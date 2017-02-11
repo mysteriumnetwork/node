@@ -4,56 +4,40 @@ import (
 	"bufio"
 	"os/exec"
 	"sync"
-	"errors"
 
 	log "github.com/cihub/seelog"
 )
 
 func NewClient(remote, key string) *Client {
 	config := NewConfig()
-	config.Remote(remote, 1194)
-	config.Device("tun")
-	config.IpConfig("10.8.0.2", "10.8.0.1")
-	config.Secret(key)
+	config.SetRemote(remote, 1194)
+	config.SetDevice("tun")
+	config.SetSecret(key)
 
-	config.KeepAlive(10, 60)
-	config.PingTimerRemote()
-	config.PersistTun()
-	config.PersistKey()
+	config.SetKeepAlive(10, 60)
+	config.SetPingTimerRemote()
+	config.SetPersistTun()
+	config.SetPersistKey()
 
 	return &Client{
 		config:     config,
 		management: NewManagement(),
-		Env:      make(map[string]string, 0),
 		shutdown: make(chan bool),
 	}
 }
 
 type Client struct {
+	config     *Config
+	management *Management
+
 	StdOut     chan string
 	StdErr     chan string
-	Stopped    chan bool
-	parameters []string
-	config     *Config
-	Env        map[string]string
-
-	management *Management
 
 	shutdown  chan bool
 	waitGroup sync.WaitGroup
 }
 
 func (client *Client) Start() (err error) {
-	// Check if the process is already running
-	if client.Stopped != nil {
-		select {
-		case <-client.Stopped:
-		// Everything is good, no process running
-		default:
-			return errors.New("Openvpn is already started, aborting")
-		}
-	}
-
 	// Start the management interface (if it isnt already started)
 	path, err := client.management.Start()
 	if err != nil {
@@ -61,7 +45,7 @@ func (client *Client) Start() (err error) {
 	}
 
 	// Add the management interface path to the config
-	client.config.setManagementPath(path)
+	client.config.SetManagementPath(path)
 
 	return client.establishConnection()
 }
@@ -82,6 +66,7 @@ func (client *Client) Shutdown() (err error) {
 
 func (client *Client) establishConnection() (err error) {
 	// Fetch the current config
+	log.Info("Validating config:", client.config)
 	config, err := client.config.Validate()
 	if err != nil {
 		return err
@@ -108,12 +93,9 @@ func (client *Client) ProcessMonitor(cmd *exec.Cmd, release chan bool) {
 	client.stdoutMonitor(cmd)
 	client.stderrMonitor(cmd)
 
-	client.Stopped = make(chan bool)
 	go func() {
 		client.waitGroup.Add(1)
 		defer client.waitGroup.Done()
-
-		defer close(client.Stopped)
 
 		// Watch if the process exits
 		done := make(chan error)
