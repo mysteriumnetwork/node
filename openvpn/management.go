@@ -61,7 +61,7 @@ func (management *Management) Start() (path string, err error) {
 	return management.Path, err
 }
 
-func (management *Management) Shutdown() {
+func (management *Management) Stop() {
 	log.Info(MANAGEMENT_LOG_PREFIX, "Shutdown")
 	close(management.shutdown)
 

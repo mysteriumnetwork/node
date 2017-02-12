@@ -6,7 +6,6 @@ import (
 
 func NewClientConfig(remote string, key string) *ClientConfig {
 	config := ClientConfig{NewConfig()}
-	//config.flags =
 	config.SetRemote(remote, 1194)
 	config.SetDevice("tun")
 	config.SetSecret(key)

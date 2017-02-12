@@ -11,6 +11,7 @@ func main() {
 	mysterium := server.NewClient()
 	mysterium.SessionCreate(NODE_KEY)
 
-	vpnClient := openvpn.NewClient(openvpn.NewClientConfig("68.235.53.140", "pre-shared.key"))
+	vpnConfig := openvpn.NewClientConfig("68.235.53.140", "pre-shared.key")
+	vpnClient := openvpn.NewClient(vpnConfig)
 	vpnClient.Start()
 }
