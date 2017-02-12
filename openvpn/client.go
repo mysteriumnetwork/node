@@ -8,17 +8,7 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-func NewClient(remote, key string) *Client {
-	config := NewConfig()
-	config.SetRemote(remote, 1194)
-	config.SetDevice("tun")
-	config.SetSecret(key)
-
-	config.SetKeepAlive(10, 60)
-	config.SetPingTimerRemote()
-	config.SetPersistTun()
-	config.SetPersistKey()
-
+func NewClient(config *ClientConfig) *Client {
 	return &Client{
 		config:     config,
 		management: NewManagement(),
@@ -27,7 +17,7 @@ func NewClient(remote, key string) *Client {
 }
 
 type Client struct {
-	config     *Config
+	config     *ClientConfig
 	management *Management
 
 	StdOut     chan string
@@ -65,15 +55,15 @@ func (client *Client) Shutdown() (err error) {
 }
 
 func (client *Client) establishConnection() (err error) {
-	// Fetch the current config
-	log.Info("Validating config:", client.config)
-	config, err := client.config.Validate()
+	// Fetch the current params
+	params, err := client.config.Validate()
+	log.Info("Validating params:", params)
 	if err != nil {
 		return err
 	}
 
 	// Create the command
-	cmd := exec.Command("openvpn", config...)
+	cmd := exec.Command("openvpn", params...)
 
 	// Attatch monitors for stdout, stderr and exit
 	release := make(chan bool)
