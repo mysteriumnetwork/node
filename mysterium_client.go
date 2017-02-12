@@ -5,11 +5,11 @@ import (
 	"github.com/mysterium/node/server"
 )
 
-const NODE_KEY = "12345"
+const CLIENT_NODE_KEY = "12345"
 
 func main() {
 	mysterium := server.NewClient()
-	mysterium.SessionCreate(NODE_KEY)
+	mysterium.SessionCreate(CLIENT_NODE_KEY)
 
 	vpnConfig := openvpn.NewClientConfig("68.235.53.140", "pre-shared.key")
 	vpnClient := openvpn.NewClient(vpnConfig)
