@@ -7,7 +7,7 @@ import (
 const SERVER_NODE_KEY = "12345"
 
 func main() {
-	vpnConfig := openvpn.NewServerConfig()
+	vpnConfig := openvpn.NewServerConfig("pre-shared.key")
 	vpnServer := openvpn.NewServer(vpnConfig)
 	vpnServer.Start()
 }
