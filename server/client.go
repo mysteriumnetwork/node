@@ -36,9 +36,21 @@ func (client *client) SessionCreate(nodeKey string) (session dto.Session, err er
 	if err == nil {
 		defer response.Body.Close()
 		err = parseResponseJson(response, &session)
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "Created new session: ", session.Id)
 	}
 
-	log.Info(MYSTERIUM_API_LOG_PREFIX, "Created new session: ", session.Id)
+	return
+}
+
+func (client *client) NodeRegister(nodeKey string) (err error) {
+	response, err := client.doRequest("POST", "node_register", dto.NodeRegisterRequest{
+		NodeKey: nodeKey,
+	})
+	if err == nil {
+		defer response.Body.Close()
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "Node registered: ", nodeKey)
+	}
+
 	return
 }
 
@@ -64,9 +76,10 @@ func (client *client) doRequest(method string, path string, payload interface{})
 		return response, err
 	}
 
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
+	err = parseResponseError(response)
+	if err != nil {
 		log.Error(MYSTERIUM_API_LOG_PREFIX, err)
-		return response, parseResponseError(response)
+		return response, err
 	}
 
 	return response, nil
@@ -87,5 +100,9 @@ func parseResponseJson(response *http.Response, dto interface{}) error {
 }
 
 func parseResponseError(response *http.Response) error {
-	return errors.New(fmt.Sprintf("Server response invalid: %s", response.Status))
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return errors.New(fmt.Sprintf("Server response invalid: %s", response.Status))
+	}
+
+	return nil
 }
