@@ -18,4 +18,6 @@ func main() {
 	if err := vpnServer.Start(); err != nil {
 		panic(err)
 	}
+
+	vpnServer.Wait()
 }

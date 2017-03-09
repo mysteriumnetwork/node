@@ -40,6 +40,10 @@ func (server *Server) Start() (err error) {
 	return server.process.Start(params...)
 }
 
+func (client *Server) Wait() {
+	client.process.Wait()
+}
+
 func (server *Server) Stop() (err error) {
 	server.process.Stop()
 	server.management.Stop()
