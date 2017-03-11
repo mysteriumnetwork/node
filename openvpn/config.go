@@ -37,8 +37,6 @@ func (c *Config) Validate() (config []string, err error) {
 
 func (c *Config) SetManagementPath(path string) {
 	c.setParam("management", path+" unix")
-	c.setFlag("management-server")
-	c.setFlag("management-hold")
 	c.setFlag("management-signal")
 	c.setFlag("management-up-down")
 }

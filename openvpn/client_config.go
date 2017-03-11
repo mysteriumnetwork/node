@@ -23,6 +23,6 @@ type ClientConfig struct {
 }
 
 func (c *ClientConfig) SetRemote(r string, port int) {
-	c.setParam("port", strconv.Itoa(port))
 	c.setParam("remote", r)
+	c.setParam("port", strconv.Itoa(port))
 }
