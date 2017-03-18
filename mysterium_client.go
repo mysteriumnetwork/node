@@ -14,7 +14,11 @@ func main() {
 		panic(err)
 	}
 
-	vpnConfig := openvpn.NewClientConfig(SERVER_HOST, "pre-shared.key")
+	vpnConfig := openvpn.NewClientConfig(
+		SERVER_HOST,
+		"bin/tls/ca.crt", "bin/tls/client.crt", "bin/tls/client.key",
+		"bin/tls/ta.key",
+	)
 	vpnClient := openvpn.NewClient(vpnConfig)
 	if err := vpnClient.Start(); err != nil {
 		panic(err)

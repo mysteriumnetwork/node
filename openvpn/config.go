@@ -41,12 +41,22 @@ func (c *Config) SetManagementPath(path string) {
 	c.setFlag("management-up-down")
 }
 
+func (c *Config) SetPort(port int) {
+	c.setParam("port", strconv.Itoa(port))
+}
+
 func (c *Config) SetDevice(deviceName string) {
 	c.setParam("dev", deviceName)
 }
 
-func (c *Config) SetSecretKey(secretKey string) {
-	c.setParam("secret", secretKey)
+func (c *Config) SetTlsCertificate(caFile, certFile, certKeyFile string) {
+	c.setParam("ca", caFile)
+	c.setParam("cert", certFile)
+	c.setParam("key", certKeyFile)
+}
+
+func (c *Config) SetTlsAuth(authFile string) {
+	c.setParam("tls-auth", authFile)
 }
 
 func (c *Config) SetKeepAlive(interval, timeout int) {

@@ -13,7 +13,11 @@ func main() {
 		panic(err)
 	}
 
-	vpnConfig := openvpn.NewServerConfig("pre-shared.key")
+	vpnConfig := openvpn.NewServerConfig(
+		"10.8.0.0", "255.255.255.0",
+		"ca.crt", "server.crt", "server.key",
+		"dh.pem", "crl.pem", "ta.key",
+	)
 	vpnServer := openvpn.NewServer(vpnConfig)
 	if err := vpnServer.Start(); err != nil {
 		panic(err)
