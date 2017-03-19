@@ -26,9 +26,11 @@ type Process struct {
 	cmdMonitorsWaiter  sync.WaitGroup
 }
 
-func (process *Process) Start(params ...string) (err error) {
+func (process *Process) Start(arguments []string) (err error) {
 	// Create the command
-	cmd := exec.Command("openvpn", params...)
+	log.Info(process.logPrefix, "Starting process with arguments: ", arguments)
+	cmd := exec.Command("openvpn", arguments...)
+
 
 	// Attach monitors for stdout, stderr and exit
 	process.stdoutMonitor(cmd)

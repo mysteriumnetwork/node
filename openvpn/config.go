@@ -1,38 +1,35 @@
 package openvpn
 
 import (
-	"strings"
 	"strconv"
 )
 
 func NewConfig() *Config {
 	return &Config{
-		flags:  make(map[string]bool),
-		params: make([]string, 0),
+		options:  make([]configOption, 0),
 	}
 }
 
 type Config struct {
-	flags  map[string]bool
-	params []string
+	options []configOption
 }
 
-func (c *Config) setParam(key, val string) {
-	a := strings.Split("--"+key+" "+val, " ")
-	for _, ar := range a {
-		c.params = append(c.params, ar)
-	}
+type configOption interface {
+	getName() string
 }
 
-func (c *Config) setFlag(key string) {
-	a := strings.Split("--"+key, " ")
-	for _, ar := range a {
-		c.params = append(c.params, ar)
-	}
+func (c *Config) setParam(name, value string) {
+	c.options = append(
+		c.options,
+		&optionParam{name, value},
+	)
 }
 
-func (c *Config) Validate() (config []string, err error) {
-	return c.params, nil
+func (c *Config) setFlag(name string) {
+	c.options = append(
+		c.options,
+		&optionFlag{name},
+	)
 }
 
 func (c *Config) SetManagementPath(path string) {

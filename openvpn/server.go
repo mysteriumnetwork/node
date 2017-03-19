@@ -1,9 +1,5 @@
 package openvpn
 
-import (
-	log "github.com/cihub/seelog"
-)
-
 const SERVER_LOG_PREFIX = "[OpenVPN.server] "
 
 func NewServer(config *ServerConfig) *Server {
@@ -31,13 +27,12 @@ func (server *Server) Start() (err error) {
 	server.config.SetManagementPath(path)
 
 	// Fetch the current params
-	params, err := server.config.Validate()
-	log.Info(SERVER_LOG_PREFIX, "Validating server params: ", params)
+	arguments, err := ConfigToArguments(*server.config.Config)
 	if err != nil {
 		return err
 	}
 
-	return server.process.Start(params...)
+	return server.process.Start(arguments)
 }
 
 func (client *Server) Wait() {

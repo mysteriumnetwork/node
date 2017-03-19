@@ -1,9 +1,5 @@
 package openvpn
 
-import (
-	log "github.com/cihub/seelog"
-)
-
 const CLIENT_LOG_PREFIX = "[OpenVPN.process] "
 
 func NewClient(config *ClientConfig) *Client {
@@ -30,14 +26,13 @@ func (client *Client) Start() (err error) {
 	// Add the management interface path to the config
 	client.config.SetManagementPath(path)
 
-	// Fetch the current params
-	params, err := client.config.Validate()
-	log.Info(CLIENT_LOG_PREFIX, "Validating process params: ", params)
+	// Fetch the current arguments
+	arguments, err := ConfigToArguments(*client.config.Config)
 	if err != nil {
 		return err
 	}
 
-	return client.process.Start(params...)
+	return client.process.Start(arguments)
 }
 
 func (client *Client) Wait() {
