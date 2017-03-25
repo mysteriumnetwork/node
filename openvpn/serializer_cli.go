@@ -25,18 +25,3 @@ func ConfigToArguments(config Config) ([]string, error) {
 type optionCliSerializable interface {
 	toArguments(arguments *[]string) error
 }
-
-func (option *optionFlag) toArguments(arguments *[]string) error {
-	*arguments = append(*arguments, "--" + option.name)
-	return nil
-}
-
-func (option *optionParam) toArguments(arguments *[]string) error {
-	*arguments = append(*arguments, "--" + option.name, option.value)
-	return nil
-}
-
-func (option *optionFile) toArguments(arguments *[]string) error {
-	*arguments = append(*arguments, "--" + option.name, option.path)
-	return nil
-}

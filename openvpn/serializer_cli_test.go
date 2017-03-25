@@ -7,8 +7,10 @@ import (
 
 func TestConfigToArguments(t *testing.T) {
 	config := Config{}
-	config.setFlag("enable-something")
-	config.setParam("very-value", "1234")
+	config.AddOptions(
+		OptionFlag("enable-something"),
+		OptionParam("very-value", "1234"),
+	)
 
 	arguments, err := ConfigToArguments(config)
 	assert.Nil(t, err)

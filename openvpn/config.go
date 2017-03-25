@@ -18,17 +18,19 @@ type configOption interface {
 	getName() string
 }
 
+func (c *Config) AddOptions(options ...configOption) {
+	c.options = append(c.options, options...)
+}
+
 func (c *Config) setParam(name, value string) {
-	c.options = append(
-		c.options,
-		&optionParam{name, value},
+	c.AddOptions(
+		OptionParam(name, value),
 	)
 }
 
 func (c *Config) setFlag(name string) {
-	c.options = append(
-		c.options,
-		&optionFlag{name},
+	c.AddOptions(
+		OptionFlag(name),
 	)
 }
 
