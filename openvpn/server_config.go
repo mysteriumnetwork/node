@@ -35,7 +35,7 @@ func (c *ServerConfig) SetServerMode(port int, network, netmask string) {
 
 func (c *ServerConfig) SetTlsServer(dhFile, caCrtFile string) {
 	c.setFlag("tls-server")
-	c.setParam("dh", dhFile)
-	c.setParam("crl-verify", caCrtFile)
+	c.AddOptions(OptionFile("dh", dhFile))
+	c.AddOptions(OptionFile("crl-verify", caCrtFile))
 
 }

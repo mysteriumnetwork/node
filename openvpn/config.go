@@ -49,13 +49,13 @@ func (c *Config) SetDevice(deviceName string) {
 }
 
 func (c *Config) SetTlsCertificate(caFile, certFile, certKeyFile string) {
-	c.setParam("ca", caFile)
-	c.setParam("cert", certFile)
-	c.setParam("key", certKeyFile)
+	c.AddOptions(OptionFile("ca", caFile))
+	c.AddOptions(OptionFile("cert", certFile))
+	c.AddOptions(OptionFile("key", certKeyFile))
 }
 
 func (c *Config) SetTlsAuth(authFile string) {
-	c.setParam("tls-auth", authFile)
+	c.AddOptions(OptionFile("tls-auth", authFile))
 }
 
 func (c *Config) SetKeepAlive(interval, timeout int) {
