@@ -5,20 +5,20 @@ import (
 	"github.com/mysterium/node/server"
 )
 
-const SERVER_HOST = "server.mysterium.localhost"
 const CLIENT_NODE_KEY = "12345"
 
 func main() {
 	mysterium := server.NewClient()
-	if _, err := mysterium.SessionCreate(CLIENT_NODE_KEY); err != nil {
+	vpnSession, err := mysterium.SessionCreate(CLIENT_NODE_KEY)
+	if err != nil {
 		panic(err)
 	}
 
-	vpnConfig := openvpn.NewClientConfig(
-		SERVER_HOST,
-		"bin/tls/ca.crt", "bin/tls/client.crt", "bin/tls/client.key",
-		"bin/tls/ta.key",
-	)
+	vpnConfig, err := openvpn.NewClientConfigFromString(vpnSession.ConnectionConfig)
+	if err != nil {
+		panic(err)
+	}
+
 	vpnClient := openvpn.NewClient(vpnConfig)
 	if err := vpnClient.Start(); err != nil {
 		panic(err)

@@ -42,9 +42,10 @@ func (client *client) SessionCreate(nodeKey string) (session dto.Session, err er
 	return
 }
 
-func (client *client) NodeRegister(nodeKey string) (err error) {
+func (client *client) NodeRegister(nodeKey, clientConfig string) (err error) {
 	response, err := client.doRequest("POST", "node_register", dto.NodeRegisterRequest{
 		NodeKey: nodeKey,
+		ConnectionConfig: clientConfig,
 	})
 	if err == nil {
 		defer response.Body.Close()

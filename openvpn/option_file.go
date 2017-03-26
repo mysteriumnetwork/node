@@ -28,5 +28,5 @@ func (option optionFile) toFile() (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("<%s>%s</%s>", option.name, string(fileContent), option.name), nil
+	return fmt.Sprintf("<%s>\n%s\n</%s>", option.name, string(fileContent), option.name), nil
 }

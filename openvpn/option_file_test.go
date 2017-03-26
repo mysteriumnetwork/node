@@ -37,5 +37,5 @@ func TestFile_ToFile(t *testing.T) {
 
 	optionValue, err := option.toFile()
 	assert.NoError(t, err)
-	assert.Equal(t, "<special-file>[filedata]</special-file>", optionValue)
+	assert.Equal(t, "<special-file>\n[filedata]\n</special-file>", optionValue)
 }
