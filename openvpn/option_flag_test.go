@@ -15,17 +15,12 @@ func TestFlag_GetName(t *testing.T) {
 	assert.Equal(t, "enable-something", option.getName())
 }
 
-func TestFlag_ToArguments(t *testing.T) {
-	var arguments []string
+func TestFlag_ToCli(t *testing.T) {
 	option := OptionFlag("enable-something")
 
-	err := option.toArguments(&arguments)
+	optionValue, err := option.toCli()
 	assert.NoError(t, err)
-	assert.Equal(
-		t,
-		[]string{"--enable-something"},
-		arguments,
-	)
+	assert.Equal(t, "--enable-something", optionValue)
 }
 
 func TestFlag_ToFile(t *testing.T) {

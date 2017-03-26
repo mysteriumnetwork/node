@@ -15,17 +15,12 @@ func TestParam_GetName(t *testing.T) {
 	assert.Equal(t, "very-value", option.getName())
 }
 
-func TestParam_ToArguments(t *testing.T) {
-	var arguments []string
+func TestParam_ToCli(t *testing.T) {
 	option := OptionParam("very-value", "1234")
 
-	err := option.toArguments(&arguments)
+	optionValue, err := option.toCli()
 	assert.NoError(t, err)
-	assert.Equal(
-		t,
-		[]string{"--very-value", "1234"},
-		arguments,
-	)
+	assert.Equal(t, "--very-value 1234", optionValue)
 }
 
 func TestParam_ToFile(t *testing.T) {

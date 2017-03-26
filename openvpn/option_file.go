@@ -18,9 +18,8 @@ func (option optionFile) getName() string {
 	return option.name
 }
 
-func (option optionFile) toArguments(arguments *[]string) error {
-	*arguments = append(*arguments, "--" + option.name, option.path)
-	return nil
+func (option optionFile) toCli() (string, error) {
+	return "--" + option.name + " " + option.path, nil
 }
 
 func (option optionFile) toFile() (string, error) {

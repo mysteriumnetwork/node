@@ -2,6 +2,7 @@ package openvpn
 
 import (
 	"fmt"
+	"strings"
 )
 
 func ConfigToArguments(config Config) ([]string, error) {
@@ -13,15 +14,18 @@ func ConfigToArguments(config Config) ([]string, error) {
 			return nil, fmt.Errorf("Unserializable option '%s': %#v", item.getName(), item)
 		}
 
-		err := option.toArguments(&arguments)
+		optionValue, err := option.toCli()
 		if err != nil {
 			return nil, err
 		}
+
+		optionArguments := strings.Split(optionValue, " ")
+		arguments = append(arguments, optionArguments...)
 	}
 
 	return arguments, nil
 }
 
 type optionCliSerializable interface {
-	toArguments(arguments *[]string) error
+	toCli() (string, error)
 }

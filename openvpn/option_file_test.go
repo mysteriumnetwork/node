@@ -15,17 +15,12 @@ func TestFile_GetName(t *testing.T) {
 	assert.Equal(t, "special-file", option.getName())
 }
 
-func TestFile_ToArguments(t *testing.T) {
-	var arguments []string
+func TestFile_ToCli(t *testing.T) {
 	option := OptionFile("special-file", "file.txt")
 
-	err := option.toArguments(&arguments)
+	optionValue, err := option.toCli()
 	assert.NoError(t, err)
-	assert.Equal(
-		t,
-		[]string{"--special-file", "file.txt"},
-		arguments,
-	)
+	assert.Equal(t, "--special-file file.txt", optionValue)
 }
 
 func TestFile_ToFileNotExisting(t *testing.T) {
