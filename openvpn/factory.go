@@ -1,6 +1,8 @@
 package openvpn
 
-import "os"
+import (
+	"io/ioutil"
+)
 
 const CLIENT_CONFIG_PATH = "client.ovpn"
 
@@ -55,18 +57,12 @@ func NewClientConfig(
 }
 
 func NewClientConfigFromString(configString string) (*ClientConfig, error) {
-	configFile, err := os.OpenFile(CLIENT_CONFIG_PATH, os.O_WRONLY | os.O_CREATE, 0600)
-	if err != nil {
-		return nil, err
-	}
-	defer configFile.Close()
-
-	_, err = configFile.WriteString(configString)
+	err := ioutil.WriteFile(CLIENT_CONFIG_PATH, []byte(configString), 0600)
 	if err != nil {
 		return nil, err
 	}
 
 	config := ClientConfig{NewConfig()}
-	config.AddOptions(OptionFile("config", CLIENT_CONFIG_PATH))
+	config.AddOptions(OptionParam("config", CLIENT_CONFIG_PATH))
 	return &config, nil
 }
