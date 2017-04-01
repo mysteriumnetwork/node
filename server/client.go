@@ -14,7 +14,7 @@ import (
 
 const MYSTERIUM_API_URL = "http://api.mysterium.network:5000/v1"
 const MYSTERIUM_API_CLIENT = "goclient-v0.1"
-const MYSTERIUM_API_LOG_PREFIX = "[OpenVPN.api] "
+const MYSTERIUM_API_LOG_PREFIX = "[Mysterium.api] "
 
 func NewClient() *client {
 	httpClient := http.Client{
