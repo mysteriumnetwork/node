@@ -55,7 +55,7 @@ func (client *client) doRequest(request *http.Request, responseDto interface{}) 
 	err = parseResponseError(response)
 	if err != nil {
 		log.Error(IPIFY_API_LOG_PREFIX, err)
-		return  err
+		return err
 	}
 
 	return parseResponseJson(response, &responseDto)

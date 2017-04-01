@@ -1,8 +1,8 @@
 package openvpn
 
 import (
-	"io/ioutil"
 	"fmt"
+	"io/ioutil"
 )
 
 func OptionFile(name, path string) optionFile {

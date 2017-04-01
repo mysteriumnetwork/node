@@ -4,16 +4,16 @@ const SERVER_LOG_PREFIX = "[OpenVPN.server] "
 
 func NewServer(config *ServerConfig) *Server {
 	return &Server{
-		config: config,
+		config:     config,
 		management: NewManagement(),
-		process: NewProcess(SERVER_LOG_PREFIX),
+		process:    NewProcess(SERVER_LOG_PREFIX),
 	}
 }
 
 type Server struct {
-	config *ServerConfig
+	config     *ServerConfig
 	management *Management
-	process *Process
+	process    *Process
 }
 
 func (server *Server) Start() (err error) {

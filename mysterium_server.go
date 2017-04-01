@@ -1,9 +1,9 @@
 package main
 
 import (
+	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/ipify"
 )
 
 const SERVER_NODE_KEY = "12345"
@@ -15,7 +15,6 @@ func main() {
 		panic(err)
 	}
 
-
 	vpnClientConfig := openvpn.NewClientConfig(
 		vpnServerIp,
 		"ca.crt", "client.crt", "client.key",
@@ -26,12 +25,10 @@ func main() {
 		panic(err)
 	}
 
-
 	mysterium := server.NewClient()
 	if err := mysterium.NodeRegister(SERVER_NODE_KEY, vpnClientConfigString); err != nil {
 		panic(err)
 	}
-
 
 	vpnServerConfig := openvpn.NewServerConfig(
 		"10.8.0.0", "255.255.255.0",

@@ -6,7 +6,7 @@ import (
 
 func NewConfig() *Config {
 	return &Config{
-		options:  make([]configOption, 0),
+		options: make([]configOption, 0),
 	}
 }
 

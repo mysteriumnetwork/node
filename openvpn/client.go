@@ -4,16 +4,16 @@ const CLIENT_LOG_PREFIX = "[OpenVPN.process] "
 
 func NewClient(config *ClientConfig) *Client {
 	return &Client{
-		config: config,
+		config:     config,
 		management: NewManagement(),
-		process: NewProcess(CLIENT_LOG_PREFIX),
+		process:    NewProcess(CLIENT_LOG_PREFIX),
 	}
 }
 
 type Client struct {
-	config *ClientConfig
+	config     *ClientConfig
 	management *Management
-	process *Process
+	process    *Process
 }
 
 func (client *Client) Start() (err error) {

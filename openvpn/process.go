@@ -10,7 +10,7 @@ import (
 
 func NewProcess(logPrefix string) *Process {
 	return &Process{
-		logPrefix:          logPrefix,
+		logPrefix: logPrefix,
 
 		cmdExitError:       make(chan error),
 		cmdShutdownStarted: make(chan bool),
@@ -19,7 +19,7 @@ func NewProcess(logPrefix string) *Process {
 }
 
 type Process struct {
-	logPrefix          string
+	logPrefix string
 
 	cmdExitError       chan error
 	cmdShutdownStarted chan bool
@@ -30,7 +30,6 @@ func (process *Process) Start(arguments []string) (err error) {
 	// Create the command
 	log.Info(process.logPrefix, "Starting process with arguments: ", arguments)
 	cmd := exec.Command("openvpn", arguments...)
-
 
 	// Attach monitors for stdout, stderr and exit
 	process.stdoutMonitor(cmd)

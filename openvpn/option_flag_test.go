@@ -1,8 +1,8 @@
 package openvpn
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestFlag_Factory(t *testing.T) {

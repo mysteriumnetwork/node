@@ -5,7 +5,7 @@ func OptionParam(name, value string) optionParam {
 }
 
 type optionParam struct {
-	name string
+	name  string
 	value string
 }
 

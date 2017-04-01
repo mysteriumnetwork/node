@@ -1,8 +1,8 @@
 package openvpn
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
 )
 
 type optionStringSerializable interface {
