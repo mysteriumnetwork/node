@@ -46,11 +46,11 @@ func (client *client) GetIp() (string, error) {
 
 func (client *client) doRequest(request *http.Request, responseDto interface{}) error {
 	response, err := client.httpClient.Do(request)
-	defer response.Body.Close()
 	if err != nil {
 		log.Error(IPIFY_API_LOG_PREFIX, err)
 		return err
 	}
+	defer response.Body.Close()
 
 	err = parseResponseError(response)
 	if err != nil {
