@@ -7,8 +7,6 @@ import (
 	"io"
 )
 
-const SERVER_NODE_KEY = "12345"
-
 type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
@@ -39,7 +37,7 @@ func (cmd *commandRun) Run(args []string) error {
 	}
 
 	mysterium := server.NewClient()
-	if err := mysterium.NodeRegister(SERVER_NODE_KEY, vpnClientConfigString); err != nil {
+	if err := mysterium.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
 		return err
 	}
 

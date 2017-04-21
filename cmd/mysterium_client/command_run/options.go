@@ -2,15 +2,23 @@ package command_run
 
 import (
 	"flag"
+	"errors"
 )
 
 type commandRunOptions struct {
+	NodeKey          string
 	DirectoryRuntime string
 }
 
 func (cmd *commandRun) parseArguments(args []string) (options commandRunOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.Bool("help", false, "Show options")
+	flags.StringVar(
+		&options.NodeKey,
+		"node",
+		"12345",
+		"Mysterium VPN node to make connection with",
+	)
 	flags.StringVar(
 		&options.DirectoryRuntime,
 		"runtime-dir",
@@ -20,6 +28,11 @@ func (cmd *commandRun) parseArguments(args []string) (options commandRunOptions,
 
 	err = flags.Parse(args[1:])
 	if err != nil {
+		return
+	}
+
+	if options.NodeKey == "" {
+		err = errors.New("Missing VPN node key!")
 		return
 	}
 

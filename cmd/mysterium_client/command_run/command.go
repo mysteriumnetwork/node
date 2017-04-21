@@ -6,8 +6,6 @@ import (
 	"io"
 )
 
-const CLIENT_NODE_KEY = "12345"
-
 type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
@@ -20,7 +18,7 @@ func (cmd *commandRun) Run(args []string) error {
 	}
 
 	mysterium := server.NewClient()
-	vpnSession, err := mysterium.SessionCreate(CLIENT_NODE_KEY)
+	vpnSession, err := mysterium.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err
 	}
