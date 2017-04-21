@@ -4,8 +4,6 @@ import (
 	"io/ioutil"
 )
 
-const CLIENT_CONFIG_PATH = "client.ovpn"
-
 func NewServerConfig(
 	network, netmask string,
 	caFile, certFile, certKeyFile,
@@ -56,13 +54,13 @@ func NewClientConfig(
 	return &config
 }
 
-func NewClientConfigFromString(configString string) (*ClientConfig, error) {
-	err := ioutil.WriteFile(CLIENT_CONFIG_PATH, []byte(configString), 0600)
+func NewClientConfigFromString(configString, configFile string) (*ClientConfig, error) {
+	err := ioutil.WriteFile(configFile, []byte(configString), 0600)
 	if err != nil {
 		return nil, err
 	}
 
 	config := ClientConfig{NewConfig()}
-	config.AddOptions(OptionParam("config", CLIENT_CONFIG_PATH))
+	config.AddOptions(OptionParam("config", configFile))
 	return &config, nil
 }

@@ -14,7 +14,7 @@ type commandRun struct {
 }
 
 func (cmd *commandRun) Run(args []string) error {
-	_, err := cmd.parseArguments(args)
+	options, err := cmd.parseArguments(args)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,10 @@ func (cmd *commandRun) Run(args []string) error {
 		return err
 	}
 
-	vpnConfig, err := openvpn.NewClientConfigFromString(vpnSession.ConnectionConfig)
+	vpnConfig, err := openvpn.NewClientConfigFromString(
+		vpnSession.ConnectionConfig,
+		options.DirectoryRuntime+ "/client.ovpn",
+	)
 	if err != nil {
 		return err
 	}
