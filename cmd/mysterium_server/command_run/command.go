@@ -4,18 +4,22 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/ipify"
+	"io"
 )
 
 const SERVER_NODE_KEY = "12345"
 
-type commandRun struct {}
-
-// NewCommand return a new instance of commandRun.
-func NewCommandRun() *commandRun {
-	return &commandRun{}
+type commandRun struct {
+	output      io.Writer
+	outputError io.Writer
 }
 
-func (cmd *commandRun) Run(args ...string) error {
+func (cmd *commandRun) Run(args []string) error {
+	_, err := cmd.parseArguments(args)
+	if err != nil {
+		return err
+	}
+
 	ipifyClient := ipify.NewClient()
 	vpnServerIp, err := ipifyClient.GetIp()
 	if err != nil {
