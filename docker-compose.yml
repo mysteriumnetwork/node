@@ -1,0 +1,24 @@
+version: '2'
+services:
+
+  mysterium-node:
+    build:
+      context: .
+      dockerfile: Dockerfile-mysterium-node
+    container_name: mysterium-node
+    networks:
+      - default
+    ports:
+      - 1194:1194
+    volumes:
+      - .:/application
+
+  mysterium-client:
+    build:
+      context: .
+      dockerfile: Dockerfile-mysterium-client
+    container_name: mysterium-client
+    networks:
+      - default
+    volumes:
+      - .:/application

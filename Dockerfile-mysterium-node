@@ -1,0 +1,15 @@
+FROM ubuntu:latest
+MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
+
+# e.g. PACKAGE_FILE="build/package/mysterium-node_0.0.1_linux_amd64.deb"
+ARG PACKAGE_FILE
+COPY $PACKAGE_FILE /tmp/mysterium-node.deb
+
+# Install packages
+RUN apt-get update \
+    && dpkg --install /tmp/mysterium-node.deb
+    && apt-get install --fix-broken \
+    && rm -rf /var/cache/apk/* \
+    && rm /tmp/mysterium-node.deb
+
+ENTRYPOINT ["/usr/bin/mysterium_server"]
