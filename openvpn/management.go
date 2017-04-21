@@ -166,8 +166,8 @@ mainLoop:
 			case management.events <- strings:
 			case <-time.After(time.Second):
 				log.Errorf(
+					"%sFailed to transport message (%client): %s |%s|",
 					MANAGEMENT_LOG_PREFIX,
-					"Failed to transport message (%client): %s |%s|",
 					management.events,
 					eventName,
 					row,
