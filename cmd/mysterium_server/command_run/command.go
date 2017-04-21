@@ -15,7 +15,7 @@ type commandRun struct {
 }
 
 func (cmd *commandRun) Run(args []string) error {
-	_, err := cmd.parseArguments(args)
+	options, err := cmd.parseArguments(args)
 	if err != nil {
 		return err
 	}
@@ -28,8 +28,10 @@ func (cmd *commandRun) Run(args []string) error {
 
 	vpnClientConfig := openvpn.NewClientConfig(
 		vpnServerIp,
-		"ca.crt", "client.crt", "client.key",
-		"ta.key",
+		options.DirectoryConfig + "/ca.crt",
+		options.DirectoryConfig + "/client.crt",
+		options.DirectoryConfig + "/client.key",
+		options.DirectoryConfig + "/ta.key",
 	)
 	vpnClientConfigString, err := openvpn.ConfigToString(*vpnClientConfig.Config)
 	if err != nil {
@@ -43,8 +45,12 @@ func (cmd *commandRun) Run(args []string) error {
 
 	vpnServerConfig := openvpn.NewServerConfig(
 		"10.8.0.0", "255.255.255.0",
-		"ca.crt", "server.crt", "server.key",
-		"dh.pem", "crl.pem", "ta.key",
+		options.DirectoryConfig + "/ca.crt",
+		options.DirectoryConfig + "/server.crt",
+		options.DirectoryConfig + "/server.key",
+		options.DirectoryConfig + "/dh.pem",
+		options.DirectoryConfig + "/crl.pem",
+		options.DirectoryConfig + "/ta.key",
 	)
 	vpnServer := openvpn.NewServer(vpnServerConfig)
 	if err := vpnServer.Start(); err != nil {
