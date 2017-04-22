@@ -17,7 +17,6 @@ func NewServerConfig(
 
 	config.SetDevice("tun")
 	config.setParam("cipher", "AES-256-CBC")
-	config.setParam("compress", "lz4")
 	config.setParam("verb", "3")
 	config.SetKeepAlive(10, 60)
 	config.SetPingTimerRemote()
@@ -38,7 +37,6 @@ func NewClientConfig(
 
 	config.SetDevice("tun")
 	config.setParam("cipher", "AES-256-CBC")
-	config.setParam("compress", "lz4")
 	config.setParam("verb", "3")
 	config.SetKeepAlive(10, 60)
 	config.SetPingTimerRemote()
