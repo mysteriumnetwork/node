@@ -12,7 +12,6 @@ type commandRunOptions struct {
 
 func (cmd *commandRun) parseArguments(args []string) (options commandRunOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	flags.Bool("help", false, "Show options")
 	flags.StringVar(
 		&options.NodeKey,
 		"node",
