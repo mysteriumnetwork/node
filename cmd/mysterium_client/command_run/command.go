@@ -9,6 +9,8 @@ import (
 type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
+
+	mysteriumClient server.Client
 }
 
 func (cmd *commandRun) Run(args []string) error {
@@ -17,8 +19,7 @@ func (cmd *commandRun) Run(args []string) error {
 		return err
 	}
 
-	mysterium := server.NewClient()
-	vpnSession, err := mysterium.SessionCreate(options.NodeKey)
+	vpnSession, err := cmd.mysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err
 	}

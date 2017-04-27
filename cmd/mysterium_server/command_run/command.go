@@ -10,6 +10,9 @@ import (
 type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
+
+	ipifyClient ipify.Client
+	mysteriumClient server.Client
 }
 
 func (cmd *commandRun) Run(args []string) error {
@@ -18,8 +21,7 @@ func (cmd *commandRun) Run(args []string) error {
 		return err
 	}
 
-	ipifyClient := ipify.NewClient()
-	vpnServerIp, err := ipifyClient.GetIp()
+	vpnServerIp, err := cmd.ipifyClient.GetIp()
 	if err != nil {
 		return err
 	}
@@ -36,8 +38,7 @@ func (cmd *commandRun) Run(args []string) error {
 		return err
 	}
 
-	mysterium := server.NewClient()
-	if err := mysterium.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
+	if err := cmd.mysteriumClient.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
 		return err
 	}
 
