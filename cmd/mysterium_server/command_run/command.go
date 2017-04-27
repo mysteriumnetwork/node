@@ -1,9 +1,9 @@
 package command_run
 
 import (
-	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/server"
 	"io"
 )
 
@@ -26,10 +26,10 @@ func (cmd *commandRun) Run(args []string) error {
 
 	vpnClientConfig := openvpn.NewClientConfig(
 		vpnServerIp,
-		options.DirectoryConfig + "/ca.crt",
-		options.DirectoryConfig + "/client.crt",
-		options.DirectoryConfig + "/client.key",
-		options.DirectoryConfig + "/ta.key",
+		options.DirectoryConfig+"/ca.crt",
+		options.DirectoryConfig+"/client.crt",
+		options.DirectoryConfig+"/client.key",
+		options.DirectoryConfig+"/ta.key",
 	)
 	vpnClientConfigString, err := openvpn.ConfigToString(*vpnClientConfig.Config)
 	if err != nil {
@@ -43,12 +43,12 @@ func (cmd *commandRun) Run(args []string) error {
 
 	vpnServerConfig := openvpn.NewServerConfig(
 		"10.8.0.0", "255.255.255.0",
-		options.DirectoryConfig + "/ca.crt",
-		options.DirectoryConfig + "/server.crt",
-		options.DirectoryConfig + "/server.key",
-		options.DirectoryConfig + "/dh.pem",
-		options.DirectoryConfig + "/crl.pem",
-		options.DirectoryConfig + "/ta.key",
+		options.DirectoryConfig+"/ca.crt",
+		options.DirectoryConfig+"/server.crt",
+		options.DirectoryConfig+"/server.key",
+		options.DirectoryConfig+"/dh.pem",
+		options.DirectoryConfig+"/crl.pem",
+		options.DirectoryConfig+"/ta.key",
 	)
 	vpnServer := openvpn.NewServer(vpnServerConfig)
 	if err := vpnServer.Start(); err != nil {

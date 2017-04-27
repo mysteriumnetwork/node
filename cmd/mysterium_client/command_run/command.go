@@ -1,8 +1,8 @@
 package command_run
 
 import (
-	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/server"
 	"io"
 )
 
@@ -25,7 +25,7 @@ func (cmd *commandRun) Run(args []string) error {
 
 	vpnConfig, err := openvpn.NewClientConfigFromString(
 		vpnSession.ConnectionConfig,
-		options.DirectoryRuntime+ "/client.ovpn",
+		options.DirectoryRuntime+"/client.ovpn",
 	)
 	if err != nil {
 		return err

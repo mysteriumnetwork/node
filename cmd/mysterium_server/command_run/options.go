@@ -1,8 +1,8 @@
 package command_run
 
 import (
-	"flag"
 	"errors"
+	"flag"
 )
 
 type commandRunOptions struct {

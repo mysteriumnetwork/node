@@ -1,9 +1,9 @@
 package main
 
 import (
-	"os"
 	"fmt"
 	"github.com/mysterium/node/cmd/mysterium_server/command_run"
+	"os"
 )
 
 func main() {
