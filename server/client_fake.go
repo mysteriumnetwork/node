@@ -4,16 +4,16 @@ import (
 	"github.com/mysterium/node/server/dto"
 
 	log "github.com/cihub/seelog"
+	"fmt"
 )
 
-func NewClientFake(connectionConfigStatic string) Client {
+func NewClientFake() Client {
 	return &clientFake{
-		connectionConfigStatic: connectionConfigStatic,
+		connectionConfigByNode: make(map[string]string, 0),
 	}
 }
 
 type clientFake struct {
-	connectionConfigStatic string
 	connectionConfigByNode map[string]string
 }
 
@@ -33,10 +33,6 @@ func (client *clientFake) SessionCreate(nodeKey string) (session dto.Session, er
 		return
 	}
 
-	log.Info(MYSTERIUM_API_LOG_PREFIX, "Created new faked session: ", session.Id)
-	session = dto.Session{
-		Id: "1",
-		ConnectionConfig: client.connectionConfigStatic,
-	}
+	err = fmt.Errorf("Fake node not found: %s", nodeKey)
 	return
 }
