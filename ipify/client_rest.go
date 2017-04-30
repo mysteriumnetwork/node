@@ -14,17 +14,17 @@ const IPIFY_API_URL = "https://api.ipify.org/"
 const IPIFY_API_CLIENT = "goclient-v0.1"
 const IPIFY_API_LOG_PREFIX = "[ipify.api] "
 
-func NewClient() *client {
-	return &client{
+func NewClient() Client {
+	return &clientRest{
 		httpClient: http.Client{},
 	}
 }
 
-type client struct {
+type clientRest struct {
 	httpClient http.Client
 }
 
-func (client *client) GetIp() (string, error) {
+func (client *clientRest) GetIp() (string, error) {
 	var ipResponse IpResponse
 
 	request, err := http.NewRequest("GET", IPIFY_API_URL+"/?format=json", nil)
@@ -44,7 +44,7 @@ func (client *client) GetIp() (string, error) {
 	return ipResponse.IP, nil
 }
 
-func (client *client) doRequest(request *http.Request, responseDto interface{}) error {
+func (client *clientRest) doRequest(request *http.Request, responseDto interface{}) error {
 	response, err := client.httpClient.Do(request)
 	if err != nil {
 		log.Error(IPIFY_API_LOG_PREFIX, err)

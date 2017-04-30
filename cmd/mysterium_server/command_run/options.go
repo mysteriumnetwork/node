@@ -5,12 +5,13 @@ import (
 	"flag"
 )
 
-type commandRunOptions struct {
+type CommandOptions struct {
 	NodeKey         string
 	DirectoryConfig string
+	DirectoryRuntime string
 }
 
-func (cmd *commandRun) parseArguments(args []string) (options commandRunOptions, err error) {
+func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.StringVar(
 		&options.NodeKey,
@@ -23,6 +24,12 @@ func (cmd *commandRun) parseArguments(args []string) (options commandRunOptions,
 		"config-dir",
 		".",
 		"Configs directory containing all configuration files",
+	)
+	flags.StringVar(
+		&options.DirectoryRuntime,
+		"runtime-dir",
+		".",
+		"Runtime directory for temp files (should be writable)",
 	)
 
 	err = flags.Parse(args[1:])

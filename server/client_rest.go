@@ -16,20 +16,20 @@ const MYSTERIUM_API_URL = "http://api.mysterium.network:5000/v1"
 const MYSTERIUM_API_CLIENT = "goclient-v0.1"
 const MYSTERIUM_API_LOG_PREFIX = "[Mysterium.api] "
 
-func NewClient() *client {
+func NewClient() *clientRest {
 	httpClient := http.Client{
 		Transport: &http.Transport{},
 	}
-	return &client{
+	return &clientRest{
 		httpClient: httpClient,
 	}
 }
 
-type client struct {
+type clientRest struct {
 	httpClient http.Client
 }
 
-func (client *client) SessionCreate(nodeKey string) (session dto.Session, err error) {
+func (client *clientRest) SessionCreate(nodeKey string) (session dto.Session, err error) {
 	response, err := client.doRequest("POST", "client_create_session", dto.SessionStartRequest{
 		NodeKey: nodeKey,
 	})
@@ -42,10 +42,10 @@ func (client *client) SessionCreate(nodeKey string) (session dto.Session, err er
 	return
 }
 
-func (client *client) NodeRegister(nodeKey, clientConfig string) (err error) {
+func (client *clientRest) NodeRegister(nodeKey, connectionConfig string) (err error) {
 	response, err := client.doRequest("POST", "node_register", dto.NodeRegisterRequest{
 		NodeKey:          nodeKey,
-		ConnectionConfig: clientConfig,
+		ConnectionConfig: connectionConfig,
 	})
 	if err == nil {
 		defer response.Body.Close()
@@ -55,7 +55,7 @@ func (client *client) NodeRegister(nodeKey, clientConfig string) (err error) {
 	return
 }
 
-func (client *client) doRequest(method string, path string, payload interface{}) (*http.Response, error) {
+func (client *clientRest) doRequest(method string, path string, payload interface{}) (*http.Response, error) {
 	payloadJson, err := json.Marshal(payload)
 	if err != nil {
 		log.Critical(MYSTERIUM_API_LOG_PREFIX, err)

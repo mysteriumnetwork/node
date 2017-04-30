@@ -1,12 +1,16 @@
 package openvpn
 
-const SERVER_LOG_PREFIX = "[OpenVPN.server] "
+import "sync"
 
-func NewServer(config *ServerConfig) *Server {
+func NewServer(config *ServerConfig, directoryRuntime string) *Server {
+	// Add the management interface socketAddress to the config
+	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
+	config.SetManagementSocket(socketAddress)
+
 	return &Server{
 		config:     config,
-		management: NewManagement(),
-		process:    NewProcess(SERVER_LOG_PREFIX),
+		management: NewManagement(socketAddress, "[server-managemnet] "),
+		process:    NewProcess("[server-openvpn] "),
 	}
 }
 
@@ -16,15 +20,11 @@ type Server struct {
 	process    *Process
 }
 
-func (server *Server) Start() (err error) {
+func (server *Server) Start() error {
 	// Start the management interface (if it isnt already started)
-	path, err := server.management.Start()
-	if err != nil {
+	if err := server.management.Start(); err != nil {
 		return err
 	}
-
-	// Add the management interface path to the config
-	server.config.SetManagementPath(path)
 
 	// Fetch the current params
 	arguments, err := ConfigToArguments(*server.config.Config)
@@ -35,13 +35,24 @@ func (server *Server) Start() (err error) {
 	return server.process.Start(arguments)
 }
 
-func (client *Server) Wait() {
-	client.process.Wait()
+func (client *Server) Wait() error {
+	return client.process.Wait()
 }
 
-func (server *Server) Stop() (err error) {
-	server.process.Stop()
-	server.management.Stop()
+func (server *Server) Stop() {
+	waiter := sync.WaitGroup{}
+	go func() {
+		waiter.Add(1)
+		defer waiter.Done()
 
-	return
+		server.process.Stop()
+	}()
+	go func() {
+		waiter.Add(1)
+		defer waiter.Done()
+
+		server.management.Stop()
+	}()
+
+	waiter.Wait()
 }

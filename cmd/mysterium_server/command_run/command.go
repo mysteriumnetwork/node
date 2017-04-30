@@ -10,16 +10,14 @@ import (
 type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
+
+	ipifyClient ipify.Client
+	mysteriumClient server.Client
+	vpnServer *openvpn.Server
 }
 
-func (cmd *commandRun) Run(args []string) error {
-	options, err := cmd.parseArguments(args)
-	if err != nil {
-		return err
-	}
-
-	ipifyClient := ipify.NewClient()
-	vpnServerIp, err := ipifyClient.GetIp()
+func (cmd *commandRun) Run(options CommandOptions) error {
+	vpnServerIp, err := cmd.ipifyClient.GetIp()
 	if err != nil {
 		return err
 	}
@@ -36,8 +34,7 @@ func (cmd *commandRun) Run(args []string) error {
 		return err
 	}
 
-	mysterium := server.NewClient()
-	if err := mysterium.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
+	if err := cmd.mysteriumClient.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
 		return err
 	}
 
@@ -50,11 +47,18 @@ func (cmd *commandRun) Run(args []string) error {
 		options.DirectoryConfig+"/crl.pem",
 		options.DirectoryConfig+"/ta.key",
 	)
-	vpnServer := openvpn.NewServer(vpnServerConfig)
-	if err := vpnServer.Start(); err != nil {
+	cmd.vpnServer = openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime)
+	if err := cmd.vpnServer.Start(); err != nil {
 		return err
 	}
 
-	vpnServer.Wait()
 	return nil
+}
+
+func (cmd *commandRun) Wait() error {
+	return cmd.vpnServer.Wait()
+}
+
+func (cmd *commandRun) Kill() {
+	cmd.vpnServer.Stop()
 }

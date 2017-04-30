@@ -7,8 +7,20 @@ import (
 )
 
 func main() {
-	command := command_run.NewCommandRun()
-	if err := command.Run(os.Args); err != nil {
+	cmd := command_run.NewCommand()
+
+	options, err := command_run.ParseArguments(os.Args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if err := cmd.Run(options); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if err = cmd.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

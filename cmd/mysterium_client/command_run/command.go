@@ -9,16 +9,13 @@ import (
 type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
+
+	mysteriumClient server.Client
+	vpnClient *openvpn.Client
 }
 
-func (cmd *commandRun) Run(args []string) error {
-	options, err := cmd.parseArguments(args)
-	if err != nil {
-		return err
-	}
-
-	mysterium := server.NewClient()
-	vpnSession, err := mysterium.SessionCreate(options.NodeKey)
+func (cmd *commandRun) Run(options CommandOptions) error {
+	vpnSession, err := cmd.mysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err
 	}
@@ -31,11 +28,19 @@ func (cmd *commandRun) Run(args []string) error {
 		return err
 	}
 
-	vpnClient := openvpn.NewClient(vpnConfig)
-	if err := vpnClient.Start(); err != nil {
+	cmd.vpnClient = openvpn.NewClient(vpnConfig, options.DirectoryRuntime)
+	if err := cmd.vpnClient.Start(); err != nil {
 		return err
 	}
 
-	vpnClient.Wait()
+
 	return nil
+}
+
+func (cmd *commandRun) Wait() error {
+	return cmd.vpnClient.Wait()
+}
+
+func (cmd *commandRun) Kill() {
+	cmd.vpnClient.Stop()
 }

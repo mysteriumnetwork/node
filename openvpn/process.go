@@ -14,7 +14,7 @@ func NewProcess(logPrefix string) *Process {
 
 		cmdExitError:       make(chan error),
 		cmdShutdownStarted: make(chan bool),
-		cmdMonitorsWaiter:  sync.WaitGroup{},
+		cmdShutdownWaiter:  sync.WaitGroup{},
 	}
 }
 
@@ -23,7 +23,7 @@ type Process struct {
 
 	cmdExitError       chan error
 	cmdShutdownStarted chan bool
-	cmdMonitorsWaiter  sync.WaitGroup
+	cmdShutdownWaiter  sync.WaitGroup
 }
 
 func (process *Process) Start(arguments []string) (err error) {
@@ -48,22 +48,20 @@ func (process *Process) Start(arguments []string) (err error) {
 	return
 }
 
-func (process *Process) Wait() {
-	<-process.cmdExitError
+func (process *Process) Wait() error {
+	return <-process.cmdExitError
 }
 
-func (process *Process) Stop() (err error) {
+func (process *Process) Stop() {
 	close(process.cmdShutdownStarted)
-	process.cmdMonitorsWaiter.Wait()
-
-	return
+	process.cmdShutdownWaiter.Wait()
 }
 
 func (process *Process) stdoutMonitor(cmd *exec.Cmd) {
 	stdout, _ := cmd.StdoutPipe()
 	go func() {
-		process.cmdMonitorsWaiter.Add(1)
-		defer process.cmdMonitorsWaiter.Done()
+		process.cmdShutdownWaiter.Add(1)
+		defer process.cmdShutdownWaiter.Done()
 
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
@@ -79,8 +77,8 @@ func (process *Process) stdoutMonitor(cmd *exec.Cmd) {
 func (process *Process) stderrMonitor(cmd *exec.Cmd) {
 	stderr, _ := cmd.StderrPipe()
 	go func() {
-		process.cmdMonitorsWaiter.Add(1)
-		defer process.cmdMonitorsWaiter.Done()
+		process.cmdShutdownWaiter.Add(1)
+		defer process.cmdShutdownWaiter.Done()
 
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
@@ -98,8 +96,8 @@ func (process *Process) waitForExit(cmd *exec.Cmd) {
 }
 
 func (process *Process) waitForShutdown(cmd *exec.Cmd) {
-	process.cmdMonitorsWaiter.Add(1)
-	defer process.cmdMonitorsWaiter.Done()
+	process.cmdShutdownWaiter.Add(1)
+	defer process.cmdShutdownWaiter.Done()
 
 	select {
 	// Wait for shutdown
