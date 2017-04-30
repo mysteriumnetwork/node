@@ -41,6 +41,6 @@ func (cmd *commandRun) Wait() {
 	cmd.vpnClient.Wait()
 }
 
-func (cmd *commandRun) Kill() error {
-	return cmd.vpnClient.Stop()
+func (cmd *commandRun) Kill() {
+	cmd.vpnClient.Stop()
 }

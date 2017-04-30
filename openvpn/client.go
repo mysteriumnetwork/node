@@ -1,5 +1,7 @@
 package openvpn
 
+import "sync"
+
 func NewClient(config *ClientConfig, directoryRuntime string) *Client {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
@@ -39,8 +41,20 @@ func (client *Client) Wait() {
 }
 
 func (client *Client) Stop() error {
-	client.process.Stop()
-	client.management.Stop()
+	waiter := sync.WaitGroup{}
+	go func() {
+		waiter.Add(1)
+		defer waiter.Done()
 
+		client.process.Stop()
+	}()
+	go func() {
+		waiter.Add(1)
+		defer waiter.Done()
+
+		client.management.Stop()
+	}()
+
+	waiter.Wait()
 	return nil
 }
