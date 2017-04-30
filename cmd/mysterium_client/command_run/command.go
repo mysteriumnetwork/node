@@ -28,7 +28,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		return err
 	}
 
-	cmd.vpnClient = openvpn.NewClient(vpnConfig)
+	cmd.vpnClient = openvpn.NewClient(vpnConfig, options.DirectoryRuntime)
 	if err := cmd.vpnClient.Start(); err != nil {
 		return err
 	}

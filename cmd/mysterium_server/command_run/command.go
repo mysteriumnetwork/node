@@ -47,7 +47,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		options.DirectoryConfig+"/crl.pem",
 		options.DirectoryConfig+"/ta.key",
 	)
-	cmd.vpnServer = openvpn.NewServer(vpnServerConfig)
+	cmd.vpnServer = openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime)
 	if err := cmd.vpnServer.Start(); err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"net"
 	"net/textproto"
-	"os"
 	"regexp"
 	"strconv"
 	"sync"
@@ -17,10 +16,10 @@ import (
 const MANAGEMENT_LOG_PREFIX = "[OpenVPN.managemnet] "
 
 type Management struct {
+	socketAddress string
+
 	ManagementRead  chan string
 	ManagementWrite chan string
-
-	Path string
 
 	events chan []string
 
@@ -32,8 +31,10 @@ type Management struct {
 	shutdown  chan bool
 }
 
-func NewManagement() *Management {
+func NewManagement(socketAddress string) *Management {
 	return &Management{
+		socketAddress: socketAddress,
+
 		ManagementRead:  make(chan string),
 		ManagementWrite: make(chan string),
 
@@ -45,20 +46,19 @@ func NewManagement() *Management {
 	}
 }
 
-func (management *Management) Start() (path string, err error) {
-	management.Path = "/tmp/openvpn-management-" + strconv.Itoa(os.Getpid()) + ".sock"
-	log.Info(MANAGEMENT_LOG_PREFIX, "Connecting to socket:", management.Path)
+func (management *Management) Start() error {
+	log.Info(MANAGEMENT_LOG_PREFIX, "Connecting to socket:", management.socketAddress)
 
-	listener, err := net.Listen("unix", management.Path)
+	listener, err := net.Listen("unix", management.socketAddress)
 	if err != nil {
 		log.Error(MANAGEMENT_LOG_PREFIX, err)
-		return
+		return err
 	}
 
 	go management.waitForShutdown(listener)
 	go management.waitForConnections(listener)
 
-	return management.Path, err
+	return nil
 }
 
 func (management *Management) Stop() {

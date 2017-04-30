@@ -8,6 +8,7 @@ import (
 type CommandOptions struct {
 	NodeKey         string
 	DirectoryConfig string
+	DirectoryRuntime string
 }
 
 func ParseArguments(args []string) (options CommandOptions, err error) {
@@ -23,6 +24,12 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"config-dir",
 		".",
 		"Configs directory containing all configuration files",
+	)
+	flags.StringVar(
+		&options.DirectoryRuntime,
+		"runtime-dir",
+		".",
+		"Runtime directory for temp files (should be writable)",
 	)
 
 	err = flags.Parse(args[1:])

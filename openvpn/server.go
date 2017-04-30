@@ -2,10 +2,14 @@ package openvpn
 
 const SERVER_LOG_PREFIX = "[OpenVPN.server] "
 
-func NewServer(config *ServerConfig) *Server {
+func NewServer(config *ServerConfig, directoryRuntime string) *Server {
+	// Add the management interface socketAddress to the config
+	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
+	config.SetManagementSocket(socketAddress)
+
 	return &Server{
 		config:     config,
-		management: NewManagement(),
+		management: NewManagement(socketAddress),
 		process:    NewProcess(SERVER_LOG_PREFIX),
 	}
 }
@@ -16,15 +20,11 @@ type Server struct {
 	process    *Process
 }
 
-func (server *Server) Start() (err error) {
+func (server *Server) Start() error {
 	// Start the management interface (if it isnt already started)
-	path, err := server.management.Start()
-	if err != nil {
+	if err := server.management.Start(); err != nil {
 		return err
 	}
-
-	// Add the management interface path to the config
-	server.config.SetManagementPath(path)
 
 	// Fetch the current params
 	arguments, err := ConfigToArguments(*server.config.Config)
@@ -39,9 +39,9 @@ func (client *Server) Wait() {
 	client.process.Wait()
 }
 
-func (server *Server) Stop() (err error) {
+func (server *Server) Stop() error {
 	server.process.Stop()
 	server.management.Stop()
 
-	return
+	return nil
 }
