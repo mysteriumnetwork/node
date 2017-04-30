@@ -35,8 +35,8 @@ func (server *Server) Start() error {
 	return server.process.Start(arguments)
 }
 
-func (client *Server) Wait() {
-	client.process.Wait()
+func (client *Server) Wait() error {
+	return client.process.Wait()
 }
 
 func (server *Server) Stop() {

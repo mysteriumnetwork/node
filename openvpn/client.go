@@ -36,8 +36,8 @@ func (client *Client) Start() error {
 	return client.process.Start(arguments)
 }
 
-func (client *Client) Wait() {
-	client.process.Wait()
+func (client *Client) Wait() error {
+	return client.process.Wait()
 }
 
 func (client *Client) Stop() error {

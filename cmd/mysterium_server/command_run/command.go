@@ -55,8 +55,8 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 	return nil
 }
 
-func (cmd *commandRun) Wait() {
-	cmd.vpnServer.Wait()
+func (cmd *commandRun) Wait() error {
+	return cmd.vpnServer.Wait()
 }
 
 func (cmd *commandRun) Kill() {

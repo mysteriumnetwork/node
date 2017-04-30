@@ -48,8 +48,8 @@ func (process *Process) Start(arguments []string) (err error) {
 	return
 }
 
-func (process *Process) Wait() {
-	<-process.cmdExitError
+func (process *Process) Wait() error {
+	return <-process.cmdExitError
 }
 
 func (process *Process) Stop() {
