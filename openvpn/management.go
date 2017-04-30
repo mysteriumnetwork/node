@@ -13,10 +13,9 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-const MANAGEMENT_LOG_PREFIX = "[OpenVPN.managemnet] "
-
 type Management struct {
 	socketAddress string
+	logPrefix string
 
 	ManagementRead  chan string
 	ManagementWrite chan string
@@ -31,9 +30,10 @@ type Management struct {
 	shutdown  chan bool
 }
 
-func NewManagement(socketAddress string) *Management {
+func NewManagement(socketAddress, logPrefix string) *Management {
 	return &Management{
 		socketAddress: socketAddress,
+		logPrefix: logPrefix,
 
 		ManagementRead:  make(chan string),
 		ManagementWrite: make(chan string),
@@ -47,11 +47,11 @@ func NewManagement(socketAddress string) *Management {
 }
 
 func (management *Management) Start() error {
-	log.Info(MANAGEMENT_LOG_PREFIX, "Connecting to socket:", management.socketAddress)
+	log.Info(management.logPrefix, "Connecting to socket:", management.socketAddress)
 
 	listener, err := net.Listen("unix", management.socketAddress)
 	if err != nil {
-		log.Error(MANAGEMENT_LOG_PREFIX, err)
+		log.Error(management.logPrefix, err)
 		return err
 	}
 
@@ -62,11 +62,11 @@ func (management *Management) Start() error {
 }
 
 func (management *Management) Stop() {
-	log.Info(MANAGEMENT_LOG_PREFIX, "Shutdown")
+	log.Info(management.logPrefix, "Shutdown")
 	close(management.shutdown)
 
 	management.waitGroup.Wait()
-	log.Info(MANAGEMENT_LOG_PREFIX, "Shutdown finished")
+	log.Info(management.logPrefix, "Shutdown finished")
 }
 
 func (management *Management) waitForShutdown(listener net.Listener) {
@@ -83,20 +83,20 @@ func (management *Management) waitForConnections(listener net.Listener) {
 		if err != nil {
 			select {
 			case <-management.shutdown:
-				log.Info(MANAGEMENT_LOG_PREFIX, "Connection closed")
+				log.Info(management.logPrefix, "Connection closed")
 			default:
-				log.Critical(MANAGEMENT_LOG_PREFIX, "Connection accept error:", err)
+				log.Critical(management.logPrefix, "Connection accept error:", err)
 			}
 			return
 		}
-		log.Info(MANAGEMENT_LOG_PREFIX, "Connection accepted")
+		log.Info(management.logPrefix, "Connection accepted")
 
 		go management.server(connection)
 	}
 }
 
 func (management *Management) server(connection net.Conn) {
-	log.Info(MANAGEMENT_LOG_PREFIX, "Server started")
+	log.Info(management.logPrefix, "Server started")
 
 	/*
 		go func() {
@@ -105,10 +105,10 @@ func (management *Management) server(connection net.Conn) {
 				<-time.After(time.Second)
 				_, err := c.Write([]byte("push \"echo hej\"\n"))
 				if err != nil {
-					log.Error(MANAGEMENT_LOG_PREFIX, "Failed management write:", err)
+					log.Error(management.logPrefix, "Failed management write:", err)
 					return
 				}
-				log.Info(MANAGEMENT_LOG_PREFIX, "Push echo hej")
+				log.Info(management.logPrefix, "Push echo hej")
 			}
 		}()
 	*/
@@ -116,7 +116,7 @@ func (management *Management) server(connection net.Conn) {
 	go func() {
 		for {
 			rows := <-management.events
-			log.Info(MANAGEMENT_LOG_PREFIX, "Event received:", rows)
+			log.Info(management.logPrefix, "Event received:", rows)
 		}
 	}()
 
@@ -126,7 +126,7 @@ func (management *Management) server(connection net.Conn) {
 		if err != nil {
 			return
 		}
-		//log.Info(MANAGEMENT_LOG_PREFIX, "Line received:", line)
+		//log.Info(management.logPrefix, "Line received:", line)
 
 		libeBytes := []byte(line)
 		management.parse(libeBytes, false)
@@ -135,7 +135,7 @@ func (management *Management) server(connection net.Conn) {
 
 // https://openvpn.net/index.php/open-source/documentation/miscellaneous/79-management-interface.html
 func (management *Management) parse(line []byte, retry bool) {
-	//log.Error(MANAGEMENT_LOG_PREFIX, "Parsing:", string(line))
+	//log.Error(management.logPrefix, "Parsing:", string(line))
 
 	eventsConfig := map[string]string{
 		// -- Log message output as controlled by the "log" command.
@@ -167,7 +167,7 @@ mainLoop:
 			case <-time.After(time.Second):
 				log.Errorf(
 					"%sFailed to transport message (%client): %s |%s|",
-					MANAGEMENT_LOG_PREFIX,
+					management.logPrefix,
 					management.events,
 					eventName,
 					row,

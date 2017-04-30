@@ -1,7 +1,5 @@
 package openvpn
 
-const SERVER_LOG_PREFIX = "[OpenVPN.server] "
-
 func NewServer(config *ServerConfig, directoryRuntime string) *Server {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
@@ -9,8 +7,8 @@ func NewServer(config *ServerConfig, directoryRuntime string) *Server {
 
 	return &Server{
 		config:     config,
-		management: NewManagement(socketAddress),
-		process:    NewProcess(SERVER_LOG_PREFIX),
+		management: NewManagement(socketAddress, "[server-managemnet] "),
+		process:    NewProcess("[server-openvpn] "),
 	}
 }
 
