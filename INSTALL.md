@@ -62,7 +62,6 @@ sudo mysterium_client --node=12345
 
 
 ## Mysterium VPN client (standalone Apple Mac/OSX/Darwin binaries)
-### Download 
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_{VERSION}_darwin_amd64
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_{VERSION}_darwin_386
 
