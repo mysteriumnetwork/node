@@ -55,6 +55,19 @@ func (client *clientRest) NodeRegister(nodeKey, connectionConfig string) (err er
 	return
 }
 
+func (client *clientRest) NodeSendStats(nodeKey string, sessionList []dto.SessionStats) (err error) {
+	response, err := client.doRequest("POST", "node_send_stats", dto.NodeStatsRequest{
+		NodeKey:  nodeKey,
+		Sessions: sessionList,
+	})
+	if err == nil {
+		defer response.Body.Close()
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "Node stats sent: ", nodeKey)
+	}
+
+	return nil
+}
+
 func (client *clientRest) doRequest(method string, path string, payload interface{}) (*http.Response, error) {
 	payloadJson, err := json.Marshal(payload)
 	if err != nil {
