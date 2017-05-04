@@ -4,16 +4,18 @@ import (
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
+	"github.com/mysterium/node/server/dto"
 	"io"
+	"time"
 )
 
 type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
 
-	ipifyClient ipify.Client
+	ipifyClient     ipify.Client
 	mysteriumClient server.Client
-	vpnServer *openvpn.Server
+	vpnServer       *openvpn.Server
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
@@ -37,6 +39,13 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 	if err := cmd.mysteriumClient.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
 		return err
 	}
+
+	go func() {
+		for {
+			time.Sleep(1 * time.Minute)
+			cmd.mysteriumClient.NodeSendStats(options.NodeKey, []dto.SessionStats{})
+		}
+	}()
 
 	vpnServerConfig := openvpn.NewServerConfig(
 		"10.8.0.0", "255.255.255.0",

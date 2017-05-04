@@ -3,8 +3,8 @@ package server
 import (
 	"github.com/mysterium/node/server/dto"
 
-	log "github.com/cihub/seelog"
 	"fmt"
+	log "github.com/cihub/seelog"
 )
 
 func NewClientFake() Client {
@@ -24,10 +24,16 @@ func (client *clientFake) NodeRegister(nodeKey, connectionConfig string) (err er
 	return nil
 }
 
+func (client *clientFake) NodeSendStats(nodeKey string, sessionStats []dto.SessionStats) (err error) {
+	log.Info(MYSTERIUM_API_LOG_PREFIX, "Node stats sent: ", nodeKey)
+
+	return nil
+}
+
 func (client *clientFake) SessionCreate(nodeKey string) (session dto.Session, err error) {
 	if connectionConfig, ok := client.connectionConfigByNode[nodeKey]; ok {
 		session = dto.Session{
-			Id: nodeKey + "-session",
+			Id:               nodeKey + "-session",
 			ConnectionConfig: connectionConfig,
 		}
 		return
