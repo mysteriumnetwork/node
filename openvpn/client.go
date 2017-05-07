@@ -9,7 +9,7 @@ func NewClient(config *ClientConfig, directoryRuntime string) *Client {
 
 	return &Client{
 		config:     config,
-		management: NewManagement(socketAddress, "[client-managemnet] "),
+		management: NewManagement(socketAddress, "[client-management] "),
 		process:    NewProcess("[client-openvpn] "),
 	}
 }

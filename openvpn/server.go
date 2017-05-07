@@ -9,7 +9,7 @@ func NewServer(config *ServerConfig, directoryRuntime string) *Server {
 
 	return &Server{
 		config:     config,
-		management: NewManagement(socketAddress, "[server-managemnet] "),
+		management: NewManagement(socketAddress, "[server-management] "),
 		process:    NewProcess("[server-openvpn] "),
 	}
 }
