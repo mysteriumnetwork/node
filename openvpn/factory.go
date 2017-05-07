@@ -47,7 +47,7 @@ func NewClientConfig(
 	config.setParam("setenv", "opt block-outside-dns")
 	config.setParam("redirect-gateway", "def1 bypass-dhcp")
 	config.setParam("dhcp-option", "DNS 208.67.222.222")
-	config.setParam("dhcp-option", "208.67.220.220")
+	config.setParam("dhcp-option", "DNS 208.67.220.220")
 
 	return &config
 }
