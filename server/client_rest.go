@@ -12,7 +12,7 @@ import (
 	"github.com/mysterium/node/server/dto"
 )
 
-const MYSTERIUM_API_URL = "https://mvp.mysterium.network:5000//v1"
+const MYSTERIUM_API_URL = "https://mvp.mysterium.network:5000/v1"
 const MYSTERIUM_API_CLIENT = "goclient-v0.1"
 const MYSTERIUM_API_LOG_PREFIX = "[Mysterium.api] "
 
