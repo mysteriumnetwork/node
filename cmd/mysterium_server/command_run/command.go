@@ -2,6 +2,7 @@ package command_run
 
 import (
 	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/server/dto"
@@ -15,12 +16,21 @@ type commandRun struct {
 
 	ipifyClient     ipify.Client
 	mysteriumClient server.Client
+	natService      nat.NATService
 	vpnServer       *openvpn.Server
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
 	vpnServerIp, err := cmd.ipifyClient.GetIp()
 	if err != nil {
+		return err
+	}
+
+	cmd.natService.Add(nat.RuleForwarding{
+		SourceAddress: "10.8.0.0/24",
+		TargetIp:      vpnServerIp,
+	})
+	if err = cmd.natService.Start(); err != nil {
 		return err
 	}
 
@@ -36,17 +46,6 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		return err
 	}
 
-	if err := cmd.mysteriumClient.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
-		return err
-	}
-
-	go func() {
-		for {
-			time.Sleep(1 * time.Minute)
-			cmd.mysteriumClient.NodeSendStats(options.NodeKey, []dto.SessionStats{})
-		}
-	}()
-
 	vpnServerConfig := openvpn.NewServerConfig(
 		"10.8.0.0", "255.255.255.0",
 		options.DirectoryConfig+"/ca.crt",
@@ -61,6 +60,16 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		return err
 	}
 
+	if err := cmd.mysteriumClient.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
+		return err
+	}
+	go func() {
+		for {
+			time.Sleep(1 * time.Minute)
+			cmd.mysteriumClient.NodeSendStats(options.NodeKey, []dto.SessionStats{})
+		}
+	}()
+
 	return nil
 }
 
@@ -70,4 +79,5 @@ func (cmd *commandRun) Wait() error {
 
 func (cmd *commandRun) Kill() {
 	cmd.vpnServer.Stop()
+	cmd.natService.Stop()
 }
