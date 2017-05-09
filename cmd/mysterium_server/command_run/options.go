@@ -6,8 +6,8 @@ import (
 )
 
 type CommandOptions struct {
-	NodeKey         string
-	DirectoryConfig string
+	NodeKey          string
+	DirectoryConfig  string
 	DirectoryRuntime string
 }
 
@@ -16,8 +16,8 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.NodeKey,
 		"node",
-		"12345",
-		"Unique identifier for my Mysterium VPN node",
+		"",
+		"Unique identifier for Mysterium VPN node",
 	)
 	flags.StringVar(
 		&options.DirectoryConfig,

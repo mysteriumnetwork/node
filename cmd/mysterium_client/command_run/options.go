@@ -15,7 +15,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.NodeKey,
 		"node",
-		"12345",
+		"",
 		"Mysterium VPN node to make connection with",
 	)
 	flags.StringVar(
