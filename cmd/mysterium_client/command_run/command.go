@@ -1,10 +1,11 @@
 package command_run
 
 import (
+	"github.com/mysterium/node/bytescount"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"io"
-	"github.com/mysterium/node/bytescount"
+	"time"
 )
 
 type commandRun struct {
@@ -12,7 +13,7 @@ type commandRun struct {
 	outputError io.Writer
 
 	mysteriumClient server.Client
-	vpnClient *openvpn.Client
+	vpnClient       *openvpn.Client
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
@@ -32,12 +33,11 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 	cmd.vpnClient = openvpn.NewClient(
 		vpnConfig,
 		options.DirectoryRuntime,
-		bytescount.NewMiddleware(),
+		bytescount.NewMiddleware(cmd.mysteriumClient, vpnSession.Id, 1*time.Minute),
 	)
 	if err := cmd.vpnClient.Start(); err != nil {
 		return err
 	}
-
 
 	return nil
 }

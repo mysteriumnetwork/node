@@ -42,3 +42,9 @@ func (client *clientFake) SessionCreate(nodeKey string) (session dto.Session, er
 	err = fmt.Errorf("Fake node not found: %s", nodeKey)
 	return
 }
+
+func (client *clientFake) SessionSendStats(sessionId string, sessionStats dto.SessionStats) (err error) {
+	log.Info(MYSTERIUM_API_LOG_PREFIX, "Session stats sent: ", sessionId)
+
+	return nil
+}

@@ -1,29 +1,39 @@
 package bytescount
 
 import (
-	"net"
+	"fmt"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/server"
+	"github.com/mysterium/node/server/dto"
+	"net"
 	"regexp"
 	"strconv"
+	"time"
 )
 
 type middleware struct {
+	mysteriumClient server.Client
+	interval        time.Duration
+	sessionId       string
+
 	connection net.Conn
-	bytesIn int
-	bytesOut int
 }
 
-func NewMiddleware() openvpn.ManagementMiddleware {
+func NewMiddleware(mysteriumClient server.Client, sessionId string, interval time.Duration) openvpn.ManagementMiddleware {
 	return &middleware{
+		mysteriumClient: mysteriumClient,
+		interval:        interval,
+		sessionId:       sessionId,
+
 		connection: nil,
-		bytesIn: 0,
-		bytesOut: 0,
 	}
 }
 
 func (middleware *middleware) Start(connection net.Conn) error {
 	middleware.connection = connection
-	_, err := middleware.connection.Write([]byte("bytecount 5\n"))
+
+	command := fmt.Sprintf("bytecount %d\n", int(middleware.interval.Seconds()))
+	_, err := middleware.connection.Write([]byte(command))
 
 	return err
 }
@@ -50,13 +60,16 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-
 	bytesOut, err := strconv.Atoi(match[2])
 	if err != nil {
 		return
 	}
 
-	middleware.bytesIn += bytesIn
-	middleware.bytesOut += bytesOut
+	err = middleware.mysteriumClient.SessionSendStats(middleware.sessionId, dto.SessionStats{
+		Id:            middleware.sessionId,
+		BytesSent:     bytesOut,
+		BytesReceived: bytesIn,
+	})
+
 	return
 }

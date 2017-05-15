@@ -1,21 +1,23 @@
 package bytescount
 
 import (
+	"errors"
+	"github.com/mysterium/node/server"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"errors"
+	"time"
 )
 
 func Test_Factory(t *testing.T) {
-	middleware := NewMiddleware()
+	middleware := NewMiddleware(server.NewClientFake(), "session-test", 1*time.Minute)
 	assert.NotNil(t, middleware)
 }
 
 func Test_ConsumeLine(t *testing.T) {
 	var tests = []struct {
-		line  string
+		line             string
 		expectedConsumed bool
-		expectedError error
+		expectedError    error
 	}{
 		{">BYTECOUNT:3018,3264", true, nil},
 		{">BYTECOUNT:0,3264", true, nil},
@@ -28,8 +30,7 @@ func Test_ConsumeLine(t *testing.T) {
 		{">BYTECOUNTT:3018,3264", false, nil},
 	}
 
-
-	middleware := middleware{}
+	middleware := NewMiddleware(server.NewClientFake(), "session-test", 1*time.Minute)
 	for _, test := range tests {
 		consumed, err := middleware.ConsumeLine(test.line)
 		if test.expectedError != nil {

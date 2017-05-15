@@ -16,7 +16,7 @@ const MYSTERIUM_API_URL = "https://mvp.mysterium.network:5000/v1"
 const MYSTERIUM_API_CLIENT = "goclient-v0.1"
 const MYSTERIUM_API_LOG_PREFIX = "[Mysterium.api] "
 
-func NewClient() *clientRest {
+func NewClient() Client {
 	httpClient := http.Client{
 		Transport: &http.Transport{},
 	}
@@ -27,19 +27,6 @@ func NewClient() *clientRest {
 
 type clientRest struct {
 	httpClient http.Client
-}
-
-func (client *clientRest) SessionCreate(nodeKey string) (session dto.Session, err error) {
-	response, err := client.doRequest("POST", "client_create_session", dto.SessionStartRequest{
-		NodeKey: nodeKey,
-	})
-	if err == nil {
-		defer response.Body.Close()
-		err = parseResponseJson(response, &session)
-		log.Info(MYSTERIUM_API_LOG_PREFIX, "Created new session: ", session.Id)
-	}
-
-	return
 }
 
 func (client *clientRest) NodeRegister(nodeKey, connectionConfig string) (err error) {
@@ -63,6 +50,29 @@ func (client *clientRest) NodeSendStats(nodeKey string, sessionList []dto.Sessio
 	if err == nil {
 		defer response.Body.Close()
 		log.Info(MYSTERIUM_API_LOG_PREFIX, "Node stats sent: ", nodeKey)
+	}
+
+	return nil
+}
+
+func (client *clientRest) SessionCreate(nodeKey string) (session dto.Session, err error) {
+	response, err := client.doRequest("POST", "client_create_session", dto.SessionStartRequest{
+		NodeKey: nodeKey,
+	})
+	if err == nil {
+		defer response.Body.Close()
+		err = parseResponseJson(response, &session)
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "Session created: ", session.Id)
+	}
+
+	return
+}
+
+func (client *clientRest) SessionSendStats(sessionId string, sessionStats dto.SessionStats) (err error) {
+	response, err := client.doRequest("POST", "client_send_stats", sessionStats)
+	if err == nil {
+		defer response.Body.Close()
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "Session stats sent: ", sessionId)
 	}
 
 	return nil
