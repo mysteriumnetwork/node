@@ -36,8 +36,7 @@ func (c *Config) setFlag(name string) {
 
 func (c *Config) SetManagementSocket(socketAddress string) {
 	c.setParam("management", socketAddress+" unix")
-	c.setFlag("management-signal")
-	c.setFlag("management-up-down")
+	c.setFlag("management-client")
 }
 
 func (c *Config) SetPort(port int) {
