@@ -1,7 +1,7 @@
 package command_run
 
 import (
-	"github.com/mysterium/node/bytescount"
+	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"io"
@@ -33,7 +33,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 	cmd.vpnClient = openvpn.NewClient(
 		vpnConfig,
 		options.DirectoryRuntime,
-		bytescount.NewMiddleware(cmd.mysteriumClient, vpnSession.Id, 1*time.Minute),
+		bytescount_client.NewMiddleware(cmd.mysteriumClient, vpnSession.Id, 1*time.Minute),
 	)
 	if err := cmd.vpnClient.Start(); err != nil {
 		return err

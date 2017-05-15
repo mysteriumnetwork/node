@@ -1,4 +1,4 @@
-package bytescount
+package bytescount_client
 
 import (
 	"errors"
