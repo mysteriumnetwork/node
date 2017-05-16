@@ -26,7 +26,7 @@ service mysterium-node status
 
 ### Installation
 ```bash
-curl https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_{VERSION}_linux_amd64.deb
+wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_{VERSION}_linux_amd64.deb
 sudo dpkg --install mysterium-client_{VERSION}_linux_amd64.deb
 sudo apt-get install --fix-broken
 ```
