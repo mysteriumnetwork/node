@@ -2,47 +2,42 @@ package openvpn
 
 import (
 	"bufio"
-	"bytes"
 	"net"
 	"net/textproto"
-	"regexp"
-	"strconv"
 	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
 )
 
+// https://openvpn.net/index.php/open-source/documentation/miscellaneous/79-management-interface.html
 type Management struct {
 	socketAddress string
-	logPrefix string
+	logPrefix     string
 
-	ManagementRead  chan string
-	ManagementWrite chan string
+	lineReceived chan string
+	middlewares  []ManagementMiddleware
 
-	events chan []string
-
-	currentClient string
-	clientEnv     map[string]string
-
-	buffer    []byte
-	waitGroup sync.WaitGroup
-	shutdown  chan bool
+	listenerShutdownStarted chan bool
+	listenerShutdownWaiter  sync.WaitGroup
 }
 
-func NewManagement(socketAddress, logPrefix string) *Management {
+type ManagementMiddleware interface {
+	Start(connection net.Conn) error
+	Stop() error
+	ConsumeLine(line string) (consumed bool, err error)
+}
+
+func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMiddleware) *Management {
 	return &Management{
 		socketAddress: socketAddress,
-		logPrefix: logPrefix,
+		logPrefix:     logPrefix,
 
-		ManagementRead:  make(chan string),
-		ManagementWrite: make(chan string),
+		lineReceived: make(chan string),
+		middlewares:  middlewares,
 
-		events: make(chan []string),
-
-		clientEnv: make(map[string]string, 0),
-		buffer:    make([]byte, 0),
-		shutdown:  make(chan bool),
+		listenerShutdownStarted: make(chan bool),
+		listenerShutdownWaiter:  sync.WaitGroup{},
 	}
 }
 
@@ -56,6 +51,7 @@ func (management *Management) Start() error {
 	}
 
 	go management.waitForShutdown(listener)
+	go management.deliverLines()
 	go management.waitForConnections(listener)
 
 	return nil
@@ -63,135 +59,83 @@ func (management *Management) Start() error {
 
 func (management *Management) Stop() {
 	log.Info(management.logPrefix, "Shutdown")
-	close(management.shutdown)
+	close(management.listenerShutdownStarted)
 
-	management.waitGroup.Wait()
+	management.listenerShutdownWaiter.Wait()
 	log.Info(management.logPrefix, "Shutdown finished")
 }
 
 func (management *Management) waitForShutdown(listener net.Listener) {
-	<-management.shutdown
+	<-management.listenerShutdownStarted
+
+	for _, middleware := range management.middlewares {
+		middleware.Stop()
+	}
+
 	listener.Close()
 }
 
 func (management *Management) waitForConnections(listener net.Listener) {
-	management.waitGroup.Add(1)
-	defer management.waitGroup.Done()
+	management.listenerShutdownWaiter.Add(1)
+	defer management.listenerShutdownWaiter.Done()
 
 	for {
 		connection, err := listener.Accept()
 		if err != nil {
 			select {
-			case <-management.shutdown:
+			case <-management.listenerShutdownStarted:
 				log.Info(management.logPrefix, "Connection closed")
 			default:
-				log.Critical(management.logPrefix, "Connection accept error:", err)
+				log.Critical(management.logPrefix, "Connection accept error: ", err)
 			}
 			return
 		}
-		log.Info(management.logPrefix, "Connection accepted")
 
-		go management.server(connection)
+		go management.serveNewConnection(connection)
 	}
 }
 
-func (management *Management) server(connection net.Conn) {
-	log.Info(management.logPrefix, "Server started")
+func (management *Management) serveNewConnection(connection net.Conn) {
+	log.Info(management.logPrefix, "New connection started")
 
-	/*
-		go func() {
-			//c.Write([]byte("status\n"))
-			for {
-				<-time.After(time.Second)
-				_, err := c.Write([]byte("push \"echo hej\"\n"))
-				if err != nil {
-					log.Error(management.logPrefix, "Failed management write:", err)
-					return
-				}
-				log.Info(management.logPrefix, "Push echo hej")
-			}
-		}()
-	*/
-
-	go func() {
-		for {
-			rows := <-management.events
-			log.Info(management.logPrefix, "Event received:", rows)
-		}
-	}()
+	for _, middleware := range management.middlewares {
+		middleware.Start(connection)
+	}
 
 	reader := textproto.NewReader(bufio.NewReader(connection))
 	for {
 		line, err := reader.ReadLine()
 		if err != nil {
+			log.Warn(management.logPrefix, "Connection failed to read. ", err)
 			return
 		}
-		//log.Info(management.logPrefix, "Line received:", line)
+		log.Debug(management.logPrefix, "Line received: ", line)
 
-		libeBytes := []byte(line)
-		management.parse(libeBytes, false)
+		// Try to deliver the message
+		select {
+		case management.lineReceived <- line:
+		case <-time.After(time.Second):
+			log.Error(management.logPrefix, "Failed to transport line: ", line)
+		}
 	}
 }
 
-// https://openvpn.net/index.php/open-source/documentation/miscellaneous/79-management-interface.html
-func (management *Management) parse(line []byte, retry bool) {
-	//log.Error(management.logPrefix, "Parsing:", string(line))
+func (management *Management) deliverLines() {
+	for {
+		line := <-management.lineReceived
+		log.Debug(management.logPrefix, "Line delivering: ", line)
 
-	eventsConfig := map[string]string{
-		// -- Log message output as controlled by the "log" command.
-		"log": ">LOG:([^\r\n]*)$",
-	}
+		lineConsumed := false
+		for _, middleware := range management.middlewares {
+			consumed, err := middleware.ConsumeLine(line)
+			if err != nil {
+				log.Error(management.logPrefix, "Failed to deliver line: ", line, ". ", err)
+			}
 
-mainLoop:
-	for eventName, eventRegex := range eventsConfig {
-		reg, _ := regexp.Compile(eventRegex)
-		match := reg.FindAllSubmatchIndex(line, -1)
-		if len(match) == 0 {
-			continue
+			lineConsumed = lineConsumed || consumed
 		}
-
-		for _, row := range match {
-			// Extract all strings of the current match
-			strings := []string{eventName}
-			for index := range row {
-				if index%2 > 0 { // Skipp all odd indexes
-					continue
-				}
-
-				strings = append(strings, string(line[row[index]:row[index+1]]))
-			}
-
-			// Try to deliver the message
-			select {
-			case management.events <- strings:
-			case <-time.After(time.Second):
-				log.Errorf(
-					"%sFailed to transport message (%client): %s |%s|",
-					management.logPrefix,
-					management.events,
-					eventName,
-					row,
-					strings,
-				)
-			}
-
-			if row[0] > 0 {
-				log.Warn("Trowing away message: ", strconv.Quote(string(line[:row[0]])))
-			}
-
-			// Just save the rest of the message
-			line = bytes.Trim(line[row[1]:], "\x00")
-
-			continue mainLoop
+		if !lineConsumed {
+			log.Warn(management.logPrefix, "Line not delivered: ", line)
 		}
-	}
-
-	if len(line) > 0 && !retry {
-		//log.Warn("Could not find message, adding to buffer: ", string(line))
-		management.buffer = append(management.buffer, line...)
-		management.buffer = append(management.buffer, '\n')
-		management.parse(management.buffer, true)
-	} else if len(line) > 0 {
-		management.buffer = line
 	}
 }

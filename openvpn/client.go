@@ -2,14 +2,14 @@ package openvpn
 
 import "sync"
 
-func NewClient(config *ClientConfig, directoryRuntime string) *Client {
+func NewClient(config *ClientConfig, directoryRuntime string, middlewares ...ManagementMiddleware) *Client {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
 	config.SetManagementSocket(socketAddress)
 
 	return &Client{
 		config:     config,
-		management: NewManagement(socketAddress, "[client-managemnet] "),
+		management: NewManagement(socketAddress, "[client-management] ", middlewares...),
 		process:    NewProcess("[client-openvpn] "),
 	}
 }
