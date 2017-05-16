@@ -62,13 +62,8 @@ sudo mysterium_client --node=12345
 
 
 ## Mysterium VPN client (standalone Apple Mac/OSX/Darwin binaries)
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_darwin_amd64
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_darwin_386
-
-
-### Mysterium VPN client (standalone Windows binaries)
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_windows_amd64.exe
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_windows_386.exe
+ * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_osx_amd64
+ * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_osx_386
 
 
 ## Build from source code
