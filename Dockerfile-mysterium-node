@@ -1,15 +1,21 @@
 FROM ubuntu:latest
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
-# e.g. PACKAGE_FILE="build/package/mysterium-node_0.0.1_linux_amd64.deb"
-ARG PACKAGE_FILE
-COPY $PACKAGE_FILE /tmp/mysterium-node.deb
+ENV VERSION 0.0.6
+ENV NODE 321
 
 # Install packages
 RUN apt-get update \
-    && dpkg --install /tmp/mysterium-node.deb
-    && apt-get install --fix-broken \
+    && apt install -y wget openvpn iptables\
+    && wget https://github.com/MysteriumNetwork/node/releases/download/${VERSION}/mysterium-node_linux_amd64.deb \
+    && dpkg --install mysterium-node_linux_amd64.deb\
+    && apt-get install -y --fix-broken \
     && rm -rf /var/cache/apk/* \
-    && rm /tmp/mysterium-node.deb
+    && rm mysterium-node_linux_amd64.deb
 
-ENTRYPOINT ["/usr/bin/mysterium_server"]
+COPY entrypoint-node.sh /entrypoint-node.sh
+RUN chmod +x /entrypoint-node.sh
+
+ENTRYPOINT ["/entrypoint-node.sh"]
+
+CMD mysterium_server --config-dir=/etc/mysterium-node --node=${NODE} --runtime-dir=/tmp

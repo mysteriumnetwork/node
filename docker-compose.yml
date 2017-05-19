@@ -6,12 +6,16 @@ services:
       context: .
       dockerfile: Dockerfile-mysterium-node
     container_name: mysterium-node
+    cap_add:
+      - NET_ADMIN
     networks:
       - default
     ports:
       - 1194:1194
     volumes:
       - .:/application
+    environment:
+      - NODE=${NODE}
 
   mysterium-client:
     build:
