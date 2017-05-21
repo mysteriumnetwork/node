@@ -4,7 +4,7 @@ https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
 ### Installation
 ```bash
 sudo apt-get install docker.io
-sudo docker run --cap-add NET_ADMIN --network host --publish "1194:1194" -e "NODE=123456" --name mysterium-node -d mysteriumnetwork/mysterium-node:{VERSION}
+sudo docker run --cap-add NET_ADMIN --net host --publish "1194:1194" -e "NODE=123456" --name mysterium-node -d mysteriumnetwork/mysterium-node:{VERSION}
 ```
 ### Running
 ```bash
