@@ -6,9 +6,9 @@ ENV NODE 321
 
 # Install packages
 RUN apt-get update \
-    && apt install -y wget openvpn iptables\
+    && apt install -y --no-install-recommends wget ca-certificates \
     && wget https://github.com/MysteriumNetwork/node/releases/download/${VERSION}/mysterium-node_linux_amd64.deb \
-    && dpkg --install mysterium-node_linux_amd64.deb\
+    && dpkg --install --force-depends mysterium-node_linux_amd64.deb\
     && apt-get install -y --fix-broken \
     && rm -rf /var/cache/apk/* \
     && rm mysterium-node_linux_amd64.deb
