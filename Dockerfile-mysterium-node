@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:16.04
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
 ENV VERSION 0.0.6
@@ -17,5 +17,4 @@ COPY entrypoint-node.sh /entrypoint-node.sh
 RUN chmod +x /entrypoint-node.sh
 
 ENTRYPOINT ["/entrypoint-node.sh"]
-
 CMD mysterium_server --config-dir=/etc/mysterium-node --node=${NODE} --runtime-dir=/tmp
