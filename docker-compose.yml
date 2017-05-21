@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile-mysterium-node
     container_name: mysterium-node
     cap_add:
+      - MKNOD
       - NET_ADMIN
     networks:
       - default
@@ -15,7 +16,7 @@ services:
     volumes:
       - .:/application
     environment:
-      - NODE=${NODE}
+      - NODE=
 
   mysterium-client:
     build:

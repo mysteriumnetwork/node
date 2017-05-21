@@ -1,8 +1,8 @@
 FROM ubuntu:16.04
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
-ENV VERSION 0.0.6
-ENV NODE 321
+# Which Mysterium VPN package version to build
+ARG VERSION
 
 # Install packages
 RUN apt-get update \
@@ -13,8 +13,6 @@ RUN apt-get update \
     && rm -rf /var/cache/apk/* \
     && rm mysterium-node_linux_amd64.deb
 
-COPY entrypoint-node.sh /entrypoint-node.sh
-RUN chmod +x /entrypoint-node.sh
+COPY docker-entrypoint-node.sh /usr/bin/docker-entrypoint.sh
 
-ENTRYPOINT ["/entrypoint-node.sh"]
-CMD mysterium_server --config-dir=/etc/mysterium-node --node=${NODE} --runtime-dir=/tmp
+ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
