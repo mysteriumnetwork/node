@@ -1,15 +1,18 @@
-FROM ubuntu:latest
+FROM ubuntu:16.04
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
-# e.g. PACKAGE_FILE="build/package/mysterium-node_0.0.1_linux_amd64.deb"
-ARG PACKAGE_FILE
-COPY $PACKAGE_FILE /tmp/mysterium-node.deb
+# Which Mysterium VPN package version to build
+ARG VERSION
 
 # Install packages
 RUN apt-get update \
-    && dpkg --install /tmp/mysterium-node.deb
-    && apt-get install --fix-broken \
+    && apt install -y --no-install-recommends wget ca-certificates \
+    && wget https://github.com/MysteriumNetwork/node/releases/download/${VERSION}/mysterium-node_linux_amd64.deb \
+    && dpkg --install --force-depends mysterium-node_linux_amd64.deb\
+    && apt-get install -y --fix-broken \
     && rm -rf /var/cache/apk/* \
-    && rm /tmp/mysterium-node.deb
+    && rm mysterium-node_linux_amd64.deb
 
-ENTRYPOINT ["/usr/bin/mysterium_server"]
+COPY docker-entrypoint-node.sh /usr/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
