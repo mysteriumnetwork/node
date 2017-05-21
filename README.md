@@ -1,5 +1,5 @@
 ---
-# Decentralised VPN built on blockchain
+# Decentralized VPN built on blockchain
 
 VPN server and client for Mysterium Network 
 
