@@ -46,8 +46,8 @@ func runVPNClient(waiter *sync.WaitGroup, options command_client.CommandOptions)
 		os.Exit(1)
 	}
 
+	waiter.Add(1)
 	go func() {
-		waiter.Add(1)
 		defer waiter.Done()
 
 		if err := clientCommand.Wait(); err != nil {

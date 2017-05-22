@@ -42,16 +42,16 @@ func (client *Client) Wait() error {
 
 func (client *Client) Stop() error {
 	waiter := sync.WaitGroup{}
-	go func() {
-		waiter.Add(1)
-		defer waiter.Done()
 
+	waiter.Add(1)
+	go func() {
+		defer waiter.Done()
 		client.process.Stop()
 	}()
-	go func() {
-		waiter.Add(1)
-		defer waiter.Done()
 
+	waiter.Add(1)
+	go func() {
+		defer waiter.Done()
 		client.management.Stop()
 	}()
 

@@ -1,13 +1,13 @@
 package main
 
 import (
-	"os"
 	"fmt"
-	"sync"
+	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
+	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/server"
-	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
-	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
+	"os"
+	"sync"
 )
 
 const NODE_KEY = "fake"
@@ -30,8 +30,8 @@ func runServer(waiter *sync.WaitGroup, mysteriumClient server.Client) {
 
 	serverCommand := command_server.NewCommandWithDependencies(os.Stdout, os.Stderr, ipifyClient, mysteriumClient)
 	err := serverCommand.Run(command_server.CommandOptions{
-		NodeKey:         NODE_KEY,
-		DirectoryConfig: NODE_DIRECTORY_CONFIG,
+		NodeKey:          NODE_KEY,
+		DirectoryConfig:  NODE_DIRECTORY_CONFIG,
 		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,
 	})
 	if err != nil {
@@ -39,8 +39,8 @@ func runServer(waiter *sync.WaitGroup, mysteriumClient server.Client) {
 		os.Exit(1)
 	}
 
+	waiter.Add(1)
 	go func() {
-		waiter.Add(1)
 		defer waiter.Done()
 
 		if err = serverCommand.Wait(); err != nil {
@@ -61,8 +61,8 @@ func runClient(waiter *sync.WaitGroup, mysteriumClient server.Client) {
 		os.Exit(1)
 	}
 
+	waiter.Add(1)
 	go func() {
-		waiter.Add(1)
 		defer waiter.Done()
 
 		if err = clientCommand.Wait(); err != nil {
