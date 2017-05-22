@@ -25,7 +25,7 @@ sudo docker logs -f mysterium-node
 ### Installation
 ```bash
 wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
-sudo dpkg --install mysterium-node_linux_amd64.deb
+sudo dpkg --install --force-depends mysterium-node_linux_amd64.deb
 sudo apt-get install --fix-broken
 ```
 ### Running
@@ -49,7 +49,7 @@ sudo mysterium_server --config-dir=/etc/mysterium-node --runtime-dir=/tmp --node
 ### Installation
 ```bash
 wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_{VERSION}_linux_amd64.deb
-sudo dpkg --install mysterium-client_{VERSION}_linux_amd64.deb
+sudo dpkg --install --force-depends mysterium-client_{VERSION}_linux_amd64.deb
 sudo apt-get install --fix-broken
 ```
 ### Running
