@@ -17,7 +17,9 @@ type commandRun struct {
 	ipifyClient     ipify.Client
 	mysteriumClient server.Client
 	natService      nat.NATService
-	vpnServer       *openvpn.Server
+	vpnMiddlewares  []openvpn.ManagementMiddleware
+
+	vpnServer *openvpn.Server
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {

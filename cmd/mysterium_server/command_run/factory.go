@@ -3,6 +3,7 @@ package command_run
 import (
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
+	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"io"
 	"os"
@@ -10,11 +11,14 @@ import (
 
 func NewCommand() *commandRun {
 	return &commandRun{
-		output:          os.Stdout,
-		outputError:     os.Stderr,
+		output:      os.Stdout,
+		outputError: os.Stderr,
+
 		ipifyClient:     ipify.NewClient(),
 		mysteriumClient: server.NewClient(),
-		natService:      nat.NewService(),
+		vpnMiddlewares:  make([]openvpn.ManagementMiddleware, 0),
+
+		natService: nat.NewService(),
 	}
 }
 
@@ -23,11 +27,14 @@ func NewCommandWithDependencies(
 	outputError io.Writer,
 	ipifyClient ipify.Client,
 	mysteriumClient server.Client,
+	vpnMiddlewares ...openvpn.ManagementMiddleware,
 ) *commandRun {
 	return &commandRun{
-		output:          output,
-		outputError:     outputError,
+		output:      output,
+		outputError: outputError,
+
 		ipifyClient:     ipifyClient,
 		mysteriumClient: mysteriumClient,
+		vpnMiddlewares:  vpnMiddlewares,
 	}
 }
