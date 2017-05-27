@@ -1,30 +1,21 @@
 package state_client
 
 import (
-	"fmt"
 	"github.com/mysterium/node/openvpn"
 	"net"
 	"regexp"
 )
 
 type middleware struct {
+	listeners  []clientStateCallback
 	connection net.Conn
 }
 
-type clientState string
+type clientStateCallback func(state State) error
 
-const STATE_CONNECTING = clientState("CONNECTING")
-const STATE_WAIT = clientState("WAIT")
-const STATE_AUTH = clientState("AUTH")
-const STATE_GET_CONFIG = clientState("GET_CONFIG")
-const STATE_ASSIGN_IP = clientState("ASSIGN_IP")
-const STATE_ADD_ROUTES = clientState("ADD_ROUTES")
-const STATE_CONNECTED = clientState("CONNECTED")
-const STATE_RECONNECTING = clientState("RECONNECTING")
-const STATE_EXITING = clientState("EXITING")
-
-func NewMiddleware() openvpn.ManagementMiddleware {
+func NewMiddleware(listeners ...clientStateCallback) openvpn.ManagementMiddleware {
 	return &middleware{
+		listeners:  listeners,
 		connection: nil,
 	}
 }
@@ -42,7 +33,7 @@ func (middleware *middleware) Stop() error {
 }
 
 func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error) {
-	rule, err := regexp.Compile("^>STATE:(.*)$")
+	rule, err := regexp.Compile("^>STATE:\\d+,([a-zA-Z]+),.*$")
 	if err != nil {
 		return
 	}
@@ -53,8 +44,17 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	state := match[1]
-	fmt.Println("State ISSSSSSSS: ", state)
+	state := State(match[1])
+	for _, listener := range middleware.listeners {
+		err = listener(state)
+		if err != nil {
+			return
+		}
+	}
 
 	return
+}
+
+func (middleware *middleware) Subscribe(listener clientStateCallback) {
+	middleware.listeners = append(middleware.listeners, listener)
 }
