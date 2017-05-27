@@ -10,6 +10,8 @@ import (
 
 	log "github.com/cihub/seelog"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
+	"github.com/mysterium/node/server"
+	"github.com/mysterium/node/state_client"
 )
 
 const MYSTERIUM_MONITOR_LOG_PREFIX = "[Mysterium.monitor] "
@@ -31,7 +33,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 	}
 
 	for _, nodeKey := range nodeKeys {
-		err := runVPNClient(&cmd.waiter, command_client.CommandOptions{
+		err := cmd.runVPNClient(command_client.CommandOptions{
 			NodeKey:          nodeKey,
 			DirectoryRuntime: options.DirectoryRuntime,
 		})
@@ -62,16 +64,21 @@ func (cmd *commandRun) Kill() {
 
 }
 
-func runVPNClient(waiter *sync.WaitGroup, options command_client.CommandOptions) error {
-	clientCommand := command_client.NewCommand()
+func (cmd *commandRun) runVPNClient(options command_client.CommandOptions) error {
+	clientCommand := command_client.NewCommandWithDependencies(
+		cmd.output,
+		cmd.outputError,
+		server.NewClient(),
+		state_client.NewMiddleware(),
+	)
 	err := clientCommand.Run(options)
 	if err != nil {
 		return err
 	}
 
-	waiter.Add(1)
+	cmd.waiter.Add(1)
 	go func() {
-		defer waiter.Done()
+		defer cmd.waiter.Done()
 
 		if err := clientCommand.Wait(); err != nil {
 			fmt.Fprintln(os.Stderr, "Client stopped with error: ", err)
