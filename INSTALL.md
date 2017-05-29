@@ -1,6 +1,23 @@
 ---
+## Mysterium VPN node (Any OS with Docker)
+https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
+### Installation
+```bash
+sudo apt-get install docker.io
+sudo docker run --cap-add NET_ADMIN --net host --publish "1194:1194" -e "NODE=123456" --name mysterium-node -d mysteriumnetwork/mysterium-node:{VERSION}
+```
+### Running
+```bash
+sudo docker start mysterium-node
+sudo docker stop mysterium-node
+```
+### Debugging
+```bash
+sudo docker logs -f mysterium-node
+```
 
-## Mysterium VPN node (Debian && Ubuntu)
+
+## Mysterium VPN node (Debian && Ubuntu) - tested on Ubuntu 14.04
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_i386.deb
@@ -8,17 +25,22 @@
 ### Installation
 ```bash
 wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
-sudo dpkg --install mysterium-node_linux_amd64.deb
+sudo dpkg --install --force-depends mysterium-node_linux_amd64.deb
 sudo apt-get install --fix-broken
 ```
 ### Running
 ```bash
-service mysterium-node start
-service mysterium-node status
+sudo service mysterium-node start
+sudo service mysterium-node status
+```
+### Debugging
+```bash
+sudo tail -f /var/log/mysterium-node/*
+sudo mysterium_server --config-dir=/etc/mysterium-node --runtime-dir=/tmp --node=123456
 ```
 
 
-## Mysterium VPN client (Debian && Ubuntu)
+## Mysterium VPN client (Debian && Ubuntu) - tested on Ubuntu 14.04
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_i386.deb
@@ -27,13 +49,18 @@ service mysterium-node status
 ### Installation
 ```bash
 wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_{VERSION}_linux_amd64.deb
-sudo dpkg --install mysterium-client_{VERSION}_linux_amd64.deb
+sudo dpkg --install --force-depends mysterium-client_{VERSION}_linux_amd64.deb
 sudo apt-get install --fix-broken
 ```
 ### Running
 ```bash
-service mysterium-client start
-service mysterium-client status
+sudo service mysterium-client start
+sudo service mysterium-client status
+```
+### Debugging
+```bash
+sudo tail -f /var/log/mysterium-client/*
+sudo mysterium_client --runtime-dir=/tmp --node=123456
 ```
 
 
@@ -45,7 +72,7 @@ service mysterium-client status
 ### Running
 ```bash
 mysterium_server --help
-sudo mysterium_server --config-dir=/etc/mysterium-node --node=12345
+sudo mysterium_server --config-dir=/etc/mysterium-node --node=123456
 ```
 
 
@@ -57,7 +84,7 @@ sudo mysterium_server --config-dir=/etc/mysterium-node --node=12345
 ### Running
 ```bash
 mysterium_client --help
-sudo mysterium_client --node=12345
+sudo mysterium_client --node=123456
 ```
 
 
