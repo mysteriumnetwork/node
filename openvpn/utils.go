@@ -4,7 +4,6 @@ import (
 	"time"
 	"os"
 	"math/rand"
-	"path/filepath"
 )
 
 var seededRand *rand.Rand = rand.New(
@@ -15,7 +14,7 @@ const finenameCharset = "1234567890abcdefghijklmnopqrstuvwxyz"
 
 func tempFilename(directory, filePrefix, fileExtension string) (filePath string) {
 	for i := 0; i < 10000; i++ {
-		filePath = filepath.Join(directory, filePrefix, randomString(10, finenameCharset), fileExtension)
+		filePath = directory + "/" + filePrefix + randomString(10, finenameCharset) + fileExtension
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			break
 		}
