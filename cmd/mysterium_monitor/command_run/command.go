@@ -65,11 +65,21 @@ func (cmd *commandRun) Kill() {
 }
 
 func (cmd *commandRun) runVPNClient(options command_client.CommandOptions) error {
+	cmd.waiter.Add(1)
+	waitForClientToStart := func(state state_client.State) error {
+		if state == state_client.STATE_CONNECTED {
+			fmt.Println("aaa", state)
+
+			cmd.waiter.Done()
+		}
+		return nil
+	}
+
 	clientCommand := command_client.NewCommandWithDependencies(
 		cmd.output,
 		cmd.outputError,
 		server.NewClient(),
-		state_client.NewMiddleware(),
+		state_client.NewMiddleware(waitForClientToStart),
 	)
 	err := clientCommand.Run(options)
 	if err != nil {
