@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func NewCommand() *commandRun {
+func NewCommand() Command {
 	return &commandRun{
 		output:      os.Stdout,
 		outputError: os.Stderr,
