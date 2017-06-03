@@ -2,16 +2,14 @@ package command_run
 
 import (
 	"errors"
-	"fmt"
 	"github.com/mysterium/node/ipify"
 	"io"
-	"os"
-	"sync"
 
 	log "github.com/cihub/seelog"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/state_client"
+	"time"
 )
 
 const MYSTERIUM_MONITOR_LOG_PREFIX = "[Mysterium.monitor] "
@@ -21,80 +19,65 @@ type commandRun struct {
 	outputError io.Writer
 
 	ipifyClient ipify.Client
-	waiter      sync.WaitGroup
+	ipOriginal  string
+
+	clientCommand command_client.Command
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
-	nodeKeys := []string{"mysterium-vpn3"}
+	var err error
+	nodeKeys := []string{"mysterium-vpn2", "mysterium-vpn3"}
 
-	ipOriginal, err := cmd.ipifyClient.GetIp()
+	cmd.ipOriginal, err = cmd.ipifyClient.GetIp()
 	if err != nil {
 		return errors.New("Failed to get original IP: " + err.Error())
 	}
 
+	cmd.clientCommand = command_client.NewCommandWithDependencies(
+		cmd.output,
+		cmd.outputError,
+		server.NewClient(),
+		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
+	)
 	for _, nodeKey := range nodeKeys {
-		err := cmd.runVPNClient(command_client.CommandOptions{
+		err = cmd.clientCommand.Run(command_client.CommandOptions{
 			NodeKey:          nodeKey,
 			DirectoryRuntime: options.DirectoryRuntime,
 		})
 		if err != nil {
+			log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Client not connected")
 			return errors.New("Client starting error: " + err.Error())
 		}
 
+		<-time.After(2 * time.Second)
+		log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Client not connected")
+
+		cmd.clientCommand.Kill()
+	}
+
+	return nil
+}
+
+func (cmd *commandRun) checkClientIpWhenConnected(state state_client.State) error {
+	if state == state_client.STATE_CONNECTED {
 		ipForwarded, err := cmd.ipifyClient.GetIp()
 		if err != nil {
 			log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Forwarded IP not detected: ", err)
-			continue
+			return nil
 		}
-		if ipForwarded == ipOriginal {
+
+		if ipForwarded == cmd.ipOriginal {
 			log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Forwarded IP is the same")
-			continue
+			return nil
 		}
 	}
-
 	return nil
 }
 
 func (cmd *commandRun) Wait() error {
-	cmd.waiter.Wait()
 	return nil
 }
 
 func (cmd *commandRun) Kill() {
-
-}
-
-func (cmd *commandRun) runVPNClient(options command_client.CommandOptions) error {
-	cmd.waiter.Add(1)
-	waitForClientToStart := func(state state_client.State) error {
-		if state == state_client.STATE_CONNECTED {
-			fmt.Println("aaa", state)
-
-			cmd.waiter.Done()
-		}
-		return nil
-	}
-
-	clientCommand := command_client.NewCommandWithDependencies(
-		cmd.output,
-		cmd.outputError,
-		server.NewClient(),
-		state_client.NewMiddleware(waitForClientToStart),
-	)
-	err := clientCommand.Run(options)
-	if err != nil {
-		return err
-	}
-
-	cmd.waiter.Add(1)
-	go func() {
-		defer cmd.waiter.Done()
-
-		if err := clientCommand.Wait(); err != nil {
-			fmt.Fprintln(os.Stderr, "Client stopped with error: ", err)
-			os.Exit(1)
-		}
-	}()
-
-	return nil
+	cmd.clientCommand.Kill()
 }
