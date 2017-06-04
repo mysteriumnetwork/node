@@ -5,14 +5,11 @@ import (
 	"github.com/mysterium/node/ipify"
 	"io"
 
-	log "github.com/cihub/seelog"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/state_client"
 	"time"
 )
-
-const MYSTERIUM_MONITOR_LOG_PREFIX = "[Mysterium.monitor] "
 
 type commandRun struct {
 	output      io.Writer
@@ -22,10 +19,17 @@ type commandRun struct {
 	ipOriginal  string
 
 	clientCommand command_client.Command
+	resultWriter  *resultWriter
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
 	var err error
+
+	cmd.resultWriter, err = NewResultWriter(options.OutputFile)
+	if err != nil {
+		return err
+	}
+	defer cmd.resultWriter.Close()
 
 	cmd.ipOriginal, err = cmd.ipifyClient.GetIp()
 	if err != nil {
@@ -39,17 +43,19 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
 	)
 	for _, nodeKey := range options.NodeKeys {
+		cmd.resultWriter.NodeStart(nodeKey)
+
 		err = cmd.clientCommand.Run(command_client.CommandOptions{
 			NodeKey:          nodeKey,
 			DirectoryRuntime: options.DirectoryRuntime,
 		})
 		if err != nil {
-			log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Client not connected")
-			return errors.New("Client starting error: " + err.Error())
+			cmd.resultWriter.NodeError("Client starting error", err)
+			continue
 		}
 
 		<-time.After(2 * time.Second)
-		log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Client not connected")
+		cmd.resultWriter.NodeStatus("Client not connected")
 
 		cmd.clientCommand.Kill()
 		cmd.checkClientIpWhenDisconnected()
@@ -62,14 +68,16 @@ func (cmd *commandRun) checkClientIpWhenConnected(state state_client.State) erro
 	if state == state_client.STATE_CONNECTED {
 		ipForwarded, err := cmd.ipifyClient.GetIp()
 		if err != nil {
-			log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Forwarded IP not detected: ", err)
+			cmd.resultWriter.NodeError("Forwarded IP not detected: ", err)
 			return nil
 		}
 
 		if ipForwarded == cmd.ipOriginal {
-			log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Forwarded IP matches original")
+			cmd.resultWriter.NodeStatus("Forwarded IP matches original")
 			return nil
 		}
+
+		cmd.resultWriter.NodeStatus("OK")
 	}
 	return nil
 }
@@ -77,12 +85,12 @@ func (cmd *commandRun) checkClientIpWhenConnected(state state_client.State) erro
 func (cmd *commandRun) checkClientIpWhenDisconnected() {
 	ipForwarded, err := cmd.ipifyClient.GetIp()
 	if err != nil {
-		log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Disconnect IP not detected: ", err)
+		cmd.resultWriter.NodeError("Disconnect IP not detected", err)
 		return
 	}
 
 	if ipForwarded != cmd.ipOriginal {
-		log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Disconnect IP does not match original")
+		cmd.resultWriter.NodeStatus("Disconnect IP does not match original")
 		return
 	}
 }
