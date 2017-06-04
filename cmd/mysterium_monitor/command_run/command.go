@@ -53,6 +53,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Client not connected")
 
 		cmd.clientCommand.Kill()
+		cmd.checkClientIpWhenDisconnected()
 	}
 
 	return nil
@@ -67,11 +68,24 @@ func (cmd *commandRun) checkClientIpWhenConnected(state state_client.State) erro
 		}
 
 		if ipForwarded == cmd.ipOriginal {
-			log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Forwarded IP is the same")
+			log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Forwarded IP matches original")
 			return nil
 		}
 	}
 	return nil
+}
+
+func (cmd *commandRun) checkClientIpWhenDisconnected() {
+	ipForwarded, err := cmd.ipifyClient.GetIp()
+	if err != nil {
+		log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Disconnect IP not detected: ", err)
+		return
+	}
+
+	if ipForwarded != cmd.ipOriginal {
+		log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, "Disconnect IP does not match original")
+		return
+	}
 }
 
 func (cmd *commandRun) Wait() error {
