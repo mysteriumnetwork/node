@@ -26,7 +26,6 @@ type commandRun struct {
 
 func (cmd *commandRun) Run(options CommandOptions) error {
 	var err error
-	nodeKeys := []string{"mysterium-vpn2", "mysterium-vpn3"}
 
 	cmd.ipOriginal, err = cmd.ipifyClient.GetIp()
 	if err != nil {
@@ -39,7 +38,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		server.NewClient(),
 		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
 	)
-	for _, nodeKey := range nodeKeys {
+	for _, nodeKey := range options.NodeKeys {
 		err = cmd.clientCommand.Run(command_client.CommandOptions{
 			NodeKey:          nodeKey,
 			DirectoryRuntime: options.DirectoryRuntime,
