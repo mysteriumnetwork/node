@@ -32,14 +32,14 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		return err
 	}
 
-	cmd.vpnMiddlewares = append(
+	vpnMiddlewares := append(
 		cmd.vpnMiddlewares,
 		bytescount_client.NewMiddleware(cmd.mysteriumClient, vpnSession.Id, 1*time.Minute),
 	)
 	cmd.vpnClient = openvpn.NewClient(
 		vpnConfig,
 		options.DirectoryRuntime,
-		cmd.vpnMiddlewares...,
+		vpnMiddlewares...,
 	)
 	if err := cmd.vpnClient.Start(); err != nil {
 		return err
