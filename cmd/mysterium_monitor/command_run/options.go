@@ -1,15 +1,14 @@
 package command_run
 
 import (
-	"bufio"
 	"errors"
 	"flag"
-	"os"
 )
 
 type CommandOptions struct {
 	DirectoryRuntime string
-	NodeKeys         []string
+	Node             string
+	NodeFile         string
 	ResultFile       string
 }
 
@@ -21,16 +20,14 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		".",
 		"Runtime directory for temp files (should be writable)",
 	)
-	var nodeToCheck string
 	flags.StringVar(
-		&nodeToCheck,
+		&options.Node,
 		"node",
 		"",
 		"Node to be checked",
 	)
-	var fileToCheck string
 	flags.StringVar(
-		&fileToCheck,
+		&options.NodeFile,
 		"node-file",
 		"",
 		"File with node list to be checked",
@@ -47,32 +44,18 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		return
 	}
 
-	if nodeToCheck != "" {
-		options.NodeKeys = []string{nodeToCheck}
-	} else if fileToCheck != "" {
-		options.NodeKeys, err = parseLines(fileToCheck)
-	} else {
+	if options.Node == "" && options.NodeFile == "" {
 		err = errors.New("Provide which nodes to monitor!")
-	}
-
-	if options.ResultFile == "" {
-		options.ResultFile = fileToCheck + ".csv"
-	}
-
-	return options, err
-}
-
-func parseLines(filePath string) (lines []string, err error) {
-	file, err := os.Open(filePath)
-	if err != nil {
 		return
 	}
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+	if options.ResultFile == "" && options.NodeFile != "" {
+		options.ResultFile = options.NodeFile + ".csv"
+	}
+	if options.ResultFile == "" {
+		err = errors.New("Missing result file!")
+		return
 	}
 
-	file.Close()
-	return
+	return options, err
 }

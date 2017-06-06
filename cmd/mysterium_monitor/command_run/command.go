@@ -31,6 +31,12 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 	}
 	defer cmd.resultWriter.Close()
 
+	nodeProvider, err := NewNodeProvider(options)
+	if err != nil {
+		return err
+	}
+	defer nodeProvider.Close()
+
 	cmd.ipOriginal, err = cmd.ipifyClient.GetIp()
 	if err != nil {
 		return errors.New("Failed to get original IP: " + err.Error())
@@ -42,7 +48,8 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		server.NewClient(),
 		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
 	)
-	for _, nodeKey := range options.NodeKeys {
+
+	nodeProvider.WithEachNode(func(nodeKey string) {
 		cmd.resultWriter.NodeStart(nodeKey)
 
 		err = cmd.clientCommand.Run(command_client.CommandOptions{
@@ -51,7 +58,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		})
 		if err != nil {
 			cmd.resultWriter.NodeError("Client starting error", err)
-			continue
+			return
 		}
 
 		<-time.After(2 * time.Second)
@@ -59,7 +66,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 
 		cmd.clientCommand.Kill()
 		cmd.checkClientIpWhenDisconnected()
-	}
+	})
 
 	return nil
 }
