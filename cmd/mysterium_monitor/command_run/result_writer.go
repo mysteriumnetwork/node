@@ -10,7 +10,7 @@ import (
 const MYSTERIUM_MONITOR_LOG_PREFIX = "[Mysterium.monitor] "
 
 func NewResultWriter(filePath string) (*resultWriter, error) {
-	file, err := os.Create(filePath)
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
 	}
@@ -72,9 +72,12 @@ func (writer *resultWriter) writeHeaderIfNeeded() {
 }
 
 func (writer *resultWriter) writeRecord() {
-	err := writer.csvWriter.Write(writer.record)
+	writer.csvWriter.Write(writer.record)
+	writer.csvWriter.Flush()
+
+	err := writer.csvWriter.Error()
 	if err != nil {
 		panic(err)
 	}
-	writer.csvWriter.Flush()
+
 }
