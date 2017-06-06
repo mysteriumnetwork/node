@@ -20,6 +20,14 @@ func NewNodeProvider(options CommandOptions) (nodeProvider node_provider.NodePro
 		nodeProvider = node_provider.NewArrayProvider([]string{options.Node})
 	} else {
 		nodeProvider, err = node_provider.NewFileProvider(options.NodeFile)
+		if err != nil {
+			return
+		}
 	}
+
+	nodeProvider, err = node_provider.NewRememberProvider(
+		nodeProvider,
+		options.DirectoryRuntime+"/remember.status",
+	)
 	return
 }
