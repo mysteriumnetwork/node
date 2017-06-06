@@ -75,7 +75,7 @@ func (cmd *commandRun) checkClientIpWhenConnected(state state_client.State) erro
 	if state == state_client.STATE_CONNECTED {
 		ipForwarded, err := cmd.ipifyClient.GetIp()
 		if err != nil {
-			cmd.resultWriter.NodeError("Forwarded IP not detected: ", err)
+			cmd.resultWriter.NodeError("Forwarded IP not detected", err)
 			return nil
 		}
 

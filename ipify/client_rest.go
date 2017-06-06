@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	log "github.com/cihub/seelog"
+	"time"
 )
 
 const IPIFY_API_URL = "https://api.ipify.org/"
@@ -15,8 +16,14 @@ const IPIFY_API_CLIENT = "goclient-v0.1"
 const IPIFY_API_LOG_PREFIX = "[ipify.api] "
 
 func NewClient() Client {
+	return NewClientWithTimeout(60 * time.Second)
+}
+
+func NewClientWithTimeout(timeout time.Duration) Client {
 	return &clientRest{
-		httpClient: http.Client{},
+		httpClient: http.Client{
+			Timeout: timeout,
+		},
 	}
 }
 

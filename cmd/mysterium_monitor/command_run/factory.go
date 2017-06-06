@@ -4,6 +4,7 @@ import (
 	"github.com/mysterium/node/cmd/mysterium_monitor/command_run/node_provider"
 	"github.com/mysterium/node/ipify"
 	"os"
+	"time"
 )
 
 func NewCommand() Command {
@@ -11,7 +12,7 @@ func NewCommand() Command {
 		output:      os.Stdout,
 		outputError: os.Stderr,
 
-		ipifyClient: ipify.NewClient(),
+		ipifyClient: ipify.NewClientWithTimeout(5 * time.Second),
 	}
 }
 
