@@ -25,7 +25,7 @@ func NewNodeProvider(options CommandOptions) (nodeProvider node_provider.NodePro
 		}
 	}
 
-	nodeProvider, err = node_provider.NewRememberProvider(
+	nodeProvider = node_provider.NewRememberProvider(
 		nodeProvider,
 		options.DirectoryRuntime+"/remember.status",
 	)

@@ -9,22 +9,16 @@ import (
 
 const MYSTERIUM_PROVIDER_LOG_PREFIX = "[Mysterium.monitor] "
 
-func NewRememberProvider(providerOriginal NodeProvider, statusFilePath string) (NodeProvider, error) {
-	rememberFile, err := os.OpenFile(statusFilePath, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
-		return nil, err
-	}
-
-	provider := &rememberProvider{
+func NewRememberProvider(providerOriginal NodeProvider, statusFilePath string) NodeProvider {
+	return &rememberProvider{
 		providerOriginal: providerOriginal,
-		rememberFile:     rememberFile,
+		rememberFile:     statusFilePath,
 	}
-	return provider, nil
 }
 
 type rememberProvider struct {
 	providerOriginal NodeProvider
-	rememberFile     *os.File
+	rememberFile     string
 }
 
 func (provider *rememberProvider) WithEachNode(consumer NodeConsumer) {
@@ -53,7 +47,7 @@ func (provider *rememberProvider) Close() error {
 }
 
 func (provider *rememberProvider) rememberGetNodeKey() string {
-	content, err := ioutil.ReadAll(provider.rememberFile)
+	content, err := ioutil.ReadFile(provider.rememberFile)
 	if err != nil {
 		log.Warn(MYSTERIUM_PROVIDER_LOG_PREFIX, "Cant remember from status file: ", err)
 		return ""
@@ -63,15 +57,12 @@ func (provider *rememberProvider) rememberGetNodeKey() string {
 }
 
 func (provider *rememberProvider) rememberSaveNodeKey(nodeKey string) {
-	_, err := provider.rememberFile.WriteString(nodeKey)
-	if err == nil {
-		err = provider.rememberFile.Sync()
-	}
+	err := ioutil.WriteFile(provider.rememberFile, []byte(nodeKey), 0666)
 	if err != nil {
 		log.Warn(MYSTERIUM_PROVIDER_LOG_PREFIX, "Cant remember to status file: ", err)
 	}
 }
 
 func (provider *rememberProvider) rememberForget() {
-	os.Remove(provider.rememberFile.Name())
+	os.Remove(provider.rememberFile)
 }
