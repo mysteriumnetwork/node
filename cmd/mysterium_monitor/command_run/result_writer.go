@@ -26,7 +26,8 @@ type resultWriter struct {
 	file      *os.File
 	csvWriter *csv.Writer
 
-	record []string
+	record          []string
+	isHeaderWritten bool
 }
 
 func (writer *resultWriter) NodeStart(nodeKey string) {
@@ -40,6 +41,7 @@ func (writer *resultWriter) NodeStatus(status string) {
 	log.Warn(MYSTERIUM_MONITOR_LOG_PREFIX, status)
 
 	writer.record[1] = status
+	writer.writeHeaderIfNeeded()
 	writer.writeRecord()
 }
 
@@ -48,6 +50,7 @@ func (writer *resultWriter) NodeError(status string, err error) {
 
 	writer.record[1] = status
 	writer.record[2] = err.Error()
+	writer.writeHeaderIfNeeded()
 	writer.writeRecord()
 }
 
@@ -56,9 +59,22 @@ func (writer *resultWriter) Close() error {
 	return writer.file.Close()
 }
 
+func (writer *resultWriter) writeHeaderIfNeeded() {
+	if writer.isHeaderWritten {
+		return
+	}
+
+	err := writer.csvWriter.Write([]string{"node_key", "status", "error"})
+	if err != nil {
+		panic(err)
+	}
+	writer.isHeaderWritten = true
+}
+
 func (writer *resultWriter) writeRecord() {
 	err := writer.csvWriter.Write(writer.record)
 	if err != nil {
 		panic(err)
 	}
+	writer.csvWriter.Flush()
 }

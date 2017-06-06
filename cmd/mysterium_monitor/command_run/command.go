@@ -25,7 +25,7 @@ type commandRun struct {
 func (cmd *commandRun) Run(options CommandOptions) error {
 	var err error
 
-	cmd.resultWriter, err = NewResultWriter(options.OutputFile)
+	cmd.resultWriter, err = NewResultWriter(options.ResultFile)
 	if err != nil {
 		return err
 	}

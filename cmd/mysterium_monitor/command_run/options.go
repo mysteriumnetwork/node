@@ -10,7 +10,7 @@ import (
 type CommandOptions struct {
 	DirectoryRuntime string
 	NodeKeys         []string
-	OutputFile       string
+	ResultFile       string
 }
 
 func ParseArguments(args []string) (options CommandOptions, err error) {
@@ -36,8 +36,8 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"File with node list to be checked",
 	)
 	flags.StringVar(
-		&options.OutputFile,
-		"output",
+		&options.ResultFile,
+		"result-file",
 		"",
 		"File where CSV output should be written",
 	)
@@ -55,8 +55,8 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		err = errors.New("Provide which nodes to monitor!")
 	}
 
-	if options.OutputFile == "" {
-		options.OutputFile = fileToCheck + ".csv"
+	if options.ResultFile == "" {
+		options.ResultFile = fileToCheck + ".csv"
 	}
 
 	return options, err
