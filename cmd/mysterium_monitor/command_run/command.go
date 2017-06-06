@@ -8,6 +8,7 @@ import (
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/state_client"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,7 @@ type commandRun struct {
 	ipOriginal  string
 
 	clientCommand command_client.Command
+	ipCheckWaiter sync.WaitGroup
 	resultWriter  *resultWriter
 }
 
@@ -51,6 +53,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 
 	nodeProvider.WithEachNode(func(nodeKey string) {
 		cmd.resultWriter.NodeStart(nodeKey)
+		cmd.ipCheckWaiter.Add(1)
 
 		err = cmd.clientCommand.Run(command_client.CommandOptions{
 			NodeKey:          nodeKey,
@@ -61,9 +64,9 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 			return
 		}
 
-		<-time.After(2 * time.Second)
-		cmd.resultWriter.NodeStatus("Client not connected")
+		go cmd.checkClientHandleTimeout()
 
+		cmd.ipCheckWaiter.Wait()
 		cmd.clientCommand.Kill()
 		cmd.checkClientIpWhenDisconnected()
 	})
@@ -76,17 +79,27 @@ func (cmd *commandRun) checkClientIpWhenConnected(state state_client.State) erro
 		ipForwarded, err := cmd.ipifyClient.GetIp()
 		if err != nil {
 			cmd.resultWriter.NodeError("Forwarded IP not detected", err)
+			cmd.ipCheckWaiter.Done()
 			return nil
 		}
 
 		if ipForwarded == cmd.ipOriginal {
 			cmd.resultWriter.NodeStatus("Forwarded IP matches original")
+			cmd.ipCheckWaiter.Done()
 			return nil
 		}
 
 		cmd.resultWriter.NodeStatus("OK")
+		cmd.ipCheckWaiter.Done()
 	}
 	return nil
+}
+
+func (cmd *commandRun) checkClientHandleTimeout() {
+	<-time.After(10 * time.Second)
+
+	cmd.resultWriter.NodeStatus("Client not connected")
+	cmd.ipCheckWaiter.Done()
 }
 
 func (cmd *commandRun) checkClientIpWhenDisconnected() {
