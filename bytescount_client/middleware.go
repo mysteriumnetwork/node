@@ -2,9 +2,9 @@ package bytescount_client
 
 import (
 	"fmt"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/server/dto"
+	"github.com/MysteriumNetwork/node/openvpn"
+	"github.com/MysteriumNetwork/node/server"
+	"github.com/MysteriumNetwork/node/server/dto"
 	"net"
 	"regexp"
 	"strconv"

@@ -1,6 +1,6 @@
 package server
 
-import "github.com/mysterium/node/server/dto"
+import "github.com/MysteriumNetwork/node/server/dto"
 
 type Client interface {
 	NodeRegister(nodeKey, connectionConfig string) (err error)

@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/server/dto"
+	"github.com/MysteriumNetwork/node/server/dto"
 )
 
 const MYSTERIUM_API_URL = "https://mvp.mysterium.network:5000/v1"

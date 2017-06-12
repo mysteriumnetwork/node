@@ -1,9 +1,9 @@
 package command_run
 
 import (
-	"github.com/mysterium/node/bytescount_client"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/server"
+	"github.com/MysteriumNetwork/node/bytescount_client"
+	"github.com/MysteriumNetwork/node/openvpn"
+	"github.com/MysteriumNetwork/node/server"
 	"io"
 	"time"
 )
