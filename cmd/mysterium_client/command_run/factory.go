@@ -2,7 +2,7 @@ package command_run
 
 import (
 	"os"
-	"github.com/mysterium/node/server"
+	"github.com/MysteriumNetwork/node/server"
 	"io"
 )
 

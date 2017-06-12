@@ -2,7 +2,7 @@ package bytescount_client
 
 import (
 	"errors"
-	"github.com/mysterium/node/server"
+	"github.com/MysteriumNetwork/node/server"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"

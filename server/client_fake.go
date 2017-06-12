@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/mysterium/node/server/dto"
+	"github.com/MysteriumNetwork/node/server/dto"
 
 	"fmt"
 	log "github.com/cihub/seelog"

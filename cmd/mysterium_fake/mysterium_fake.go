@@ -4,10 +4,10 @@ import (
 	"os"
 	"fmt"
 	"sync"
-	"github.com/mysterium/node/ipify"
-	"github.com/mysterium/node/server"
-	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
-	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
+	"github.com/MysteriumNetwork/node/ipify"
+	"github.com/MysteriumNetwork/node/server"
+	command_server "github.com/MysteriumNetwork/node/cmd/mysterium_server/command_run"
+	command_client "github.com/MysteriumNetwork/node/cmd/mysterium_client/command_run"
 )
 
 const NODE_KEY = "fake"

@@ -1,11 +1,11 @@
 package command_run
 
 import (
-	"github.com/mysterium/node/ipify"
-	"github.com/mysterium/node/nat"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/server/dto"
+	"github.com/MysteriumNetwork/node/ipify"
+	"github.com/MysteriumNetwork/node/nat"
+	"github.com/MysteriumNetwork/node/openvpn"
+	"github.com/MysteriumNetwork/node/server"
+	"github.com/MysteriumNetwork/node/server/dto"
 	"io"
 	"time"
 )
