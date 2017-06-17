@@ -1,0 +1,34 @@
+#!/bin/bash
+
+###########################################################################
+# Packaging script which creates all packages (Debian)
+#
+# To package a build, simple execute:
+#> bin/server_package_all <version>
+
+# Usage example:
+#> bin/server_package_all 0.0.1
+
+VERSION=$1
+if [ -z "$VERSION" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing version!";
+    exit 1
+fi
+
+GOOS=linux GOARCH=amd64 bin/server_build \
+    && bin/server_package_debian $VERSION amd64
+
+GOOS=linux GOARCH=386 bin/server_build \
+    && bin/server_package_debian $VERSION i386
+
+GOOS=linux GOARCH=arm bin/server_build \
+    && bin/server_package_debian $VERSION armhf
+
+GOOS=linux GOARCH=amd64 bin/client_build \
+    && bin/client_package_debian $VERSION amd64
+
+GOOS=linux GOARCH=386 bin/client_build \
+    && bin/client_package_debian $VERSION i386
+
+GOOS=linux GOARCH=arm bin/client_build \
+    && bin/client_package_debian $VERSION armhf

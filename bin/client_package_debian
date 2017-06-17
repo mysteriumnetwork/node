@@ -1,0 +1,67 @@
+#!/bin/bash
+
+###########################################################################
+# Packaging script which creates Debian package.
+#
+# Requirements:
+# - GOPATH must be set
+# - 'fpm' tool must be on the path (https://github.com/jordansissel/fpm)
+#
+# To package a build, simple execute:
+#> bin/client_package_debian <version> <architecture>
+
+# Usage example:
+#> bin/client_package_debian 0.0.1 amd64
+
+OS_DIR_BIN="/usr/bin"
+OS_DIR_INSTALLATION="/usr/lib/mysterium-client/installation"
+
+VERSION=$1
+if [ -z "$VERSION" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing version!";
+    exit 1
+fi
+
+ARCH=$2
+if [ -z "$ARCH" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing architecture!";
+    exit 1
+fi
+
+FPM_BIN=`which fpm`
+if [ ! -x "$FPM_BIN" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing tool 'fpm'!";
+    exit 1
+fi
+
+
+DIR_BUILD="build/package"
+PACKAGE_FILE="${DIR_BUILD}/mysterium-client_${VERSION}_linux_${ARCH}.deb"
+printf  "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
+    && rm -f ${PACKAGE_FILE} \
+    && ${FPM_BIN} \
+        --name="mysterium-client" \
+        --description="Client for decentralised VPN built on blockchain" \
+        --url="https://mysterium.network/" \
+        --vendor="MysteriumNetwork" \
+        --license="MIT" \
+        --maintainer="Valdas Petrulis (petrulis.valdas@gmail.com)" \
+        --version "$VERSION" \
+        --architecture="$ARCH" \
+        --package="$PACKAGE_FILE" \
+        --depends "openvpn" \
+        --depends "ca-certificates" \
+        --after-install bin/client_package/installation/post-install.sh \
+        --after-remove bin/client_package/installation/post-uninstall.sh \
+        -s dir -t deb \
+        build/client/mysterium_client=${OS_DIR_BIN}/ \
+        bin/client_package/installation/=${OS_DIR_INSTALLATION}/
+if [ $? -ne 0 ] ; then
+    printf "\e[0;31m%s\e[0m\n" "Failed to build Debian package!";
+    exit 1
+fi
+
+debber deb:contents ${PACKAGE_FILE}
+
+printf "Packaging process complete."
+exit 0

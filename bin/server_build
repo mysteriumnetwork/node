@@ -13,13 +13,13 @@
 #> GOOS=windows GOARCH=amd64 bin/server_build
 #
 # Check if program has dynamic libraries:
-#> readelf -d mysterium_server
+#> readelf -d /build/server/mysterium_server
 
 : ${GOOS:=`go env GOHOSTOS`}
 : ${GOARCH:=`go env GOHOSTARCH`}
 
-echo "Compiling application for '$GOOS/$GOARCH'.."
-GOBIN=`pwd` go install mysterium_server.go
+echo "Compiling 'mysterium_server' for '$GOOS/$GOARCH'.."
+GOBIN=`pwd`/build/server go install cmd/mysterium_server/mysterium_server.go
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Compile failed!";
     exit 1

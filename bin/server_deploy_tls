@@ -13,11 +13,11 @@ printf "\n\nStopping application at '$SSH_SERVER':\n" \
     && ssh $SSH_SERVER 'sudo killall openvpn || true' \
 && printf "\n\nDeploying application:\n" \
     && ssh $SSH_SERVER "mkdir -pv $SSH_SERVER_DIR" \
-    && scp mysterium_server \
+    && scp build/server/mysterium_server \
         bin/tls/server.conf bin/tls/server.crt bin/tls/server.key bin/tls/ca.crt \
         bin/tls/dh.pem bin/tls/ta.key \
         $SSH_SERVER:$SSH_SERVER_DIR/ \
 && printf "\n\nStarting application:\n" \
-    && ssh $SSH_SERVER "cd $SSH_SERVER_DIR && sudo ./mysterium_server"
+    && ssh $SSH_SERVER "sudo $SSH_SERVER_DIR/mysterium_server --config-dir=$SSH_SERVER_DIR"
 
 exit 0

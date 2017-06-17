@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sudo ./mysterium_client
+sudo ./build/client/mysterium_client
