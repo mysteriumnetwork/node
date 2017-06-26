@@ -19,7 +19,7 @@ DAEMON_NAME="mysterium-node"
 #Daemon name, where is the actual executable
 DAEMON_BIN="$OS_DIR_BIN/mysterium_server"
 # Daemon options
-DAEMON_OPTS="--node=12345 --config-dir=$OS_DIR_CONFIG"
+DAEMON_OPTS="--node=12345 --config-dir=$OS_DIR_CONFIG --runtime-dir=$OS_DIR_RUN"
 # User and group
 DAEMON_USER="mysterium-node"
 DAEMON_GROUP="mysterium-node"
