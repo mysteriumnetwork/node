@@ -15,6 +15,9 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
+DIR_BUILD="build/package"
+mkdir $DIR_BUILD
+
 GOOS=linux GOARCH=amd64 bin/server_build \
     && bin/server_package_debian $VERSION amd64
 

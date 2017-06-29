@@ -34,7 +34,8 @@ function install_chkconfig {
 }
 
 printf "Creating user '$DAEMON_USER:$DAEMON_GROUP'...\n" \
-    && useradd --system -U $DAEMON_USER -s /bin/false -m -d $OS_DIR_DATA \
+    && useradd --system -U $DAEMON_USER -G root -s /bin/false -m -d $OS_DIR_DATA \
+    && usermod -a -G root $DAEMON_USER \
     && chown -R -L $DAEMON_USER:$DAEMON_GROUP $OS_DIR_DATA \
     && chown -R -L $DAEMON_USER:$DAEMON_GROUP $OS_DIR_LOG
 

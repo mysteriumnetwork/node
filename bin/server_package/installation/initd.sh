@@ -26,7 +26,8 @@ DAEMON_GROUP="mysterium-node"
 # PID file for the daemon
 DAEMON_PIDFILE="$OS_DIR_RUN/daemon.pid"
 # Logging
-DAEMON_LOGFILE="$OS_DIR_LOG/daemon.log"
+DAEMON_STDOUT="$OS_DIR_LOG/daemon.log"
+DAEMON_SDTERR="$OS_DIR_LOG/error.log"
 # Command-line options that can be set in /etc/default/mysterium-node.
 # These will override any config file values.
 DAEMON_DEFAULT="/etc/default/mysterium-node"
@@ -52,8 +53,11 @@ fi
 
 
 # Create directory for logs
-if [ ! -f "$DAEMON_LOGFILE" ]; then
-    mkdir -p $(dirname $DAEMON_LOGFILE)
+if [ ! -f "$DAEMON_STDOUT" ]; then
+    mkdir -p $(dirname $DAEMON_STDOUT)
+fi
+if [ ! -f "$DAEMON_SDTERR" ]; then
+    mkdir -p $(dirname $DAEMON_SDTERR)
 fi
 
 if [ -r /lib/lsb/init-functions ]; then
@@ -93,14 +97,17 @@ function start() {
     # Launch process
     echo "Starting $DAEMON_NAME..."
     start-stop-daemon \
-        --chuid $DAEMON_USER:$DAEMON_GROUP \
         --start \
         --quiet \
+        --background \
+        --no-close \
+        --make-pidfile \
         --pidfile $DAEMON_PIDFILE \
+        --user $DAEMON_USER \
+        --group $DAEMON_GROUP \
         --exec $DAEMON_BIN \
         -- \
-        -pidfile $DAEMON_PIDFILE \
-        $DAEMON_OPTS >>$DAEMON_LOGFILE 2>>$1 &
+        $DAEMON_OPTS >>$DAEMON_STDOUT 2>>$DAEMON_SDTERR
 
     # Sleep to verify process is still up
     sleep 1
@@ -131,6 +138,10 @@ function stop() {
                 if [ "$?" != "0" ]; then
                     # Process stopped, break from loop
                     log_success_msg "$DAEMON_NAME process was stopped"
+
+                    # Kill open Openvpn, until signal handling will be implemented
+                    killall openvpn
+
                     return 0
                 fi
 
@@ -141,6 +152,9 @@ function stop() {
                     # After 30 seconds, send SIGKILL
                     echo "Timeout exceeded, sending SIGKILL..."
                     kill -s KILL $PID &>/dev/null
+
+                    # Kill open Openvpn, until signal handling will be implemented
+                    killall openvpn
                 elif [ $? -eq 40 ]; then
                     # After 40 seconds, error out
                     log_failure_msg "could not stop $DAEMON_NAME process"
