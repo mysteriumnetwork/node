@@ -18,26 +18,26 @@ OS_DIR_INSTALLATION="/usr/lib/mysterium-client/installation"
 
 VERSION=$1
 if [ -z "$VERSION" ]; then
-    printf "\e[0;31m%s\e[0m\n" "Missing version!";
+    printf "\e[0;31m%s\e[0m\n" "Missing version!"
     exit 1
 fi
 
 ARCH=$2
 if [ -z "$ARCH" ]; then
-    printf "\e[0;31m%s\e[0m\n" "Missing architecture!";
+    printf "\e[0;31m%s\e[0m\n" "Missing architecture!"
     exit 1
 fi
 
 FPM_BIN=`which fpm`
 if [ ! -x "$FPM_BIN" ]; then
-    printf "\e[0;31m%s\e[0m\n" "Missing tool 'fpm'!";
+    printf "\e[0;31m%s\e[0m\n" "Missing tool 'fpm'!"
     exit 1
 fi
 
 
 DIR_BUILD="build/package"
 PACKAGE_FILE="${DIR_BUILD}/mysterium-client_${VERSION}_linux_${ARCH}.deb"
-printf  "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
+printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
     && rm -f ${PACKAGE_FILE} \
     && ${FPM_BIN} \
         --name="mysterium-client" \
@@ -57,11 +57,11 @@ printf  "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" 
         build/client/mysterium_client=${OS_DIR_BIN}/ \
         bin/client_package/installation/=${OS_DIR_INSTALLATION}/
 if [ $? -ne 0 ] ; then
-    printf "\e[0;31m%s\e[0m\n" "Failed to build Debian package!";
+    printf "\e[0;31m%s\e[0m\n" "Failed to build Debian package!"
     exit 1
 fi
 
 debber deb:contents ${PACKAGE_FILE}
 
-printf "Packaging process complete."
+printf "\e[0;32m%s\e[0m\n" "Debian packaging process for architecture '$ARCH' complete!"
 exit 0

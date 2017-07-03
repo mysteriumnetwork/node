@@ -21,7 +21,7 @@
 echo "Compiling 'mysterium_fake' for '$GOOS/$GOARCH'.."
 GOBIN=`pwd`/build/fake go install cmd/mysterium_fake/mysterium_fake.go
 if [ $? -ne 0 ] ; then
-    printf "\e[0;31m%s\e[0m\n" "Compile failed!";
+    printf "\e[0;31m%s\e[0m\n" "Compile failed!"
     exit 1
 fi
 
