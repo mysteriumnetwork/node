@@ -13,7 +13,9 @@ type commandRun struct {
 	outputError io.Writer
 
 	mysteriumClient server.Client
-	vpnClient       *openvpn.Client
+	vpnMiddlewares  []openvpn.ManagementMiddleware
+
+	vpnClient *openvpn.Client
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
@@ -30,10 +32,14 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		return err
 	}
 
+	vpnMiddlewares := append(
+		cmd.vpnMiddlewares,
+		bytescount_client.NewMiddleware(cmd.mysteriumClient, vpnSession.Id, 1*time.Minute),
+	)
 	cmd.vpnClient = openvpn.NewClient(
 		vpnConfig,
 		options.DirectoryRuntime,
-		bytescount_client.NewMiddleware(cmd.mysteriumClient, vpnSession.Id, 1*time.Minute),
+		vpnMiddlewares...,
 	)
 	if err := cmd.vpnClient.Start(); err != nil {
 		return err

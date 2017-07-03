@@ -1,27 +1,35 @@
 package command_run
 
 import (
-	"os"
+	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"io"
+	"os"
 )
 
-func NewCommand() *commandRun {
+func NewCommand() Command {
 	return &commandRun{
-		output: os.Stdout,
+		output:      os.Stdout,
 		outputError: os.Stderr,
+
 		mysteriumClient: server.NewClient(),
+		vpnMiddlewares:  make([]openvpn.ManagementMiddleware, 0),
 	}
 }
 
 func NewCommandWithDependencies(
 	output io.Writer,
 	outputError io.Writer,
+
 	mysteriumClient server.Client,
-) *commandRun {
+	vpnMiddlewares ...openvpn.ManagementMiddleware,
+
+) Command {
 	return &commandRun{
-		output: output,
+		output:      output,
 		outputError: outputError,
+
 		mysteriumClient: mysteriumClient,
+		vpnMiddlewares:  vpnMiddlewares,
 	}
 }
