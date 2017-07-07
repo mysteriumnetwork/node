@@ -37,7 +37,7 @@ fi
 
 
 DIR_BUILD="build/package"
-PACKAGE_FILE="${DIR_BUILD}/mysterium-node_${VERSION}_linux_${ARCH}.deb"
+PACKAGE_FILE="${DIR_BUILD}/mysterium-node_linux_${ARCH}.deb"
 printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
     && rm -f ${PACKAGE_FILE} \
     && ${FPM_BIN} \

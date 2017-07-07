@@ -1,13 +1,13 @@
 #!/bin/bash
 
 ###########################################################################
-# Packaging script which creates all packages (Debian)
+# Packaging script which creates all packages (Debian/Ubuntu/Linux/OSX/Windows)
 #
 # To package a build, simple execute:
-#> bin/server_package_all <version>
+#> bin/package_all <version>
 
 # Usage example:
-#> bin/server_package_all 0.0.1
+#> bin/package_all 0.0.1
 
 VERSION=$1
 if [ -z "$VERSION" ]; then
@@ -20,39 +20,39 @@ DIR_BUILD="build/package"
 printf "Creating build directory '$DIR_BUILD' ..\n" \
     && mkdir -p $DIR_BUILD \
 && printf "\n\n" \
-    GOOS=linux GOARCH=amd64 bin/server_build \
+    && GOOS=linux GOARCH=amd64 bin/server_build \
     && bin/server_package_debian $VERSION amd64 \
-    && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_${VERSION}_linux_amd64 \
+    && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_linux_amd64 \
 && printf "\n\n" \
     && GOOS=linux GOARCH=386 bin/server_build \
     && bin/server_package_debian $VERSION i386 \
-    && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_${VERSION}_linux_386 \
+    && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_linux_386 \
 && printf "\n\n" \
     && GOOS=linux GOARCH=arm bin/server_build \
     && bin/server_package_debian $VERSION armhf \
-    && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_${VERSION}_linux_arm \
+    && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_linux_arm \
 && printf "\n\n" \
     && GOOS=linux GOARCH=amd64 bin/client_build \
     && bin/client_package_debian $VERSION amd64 \
-    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_${VERSION}_linux_amd64 \
+    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_linux_amd64 \
 && printf "\n\n" \
     && GOOS=linux GOARCH=386 bin/client_build \
     && bin/client_package_debian $VERSION i386 \
-    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_${VERSION}_linux_386 \
+    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_linux_386 \
 && printf "\n\n" \
     && GOOS=linux GOARCH=arm bin/client_build \
     && bin/client_package_debian $VERSION armhf \
-    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_${VERSION}_linux_arm \
+    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_linux_arm \
 && printf "\n\n" \
     && GOOS=darwin GOARCH=amd64 bin/client_build \
-    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_${VERSION}_darwin_amd64 \
+    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_darwin_amd64 \
 && printf "\n\n" \
     && GOOS=darwin GOARCH=386 bin/client_build \
-    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_${VERSION}_darwin_386 \
+    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_darwin_386 \
 && printf "\n\n" \
     && GOOS=windows GOARCH=amd64 bin/client_build \
-    && mv build/client/mysterium_client.exe $DIR_BUILD/mysterium_client_${VERSION}_windows_amd64.exe \
+    && mv build/client/mysterium_client.exe $DIR_BUILD/mysterium_client_windows_amd64.exe \
 && printf "\n\n" \
     && GOOS=windows GOARCH=386 bin/client_build \
-    && mv build/client/mysterium_client.exe $DIR_BUILD/mysterium_client_${VERSION}_windows_386.exe \
+    && mv build/client/mysterium_client.exe $DIR_BUILD/mysterium_client_windows_386.exe \
 && printf "\e[0;32m%s\e[0m\n" "All packages successfully packaged to directory '$DIR_BUILD'!"
