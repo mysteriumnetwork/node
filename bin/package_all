@@ -18,7 +18,9 @@ fi
 DIR_BUILD="build/package"
 
 printf "Creating build directory '$DIR_BUILD' ..\n" \
+    && rm -rf $DIR_BUILD \
     && mkdir -p $DIR_BUILD \
+    && cp INSTALL.md $DIR_BUILD/INSTALL.txt \
 && printf "\n\n" \
     && GOOS=linux GOARCH=amd64 bin/server_build \
     && bin/server_package_debian $VERSION amd64 \

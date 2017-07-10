@@ -1,0 +1,37 @@
+#!/bin/bash
+
+###########################################################################
+# Release creates all supported packages and uploads them to release pages
+#
+# To create a release, simple execute:
+#> bin/release <version>
+
+# Usage example:
+#> git config --global github.token "verysecrettoken"
+#> ./bin/release 0.0.1
+
+GHR_BIN=`which ghr`
+if [ ! -x "$GHR_BIN" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing tool 'ghr'!"
+    exit 1
+fi
+
+VERSION=$1
+if [ -z "$VERSION" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing version!"
+    exit 1
+fi
+
+DIR_BUILD="build/package"
+
+printf "Creating Github release '$VERSION' ..\n" \
+    && ghr \
+        --owner="MysteriumNetwork" \
+        --repository="node" \
+        --prerelease \
+        --parallel=100 \
+        $VERSION $DIR_BUILD \
+    && printf "\e[0;32m%s\e[0m\n" "Github release '$VERSION' created!"
+
+open https://github.com/MysteriumNetwork/node/releases/tag/$VERSION
+exit 0
