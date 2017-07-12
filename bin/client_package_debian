@@ -49,7 +49,8 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --version "$VERSION" \
         --architecture="$ARCH" \
         --package="$PACKAGE_FILE" \
-        --depends "openvpn" \
+        --depends "openvpn (>= 2.3.2)" \
+        --depends "openvpn (<< 2.3.3)" \
         --depends "ca-certificates" \
         --after-install bin/client_package/installation/post-install.sh \
         --after-remove bin/client_package/installation/post-uninstall.sh \
