@@ -14,12 +14,13 @@ OS_DIR_CONFIG="/etc/mysterium-node"
 OS_DIR_LOG="/var/log/mysterium-node"
 OS_DIR_RUN="/var/run/mysterium-node"
 
+# Unique identifier for Mysterium VPN node
+MYSTERIUM_SERVER_NODE=""
+
 # Process name (For display)
 DAEMON_NAME="mysterium-node"
 #Daemon name, where is the actual executable
 DAEMON_BIN="$OS_DIR_BIN/mysterium_server"
-# Daemon options
-DAEMON_OPTS="--node=12345 --config-dir=$OS_DIR_CONFIG --runtime-dir=$OS_DIR_RUN"
 # User and group
 DAEMON_USER="mysterium-node"
 DAEMON_GROUP="mysterium-node"
@@ -27,7 +28,7 @@ DAEMON_GROUP="mysterium-node"
 DAEMON_PIDFILE="$OS_DIR_RUN/daemon.pid"
 # Logging
 DAEMON_STDOUT="$OS_DIR_LOG/daemon.log"
-DAEMON_SDTERR="$OS_DIR_LOG/error.log"
+DAEMON_STDERR="$OS_DIR_LOG/error.log"
 # Command-line options that can be set in /etc/default/mysterium-node.
 # These will override any config file values.
 DAEMON_DEFAULT="/etc/default/mysterium-node"
@@ -53,11 +54,15 @@ fi
 
 
 # Create directory for logs
-if [ ! -f "$DAEMON_STDOUT" ]; then
-    mkdir -p $(dirname $DAEMON_STDOUT)
+LOGDIR=`dirname $DAEMON_STDOUT`
+if [ ! -d "$LOGDIR" ]; then
+    mkdir -p $LOGDIR
+    chown -R -L $DAEMON_USER:$DAEMON_GROUP $LOGDIR
 fi
-if [ ! -f "$DAEMON_SDTERR" ]; then
-    mkdir -p $(dirname $DAEMON_SDTERR)
+LOGDIR=`dirname $DAEMON_STDERR`
+if [ ! -d "$LOGDIR" ]; then
+    mkdir -p $LOGDIR
+    chown -R -L $DAEMON_USER:$DAEMON_GROUP $LOGDIR
 fi
 
 if [ -r /lib/lsb/init-functions ]; then
@@ -107,7 +112,11 @@ function start() {
         --group $DAEMON_GROUP \
         --exec $DAEMON_BIN \
         -- \
-        $DAEMON_OPTS >>$DAEMON_STDOUT 2>>$DAEMON_SDTERR
+        --node=$MYSTERIUM_SERVER_NODE \
+        --config-dir=$OS_DIR_CONFIG \
+        --runtime-dir=$OS_DIR_RUN \
+        >>$DAEMON_STDOUT \
+        2>>$DAEMON_STDERR
 
     # Sleep to verify process is still up
     sleep 1

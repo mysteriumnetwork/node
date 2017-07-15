@@ -2,6 +2,7 @@
 
 OS_DIR_BIN="/usr/bin"
 OS_DIR_LOG="/var/log/mysterium-client"
+OS_DIR_RUN="/var/run/mysterium-client"
 OS_DIR_DATA="/var/lib/mysterium-client"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-client/installation"
 OS_DIR_INITD="/etc/init.d/"
@@ -36,13 +37,7 @@ function install_chkconfig {
 printf "Creating user '$DAEMON_USER:$DAEMON_GROUP'...\n" \
     && useradd --system -U $DAEMON_USER -G root -s /bin/false -m -d $OS_DIR_DATA \
     && usermod -a -G root $DAEMON_USER \
-    && chown -R -L $DAEMON_USER:$DAEMON_GROUP $OS_DIR_DATA \
-    && chown -R -L $DAEMON_USER:$DAEMON_GROUP $OS_DIR_LOG
-
-# Add defaults file, if it doesn't exist
-if [[ ! -f $DAEMON_DEFAULT ]]; then
-    touch $DAEMON_DEFAULT
-fi
+    && chown -R -L $DAEMON_USER:$DAEMON_GROUP $OS_DIR_DATA
 
 # Remove legacy symlink, if it exists
 if [[ -L $OS_DIR_INITD/mysterium-client ]]; then
@@ -78,3 +73,13 @@ elif [[ -f /etc/os-release ]]; then
 	install_chkconfig
     fi
 fi
+
+# Add defaults file, if it doesn't exist
+if [[ ! -f $DAEMON_DEFAULT ]]; then
+    printf "\nPlease, enter Mysterium VPN node to make connection with: \n" \
+        && read -p ">" MYSTERIUM_CLIENT_NODE \
+        && echo "MYSTERIUM_CLIENT_NODE=$MYSTERIUM_CLIENT_NODE" > $DAEMON_DEFAULT
+fi
+
+printf "\nInstallation successfully finished.\n" \
+    && printf "Usage: service mysterium-client restart\n"
