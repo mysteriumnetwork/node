@@ -1,0 +1,4 @@
+#!/bin/bash
+
+CURRENT_SOCKET=`ls build/server/*.sock | head -1`
+sudo socat - UNIX-CONNECT:$CURRENT_SOCKET
