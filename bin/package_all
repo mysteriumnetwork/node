@@ -47,14 +47,8 @@ printf "Creating build directory '$DIR_BUILD' ..\n" \
     && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_linux_arm \
 && printf "\n\n" \
     && GOOS=darwin GOARCH=amd64 bin/client_build \
-    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_darwin_amd64 \
+    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_osx_amd64 \
 && printf "\n\n" \
     && GOOS=darwin GOARCH=386 bin/client_build \
-    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_darwin_386 \
-&& printf "\n\n" \
-    && GOOS=windows GOARCH=amd64 bin/client_build \
-    && mv build/client/mysterium_client.exe $DIR_BUILD/mysterium_client_windows_amd64.exe \
-&& printf "\n\n" \
-    && GOOS=windows GOARCH=386 bin/client_build \
-    && mv build/client/mysterium_client.exe $DIR_BUILD/mysterium_client_windows_386.exe \
+    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_osx_386 \
 && printf "\e[0;32m%s\e[0m\n" "All packages successfully packaged to directory '$DIR_BUILD'!"
