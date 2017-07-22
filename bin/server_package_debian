@@ -51,8 +51,8 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --architecture="$ARCH" \
         --package="$PACKAGE_FILE" \
         --depends "openvpn (>= 2.3.2)" \
-        --depends "openvpn (<< 2.3.3)" \
         --depends "ca-certificates" \
+        --depends "iptables" \
         --after-install bin/server_package/installation/post-install.sh \
         --after-remove bin/server_package/installation/post-uninstall.sh \
         -s dir -t deb \
