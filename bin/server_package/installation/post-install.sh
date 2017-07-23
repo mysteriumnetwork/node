@@ -77,7 +77,7 @@ fi
 
 # Add defaults file, if it doesn't exist
 if [[ ! -f $DAEMON_DEFAULT ]]; then
-    printf "\nPlease, enter unique identifier for Mysterium VPN node: \n" \
+    printf "\nPlease, enter unique identifier for Mysterium VPN node (Node key): \n" \
         && read -p ">" MYSTERIUM_SERVER_NODE \
         && echo "MYSTERIUM_SERVER_NODE=$MYSTERIUM_SERVER_NODE" > $DAEMON_DEFAULT
 fi
