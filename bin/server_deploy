@@ -5,7 +5,7 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-SSH_SERVER=root@server.mysterium.localhost
+SSH_SERVER=root@vpn1.mysterium.local
 SSH_SERVER_DIR=mysterium/server
 
 printf "\n\nStopping application at '$SSH_SERVER':\n" \
@@ -15,11 +15,12 @@ printf "\n\nStopping application at '$SSH_SERVER':\n" \
 && printf "\n\nDeploying application:\n" \
     && ssh $SSH_SERVER "mkdir -pv $SSH_SERVER_DIR" \
     && scp build/server/mysterium_server \
-        bin/tls/server.crt bin/tls/server.key bin/tls/ca.crt \
-        bin/tls/client.key bin/tls/client.crt \
-        bin/tls/crl.pem bin/tls/dh.pem bin/tls/ta.key \
+        bin/server_package/config/* \
         $SSH_SERVER:$SSH_SERVER_DIR/ \
 && printf "\n\nStarting application:\n" \
-    && ssh $SSH_SERVER "sudo $SSH_SERVER_DIR/mysterium_server --config-dir=$SSH_SERVER_DIR"
+    && ssh $SSH_SERVER "sudo $SSH_SERVER_DIR/mysterium_server \
+        --config-dir=$SSH_SERVER_DIR" \
+        --runtime-dir=$SSH_SERVER_DIR \
+        $@
 
 exit 0

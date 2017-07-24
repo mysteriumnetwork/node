@@ -5,7 +5,7 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-SSH_SERVER=root@server.mysterium.localhost
+SSH_SERVER=root@vpn1.mysterium.local
 SSH_SERVER_DIR=mysterium/etc
 
 printf "\n\nStopping application at '$SSH_SERVER':\n" \
