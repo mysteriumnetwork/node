@@ -1,0 +1,17 @@
+# If you modify this, please also make sure to edit initd.sh
+
+[Unit]
+Description=Client for decentralised VPN built on blockchain
+Documentation=https://mysterium.network/
+After=network-online.target
+
+[Service]
+User=mysterium-client
+Group=mysterium-client
+EnvironmentFile=-/etc/default/mysterium-client
+ExecStart=/usr/bin/mysterium_client ${DAEMON_OPTS}
+KillMode=control-group
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

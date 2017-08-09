@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sudo ./build/server/mysterium_server --config-dir=bin/tls --runtime-dir=build/server $@

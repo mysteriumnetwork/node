@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sudo ./build/fake/mysterium_fake
