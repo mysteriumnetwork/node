@@ -5,9 +5,6 @@ import (
 )
 
 type ServiceDefinition struct {
-	// Definitions of VPN service type offered
-	Type string
-
 	// Approximate information on location where the service is provided from
 	Location dto_discovery.Location
 
@@ -16,10 +13,6 @@ type ServiceDefinition struct {
 
 	// Available per session bandwidth
 	SessionBandwidth Bandwidth
-}
-
-func (service ServiceDefinition) GetType() string {
-	return service.Type
 }
 
 func (service ServiceDefinition) GetLocation() dto_discovery.Location {

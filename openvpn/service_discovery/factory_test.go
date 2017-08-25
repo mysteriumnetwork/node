@@ -8,17 +8,17 @@ import (
 	"time"
 )
 
-func Test_Factory(t *testing.T) {
+func Test_NewServiceProposal(t *testing.T) {
 	proposal := NewServiceProposal()
 
 	assert.NotNil(t, proposal)
+	assert.Equal(t, 1, proposal.Id)
 	assert.Equal(t, "service-proposal/v1", proposal.Format)
 	assert.Equal(t, "provider1", proposal.ProviderId)
-	assert.Equal(t, 1, proposal.SerialNumber)
+	assert.Equal(t, "openvpn", proposal.ServiceType)
 	assert.Equal(
 		t,
 		dto.ServiceDefinition{
-			Type:              "openvpn",
 			Location:          dto_discovery.Location{"LT", "Vilnius"},
 			LocationOriginate: dto_discovery.Location{"US", "Newyork"},
 			SessionBandwidth:  10.5,

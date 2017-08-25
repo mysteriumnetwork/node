@@ -8,11 +8,11 @@ import (
 
 func NewServiceProposal() dto_discovery.ServiceProposal {
 	return dto_discovery.ServiceProposal{
-		Format:       "service-proposal/v1",
-		ProviderId:   "provider1",
-		SerialNumber: 1,
+		Id:          1,
+		Format:      "service-proposal/v1",
+		ProviderId:  "provider1",
+		ServiceType: "openvpn",
 		ServiceDefinition: dto.ServiceDefinition{
-			Type:              "openvpn",
 			Location:          dto_discovery.Location{"LT", "Vilnius"},
 			LocationOriginate: dto_discovery.Location{"US", "Newyork"},
 			SessionBandwidth:  10.5,
