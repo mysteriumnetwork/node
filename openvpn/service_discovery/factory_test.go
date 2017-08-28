@@ -25,10 +25,10 @@ func Test_NewServiceProposal(t *testing.T) {
 		},
 		proposal.ServiceDefinition,
 	)
+	assert.Equal(t, dto.PAYMENT_METHOD_PER_TIME, proposal.PaymentMethodType)
 	assert.Equal(
 		t,
 		dto.PaymentMethodPerTime{
-			Type:     dto.PAYMENT_METHOD_PER_TIME,
 			Price:    dto_discovery.Price{0.125, "MYST"},
 			Duration: 60 * time.Minute,
 		},

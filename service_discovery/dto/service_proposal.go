@@ -10,12 +10,15 @@ type ServiceProposal struct {
 	// Unique identifier of a provider
 	ProviderId string
 
-	// Definitions of service type offered
+	// Type of service type offered
 	ServiceType string
 
 	// Qualitative service definition
 	ServiceDefinition ServiceDefinition
 
-	// Service payment & metering method
+	// Type of service payment method
+	PaymentMethodType string
+
+	// Service payment & usage metering definition
 	PaymentMethod PaymentMethod
 }

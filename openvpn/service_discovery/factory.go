@@ -17,8 +17,8 @@ func NewServiceProposal() dto_discovery.ServiceProposal {
 			LocationOriginate: dto_discovery.Location{"US", "Newyork"},
 			SessionBandwidth:  10.5,
 		},
+		PaymentMethodType: dto.PAYMENT_METHOD_PER_TIME,
 		PaymentMethod: dto.PaymentMethodPerTime{
-			Type: dto.PAYMENT_METHOD_PER_TIME,
 			// 15 MYST/month = 0,5 MYST/day = 0,125 MYST/hour
 			Price:    dto_discovery.Price{0.125, "MYST"},
 			Duration: 1 * time.Hour,
