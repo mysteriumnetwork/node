@@ -6,15 +6,15 @@ import (
 	"time"
 )
 
-func NewServiceProposal() dto_discovery.ServiceProposal {
+func NewServiceProposal(nodeLocation dto_discovery.Location) dto_discovery.ServiceProposal {
 	return dto_discovery.ServiceProposal{
 		Id:          1,
 		Format:      "service-proposal/v1",
 		ProviderId:  "provider1",
 		ServiceType: "openvpn",
 		ServiceDefinition: dto.ServiceDefinition{
-			Location:          dto_discovery.Location{"LT", "Vilnius"},
-			LocationOriginate: dto_discovery.Location{"US", "Newyork"},
+			Location:          nodeLocation,
+			LocationOriginate: nodeLocation,
 			SessionBandwidth:  10.5,
 		},
 		PaymentMethodType: dto.PAYMENT_METHOD_PER_TIME,

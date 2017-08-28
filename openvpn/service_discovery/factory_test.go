@@ -8,8 +8,10 @@ import (
 	"time"
 )
 
+var locationLTTelia = dto_discovery.Location{"LT", "Vilnius", "AS8764"}
+
 func Test_NewServiceProposal(t *testing.T) {
-	proposal := NewServiceProposal()
+	proposal := NewServiceProposal(locationLTTelia)
 
 	assert.NotNil(t, proposal)
 	assert.Equal(t, 1, proposal.Id)
@@ -19,8 +21,8 @@ func Test_NewServiceProposal(t *testing.T) {
 	assert.Equal(
 		t,
 		dto.ServiceDefinition{
-			Location:          dto_discovery.Location{"LT", "Vilnius"},
-			LocationOriginate: dto_discovery.Location{"US", "Newyork"},
+			Location:          locationLTTelia,
+			LocationOriginate: locationLTTelia,
 			SessionBandwidth:  10.5,
 		},
 		proposal.ServiceDefinition,
