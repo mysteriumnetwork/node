@@ -7,9 +7,6 @@ type ServiceProposal struct {
 	// A version number is included in the proposal to allow extensions to the proposal format
 	Format string
 
-	// Unique identifier of a provider
-	ProviderId string
-
 	// Type of service type offered
 	ServiceType string
 
@@ -21,4 +18,10 @@ type ServiceProposal struct {
 
 	// Service payment & usage metering definition
 	PaymentMethod PaymentMethod
+
+	// Unique identifier of a provider
+	ProviderId string
+
+	// Communication methods possible
+	ProviderContacts []Contact
 }

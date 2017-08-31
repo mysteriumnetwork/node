@@ -8,15 +8,17 @@ import (
 	"time"
 )
 
-var locationLTTelia = dto_discovery.Location{"LT", "Vilnius", "AS8764"}
+var (
+	nodeKey         = "123456"
+	locationLTTelia = dto_discovery.Location{"LT", "Vilnius", "AS8764"}
+)
 
 func Test_NewServiceProposal(t *testing.T) {
-	proposal := NewServiceProposal(locationLTTelia)
+	proposal := NewServiceProposal(nodeKey, locationLTTelia)
 
 	assert.NotNil(t, proposal)
 	assert.Equal(t, 1, proposal.Id)
 	assert.Equal(t, "service-proposal/v1", proposal.Format)
-	assert.Equal(t, "provider1", proposal.ProviderId)
 	assert.Equal(t, "openvpn", proposal.ServiceType)
 	assert.Equal(
 		t,
@@ -35,5 +37,16 @@ func Test_NewServiceProposal(t *testing.T) {
 			Duration: 60 * time.Minute,
 		},
 		proposal.PaymentMethod,
+	)
+	assert.Equal(t, nodeKey, proposal.ProviderId)
+	assert.Equal(
+		t,
+		[]dto_discovery.Contact{
+			{
+				Type:       dto_discovery.CONTACT_NATS_V1,
+				Definition: dto_discovery.ContactNATSV1{nodeKey},
+			},
+		},
+		proposal.ProviderContacts,
 	)
 }

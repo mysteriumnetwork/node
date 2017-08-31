@@ -6,11 +6,10 @@ import (
 	"time"
 )
 
-func NewServiceProposal(nodeLocation dto_discovery.Location) dto_discovery.ServiceProposal {
+func NewServiceProposal(nodeKey string, nodeLocation dto_discovery.Location) dto_discovery.ServiceProposal {
 	return dto_discovery.ServiceProposal{
 		Id:          1,
 		Format:      "service-proposal/v1",
-		ProviderId:  "provider1",
 		ServiceType: "openvpn",
 		ServiceDefinition: dto.ServiceDefinition{
 			Location:          nodeLocation,
@@ -22,6 +21,13 @@ func NewServiceProposal(nodeLocation dto_discovery.Location) dto_discovery.Servi
 			// 15 MYST/month = 0,5 MYST/day = 0,125 MYST/hour
 			Price:    dto_discovery.Price{0.125, "MYST"},
 			Duration: 1 * time.Hour,
+		},
+		ProviderId: nodeKey,
+		ProviderContacts: []dto_discovery.Contact{
+			{
+				Type:       dto_discovery.CONTACT_NATS_V1,
+				Definition: dto_discovery.ContactNATSV1{nodeKey},
+			},
 		},
 	}
 }
