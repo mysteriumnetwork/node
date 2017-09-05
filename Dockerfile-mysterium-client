@@ -1,14 +1,14 @@
 FROM ubuntu:latest
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
-# e.g. PACKAGE_FILE="build/package/mysterium-client_0.0.1_linux_amd64.deb"
+# e.g. PACKAGE_FILE="build/package/mysterium-client_linux_amd64.deb"
 ARG PACKAGE_FILE
 COPY $PACKAGE_FILE /tmp/mysterium-client.deb
 
 # Install packages
 RUN apt-get update \
-    && dpkg --install /tmp/mysterium-client.deb
-    && apt-get install --fix-broken \
+    && dpkg --install --force-depends /tmp/mysterium-client.deb \
+    && apt-get install -y --fix-broken \
     && rm -rf /var/cache/apk/* \
     && rm /tmp/mysterium-client.deb
 

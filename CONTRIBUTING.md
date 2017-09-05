@@ -1,5 +1,6 @@
 # Contributing guide
 
+
 Running
 ------------
 ``` bash
@@ -10,9 +11,9 @@ bin/client_build
 bin/client_run
 ```
 
+
 Development environment
 ------------
-
 * **Step 1.** Get Golang
 ```bash
 brew install go
@@ -28,6 +29,7 @@ cd $GOPATH/src/github.com/mysterium/node
 glide install
 go build github.com/mysterium/node
 ```
+
 
 Dependency management
 ------------
@@ -47,3 +49,24 @@ glide get github.com/ccding/go-stun
 vim glide.yaml
 glide update 
 ```
+
+
+Debian packaging
+------------
+* **Step 1.** Get FPM tool
+See http://fpm.readthedocs.io/en/latest/installing.html
+
+```bash
+brew install gnu-tar
+gem install --no-ri --no-rdoc fpm
+
+* **Step 2.** Get Debber tool
+See https://github.com/debber/debber-v0.3
+
+```bash
+go get github.com/debber/debber-v0.3/cmd/...
+
+* **Step 3.** Build .deb package
+```bash
+bin/server_package_debian 0.0.6 amd64
+bin/client_package_debian 0.0.6 amd64
