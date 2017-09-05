@@ -31,3 +31,12 @@ services:
       - default
     volumes:
       - .:/application
+
+  gateway:
+    image: nats
+    container_name: mysterium-gateway
+    networks:
+      - default
+    ports:
+      - 4222:4222
+      - 8222:8222
