@@ -6,6 +6,7 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/server/dto"
+	"github.com/nats-io/go-nats"
 	"io"
 	"time"
 )
@@ -17,9 +18,12 @@ type commandRun struct {
 	ipifyClient     ipify.Client
 	mysteriumClient server.Client
 	natService      nat.NATService
-	vpnMiddlewares  []openvpn.ManagementMiddleware
 
-	vpnServer *openvpn.Server
+	vpnMiddlewares []openvpn.ManagementMiddleware
+	vpnServer      *openvpn.Server
+
+	communicationOptions nats.Options
+	communication        *nats.Conn
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
@@ -72,6 +76,15 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		}
 	}()
 
+	cmd.communication, err = cmd.communicationOptions.Connect()
+	if err != nil {
+		return err
+	}
+	err = cmd.communication.Publish("node-register", []byte(options.NodeKey))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -80,6 +93,7 @@ func (cmd *commandRun) Wait() error {
 }
 
 func (cmd *commandRun) Kill() {
+	cmd.communication.Close()
 	cmd.vpnServer.Stop()
 	cmd.natService.Stop()
 }
