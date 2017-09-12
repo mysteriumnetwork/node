@@ -1,12 +1,12 @@
 package command_run
 
 import (
+	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/server/dto"
-	"github.com/nats-io/go-nats"
 	"io"
 	"time"
 )
@@ -22,8 +22,7 @@ type commandRun struct {
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnServer      *openvpn.Server
 
-	communicationOptions nats.Options
-	communication        *nats.Conn
+	communicationChannel communication.CommunicationsChannel
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
@@ -37,6 +36,10 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		TargetIp:      vpnServerIp,
 	})
 	if err = cmd.natService.Start(); err != nil {
+		return err
+	}
+
+	if err = cmd.communicationChannel.Start(); err != nil {
 		return err
 	}
 
@@ -76,11 +79,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		}
 	}()
 
-	cmd.communication, err = cmd.communicationOptions.Connect()
-	if err != nil {
-		return err
-	}
-	err = cmd.communication.Publish("node-register", []byte(options.NodeKey))
+	err = cmd.communicationChannel.Send(communication.NODE_REGISTER, options.NodeKey)
 	if err != nil {
 		return err
 	}
@@ -93,7 +92,7 @@ func (cmd *commandRun) Wait() error {
 }
 
 func (cmd *commandRun) Kill() {
-	cmd.communication.Close()
+	cmd.communicationChannel.Stop()
 	cmd.vpnServer.Stop()
 	cmd.natService.Stop()
 }
