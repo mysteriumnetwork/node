@@ -1,6 +1,7 @@
 package command_run
 
 import (
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -14,9 +15,10 @@ func NewCommand() Command {
 		output:      os.Stdout,
 		outputError: os.Stderr,
 
-		ipifyClient:     ipify.NewClient(),
-		mysteriumClient: server.NewClient(),
-		vpnMiddlewares:  make([]openvpn.ManagementMiddleware, 0),
+		ipifyClient:          ipify.NewClient(),
+		mysteriumClient:      server.NewClient(),
+		communicationChannel: nats.NewService(),
+		vpnMiddlewares:       make([]openvpn.ManagementMiddleware, 0),
 
 		natService: nat.NewService(),
 	}

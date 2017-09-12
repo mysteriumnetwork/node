@@ -1,6 +1,7 @@
 package command_run
 
 import (
+	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -17,9 +18,11 @@ type commandRun struct {
 	ipifyClient     ipify.Client
 	mysteriumClient server.Client
 	natService      nat.NATService
-	vpnMiddlewares  []openvpn.ManagementMiddleware
 
-	vpnServer *openvpn.Server
+	vpnMiddlewares []openvpn.ManagementMiddleware
+	vpnServer      *openvpn.Server
+
+	communicationChannel communication.CommunicationsChannel
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
@@ -33,6 +36,10 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		TargetIp:      vpnServerIp,
 	})
 	if err = cmd.natService.Start(); err != nil {
+		return err
+	}
+
+	if err = cmd.communicationChannel.Start(); err != nil {
 		return err
 	}
 
@@ -72,6 +79,11 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		}
 	}()
 
+	err = cmd.communicationChannel.Send(communication.NODE_REGISTER, options.NodeKey)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -80,6 +92,7 @@ func (cmd *commandRun) Wait() error {
 }
 
 func (cmd *commandRun) Kill() {
+	cmd.communicationChannel.Stop()
 	cmd.vpnServer.Stop()
 	cmd.natService.Stop()
 }
