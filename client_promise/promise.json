@@ -1,0 +1,11 @@
+{
+  "promise": {
+    "id": 1,
+    "proposal_id": 1,
+    "issuer_id": 1,
+    "amount": 5,
+    "date_created": "unix_timestamp"
+  },
+  "issuer_signature": "",
+  "provider_signature": ""
+}
