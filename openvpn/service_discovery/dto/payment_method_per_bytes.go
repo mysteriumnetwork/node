@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"github.com/mysterium/node/datasize"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
@@ -12,7 +13,7 @@ type PaymentMethodPerBytes struct {
 	Price dto_discovery.Price
 
 	// Service bytes provided for paid price
-	Bytes int
+	Bytes datasize.BitSize
 }
 
 func (method PaymentMethodPerBytes) GetType() string {

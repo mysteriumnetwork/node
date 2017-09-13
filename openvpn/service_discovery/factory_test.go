@@ -25,7 +25,7 @@ func Test_NewServiceProposal(t *testing.T) {
 		dto.ServiceDefinition{
 			Location:          locationLTTelia,
 			LocationOriginate: locationLTTelia,
-			SessionBandwidth:  10.5,
+			SessionBandwidth:  83886080,
 		},
 		proposal.ServiceDefinition,
 	)

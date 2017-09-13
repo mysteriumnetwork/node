@@ -1,6 +1,7 @@
 package service_discovery
 
 import (
+	"github.com/mysterium/node/datasize"
 	dto "github.com/mysterium/node/openvpn/service_discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"time"
@@ -14,7 +15,7 @@ func NewServiceProposal(nodeKey string, nodeLocation dto_discovery.Location) dto
 		ServiceDefinition: dto.ServiceDefinition{
 			Location:          nodeLocation,
 			LocationOriginate: nodeLocation,
-			SessionBandwidth:  10.5,
+			SessionBandwidth:  dto.Bandwidth(10 * datasize.MB),
 		},
 		PaymentMethodType: dto.PAYMENT_METHOD_PER_TIME,
 		PaymentMethod: dto.PaymentMethodPerTime{
