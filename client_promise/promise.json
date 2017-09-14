@@ -1,11 +1,9 @@
 {
   "promise": {
-    "id": 1,
-    "proposal_id": 1,
+    "serial_number": 1,
     "issuer_id": 1,
-    "amount": 5,
-    "date_created": "unix_timestamp"
+    "benefiter_id": 1,
+    "amount": 5
   },
-  "issuer_signature": "",
-  "provider_signature": ""
+  "issuer_signature": ""
 }
