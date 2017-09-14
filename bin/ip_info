@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Automate retrieval of IP information
+#
+# Usage example:
+# Lookup info of current IP:
+#> bin/ip2info
+#
+# Lookup info of given IP:
+#> bin/ip2info 216.58.209.110
+
+IP=$1
+if [ -z "$IP" ]; then
+    IP=`curl -s "https://api.ipify.org/?format=text"`
+fi
+
+REVERSE_IP=`echo $IP | awk -F "." '{print $4"."$3"."$2"."$1}'`
+
+ASN_INFO=`dig +short $REVERSE_IP.origin.asn.cymru.com TXT`
+PEER_INFO=`dig +short $REVERSE_IP.peer.asn.cymru.com TXT`
+
+NUMBER=`echo $ASN_INFO | cut -d'|' -f 1 | cut -d'"' -f 2 | cut -d' ' -f 1`
+ASN="AS$NUMBER"
+
+ASN_REPORT=`dig +short $ASN.asn.cymru.com TXT`
+
+SUBNET=`echo $ASN_INFO | cut -d'|' -f 2`
+COUNTRY=`echo $ASN_INFO | cut -d'|' -f 3`
+ISSUER=`echo $ASN_INFO | cut -d'|' -f 4`
+
+PEERS=`echo $PEER_INFO | cut -d'|' -f 1 | cut -d'"' -f 2`
+
+REGISTRY_DATE=`echo $ASN_REPORT | cut -d'|' -f 4`
+REGISTRANT=`echo $ASN_REPORT | cut -d'|' -f 5 | cut -d'"' -f 1`
+
+# Print tab delimited with headers
+echo "# Query,Subnet,Registrant,AS Number,Country,Issuer,Registry Date,Peer ASNs"
+echo -e "$IP\t$SUBNET\t$REGISTRANT\t$ASN\t$COUNTRY\t$ISSUER\t$REGISTRY_DATE\t$PEERS"
