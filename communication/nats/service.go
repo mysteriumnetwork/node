@@ -3,6 +3,7 @@ package nats
 import (
 	"github.com/mysterium/node/communication"
 	"github.com/nats-io/go-nats"
+	"time"
 )
 
 type serviceNats struct {
@@ -29,4 +30,18 @@ func (service *serviceNats) Receive(messageType communication.MessageType, callb
 		callback(string(message.Data))
 	})
 	return err
+}
+
+func (service *serviceNats) ReceiveSync(messageType communication.MessageType) (string, error) {
+	subscription, err := service.connection.SubscribeSync(string(messageType))
+	if err != nil {
+		return "", err
+	}
+
+	message, err := subscription.NextMsg(10 * time.Second)
+	if err != nil {
+		return "", err
+	}
+
+	return string(message.Data), nil
 }

@@ -7,3 +7,4 @@ const NODE_REGISTER = MessageType("node-register")
 
 // Client is trying to establish new dialog with Node
 const DIALOG_CREATE = MessageType("dialog-create")
+const DIALOG_STARTED = MessageType("dialog-started")

@@ -84,7 +84,8 @@ func (cmd *commandRun) Run(options CommandOptions) (err error) {
 	}
 
 	err = cmd.communicationChannel.Receive(communication.DIALOG_CREATE, func(clientId string) {
-		fmt.Printf("New dialog from clientId=%s]\n", clientId)
+		fmt.Printf("Dialog from client requested. client=%s\n", clientId)
+		cmd.communicationChannel.Send(communication.DIALOG_STARTED, "")
 	})
 	if err != nil {
 		return err
