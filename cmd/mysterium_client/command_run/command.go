@@ -2,6 +2,7 @@ package command_run
 
 import (
 	"github.com/mysterium/node/bytescount_client"
+	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"io"
@@ -12,13 +13,18 @@ type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
 
-	mysteriumClient server.Client
-	vpnMiddlewares  []openvpn.ManagementMiddleware
+	mysteriumClient      server.Client
+	communicationChannel communication.CommunicationsChannel
 
-	vpnClient *openvpn.Client
+	vpnMiddlewares []openvpn.ManagementMiddleware
+	vpnClient      *openvpn.Client
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
+	if err := cmd.communicationChannel.Start(); err != nil {
+		return err
+	}
+
 	vpnSession, err := cmd.mysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err

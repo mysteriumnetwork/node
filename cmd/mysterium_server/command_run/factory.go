@@ -1,6 +1,7 @@
 package command_run
 
 import (
+	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
@@ -11,17 +12,14 @@ import (
 )
 
 func NewCommand() Command {
-	return &commandRun{
-		output:      os.Stdout,
-		outputError: os.Stderr,
-
-		ipifyClient:          ipify.NewClient(),
-		mysteriumClient:      server.NewClient(),
-		communicationChannel: nats.NewService(),
-		vpnMiddlewares:       make([]openvpn.ManagementMiddleware, 0),
-
-		natService: nat.NewService(),
-	}
+	return NewCommandWithDependencies(
+		os.Stdout,
+		os.Stderr,
+		ipify.NewClient(),
+		server.NewClient(),
+		nat.NewService(),
+		nats.NewService(),
+	)
 }
 
 func NewCommandWithDependencies(
@@ -29,14 +27,17 @@ func NewCommandWithDependencies(
 	outputError io.Writer,
 	ipifyClient ipify.Client,
 	mysteriumClient server.Client,
-	vpnMiddlewares ...openvpn.ManagementMiddleware,
+	natService nat.NATService,
+	communicationChannel communication.CommunicationsChannel,
 ) Command {
 	return &commandRun{
 		output:      output,
 		outputError: outputError,
 
-		ipifyClient:     ipifyClient,
-		mysteriumClient: mysteriumClient,
-		vpnMiddlewares:  vpnMiddlewares,
+		ipifyClient:          ipifyClient,
+		mysteriumClient:      mysteriumClient,
+		natService:           natService,
+		communicationChannel: communicationChannel,
+		vpnMiddlewares:       make([]openvpn.ManagementMiddleware, 0),
 	}
 }

@@ -1,5 +1,9 @@
 package nat
 
+func NewServiceFake() *serviceFake {
+	return &serviceFake{}
+}
+
 type serviceFake struct {
 }
 

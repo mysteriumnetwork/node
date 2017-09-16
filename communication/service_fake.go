@@ -1,5 +1,9 @@
 package communication
 
+func NewServiceFake() *serviceFake {
+	return &serviceFake{}
+}
+
 type serviceFake struct {
 }
 

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
 	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/server"
 	"os"
 	"sync"
@@ -18,17 +20,30 @@ const CLIENT_DIRECTORY_RUNTIME = "build/fake"
 func main() {
 	waiter := &sync.WaitGroup{}
 	mysteriumClient := server.NewClientFake()
+	communicationChannel := nats.NewService()
 
-	runServer(waiter, mysteriumClient)
-	runClient(waiter, mysteriumClient)
+	serverCommand := command_server.NewCommandWithDependencies(
+		os.Stdout,
+		os.Stderr,
+		ipify.NewClientFake(NODE_IP),
+		mysteriumClient,
+		nat.NewServiceFake(),
+		communicationChannel,
+	)
+	runServer(serverCommand, waiter)
+
+	clientCommand := command_client.NewCommandWithDependencies(
+		os.Stdout,
+		os.Stderr,
+		mysteriumClient,
+		communicationChannel,
+	)
+	runClient(clientCommand, waiter)
 
 	waiter.Wait()
 }
 
-func runServer(waiter *sync.WaitGroup, mysteriumClient server.Client) {
-	ipifyClient := ipify.NewClientFake(NODE_IP)
-
-	serverCommand := command_server.NewCommandWithDependencies(os.Stdout, os.Stderr, ipifyClient, mysteriumClient)
+func runServer(serverCommand command_server.Command, waiter *sync.WaitGroup) {
 	err := serverCommand.Run(command_server.CommandOptions{
 		NodeKey:          NODE_KEY,
 		DirectoryConfig:  NODE_DIRECTORY_CONFIG,
@@ -50,8 +65,7 @@ func runServer(waiter *sync.WaitGroup, mysteriumClient server.Client) {
 	}()
 }
 
-func runClient(waiter *sync.WaitGroup, mysteriumClient server.Client) {
-	clientCommand := command_client.NewCommandWithDependencies(os.Stdout, os.Stderr, mysteriumClient)
+func runClient(clientCommand command_client.Command, waiter *sync.WaitGroup) {
 	err := clientCommand.Run(command_client.CommandOptions{
 		NodeKey:          NODE_KEY,
 		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,

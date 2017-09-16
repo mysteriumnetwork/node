@@ -15,14 +15,13 @@ type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
 
-	ipifyClient     ipify.Client
-	mysteriumClient server.Client
-	natService      nat.NATService
+	ipifyClient          ipify.Client
+	mysteriumClient      server.Client
+	natService           nat.NATService
+	communicationChannel communication.CommunicationsChannel
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnServer      *openvpn.Server
-
-	communicationChannel communication.CommunicationsChannel
 }
 
 func (cmd *commandRun) Run(options CommandOptions) error {
