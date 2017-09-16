@@ -3,6 +3,7 @@ package nats
 import (
 	"github.com/mysterium/node/communication"
 	"github.com/nats-io/go-nats"
+	"time"
 )
 
 func NewService() communication.CommunicationsChannel {
@@ -12,6 +13,7 @@ func NewService() communication.CommunicationsChannel {
 	}
 
 	return &serviceNats{
-		options: options,
+		options:        options,
+		timeoutRequest: 500 * time.Millisecond,
 	}
 }

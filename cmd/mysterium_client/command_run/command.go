@@ -26,13 +26,10 @@ func (cmd *commandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	if err = cmd.communicationChannel.Send(communication.DIALOG_CREATE, "consumer1"); err != nil {
+	if _, err = cmd.communicationChannel.Request(communication.DIALOG_CREATE, "consumer1"); err != nil {
 		return err
 	}
-	if _, err = cmd.communicationChannel.ReceiveSync(communication.DIALOG_STARTED); err != nil {
-		return err
-	}
-	fmt.Printf("Dialog with node created node=%s\n", options.NodeKey)
+	fmt.Printf("Dialog with node created. node=%s\n", options.NodeKey)
 
 	vpnSession, err := cmd.mysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {

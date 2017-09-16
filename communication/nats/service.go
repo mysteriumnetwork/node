@@ -7,8 +7,9 @@ import (
 )
 
 type serviceNats struct {
-	options    nats.Options
-	connection *nats.Conn
+	options        nats.Options
+	timeoutRequest time.Duration
+	connection     *nats.Conn
 }
 
 func (service *serviceNats) Start() (err error) {
@@ -21,27 +22,45 @@ func (service *serviceNats) Stop() error {
 	return nil
 }
 
-func (service *serviceNats) Send(messageType communication.MessageType, payload string) error {
-	return service.connection.Publish(string(messageType), []byte(payload))
+func (service *serviceNats) Send(
+	messageType communication.MessageType,
+	message string,
+) error {
+	return service.connection.Publish(string(messageType), []byte(message))
 }
 
-func (service *serviceNats) Receive(messageType communication.MessageType, callback communication.PayloadHandler) error {
+func (service *serviceNats) Receive(
+	messageType communication.MessageType,
+	callback communication.MessageHandler,
+) error {
 	_, err := service.connection.Subscribe(string(messageType), func(message *nats.Msg) {
 		callback(string(message.Data))
 	})
+
 	return err
 }
 
-func (service *serviceNats) ReceiveSync(messageType communication.MessageType) (string, error) {
-	subscription, err := service.connection.SubscribeSync(string(messageType))
+func (service *serviceNats) Request(
+	messageType communication.RequestType,
+	request string,
+) (response string, err error) {
+	message, err := service.connection.Request(string(messageType), []byte(request), service.timeoutRequest)
 	if err != nil {
-		return "", err
+		return
 	}
 
-	message, err := subscription.NextMsg(10 * time.Second)
-	if err != nil {
-		return "", err
-	}
+	response = string(message.Data)
+	return
+}
 
-	return string(message.Data), nil
+func (service *serviceNats) Respond(
+	messageType communication.RequestType,
+	callback communication.RequestHandler,
+) error {
+	_, err := service.connection.Subscribe(string(messageType), func(message *nats.Msg) {
+		response := callback(string(message.Data))
+		service.connection.Publish(message.Reply, []byte(response))
+	})
+
+	return err
 }
