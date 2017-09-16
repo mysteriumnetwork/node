@@ -20,8 +20,13 @@ type commandRun struct {
 	vpnClient      *openvpn.Client
 }
 
-func (cmd *commandRun) Run(options CommandOptions) error {
-	if err := cmd.communicationChannel.Start(); err != nil {
+func (cmd *commandRun) Run(options CommandOptions) (err error) {
+	if err = cmd.communicationChannel.Start(); err != nil {
+		return err
+	}
+
+	err = cmd.communicationChannel.Send(communication.DIALOG_CREATE, "consumer1")
+	if err != nil {
 		return err
 	}
 

@@ -1,6 +1,7 @@
 package command_run
 
 import (
+	"fmt"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
@@ -24,7 +25,7 @@ type commandRun struct {
 	vpnServer      *openvpn.Server
 }
 
-func (cmd *commandRun) Run(options CommandOptions) error {
+func (cmd *commandRun) Run(options CommandOptions) (err error) {
 	vpnServerIp, err := cmd.ipifyClient.GetIp()
 	if err != nil {
 		return err
@@ -78,7 +79,13 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		}
 	}()
 
-	err = cmd.communicationChannel.Send(communication.NODE_REGISTER, options.NodeKey)
+	if err = cmd.communicationChannel.Send(communication.NODE_REGISTER, options.NodeKey); err != nil {
+		return err
+	}
+
+	err = cmd.communicationChannel.Receive(communication.DIALOG_CREATE, func(clientId string) {
+		fmt.Printf("New dialog from clientId=%s]\n", clientId)
+	})
 	if err != nil {
 		return err
 	}

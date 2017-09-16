@@ -23,3 +23,10 @@ func (service *serviceNats) Stop() error {
 func (service *serviceNats) Send(messageType communication.MessageType, payload string) error {
 	return service.connection.Publish(string(messageType), []byte(payload))
 }
+
+func (service *serviceNats) Receive(messageType communication.MessageType, callback communication.PayloadHandler) error {
+	_, err := service.connection.Subscribe(string(messageType), func(message *nats.Msg) {
+		callback(string(message.Data))
+	})
+	return err
+}
