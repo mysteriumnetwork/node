@@ -6,6 +6,7 @@ import (
 	"io"
 
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/state_client"
 	"sync"
@@ -48,6 +49,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		cmd.output,
 		cmd.outputError,
 		server.NewClient(),
+		nats.NewService(),
 		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
 	)
 

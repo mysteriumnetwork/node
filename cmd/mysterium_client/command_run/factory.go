@@ -23,6 +23,7 @@ func NewCommandWithDependencies(
 	outputError io.Writer,
 	mysteriumClient server.Client,
 	communicationChannel communication.CommunicationsChannel,
+	vpnMiddlewares ...openvpn.ManagementMiddleware,
 ) Command {
 	return &commandRun{
 		output:      output,
@@ -31,6 +32,6 @@ func NewCommandWithDependencies(
 		mysteriumClient:      mysteriumClient,
 		communicationChannel: communicationChannel,
 
-		vpnMiddlewares: make([]openvpn.ManagementMiddleware, 0),
+		vpnMiddlewares: vpnMiddlewares,
 	}
 }
