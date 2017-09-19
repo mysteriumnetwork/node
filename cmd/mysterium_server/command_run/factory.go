@@ -18,7 +18,7 @@ func NewCommand() Command {
 		ipify.NewClient(),
 		server.NewClient(),
 		nat.NewService(),
-		nats.NewService(),
+		nats.NewChannel(),
 	)
 }
 
@@ -28,7 +28,7 @@ func NewCommandWithDependencies(
 	ipifyClient ipify.Client,
 	mysteriumClient server.Client,
 	natService nat.NATService,
-	communicationChannel communication.CommunicationsChannel,
+	communicationChannel communication.Channel,
 ) Command {
 	return &commandRun{
 		output:      output,

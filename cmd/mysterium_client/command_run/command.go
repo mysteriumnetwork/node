@@ -15,7 +15,7 @@ type commandRun struct {
 	outputError io.Writer
 
 	mysteriumClient      server.Client
-	communicationChannel communication.CommunicationsChannel
+	communicationChannel communication.Channel
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnClient      *openvpn.Client

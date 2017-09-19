@@ -1,6 +1,6 @@
 package communication
 
-type CommunicationsChannel interface {
+type Channel interface {
 	Start() error
 	Stop() error
 

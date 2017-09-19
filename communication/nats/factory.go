@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func NewService() communication.CommunicationsChannel {
+func NewChannel() communication.Channel {
 	options := nats.GetDefaultOptions()
 	options.Servers = []string{
 		"nats://127.0.0.1:4222",

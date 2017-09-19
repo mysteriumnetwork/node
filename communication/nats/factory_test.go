@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestNewService(t *testing.T) {
-	_, ok := NewService().(communication.CommunicationsChannel)
+func TestNewChannel(t *testing.T) {
+	_, ok := NewChannel().(communication.Channel)
 	assert.True(t, ok)
 }

@@ -19,7 +19,7 @@ type commandRun struct {
 	ipifyClient          ipify.Client
 	mysteriumClient      server.Client
 	natService           nat.NATService
-	communicationChannel communication.CommunicationsChannel
+	communicationChannel communication.Channel
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnServer      *openvpn.Server
