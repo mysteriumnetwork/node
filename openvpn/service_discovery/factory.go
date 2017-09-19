@@ -11,11 +11,18 @@ var (
 	locationUnknown = dto_discovery.Location{}
 )
 
-func NewServiceProposal(nodeKey string) dto_discovery.ServiceProposal {
-	return NewServiceProposalWithLocation(nodeKey, locationUnknown)
+func NewServiceProposal(
+	providerId dto_discovery.Identity,
+	providerContact dto_discovery.Contact,
+) dto_discovery.ServiceProposal {
+	return NewServiceProposalWithLocation(providerId, providerContact, locationUnknown)
 }
 
-func NewServiceProposalWithLocation(nodeKey string, nodeLocation dto_discovery.Location) dto_discovery.ServiceProposal {
+func NewServiceProposalWithLocation(
+	providerId dto_discovery.Identity,
+	providerContact dto_discovery.Contact,
+	nodeLocation dto_discovery.Location,
+) dto_discovery.ServiceProposal {
 	return dto_discovery.ServiceProposal{
 		Id:          1,
 		Format:      "service-proposal/v1",
@@ -31,12 +38,7 @@ func NewServiceProposalWithLocation(nodeKey string, nodeLocation dto_discovery.L
 			Price:    dto_discovery.Money{12500000, "MYST"},
 			Duration: 1 * time.Hour,
 		},
-		ProviderId: nodeKey,
-		ProviderContacts: []dto_discovery.Contact{
-			{
-				Type:       dto_discovery.CONTACT_NATS_V1,
-				Definition: dto_discovery.ContactNATSV1{nodeKey},
-			},
-		},
+		ProviderId:       dto_discovery.Identity(providerId),
+		ProviderContacts: []dto_discovery.Contact{providerContact},
 	}
 }
