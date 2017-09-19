@@ -7,7 +7,15 @@ import (
 	"time"
 )
 
-func NewServiceProposal(nodeKey string, nodeLocation dto_discovery.Location) dto_discovery.ServiceProposal {
+var (
+	locationUnknown = dto_discovery.Location{}
+)
+
+func NewServiceProposal(nodeKey string) dto_discovery.ServiceProposal {
+	return NewServiceProposalWithLocation(nodeKey, locationUnknown)
+}
+
+func NewServiceProposalWithLocation(nodeKey string, nodeLocation dto_discovery.Location) dto_discovery.ServiceProposal {
 	return dto_discovery.ServiceProposal{
 		Id:          1,
 		Format:      "service-proposal/v1",

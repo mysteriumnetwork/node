@@ -14,7 +14,16 @@ var (
 )
 
 func Test_NewServiceProposal(t *testing.T) {
-	proposal := NewServiceProposal(nodeKey, locationLTTelia)
+	proposal := NewServiceProposal(nodeKey)
+
+	serviceDefinition, ok := proposal.ServiceDefinition.(dto.ServiceDefinition)
+	assert.True(t, ok)
+	assert.Equal(t, locationUnknown, serviceDefinition.Location)
+	assert.Equal(t, locationUnknown, serviceDefinition.LocationOriginate)
+}
+
+func Test_NewServiceProposalWithLocation(t *testing.T) {
+	proposal := NewServiceProposalWithLocation(nodeKey, locationLTTelia)
 
 	assert.NotNil(t, proposal)
 	assert.Equal(t, 1, proposal.Id)
