@@ -79,10 +79,6 @@ func (cmd *commandRun) Run(options CommandOptions) (err error) {
 		}
 	}()
 
-	if err = cmd.communicationChannel.Send(communication.NODE_REGISTER, options.NodeKey); err != nil {
-		return err
-	}
-
 	err = cmd.communicationChannel.Respond(communication.DIALOG_CREATE, func(clientId string) string {
 		fmt.Printf("Dialog from client requested. client=%s\n", clientId)
 		return "OK"
