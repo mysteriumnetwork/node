@@ -14,19 +14,19 @@ type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
 
-	mysteriumClient      server.Client
-	communicationChannel communication.Channel
+	mysteriumClient     server.Client
+	communicationClient communication.Client
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnClient      *openvpn.Client
 }
 
 func (cmd *commandRun) Run(options CommandOptions) (err error) {
-	if err = cmd.communicationChannel.Start(); err != nil {
+	if err = cmd.communicationClient.Start(); err != nil {
 		return err
 	}
 
-	if _, err = cmd.communicationChannel.Request(communication.DIALOG_CREATE, "consumer1"); err != nil {
+	if _, err = cmd.communicationClient.Request(communication.DIALOG_CREATE, "consumer1"); err != nil {
 		return err
 	}
 	fmt.Printf("Dialog with node created. node=%s\n", options.NodeKey)

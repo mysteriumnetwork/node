@@ -15,14 +15,24 @@ func NewContact(identity dto_discovery.Identity) dto_discovery.Contact {
 	}
 }
 
-func NewChannel() *channelNats {
+func NewServer() *channelNats {
+	return &channelNats{
+		options:        getDefaultOptions(),
+		timeoutRequest: 500 * time.Millisecond,
+	}
+}
+
+func NewClient() *channelNats {
+	return &channelNats{
+		options:        getDefaultOptions(),
+		timeoutRequest: 500 * time.Millisecond,
+	}
+}
+
+func getDefaultOptions() nats.Options {
 	options := nats.GetDefaultOptions()
 	options.Servers = []string{
 		"nats://127.0.0.1:4222",
 	}
-
-	return &channelNats{
-		options:        options,
-		timeoutRequest: 500 * time.Millisecond,
-	}
+	return options
 }

@@ -14,7 +14,7 @@ func NewCommand() Command {
 		os.Stdout,
 		os.Stderr,
 		server.NewClient(),
-		nats.NewChannel(),
+		nats.NewServer(),
 	)
 }
 
@@ -22,15 +22,15 @@ func NewCommandWithDependencies(
 	output io.Writer,
 	outputError io.Writer,
 	mysteriumClient server.Client,
-	communicationChannel communication.Channel,
+	communicationClient communication.Client,
 	vpnMiddlewares ...openvpn.ManagementMiddleware,
 ) Command {
 	return &commandRun{
 		output:      output,
 		outputError: outputError,
 
-		mysteriumClient:      mysteriumClient,
-		communicationChannel: communicationChannel,
+		mysteriumClient:     mysteriumClient,
+		communicationClient: communicationClient,
 
 		vpnMiddlewares: vpnMiddlewares,
 	}

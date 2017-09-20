@@ -18,7 +18,7 @@ func NewCommand() Command {
 		ipify.NewClient(),
 		server.NewClient(),
 		nat.NewService(),
-		nats.NewChannel(),
+		nats.NewServer(),
 	)
 }
 
@@ -28,16 +28,16 @@ func NewCommandWithDependencies(
 	ipifyClient ipify.Client,
 	mysteriumClient server.Client,
 	natService nat.NATService,
-	communicationChannel communication.Channel,
+	communicationServer communication.Server,
 ) Command {
 	return &commandRun{
 		output:      output,
 		outputError: outputError,
 
-		ipifyClient:          ipifyClient,
-		mysteriumClient:      mysteriumClient,
-		natService:           natService,
-		communicationChannel: communicationChannel,
-		vpnMiddlewares:       make([]openvpn.ManagementMiddleware, 0),
+		ipifyClient:         ipifyClient,
+		mysteriumClient:     mysteriumClient,
+		natService:          natService,
+		communicationServer: communicationServer,
+		vpnMiddlewares:      make([]openvpn.ManagementMiddleware, 0),
 	}
 }

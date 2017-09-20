@@ -16,10 +16,10 @@ type commandRun struct {
 	output      io.Writer
 	outputError io.Writer
 
-	ipifyClient          ipify.Client
-	mysteriumClient      server.Client
-	natService           nat.NATService
-	communicationChannel communication.Channel
+	ipifyClient         ipify.Client
+	mysteriumClient     server.Client
+	natService          nat.NATService
+	communicationServer communication.Server
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnServer      *openvpn.Server
@@ -39,7 +39,7 @@ func (cmd *commandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	if err = cmd.communicationChannel.Start(); err != nil {
+	if err = cmd.communicationServer.Start(); err != nil {
 		return err
 	}
 
@@ -79,7 +79,7 @@ func (cmd *commandRun) Run(options CommandOptions) (err error) {
 		}
 	}()
 
-	err = cmd.communicationChannel.Respond(communication.DIALOG_CREATE, func(clientId string) string {
+	err = cmd.communicationServer.Respond(communication.DIALOG_CREATE, func(clientId string) string {
 		fmt.Printf("Dialog from client requested. client=%s\n", clientId)
 		return "OK"
 	})
@@ -95,7 +95,7 @@ func (cmd *commandRun) Wait() error {
 }
 
 func (cmd *commandRun) Kill() {
-	cmd.communicationChannel.Stop()
+	cmd.communicationServer.Stop()
 	cmd.vpnServer.Stop()
 	cmd.natService.Stop()
 }

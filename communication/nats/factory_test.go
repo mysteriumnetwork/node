@@ -24,7 +24,12 @@ func TestNewContact(t *testing.T) {
 	)
 }
 
-func TestNewChannel(t *testing.T) {
-	var channel communication.Channel = NewChannel()
-	assert.NotNil(t, channel)
+func TestNewServer(t *testing.T) {
+	var server communication.Server = NewServer()
+	assert.NotNil(t, server)
+}
+
+func TestNewClient(t *testing.T) {
+	var client communication.Server = NewClient()
+	assert.NotNil(t, client)
 }

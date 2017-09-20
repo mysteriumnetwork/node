@@ -1,14 +1,19 @@
 package communication
 
-type Channel interface {
+type Server interface {
+	Start() error
+	Stop() error
+
+	Receive(messageType MessageType, callback MessageHandler) error
+	Respond(requestType RequestType, callback RequestHandler) error
+}
+
+type Client interface {
 	Start() error
 	Stop() error
 
 	Send(messageType MessageType, message string) error
-	Receive(messageType MessageType, callback MessageHandler) error
-
 	Request(requestType RequestType, request string) (response string, err error)
-	Respond(requestType RequestType, callback RequestHandler) error
 }
 
 type MessageType string
