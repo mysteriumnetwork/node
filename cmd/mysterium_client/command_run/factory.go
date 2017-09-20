@@ -14,7 +14,7 @@ func NewCommand() Command {
 		os.Stdout,
 		os.Stderr,
 		server.NewClient(),
-		nats.NewServer(),
+		nats.NewClient(),
 	)
 }
 

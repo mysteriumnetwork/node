@@ -15,15 +15,14 @@ func NewContact(identity dto_discovery.Identity) dto_discovery.Contact {
 	}
 }
 
-func NewServer() *channelNats {
-	return &channelNats{
-		options:        getDefaultOptions(),
-		timeoutRequest: 500 * time.Millisecond,
+func NewServer() *serverNats {
+	return &serverNats{
+		options: getDefaultOptions(),
 	}
 }
 
-func NewClient() *channelNats {
-	return &channelNats{
+func NewClient() *clientNats {
+	return &clientNats{
 		options:        getDefaultOptions(),
 		timeoutRequest: 500 * time.Millisecond,
 	}

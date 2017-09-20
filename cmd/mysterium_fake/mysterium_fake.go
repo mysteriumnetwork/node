@@ -20,7 +20,6 @@ const CLIENT_DIRECTORY_RUNTIME = "build/fake"
 func main() {
 	waiter := &sync.WaitGroup{}
 	mysteriumClient := server.NewClientFake()
-	communicationChannel := nats.NewServer()
 
 	serverCommand := command_server.NewCommandWithDependencies(
 		os.Stdout,
@@ -28,7 +27,7 @@ func main() {
 		ipify.NewClientFake(NODE_IP),
 		mysteriumClient,
 		nat.NewServiceFake(),
-		communicationChannel,
+		nats.NewServer(),
 	)
 	runServer(serverCommand, waiter)
 
@@ -36,7 +35,7 @@ func main() {
 		os.Stdout,
 		os.Stderr,
 		mysteriumClient,
-		communicationChannel,
+		nats.NewClient(),
 	)
 	runClient(clientCommand, waiter)
 

@@ -49,7 +49,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		cmd.output,
 		cmd.outputError,
 		server.NewClient(),
-		nats.NewServer(),
+		nats.NewClient(),
 		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
 	)
 

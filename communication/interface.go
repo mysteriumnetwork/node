@@ -3,15 +3,19 @@ package communication
 type Server interface {
 	Start() error
 	Stop() error
-
-	Receive(messageType MessageType, callback MessageHandler) error
-	Respond(requestType RequestType, callback RequestHandler) error
 }
 
 type Client interface {
 	Start() error
 	Stop() error
+}
 
+type Receiver interface {
+	Receive(messageType MessageType, callback MessageHandler) error
+	Respond(requestType RequestType, callback RequestHandler) error
+}
+
+type Sender interface {
 	Send(messageType MessageType, message string) error
 	Request(requestType RequestType, request string) (response string, err error)
 }

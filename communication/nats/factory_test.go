@@ -30,6 +30,6 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestNewClient(t *testing.T) {
-	var client communication.Server = NewClient()
+	var client communication.Client = NewClient()
 	assert.NotNil(t, client)
 }
