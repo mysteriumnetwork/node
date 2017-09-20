@@ -6,45 +6,50 @@ import (
 	"time"
 )
 
-type serviceNats struct {
+type channelNats struct {
 	options        nats.Options
 	timeoutRequest time.Duration
-	connection     *nats.Conn
+	myTopic        string
+
+	connection *nats.Conn
 }
 
-func (service *serviceNats) Start() (err error) {
-	service.connection, err = service.options.Connect()
+func (channel *channelNats) Start() (err error) {
+	channel.connection, err = channel.options.Connect()
 	return err
 }
 
-func (service *serviceNats) Stop() error {
-	service.connection.Close()
+func (channel *channelNats) Stop() error {
+	channel.connection.Close()
 	return nil
 }
 
-func (service *serviceNats) Send(
+func (channel *channelNats) Send(
 	messageType communication.MessageType,
 	message string,
 ) error {
-	return service.connection.Publish(string(messageType), []byte(message))
+	return channel.connection.Publish(string(messageType), []byte(message))
 }
 
-func (service *serviceNats) Receive(
+func (channel *channelNats) Receive(
 	messageType communication.MessageType,
 	callback communication.MessageHandler,
 ) error {
-	_, err := service.connection.Subscribe(string(messageType), func(message *nats.Msg) {
-		callback(string(message.Data))
-	})
 
+	_, err := channel.connection.Subscribe(
+		channel.myTopic+"."+string(messageType),
+		func(message *nats.Msg) {
+			callback(string(message.Data))
+		},
+	)
 	return err
 }
 
-func (service *serviceNats) Request(
+func (channel *channelNats) Request(
 	messageType communication.RequestType,
 	request string,
 ) (response string, err error) {
-	message, err := service.connection.Request(string(messageType), []byte(request), service.timeoutRequest)
+	message, err := channel.connection.Request(string(messageType), []byte(request), channel.timeoutRequest)
 	if err != nil {
 		return
 	}
@@ -53,14 +58,17 @@ func (service *serviceNats) Request(
 	return
 }
 
-func (service *serviceNats) Respond(
+func (channel *channelNats) Respond(
 	messageType communication.RequestType,
 	callback communication.RequestHandler,
 ) error {
-	_, err := service.connection.Subscribe(string(messageType), func(message *nats.Msg) {
-		response := callback(string(message.Data))
-		service.connection.Publish(message.Reply, []byte(response))
-	})
 
+	_, err := channel.connection.Subscribe(
+		channel.myTopic+"."+string(messageType),
+		func(message *nats.Msg) {
+			response := callback(string(message.Data))
+			channel.connection.Publish(message.Reply, []byte(response))
+		},
+	)
 	return err
 }

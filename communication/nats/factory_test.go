@@ -25,6 +25,6 @@ func TestNewContact(t *testing.T) {
 }
 
 func TestNewChannel(t *testing.T) {
-	_, ok := NewChannel().(communication.Channel)
-	assert.True(t, ok)
+	var channel communication.Channel = NewChannel()
+	assert.NotNil(t, channel)
 }
