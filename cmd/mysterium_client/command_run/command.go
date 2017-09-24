@@ -1,11 +1,13 @@
 package command_run
 
 import (
-	"fmt"
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/service_discovery"
 	"github.com/mysterium/node/server"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"io"
 	"time"
 )
@@ -22,14 +24,13 @@ type commandRun struct {
 }
 
 func (cmd *commandRun) Run(options CommandOptions) (err error) {
-	if err = cmd.communicationClient.Start(); err != nil {
-		return err
-	}
+	providerId := dto_discovery.Identity(options.NodeKey)
+	serviceProposal := service_discovery.NewServiceProposal(providerId, nats.NewContact(providerId))
 
-	if _, err = cmd.communicationClient.Request(communication.DIALOG_CREATE, "consumer1"); err != nil {
+	_, _, err = cmd.communicationClient.CreateDialog(serviceProposal.ProviderContacts[0])
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Dialog with node created. node=%s\n", options.NodeKey)
 
 	vpnSession, err := cmd.mysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
@@ -65,5 +66,6 @@ func (cmd *commandRun) Wait() error {
 }
 
 func (cmd *commandRun) Kill() {
+	cmd.communicationClient.Stop()
 	cmd.vpnClient.Stop()
 }

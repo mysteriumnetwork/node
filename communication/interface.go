@@ -1,12 +1,14 @@
 package communication
 
+import dto_discovery "github.com/mysterium/node/service_discovery/dto"
+
 type Server interface {
 	Start() error
 	Stop() error
 }
 
 type Client interface {
-	Start() error
+	CreateDialog(contact dto_discovery.Contact) (Sender, Receiver, error)
 	Stop() error
 }
 
