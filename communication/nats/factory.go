@@ -15,9 +15,11 @@ func NewContact(identity dto_discovery.Identity) dto_discovery.Contact {
 	}
 }
 
-func NewServer() *serverNats {
+func NewServer(identity dto_discovery.Identity) *serverNats {
 	return &serverNats{
-		options: getDefaultOptions(),
+		myTopic:        string(identity),
+		options:        getDefaultOptions(),
+		timeoutRequest: 500 * time.Millisecond,
 	}
 }
 

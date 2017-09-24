@@ -1,7 +1,6 @@
 package command_run
 
 import (
-	"fmt"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
@@ -39,7 +38,7 @@ func (cmd *commandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	if err = cmd.communicationServer.Start(); err != nil {
+	if err = cmd.communicationServer.ServeDialogs(cmd.handleDialog); err != nil {
 		return err
 	}
 
@@ -79,15 +78,11 @@ func (cmd *commandRun) Run(options CommandOptions) (err error) {
 		}
 	}()
 
-	err = cmd.communicationServer.Respond(communication.DIALOG_CREATE, func(clientId string) string {
-		fmt.Printf("Dialog from client requested. client=%s\n", clientId)
-		return "OK"
-	})
-	if err != nil {
-		return err
-	}
-
 	return nil
+}
+
+func (cmd *commandRun) handleDialog(sender communication.Sender, receiver communication.Receiver) {
+
 }
 
 func (cmd *commandRun) Wait() error {
@@ -95,7 +90,7 @@ func (cmd *commandRun) Wait() error {
 }
 
 func (cmd *commandRun) Kill() {
-	cmd.communicationServer.Stop()
 	cmd.vpnServer.Stop()
+	cmd.communicationServer.Stop()
 	cmd.natService.Stop()
 }

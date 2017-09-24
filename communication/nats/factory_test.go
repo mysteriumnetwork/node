@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"github.com/mysterium/node/communication"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -25,8 +24,9 @@ func TestNewContact(t *testing.T) {
 }
 
 func TestNewServer(t *testing.T) {
-	var server communication.Server = NewServer()
+	server := NewServer(identity)
 	assert.NotNil(t, server)
+	assert.Equal(t, "123456", server.myTopic)
 }
 
 func TestNewClient(t *testing.T) {
