@@ -8,6 +8,7 @@ import (
 
 type senderNats struct {
 	connection     *nats.Conn
+	receiverTopic  string
 	timeoutRequest time.Duration
 }
 
@@ -15,7 +16,10 @@ func (client *senderNats) Send(
 	messageType communication.MessageType,
 	message string,
 ) error {
-	return client.connection.Publish(string(messageType), []byte(message))
+	return client.connection.Publish(
+		string(messageType),
+		[]byte(message),
+	)
 }
 
 func (client *senderNats) Request(

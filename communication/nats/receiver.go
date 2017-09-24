@@ -6,8 +6,8 @@ import (
 )
 
 type receiverNats struct {
-	connection *nats.Conn
-	myTopic    string
+	connection    *nats.Conn
+	receiverTopic string
 }
 
 func (server *receiverNats) Receive(
@@ -16,7 +16,7 @@ func (server *receiverNats) Receive(
 ) error {
 
 	_, err := server.connection.Subscribe(
-		server.myTopic+"."+string(messageType),
+		server.receiverTopic+"."+string(messageType),
 		func(message *nats.Msg) {
 			callback(string(message.Data))
 		},
@@ -30,7 +30,7 @@ func (server *receiverNats) Respond(
 ) error {
 
 	_, err := server.connection.Subscribe(
-		server.myTopic+"."+string(messageType),
+		server.receiverTopic+"."+string(messageType),
 		func(message *nats.Msg) {
 			response := callback(string(message.Data))
 			server.connection.Publish(message.Reply, []byte(response))

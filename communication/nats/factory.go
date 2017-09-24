@@ -21,8 +21,9 @@ func NewServer() *serverNats {
 	}
 }
 
-func NewClient() *clientNats {
+func NewClient(identity dto_discovery.Identity) *clientNats {
 	return &clientNats{
+		myTopic:        string(identity),
 		options:        getDefaultOptions(),
 		timeoutRequest: 500 * time.Millisecond,
 	}

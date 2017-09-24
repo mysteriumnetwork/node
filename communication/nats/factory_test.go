@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	contactIdentity = dto_discovery.Identity("123456")
+	identity = dto_discovery.Identity("123456")
 )
 
 func TestNewContact(t *testing.T) {
@@ -17,10 +17,10 @@ func TestNewContact(t *testing.T) {
 		dto_discovery.Contact{
 			Type: CONTACT_NATS_V1,
 			Definition: ContactNATSV1{
-				Topic: string(contactIdentity),
+				Topic: string(identity),
 			},
 		},
-		NewContact(contactIdentity),
+		NewContact(identity),
 	)
 }
 
@@ -30,6 +30,7 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestNewClient(t *testing.T) {
-	var client communication.Client = NewClient()
+	client := NewClient(identity)
 	assert.NotNil(t, client)
+	assert.Equal(t, "123456", client.myTopic)
 }

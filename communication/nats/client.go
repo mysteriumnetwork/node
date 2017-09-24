@@ -9,6 +9,7 @@ import (
 )
 
 type clientNats struct {
+	myTopic        string
 	options        nats.Options
 	timeoutRequest time.Duration
 
@@ -20,8 +21,6 @@ func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (
 	receiver communication.Receiver,
 	err error,
 ) {
-	myTopic := "consumer1"
-
 	if contact.Type != CONTACT_NATS_V1 {
 		err = fmt.Errorf("Invalid contact type: %s", contact.Type)
 		return
@@ -31,12 +30,17 @@ func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (
 		err = fmt.Errorf("Invalid contact definition: %#v", contact.Definition)
 		return
 	}
+	contactTopic := contactNats.Topic
 
 	if err = client.Start(); err != nil {
 		return
 	}
 
-	message, err := client.connection.Request(contactNats.Topic, []byte(myTopic), client.timeoutRequest)
+	message, err := client.connection.Request(
+		contactTopic+"."+string(communication.DIALOG_CREATE),
+		[]byte(client.myTopic),
+		client.timeoutRequest,
+	)
 	if err != nil {
 		return
 	}
@@ -49,11 +53,12 @@ func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (
 
 	sender = &senderNats{
 		connection:     client.connection,
+		receiverTopic:  contactTopic,
 		timeoutRequest: client.timeoutRequest,
 	}
 	receiver = &receiverNats{
-		connection: client.connection,
-		myTopic:    myTopic,
+		connection:    client.connection,
+		receiverTopic: client.myTopic,
 	}
 	fmt.Printf("Dialog with contact created. topic=%s\n", contactNats.Topic)
 	return
