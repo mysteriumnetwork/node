@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-func NewCommand() Command {
-	return &commandRun{
-		output:      os.Stdout,
-		outputError: os.Stderr,
+func NewCommand() *CommandRun {
+	return &CommandRun{
+		Output:      os.Stdout,
+		OutputError: os.Stderr,
 
-		ipifyClient: ipify.NewClientWithTimeout(5 * time.Second),
+		IpifyClient: ipify.NewClientWithTimeout(5 * time.Second),
 	}
 }
 
