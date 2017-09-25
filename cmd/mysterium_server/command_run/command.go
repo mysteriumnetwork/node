@@ -6,7 +6,8 @@ import (
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/server/dto"
+	dto_server "github.com/mysterium/node/server/dto"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"io"
 	"time"
 )
@@ -15,16 +16,20 @@ type CommandRun struct {
 	Output      io.Writer
 	OutputError io.Writer
 
-	IpifyClient         ipify.Client
-	MysteriumClient     server.Client
-	NatService          nat.NATService
-	CommunicationServer communication.Server
+	IpifyClient     ipify.Client
+	MysteriumClient server.Client
+	NatService      nat.NATService
+
+	CommunicationServerFactory func(identity dto_discovery.Identity) communication.Server
+	communicationServer        communication.Server
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnServer      *openvpn.Server
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
+	providerId := dto_discovery.Identity(options.NodeKey)
+
 	vpnServerIp, err := cmd.IpifyClient.GetIp()
 	if err != nil {
 		return err
@@ -38,7 +43,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	if err = cmd.CommunicationServer.ServeDialogs(cmd.handleDialog); err != nil {
+	cmd.communicationServer = cmd.CommunicationServerFactory(providerId)
+	if err = cmd.communicationServer.ServeDialogs(cmd.handleDialog); err != nil {
 		return err
 	}
 
@@ -74,7 +80,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.MysteriumClient.NodeSendStats(options.NodeKey, []dto.SessionStats{})
+			cmd.MysteriumClient.NodeSendStats(options.NodeKey, []dto_server.SessionStats{})
 		}
 	}()
 
@@ -91,6 +97,6 @@ func (cmd *CommandRun) Wait() error {
 
 func (cmd *CommandRun) Kill() {
 	cmd.vpnServer.Stop()
-	cmd.CommunicationServer.Stop()
+	cmd.communicationServer.Stop()
 	cmd.NatService.Stop()
 }
