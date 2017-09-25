@@ -6,8 +6,6 @@ import (
 	"io"
 
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
-	"github.com/mysterium/node/communication/nats"
-	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/state_client"
 	"sync"
 	"time"
@@ -20,7 +18,7 @@ type commandRun struct {
 	ipifyClient ipify.Client
 	ipOriginal  string
 
-	clientCommand command_client.Command
+	clientCommand *command_client.CommandRun
 	ipCheckWaiter sync.WaitGroup
 	resultWriter  *resultWriter
 }
@@ -45,13 +43,11 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		return errors.New("Failed to get original IP: " + err.Error())
 	}
 
-	cmd.clientCommand = command_client.NewCommandWithDependencies(
-		cmd.output,
-		cmd.outputError,
-		server.NewClient(),
-		nats.NewClient(),
+	cmd.clientCommand = command_client.NewCommand(
 		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
 	)
+	cmd.clientCommand.Output = cmd.output
+	cmd.clientCommand.OutputError = cmd.outputError
 
 	nodeProvider.WithEachNode(func(nodeKey string) {
 		cmd.resultWriter.NodeStart(nodeKey)

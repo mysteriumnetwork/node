@@ -31,12 +31,10 @@ func main() {
 	)
 	runServer(serverCommand, waiter)
 
-	clientCommand := command_client.NewCommandWithDependencies(
-		os.Stdout,
-		os.Stderr,
-		mysteriumClient,
-		nats.NewClient(),
-	)
+	clientCommand := command_client.NewCommand()
+	clientCommand.Output = os.Stdout
+	clientCommand.OutputError = os.Stderr
+	clientCommand.MysteriumClient = mysteriumClient
 	runClient(clientCommand, waiter)
 
 	waiter.Wait()
@@ -64,7 +62,7 @@ func runServer(serverCommand command_server.Command, waiter *sync.WaitGroup) {
 	}()
 }
 
-func runClient(clientCommand command_client.Command, waiter *sync.WaitGroup) {
+func runClient(clientCommand *command_client.CommandRun, waiter *sync.WaitGroup) {
 	err := clientCommand.Run(command_client.CommandOptions{
 		NodeKey:          NODE_KEY,
 		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,
