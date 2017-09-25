@@ -16,18 +16,22 @@ type CommandRun struct {
 	Output      io.Writer
 	OutputError io.Writer
 
-	MysteriumClient     server.Client
-	CommunicationClient communication.Client
+	MysteriumClient server.Client
+
+	CommunicationClientFactory func(identity dto_discovery.Identity) communication.Client
+	communicationClient        communication.Client
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnClient      *openvpn.Client
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
+	consumerId := dto_discovery.Identity("consumer1")
 	providerId := dto_discovery.Identity(options.NodeKey)
 	serviceProposal := service_discovery.NewServiceProposal(providerId, nats.NewContact(providerId))
 
-	_, _, err = cmd.CommunicationClient.CreateDialog(serviceProposal.ProviderContacts[0])
+	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
+	_, _, err = cmd.communicationClient.CreateDialog(serviceProposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
@@ -66,6 +70,6 @@ func (cmd *CommandRun) Wait() error {
 }
 
 func (cmd *CommandRun) Kill() {
-	cmd.CommunicationClient.Stop()
+	cmd.communicationClient.Stop()
 	cmd.vpnClient.Stop()
 }
