@@ -4,7 +4,6 @@ import (
 	"fmt"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
 	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
-	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/server"
@@ -21,14 +20,12 @@ func main() {
 	waiter := &sync.WaitGroup{}
 	mysteriumClient := server.NewClientFake()
 
-	serverCommand := command_server.NewCommandWithDependencies(
-		os.Stdout,
-		os.Stderr,
-		ipify.NewClientFake(NODE_IP),
-		mysteriumClient,
-		nat.NewServiceFake(),
-		nats.NewServer(),
-	)
+	serverCommand := command_server.NewCommand()
+	serverCommand.Output = os.Stdout
+	serverCommand.OutputError = os.Stderr
+	serverCommand.IpifyClient = ipify.NewClientFake(NODE_IP)
+	serverCommand.MysteriumClient = mysteriumClient
+	serverCommand.NatService = nat.NewServiceFake()
 	runServer(serverCommand, waiter)
 
 	clientCommand := command_client.NewCommand()
@@ -40,7 +37,7 @@ func main() {
 	waiter.Wait()
 }
 
-func runServer(serverCommand command_server.Command, waiter *sync.WaitGroup) {
+func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup) {
 	err := serverCommand.Run(command_server.CommandOptions{
 		NodeKey:          NODE_KEY,
 		DirectoryConfig:  NODE_DIRECTORY_CONFIG,

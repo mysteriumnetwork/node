@@ -11,34 +11,34 @@ import (
 	"time"
 )
 
-type commandRun struct {
-	output      io.Writer
-	outputError io.Writer
+type CommandRun struct {
+	Output      io.Writer
+	OutputError io.Writer
 
-	ipifyClient         ipify.Client
-	mysteriumClient     server.Client
-	natService          nat.NATService
-	communicationServer communication.Server
+	IpifyClient         ipify.Client
+	MysteriumClient     server.Client
+	NatService          nat.NATService
+	CommunicationServer communication.Server
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnServer      *openvpn.Server
 }
 
-func (cmd *commandRun) Run(options CommandOptions) (err error) {
-	vpnServerIp, err := cmd.ipifyClient.GetIp()
+func (cmd *CommandRun) Run(options CommandOptions) (err error) {
+	vpnServerIp, err := cmd.IpifyClient.GetIp()
 	if err != nil {
 		return err
 	}
 
-	cmd.natService.Add(nat.RuleForwarding{
+	cmd.NatService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIp:      vpnServerIp,
 	})
-	if err = cmd.natService.Start(); err != nil {
+	if err = cmd.NatService.Start(); err != nil {
 		return err
 	}
 
-	if err = cmd.communicationServer.ServeDialogs(cmd.handleDialog); err != nil {
+	if err = cmd.CommunicationServer.ServeDialogs(cmd.handleDialog); err != nil {
 		return err
 	}
 
@@ -68,29 +68,29 @@ func (cmd *commandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	if err := cmd.mysteriumClient.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
+	if err := cmd.MysteriumClient.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
 		return err
 	}
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.mysteriumClient.NodeSendStats(options.NodeKey, []dto.SessionStats{})
+			cmd.MysteriumClient.NodeSendStats(options.NodeKey, []dto.SessionStats{})
 		}
 	}()
 
 	return nil
 }
 
-func (cmd *commandRun) handleDialog(sender communication.Sender, receiver communication.Receiver) {
+func (cmd *CommandRun) handleDialog(sender communication.Sender, receiver communication.Receiver) {
 
 }
 
-func (cmd *commandRun) Wait() error {
+func (cmd *CommandRun) Wait() error {
 	return cmd.vpnServer.Wait()
 }
 
-func (cmd *commandRun) Kill() {
+func (cmd *CommandRun) Kill() {
 	cmd.vpnServer.Stop()
-	cmd.communicationServer.Stop()
-	cmd.natService.Stop()
+	cmd.CommunicationServer.Stop()
+	cmd.NatService.Stop()
 }
