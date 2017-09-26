@@ -1,9 +1,0 @@
-{
-  "body": {
-    "serial_number": 1,
-    "issuer_id": 1,
-    "benefiter_id": 1,
-    "amount": 5
-  },
-  "issuer_signature": ""
-}
