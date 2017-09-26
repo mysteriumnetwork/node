@@ -1,6 +1,6 @@
 package dto
 
 type SignedPromise struct {
-	promise         PromiseBody
-	issuerSignature Signature
+	Promise         PromiseBody
+	IssuerSignature Signature
 }

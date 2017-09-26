@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func Test_ClientPromise(t *testing.T) {
+func Test_PromiseBody(t *testing.T) {
 
 	amount := discovery_dto.Money{
 		Amount:   uint64(5),
@@ -26,4 +26,17 @@ func Test_ClientPromise(t *testing.T) {
 	assert.Equal(t, promise.BenefiterId, "benefiter1")
 	assert.Equal(t, promise.Amount.Amount, uint64(5))
 	assert.Equal(t, promise.Amount.Currency, "Token")
+}
+
+func Test_SignedPromise(t *testing.T) {
+
+	promise := dto.PromiseBody{}
+
+	signedPromise := dto.SignedPromise{
+		Promise: promise,
+		IssuerSignature: "signature",
+	}
+
+	assert.Equal(t, signedPromise.Promise, promise)
+	assert.Equal(t, signedPromise.IssuerSignature, dto.Signature("signature"))
 }
