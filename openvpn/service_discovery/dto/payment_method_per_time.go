@@ -8,12 +8,12 @@ import (
 const PAYMENT_METHOD_PER_TIME = "PER_TIME"
 
 type PaymentMethodPerTime struct {
-	Price dto_discovery.Price
+	Price dto_discovery.Money
 
 	// Service duration provided for paid price
 	Duration time.Duration
 }
 
-func (method PaymentMethodPerTime) GetPrice() dto_discovery.Price {
+func (method PaymentMethodPerTime) GetPrice() dto_discovery.Money {
 	return method.Price
 }

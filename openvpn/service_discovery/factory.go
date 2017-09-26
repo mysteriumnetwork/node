@@ -20,7 +20,7 @@ func NewServiceProposal(nodeKey string, nodeLocation dto_discovery.Location) dto
 		PaymentMethodType: dto.PAYMENT_METHOD_PER_TIME,
 		PaymentMethod: dto.PaymentMethodPerTime{
 			// 15 MYST/month = 0,5 MYST/day = 0,125 MYST/hour
-			Price:    dto_discovery.Price{0.125, "MYST"},
+			Price:    dto_discovery.Money{12500000, "MYST"},
 			Duration: 1 * time.Hour,
 		},
 		ProviderId: nodeKey,
