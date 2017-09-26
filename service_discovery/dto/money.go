@@ -1,6 +1,6 @@
 package dto
 
 type Money struct {
-	Amount   float64
+	Amount   uint64
 	Currency string
 }
