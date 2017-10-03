@@ -10,13 +10,13 @@ type receiverNats struct {
 	receiverTopic string
 }
 
-func (server *receiverNats) Receive(
+func (receiver *receiverNats) Receive(
 	messageType communication.MessageType,
 	callback communication.MessageHandler,
 ) error {
 
-	_, err := server.connection.Subscribe(
-		server.receiverTopic+"."+string(messageType),
+	_, err := receiver.connection.Subscribe(
+		receiver.receiverTopic+"."+string(messageType),
 		func(message *nats.Msg) {
 			callback(string(message.Data))
 		},
@@ -24,16 +24,16 @@ func (server *receiverNats) Receive(
 	return err
 }
 
-func (server *receiverNats) Respond(
+func (receiver *receiverNats) Respond(
 	messageType communication.RequestType,
 	callback communication.RequestHandler,
 ) error {
 
-	_, err := server.connection.Subscribe(
-		server.receiverTopic+"."+string(messageType),
+	_, err := receiver.connection.Subscribe(
+		receiver.receiverTopic+"."+string(messageType),
 		func(message *nats.Msg) {
 			response := callback(string(message.Data))
-			server.connection.Publish(message.Reply, []byte(response))
+			receiver.connection.Publish(message.Reply, []byte(response))
 		},
 	)
 	return err

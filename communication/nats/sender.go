@@ -12,21 +12,21 @@ type senderNats struct {
 	timeoutRequest time.Duration
 }
 
-func (client *senderNats) Send(
+func (sender *senderNats) Send(
 	messageType communication.MessageType,
 	message string,
 ) error {
-	return client.connection.Publish(
+	return sender.connection.Publish(
 		string(messageType),
 		[]byte(message),
 	)
 }
 
-func (client *senderNats) Request(
+func (sender *senderNats) Request(
 	messageType communication.RequestType,
 	request string,
 ) (response string, err error) {
-	message, err := client.connection.Request(string(messageType), []byte(request), client.timeoutRequest)
+	message, err := sender.connection.Request(string(messageType), []byte(request), sender.timeoutRequest)
 	if err != nil {
 		return
 	}
