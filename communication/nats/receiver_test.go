@@ -5,6 +5,6 @@ import (
 	"testing"
 )
 
-func TestSenderInterface(t *testing.T) {
+func TestReceiverInterface(t *testing.T) {
 	var _ communication.Receiver = &receiverNats{}
 }
