@@ -23,10 +23,10 @@ func (sender *senderNats) Send(
 }
 
 func (sender *senderNats) Request(
-	messageType communication.RequestType,
+	requestType communication.RequestType,
 	request string,
 ) (response string, err error) {
-	message, err := sender.connection.Request(string(messageType), []byte(request), sender.timeoutRequest)
+	message, err := sender.connection.Request(string(requestType), []byte(request), sender.timeoutRequest)
 	if err != nil {
 		return
 	}

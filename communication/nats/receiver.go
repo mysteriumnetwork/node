@@ -25,12 +25,12 @@ func (receiver *receiverNats) Receive(
 }
 
 func (receiver *receiverNats) Respond(
-	messageType communication.RequestType,
+	requestType communication.RequestType,
 	callback communication.RequestHandler,
 ) error {
 
 	_, err := receiver.connection.Subscribe(
-		receiver.receiverTopic+"."+string(messageType),
+		receiver.receiverTopic+"."+string(requestType),
 		func(message *nats.Msg) {
 			response := callback(string(message.Data))
 			receiver.connection.Publish(message.Reply, []byte(response))
