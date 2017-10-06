@@ -2,24 +2,41 @@ package command_run
 
 import (
 	"github.com/mysterium/node/bytescount_client"
+	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/service_discovery"
 	"github.com/mysterium/node/server"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"io"
 	"time"
 )
 
-type commandRun struct {
-	output      io.Writer
-	outputError io.Writer
+type CommandRun struct {
+	Output      io.Writer
+	OutputError io.Writer
 
-	mysteriumClient server.Client
-	vpnMiddlewares  []openvpn.ManagementMiddleware
+	MysteriumClient server.Client
 
-	vpnClient *openvpn.Client
+	CommunicationClientFactory func(identity dto_discovery.Identity) communication.Client
+	communicationClient        communication.Client
+
+	vpnMiddlewares []openvpn.ManagementMiddleware
+	vpnClient      *openvpn.Client
 }
 
-func (cmd *commandRun) Run(options CommandOptions) error {
-	vpnSession, err := cmd.mysteriumClient.SessionCreate(options.NodeKey)
+func (cmd *CommandRun) Run(options CommandOptions) (err error) {
+	consumerId := dto_discovery.Identity("consumer1")
+	providerId := dto_discovery.Identity(options.NodeKey)
+	serviceProposal := service_discovery.NewServiceProposal(providerId, nats.NewContact(providerId))
+
+	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
+	_, _, err = cmd.communicationClient.CreateDialog(serviceProposal.ProviderContacts[0])
+	if err != nil {
+		return err
+	}
+
+	vpnSession, err := cmd.MysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err
 	}
@@ -34,7 +51,7 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 
 	vpnMiddlewares := append(
 		cmd.vpnMiddlewares,
-		bytescount_client.NewMiddleware(cmd.mysteriumClient, vpnSession.Id, 1*time.Minute),
+		bytescount_client.NewMiddleware(cmd.MysteriumClient, vpnSession.Id, 1*time.Minute),
 	)
 	cmd.vpnClient = openvpn.NewClient(
 		vpnConfig,
@@ -48,10 +65,11 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 	return nil
 }
 
-func (cmd *commandRun) Wait() error {
+func (cmd *CommandRun) Wait() error {
 	return cmd.vpnClient.Wait()
 }
 
-func (cmd *commandRun) Kill() {
+func (cmd *CommandRun) Kill() {
+	cmd.communicationClient.Stop()
 	cmd.vpnClient.Stop()
 }

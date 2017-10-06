@@ -1,4 +1,4 @@
-package dto
+package nats
 
 const CONTACT_NATS_V1 = "nats/v1"
 

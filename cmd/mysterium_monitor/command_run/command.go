@@ -6,25 +6,24 @@ import (
 	"io"
 
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
-	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/state_client"
 	"sync"
 	"time"
 )
 
-type commandRun struct {
-	output      io.Writer
-	outputError io.Writer
+type CommandRun struct {
+	Output      io.Writer
+	OutputError io.Writer
 
-	ipifyClient ipify.Client
+	IpifyClient ipify.Client
 	ipOriginal  string
 
-	clientCommand command_client.Command
+	clientCommand *command_client.CommandRun
 	ipCheckWaiter sync.WaitGroup
 	resultWriter  *resultWriter
 }
 
-func (cmd *commandRun) Run(options CommandOptions) error {
+func (cmd *CommandRun) Run(options CommandOptions) error {
 	var err error
 
 	cmd.resultWriter, err = NewResultWriter(options.ResultFile)
@@ -39,17 +38,16 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 	}
 	defer nodeProvider.Close()
 
-	cmd.ipOriginal, err = cmd.ipifyClient.GetIp()
+	cmd.ipOriginal, err = cmd.IpifyClient.GetIp()
 	if err != nil {
 		return errors.New("Failed to get original IP: " + err.Error())
 	}
 
-	cmd.clientCommand = command_client.NewCommandWithDependencies(
-		cmd.output,
-		cmd.outputError,
-		server.NewClient(),
+	cmd.clientCommand = command_client.NewCommand(
 		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
 	)
+	cmd.clientCommand.Output = cmd.Output
+	cmd.clientCommand.OutputError = cmd.OutputError
 
 	nodeProvider.WithEachNode(func(nodeKey string) {
 		cmd.resultWriter.NodeStart(nodeKey)
@@ -74,9 +72,9 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 	return nil
 }
 
-func (cmd *commandRun) checkClientIpWhenConnected(state state_client.State) error {
+func (cmd *CommandRun) checkClientIpWhenConnected(state state_client.State) error {
 	if state == state_client.STATE_CONNECTED {
-		ipForwarded, err := cmd.ipifyClient.GetIp()
+		ipForwarded, err := cmd.IpifyClient.GetIp()
 		if err != nil {
 			cmd.resultWriter.NodeError("Forwarded IP not detected", err)
 			cmd.ipCheckWaiter.Done()
@@ -95,15 +93,15 @@ func (cmd *commandRun) checkClientIpWhenConnected(state state_client.State) erro
 	return nil
 }
 
-func (cmd *commandRun) checkClientHandleTimeout() {
+func (cmd *CommandRun) checkClientHandleTimeout() {
 	<-time.After(10 * time.Second)
 
 	cmd.resultWriter.NodeStatus("Client not connected")
 	cmd.ipCheckWaiter.Done()
 }
 
-func (cmd *commandRun) checkClientIpWhenDisconnected() {
-	ipForwarded, err := cmd.ipifyClient.GetIp()
+func (cmd *CommandRun) checkClientIpWhenDisconnected() {
+	ipForwarded, err := cmd.IpifyClient.GetIp()
 	if err != nil {
 		cmd.resultWriter.NodeError("Disconnect IP not detected", err)
 		return
@@ -115,10 +113,10 @@ func (cmd *commandRun) checkClientIpWhenDisconnected() {
 	}
 }
 
-func (cmd *commandRun) Wait() error {
+func (cmd *CommandRun) Wait() error {
 	return nil
 }
 
-func (cmd *commandRun) Kill() {
+func (cmd *CommandRun) Kill() {
 	cmd.clientCommand.Kill()
 }

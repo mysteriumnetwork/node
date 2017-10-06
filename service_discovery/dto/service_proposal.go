@@ -20,7 +20,7 @@ type ServiceProposal struct {
 	PaymentMethod PaymentMethod
 
 	// Unique identifier of a provider
-	ProviderId string
+	ProviderId Identity
 
 	// Communication methods possible
 	ProviderContacts []Contact

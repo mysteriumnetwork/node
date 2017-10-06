@@ -1,42 +1,27 @@
 package command_run
 
 import (
+	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
-	"io"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"os"
 )
 
-func NewCommand() Command {
-	return &commandRun{
-		output:      os.Stdout,
-		outputError: os.Stderr,
+func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
+	return &CommandRun{
+		Output:      os.Stdout,
+		OutputError: os.Stderr,
 
-		ipifyClient:          ipify.NewClient(),
-		mysteriumClient:      server.NewClient(),
-		communicationChannel: nats.NewService(),
-		vpnMiddlewares:       make([]openvpn.ManagementMiddleware, 0),
-
-		natService: nat.NewService(),
-	}
-}
-
-func NewCommandWithDependencies(
-	output io.Writer,
-	outputError io.Writer,
-	ipifyClient ipify.Client,
-	mysteriumClient server.Client,
-	vpnMiddlewares ...openvpn.ManagementMiddleware,
-) Command {
-	return &commandRun{
-		output:      output,
-		outputError: outputError,
-
-		ipifyClient:     ipifyClient,
-		mysteriumClient: mysteriumClient,
-		vpnMiddlewares:  vpnMiddlewares,
+		IpifyClient:     ipify.NewClient(),
+		MysteriumClient: server.NewClient(),
+		NatService:      nat.NewService(),
+		CommunicationServerFactory: func(identity dto_discovery.Identity) communication.Server {
+			return nats.NewServer(identity)
+		},
+		vpnMiddlewares: vpnMiddlewares,
 	}
 }

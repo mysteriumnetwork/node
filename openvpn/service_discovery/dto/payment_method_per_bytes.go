@@ -8,16 +8,10 @@ import (
 const PAYMENT_METHOD_PER_BYTES = "PER_BYTES"
 
 type PaymentMethodPerBytes struct {
-	Type string
-
 	Price dto_discovery.Money
 
 	// Service bytes provided for paid price
 	Bytes datasize.BitSize
-}
-
-func (method PaymentMethodPerBytes) GetType() string {
-	return method.Type
 }
 
 func (method PaymentMethodPerBytes) GetPrice() dto_discovery.Money {
