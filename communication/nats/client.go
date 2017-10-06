@@ -21,46 +21,35 @@ func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (
 	receiver communication.Receiver,
 	err error,
 ) {
-	if contact.Type != CONTACT_NATS_V1 {
-		err = fmt.Errorf("Invalid contact type: %s", contact.Type)
+	contactTopic, err := extractContactTopic(contact)
+	if err != nil {
 		return
 	}
-	contactNats, ok := contact.Definition.(ContactNATSV1)
-	if !ok {
-		err = fmt.Errorf("Invalid contact definition: %#v", contact.Definition)
-		return
-	}
-	contactTopic := contactNats.Topic
 
 	if err = client.Start(); err != nil {
 		return
 	}
 
-	message, err := client.connection.Request(
-		contactTopic+"."+string(communication.DIALOG_CREATE),
-		[]byte(client.myTopic),
-		client.timeoutRequest,
-	)
+	sender = &senderNats{
+		connection:     client.connection,
+		timeoutRequest: client.timeoutRequest,
+		messageTopic:   contactTopic + ".",
+	}
+
+	response, err := sender.Request(communication.DIALOG_CREATE, client.myTopic)
 	if err != nil {
 		return
 	}
-
-	response := string(message.Data)
 	if response != "OK" {
 		err = fmt.Errorf("Dialog creation rejected: %s", response)
 		return
 	}
 
-	sender = &senderNats{
-		connection:     client.connection,
-		receiverTopic:  contactTopic,
-		timeoutRequest: client.timeoutRequest,
-	}
 	receiver = &receiverNats{
-		connection:    client.connection,
-		receiverTopic: client.myTopic,
+		connection:   client.connection,
+		messageTopic: client.myTopic + ".",
 	}
-	fmt.Printf("Dialog with contact created. topic=%s\n", contactNats.Topic)
+	fmt.Printf("Dialog with contact created. topic=%s\n", contactTopic)
 	return
 }
 
@@ -72,4 +61,16 @@ func (client *clientNats) Start() (err error) {
 func (client *clientNats) Stop() error {
 	client.connection.Close()
 	return nil
+}
+
+func extractContactTopic(contact dto_discovery.Contact) (topic string, err error) {
+	if contact.Type != CONTACT_NATS_V1 {
+		return "", fmt.Errorf("Invalid contact type: %s", contact.Type)
+	}
+	contactNats, ok := contact.Definition.(ContactNATSV1)
+	if !ok {
+		return "", fmt.Errorf("Invalid contact definition: %#v", contact.Definition)
+	}
+
+	return contactNats.Topic, nil
 }

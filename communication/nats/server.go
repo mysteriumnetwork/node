@@ -45,7 +45,7 @@ func (server *serverNats) createDialog(receiverTopic string) {
 
 	sender := &senderNats{
 		connection:     server.connection,
-		receiverTopic:  server.myTopic,
+		messageTopic:   server.myTopic,
 		timeoutRequest: server.timeoutRequest,
 	}
 	receiver := &receiverNats{
