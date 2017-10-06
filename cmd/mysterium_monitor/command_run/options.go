@@ -36,7 +36,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		&options.ResultFile,
 		"result-file",
 		"",
-		"File where CSV Output should be written",
+		"File where CSV output should be written",
 	)
 
 	err = flags.Parse(args[1:])
