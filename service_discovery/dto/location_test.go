@@ -2,29 +2,89 @@ package dto
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-var (
-	locationLTTelia = Location{"XX", "YY", "AS123"}
-	locationJson    = `{
-		"country": "XX",
-		"city": "YY",
-		"asn":"AS123"
-	}`
-)
-
 func TestLocationSerialize(t *testing.T) {
-	jsonBytes, err := json.Marshal(locationLTTelia)
-	assert.Nil(t, err)
-	assert.JSONEq(t, locationJson, string(jsonBytes))
+	var tests = []struct {
+		model        Location
+		expectedJson string
+	}{
+		{
+			Location{"XX", "YY", "AS123"},
+			`{
+				"country": "XX",
+				"city": "YY",
+				"asn": "AS123"
+			}`,
+		},
+		{
+			Location{Country: "XX"},
+			`{
+				"country": "XX"
+			}`,
+		},
+		{
+			Location{},
+			`{}`,
+		},
+	}
+
+	for _, test := range tests {
+		jsonBytes, err := json.Marshal(test.model)
+
+		assert.Nil(t, err)
+		assert.JSONEq(t, test.expectedJson, string(jsonBytes))
+	}
 }
 
 func TestLocationUnserialize(t *testing.T) {
-	var model Location
+	var tests = []struct {
+		json          string
+		expectedModel Location
+		expectedError error
+	}{
+		{
+			`{
+				"country": "XX",
+				"city": "YY",
+				"asn": "AS123"
+			}`,
+			Location{"XX", "YY", "AS123"},
+			nil,
+		},
+		{
+			`{
+				"country": "XX"
+			}`,
+			Location{Country: "XX"},
+			nil,
+		},
+		{
+			`{}`,
+			Location{},
+			nil,
+		},
+		{
+			`{
+				"country": 1
+			}`,
+			Location{},
+			errors.New("json: cannot unmarshal number into Go struct field Location.country of type string"),
+		},
+	}
 
-	err := json.Unmarshal([]byte(locationJson), &model)
-	assert.Nil(t, err)
-	assert.Equal(t, locationLTTelia, model)
+	for _, test := range tests {
+		var model Location
+		err := json.Unmarshal([]byte(test.json), &model)
+
+		assert.Equal(t, test.expectedModel, model)
+		if test.expectedError != nil {
+			assert.EqualError(t, err, test.expectedError.Error())
+		} else {
+			assert.NoError(t, err)
+		}
+	}
 }
