@@ -25,7 +25,7 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		messageTopic: server.myTopic + ".",
 	}
 
-	createDialog := func(request string) (response string) {
+	createDialog := func(request []byte) (response []byte) {
 		receiverTopic := request
 		fmt.Printf("Dialog requested. topic=%s\n", receiverTopic)
 
@@ -36,7 +36,7 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		}
 		dialogHandler(sender, receiver)
 
-		return "OK"
+		return []byte("OK")
 	}
 
 	return receiver.Respond(communication.DIALOG_CREATE, createDialog)

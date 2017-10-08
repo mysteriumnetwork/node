@@ -18,7 +18,7 @@ func (receiver *receiverNats) Receive(
 	_, err := receiver.connection.Subscribe(
 		receiver.messageTopic+string(messageType),
 		func(message *nats.Msg) {
-			callback(string(message.Data))
+			callback(message.Data)
 		},
 	)
 	return err
@@ -32,7 +32,7 @@ func (receiver *receiverNats) Respond(
 	_, err := receiver.connection.Subscribe(
 		receiver.messageTopic+string(requestType),
 		func(message *nats.Msg) {
-			response := callback(string(message.Data))
+			response := callback(message.Data)
 			receiver.connection.Publish(message.Reply, []byte(response))
 		},
 	)

@@ -14,29 +14,29 @@ type senderNats struct {
 
 func (sender *senderNats) Send(
 	messageType communication.MessageType,
-	message string,
+	message []byte,
 ) error {
 
 	return sender.connection.Publish(
 		sender.messageTopic+string(messageType),
-		[]byte(message),
+		message,
 	)
 }
 
 func (sender *senderNats) Request(
 	requestType communication.RequestType,
-	request string,
-) (response string, err error) {
+	request []byte,
+) (response []byte, err error) {
 
 	message, err := sender.connection.Request(
 		sender.messageTopic+string(requestType),
-		[]byte(request),
+		request,
 		sender.timeoutRequest,
 	)
 	if err != nil {
 		return
 	}
 
-	response = string(message.Data)
+	response = message.Data
 	return
 }
