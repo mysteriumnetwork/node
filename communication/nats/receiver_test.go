@@ -17,11 +17,7 @@ type rawCallback struct {
 	Callback func(message []byte)
 }
 
-func (consumer rawCallback) MessageType() communication.MessageType {
-	return communication.MessageType("raw-message")
-}
-
-func (consumer rawCallback) Consume(messageBody []byte) {
+func (consumer rawCallback) ConsumeMessage(messageBody []byte) {
 	consumer.Callback(messageBody)
 }
 
@@ -34,10 +30,13 @@ func TestReceiverReceiveRaw(t *testing.T) {
 	receiver := &receiverNats{connection: connection}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive(rawCallback{func(message []byte) {
-		assert.Equal(t, "123", string(message))
-		messageReceived <- true
-	}})
+	err := receiver.Receive(
+		communication.MessageType("raw-message"),
+		rawCallback{func(message []byte) {
+			assert.Equal(t, "123", string(message))
+			messageReceived <- true
+		}},
+	)
 	assert.Nil(t, err)
 
 	err = connection.Publish("raw-message", []byte("123"))
@@ -56,11 +55,7 @@ type customMessageCallback struct {
 	Callback func(message customMessage)
 }
 
-func (consumer customMessageCallback) MessageType() communication.MessageType {
-	return communication.MessageType("json-message")
-}
-
-func (consumer customMessageCallback) Consume(messageBody []byte) {
+func (consumer customMessageCallback) ConsumeMessage(messageBody []byte) {
 	var message customMessage
 	err := json.Unmarshal(messageBody, &message)
 	if err != nil {
@@ -79,10 +74,13 @@ func TestReceiverReceiveCustomType(t *testing.T) {
 	receiver := &receiverNats{connection: connection}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive(&customMessageCallback{func(message customMessage) {
-		assert.Equal(t, customMessage{123}, message, "comp2")
-		messageReceived <- true
-	}})
+	err := receiver.Receive(
+		communication.MessageType("json-message"),
+		customMessageCallback{func(message customMessage) {
+			assert.Equal(t, customMessage{123}, message)
+			messageReceived <- true
+		}},
+	)
 	assert.Nil(t, err)
 
 	err = connection.Publish("json-message", []byte(`{"Field":123}`))

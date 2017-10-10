@@ -18,11 +18,7 @@ type producerRaw struct {
 	message []byte
 }
 
-func (producer producerRaw) MessageType() communication.MessageType {
-	return communication.MessageType("raw-message")
-}
-
-func (producer producerRaw) Produce() []byte {
+func (producer producerRaw) ProduceMessage() []byte {
 	return producer.message
 }
 
@@ -41,9 +37,12 @@ func TestSenderSendRaw(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = sender.Send(producerRaw{
-		[]byte("123"),
-	})
+	err = sender.Send(
+		communication.MessageType("raw-message"),
+		producerRaw{
+			[]byte("123"),
+		},
+	)
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageSent); err != nil {
@@ -59,11 +58,7 @@ type customMessageProducer struct {
 	message customMessage2
 }
 
-func (producer customMessageProducer) MessageType() communication.MessageType {
-	return communication.MessageType("custom-message")
-}
-
-func (producer customMessageProducer) Produce() []byte {
+func (producer customMessageProducer) ProduceMessage() []byte {
 	messageBody, err := json.Marshal(producer.message)
 	if err != nil {
 		panic(err)
@@ -86,9 +81,12 @@ func TestSenderSendCustomMessage(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = sender.Send(customMessageProducer{
-		customMessage2{"123"},
-	})
+	err = sender.Send(
+		communication.MessageType("custom-message"),
+		customMessageProducer{
+			customMessage2{"123"},
+		},
+	)
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageSent); err != nil {

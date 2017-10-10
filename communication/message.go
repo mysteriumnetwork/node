@@ -3,11 +3,9 @@ package communication
 type MessageType string
 
 type MessageProducer interface {
-	MessageType() MessageType
-	Produce() []byte
+	ProduceMessage() []byte
 }
 
 type MessageConsumer interface {
-	MessageType() MessageType
-	Consume(messageBody []byte)
+	ConsumeMessage(messageBody []byte)
 }
