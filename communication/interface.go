@@ -15,7 +15,7 @@ type Client interface {
 }
 
 type Receiver interface {
-	Receive(messageType MessageType, callback MessageHandler) error
+	Receive(handler MessageHandler) error
 	Respond(requestType RequestType, callback RequestHandler) error
 }
 
