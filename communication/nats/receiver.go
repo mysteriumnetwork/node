@@ -10,12 +10,12 @@ type receiverNats struct {
 	messageTopic string
 }
 
-func (receiver *receiverNats) Receive(handler communication.MessageHandler) error {
+func (receiver *receiverNats) Receive(consumer communication.MessageConsumer) error {
 
 	_, err := receiver.connection.Subscribe(
-		receiver.messageTopic+string(handler.Type()),
+		receiver.messageTopic+string(consumer.MessageType()),
 		func(message *nats.Msg) {
-			handler.Deliver(message.Data)
+			consumer.Consume(message.Data)
 		},
 	)
 	return err

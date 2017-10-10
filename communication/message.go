@@ -2,7 +2,12 @@ package communication
 
 type MessageType string
 
-type MessageHandler interface {
-	Type() MessageType
-	Deliver(messageBody []byte)
+type MessageProducer interface {
+	MessageType() MessageType
+	Produce() []byte
+}
+
+type MessageConsumer interface {
+	MessageType() MessageType
+	Consume(messageBody []byte)
 }

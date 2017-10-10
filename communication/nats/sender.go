@@ -12,14 +12,11 @@ type senderNats struct {
 	messageTopic   string
 }
 
-func (sender *senderNats) Send(
-	messageType communication.MessageType,
-	message []byte,
-) error {
+func (sender *senderNats) Send(producer communication.MessageProducer) error {
 
 	return sender.connection.Publish(
-		sender.messageTopic+string(messageType),
-		message,
+		sender.messageTopic+string(producer.MessageType()),
+		producer.Produce(),
 	)
 }
 

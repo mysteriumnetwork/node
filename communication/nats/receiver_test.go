@@ -17,12 +17,12 @@ type rawCallback struct {
 	Callback func(message []byte)
 }
 
-func (subscription rawCallback) Type() communication.MessageType {
+func (consumer rawCallback) MessageType() communication.MessageType {
 	return communication.MessageType("raw-message")
 }
 
-func (subscription rawCallback) Deliver(messageBody []byte) {
-	subscription.Callback(messageBody)
+func (consumer rawCallback) Consume(messageBody []byte) {
+	consumer.Callback(messageBody)
 }
 
 func TestReceiverReceiveRaw(t *testing.T) {
@@ -56,18 +56,18 @@ type customMessageCallback struct {
 	Callback func(message customMessage)
 }
 
-func (subscription customMessageCallback) Type() communication.MessageType {
+func (consumer customMessageCallback) MessageType() communication.MessageType {
 	return communication.MessageType("json-message")
 }
 
-func (subscription customMessageCallback) Deliver(messageBody []byte) {
+func (consumer customMessageCallback) Consume(messageBody []byte) {
 	var message customMessage
 	err := json.Unmarshal(messageBody, &message)
 	if err != nil {
 		panic(err)
 	}
 
-	subscription.Callback(message)
+	consumer.Callback(message)
 }
 
 func TestReceiverReceiveCustomType(t *testing.T) {
