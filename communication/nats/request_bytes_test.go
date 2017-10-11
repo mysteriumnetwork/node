@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func TestRequestBytesSend(t *testing.T) {
+func TestBytesRequest(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
 	connection := test.NewDefaultConnection(t)
@@ -21,18 +21,18 @@ func TestRequestBytesSend(t *testing.T) {
 	}
 
 	requestSent := make(chan bool)
-	_, err := connection.Subscribe("test", func(message *nats.Msg) {
+	_, err := connection.Subscribe("bytes-request", func(message *nats.Msg) {
 		assert.Equal(t, "REQUEST", string(message.Data))
 		connection.Publish(message.Reply, []byte("RESPONSE"))
 		requestSent <- true
 	})
 	assert.Nil(t, err)
 
-	response := &communication.BytesResponse{}
+	response := communication.BytesResponse{}
 	err = sender.Request(
-		communication.RequestType("test"),
+		communication.RequestType("bytes-request"),
 		communication.BytesProduce{[]byte("REQUEST")},
-		response,
+		&response,
 	)
 	assert.Nil(t, err)
 	assert.Equal(t, "RESPONSE", string(response.Response))
@@ -42,7 +42,7 @@ func TestRequestBytesSend(t *testing.T) {
 	}
 }
 
-func TestRequestBytesRespond(t *testing.T) {
+func TestBytesRespond(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
 	connection := test.NewDefaultConnection(t)
@@ -52,7 +52,7 @@ func TestRequestBytesRespond(t *testing.T) {
 
 	requestReceived := make(chan bool)
 	err := receiver.Respond(
-		communication.RequestType("test"),
+		communication.RequestType("bytes-response"),
 		func(request []byte) []byte {
 			assert.Equal(t, "REQUEST", string(request))
 			requestReceived <- true
@@ -61,11 +61,11 @@ func TestRequestBytesRespond(t *testing.T) {
 	)
 	assert.Nil(t, err)
 
-	err = connection.PublishRequest("test", "test-reply", []byte("REQUEST"))
+	err = connection.PublishRequest("bytes-response", "bytes-reply", []byte("REQUEST"))
 	assert.Nil(t, err)
 
 	requestResponded := make(chan bool)
-	_, err = connection.Subscribe("test-reply", func(message *nats.Msg) {
+	_, err = connection.Subscribe("bytes-reply", func(message *nats.Msg) {
 		assert.Equal(t, "RESPONSE", string(message.Data))
 		requestResponded <- true
 	})

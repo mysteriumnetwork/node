@@ -13,6 +13,18 @@ type customMessage struct {
 	Field int
 }
 
+type customMessageProduce struct {
+	Message customMessage
+}
+
+func (producer customMessageProduce) ProduceMessage() []byte {
+	messageBody, err := json.Marshal(producer.Message)
+	if err != nil {
+		panic(err)
+	}
+	return messageBody
+}
+
 type customMessageCallback struct {
 	Callback func(message customMessage)
 }
@@ -25,18 +37,6 @@ func (consumer customMessageCallback) ConsumeMessage(messageBody []byte) {
 	}
 
 	consumer.Callback(message)
-}
-
-type customMessageProduce struct {
-	Message customMessage
-}
-
-func (producer customMessageProduce) ProduceMessage() []byte {
-	messageBody, err := json.Marshal(producer.Message)
-	if err != nil {
-		panic(err)
-	}
-	return messageBody
 }
 
 func TestMessageCustomSend(t *testing.T) {
