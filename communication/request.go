@@ -2,4 +2,6 @@ package communication
 
 type RequestType string
 
-type RequestHandler func(request []byte) (response []byte)
+type RequestConsumer interface {
+	ConsumeRequest(requestBody []byte) (responseBody []byte)
+}

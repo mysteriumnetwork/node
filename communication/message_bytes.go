@@ -23,3 +23,11 @@ type BytesCallback struct {
 func (consumer BytesCallback) ConsumeMessage(messageBody []byte) {
 	consumer.Callback(messageBody)
 }
+
+type BytesResponder struct {
+	Callback func(request []byte) []byte
+}
+
+func (consumer BytesResponder) ConsumeRequest(requestBody []byte) (responseBody []byte) {
+	return consumer.Callback(requestBody)
+}

@@ -14,14 +14,6 @@ type customRequest struct {
 	FieldIn string
 }
 
-func (request customRequest) ProduceMessage() []byte {
-	messageBody, err := json.Marshal(request)
-	if err != nil {
-		panic(err)
-	}
-	return messageBody
-}
-
 type customResponse struct {
 	FieldOut string
 }
@@ -31,6 +23,18 @@ func (response *customResponse) ConsumeMessage(messageBody []byte) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+type customRequestProduce struct {
+	Request customRequest
+}
+
+func (producer customRequestProduce) ProduceMessage() []byte {
+	messageBody, err := json.Marshal(producer.Request)
+	if err != nil {
+		panic(err)
+	}
+	return messageBody
 }
 
 func TestCustomRequest(t *testing.T) {
@@ -55,7 +59,9 @@ func TestCustomRequest(t *testing.T) {
 	response := customResponse{}
 	err = sender.Request(
 		communication.RequestType("custom-request"),
-		customRequest{"REQUEST"},
+		customRequestProduce{
+			customRequest{"REQUEST"},
+		},
 		&response,
 	)
 	assert.Nil(t, err)
@@ -63,5 +69,63 @@ func TestCustomRequest(t *testing.T) {
 
 	if err := test.Wait(requestSent); err != nil {
 		t.Fatal("Request not sent")
+	}
+}
+
+type customResponder struct {
+	Callback func(request customRequest) customResponse
+}
+
+func (responder customResponder) ConsumeRequest(requestBody []byte) []byte {
+	var request customRequest
+	err := json.Unmarshal(requestBody, &request)
+	if err != nil {
+		panic(err)
+	}
+
+	response := responder.Callback(request)
+
+	responseBody, err := json.Marshal(response)
+	if err != nil {
+		panic(err)
+	}
+	return responseBody
+}
+
+func TestCustomRespond(t *testing.T) {
+	server := test.RunDefaultServer()
+	defer server.Shutdown()
+	connection := test.NewDefaultConnection(t)
+	defer connection.Close()
+
+	receiver := &receiverNats{connection: connection}
+
+	requestReceived := make(chan bool)
+	err := receiver.Respond(
+		communication.RequestType("custom-response"),
+		customResponder{func(request customRequest) customResponse {
+			assert.Equal(t, customRequest{"REQUEST"}, request)
+			requestReceived <- true
+			return customResponse{"RESPONSE"}
+		}},
+	)
+	assert.Nil(t, err)
+
+	err = connection.PublishRequest("custom-response", "custom-reply", []byte(`{"FieldIn": "REQUEST"}`))
+	assert.Nil(t, err)
+
+	requestResponded := make(chan bool)
+	_, err = connection.Subscribe("custom-reply", func(message *nats.Msg) {
+		assert.JSONEq(t, `{"FieldOut": "RESPONSE"}`, string(message.Data))
+		requestResponded <- true
+	})
+	assert.Nil(t, err)
+
+	if err := test.Wait(requestReceived); err != nil {
+		t.Fatal("Request not received")
+	}
+
+	if err := test.Wait(requestResponded); err != nil {
+		t.Fatal("Request not responded")
 	}
 }

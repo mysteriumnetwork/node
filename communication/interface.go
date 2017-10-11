@@ -16,7 +16,7 @@ type Client interface {
 
 type Receiver interface {
 	Receive(messageType MessageType, consumer MessageConsumer) error
-	Respond(requestType RequestType, callback RequestHandler) error
+	Respond(requestType RequestType, consumer RequestConsumer) error
 }
 
 type Sender interface {
