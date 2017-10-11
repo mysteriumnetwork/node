@@ -11,12 +11,19 @@ func TestStringProduce(t *testing.T) {
 	assert.Equal(t, "123", string(producer.ProduceMessage()))
 }
 
+func TestStringResponse(t *testing.T) {
+	consumer := StringResponse{}
+	consumer.ConsumeMessage([]byte("123"))
+
+	assert.Equal(t, "123", consumer.Response)
+}
+
 func TestStringCallback(t *testing.T) {
 	var messageConsumed string
-	producer := StringCallback{func(message string) {
+	consumer := StringCallback{func(message string) {
 		messageConsumed = message
 	}}
-	producer.ConsumeMessage([]byte("123"))
+	consumer.ConsumeMessage([]byte("123"))
 
 	assert.Equal(t, "123", messageConsumed)
 }

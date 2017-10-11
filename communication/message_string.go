@@ -8,6 +8,14 @@ func (producer StringProduce) ProduceMessage() []byte {
 	return []byte(producer.Message)
 }
 
+type StringResponse struct {
+	Response string
+}
+
+func (consumer *StringResponse) ConsumeMessage(messageBody []byte) {
+	consumer.Response = string(messageBody)
+}
+
 type StringCallback struct {
 	Callback func(message string)
 }
