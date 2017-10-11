@@ -36,11 +36,13 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		messageTopic:   contactTopic + ".",
 	}
 
-	response, err := sender.Request(communication.DIALOG_CREATE, []byte(client.myTopic))
+	request := communication.StringProduce{client.myTopic}
+	response := &communication.StringResponse{}
+	err = sender.Request(communication.DIALOG_CREATE, request, response)
 	if err != nil {
 		return
 	}
-	if string(response) != "OK" {
+	if response.Response != "OK" {
 		err = fmt.Errorf("Dialog creation rejected: %s", response)
 		return
 	}

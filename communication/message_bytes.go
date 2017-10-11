@@ -8,6 +8,14 @@ func (producer BytesProduce) ProduceMessage() []byte {
 	return producer.Message
 }
 
+type BytesResponse struct {
+	Response []byte
+}
+
+func (consumer *BytesResponse) ConsumeMessage(messageBody []byte) {
+	consumer.Response = messageBody
+}
+
 type BytesCallback struct {
 	Callback func(message []byte)
 }

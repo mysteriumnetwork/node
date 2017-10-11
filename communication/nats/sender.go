@@ -25,18 +25,19 @@ func (sender *senderNats) Send(
 
 func (sender *senderNats) Request(
 	requestType communication.RequestType,
-	request []byte,
-) (response []byte, err error) {
+	request communication.MessageProducer,
+	response communication.MessageConsumer,
+) error {
 
 	message, err := sender.connection.Request(
 		sender.messageTopic+string(requestType),
-		request,
+		request.ProduceMessage(),
 		sender.timeoutRequest,
 	)
 	if err != nil {
-		return
+		return err
 	}
 
-	response = message.Data
-	return
+	response.ConsumeMessage(message.Data)
+	return nil
 }

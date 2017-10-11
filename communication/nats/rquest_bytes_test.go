@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func TestSenderRequest(t *testing.T) {
+func TestRequestBytesSend(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
 	connection := test.NewDefaultConnection(t)
@@ -28,19 +28,21 @@ func TestSenderRequest(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	response, err := sender.Request(
+	response := &communication.BytesResponse{}
+	err = sender.Request(
 		communication.RequestType("test"),
-		[]byte("REQUEST"),
+		communication.BytesProduce{[]byte("REQUEST")},
+		response,
 	)
 	assert.Nil(t, err)
-	assert.Equal(t, "RESPONSE", string(response))
+	assert.Equal(t, "RESPONSE", string(response.Response))
 
 	if err := test.Wait(requestSent); err != nil {
 		t.Fatal("Request not sent")
 	}
 }
 
-func TestReceiverRespond(t *testing.T) {
+func TestRequestBytesRespond(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
 	connection := test.NewDefaultConnection(t)

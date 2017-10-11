@@ -21,5 +21,5 @@ type Receiver interface {
 
 type Sender interface {
 	Send(messageType MessageType, producer MessageProducer) error
-	Request(requestType RequestType, request []byte) (response []byte, err error)
+	Request(requestType RequestType, request MessageProducer, response MessageConsumer) error
 }
