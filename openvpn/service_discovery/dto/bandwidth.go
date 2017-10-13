@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"fmt"
 	"github.com/mysterium/node/datasize"
 	"strconv"
 )
@@ -20,9 +19,6 @@ func (value Bandwidth) MarshalJSON() ([]byte, error) {
 func (value *Bandwidth) UnmarshalJSON(valueJson []byte) error {
 	valueBits, err := strconv.ParseUint(string(valueJson), 10, 64)
 	*value = Bandwidth(valueBits)
-
-	fmt.Println("JSON: ", string(valueJson))
-	fmt.Println("Value: ", *value)
 
 	return err
 }
