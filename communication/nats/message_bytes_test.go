@@ -45,10 +45,10 @@ func TestMessageBytesSendReceive(t *testing.T) {
 	messageReceived := make(chan bool)
 	err := receiver.Receive(
 		communication.MessageType("bytes-message"),
-		func(message []byte) {
+		communication.BytesListener(func(message []byte) {
 			assert.Equal(t, "123", string(message))
 			messageReceived <- true
-		},
+		}),
 	)
 	assert.Nil(t, err)
 

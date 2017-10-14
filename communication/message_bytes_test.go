@@ -5,15 +5,27 @@ import (
 	"testing"
 )
 
-func TestBytesProduce(t *testing.T) {
+func TestBytesPack(t *testing.T) {
 	packer := BytesPacker([]byte("123"))
-	assert.Equal(t, "123", string(packer()))
+	data := packer()
+
+	assert.Equal(t, "123", string(data))
 }
 
-func TestBytesResponse(t *testing.T) {
-	var response []byte
-	unpacker := BytesUnpacker(&response)
+func TestBytesUnpack(t *testing.T) {
+	var message []byte
+	unpacker := BytesUnpacker(&message)
 	unpacker([]byte("123"))
 
-	assert.Equal(t, "123", string(response))
+	assert.Equal(t, "123", string(message))
+}
+
+func TestBytesListener(t *testing.T) {
+	var messageConsumed []byte
+	listener := BytesListener(func(message []byte) {
+		messageConsumed = message
+	})
+	listener([]byte("123"))
+
+	assert.Equal(t, "123", string(messageConsumed))
 }

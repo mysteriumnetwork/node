@@ -23,7 +23,7 @@ func customMessagePack(message customMessage) communication.MessagePacker {
 	}
 }
 
-func customMessageUnpack(message customMessage) communication.MessageUnpacker {
+func customMessageUnpack(message *customMessage) communication.MessageUnpacker {
 	return func(data []byte) {
 		err := json.Unmarshal(data, &message)
 		if err != nil {
@@ -32,10 +32,10 @@ func customMessageUnpack(message customMessage) communication.MessageUnpacker {
 	}
 }
 
-func customMessageCallback(callback func(message customMessage)) communication.MessageUnpacker {
+func customMessageListener(callback func(message customMessage)) communication.MessageListener {
 	return func(data []byte) {
 		var message customMessage
-		customMessageUnpack(message)
+		customMessageUnpack(&message)
 
 		callback(message)
 	}
@@ -78,7 +78,7 @@ func TestMessageCustomReceive(t *testing.T) {
 	messageReceived := make(chan bool)
 	err := receiver.Receive(
 		communication.MessageType("json-message"),
-		customMessageCallback(func(message customMessage) {
+		customMessageListener(func(message customMessage) {
 			assert.Equal(t, customMessage{123}, message)
 			messageReceived <- true
 		}),
