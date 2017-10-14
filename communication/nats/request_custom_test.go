@@ -18,23 +18,23 @@ type customResponse struct {
 	FieldOut string
 }
 
-func (response *customResponse) ConsumeMessage(messageBody []byte) {
-	err := json.Unmarshal(messageBody, response)
-	if err != nil {
-		panic(err)
+func customRequestPack(request customRequest) communication.MessagePacker {
+	return func() []byte {
+		data, err := json.Marshal(request)
+		if err != nil {
+			panic(err)
+		}
+		return data
 	}
 }
 
-type customRequestProduce struct {
-	Request customRequest
-}
-
-func (producer customRequestProduce) ProduceMessage() []byte {
-	messageBody, err := json.Marshal(producer.Request)
-	if err != nil {
-		panic(err)
+func customResponseUnpack(response *customResponse) communication.MessageUnpacker {
+	return func(data []byte) {
+		err := json.Unmarshal(data, &response)
+		if err != nil {
+			panic(err)
+		}
 	}
-	return messageBody
 }
 
 func TestCustomRequest(t *testing.T) {
@@ -59,10 +59,8 @@ func TestCustomRequest(t *testing.T) {
 	response := customResponse{}
 	err = sender.Request(
 		communication.RequestType("custom-request"),
-		customRequestProduce{
-			customRequest{"REQUEST"},
-		},
-		&response,
+		customRequestPack(customRequest{"REQUEST"}),
+		customResponseUnpack(&response),
 	)
 	assert.Nil(t, err)
 	assert.Equal(t, customResponse{"RESPONSE"}, response)

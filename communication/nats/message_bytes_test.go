@@ -25,9 +25,7 @@ func TestMessageBytesSend(t *testing.T) {
 
 	err = sender.Send(
 		communication.MessageType("bytes-message"),
-		communication.BytesProduce{
-			[]byte("123"),
-		},
+		communication.BytesPacker([]byte("123")),
 	)
 	assert.Nil(t, err)
 
@@ -47,10 +45,10 @@ func TestMessageBytesSendReceive(t *testing.T) {
 	messageReceived := make(chan bool)
 	err := receiver.Receive(
 		communication.MessageType("bytes-message"),
-		communication.BytesCallback{func(message []byte) {
+		func(message []byte) {
 			assert.Equal(t, "123", string(message))
 			messageReceived <- true
-		}},
+		},
 	)
 	assert.Nil(t, err)
 

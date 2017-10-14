@@ -13,30 +13,32 @@ type customMessage struct {
 	Field int
 }
 
-type customMessageProduce struct {
-	Message customMessage
-}
-
-func (producer customMessageProduce) ProduceMessage() []byte {
-	messageBody, err := json.Marshal(producer.Message)
-	if err != nil {
-		panic(err)
+func customMessagePack(message customMessage) communication.MessagePacker {
+	return func() []byte {
+		data, err := json.Marshal(message)
+		if err != nil {
+			panic(err)
+		}
+		return data
 	}
-	return messageBody
 }
 
-type customMessageCallback struct {
-	Callback func(message customMessage)
-}
-
-func (consumer customMessageCallback) ConsumeMessage(messageBody []byte) {
-	var message customMessage
-	err := json.Unmarshal(messageBody, &message)
-	if err != nil {
-		panic(err)
+func customMessageUnpack(message customMessage) communication.MessageUnpacker {
+	return func(data []byte) {
+		err := json.Unmarshal(data, &message)
+		if err != nil {
+			panic(err)
+		}
 	}
+}
 
-	consumer.Callback(message)
+func customMessageCallback(callback func(message customMessage)) communication.MessageUnpacker {
+	return func(data []byte) {
+		var message customMessage
+		customMessageUnpack(message)
+
+		callback(message)
+	}
 }
 
 func TestMessageCustomSend(t *testing.T) {
@@ -56,9 +58,7 @@ func TestMessageCustomSend(t *testing.T) {
 
 	err = sender.Send(
 		communication.MessageType("custom-message"),
-		customMessageProduce{
-			customMessage{123},
-		},
+		customMessagePack(customMessage{123}),
 	)
 	assert.Nil(t, err)
 
@@ -78,10 +78,10 @@ func TestMessageCustomReceive(t *testing.T) {
 	messageReceived := make(chan bool)
 	err := receiver.Receive(
 		communication.MessageType("json-message"),
-		customMessageCallback{func(message customMessage) {
+		customMessageCallback(func(message customMessage) {
 			assert.Equal(t, customMessage{123}, message)
 			messageReceived <- true
-		}},
+		}),
 	)
 	assert.Nil(t, err)
 

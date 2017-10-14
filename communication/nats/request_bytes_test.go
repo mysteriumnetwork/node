@@ -28,14 +28,14 @@ func TestBytesRequest(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	response := communication.BytesResponse{}
+	var response []byte
 	err = sender.Request(
 		communication.RequestType("bytes-request"),
-		communication.BytesProduce{[]byte("REQUEST")},
-		&response,
+		communication.BytesPacker([]byte("REQUEST")),
+		communication.BytesUnpacker(&response),
 	)
 	assert.Nil(t, err)
-	assert.Equal(t, "RESPONSE", string(response.Response))
+	assert.Equal(t, "RESPONSE", string(response))
 
 	if err := test.Wait(requestSent); err != nil {
 		t.Fatal("Request not sent")

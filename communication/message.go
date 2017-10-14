@@ -2,10 +2,6 @@ package communication
 
 type MessageType string
 
-type MessageProducer interface {
-	ProduceMessage() []byte
-}
+type MessagePacker func() (data []byte)
 
-type MessageConsumer interface {
-	ConsumeMessage(messageBody []byte)
-}
+type MessageUnpacker func(data []byte)

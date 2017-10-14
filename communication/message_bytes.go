@@ -1,27 +1,15 @@
 package communication
 
-type BytesProduce struct {
-	Message []byte
+func BytesPacker(message []byte) MessagePacker {
+	return func() []byte {
+		return message
+	}
 }
 
-func (producer BytesProduce) ProduceMessage() []byte {
-	return producer.Message
-}
-
-type BytesResponse struct {
-	Response []byte
-}
-
-func (consumer *BytesResponse) ConsumeMessage(messageBody []byte) {
-	consumer.Response = messageBody
-}
-
-type BytesCallback struct {
-	Callback func(message []byte)
-}
-
-func (consumer BytesCallback) ConsumeMessage(messageBody []byte) {
-	consumer.Callback(messageBody)
+func BytesUnpacker(messagePtr *[]byte) MessageUnpacker {
+	return func(data []byte) {
+		*messagePtr = data
+	}
 }
 
 type BytesResponder struct {

@@ -14,30 +14,30 @@ type senderNats struct {
 
 func (sender *senderNats) Send(
 	messageType communication.MessageType,
-	producer communication.MessageProducer,
+	messagePacker communication.MessagePacker,
 ) error {
 
 	return sender.connection.Publish(
 		sender.messageTopic+string(messageType),
-		producer.ProduceMessage(),
+		messagePacker(),
 	)
 }
 
 func (sender *senderNats) Request(
 	requestType communication.RequestType,
-	request communication.MessageProducer,
-	response communication.MessageConsumer,
+	requestPacker communication.MessagePacker,
+	responseUnpacker communication.MessageUnpacker,
 ) error {
 
 	message, err := sender.connection.Request(
 		sender.messageTopic+string(requestType),
-		request.ProduceMessage(),
+		requestPacker(),
 		sender.timeoutRequest,
 	)
 	if err != nil {
 		return err
 	}
 
-	response.ConsumeMessage(message.Data)
+	responseUnpacker(message.Data)
 	return nil
 }
