@@ -34,7 +34,7 @@ func TestMessageBytesSend(t *testing.T) {
 	}
 }
 
-func TestMessageBytesSendReceive(t *testing.T) {
+func TestMessageBytesReceive(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
 	connection := test.NewDefaultConnection(t)
