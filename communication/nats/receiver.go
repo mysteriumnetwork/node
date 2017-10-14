@@ -26,15 +26,15 @@ func (receiver *receiverNats) Receive(
 
 func (receiver *receiverNats) Respond(
 	requestType communication.RequestType,
-	consumer communication.RequestConsumer,
+	handler communication.RequestHandler,
 ) error {
 
 	_, err := receiver.connection.Subscribe(
 		receiver.messageTopic+string(requestType),
 		func(message *nats.Msg) {
-			requestData := message.Data
-			responseData := consumer.ConsumeRequest(requestData)
-			receiver.connection.Publish(message.Reply, responseData)
+			request := message.Data
+			response := handler(request)
+			receiver.connection.Publish(message.Reply, response)
 		},
 	)
 	return err

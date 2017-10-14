@@ -29,3 +29,15 @@ func TestBytesListener(t *testing.T) {
 
 	assert.Equal(t, "123", string(messageConsumed))
 }
+
+func TestBytesHandler(t *testing.T) {
+	var requestReceived []byte
+	handler := BytesHandler(func(request []byte) []byte {
+		requestReceived = request
+		return []byte("RESPONSE")
+	})
+	response := handler([]byte("REQUEST"))
+
+	assert.Equal(t, "REQUEST", string(requestReceived))
+	assert.Equal(t, "RESPONSE", string(response))
+}

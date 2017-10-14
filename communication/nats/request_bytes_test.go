@@ -53,11 +53,11 @@ func TestBytesRespond(t *testing.T) {
 	requestReceived := make(chan bool)
 	err := receiver.Respond(
 		communication.RequestType("bytes-response"),
-		communication.BytesResponder{func(request []byte) []byte {
+		communication.BytesHandler(func(request []byte) []byte {
 			assert.Equal(t, "REQUEST", string(request))
 			requestReceived <- true
 			return []byte("RESPONSE")
-		}},
+		}),
 	)
 	assert.Nil(t, err)
 

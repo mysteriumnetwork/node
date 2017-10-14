@@ -12,16 +12,10 @@ func BytesUnpacker(messagePtr *[]byte) MessageUnpacker {
 	}
 }
 
-func BytesListener(callback func(message []byte)) MessageListener {
-	return func(data []byte) {
-		callback(data)
-	}
+func BytesListener(callback func([]byte)) MessageListener {
+	return callback
 }
 
-type BytesResponder struct {
-	Callback func(request []byte) []byte
-}
-
-func (consumer BytesResponder) ConsumeRequest(requestBody []byte) (responseBody []byte) {
-	return consumer.Callback(requestBody)
+func BytesHandler(callback func([]byte) []byte) RequestHandler {
+	return callback
 }
