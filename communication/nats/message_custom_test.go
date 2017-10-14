@@ -13,7 +13,7 @@ type customMessage struct {
 	Field int
 }
 
-func customMessagePack(message customMessage) communication.MessagePacker {
+func customMessagePack(message customMessage) communication.Packer {
 	return func() []byte {
 		data, err := json.Marshal(message)
 		if err != nil {
@@ -23,7 +23,7 @@ func customMessagePack(message customMessage) communication.MessagePacker {
 	}
 }
 
-func customMessageUnpack(message *customMessage) communication.MessageUnpacker {
+func customMessageUnpack(message *customMessage) communication.Unpacker {
 	return func(data []byte) {
 		err := json.Unmarshal(data, &message)
 		if err != nil {

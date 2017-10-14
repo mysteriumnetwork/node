@@ -1,12 +1,12 @@
 package communication
 
-func BytesPacker(message []byte) MessagePacker {
+func BytesPacker(message []byte) Packer {
 	return func() []byte {
 		return message
 	}
 }
 
-func BytesUnpacker(messagePtr *[]byte) MessageUnpacker {
+func BytesUnpacker(messagePtr *[]byte) Unpacker {
 	return func(data []byte) {
 		*messagePtr = data
 	}

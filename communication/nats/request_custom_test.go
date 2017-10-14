@@ -18,7 +18,7 @@ type customResponse struct {
 	FieldOut string
 }
 
-func customRequestPack(request customRequest) communication.MessagePacker {
+func customRequestPack(request customRequest) communication.Packer {
 	return func() []byte {
 		data, err := json.Marshal(request)
 		if err != nil {
@@ -28,7 +28,7 @@ func customRequestPack(request customRequest) communication.MessagePacker {
 	}
 }
 
-func customRequestUnpacker(request *customRequest) communication.MessageUnpacker {
+func customRequestUnpacker(request *customRequest) communication.Unpacker {
 	return func(data []byte) {
 		err := json.Unmarshal(data, &request)
 		if err != nil {
@@ -37,7 +37,7 @@ func customRequestUnpacker(request *customRequest) communication.MessageUnpacker
 	}
 }
 
-func customResponsePacker(request customResponse) communication.MessagePacker {
+func customResponsePacker(request customResponse) communication.Packer {
 	return func() []byte {
 		data, err := json.Marshal(request)
 		if err != nil {
@@ -47,7 +47,7 @@ func customResponsePacker(request customResponse) communication.MessagePacker {
 	}
 }
 
-func customResponseUnpacker(response *customResponse) communication.MessageUnpacker {
+func customResponseUnpacker(response *customResponse) communication.Unpacker {
 	return func(data []byte) {
 		err := json.Unmarshal(data, &response)
 		if err != nil {

@@ -20,6 +20,12 @@ type Receiver interface {
 }
 
 type Sender interface {
-	Send(messageType MessageType, message MessagePacker) error
-	Request(requestType RequestType, request MessagePacker, response MessageUnpacker) error
+	Send(messageType MessageType, message Packer) error
+	Request(requestType RequestType, request Packer, response Unpacker) error
 }
+
+type MessageType string
+type MessageListener func(message []byte)
+
+type RequestType string
+type RequestHandler func(request []byte) (response []byte)

@@ -14,7 +14,7 @@ type senderNats struct {
 
 func (sender *senderNats) Send(
 	messageType communication.MessageType,
-	messagePacker communication.MessagePacker,
+	messagePacker communication.Packer,
 ) error {
 
 	return sender.connection.Publish(
@@ -25,8 +25,8 @@ func (sender *senderNats) Send(
 
 func (sender *senderNats) Request(
 	requestType communication.RequestType,
-	requestPacker communication.MessagePacker,
-	responseUnpacker communication.MessageUnpacker,
+	requestPacker communication.Packer,
+	responseUnpacker communication.Unpacker,
 ) error {
 
 	message, err := sender.connection.Request(
