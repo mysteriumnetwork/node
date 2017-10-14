@@ -12,15 +12,16 @@ func StringUnpacker(message *string) Unpacker {
 	}
 }
 
-func StringListener(callback func(string)) MessageListener {
-	return func(data []byte) {
-		callback(string(data))
+func StringListener(listener func(string)) MessageListener {
+	return func(messageData []byte) {
+		message := string(messageData)
+		listener(message)
 	}
 }
 
 func StringHandler(handler func(string) string) RequestHandler {
-	return func(data []byte) []byte {
-		request := string(data)
+	return func(requestData []byte) []byte {
+		request := string(requestData)
 
 		response := handler(request)
 
