@@ -9,6 +9,8 @@ import (
 	"github.com/mysterium/node/datasize"
 	"github.com/stretchr/testify/assert"
 	"time"
+	"encoding/json"
+	"fmt"
 )
 
 func TestOpenVpnServiceProposalBuilderPerBytes(t *testing.T) {
@@ -148,4 +150,77 @@ func TestOpenVpnServiceProposalBuilderPerTime(t *testing.T) {
 	}
 
 	assert.Equal(t, expected, actual)
+}
+
+func TestServiceProposalUnserialization(t *testing.T) {
+	expectedJson := `{
+		"id": 1,
+		"format": "service-proposal/v1",
+		"service_type": "openvpn",
+		"service_definition": {
+			"location": {
+				"country": "US",
+				"city": "Washington DC",
+				"asn" : "AS15440"
+			},
+			"location_originate": {
+				"country": "US"
+			},
+			"session_bandwidth": 8
+		},
+		"payment_method_type": "PER_TIME",
+		"payment_method": {
+			"price": {
+				"amount": 10000000,
+				"currency": "MYST"
+			},
+			"duration": 3600
+		},
+		"provider_id": "node",
+		"provider_contacts": [
+			{
+				"type": "test",
+				"definition": null
+			}
+		]
+	}`
+
+	sp := dto.ServiceProposal{
+		Id:          1,
+		Format:      "service-proposal/v1",
+		ServiceType: "openvpn",
+		ServiceDefinition: ServiceDefinition{
+			Location: dto.Location{
+				Country: "US",
+				City:    "Washington DC",
+				ASN:     "AS15440",
+			},
+			LocationOriginate: dto.Location{
+				Country: "US",
+				City:    "",
+				ASN:     "",
+			},
+			SessionBandwidth: 8,
+		},
+		PaymentMethodType: "PER_TIME",
+		PaymentMethod: PaymentMethodPerTime{
+			Price: money.Money{
+				Amount:   10000000,
+				Currency: money.Currency("MYST"),
+			},
+			Duration: time.Duration(3600),
+		},
+		ProviderId: dto.Identity("node"),
+		ProviderContacts: []dto.Contact{
+			{
+				Type: "test",
+				Definition: nil,
+			},
+		},
+	}
+
+	actualJson, err := json.Marshal(sp)
+
+	assert.JSONEq(t, expectedJson, string(actualJson))
+	assert.Nil(t, err)
 }
