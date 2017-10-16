@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"time"
 	"encoding/json"
-	"fmt"
 )
 
 func TestOpenVpnServiceProposalBuilderPerBytes(t *testing.T) {
