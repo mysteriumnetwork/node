@@ -2,26 +2,26 @@ package dto
 
 type ServiceProposal struct {
 	// Per provider unique serial number of service description provided
-	Id int
+	Id int `json:"id"`
 
 	// A version number is included in the proposal to allow extensions to the proposal format
-	Format string
+	Format string `json:"format"`
 
 	// Type of service type offered
-	ServiceType string
+	ServiceType string `json:"service_type"`
 
 	// Qualitative service definition
-	ServiceDefinition ServiceDefinition
+	ServiceDefinition ServiceDefinition `json:"service_definition"`
 
 	// Type of service payment method
-	PaymentMethodType string
+	PaymentMethodType string `json:"payment_method_type"`
 
 	// Service payment & usage metering definition
-	PaymentMethod PaymentMethod
+	PaymentMethod PaymentMethod `json:"payment_method"`
 
 	// Unique identifier of a provider
-	ProviderId Identity
+	ProviderId Identity `json:"provider_id"`
 
 	// Communication methods possible
-	ProviderContacts []Contact
+	ProviderContacts []Contact `json:"provider_contacts"`
 }
