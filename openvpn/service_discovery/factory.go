@@ -5,6 +5,7 @@ import (
 	dto "github.com/mysterium/node/openvpn/service_discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"time"
+	"github.com/mysterium/node/money"
 )
 
 var (
@@ -35,7 +36,7 @@ func NewServiceProposalWithLocation(
 		PaymentMethodType: dto.PAYMENT_METHOD_PER_TIME,
 		PaymentMethod: dto.PaymentMethodPerTime{
 			// 15 MYST/month = 0,5 MYST/day = 0,125 MYST/hour
-			Price:    dto_discovery.Money{12500000, "MYST"},
+			Price:    money.NewMoney(0.125, money.CURRENCY_MYST),
 			Duration: 1 * time.Hour,
 		},
 		ProviderId:       dto_discovery.Identity(providerId),

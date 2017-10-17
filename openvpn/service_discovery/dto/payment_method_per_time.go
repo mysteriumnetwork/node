@@ -1,19 +1,19 @@
 package dto
 
 import (
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"time"
+	"github.com/mysterium/node/money"
 )
 
 const PAYMENT_METHOD_PER_TIME = "PER_TIME"
 
 type PaymentMethodPerTime struct {
-	Price dto_discovery.Money
+	Price money.Money `json:"price"`
 
 	// Service duration provided for paid price
-	Duration time.Duration
+	Duration time.Duration `json:"duration"`
 }
 
-func (method PaymentMethodPerTime) GetPrice() dto_discovery.Money {
+func (method PaymentMethodPerTime) GetPrice() money.Money {
 	return method.Price
 }

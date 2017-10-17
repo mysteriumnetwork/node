@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+	"github.com/mysterium/node/money"
 )
 
 var (
@@ -45,7 +46,7 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 	assert.Equal(
 		t,
 		dto.PaymentMethodPerTime{
-			Price:    dto_discovery.Money{12500000, "MYST"},
+			Price:    money.Money{12500000, money.Currency("MYST")},
 			Duration: 60 * time.Minute,
 		},
 		proposal.PaymentMethod,
