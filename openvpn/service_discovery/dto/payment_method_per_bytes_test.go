@@ -33,11 +33,7 @@ func TestPaymentMethodPerBytesSerialize(t *testing.T) {
 		{
 			PaymentMethodPerBytes{},
 			`{
-				"price": {
-					"amount": 0,
-					"currency": ""
-				},
-				"bytes": 0
+				"price": {}
 			}`,
 		},
 	}

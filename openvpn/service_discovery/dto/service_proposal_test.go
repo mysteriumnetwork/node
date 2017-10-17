@@ -2,8 +2,6 @@ package dto
 
 import (
 	"testing"
-	//"fmt"
-	//"github.com/davecgh/go-spew/spew"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/money"
 	"github.com/mysterium/node/datasize"

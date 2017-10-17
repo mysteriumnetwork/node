@@ -7,12 +7,14 @@ import (
 	"github.com/mysterium/node/money"
 )
 
-type TestServiceDefinition struct {}
+type TestServiceDefinition struct{}
+
 func (service TestServiceDefinition) GetLocation() Location {
 	return Location{}
 }
 
-type TestPaymentMethod struct {}
+type TestPaymentMethod struct{}
+
 func (method TestPaymentMethod) GetPrice() money.Money {
 	return money.Money{}
 }

@@ -1,8 +1,8 @@
 package money
 
 type Money struct {
-	Amount   uint64   `json:"amount"`
-	Currency Currency `json:"currency"`
+	Amount   uint64   `json:"amount,omitempty"`
+	Currency Currency `json:"currency,omitempty"`
 }
 
 func NewMoney(amount float64, currency Currency) Money {
