@@ -31,7 +31,8 @@ func TestPaymentMethodPerTimeSerialize(t *testing.T) {
 		{
 			PaymentMethodPerTime{},
 			`{
-				"price": {}
+				"price": {},
+				"duration": 0
 			}`,
 		},
 	}

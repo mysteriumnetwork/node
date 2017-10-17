@@ -8,7 +8,7 @@ import (
 const PAYMENT_METHOD_PER_BYTES = "PER_BYTES"
 
 type PaymentMethodPerBytes struct {
-	Price money.Money `json:"price,omitempty"`
+	Price money.Money `json:"price"`
 
 	// Service bytes provided for paid price
 	Bytes datasize.BitSize `json:"bytes,omitempty"`

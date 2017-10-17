@@ -68,10 +68,7 @@ func TestPaymentMethodPerBytesUnserialize(t *testing.T) {
 		},
 		{
 			`{
-				"price": {
-					"amount": 0,
-					"currency": ""
-				},
+				"price": {},
 				"bytes": 0
 			}`,
 			PaymentMethodPerBytes{},

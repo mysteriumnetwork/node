@@ -47,3 +47,14 @@ func TestServiceProposalSerialize(t *testing.T) {
 	assert.Nil(t, err)
 	assert.JSONEq(t, expectedJson, string(jsonBytes))
 }
+
+func TestRegisterPaymentMethodUnserializer(t *testing.T) {
+	rand := func(*json.RawMessage) (payment PaymentMethod, err error) {
+		return
+	}
+
+	RegisterPaymentMethodUnserializer("testable", rand)
+	_, exists := paymentMethodMap["testable"]
+
+	assert.True(t, exists)
+}
