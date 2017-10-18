@@ -14,45 +14,37 @@ type customRequest struct {
 	FieldIn string
 }
 
+func (message customRequest) Pack() (data []byte) {
+	data, err := json.Marshal(message)
+	if err != nil {
+		panic(err)
+	}
+	return []byte(data)
+}
+
+func (message *customRequest) Unpack(data []byte) {
+	err := json.Unmarshal(data, message)
+	if err != nil {
+		panic(err)
+	}
+}
+
 type customResponse struct {
 	FieldOut string
 }
 
-func customRequestPack(request customRequest) communication.Packer {
-	return func() []byte {
-		data, err := json.Marshal(request)
-		if err != nil {
-			panic(err)
-		}
-		return data
+func (message customResponse) Pack() (data []byte) {
+	data, err := json.Marshal(message)
+	if err != nil {
+		panic(err)
 	}
+	return []byte(data)
 }
 
-func customRequestUnpacker(request *customRequest) communication.Unpacker {
-	return func(data []byte) {
-		err := json.Unmarshal(data, &request)
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
-func customResponsePacker(request customResponse) communication.Packer {
-	return func() []byte {
-		data, err := json.Marshal(request)
-		if err != nil {
-			panic(err)
-		}
-		return data
-	}
-}
-
-func customResponseUnpacker(response *customResponse) communication.Unpacker {
-	return func(data []byte) {
-		err := json.Unmarshal(data, &response)
-		if err != nil {
-			panic(err)
-		}
+func (message *customResponse) Unpack(data []byte) {
+	err := json.Unmarshal(data, message)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -75,11 +67,11 @@ func TestCustomRequest(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	response := customResponse{}
+	var response customResponse
 	err = sender.Request(
 		communication.RequestType("custom-request"),
-		customRequestPack(customRequest{"REQUEST"}),
-		customResponseUnpacker(&response),
+		customRequest{"REQUEST"},
+		&response,
 	)
 	assert.Nil(t, err)
 	assert.Equal(t, customResponse{"RESPONSE"}, response)
@@ -89,14 +81,14 @@ func TestCustomRequest(t *testing.T) {
 	}
 }
 
-func customRequestHandler(callback func(customRequest) customResponse) communication.RequestHandler {
+func customRequestHandler(callback func(*customRequest) *customResponse) communication.RequestHandler {
 	return func(requestData []byte) []byte {
 		var request customRequest
-		customRequestUnpacker(&request)(requestData)
+		request.Unpack(requestData)
 
-		response := callback(request)
+		response := callback(&request)
 
-		return customResponsePacker(response)()
+		return response.Pack()
 	}
 }
 
@@ -111,10 +103,10 @@ func TestCustomRespond(t *testing.T) {
 	requestReceived := make(chan bool)
 	err := receiver.Respond(
 		communication.RequestType("custom-response"),
-		customRequestHandler(func(request customRequest) customResponse {
-			assert.Equal(t, customRequest{"REQUEST"}, request)
+		customRequestHandler(func(request *customRequest) *customResponse {
+			assert.Equal(t, &customRequest{"REQUEST"}, request)
 			requestReceived <- true
-			return customResponse{"RESPONSE"}
+			return &customResponse{"RESPONSE"}
 		}),
 	)
 	assert.Nil(t, err)

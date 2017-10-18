@@ -13,31 +13,18 @@ type customMessage struct {
 	Field int
 }
 
-func customMessagePack(message customMessage) communication.Packer {
-	return func() []byte {
-		data, err := json.Marshal(message)
-		if err != nil {
-			panic(err)
-		}
-		return data
+func (payload customMessage) Pack() (data []byte) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		panic(err)
 	}
+	return []byte(data)
 }
 
-func customMessageUnpack(message *customMessage) communication.Unpacker {
-	return func(data []byte) {
-		err := json.Unmarshal(data, &message)
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
-func customMessageListener(callback func(message customMessage)) communication.MessageListener {
-	return func(data []byte) {
-		var message customMessage
-		customMessageUnpack(&message)
-
-		callback(message)
+func (payload *customMessage) Unpack(data []byte) {
+	err := json.Unmarshal(data, payload)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -58,12 +45,21 @@ func TestMessageCustomSend(t *testing.T) {
 
 	err = sender.Send(
 		communication.MessageType("custom-message"),
-		customMessagePack(customMessage{123}),
+		customMessage{123},
 	)
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageSent); err != nil {
 		t.Fatal("Message not sent")
+	}
+}
+
+func customMessageListener(listener func(*customMessage)) communication.MessageListener {
+	return func(messageData []byte) {
+		var message customMessage
+		message.Unpack(messageData)
+
+		listener(&message)
 	}
 }
 
@@ -78,7 +74,7 @@ func TestMessageCustomReceive(t *testing.T) {
 	messageReceived := make(chan bool)
 	err := receiver.Receive(
 		communication.MessageType("json-message"),
-		customMessageListener(func(message customMessage) {
+		customMessageListener(func(message *customMessage) {
 			assert.Equal(t, customMessage{123}, message)
 			messageReceived <- true
 		}),
