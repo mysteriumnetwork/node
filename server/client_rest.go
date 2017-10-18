@@ -70,7 +70,6 @@ func (client *clientRest) SessionCreate(nodeKey string) (session dto.Session, er
 		}
 
 		err = parseResponseJson(response, &temp)
-
 		if err != nil {
 			return
 		}
@@ -78,10 +77,6 @@ func (client *clientRest) SessionCreate(nodeKey string) (session dto.Session, er
 		// this is a temporary solution for pulling the VPN config
 		session.ConnectionConfig = temp.ServiceProposal.ConnectionConfig
 		session.Id = temp.Id
-
-		if err != nil {
-			return
-		}
 
 		log.Info(MYSTERIUM_API_LOG_PREFIX, "Session created: ", session.Id)
 	}
@@ -138,7 +133,6 @@ func parseResponseJson(response *http.Response, dto interface{}) error {
 	}
 
 	err = json.Unmarshal(responseJson, dto)
-
 	if err != nil {
 		return err
 	}
