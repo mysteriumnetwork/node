@@ -36,16 +36,16 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		messageTopic:   contactTopic + ".",
 	}
 
-	var response string
+	var response communication.StringPayload
 	err = sender.Request(
 		communication.DIALOG_CREATE,
-		communication.StringPacker(client.myTopic),
-		communication.StringUnpacker(&response),
+		communication.StringPayload{client.myTopic},
+		&response,
 	)
 	if err != nil {
 		return
 	}
-	if response != "OK" {
+	if response.Data != "OK" {
 		err = fmt.Errorf("Dialog creation rejected: %s", response)
 		return
 	}

@@ -1,30 +1,33 @@
 package communication
 
-func StringPacker(message string) Packer {
-	return func() []byte {
-		return []byte(message)
-	}
+type StringPayload struct {
+	Data string
 }
 
-func StringUnpacker(message *string) Unpacker {
-	return func(data []byte) {
-		*message = string(data)
-	}
+func (payload StringPayload) Pack() (data []byte) {
+	return []byte(payload.Data)
 }
 
-func StringListener(listener func(string)) MessageListener {
+func (payload *StringPayload) Unpack(data []byte) {
+	payload.Data = string(data)
+}
+
+func StringListener(listener func(*StringPayload)) MessageListener {
 	return func(messageData []byte) {
-		message := string(messageData)
-		listener(message)
+		var message StringPayload
+		message.Unpack(messageData)
+
+		listener(&message)
 	}
 }
 
-func StringHandler(handler func(string) string) RequestHandler {
+func StringHandler(handler func(*StringPayload) *StringPayload) RequestHandler {
 	return func(requestData []byte) []byte {
-		request := string(requestData)
+		var request StringPayload
+		request.Unpack(requestData)
 
-		response := handler(request)
+		response := handler(&request)
 
-		return []byte(response)
+		return response.Pack()
 	}
 }
