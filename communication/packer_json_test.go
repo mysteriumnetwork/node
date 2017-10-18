@@ -10,18 +10,19 @@ type customMessage struct {
 }
 
 func TestJsonPack(t *testing.T) {
-	packer := JsonPacker(customMessage{123})
-	data := packer()
+	packer := JsonPayload{
+		customMessage{Field: 123},
+	}
+	data := packer.Pack()
 
 	assert.JSONEq(t, `{"Field": 123}`, string(data))
 }
 
 func TestJsonUnpack(t *testing.T) {
-	var message customMessage
-	unpacker := JsonUnpacker(&message)
-	unpacker([]byte(`{"Field": 123}`))
+	unpacker := JsonPayload{&customMessage{}}
+	unpacker.Unpack([]byte(`{"Field": 123}`))
 
-	assert.Equal(t, customMessage{123}, message)
+	assert.Equal(t, &customMessage{Field: 123}, unpacker.Model)
 }
 
 func TestJsonListener(t *testing.T) {

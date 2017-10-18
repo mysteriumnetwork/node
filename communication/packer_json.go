@@ -2,77 +2,87 @@ package communication
 
 import (
 	"encoding/json"
-	"github.com/pkg/errors"
 	"reflect"
 )
 
-func JsonPacker(message interface{}) Packer {
-	return func() []byte {
-		data, err := json.Marshal(message)
-		if err != nil {
-			panic(err)
-		}
-
-		return data
-	}
+type JsonPayload struct {
+	Model interface{}
 }
 
-func JsonUnpacker(messagePtr interface{}) Unpacker {
-	return func(data []byte) {
-		err := json.Unmarshal(data, &messagePtr)
-		if err != nil {
-			panic(err)
-		}
+func (payload JsonPayload) Pack() (data []byte) {
+	data, err := json.Marshal(payload.Model)
+	if err != nil {
+		panic(err)
+	}
+	return []byte(data)
+}
+
+func (payload *JsonPayload) Unpack(data []byte) {
+	err := json.Unmarshal(data, payload.Model)
+	if err != nil {
+		panic(err)
 	}
 }
 
 func JsonListener(listener interface{}) MessageListener {
 	listenerValue := reflect.ValueOf(listener)
-	messageValue, err := parseArgumentValue(listener)
-	if err != nil {
-		panic(err)
+	listenerType := parseCallbackType(listener)
+	message := JsonPayload{
+		Model: parseArgumentValue(listenerType).Interface(),
 	}
 
 	return func(messageData []byte) {
-		JsonUnpacker(messageValue.Interface())(messageData)
+		message.Unpack(messageData)
 
 		listenerValue.Call([]reflect.Value{
-			reflect.Indirect(messageValue),
+			reflect.ValueOf(message.Model).Elem(),
 		})
 	}
 }
 
 func JsonHandler(handler interface{}) RequestHandler {
 	handlerValue := reflect.ValueOf(handler)
-	requestValue, err := parseArgumentValue(handler)
-	if err != nil {
-		panic(err)
+	handlerType := parseCallbackType(handler)
+	request := JsonPayload{
+		Model: parseArgumentValue(handlerType).Interface(),
+	}
+	response := JsonPayload{
+		Model: parseReturnValue(handlerType).Interface(),
 	}
 
 	return func(requestData []byte) []byte {
-		JsonUnpacker(requestValue.Interface())(requestData)
+		request.Unpack(requestData)
 
-		handlerResult := handlerValue.Call([]reflect.Value{
-			reflect.Indirect(requestValue),
+		handlerReturnValues := handlerValue.Call([]reflect.Value{
+			reflect.ValueOf(request.Model).Elem(),
 		})
-		response := handlerResult[0]
 
-		return JsonPacker(response.Interface())()
+		response.Model = handlerReturnValues[0].Interface()
+		return response.Pack()
 	}
 }
 
-func parseArgumentValue(callback interface{}) (argumentValue reflect.Value, err error) {
+func parseCallbackType(callback interface{}) reflect.Type {
 	callbackType := reflect.TypeOf(callback)
-
 	if callbackType.Kind() != reflect.Func {
-		err = errors.New("Message callback needs to be a func")
-		return
-	}
-	if callbackType.NumIn() != 1 {
-		err = errors.New("Message callback should accept message")
-		return
+		panic("Callback needs to be a func")
 	}
 
-	argumentValue = reflect.New(callbackType.In(0))
-	return
+	return callbackType
+}
+
+func parseArgumentValue(callbackType reflect.Type) reflect.Value {
+	if callbackType.NumIn() != 1 {
+		panic("Callback should accept 1 argument")
+	}
+
+	return reflect.New(callbackType.In(0))
+}
+
+func parseReturnValue(callbackType reflect.Type) reflect.Value {
+	if callbackType.NumOut() != 1 {
+		panic("Callback should return 1 argument")
+	}
+
+	return reflect.New(callbackType.Out(0))
 }
