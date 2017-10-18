@@ -5,21 +5,22 @@ import (
 
 	"fmt"
 	log "github.com/cihub/seelog"
+	dto2 "github.com/mysterium/node/service_discovery/dto"
 )
 
 func NewClientFake() Client {
 	return &clientFake{
-		connectionConfigByNode: make(map[string]string, 0),
+		connectionConfigByNode: make(map[string]dto2.ServiceProposal, 0),
 	}
 }
 
 type clientFake struct {
-	connectionConfigByNode map[string]string
+	connectionConfigByNode map[string]dto2.ServiceProposal
 }
 
-func (client *clientFake) NodeRegister(nodeKey, connectionConfig string) (err error) {
-	client.connectionConfigByNode[nodeKey] = connectionConfig
-	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake node registered: ", nodeKey)
+func (client *clientFake) NodeRegister(proposal dto2.ServiceProposal) (err error) {
+	client.connectionConfigByNode[string(proposal.ProviderId)] = proposal
+	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake node registered: ", proposal)
 
 	return nil
 }
@@ -31,10 +32,10 @@ func (client *clientFake) NodeSendStats(nodeKey string, sessionStats []dto.Sessi
 }
 
 func (client *clientFake) SessionCreate(nodeKey string) (session dto.Session, err error) {
-	if connectionConfig, ok := client.connectionConfigByNode[nodeKey]; ok {
+	if proposal, ok := client.connectionConfigByNode[nodeKey]; ok {
 		session = dto.Session{
 			Id:               nodeKey + "-session",
-			ConnectionConfig: connectionConfig,
+			ConnectionConfig: proposal.ConnectionConfig,
 		}
 		return
 	}

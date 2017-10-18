@@ -29,6 +29,9 @@ type ServiceProposal struct {
 
 	// Communication methods possible
 	ProviderContacts []Contact `json:"provider_contacts"`
+
+	// Connection string
+	ConnectionConfig string `json:"connection_string,omitempty"`
 }
 
 type ServiceDefinitionUnserializer func(*json.RawMessage) (ServiceDefinition, error)

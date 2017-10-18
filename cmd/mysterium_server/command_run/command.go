@@ -10,6 +10,8 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"io"
 	"time"
+	"github.com/mysterium/node/openvpn/service_discovery"
+	"github.com/mysterium/node/communication/nats"
 )
 
 type CommandRun struct {
@@ -55,6 +57,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		options.DirectoryConfig+"/client.key",
 		options.DirectoryConfig+"/ta.key",
 	)
+
 	vpnClientConfigString, err := openvpn.ConfigToString(*vpnClientConfig.Config)
 	if err != nil {
 		return err
@@ -74,7 +77,14 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	if err := cmd.MysteriumClient.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
+	proposal := service_discovery.NewServiceProposal(
+		dto_discovery.Identity(options.NodeKey),
+		nats.NewContact(dto_discovery.Identity(options.NodeKey)),
+	)
+
+	proposal.ConnectionConfig = vpnClientConfigString
+
+	if err := cmd.MysteriumClient.NodeRegister(proposal); err != nil {
 		return err
 	}
 	go func() {

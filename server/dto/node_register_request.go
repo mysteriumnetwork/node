@@ -1,6 +1,7 @@
 package dto
 
+import "github.com/mysterium/node/service_discovery/dto"
+
 type NodeRegisterRequest struct {
-	NodeKey          string `json:"node_key"`
-	ConnectionConfig string `json:"connection_config"`
+	ServiceProposal dto.ServiceProposal `json:"service_proposal"`
 }
