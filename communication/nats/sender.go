@@ -19,7 +19,7 @@ func (sender *senderNats) Send(
 
 	return sender.connection.Publish(
 		sender.messageTopic+string(messageType),
-		message(),
+		message.Pack(),
 	)
 }
 
@@ -31,13 +31,13 @@ func (sender *senderNats) Request(
 
 	message, err := sender.connection.Request(
 		sender.messageTopic+string(requestType),
-		request(),
+		request.Pack(),
 		sender.timeoutRequest,
 	)
 	if err != nil {
 		return err
 	}
 
-	response(message.Data)
+	response.Unpack(message.Data)
 	return nil
 }

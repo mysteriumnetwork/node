@@ -6,38 +6,37 @@ import (
 )
 
 func TestBytesPack(t *testing.T) {
-	packer := BytesPacker([]byte("123"))
-	data := packer()
+	packer := BytesPayload{[]byte("123")}
+	data := packer.Pack()
 
 	assert.Equal(t, "123", string(data))
 }
 
 func TestBytesUnpack(t *testing.T) {
-	var message []byte
-	unpacker := BytesUnpacker(&message)
-	unpacker([]byte("123"))
+	var unpacker BytesPayload
+	unpacker.Unpack([]byte("123"))
 
-	assert.Equal(t, "123", string(message))
+	assert.Equal(t, "123", string(unpacker.Data))
 }
 
 func TestBytesListener(t *testing.T) {
-	var messageConsumed []byte
-	listener := BytesListener(func(message []byte) {
+	var messageConsumed *BytesPayload
+	listener := BytesListener(func(message *BytesPayload) {
 		messageConsumed = message
 	})
 	listener([]byte("123"))
 
-	assert.Equal(t, "123", string(messageConsumed))
+	assert.Equal(t, "123", string(messageConsumed.Data))
 }
 
 func TestBytesHandler(t *testing.T) {
-	var requestReceived []byte
-	handler := BytesHandler(func(request []byte) []byte {
+	var requestReceived *BytesPayload
+	handler := BytesHandler(func(request *BytesPayload) *BytesPayload {
 		requestReceived = request
-		return []byte("RESPONSE")
+		return &BytesPayload{[]byte("RESPONSE")}
 	})
 	response := handler([]byte("REQUEST"))
 
-	assert.Equal(t, "REQUEST", string(requestReceived))
+	assert.Equal(t, "REQUEST", string(requestReceived.Data))
 	assert.Equal(t, "RESPONSE", string(response))
 }

@@ -1,4 +1,9 @@
 package communication
 
-type Packer func() (data []byte)
-type Unpacker func(data []byte)
+type Packer interface {
+	Pack() (data []byte)
+}
+
+type Unpacker interface {
+	Unpack(data []byte)
+}
