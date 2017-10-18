@@ -31,10 +31,11 @@ type ServiceProposal struct {
 	ProviderContacts []Contact `json:"provider_contacts"`
 
 	// Connection string
-	ConnectionConfig string `json:"connection_string,omitempty"`
+	ConnectionConfig string `json:"connection_config,omitempty"`
 }
 
 type ServiceDefinitionUnserializer func(*json.RawMessage) (ServiceDefinition, error)
+
 // service definition unserializer registry
 var serviceDefinitionMap map[string]ServiceDefinitionUnserializer = make(map[string]ServiceDefinitionUnserializer, 10)
 
@@ -50,6 +51,7 @@ func unserializeServiceDefinition(serviceType string, message *json.RawMessage) 
 }
 
 type PaymentMethodUnserializer func(*json.RawMessage) (PaymentMethod, error)
+
 // service payment method unserializer registry
 var paymentMethodMap map[string]PaymentMethodUnserializer = make(map[string]PaymentMethodUnserializer, 0)
 
@@ -75,6 +77,7 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 		ServiceDefinition *json.RawMessage `json:"service_definition"`
 		PaymentMethod     *json.RawMessage `json:"payment_method"`
 		ProviderContacts  []Contact        `json:"provider_contacts"`
+		ConnectionConfig  string           `json:"connection_config"`
 	}
 	if err = json.Unmarshal(data, &jsonData); err != nil {
 		return
@@ -86,6 +89,7 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 	genericProposal.ProviderId = Identity(jsonData.ProviderId)
 	genericProposal.PaymentMethodType = jsonData.PaymentMethodType
 	genericProposal.ProviderContacts = jsonData.ProviderContacts
+	genericProposal.ConnectionConfig = jsonData.ConnectionConfig
 
 	// run the service definition implementation from our registry
 	genericProposal.ServiceDefinition, err = unserializeServiceDefinition(

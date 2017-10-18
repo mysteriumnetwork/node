@@ -1,7 +1,7 @@
 package dto
 
-import "github.com/mysterium/node/service_discovery/dto"
+import dto_discovery "github.com/mysterium/node/service_discovery/dto"
 
 type NodeRegisterRequest struct {
-	ServiceProposal dto.ServiceProposal `json:"service_proposal"`
+	ServiceProposal dto_discovery.ServiceProposal `json:"service_proposal"`
 }

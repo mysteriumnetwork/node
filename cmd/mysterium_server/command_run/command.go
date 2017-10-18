@@ -78,8 +78,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 
 	proposal := service_discovery.NewServiceProposal(
-		dto_discovery.Identity(options.NodeKey),
-		nats.NewContact(dto_discovery.Identity(options.NodeKey)),
+		providerId,
+		nats.NewContact(providerId),
 	)
 
 	proposal.ConnectionConfig = vpnClientConfigString

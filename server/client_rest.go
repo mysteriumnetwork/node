@@ -10,7 +10,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/server/dto"
-	dto2 "github.com/mysterium/node/service_discovery/dto"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
 const MYSTERIUM_API_URL = "https://mvp.mysterium.network:5000/v1"
@@ -30,7 +30,7 @@ type clientRest struct {
 	httpClient http.Client
 }
 
-func (client *clientRest) NodeRegister(proposal dto2.ServiceProposal) (err error) {
+func (client *clientRest) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
 	response, err := client.doRequest("POST", "node_register", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	})
@@ -64,20 +64,20 @@ func (client *clientRest) SessionCreate(nodeKey string) (session dto.Session, er
 	if err == nil {
 		defer response.Body.Close()
 
-		err = parseResponseJson(response, &session)
+		var temp struct {
+			Id              string                        `json:"session_key"`
+			ServiceProposal dto_discovery.ServiceProposal `json:"service_proposal"`
+		}
+
+		err = parseResponseJson(response, &temp)
 
 		if err != nil {
 			return
 		}
 
 		// this is a temporary solution for pulling the VPN config
-		temp := struct {
-			ConnectionConfig string `json:"connection_config"`
-		}{}
-
-		err = json.Unmarshal([]byte(session.ConnectionConfig), &temp)
-
-		session.ConnectionConfig = temp.ConnectionConfig
+		session.ConnectionConfig = temp.ServiceProposal.ConnectionConfig
+		session.Id = temp.Id
 
 		if err != nil {
 			return
@@ -138,6 +138,7 @@ func parseResponseJson(response *http.Response, dto interface{}) error {
 	}
 
 	err = json.Unmarshal(responseJson, dto)
+
 	if err != nil {
 		return err
 	}
