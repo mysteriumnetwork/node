@@ -6,7 +6,3 @@ type Contact struct {
 }
 
 type ContactDefinition interface{}
-
-
-
-
