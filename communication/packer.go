@@ -1,9 +1,9 @@
 package communication
 
 type Packer interface {
-	Pack() (data []byte)
+	Pack() ([]byte, error)
 }
 
 type Unpacker interface {
-	Unpack(data []byte)
+	Unpack([]byte) error
 }

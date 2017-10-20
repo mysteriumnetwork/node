@@ -4,18 +4,22 @@ type BytesPayload struct {
 	Data []byte
 }
 
-func (payload BytesPayload) Pack() (data []byte) {
-	return payload.Data
+func (payload BytesPayload) Pack() ([]byte, error) {
+	return payload.Data, nil
 }
 
-func (payload *BytesPayload) Unpack(data []byte) {
+func (payload *BytesPayload) Unpack(data []byte) error {
 	payload.Data = data
+	return nil
 }
 
 func BytesListener(callback func(*BytesPayload)) MessageListener {
 	return func(messageData []byte) {
 		var message BytesPayload
-		message.Unpack(messageData)
+		err := message.Unpack(messageData)
+		if err != nil {
+			panic(err)
+		}
 
 		callback(&message)
 	}
@@ -24,10 +28,17 @@ func BytesListener(callback func(*BytesPayload)) MessageListener {
 func BytesHandler(callback func(*BytesPayload) *BytesPayload) RequestHandler {
 	return func(requestData []byte) []byte {
 		var message BytesPayload
-		message.Unpack(requestData)
+		err := message.Unpack(requestData)
+		if err != nil {
+			panic(err)
+		}
 
 		response := callback(&message)
 
-		return response.Pack()
+		responseData, err := response.Pack()
+		if err != nil {
+			panic(err)
+		}
+		return responseData
 	}
 }

@@ -9,19 +9,12 @@ type JsonPayload struct {
 	Model interface{}
 }
 
-func (payload JsonPayload) Pack() (data []byte) {
-	data, err := json.Marshal(payload.Model)
-	if err != nil {
-		panic(err)
-	}
-	return []byte(data)
+func (payload JsonPayload) Pack() ([]byte, error) {
+	return json.Marshal(payload.Model)
 }
 
-func (payload *JsonPayload) Unpack(data []byte) {
-	err := json.Unmarshal(data, payload.Model)
-	if err != nil {
-		panic(err)
-	}
+func (payload *JsonPayload) Unpack(data []byte) error {
+	return json.Unmarshal(data, payload.Model)
 }
 
 func JsonListener(listener interface{}) MessageListener {
@@ -51,14 +44,22 @@ func JsonHandler(handler interface{}) RequestHandler {
 	}
 
 	return func(requestData []byte) []byte {
-		request.Unpack(requestData)
+		err := request.Unpack(requestData)
+		if err != nil {
+			panic(err)
+		}
 
 		handlerReturnValues := handlerValue.Call([]reflect.Value{
 			reflect.ValueOf(request.Model).Elem(),
 		})
 
 		response.Model = handlerReturnValues[0].Interface()
-		return response.Pack()
+
+		responseData, err := response.Pack()
+		if err != nil {
+			panic(err)
+		}
+		return responseData
 	}
 }
 

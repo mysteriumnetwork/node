@@ -7,15 +7,17 @@ import (
 
 func TestBytesPack(t *testing.T) {
 	packer := BytesPayload{[]byte("123")}
-	data := packer.Pack()
+	data, err := packer.Pack()
 
+	assert.NoError(t, err)
 	assert.Equal(t, "123", string(data))
 }
 
 func TestBytesUnpack(t *testing.T) {
 	var unpacker BytesPayload
-	unpacker.Unpack([]byte("123"))
+	err := unpacker.Unpack([]byte("123"))
 
+	assert.NoError(t, err)
 	assert.Equal(t, "123", string(unpacker.Data))
 }
 

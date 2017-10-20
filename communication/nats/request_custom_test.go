@@ -14,38 +14,24 @@ type customRequest struct {
 	FieldIn string
 }
 
-func (message customRequest) Pack() (data []byte) {
-	data, err := json.Marshal(message)
-	if err != nil {
-		panic(err)
-	}
-	return []byte(data)
+func (message customRequest) Pack() ([]byte, error) {
+	return json.Marshal(message)
 }
 
-func (message *customRequest) Unpack(data []byte) {
-	err := json.Unmarshal(data, message)
-	if err != nil {
-		panic(err)
-	}
+func (message *customRequest) Unpack(data []byte) error {
+	return json.Unmarshal(data, message)
 }
 
 type customResponse struct {
 	FieldOut string
 }
 
-func (message customResponse) Pack() (data []byte) {
-	data, err := json.Marshal(message)
-	if err != nil {
-		panic(err)
-	}
-	return []byte(data)
+func (message customResponse) Pack() ([]byte, error) {
+	return json.Marshal(message)
 }
 
-func (message *customResponse) Unpack(data []byte) {
-	err := json.Unmarshal(data, message)
-	if err != nil {
-		panic(err)
-	}
+func (message *customResponse) Unpack(data []byte) error {
+	return json.Unmarshal(data, message)
 }
 
 func TestCustomRequest(t *testing.T) {
@@ -84,11 +70,18 @@ func TestCustomRequest(t *testing.T) {
 func customRequestHandler(callback func(*customRequest) *customResponse) communication.RequestHandler {
 	return func(requestData []byte) []byte {
 		var request customRequest
-		request.Unpack(requestData)
+		err := request.Unpack(requestData)
+		if err != nil {
+			panic(err)
+		}
 
 		response := callback(&request)
 
-		return response.Pack()
+		responseData, err := response.Pack()
+		if err != nil {
+			panic(err)
+		}
+		return responseData
 	}
 }
 

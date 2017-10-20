@@ -13,19 +13,12 @@ type customMessage struct {
 	Field int
 }
 
-func (payload customMessage) Pack() (data []byte) {
-	data, err := json.Marshal(payload)
-	if err != nil {
-		panic(err)
-	}
-	return []byte(data)
+func (payload customMessage) Pack() ([]byte, error) {
+	return json.Marshal(payload)
 }
 
-func (payload *customMessage) Unpack(data []byte) {
-	err := json.Unmarshal(data, payload)
-	if err != nil {
-		panic(err)
-	}
+func (payload *customMessage) Unpack(data []byte) error {
+	return json.Unmarshal(data, payload)
 }
 
 func TestMessageCustomSend(t *testing.T) {
@@ -57,7 +50,10 @@ func TestMessageCustomSend(t *testing.T) {
 func customMessageListener(listener func(*customMessage)) communication.MessageListener {
 	return func(messageData []byte) {
 		var message customMessage
-		message.Unpack(messageData)
+		err := message.Unpack(messageData)
+		if err != nil {
+			panic(err)
+		}
 
 		listener(&message)
 	}

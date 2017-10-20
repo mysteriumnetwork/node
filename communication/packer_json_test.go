@@ -13,15 +13,17 @@ func TestJsonPack(t *testing.T) {
 	packer := JsonPayload{
 		customMessage{Field: 123},
 	}
-	data := packer.Pack()
+	data, err := packer.Pack()
 
+	assert.NoError(t, err)
 	assert.JSONEq(t, `{"Field": 123}`, string(data))
 }
 
 func TestJsonUnpack(t *testing.T) {
 	unpacker := JsonPayload{&customMessage{}}
-	unpacker.Unpack([]byte(`{"Field": 123}`))
+	err := unpacker.Unpack([]byte(`{"Field": 123}`))
 
+	assert.NoError(t, err)
 	assert.Equal(t, &customMessage{Field: 123}, unpacker.Model)
 }
 

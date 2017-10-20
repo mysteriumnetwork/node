@@ -17,9 +17,14 @@ func (sender *senderNats) Send(
 	message communication.Packer,
 ) error {
 
+	messageData, err := message.Pack()
+	if err != nil {
+		return err
+	}
+
 	return sender.connection.Publish(
 		sender.messageTopic+string(messageType),
-		message.Pack(),
+		messageData,
 	)
 }
 
@@ -29,15 +34,20 @@ func (sender *senderNats) Request(
 	response communication.Unpacker,
 ) error {
 
+	requestData, err := request.Pack()
+	if err != nil {
+		return err
+	}
+
 	message, err := sender.connection.Request(
 		sender.messageTopic+string(requestType),
-		request.Pack(),
+		requestData,
 		sender.timeoutRequest,
 	)
 	if err != nil {
 		return err
 	}
 
-	response.Unpack(message.Data)
-	return nil
+	err = response.Unpack(message.Data)
+	return err
 }
