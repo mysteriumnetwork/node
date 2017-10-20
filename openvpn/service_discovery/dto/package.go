@@ -3,7 +3,12 @@ package dto
 import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"encoding/json"
+	"github.com/mysterium/node/communication/nats"
 )
+
+func Initialize() {
+
+}
 
 func init() {
 	dto_discovery.RegisterServiceDefinitionUnserializer(
@@ -33,6 +38,17 @@ func init() {
 			err := json.Unmarshal(*rawDefinition, &method)
 
 			return method, err
+		},
+	)
+
+	dto_discovery.RegisterContactDefinitionUnserializer(
+		nats.CONTACT_NATS_V1,
+		func (rawDefinition *json.RawMessage) (dto_discovery.ContactDefinition, error) {
+			var contact nats.ContactNATSV1
+
+			err := json.Unmarshal(*rawDefinition, &contact)
+
+			return contact, err
 		},
 	)
 }

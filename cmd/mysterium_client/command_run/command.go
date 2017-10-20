@@ -3,13 +3,12 @@ package command_run
 import (
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/service_discovery"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"io"
 	"time"
+	"github.com/mysterium/node/openvpn/service_discovery/dto"
 )
 
 type CommandRun struct {
@@ -27,22 +26,24 @@ type CommandRun struct {
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	consumerId := dto_discovery.Identity("consumer1")
-	providerId := dto_discovery.Identity(options.NodeKey)
-	serviceProposal := service_discovery.NewServiceProposal(providerId, nats.NewContact(providerId))
 
-	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
-	_, _, err = cmd.communicationClient.CreateDialog(serviceProposal.ProviderContacts[0])
-	if err != nil {
-		return err
-	}
+	dto.Initialize()
 
+	// rename this
 	vpnSession, err := cmd.MysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err
 	}
 
+	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
+
+	_, _, err = cmd.communicationClient.CreateDialog(vpnSession.ServiceProposal.ProviderContacts[0].Definition)
+	if err != nil {
+		return err
+	}
+
 	vpnConfig, err := openvpn.NewClientConfigFromString(
-		vpnSession.ConnectionConfig,
+		vpnSession.ServiceProposal.ConnectionConfig,
 		options.DirectoryRuntime+"/client.ovpn",
 	)
 	if err != nil {

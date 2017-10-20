@@ -25,14 +25,14 @@ func TestServiceProposalUnserialize(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := dto.ServiceProposal{
-		Id:          1,
-		Format:      "service-proposal/v1",
-		ServiceType: "openvpn",
+		Id:                1,
+		Format:            "service-proposal/v1",
+		ServiceType:       "openvpn",
 		ServiceDefinition: ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
-		PaymentMethod: PaymentMethodPerTime{},
-		ProviderId: dto.Identity("node"),
-		ProviderContacts: []dto.Contact{},
+		PaymentMethod:     PaymentMethodPerTime{},
+		ProviderId:        dto.Identity("node"),
+		ProviderContacts:  nil,
 	}
 	assert.Equal(t, expected, actual)
 }
@@ -42,7 +42,8 @@ func TestServiceProposalUnserializeOpenVpnService(t *testing.T) {
 		"service_type": "openvpn",
 		"service_definition": {},
 		"payment_method_type": "PER_TIME",
-		"payment_method": {}
+		"payment_method": {},
+		"provider_contacts": []
 	}`)
 
 	var actual dto.ServiceProposal
@@ -58,7 +59,8 @@ func TestServiceProposalUnserializeUnknownService(t *testing.T) {
 		"service_type": "unknown",
 		"service_definition": {},
 		"payment_method_type": "PER_TIME",
-		"payment_method": {}
+		"payment_method": {},
+		"provider_contacts": []
 	}`)
 
 	var actual dto.ServiceProposal
@@ -74,7 +76,8 @@ func TestServiceProposalUnserializePerTimePaymentMethod(t *testing.T) {
 		"service_type": "openvpn",
 		"service_definition": {},
 		"payment_method_type": "PER_TIME",
-		"payment_method": {}
+		"payment_method": {},
+		"provider_contacts": []
 	}`)
 
 	var actual dto.ServiceProposal
@@ -84,12 +87,36 @@ func TestServiceProposalUnserializePerTimePaymentMethod(t *testing.T) {
 	assert.Equal(t, "dto.PaymentMethodPerTime", reflect.TypeOf(actual.PaymentMethod).String())
 }
 
+func TestServiceProposalUnserializeNatsContact(t *testing.T) {
+	jsonData := []byte(`{
+		"service_type": "openvpn",
+		"service_definition": {},
+		"payment_method_type": "PER_TIME",
+		"payment_method": {},
+		"provider_contacts": [
+			{
+				"type": "nats/v1",
+				"definition": {
+					"topic": "test-topic"
+				}
+			}
+		]
+	}`)
+
+	var actual dto.ServiceProposal
+	err := json.Unmarshal(jsonData, &actual)
+
+	assert.Nil(t, err)
+	assert.Equal(t, "nats.ContactNATSV1", reflect.TypeOf(actual.ProviderContacts[0].Definition).String())
+}
+
 func TestServiceProposalUnserializeUnknownPaymentMethod(t *testing.T) {
 	jsonData := []byte(`{
 		"service_type": "openvpn",
 		"service_definition": {},
 		"payment_method_type": "unknown",
-		"payment_method": {}
+		"payment_method": {},
+		"provider_contacts": []
 	}`)
 
 	var actual dto.ServiceProposal
@@ -119,14 +146,14 @@ func TestServiceProposalSerialize(t *testing.T) {
 	}`
 
 	sp := dto.ServiceProposal{
-		Id:          1,
-		Format:      "service-proposal/v1",
-		ServiceType: "openvpn",
+		Id:                1,
+		Format:            "service-proposal/v1",
+		ServiceType:       "openvpn",
 		ServiceDefinition: ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
-		PaymentMethod: PaymentMethodPerTime{},
-		ProviderId: dto.Identity("node"),
-		ProviderContacts: []dto.Contact{},
+		PaymentMethod:     PaymentMethodPerTime{},
+		ProviderId:        dto.Identity("node"),
+		ProviderContacts:  []dto.Contact{},
 	}
 
 	actualJson, err := json.Marshal(sp)

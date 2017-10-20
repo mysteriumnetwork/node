@@ -34,8 +34,8 @@ func (client *clientFake) NodeSendStats(nodeKey string, sessionStats []dto.Sessi
 func (client *clientFake) SessionCreate(nodeKey string) (session dto.Session, err error) {
 	if proposal, ok := client.proposalsByProvider[nodeKey]; ok {
 		session = dto.Session{
-			Id:               nodeKey + "-session",
-			ConnectionConfig: proposal.ConnectionConfig,
+			Id:              nodeKey + "-session",
+			ServiceProposal: proposal,
 		}
 		return
 	}
