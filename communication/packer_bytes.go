@@ -14,14 +14,13 @@ func (payload *BytesPayload) Unpack(data []byte) error {
 }
 
 func BytesListener(callback func(*BytesPayload)) MessageListener {
-	return func(messageData []byte) {
-		var message BytesPayload
-		err := message.Unpack(messageData)
-		if err != nil {
-			panic(err)
-		}
+	var message BytesPayload
 
-		callback(&message)
+	return MessageListener{
+		Message: &message,
+		Invoke: func() {
+			callback(&message)
+		},
 	}
 }
 

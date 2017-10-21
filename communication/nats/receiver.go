@@ -3,7 +3,11 @@ package nats
 import (
 	"github.com/mysterium/node/communication"
 	"github.com/nats-io/go-nats"
+
+	log "github.com/cihub/seelog"
 )
+
+const RECEIVER_LOG_PREFIX = "[NATS.Receiver] "
 
 type receiverNats struct {
 	connection   *nats.Conn
@@ -17,8 +21,14 @@ func (receiver *receiverNats) Receive(
 
 	_, err := receiver.connection.Subscribe(
 		receiver.messageTopic+string(messageType),
-		func(message *nats.Msg) {
-			listener(message.Data)
+		func(msg *nats.Msg) {
+			err := listener.Message.Unpack(msg.Data)
+			if err != nil {
+				log.Warnf("%sFailed to unpack message '%s'. %s", RECEIVER_LOG_PREFIX, messageType, err)
+				return
+			}
+
+			listener.Invoke()
 		},
 	)
 	return err

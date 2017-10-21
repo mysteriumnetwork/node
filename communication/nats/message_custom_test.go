@@ -48,14 +48,13 @@ func TestMessageCustomSend(t *testing.T) {
 }
 
 func customMessageListener(listener func(*customMessage)) communication.MessageListener {
-	return func(messageData []byte) {
-		var message customMessage
-		err := message.Unpack(messageData)
-		if err != nil {
-			panic(err)
-		}
+	var message customMessage
 
-		listener(&message)
+	return communication.MessageListener{
+		Message: &message,
+		Invoke: func() {
+			listener(&message)
+		},
 	}
 }
 
@@ -71,7 +70,7 @@ func TestMessageCustomReceive(t *testing.T) {
 	err := receiver.Receive(
 		communication.MessageType("json-message"),
 		customMessageListener(func(message *customMessage) {
-			assert.Equal(t, customMessage{123}, message)
+			assert.Exactly(t, customMessage{123}, message)
 			messageReceived <- true
 		}),
 	)

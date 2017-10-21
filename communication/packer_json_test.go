@@ -32,8 +32,11 @@ func TestJsonListener(t *testing.T) {
 	listener := JsonListener(func(message customMessage) {
 		messageConsumed = message
 	})
-	listener([]byte(`{"Field": 123}`))
 
+	err := listener.Message.Unpack([]byte(`{"Field": 123}`))
+	listener.Invoke()
+
+	assert.NoError(t, err)
 	assert.Exactly(t, customMessage{123}, messageConsumed)
 }
 

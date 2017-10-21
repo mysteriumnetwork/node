@@ -60,7 +60,7 @@ func TestCustomRequest(t *testing.T) {
 		&response,
 	)
 	assert.Nil(t, err)
-	assert.Equal(t, customResponse{"RESPONSE"}, response)
+	assert.Exactly(t, customResponse{"RESPONSE"}, response)
 
 	if err := test.Wait(requestSent); err != nil {
 		t.Fatal("Request not sent")

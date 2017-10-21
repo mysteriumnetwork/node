@@ -24,12 +24,13 @@ func JsonListener(listener interface{}) MessageListener {
 		Model: parseArgumentValue(listenerType).Interface(),
 	}
 
-	return func(messageData []byte) {
-		message.Unpack(messageData)
-
-		listenerValue.Call([]reflect.Value{
-			reflect.ValueOf(message.Model).Elem(),
-		})
+	return MessageListener{
+		Message: &message,
+		Invoke: func() {
+			listenerValue.Call([]reflect.Value{
+				reflect.ValueOf(message.Model).Elem(),
+			})
+		},
 	}
 }
 

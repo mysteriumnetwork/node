@@ -24,8 +24,5 @@ type Sender interface {
 	Request(requestType RequestType, request Packer, response Unpacker) error
 }
 
-type MessageType string
-type MessageListener func(message []byte)
-
 type RequestType string
 type RequestHandler func(request []byte) (response []byte)

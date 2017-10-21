@@ -4,7 +4,11 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/nats-io/go-nats"
 	"time"
+
+	log "github.com/cihub/seelog"
 )
+
+const SENDER_LOG_PREFIX = "[NATS.Sender] "
 
 type senderNats struct {
 	connection     *nats.Conn
@@ -19,6 +23,7 @@ func (sender *senderNats) Send(
 
 	messageData, err := message.Pack()
 	if err != nil {
+		log.Warnf("%sFailed to pack message '%s'. %s", SENDER_LOG_PREFIX, messageType, err)
 		return err
 	}
 
@@ -36,6 +41,7 @@ func (sender *senderNats) Request(
 
 	requestData, err := request.Pack()
 	if err != nil {
+		log.Warnf("%sFailed to pack request '%s'. %s", SENDER_LOG_PREFIX, requestType, err)
 		return err
 	}
 

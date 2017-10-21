@@ -26,8 +26,11 @@ func TestStringListener(t *testing.T) {
 	listener := StringListener(func(message *StringPayload) {
 		messageConsumed = message
 	})
-	listener([]byte("123"))
 
+	err := listener.Message.Unpack([]byte("123"))
+	listener.Invoke()
+
+	assert.NoError(t, err)
 	assert.Equal(t, "123", messageConsumed.Data)
 }
 
