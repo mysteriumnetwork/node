@@ -23,6 +23,3 @@ type Sender interface {
 	Send(messageType MessageType, message Packer) error
 	Request(requestType RequestType, request Packer, response Unpacker) error
 }
-
-type RequestType string
-type RequestHandler func(request []byte) (response []byte)

@@ -41,10 +41,22 @@ func (receiver *receiverNats) Respond(
 
 	_, err := receiver.connection.Subscribe(
 		receiver.messageTopic+string(requestType),
-		func(message *nats.Msg) {
-			request := message.Data
-			response := handler(request)
-			receiver.connection.Publish(message.Reply, response)
+		func(msg *nats.Msg) {
+			err := handler.Request.Unpack(msg.Data)
+			if err != nil {
+				log.Warnf("%sFailed to unpack request '%s'. %s", RECEIVER_LOG_PREFIX, requestType, err)
+				return
+			}
+
+			response := handler.Invoke()
+
+			responseData, err := response.Pack()
+			if err != nil {
+				log.Warnf("%sFailed to pack response '%s'. %s", RECEIVER_LOG_PREFIX, requestType, err)
+				return
+			}
+
+			receiver.connection.Publish(msg.Reply, responseData)
 		},
 	)
 	return err

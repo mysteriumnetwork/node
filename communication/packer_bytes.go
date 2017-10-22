@@ -25,19 +25,12 @@ func BytesListener(callback func(*BytesPayload)) MessageListener {
 }
 
 func BytesHandler(callback func(*BytesPayload) *BytesPayload) RequestHandler {
-	return func(requestData []byte) []byte {
-		var message BytesPayload
-		err := message.Unpack(requestData)
-		if err != nil {
-			panic(err)
-		}
+	var request BytesPayload
 
-		response := callback(&message)
-
-		responseData, err := response.Pack()
-		if err != nil {
-			panic(err)
-		}
-		return responseData
+	return RequestHandler{
+		Request: &request,
+		Invoke: func() Packer {
+			return callback(&request)
+		},
 	}
 }

@@ -31,7 +31,7 @@ func TestBytesListener(t *testing.T) {
 	listener.Invoke()
 
 	assert.NoError(t, err)
-	assert.Equal(t, "123", string(messageConsumed.Data))
+	assert.Exactly(t, &BytesPayload{[]byte("123")}, messageConsumed)
 }
 
 func TestBytesHandler(t *testing.T) {
@@ -40,8 +40,11 @@ func TestBytesHandler(t *testing.T) {
 		requestReceived = request
 		return &BytesPayload{[]byte("RESPONSE")}
 	})
-	response := handler([]byte("REQUEST"))
 
-	assert.Equal(t, "REQUEST", string(requestReceived.Data))
-	assert.Equal(t, "RESPONSE", string(response))
+	err := handler.Request.Unpack([]byte("REQUEST"))
+	response := handler.Invoke()
+
+	assert.NoError(t, err)
+	assert.Exactly(t, &BytesPayload{[]byte("REQUEST")}, requestReceived)
+	assert.Exactly(t, &BytesPayload{[]byte("RESPONSE")}, response)
 }

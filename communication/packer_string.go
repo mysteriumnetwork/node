@@ -25,19 +25,12 @@ func StringListener(listener func(*StringPayload)) MessageListener {
 }
 
 func StringHandler(handler func(*StringPayload) *StringPayload) RequestHandler {
-	return func(requestData []byte) []byte {
-		var request StringPayload
-		err := request.Unpack(requestData)
-		if err != nil {
-			panic(err)
-		}
+	var request StringPayload
 
-		response := handler(&request)
-
-		responseData, err := response.Pack()
-		if err != nil {
-			panic(err)
-		}
-		return responseData
+	return RequestHandler{
+		Request: &request,
+		Invoke: func() (response Packer) {
+			return handler(&request)
+		},
 	}
 }

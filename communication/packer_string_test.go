@@ -31,7 +31,7 @@ func TestStringListener(t *testing.T) {
 	listener.Invoke()
 
 	assert.NoError(t, err)
-	assert.Equal(t, "123", messageConsumed.Data)
+	assert.Equal(t, &StringPayload{"123"}, messageConsumed)
 }
 
 func TestStringHandler(t *testing.T) {
@@ -40,8 +40,11 @@ func TestStringHandler(t *testing.T) {
 		requestReceived = request
 		return &StringPayload{"RESPONSE"}
 	})
-	response := handler([]byte("REQUEST"))
 
-	assert.Equal(t, "REQUEST", requestReceived.Data)
-	assert.Equal(t, "RESPONSE", string(response))
+	err := handler.Request.Unpack([]byte("REQUEST"))
+	response := handler.Invoke()
+
+	assert.NoError(t, err)
+	assert.Equal(t, &StringPayload{"REQUEST"}, requestReceived)
+	assert.Equal(t, &StringPayload{"RESPONSE"}, response)
 }

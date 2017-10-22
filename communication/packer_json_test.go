@@ -54,8 +54,11 @@ func TestJsonHandler(t *testing.T) {
 		requestReceived = request
 		return customResponse{"RESPONSE"}
 	})
-	response := handler([]byte(`{"FieldIn": "REQUEST"}`))
 
+	err := handler.Request.Unpack([]byte(`{"FieldIn": "REQUEST"}`))
+	response := handler.Invoke()
+
+	assert.NoError(t, err)
 	assert.Exactly(t, customRequest{"REQUEST"}, requestReceived)
-	assert.JSONEq(t, `{"FieldOut": "RESPONSE"}`, string(response))
+	assert.Exactly(t, JsonPayload{customResponse{"RESPONSE"}}, response)
 }

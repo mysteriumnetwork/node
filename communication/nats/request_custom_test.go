@@ -68,20 +68,13 @@ func TestCustomRequest(t *testing.T) {
 }
 
 func customRequestHandler(callback func(*customRequest) *customResponse) communication.RequestHandler {
-	return func(requestData []byte) []byte {
-		var request customRequest
-		err := request.Unpack(requestData)
-		if err != nil {
-			panic(err)
-		}
+	var request customRequest
 
-		response := callback(&request)
-
-		responseData, err := response.Pack()
-		if err != nil {
-			panic(err)
-		}
-		return responseData
+	return communication.RequestHandler{
+		Request: &request,
+		Invoke: func() communication.Packer {
+			return callback(&request)
+		},
 	}
 }
 

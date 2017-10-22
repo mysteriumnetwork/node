@@ -44,23 +44,16 @@ func JsonHandler(handler interface{}) RequestHandler {
 		Model: parseReturnValue(handlerType).Interface(),
 	}
 
-	return func(requestData []byte) []byte {
-		err := request.Unpack(requestData)
-		if err != nil {
-			panic(err)
-		}
+	return RequestHandler{
+		Request: &request,
+		Invoke: func() Packer {
+			handlerReturnValues := handlerValue.Call([]reflect.Value{
+				reflect.ValueOf(request.Model).Elem(),
+			})
+			response.Model = handlerReturnValues[0].Interface()
 
-		handlerReturnValues := handlerValue.Call([]reflect.Value{
-			reflect.ValueOf(request.Model).Elem(),
-		})
-
-		response.Model = handlerReturnValues[0].Interface()
-
-		responseData, err := response.Pack()
-		if err != nil {
-			panic(err)
-		}
-		return responseData
+			return response
+		},
 	}
 }
 
