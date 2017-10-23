@@ -2,11 +2,14 @@ package nats
 
 import (
 	"fmt"
+	"github.com/mgutz/logxi/v1"
 	"github.com/mysterium/node/communication"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/nats-io/go-nats"
 	"time"
 )
+
+const CLIENT_LOG_PREFIX = "[NATS.Client] "
 
 type clientNats struct {
 	myTopic        string
@@ -54,7 +57,8 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		connection:   client.connection,
 		messageTopic: client.myTopic + ".",
 	}
-	fmt.Printf("Dialog with contact created. topic=%s\n", contactTopic)
+
+	log.Info(CLIENT_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' created\n", contactTopic))
 	return
 }
 

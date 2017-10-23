@@ -4,6 +4,7 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/nats-io/go-nats"
 
+	"fmt"
 	log "github.com/cihub/seelog"
 )
 
@@ -19,19 +20,24 @@ func (receiver *receiverNats) Receive(
 	listener communication.MessageListener,
 ) error {
 
-	_, err := receiver.connection.Subscribe(
-		receiver.messageTopic+string(messageType),
-		func(msg *nats.Msg) {
-			err := listener.Message.Unpack(msg.Data)
-			if err != nil {
-				log.Warnf("%sFailed to unpack message '%s'. %s", RECEIVER_LOG_PREFIX, messageType, err)
-				return
-			}
+	messageHandler := func(msg *nats.Msg) {
+		err := listener.Message.Unpack(msg.Data)
+		if err != nil {
+			err = fmt.Errorf("Failed to unpack message '%s'. %s", messageType, err)
+			log.Error(RECEIVER_LOG_PREFIX, err)
+			return
+		}
 
-			listener.Invoke()
-		},
-	)
-	return err
+		listener.Invoke()
+	}
+
+	_, err := receiver.connection.Subscribe(receiver.messageTopic+string(messageType), messageHandler)
+	if err != nil {
+		err = fmt.Errorf("Failed subscribe message '%s'. %s", messageType, err)
+		return err
+	}
+
+	return nil
 }
 
 func (receiver *receiverNats) Respond(
@@ -39,25 +45,41 @@ func (receiver *receiverNats) Respond(
 	handler communication.RequestHandler,
 ) error {
 
-	_, err := receiver.connection.Subscribe(
-		receiver.messageTopic+string(requestType),
-		func(msg *nats.Msg) {
-			err := handler.Request.Unpack(msg.Data)
-			if err != nil {
-				log.Warnf("%sFailed to unpack request '%s'. %s", RECEIVER_LOG_PREFIX, requestType, err)
-				return
-			}
+	messageHandler := func(msg *nats.Msg) {
+		requestData := msg.Data
+		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' received: %s", requestType, requestData))
 
-			response := handler.Invoke()
+		err := handler.Request.Unpack(requestData)
+		if err != nil {
+			err = fmt.Errorf("Failed to unpack request '%s'. %s", requestType, err)
+			log.Error(RECEIVER_LOG_PREFIX, err)
+			return
+		}
 
-			responseData, err := response.Pack()
-			if err != nil {
-				log.Warnf("%sFailed to pack response '%s'. %s", RECEIVER_LOG_PREFIX, requestType, err)
-				return
-			}
+		response := handler.Invoke()
 
-			receiver.connection.Publish(msg.Reply, responseData)
-		},
-	)
-	return err
+		responseData, err := response.Pack()
+		if err != nil {
+			err = fmt.Errorf("Failed to pack response '%s'. %s", requestType, err)
+			log.Error(RECEIVER_LOG_PREFIX, err)
+			return
+		}
+
+		err = receiver.connection.Publish(msg.Reply, responseData)
+		if err != nil {
+			err = fmt.Errorf("Failed to send response '%s'. %s", requestType, err)
+			log.Error(RECEIVER_LOG_PREFIX, err)
+			return
+		}
+
+		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' response: %s", requestType, responseData))
+	}
+
+	_, err := receiver.connection.Subscribe(receiver.messageTopic+string(requestType), messageHandler)
+	if err != nil {
+		err = fmt.Errorf("Failed subscribe request '%s'. %s", requestType, err)
+		return err
+	}
+
+	return nil
 }

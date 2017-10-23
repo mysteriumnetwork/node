@@ -5,6 +5,7 @@ import (
 	"github.com/nats-io/go-nats"
 	"time"
 
+	"fmt"
 	log "github.com/cihub/seelog"
 )
 
@@ -23,14 +24,21 @@ func (sender *senderNats) Send(
 
 	messageData, err := message.Pack()
 	if err != nil {
-		log.Warnf("%sFailed to pack message '%s'. %s", SENDER_LOG_PREFIX, messageType, err)
+		err = fmt.Errorf("Failed to pack message '%s'. %s", messageType, err)
 		return err
 	}
 
-	return sender.connection.Publish(
+	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Message '%s' sending: %s", messageType, messageData))
+	err = sender.connection.Publish(
 		sender.messageTopic+string(messageType),
 		messageData,
 	)
+	if err != nil {
+		err = fmt.Errorf("Failed to send message '%s'. %s", messageType, err)
+		return err
+	}
+
+	return nil
 }
 
 func (sender *senderNats) Request(
@@ -41,19 +49,29 @@ func (sender *senderNats) Request(
 
 	requestData, err := request.Pack()
 	if err != nil {
-		log.Warnf("%sFailed to pack request '%s'. %s", SENDER_LOG_PREFIX, requestType, err)
+		err = fmt.Errorf("Failed to pack request '%s'. %s", requestType, err)
 		return err
 	}
 
-	message, err := sender.connection.Request(
+	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Request '%s' sending: %s", requestType, requestData))
+	msg, err := sender.connection.Request(
 		sender.messageTopic+string(requestType),
 		requestData,
 		sender.timeoutRequest,
 	)
 	if err != nil {
+		err = fmt.Errorf("Failed to send request '%s'. %s", requestType, err)
 		return err
 	}
 
-	err = response.Unpack(message.Data)
-	return err
+	responseData := msg.Data
+	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Received response for '%s': %s", requestType, responseData))
+
+	err = response.Unpack(responseData)
+	if err != nil {
+		err = fmt.Errorf("Failed to unpack response '%s'. %s", requestType, err)
+		return err
+	}
+
+	return nil
 }

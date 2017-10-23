@@ -5,7 +5,11 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/nats-io/go-nats"
 	"time"
+
+	log "github.com/cihub/seelog"
 )
+
+const SERVER_LOG_PREFIX = "[NATS.Server] "
 
 type serverNats struct {
 	myTopic        string
@@ -26,8 +30,6 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 	}
 
 	createDialog := communication.StringHandler(func(receiverTopic *communication.StringPayload) *communication.StringPayload {
-		fmt.Printf("Dialog requested. topic=%s\n", receiverTopic)
-
 		sender := &senderNats{
 			connection:     server.connection,
 			messageTopic:   server.myTopic,
@@ -35,6 +37,7 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		}
 		dialogHandler(sender, receiver)
 
+		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' established.", receiverTopic))
 		return &communication.StringPayload{"OK"}
 	})
 
