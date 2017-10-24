@@ -8,7 +8,6 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"io"
 	"time"
-	"github.com/mysterium/node/openvpn/service_discovery/dto"
 )
 
 type CommandRun struct {
@@ -27,23 +26,20 @@ type CommandRun struct {
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	consumerId := dto_discovery.Identity("consumer1")
 
-	dto.Initialize()
-
-	// rename this
-	vpnSession, err := cmd.MysteriumClient.SessionCreate(options.NodeKey)
+	session, err := cmd.MysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err
 	}
 
 	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
-
-	_, _, err = cmd.communicationClient.CreateDialog(vpnSession.ServiceProposal.ProviderContacts[0].Definition)
+	proposal := session.ServiceProposal
+	_, _, err = cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0].Definition)
 	if err != nil {
 		return err
 	}
 
 	vpnConfig, err := openvpn.NewClientConfigFromString(
-		vpnSession.ServiceProposal.ConnectionConfig,
+		proposal.ConnectionConfig,
 		options.DirectoryRuntime+"/client.ovpn",
 	)
 	if err != nil {
@@ -52,7 +48,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	vpnMiddlewares := append(
 		cmd.vpnMiddlewares,
-		bytescount_client.NewMiddleware(cmd.MysteriumClient, vpnSession.Id, 1*time.Minute),
+		bytescount_client.NewMiddleware(cmd.MysteriumClient, session.Id, 1*time.Minute),
 	)
 	cmd.vpnClient = openvpn.NewClient(
 		vpnConfig,

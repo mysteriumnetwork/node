@@ -143,7 +143,6 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 	genericProposal.ServiceType = jsonData.ServiceType
 	genericProposal.ProviderId = Identity(jsonData.ProviderId)
 	genericProposal.PaymentMethodType = jsonData.PaymentMethodType
-	//genericProposal.ProviderContacts = jsonData.ProviderContacts
 	genericProposal.ConnectionConfig = jsonData.ConnectionConfig
 
 	// run the service definition implementation from our registry
@@ -151,7 +150,6 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 		jsonData.ServiceType,
 		jsonData.ServiceDefinition,
 	)
-
 	if err != nil {
 		return
 	}
@@ -161,17 +159,14 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 		jsonData.PaymentMethodType,
 		jsonData.PaymentMethod,
 	)
-
 	if err != nil {
 		return
 	}
 
-	if jsonData.ProviderContacts != nil {
-		// run contact unserializer
-		genericProposal.ProviderContacts, err = unserializeContactDefinition(jsonData.ProviderContacts)
-		if err != nil {
-			return
-		}
+	// run contact unserializer
+	genericProposal.ProviderContacts, err = unserializeContactDefinition(jsonData.ProviderContacts)
+	if err != nil {
+		return
 	}
 
 	return nil
