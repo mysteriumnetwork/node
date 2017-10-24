@@ -96,9 +96,6 @@ func unserializeContactDefinition(message *json.RawMessage) (contactList []Conta
 	}
 
 	length := len(contacts)
-	if length == 0 {
-		return
-	}
 
 	contactList = make([]Contact, length)
 

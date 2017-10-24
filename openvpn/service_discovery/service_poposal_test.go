@@ -39,7 +39,7 @@ func TestServiceProposalUnserialize(t *testing.T) {
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
 		ProviderId:        dto_discovery.Identity("node"),
-		ProviderContacts:  nil,
+		ProviderContacts:  []dto_discovery.Contact{},
 	}
 	assert.Equal(t, expected, actual)
 }
