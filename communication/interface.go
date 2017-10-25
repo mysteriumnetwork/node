@@ -10,7 +10,7 @@ type Server interface {
 type DialogHandler func(Sender, Receiver)
 
 type Client interface {
-	CreateDialog(contact dto_discovery.Contact) (Sender, Receiver, error)
+	CreateDialog(contact dto_discovery.ContactDefinition) (Sender, Receiver, error)
 	Stop() error
 }
 

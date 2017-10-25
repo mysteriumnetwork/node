@@ -1,25 +1,26 @@
-package dto
+package openvpn
 
 import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"encoding/json"
+	dto_openvpn "github.com/mysterium/node/openvpn/service_discovery/dto"
 )
 
-func init() {
+func Bootstrap() {
 	dto_discovery.RegisterServiceDefinitionUnserializer(
 		"openvpn",
 		func(rawDefinition *json.RawMessage) (dto_discovery.ServiceDefinition, error) {
-			var definition ServiceDefinition
+			var definition dto_openvpn.ServiceDefinition
 			err := json.Unmarshal(*rawDefinition, &definition)
 
 			return definition, err
- 		},
+		},
 	)
 
 	dto_discovery.RegisterPaymentMethodUnserializer(
-		PAYMENT_METHOD_PER_TIME,
+		dto_openvpn.PAYMENT_METHOD_PER_TIME,
 		func(rawDefinition *json.RawMessage) (dto_discovery.PaymentMethod, error) {
-			var method PaymentMethodPerTime
+			var method dto_openvpn.PaymentMethodPerTime
 			err := json.Unmarshal(*rawDefinition, &method)
 
 			return method, err
@@ -27,9 +28,9 @@ func init() {
 	)
 
 	dto_discovery.RegisterPaymentMethodUnserializer(
-		PAYMENT_METHOD_PER_BYTES,
+		dto_openvpn.PAYMENT_METHOD_PER_BYTES,
 		func(rawDefinition *json.RawMessage) (dto_discovery.PaymentMethod, error) {
-			var method PaymentMethodPerBytes
+			var method dto_openvpn.PaymentMethodPerBytes
 			err := json.Unmarshal(*rawDefinition, &method)
 
 			return method, err

@@ -64,19 +64,10 @@ func (client *clientRest) SessionCreate(nodeKey string) (session dto.Session, er
 	if err == nil {
 		defer response.Body.Close()
 
-		var temp struct {
-			Id              string                        `json:"session_key"`
-			ServiceProposal dto_discovery.ServiceProposal `json:"service_proposal"`
-		}
-
-		err = parseResponseJson(response, &temp)
+		err = parseResponseJson(response, &session)
 		if err != nil {
 			return
 		}
-
-		// this is a temporary solution for pulling the VPN config
-		session.ConnectionConfig = temp.ServiceProposal.ConnectionConfig
-		session.Id = temp.Id
 
 		log.Info(MYSTERIUM_API_LOG_PREFIX, "Session created: ", session.Id)
 	}
