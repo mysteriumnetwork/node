@@ -18,8 +18,13 @@
 : ${GOOS:=`go env GOHOSTOS`}
 : ${GOARCH:=`go env GOHOSTARCH`}
 
+# include the helper method
+source $(dirname "$0")/helpers/config
+
+variables=$(env_vars_replace .env)
+
 echo "Compiling 'mysterium_client' for '$GOOS/$GOARCH'.."
-GOBIN=`pwd`/build/client go install cmd/mysterium_client/mysterium_client.go
+GOBIN=`pwd`/build/client go install -ldflags="$variables" cmd/mysterium_client/mysterium_client.go
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Compile failed!"
     exit 1

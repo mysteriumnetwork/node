@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# collect variables from a config file
+# concat them for go linker's -ldflags usage
+function env_vars_replace {
+    env_config=$1
+    vars=""
+
+    if [ -f $env_config ]; then
+        while IFS='=' read -r key value
+        do
+            vars="$vars -X '$key=$value'"
+        done < $env_config
+    fi
+
+    echo ${vars}
+}
