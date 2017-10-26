@@ -1,4 +1,4 @@
 .idea
 /build
 /vendor
-.env
+/.env
