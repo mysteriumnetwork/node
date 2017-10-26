@@ -13,7 +13,8 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
-const MYSTERIUM_API_URL = "https://mvp.mysterium.network:5000/v1"
+var mysteriumApiUrl string
+
 const MYSTERIUM_API_CLIENT = "goclient-v0.1"
 const MYSTERIUM_API_LOG_PREFIX = "[Mysterium.api] "
 
@@ -92,7 +93,7 @@ func (client *clientRest) doRequest(method string, path string, payload interfac
 		return nil, err
 	}
 
-	request, err := http.NewRequest(method, MYSTERIUM_API_URL+"/"+path, bytes.NewBuffer(payloadJson))
+	request, err := http.NewRequest(method, mysteriumApiUrl+"/"+path, bytes.NewBuffer(payloadJson))
 	request.Header.Set("User-Agent", MYSTERIUM_API_CLIENT)
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
