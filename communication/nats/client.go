@@ -12,6 +12,7 @@ import (
 const CLIENT_LOG_PREFIX = "[NATS.Client] "
 
 type clientNats struct {
+	myIdentity     dto_discovery.Identity
 	myTopic        string
 	options        nats.Options
 	timeoutRequest time.Duration
@@ -41,8 +42,10 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 
 	var response communication.StringPayload
 	err = sender.Request(
-		communication.DIALOG_CREATE,
-		communication.StringPayload{client.myTopic},
+		ENDPOINT_DIALOG_CREATE,
+		dialogCreateRequest{
+			IdentityId: client.myIdentity,
+		},
 		&response,
 	)
 	if err != nil {

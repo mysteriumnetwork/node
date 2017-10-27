@@ -25,6 +25,7 @@ func NewServer(identity dto_discovery.Identity) *serverNats {
 
 func NewClient(identity dto_discovery.Identity) *clientNats {
 	return &clientNats{
+		myIdentity:     identity,
 		myTopic:        string(identity),
 		options:        getDefaultOptions(),
 		timeoutRequest: 500 * time.Millisecond,
