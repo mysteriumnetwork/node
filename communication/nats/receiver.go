@@ -17,23 +17,50 @@ type receiverNats struct {
 
 func (receiver *receiverNats) Receive(
 	messageType communication.MessageType,
-	listener communication.MessageListener,
+	messageUnpacker communication.MessageListener,
 ) error {
 
 	messageHandler := func(msg *nats.Msg) {
-		err := listener.Message.Unpack(msg.Data)
+		err := messageUnpacker.Message.Unpack(msg.Data)
 		if err != nil {
 			err = fmt.Errorf("Failed to unpack message '%s'. %s", messageType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
 			return
 		}
 
-		listener.Invoke()
+		messageUnpacker.Invoke()
 	}
 
 	_, err := receiver.connection.Subscribe(receiver.messageTopic+string(messageType), messageHandler)
 	if err != nil {
 		err = fmt.Errorf("Failed subscribe message '%s'. %s", messageType, err)
+		return err
+	}
+
+	return nil
+}
+
+func (receiver *receiverNats) Receive2(unpacker communication.MessageUnpacker) error {
+
+	messageHandler := func(msg *nats.Msg) {
+		err := unpacker.Unpack(msg.Data)
+		if err != nil {
+			err = fmt.Errorf("Failed to unpack message '%s'. %s", unpacker.MessageType, err)
+			log.Error(RECEIVER_LOG_PREFIX, err)
+			return
+		}
+
+		err = unpacker.Invoke()
+		if err != nil {
+			err = fmt.Errorf("Failed to process message '%s'. %s", unpacker.MessageType, err)
+			log.Error(RECEIVER_LOG_PREFIX, err)
+			return
+		}
+	}
+
+	_, err := receiver.connection.Subscribe(receiver.messageTopic+unpacker.MessageType, messageHandler)
+	if err != nil {
+		err = fmt.Errorf("Failed subscribe message '%s'. %s", unpacker.MessageType, err)
 		return err
 	}
 

@@ -41,6 +41,27 @@ func (sender *senderNats) Send(
 	return nil
 }
 
+func (sender *senderNats) Send2(packer communication.MessagePacker) error {
+
+	messageData, err := packer.Pack()
+	if err != nil {
+		err = fmt.Errorf("Failed to pack messagePacker '%s'. %s", packer.MessageType, err)
+		return err
+	}
+
+	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Message '%s' sending: %s", packer.MessageType, messageData))
+	err = sender.connection.Publish(
+		sender.messageTopic+packer.MessageType,
+		messageData,
+	)
+	if err != nil {
+		err = fmt.Errorf("Failed to send messagePacker '%s'. %s", packer.MessageType, err)
+		return err
+	}
+
+	return nil
+}
+
 func (sender *senderNats) Request(
 	requestType communication.RequestType,
 	request communication.Packer,
