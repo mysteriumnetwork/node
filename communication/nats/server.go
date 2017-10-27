@@ -29,19 +29,22 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		messageTopic: server.myTopic + ".",
 	}
 
-	createDialog := communication.StringHandler(func(receiverTopic *communication.StringPayload) *communication.StringPayload {
+	createDialog := newRequestHandler(func(request *dialogCreateRequest) *dialogCreateResponse {
 		sender := &senderNats{
 			connection:     server.connection,
-			messageTopic:   server.myTopic,
+			messageTopic:   string(request.IdentityId),
 			timeoutRequest: server.timeoutRequest,
 		}
 		dialogHandler(sender, receiver)
 
-		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' established.", receiverTopic))
-		return &communication.StringPayload{"OK"}
+		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' established.", request.IdentityId))
+		return &dialogCreateResponse{
+			Accepted: true,
+		}
 	})
 
-	return receiver.Respond(communication.DIALOG_CREATE, createDialog)
+	subscribeError := receiver.Respond(ENDPOINT_DIALOG_CREATE, createDialog)
+	return subscribeError
 }
 
 func (server *serverNats) Start() (err error) {
@@ -52,4 +55,15 @@ func (server *serverNats) Start() (err error) {
 func (server *serverNats) Stop() error {
 	server.connection.Close()
 	return nil
+}
+
+func newRequestHandler(callback func(request *dialogCreateRequest) *dialogCreateResponse) communication.RequestHandler {
+	var request dialogCreateRequest
+
+	return communication.RequestHandler{
+		Request: &request,
+		Invoke: func() communication.Packer {
+			return callback(&request)
+		},
+	}
 }

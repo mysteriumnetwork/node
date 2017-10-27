@@ -20,3 +20,15 @@ func (payload dialogCreateRequest) Pack() ([]byte, error) {
 func (payload *dialogCreateRequest) Unpack(data []byte) error {
 	return json.Unmarshal(data, payload)
 }
+
+type dialogCreateResponse struct {
+	Accepted bool `json:"accepted"`
+}
+
+func (payload dialogCreateResponse) Pack() ([]byte, error) {
+	return json.Marshal(payload)
+}
+
+func (payload *dialogCreateResponse) Unpack(data []byte) error {
+	return json.Unmarshal(data, payload)
+}
