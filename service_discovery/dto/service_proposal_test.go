@@ -1,10 +1,10 @@
 package dto
 
 import (
-	"testing"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"github.com/mysterium/node/money"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 type TestServiceDefinition struct{}

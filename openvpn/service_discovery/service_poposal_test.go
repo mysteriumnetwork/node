@@ -1,13 +1,13 @@
 package service_discovery
 
 import (
-	"testing"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"github.com/stretchr/testify/assert"
 	"encoding/json"
-	dto_openvpn "github.com/mysterium/node/openvpn/service_discovery/dto"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/openvpn"
+	dto_openvpn "github.com/mysterium/node/openvpn/service_discovery/dto"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func init() {

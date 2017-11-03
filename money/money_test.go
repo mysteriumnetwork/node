@@ -1,8 +1,8 @@
 package money
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func Test_NewMoney(t *testing.T) {

@@ -2,9 +2,9 @@ package client_promise
 
 import (
 	dto "github.com/mysterium/node/client_promise/dto"
+	"github.com/mysterium/node/money"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/mysterium/node/money"
 )
 
 const CURRENCY_TOKEN = money.Currency("Token")
@@ -35,7 +35,7 @@ func Test_SignedPromise(t *testing.T) {
 	promise := dto.PromiseBody{}
 
 	signedPromise := dto.SignedPromise{
-		Promise: promise,
+		Promise:         promise,
 		IssuerSignature: "signature",
 	}
 

@@ -1,9 +1,9 @@
 package openvpn
 
 import (
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"encoding/json"
 	dto_openvpn "github.com/mysterium/node/openvpn/service_discovery/dto"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
 func Bootstrap() {
