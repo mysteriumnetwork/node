@@ -1,8 +1,8 @@
 package dto
 
 import (
-	"time"
 	"github.com/mysterium/node/money"
+	"time"
 )
 
 const PAYMENT_METHOD_PER_TIME = "PER_TIME"

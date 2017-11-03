@@ -1,9 +1,9 @@
 package openvpn
 
 import (
-	"time"
-	"os"
 	"math/rand"
+	"os"
+	"time"
 )
 
 var seededRand *rand.Rand = rand.New(

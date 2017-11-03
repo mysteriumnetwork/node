@@ -1,11 +1,11 @@
 package nats
 
 import (
-	"testing"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/openvpn"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func init() {

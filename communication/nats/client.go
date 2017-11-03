@@ -3,9 +3,9 @@ package nats
 import (
 	"fmt"
 	"github.com/mysterium/node/communication"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/nats-io/go-nats"
 	"time"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
 type clientNats struct {

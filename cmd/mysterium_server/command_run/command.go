@@ -2,16 +2,16 @@ package command_run
 
 import (
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/service_discovery"
 	"github.com/mysterium/node/server"
 	dto_server "github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"io"
 	"time"
-	"github.com/mysterium/node/openvpn/service_discovery"
-	"github.com/mysterium/node/communication/nats"
 )
 
 type CommandRun struct {
