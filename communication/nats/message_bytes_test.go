@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-func bytesMessagePacker(message []byte) communication.MessagePacker {
-	return communication.MessagePacker{
+func bytesMessagePacker(message []byte) *communication.MessagePacker {
+	return &communication.MessagePacker{
 		MessageType: "bytes-message",
 		Pack: func() ([]byte, error) {
 			return message, nil
@@ -17,10 +17,10 @@ func bytesMessagePacker(message []byte) communication.MessagePacker {
 	}
 }
 
-func bytesMessageUnpacker(listener func([]byte)) communication.MessageUnpacker {
+func bytesMessageUnpacker(listener func([]byte)) *communication.MessageUnpacker {
 	var message []byte
 
-	return communication.MessageUnpacker{
+	return &communication.MessageUnpacker{
 		MessageType: "bytes-message",
 		Unpack: func(data []byte) error {
 			message = data
@@ -48,7 +48,9 @@ func TestMessageBytesSend(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = sender.Send(bytesMessagePacker([]byte("123")))
+	err = sender.Send(
+		bytesMessagePacker([]byte("123")),
+	)
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageSent); err != nil {

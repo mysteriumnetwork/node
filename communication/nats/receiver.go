@@ -15,7 +15,7 @@ type receiverNats struct {
 	messageTopic string
 }
 
-func (receiver *receiverNats) Receive(unpacker communication.MessageUnpacker) error {
+func (receiver *receiverNats) Receive(unpacker *communication.MessageUnpacker) error {
 
 	messageHandler := func(msg *nats.Msg) {
 		err := unpacker.Unpack(msg.Data)

@@ -17,7 +17,7 @@ type senderNats struct {
 	messageTopic   string
 }
 
-func (sender *senderNats) Send(packer communication.MessagePacker) error {
+func (sender *senderNats) Send(packer *communication.MessagePacker) error {
 
 	messageData, err := packer.Pack()
 	if err != nil {
