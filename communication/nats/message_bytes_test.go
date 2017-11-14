@@ -8,6 +8,31 @@ import (
 	"testing"
 )
 
+func bytesMessagePacker(message []byte) communication.MessagePacker {
+	return communication.MessagePacker{
+		MessageType: "bytes-message",
+		Pack: func() ([]byte, error) {
+			return message, nil
+		},
+	}
+}
+
+func bytesMessageUnpacker(listener func([]byte)) communication.MessageUnpacker {
+	var message []byte
+
+	return communication.MessageUnpacker{
+		MessageType: "bytes-message",
+		Unpack: func(data []byte) error {
+			message = data
+			return nil
+		},
+		Invoke: func() error {
+			listener(message)
+			return nil
+		},
+	}
+}
+
 func TestMessageBytesSend(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
@@ -23,10 +48,7 @@ func TestMessageBytesSend(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = sender.Send(
-		communication.MessageType("bytes-message"),
-		communication.BytesPayload{[]byte("123")},
-	)
+	err = sender.Send2(bytesMessagePacker([]byte("123")))
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageSent); err != nil {
@@ -43,10 +65,9 @@ func TestMessageBytesReceive(t *testing.T) {
 	receiver := &receiverNats{connection: connection}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive(
-		communication.MessageType("bytes-message"),
-		communication.BytesListener(func(message *communication.BytesPayload) {
-			assert.Equal(t, "123", string(message.Data))
+	err := receiver.Receive2(
+		bytesMessageUnpacker(func(message []byte) {
+			assert.Equal(t, "123", string(message))
 			messageReceived <- true
 		}),
 	)
