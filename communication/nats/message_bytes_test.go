@@ -48,7 +48,7 @@ func TestMessageBytesSend(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = sender.Send2(bytesMessagePacker([]byte("123")))
+	err = sender.Send(bytesMessagePacker([]byte("123")))
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageSent); err != nil {
@@ -65,7 +65,7 @@ func TestMessageBytesReceive(t *testing.T) {
 	receiver := &receiverNats{connection: connection}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive2(
+	err := receiver.Receive(
 		bytesMessageUnpacker(func(message []byte) {
 			assert.Equal(t, "123", string(message))
 			messageReceived <- true

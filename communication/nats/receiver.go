@@ -15,32 +15,7 @@ type receiverNats struct {
 	messageTopic string
 }
 
-func (receiver *receiverNats) Receive(
-	messageType communication.MessageType,
-	messageUnpacker communication.MessageListener,
-) error {
-
-	messageHandler := func(msg *nats.Msg) {
-		err := messageUnpacker.Message.Unpack(msg.Data)
-		if err != nil {
-			err = fmt.Errorf("Failed to unpack message '%s'. %s", messageType, err)
-			log.Error(RECEIVER_LOG_PREFIX, err)
-			return
-		}
-
-		messageUnpacker.Invoke()
-	}
-
-	_, err := receiver.connection.Subscribe(receiver.messageTopic+string(messageType), messageHandler)
-	if err != nil {
-		err = fmt.Errorf("Failed subscribe message '%s'. %s", messageType, err)
-		return err
-	}
-
-	return nil
-}
-
-func (receiver *receiverNats) Receive2(unpacker communication.MessageUnpacker) error {
+func (receiver *receiverNats) Receive(unpacker communication.MessageUnpacker) error {
 
 	messageHandler := func(msg *nats.Msg) {
 		err := unpacker.Unpack(msg.Data)

@@ -52,7 +52,7 @@ func TestMessageCustomSend(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = sender.Send2(
+	err = sender.Send(
 		customMessagePacker(&customMessage{123}),
 	)
 	assert.Nil(t, err)
@@ -71,7 +71,7 @@ func TestMessageCustomReceive(t *testing.T) {
 	receiver := &receiverNats{connection: connection}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive2(
+	err := receiver.Receive(
 		customMessageUnpacker(func(message *customMessage) {
 			assert.Exactly(t, customMessage{123}, message)
 			messageReceived <- true

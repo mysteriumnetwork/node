@@ -17,31 +17,7 @@ type senderNats struct {
 	messageTopic   string
 }
 
-func (sender *senderNats) Send(
-	messageType communication.MessageType,
-	message communication.Packer,
-) error {
-
-	messageData, err := message.Pack()
-	if err != nil {
-		err = fmt.Errorf("Failed to pack message '%s'. %s", messageType, err)
-		return err
-	}
-
-	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Message '%s' sending: %s", messageType, messageData))
-	err = sender.connection.Publish(
-		sender.messageTopic+string(messageType),
-		messageData,
-	)
-	if err != nil {
-		err = fmt.Errorf("Failed to send message '%s'. %s", messageType, err)
-		return err
-	}
-
-	return nil
-}
-
-func (sender *senderNats) Send2(packer communication.MessagePacker) error {
+func (sender *senderNats) Send(packer communication.MessagePacker) error {
 
 	messageData, err := packer.Pack()
 	if err != nil {
