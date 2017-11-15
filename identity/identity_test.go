@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -24,4 +25,9 @@ func Test_SignVerify(t *testing.T) {
 	r, s, _ := Sign(privateKey, "message")
 	verified := Verify(privateKey.PublicKey, "message", r, s)
 	assert.True(t, verified)
+}
+
+func Test_EthNewAccount(t *testing.T) {
+	account := accounts.Account{}
+	t.Fatal(account)
 }

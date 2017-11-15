@@ -1,5 +1,5 @@
-hash: c2f8375b5664d8fb9aa6c5a2ab91d477f7bde5b756b88643ba54a3a0fdbba355
-updated: 2017-09-05T12:21:30.824855243+03:00
+hash: 9da7ed1117d9e69919641f37d28e8c93ae7fda25f5fb8f6ce263c8f231d067f9
+updated: 2017-11-15T16:34:58.170838+02:00
 imports:
 - name: github.com/cihub/seelog
   version: d2c6e5aa9fbfdd1c624e140287063c7730654115
@@ -11,15 +11,48 @@ imports:
 - name: github.com/nats-io/nuid
   version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
 testImports:
+- name: github.com/aristanetworks/goarista
+  version: d1195528dcb23ba20b6b77f38596720af652a572
+  subpackages:
+  - monotime
+- name: github.com/btcsuite/btcd
+  version: 8cea3866d0f7fb12d567a20744942c0d078c7d15
+  subpackages:
+  - btcec
 - name: github.com/davecgh/go-spew
   version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
   subpackages:
   - spew
+- name: github.com/ethereum/go-ethereum
+  version: 1db4ecdc0b9e828ff65777fb466fc7c1d04e0de9
+  subpackages:
+  - accounts
+  - common
+  - common/hexutil
+  - common/math
+  - common/mclock
+  - core/types
+  - crypto
+  - crypto/secp256k1
+  - crypto/sha3
+  - event
+  - log
+  - params
+  - rlp
+  - trie
+- name: github.com/go-stack/stack
+  version: 259ab82a6cad3992b4e21ff5cac294ccb06474bc
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
   - difflib
+- name: github.com/rcrowley/go-metrics
+  version: 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 - name: github.com/stretchr/testify
   version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   subpackages:
   - assert
+- name: gopkg.in/karalabe/cookiejar.v2
+  version: 8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57
+  subpackages:
+  - collections/prque
