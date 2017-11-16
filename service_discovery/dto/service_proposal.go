@@ -29,9 +29,6 @@ type ServiceProposal struct {
 
 	// Communication methods possible
 	ProviderContacts []Contact `json:"provider_contacts"`
-
-	// Connection string
-	ConnectionConfig string `json:"connection_config,omitempty"`
 }
 
 /**
@@ -129,7 +126,6 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 		ServiceDefinition *json.RawMessage `json:"service_definition"`
 		PaymentMethod     *json.RawMessage `json:"payment_method"`
 		ProviderContacts  *json.RawMessage `json:"provider_contacts"`
-		ConnectionConfig  string           `json:"connection_config"`
 	}
 	if err = json.Unmarshal(data, &jsonData); err != nil {
 		return
@@ -140,7 +136,6 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 	genericProposal.ServiceType = jsonData.ServiceType
 	genericProposal.ProviderId = Identity(jsonData.ProviderId)
 	genericProposal.PaymentMethodType = jsonData.PaymentMethodType
-	genericProposal.ConnectionConfig = jsonData.ConnectionConfig
 
 	// run the service definition implementation from our registry
 	genericProposal.ServiceDefinition, err = unserializeServiceDefinition(
