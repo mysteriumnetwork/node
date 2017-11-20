@@ -25,9 +25,8 @@ type CommandRun struct {
 	CommunicationServerFactory func(identity dto_discovery.Identity) communication.Server
 	communicationServer        communication.Server
 
-	vpnMiddlewares        []openvpn.ManagementMiddleware
-	vpnServer             *openvpn.Server
-	vpnClientConfigString string
+	vpnMiddlewares []openvpn.ManagementMiddleware
+	vpnServer      *openvpn.Server
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
