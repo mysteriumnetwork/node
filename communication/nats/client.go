@@ -40,19 +40,10 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		messageTopic:   contactTopic + ".",
 	}
 
-	var response dialogCreateResponse
-	err = sender.Request(
-		ENDPOINT_DIALOG_CREATE,
-		dialogCreateRequest{
-			IdentityId: client.myIdentity,
-		},
-		&response,
-	)
+	_, err = requestDialogCreate(sender, dialogCreateRequest{
+		IdentityId: client.myIdentity,
+	})
 	if err != nil {
-		return
-	}
-	if !response.Accepted {
-		err = fmt.Errorf("Dialog creation rejected: %s", response)
 		return
 	}
 
@@ -62,7 +53,7 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 	}
 
 	log.Info(CLIENT_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' created\n", contactTopic))
-	return
+	return sender, receiver, err
 }
 
 func (client *clientNats) Start() (err error) {

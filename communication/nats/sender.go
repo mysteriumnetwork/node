@@ -19,32 +19,30 @@ type senderNats struct {
 
 func (sender *senderNats) Send(packer *communication.MessagePacker) error {
 
+	messageType := packer.MessageType
 	messageData, err := packer.Pack()
 	if err != nil {
-		err = fmt.Errorf("Failed to pack messagePacker '%s'. %s", packer.MessageType, err)
+		err = fmt.Errorf("Failed to pack messagePacker '%s'. %s", messageType, err)
 		return err
 	}
 
-	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Message '%s' sending: %s", packer.MessageType, messageData))
+	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Message '%s' sending: %s", messageType, messageData))
 	err = sender.connection.Publish(
 		sender.messageTopic+packer.MessageType,
 		messageData,
 	)
 	if err != nil {
-		err = fmt.Errorf("Failed to send messagePacker '%s'. %s", packer.MessageType, err)
+		err = fmt.Errorf("Failed to send messagePacker '%s'. %s", messageType, err)
 		return err
 	}
 
 	return nil
 }
 
-func (sender *senderNats) Request(
-	requestType communication.RequestType,
-	request communication.Packer,
-	response communication.Unpacker,
-) error {
+func (sender *senderNats) Request(packer *communication.RequestPacker) error {
 
-	requestData, err := request.Pack()
+	requestType := string(packer.RequestType)
+	requestData, err := packer.RequestPack()
 	if err != nil {
 		err = fmt.Errorf("Failed to pack request '%s'. %s", requestType, err)
 		return err
@@ -52,7 +50,7 @@ func (sender *senderNats) Request(
 
 	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Request '%s' sending: %s", requestType, requestData))
 	msg, err := sender.connection.Request(
-		sender.messageTopic+string(requestType),
+		sender.messageTopic+string(packer.RequestType),
 		requestData,
 		sender.timeoutRequest,
 	)
@@ -64,7 +62,7 @@ func (sender *senderNats) Request(
 	responseData := msg.Data
 	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Received response for '%s': %s", requestType, responseData))
 
-	err = response.Unpack(responseData)
+	err = packer.ResponseUnpack(responseData)
 	if err != nil {
 		err = fmt.Errorf("Failed to unpack response '%s'. %s", requestType, err)
 		return err

@@ -9,6 +9,20 @@ import (
 	"time"
 )
 
+func requestBytes(sender communication.Sender, request []byte) (response []byte, err error) {
+	err = sender.Request(&communication.RequestPacker{
+		RequestType: "bytes-request",
+		RequestPack: func() ([]byte, error) {
+			return request, nil
+		},
+		ResponseUnpack: func(responseData []byte) error {
+			response = responseData
+			return nil
+		},
+	})
+	return response, err
+}
+
 func TestBytesRequest(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
@@ -28,14 +42,9 @@ func TestBytesRequest(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	var response communication.BytesPayload
-	err = sender.Request(
-		communication.RequestType("bytes-request"),
-		&communication.BytesPayload{[]byte("REQUEST")},
-		&response,
-	)
+	response, err := requestBytes(sender, []byte("REQUEST"))
 	assert.Nil(t, err)
-	assert.Equal(t, "RESPONSE", string(response.Data))
+	assert.Equal(t, "RESPONSE", string(response))
 
 	if err := test.Wait(requestSent); err != nil {
 		t.Fatal("Request not sent")

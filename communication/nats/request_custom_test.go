@@ -34,6 +34,19 @@ func (message *customResponse) Unpack(data []byte) error {
 	return json.Unmarshal(data, message)
 }
 
+func requestCustom(sender communication.Sender, request *customRequest) (response *customResponse, err error) {
+	err = sender.Request(&communication.RequestPacker{
+		RequestType: "custom-request",
+		RequestPack: func() ([]byte, error) {
+			return json.Marshal(request)
+		},
+		ResponseUnpack: func(responseData []byte) error {
+			return json.Unmarshal(responseData, &response)
+		},
+	})
+	return response, err
+}
+
 func TestCustomRequest(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
@@ -53,14 +66,9 @@ func TestCustomRequest(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	var response customResponse
-	err = sender.Request(
-		communication.RequestType("custom-request"),
-		customRequest{"REQUEST"},
-		&response,
-	)
+	response, err := requestCustom(sender, &customRequest{"REQUEST"})
 	assert.Nil(t, err)
-	assert.Exactly(t, customResponse{"RESPONSE"}, response)
+	assert.Exactly(t, &customResponse{"RESPONSE"}, response)
 
 	if err := test.Wait(requestSent); err != nil {
 		t.Fatal("Request not sent")
