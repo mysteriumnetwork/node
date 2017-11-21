@@ -1,11 +1,13 @@
 package session
 
 import (
-	sid "github.com/mysterium/node/session"
+	node_session "github.com/mysterium/node/session"
 )
 
+var manager node_session.Manager
+
 func NewVpnSession(config string) (session VpnSession, err error) {
-	id, err := sid.GenerateSessionId()
+	id, err := manager.Create()
 	if err != nil {
 		return VpnSession{}, err
 	}
