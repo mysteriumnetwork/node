@@ -45,21 +45,15 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	cmd.communicationServer = cmd.CommunicationServerFactory(providerId)
-	if err = cmd.communicationServer.ServeDialogs(cmd.handleDialog); err != nil {
-		return err
+	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
+		receiver.Respond(communication.GET_CONNECTION_CONFIG, func(request string) (response string) {
+			config, _ := buildVpnClientConfig(vpnServerIp, options.DirectoryConfig)
+			return config
+		})
 	}
 
-	vpnClientConfig := openvpn.NewClientConfig(
-		vpnServerIp,
-		options.DirectoryConfig+"/ca.crt",
-		options.DirectoryConfig+"/client.crt",
-		options.DirectoryConfig+"/client.key",
-		options.DirectoryConfig+"/ta.key",
-	)
-
-	vpnClientConfigString, err := openvpn.ConfigToString(*vpnClientConfig.Config)
-	if err != nil {
+	cmd.communicationServer = cmd.CommunicationServerFactory(providerId)
+	if err = cmd.communicationServer.ServeDialogs(handleDialog); err != nil {
 		return err
 	}
 
@@ -82,8 +76,6 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		nats.NewContact(providerId),
 	)
 
-	proposal.ConnectionConfig = vpnClientConfigString
-
 	if err := cmd.MysteriumClient.NodeRegister(proposal); err != nil {
 		return err
 	}
@@ -97,8 +89,18 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	return nil
 }
 
-func (cmd *CommandRun) handleDialog(sender communication.Sender, receiver communication.Receiver) {
+func buildVpnClientConfig(vpnIp string, dir string) (config string, err error) {
+	vpnClientConfig := openvpn.NewClientConfig(
+		vpnIp,
+		dir+"/ca.crt",
+		dir+"/client.crt",
+		dir+"/client.key",
+		dir+"/ta.key",
+	)
 
+	config, err = openvpn.ConfigToString(*vpnClientConfig.Config)
+
+	return
 }
 
 func (cmd *CommandRun) Wait() error {

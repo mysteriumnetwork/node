@@ -33,13 +33,18 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
 	proposal := session.ServiceProposal
-	_, _, err = cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0].Definition)
+	sender, _, err := cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0].Definition)
+	if err != nil {
+		return err
+	}
+
+	vpnConfigString, err := sender.Request(communication.GET_CONNECTION_CONFIG, "")
 	if err != nil {
 		return err
 	}
 
 	vpnConfig, err := openvpn.NewClientConfigFromString(
-		proposal.ConnectionConfig,
+		vpnConfigString,
 		options.DirectoryRuntime+"/client.ovpn",
 	)
 	if err != nil {
