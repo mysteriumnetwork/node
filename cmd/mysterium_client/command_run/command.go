@@ -8,6 +8,9 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"io"
 	"time"
+	"encoding/json"
+	vpn_session "github.com/mysterium/node/openvpn/session"
+	"fmt"
 )
 
 type CommandRun struct {
@@ -38,13 +41,21 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	vpnConfigString, err := sender.Request(communication.GET_CONNECTION_CONFIG, "")
+	vpnSessionJson, err := sender.Request(communication.SESSION_CREATE, string(proposal.Id))
 	if err != nil {
 		return err
 	}
 
+	vpnSession := vpn_session.VpnSession{}
+	err = json.Unmarshal([]byte(vpnSessionJson), &vpnSession)
+	if err != nil {
+		return err
+	}
+
+	session.Id = string(vpnSession.Id)
+
 	vpnConfig, err := openvpn.NewClientConfigFromString(
-		vpnConfigString,
+		vpnSession.Config,
 		options.DirectoryRuntime+"/client.ovpn",
 	)
 	if err != nil {

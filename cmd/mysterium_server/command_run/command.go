@@ -12,6 +12,8 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"io"
 	"time"
+	vpn_session "github.com/mysterium/node/openvpn/session"
+	"encoding/json"
 )
 
 type CommandRun struct {
@@ -46,9 +48,23 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 
 	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
-		receiver.Respond(communication.GET_CONNECTION_CONFIG, func(request string) (response string) {
-			config, _ := buildVpnClientConfig(vpnServerIp, options.DirectoryConfig)
-			return config
+		receiver.Respond(communication.SESSION_CREATE, func(proposalId string) (response string) {
+			config, err := buildVpnClientConfig(vpnServerIp, options.DirectoryConfig)
+			if err != nil {
+				return "Failed to create VPN config."
+			}
+
+			vpnSession, err := vpn_session.NewVpnSession(config)
+			if err != nil {
+				return "Failed to create session."
+			}
+
+			session, err := json.Marshal(vpnSession)
+			if err != nil {
+				return "Failed to serialize VPN session."
+			}
+
+			return string(session)
 		})
 	}
 
