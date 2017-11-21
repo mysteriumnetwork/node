@@ -10,7 +10,6 @@ import (
 	"time"
 	"encoding/json"
 	vpn_session "github.com/mysterium/node/openvpn/session"
-	"fmt"
 )
 
 type CommandRun struct {
@@ -46,8 +45,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	vpnSession := vpn_session.VpnSession{}
-	err = json.Unmarshal([]byte(vpnSessionJson), &vpnSession)
+	vpnSession, err := getVpnSession(vpnSessionJson)
 	if err != nil {
 		return err
 	}
@@ -85,4 +83,10 @@ func (cmd *CommandRun) Wait() error {
 func (cmd *CommandRun) Kill() {
 	cmd.communicationClient.Stop()
 	cmd.vpnClient.Stop()
+}
+
+func getVpnSession(sessionJson string) (session vpn_session.VpnSession, err error) {
+	err = json.Unmarshal([]byte(sessionJson), &session)
+
+	return
 }
