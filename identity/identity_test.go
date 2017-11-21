@@ -18,3 +18,12 @@ func Test_GetIdentities(t *testing.T) {
 		fmt.Println(id)
 	}
 }
+
+func Test_SignMessage(t *testing.T) {
+	ids := GetIdentities("testdata")
+	for _, id := range ids {
+		signature, err := SignMessage("testdata", id, "message to sign")
+		assert.NoError(t, err)
+		assert.Equal(t, len(signature), 65)
+	}
+}
