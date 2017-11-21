@@ -10,6 +10,9 @@ import (
 )
 
 func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
+	nats.Bootstrap()
+	openvpn.Bootstrap()
+
 	return &CommandRun{
 		Output:      os.Stdout,
 		OutputError: os.Stderr,

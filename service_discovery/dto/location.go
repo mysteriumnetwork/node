@@ -1,8 +1,8 @@
 package dto
 
 type Location struct {
-	Country string
-	City    string
+	Country string `json:"country,omitempty"`
+	City    string `json:"city,omitempty"`
 	// Autonomous System Number http://www.whatismyip.cx/
-	ASN string
+	ASN string `json:"asn,omitempty"`
 }

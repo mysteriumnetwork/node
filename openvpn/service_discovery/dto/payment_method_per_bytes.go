@@ -2,18 +2,18 @@ package dto
 
 import (
 	"github.com/mysterium/node/datasize"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/money"
 )
 
 const PAYMENT_METHOD_PER_BYTES = "PER_BYTES"
 
 type PaymentMethodPerBytes struct {
-	Price dto_discovery.Money
+	Price money.Money `json:"price"`
 
 	// Service bytes provided for paid price
-	Bytes datasize.BitSize
+	Bytes datasize.BitSize `json:"bytes,omitempty"`
 }
 
-func (method PaymentMethodPerBytes) GetPrice() dto_discovery.Money {
+func (method PaymentMethodPerBytes) GetPrice() money.Money {
 	return method.Price
 }

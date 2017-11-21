@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Automate retrieval of ASN (Autonomous System Number)
+#
+# Usage example:
+# Lookup ASN of current IP:
+#> bin/ip2asn
+#
+# Lookup ASN of given IP:
+#> bin/ip2asn 216.58.209.110
+
+IP=$1
+if [ -z "$IP" ]; then
+    IP=`curl -s "https://api.ipify.org/?format=text"`
+fi
+
+REVERSE_IP=`echo $IP | awk -F "." '{print $4"."$3"."$2"."$1}'`
+ASN_INFO=`dig +short $REVERSE_IP.origin.asn.cymru.com TXT`
+
+NUMBER=`echo $ASN_INFO | cut -d'|' -f 1 | cut -d'"' -f 2 | cut -d' ' -f 1`
+ASN="AS$NUMBER"
+
+echo $ASN

@@ -16,7 +16,7 @@ type clientNats struct {
 	connection *nats.Conn
 }
 
-func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (
+func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) (
 	sender communication.Sender,
 	receiver communication.Receiver,
 	err error,
@@ -63,13 +63,10 @@ func (client *clientNats) Stop() error {
 	return nil
 }
 
-func extractContactTopic(contact dto_discovery.Contact) (topic string, err error) {
-	if contact.Type != CONTACT_NATS_V1 {
-		return "", fmt.Errorf("Invalid contact type: %s", contact.Type)
-	}
-	contactNats, ok := contact.Definition.(ContactNATSV1)
+func extractContactTopic(contact dto_discovery.ContactDefinition) (topic string, err error) {
+	contactNats, ok := contact.(ContactNATSV1)
 	if !ok {
-		return "", fmt.Errorf("Invalid contact definition: %#v", contact.Definition)
+		return "", fmt.Errorf("Invalid contact definition: %#v", contact)
 	}
 
 	return contactNats.Topic, nil

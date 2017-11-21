@@ -1,10 +1,12 @@
 package dto
 
-import "github.com/mysterium/node/service_discovery/dto"
+import (
+	"github.com/mysterium/node/money"
+)
 
 type PromiseBody struct {
 	SerialNumber int
 	IssuerId     string
 	BenefiterId  string
-	Amount       dto.Money
+	Amount       money.Money
 }
