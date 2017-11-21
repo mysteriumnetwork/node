@@ -47,7 +47,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
 		receiver.Respond(communication.GET_CONNECTION_CONFIG, func(request string) (response string) {
-			return buildVpnClientConfig(vpnServerIp, options.DirectoryConfig)
+			config, _ := buildVpnClientConfig(vpnServerIp, options.DirectoryConfig)
+			return config
 		})
 	}
 
@@ -88,7 +89,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	return nil
 }
 
-func buildVpnClientConfig(vpnIp string, dir string) (string) {
+func buildVpnClientConfig(vpnIp string, dir string) (config string, err error) {
 	vpnClientConfig := openvpn.NewClientConfig(
 		vpnIp,
 		dir+"/ca.crt",
@@ -97,9 +98,9 @@ func buildVpnClientConfig(vpnIp string, dir string) (string) {
 		dir+"/ta.key",
 	)
 
-	config, _ := openvpn.ConfigToString(*vpnClientConfig.Config)
+	config, err = openvpn.ConfigToString(*vpnClientConfig.Config)
 
-	return config
+	return
 }
 
 func (cmd *CommandRun) Wait() error {
