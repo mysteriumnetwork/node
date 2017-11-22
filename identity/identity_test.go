@@ -23,6 +23,11 @@ func Test_GetIdentities(t *testing.T) {
 	}
 }
 
+func Test_IdentityExists(t *testing.T) {
+	manager := NewIdentityManager("testdata")
+	assert.Equal(t, manager.IdentityExists(), len(manager.GetIdentities()) > 0)
+}
+
 func Test_SignMessage(t *testing.T) {
 	manager := NewIdentityManager("testdata")
 	ids := manager.GetIdentities()

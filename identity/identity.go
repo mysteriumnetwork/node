@@ -37,6 +37,10 @@ func (idm *IdentityManager) GetIdentities() []string {
 	return ids
 }
 
+func (idm *IdentityManager) IdentityExists() (bool) {
+	return len(idm.keystoreManager.Accounts()) > 0
+}
+
 // signHash is a helper function that calculates a hash for the given message that can be
 // safely used to calculate a signature from.
 //
