@@ -5,7 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestManagerHasUniqueSessionsStored(t *testing.T) {
+func TestManagerHasSessionsStored(t *testing.T) {
 	manager := Manager{}
 	length := 10
 

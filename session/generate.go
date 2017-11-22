@@ -1,24 +1,13 @@
 package session
 
 import (
-	"crypto/rand"
-	"encoding/hex"
+	"github.com/satori/go.uuid"
 )
 
 type SessionId string
 
-func GenerateSessionId() (sid SessionId, err error) {
-	b, err := generateRandomBytes(16)
+func GenerateSessionId() (sid SessionId) {
+	sid = SessionId(uuid.NewV4().String())
 
-	return SessionId(hex.EncodeToString(b)), err
-}
-
-func generateRandomBytes(n int) ([]byte, error) {
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
+	return
 }

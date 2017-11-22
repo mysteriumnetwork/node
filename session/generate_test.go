@@ -6,7 +6,7 @@ import (
 )
 
 func TestSessionIdLength(t *testing.T) {
-	sid, _ := GenerateSessionId()
+	sid := GenerateSessionId()
 
-	assert.Len(t, sid, 32)
+	assert.Len(t, sid, 36)
 }

@@ -6,16 +6,13 @@ import (
 
 var manager node_session.Manager
 
-func NewVpnSession(config string) (session VpnSession, err error) {
-	id, err := manager.Create()
-	if err != nil {
-		return VpnSession{}, err
-	}
+func NewVpnSession(config string) (session VpnSession) {
+	id := manager.Create()
 
-	vpnSession := VpnSession{
+	session = VpnSession{
 		Id:     id,
 		Config: config,
 	}
 
-	return vpnSession, nil
+	return
 }

@@ -54,7 +54,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 				return "Failed to create VPN config."
 			}
 
-			vpnSession, err := vpn_session.NewVpnSession(config)
+			vpnSession := vpn_session.NewVpnSession(config)
 			if err != nil {
 				return "Failed to create session."
 			}

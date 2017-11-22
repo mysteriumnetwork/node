@@ -40,17 +40,10 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	vpnSessionJson, err := sender.Request(communication.SESSION_CREATE, string(proposal.Id))
+	vpnSession, err := getVpnSession(sender, string(proposal.Id))
 	if err != nil {
 		return err
 	}
-
-	vpnSession, err := getVpnSession(vpnSessionJson)
-	if err != nil {
-		return err
-	}
-
-	session.Id = string(vpnSession.Id)
 
 	vpnConfig, err := openvpn.NewClientConfigFromString(
 		vpnSession.Config,
@@ -85,7 +78,12 @@ func (cmd *CommandRun) Kill() {
 	cmd.vpnClient.Stop()
 }
 
-func getVpnSession(sessionJson string) (session vpn_session.VpnSession, err error) {
+func getVpnSession(sender communication.Sender, proposalId string) (session vpn_session.VpnSession, err error) {
+	sessionJson, err := sender.Request(communication.SESSION_CREATE, proposalId)
+	if err != nil {
+		return
+	}
+
 	err = json.Unmarshal([]byte(sessionJson), &session)
 
 	return
