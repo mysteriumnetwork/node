@@ -8,9 +8,11 @@ import (
 	"fmt"
 )
 
+const PASSPHRASE = ""
+
 func CreateNewIdentity(path string) (string, error) {
 	keystoreManager := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
-	account, err := keystoreManager.NewAccount("")
+	account, err := keystoreManager.NewAccount(PASSPHRASE)
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +52,7 @@ func SignMessage(path string, identity string, message string) ([]byte, error) {
 		return nil, err
 	}
 
-	err = keystoreManager.Unlock(account, "")
+	err = keystoreManager.Unlock(account, PASSPHRASE)
 	if err != nil {
 		return nil, err
 	}
