@@ -29,7 +29,7 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		messageTopic: server.myTopic + ".",
 	}
 
-	createDialog := newRequestHandler(func(request *dialogCreateRequest) *dialogCreateResponse {
+	createDialog := func(request *dialogCreateRequest) *dialogCreateResponse {
 		sender := &senderNats{
 			connection:     server.connection,
 			messageTopic:   string(request.IdentityId),
@@ -41,9 +41,9 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		return &dialogCreateResponse{
 			Accepted: true,
 		}
-	})
+	}
 
-	subscribeError := receiver.Respond(ENDPOINT_DIALOG_CREATE, createDialog)
+	subscribeError := respondDialogCreate(receiver, createDialog)
 	return subscribeError
 }
 
@@ -55,15 +55,4 @@ func (server *serverNats) Start() (err error) {
 func (server *serverNats) Stop() error {
 	server.connection.Close()
 	return nil
-}
-
-func newRequestHandler(callback func(request *dialogCreateRequest) *dialogCreateResponse) communication.RequestHandler {
-	var request dialogCreateRequest
-
-	return communication.RequestHandler{
-		Request: &request,
-		Invoke: func() communication.Packer {
-			return callback(&request)
-		},
-	}
 }

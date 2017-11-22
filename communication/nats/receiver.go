@@ -17,50 +17,54 @@ type receiverNats struct {
 
 func (receiver *receiverNats) Receive(unpacker *communication.MessageUnpacker) error {
 
+	messageType := unpacker.MessageType
 	messageHandler := func(msg *nats.Msg) {
 		err := unpacker.Unpack(msg.Data)
 		if err != nil {
-			err = fmt.Errorf("Failed to unpack message '%s'. %s", unpacker.MessageType, err)
+			err = fmt.Errorf("Failed to unpack message '%s'. %s", messageType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
 			return
 		}
 
 		err = unpacker.Invoke()
 		if err != nil {
-			err = fmt.Errorf("Failed to process message '%s'. %s", unpacker.MessageType, err)
+			err = fmt.Errorf("Failed to process message '%s'. %s", messageType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
 			return
 		}
 	}
 
-	_, err := receiver.connection.Subscribe(receiver.messageTopic+unpacker.MessageType, messageHandler)
+	_, err := receiver.connection.Subscribe(receiver.messageTopic+messageType, messageHandler)
 	if err != nil {
-		err = fmt.Errorf("Failed subscribe message '%s'. %s", unpacker.MessageType, err)
+		err = fmt.Errorf("Failed subscribe message '%s'. %s", messageType, err)
 		return err
 	}
 
 	return nil
 }
 
-func (receiver *receiverNats) Respond(
-	requestType communication.RequestType,
-	handler communication.RequestHandler,
-) error {
+func (receiver *receiverNats) Respond(unpacker *communication.RequestUnpacker) error {
 
+	requestType := string(unpacker.RequestType)
 	messageHandler := func(msg *nats.Msg) {
 		requestData := msg.Data
 		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' received: %s", requestType, requestData))
 
-		err := handler.Request.Unpack(requestData)
+		err := unpacker.RequestUnpack(requestData)
 		if err != nil {
 			err = fmt.Errorf("Failed to unpack request '%s'. %s", requestType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
 			return
 		}
 
-		response := handler.Invoke()
+		err = unpacker.Invoke()
+		if err != nil {
+			err = fmt.Errorf("Failed to process request '%s'. %s", requestType, err)
+			log.Error(RECEIVER_LOG_PREFIX, err)
+			return
+		}
 
-		responseData, err := response.Pack()
+		responseData, err := unpacker.ResponsePack()
 		if err != nil {
 			err = fmt.Errorf("Failed to pack response '%s'. %s", requestType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
@@ -77,7 +81,7 @@ func (receiver *receiverNats) Respond(
 		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' response: %s", requestType, responseData))
 	}
 
-	_, err := receiver.connection.Subscribe(receiver.messageTopic+string(requestType), messageHandler)
+	_, err := receiver.connection.Subscribe(receiver.messageTopic+requestType, messageHandler)
 	if err != nil {
 		err = fmt.Errorf("Failed subscribe request '%s'. %s", requestType, err)
 		return err

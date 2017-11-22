@@ -12,3 +12,10 @@ type RequestPacker struct {
 	RequestPack    func() ([]byte, error)
 	ResponseUnpack func([]byte) error
 }
+
+type RequestUnpacker struct {
+	RequestType   RequestType
+	Invoke        func() error
+	RequestUnpack func([]byte) error
+	ResponsePack  func() ([]byte, error)
+}

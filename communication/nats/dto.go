@@ -27,26 +27,29 @@ func requestDialogCreate(sender communication.Sender, request dialogCreateReques
 	return response, err
 }
 
+func respondDialogCreate(receiver communication.Receiver, callback func(request *dialogCreateRequest) *dialogCreateResponse) error {
+	var request *dialogCreateRequest
+	var response *dialogCreateResponse
+
+	return receiver.Respond(&communication.RequestUnpacker{
+		RequestType: ENDPOINT_DIALOG_CREATE,
+		RequestUnpack: func(requestData []byte) error {
+			return json.Unmarshal(requestData, &request)
+		},
+		ResponsePack: func() ([]byte, error) {
+			return json.Marshal(response)
+		},
+		Invoke: func() error {
+			response = callback(request)
+			return nil
+		},
+	})
+}
+
 type dialogCreateRequest struct {
 	IdentityId dto.Identity `json:"identity_id"`
 }
 
-func (payload dialogCreateRequest) Pack() ([]byte, error) {
-	return json.Marshal(payload)
-}
-
-func (payload *dialogCreateRequest) Unpack(data []byte) error {
-	return json.Unmarshal(data, payload)
-}
-
 type dialogCreateResponse struct {
 	Accepted bool `json:"accepted"`
-}
-
-func (payload dialogCreateResponse) Pack() ([]byte, error) {
-	return json.Marshal(payload)
-}
-
-func (payload *dialogCreateResponse) Unpack(data []byte) error {
-	return json.Unmarshal(data, payload)
 }

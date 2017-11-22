@@ -51,6 +51,26 @@ func TestBytesRequest(t *testing.T) {
 	}
 }
 
+func respondBytes(receiver communication.Receiver, callback func([]byte) []byte) error {
+	var request []byte
+	var response []byte
+
+	return receiver.Respond(&communication.RequestUnpacker{
+		RequestType: "bytes-response",
+		RequestUnpack: func(requestData []byte) error {
+			request = requestData
+			return nil
+		},
+		ResponsePack: func() ([]byte, error) {
+			return response, nil
+		},
+		Invoke: func() error {
+			response = callback(request)
+			return nil
+		},
+	})
+}
+
 func TestBytesRespond(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
@@ -60,14 +80,11 @@ func TestBytesRespond(t *testing.T) {
 	receiver := &receiverNats{connection: connection}
 
 	requestReceived := make(chan bool)
-	err := receiver.Respond(
-		communication.RequestType("bytes-response"),
-		communication.BytesHandler(func(request *communication.BytesPayload) *communication.BytesPayload {
-			assert.Equal(t, "REQUEST", string(request.Data))
-			requestReceived <- true
-			return &communication.BytesPayload{[]byte("RESPONSE")}
-		}),
-	)
+	err := respondBytes(receiver, func(request []byte) []byte {
+		assert.Equal(t, "REQUEST", string(request))
+		requestReceived <- true
+		return []byte("RESPONSE")
+	})
 	assert.Nil(t, err)
 
 	err = connection.PublishRequest("bytes-response", "bytes-reply", []byte("REQUEST"))

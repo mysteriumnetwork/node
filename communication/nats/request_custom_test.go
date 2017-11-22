@@ -14,24 +14,8 @@ type customRequest struct {
 	FieldIn string
 }
 
-func (message customRequest) Pack() ([]byte, error) {
-	return json.Marshal(message)
-}
-
-func (message *customRequest) Unpack(data []byte) error {
-	return json.Unmarshal(data, message)
-}
-
 type customResponse struct {
 	FieldOut string
-}
-
-func (message customResponse) Pack() ([]byte, error) {
-	return json.Marshal(message)
-}
-
-func (message *customResponse) Unpack(data []byte) error {
-	return json.Unmarshal(data, message)
 }
 
 func requestCustom(sender communication.Sender, request *customRequest) (response *customResponse, err error) {
@@ -75,15 +59,23 @@ func TestCustomRequest(t *testing.T) {
 	}
 }
 
-func customRequestHandler(callback func(*customRequest) *customResponse) communication.RequestHandler {
-	var request customRequest
+func respondCustom(receiver communication.Receiver, callback func(request *customRequest) *customResponse) error {
+	var request *customRequest
+	var response *customResponse
 
-	return communication.RequestHandler{
-		Request: &request,
-		Invoke: func() communication.Packer {
-			return callback(&request)
+	return receiver.Respond(&communication.RequestUnpacker{
+		RequestType: "custom-response",
+		RequestUnpack: func(requestData []byte) error {
+			return json.Unmarshal(requestData, &request)
 		},
-	}
+		ResponsePack: func() ([]byte, error) {
+			return json.Marshal(response)
+		},
+		Invoke: func() error {
+			response = callback(request)
+			return nil
+		},
+	})
 }
 
 func TestCustomRespond(t *testing.T) {
@@ -95,14 +87,11 @@ func TestCustomRespond(t *testing.T) {
 	receiver := &receiverNats{connection: connection}
 
 	requestReceived := make(chan bool)
-	err := receiver.Respond(
-		communication.RequestType("custom-response"),
-		customRequestHandler(func(request *customRequest) *customResponse {
-			assert.Equal(t, &customRequest{"REQUEST"}, request)
-			requestReceived <- true
-			return &customResponse{"RESPONSE"}
-		}),
-	)
+	err := respondCustom(receiver, func(request *customRequest) *customResponse {
+		assert.Equal(t, &customRequest{"REQUEST"}, request)
+		requestReceived <- true
+		return &customResponse{"RESPONSE"}
+	})
 	assert.Nil(t, err)
 
 	err = connection.PublishRequest("custom-response", "custom-reply", []byte(`{"FieldIn": "REQUEST"}`))
