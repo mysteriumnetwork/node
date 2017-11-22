@@ -10,8 +10,8 @@ import (
 
 const PASSPHRASE = ""
 
-func CreateNewIdentity(path string) (string, error) {
-	keystoreManager := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
+func CreateNewIdentity(keydir string) (string, error) {
+	keystoreManager := keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	account, err := keystoreManager.NewAccount(PASSPHRASE)
 	if err != nil {
 		return "", err
@@ -20,8 +20,8 @@ func CreateNewIdentity(path string) (string, error) {
 	return account.Address.Hex(), nil
 }
 
-func GetIdentities(path string) []string {
-	keystoreManager := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
+func GetIdentities(keydir string) []string {
+	keystoreManager := keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	var ids []string
 	for _, account := range keystoreManager.Accounts() {
 		ids = append(ids, account.Address.Hex())
@@ -41,8 +41,8 @@ func signHash(data []byte) []byte {
 	return crypto.Keccak256([]byte(msg))
 }
 
-func SignMessage(path string, identity string, message string) ([]byte, error) {
-	keystoreManager := keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
+func SignMessage(keydir string, identity string, message string) ([]byte, error) {
+	keystoreManager := keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP)
 	accountExisting := accounts.Account{
 		Address: common.HexToAddress(identity),
 	}
