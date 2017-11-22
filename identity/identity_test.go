@@ -2,33 +2,36 @@ package identity
 
 import (
 	"testing"
-	"fmt"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/ethereum/go-ethereum/crypto"
+	"fmt"
 )
 
 func Test_CreateNewIdentity(t *testing.T) {
-	id, err := CreateNewIdentity("testdata")
+	manager := NewIdentityManager("testdata")
+	id, err := manager.CreateNewIdentity()
 	assert.NoError(t, err)
 	assert.Equal(t, len(id), 42)
 }
 
 func Test_GetIdentities(t *testing.T) {
-	ids := GetIdentities("testdata")
+	manager := NewIdentityManager("testdata")
+	ids := manager.GetIdentities()
 	for _, id := range ids {
 		fmt.Println(id)
 	}
 }
 
 func Test_SignMessage(t *testing.T) {
-	ids := GetIdentities("testdata")
+	manager := NewIdentityManager("testdata")
+	ids := manager.GetIdentities()
 	for _, id := range ids {
-		signature, err := SignMessage("testdata", id, "message to sign")
+		signature, err := manager.SignMessage(id, "message to sign")
 		assert.NoError(t, err)
 		assert.Equal(t, len(signature), 65)
 	}
 }
-
 func Test_SignVerifyMessage(t *testing.T) {
 
 	key, err := crypto.GenerateKey()

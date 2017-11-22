@@ -10,9 +10,18 @@ import (
 
 const PASSPHRASE = ""
 
-func CreateNewIdentity(keydir string) (string, error) {
-	keystoreManager := keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	account, err := keystoreManager.NewAccount(PASSPHRASE)
+type IdentityManager struct {
+	keystoreManager *keystore.KeyStore
+}
+
+func NewIdentityManager(keydir string) *IdentityManager {
+	return &IdentityManager{
+		keystoreManager: keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP),
+	}
+}
+
+func (idm *IdentityManager) CreateNewIdentity() (string, error) {
+	account, err := idm.keystoreManager.NewAccount(PASSPHRASE)
 	if err != nil {
 		return "", err
 	}
@@ -20,10 +29,9 @@ func CreateNewIdentity(keydir string) (string, error) {
 	return account.Address.Hex(), nil
 }
 
-func GetIdentities(keydir string) []string {
-	keystoreManager := keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+func (idm *IdentityManager) GetIdentities() []string {
 	var ids []string
-	for _, account := range keystoreManager.Accounts() {
+	for _, account := range idm.keystoreManager.Accounts() {
 		ids = append(ids, account.Address.Hex())
 	}
 	return ids
@@ -41,23 +49,22 @@ func signHash(data []byte) []byte {
 	return crypto.Keccak256([]byte(msg))
 }
 
-func SignMessage(keydir string, identity string, message string) ([]byte, error) {
-	keystoreManager := keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+func (idm *IdentityManager) SignMessage(identity string, message string) ([]byte, error) {
 	accountExisting := accounts.Account{
 		Address: common.HexToAddress(identity),
 	}
 
-	account, err := keystoreManager.Find(accountExisting)
+	account, err := idm.keystoreManager.Find(accountExisting)
 	if err != nil {
 		return nil, err
 	}
 
-	err = keystoreManager.Unlock(account, PASSPHRASE)
+	err =  idm.keystoreManager.Unlock(account, PASSPHRASE)
 	if err != nil {
 		return nil, err
 	}
 
-	signature, err := keystoreManager.SignHash(account, signHash([]byte(message)))
+	signature, err :=  idm.keystoreManager.SignHash(account, signHash([]byte(message)))
 	if err != nil {
 		return nil, err
 	}
