@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"fmt"
 	"github.com/mysterium/node/service_discovery/dto"
+	"strings"
 )
 
 const PASSPHRASE = ""
@@ -50,8 +51,9 @@ func (idm *IdentityManager) GetIdentities() []dto.Identity {
 }
 
 func (idm *IdentityManager) GetIdentity(identityString string) *dto.Identity {
+	identityString = strings.ToLower(identityString)
 	for _, id := range idm.GetIdentities() {
-		if string(id) == identityString {
+		if strings.ToLower(string(id)) == identityString {
 			return &id
 		}
 	}
