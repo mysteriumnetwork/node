@@ -23,9 +23,28 @@ func Test_GetIdentities(t *testing.T) {
 	}
 }
 
-func Test_IdentityExists(t *testing.T) {
+func Test_GetIdentity(t *testing.T) {
 	manager := NewIdentityManager("testdata")
-	assert.Equal(t, manager.IdentityExists(), len(manager.GetIdentities()) > 0)
+	ids := manager.GetIdentities()
+	for _, id := range ids {
+		identity := manager.GetIdentity(string(id))
+		assert.NotNil(t, identity)
+		assert.Equal(t, id, *identity)
+	}
+
+	identity := manager.GetIdentity("")
+	assert.Nil(t, identity)
+}
+
+func Test_HasIdentity(t *testing.T) {
+	manager := NewIdentityManager("testdata")
+	ids := manager.GetIdentities()
+	for _, id := range ids {
+		assert.True(t, manager.HasIdentity(string(id)))
+	}
+
+	identity := manager.HasIdentity("")
+	assert.False(t, identity)
 }
 
 func Test_SignMessage(t *testing.T) {

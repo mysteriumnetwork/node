@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"fmt"
+	"github.com/mysterium/node/service_discovery/dto"
 )
 
 const PASSPHRASE = ""
@@ -20,25 +21,46 @@ func NewIdentityManager(keydir string) *IdentityManager {
 	}
 }
 
-func (idm *IdentityManager) CreateNewIdentity() (string, error) {
+func accountToIdentity(account accounts.Account) dto.Identity {
+	return dto.Identity(account.Address.Hex())
+}
+
+func identityToAccount(identityString string) accounts.Account {
+	return accounts.Account{
+		Address: common.HexToAddress(identityString),
+	}
+}
+
+func (idm *IdentityManager) CreateNewIdentity() (dto.Identity, error) {
 	account, err := idm.keystoreManager.NewAccount(PASSPHRASE)
 	if err != nil {
 		return "", err
 	}
 
-	return account.Address.Hex(), nil
+	return accountToIdentity(account), nil
 }
 
-func (idm *IdentityManager) GetIdentities() []string {
-	var ids []string
+func (idm *IdentityManager) GetIdentities() []dto.Identity {
+	var ids []dto.Identity
 	for _, account := range idm.keystoreManager.Accounts() {
-		ids = append(ids, account.Address.Hex())
+		ids = append(ids, accountToIdentity(account))
 	}
+
 	return ids
 }
 
-func (idm *IdentityManager) IdentityExists() (bool) {
-	return len(idm.keystoreManager.Accounts()) > 0
+func (idm *IdentityManager) GetIdentity(identityString string) *dto.Identity {
+	for _, id := range idm.GetIdentities() {
+		if string(id) == identityString {
+			return &id
+		}
+	}
+
+	return nil
+}
+
+func (idm *IdentityManager) HasIdentity(identityString string) bool {
+	return idm.GetIdentity(identityString)!= nil
 }
 
 // signHash is a helper function that calculates a hash for the given message that can be
@@ -53,17 +75,9 @@ func signHash(data []byte) []byte {
 	return crypto.Keccak256([]byte(msg))
 }
 
-func (idm *IdentityManager) SignMessage(identity string, message string) ([]byte, error) {
-	accountExisting := accounts.Account{
-		Address: common.HexToAddress(identity),
-	}
-
-	account, err := idm.keystoreManager.Find(accountExisting)
-	if err != nil {
-		return nil, err
-	}
-
-	err =  idm.keystoreManager.Unlock(account, PASSPHRASE)
+func (idm *IdentityManager) SignMessage(identity dto.Identity, message string) ([]byte, error) {
+	account := identityToAccount(string(identity))
+	err :=  idm.keystoreManager.Unlock(account, PASSPHRASE)
 	if err != nil {
 		return nil, err
 	}
