@@ -13,6 +13,10 @@ func (payload *StringPayload) Unpack(data []byte) error {
 	return nil
 }
 
+func StringPacker(data string) *StringPayload {
+	return &StringPayload{data}
+}
+
 func StringListener(listener func(*StringPayload)) MessageListener {
 	var message StringPayload
 

@@ -17,6 +17,10 @@ func (payload *JsonPayload) Unpack(data []byte) error {
 	return json.Unmarshal(data, payload.Model)
 }
 
+func JsonPacker(model interface{}) *JsonPayload {
+	return &JsonPayload{model}
+}
+
 func JsonListener(listener interface{}) MessageListener {
 	listenerValue := reflect.ValueOf(listener)
 	listenerType := parseCallbackType(listener)

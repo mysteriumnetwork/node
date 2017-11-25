@@ -6,7 +6,7 @@ import (
 )
 
 func TestStringPack(t *testing.T) {
-	packer := StringPayload{"123"}
+	packer := StringPacker("123")
 	data, err := packer.Pack()
 
 	assert.NoError(t, err)

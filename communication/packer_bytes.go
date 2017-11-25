@@ -13,6 +13,10 @@ func (payload *BytesPayload) Unpack(data []byte) error {
 	return nil
 }
 
+func BytesPacker(data []byte) *BytesPayload {
+	return &BytesPayload{data}
+}
+
 func BytesListener(callback func(*BytesPayload)) MessageListener {
 	var message BytesPayload
 

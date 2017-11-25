@@ -10,9 +10,7 @@ type customMessage struct {
 }
 
 func TestJsonPack(t *testing.T) {
-	packer := JsonPayload{
-		customMessage{Field: 123},
-	}
+	packer := JsonPacker(&customMessage{Field: 123})
 	data, err := packer.Pack()
 
 	assert.NoError(t, err)

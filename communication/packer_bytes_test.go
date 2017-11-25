@@ -6,7 +6,7 @@ import (
 )
 
 func TestBytesPack(t *testing.T) {
-	packer := BytesPayload{[]byte("123")}
+	packer := BytesPacker([]byte("123"))
 	data, err := packer.Pack()
 
 	assert.NoError(t, err)
