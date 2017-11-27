@@ -11,8 +11,9 @@ import (
 func Test_CreateNewIdentity(t *testing.T) {
 	manager := NewIdentityManager("testdata")
 	id, err := manager.CreateNewIdentity()
+
 	assert.NoError(t, err)
-	assert.Len(t, id, 42)
+	assert.Len(t, *id, 42)
 }
 
 func Test_GetIdentities(t *testing.T) {

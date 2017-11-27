@@ -12,18 +12,19 @@ import (
 
 const PASSPHRASE = ""
 
-type IdentityManager struct {
+type identityManager struct {
 	keystoreManager *keystore.KeyStore
 }
 
-func NewIdentityManager(keydir string) *IdentityManager {
-	return &IdentityManager{
+func NewIdentityManager(keydir string) *identityManager {
+	return &identityManager{
 		keystoreManager: keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP),
 	}
 }
 
-func accountToIdentity(account accounts.Account) dto.Identity {
-	return dto.Identity(account.Address.Hex())
+func accountToIdentity(account accounts.Account) *dto.Identity {
+	identity := dto.Identity(account.Address.Hex())
+	return &identity
 }
 
 func identityToAccount(identityString string) accounts.Account {
@@ -32,25 +33,27 @@ func identityToAccount(identityString string) accounts.Account {
 	}
 }
 
-func (idm *IdentityManager) CreateNewIdentity() (dto.Identity, error) {
+func (idm *identityManager) CreateNewIdentity() (*dto.Identity, error) {
 	account, err := idm.keystoreManager.NewAccount(PASSPHRASE)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return accountToIdentity(account), nil
 }
 
-func (idm *IdentityManager) GetIdentities() []dto.Identity {
-	var ids []dto.Identity
-	for _, account := range idm.keystoreManager.Accounts() {
-		ids = append(ids, accountToIdentity(account))
+func (idm *identityManager) GetIdentities() []dto.Identity {
+	accountList := idm.keystoreManager.Accounts()
+
+	var ids = make([]dto.Identity, len(accountList))
+	for i, account := range accountList {
+		ids[i] = *accountToIdentity(account)
 	}
 
 	return ids
 }
 
-func (idm *IdentityManager) GetIdentity(identityString string) *dto.Identity {
+func (idm *identityManager) GetIdentity(identityString string) *dto.Identity {
 	identityString = strings.ToLower(identityString)
 	for _, id := range idm.GetIdentities() {
 		if strings.ToLower(string(id)) == identityString {
@@ -61,7 +64,7 @@ func (idm *IdentityManager) GetIdentity(identityString string) *dto.Identity {
 	return nil
 }
 
-func (idm *IdentityManager) HasIdentity(identityString string) bool {
+func (idm *identityManager) HasIdentity(identityString string) bool {
 	return idm.GetIdentity(identityString)!= nil
 }
 
@@ -77,7 +80,7 @@ func signHash(data []byte) []byte {
 	return crypto.Keccak256([]byte(msg))
 }
 
-func (idm *IdentityManager) SignMessage(identity dto.Identity, message string) ([]byte, error) {
+func (idm *identityManager) SignMessage(identity dto.Identity, message string) ([]byte, error) {
 	account := identityToAccount(string(identity))
 	err :=  idm.keystoreManager.Unlock(account, PASSPHRASE)
 	if err != nil {
