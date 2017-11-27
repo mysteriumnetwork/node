@@ -9,5 +9,4 @@ type GeneratorInterface interface {
 type ManagerInterface interface {
 	Create() SessionId
 	Add(SessionId)
-	Get(SessionId) SessionId
 }

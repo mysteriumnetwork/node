@@ -15,13 +15,3 @@ func (manager *Manager) Create() SessionId {
 
 	return id
 }
-
-func (manager *Manager) Get(sid SessionId) (sessionId SessionId) {
-	for i := range manager.sessions {
-		if manager.sessions[i] == sid {
-			return manager.sessions[i]
-		}
-	}
-
-	return
-}
