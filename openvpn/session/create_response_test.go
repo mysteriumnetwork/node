@@ -11,17 +11,17 @@ var sessionManager = session.Manager{
 	Generator: &session.GeneratorMock{},
 }
 
-func TestHandler_UnknownProposal(t *testing.T) {
-	handler := CreateResponseHandler{
-		ProposalId:     101,
-		SessionManager: &sessionManager,
-		ClientConfigFactory: func() *openvpn.ClientConfig {
-			config := &openvpn.ClientConfig{&openvpn.Config{}}
-			config.SetPort(1001)
-			return config
-		},
-	}
+var handler = CreateResponseHandler{
+	ProposalId:     101,
+	SessionManager: &sessionManager,
+	ClientConfigFactory: func() *openvpn.ClientConfig {
+		config := &openvpn.ClientConfig{&openvpn.Config{}}
+		config.SetPort(1001)
+		return config
+	},
+}
 
+func TestHandler_UnknownProposal(t *testing.T) {
 	sessionResponse := handler.Handle("100")
 	assert.JSONEq(
 		t,
@@ -38,16 +38,6 @@ func TestHandler_UnknownProposal(t *testing.T) {
 }
 
 func TestHandler_InvalidProposalId(t *testing.T) {
-	handler := CreateResponseHandler{
-		ProposalId:     101,
-		SessionManager: &sessionManager,
-		ClientConfigFactory: func() *openvpn.ClientConfig {
-			config := &openvpn.ClientConfig{&openvpn.Config{}}
-			config.SetPort(1001)
-			return config
-		},
-	}
-
 	sessionResponse := handler.Handle("abc")
 	assert.JSONEq(
 		t,
@@ -64,16 +54,6 @@ func TestHandler_InvalidProposalId(t *testing.T) {
 }
 
 func TestHandler_Success(t *testing.T) {
-	handler := CreateResponseHandler{
-		ProposalId:     101,
-		SessionManager: &sessionManager,
-		ClientConfigFactory: func() *openvpn.ClientConfig {
-			config := &openvpn.ClientConfig{&openvpn.Config{}}
-			config.SetPort(1001)
-			return config
-		},
-	}
-
 	sessionResponse := handler.Handle("101")
 	assert.JSONEq(
 		t,
