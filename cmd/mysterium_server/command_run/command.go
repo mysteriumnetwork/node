@@ -7,13 +7,13 @@ import (
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/service_discovery"
+	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	dto_server "github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/session"
 	"io"
 	"time"
-	vpn_session "github.com/mysterium/node/openvpn/session"
-	"encoding/json"
 )
 
 type CommandRun struct {
@@ -47,25 +47,28 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
+	proposal := service_discovery.NewServiceProposal(
+		providerId,
+		nats.NewContact(providerId),
+	)
+
+	sessionResponseHandler := vpn_session.CreateResponseHandler{
+		ProposalId: proposal.Id,
+		SessionManager: &session.Manager{
+			Generator: &session.Generator{},
+		},
+		ClientConfigFactory: func() *openvpn.ClientConfig {
+			return openvpn.NewClientConfig(
+				vpnServerIp,
+				options.DirectoryConfig+"/ca.crt",
+				options.DirectoryConfig+"/client.crt",
+				options.DirectoryConfig+"/client.key",
+				options.DirectoryConfig+"/ta.key",
+			)
+		},
+	}
 	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
-		receiver.Respond(communication.SESSION_CREATE, func(proposalId string) (response string) {
-			config, err := buildVpnClientConfig(vpnServerIp, options.DirectoryConfig)
-			if err != nil {
-				return "Failed to create VPN config."
-			}
-
-			vpnSession := vpn_session.NewVpnSession(config)
-			if err != nil {
-				return "Failed to create session."
-			}
-
-			session, err := json.Marshal(vpnSession)
-			if err != nil {
-				return "Failed to serialize VPN session."
-			}
-
-			return string(session)
-		})
+		receiver.Respond(communication.SESSION_CREATE, sessionResponseHandler.Handle)
 	}
 
 	cmd.communicationServer = cmd.CommunicationServerFactory(providerId)
@@ -87,11 +90,6 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	proposal := service_discovery.NewServiceProposal(
-		providerId,
-		nats.NewContact(providerId),
-	)
-
 	if err := cmd.MysteriumClient.NodeRegister(proposal); err != nil {
 		return err
 	}
@@ -103,20 +101,6 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}()
 
 	return nil
-}
-
-func buildVpnClientConfig(vpnIp string, dir string) (config string, err error) {
-	vpnClientConfig := openvpn.NewClientConfig(
-		vpnIp,
-		dir+"/ca.crt",
-		dir+"/client.crt",
-		dir+"/client.key",
-		dir+"/ta.key",
-	)
-
-	config, err = openvpn.ConfigToString(*vpnClientConfig.Config)
-
-	return
 }
 
 func (cmd *CommandRun) Wait() error {

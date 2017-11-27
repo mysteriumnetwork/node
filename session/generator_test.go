@@ -1,12 +1,14 @@
 package session
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
+var generator Generator
+
 func TestSessionIdLength(t *testing.T) {
-	sid := GenerateSessionId()
+	sid := generator.Generate()
 
 	assert.Len(t, sid, 36)
 }

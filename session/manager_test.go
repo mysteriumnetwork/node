@@ -1,17 +1,23 @@
 package session
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestManagerHasSessionsStored(t *testing.T) {
-	manager := Manager{}
+	var generator GeneratorMock
+
+	manager := Manager{
+		Generator: &generator,
+	}
+
 	length := 10
 
 	for i := 0; i < length; i++ {
-		manager.Create()
+		sid := manager.Generator.Generate()
+		manager.Add(sid)
 	}
 
-	assert.Len(t, manager.Sessions, length)
+	assert.Len(t, manager.sessions, length)
 }

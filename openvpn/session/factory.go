@@ -4,9 +4,7 @@ import (
 	node_session "github.com/mysterium/node/session"
 )
 
-var manager node_session.Manager
-
-func NewVpnSession(config string) (session VpnSession) {
+func NewVpnSession(manager node_session.ManagerInterface, config string) (session VpnSession) {
 	id := manager.Create()
 
 	session = VpnSession{
