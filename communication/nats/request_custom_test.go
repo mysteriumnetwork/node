@@ -39,6 +39,7 @@ func TestCustomRequest(t *testing.T) {
 
 	sender := &senderNats{
 		connection:     connection,
+		codec:          communication.NewCodecJSON(),
 		timeoutRequest: 100 * time.Millisecond,
 	}
 
@@ -84,7 +85,9 @@ func TestCustomRespond(t *testing.T) {
 	connection := test.NewDefaultConnection(t)
 	defer connection.Close()
 
-	receiver := &receiverNats{connection: connection}
+	receiver := &receiverNats{
+		connection: connection,
+	}
 
 	requestReceived := make(chan bool)
 	err := respondCustom(receiver, func(request *customRequest) *customResponse {

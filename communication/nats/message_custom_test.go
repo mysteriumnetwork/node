@@ -13,13 +13,16 @@ type customMessage struct {
 	Field int
 }
 
-func customMessagePacker(message customMessage) *communication.MessagePacker {
-	return &communication.MessagePacker{
-		MessageType: "custom-message",
-		Pack: func() ([]byte, error) {
-			return json.Marshal(message)
-		},
-	}
+type customMessagePacker struct {
+	Message *customMessage
+}
+
+func (packer *customMessagePacker) GetMessageType() communication.MessageType {
+	return communication.MessageType("custom-message")
+}
+
+func (packer *customMessagePacker) CreateMessage() (messagePtr interface{}) {
+	return packer.Message
 }
 
 func customMessageUnpacker(listener func(customMessage)) *communication.MessageUnpacker {
@@ -43,7 +46,10 @@ func TestMessageCustomSend(t *testing.T) {
 	connection := test.NewDefaultConnection(t)
 	defer connection.Close()
 
-	sender := &senderNats{connection: connection}
+	sender := &senderNats{
+		connection: connection,
+		codec:      communication.NewCodecJSON(),
+	}
 
 	messageSent := make(chan bool)
 	_, err := connection.Subscribe("custom-message", func(message *nats.Msg) {
@@ -52,9 +58,33 @@ func TestMessageCustomSend(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = sender.Send(
-		customMessagePacker(customMessage{123}),
-	)
+	err = sender.Send(&customMessagePacker{&customMessage{123}})
+	assert.Nil(t, err)
+
+	if err := test.Wait(messageSent); err != nil {
+		t.Fatal("Message not sent")
+	}
+}
+
+func TestMessageCustomSendNull(t *testing.T) {
+	server := test.RunDefaultServer()
+	defer server.Shutdown()
+	connection := test.NewDefaultConnection(t)
+	defer connection.Close()
+
+	sender := &senderNats{
+		connection: connection,
+		codec:      communication.NewCodecJSON(),
+	}
+
+	messageSent := make(chan bool)
+	_, err := connection.Subscribe("custom-message", func(message *nats.Msg) {
+		assert.JSONEq(t, `null`, string(message.Data))
+		messageSent <- true
+	})
+	assert.Nil(t, err)
+
+	err = sender.Send(&customMessagePacker{})
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageSent); err != nil {
@@ -68,7 +98,9 @@ func TestMessageCustomReceive(t *testing.T) {
 	connection := test.NewDefaultConnection(t)
 	defer connection.Close()
 
-	receiver := &receiverNats{connection: connection}
+	receiver := &receiverNats{
+		connection: connection,
+	}
 
 	messageReceived := make(chan bool)
 	err := receiver.Receive(

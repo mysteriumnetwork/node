@@ -7,9 +7,9 @@ type MessageListener struct {
 	Invoke  func()
 }
 
-type MessagePacker struct {
-	MessageType string
-	Pack        func() ([]byte, error)
+type MessagePacker interface {
+	GetMessageType() MessageType
+	CreateMessage() (messagePtr interface{})
 }
 
 type MessageUnpacker struct {

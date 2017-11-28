@@ -8,13 +8,16 @@ import (
 	"testing"
 )
 
-func bytesMessagePacker(message []byte) *communication.MessagePacker {
-	return &communication.MessagePacker{
-		MessageType: "bytes-message",
-		Pack: func() ([]byte, error) {
-			return message, nil
-		},
-	}
+type bytesMessagePacker struct {
+	Message []byte
+}
+
+func (packer *bytesMessagePacker) GetMessageType() communication.MessageType {
+	return communication.MessageType("bytes-message")
+}
+
+func (packer *bytesMessagePacker) CreateMessage() (messagePtr interface{}) {
+	return packer.Message
 }
 
 func bytesMessageUnpacker(listener func([]byte)) *communication.MessageUnpacker {
@@ -39,7 +42,10 @@ func TestMessageBytesSend(t *testing.T) {
 	connection := test.NewDefaultConnection(t)
 	defer connection.Close()
 
-	sender := &senderNats{connection: connection}
+	sender := &senderNats{
+		connection: connection,
+		codec:      communication.NewCodecBytes(),
+	}
 
 	messageSent := make(chan bool)
 	_, err := connection.Subscribe("bytes-message", func(message *nats.Msg) {
@@ -49,7 +55,7 @@ func TestMessageBytesSend(t *testing.T) {
 	assert.Nil(t, err)
 
 	err = sender.Send(
-		bytesMessagePacker([]byte("123")),
+		&bytesMessagePacker{[]byte("123")},
 	)
 	assert.Nil(t, err)
 
@@ -64,7 +70,9 @@ func TestMessageBytesReceive(t *testing.T) {
 	connection := test.NewDefaultConnection(t)
 	defer connection.Close()
 
-	receiver := &receiverNats{connection: connection}
+	receiver := &receiverNats{
+		connection: connection,
+	}
 
 	messageReceived := make(chan bool)
 	err := receiver.Receive(

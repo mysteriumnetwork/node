@@ -13,26 +13,28 @@ const SENDER_LOG_PREFIX = "[NATS.Sender] "
 
 type senderNats struct {
 	connection     *nats.Conn
+	codec          communication.Codec
 	timeoutRequest time.Duration
 	messageTopic   string
 }
 
-func (sender *senderNats) Send(packer *communication.MessagePacker) error {
+func (sender *senderNats) Send(packer communication.MessagePacker) error {
 
-	messageType := packer.MessageType
-	messageData, err := packer.Pack()
+	messageType := string(packer.GetMessageType())
+
+	messageData, err := sender.codec.Pack(packer.CreateMessage())
 	if err != nil {
-		err = fmt.Errorf("Failed to pack messagePacker '%s'. %s", messageType, err)
+		err = fmt.Errorf("Failed to encode message '%s'. %s", messageType, err)
 		return err
 	}
 
 	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Message '%s' sending: %s", messageType, messageData))
 	err = sender.connection.Publish(
-		sender.messageTopic+packer.MessageType,
+		sender.messageTopic+messageType,
 		messageData,
 	)
 	if err != nil {
-		err = fmt.Errorf("Failed to send messagePacker '%s'. %s", messageType, err)
+		err = fmt.Errorf("Failed to send message '%s'. %s", messageType, err)
 		return err
 	}
 

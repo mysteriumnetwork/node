@@ -20,6 +20,6 @@ type Receiver interface {
 }
 
 type Sender interface {
-	Send(packer *MessagePacker) error
+	Send(packer MessagePacker) error
 	Request(packer *RequestPacker) error
 }
