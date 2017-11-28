@@ -1,0 +1,26 @@
+#!/bin/bash
+
+GOOS=linux GOARCH=amd64 bin/server_build
+if [ $? -ne 0 ] ; then
+    exit 1
+fi
+
+SSH_SERVER=root@vpn1.mysterium.local
+SSH_SERVER_DIR=mysterium/server
+
+printf "\n\nStopping application at '$SSH_SERVER':\n" \
+    && ssh $SSH_SERVER 'sudo killall mysterium_server || true' \
+    && ssh $SSH_SERVER 'sudo killall mysterium_client || true' \
+    && ssh $SSH_SERVER 'sudo killall openvpn || true' \
+&& printf "\n\nDeploying application:\n" \
+    && ssh $SSH_SERVER "mkdir -pv $SSH_SERVER_DIR" \
+    && scp build/server/mysterium_server \
+        bin/server_package/config/* \
+        $SSH_SERVER:$SSH_SERVER_DIR/ \
+&& printf "\n\nStarting application:\n" \
+    && ssh $SSH_SERVER "sudo $SSH_SERVER_DIR/mysterium_server \
+        --config-dir=$SSH_SERVER_DIR" \
+        --runtime-dir=$SSH_SERVER_DIR \
+        $@
+
+exit 0

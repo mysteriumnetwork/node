@@ -1,0 +1,3 @@
+#!/bin/bash
+
+sudo ./build/client/mysterium_client --runtime-dir=build/client $@

@@ -1,27 +1,27 @@
 package command_run
 
 import (
-	"os"
+	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/communication/nats"
+	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
-	"io"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"os"
 )
 
-func NewCommand() *commandRun {
-	return &commandRun{
-		output: os.Stdout,
-		outputError: os.Stderr,
-		mysteriumClient: server.NewClient(),
-	}
-}
+func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
+	nats.Bootstrap()
+	openvpn.Bootstrap()
 
-func NewCommandWithDependencies(
-	output io.Writer,
-	outputError io.Writer,
-	mysteriumClient server.Client,
-) *commandRun {
-	return &commandRun{
-		output: output,
-		outputError: outputError,
-		mysteriumClient: mysteriumClient,
+	return &CommandRun{
+		Output:      os.Stdout,
+		OutputError: os.Stderr,
+
+		MysteriumClient: server.NewClient(),
+		CommunicationClientFactory: func(identity dto_discovery.Identity) communication.Client {
+			return nats.NewClient(identity)
+		},
+
+		vpnMiddlewares: vpnMiddlewares,
 	}
 }

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./bin/ip_info

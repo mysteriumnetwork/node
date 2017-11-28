@@ -1,48 +1,78 @@
 package command_run
 
 import (
+	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/service_discovery"
+	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/server/dto"
+	dto_server "github.com/mysterium/node/server/dto"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/session"
 	"io"
 	"time"
 )
 
-type commandRun struct {
-	output      io.Writer
-	outputError io.Writer
+type CommandRun struct {
+	Output      io.Writer
+	OutputError io.Writer
 
-	ipifyClient     ipify.Client
-	mysteriumClient server.Client
-	natService      nat.NATService
-	vpnServer       *openvpn.Server
+	IpifyClient     ipify.Client
+	MysteriumClient server.Client
+	NatService      nat.NATService
+
+	CommunicationServerFactory func(identity dto_discovery.Identity) communication.Server
+	communicationServer        communication.Server
+
+	vpnMiddlewares []openvpn.ManagementMiddleware
+	vpnServer      *openvpn.Server
 }
 
-func (cmd *commandRun) Run(options CommandOptions) error {
-	vpnServerIp, err := cmd.ipifyClient.GetIp()
+func (cmd *CommandRun) Run(options CommandOptions) (err error) {
+	providerId := dto_discovery.Identity(options.NodeKey)
+
+	vpnServerIp, err := cmd.IpifyClient.GetIp()
 	if err != nil {
 		return err
 	}
 
-	cmd.natService.Add(nat.RuleForwarding{
+	cmd.NatService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIp:      vpnServerIp,
 	})
-	if err = cmd.natService.Start(); err != nil {
+	if err = cmd.NatService.Start(); err != nil {
 		return err
 	}
 
-	vpnClientConfig := openvpn.NewClientConfig(
-		vpnServerIp,
-		options.DirectoryConfig+"/ca.crt",
-		options.DirectoryConfig+"/client.crt",
-		options.DirectoryConfig+"/client.key",
-		options.DirectoryConfig+"/ta.key",
+	proposal := service_discovery.NewServiceProposal(
+		providerId,
+		nats.NewContact(providerId),
 	)
-	vpnClientConfigString, err := openvpn.ConfigToString(*vpnClientConfig.Config)
-	if err != nil {
+
+	sessionResponseHandler := vpn_session.CreateResponseHandler{
+		ProposalId: proposal.Id,
+		SessionManager: &session.Manager{
+			Generator: &session.Generator{},
+		},
+		ClientConfigFactory: func() *openvpn.ClientConfig {
+			return openvpn.NewClientConfig(
+				vpnServerIp,
+				options.DirectoryConfig+"/ca.crt",
+				options.DirectoryConfig+"/client.crt",
+				options.DirectoryConfig+"/client.key",
+				options.DirectoryConfig+"/ta.key",
+			)
+		},
+	}
+	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
+		receiver.Respond(communication.SESSION_CREATE, sessionResponseHandler.Handle)
+	}
+
+	cmd.communicationServer = cmd.CommunicationServerFactory(providerId)
+	if err = cmd.communicationServer.ServeDialogs(handleDialog); err != nil {
 		return err
 	}
 
@@ -60,24 +90,25 @@ func (cmd *commandRun) Run(options CommandOptions) error {
 		return err
 	}
 
-	if err := cmd.mysteriumClient.NodeRegister(options.NodeKey, vpnClientConfigString); err != nil {
+	if err := cmd.MysteriumClient.NodeRegister(proposal); err != nil {
 		return err
 	}
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.mysteriumClient.NodeSendStats(options.NodeKey, []dto.SessionStats{})
+			cmd.MysteriumClient.NodeSendStats(options.NodeKey, []dto_server.SessionStats{})
 		}
 	}()
 
 	return nil
 }
 
-func (cmd *commandRun) Wait() error {
+func (cmd *CommandRun) Wait() error {
 	return cmd.vpnServer.Wait()
 }
 
-func (cmd *commandRun) Kill() {
+func (cmd *CommandRun) Kill() {
 	cmd.vpnServer.Stop()
-	cmd.natService.Stop()
+	cmd.communicationServer.Stop()
+	cmd.NatService.Stop()
 }
