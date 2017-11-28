@@ -1,3 +1,6 @@
+// Maps Ethereum account to dto.Identity.
+// Currently creates a new eth account with PASSPHRASE password on CreateNewIdentity().
+
 package identity
 
 import (
