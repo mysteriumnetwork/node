@@ -2,9 +2,7 @@ package identity
 
 import (
 	"testing"
-
 	"github.com/stretchr/testify/assert"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/mysterium/node/service_discovery/dto"
 	"errors"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -82,31 +80,4 @@ func Test_HasIdentity(t *testing.T) {
 	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000A"))
 	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000a"))
 	assert.False(t, manager.HasIdentity("0x000000000000000000000000000000000000000B"))
-}
-
-func Test_SignMessage(t *testing.T) {
-	manager := NewIdentityManager("testdata")
-	ids := manager.GetIdentities()
-	for _, id := range ids {
-		signature, err := manager.SignMessage(id, "message to sign")
-		assert.NoError(t, err)
-		assert.Len(t, signature, 65)
-	}
-}
-func Test_SignVerifyMessage(t *testing.T) {
-
-	key, err := crypto.GenerateKey()
-	assert.NoError(t, err)
-	message := []byte("message to sign")
-
-	signature, err := crypto.Sign(signHash(message), key)
-	assert.NoError(t, err)
-
-	rpk, err := crypto.Ecrecover(signHash(message), signature)
-	assert.NoError(t, err)
-	pubKey := crypto.ToECDSAPub(rpk)
-	recoveredAddr := crypto.PubkeyToAddress(*pubKey)
-
-	assert.Equal(t, recoveredAddr, crypto.PubkeyToAddress(key.PublicKey))
-
 }
