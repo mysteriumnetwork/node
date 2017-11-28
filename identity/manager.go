@@ -13,7 +13,7 @@ import (
 const PASSPHRASE = ""
 
 type identityManager struct {
-	keystoreManager *keystore.KeyStore
+	keystoreManager keystoreManager
 }
 
 func NewIdentityManager(keydir string) *identityManager {
@@ -65,7 +65,7 @@ func (idm *identityManager) GetIdentity(identityString string) *dto.Identity {
 }
 
 func (idm *identityManager) HasIdentity(identityString string) bool {
-	return idm.GetIdentity(identityString)!= nil
+	return idm.GetIdentity(identityString) != nil
 }
 
 // signHash is a helper function that calculates a hash for the given message that can be

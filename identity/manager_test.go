@@ -5,47 +5,83 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/ethereum/go-ethereum/crypto"
-	"fmt"
+	"github.com/mysterium/node/service_discovery/dto"
+	"errors"
+	"github.com/ethereum/go-ethereum/accounts"
 )
 
+func newManager(accountValue string) *identityManager {
+	return &identityManager{
+		keystoreManager: &keyStoreFake{
+			AccountsMock: []accounts.Account{
+				identityToAccount(accountValue),
+			},
+		},
+	}
+}
+
+func newManagerWithError(errorMock error) *identityManager {
+	return &identityManager{
+		keystoreManager: &keyStoreFake{
+			ErrorMock: errorMock,
+		},
+	}
+}
+
 func Test_CreateNewIdentity(t *testing.T) {
-	manager := NewIdentityManager("testdata")
-	id, err := manager.CreateNewIdentity()
+	manager := newManager("0x000000000000000000000000000000000000000A")
+	identity, err := manager.CreateNewIdentity()
 
 	assert.NoError(t, err)
-	assert.Len(t, *id, 42)
+	assert.Equal(t, *identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
+	assert.Len(t, manager.keystoreManager.Accounts(), 2)
 }
 
-func Test_GetIdentities(t *testing.T) {
-	manager := NewIdentityManager("testdata")
-	ids := manager.GetIdentities()
-	for _, id := range ids {
-		fmt.Println(id)
-	}
-}
+func Test_CreateNewIdentityError(t *testing.T) {
+	im := newManagerWithError(errors.New("Identity create failed"))
+	identity, err := im.CreateNewIdentity()
 
-func Test_GetIdentity(t *testing.T) {
-	manager := NewIdentityManager("testdata")
-	ids := manager.GetIdentities()
-	for _, id := range ids {
-		identity := manager.GetIdentity(string(id))
-		assert.NotNil(t, identity)
-		assert.Equal(t, id, *identity)
-	}
-
-	identity := manager.GetIdentity("")
+	assert.EqualError(t, err, "Identity create failed")
 	assert.Nil(t, identity)
 }
 
-func Test_HasIdentity(t *testing.T) {
-	manager := NewIdentityManager("testdata")
-	ids := manager.GetIdentities()
-	for _, id := range ids {
-		assert.True(t, manager.HasIdentity(string(id)))
-	}
+func Test_GetIdentities(t *testing.T) {
+	manager := newManager("0x000000000000000000000000000000000000000A")
 
-	identity := manager.HasIdentity("")
-	assert.False(t, identity)
+	assert.Equal(
+		t,
+		[]dto.Identity{
+			dto.Identity("0x000000000000000000000000000000000000000A"),
+		},
+		manager.GetIdentities(),
+	)
+}
+
+func Test_GetIdentity(t *testing.T) {
+	manager := newManager("0x000000000000000000000000000000000000000A")
+
+	assert.Equal(
+		t,
+		dto.Identity("0x000000000000000000000000000000000000000A"),
+		*manager.GetIdentity("0x000000000000000000000000000000000000000A"),
+	)
+	assert.Equal(
+		t,
+		dto.Identity("0x000000000000000000000000000000000000000A"),
+		*manager.GetIdentity("0x000000000000000000000000000000000000000a"),
+	)
+	assert.Nil(
+		t,
+		manager.GetIdentity("0x000000000000000000000000000000000000000B"),
+	)
+}
+
+func Test_HasIdentity(t *testing.T) {
+	manager := newManager("0x000000000000000000000000000000000000000A")
+
+	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000A"))
+	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000a"))
+	assert.False(t, manager.HasIdentity("0x000000000000000000000000000000000000000B"))
 }
 
 func Test_SignMessage(t *testing.T) {
