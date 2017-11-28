@@ -11,7 +11,7 @@ import (
 const PASSPHRASE = ""
 
 type identityManager struct {
-	keystoreManager keystoreManager
+	keystoreManager keystoreInterface
 }
 
 func NewIdentityManager(keydir string) *identityManager {
