@@ -28,7 +28,7 @@ func newManagerWithError(errorMock error) *identityManager {
 
 func Test_CreateNewIdentity(t *testing.T) {
 	manager := newManager("0x000000000000000000000000000000000000000A")
-	identity, err := manager.CreateNewIdentity()
+	identity, err := manager.CreateNewIdentity("")
 
 	assert.NoError(t, err)
 	assert.Equal(t, *identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
@@ -37,7 +37,7 @@ func Test_CreateNewIdentity(t *testing.T) {
 
 func Test_CreateNewIdentityError(t *testing.T) {
 	im := newManagerWithError(errors.New("Identity create failed"))
-	identity, err := im.CreateNewIdentity()
+	identity, err := im.CreateNewIdentity("")
 
 	assert.EqualError(t, err, "Identity create failed")
 	assert.Nil(t, identity)

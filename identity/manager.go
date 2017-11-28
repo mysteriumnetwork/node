@@ -1,5 +1,5 @@
 // Maps Ethereum account to dto.Identity.
-// Currently creates a new eth account with PASSPHRASE password on CreateNewIdentity().
+// Currently creates a new eth account with password on CreateNewIdentity().
 
 package identity
 
@@ -10,8 +10,6 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 	"strings"
 )
-
-const PASSPHRASE = ""
 
 type identityManager struct {
 	keystoreManager keystoreInterface
@@ -34,8 +32,8 @@ func identityToAccount(identityString string) accounts.Account {
 	}
 }
 
-func (idm *identityManager) CreateNewIdentity() (*dto.Identity, error) {
-	account, err := idm.keystoreManager.NewAccount(PASSPHRASE)
+func (idm *identityManager) CreateNewIdentity(passphrase string) (*dto.Identity, error) {
+	account, err := idm.keystoreManager.NewAccount(passphrase)
 	if err != nil {
 		return nil, err
 	}
