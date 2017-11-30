@@ -10,7 +10,7 @@ RUN apt-get update \
     && wget https://github.com/MysteriumNetwork/node/releases/download/${VERSION}/mysterium-node_linux_amd64.deb \
     && dpkg --install --force-depends mysterium-node_linux_amd64.deb \
     && apt-get install -y --fix-broken \
-    && rm -rf /var/cache/apk/* \
+    && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
     && rm mysterium-node_linux_amd64.deb
 
 COPY docker-entrypoint-node.sh /usr/bin/docker-entrypoint.sh

@@ -15,8 +15,6 @@ services:
       - default
     ports:
       - 1194:1194
-    volumes:
-      - .:/application
     environment:
       - NODE=123456
 

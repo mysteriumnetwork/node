@@ -9,7 +9,7 @@ COPY $PACKAGE_FILE /tmp/mysterium-client.deb
 RUN apt-get update \
     && dpkg --install --force-depends /tmp/mysterium-client.deb \
     && apt-get install -y --fix-broken \
-    && rm -rf /var/cache/apk/* \
+    && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
     && rm /tmp/mysterium-client.deb
 
 ENTRYPOINT ["/usr/bin/mysterium_client"]
