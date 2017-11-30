@@ -1,25 +1,15 @@
-package handlers
+package utils
 
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 )
 
-var startupTime = time.Now()
-
-type healthCheckData struct {
-	Uptime string `json:"uptime"`
-}
-
-var HealthCheckHandler http.HandlerFunc = func(writer http.ResponseWriter, request *http.Request) {
-	status := healthCheckData{
-		Uptime: time.Now().Sub(startupTime).String(),
-	}
-	writeAsJson(status, writer)
-}
-
-func writeAsJson(v interface{}, writer http.ResponseWriter) {
+/*
+WriteAsJson takes value as the first argument and handles json marshaling with returning appropriate errors if needed,
+also enforces application/json and charset response headers
+*/
+func WriteAsJson(v interface{}, writer http.ResponseWriter) {
 
 	serialized, err := json.Marshal(v)
 	if err != nil {
