@@ -14,6 +14,8 @@ import (
 	"github.com/mysterium/node/session"
 	"io"
 	"time"
+	"github.com/mysterium/node/identity"
+	"fmt"
 )
 
 type CommandRun struct {
@@ -32,7 +34,10 @@ type CommandRun struct {
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	providerId := dto_discovery.Identity(options.NodeKey)
+	providerId, err := identity.SelectIdentity(options.DirectoryKeystore, options.NodeKey)
+	if err != nil {
+		return err
+	}
 
 	vpnServerIp, err := cmd.IpifyClient.GetIp()
 	if err != nil {
@@ -48,8 +53,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 
 	proposal := service_discovery.NewServiceProposal(
-		providerId,
-		nats.NewContact(providerId),
+		*providerId,
+		nats.NewContact(*providerId),
 	)
 
 	sessionResponseHandler := vpn_session.CreateResponseHandler{
@@ -71,7 +76,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		receiver.Respond(communication.SESSION_CREATE, sessionResponseHandler.Handle)
 	}
 
-	cmd.communicationServer = cmd.CommunicationServerFactory(providerId)
+	cmd.communicationServer = cmd.CommunicationServerFactory(*providerId)
 	if err = cmd.communicationServer.ServeDialogs(handleDialog); err != nil {
 		return err
 	}
