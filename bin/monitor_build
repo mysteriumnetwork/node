@@ -17,11 +17,13 @@
 
 source bin/helpers/functions.sh
 source bin/helpers/load_environment.sh
-: ${GOOS:=`go env GOHOSTOS`}
-: ${GOARCH:=`go env GOHOSTARCH`}
 
+export GOOS=${GOOS:=`go env GOHOSTOS`}
+export GOARCH=${GOARCH:=`go env GOHOSTARCH`}
+export GOBIN=`pwd`/build/monitor
 echo "Compiling 'mysterium_fake' for '$GOOS/$GOARCH'.."
-GOBIN=`pwd`/build/monitor go install -ldflags="$(get_linker_ldflags)" cmd/mysterium_monitor/mysterium_monitor.go
+
+go install -ldflags="$(get_linker_ldflags)" cmd/mysterium_monitor/mysterium_monitor.go
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Compile failed!"
     exit 1
