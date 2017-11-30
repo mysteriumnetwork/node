@@ -15,11 +15,13 @@
 # Check if program has dynamic libraries:
 #> readelf -d /build/fake/mysterium_monitor
 
+source bin/helpers/functions.sh
+source bin/helpers/load_environment.sh
 : ${GOOS:=`go env GOHOSTOS`}
 : ${GOARCH:=`go env GOHOSTARCH`}
 
 echo "Compiling 'mysterium_fake' for '$GOOS/$GOARCH'.."
-GOBIN=`pwd`/build/monitor go install cmd/mysterium_monitor/mysterium_monitor.go
+GOBIN=`pwd`/build/monitor go install -ldflags="$(get_linker_ldflags)" cmd/mysterium_monitor/mysterium_monitor.go
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Compile failed!"
     exit 1
