@@ -10,15 +10,16 @@ import (
 
 const httpLogPrefix = "[http]"
 
-func init() {
+func registerAllEndpoints() {
 	RegisterEndpoint("/healthcheck", endpoints.HealthCheckEndpoint)
 }
 
 /*
 Bootstrap function starts http server on specified binding address, which format conforms to what is expeted by
-http.ListenAndServe function
+http.ListenAndServe function. This function IS BLOCKING, that means - it should be run on goroutine to resume with normal flow
 */
 func Bootstrap(bindAddress string) {
+	registerAllEndpoints()
 	log.Infof("%s Local api binding %s\n", httpLogPrefix, bindAddress)
 	log.Errorf(httpLogPrefix, http.ListenAndServe(bindAddress, nil))
 }
