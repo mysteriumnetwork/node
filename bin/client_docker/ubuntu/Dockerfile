@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:16.04
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
 # e.g. PACKAGE_FILE="build/package/mysterium-client_linux_amd64.deb"
@@ -9,7 +9,6 @@ COPY $PACKAGE_FILE /tmp/mysterium-client.deb
 RUN apt-get update \
     && dpkg --install --force-depends /tmp/mysterium-client.deb \
     && apt-get install -y --fix-broken \
-    && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
-    && rm /tmp/mysterium-client.deb
+    && rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/mysterium-client.deb
 
 ENTRYPOINT ["/usr/bin/mysterium_client"]

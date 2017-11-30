@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: bin/server_docker/ubuntu/Dockerfile
       args:
-        VERSION: 0.0.6
+        PACKAGE_FILE: build/package/mysterium-node_linux_amd64.deb
     container_name: mysterium-server
     cap_add:
       - MKNOD
