@@ -1,10 +1,9 @@
 package endpoints
 
 import (
+	"github.com/mysterium/node/client_local_api/utils"
 	"net/http"
 	"time"
-
-	"github.com/mysterium/node/client_local_api/utils"
 )
 
 var currentTime = time.Now
@@ -15,6 +14,9 @@ type healthCheckData struct {
 	Uptime string `json:"uptime"`
 }
 
+/*
+HealthCheckHandler function returns health status json object, currently with only one field - uptime
+*/
 var HealthCheckHandler = func(writer http.ResponseWriter, request *http.Request) {
 	status := healthCheckData{
 		Uptime: currentTime().Sub(startupTime).String(),

@@ -3,7 +3,6 @@ package client_local_api
 import (
 	"fmt"
 	"github.com/mysterium/node/client_local_api/endpoints"
-	_ "github.com/mysterium/node/client_local_api/endpoints"
 	"net/http"
 )
 
