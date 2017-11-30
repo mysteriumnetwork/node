@@ -13,6 +13,6 @@ RUN apt-get update \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
     && rm mysterium-node_linux_amd64.deb
 
-COPY docker-entrypoint-node.sh /usr/bin/docker-entrypoint.sh
+COPY bin/server_docker/ubuntu/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]

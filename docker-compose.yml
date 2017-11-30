@@ -1,13 +1,13 @@
 version: '2'
 services:
 
-  node:
+  server:
     build:
       context: .
-      dockerfile: Dockerfile-mysterium-node
+      dockerfile: bin/server_docker/ubuntu/Dockerfile
       args:
         VERSION: 0.0.6
-    container_name: mysterium-node
+    container_name: mysterium-server
     cap_add:
       - MKNOD
       - NET_ADMIN
@@ -21,14 +21,12 @@ services:
   client:
     build:
       context: .
-      dockerfile: Dockerfile-mysterium-client
+      dockerfile: bin/client_docker/ubuntu/Dockerfile
       args:
         PACKAGE_FILE: build/package/mysterium-client_linux_amd64.deb
     container_name: mysterium-client
     networks:
       - default
-    volumes:
-      - .:/application
 
   gateway:
     image: nats
