@@ -1,22 +1,26 @@
 package client_local_api
 
 import (
-	"fmt"
+	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/client_local_api/endpoints"
 	"net/http"
+	"reflect"
+	"runtime"
 )
 
+const httpLogPrefix = "[http]"
+
 func init() {
-	RegisterEndpoint("/healthcheck", endpoints.HealthCheckHandler)
+	RegisterEndpoint("/healthcheck", endpoints.HealthCheckEndpoint)
 }
 
 /*
 Bootstrap function starts http server on specified binding address, which format conforms to what is expeted by
 http.ListenAndServe function
 */
-func Bootstrap(bindAddress string) error {
-	fmt.Println("Binding local http server on: ", bindAddress)
-	return http.ListenAndServe(bindAddress, nil)
+func Bootstrap(bindAddress string) {
+	log.Infof("%s Local api binding %s\n", httpLogPrefix, bindAddress)
+	log.Errorf(httpLogPrefix, http.ListenAndServe(bindAddress, nil))
 }
 
 /*
@@ -24,6 +28,10 @@ RegisterEndpoint registers http.HandlerFunc to specified path. It depends on htt
 single point for endpoint registration, with posibility to add custom global handlers like enforcing utf-8 responses
 */
 func RegisterEndpoint(path string, handler http.HandlerFunc) {
-	fmt.Println("Registering path: ", path)
+	log.Tracef("%s Mapping %s -> %s", httpLogPrefix, path, extractName(handler))
 	http.Handle(path, handler)
+}
+
+func extractName(f interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
 }

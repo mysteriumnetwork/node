@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/mysterium/node/bytescount_client"
+	"github.com/mysterium/node/client_local_api"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/openvpn"
 	vpn_session "github.com/mysterium/node/openvpn/session"
@@ -67,6 +68,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	if err := cmd.vpnClient.Start(); err != nil {
 		return err
 	}
+
+	go client_local_api.Bootstrap(options.LocalApiAddress)
 
 	return nil
 }

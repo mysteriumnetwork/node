@@ -15,9 +15,9 @@ type healthCheckData struct {
 }
 
 /*
-HealthCheckHandler function returns health status json object, currently with only one field - uptime
+HealthCheckEndpoint function returns health status json object, currently with only one field - uptime
 */
-var HealthCheckHandler = func(writer http.ResponseWriter, request *http.Request) {
+func HealthCheckEndpoint(writer http.ResponseWriter, request *http.Request) {
 	status := healthCheckData{
 		Uptime: currentTime().Sub(startupTime).String(),
 	}

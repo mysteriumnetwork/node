@@ -15,7 +15,7 @@ func TestHealthCheckReturnsExpectedJsonObject(t *testing.T) {
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	HealthCheckHandler(resp, req)
+	HealthCheckEndpoint(resp, req)
 
 	assert.JSONEq(t, `
 	{
