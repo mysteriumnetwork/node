@@ -76,9 +76,7 @@ fi
 
 # Add defaults file, if it doesn't exist
 if [[ ! -f $DAEMON_DEFAULT ]]; then
-    printf "\nPlease, enter Mysterium VPN node to make connection with (Node key): \n" \
-        && read -p ">" MYSTERIUM_CLIENT_NODE \
-        && echo "MYSTERIUM_CLIENT_NODE=$MYSTERIUM_CLIENT_NODE" > $DAEMON_DEFAULT
+    echo "MYSTERIUM_CLIENT_NODE=" > $DAEMON_DEFAULT
 fi
 
 printf "\nInstallation successfully finished.\n" \
