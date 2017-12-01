@@ -32,7 +32,7 @@ Running
 ------------
 ``` bash
 # Start communication gateway
-docker-compose up gateway
+docker-compose up broker
 
 # Start node
 bin/server_build

@@ -1,6 +1,15 @@
 version: '2'
 services:
 
+  broker:
+    image: nats
+    container_name: mysterium-broker
+    networks:
+      - default
+    ports:
+      - 4222:4222
+      - 8222:8222
+
   server:
     build:
       context: .
@@ -8,6 +17,8 @@ services:
       args:
         PACKAGE_FILE: build/package/mysterium-node_linux_amd64.deb
     container_name: mysterium-server
+    depends_on:
+      - broker
     cap_add:
       - MKNOD
       - NET_ADMIN
@@ -16,7 +27,7 @@ services:
     ports:
       - 1194:1194
     environment:
-      - NODE=123456
+      NODE: server-ubuntu
 
   client:
     build:
@@ -25,14 +36,10 @@ services:
       args:
         PACKAGE_FILE: build/package/mysterium-client_linux_amd64.deb
     container_name: mysterium-client
+    depends_on:
+      - broker
+      - server
     networks:
       - default
-
-  gateway:
-    image: nats
-    container_name: mysterium-gateway
-    networks:
-      - default
-    ports:
-      - 4222:4222
-      - 8222:8222
+    environment:
+      NODE: server-ubuntu

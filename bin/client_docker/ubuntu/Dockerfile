@@ -11,4 +11,4 @@ RUN apt-get update \
     && apt-get install -y --fix-broken \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/mysterium-client.deb
 
-ENTRYPOINT ["/usr/bin/mysterium_client"]
+ENTRYPOINT ["/usr/bin/mysterium_client", "--node=${NODE}"]
