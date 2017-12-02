@@ -12,8 +12,8 @@ type MessagePacker interface {
 	CreateMessage() (messagePtr interface{})
 }
 
-type MessageUnpacker struct {
-	MessageType string
-	Unpack      func([]byte) error
-	Invoke      func() error
+type MessageUnpacker interface {
+	GetMessageType() MessageType
+	CreateMessage() (messagePtr interface{})
+	Handle(messagePtr interface{}) error
 }

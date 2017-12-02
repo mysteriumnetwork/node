@@ -20,20 +20,22 @@ func (packer *bytesMessagePacker) CreateMessage() (messagePtr interface{}) {
 	return packer.Message
 }
 
-func bytesMessageUnpacker(listener func([]byte)) *communication.MessageUnpacker {
-	var message []byte
+type bytesMessageUnpacker struct {
+	Callback func(*[]byte)
+}
 
-	return &communication.MessageUnpacker{
-		MessageType: "bytes-message",
-		Unpack: func(data []byte) error {
-			message = data
-			return nil
-		},
-		Invoke: func() error {
-			listener(message)
-			return nil
-		},
-	}
+func (unpacker *bytesMessageUnpacker) GetMessageType() communication.MessageType {
+	return communication.MessageType("bytes-message")
+}
+
+func (unpacker *bytesMessageUnpacker) CreateMessage() (messagePtr interface{}) {
+	var message []byte
+	return &message
+}
+
+func (unpacker *bytesMessageUnpacker) Handle(messagePtr interface{}) error {
+	unpacker.Callback(messagePtr.(*[]byte))
+	return nil
 }
 
 func TestMessageBytesSend(t *testing.T) {
@@ -49,7 +51,7 @@ func TestMessageBytesSend(t *testing.T) {
 
 	messageSent := make(chan bool)
 	_, err := connection.Subscribe("bytes-message", func(message *nats.Msg) {
-		assert.Equal(t, "123", string(message.Data))
+		assert.Equal(t, []byte("123"), message.Data)
 		messageSent <- true
 	})
 	assert.Nil(t, err)
@@ -72,15 +74,14 @@ func TestMessageBytesReceive(t *testing.T) {
 
 	receiver := &receiverNats{
 		connection: connection,
+		codec:      communication.NewCodecBytes(),
 	}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive(
-		bytesMessageUnpacker(func(message []byte) {
-			assert.Equal(t, "123", string(message))
-			messageReceived <- true
-		}),
-	)
+	err := receiver.Receive(&bytesMessageUnpacker{func(message *[]byte) {
+		assert.Equal(t, []byte("123"), *message)
+		messageReceived <- true
+	}})
 	assert.Nil(t, err)
 
 	err = connection.Publish("bytes-message", []byte("123"))

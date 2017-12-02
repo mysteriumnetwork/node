@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"encoding/json"
 	"github.com/mysterium/node/communication"
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats/test"
@@ -23,21 +22,6 @@ func (packer *customMessagePacker) GetMessageType() communication.MessageType {
 
 func (packer *customMessagePacker) CreateMessage() (messagePtr interface{}) {
 	return packer.Message
-}
-
-func customMessageUnpacker(listener func(customMessage)) *communication.MessageUnpacker {
-	var message customMessage
-
-	return &communication.MessageUnpacker{
-		MessageType: "json-message",
-		Unpack: func(data []byte) error {
-			return json.Unmarshal(data, &message)
-		},
-		Invoke: func() error {
-			listener(message)
-			return nil
-		},
-	}
 }
 
 func TestMessageCustomSend(t *testing.T) {
@@ -92,6 +76,23 @@ func TestMessageCustomSendNull(t *testing.T) {
 	}
 }
 
+type customMessageUnpacker struct {
+	Callback func(message *customMessage)
+}
+
+func (unpacker *customMessageUnpacker) GetMessageType() communication.MessageType {
+	return communication.MessageType("custom-message")
+}
+
+func (unpacker *customMessageUnpacker) CreateMessage() (messagePtr interface{}) {
+	return &customMessage{}
+}
+
+func (unpacker *customMessageUnpacker) Handle(messagePtr interface{}) error {
+	unpacker.Callback(messagePtr.(*customMessage))
+	return nil
+}
+
 func TestMessageCustomReceive(t *testing.T) {
 	server := test.RunDefaultServer()
 	defer server.Shutdown()
@@ -100,18 +101,17 @@ func TestMessageCustomReceive(t *testing.T) {
 
 	receiver := &receiverNats{
 		connection: connection,
+		codec:      communication.NewCodecJSON(),
 	}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive(
-		customMessageUnpacker(func(message customMessage) {
-			assert.Exactly(t, customMessage{123}, message)
-			messageReceived <- true
-		}),
-	)
+	err := receiver.Receive(&customMessageUnpacker{func(message *customMessage) {
+		assert.Exactly(t, customMessage{123}, *message)
+		messageReceived <- true
+	}})
 	assert.Nil(t, err)
 
-	err = connection.Publish("json-message", []byte(`{"Field":123}`))
+	err = connection.Publish("custom-message", []byte(`{"Field":123}`))
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageReceived); err != nil {

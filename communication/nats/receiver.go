@@ -12,21 +12,27 @@ const RECEIVER_LOG_PREFIX = "[NATS.Receiver] "
 
 type receiverNats struct {
 	connection   *nats.Conn
+	codec        communication.Codec
 	messageTopic string
 }
 
-func (receiver *receiverNats) Receive(unpacker *communication.MessageUnpacker) error {
+func (receiver *receiverNats) Receive(unpacker communication.MessageUnpacker) error {
 
-	messageType := unpacker.MessageType
+	messageType := string(unpacker.GetMessageType())
+
 	messageHandler := func(msg *nats.Msg) {
-		err := unpacker.Unpack(msg.Data)
+		messageData := msg.Data
+		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Message '%s' received: %s", messageType, messageData))
+
+		messagePtr := unpacker.CreateMessage()
+		err := receiver.codec.Unpack(msg.Data, messagePtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to unpack message '%s'. %s", messageType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
 			return
 		}
 
-		err = unpacker.Invoke()
+		err = unpacker.Handle(messagePtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to process message '%s'. %s", messageType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
