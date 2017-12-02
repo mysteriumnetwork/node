@@ -47,26 +47,28 @@ func (receiver *receiverNats) Receive(unpacker communication.MessageUnpacker) er
 	return nil
 }
 
-func (receiver *receiverNats) Respond(unpacker *communication.RequestUnpacker) error {
+func (receiver *receiverNats) Respond(unpacker communication.RequestUnpacker) error {
 
-	requestType := string(unpacker.RequestType)
+	requestType := string(unpacker.GetRequestType())
+
 	messageHandler := func(msg *nats.Msg) {
 		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' received: %s", requestType, msg.Data))
-		err := unpacker.RequestUnpack(msg.Data)
+		requestPtr := unpacker.CreateRequest()
+		err := receiver.codec.Unpack(msg.Data, requestPtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to unpack request '%s'. %s", requestType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
 			return
 		}
 
-		err = unpacker.Invoke()
+		response, err := unpacker.Handle(requestPtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to process request '%s'. %s", requestType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
 			return
 		}
 
-		responseData, err := unpacker.ResponsePack()
+		responseData, err := receiver.codec.Pack(response)
 		if err != nil {
 			err = fmt.Errorf("Failed to pack response '%s'. %s", requestType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)

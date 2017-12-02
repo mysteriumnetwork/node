@@ -29,7 +29,7 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		messageTopic: server.myTopic + ".",
 	}
 
-	createDialog := func(request *dialogCreateRequest) *dialogCreateResponse {
+	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
 		sender := &senderNats{
 			connection:     server.connection,
 			messageTopic:   string(request.IdentityId),
@@ -38,12 +38,10 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		dialogHandler(sender, receiver)
 
 		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' established.", request.IdentityId))
-		return &dialogCreateResponse{
-			Accepted: true,
-		}
+		return &dialogCreateResponse{Accepted: true}, nil
 	}
 
-	subscribeError := respondDialogCreate(receiver, createDialog)
+	subscribeError := receiver.Respond(&dialogCreateUnpacker{createDialog})
 	return subscribeError
 }
 

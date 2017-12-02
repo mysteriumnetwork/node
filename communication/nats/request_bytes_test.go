@@ -57,24 +57,21 @@ func TestBytesRequest(t *testing.T) {
 	}
 }
 
-func respondBytes(receiver communication.Receiver, callback func([]byte) []byte) error {
-	var request []byte
-	var response []byte
+type bytesRequestUnpacker struct {
+	Callback func(request *[]byte) []byte
+}
 
-	return receiver.Respond(&communication.RequestUnpacker{
-		RequestType: "bytes-response",
-		RequestUnpack: func(requestData []byte) error {
-			request = requestData
-			return nil
-		},
-		ResponsePack: func() ([]byte, error) {
-			return response, nil
-		},
-		Invoke: func() error {
-			response = callback(request)
-			return nil
-		},
-	})
+func (unpacker *bytesRequestUnpacker) GetRequestType() communication.RequestType {
+	return communication.RequestType("bytes-response")
+}
+
+func (unpacker *bytesRequestUnpacker) CreateRequest() (requestPtr interface{}) {
+	var request []byte
+	return &request
+}
+
+func (unpacker *bytesRequestUnpacker) Handle(requestPtr interface{}) (responsePtr interface{}, err error) {
+	return unpacker.Callback(requestPtr.(*[]byte)), nil
 }
 
 func TestBytesRespond(t *testing.T) {
@@ -89,10 +86,12 @@ func TestBytesRespond(t *testing.T) {
 	}
 
 	requestReceived := make(chan bool)
-	err := respondBytes(receiver, func(request []byte) []byte {
-		assert.Equal(t, []byte("REQUEST"), request)
-		requestReceived <- true
-		return []byte("RESPONSE")
+	err := receiver.Respond(&bytesRequestUnpacker{
+		func(request *[]byte) []byte {
+			assert.Equal(t, []byte("REQUEST"), *request)
+			requestReceived <- true
+			return []byte("RESPONSE")
+		},
 	})
 	assert.Nil(t, err)
 

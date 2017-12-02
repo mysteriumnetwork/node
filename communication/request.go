@@ -13,9 +13,8 @@ type RequestPacker interface {
 	CreateResponse() (responsePtr interface{})
 }
 
-type RequestUnpacker struct {
-	RequestType   RequestType
-	Invoke        func() error
-	RequestUnpack func([]byte) error
-	ResponsePack  func() ([]byte, error)
+type RequestUnpacker interface {
+	GetRequestType() RequestType
+	CreateRequest() (messagePtr interface{})
+	Handle(requestPtr interface{}) (responsePtr interface{}, err error)
 }

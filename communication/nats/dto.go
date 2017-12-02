@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"encoding/json"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/service_discovery/dto"
 )
@@ -25,23 +24,20 @@ func (packer *dialogCreatePacker) CreateResponse() (responsePtr interface{}) {
 	return &dialogCreateResponse{}
 }
 
-func respondDialogCreate(receiver communication.Receiver, callback func(request *dialogCreateRequest) *dialogCreateResponse) error {
-	var request *dialogCreateRequest
-	var response *dialogCreateResponse
+type dialogCreateUnpacker struct {
+	Callback func(request *dialogCreateRequest) (*dialogCreateResponse, error)
+}
 
-	return receiver.Respond(&communication.RequestUnpacker{
-		RequestType: ENDPOINT_DIALOG_CREATE,
-		RequestUnpack: func(requestData []byte) error {
-			return json.Unmarshal(requestData, &request)
-		},
-		ResponsePack: func() ([]byte, error) {
-			return json.Marshal(response)
-		},
-		Invoke: func() error {
-			response = callback(request)
-			return nil
-		},
-	})
+func (unpacker *dialogCreateUnpacker) GetRequestType() communication.RequestType {
+	return ENDPOINT_DIALOG_CREATE
+}
+
+func (unpacker *dialogCreateUnpacker) CreateRequest() (requestPtr interface{}) {
+	return &dialogCreateRequest{}
+}
+
+func (unpacker *dialogCreateUnpacker) Handle(requestPtr interface{}) (responsePtr interface{}, err error) {
+	return unpacker.Callback(requestPtr.(*dialogCreateRequest))
 }
 
 type dialogCreateRequest struct {

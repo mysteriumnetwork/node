@@ -16,7 +16,7 @@ type Client interface {
 
 type Receiver interface {
 	Receive(unpacker MessageUnpacker) error
-	Respond(unpacker *RequestUnpacker) error
+	Respond(unpacker RequestUnpacker) error
 }
 
 type Sender interface {

@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"encoding/json"
 	"github.com/mysterium/node/communication"
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats/test"
@@ -65,23 +64,20 @@ func TestCustomRequest(t *testing.T) {
 	}
 }
 
-func respondCustom(receiver communication.Receiver, callback func(request *customRequest) *customResponse) error {
-	var request *customRequest
-	var response *customResponse
+type customRequestUnpacker struct {
+	Callback func(request *customRequest) *customResponse
+}
 
-	return receiver.Respond(&communication.RequestUnpacker{
-		RequestType: "custom-response",
-		RequestUnpack: func(requestData []byte) error {
-			return json.Unmarshal(requestData, &request)
-		},
-		ResponsePack: func() ([]byte, error) {
-			return json.Marshal(response)
-		},
-		Invoke: func() error {
-			response = callback(request)
-			return nil
-		},
-	})
+func (unpacker *customRequestUnpacker) GetRequestType() communication.RequestType {
+	return communication.RequestType("custom-response")
+}
+
+func (unpacker *customRequestUnpacker) CreateRequest() (requestPtr interface{}) {
+	return &customRequest{}
+}
+
+func (unpacker *customRequestUnpacker) Handle(requestPtr interface{}) (responsePtr interface{}, err error) {
+	return unpacker.Callback(requestPtr.(*customRequest)), nil
 }
 
 func TestCustomRespond(t *testing.T) {
@@ -96,10 +92,12 @@ func TestCustomRespond(t *testing.T) {
 	}
 
 	requestReceived := make(chan bool)
-	err := respondCustom(receiver, func(request *customRequest) *customResponse {
-		assert.Equal(t, &customRequest{"REQUEST"}, request)
-		requestReceived <- true
-		return &customResponse{"RESPONSE"}
+	err := receiver.Respond(&customRequestUnpacker{
+		func(request *customRequest) *customResponse {
+			assert.Equal(t, &customRequest{"REQUEST"}, request)
+			requestReceived <- true
+			return &customResponse{"RESPONSE"}
+		},
 	})
 	assert.Nil(t, err)
 
