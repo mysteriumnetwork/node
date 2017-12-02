@@ -2,11 +2,6 @@ package communication
 
 type RequestType string
 
-type RequestHandler struct {
-	Request Unpacker
-	Invoke  func() (response Packer)
-}
-
 type RequestPacker interface {
 	GetRequestType() RequestType
 	CreateRequest() (requestPtr interface{})
