@@ -2,7 +2,6 @@ package nats
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/service_discovery/dto"
 )
@@ -10,21 +9,20 @@ import (
 // Client is trying to establish new dialog with Node
 const ENDPOINT_DIALOG_CREATE = communication.RequestType("dialog-create")
 
-func requestDialogCreate(sender communication.Sender, request dialogCreateRequest) (response *dialogCreateResponse, err error) {
-	err = sender.Request(&communication.RequestPacker{
-		RequestType: ENDPOINT_DIALOG_CREATE,
-		RequestPack: func() ([]byte, error) {
-			return json.Marshal(request)
-		},
-		ResponseUnpack: func(responseData []byte) error {
-			return json.Unmarshal(responseData, response)
-		},
-	})
-	if !response.Accepted {
-		err = fmt.Errorf("Dialog creation rejected: %s", response)
-	}
+type dialogCreatePacker struct {
+	Request *dialogCreateRequest
+}
 
-	return response, err
+func (packer *dialogCreatePacker) GetRequestType() communication.RequestType {
+	return ENDPOINT_DIALOG_CREATE
+}
+
+func (packer *dialogCreatePacker) CreateRequest() (requestPtr interface{}) {
+	return packer.Request
+}
+
+func (packer *dialogCreatePacker) CreateResponse() (responsePtr interface{}) {
+	return &dialogCreateResponse{}
 }
 
 func respondDialogCreate(receiver communication.Receiver, callback func(request *dialogCreateRequest) *dialogCreateResponse) error {

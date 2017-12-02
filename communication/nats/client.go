@@ -40,11 +40,13 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		messageTopic:   contactTopic + ".",
 	}
 
-	_, err = requestDialogCreate(sender, dialogCreateRequest{
-		IdentityId: client.myIdentity,
+	resp, err := sender.Request(&dialogCreatePacker{
+		&dialogCreateRequest{
+			IdentityId: client.myIdentity,
+		},
 	})
-	if err != nil {
-		return
+	if !resp.(*dialogCreateResponse).Accepted {
+		err = fmt.Errorf("Dialog creation rejected: %s", resp)
 	}
 
 	receiver = &receiverNats{

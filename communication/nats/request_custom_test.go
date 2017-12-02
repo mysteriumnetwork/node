@@ -18,17 +18,20 @@ type customResponse struct {
 	FieldOut string
 }
 
-func requestCustom(sender communication.Sender, request *customRequest) (response *customResponse, err error) {
-	err = sender.Request(&communication.RequestPacker{
-		RequestType: "custom-request",
-		RequestPack: func() ([]byte, error) {
-			return json.Marshal(request)
-		},
-		ResponseUnpack: func(responseData []byte) error {
-			return json.Unmarshal(responseData, &response)
-		},
-	})
-	return response, err
+type customRequestPacker struct {
+	Request *customRequest
+}
+
+func (packer *customRequestPacker) GetRequestType() communication.RequestType {
+	return communication.RequestType("custom-request")
+}
+
+func (packer *customRequestPacker) CreateRequest() (requestPtr interface{}) {
+	return packer.Request
+}
+
+func (packer *customRequestPacker) CreateResponse() (responsePtr interface{}) {
+	return &customResponse{}
 }
 
 func TestCustomRequest(t *testing.T) {
@@ -51,9 +54,11 @@ func TestCustomRequest(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	response, err := requestCustom(sender, &customRequest{"REQUEST"})
+	response, err := sender.Request(&customRequestPacker{
+		&customRequest{"REQUEST"},
+	})
 	assert.Nil(t, err)
-	assert.Exactly(t, &customResponse{"RESPONSE"}, response)
+	assert.Exactly(t, customResponse{"RESPONSE"}, *response.(*customResponse))
 
 	if err := test.Wait(requestSent); err != nil {
 		t.Fatal("Request not sent")
@@ -87,6 +92,7 @@ func TestCustomRespond(t *testing.T) {
 
 	receiver := &receiverNats{
 		connection: connection,
+		codec:      communication.NewCodecJSON(),
 	}
 
 	requestReceived := make(chan bool)

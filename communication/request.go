@@ -7,10 +7,10 @@ type RequestHandler struct {
 	Invoke  func() (response Packer)
 }
 
-type RequestPacker struct {
-	RequestType    RequestType
-	RequestPack    func() ([]byte, error)
-	ResponseUnpack func([]byte) error
+type RequestPacker interface {
+	GetRequestType() RequestType
+	CreateRequest() (requestPtr interface{})
+	CreateResponse() (responsePtr interface{})
 }
 
 type RequestUnpacker struct {

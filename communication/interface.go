@@ -21,5 +21,5 @@ type Receiver interface {
 
 type Sender interface {
 	Send(packer MessagePacker) error
-	Request(packer *RequestPacker) error
+	Request(packer RequestPacker) (responsePtr interface{}, err error)
 }

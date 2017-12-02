@@ -41,34 +41,35 @@ func (sender *senderNats) Send(packer communication.MessagePacker) error {
 	return nil
 }
 
-func (sender *senderNats) Request(packer *communication.RequestPacker) error {
+func (sender *senderNats) Request(packer communication.RequestPacker) (responsePtr interface{}, err error) {
 
-	requestType := string(packer.RequestType)
-	requestData, err := packer.RequestPack()
+	requestType := string(packer.GetRequestType())
+	responsePtr = packer.CreateResponse()
+
+	requestData, err := sender.codec.Pack(packer.CreateRequest())
 	if err != nil {
 		err = fmt.Errorf("Failed to pack request '%s'. %s", requestType, err)
-		return err
+		return
 	}
 
 	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Request '%s' sending: %s", requestType, requestData))
 	msg, err := sender.connection.Request(
-		sender.messageTopic+string(packer.RequestType),
+		sender.messageTopic+requestType,
 		requestData,
 		sender.timeoutRequest,
 	)
 	if err != nil {
 		err = fmt.Errorf("Failed to send request '%s'. %s", requestType, err)
-		return err
+		return
 	}
 
-	responseData := msg.Data
-	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Received response for '%s': %s", requestType, responseData))
-
-	err = packer.ResponseUnpack(responseData)
+	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Received response for '%s': %s", requestType, msg.Data))
+	err = sender.codec.Unpack(msg.Data, responsePtr)
 	if err != nil {
 		err = fmt.Errorf("Failed to unpack response '%s'. %s", requestType, err)
-		return err
+		log.Error(RECEIVER_LOG_PREFIX, err)
+		return
 	}
 
-	return nil
+	return responsePtr, nil
 }

@@ -9,18 +9,21 @@ import (
 	"time"
 )
 
-func requestBytes(sender communication.Sender, request []byte) (response []byte, err error) {
-	err = sender.Request(&communication.RequestPacker{
-		RequestType: "bytes-request",
-		RequestPack: func() ([]byte, error) {
-			return request, nil
-		},
-		ResponseUnpack: func(responseData []byte) error {
-			response = responseData
-			return nil
-		},
-	})
-	return response, err
+type bytesRequestPacker struct {
+	Request []byte
+}
+
+func (packer *bytesRequestPacker) GetRequestType() communication.RequestType {
+	return communication.RequestType("bytes-request")
+}
+
+func (packer *bytesRequestPacker) CreateRequest() (requestPtr interface{}) {
+	return packer.Request
+}
+
+func (packer *bytesRequestPacker) CreateResponse() (responsePtr interface{}) {
+	var response []byte
+	return &response
 }
 
 func TestBytesRequest(t *testing.T) {
@@ -31,7 +34,7 @@ func TestBytesRequest(t *testing.T) {
 
 	sender := &senderNats{
 		connection:     connection,
-		codec:          communication.NewCodecJSON(),
+		codec:          communication.NewCodecBytes(),
 		timeoutRequest: 100 * time.Millisecond,
 	}
 
@@ -43,9 +46,11 @@ func TestBytesRequest(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	response, err := requestBytes(sender, []byte("REQUEST"))
+	response, err := sender.Request(&bytesRequestPacker{
+		[]byte("REQUEST"),
+	})
 	assert.Nil(t, err)
-	assert.Equal(t, "RESPONSE", string(response))
+	assert.Equal(t, []byte("RESPONSE"), *response.(*[]byte))
 
 	if err := test.Wait(requestSent); err != nil {
 		t.Fatal("Request not sent")
@@ -80,11 +85,12 @@ func TestBytesRespond(t *testing.T) {
 
 	receiver := &receiverNats{
 		connection: connection,
+		codec:      communication.NewCodecBytes(),
 	}
 
 	requestReceived := make(chan bool)
 	err := respondBytes(receiver, func(request []byte) []byte {
-		assert.Equal(t, "REQUEST", string(request))
+		assert.Equal(t, []byte("REQUEST"), request)
 		requestReceived <- true
 		return []byte("RESPONSE")
 	})
