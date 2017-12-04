@@ -16,10 +16,10 @@ type ApiServer interface {
 	Stop()
 }
 
-type localApiServer struct {
+type apiServer struct {
 	listener  net.Listener
 	stopped   sync.WaitGroup
-	bountPort int
+	boundPort int
 }
 
 func CreateNew(address string, port int) (ApiServer, error) {
@@ -38,24 +38,24 @@ func CreateNew(address string, port int) (ApiServer, error) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	server := localApiServer{listener, wg, boundPort}
+	server := apiServer{listener, wg, boundPort}
 	go server.handleHttpRequests()
 	return &server, nil
 }
 
-func (server *localApiServer) Stop() {
+func (server *apiServer) Stop() {
 	server.listener.Close()
 }
 
-func (server *localApiServer) Wait() {
+func (server *apiServer) Wait() {
 	server.stopped.Wait()
 }
 
-func (server *localApiServer) Port() int {
-	return server.bountPort
+func (server *apiServer) Port() int {
+	return server.boundPort
 }
 
-func (server *localApiServer) handleHttpRequests() {
+func (server *apiServer) handleHttpRequests() {
 	http.Serve(server.listener, nil)
 	server.stopped.Done()
 }
