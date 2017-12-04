@@ -2,14 +2,14 @@ package communication
 
 type RequestType string
 
-type RequestPacker interface {
+type RequestProducer interface {
 	GetRequestType() RequestType
-	CreateRequest() (requestPtr interface{})
-	CreateResponse() (responsePtr interface{})
+	NewResponse() (responsePtr interface{})
+	Produce() (requestPtr interface{})
 }
 
-type RequestUnpacker interface {
+type RequestHandler interface {
 	GetRequestType() RequestType
-	CreateRequest() (messagePtr interface{})
+	NewRequest() (messagePtr interface{})
 	Handle(requestPtr interface{}) (responsePtr interface{}, err error)
 }

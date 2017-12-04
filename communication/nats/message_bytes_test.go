@@ -8,33 +8,33 @@ import (
 	"testing"
 )
 
-type bytesMessagePacker struct {
+type bytesMessageProducer struct {
 	Message []byte
 }
 
-func (packer *bytesMessagePacker) GetMessageType() communication.MessageType {
+func (producer *bytesMessageProducer) GetMessageType() communication.MessageType {
 	return communication.MessageType("bytes-message")
 }
 
-func (packer *bytesMessagePacker) CreateMessage() (messagePtr interface{}) {
-	return packer.Message
+func (producer *bytesMessageProducer) Produce() (messagePtr interface{}) {
+	return producer.Message
 }
 
-type bytesMessageUnpacker struct {
+type bytesMessageHandler struct {
 	Callback func(*[]byte)
 }
 
-func (unpacker *bytesMessageUnpacker) GetMessageType() communication.MessageType {
+func (handler *bytesMessageHandler) GetMessageType() communication.MessageType {
 	return communication.MessageType("bytes-message")
 }
 
-func (unpacker *bytesMessageUnpacker) CreateMessage() (messagePtr interface{}) {
+func (handler *bytesMessageHandler) NewMessage() (messagePtr interface{}) {
 	var message []byte
 	return &message
 }
 
-func (unpacker *bytesMessageUnpacker) Handle(messagePtr interface{}) error {
-	unpacker.Callback(messagePtr.(*[]byte))
+func (handler *bytesMessageHandler) Handle(messagePtr interface{}) error {
+	handler.Callback(messagePtr.(*[]byte))
 	return nil
 }
 
@@ -57,7 +57,7 @@ func TestMessageBytesSend(t *testing.T) {
 	assert.Nil(t, err)
 
 	err = sender.Send(
-		&bytesMessagePacker{[]byte("123")},
+		&bytesMessageProducer{[]byte("123")},
 	)
 	assert.Nil(t, err)
 
@@ -78,7 +78,7 @@ func TestMessageBytesReceive(t *testing.T) {
 	}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive(&bytesMessageUnpacker{func(message *[]byte) {
+	err := receiver.Receive(&bytesMessageHandler{func(message *[]byte) {
 		assert.Equal(t, []byte("123"), *message)
 		messageReceived <- true
 	}})

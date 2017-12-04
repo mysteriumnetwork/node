@@ -15,11 +15,11 @@ type Client interface {
 }
 
 type Receiver interface {
-	Receive(unpacker MessageUnpacker) error
-	Respond(unpacker RequestUnpacker) error
+	Receive(handler MessageHandler) error
+	Respond(handler RequestHandler) error
 }
 
 type Sender interface {
-	Send(packer MessagePacker) error
-	Request(packer RequestPacker) (responsePtr interface{}, err error)
+	Send(producer MessageProducer) error
+	Request(producer RequestProducer) (responsePtr interface{}, err error)
 }

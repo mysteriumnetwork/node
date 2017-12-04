@@ -40,7 +40,7 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		messageTopic:   contactTopic + ".",
 	}
 
-	resp, err := sender.Request(&dialogCreatePacker{
+	resp, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
 			IdentityId: client.myIdentity,
 		},

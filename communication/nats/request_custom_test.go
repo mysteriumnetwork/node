@@ -17,20 +17,20 @@ type customResponse struct {
 	FieldOut string
 }
 
-type customRequestPacker struct {
+type customRequestProducer struct {
 	Request *customRequest
 }
 
-func (packer *customRequestPacker) GetRequestType() communication.RequestType {
+func (producer *customRequestProducer) GetRequestType() communication.RequestType {
 	return communication.RequestType("custom-request")
 }
 
-func (packer *customRequestPacker) CreateRequest() (requestPtr interface{}) {
-	return packer.Request
+func (producer *customRequestProducer) NewResponse() (responsePtr interface{}) {
+	return &customResponse{}
 }
 
-func (packer *customRequestPacker) CreateResponse() (responsePtr interface{}) {
-	return &customResponse{}
+func (producer *customRequestProducer) Produce() (requestPtr interface{}) {
+	return producer.Request
 }
 
 func TestCustomRequest(t *testing.T) {
@@ -53,7 +53,7 @@ func TestCustomRequest(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	response, err := sender.Request(&customRequestPacker{
+	response, err := sender.Request(&customRequestProducer{
 		&customRequest{"REQUEST"},
 	})
 	assert.Nil(t, err)
@@ -64,20 +64,20 @@ func TestCustomRequest(t *testing.T) {
 	}
 }
 
-type customRequestUnpacker struct {
+type customRequestHandler struct {
 	Callback func(request *customRequest) *customResponse
 }
 
-func (unpacker *customRequestUnpacker) GetRequestType() communication.RequestType {
+func (handler *customRequestHandler) GetRequestType() communication.RequestType {
 	return communication.RequestType("custom-response")
 }
 
-func (unpacker *customRequestUnpacker) CreateRequest() (requestPtr interface{}) {
+func (handler *customRequestHandler) NewRequest() (requestPtr interface{}) {
 	return &customRequest{}
 }
 
-func (unpacker *customRequestUnpacker) Handle(requestPtr interface{}) (responsePtr interface{}, err error) {
-	return unpacker.Callback(requestPtr.(*customRequest)), nil
+func (handler *customRequestHandler) Handle(requestPtr interface{}) (responsePtr interface{}, err error) {
+	return handler.Callback(requestPtr.(*customRequest)), nil
 }
 
 func TestCustomRespond(t *testing.T) {
@@ -92,7 +92,7 @@ func TestCustomRespond(t *testing.T) {
 	}
 
 	requestReceived := make(chan bool)
-	err := receiver.Respond(&customRequestUnpacker{
+	err := receiver.Respond(&customRequestHandler{
 		func(request *customRequest) *customResponse {
 			assert.Equal(t, &customRequest{"REQUEST"}, request)
 			requestReceived <- true

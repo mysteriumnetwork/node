@@ -41,7 +41,7 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		return &dialogCreateResponse{Accepted: true}, nil
 	}
 
-	subscribeError := receiver.Respond(&dialogCreateUnpacker{createDialog})
+	subscribeError := receiver.Respond(&dialogCreateHandler{createDialog})
 	return subscribeError
 }
 

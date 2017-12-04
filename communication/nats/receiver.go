@@ -16,13 +16,13 @@ type receiverNats struct {
 	messageTopic string
 }
 
-func (receiver *receiverNats) Receive(unpacker communication.MessageUnpacker) error {
+func (receiver *receiverNats) Receive(handler communication.MessageHandler) error {
 
-	messageType := string(unpacker.GetMessageType())
+	messageType := string(handler.GetMessageType())
 
 	messageHandler := func(msg *nats.Msg) {
 		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Message '%s' received: %s", messageType, msg.Data))
-		messagePtr := unpacker.CreateMessage()
+		messagePtr := handler.NewMessage()
 		err := receiver.codec.Unpack(msg.Data, messagePtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to unpack message '%s'. %s", messageType, err)
@@ -30,7 +30,7 @@ func (receiver *receiverNats) Receive(unpacker communication.MessageUnpacker) er
 			return
 		}
 
-		err = unpacker.Handle(messagePtr)
+		err = handler.Handle(messagePtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to process message '%s'. %s", messageType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
@@ -47,13 +47,13 @@ func (receiver *receiverNats) Receive(unpacker communication.MessageUnpacker) er
 	return nil
 }
 
-func (receiver *receiverNats) Respond(unpacker communication.RequestUnpacker) error {
+func (receiver *receiverNats) Respond(handler communication.RequestHandler) error {
 
-	requestType := string(unpacker.GetRequestType())
+	requestType := string(handler.GetRequestType())
 
 	messageHandler := func(msg *nats.Msg) {
 		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' received: %s", requestType, msg.Data))
-		requestPtr := unpacker.CreateRequest()
+		requestPtr := handler.NewRequest()
 		err := receiver.codec.Unpack(msg.Data, requestPtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to unpack request '%s'. %s", requestType, err)
@@ -61,7 +61,7 @@ func (receiver *receiverNats) Respond(unpacker communication.RequestUnpacker) er
 			return
 		}
 
-		response, err := unpacker.Handle(requestPtr)
+		response, err := handler.Handle(requestPtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to process request '%s'. %s", requestType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)

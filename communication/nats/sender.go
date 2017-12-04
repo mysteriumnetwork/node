@@ -18,11 +18,11 @@ type senderNats struct {
 	messageTopic   string
 }
 
-func (sender *senderNats) Send(packer communication.MessagePacker) error {
+func (sender *senderNats) Send(producer communication.MessageProducer) error {
 
-	messageType := string(packer.GetMessageType())
+	messageType := string(producer.GetMessageType())
 
-	messageData, err := sender.codec.Pack(packer.CreateMessage())
+	messageData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
 		err = fmt.Errorf("Failed to encode message '%s'. %s", messageType, err)
 		return err
@@ -41,12 +41,12 @@ func (sender *senderNats) Send(packer communication.MessagePacker) error {
 	return nil
 }
 
-func (sender *senderNats) Request(packer communication.RequestPacker) (responsePtr interface{}, err error) {
+func (sender *senderNats) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
 
-	requestType := string(packer.GetRequestType())
-	responsePtr = packer.CreateResponse()
+	requestType := string(producer.GetRequestType())
+	responsePtr = producer.NewResponse()
 
-	requestData, err := sender.codec.Pack(packer.CreateRequest())
+	requestData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
 		err = fmt.Errorf("Failed to pack request '%s'. %s", requestType, err)
 		return

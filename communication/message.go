@@ -2,13 +2,13 @@ package communication
 
 type MessageType string
 
-type MessagePacker interface {
+type MessageProducer interface {
 	GetMessageType() MessageType
-	CreateMessage() (messagePtr interface{})
+	Produce() (messagePtr interface{})
 }
 
-type MessageUnpacker interface {
+type MessageHandler interface {
 	GetMessageType() MessageType
-	CreateMessage() (messagePtr interface{})
+	NewMessage() (messagePtr interface{})
 	Handle(messagePtr interface{}) error
 }

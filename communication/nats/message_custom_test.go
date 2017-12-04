@@ -12,16 +12,16 @@ type customMessage struct {
 	Field int
 }
 
-type customMessagePacker struct {
+type customMessageProducer struct {
 	Message *customMessage
 }
 
-func (packer *customMessagePacker) GetMessageType() communication.MessageType {
+func (producer *customMessageProducer) GetMessageType() communication.MessageType {
 	return communication.MessageType("custom-message")
 }
 
-func (packer *customMessagePacker) CreateMessage() (messagePtr interface{}) {
-	return packer.Message
+func (producer *customMessageProducer) Produce() (messagePtr interface{}) {
+	return producer.Message
 }
 
 func TestMessageCustomSend(t *testing.T) {
@@ -42,7 +42,7 @@ func TestMessageCustomSend(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = sender.Send(&customMessagePacker{&customMessage{123}})
+	err = sender.Send(&customMessageProducer{&customMessage{123}})
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageSent); err != nil {
@@ -68,7 +68,7 @@ func TestMessageCustomSendNull(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	err = sender.Send(&customMessagePacker{})
+	err = sender.Send(&customMessageProducer{})
 	assert.Nil(t, err)
 
 	if err := test.Wait(messageSent); err != nil {
@@ -76,20 +76,20 @@ func TestMessageCustomSendNull(t *testing.T) {
 	}
 }
 
-type customMessageUnpacker struct {
+type customMessageHandler struct {
 	Callback func(message *customMessage)
 }
 
-func (unpacker *customMessageUnpacker) GetMessageType() communication.MessageType {
+func (handler *customMessageHandler) GetMessageType() communication.MessageType {
 	return communication.MessageType("custom-message")
 }
 
-func (unpacker *customMessageUnpacker) CreateMessage() (messagePtr interface{}) {
+func (handler *customMessageHandler) NewMessage() (messagePtr interface{}) {
 	return &customMessage{}
 }
 
-func (unpacker *customMessageUnpacker) Handle(messagePtr interface{}) error {
-	unpacker.Callback(messagePtr.(*customMessage))
+func (handler *customMessageHandler) Handle(messagePtr interface{}) error {
+	handler.Callback(messagePtr.(*customMessage))
 	return nil
 }
 
@@ -105,7 +105,7 @@ func TestMessageCustomReceive(t *testing.T) {
 	}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive(&customMessageUnpacker{func(message *customMessage) {
+	err := receiver.Receive(&customMessageHandler{func(message *customMessage) {
 		assert.Exactly(t, customMessage{123}, *message)
 		messageReceived <- true
 	}})

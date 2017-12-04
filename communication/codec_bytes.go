@@ -11,7 +11,7 @@ func NewCodecBytes() *codecBytes {
 
 type codecBytes struct{}
 
-func (packer *codecBytes) Pack(payloadPtr interface{}) ([]byte, error) {
+func (codec *codecBytes) Pack(payloadPtr interface{}) ([]byte, error) {
 	if payloadPtr == nil {
 		return []byte{}, nil
 	}
@@ -30,7 +30,7 @@ func (packer *codecBytes) Pack(payloadPtr interface{}) ([]byte, error) {
 	return []byte{}, fmt.Errorf("Cant pack payload: %#v", payloadPtr)
 }
 
-func (packer *codecBytes) Unpack(data []byte, payloadPtr interface{}) error {
+func (codec *codecBytes) Unpack(data []byte, payloadPtr interface{}) error {
 	switch payload := payloadPtr.(type) {
 	case *[]byte:
 		*payload = data
