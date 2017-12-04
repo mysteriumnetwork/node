@@ -20,6 +20,6 @@ func WriteAsJson(v interface{}, writer http.ResponseWriter) {
 	writer.Header().Add("Content-type", "charset=utf-8")
 	_, writeErr := writer.Write(serialized)
 	if writeErr != nil {
-		http.Error(writer, "Unable write to writer (funny :D)", http.StatusInternalServerError)
+		http.Error(writer, "Http response write error", http.StatusInternalServerError)
 	}
 }

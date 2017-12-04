@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/mysterium/node/bytescount_client"
-	"github.com/mysterium/node/client_local_api"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/openvpn"
 	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/tequilapi"
 	"io"
 	"strconv"
 	"time"
@@ -26,6 +26,8 @@ type CommandRun struct {
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnClient      *openvpn.Client
+
+	httpApiServer tequilapi.ApiServer
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
@@ -69,16 +71,21 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	go client_local_api.Bootstrap(options.LocalApiAddress)
+	cmd.httpApiServer, err = tequilapi.Bootstrap(options.TequilaApiAddress, options.TequilaApiPort)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func (cmd *CommandRun) Wait() error {
+	cmd.httpApiServer.Wait()
 	return cmd.vpnClient.Wait()
 }
 
 func (cmd *CommandRun) Kill() {
+	cmd.httpApiServer.Stop()
 	cmd.communicationClient.Stop()
 	cmd.vpnClient.Stop()
 }

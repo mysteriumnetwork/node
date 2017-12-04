@@ -1,27 +1,31 @@
-package client_local_api
+package tequilapi
 
 import (
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/client_local_api/endpoints"
+	"github.com/mysterium/node/tequilapi/endpoints"
 	"net/http"
 	"reflect"
 	"runtime"
+	"time"
 )
 
 const httpLogPrefix = "[http]"
 
 func registerAllEndpoints() {
-	RegisterEndpoint("/healthcheck", endpoints.HealthCheckEndpoint)
+	RegisterEndpoint("/healthcheck", endpoints.HealthCheckEndpointFactory(time.Now))
 }
 
 /*
-Bootstrap function starts http server on specified binding address, which format conforms to what is expeted by
+Bootstrap function starts http server on specified binding address, which format conforms to what is expected by
 http.ListenAndServe function. This function IS BLOCKING, that means - it should be run on goroutine to resume with normal flow
 */
-func Bootstrap(bindAddress string) {
+func Bootstrap(bindAddress string, bindPort int) (ApiServer, error) {
 	registerAllEndpoints()
-	log.Infof("%s Local api binding %s\n", httpLogPrefix, bindAddress)
-	log.Errorf(httpLogPrefix, http.ListenAndServe(bindAddress, nil))
+	apiServer, err := CreateNew(bindAddress, bindPort)
+	if err != nil {
+		return nil, err
+	}
+	return apiServer, nil
 }
 
 /*
