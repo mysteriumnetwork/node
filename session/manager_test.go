@@ -5,19 +5,33 @@ import (
 	"testing"
 )
 
-func TestManagerHasSessionsStored(t *testing.T) {
-	var generator GeneratorMock
-
+func TestManagerAdd(t *testing.T) {
+	sessionExpected := SessionId("session-1")
 	manager := Manager{
-		Generator: &generator,
+		Generator: &GeneratorFake{},
 	}
 
-	length := 10
+	manager.Add(sessionExpected)
+	assert.Exactly(
+		t,
+		[]SessionId{sessionExpected},
+		manager.sessions,
+	)
+}
 
-	for i := 0; i < length; i++ {
-		sid := manager.Generator.Generate()
-		manager.Add(sid)
+func TestManagerCreate(t *testing.T) {
+	sessionExpected := SessionId("mocked-session")
+	manager := Manager{
+		Generator: &GeneratorFake{
+			SessionIdMock: SessionId("mocked-session"),
+		},
 	}
 
-	assert.Len(t, manager.sessions, length)
+	session := manager.Create()
+	assert.Exactly(t, sessionExpected, session)
+	assert.Exactly(
+		t,
+		[]SessionId{sessionExpected},
+		manager.sessions,
+	)
 }

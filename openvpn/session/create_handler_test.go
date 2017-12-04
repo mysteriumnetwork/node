@@ -8,17 +8,14 @@ import (
 )
 
 var sessionManager = session.Manager{
-	Generator: &session.GeneratorMock{},
+	Generator: &session.GeneratorFake{
+		SessionIdMock: session.SessionId("session-mock"),
+	},
 }
-
-var clientConfig = openvpn.ClientConfig{&openvpn.Config{}}
 
 var handler = SessionCreateHandler{
 	CurrentProposalId: 101,
 	SessionManager:    &sessionManager,
-	ClientConfigFactory: func() *openvpn.ClientConfig {
-		return &clientConfig
-	},
 }
 
 func TestHandler_UnknownProposal(t *testing.T) {
@@ -38,6 +35,12 @@ func TestHandler_UnknownProposal(t *testing.T) {
 }
 
 func TestHandler_Success(t *testing.T) {
+	handler.ClientConfigFactory = func() *openvpn.ClientConfig {
+		clientConfig := openvpn.ClientConfig{&openvpn.Config{}}
+		clientConfig.SetPort(1000)
+		return &clientConfig
+	}
+
 	request := handler.NewRequest().(*SessionCreateRequest)
 	request.ProposalId = 101
 	sessionResponse, err := handler.Handle(request)
@@ -48,8 +51,8 @@ func TestHandler_Success(t *testing.T) {
 		&SessionCreateResponse{
 			Success: true,
 			Session: VpnSession{
-				Id:     "",
-				Config: "",
+				Id:     "session-mock",
+				Config: "port 1000\n",
 			},
 		},
 		sessionResponse,
