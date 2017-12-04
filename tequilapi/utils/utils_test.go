@@ -20,11 +20,12 @@ func TestWriteAsJsonReturnsExpectedResponse(t *testing.T) {
 	result := respRecorder.Result()
 
 	assert.Equal(t, "application/json", result.Header.Get("Content-type"))
-	assert.JSONEq(t, `
-		{
+	assert.JSONEq(
+		t,
+		`{
             "IntField" : 1,
 			"renamed" : "abc"
-		}
-	`, respRecorder.Body.String())
+		}`,
+		respRecorder.Body.String())
 
 }
