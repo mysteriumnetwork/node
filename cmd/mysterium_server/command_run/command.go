@@ -28,6 +28,8 @@ type CommandRun struct {
 	CommunicationServerFactory func(identity dto_discovery.Identity) communication.Server
 	communicationServer        communication.Server
 
+	SessionManager session.ManagerInterface
+
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnServer      *openvpn.Server
 }
@@ -56,11 +58,9 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		nats.NewContact(*providerId),
 	)
 
-	sessionResponseHandler := vpn_session.CreateResponseHandler{
-		ProposalId: proposal.Id,
-		SessionManager: &session.Manager{
-			Generator: &session.Generator{},
-		},
+	sessionResponseHandler := &vpn_session.SessionCreateHandler{
+		CurrentProposalId: proposal.Id,
+		SessionManager:    cmd.SessionManager,
 		ClientConfigFactory: func() *openvpn.ClientConfig {
 			return openvpn.NewClientConfig(
 				vpnServerIp,
@@ -72,7 +72,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		},
 	}
 	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
-		receiver.Respond(communication.SESSION_CREATE, sessionResponseHandler.Handle)
+		receiver.Respond(sessionResponseHandler)
 	}
 
 	cmd.communicationServer = cmd.CommunicationServerFactory(*providerId)
