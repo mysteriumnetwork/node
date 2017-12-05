@@ -14,7 +14,7 @@ type SessionCreateHandler struct {
 }
 
 func (handler *SessionCreateHandler) GetRequestType() communication.RequestType {
-	return communication.SESSION_CREATE
+	return SESSION_CREATE
 }
 
 func (handler *SessionCreateHandler) NewRequest() (requestPtr interface{}) {

@@ -1,8 +1,6 @@
 package command_run
 
 import (
-	"encoding/json"
-	"errors"
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/openvpn"
@@ -11,7 +9,6 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	"io"
-	"strconv"
 	"time"
 )
 
@@ -45,7 +42,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	vpnSession, err := getVpnSession(sender, strconv.Itoa(proposal.Id))
+	vpnSession, err := vpn_session.RequestSessionCreate(sender, proposal.Id)
 	if err != nil {
 		return err
 	}
@@ -90,24 +87,4 @@ func (cmd *CommandRun) Kill() {
 	cmd.httpApiServer.Stop()
 	cmd.communicationClient.Stop()
 	cmd.vpnClient.Stop()
-}
-
-func getVpnSession(sender communication.Sender, proposalId string) (session vpn_session.VpnSession, err error) {
-	sessionJson, err := sender.Request(communication.SESSION_CREATE, proposalId)
-	if err != nil {
-		return
-	}
-
-	var response vpn_session.SessionCreateResponse
-
-	err = json.Unmarshal([]byte(sessionJson), &response)
-	if err != nil {
-		return
-	}
-
-	if response.Success == false {
-		return session, errors.New(response.Message)
-	}
-
-	return response.Session, nil
 }
