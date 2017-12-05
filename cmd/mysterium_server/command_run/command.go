@@ -14,7 +14,6 @@ import (
 	"github.com/mysterium/node/session"
 	"io"
 	"time"
-	"errors"
 	"github.com/mysterium/node/identity"
 )
 
@@ -34,7 +33,7 @@ type CommandRun struct {
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	providerId, err := selectIdentity(options.DirectoryKeystore, options.NodeKey)
+	providerId, err := identity.SelectIdentity(options.DirectoryKeystore, options.NodeKey)
 	if err != nil {
 		return err
 	}
@@ -116,35 +115,4 @@ func (cmd *CommandRun) Kill() {
 	cmd.vpnServer.Stop()
 	cmd.communicationServer.Stop()
 	cmd.NatService.Stop()
-}
-
-func selectIdentity(dir string, nodeKey string) (id *dto_discovery.Identity, err error) {
-	identityController := identity.NewIdentityController(dir)
-
-	// validate and return user provided identity
-	if len(nodeKey) > 0 {
-		id = identityController.GetIdentityByValue(nodeKey)
-		if id == nil {
-			return id, errors.New("identity doesn't exist")
-		}
-		identityController.CacheIdentity(id)
-		return
-	}
-
-	// try cache
-	id = identityController.GetIdentityFromCache()
-	if id != nil {
-		identityController.CacheIdentity(id)
-		return
-	}
-
-	// if all fails, create a new one
-	id, err = identityController.CreateIdentity()
-	if err != nil {
-		return id, err
-	}
-
-	identityController.CacheIdentity(id)
-
-	return
 }
