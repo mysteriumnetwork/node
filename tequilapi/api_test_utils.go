@@ -32,10 +32,12 @@ func (tc *testClient) Get(path string) *http.Response {
 	return resp
 }
 
-func expectJsonAndStatus(t *testing.T, resp *http.Response, httpStatus int, v interface{}) {
+func expectJsonStatus200(t *testing.T, resp *http.Response, httpStatus int) {
 	assert.Equal(t, "application/json", resp.Header.Get("Content-type"))
 	assert.Equal(t, httpStatus, resp.StatusCode)
+}
 
+func parseResponseAsJson(t *testing.T, resp *http.Response, v interface{}) {
 	err := json.NewDecoder(resp.Body).Decode(v)
 	assert.Nil(t, err)
 }

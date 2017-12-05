@@ -14,7 +14,7 @@ type tequilapiTestSuite struct {
 
 func (testSuite *tequilapiTestSuite) SetupSuite() {
 	var err error
-	testSuite.server, err = Bootstrap("", 0)
+	testSuite.server, err = NewServer("", 0, NewApiEndpoints())
 	if err != nil {
 		testSuite.T().FailNow()
 	}
@@ -22,12 +22,12 @@ func (testSuite *tequilapiTestSuite) SetupSuite() {
 }
 
 func (testSuite *tequilapiTestSuite) TestHealthCheckReturnsExpectedResponse() {
-
 	resp := testSuite.client.Get("/healthcheck")
 
-	var jsonMap map[string]interface{}
-	expectJsonAndStatus(testSuite.T(), resp, 200, &jsonMap)
+	expectJsonStatus200(testSuite.T(), resp, 200)
 
+	var jsonMap map[string]interface{}
+	parseResponseAsJson(testSuite.T(), resp, &jsonMap)
 	assert.NotEmpty(testSuite.T(), jsonMap["uptime"])
 }
 

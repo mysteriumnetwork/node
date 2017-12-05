@@ -71,7 +71,10 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	cmd.httpApiServer, err = tequilapi.Bootstrap(options.TequilaApiAddress, options.TequilaApiPort)
+	apiEndpoints := tequilapi.NewApiEndpoints()
+	//TODO additional endpoint registration can go here i.e apiEndpoints.GET("/path", httprouter.Handle function)
+
+	cmd.httpApiServer, err = tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, apiEndpoints)
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
@@ -12,11 +13,11 @@ func TestHealthCheckReturnsExpectedJsonObject(t *testing.T) {
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	startTime := time.Unix(0, 0)
-	requestTime := startTime.Add(time.Minute)
+	tick1 := time.Unix(0, 0)
+	tick2 := tick1.Add(time.Minute)
 
-	handlerFunc := HealthCheckEndpointFactory(timeValues([]time.Time{startTime, requestTime}))
-	handlerFunc(resp, req)
+	handlerFunc := HealthCheckEndpointFactory(newMockTimer([]time.Time{tick1, tick2}).Now).HealthCheck
+	handlerFunc(resp, req, httprouter.Params{})
 
 	assert.JSONEq(
 		t,
@@ -26,11 +27,20 @@ func TestHealthCheckReturnsExpectedJsonObject(t *testing.T) {
 		resp.Body.String())
 }
 
-func timeValues(values []time.Time) func() time.Time {
-	var currentIndex = 0
-	return func() time.Time {
-		currentValue := values[currentIndex]
-		currentIndex = currentIndex + 1
-		return currentValue
+type mockTimer struct {
+	values  []time.Time
+	current int
+}
+
+func newMockTimer(values []time.Time) *mockTimer {
+	return &mockTimer{
+		values,
+		0,
 	}
+}
+
+func (mockTimer *mockTimer) Now() time.Time {
+	value := mockTimer.values[mockTimer.current%len(mockTimer.values)]
+	mockTimer.current += 1
+	return value
 }

@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/tequilapi/utils"
 	"net/http"
 	"time"
@@ -10,16 +11,23 @@ type healthCheckData struct {
 	Uptime string `json:"uptime"`
 }
 
+type healthCheckEndpoint struct {
+	startTime       time.Time
+	currentTimeFunc func() time.Time
+}
+
 /*
-HealthCheckEndpointFactory creates http.HandlerFunc for injected current time provider,
-which returns health status json object, currently with only one field - uptime
+HealthCheckEndpointFactory creates a structure with single HealthCheck method for healthcheck serving as http,
+currentTimeFunc is injected for easier testing
 */
-func HealthCheckEndpointFactory(currentTime func() time.Time) http.HandlerFunc {
-	startupTime := currentTime()
-	return func(writer http.ResponseWriter, request *http.Request) {
-		status := healthCheckData{
-			Uptime: currentTime().Sub(startupTime).String(),
-		}
-		utils.WriteAsJson(status, writer)
+func HealthCheckEndpointFactory(currentTimeFunc func() time.Time) *healthCheckEndpoint {
+	startTime := currentTimeFunc()
+	return &healthCheckEndpoint{startTime, currentTimeFunc}
+}
+
+func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	status := healthCheckData{
+		Uptime: hce.currentTimeFunc().Sub(hce.startTime).String(),
 	}
+	utils.WriteAsJson(status, writer)
 }

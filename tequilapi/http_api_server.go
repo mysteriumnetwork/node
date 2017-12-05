@@ -18,11 +18,11 @@ type ApiServer interface {
 
 type apiServer struct {
 	listener  net.Listener
-	stopped   sync.WaitGroup
+	stopped   *sync.WaitGroup
 	boundPort int
 }
 
-func CreateNew(address string, port int) (ApiServer, error) {
+func NewServer(address string, port int, handler http.Handler) (ApiServer, error) {
 	var err error
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", address, port))
 	if err != nil {
@@ -38,8 +38,8 @@ func CreateNew(address string, port int) (ApiServer, error) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	server := apiServer{listener, wg, boundPort}
-	go server.handleHttpRequests()
+	server := apiServer{listener, &wg, boundPort}
+	go serve(listener, handler, &wg)
 	return &server, nil
 }
 
@@ -55,9 +55,9 @@ func (server *apiServer) Port() int {
 	return server.boundPort
 }
 
-func (server *apiServer) handleHttpRequests() {
-	http.Serve(server.listener, nil)
-	server.stopped.Done()
+func serve(listener net.Listener, handler http.Handler, wg *sync.WaitGroup) {
+	http.Serve(listener, handler)
+	wg.Done()
 }
 
 func extractBoundPort(listener net.Listener) (int, error) {
