@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 )
 
-func GetMysteriumDirectory(paths ...string) string {
+func GetMysteriumDirectory(path string) string {
 	dir, _ := homedir.Dir()
 
-	dir = filepath.Join(dir, ".mysterium", filepath.Join(paths...))
+	dir = filepath.Join(dir, ".mysterium", path)
 
 	return dir
 }
