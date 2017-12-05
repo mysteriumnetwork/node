@@ -2,7 +2,7 @@ package command_run
 
 import (
 	"flag"
-	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/utils/file"
 )
 
 type CommandOptions struct {
@@ -24,21 +24,21 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.DirectoryConfig,
 		"config-dir",
-		cmd.GetDirectory("config"),
+		file.GetMysteriumDirectory("config"),
 		"Configs directory containing all configuration files",
 	)
 
 	flags.StringVar(
 		&options.DirectoryRuntime,
 		"runtime-dir",
-		cmd.GetDirectory("run"),
+		file.GetMysteriumDirectory("run"),
 		"Runtime directory for temp files (should be writable)",
 	)
 
 	flags.StringVar(
 		&options.DirectoryKeystore,
 		"keystore-dir",
-		cmd.GetDirectory("keystore"),
+		file.GetMysteriumDirectory("keystore"),
 		"Keystore directory",
 	)
 
