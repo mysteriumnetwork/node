@@ -27,8 +27,6 @@ func Test_IdentityCacheGetIdentity(t *testing.T) {
 
 	err := cache.StoreIdentity(&identity)
 	assert.Nil(t, err)
-
-	_, err = os.Stat(file)
 	assert.Equal(t, cache.GetIdentity(), &identity)
 }
 
