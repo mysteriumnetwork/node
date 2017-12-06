@@ -5,6 +5,7 @@ import dto_discovery "github.com/mysterium/node/service_discovery/dto"
 type Server interface {
 	Start() error
 	Stop() error
+	GetContact() dto_discovery.Contact
 	ServeDialogs(callback DialogHandler) error
 }
 

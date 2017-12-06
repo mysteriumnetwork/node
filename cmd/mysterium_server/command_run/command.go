@@ -60,7 +60,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	proposal := service_discovery.NewServiceProposal(
 		*providerId,
-		nats.NewContact(*providerId),
+		cmd.communicationServer.GetContact(),
 	)
 
 	sessionResponseHandler := &vpn_session.SessionCreateHandler{

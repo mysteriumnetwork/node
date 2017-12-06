@@ -7,12 +7,14 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/pkg/errors"
 )
 
 const SERVER_LOG_PREFIX = "[NATS.Server] "
 
 type serverNats struct {
+	myIdentity     dto_discovery.Identity
 	myTopic        string
 	options        nats.Options
 	timeoutRequest time.Duration
@@ -37,6 +39,15 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 
 	subscribeError := receiver.Respond(&dialogCreateHandler{createDialog})
 	return subscribeError
+}
+
+func (server *serverNats) GetContact() dto_discovery.Contact {
+	return dto_discovery.Contact{
+		Type: CONTACT_NATS_V1,
+		Definition: ContactNATSV1{
+			Topic: string(server.myIdentity),
+		},
+	}
 }
 
 func (server *serverNats) Start() (err error) {
