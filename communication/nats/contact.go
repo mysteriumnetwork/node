@@ -21,13 +21,17 @@ func newContact(identity dto_discovery.Identity) dto_discovery.Contact {
 	}
 }
 
-func contactToTopic(contact dto_discovery.ContactDefinition) (topic string, err error) {
-	contactNats, ok := contact.(ContactNATSV1)
-	if !ok {
-		return "", fmt.Errorf("Invalid contact definition: %#v", contact)
+func contactToTopic(contact dto_discovery.Contact) (string, error) {
+	if contact.Type != CONTACT_NATS_V1 {
+		return "", fmt.Errorf("Invalid contact type: %s", contact.Type)
 	}
 
-	return contactNats.Topic, nil
+	contactNats, ok := contact.Definition.(ContactNATSV1)
+	if !ok {
+		return "", fmt.Errorf("Invalid contact definition: %#v", contact.Definition)
+	}
+
+	return contactNats.Topic + ".", nil
 }
 
 func identityToTopic(identity dto_discovery.Identity) string {

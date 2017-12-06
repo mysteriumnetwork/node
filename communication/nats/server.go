@@ -29,10 +29,12 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 	receiver := newReceiver(server.connection, identityToTopic(server.myIdentity), nil)
 
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-		sender := newSender(server.connection, identityToTopic(request.IdentityId), server.timeoutRequest, nil)
-		dialogHandler(sender, receiver)
+		contact := newContact(request.IdentityId)
+		sender, _ := newSender(server.connection, contact, server.timeoutRequest, nil)
 
-		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' established.", request.IdentityId))
+		dialogHandler(sender, receiver)
+		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Dialog with '%#v' established.", contact))
+
 		return &dialogCreateResponse{Accepted: true}, nil
 	}
 

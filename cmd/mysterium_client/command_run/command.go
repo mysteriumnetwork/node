@@ -41,7 +41,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 
 	proposal := session.ServiceProposal
-	sender, _, err := cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0].Definition)
+	sender, _, err := cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}

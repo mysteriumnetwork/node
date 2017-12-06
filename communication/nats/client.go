@@ -20,7 +20,7 @@ type clientNats struct {
 	connection *nats.Conn
 }
 
-func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) (
+func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (
 	sender communication.Sender,
 	receiver communication.Receiver,
 	err error,
@@ -30,11 +30,7 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		return
 	}
 
-	contactTopic, err := contactToTopic(contact)
-	if err != nil {
-		return
-	}
-	sender = newSender(client.connection, contactTopic, client.timeoutRequest, nil)
+	sender, err = newSender(client.connection, contact, client.timeoutRequest, nil)
 
 	response, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
@@ -48,7 +44,7 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 
 	receiver = newReceiver(client.connection, identityToTopic(client.myIdentity), nil)
 
-	log.Info(CLIENT_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' created\n", contactTopic))
+	log.Info(CLIENT_LOG_PREFIX, fmt.Sprintf("Dialog created with: %#v\n", contact))
 	return sender, receiver, err
 }
 

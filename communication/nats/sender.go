@@ -7,27 +7,36 @@ import (
 
 	"fmt"
 	log "github.com/cihub/seelog"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
 const SENDER_LOG_PREFIX = "[NATS.Sender] "
 
-func newSender(connection *nats.Conn, messageTopic string, timeoutRequest time.Duration, codec communication.Codec) *senderNats {
+func newSender(
+	connection *nats.Conn,
+	receiverContact dto_discovery.Contact,
+	timeoutRequest time.Duration,
+	codec communication.Codec,
+) (*senderNats, error) {
 	if codec == nil {
 		codec = communication.NewCodecJSON()
 	}
 	if timeoutRequest == 0 {
 		timeoutRequest = 500 * time.Millisecond
 	}
-	if messageTopic != "" {
-		messageTopic = messageTopic + "."
+
+	messageTopic, err := contactToTopic(receiverContact)
+	if err != nil {
+		return nil, err
 	}
 
-	return &senderNats{
+	sender := senderNats{
 		connection:     connection,
 		codec:          codec,
 		timeoutRequest: timeoutRequest,
 		messageTopic:   messageTopic,
 	}
+	return &sender, nil
 }
 
 type senderNats struct {
@@ -65,7 +74,6 @@ func (sender *senderNats) Request(producer communication.RequestProducer) (respo
 	requestType := string(producer.GetRequestType())
 	responsePtr = producer.NewResponse()
 
-	fmt.Printf("va: %#v", producer.Produce())
 	requestData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
 		err = fmt.Errorf("Failed to pack request '%s'. %s", requestType, err)

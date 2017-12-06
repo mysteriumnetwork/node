@@ -18,7 +18,7 @@ func TestClientCreateDialog(t *testing.T) {
 	defer connection.Close()
 
 	requestSent := make(chan bool)
-	_, err := connection.Subscribe("server1-topic.dialog-create", func(message *nats.Msg) {
+	_, err := connection.Subscribe("server1.dialog-create", func(message *nats.Msg) {
 		assert.JSONEq(t, `{"identity_id":"client1"}`, string(message.Data))
 		connection.Publish(message.Reply, []byte(`{"accepted":true}`))
 		requestSent <- true
@@ -29,9 +29,7 @@ func TestClientCreateDialog(t *testing.T) {
 		myIdentity: dto.Identity("client1"),
 		connection: connection,
 	}
-	sender, receiver, err := client.CreateDialog(ContactNATSV1{
-		Topic: "server1-topic",
-	})
+	sender, receiver, err := client.CreateDialog(newContact(dto.Identity("server1")))
 	assert.NoError(t, err)
 	assert.NotNil(t, sender)
 	assert.NotNil(t, receiver)
