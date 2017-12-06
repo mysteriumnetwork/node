@@ -6,6 +6,7 @@ import (
 	"github.com/mysterium/node/communication"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/nats-io/go-nats"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -25,12 +26,13 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 	receiver communication.Receiver,
 	err error,
 ) {
-	contactTopic, err := extractContactTopic(contact)
-	if err != nil {
+	if client.connection == nil {
+		err = errors.New("Client is not started")
 		return
 	}
 
-	if err = client.Start(); err != nil {
+	contactTopic, err := extractContactTopic(contact)
+	if err != nil {
 		return
 	}
 

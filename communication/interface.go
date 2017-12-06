@@ -3,15 +3,17 @@ package communication
 import dto_discovery "github.com/mysterium/node/service_discovery/dto"
 
 type Server interface {
-	ServeDialogs(callback DialogHandler) error
+	Start() error
 	Stop() error
+	ServeDialogs(callback DialogHandler) error
 }
 
 type DialogHandler func(Sender, Receiver)
 
 type Client interface {
-	CreateDialog(contact dto_discovery.ContactDefinition) (Sender, Receiver, error)
+	Start() error
 	Stop() error
+	CreateDialog(contact dto_discovery.ContactDefinition) (Sender, Receiver, error)
 }
 
 type Receiver interface {

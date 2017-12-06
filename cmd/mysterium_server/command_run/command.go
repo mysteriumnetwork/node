@@ -3,6 +3,7 @@ package command_run
 import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -14,7 +15,6 @@ import (
 	"github.com/mysterium/node/session"
 	"io"
 	"time"
-	"github.com/mysterium/node/identity"
 )
 
 type CommandRun struct {
@@ -37,6 +37,11 @@ type CommandRun struct {
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	providerId, err := identity.SelectIdentity(options.DirectoryKeystore, options.NodeKey)
 	if err != nil {
+		return err
+	}
+
+	cmd.communicationServer = cmd.CommunicationServerFactory(*providerId)
+	if err = cmd.communicationServer.Start(); err != nil {
 		return err
 	}
 
@@ -74,8 +79,6 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
 		receiver.Respond(sessionResponseHandler)
 	}
-
-	cmd.communicationServer = cmd.CommunicationServerFactory(*providerId)
 	if err = cmd.communicationServer.ServeDialogs(handleDialog); err != nil {
 		return err
 	}

@@ -30,12 +30,16 @@ type CommandRun struct {
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	consumerId := dto_discovery.Identity("consumer1")
 
+	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
+	if err = cmd.communicationClient.Start(); err != nil {
+		return err
+	}
+
 	session, err := cmd.MysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err
 	}
 
-	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
 	proposal := session.ServiceProposal
 	sender, _, err := cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0].Definition)
 	if err != nil {

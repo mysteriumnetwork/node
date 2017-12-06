@@ -7,6 +7,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/pkg/errors"
 )
 
 const SERVER_LOG_PREFIX = "[NATS.Server] "
@@ -20,8 +21,8 @@ type serverNats struct {
 }
 
 func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler) error {
-	if err := server.Start(); err != nil {
-		return err
+	if server.connection == nil {
+		return errors.New("Client is not started")
 	}
 
 	receiver := &receiverNats{
