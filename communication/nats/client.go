@@ -30,7 +30,7 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		return
 	}
 
-	contactTopic, err := extractContactTopic(contact)
+	contactTopic, err := contactToTopic(contact)
 	if err != nil {
 		return
 	}
@@ -60,17 +60,4 @@ func (client *clientNats) Start() (err error) {
 func (client *clientNats) Stop() error {
 	client.connection.Close()
 	return nil
-}
-
-func extractContactTopic(contact dto_discovery.ContactDefinition) (topic string, err error) {
-	contactNats, ok := contact.(ContactNATSV1)
-	if !ok {
-		return "", fmt.Errorf("Invalid contact definition: %#v", contact)
-	}
-
-	return contactNats.Topic, nil
-}
-
-func identityToTopic(identity dto_discovery.Identity) string {
-	return string(identity)
 }

@@ -29,7 +29,7 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 	receiver := newReceiver(server.connection, identityToTopic(server.myIdentity), nil)
 
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-		sender := newSender(server.connection, string(request.IdentityId), server.timeoutRequest, nil)
+		sender := newSender(server.connection, identityToTopic(request.IdentityId), server.timeoutRequest, nil)
 		dialogHandler(sender, receiver)
 
 		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' established.", request.IdentityId))
@@ -41,12 +41,7 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 }
 
 func (server *serverNats) GetContact() dto_discovery.Contact {
-	return dto_discovery.Contact{
-		Type: CONTACT_NATS_V1,
-		Definition: ContactNATSV1{
-			Topic: string(server.myIdentity),
-		},
-	}
+	return newContact(server.myIdentity)
 }
 
 func (server *serverNats) Start() (err error) {
