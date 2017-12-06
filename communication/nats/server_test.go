@@ -6,5 +6,5 @@ import (
 )
 
 func TestServerInterface(t *testing.T) {
-	var _ communication.Client = &clientNats{}
+	var _ communication.Server = &serverNats{}
 }

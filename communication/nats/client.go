@@ -35,15 +35,16 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 	if err != nil {
 		return
 	}
-
 	sender = newSender(client.connection, contactTopic, client.timeoutRequest, nil)
-	resp, err := sender.Request(&dialogCreateProducer{
+
+	response, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
 			IdentityId: client.myIdentity,
 		},
 	})
-	if !resp.(*dialogCreateResponse).Accepted {
-		err = fmt.Errorf("Dialog creation rejected: %s", resp)
+	if !response.(*dialogCreateResponse).Accepted {
+		err = fmt.Errorf("Dialog creation rejected: %#v", response)
+		return
 	}
 
 	receiver = newReceiver(client.connection, client.myTopic, nil)
