@@ -7,22 +7,21 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 type ApiServer interface {
 	Port() int
-	Wait()
+	Wait() error
 	Stop()
 }
 
 type apiServer struct {
-	listener  net.Listener
-	stopped   *sync.WaitGroup
-	boundPort int
+	listener     net.Listener
+	errorChannel chan error
+	boundPort    int
 }
 
-func NewServer(address string, port int, handler http.Handler) (ApiServer, error) {
+func StartNewServer(address string, port int, handler http.Handler) (ApiServer, error) {
 	var err error
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", address, port))
 	if err != nil {
@@ -35,11 +34,8 @@ func NewServer(address string, port int, handler http.Handler) (ApiServer, error
 		return nil, err
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
-	server := apiServer{listener, &wg, boundPort}
-	go serve(listener, handler, &wg)
+	server := apiServer{listener, make(chan error, 1), boundPort}
+	go server.serve(handler)
 	return &server, nil
 }
 
@@ -47,17 +43,16 @@ func (server *apiServer) Stop() {
 	server.listener.Close()
 }
 
-func (server *apiServer) Wait() {
-	server.stopped.Wait()
+func (server *apiServer) Wait() error {
+	return <-server.errorChannel
 }
 
 func (server *apiServer) Port() int {
 	return server.boundPort
 }
 
-func serve(listener net.Listener, handler http.Handler, wg *sync.WaitGroup) {
-	http.Serve(listener, handler)
-	wg.Done()
+func (server *apiServer) serve(handler http.Handler) {
+	server.errorChannel <- http.Serve(server.listener, handler)
 }
 
 func extractBoundPort(listener net.Listener) (int, error) {

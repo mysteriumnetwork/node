@@ -14,7 +14,7 @@ type tequilapiTestSuite struct {
 
 func (testSuite *tequilapiTestSuite) SetupSuite() {
 	var err error
-	testSuite.server, err = NewServer("", 0, NewApiEndpoints())
+	testSuite.server, err = StartNewServer("", 0, NewApiEndpoints())
 	if err != nil {
 		testSuite.T().FailNow()
 	}

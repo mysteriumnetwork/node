@@ -74,7 +74,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	apiEndpoints := tequilapi.NewApiEndpoints()
 	//TODO additional endpoint registration can go here i.e apiEndpoints.GET("/path", httprouter.Handle function)
 
-	cmd.httpApiServer, err = tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, apiEndpoints)
+	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, apiEndpoints)
 	if err != nil {
 		return err
 	}
@@ -83,8 +83,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 }
 
 func (cmd *CommandRun) Wait() error {
-	cmd.httpApiServer.Wait()
-	return cmd.vpnClient.Wait()
+	return cmd.httpApiServer.Wait()
 }
 
 func (cmd *CommandRun) Kill() {
