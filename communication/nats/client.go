@@ -14,7 +14,6 @@ const CLIENT_LOG_PREFIX = "[NATS.Client] "
 
 type clientNats struct {
 	myIdentity     dto_discovery.Identity
-	myTopic        string
 	options        nats.Options
 	timeoutRequest time.Duration
 
@@ -47,7 +46,7 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		return
 	}
 
-	receiver = newReceiver(client.connection, client.myTopic, nil)
+	receiver = newReceiver(client.connection, identityToTopic(client.myIdentity), nil)
 
 	log.Info(CLIENT_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' created\n", contactTopic))
 	return sender, receiver, err
@@ -70,4 +69,8 @@ func extractContactTopic(contact dto_discovery.ContactDefinition) (topic string,
 	}
 
 	return contactNats.Topic, nil
+}
+
+func identityToTopic(identity dto_discovery.Identity) string {
+	return string(identity)
 }

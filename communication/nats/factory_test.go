@@ -15,7 +15,6 @@ func TestNewServer(t *testing.T) {
 
 	assert.NotNil(t, server)
 	assert.Equal(t, identity, server.myIdentity)
-	assert.Equal(t, "123456", server.myTopic)
 }
 
 func TestNewClient(t *testing.T) {
@@ -23,5 +22,4 @@ func TestNewClient(t *testing.T) {
 
 	assert.NotNil(t, client)
 	assert.Equal(t, identity, client.myIdentity)
-	assert.Equal(t, "123456", client.myTopic)
 }

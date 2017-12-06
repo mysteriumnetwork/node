@@ -15,7 +15,6 @@ const SERVER_LOG_PREFIX = "[NATS.Server] "
 
 type serverNats struct {
 	myIdentity     dto_discovery.Identity
-	myTopic        string
 	options        nats.Options
 	timeoutRequest time.Duration
 
@@ -27,7 +26,7 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		return errors.New("Client is not started")
 	}
 
-	receiver := newReceiver(server.connection, server.myTopic, nil)
+	receiver := newReceiver(server.connection, identityToTopic(server.myIdentity), nil)
 
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
 		sender := newSender(server.connection, string(request.IdentityId), server.timeoutRequest, nil)

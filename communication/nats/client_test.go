@@ -27,7 +27,6 @@ func TestClientCreateDialog(t *testing.T) {
 
 	client := &clientNats{
 		myIdentity: dto.Identity("client1"),
-		myTopic:    "client1-topic",
 		connection: connection,
 	}
 	sender, receiver, err := client.CreateDialog(ContactNATSV1{
