@@ -1,18 +1,6 @@
-hash: 44b5d4ec86ca2bfbdfbb2b724aff6e3be17f2ac58e8d93f3731621c2593198bd
-updated: 2017-11-28T16:29:42.030992+02:00
+hash: 43125bb122714ffb721e8349d72a4a1b3ec1b0ed0707e2a6ea18f7553a6ed11d
+updated: 2017-12-04T15:52:02.852853+02:00
 imports:
-- name: github.com/cihub/seelog
-  version: d2c6e5aa9fbfdd1c624e140287063c7730654115
-- name: github.com/nats-io/go-nats
-  version: 29f9728a183bf3fa7e809e14edac00b33be72088
-  subpackages:
-  - encoders/builtin
-  - util
-- name: github.com/nats-io/nuid
-  version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
-- name: github.com/satori/go.uuid
-  version: 879c5887cd475cd7864858769793b2ceb0d44feb
-testImports:
 - name: github.com/aristanetworks/goarista
   version: d1195528dcb23ba20b6b77f38596720af652a572
   subpackages:
@@ -21,6 +9,8 @@ testImports:
   version: 8cea3866d0f7fb12d567a20744942c0d078c7d15
   subpackages:
   - btcec
+- name: github.com/cihub/seelog
+  version: d2c6e5aa9fbfdd1c624e140287063c7730654115
 - name: github.com/davecgh/go-spew
   version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
   subpackages:
@@ -29,12 +19,14 @@ testImports:
   version: 4bb3c89d44e372e6a9ab85a8be0c9345265c763a
   subpackages:
   - accounts
+  - accounts/keystore
   - common
   - common/hexutil
   - common/math
   - common/mclock
   - core/types
   - crypto
+  - crypto/randentropy
   - crypto/secp256k1
   - crypto/sha3
   - event
@@ -44,17 +36,46 @@ testImports:
   - trie
 - name: github.com/go-stack/stack
   version: 259ab82a6cad3992b4e21ff5cac294ccb06474bc
+- name: github.com/julienschmidt/httprouter
+  version: 8c199fb6259ffc1af525cc3ad52ee60ba8359669
+- name: github.com/nats-io/go-nats
+  version: 29f9728a183bf3fa7e809e14edac00b33be72088
+  subpackages:
+  - encoders/builtin
+  - util
+- name: github.com/nats-io/nuid
+  version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
+- name: github.com/pborman/uuid
+  version: e533369306653d193b93dae055f6083cbf8ba54f
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
   - difflib
 - name: github.com/rcrowley/go-metrics
   version: 1f30fe9094a513ce4c700b9a54458bbb0c96996c
+- name: github.com/rjeczalik/notify
+  version: 767eb674ef14b09119b2fff3601e64558d530c47
+- name: github.com/satori/go.uuid
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/stretchr/testify
   version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   subpackages:
   - assert
+  - require
+  - suite
+- name: golang.org/x/crypto
+  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
+  subpackages:
+  - pbkdf2
+  - scrypt
+- name: golang.org/x/sys
+  version: 8b4580aae2a0dd0c231a45d3ccb8434ff533b840
+  subpackages:
+  - unix
+- name: gopkg.in/fatih/set.v0
+  version: 27c40922c40b43fe04554d8223a402af3ea333f3
 - name: gopkg.in/karalabe/cookiejar.v2
   version: 8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57
   subpackages:
   - collections/prque
+testImports: []

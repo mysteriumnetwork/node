@@ -9,6 +9,7 @@ import (
 	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/tequilapi"
 	"io"
 	"strconv"
 	"time"
@@ -25,6 +26,8 @@ type CommandRun struct {
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnClient      *openvpn.Client
+
+	httpApiServer tequilapi.ApiServer
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
@@ -68,14 +71,23 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
+	apiEndpoints := tequilapi.NewApiEndpoints()
+	//TODO additional endpoint registration can go here i.e apiEndpoints.GET("/path", httprouter.Handle function)
+
+	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, apiEndpoints)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (cmd *CommandRun) Wait() error {
-	return cmd.vpnClient.Wait()
+	return cmd.httpApiServer.Wait()
 }
 
 func (cmd *CommandRun) Kill() {
+	cmd.httpApiServer.Stop()
 	cmd.communicationClient.Stop()
 	cmd.vpnClient.Stop()
 }
