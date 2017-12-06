@@ -23,9 +23,8 @@ func TestWriteAsJsonReturnsExpectedResponse(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-            "IntField" : 1,
+			"IntField" : 1,
 			"renamed" : "abc"
 		}`,
 		respRecorder.Body.String())
-
 }
