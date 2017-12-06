@@ -36,12 +36,7 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		return
 	}
 
-	sender = &senderNats{
-		connection:     client.connection,
-		timeoutRequest: client.timeoutRequest,
-		messageTopic:   contactTopic + ".",
-	}
-
+	sender = newSender(client.connection, contactTopic, client.timeoutRequest, nil)
 	resp, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
 			IdentityId: client.myIdentity,
@@ -51,10 +46,7 @@ func (client *clientNats) CreateDialog(contact dto_discovery.ContactDefinition) 
 		err = fmt.Errorf("Dialog creation rejected: %s", resp)
 	}
 
-	receiver = &receiverNats{
-		connection:   client.connection,
-		messageTopic: client.myTopic + ".",
-	}
+	receiver = newReceiver(client.connection, client.myTopic, nil)
 
 	log.Info(CLIENT_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' created\n", contactTopic))
 	return sender, receiver, err

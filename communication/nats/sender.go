@@ -11,6 +11,25 @@ import (
 
 const SENDER_LOG_PREFIX = "[NATS.Sender] "
 
+func newSender(connection *nats.Conn, messageTopic string, timeoutRequest time.Duration, codec communication.Codec) *senderNats {
+	if codec == nil {
+		codec = communication.NewCodecJSON()
+	}
+	if timeoutRequest == 0 {
+		timeoutRequest = 500 * time.Millisecond
+	}
+	if messageTopic != "" {
+		messageTopic = messageTopic + "."
+	}
+
+	return &senderNats{
+		connection:     connection,
+		codec:          codec,
+		timeoutRequest: timeoutRequest,
+		messageTopic:   messageTopic,
+	}
+}
+
 type senderNats struct {
 	connection     *nats.Conn
 	codec          communication.Codec
@@ -46,6 +65,7 @@ func (sender *senderNats) Request(producer communication.RequestProducer) (respo
 	requestType := string(producer.GetRequestType())
 	responsePtr = producer.NewResponse()
 
+	fmt.Printf("va: %#v", producer.Produce())
 	requestData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
 		err = fmt.Errorf("Failed to pack request '%s'. %s", requestType, err)

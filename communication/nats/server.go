@@ -25,17 +25,10 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		return errors.New("Client is not started")
 	}
 
-	receiver := &receiverNats{
-		connection:   server.connection,
-		messageTopic: server.myTopic + ".",
-	}
+	receiver := newReceiver(server.connection, server.myTopic, nil)
 
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-		sender := &senderNats{
-			connection:     server.connection,
-			messageTopic:   string(request.IdentityId),
-			timeoutRequest: server.timeoutRequest,
-		}
+		sender := newSender(server.connection, string(request.IdentityId), server.timeoutRequest, nil)
 		dialogHandler(sender, receiver)
 
 		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Dialog with '%s' established.", request.IdentityId))
