@@ -5,16 +5,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type keyStoreFake struct {
+type KeyStoreFake struct {
 	AccountsMock []accounts.Account
 	ErrorMock error
 }
 
-func (self *keyStoreFake) Accounts() []accounts.Account {
+func (self *KeyStoreFake) Accounts() []accounts.Account {
 	return self.AccountsMock
 }
 
-func (self *keyStoreFake) NewAccount(passphrase string) (accounts.Account, error) {
+func (self *KeyStoreFake) NewAccount(passphrase string) (accounts.Account, error) {
 	if self.ErrorMock != nil {
 		return accounts.Account{}, self.ErrorMock
 	}
@@ -27,7 +27,7 @@ func (self *keyStoreFake) NewAccount(passphrase string) (accounts.Account, error
 	return accountNew, nil
 }
 
-func (self *keyStoreFake) Unlock(a accounts.Account, passphrase string) error {
+func (self *KeyStoreFake) Unlock(a accounts.Account, passphrase string) error {
 	if self.ErrorMock != nil {
 		return self.ErrorMock
 	}
@@ -35,7 +35,7 @@ func (self *keyStoreFake) Unlock(a accounts.Account, passphrase string) error {
 	panic("implement me")
 }
 
-func (self *keyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
+func (self *KeyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 	if self.ErrorMock != nil {
 		return []byte{}, self.ErrorMock
 	}

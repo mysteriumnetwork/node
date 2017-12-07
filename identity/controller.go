@@ -6,7 +6,7 @@ import (
 )
 
 type identityHandler struct {
-	manager *identityManager
+	manager *IdentityManager
 	cache   *identityCache
 }
 

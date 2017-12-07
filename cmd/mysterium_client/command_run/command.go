@@ -3,16 +3,19 @@ package command_run
 import (
 	"encoding/json"
 	"errors"
+	"io"
+	"strconv"
+	"time"
+
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
-	"io"
-	"strconv"
-	"time"
+	"github.com/mysterium/node/tequilapi/endpoints"
 )
 
 type CommandRun struct {
@@ -71,7 +74,9 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	apiEndpoints := tequilapi.NewApiEndpoints()
+	idm := identity.NewIdentityManager("TEST")
+	router := tequilapi.NewApiEndpoints()
+	router.GET("/list-identities", endpoints.ListIdentitiesEndpointFactory(idm).ListIdentities)
 	//TODO additional endpoint registration can go here i.e apiEndpoints.GET("/path", httprouter.Handle function)
 
 	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, apiEndpoints)
