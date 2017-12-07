@@ -38,6 +38,18 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
+	// if no identity can be selected, lets create a new one
+	if providerId == nil {
+		providerId, err = identity.CreateIdentity(options.DirectoryKeystore)
+		if err != nil {
+			return err
+		}
+
+		if err := cmd.MysteriumClient.RegisterIdentity(providerId); err != nil {
+			return err
+		}
+	}
+
 	vpnServerIp, err := cmd.IpifyClient.GetIp()
 	if err != nil {
 		return err

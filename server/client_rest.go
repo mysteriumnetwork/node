@@ -31,6 +31,19 @@ type clientRest struct {
 	httpClient http.Client
 }
 
+func (client *clientRest) RegisterIdentity(identity *dto_discovery.Identity) (err error) {
+	response, err := client.doRequest("POST", "identities", dto.CreateIdentityRequest{
+		Identity: *identity,
+	})
+
+	if err == nil {
+		defer response.Body.Close()
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "Identity created: ", *identity)
+	}
+
+	return
+}
+
 func (client *clientRest) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
 	response, err := client.doRequest("POST", "node_register", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,

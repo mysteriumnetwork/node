@@ -30,6 +30,12 @@ func SelectIdentity(dir string, nodeKey string) (id *dto.Identity, err error) {
 		return
 	}
 
+	return
+}
+
+func CreateIdentity(dir string) (id *dto.Identity, err error) {
+	handler := NewIdentityHandler(dir)
+
 	// if all fails, create a new one
 	id, err = handler.CreateIdentity()
 	if err != nil {

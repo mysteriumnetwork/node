@@ -1,5 +1,5 @@
-hash: 43125bb122714ffb721e8349d72a4a1b3ec1b0ed0707e2a6ea18f7553a6ed11d
-updated: 2017-12-04T15:52:02.852853+02:00
+hash: 16b1b0e16285faab70e48ef6e8662fe40fb58ad1d9461e3545e87a430ec73eaf
+updated: 2017-12-07T11:56:37.602668571+02:00
 imports:
 - name: github.com/aristanetworks/goarista
   version: d1195528dcb23ba20b6b77f38596720af652a572
@@ -38,6 +38,8 @@ imports:
   version: 259ab82a6cad3992b4e21ff5cac294ccb06474bc
 - name: github.com/julienschmidt/httprouter
   version: 8c199fb6259ffc1af525cc3ad52ee60ba8359669
+- name: github.com/mitchellh/go-homedir
+  version: b8bc1bf767474819792c23f32d8286a45736f1c6
 - name: github.com/nats-io/go-nats
   version: 29f9728a183bf3fa7e809e14edac00b33be72088
   subpackages:
