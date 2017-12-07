@@ -10,6 +10,7 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
+	"github.com/mysterium/node/tequilapi/endpoints"
 	"io"
 	"strconv"
 	"time"
@@ -73,6 +74,10 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	apiEndpoints := tequilapi.NewApiEndpoints()
 	//TODO additional endpoint registration can go here i.e apiEndpoints.GET("/path", httprouter.Handle function)
+	connectionEndpoint := endpoints.NewConnectionEndpoint()
+	apiEndpoints.GET("/connection", connectionEndpoint.Status)
+	apiEndpoints.PUT("/connection", connectionEndpoint.Create)
+	apiEndpoints.DELETE("/connection", connectionEndpoint.Kill)
 
 	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, apiEndpoints)
 	if err != nil {
