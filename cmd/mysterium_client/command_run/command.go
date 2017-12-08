@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -74,10 +75,12 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	idm := identity.NewIdentityManager("TEST")
+	// options.keystoreDir still to be implemented. represents keystore directory/file
+	keystore := keystore.NewKeyStore("options.keystoreDir", keystore.StandardScryptN, keystore.StandardScryptP)
+	idm := identity.NewIdentityManager(keystore)
 	router := tequilapi.NewApiEndpoints()
-	router.GET("/list-identities", endpoints.ListIdentitiesEndpointFactory(idm).ListIdentities)
-	//TODO additional endpoint registration can go here i.e apiEndpoints.GET("/path", httprouter.Handle function)
+	// planning to move rote declarations to tequilapi.NewApiEndpoints(). needs injecting identitymanager
+	router.GET("/identities", endpoints.IdentityHandlers(idm).Get)
 
 	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, apiEndpoints)
 	if err != nil {

@@ -7,20 +7,20 @@ import (
 
 type KeyStoreFake struct {
 	AccountsMock []accounts.Account
-	ErrorMock error
+	ErrorMock    error
 }
 
 func (self *KeyStoreFake) Accounts() []accounts.Account {
 	return self.AccountsMock
 }
 
-func (self *KeyStoreFake) NewAccount(passphrase string) (accounts.Account, error) {
+func (self *KeyStoreFake) NewAccount(addressHex string) (accounts.Account, error) {
 	if self.ErrorMock != nil {
 		return accounts.Account{}, self.ErrorMock
 	}
 
 	accountNew := accounts.Account{
-		Address: common.HexToAddress("0x000000000000000000000000000000000000bEEF"),
+		Address: common.HexToAddress(addressHex),
 	}
 	self.AccountsMock = append(self.AccountsMock, accountNew)
 
@@ -42,5 +42,3 @@ func (self *KeyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, err
 
 	panic("implement me")
 }
-
-

@@ -4,7 +4,6 @@
 package identity
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/service_discovery/dto"
@@ -12,12 +11,12 @@ import (
 )
 
 type IdentityManager struct {
-	KeystoreManager keystoreInterface
+	keystoreManager keystoreInterface
 }
 
-func NewIdentityManager(keydir string) *IdentityManager {
+func NewIdentityManager(keystore keystoreInterface) *IdentityManager {
 	return &IdentityManager{
-		KeystoreManager: keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP),
+		keystoreManager: keystore,
 	}
 }
 
@@ -26,14 +25,14 @@ func accountToIdentity(account accounts.Account) *dto.Identity {
 	return &identity
 }
 
-func IdentityToAccount(identityString string) accounts.Account {
+func identityToAccount(identityString string) accounts.Account {
 	return accounts.Account{
 		Address: common.HexToAddress(identityString),
 	}
 }
 
 func (idm *IdentityManager) CreateNewIdentity(passphrase string) (*dto.Identity, error) {
-	account, err := idm.KeystoreManager.NewAccount(passphrase)
+	account, err := idm.keystoreManager.NewAccount(passphrase)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +41,7 @@ func (idm *IdentityManager) CreateNewIdentity(passphrase string) (*dto.Identity,
 }
 
 func (idm *IdentityManager) GetIdentities() []dto.Identity {
-	accountList := idm.KeystoreManager.Accounts()
+	accountList := idm.keystoreManager.Accounts()
 
 	var ids = make([]dto.Identity, len(accountList))
 	for i, account := range accountList {
