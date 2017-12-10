@@ -1,10 +1,11 @@
-package nats
+package nats_dialog
 
 import (
 	"fmt"
 	"github.com/mysterium/node/communication"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
@@ -28,8 +29,8 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		return fmt.Errorf("Failed to start my connection. %s", server.myAddress)
 	}
 
-	myReceiver := NewReceiver(server.myAddress)
-	contactSender := NewSender(server.myAddress)
+	myReceiver := nats.NewReceiver(server.myAddress)
+	contactSender := nats.NewSender(server.myAddress)
 
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
 		dialogHandler(contactSender, myReceiver)

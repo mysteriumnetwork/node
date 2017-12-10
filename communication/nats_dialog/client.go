@@ -1,9 +1,10 @@
-package nats
+package nats_dialog
 
 import (
 	"fmt"
 	"github.com/mgutz/logxi/v1"
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
@@ -37,8 +38,8 @@ func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (
 		return
 	}
 
-	myReceiver := NewReceiver(contactAddress)
-	contactSender = NewSender(contactAddress)
+	myReceiver := nats.NewReceiver(contactAddress)
+	contactSender = nats.NewSender(contactAddress)
 
 	response, err := contactSender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
