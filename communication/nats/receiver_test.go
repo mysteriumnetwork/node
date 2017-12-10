@@ -14,7 +14,7 @@ func TestReceiverInterface(t *testing.T) {
 func TestReceiverNew(t *testing.T) {
 	connection := nats_discovery.NewAddress("far-proxy", 1234, "custom")
 
-	sender := newReceiver(connection)
+	sender := NewReceiver(connection)
 	assert.Equal(
 		t,
 		&receiverNats{

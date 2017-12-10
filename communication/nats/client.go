@@ -8,6 +8,12 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
+func NewClient(identity dto_discovery.Identity) *clientNats {
+	return &clientNats{
+		myIdentity: identity,
+	}
+}
+
 const CLIENT_LOG_PREFIX = "[NATS.Client] "
 
 type clientNats struct {
@@ -31,8 +37,8 @@ func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (
 		return
 	}
 
-	myReceiver := newReceiver(contactAddress)
-	contactSender = newSender(contactAddress)
+	myReceiver := NewReceiver(contactAddress)
+	contactSender = NewSender(contactAddress)
 
 	response, err := contactSender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{

@@ -1,9 +1,10 @@
 package nats
 
 import (
-	"github.com/magiconair/properties/assert"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats_discovery"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -11,11 +12,10 @@ func TestServerInterface(t *testing.T) {
 	var _ communication.Server = &serverNats{}
 }
 
-func TestServerGetContact(t *testing.T) {
-	address := nats_discovery.NewAddress("far-server", 1234, "custom")
+func TestNewServer(t *testing.T) {
+	identity := dto_discovery.Identity("123456")
+	server := NewServer(identity)
 
-	server := &serverNats{
-		myAddress: address,
-	}
-	assert.Equal(t, address.GetContact(), server.GetContact())
+	assert.NotNil(t, server)
+	assert.Equal(t, nats_discovery.NewAddressForIdentity(identity), server.myAddress)
 }

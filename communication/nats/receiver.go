@@ -11,7 +11,7 @@ import (
 
 const RECEIVER_LOG_PREFIX = "[NATS.Receiver] "
 
-func newReceiver(address *nats_discovery.NatsAddress) *receiverNats {
+func NewReceiver(address *nats_discovery.NatsAddress) *receiverNats {
 	return &receiverNats{
 		connection:   address.GetConnection(),
 		codec:        communication.NewCodecJSON(),

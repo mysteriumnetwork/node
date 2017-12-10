@@ -9,6 +9,12 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
+func NewServer(identity dto_discovery.Identity) *serverNats {
+	return &serverNats{
+		myAddress: nats_discovery.NewAddressForIdentity(identity),
+	}
+}
+
 const SERVER_LOG_PREFIX = "[NATS.Server] "
 
 type serverNats struct {
@@ -22,8 +28,8 @@ func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler
 		return fmt.Errorf("Failed to start my connection. %s", server.myAddress)
 	}
 
-	myReceiver := newReceiver(server.myAddress)
-	contactSender := newSender(server.myAddress)
+	myReceiver := NewReceiver(server.myAddress)
+	contactSender := NewSender(server.myAddress)
 
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
 		dialogHandler(contactSender, myReceiver)

@@ -12,7 +12,7 @@ import (
 
 const SENDER_LOG_PREFIX = "[NATS.Sender] "
 
-func newSender(address *nats_discovery.NatsAddress) *senderNats {
+func NewSender(address *nats_discovery.NatsAddress) *senderNats {
 	return &senderNats{
 		connection:     address.GetConnection(),
 		codec:          communication.NewCodecJSON(),

@@ -3,7 +3,7 @@ package nats
 import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats_discovery"
-	"github.com/mysterium/node/service_discovery/dto"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats/test"
 	"github.com/stretchr/testify/assert"
@@ -12,6 +12,14 @@ import (
 
 func TestClientInterface(t *testing.T) {
 	var _ communication.Client = &clientNats{}
+}
+
+func TestNewClient(t *testing.T) {
+	identity := dto_discovery.Identity("123456")
+	client := NewClient(identity)
+
+	assert.NotNil(t, client)
+	assert.Equal(t, identity, client.myIdentity)
 }
 
 func TestClientCreateDialog(t *testing.T) {
@@ -29,9 +37,9 @@ func TestClientCreateDialog(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	address := nats_discovery.NewAddressForIdentity(dto.Identity("server1"))
+	address := nats_discovery.NewAddressForIdentity(dto_discovery.Identity("server1"))
 	client := &clientNats{
-		myIdentity: dto.Identity("client1"),
+		myIdentity: dto_discovery.Identity("client1"),
 	}
 	sender, receiver, err := client.CreateDialog(address.GetContact())
 	assert.NoError(t, err)
