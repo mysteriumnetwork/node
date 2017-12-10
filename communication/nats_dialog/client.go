@@ -46,11 +46,3 @@ func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (communica
 	log.Info(CLIENT_LOG_PREFIX, fmt.Sprintf("Dialog established with: %#v", contact))
 	return dialog, err
 }
-
-func (client *clientNats) Start() (err error) {
-	return nil
-}
-
-func (client *clientNats) Stop() error {
-	return nil
-}

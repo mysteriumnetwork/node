@@ -29,6 +29,7 @@ func (server *serverNats) ServeDialogs(handler func(communication.Dialog)) error
 	}
 
 	dialog := &dialog{nats.NewSender(server.myAddress), nats.NewReceiver(server.myAddress)}
+
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
 		handler(dialog)
 
@@ -40,10 +41,8 @@ func (server *serverNats) ServeDialogs(handler func(communication.Dialog)) error
 	return subscribeError
 }
 
-func (server *serverNats) Start() (err error) {
-	return nil
-}
-
 func (server *serverNats) Stop() error {
+	server.myAddress.Disconnect()
+
 	return nil
 }

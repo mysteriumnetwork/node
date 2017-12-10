@@ -41,9 +41,6 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	var providerContact dto_discovery.Contact
 	cmd.communicationServer, providerContact = cmd.CommunicationServerFactory(*providerId)
-	if err = cmd.communicationServer.Start(); err != nil {
-		return err
-	}
 
 	vpnServerIp, err := cmd.IpifyClient.GetIp()
 	if err != nil {

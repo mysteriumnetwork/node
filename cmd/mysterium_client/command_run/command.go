@@ -19,7 +19,7 @@ type CommandRun struct {
 	MysteriumClient server.Client
 
 	CommunicationClientFactory func(identity dto_discovery.Identity) communication.Client
-	communicationClient        communication.Client
+	communicationDialog        communication.Dialog
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnClient      *openvpn.Client
@@ -30,23 +30,19 @@ type CommandRun struct {
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	consumerId := dto_discovery.Identity("consumer1")
 
-	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
-	if err = cmd.communicationClient.Start(); err != nil {
-		return err
-	}
-
 	session, err := cmd.MysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err
 	}
-
 	proposal := session.ServiceProposal
-	dialog, err := cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0])
+
+	communicationClient := cmd.CommunicationClientFactory(consumerId)
+	cmd.communicationDialog, err = communicationClient.CreateDialog(proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
 
-	vpnSession, err := vpn_session.RequestSessionCreate(dialog, proposal.Id)
+	vpnSession, err := vpn_session.RequestSessionCreate(cmd.communicationDialog, proposal.Id)
 	if err != nil {
 		return err
 	}
@@ -88,7 +84,7 @@ func (cmd *CommandRun) Wait() error {
 }
 
 func (cmd *CommandRun) Kill() {
-	cmd.httpApiServer.Stop()
-	cmd.communicationClient.Stop()
+	cmd.communicationDialog.Close()
 	cmd.vpnClient.Stop()
+	cmd.httpApiServer.Stop()
 }
