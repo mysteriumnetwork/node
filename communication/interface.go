@@ -7,8 +7,14 @@ type Server interface {
 	Stop() error
 }
 
-type Client interface {
+type DialogEstablisher interface {
 	CreateDialog(contact dto_discovery.Contact) (Dialog, error)
+}
+
+type Dialog interface {
+	Sender
+	Receiver
+	Close() error
 }
 
 type Receiver interface {
@@ -19,10 +25,4 @@ type Receiver interface {
 type Sender interface {
 	Send(producer MessageProducer) error
 	Request(producer RequestProducer) (responsePtr interface{}, err error)
-}
-
-type Dialog interface {
-	Sender
-	Receiver
-	Close() error
 }

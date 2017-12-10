@@ -18,8 +18,8 @@ type CommandRun struct {
 
 	MysteriumClient server.Client
 
-	CommunicationClientFactory func(identity dto_discovery.Identity) communication.Client
-	communicationDialog        communication.Dialog
+	DialogEstablisherFactory func(identity dto_discovery.Identity) communication.DialogEstablisher
+	dialog                   communication.Dialog
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnClient      *openvpn.Client
@@ -36,13 +36,13 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 	proposal := session.ServiceProposal
 
-	communicationClient := cmd.CommunicationClientFactory(consumerId)
-	cmd.communicationDialog, err = communicationClient.CreateDialog(proposal.ProviderContacts[0])
+	dialogEstablisher := cmd.DialogEstablisherFactory(consumerId)
+	cmd.dialog, err = dialogEstablisher.CreateDialog(proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
 
-	vpnSession, err := vpn_session.RequestSessionCreate(cmd.communicationDialog, proposal.Id)
+	vpnSession, err := vpn_session.RequestSessionCreate(cmd.dialog, proposal.Id)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (cmd *CommandRun) Wait() error {
 }
 
 func (cmd *CommandRun) Kill() {
-	cmd.communicationDialog.Close()
+	cmd.dialog.Close()
 	cmd.vpnClient.Stop()
 	cmd.httpApiServer.Stop()
 }

@@ -9,25 +9,25 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
-func NewClient(identity dto_discovery.Identity) *clientNats {
-	return &clientNats{
+func NewDialogEstablisher(identity dto_discovery.Identity) *dialogEstablisher {
+	return &dialogEstablisher{
 		myIdentity: identity,
 	}
 }
 
-const CLIENT_LOG_PREFIX = "[NATS.Client] "
+const establisherLogPrefix = "[NATS.DialogEstablisher] "
 
-type clientNats struct {
+type dialogEstablisher struct {
 	myIdentity dto_discovery.Identity
 }
 
-func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (communication.Dialog, error) {
+func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact) (communication.Dialog, error) {
 	contactAddress, err := nats_discovery.NewAddressForContact(contact)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info(CLIENT_LOG_PREFIX, fmt.Sprintf("Connecting to: %#v", contactAddress))
+	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", contactAddress))
 	err = contactAddress.Connect()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
@@ -36,13 +36,13 @@ func (client *clientNats) CreateDialog(contact dto_discovery.Contact) (communica
 	dialog := &dialog{nats.NewSender(contactAddress), nats.NewReceiver(contactAddress)}
 	response, err := dialog.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
-			IdentityId: client.myIdentity,
+			IdentityId: establisher.myIdentity,
 		},
 	})
 	if err != nil || !response.(*dialogCreateResponse).Accepted {
 		return nil, fmt.Errorf("Dialog creation rejected: %s", err)
 	}
 
-	log.Info(CLIENT_LOG_PREFIX, fmt.Sprintf("Dialog established with: %#v", contact))
+	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", contact))
 	return dialog, err
 }

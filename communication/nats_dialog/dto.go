@@ -5,7 +5,7 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 )
 
-// Client is trying to establish new dialog with Node
+// Consumer is trying to establish new dialog with Provider
 const ENDPOINT_DIALOG_CREATE = communication.RequestType("dialog-create")
 
 type dialogCreateProducer struct {
