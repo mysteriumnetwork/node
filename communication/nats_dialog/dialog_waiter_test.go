@@ -7,14 +7,14 @@ import (
 	"testing"
 )
 
-func TestServerInterface(t *testing.T) {
-	var _ communication.Server = &serverNats{}
+func TestDialogWaiter_Interface(t *testing.T) {
+	var _ communication.DialogWaiter = &dialogWaiter{}
 }
 
-func TestNewServer(t *testing.T) {
+func TestDialogWaiter_Factory(t *testing.T) {
 	address := nats_discovery.NewAddress("127.0.0.1", 4222, "custom")
-	server := NewServer(address)
+	waiter := NewDialogWaiter(address)
 
-	assert.NotNil(t, server)
-	assert.Equal(t, address, server.myAddress)
+	assert.NotNil(t, waiter)
+	assert.Equal(t, address, waiter.myAddress)
 }

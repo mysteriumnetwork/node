@@ -24,8 +24,8 @@ type CommandRun struct {
 	MysteriumClient server.Client
 	NatService      nat.NATService
 
-	CommunicationServerFactory func(identity dto_discovery.Identity) (communication.Server, dto_discovery.Contact)
-	communicationServer        communication.Server
+	DialogWaiterFactory func(identity dto_discovery.Identity) (communication.DialogWaiter, dto_discovery.Contact)
+	dialogWaiter        communication.DialogWaiter
 
 	SessionManager session.ManagerInterface
 
@@ -40,7 +40,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 
 	var providerContact dto_discovery.Contact
-	cmd.communicationServer, providerContact = cmd.CommunicationServerFactory(*providerId)
+	cmd.dialogWaiter, providerContact = cmd.DialogWaiterFactory(*providerId)
 
 	vpnServerIp, err := cmd.IpifyClient.GetIp()
 	if err != nil {
@@ -73,7 +73,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	handleDialog := func(dialog communication.Dialog) {
 		dialog.Respond(sessionResponseHandler)
 	}
-	if err = cmd.communicationServer.ServeDialogs(handleDialog); err != nil {
+	if err = cmd.dialogWaiter.ServeDialogs(handleDialog); err != nil {
 		return err
 	}
 
@@ -110,6 +110,6 @@ func (cmd *CommandRun) Wait() error {
 
 func (cmd *CommandRun) Kill() {
 	cmd.vpnServer.Stop()
-	cmd.communicationServer.Stop()
+	cmd.dialogWaiter.Stop()
 	cmd.NatService.Stop()
 }

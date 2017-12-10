@@ -2,7 +2,7 @@ package communication
 
 import dto_discovery "github.com/mysterium/node/service_discovery/dto"
 
-type Server interface {
+type DialogWaiter interface {
 	ServeDialogs(handler func(Dialog)) error
 	Stop() error
 }

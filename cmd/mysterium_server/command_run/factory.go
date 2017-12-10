@@ -21,9 +21,9 @@ func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
 		IpifyClient:     ipify.NewClient(),
 		MysteriumClient: server.NewClient(),
 		NatService:      nat.NewService(),
-		CommunicationServerFactory: func(identity dto_discovery.Identity) (communication.Server, dto_discovery.Contact) {
+		DialogWaiterFactory: func(identity dto_discovery.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
 			address := nats_discovery.NewAddressForIdentity(identity)
-			return nats_dialog.NewServer(address), address.GetContact()
+			return nats_dialog.NewDialogWaiter(address), address.GetContact()
 		},
 		SessionManager: &session.Manager{
 			Generator: &session.Generator{},
