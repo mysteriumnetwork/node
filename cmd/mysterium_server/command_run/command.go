@@ -73,8 +73,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 			)
 		},
 	}
-	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
-		receiver.Respond(sessionResponseHandler)
+	handleDialog := func(dialog communication.Dialog) {
+		dialog.Respond(sessionResponseHandler)
 	}
 	if err = cmd.communicationServer.ServeDialogs(handleDialog); err != nil {
 		return err

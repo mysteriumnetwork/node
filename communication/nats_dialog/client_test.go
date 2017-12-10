@@ -41,10 +41,9 @@ func TestClientCreateDialog(t *testing.T) {
 	client := &clientNats{
 		myIdentity: dto_discovery.Identity("client1"),
 	}
-	sender, receiver, err := client.CreateDialog(address.GetContact())
+	dialog, err := client.CreateDialog(address.GetContact())
 	assert.NoError(t, err)
-	assert.NotNil(t, sender)
-	assert.NotNil(t, receiver)
+	assert.NotNil(t, dialog)
 
 	if err := test.Wait(requestSent); err != nil {
 		t.Fatal("Request not sent")

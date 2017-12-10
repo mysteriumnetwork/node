@@ -41,12 +41,12 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 
 	proposal := session.ServiceProposal
-	sender, _, err := cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0])
+	dialog, err := cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
 
-	vpnSession, err := vpn_session.RequestSessionCreate(sender, proposal.Id)
+	vpnSession, err := vpn_session.RequestSessionCreate(dialog, proposal.Id)
 	if err != nil {
 		return err
 	}
