@@ -2,7 +2,6 @@ package command_run
 
 import (
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
@@ -25,7 +24,7 @@ type CommandRun struct {
 	MysteriumClient server.Client
 	NatService      nat.NATService
 
-	CommunicationServerFactory func(identity dto_discovery.Identity) communication.Server
+	CommunicationServerFactory func(identity dto_discovery.Identity) (communication.Server, dto_discovery.Contact)
 	communicationServer        communication.Server
 
 	SessionManager session.ManagerInterface
@@ -40,7 +39,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	cmd.communicationServer = cmd.CommunicationServerFactory(*providerId)
+	var providerContact dto_discovery.Contact
+	cmd.communicationServer, providerContact = cmd.CommunicationServerFactory(*providerId)
 	if err = cmd.communicationServer.Start(); err != nil {
 		return err
 	}
@@ -58,10 +58,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	proposal := service_discovery.NewServiceProposal(
-		*providerId,
-		cmd.communicationServer.GetContact(),
-	)
+	proposal := service_discovery.NewServiceProposal(*providerId, providerContact)
 
 	sessionResponseHandler := &vpn_session.SessionCreateHandler{
 		CurrentProposalId: proposal.Id,

@@ -7,12 +7,11 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
-func NewServer(identity dto_discovery.Identity) *serverNats {
+func NewServer(address *nats_discovery.NatsAddress) *serverNats {
 	return &serverNats{
-		myAddress: nats_discovery.NewAddressForIdentity(identity),
+		myAddress: address,
 	}
 }
 
@@ -49,8 +48,4 @@ func (server *serverNats) Start() (err error) {
 
 func (server *serverNats) Stop() error {
 	return nil
-}
-
-func (server *serverNats) GetContact() dto_discovery.Contact {
-	return server.myAddress.GetContact()
 }
