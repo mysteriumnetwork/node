@@ -7,36 +7,17 @@ import (
 
 	"fmt"
 	log "github.com/cihub/seelog"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
 const SENDER_LOG_PREFIX = "[NATS.Sender] "
 
-func newSender(
-	connection *nats.Conn,
-	receiverContact dto_discovery.Contact,
-	timeoutRequest time.Duration,
-	codec communication.Codec,
-) (*senderNats, error) {
-	if codec == nil {
-		codec = communication.NewCodecJSON()
-	}
-	if timeoutRequest == 0 {
-		timeoutRequest = 500 * time.Millisecond
-	}
-
-	messageTopic, err := contactToTopic(receiverContact)
-	if err != nil {
-		return nil, err
-	}
-
-	sender := senderNats{
+func newSender(connection *nats.Conn, messageTopic string) *senderNats {
+	return &senderNats{
 		connection:     connection,
-		codec:          codec,
-		timeoutRequest: timeoutRequest,
+		codec:          communication.NewCodecJSON(),
+		timeoutRequest: 500 * time.Millisecond,
 		messageTopic:   messageTopic,
 	}
-	return &sender, nil
 }
 
 type senderNats struct {

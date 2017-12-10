@@ -11,13 +11,6 @@ import (
 const RECEIVER_LOG_PREFIX = "[NATS.Receiver] "
 
 func newReceiver(connection *nats.Conn, messageTopic string, codec communication.Codec) *receiverNats {
-	if codec == nil {
-		codec = communication.NewCodecJSON()
-	}
-	if messageTopic != "" {
-		messageTopic = messageTopic + "."
-	}
-
 	return &receiverNats{
 		connection:   connection,
 		codec:        codec,

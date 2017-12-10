@@ -3,47 +3,42 @@ package nats
 import (
 	"fmt"
 	"github.com/mysterium/node/communication"
-	"github.com/nats-io/go-nats"
-	"time"
 
 	log "github.com/cihub/seelog"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"github.com/pkg/errors"
+	"github.com/nats-io/go-nats"
 )
 
 const SERVER_LOG_PREFIX = "[NATS.Server] "
 
 type serverNats struct {
-	myIdentity     dto_discovery.Identity
-	options        nats.Options
-	timeoutRequest time.Duration
+	myIdentity dto_discovery.Identity
 
+	options    nats.Options
 	connection *nats.Conn
 }
 
 func (server *serverNats) ServeDialogs(dialogHandler communication.DialogHandler) error {
-	if server.connection == nil {
-		return errors.New("Client is not started")
+	myReceiver, err := server.listen()
+	if err != nil {
+		return fmt.Errorf("Failed to start my channel. %s", err)
 	}
 
-	receiver := newReceiver(server.connection, identityToTopic(server.myIdentity), nil)
-
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-		contact := newContact(request.IdentityId)
-		sender, _ := newSender(server.connection, contact, server.timeoutRequest, nil)
+		contactSender, err := server.contactConnect(request.IdentityId)
+		if err != nil {
+			log.Error(SERVER_LOG_PREFIX, fmt.Sprintf("Failed to start contact '%s' channel. %s", request.IdentityId, err))
+			return nil, fmt.Errorf("Failed to connect to your channel")
+		}
 
-		dialogHandler(sender, receiver)
-		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Dialog with '%#v' established.", contact))
+		dialogHandler(contactSender, myReceiver)
+		log.Info(SERVER_LOG_PREFIX, fmt.Sprintf("Channel to contact '%s' established.", request.IdentityId))
 
 		return &dialogCreateResponse{Accepted: true}, nil
 	}
 
-	subscribeError := receiver.Respond(&dialogCreateHandler{createDialog})
+	subscribeError := myReceiver.Respond(&dialogCreateHandler{createDialog})
 	return subscribeError
-}
-
-func (server *serverNats) GetContact() dto_discovery.Contact {
-	return newContact(server.myIdentity)
 }
 
 func (server *serverNats) Start() (err error) {
@@ -54,4 +49,22 @@ func (server *serverNats) Start() (err error) {
 func (server *serverNats) Stop() error {
 	server.connection.Close()
 	return nil
+}
+
+func (server *serverNats) listen() (communication.Receiver, error) {
+	myTopic := identityToTopic(server.myIdentity)
+
+	receiver := newReceiver(server.connection, myTopic, communication.NewCodecJSON())
+	return receiver, nil
+}
+
+func (server *serverNats) contactConnect(contactIdentity dto_discovery.Identity) (communication.Sender, error) {
+	contactTopic := identityToTopic(contactIdentity)
+
+	sender := newSender(server.connection, contactTopic)
+	return sender, nil
+}
+
+func (server *serverNats) GetContact() dto_discovery.Contact {
+	return newContact(server.myIdentity)
 }
