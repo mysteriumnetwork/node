@@ -3,7 +3,7 @@ package nats
 import (
 	"github.com/dshearer/jobber/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"github.com/mysterium/node/communication"
-	"github.com/nats-io/go-nats"
+	"github.com/mysterium/node/communication/nats_discovery"
 	"testing"
 	"time"
 )
@@ -13,16 +13,16 @@ func TestSenderInterface(t *testing.T) {
 }
 
 func TestSenderNew(t *testing.T) {
-	connection := &nats.Conn{}
+	address := nats_discovery.NewAddress("far-proxy", 1234, "custom")
 
-	sender := newSender(connection, "123456")
+	sender := newSender(address)
 	assert.Equal(
 		t,
 		&senderNats{
-			connection:     connection,
+			connection:     nil,
 			codec:          communication.NewCodecJSON(),
 			timeoutRequest: 500 * time.Millisecond,
-			messageTopic:   "123456.",
+			messageTopic:   "custom.",
 		},
 		sender,
 	)

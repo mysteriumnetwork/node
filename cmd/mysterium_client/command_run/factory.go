@@ -3,6 +3,7 @@ package command_run
 import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
+	"github.com/mysterium/node/communication/nats_discovery"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
@@ -10,7 +11,7 @@ import (
 )
 
 func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
-	nats.Bootstrap()
+	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 
 	return &CommandRun{

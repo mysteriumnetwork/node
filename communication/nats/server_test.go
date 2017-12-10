@@ -3,7 +3,7 @@ package nats
 import (
 	"github.com/magiconair/properties/assert"
 	"github.com/mysterium/node/communication"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/communication/nats_discovery"
 	"testing"
 )
 
@@ -12,10 +12,10 @@ func TestServerInterface(t *testing.T) {
 }
 
 func TestServerGetContact(t *testing.T) {
-	identity := dto_discovery.Identity("123456")
+	address := nats_discovery.NewAddress("far-server", 1234, "custom")
 
 	server := &serverNats{
-		myIdentity: identity,
+		myAddress: address,
 	}
-	assert.Equal(t, newContact(server.myIdentity), server.GetContact())
+	assert.Equal(t, address.GetContact(), server.GetContact())
 }

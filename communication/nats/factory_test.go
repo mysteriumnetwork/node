@@ -1,6 +1,7 @@
 package nats
 
 import (
+	"github.com/mysterium/node/communication/nats_discovery"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -14,7 +15,7 @@ func TestNewServer(t *testing.T) {
 	server := NewServer(identity)
 
 	assert.NotNil(t, server)
-	assert.Equal(t, identity, server.myIdentity)
+	assert.Equal(t, nats_discovery.NewAddressForIdentity(identity), server.myAddress)
 }
 
 func TestNewClient(t *testing.T) {

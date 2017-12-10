@@ -7,16 +7,17 @@ import (
 
 	"fmt"
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/communication/nats_discovery"
 )
 
 const SENDER_LOG_PREFIX = "[NATS.Sender] "
 
-func newSender(connection *nats.Conn, messageTopic string) *senderNats {
+func newSender(address *nats_discovery.NatsAddress) *senderNats {
 	return &senderNats{
-		connection:     connection,
+		connection:     address.GetConnection(),
 		codec:          communication.NewCodecJSON(),
 		timeoutRequest: 500 * time.Millisecond,
-		messageTopic:   messageTopic,
+		messageTopic:   address.GetTopic() + ".",
 	}
 }
 
