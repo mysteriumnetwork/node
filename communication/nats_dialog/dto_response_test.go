@@ -13,17 +13,17 @@ func TestResponseSerialize(t *testing.T) {
 		expectedJson string
 	}{
 		{
-			dialogCreateResponse{
-				Accepted: true,
-			},
+			responseOK,
 			`{
-				"accepted": true
+				"reason": 200,
+				"reasonMessage": "OK"
 			}`,
 		},
 		{
-			dialogCreateResponse{},
+			responseInvalidIdentity,
 			`{
-				"accepted": false
+				"reason": 400,
+				"reasonMessage": "Invalid identity"
 			}`,
 		},
 	}
@@ -44,36 +44,36 @@ func TestResponseUnserialize(t *testing.T) {
 	}{
 		{
 			`{
-				"accepted": true
+				"reason": 200,
+				"reasonMessage": "OK"
 			}`,
 			dialogCreateResponse{
-				Accepted: true,
+				Reason:        200,
+				ReasonMessage: "OK",
 			},
 			nil,
 		},
 		{
 			`{
-				"accepted": false
+				"reason": 500,
+				"reasonMessage": "Bla"
 			}`,
 			dialogCreateResponse{
-				Accepted: false,
+				Reason:        500,
+				ReasonMessage: "Bla",
 			},
 			nil,
 		},
 		{
 			`{
-				"accepted": "true"
+				"reason": true
 			}`,
-			dialogCreateResponse{
-				Accepted: false,
-			},
-			errors.New("json: cannot unmarshal string into Go struct field dialogCreateResponse.accepted of type bool"),
+			dialogCreateResponse{},
+			errors.New("json: cannot unmarshal bool into Go struct field dialogCreateResponse.reason of type uint"),
 		},
 		{
 			`{}`,
-			dialogCreateResponse{
-				Accepted: false,
-			},
+			dialogCreateResponse{},
 			nil,
 		},
 	}

@@ -20,6 +20,25 @@ func TestNewAddress(t *testing.T) {
 	)
 }
 
+func TestNewAddressNested(t *testing.T) {
+	parentAddress := &NatsAddress{
+		servers:    []string{"nats://far-server:1234"},
+		topic:      "topic",
+		connection: &nats.Conn{},
+	}
+	address := NewAddressNested(parentAddress, "subtopic")
+
+	assert.Equal(
+		t,
+		&NatsAddress{
+			servers:    []string{"nats://far-server:1234"},
+			topic:      "topic.subtopic",
+			connection: parentAddress.connection,
+		},
+		address,
+	)
+}
+
 func TestNewAddressForIdentity(t *testing.T) {
 	identity := dto_discovery.Identity("provider1")
 	address := NewAddressForIdentity(identity)

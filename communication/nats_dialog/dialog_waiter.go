@@ -28,16 +28,21 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateHandler communication.Requ
 		return fmt.Errorf("Failed to start my connection. %s", waiter.myAddress)
 	}
 
-	dialog := &dialog{nats.NewSender(waiter.myAddress), nats.NewReceiver(waiter.myAddress)}
-
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
+		if request.IdentityId == "" {
+			return &responseInvalidIdentity, nil
+		}
+
+		dialogAddress := nats_discovery.NewAddressNested(waiter.myAddress, string(request.IdentityId))
+		dialog := &dialog{nats.NewSender(dialogAddress), nats.NewReceiver(dialogAddress)}
+
 		dialog.Respond(sessionCreateHandler)
 
 		log.Info(waiterLogPrefix, fmt.Sprintf("Dialog accepted from: '%s'", request.IdentityId))
-		return &dialogCreateResponse{Accepted: true}, nil
+		return &responseOK, nil
 	}
 
-	subscribeError := dialog.Respond(&dialogCreateHandler{createDialog})
+	subscribeError := nats.NewReceiver(waiter.myAddress).Respond(&dialogCreateHandler{createDialog})
 	return subscribeError
 }
 

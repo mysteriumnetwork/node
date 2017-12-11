@@ -33,15 +33,17 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 		return nil, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
 	}
 
-	dialog := &dialog{nats.NewSender(contactAddress), nats.NewReceiver(contactAddress)}
-	response, err := dialog.Request(&dialogCreateProducer{
+	response, err := nats.NewSender(contactAddress).Request(&dialogCreateProducer{
 		&dialogCreateRequest{
 			IdentityId: establisher.myIdentity,
 		},
 	})
-	if err != nil || !response.(*dialogCreateResponse).Accepted {
+	if err != nil || response.(*dialogCreateResponse).Reason != 200 {
 		return nil, fmt.Errorf("Dialog creation rejected: %s", err)
 	}
+
+	dialogAddress := nats_discovery.NewAddressNested(contactAddress, string(establisher.myIdentity))
+	dialog := &dialog{nats.NewSender(dialogAddress), nats.NewReceiver(dialogAddress)}
 
 	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", contact))
 	return dialog, err

@@ -2,16 +2,22 @@ package nats_dialog
 
 import (
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/service_discovery/dto"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
 // Consumer is trying to establish new dialog with Provider
 const ENDPOINT_DIALOG_CREATE = communication.RequestType("dialog-create")
 
+var (
+	responseOK              = dialogCreateResponse{200, "OK"}
+	responseInvalidIdentity = dialogCreateResponse{400, "Invalid identity"}
+)
+
 type dialogCreateRequest struct {
-	IdentityId dto.Identity `json:"identity_id"`
+	IdentityId dto_discovery.Identity `json:"identity_id"`
 }
 
 type dialogCreateResponse struct {
-	Accepted bool `json:"accepted"`
+	Reason        uint   `json:"reason"`
+	ReasonMessage string `json:"reasonMessage"`
 }
