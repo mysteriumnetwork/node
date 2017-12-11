@@ -14,8 +14,8 @@ func TestListIdentities(t *testing.T) {
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	mockIdm := newManager("0x000000000000000000000000000000000000bEEF")
-	handlerFunc := IdentityHandlers(mockIdm).Get
+	mockIdm := newManager()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).Get
 	handlerFunc(resp, req, httprouter.Params{})
 
 	assert.JSONEq(
@@ -23,13 +23,17 @@ func TestListIdentities(t *testing.T) {
 		`{
 			"identities":[{
 				"id": "0x000000000000000000000000000000000000bEEF"
+			},
+			{
+				"id": "0x000000000000000000000000000000000000000F"
 			}]
 		}`,
 		resp.Body.String())
 }
 
-func newManager(accountValue string) *identity.IdentityManager {
+func newManager() *identity.IdentityManager {
 	keystoreFake := &identity.KeyStoreFake{}
-	keystoreFake.NewAccount(accountValue)
+	keystoreFake.NewAccount("0x000000000000000000000000000000000000bEEF")
+	keystoreFake.NewAccount("0x000000000000000000000000000000000000000F")
 	return identity.NewIdentityManager(keystoreFake)
 }

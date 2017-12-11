@@ -80,9 +80,9 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	idm := identity.NewIdentityManager(keystore)
 	router := tequilapi.NewApiEndpoints()
 	// planning to move rote declarations to tequilapi.NewApiEndpoints(). needs injecting identitymanager
-	router.GET("/identities", endpoints.IdentityHandlers(idm).Get)
+	router.GET("/identities", endpoints.NewIdentitiesEndpoint(idm).Get)
 
-	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, apiEndpoints)
+	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 	if err != nil {
 		return err
 	}

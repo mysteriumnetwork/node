@@ -9,24 +9,31 @@ import (
 	"github.com/mysterium/node/tequilapi/utils"
 )
 
+type IdentityData struct {
+	Id dto.Identity `json:"id"`
+}
+type Identities struct {
+	Identities []IdentityData `json:"identities"`
+}
+
 type IdentitiesApi struct {
-	getIdentityArray func() []dto.Identity
+	idm *identity.IdentityManager
 }
 
-func IdentityHandlers(idm *identity.IdentityManager) *IdentitiesApi {
-	return &IdentitiesApi{getIdentityArray: idm.GetIdentities}
+func NewIdentitiesEndpoint(idm *identity.IdentityManager) *IdentitiesApi {
+	return &IdentitiesApi{idm}
 }
 
-func (lsid *IdentitiesApi) Get(writer http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	idArry := lsid.getIdentityArray()
+func (endpoint *IdentitiesApi) Get(writer http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	idArry := endpoint.idm.GetIdentities()
 
-	idSerializable := dto.Identities{
-		Identities: make([]dto.IdentityData, len(idArry)),
+	idsSerializable := Identities{
+		Identities: make([]IdentityData, len(idArry)),
 	}
 
 	for k, v := range idArry {
-		idSerializable.Identities[k] = dto.IdentityData{v}
+		idsSerializable.Identities[k] = IdentityData{v}
 	}
 
-	utils.WriteAsJson(idSerializable, writer)
+	utils.WriteAsJson(idsSerializable, writer)
 }
