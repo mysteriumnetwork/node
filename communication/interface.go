@@ -18,7 +18,7 @@ type Dialog interface {
 }
 
 type Receiver interface {
-	Receive(handler MessageHandler) error
+	Receive(consumer MessageConsumer) error
 	Respond(consumer RequestConsumer) error
 }
 

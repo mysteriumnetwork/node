@@ -20,21 +20,21 @@ func (producer *bytesMessageProducer) Produce() (messagePtr interface{}) {
 	return producer.Message
 }
 
-type bytesMessageHandler struct {
+type bytesMessageConsumer struct {
 	Callback func(*[]byte)
 }
 
-func (handler *bytesMessageHandler) GetMessageType() communication.MessageType {
+func (consumer *bytesMessageConsumer) GetMessageType() communication.MessageType {
 	return communication.MessageType("bytes-message")
 }
 
-func (handler *bytesMessageHandler) NewMessage() (messagePtr interface{}) {
+func (consumer *bytesMessageConsumer) NewMessage() (messagePtr interface{}) {
 	var message []byte
 	return &message
 }
 
-func (handler *bytesMessageHandler) Handle(messagePtr interface{}) error {
-	handler.Callback(messagePtr.(*[]byte))
+func (consumer *bytesMessageConsumer) Consume(messagePtr interface{}) error {
+	consumer.Callback(messagePtr.(*[]byte))
 	return nil
 }
 
@@ -78,7 +78,7 @@ func TestMessageBytesReceive(t *testing.T) {
 	}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive(&bytesMessageHandler{func(message *[]byte) {
+	err := receiver.Receive(&bytesMessageConsumer{func(message *[]byte) {
 		assert.Equal(t, []byte("123"), *message)
 		messageReceived <- true
 	}})

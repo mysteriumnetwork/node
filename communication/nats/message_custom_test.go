@@ -76,20 +76,20 @@ func TestMessageCustomSendNull(t *testing.T) {
 	}
 }
 
-type customMessageHandler struct {
+type customMessageConsumer struct {
 	Callback func(message *customMessage)
 }
 
-func (handler *customMessageHandler) GetMessageType() communication.MessageType {
+func (consumer *customMessageConsumer) GetMessageType() communication.MessageType {
 	return communication.MessageType("custom-message")
 }
 
-func (handler *customMessageHandler) NewMessage() (messagePtr interface{}) {
+func (consumer *customMessageConsumer) NewMessage() (messagePtr interface{}) {
 	return &customMessage{}
 }
 
-func (handler *customMessageHandler) Handle(messagePtr interface{}) error {
-	handler.Callback(messagePtr.(*customMessage))
+func (consumer *customMessageConsumer) Consume(messagePtr interface{}) error {
+	consumer.Callback(messagePtr.(*customMessage))
 	return nil
 }
 
@@ -105,7 +105,7 @@ func TestMessageCustomReceive(t *testing.T) {
 	}
 
 	messageReceived := make(chan bool)
-	err := receiver.Receive(&customMessageHandler{func(message *customMessage) {
+	err := receiver.Receive(&customMessageConsumer{func(message *customMessage) {
 		assert.Exactly(t, customMessage{123}, *message)
 		messageReceived <- true
 	}})

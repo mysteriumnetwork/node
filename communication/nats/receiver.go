@@ -25,13 +25,13 @@ type receiverNats struct {
 	messageTopic string
 }
 
-func (receiver *receiverNats) Receive(handler communication.MessageHandler) error {
+func (receiver *receiverNats) Receive(consumer communication.MessageConsumer) error {
 
-	messageType := string(handler.GetMessageType())
+	messageType := string(consumer.GetMessageType())
 
 	messageHandler := func(msg *nats.Msg) {
 		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Message '%s' received: %s", messageType, msg.Data))
-		messagePtr := handler.NewMessage()
+		messagePtr := consumer.NewMessage()
 		err := receiver.codec.Unpack(msg.Data, messagePtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to unpack message '%s'. %s", messageType, err)
@@ -39,7 +39,7 @@ func (receiver *receiverNats) Receive(handler communication.MessageHandler) erro
 			return
 		}
 
-		err = handler.Handle(messagePtr)
+		err = consumer.Consume(messagePtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to process message '%s'. %s", messageType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)

@@ -7,8 +7,8 @@ type MessageProducer interface {
 	Produce() (messagePtr interface{})
 }
 
-type MessageHandler interface {
+type MessageConsumer interface {
 	GetMessageType() MessageType
 	NewMessage() (messagePtr interface{})
-	Handle(messagePtr interface{}) error
+	Consume(messagePtr interface{}) error
 }
