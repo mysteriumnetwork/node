@@ -57,7 +57,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	proposal := service_discovery.NewServiceProposal(*providerId, providerContact)
 
-	sessionResponseHandler := &vpn_session.SessionCreateHandler{
+	sessionCreateHandler := &vpn_session.SessionCreateHandler{
 		CurrentProposalId: proposal.Id,
 		SessionManager:    cmd.SessionManager,
 		ClientConfigFactory: func() *openvpn.ClientConfig {
@@ -70,10 +70,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 			)
 		},
 	}
-	handleDialog := func(dialog communication.Dialog) {
-		dialog.Respond(sessionResponseHandler)
-	}
-	if err = cmd.dialogWaiter.ServeDialogs(handleDialog); err != nil {
+	if err = cmd.dialogWaiter.ServeDialogs(sessionCreateHandler); err != nil {
 		return err
 	}
 

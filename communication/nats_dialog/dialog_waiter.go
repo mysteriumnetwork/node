@@ -21,7 +21,7 @@ type dialogWaiter struct {
 	myAddress *nats_discovery.NatsAddress
 }
 
-func (waiter *dialogWaiter) ServeDialogs(handler func(communication.Dialog)) error {
+func (waiter *dialogWaiter) ServeDialogs(sessionCreateHandler communication.RequestHandler) error {
 	log.Info(waiterLogPrefix, fmt.Sprintf("Connecting to: %#v", waiter.myAddress))
 	err := waiter.myAddress.Connect()
 	if err != nil {
@@ -31,7 +31,7 @@ func (waiter *dialogWaiter) ServeDialogs(handler func(communication.Dialog)) err
 	dialog := &dialog{nats.NewSender(waiter.myAddress), nats.NewReceiver(waiter.myAddress)}
 
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-		handler(dialog)
+		dialog.Respond(sessionCreateHandler)
 
 		log.Info(waiterLogPrefix, fmt.Sprintf("Dialog accepted from: '%s'", request.IdentityId))
 		return &dialogCreateResponse{Accepted: true}, nil
