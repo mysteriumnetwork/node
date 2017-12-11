@@ -8,8 +8,8 @@ type RequestProducer interface {
 	Produce() (requestPtr interface{})
 }
 
-type RequestHandler interface {
+type RequestConsumer interface {
 	GetRequestType() RequestType
 	NewRequest() (messagePtr interface{})
-	Handle(requestPtr interface{}) (responsePtr interface{}, err error)
+	Consume(requestPtr interface{}) (responsePtr interface{}, err error)
 }

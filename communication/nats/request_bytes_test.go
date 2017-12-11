@@ -57,21 +57,21 @@ func TestBytesRequest(t *testing.T) {
 	}
 }
 
-type bytesRequestHandler struct {
+type bytesRequestConsumer struct {
 	Callback func(request *[]byte) []byte
 }
 
-func (handler *bytesRequestHandler) GetRequestType() communication.RequestType {
+func (consumer *bytesRequestConsumer) GetRequestType() communication.RequestType {
 	return communication.RequestType("bytes-response")
 }
 
-func (handler *bytesRequestHandler) NewRequest() (requestPtr interface{}) {
+func (consumer *bytesRequestConsumer) NewRequest() (requestPtr interface{}) {
 	var request []byte
 	return &request
 }
 
-func (handler *bytesRequestHandler) Handle(requestPtr interface{}) (responsePtr interface{}, err error) {
-	return handler.Callback(requestPtr.(*[]byte)), nil
+func (consumer *bytesRequestConsumer) Consume(requestPtr interface{}) (responsePtr interface{}, err error) {
+	return consumer.Callback(requestPtr.(*[]byte)), nil
 }
 
 func TestBytesRespond(t *testing.T) {
@@ -86,7 +86,7 @@ func TestBytesRespond(t *testing.T) {
 	}
 
 	requestReceived := make(chan bool)
-	err := receiver.Respond(&bytesRequestHandler{
+	err := receiver.Respond(&bytesRequestConsumer{
 		func(request *[]byte) []byte {
 			assert.Equal(t, []byte("REQUEST"), *request)
 			requestReceived <- true

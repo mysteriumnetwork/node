@@ -7,24 +7,24 @@ import (
 	"github.com/mysterium/node/session"
 )
 
-type SessionCreateHandler struct {
+type SessionCreateConsumer struct {
 	CurrentProposalId   int
 	SessionManager      session.ManagerInterface
 	ClientConfigFactory func() *openvpn.ClientConfig
 }
 
-func (handler *SessionCreateHandler) GetRequestType() communication.RequestType {
+func (consumer *SessionCreateConsumer) GetRequestType() communication.RequestType {
 	return SESSION_CREATE
 }
 
-func (handler *SessionCreateHandler) NewRequest() (requestPtr interface{}) {
+func (consumer *SessionCreateConsumer) NewRequest() (requestPtr interface{}) {
 	var request SessionCreateRequest
 	return &request
 }
 
-func (handler *SessionCreateHandler) Handle(requestPtr interface{}) (response interface{}, err error) {
+func (consumer *SessionCreateConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*SessionCreateRequest)
-	if handler.CurrentProposalId != request.ProposalId {
+	if consumer.CurrentProposalId != request.ProposalId {
 		response = &SessionCreateResponse{
 			Success: false,
 			Message: fmt.Sprintf("Proposal doesn't exist: %d", request.ProposalId),
@@ -32,7 +32,7 @@ func (handler *SessionCreateHandler) Handle(requestPtr interface{}) (response in
 		return
 	}
 
-	clientConfig, err := handler.newClientConfig()
+	clientConfig, err := consumer.newClientConfig()
 	if err != nil {
 		response = &SessionCreateResponse{
 			Success: false,
@@ -40,7 +40,7 @@ func (handler *SessionCreateHandler) Handle(requestPtr interface{}) (response in
 		}
 		return
 	}
-	clientSession := handler.newVpnSession(clientConfig)
+	clientSession := consumer.newVpnSession(clientConfig)
 
 	response = &SessionCreateResponse{
 		Success: true,
@@ -49,8 +49,8 @@ func (handler *SessionCreateHandler) Handle(requestPtr interface{}) (response in
 	return
 }
 
-func (handler *SessionCreateHandler) newClientConfig() (string, error) {
-	vpnClientConfig := handler.ClientConfigFactory()
+func (consumer *SessionCreateConsumer) newClientConfig() (string, error) {
+	vpnClientConfig := consumer.ClientConfigFactory()
 	vpnClientConfigString, err := openvpn.ConfigToString(*vpnClientConfig.Config)
 	if err != nil {
 		return "", err
@@ -59,8 +59,8 @@ func (handler *SessionCreateHandler) newClientConfig() (string, error) {
 	return vpnClientConfigString, nil
 }
 
-func (handler *SessionCreateHandler) newVpnSession(vpnClientConfig string) VpnSession {
-	sessionId := handler.SessionManager.Create()
+func (consumer *SessionCreateConsumer) newVpnSession(vpnClientConfig string) VpnSession {
+	sessionId := consumer.SessionManager.Create()
 
 	return VpnSession{
 		Id:     sessionId,

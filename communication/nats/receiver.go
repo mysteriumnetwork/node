@@ -56,13 +56,13 @@ func (receiver *receiverNats) Receive(handler communication.MessageHandler) erro
 	return nil
 }
 
-func (receiver *receiverNats) Respond(handler communication.RequestHandler) error {
+func (receiver *receiverNats) Respond(consumer communication.RequestConsumer) error {
 
-	requestType := string(handler.GetRequestType())
+	requestType := string(consumer.GetRequestType())
 
 	messageHandler := func(msg *nats.Msg) {
 		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' received: %s", requestType, msg.Data))
-		requestPtr := handler.NewRequest()
+		requestPtr := consumer.NewRequest()
 		err := receiver.codec.Unpack(msg.Data, requestPtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to unpack request '%s'. %s", requestType, err)
@@ -70,7 +70,7 @@ func (receiver *receiverNats) Respond(handler communication.RequestHandler) erro
 			return
 		}
 
-		response, err := handler.Handle(requestPtr)
+		response, err := consumer.Consume(requestPtr)
 		if err != nil {
 			err = fmt.Errorf("Failed to process request '%s'. %s", requestType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)

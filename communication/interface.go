@@ -3,7 +3,7 @@ package communication
 import dto_discovery "github.com/mysterium/node/service_discovery/dto"
 
 type DialogWaiter interface {
-	ServeDialogs(sessionCreateHandler RequestHandler) error
+	ServeDialogs(sessionCreateConsumer RequestConsumer) error
 	Stop() error
 }
 
@@ -19,7 +19,7 @@ type Dialog interface {
 
 type Receiver interface {
 	Receive(handler MessageHandler) error
-	Respond(handler RequestHandler) error
+	Respond(consumer RequestConsumer) error
 }
 
 type Sender interface {

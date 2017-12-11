@@ -13,15 +13,15 @@ var sessionManager = session.Manager{
 	},
 }
 
-var handler = SessionCreateHandler{
+var consumer = SessionCreateConsumer{
 	CurrentProposalId: 101,
 	SessionManager:    &sessionManager,
 }
 
-func TestHandler_UnknownProposal(t *testing.T) {
-	request := handler.NewRequest().(*SessionCreateRequest)
+func TestConsumer_UnknownProposal(t *testing.T) {
+	request := consumer.NewRequest().(*SessionCreateRequest)
 	request.ProposalId = 100
-	sessionResponse, err := handler.Handle(request)
+	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
 	assert.Exactly(
@@ -34,16 +34,16 @@ func TestHandler_UnknownProposal(t *testing.T) {
 	)
 }
 
-func TestHandler_Success(t *testing.T) {
-	handler.ClientConfigFactory = func() *openvpn.ClientConfig {
+func TestConsumer_Success(t *testing.T) {
+	consumer.ClientConfigFactory = func() *openvpn.ClientConfig {
 		clientConfig := openvpn.ClientConfig{&openvpn.Config{}}
 		clientConfig.SetPort(1000)
 		return &clientConfig
 	}
 
-	request := handler.NewRequest().(*SessionCreateRequest)
+	request := consumer.NewRequest().(*SessionCreateRequest)
 	request.ProposalId = 101
-	sessionResponse, err := handler.Handle(request)
+	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
 	assert.Exactly(

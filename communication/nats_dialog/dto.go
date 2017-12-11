@@ -5,7 +5,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
-// Consumer is trying to establish new dialog with Provider
+// Consume is trying to establish new dialog with Provider
 const ENDPOINT_DIALOG_CREATE = communication.RequestType("dialog-create")
 
 var (

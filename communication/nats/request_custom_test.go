@@ -64,20 +64,20 @@ func TestCustomRequest(t *testing.T) {
 	}
 }
 
-type customRequestHandler struct {
+type customRequestConsumer struct {
 	Callback func(request *customRequest) *customResponse
 }
 
-func (handler *customRequestHandler) GetRequestType() communication.RequestType {
+func (consumer *customRequestConsumer) GetRequestType() communication.RequestType {
 	return communication.RequestType("custom-response")
 }
 
-func (handler *customRequestHandler) NewRequest() (requestPtr interface{}) {
+func (consumer *customRequestConsumer) NewRequest() (requestPtr interface{}) {
 	return &customRequest{}
 }
 
-func (handler *customRequestHandler) Handle(requestPtr interface{}) (responsePtr interface{}, err error) {
-	return handler.Callback(requestPtr.(*customRequest)), nil
+func (consumer *customRequestConsumer) Consume(requestPtr interface{}) (responsePtr interface{}, err error) {
+	return consumer.Callback(requestPtr.(*customRequest)), nil
 }
 
 func TestCustomRespond(t *testing.T) {
@@ -92,7 +92,7 @@ func TestCustomRespond(t *testing.T) {
 	}
 
 	requestReceived := make(chan bool)
-	err := receiver.Respond(&customRequestHandler{
+	err := receiver.Respond(&customRequestConsumer{
 		func(request *customRequest) *customResponse {
 			assert.Equal(t, &customRequest{"REQUEST"}, request)
 			requestReceived <- true
