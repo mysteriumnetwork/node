@@ -75,8 +75,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 
 	// options.keystoreDir still to be implemented. represents keystore directory/file
-	// TODO: create options.keystoreDir
-	keystore := keystore.NewKeyStore("options.keystoreDir", keystore.StandardScryptN, keystore.StandardScryptP)
+	keystore := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	idm := identity.NewIdentityManager(keystore)
 	router := tequilapi.NewApiEndpoints(idm)
 
