@@ -29,10 +29,11 @@ func newManagerWithError(errorMock error) *identityManager {
 
 func Test_CreateNewIdentity(t *testing.T) {
 	manager := newManager("0x000000000000000000000000000000000000000A")
-	identity, err := manager.CreateNewIdentity("")
+	identity, err := manager.CreateNewIdentity("0x000000000000000000000000000000000000000b")
 
 	assert.NoError(t, err)
-	assert.Equal(t, dto.Identity("0x000000000000000000000000000000000000bEEF"), *identity)
+	assert.Equal(t, dto.Identity("0x000000000000000000000000000000000000000b"), *identity)
+	//assert.Equal(t, *identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
 	assert.Len(t, manager.keystoreManager.Accounts(), 2)
 }
 

@@ -31,8 +31,8 @@ func identityToAccount(identityString string) accounts.Account {
 	}
 }
 
-func (idm *identityManager) CreateNewIdentity(passphrase string) (*dto.Identity, error) {
-	account, err := idm.keystoreManager.NewAccount(passphrase)
+func (idm *identityManager) CreateNewIdentity(addrToHex string) (*dto.Identity, error) {
+	account, err := idm.keystoreManager.NewAccount(addrToHex)
 	if err != nil {
 		return nil, err
 	}
