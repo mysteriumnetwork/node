@@ -35,7 +35,7 @@ type CommandRun struct {
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	keystore := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
-	providerId, err := identity.SelectIdentity(keystore, options.NodeKey)
+	providerId, err := identity.SelectIdentity(keystore, options.DirectoryKeystore, options.NodeKey)
 	if err != nil {
 		return err
 	}

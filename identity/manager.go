@@ -10,12 +10,12 @@ import (
 	"strings"
 )
 
-type IdentityManager struct {
+type identityManager struct {
 	keystoreManager keystoreInterface
 }
 
-func NewIdentityManager(keystore keystoreInterface) *IdentityManager {
-	return &IdentityManager{
+func NewIdentityManager(keystore keystoreInterface) *identityManager {
+	return &identityManager{
 		keystoreManager: keystore,
 	}
 }
@@ -31,7 +31,7 @@ func identityToAccount(identityString string) accounts.Account {
 	}
 }
 
-func (idm *IdentityManager) CreateNewIdentity(passphrase string) (*dto.Identity, error) {
+func (idm *identityManager) CreateNewIdentity(passphrase string) (*dto.Identity, error) {
 	account, err := idm.keystoreManager.NewAccount(passphrase)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (idm *IdentityManager) CreateNewIdentity(passphrase string) (*dto.Identity,
 	return accountToIdentity(account), nil
 }
 
-func (idm *IdentityManager) GetIdentities() []dto.Identity {
+func (idm *identityManager) GetIdentities() []dto.Identity {
 	accountList := idm.keystoreManager.Accounts()
 
 	var ids = make([]dto.Identity, len(accountList))
@@ -51,7 +51,7 @@ func (idm *IdentityManager) GetIdentities() []dto.Identity {
 	return ids
 }
 
-func (idm *IdentityManager) GetIdentity(identityString string) *dto.Identity {
+func (idm *identityManager) GetIdentity(identityString string) *dto.Identity {
 	identityString = strings.ToLower(identityString)
 	for _, id := range idm.GetIdentities() {
 		if strings.ToLower(string(id)) == identityString {
@@ -62,6 +62,6 @@ func (idm *IdentityManager) GetIdentity(identityString string) *dto.Identity {
 	return nil
 }
 
-func (idm *IdentityManager) HasIdentity(identityString string) bool {
+func (idm *identityManager) HasIdentity(identityString string) bool {
 	return idm.GetIdentity(identityString) != nil
 }

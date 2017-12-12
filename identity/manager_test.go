@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newManager(accountValue string) *IdentityManager {
-	return &IdentityManager{
+func newManager(accountValue string) *identityManager {
+	return &identityManager{
 		keystoreManager: &KeyStoreFake{
 			AccountsMock: []accounts.Account{
 				identityToAccount(accountValue),
@@ -19,8 +19,8 @@ func newManager(accountValue string) *IdentityManager {
 	}
 }
 
-func newManagerWithError(errorMock error) *IdentityManager {
-	return &IdentityManager{
+func newManagerWithError(errorMock error) *identityManager {
+	return &identityManager{
 		keystoreManager: &KeyStoreFake{
 			ErrorMock: errorMock,
 		},
@@ -32,7 +32,7 @@ func Test_CreateNewIdentity(t *testing.T) {
 	identity, err := manager.CreateNewIdentity("")
 
 	assert.NoError(t, err)
-	assert.Equal(t, *identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
+	assert.Equal(t, dto.Identity("0x000000000000000000000000000000000000bEEF"), *identity)
 	assert.Len(t, manager.keystoreManager.Accounts(), 2)
 }
 

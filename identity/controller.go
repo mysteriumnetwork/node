@@ -6,12 +6,12 @@ import (
 )
 
 type identityHandler struct {
-	manager *IdentityManager
+	manager IdentityManagerInterface
 	cache   *identityCache
 }
 
-func SelectIdentity(keystore keystoreInterface, nodeKey string) (id *dto.Identity, err error) {
-	handler := NewIdentityHandler(keystore)
+func SelectIdentity(keystore keystoreInterface, cacheDir, nodeKey string) (id *dto.Identity, err error) {
+	handler := NewIdentityHandler(keystore, cacheDir)
 
 	// validate and return user provided identity
 	if len(nodeKey) > 0 {
@@ -41,10 +41,10 @@ func SelectIdentity(keystore keystoreInterface, nodeKey string) (id *dto.Identit
 	return
 }
 
-func NewIdentityHandler(keystore keystoreInterface) *identityHandler {
+func NewIdentityHandler(keystore keystoreInterface, cacheDir string) *identityHandler {
 	return &identityHandler{
 		manager: NewIdentityManager(keystore),
-		cache:   NewIdentityCache("SOME_DEFAULT_DIRECTORY", "cache.json"),
+		cache:   NewIdentityCache(cacheDir, "cache.json"),
 	}
 }
 

@@ -15,7 +15,7 @@ func TestListIdentities(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	mockIdm := newManager()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Get
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).List
 	handlerFunc(resp, req, httprouter.Params{})
 
 	assert.JSONEq(
@@ -31,7 +31,7 @@ func TestListIdentities(t *testing.T) {
 		resp.Body.String())
 }
 
-func newManager() *identity.IdentityManager {
+func newManager() identity.IdentityManagerInterface {
 	keystoreFake := &identity.KeyStoreFake{}
 	keystoreFake.NewAccount("0x000000000000000000000000000000000000bEEF")
 	keystoreFake.NewAccount("0x000000000000000000000000000000000000000F")

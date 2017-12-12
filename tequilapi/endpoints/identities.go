@@ -17,14 +17,14 @@ type Identities struct {
 }
 
 type IdentitiesApi struct {
-	idm *identity.IdentityManager
+	idm identity.IdentityManagerInterface
 }
 
-func NewIdentitiesEndpoint(idm *identity.IdentityManager) *IdentitiesApi {
+func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface) *IdentitiesApi {
 	return &IdentitiesApi{idm}
 }
 
-func (endpoint *IdentitiesApi) Get(writer http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (endpoint *IdentitiesApi) List(writer http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	idArry := endpoint.idm.GetIdentities()
 
 	idsSerializable := Identities{

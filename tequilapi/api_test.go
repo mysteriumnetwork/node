@@ -1,6 +1,7 @@
 package tequilapi
 
 import (
+	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"testing"
@@ -14,7 +15,8 @@ type tequilapiTestSuite struct {
 
 func (testSuite *tequilapiTestSuite) SetupSuite() {
 	var err error
-	testSuite.server, err = StartNewServer("", 0, NewApiEndpoints())
+	idmFake := identity.NewIdentityManagerFake()
+	testSuite.server, err = StartNewServer("", 0, NewApiEndpoints(idmFake))
 	if err != nil {
 		testSuite.T().FailNow()
 	}

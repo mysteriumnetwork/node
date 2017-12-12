@@ -16,7 +16,6 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
-	"github.com/mysterium/node/tequilapi/endpoints"
 )
 
 type CommandRun struct {
@@ -76,11 +75,10 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 
 	// options.keystoreDir still to be implemented. represents keystore directory/file
+	// TODO: create options.keystoreDir
 	keystore := keystore.NewKeyStore("options.keystoreDir", keystore.StandardScryptN, keystore.StandardScryptP)
 	idm := identity.NewIdentityManager(keystore)
-	router := tequilapi.NewApiEndpoints()
-	// planning to move rote declarations to tequilapi.NewApiEndpoints(). needs injecting identitymanager
-	router.GET("/identities", endpoints.NewIdentitiesEndpoint(idm).Get)
+	router := tequilapi.NewApiEndpoints(idm)
 
 	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 	if err != nil {
