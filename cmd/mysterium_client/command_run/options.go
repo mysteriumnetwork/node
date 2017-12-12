@@ -29,8 +29,8 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.TequilaApiAddress,
 		"tequilapi.address",
-		"",
-		"IP address of interface to listen for incoming connections. By default - listen on all interfaces",
+		"localhost",
+		"IP address of interface to listen for incoming connections. By default - bind to local interface",
 	)
 
 	flags.IntVar(
