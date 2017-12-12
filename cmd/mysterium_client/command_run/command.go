@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/mysterium/node/bytescount_client"
+	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/openvpn"
 	vpn_session "github.com/mysterium/node/openvpn/session"
@@ -74,7 +75,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	apiEndpoints := tequilapi.NewApiEndpoints()
 	//TODO additional endpoint registration can go here i.e apiEndpoints.GET("/path", httprouter.Handle function)
-	connectionEndpoint := endpoints.NewConnectionEndpoint()
+	connectionEndpoint := endpoints.NewConnectionEndpoint(client_connection.NewManager())
 	apiEndpoints.GET("/connection", connectionEndpoint.Status)
 	apiEndpoints.PUT("/connection", connectionEndpoint.Create)
 	apiEndpoints.DELETE("/connection", connectionEndpoint.Kill)

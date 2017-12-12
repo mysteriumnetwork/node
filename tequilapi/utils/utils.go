@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -22,4 +23,14 @@ func WriteAsJson(v interface{}, writer http.ResponseWriter) {
 	if writeErr != nil {
 		http.Error(writer, "Http response write error", http.StatusInternalServerError)
 	}
+}
+
+type HttpErrorResponse struct {
+	Message string `json:"message"`
+}
+
+func SendErrorMessage(writer http.ResponseWriter, err error, httpCode int) {
+
+	writer.WriteHeader(httpCode)
+	WriteAsJson(HttpErrorResponse{fmt.Sprint(err)}, writer)
 }
