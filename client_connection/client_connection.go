@@ -9,8 +9,12 @@ type State string
 
 const (
 	NOT_CONNECTED = State("NOT_CONNECTED")
-	NEGOTIATING   = State("CONNECTING")
+	NEGOTIATING   = State("NEGOTIATING")
 	CONNECTED     = State("CONNECTED")
+)
+
+var (
+	ALREADY_CONNECTED = errors.New("already connected")
 )
 
 type Status struct {
