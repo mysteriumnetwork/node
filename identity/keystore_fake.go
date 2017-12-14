@@ -7,14 +7,18 @@ import (
 
 type keyStoreFake struct {
 	AccountsMock []accounts.Account
-	ErrorMock error
+	ErrorMock    error
+}
+
+func NewKeystoreFake() *keyStoreFake {
+    return &keyStoreFake{}
 }
 
 func (self *keyStoreFake) Accounts() []accounts.Account {
 	return self.AccountsMock
 }
 
-func (self *keyStoreFake) NewAccount(passphrase string) (accounts.Account, error) {
+func (self *keyStoreFake) NewAccount(_ string) (accounts.Account, error) {
 	if self.ErrorMock != nil {
 		return accounts.Account{}, self.ErrorMock
 	}
@@ -42,5 +46,3 @@ func (self *keyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, err
 
 	panic("implement me")
 }
-
-

@@ -1,11 +1,12 @@
 package identity
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"github.com/mysterium/node/service_discovery/dto"
 	"errors"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/mysterium/node/service_discovery/dto"
+	"github.com/stretchr/testify/assert"
 )
 
 func newManager(accountValue string) *identityManager {

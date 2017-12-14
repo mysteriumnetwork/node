@@ -1,17 +1,17 @@
 package identity
 
 import (
-	"github.com/mysterium/node/service_discovery/dto"
 	"errors"
+	"github.com/mysterium/node/service_discovery/dto"
 )
 
 type identityHandler struct {
-	manager *identityManager
+	manager IdentityManagerInterface
 	cache   *identityCache
 }
 
-func SelectIdentity(dir string, nodeKey string) (id *dto.Identity, err error) {
-	handler := NewIdentityHandler(dir)
+func SelectIdentity(keystore keystoreInterface, cacheDir, nodeKey string) (id *dto.Identity, err error) {
+	handler := NewIdentityHandler(keystore, cacheDir)
 
 	// validate and return user provided identity
 	if len(nodeKey) > 0 {
@@ -41,10 +41,10 @@ func SelectIdentity(dir string, nodeKey string) (id *dto.Identity, err error) {
 	return
 }
 
-func NewIdentityHandler(dir string) *identityHandler {
+func NewIdentityHandler(keystore keystoreInterface, cacheDir string) *identityHandler {
 	return &identityHandler{
-		manager: NewIdentityManager(dir),
-		cache:   NewIdentityCache(dir, "cache.json"),
+		manager: NewIdentityManager(keystore),
+		cache:   NewIdentityCache(cacheDir, "cache.json"),
 	}
 }
 

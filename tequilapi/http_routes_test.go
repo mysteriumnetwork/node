@@ -19,7 +19,7 @@ func (hfts *handleFunctionTestStruct) httprouterHandle(resp http.ResponseWriter,
 func TestHttpRouterHandlesRequests(t *testing.T) {
 	ts := handleFunctionTestStruct{false}
 
-	router := NewApiEndpoints()
+	router := httprouter.New()
 	router.GET("/testhandler", ts.httprouterHandle)
 
 	req, err := http.NewRequest("GET", "/testhandler", nil)
