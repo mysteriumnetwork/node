@@ -124,13 +124,11 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 		t,
 		`{
 			"message" : "validation_error",
-			"validationErros" : [
-				{ "field" : "" , "error" : ""} ,
-				{ "field" : "" , "error" : ""}
-			]
-		}`,
-		resp.Body.String())
-
+			"errors" : {
+				"identity" : [ { "code" : "required" , "message" : "Field is required" } ],
+				"nodeKey" : [ {"code" : "required" , "message" : "Field is required" } ]
+			}
+		}`, resp.Body.String())
 }
 
 func TestPutWithValidBodyCreatesConnection(t *testing.T) {

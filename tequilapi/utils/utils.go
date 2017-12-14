@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
 )
 
@@ -21,12 +22,27 @@ func WriteAsJson(v interface{}, writer http.ResponseWriter) {
 	}
 }
 
-type HttpErrorResponse struct {
+type errorMessage struct {
 	Message string `json:"message"`
 }
 
-func SendErrorMessage(writer http.ResponseWriter, err error, httpCode int) {
+func SendError(writer http.ResponseWriter, err error, httpCode int) {
 
+	SendErrorMessage(writer, &errorMessage{fmt.Sprint(err)}, httpCode)
+}
+
+func SendErrorMessage(writer http.ResponseWriter, message interface{}, httpCode int) {
 	writer.WriteHeader(httpCode)
-	WriteAsJson(HttpErrorResponse{fmt.Sprint(err)}, writer)
+	WriteAsJson(message, writer)
+}
+
+type validationErrorMessage struct {
+	errorMessage
+	ValidationErrors *validation.FieldErrorMap `json:"errors"`
+}
+
+func SendValidationErrorMessage(resp http.ResponseWriter, errorMap *validation.FieldErrorMap) {
+	errorResponse := errorMessage{Message: "validation_error"}
+
+	SendErrorMessage(resp, &validationErrorMessage{errorResponse, errorMap}, http.StatusUnprocessableEntity)
 }

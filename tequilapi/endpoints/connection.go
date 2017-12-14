@@ -7,6 +7,7 @@ import (
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi/utils"
+	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
 )
 
@@ -36,13 +37,20 @@ func (ce *connectionEndpoint) Status(resp http.ResponseWriter, req *http.Request
 func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	cr, err := toConnectionRequest(req)
 	if err != nil {
-		utils.SendErrorMessage(resp, err, http.StatusBadRequest)
+		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
+
+	errorMap := validateConnectionRequest(cr)
+	if errorMap.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errorMap)
+		return
+	}
+
 	err = ce.manager.Connect(dto.Identity(cr.Identity), cr.NodeKey)
 
 	if err != nil {
-		utils.SendErrorMessage(resp, err, http.StatusInternalServerError)
+		utils.SendError(resp, err, http.StatusInternalServerError)
 	}
 	resp.WriteHeader(http.StatusCreated)
 	ce.Status(resp, req, params)
@@ -60,6 +68,17 @@ func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
 		return nil, err
 	}
 	return &connectionRequest, nil
+}
+
+func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap {
+	errors := validation.NewErrorMap()
+	if len(cr.Identity) == 0 {
+		errors.ForField("identity").AddError("required", "Field is required")
+	}
+	if len(cr.NodeKey) == 0 {
+		errors.ForField("nodeKey").AddError("required", "Field is required")
+	}
+	return errors
 }
 
 func toStatusResponse(status client_connection.Status) statusResponse {
