@@ -2,7 +2,6 @@ package tequilapi
 
 import (
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -20,8 +19,7 @@ func (hfts *handleFunctionTestStruct) httprouterHandle(resp http.ResponseWriter,
 func TestHttpRouterHandlesRequests(t *testing.T) {
 	ts := handleFunctionTestStruct{false}
 
-	idmFake := identity.NewIdentityManagerFake()
-	router := NewApiEndpoints(idmFake)
+	router := httprouter.New()
 	router.GET("/testhandler", ts.httprouterHandle)
 
 	req, err := http.NewRequest("GET", "/testhandler", nil)

@@ -4,10 +4,10 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 )
 
-type idmFake struct {}
+type idmFake struct{}
 
 func NewIdentityManagerFake() *idmFake {
-	return &idmFake{ }
+	return &idmFake{}
 }
 
 func (fakeIdm *idmFake) CreateNewIdentity(_ string) (*dto.Identity, error) {
@@ -18,10 +18,9 @@ func (fakeIdm *idmFake) GetIdentities() []dto.Identity {
 	accountList := []dto.Identity{
 		dto.Identity("0x000000000000000000000000000000000000bEEF"),
 		dto.Identity("0x000000000000000000000000000000000000bEEF"),
-		}
+	}
 
-
-    return accountList
+	return accountList
 }
 func (fakeIdm *idmFake) GetIdentity(string) *dto.Identity {
 	id := dto.Identity("0x000000000000000000000000000000000000000A")
