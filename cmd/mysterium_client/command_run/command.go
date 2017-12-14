@@ -1,8 +1,6 @@
 package command_run
 
 import (
-	"encoding/json"
-	"errors"
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/communication"
@@ -13,7 +11,6 @@ import (
 	"github.com/mysterium/node/tequilapi"
 	"github.com/mysterium/node/tequilapi/endpoints"
 	"io"
-	"strconv"
 	"time"
 )
 
@@ -23,8 +20,8 @@ type CommandRun struct {
 
 	MysteriumClient server.Client
 
-	CommunicationClientFactory func(identity dto_discovery.Identity) communication.Client
-	communicationClient        communication.Client
+	DialogEstablisherFactory func(identity dto_discovery.Identity) communication.DialogEstablisher
+	dialog                   communication.Dialog
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnClient      *openvpn.Client
@@ -39,15 +36,15 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	if err != nil {
 		return err
 	}
-
-	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
 	proposal := session.ServiceProposal
-	sender, _, err := cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0].Definition)
+
+	dialogEstablisher := cmd.DialogEstablisherFactory(consumerId)
+	cmd.dialog, err = dialogEstablisher.CreateDialog(proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
 
-	vpnSession, err := getVpnSession(sender, strconv.Itoa(proposal.Id))
+	vpnSession, err := vpn_session.RequestSessionCreate(cmd.dialog, proposal.Id)
 	if err != nil {
 		return err
 	}
@@ -93,27 +90,7 @@ func (cmd *CommandRun) Wait() error {
 }
 
 func (cmd *CommandRun) Kill() {
-	cmd.httpApiServer.Stop()
-	cmd.communicationClient.Stop()
+	cmd.dialog.Close()
 	cmd.vpnClient.Stop()
-}
-
-func getVpnSession(sender communication.Sender, proposalId string) (session vpn_session.VpnSession, err error) {
-	sessionJson, err := sender.Request(communication.SESSION_CREATE, proposalId)
-	if err != nil {
-		return
-	}
-
-	var response vpn_session.SessionCreateResponse
-
-	err = json.Unmarshal([]byte(sessionJson), &response)
-	if err != nil {
-		return
-	}
-
-	if response.Success == false {
-		return session, errors.New(response.Message)
-	}
-
-	return response.Session, nil
+	cmd.httpApiServer.Stop()
 }

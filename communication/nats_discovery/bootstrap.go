@@ -1,4 +1,4 @@
-package nats
+package nats_discovery
 
 import (
 	"encoding/json"
@@ -10,7 +10,6 @@ func Bootstrap() {
 		CONTACT_NATS_V1,
 		func(rawDefinition *json.RawMessage) (dto_discovery.ContactDefinition, error) {
 			var contact ContactNATSV1
-
 			err := json.Unmarshal(*rawDefinition, &contact)
 
 			return contact, err
