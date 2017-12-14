@@ -1,4 +1,4 @@
-package nats
+package nats_discovery
 
 const CONTACT_NATS_V1 = "nats/v1"
 

@@ -1,4 +1,4 @@
-package nats
+package nats_discovery
 
 import (
 	"encoding/json"

@@ -2,7 +2,7 @@ package command_run
 
 import (
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/communication/nats"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -14,7 +14,6 @@ import (
 	"github.com/mysterium/node/session"
 	"io"
 	"time"
-	"github.com/mysterium/node/identity"
 )
 
 type CommandRun struct {
@@ -25,8 +24,10 @@ type CommandRun struct {
 	MysteriumClient server.Client
 	NatService      nat.NATService
 
-	CommunicationServerFactory func(identity dto_discovery.Identity) communication.Server
-	communicationServer        communication.Server
+	DialogWaiterFactory func(identity dto_discovery.Identity) (communication.DialogWaiter, dto_discovery.Contact)
+	dialogWaiter        communication.DialogWaiter
+
+	SessionManager session.ManagerInterface
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnServer      *openvpn.Server
@@ -37,6 +38,9 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	if err != nil {
 		return err
 	}
+
+	var providerContact dto_discovery.Contact
+	cmd.dialogWaiter, providerContact = cmd.DialogWaiterFactory(*providerId)
 
 	vpnServerIp, err := cmd.IpifyClient.GetIp()
 	if err != nil {
@@ -51,16 +55,11 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	proposal := service_discovery.NewServiceProposal(
-		*providerId,
-		nats.NewContact(*providerId),
-	)
+	proposal := service_discovery.NewServiceProposal(*providerId, providerContact)
 
-	sessionResponseHandler := vpn_session.CreateResponseHandler{
-		ProposalId: proposal.Id,
-		SessionManager: &session.Manager{
-			Generator: &session.Generator{},
-		},
+	sessionCreateConsumer := &vpn_session.SessionCreateConsumer{
+		CurrentProposalId: proposal.Id,
+		SessionManager:    cmd.SessionManager,
 		ClientConfigFactory: func() *openvpn.ClientConfig {
 			return openvpn.NewClientConfig(
 				vpnServerIp,
@@ -71,12 +70,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 			)
 		},
 	}
-	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
-		receiver.Respond(communication.SESSION_CREATE, sessionResponseHandler.Handle)
-	}
-
-	cmd.communicationServer = cmd.CommunicationServerFactory(*providerId)
-	if err = cmd.communicationServer.ServeDialogs(handleDialog); err != nil {
+	if err = cmd.dialogWaiter.ServeDialogs(sessionCreateConsumer); err != nil {
 		return err
 	}
 
@@ -113,6 +107,6 @@ func (cmd *CommandRun) Wait() error {
 
 func (cmd *CommandRun) Kill() {
 	cmd.vpnServer.Stop()
-	cmd.communicationServer.Stop()
+	cmd.dialogWaiter.Stop()
 	cmd.NatService.Stop()
 }
