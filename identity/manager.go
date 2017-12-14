@@ -4,7 +4,6 @@
 package identity
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/service_discovery/dto"
@@ -15,9 +14,9 @@ type identityManager struct {
 	keystoreManager keystoreInterface
 }
 
-func NewIdentityManager(keydir string) *identityManager {
+func NewIdentityManager(keystore keystoreInterface) *identityManager {
 	return &identityManager{
-		keystoreManager: keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP),
+		keystoreManager: keystore,
 	}
 }
 
@@ -32,8 +31,8 @@ func identityToAccount(identityString string) accounts.Account {
 	}
 }
 
-func (idm *identityManager) CreateNewIdentity(passphrase string) (*dto.Identity, error) {
-	account, err := idm.keystoreManager.NewAccount(passphrase)
+func (idm *identityManager) CreateNewIdentity(addrToHex string) (*dto.Identity, error) {
+	account, err := idm.keystoreManager.NewAccount(addrToHex)
 	if err != nil {
 		return nil, err
 	}

@@ -3,11 +3,13 @@ package command_run
 import (
 	"errors"
 	"flag"
+	"github.com/mysterium/node/utils/file"
 )
 
 type CommandOptions struct {
 	NodeKey           string
 	DirectoryRuntime  string
+	DirectoryKeystore string
 	TequilaApiAddress string
 	TequilaApiPort    int
 }
@@ -27,10 +29,16 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"Runtime directory for temp files (should be writable)",
 	)
 	flags.StringVar(
+		&options.DirectoryKeystore,
+		"keystore-dir",
+		file.GetMysteriumDirectory("keystore"),
+		"Keystore directory",
+	)
+	flags.StringVar(
 		&options.TequilaApiAddress,
 		"tequilapi.address",
-		"",
-		"IP address of interface to listen for incoming connections. By default - listen on all interfaces",
+		"localhost",
+		"IP address of interface to listen for incoming connections. By default - bind to local interface",
 	)
 
 	flags.IntVar(

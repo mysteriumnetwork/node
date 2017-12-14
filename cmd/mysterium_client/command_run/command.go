@@ -3,16 +3,19 @@ package command_run
 import (
 	"encoding/json"
 	"errors"
+	"io"
+	"strconv"
+	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
-	"io"
-	"strconv"
-	"time"
 )
 
 type CommandRun struct {
@@ -71,10 +74,12 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	apiEndpoints := tequilapi.NewApiEndpoints()
-	//TODO additional endpoint registration can go here i.e apiEndpoints.GET("/path", httprouter.Handle function)
+	// options.keystoreDir still to be implemented. represents keystore directory/file
+	keystore := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	idm := identity.NewIdentityManager(keystore)
+	router := tequilapi.NewApiEndpoints(idm)
 
-	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, apiEndpoints)
+	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 	if err != nil {
 		return err
 	}

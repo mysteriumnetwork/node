@@ -1,16 +1,17 @@
 package identity
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"github.com/mysterium/node/service_discovery/dto"
 	"errors"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/mysterium/node/service_discovery/dto"
+	"github.com/stretchr/testify/assert"
 )
 
 func newManager(accountValue string) *identityManager {
 	return &identityManager{
-		keystoreManager: &keyStoreFake{
+		keystoreManager: &KeyStoreFake{
 			AccountsMock: []accounts.Account{
 				identityToAccount(accountValue),
 			},
@@ -20,7 +21,7 @@ func newManager(accountValue string) *identityManager {
 
 func newManagerWithError(errorMock error) *identityManager {
 	return &identityManager{
-		keystoreManager: &keyStoreFake{
+		keystoreManager: &KeyStoreFake{
 			ErrorMock: errorMock,
 		},
 	}
@@ -28,10 +29,11 @@ func newManagerWithError(errorMock error) *identityManager {
 
 func Test_CreateNewIdentity(t *testing.T) {
 	manager := newManager("0x000000000000000000000000000000000000000A")
-	identity, err := manager.CreateNewIdentity("")
+	identity, err := manager.CreateNewIdentity("0x000000000000000000000000000000000000000b")
 
 	assert.NoError(t, err)
-	assert.Equal(t, *identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
+	assert.Equal(t, dto.Identity("0x000000000000000000000000000000000000000b"), *identity)
+	//assert.Equal(t, *identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
 	assert.Len(t, manager.keystoreManager.Accounts(), 2)
 }
 
