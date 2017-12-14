@@ -1,6 +1,7 @@
 package command_run
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"

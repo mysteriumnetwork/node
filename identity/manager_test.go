@@ -28,13 +28,12 @@ func newManagerWithError(errorMock error) *identityManager {
 }
 
 func Test_CreateNewIdentity(t *testing.T) {
-	manager := NewIdentityManagerFake()
-	assert.Len(t, manager.ksmFake.Accounts(), 0)
-	identity, err := manager.CreateNewIdentity("0x000000000000000000000000000000000000bEEf")
+	manager := newManager("0x000000000000000000000000000000000000000A")
+	identity, err := manager.CreateNewIdentity("")
 
 	assert.NoError(t, err)
-	assert.Equal(t, dto.Identity("0x000000000000000000000000000000000000bEEf"), *identity)
-	assert.Len(t, manager.ksmFake.Accounts(), 1)
+	assert.Equal(t, *identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
+	assert.Len(t, manager.keystoreManager.Accounts(), 2)
 }
 
 func Test_CreateNewIdentityError(t *testing.T) {

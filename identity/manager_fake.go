@@ -4,30 +4,24 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 )
 
-type idmFake struct {
-    ksmFake keystoreInterface
-}
+type idmFake struct {}
 
 func NewIdentityManagerFake() *idmFake {
-	return &idmFake{
-	    ksmFake:NewKeystoreFake(),
-    }
+	return &idmFake{ }
 }
 
-func (fakeIdm *idmFake) CreateNewIdentity(hexAddress string) (*dto.Identity, error) {
-    id, error := fakeIdm.ksmFake.NewAccount(hexAddress)
-	//id := dto.Identity("0x000000000000000000000000000000000000000A")
-	return accountToIdentity(id), error
+func (fakeIdm *idmFake) CreateNewIdentity(_ string) (*dto.Identity, error) {
+	id := dto.Identity("0x000000000000000000000000000000000000bEEF")
+	return &id, nil
 }
 func (fakeIdm *idmFake) GetIdentities() []dto.Identity {
-    accountList := fakeIdm.ksmFake.Accounts()
+	accountList := []dto.Identity{
+		dto.Identity("0x000000000000000000000000000000000000bEEF"),
+		dto.Identity("0x000000000000000000000000000000000000bEEF"),
+		}
 
-    var ids = make([]dto.Identity, len(accountList))
-    for i, account := range accountList {
-        ids[i] = *accountToIdentity(account)
-    }
 
-    return ids
+    return accountList
 }
 func (fakeIdm *idmFake) GetIdentity(string) *dto.Identity {
 	id := dto.Identity("0x000000000000000000000000000000000000000A")

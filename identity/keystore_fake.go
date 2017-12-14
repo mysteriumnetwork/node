@@ -18,13 +18,13 @@ func (self *keyStoreFake) Accounts() []accounts.Account {
 	return self.AccountsMock
 }
 
-func (self *keyStoreFake) NewAccount(address string) (accounts.Account, error) {
+func (self *keyStoreFake) NewAccount(_ string) (accounts.Account, error) {
 	if self.ErrorMock != nil {
 		return accounts.Account{}, self.ErrorMock
 	}
 
 	accountNew := accounts.Account{
-		Address: common.HexToAddress(address),
+		Address: common.HexToAddress("0x000000000000000000000000000000000000bEEF"),
 	}
 	self.AccountsMock = append(self.AccountsMock, accountNew)
 

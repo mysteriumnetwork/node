@@ -25,7 +25,7 @@ func TestListIdentities(t *testing.T) {
 				"id": "0x000000000000000000000000000000000000bEEF"
 			},
 			{
-				"id": "0x000000000000000000000000000000000000000F"
+				"id": "0x000000000000000000000000000000000000bEEF"
 			}]
 		}`,
 		resp.Body.String())
@@ -33,7 +33,7 @@ func TestListIdentities(t *testing.T) {
 
 func newManager() identity.IdentityManagerInterface {
 	idmFake := identity.NewIdentityManagerFake()
-	idmFake.CreateNewIdentity("0x000000000000000000000000000000000000bEEF")
-	idmFake.CreateNewIdentity("0x000000000000000000000000000000000000000F")
+	idmFake.CreateNewIdentity("")
+	idmFake.CreateNewIdentity("")
 	return idmFake
 }
