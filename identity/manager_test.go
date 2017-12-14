@@ -11,7 +11,7 @@ import (
 
 func newManager(accountValue string) *identityManager {
 	return &identityManager{
-		keystoreManager: &KeyStoreFake{
+		keystoreManager: &keyStoreFake{
 			AccountsMock: []accounts.Account{
 				identityToAccount(accountValue),
 			},
@@ -21,20 +21,20 @@ func newManager(accountValue string) *identityManager {
 
 func newManagerWithError(errorMock error) *identityManager {
 	return &identityManager{
-		keystoreManager: &KeyStoreFake{
+		keystoreManager: &keyStoreFake{
 			ErrorMock: errorMock,
 		},
 	}
 }
 
 func Test_CreateNewIdentity(t *testing.T) {
-	manager := newManager("0x000000000000000000000000000000000000000A")
-	identity, err := manager.CreateNewIdentity("0x000000000000000000000000000000000000000b")
+	manager := NewIdentityManagerFake()
+	assert.Len(t, manager.ksmFake.Accounts(), 0)
+	identity, err := manager.CreateNewIdentity("0x000000000000000000000000000000000000bEEf")
 
 	assert.NoError(t, err)
-	assert.Equal(t, dto.Identity("0x000000000000000000000000000000000000000b"), *identity)
-	//assert.Equal(t, *identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
-	assert.Len(t, manager.keystoreManager.Accounts(), 2)
+	assert.Equal(t, dto.Identity("0x000000000000000000000000000000000000bEEf"), *identity)
+	assert.Len(t, manager.ksmFake.Accounts(), 1)
 }
 
 func Test_CreateNewIdentityError(t *testing.T) {

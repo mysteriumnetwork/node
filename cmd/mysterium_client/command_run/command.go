@@ -75,8 +75,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	}
 
 	// options.keystoreDir still to be implemented. represents keystore directory/file
-	keystore := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
-	idm := identity.NewIdentityManager(keystore)
+	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	idm := identity.NewIdentityManager(keystoreInstance)
 	router := tequilapi.NewApiEndpoints(idm)
 
 	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, router)

@@ -25,14 +25,14 @@ func accountToIdentity(account accounts.Account) *dto.Identity {
 	return &identity
 }
 
-func identityToAccount(identityString string) accounts.Account {
+func identityToAccount(identityStr string) accounts.Account {
 	return accounts.Account{
-		Address: common.HexToAddress(identityString),
+		Address: common.HexToAddress(identityStr),
 	}
 }
 
-func (idm *identityManager) CreateNewIdentity(addrToHex string) (*dto.Identity, error) {
-	account, err := idm.keystoreManager.NewAccount(addrToHex)
+func (idm *identityManager) CreateNewIdentity(passphrase string) (*dto.Identity, error) {
+	account, err := idm.keystoreManager.NewAccount(passphrase)
 	if err != nil {
 		return nil, err
 	}

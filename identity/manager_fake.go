@@ -4,24 +4,35 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 )
 
-type IdentityManagerFake struct {
+type idmFake struct {
+    ksmFake keystoreInterface
 }
 
-func NewIdentityManagerFake() *IdentityManagerFake {
-	return &IdentityManagerFake{}
+func NewIdentityManagerFake() *idmFake {
+	return &idmFake{
+	    ksmFake:NewKeystoreFake(),
+    }
 }
 
-func (fakeIdm *IdentityManagerFake) CreateNewIdentity(_ string) (*dto.Identity, error) {
-	id := dto.Identity("0x000000000000000000000000000000000000000A")
-	return &id, nil
+func (fakeIdm *idmFake) CreateNewIdentity(hexAddress string) (*dto.Identity, error) {
+    id, error := fakeIdm.ksmFake.NewAccount(hexAddress)
+	//id := dto.Identity("0x000000000000000000000000000000000000000A")
+	return accountToIdentity(id), error
 }
-func (fakeIdm *IdentityManagerFake) GetIdentities() []dto.Identity {
-	return []dto.Identity{}
+func (fakeIdm *idmFake) GetIdentities() []dto.Identity {
+    accountList := fakeIdm.ksmFake.Accounts()
+
+    var ids = make([]dto.Identity, len(accountList))
+    for i, account := range accountList {
+        ids[i] = *accountToIdentity(account)
+    }
+
+    return ids
 }
-func (fakeIdm *IdentityManagerFake) GetIdentity(string) *dto.Identity {
+func (fakeIdm *idmFake) GetIdentity(string) *dto.Identity {
 	id := dto.Identity("0x000000000000000000000000000000000000000A")
 	return &id
 }
-func (fakeIdm *IdentityManagerFake) HasIdentity(string) bool {
+func (fakeIdm *idmFake) HasIdentity(string) bool {
 	return true
 }

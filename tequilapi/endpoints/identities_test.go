@@ -21,7 +21,7 @@ func TestListIdentities(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"identities":[{
+			"identitiesListDto":[{
 				"id": "0x000000000000000000000000000000000000bEEF"
 			},
 			{
@@ -32,8 +32,8 @@ func TestListIdentities(t *testing.T) {
 }
 
 func newManager() identity.IdentityManagerInterface {
-	keystoreFake := &identity.KeyStoreFake{}
-	keystoreFake.NewAccount("0x000000000000000000000000000000000000bEEF")
-	keystoreFake.NewAccount("0x000000000000000000000000000000000000000F")
-	return identity.NewIdentityManager(keystoreFake)
+	idmFake := identity.NewIdentityManagerFake()
+	idmFake.CreateNewIdentity("0x000000000000000000000000000000000000bEEF")
+	idmFake.CreateNewIdentity("0x000000000000000000000000000000000000000F")
+	return idmFake
 }
