@@ -31,14 +31,14 @@ type clientRest struct {
 	httpClient http.Client
 }
 
-func (client *clientRest) RegisterIdentity(identity *dto_discovery.Identity) (err error) {
+func (client *clientRest) RegisterIdentity(identity dto_discovery.Identity) (err error) {
 	response, err := client.doRequest("POST", "identities", dto.CreateIdentityRequest{
-		Identity: *identity,
+		Identity: identity,
 	})
 
 	if err == nil {
 		defer response.Body.Close()
-		log.Info(MYSTERIUM_API_LOG_PREFIX, "Identity created: ", *identity)
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "Identity created: ", identity)
 	}
 
 	return

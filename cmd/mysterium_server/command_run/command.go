@@ -35,26 +35,23 @@ type CommandRun struct {
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	keystore := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
-	providerId, err := identity.SelectIdentity(keystore, options.DirectoryKeystore, options.NodeKey)
-	if err != nil {
-		return err
-	}
+	ks := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	identityHandler := identity.NewNodeIdentityHandler(ks, options.DirectoryKeystore)
 
-	// if no identity can be selected, lets create a new one
-	if providerId == nil {
-		providerId, err = identity.CreateIdentity(options.DirectoryKeystore)
+	providerId, err := identityHandler.Select(options.NodeKey)
+	if err != nil {
+		providerId, err = identityHandler.Create()
 		if err != nil {
 			return err
 		}
+	}
 
-		if err := cmd.MysteriumClient.RegisterIdentity(providerId); err != nil {
-			return err
-		}
+	if err := cmd.MysteriumClient.RegisterIdentity(providerId); err != nil {
+		return err
 	}
 
 	var providerContact dto_discovery.Contact
-	cmd.dialogWaiter, providerContact = cmd.DialogWaiterFactory(*providerId)
+	cmd.dialogWaiter, providerContact = cmd.DialogWaiterFactory(providerId)
 
 	vpnServerIp, err := cmd.IpifyClient.GetIp()
 	if err != nil {
@@ -69,7 +66,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	proposal := service_discovery.NewServiceProposal(*providerId, providerContact)
+	proposal := service_discovery.NewServiceProposal(providerId, providerContact)
 
 	sessionCreateConsumer := &vpn_session.SessionCreateConsumer{
 		CurrentProposalId: proposal.Id,

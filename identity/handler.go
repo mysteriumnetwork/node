@@ -10,72 +10,68 @@ type identityHandler struct {
 	cache   *identityCache
 }
 
-func SelectIdentity(keystore keystoreInterface, cacheDir, nodeKey string) (id *dto.Identity, err error) {
-	handler := NewIdentityHandler(keystore, cacheDir)
+func NewNodeIdentityHandler(keystore keystoreInterface, cacheDir string) *identityHandler {
+	return &identityHandler{
+		manager: NewIdentityManager(keystore),
+		cache:   NewIdentityCache(cacheDir, "remember.json"),
+	}
+}
 
-	// validate and return user provided identity
+func (ih *identityHandler) Select(nodeKey string) (id dto.Identity, err error) {
 	if len(nodeKey) > 0 {
-		id = handler.GetIdentityByValue(nodeKey)
-		if id == nil {
-			return id, errors.New("identity doesn't exist")
+		id, err = ih.getIdentityByValue(nodeKey)
+		if err != nil {
+			return id, err
 		}
-		handler.CacheIdentity(id)
+
+		ih.cacheIdentity(id)
 		return
 	}
 
-	// try cache
-	id = handler.GetIdentityFromCache()
-	if id != nil {
-		handler.CacheIdentity(id)
+	id, err = ih.getIdentityFromCache()
+	if err != nil {
 		return
 	}
+
+	ih.cacheIdentity(id)
 
 	return
 }
 
-func CreateIdentity(dir string) (id dto.Identity, err error) {
-	handler := NewIdentityHandler(dir)
-
+func (ih *identityHandler) Create() (id dto.Identity, err error) {
 	// if all fails, create a new one
-	id, err = handler.CreateIdentity()
+	id, err = ih.createIdentity()
 	if err != nil {
 		return id, err
 	}
 
-	handler.CacheIdentity(id)
+	ih.cacheIdentity(id)
 
 	return
 }
 
-func NewIdentityHandler(keystore keystoreInterface, cacheDir string) *identityHandler {
-	return &identityHandler{
-		manager: NewIdentityManager(keystore),
-		cache:   NewIdentityCache(cacheDir, "cache.json"),
-	}
-}
-
-func (ih *identityHandler) GetIdentityByValue(id string) dto.Identity {
+func (ih *identityHandler) getIdentityByValue(id string) (dto.Identity, error) {
 	if ih.manager.HasIdentity(id) {
-		return ih.manager.GetIdentity(id)
+		return ih.manager.GetIdentity(id), nil
 	}
 
-	return dto.Identity("")
+	return dto.Identity(""), errors.New("identity not found")
 }
 
-func (ih *identityHandler) GetIdentityFromCache() (identity dto.Identity) {
+func (ih *identityHandler) getIdentityFromCache() (identity dto.Identity, err error) {
 	id := ih.cache.GetIdentity()
 
-	if id != nil && ih.manager.HasIdentity(string(*id)) {
-		return
+	if len(id) > 0 && ih.manager.HasIdentity(string(id)) {
+		return id, nil
 	}
 
-	return
+	return identity, errors.New("identity not found in cache")
 }
 
-func (ih *identityHandler) CreateIdentity() (identity dto.Identity, err error) {
+func (ih *identityHandler) createIdentity() (identity dto.Identity, err error) {
 	return ih.manager.CreateNewIdentity("")
 }
 
-func (ih *identityHandler) CacheIdentity(identity *dto.Identity) {
+func (ih *identityHandler) cacheIdentity(identity dto.Identity) {
 	ih.cache.StoreIdentity(identity)
 }

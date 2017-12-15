@@ -34,7 +34,7 @@ func identityToAccount(identityStr string) accounts.Account {
 func (idm *identityManager) CreateNewIdentity(passphrase string) (dto.Identity, error) {
 	account, err := idm.keystoreManager.NewAccount(passphrase)
 	if err != nil {
-		return dto.Identity(""), err
+		return "", err
 	}
 
 	return accountToIdentity(account), nil

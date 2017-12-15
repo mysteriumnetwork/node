@@ -35,9 +35,9 @@ func (ic *identityCache) GetIdentity() (identity dto.Identity) {
 	return
 }
 
-func (ic *identityCache) StoreIdentity(identity *dto.Identity) (error) {
+func (ic *identityCache) StoreIdentity(identity dto.Identity) (error) {
 	cache := cacheData{
-		Identity: *identity,
+		Identity: identity,
 	}
 
 	return ic.writeCache(cache)

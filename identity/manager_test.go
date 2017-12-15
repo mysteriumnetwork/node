@@ -37,11 +37,11 @@ func Test_CreateNewIdentity(t *testing.T) {
 }
 
 func Test_CreateNewIdentityError(t *testing.T) {
-	im := newManagerWithError(errors.New("Identity create failed"))
+	im := newManagerWithError(errors.New("identity create failed"))
 	identity, err := im.CreateNewIdentity("")
 
-	assert.EqualError(t, err, "Identity create failed")
-	assert.Nil(t, identity)
+	assert.EqualError(t, err, "identity create failed")
+	assert.Empty(t, identity)
 }
 
 func Test_GetIdentities(t *testing.T) {
@@ -69,7 +69,7 @@ func Test_GetIdentity(t *testing.T) {
 		dto.Identity("0x000000000000000000000000000000000000000A"),
 		manager.GetIdentity("0x000000000000000000000000000000000000000a"),
 	)
-	assert.Nil(
+	assert.Empty(
 		t,
 		manager.GetIdentity("0x000000000000000000000000000000000000000B"),
 	)
