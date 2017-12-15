@@ -46,8 +46,6 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 	cmd.clientCommand = command_client.NewCommand(
 		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
 	)
-	cmd.clientCommand.Output = cmd.Output
-	cmd.clientCommand.OutputError = cmd.OutputError
 
 	nodeProvider.WithEachNode(func(nodeKey string) {
 		cmd.resultWriter.NodeStart(nodeKey)
