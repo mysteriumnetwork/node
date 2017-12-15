@@ -1,6 +1,7 @@
 package command_run
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
@@ -34,7 +35,8 @@ type CommandRun struct {
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	providerId, err := identity.SelectIdentity(options.DirectoryKeystore, options.NodeKey)
+	keystore := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	providerId, err := identity.SelectIdentity(keystore, options.DirectoryKeystore, options.NodeKey)
 	if err != nil {
 		return err
 	}

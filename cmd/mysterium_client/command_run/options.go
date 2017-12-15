@@ -3,11 +3,13 @@ package command_run
 import (
 	"errors"
 	"flag"
+	"github.com/mysterium/node/utils/file"
 )
 
 type CommandOptions struct {
 	NodeKey           string
 	DirectoryRuntime  string
+	DirectoryKeystore string
 	TequilaApiAddress string
 	TequilaApiPort    int
 }
@@ -25,6 +27,12 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"runtime-dir",
 		".",
 		"Runtime directory for temp files (should be writable)",
+	)
+	flags.StringVar(
+		&options.DirectoryKeystore,
+		"keystore-dir",
+		file.GetMysteriumDirectory("keystore"),
+		"Keystore directory",
 	)
 	flags.StringVar(
 		&options.TequilaApiAddress,
