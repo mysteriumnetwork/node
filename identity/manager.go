@@ -20,9 +20,9 @@ func NewIdentityManager(keystore keystoreInterface) *identityManager {
 	}
 }
 
-func accountToIdentity(account accounts.Account) *dto.Identity {
+func accountToIdentity(account accounts.Account) dto.Identity {
 	identity := dto.Identity(account.Address.Hex())
-	return &identity
+	return identity
 }
 
 func identityToAccount(identityString string) accounts.Account {
@@ -31,10 +31,10 @@ func identityToAccount(identityString string) accounts.Account {
 	}
 }
 
-func (idm *identityManager) CreateNewIdentity(addrToHex string) (*dto.Identity, error) {
+func (idm *identityManager) CreateNewIdentity(addrToHex string) (dto.Identity, error) {
 	account, err := idm.keystoreManager.NewAccount(addrToHex)
 	if err != nil {
-		return nil, err
+		return dto.Identity(""), err
 	}
 
 	return accountToIdentity(account), nil
@@ -45,23 +45,23 @@ func (idm *identityManager) GetIdentities() []dto.Identity {
 
 	var ids = make([]dto.Identity, len(accountList))
 	for i, account := range accountList {
-		ids[i] = *accountToIdentity(account)
+		ids[i] = accountToIdentity(account)
 	}
 
 	return ids
 }
 
-func (idm *identityManager) GetIdentity(identityString string) *dto.Identity {
+func (idm *identityManager) GetIdentity(identityString string) dto.Identity {
 	identityString = strings.ToLower(identityString)
 	for _, id := range idm.GetIdentities() {
 		if strings.ToLower(string(id)) == identityString {
-			return &id
+			return id
 		}
 	}
 
-	return nil
+	return dto.Identity("")
 }
 
 func (idm *identityManager) HasIdentity(identityString string) bool {
-	return idm.GetIdentity(identityString) != nil
+	return len(idm.GetIdentity(identityString)) != 0
 }

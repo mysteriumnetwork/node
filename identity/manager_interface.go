@@ -5,8 +5,8 @@ import (
 )
 
 type IdentityManagerInterface interface {
-	CreateNewIdentity(string) (*dto.Identity, error)
+	CreateNewIdentity(string) (dto.Identity, error)
 	GetIdentities() []dto.Identity
-	GetIdentity(string) *dto.Identity
+	GetIdentity(string) dto.Identity
 	HasIdentity(string) bool
 }

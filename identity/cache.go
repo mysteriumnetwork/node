@@ -22,17 +22,17 @@ func NewIdentityCache(dir string, jsonFile string) *identityCache {
 	}
 }
 
-func (ic *identityCache) GetIdentity() *dto.Identity {
+func (ic *identityCache) GetIdentity() (identity dto.Identity) {
 	if ic.cacheExists() {
 		cache, err := ic.readCache()
 		if err != nil {
-			return nil
+			return
 		}
 
-		return &cache.Identity
+		return cache.Identity
 	}
 
-	return nil
+	return
 }
 
 func (ic *identityCache) StoreIdentity(identity *dto.Identity) (error) {

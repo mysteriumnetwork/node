@@ -33,7 +33,7 @@ func SelectIdentity(keystore keystoreInterface, cacheDir, nodeKey string) (id *d
 	return
 }
 
-func CreateIdentity(dir string) (id *dto.Identity, err error) {
+func CreateIdentity(dir string) (id dto.Identity, err error) {
 	handler := NewIdentityHandler(dir)
 
 	// if all fails, create a new one
@@ -54,25 +54,25 @@ func NewIdentityHandler(keystore keystoreInterface, cacheDir string) *identityHa
 	}
 }
 
-func (ih *identityHandler) GetIdentityByValue(id string) *dto.Identity {
+func (ih *identityHandler) GetIdentityByValue(id string) dto.Identity {
 	if ih.manager.HasIdentity(id) {
 		return ih.manager.GetIdentity(id)
 	}
 
-	return nil
+	return dto.Identity("")
 }
 
-func (ih *identityHandler) GetIdentityFromCache() (identity *dto.Identity) {
+func (ih *identityHandler) GetIdentityFromCache() (identity dto.Identity) {
 	id := ih.cache.GetIdentity()
 
 	if id != nil && ih.manager.HasIdentity(string(*id)) {
-		return id
+		return
 	}
 
-	return nil
+	return
 }
 
-func (ih *identityHandler) CreateIdentity() (identity *dto.Identity, err error) {
+func (ih *identityHandler) CreateIdentity() (identity dto.Identity, err error) {
 	return ih.manager.CreateNewIdentity("")
 }
 

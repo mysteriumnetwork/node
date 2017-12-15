@@ -32,7 +32,7 @@ func Test_CreateNewIdentity(t *testing.T) {
 	identity, err := manager.CreateNewIdentity("0x000000000000000000000000000000000000000b")
 
 	assert.NoError(t, err)
-	assert.Equal(t, dto.Identity("0x000000000000000000000000000000000000000b"), *identity)
+	assert.Equal(t, dto.Identity("0x000000000000000000000000000000000000000b"), identity)
 	//assert.Equal(t, *identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
 	assert.Len(t, manager.keystoreManager.Accounts(), 2)
 }
@@ -63,12 +63,12 @@ func Test_GetIdentity(t *testing.T) {
 	assert.Equal(
 		t,
 		dto.Identity("0x000000000000000000000000000000000000000A"),
-		*manager.GetIdentity("0x000000000000000000000000000000000000000A"),
+		manager.GetIdentity("0x000000000000000000000000000000000000000A"),
 	)
 	assert.Equal(
 		t,
 		dto.Identity("0x000000000000000000000000000000000000000A"),
-		*manager.GetIdentity("0x000000000000000000000000000000000000000a"),
+		manager.GetIdentity("0x000000000000000000000000000000000000000a"),
 	)
 	assert.Nil(
 		t,
