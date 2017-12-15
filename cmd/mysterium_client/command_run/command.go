@@ -11,6 +11,7 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
+	"github.com/mysterium/node/tequilapi/endpoints"
 	"time"
 )
 
@@ -67,9 +68,13 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
+	router := tequilapi.NewApiRouter()
+
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	idm := identity.NewIdentityManager(keystoreInstance)
-	router := tequilapi.NewApiEndpoints(idm, client_connection.NewManager())
+	endpoints.RegisterIdentitiesEndpoint(router, idm)
+
+	endpoints.RegisterConnectionEndpoint(router, client_connection.NewManager())
 
 	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 	if err != nil {

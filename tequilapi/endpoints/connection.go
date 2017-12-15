@@ -2,7 +2,6 @@ package endpoints
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/service_discovery/dto"
@@ -59,6 +58,13 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	ce.manager.Disconnect()
 	resp.WriteHeader(http.StatusAccepted)
+}
+
+func RegisterConnectionEndpoint(router *httprouter.Router, manager client_connection.Manager) {
+	connectionEndpoint := NewConnectionEndpoint(manager)
+	router.GET("/connection", connectionEndpoint.Status)
+	router.PUT("/connection", connectionEndpoint.Create)
+	router.DELETE("/connection", connectionEndpoint.Kill)
 }
 
 func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
