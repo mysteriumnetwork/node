@@ -11,14 +11,10 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
-	"io"
 	"time"
 )
 
 type CommandRun struct {
-	Output      io.Writer
-	OutputError io.Writer
-
 	MysteriumClient server.Client
 
 	DialogEstablisherFactory func(identity dto_discovery.Identity) communication.DialogEstablisher

@@ -29,8 +29,6 @@ func main() {
 	runServer(serverCommand, waiter)
 
 	clientCommand := command_client.NewCommand()
-	clientCommand.Output = os.Stdout
-	clientCommand.OutputError = os.Stderr
 	clientCommand.MysteriumClient = mysteriumClient
 	runClient(clientCommand, waiter)
 
