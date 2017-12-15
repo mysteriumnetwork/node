@@ -81,9 +81,9 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 	return errors
 }
 
-func toStatusResponse(status client_connection.Status) statusResponse {
+func toStatusResponse(status client_connection.ConnectionStatus) statusResponse {
 	return statusResponse{
-		Status:    fmt.Sprint(status.State),
+		Status:    string(status.State),
 		SessionId: status.SessionId,
 	}
 }

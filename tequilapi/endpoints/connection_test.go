@@ -14,7 +14,7 @@ import (
 type fakeManager struct {
 	onConnectReturn    error
 	onDisconnectReturn error
-	onStatusReturn     client_connection.Status
+	onStatusReturn     client_connection.ConnectionStatus
 	disconnectCount    int
 	requestedIdentity  dto.Identity
 	requestedNode      string
@@ -26,7 +26,7 @@ func (fm *fakeManager) Connect(identity dto.Identity, node string) error {
 	return fm.onConnectReturn
 }
 
-func (fm *fakeManager) Status() client_connection.Status {
+func (fm *fakeManager) Status() client_connection.ConnectionStatus {
 
 	return fm.onStatusReturn
 }
@@ -42,7 +42,7 @@ func (fm *fakeManager) Wait() error {
 
 func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = client_connection.Status{
+	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
 		State:     client_connection.NOT_CONNECTED,
 		SessionId: "",
 	}
@@ -65,7 +65,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 
 func TestConnectedStateAndSessionIdIsReturnedWhenIsConnection(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = client_connection.Status{
+	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
 		State:     client_connection.CONNECTED,
 		SessionId: "My-super-session",
 	}

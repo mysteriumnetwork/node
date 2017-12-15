@@ -17,39 +17,39 @@ var (
 	ALREADY_CONNECTED = errors.New("already connected")
 )
 
-type Status struct {
+type ConnectionStatus struct {
 	State     State
 	SessionId string
 }
 
 type Manager interface {
 	Connect(identity dto.Identity, NodeKey string) error
-	Status() Status
+	Status() ConnectionStatus
 	Disconnect() error
 	Wait() error
 }
 
-type nullManager struct {
+type fakeManager struct {
 	errorChannel chan error
 }
 
-func NewManager() *nullManager {
-	return &nullManager{make(chan error)}
+func NewManager() *fakeManager {
+	return &fakeManager{make(chan error)}
 }
 
-func (nm *nullManager) Connect(identity dto.Identity, NodeKey string) error {
+func (nm *fakeManager) Connect(identity dto.Identity, NodeKey string) error {
 	return nil
 }
 
-func (nm *nullManager) Status() Status {
-	return Status{NOT_CONNECTED, ""}
+func (nm *fakeManager) Status() ConnectionStatus {
+	return ConnectionStatus{NOT_CONNECTED, ""}
 }
 
-func (nm *nullManager) Disconnect() error {
+func (nm *fakeManager) Disconnect() error {
 	nm.errorChannel <- errors.New("disconnected")
 	return nil
 }
 
-func (nm *nullManager) Wait() error {
+func (nm *fakeManager) Wait() error {
 	return <-nm.errorChannel
 }
