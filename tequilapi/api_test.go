@@ -16,7 +16,7 @@ type tequilapiTestSuite struct {
 func (testSuite *tequilapiTestSuite) SetupSuite() {
 	var err error
 	idmFake := identity.NewIdentityManagerFake()
-	testSuite.server, err = StartNewServer("localhost", 0, NewApiEndpoints(idmFake))
+	testSuite.server, err = StartNewServer("localhost", 0, NewApiEndpoints(idmFake, nil))
 	if err != nil {
 		testSuite.T().FailNow()
 	}

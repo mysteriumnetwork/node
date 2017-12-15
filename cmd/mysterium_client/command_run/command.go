@@ -11,7 +11,6 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
-	"github.com/mysterium/node/tequilapi/endpoints"
 	"io"
 	"time"
 )
