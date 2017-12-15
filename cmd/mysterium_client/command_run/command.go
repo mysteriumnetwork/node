@@ -74,12 +74,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	idm := identity.NewIdentityManager(keystoreInstance)
-	router := tequilapi.NewApiEndpoints(idm)
-
-	connectionEndpoint := endpoints.NewConnectionEndpoint(client_connection.NewManager())
-	router.GET("/connection", connectionEndpoint.Status)
-	router.PUT("/connection", connectionEndpoint.Create)
-	router.DELETE("/connection", connectionEndpoint.Kill)
+	router := tequilapi.NewApiEndpoints(idm, client_connection.NewManager())
 
 	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 	if err != nil {
