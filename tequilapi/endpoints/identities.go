@@ -32,3 +32,7 @@ func (endpoint *identitiesApi) List(writer http.ResponseWriter, request *http.Re
 
 	utils.WriteAsJson(idsSerializable, writer)
 }
+
+func RegisterIdentitiesEndpoint(router *httprouter.Router, idm identity.IdentityManagerInterface) {
+	router.GET("/identities", NewIdentitiesEndpoint(idm).List)
+}
