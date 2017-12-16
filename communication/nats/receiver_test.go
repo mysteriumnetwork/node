@@ -1,9 +1,9 @@
 package nats
 
 import (
-	"github.com/magiconair/properties/assert"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -12,13 +12,13 @@ func TestReceiverInterface(t *testing.T) {
 }
 
 func TestReceiverNew(t *testing.T) {
-	connection := nats_discovery.NewAddress("far-proxy", 1234, "custom")
+	address := nats_discovery.NewAddress("far-proxy", 1234, "custom")
 
-	sender := NewReceiver(connection)
+	sender := NewReceiver(address)
 	assert.Equal(
 		t,
 		&receiverNats{
-			connection:   nil,
+			connection:   address.GetConnection(),
 			codec:        communication.NewCodecJSON(),
 			messageTopic: "custom.",
 		},

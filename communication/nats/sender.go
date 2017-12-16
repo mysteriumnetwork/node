@@ -2,7 +2,6 @@ package nats
 
 import (
 	"github.com/mysterium/node/communication"
-	"github.com/nats-io/go-nats"
 	"time"
 
 	"fmt"
@@ -22,7 +21,7 @@ func NewSender(address *nats_discovery.NatsAddress) *senderNats {
 }
 
 type senderNats struct {
-	connection     *nats.Conn
+	connection     Connection
 	codec          communication.Codec
 	timeoutRequest time.Duration
 	messageTopic   string

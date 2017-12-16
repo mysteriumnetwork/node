@@ -2,8 +2,6 @@ package nats
 
 import (
 	"github.com/mysterium/node/communication"
-	"github.com/nats-io/go-nats"
-	"github.com/nats-io/go-nats/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -21,7 +19,7 @@ func (producer *bytesMessageProducer) Produce() (messagePtr interface{}) {
 }
 
 type bytesMessageConsumer struct {
-	Callback func(*[]byte)
+	messageReceived chan interface{}
 }
 
 func (consumer *bytesMessageConsumer) GetMessageType() communication.MessageType {
@@ -34,60 +32,41 @@ func (consumer *bytesMessageConsumer) NewMessage() (messagePtr interface{}) {
 }
 
 func (consumer *bytesMessageConsumer) Consume(messagePtr interface{}) error {
-	consumer.Callback(messagePtr.(*[]byte))
+	consumer.messageReceived <- messagePtr
 	return nil
 }
 
 func TestMessageBytesSend(t *testing.T) {
-	server := test.RunDefaultServer()
-	defer server.Shutdown()
-	connection := test.NewDefaultConnection(t)
-	defer connection.Close()
+	connection := StartConnectionFake()
+	defer connection.Stop()
 
 	sender := &senderNats{
 		connection: connection,
 		codec:      communication.NewCodecBytes(),
 	}
 
-	messageSent := make(chan bool)
-	_, err := connection.Subscribe("bytes-message", func(message *nats.Msg) {
-		assert.Equal(t, []byte("123"), message.Data)
-		messageSent <- true
-	})
-	assert.Nil(t, err)
-
-	err = sender.Send(
+	err := sender.Send(
 		&bytesMessageProducer{[]byte("123")},
 	)
-	assert.Nil(t, err)
-
-	if err := test.Wait(messageSent); err != nil {
-		t.Fatal("Message not sent")
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("123"), connection.GetLastMessage())
 }
 
 func TestMessageBytesReceive(t *testing.T) {
-	server := test.RunDefaultServer()
-	defer server.Shutdown()
-	connection := test.NewDefaultConnection(t)
-	defer connection.Close()
+	connection := StartConnectionFake()
+	defer connection.Stop()
 
 	receiver := &receiverNats{
 		connection: connection,
 		codec:      communication.NewCodecBytes(),
 	}
 
-	messageReceived := make(chan bool)
-	err := receiver.Receive(&bytesMessageConsumer{func(message *[]byte) {
-		assert.Equal(t, []byte("123"), *message)
-		messageReceived <- true
-	}})
-	assert.Nil(t, err)
+	consumer := &bytesMessageConsumer{messageReceived: make(chan interface{})}
+	err := receiver.Receive(consumer)
+	assert.NoError(t, err)
 
-	err = connection.Publish("bytes-message", []byte("123"))
-	assert.Nil(t, err)
-
-	if err := test.Wait(messageReceived); err != nil {
-		t.Fatal("Message not received")
-	}
+	connection.Publish("bytes-message", []byte("123"))
+	message, err := connection.MessageWait(consumer.messageReceived)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("123"), *message.(*[]byte))
 }

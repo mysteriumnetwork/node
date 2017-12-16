@@ -1,9 +1,9 @@
 package nats
 
 import (
-	"github.com/dshearer/jobber/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -19,7 +19,7 @@ func TestSenderNew(t *testing.T) {
 	assert.Equal(
 		t,
 		&senderNats{
-			connection:     nil,
+			connection:     address.GetConnection(),
 			codec:          communication.NewCodecJSON(),
 			timeoutRequest: 500 * time.Millisecond,
 			messageTopic:   "custom.",
