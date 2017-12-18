@@ -16,10 +16,8 @@ func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
 	return &CommandRun{
 
 		MysteriumClient: server.NewClient(),
-		DialogEstablisherFactory: func(identity dto_discovery.Identity) communication.DialogEstablisher {
+		dialogEstablisherFactory: func(identity dto_discovery.Identity) communication.DialogEstablisher {
 			return nats_dialog.NewDialogEstablisher(identity)
 		},
-
-		vpnMiddlewares: vpnMiddlewares,
 	}
 }

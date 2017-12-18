@@ -52,7 +52,6 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 		cmd.ipCheckWaiter.Add(1)
 
 		err = cmd.clientCommand.Run(command_client.CommandOptions{
-			NodeKey:          nodeKey,
 			DirectoryRuntime: options.DirectoryRuntime,
 		})
 		if err != nil {

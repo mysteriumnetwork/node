@@ -59,7 +59,6 @@ func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup)
 
 func runClient(clientCommand *command_client.CommandRun, waiter *sync.WaitGroup) {
 	err := clientCommand.Run(command_client.CommandOptions{
-		NodeKey:          NODE_KEY,
 		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,
 	})
 	if err != nil {
