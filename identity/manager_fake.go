@@ -10,6 +10,10 @@ func NewIdentityManagerFake() *idmFake {
 	return &idmFake{}
 }
 
+func (idmFake *idmFake) Register(id dto.Identity) error {
+	return nil
+}
+
 func (fakeIdm *idmFake) CreateNewIdentity(_ string) (dto.Identity, error) {
 	id := dto.Identity("0x000000000000000000000000000000000000bEEF")
 	return id, nil

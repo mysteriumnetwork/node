@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
 )
@@ -19,7 +20,8 @@ type identityCreationDto struct {
 }
 
 type identityRegistrationDto struct {
-	Registered bool `json:"registered"`
+	Id         string `json:"id"`
+	Registered bool   `json:"registered"`
 }
 
 type identitiesApi struct {
@@ -54,7 +56,7 @@ func (endpoint *identitiesApi) Create(writer http.ResponseWriter, request *http.
 		return
 	}
 	id, err := endpoint.idm.CreateNewIdentity(createReq.Password)
-	idDto := identityDto{string(*id)}
+	idDto := identityDto{string(id)}
 	if err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError) // This should never happen
 		return
@@ -75,8 +77,19 @@ func (endpoint *identitiesApi) Register(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	// TODO: Register here
+	id := dto.Identity(registerReq.Id)
+	err = endpoint.idm.Register(id)
+	if err != nil {
+		utils.SendError(writer, err, http.StatusInternalServerError)
+		return
+	}
 
+	idRegistered := identityRegistrationDto{
+		registerReq.Id, // is a string already
+		true,
+	}
+
+	utils.WriteAsJson(idRegistered, writer)
 }
 
 func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
@@ -88,16 +101,15 @@ func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 	return identityCreationReq, nil
 }
 
-func toRegisterRequest(req *http.Request) (*identityRegistrationDto, error) {
-	var idRegDto = identityRegistrationDto{}
-	err := json.NewDecoder(req.Body).Decode(&idRegDto)
+func toRegisterRequest(req *http.Request) (id identityDto, err error) {
+	err = json.NewDecoder(req.Body).Decode(&id)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return &idRegDto, nil
+	return id, nil
 }
 
-func validateRegistrationRequest(regReq *identityRegistrationDto) (errors *validation.FieldErrorMap) {
+func validateRegistrationRequest(regReq identityDto) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
 	return
 }
