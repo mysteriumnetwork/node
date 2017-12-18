@@ -7,6 +7,6 @@ import (
 type IdentityManagerInterface interface {
 	CreateNewIdentity(string) (dto.Identity, error)
 	GetIdentities() []dto.Identity
-	GetIdentity(string) dto.Identity
+	GetIdentity(string) (dto.Identity, error)
 	HasIdentity(string) bool
 }

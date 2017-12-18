@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/service_discovery/dto"
 	"strings"
+	"github.com/pkg/errors"
 )
 
 type identityManager struct {
@@ -51,17 +52,19 @@ func (idm *identityManager) GetIdentities() []dto.Identity {
 	return ids
 }
 
-func (idm *identityManager) GetIdentity(identityString string) dto.Identity {
+func (idm *identityManager) GetIdentity(identityString string) (id dto.Identity, err error) {
 	identityString = strings.ToLower(identityString)
 	for _, id := range idm.GetIdentities() {
 		if strings.ToLower(string(id)) == identityString {
-			return id
+			return id, nil
 		}
 	}
 
-	return dto.Identity("")
+	return id, errors.New("identity not found")
 }
 
 func (idm *identityManager) HasIdentity(identityString string) bool {
-	return len(idm.GetIdentity(identityString)) != 0
+	_, err := idm.GetIdentity(identityString)
+
+	return err == nil
 }

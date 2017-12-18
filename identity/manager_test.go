@@ -59,19 +59,27 @@ func Test_GetIdentities(t *testing.T) {
 func Test_GetIdentity(t *testing.T) {
 	manager := newManager("0x000000000000000000000000000000000000000A")
 
+	identity, err := manager.GetIdentity("0x000000000000000000000000000000000000000A")
+	assert.Nil(t, err)
 	assert.Equal(
 		t,
 		dto.Identity("0x000000000000000000000000000000000000000A"),
-		manager.GetIdentity("0x000000000000000000000000000000000000000A"),
+		identity,
 	)
+
+	identity, err = manager.GetIdentity("0x000000000000000000000000000000000000000a")
+	assert.Nil(t, err)
 	assert.Equal(
 		t,
 		dto.Identity("0x000000000000000000000000000000000000000A"),
-		manager.GetIdentity("0x000000000000000000000000000000000000000a"),
+		identity,
 	)
-	assert.Empty(
+
+	identity, err = manager.GetIdentity("0x000000000000000000000000000000000000000B")
+	assert.Error(
 		t,
-		manager.GetIdentity("0x000000000000000000000000000000000000000B"),
+		err,
+		errors.New("identity not found"),
 	)
 }
 

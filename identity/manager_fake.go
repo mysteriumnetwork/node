@@ -22,9 +22,9 @@ func (fakeIdm *idmFake) GetIdentities() []dto.Identity {
 
 	return accountList
 }
-func (fakeIdm *idmFake) GetIdentity(string) dto.Identity {
+func (fakeIdm *idmFake) GetIdentity(string) (dto.Identity, error) {
 	id := dto.Identity("0x000000000000000000000000000000000000000A")
-	return id
+	return id, nil
 }
 func (fakeIdm *idmFake) HasIdentity(string) bool {
 	return true

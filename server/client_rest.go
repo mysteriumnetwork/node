@@ -38,7 +38,7 @@ func (client *clientRest) RegisterIdentity(identity dto_discovery.Identity) (err
 
 	if err == nil {
 		defer response.Body.Close()
-		log.Info(MYSTERIUM_API_LOG_PREFIX, "Identity created: ", identity)
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "Identity registered: ", identity)
 	}
 
 	return

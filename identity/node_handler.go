@@ -19,12 +19,12 @@ func NewNodeIdentityHandler(keystore keystoreInterface, cacheDir string) *identi
 
 func (ih *identityHandler) Select(nodeKey string) (id dto.Identity, err error) {
 	if len(nodeKey) > 0 {
-		id, err = ih.getIdentityByValue(nodeKey)
+		id, err = ih.manager.GetIdentity(nodeKey)
 		if err != nil {
 			return id, err
 		}
 
-		ih.cacheIdentity(id)
+		ih.cache.StoreIdentity(id)
 		return
 	}
 
@@ -33,29 +33,21 @@ func (ih *identityHandler) Select(nodeKey string) (id dto.Identity, err error) {
 		return
 	}
 
-	ih.cacheIdentity(id)
+	ih.cache.StoreIdentity(id)
 
 	return
 }
 
 func (ih *identityHandler) Create() (id dto.Identity, err error) {
 	// if all fails, create a new one
-	id, err = ih.createIdentity()
+	id, err = ih.manager.CreateNewIdentity("")
 	if err != nil {
 		return id, err
 	}
 
-	ih.cacheIdentity(id)
+	ih.cache.StoreIdentity(id)
 
 	return
-}
-
-func (ih *identityHandler) getIdentityByValue(id string) (dto.Identity, error) {
-	if ih.manager.HasIdentity(id) {
-		return ih.manager.GetIdentity(id), nil
-	}
-
-	return dto.Identity(""), errors.New("identity not found")
 }
 
 func (ih *identityHandler) getIdentityFromCache() (identity dto.Identity, err error) {
@@ -66,12 +58,4 @@ func (ih *identityHandler) getIdentityFromCache() (identity dto.Identity, err er
 	}
 
 	return identity, errors.New("identity not found in cache")
-}
-
-func (ih *identityHandler) createIdentity() (identity dto.Identity, err error) {
-	return ih.manager.CreateNewIdentity("")
-}
-
-func (ih *identityHandler) cacheIdentity(identity dto.Identity) {
-	ih.cache.StoreIdentity(identity)
 }
