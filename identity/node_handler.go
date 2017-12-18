@@ -51,11 +51,11 @@ func (ih *identityHandler) Create() (id dto.Identity, err error) {
 }
 
 func (ih *identityHandler) getIdentityFromCache() (identity dto.Identity, err error) {
-	id := ih.cache.GetIdentity()
+	identity, err = ih.cache.GetIdentity()
 
-	if len(id) > 0 && ih.manager.HasIdentity(string(id)) {
-		return id, nil
+	if err != nil || !ih.manager.HasIdentity(string(identity)) {
+		return identity, errors.New("identity not found in cache")
 	}
 
-	return identity, errors.New("identity not found in cache")
+	return identity, nil
 }
