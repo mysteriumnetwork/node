@@ -10,9 +10,9 @@ func NewIdentityManagerFake() *idmFake {
 	return &idmFake{}
 }
 
-func (fakeIdm *idmFake) CreateNewIdentity(_ string) (*dto.Identity, error) {
+func (fakeIdm *idmFake) CreateNewIdentity(_ string) (dto.Identity, error) {
 	id := dto.Identity("0x000000000000000000000000000000000000bEEF")
-	return &id, nil
+	return id, nil
 }
 func (fakeIdm *idmFake) GetIdentities() []dto.Identity {
 	accountList := []dto.Identity{
@@ -22,9 +22,9 @@ func (fakeIdm *idmFake) GetIdentities() []dto.Identity {
 
 	return accountList
 }
-func (fakeIdm *idmFake) GetIdentity(string) *dto.Identity {
+func (fakeIdm *idmFake) GetIdentity(string) (dto.Identity, error) {
 	id := dto.Identity("0x000000000000000000000000000000000000000A")
-	return &id
+	return id, nil
 }
 func (fakeIdm *idmFake) HasIdentity(string) bool {
 	return true

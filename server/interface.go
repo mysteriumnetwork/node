@@ -6,6 +6,7 @@ import (
 )
 
 type Client interface {
+	RegisterIdentity(identity dto_discovery.Identity) (err error)
 	NodeRegister(proposal dto_discovery.ServiceProposal) (err error)
 	NodeSendStats(nodeKey string, sessionStats []dto.SessionStats) (err error)
 	SessionCreate(nodeKey string) (session dto.Session, err error)
