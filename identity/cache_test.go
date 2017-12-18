@@ -27,7 +27,10 @@ func Test_IdentityCacheGetIdentity(t *testing.T) {
 
 	err := cache.StoreIdentity(identity)
 	assert.Nil(t, err)
-	assert.Equal(t, cache.GetIdentity(), identity)
+	id, err := cache.GetIdentity()
+	
+	assert.Equal(t, id, identity)
+	assert.Nil(t, err)
 }
 
 func Test_cacheExists(t *testing.T) {
