@@ -44,10 +44,10 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		if err != nil {
 			return err
 		}
-	}
 
-	if err := cmd.MysteriumClient.RegisterIdentity(providerId); err != nil {
-		return err
+		if err := cmd.MysteriumClient.RegisterIdentity(providerId); err != nil {
+			return err
+		}
 	}
 
 	var providerContact dto_discovery.Contact
