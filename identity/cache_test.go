@@ -15,7 +15,7 @@ func TestIdentityCache_StoreIdentity(t *testing.T) {
 		File: file,
 	}
 
-	err := cache.StoreIdentity(&identity)
+	err := cache.StoreIdentity(identity)
 	assert.Nil(t, err)
 }
 
@@ -25,9 +25,12 @@ func Test_IdentityCacheGetIdentity(t *testing.T) {
 		File: file,
 	}
 
-	err := cache.StoreIdentity(&identity)
+	err := cache.StoreIdentity(identity)
 	assert.Nil(t, err)
-	assert.Equal(t, cache.GetIdentity(), &identity)
+	id, err := cache.GetIdentity()
+	
+	assert.Equal(t, id, identity)
+	assert.Nil(t, err)
 }
 
 func Test_cacheExists(t *testing.T) {
@@ -36,7 +39,7 @@ func Test_cacheExists(t *testing.T) {
 		File: file,
 	}
 
-	err := cache.StoreIdentity(&identity)
+	err := cache.StoreIdentity(identity)
 	assert.Nil(t, err)
 
 	assert.True(t, cache.cacheExists())
