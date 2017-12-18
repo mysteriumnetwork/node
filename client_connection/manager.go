@@ -2,7 +2,7 @@ package client_connection
 
 import (
 	"errors"
-	"github.com/mysterium/node/service_discovery/dto"
+	id "github.com/mysterium/node/identity"
 )
 
 type State string
@@ -23,7 +23,7 @@ type ConnectionStatus struct {
 }
 
 type Manager interface {
-	Connect(identity dto.Identity, NodeKey string) error
+	Connect(identity id.Identity, NodeKey string) error
 	Status() ConnectionStatus
 	Disconnect() error
 	Wait() error
@@ -37,7 +37,7 @@ func NewManager() *fakeManager {
 	return &fakeManager{make(chan error)}
 }
 
-func (nm *fakeManager) Connect(identity dto.Identity, NodeKey string) error {
+func (nm *fakeManager) Connect(identity id.Identity, NodeKey string) error {
 	return nil
 }
 

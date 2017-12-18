@@ -2,7 +2,6 @@ package identity
 
 import (
 	"errors"
-	"github.com/mysterium/node/service_discovery/dto"
 )
 
 type identityHandler struct {
@@ -17,7 +16,7 @@ func NewNodeIdentityHandler(keystore keystoreInterface, cacheDir string) *identi
 	}
 }
 
-func (ih *identityHandler) Select(nodeKey string) (id dto.Identity, err error) {
+func (ih *identityHandler) Select(nodeKey string) (id Identity, err error) {
 	if len(nodeKey) > 0 {
 		id, err = ih.manager.GetIdentity(nodeKey)
 		if err != nil {
@@ -38,7 +37,7 @@ func (ih *identityHandler) Select(nodeKey string) (id dto.Identity, err error) {
 	return
 }
 
-func (ih *identityHandler) Create() (id dto.Identity, err error) {
+func (ih *identityHandler) Create() (id Identity, err error) {
 	// if all fails, create a new one
 	id, err = ih.manager.CreateNewIdentity("")
 	if err != nil {
@@ -50,10 +49,10 @@ func (ih *identityHandler) Create() (id dto.Identity, err error) {
 	return
 }
 
-func (ih *identityHandler) getIdentityFromCache() (identity dto.Identity, err error) {
+func (ih *identityHandler) getIdentityFromCache() (identity Identity, err error) {
 	identity, err = ih.cache.GetIdentity()
 
-	if err != nil || !ih.manager.HasIdentity(string(identity)) {
+	if err != nil || !ih.manager.HasIdentity(string(identity.Id)) {
 		return identity, errors.New("identity not found in cache")
 	}
 

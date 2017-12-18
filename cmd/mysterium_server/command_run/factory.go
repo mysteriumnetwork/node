@@ -11,6 +11,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"os"
+	id "github.com/mysterium/node/identity"
 )
 
 func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
@@ -21,7 +22,7 @@ func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
 		IpifyClient:     ipify.NewClient(),
 		MysteriumClient: server.NewClient(),
 		NatService:      nat.NewService(),
-		DialogWaiterFactory: func(identity dto_discovery.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
+		DialogWaiterFactory: func(identity id.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
 			address := nats_discovery.NewAddressForIdentity(identity)
 			return nats_dialog.NewDialogWaiter(address), address.GetContact()
 		},

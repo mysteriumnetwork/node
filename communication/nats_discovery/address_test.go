@@ -5,6 +5,7 @@ import (
 	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	id "github.com/mysterium/node/identity"
 )
 
 func TestNewAddress(t *testing.T) {
@@ -40,7 +41,7 @@ func TestNewAddressNested(t *testing.T) {
 }
 
 func TestNewAddressForIdentity(t *testing.T) {
-	identity := dto_discovery.Identity("provider1")
+	identity := id.NewIdentity("provider1")
 	address := NewAddressForIdentity(identity)
 
 	assert.Equal(

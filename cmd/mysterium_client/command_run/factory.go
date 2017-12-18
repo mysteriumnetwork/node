@@ -6,7 +6,7 @@ import (
 	"github.com/mysterium/node/communication/nats_discovery"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	id "github.com/mysterium/node/identity"
 )
 
 func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
@@ -16,7 +16,7 @@ func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
 	return &CommandRun{
 
 		MysteriumClient: server.NewClient(),
-		DialogEstablisherFactory: func(identity dto_discovery.Identity) communication.DialogEstablisher {
+		DialogEstablisherFactory: func(identity id.Identity) communication.DialogEstablisher {
 			return nats_dialog.NewDialogEstablisher(identity)
 		},
 

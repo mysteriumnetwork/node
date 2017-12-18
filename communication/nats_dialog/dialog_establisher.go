@@ -7,9 +7,10 @@ import (
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	id "github.com/mysterium/node/identity"
 )
 
-func NewDialogEstablisher(identity dto_discovery.Identity) *dialogEstablisher {
+func NewDialogEstablisher(identity id.Identity) *dialogEstablisher {
 	return &dialogEstablisher{
 		myIdentity: identity,
 	}
@@ -18,7 +19,7 @@ func NewDialogEstablisher(identity dto_discovery.Identity) *dialogEstablisher {
 const establisherLogPrefix = "[NATS.DialogEstablisher] "
 
 type dialogEstablisher struct {
-	myIdentity dto_discovery.Identity
+	myIdentity id.Identity
 }
 
 func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact) (communication.Dialog, error) {
@@ -35,14 +36,14 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 
 	response, err := nats.NewSender(contactAddress).Request(&dialogCreateProducer{
 		&dialogCreateRequest{
-			IdentityId: establisher.myIdentity,
+			IdentityId: establisher.myIdentity.Id,
 		},
 	})
 	if err != nil || response.(*dialogCreateResponse).Reason != 200 {
 		return nil, fmt.Errorf("Dialog creation rejected: %s", err)
 	}
 
-	dialogAddress := nats_discovery.NewAddressNested(contactAddress, string(establisher.myIdentity))
+	dialogAddress := nats_discovery.NewAddressNested(contactAddress, string(establisher.myIdentity.Id))
 	dialog := &dialog{nats.NewSender(dialogAddress), nats.NewReceiver(dialogAddress)}
 
 	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", contact))

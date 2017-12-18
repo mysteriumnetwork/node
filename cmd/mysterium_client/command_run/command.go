@@ -5,11 +5,10 @@ import (
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/identity"
+	id "github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	"github.com/mysterium/node/tequilapi/endpoints"
 	"time"
@@ -18,7 +17,7 @@ import (
 type CommandRun struct {
 	MysteriumClient server.Client
 
-	DialogEstablisherFactory func(identity dto_discovery.Identity) communication.DialogEstablisher
+	DialogEstablisherFactory func(identity id.Identity) communication.DialogEstablisher
 	dialog                   communication.Dialog
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
@@ -28,7 +27,7 @@ type CommandRun struct {
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	consumerId := dto_discovery.Identity("consumer1")
+	consumerId := id.NewIdentity("consumer1")
 
 	session, err := cmd.MysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
@@ -71,7 +70,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	router := tequilapi.NewApiRouter()
 
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
-	idm := identity.NewIdentityManager(keystoreInstance)
+	idm := id.NewIdentityManager(keystoreInstance)
 	endpoints.RegisterIdentitiesEndpoint(router, idm)
 
 	endpoints.RegisterConnectionEndpoint(router, client_connection.NewManager())
