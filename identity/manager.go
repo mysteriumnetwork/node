@@ -32,10 +32,10 @@ func identityToAccount(identityStr string) accounts.Account {
 	}
 }
 
-func (idm *identityManager) CreateNewIdentity(passphrase string) (dto.Identity, error) {
+func (idm *identityManager) CreateNewIdentity(passphrase string) (identity dto.Identity, err error) {
 	account, err := idm.keystoreManager.NewAccount(passphrase)
 	if err != nil {
-		return dto.Identity(""), err
+		return identity, err
 	}
 
 	return accountToIdentity(account), nil
@@ -52,15 +52,15 @@ func (idm *identityManager) GetIdentities() []dto.Identity {
 	return ids
 }
 
-func (idm *identityManager) GetIdentity(identityString string) (id dto.Identity, err error) {
+func (idm *identityManager) GetIdentity(identityString string) (identity dto.Identity, err error) {
 	identityString = strings.ToLower(identityString)
-	for _, id := range idm.GetIdentities() {
-		if strings.ToLower(string(id)) == identityString {
-			return id, nil
+	for _, identity := range idm.GetIdentities() {
+		if strings.ToLower(string(identity)) == identityString {
+			return identity, nil
 		}
 	}
 
-	return id, errors.New("identity not found")
+	return identity, errors.New("identity not found")
 }
 
 func (idm *identityManager) HasIdentity(identityString string) bool {
