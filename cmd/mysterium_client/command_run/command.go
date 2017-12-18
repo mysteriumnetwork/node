@@ -74,7 +74,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	idm := identity.NewIdentityManager(keystoreInstance)
 	endpoints.RegisterIdentitiesEndpoint(router, idm)
 
-	endpoints.RegisterConnectionEndpoint(router, client_connection.NewManager())
+	endpoints.RegisterConnectionEndpoint(router, client_connection.NewFakeManager())
 
 	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 	if err != nil {
