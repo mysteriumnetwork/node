@@ -3,11 +3,11 @@ package nats_dialog
 import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/mysterium/node/identity"
 	"github.com/nats-io/go-nats"
 	"github.com/nats-io/go-nats/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/mysterium/node/identity"
 )
 
 func TestDialogEstablisher_Interface(t *testing.T) {

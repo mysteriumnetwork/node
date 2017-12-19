@@ -5,7 +5,7 @@ import (
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/communication"
-    "github.com/mysterium/node/identity"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"

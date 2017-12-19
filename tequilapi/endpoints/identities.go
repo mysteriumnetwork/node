@@ -8,7 +8,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
 )
@@ -63,12 +62,12 @@ func (endpoint *identitiesApi) Create(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	idDto := identityDto{string(id)}
+	idDto := identityDto{string(id.Address)}
 	utils.WriteAsJson(idDto, writer)
 }
 
 func (endpoint *identitiesApi) Register(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	id := dto.Identity(params.ByName("id"))
+	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)
 	if err != nil {
 		utils.SendError(writer, err, http.StatusBadRequest)

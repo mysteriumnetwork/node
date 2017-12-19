@@ -5,8 +5,8 @@ import (
 
 	"fmt"
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-    "github.com/mysterium/node/identity"
 )
 
 func NewClientFake() Client {

@@ -2,7 +2,7 @@ package client_connection
 
 import (
 	"errors"
-    "github.com/mysterium/node/identity"
+	"github.com/mysterium/node/identity"
 )
 
 type State string

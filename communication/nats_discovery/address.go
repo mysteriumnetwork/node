@@ -2,9 +2,9 @@ package nats_discovery
 
 import (
 	"fmt"
+	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/nats-io/go-nats"
-    "github.com/mysterium/node/identity"
 )
 
 func NewAddress(server string, port int, topic string) *NatsAddress {

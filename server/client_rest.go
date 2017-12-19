@@ -9,9 +9,9 @@ import (
 	"net/http"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-    "github.com/mysterium/node/identity"
 )
 
 var mysteriumApiUrl string
@@ -31,6 +31,7 @@ func NewClient() Client {
 type clientRest struct {
 	httpClient http.Client
 }
+
 func (client *clientRest) RegisterIdentity(identity identity.Identity) (err error) {
 	response, err := client.doRequest("POST", "identities", dto.CreateIdentityRequest{
 		Identity: identity.Address,
