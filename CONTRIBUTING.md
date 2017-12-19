@@ -19,6 +19,15 @@ glide install
 go build github.com/mysterium/node
 ```
 
+* **Step 3.** Prepare configuration
+
+Enter `MYSTERIUM_API_URL` value of running [api](https://github.com/MysteriumNetwork/api) instance
+
+```bash
+cp .env_example .env
+vim .env
+```
+
 Running
 ------------
 ``` bash
