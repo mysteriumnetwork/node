@@ -6,21 +6,20 @@ import (
 
 	"fmt"
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/communication/nats_discovery"
 )
 
 const RECEIVER_LOG_PREFIX = "[NATS.Receiver] "
 
-func NewReceiver(address *nats_discovery.NatsAddress) *receiverNats {
+func NewReceiver(connection Connection, topic string) *receiverNats {
 	return &receiverNats{
-		connection:   address.GetConnection(),
+		connection:   connection,
 		codec:        communication.NewCodecJSON(),
-		messageTopic: address.GetTopic() + ".",
+		messageTopic: topic + ".",
 	}
 }
 
 type receiverNats struct {
-	connection   *nats.Conn
+	connection   Connection
 	codec        communication.Codec
 	messageTopic string
 }
@@ -84,14 +83,13 @@ func (receiver *receiverNats) Respond(consumer communication.RequestConsumer) er
 			return
 		}
 
+		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' response: %s", requestType, responseData))
 		err = receiver.connection.Publish(msg.Reply, responseData)
 		if err != nil {
 			err = fmt.Errorf("Failed to send response '%s'. %s", requestType, err)
 			log.Error(RECEIVER_LOG_PREFIX, err)
 			return
 		}
-
-		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' response: %s", requestType, responseData))
 	}
 
 	_, err := receiver.connection.Subscribe(receiver.messageTopic+requestType, messageHandler)

@@ -7,6 +7,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/mysterium/node/identity"
 )
 
 func NewDialogWaiter(address *nats_discovery.NatsAddress) *dialogWaiter {
@@ -33,17 +34,27 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 			return &responseInvalidIdentity, nil
 		}
 
-		dialogAddress := nats_discovery.NewAddressNested(waiter.myAddress, string(request.IdentityId))
-		dialog := &dialog{nats.NewSender(dialogAddress), nats.NewReceiver(dialogAddress)}
-
-		dialog.Respond(sessionCreateConsumer)
-
+		contactDialog := waiter.newDialogToContact(identity.FromAddress(request.IdentityId))
 		log.Info(waiterLogPrefix, fmt.Sprintf("Dialog accepted from: '%s'", request.IdentityId))
+
+		contactDialog.Respond(sessionCreateConsumer)
+
 		return &responseOK, nil
 	}
 
-	subscribeError := nats.NewReceiver(waiter.myAddress).Respond(&dialogCreateConsumer{createDialog})
+	myReceiver := nats.NewReceiver(waiter.myAddress.GetConnection(), waiter.myAddress.GetTopic())
+	subscribeError := myReceiver.Respond(&dialogCreateConsumer{createDialog})
+
 	return subscribeError
+}
+
+func (waiter *dialogWaiter) newDialogToContact(contactIdentity identity.Identity) *dialog {
+	subTopic := waiter.myAddress.GetTopic() + "." + contactIdentity.Address
+
+	return &dialog{
+		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), subTopic),
+		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), subTopic),
+	}
 }
 
 func (waiter *dialogWaiter) Stop() error {

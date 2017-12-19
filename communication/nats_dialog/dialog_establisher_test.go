@@ -2,9 +2,9 @@ package nats_dialog
 
 import (
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
-	"github.com/nats-io/go-nats"
-	"github.com/nats-io/go-nats/test"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"github.com/mysterium/node/identity"
@@ -15,37 +15,46 @@ func TestDialogEstablisher_Interface(t *testing.T) {
 }
 
 func TestDialogEstablisher_Factory(t *testing.T) {
-	identity := identity.FromAddress("123456")
-	establisher := NewDialogEstablisher(identity)
+	id := identity.FromAddress("123456")
+	establisher := NewDialogEstablisher(id)
 
 	assert.NotNil(t, establisher)
-	assert.Equal(t, identity, establisher.myIdentity)
+	assert.Equal(t, id, establisher.myIdentity)
 }
 
 func TestDialogEstablisher_CreateDialog(t *testing.T) {
-	server := test.RunDefaultServer()
-	defer server.Shutdown()
-
-	connection := test.NewDefaultConnection(t)
+	connection := nats.StartConnectionFake()
+	connection.MockResponse(
+		"provider1.dialog-create",
+		[]byte(`{
+			"reason":200,
+			"reasonMessage": "OK"
+		}`),
+	)
 	defer connection.Close()
 
-	requestSent := make(chan bool)
-	_, err := connection.Subscribe("provider1.dialog-create", func(message *nats.Msg) {
-		assert.JSONEq(t, `{"identity_id":"consumer1"}`, string(message.Data))
-		connection.Publish(message.Reply, []byte(`{"accepted":true}`))
-		requestSent <- true
-	})
-	assert.Nil(t, err)
-
-	contactAddress := nats_discovery.NewAddressForIdentity(identity.FromAddress("provider1"))
 	establisher := &dialogEstablisher{
 		myIdentity: identity.FromAddress("consumer1"),
+		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
+			assert.Exactly(t, dto_discovery.Contact{}, contact)
+			return nats_discovery.NewAddressWithConnection(connection, "provider1"), nil
+		},
 	}
-	dialog, err := establisher.CreateDialog(contactAddress.GetContact())
+	dialogInstance, err := establisher.CreateDialog(dto_discovery.Contact{})
+	defer dialogInstance.Close()
 	assert.NoError(t, err)
-	assert.NotNil(t, dialog)
+	assert.NotNil(t, dialogInstance)
 
-	if err := test.Wait(requestSent); err != nil {
-		t.Fatal("Request not sent")
-	}
+	dialogNats, ok := dialogInstance.(*dialog)
+	assert.True(t, ok)
+	assert.Equal(
+		t,
+		nats.NewSender(connection, "provider1.consumer1"),
+		dialogNats.Sender,
+	)
+	assert.Equal(
+		t,
+		nats.NewReceiver(connection, "provider1.consumer1"),
+		dialogNats.Receiver,
+	)
 }

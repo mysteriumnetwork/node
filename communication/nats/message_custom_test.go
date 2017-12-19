@@ -2,8 +2,6 @@ package nats
 
 import (
 	"github.com/mysterium/node/communication"
-	"github.com/nats-io/go-nats"
-	"github.com/nats-io/go-nats/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -25,9 +23,7 @@ func (producer *customMessageProducer) Produce() (messagePtr interface{}) {
 }
 
 func TestMessageCustomSend(t *testing.T) {
-	server := test.RunDefaultServer()
-	defer server.Shutdown()
-	connection := test.NewDefaultConnection(t)
+	connection := StartConnectionFake()
 	defer connection.Close()
 
 	sender := &senderNats{
@@ -35,25 +31,13 @@ func TestMessageCustomSend(t *testing.T) {
 		codec:      communication.NewCodecJSON(),
 	}
 
-	messageSent := make(chan bool)
-	_, err := connection.Subscribe("custom-message", func(message *nats.Msg) {
-		assert.JSONEq(t, `{"Field": 123}`, string(message.Data))
-		messageSent <- true
-	})
-	assert.Nil(t, err)
-
-	err = sender.Send(&customMessageProducer{&customMessage{123}})
-	assert.Nil(t, err)
-
-	if err := test.Wait(messageSent); err != nil {
-		t.Fatal("Message not sent")
-	}
+	err := sender.Send(&customMessageProducer{&customMessage{123}})
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{"Field": 123}`, string(connection.GetLastMessage()))
 }
 
 func TestMessageCustomSendNull(t *testing.T) {
-	server := test.RunDefaultServer()
-	defer server.Shutdown()
-	connection := test.NewDefaultConnection(t)
+	connection := StartConnectionFake()
 	defer connection.Close()
 
 	sender := &senderNats{
@@ -61,23 +45,13 @@ func TestMessageCustomSendNull(t *testing.T) {
 		codec:      communication.NewCodecJSON(),
 	}
 
-	messageSent := make(chan bool)
-	_, err := connection.Subscribe("custom-message", func(message *nats.Msg) {
-		assert.JSONEq(t, `null`, string(message.Data))
-		messageSent <- true
-	})
-	assert.Nil(t, err)
-
-	err = sender.Send(&customMessageProducer{})
-	assert.Nil(t, err)
-
-	if err := test.Wait(messageSent); err != nil {
-		t.Fatal("Message not sent")
-	}
+	err := sender.Send(&customMessageProducer{})
+	assert.NoError(t, err)
+	assert.JSONEq(t, `null`, string(connection.GetLastMessage()))
 }
 
 type customMessageConsumer struct {
-	Callback func(message *customMessage)
+	messageReceived chan interface{}
 }
 
 func (consumer *customMessageConsumer) GetMessageType() communication.MessageType {
@@ -89,14 +63,12 @@ func (consumer *customMessageConsumer) NewMessage() (messagePtr interface{}) {
 }
 
 func (consumer *customMessageConsumer) Consume(messagePtr interface{}) error {
-	consumer.Callback(messagePtr.(*customMessage))
+	consumer.messageReceived <- messagePtr
 	return nil
 }
 
 func TestMessageCustomReceive(t *testing.T) {
-	server := test.RunDefaultServer()
-	defer server.Shutdown()
-	connection := test.NewDefaultConnection(t)
+	connection := StartConnectionFake()
 	defer connection.Close()
 
 	receiver := &receiverNats{
@@ -104,17 +76,12 @@ func TestMessageCustomReceive(t *testing.T) {
 		codec:      communication.NewCodecJSON(),
 	}
 
-	messageReceived := make(chan bool)
-	err := receiver.Receive(&customMessageConsumer{func(message *customMessage) {
-		assert.Exactly(t, customMessage{123}, *message)
-		messageReceived <- true
-	}})
-	assert.Nil(t, err)
+	consumer := &customMessageConsumer{messageReceived: make(chan interface{})}
+	err := receiver.Receive(consumer)
+	assert.NoError(t, err)
 
-	err = connection.Publish("custom-message", []byte(`{"Field":123}`))
-	assert.Nil(t, err)
-
-	if err := test.Wait(messageReceived); err != nil {
-		t.Fatal("Message not received")
-	}
+	connection.Publish("custom-message", []byte(`{"Field":123}`))
+	message, err := connection.MessageWait(consumer.messageReceived)
+	assert.NoError(t, err)
+	assert.Exactly(t, customMessage{123}, *message.(*customMessage))
 }
