@@ -2,15 +2,16 @@ package service_discovery
 
 import (
 	"github.com/mysterium/node/money"
-	dto "github.com/mysterium/node/openvpn/service_discovery/dto"
+	"github.com/mysterium/node/openvpn/service_discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+    "github.com/mysterium/node/identity"
 )
 
 var (
-	providerId      = dto_discovery.Identity("123456")
+	providerId      = identity.FromAddress("123456")
 	providerContact = dto_discovery.Contact{
 		Type: "type1",
 	}
@@ -51,6 +52,6 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 		},
 		proposal.PaymentMethod,
 	)
-	assert.Equal(t, providerId, proposal.ProviderId)
+	assert.Equal(t, providerId.Address, proposal.ProviderId)
 	assert.Equal(t, []dto_discovery.Contact{providerContact}, proposal.ProviderContacts)
 }

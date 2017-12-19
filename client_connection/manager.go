@@ -3,15 +3,15 @@ package client_connection
 import (
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/service_discovery/dto"
 	"path/filepath"
 	"time"
 )
 
-type DialogEstablisherFactory func(identity dto.Identity) communication.DialogEstablisher
+type DialogEstablisherFactory func(identity identity.Identity) communication.DialogEstablisher
 
 type vpnManager struct {
 	//these are passed on creation
@@ -38,7 +38,7 @@ func NewVpnManager(mysteriumClient server.Client, dialogEstablisherFactory Dialo
 	}
 }
 
-func (vpn *vpnManager) Connect(identity dto.Identity, NodeKey string) error {
+func (vpn *vpnManager) Connect(identity identity.Identity, NodeKey string) error {
 
 	session, err := vpn.mysteriumClient.SessionCreate(NodeKey)
 	if err != nil {

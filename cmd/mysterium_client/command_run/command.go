@@ -9,7 +9,6 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	"github.com/mysterium/node/tequilapi/endpoints"
 )
@@ -35,7 +34,7 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 
 	mysteriumClient := server.NewClient()
 
-	dialogEstablisherFactory := func(identity dto.Identity) communication.DialogEstablisher {
+	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
 		return nats_dialog.NewDialogEstablisher(identity)
 	}
 
