@@ -39,7 +39,7 @@ func TestServiceProposalUnserialize(t *testing.T) {
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
-		ProviderId:        identity.NewIdentity("node").Id,
+		ProviderId:        identity.FromAddress("node").Address,
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
 	assert.Equal(t, expected, actual)
@@ -120,7 +120,7 @@ func TestServiceProposalSerialize(t *testing.T) {
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
-		ProviderId:        identity.NewIdentity("node").Id,
+		ProviderId:        identity.FromAddress("node").Address,
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
 

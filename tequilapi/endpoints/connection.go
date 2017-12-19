@@ -46,7 +46,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	err = ce.manager.Connect( identity.NewIdentity(cr.Identity), cr.NodeKey)
+	err = ce.manager.Connect( identity.FromAddress(cr.Identity), cr.NodeKey)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)

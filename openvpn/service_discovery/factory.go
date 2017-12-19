@@ -40,7 +40,7 @@ func NewServiceProposalWithLocation(
 			Price:    money.NewMoney(0.125, money.CURRENCY_MYST),
 			Duration: 1 * time.Hour,
 		},
-		ProviderId:       identity.Identity(providerId).Id,
+		ProviderId:       identity.Identity(providerId).Address,
 		ProviderContacts: []dto_discovery.Contact{providerContact},
 	}
 }

@@ -15,7 +15,7 @@ func TestDialogEstablisher_Interface(t *testing.T) {
 }
 
 func TestDialogEstablisher_Factory(t *testing.T) {
-	identity := identity.NewIdentity("123456")
+	identity := identity.FromAddress("123456")
 	establisher := NewDialogEstablisher(identity)
 
 	assert.NotNil(t, establisher)
@@ -37,9 +37,9 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	contactAddress := nats_discovery.NewAddressForIdentity(identity.NewIdentity("provider1"))
+	contactAddress := nats_discovery.NewAddressForIdentity(identity.FromAddress("provider1"))
 	establisher := &dialogEstablisher{
-		myIdentity: identity.NewIdentity("consumer1"),
+		myIdentity: identity.FromAddress("consumer1"),
 	}
 	dialog, err := establisher.CreateDialog(contactAddress.GetContact())
 	assert.NoError(t, err)

@@ -9,7 +9,7 @@ import (
 var file = "/tmp/cache.json"
 
 func TestIdentityCache_StoreIdentity(t *testing.T) {
-	identity := NewIdentity("0x000000000000000000000000000000000000000A")
+	identity := FromAddress("0x000000000000000000000000000000000000000A")
 	cache := identityCache{
 		File: file,
 	}
@@ -19,7 +19,7 @@ func TestIdentityCache_StoreIdentity(t *testing.T) {
 }
 
 func Test_IdentityCacheGetIdentity(t *testing.T) {
-	identity := NewIdentity("0x000000000000000000000000000000000000000A")
+	identity := FromAddress("0x000000000000000000000000000000000000000A")
 	cache := identityCache{
 		File: file,
 	}
@@ -33,7 +33,7 @@ func Test_IdentityCacheGetIdentity(t *testing.T) {
 }
 
 func Test_cacheExists(t *testing.T) {
-	identity := NewIdentity("0x000000000000000000000000000000000000000A")
+	identity := FromAddress("0x000000000000000000000000000000000000000A")
 	cache := identityCache{
 		File: file,
 	}

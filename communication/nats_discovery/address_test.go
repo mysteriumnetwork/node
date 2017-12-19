@@ -41,7 +41,7 @@ func TestNewAddressNested(t *testing.T) {
 }
 
 func TestNewAddressForIdentity(t *testing.T) {
-	identity := identity.NewIdentity("provider1")
+	identity := identity.FromAddress("provider1")
 	address := NewAddressForIdentity(identity)
 
 	assert.Equal(

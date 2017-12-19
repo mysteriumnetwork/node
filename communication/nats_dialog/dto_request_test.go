@@ -8,14 +8,14 @@ import (
 )
 
 func TestRequestSerialize(t *testing.T) {
-	var identity = identity.NewIdentity("123")
+	var identity = identity.FromAddress("123")
 	var tests = []struct {
 		model        dialogCreateRequest
 		expectedJson string
 	}{
 		{
 			dialogCreateRequest{
-				IdentityId: identity.Id,
+				IdentityId: identity.Address,
 			},
 			`{
 				"identity_id": "123"
@@ -48,14 +48,14 @@ func TestRequestUnserialize(t *testing.T) {
 				"identity_id": "123"
 			}`,
 			dialogCreateRequest{
-				IdentityId: identity.NewIdentity("123").Id,
+				IdentityId: identity.FromAddress("123").Address,
 			},
 			nil,
 		},
 		{
 			`{}`,
 			dialogCreateRequest{
-				IdentityId: identity.NewIdentity("").Id,
+				IdentityId: identity.FromAddress("").Address,
 			},
 			nil,
 		},

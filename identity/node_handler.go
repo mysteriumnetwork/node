@@ -52,7 +52,7 @@ func (ih *identityHandler) Create() (id Identity, err error) {
 func (ih *identityHandler) getIdentityFromCache() (identity Identity, err error) {
 	identity, err = ih.cache.GetIdentity()
 
-	if err != nil || !ih.manager.HasIdentity(string(identity.Id)) {
+	if err != nil || !ih.manager.HasIdentity(string(identity.Address)) {
 		return identity, errors.New("identity not found in cache")
 	}
 

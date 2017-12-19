@@ -33,7 +33,7 @@ type clientRest struct {
 }
 func (client *clientRest) RegisterIdentity(identity identity.Identity) (err error) {
 	response, err := client.doRequest("POST", "identities", dto.CreateIdentityRequest{
-		Identity: identity.Id,
+		Identity: identity.Address,
 	})
 
 	if err == nil {

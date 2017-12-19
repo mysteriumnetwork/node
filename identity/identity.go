@@ -1,9 +1,9 @@
 package identity
 
 type Identity struct {
-	Id string
+	Address string
 }
 
-func NewIdentity(id string) Identity {
-	return Identity{id}
+func FromAddress(address string) Identity {
+	return Identity{address}
 }

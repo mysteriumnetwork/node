@@ -27,7 +27,7 @@ type CommandRun struct {
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	consumerId := identity.NewIdentity("consumer1")
+	consumerId := identity.FromAddress("consumer1")
 
 	session, err := cmd.MysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {

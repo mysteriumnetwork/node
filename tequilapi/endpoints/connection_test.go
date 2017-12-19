@@ -150,7 +150,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
-	assert.Equal(t, identity.NewIdentity("my-identity"), fakeManager.requestedIdentity)
+	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedIdentity)
 	assert.Equal(t, "required-node", fakeManager.requestedNode)
 
 }

@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	providerId      = identity.NewIdentity("123456")
+	providerId      = identity.FromAddress("123456")
 	providerContact = dto_discovery.Contact{
 		Type: "type1",
 	}
@@ -52,6 +52,6 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 		},
 		proposal.PaymentMethod,
 	)
-	assert.Equal(t, providerId.Id, proposal.ProviderId)
+	assert.Equal(t, providerId.Address, proposal.ProviderId)
 	assert.Equal(t, []dto_discovery.Contact{providerContact}, proposal.ProviderContacts)
 }

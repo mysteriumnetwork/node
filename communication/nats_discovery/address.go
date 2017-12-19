@@ -17,7 +17,7 @@ func NewAddress(server string, port int, topic string) *NatsAddress {
 }
 
 func NewAddressForIdentity(identity identity.Identity) *NatsAddress {
-	return NewAddress("127.0.0.1", 4222, string(identity.Id))
+	return NewAddress("127.0.0.1", 4222, string(identity.Address))
 }
 
 func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
