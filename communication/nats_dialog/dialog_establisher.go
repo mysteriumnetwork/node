@@ -6,14 +6,21 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/identity"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
 func NewDialogEstablisher(identity identity.Identity) *dialogEstablisher {
 	return &dialogEstablisher{
-		myIdentity:            identity,
-		contactAddressFactory: nats_discovery.NewAddressForContact,
+		myIdentity: identity,
+		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
+			address, err := nats_discovery.NewAddressForContact(contact)
+			if err == nil {
+				err = address.Connect()
+			}
+
+			return address, err
+		},
 	}
 }
 
@@ -37,8 +44,11 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 			IdentityId: establisher.myIdentity.Address,
 		},
 	})
-	if err != nil || response.(*dialogCreateResponse).Reason != 200 {
-		return nil, fmt.Errorf("Dialog creation rejected: %s", response)
+	if err != nil {
+		return nil, fmt.Errorf("Dialog creation error. %s", err)
+	}
+	if response.(*dialogCreateResponse).Reason != 200 {
+		return nil, fmt.Errorf("Dialog creation rejected. %#v", response)
 	}
 
 	dialog := establisher.newDialogToContact(contactAddress)
