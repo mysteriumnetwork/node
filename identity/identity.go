@@ -1,7 +1,7 @@
 package identity
 
 type Identity struct {
-	Address string
+	Address string `json:"address"`
 }
 
 func FromAddress(address string) Identity {
