@@ -6,16 +6,15 @@ import (
 
 	"fmt"
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/communication/nats_discovery"
 )
 
 const RECEIVER_LOG_PREFIX = "[NATS.Receiver] "
 
-func NewReceiver(address *nats_discovery.NatsAddress) *receiverNats {
+func NewReceiver(connection Connection, topic string) *receiverNats {
 	return &receiverNats{
-		connection:   address.GetConnection(),
+		connection:   connection,
 		codec:        communication.NewCodecJSON(),
-		messageTopic: address.GetTopic() + ".",
+		messageTopic: topic + ".",
 	}
 }
 

@@ -2,8 +2,9 @@ package nats_discovery
 
 import (
 	"fmt"
+	"github.com/mysterium/node/communication/nats"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"github.com/nats-io/go-nats"
+	nats_lib "github.com/nats-io/go-nats"
 )
 
 func NewAddress(server string, port int, topic string) *NatsAddress {
@@ -44,11 +45,11 @@ type NatsAddress struct {
 	servers []string
 	topic   string
 
-	connection *nats.Conn
+	connection *nats_lib.Conn
 }
 
 func (address *NatsAddress) Connect() (err error) {
-	options := nats.GetDefaultOptions()
+	options := nats_lib.GetDefaultOptions()
 	options.Servers = address.servers
 
 	address.connection, err = options.Connect()
@@ -59,7 +60,7 @@ func (address *NatsAddress) Disconnect() {
 	address.connection.Close()
 }
 
-func (address *NatsAddress) GetConnection() *nats.Conn {
+func (address *NatsAddress) GetConnection() nats.Connection {
 	return address.connection
 }
 
