@@ -3,7 +3,7 @@ package command_run
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/communication"
-	id "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -25,7 +25,7 @@ type CommandRun struct {
 	MysteriumClient server.Client
 	NatService      nat.NATService
 
-	DialogWaiterFactory func(identity id.Identity) (communication.DialogWaiter, dto_discovery.Contact)
+	DialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
 	dialogWaiter        communication.DialogWaiter
 
 	SessionManager session.ManagerInterface
@@ -36,7 +36,7 @@ type CommandRun struct {
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	ks := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
-	identityHandler := id.NewNodeIdentityHandler(ks, options.DirectoryKeystore)
+	identityHandler := identity.NewNodeIdentityHandler(ks, options.DirectoryKeystore)
 
 	providerId, err := identityHandler.Select(options.NodeKey)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
-	id "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 )
 
 type connectionRequest struct {
@@ -46,7 +46,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	err = ce.manager.Connect(id.NewIdentity(cr.Identity), cr.NodeKey)
+	err = ce.manager.Connect( identity.NewIdentity(cr.Identity), cr.NodeKey)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)

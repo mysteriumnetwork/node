@@ -7,11 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
-	id "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 )
 
 var (
-	providerId      = id.NewIdentity("123456")
+	providerId      = identity.NewIdentity("123456")
 	providerContact = dto_discovery.Contact{
 		Type: "type1",
 	}

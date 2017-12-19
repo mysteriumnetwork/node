@@ -4,7 +4,7 @@ import (
 	"fmt"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/nats-io/go-nats"
-	id "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 )
 
 func NewAddress(server string, port int, topic string) *NatsAddress {
@@ -16,7 +16,7 @@ func NewAddress(server string, port int, topic string) *NatsAddress {
 	}
 }
 
-func NewAddressForIdentity(identity id.Identity) *NatsAddress {
+func NewAddressForIdentity(identity identity.Identity) *NatsAddress {
 	return NewAddress("127.0.0.1", 4222, string(identity.Id))
 }
 

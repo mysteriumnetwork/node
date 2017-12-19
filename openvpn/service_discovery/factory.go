@@ -6,7 +6,7 @@ import (
 	"github.com/mysterium/node/openvpn/service_discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"time"
-	id "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 )
 
 var (
@@ -14,14 +14,14 @@ var (
 )
 
 func NewServiceProposal(
-	providerId id.Identity,
+	providerId identity.Identity,
 	providerContact dto_discovery.Contact,
 ) dto_discovery.ServiceProposal {
 	return NewServiceProposalWithLocation(providerId, providerContact, locationUnknown)
 }
 
 func NewServiceProposalWithLocation(
-	providerId id.Identity,
+	providerId identity.Identity,
 	providerContact dto_discovery.Contact,
 	nodeLocation dto_discovery.Location,
 ) dto_discovery.ServiceProposal {
@@ -40,7 +40,7 @@ func NewServiceProposalWithLocation(
 			Price:    money.NewMoney(0.125, money.CURRENCY_MYST),
 			Duration: 1 * time.Hour,
 		},
-		ProviderId:       id.Identity(providerId).Id,
+		ProviderId:       identity.Identity(providerId).Id,
 		ProviderContacts: []dto_discovery.Contact{providerContact},
 	}
 }

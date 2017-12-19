@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	id "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 )
 
 type fakeManager struct {
@@ -16,11 +16,11 @@ type fakeManager struct {
 	onDisconnectReturn error
 	onStatusReturn     client_connection.ConnectionStatus
 	disconnectCount    int
-	requestedIdentity  id.Identity
+	requestedIdentity  identity.Identity
 	requestedNode      string
 }
 
-func (fm *fakeManager) Connect(identity id.Identity, node string) error {
+func (fm *fakeManager) Connect(identity identity.Identity, node string) error {
 	fm.requestedIdentity = identity
 	fm.requestedNode = node
 	return fm.onConnectReturn
@@ -150,7 +150,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
-	assert.Equal(t, id.NewIdentity("my-identity"), fakeManager.requestedIdentity)
+	assert.Equal(t, identity.NewIdentity("my-identity"), fakeManager.requestedIdentity)
 	assert.Equal(t, "required-node", fakeManager.requestedNode)
 
 }

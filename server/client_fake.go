@@ -6,7 +6,7 @@ import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	id "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 )
 
 func NewClientFake() Client {
@@ -26,7 +26,7 @@ func (client *clientFake) NodeRegister(proposal dto_discovery.ServiceProposal) (
 	return nil
 }
 
-func (client *clientFake) RegisterIdentity(identity id.Identity) (err error) {
+func (client *clientFake) RegisterIdentity(identity identity.Identity) (err error) {
 	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake identity registered: ", identity)
 
 	return nil

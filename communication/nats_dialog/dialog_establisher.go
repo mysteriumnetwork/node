@@ -7,10 +7,10 @@ import (
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	id "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 )
 
-func NewDialogEstablisher(identity id.Identity) *dialogEstablisher {
+func NewDialogEstablisher(identity identity.Identity) *dialogEstablisher {
 	return &dialogEstablisher{
 		myIdentity: identity,
 	}
@@ -19,7 +19,7 @@ func NewDialogEstablisher(identity id.Identity) *dialogEstablisher {
 const establisherLogPrefix = "[NATS.DialogEstablisher] "
 
 type dialogEstablisher struct {
-	myIdentity id.Identity
+	myIdentity identity.Identity
 }
 
 func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact) (communication.Dialog, error) {

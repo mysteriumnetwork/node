@@ -8,7 +8,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	id "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 )
 
 func init() {
@@ -39,7 +39,7 @@ func TestServiceProposalUnserialize(t *testing.T) {
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
-		ProviderId:        id.NewIdentity("node").Id,
+		ProviderId:        identity.NewIdentity("node").Id,
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
 	assert.Equal(t, expected, actual)
@@ -120,7 +120,7 @@ func TestServiceProposalSerialize(t *testing.T) {
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
-		ProviderId:        id.NewIdentity("node").Id,
+		ProviderId:        identity.NewIdentity("node").Id,
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
 
