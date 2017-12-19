@@ -9,5 +9,4 @@ type IdentityManagerInterface interface {
 	GetIdentities() []dto.Identity
 	GetIdentity(string) (dto.Identity, error)
 	HasIdentity(string) bool
-	Register(dto.Identity) error
 }

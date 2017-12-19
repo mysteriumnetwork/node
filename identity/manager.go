@@ -6,7 +6,6 @@ package identity
 import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/pkg/errors"
 	"strings"
@@ -14,13 +13,11 @@ import (
 
 type identityManager struct {
 	keystoreManager keystoreInterface
-	discovery       server.Client
 }
 
 func NewIdentityManager(keystore keystoreInterface) *identityManager {
 	return &identityManager{
 		keystoreManager: keystore,
-		discovery:       server.NewClient(),
 	}
 }
 
@@ -70,9 +67,4 @@ func (idm *identityManager) HasIdentity(identityString string) bool {
 	_, err := idm.GetIdentity(identityString)
 
 	return err == nil
-}
-
-func (idm *identityManager) Register(id dto.Identity) (err error) {
-	err = idm.discovery.RegisterIdentity(id)
-	return
 }

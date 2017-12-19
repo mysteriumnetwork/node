@@ -72,7 +72,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	idm := identity.NewIdentityManager(keystoreInstance)
-	endpoints.RegisterIdentitiesEndpoint(router, idm)
+	mystClient := server.NewClient()
+	endpoints.RegisterIdentitiesEndpoint(router, idm, mystClient)
 
 	endpoints.RegisterConnectionEndpoint(router, client_connection.NewManager())
 

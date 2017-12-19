@@ -7,10 +7,16 @@ import (
 
 	"bytes"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/server"
 	"github.com/stretchr/testify/assert"
 )
 
-var identityUrl = "/identities/123/registration"
+const identityUrl = "/irrelevant"
+
+var (
+	mockIdm    = identity.NewIdentityManagerFake()
+	mystClient = server.NewClientFake()
+)
 
 func TestRegisterExistingIdentityRequest(t *testing.T) {
 	req, err := http.NewRequest(
@@ -20,14 +26,19 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 			`{
 				"registered": false
 			}`))
+
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 
-	mockIdm := identity.NewIdentityManagerFake()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Register
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Register
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, 501, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+            "message": "Unregister not supported"
+        }`, resp.Body.String())
 }
 
 func TestRegisterIdentitySuccess(t *testing.T) {
@@ -38,15 +49,15 @@ func TestRegisterIdentitySuccess(t *testing.T) {
 			`{
 				"registered": true
 			}`))
+
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 
 	mockIdm := identity.NewIdentityManagerFake()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Register
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Register
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
-
 }
 
 func TestCreateNewIdentityNoPassword(t *testing.T) {
@@ -57,12 +68,11 @@ func TestCreateNewIdentityNoPassword(t *testing.T) {
 			`{
                 "password": ""
             }`))
+
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-
-	mockIdm := identity.NewIdentityManagerFake()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Create
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -87,27 +97,21 @@ func TestCreateNewIdentity(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 
-	mockIdm := identity.NewIdentityManagerFake()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Create
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
 		t,
-		`
-            {
+		`{
                 "id":"0x000000000000000000000000000000000000bEEF"
-            }
-        `,
-		resp.Body.String(),
-	)
+            }`, resp.Body.String())
 }
 
 func TestListIdentities(t *testing.T) {
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	mockIdm := identity.NewIdentityManagerFake()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).List
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -120,6 +124,5 @@ func TestListIdentities(t *testing.T) {
                 "id": "0x000000000000000000000000000000000000bEEF"
             }
         ]`,
-		resp.Body.String(),
-	)
+		resp.Body.String())
 }
