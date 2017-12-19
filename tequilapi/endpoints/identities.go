@@ -33,16 +33,21 @@ func idToDto(id identity.Identity) identityDto {
 	return identityDto{id.Address}
 }
 
+func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identityDto) (idDtoArry []identityDto) {
+	idDtoArry = make([]identityDto, len(idArry))
+	for i, id := range idArry {
+		idDtoArry[i] = f(id)
+	}
+	return
+}
+
 func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient server.Client) *identitiesApi {
 	return &identitiesApi{idm, mystClient}
 }
 
 func (endpoint *identitiesApi) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	idArry := endpoint.idm.GetIdentities()
-	idsSerializable := make([]identityDto, len(idArry))
-	for i, id := range idArry {
-		idsSerializable[i] = idToDto(id)
-	}
+	idsSerializable := mapIdentities(idArry, idToDto)
 
 	utils.WriteAsJson(idsSerializable, resp)
 }
