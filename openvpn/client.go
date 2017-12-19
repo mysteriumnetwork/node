@@ -2,25 +2,31 @@ package openvpn
 
 import "sync"
 
-func NewClient(config *ClientConfig, directoryRuntime string, middlewares ...ManagementMiddleware) *Client {
+type Client interface {
+	Start() error
+	Wait() error
+	Stop() error
+}
+
+type openVpnClient struct {
+	config     *ClientConfig
+	management *Management
+	process    *Process
+}
+
+func NewClient(config *ClientConfig, directoryRuntime string, middlewares ...ManagementMiddleware) *openVpnClient {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
 	config.SetManagementSocket(socketAddress)
 
-	return &Client{
+	return &openVpnClient{
 		config:     config,
 		management: NewManagement(socketAddress, "[client-management] ", middlewares...),
 		process:    NewProcess("[client-openvpn] "),
 	}
 }
 
-type Client struct {
-	config     *ClientConfig
-	management *Management
-	process    *Process
-}
-
-func (client *Client) Start() error {
+func (client *openVpnClient) Start() error {
 	// Start the management interface (if it isnt already started)
 	err := client.management.Start()
 	if err != nil {
@@ -36,11 +42,11 @@ func (client *Client) Start() error {
 	return client.process.Start(arguments)
 }
 
-func (client *Client) Wait() error {
+func (client *openVpnClient) Wait() error {
 	return client.process.Wait()
 }
 
-func (client *Client) Stop() error {
+func (client *openVpnClient) Stop() error {
 	waiter := sync.WaitGroup{}
 
 	waiter.Add(1)

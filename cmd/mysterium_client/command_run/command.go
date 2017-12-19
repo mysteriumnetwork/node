@@ -2,15 +2,20 @@ package command_run
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats_dialog"
 	"github.com/mysterium/node/communication/nats_discovery"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
+	"github.com/mysterium/node/server/dto"
 	"github.com/mysterium/node/tequilapi"
 	"github.com/mysterium/node/tequilapi/endpoints"
+	"path/filepath"
+	"time"
 )
 
 type CommandRun struct {
@@ -30,15 +35,35 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 
 	mysteriumClient := server.NewClient()
 
-	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
-		return nats_dialog.NewDialogEstablisher(identity)
-	}
-
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	identityManager := identity.NewIdentityManager(keystoreInstance)
 
-	vpnManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, options.DirectoryRuntime)
+	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
+		return nats_dialog.NewDialogEstablisher(identity)
+	}
+
+	vpnClientFactory := func(vpnSession *session.VpnSession, session *dto.Session) (openvpn.Client, error) {
+		vpnConfig, err := openvpn.NewClientConfigFromString(
+			vpnSession.Config,
+			filepath.Join(options.DirectoryRuntime, "client.ovpn"),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		vpnMiddlewares := []openvpn.ManagementMiddleware{
+			bytescount_client.NewMiddleware(mysteriumClient, session.Id, 1*time.Minute),
+		}
+		return openvpn.NewClient(
+			vpnConfig,
+			options.DirectoryRuntime,
+			vpnMiddlewares...,
+		), nil
+
+	}
+
+	vpnManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
 	httpApiServer, err := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort)
 	if err != nil {
