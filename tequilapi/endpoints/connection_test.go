@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
-	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+    "github.com/mysterium/node/identity"
 )
 
 type fakeManager struct {
@@ -16,11 +16,11 @@ type fakeManager struct {
 	onDisconnectReturn error
 	onStatusReturn     client_connection.ConnectionStatus
 	disconnectCount    int
-	requestedIdentity  dto.Identity
+	requestedIdentity  identity.Identity
 	requestedNode      string
 }
 
-func (fm *fakeManager) Connect(identity dto.Identity, node string) error {
+func (fm *fakeManager) Connect(identity identity.Identity, node string) error {
 	fm.requestedIdentity = identity
 	fm.requestedNode = node
 	return fm.onConnectReturn
@@ -150,7 +150,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
-	assert.Equal(t, dto.Identity("my-identity"), fakeManager.requestedIdentity)
+	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedIdentity)
 	assert.Equal(t, "required-node", fakeManager.requestedNode)
 
 }

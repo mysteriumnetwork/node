@@ -5,6 +5,7 @@ import (
 	"github.com/mysterium/node/money"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"github.com/mysterium/node/identity"
 )
 
 type TestServiceDefinition struct{}
@@ -27,7 +28,7 @@ func TestServiceProposalSerialize(t *testing.T) {
 		ServiceDefinition: TestServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     TestPaymentMethod{},
-		ProviderId:        Identity("node"),
+		ProviderId:        "node",
 		ProviderContacts:  []Contact{},
 	}
 

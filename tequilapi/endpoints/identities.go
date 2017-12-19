@@ -26,7 +26,7 @@ func (endpoint *identitiesApi) List(writer http.ResponseWriter, request *http.Re
 	idsSerializable := make([]identityDto, len(idArry))
 	for i, id := range idArry {
 		idsSerializable[i] = identityDto{
-			Id: string(id),
+			Id: id.Address,
 		}
 	}
 

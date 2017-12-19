@@ -3,7 +3,7 @@ package command_run
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/identity"
+    "github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -25,7 +25,7 @@ type CommandRun struct {
 	MysteriumClient server.Client
 	NatService      nat.NATService
 
-	DialogWaiterFactory func(identity dto_discovery.Identity) (communication.DialogWaiter, dto_discovery.Contact)
+	DialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
 	dialogWaiter        communication.DialogWaiter
 
 	SessionManager session.ManagerInterface

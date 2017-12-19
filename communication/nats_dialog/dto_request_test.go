@@ -2,20 +2,20 @@ package nats_dialog
 
 import (
 	"encoding/json"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"github.com/mysterium/node/identity"
 )
 
 func TestRequestSerialize(t *testing.T) {
-	var identity = dto_discovery.Identity("123")
+	var identity = identity.FromAddress("123")
 	var tests = []struct {
 		model        dialogCreateRequest
 		expectedJson string
 	}{
 		{
 			dialogCreateRequest{
-				IdentityId: identity,
+				IdentityId: identity.Address,
 			},
 			`{
 				"identity_id": "123"
@@ -48,14 +48,14 @@ func TestRequestUnserialize(t *testing.T) {
 				"identity_id": "123"
 			}`,
 			dialogCreateRequest{
-				IdentityId: dto_discovery.Identity("123"),
+				IdentityId: "123",
 			},
 			nil,
 		},
 		{
 			`{}`,
 			dialogCreateRequest{
-				IdentityId: dto_discovery.Identity(""),
+				IdentityId: "",
 			},
 			nil,
 		},
