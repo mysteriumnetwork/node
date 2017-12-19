@@ -2,10 +2,9 @@ package nats_dialog
 
 import (
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"github.com/nats-io/go-nats"
-	"github.com/nats-io/go-nats/test"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -23,29 +22,24 @@ func TestDialogEstablisher_Factory(t *testing.T) {
 }
 
 func TestDialogEstablisher_CreateDialog(t *testing.T) {
-	server := test.RunDefaultServer()
-	defer server.Shutdown()
-
-	connection := test.NewDefaultConnection(t)
+	connection := nats.StartConnectionFake()
+	connection.MockResponse(
+		"provider1.dialog-create",
+		[]byte(`{
+			"reason":200,
+			"reasonMessage": "OK"
+		}`),
+	)
 	defer connection.Close()
 
-	requestSent := make(chan bool)
-	_, err := connection.Subscribe("provider1.dialog-create", func(message *nats.Msg) {
-		assert.JSONEq(t, `{"identity_id":"consumer1"}`, string(message.Data))
-		connection.Publish(message.Reply, []byte(`{"accepted":true}`))
-		requestSent <- true
-	})
-	assert.Nil(t, err)
-
-	contactAddress := nats_discovery.NewAddressForIdentity(dto_discovery.Identity("provider1"))
 	establisher := &dialogEstablisher{
 		myIdentity: dto_discovery.Identity("consumer1"),
+		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
+			assert.Exactly(t, dto_discovery.Contact{}, contact)
+			return nats_discovery.NewAddressWithConnection(connection, "provider1"), nil
+		},
 	}
-	dialog, err := establisher.CreateDialog(contactAddress.GetContact())
+	dialog, err := establisher.CreateDialog(dto_discovery.Contact{})
 	assert.NoError(t, err)
 	assert.NotNil(t, dialog)
-
-	if err := test.Wait(requestSent); err != nil {
-		t.Fatal("Request not sent")
-	}
 }

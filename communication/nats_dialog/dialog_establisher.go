@@ -11,24 +11,21 @@ import (
 
 func NewDialogEstablisher(identity dto_discovery.Identity) *dialogEstablisher {
 	return &dialogEstablisher{
-		myIdentity: identity,
+		myIdentity:            identity,
+		contactAddressFactory: nats_discovery.NewAddressForContact,
 	}
 }
 
 const establisherLogPrefix = "[NATS.DialogEstablisher] "
 
 type dialogEstablisher struct {
-	myIdentity dto_discovery.Identity
+	myIdentity            dto_discovery.Identity
+	contactAddressFactory func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error)
 }
 
 func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact) (communication.Dialog, error) {
-	contactAddress, err := nats_discovery.NewAddressForContact(contact)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", contactAddress))
-	err = contactAddress.Connect()
+	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", contact))
+	contactAddress, err := establisher.contactAddressFactory(contact)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
 	}
@@ -40,7 +37,7 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 		},
 	})
 	if err != nil || response.(*dialogCreateResponse).Reason != 200 {
-		return nil, fmt.Errorf("Dialog creation rejected: %s", err)
+		return nil, fmt.Errorf("Dialog creation rejected: %s", response)
 	}
 
 	dialog := establisher.newDialog(contactAddress)

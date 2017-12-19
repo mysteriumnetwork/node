@@ -41,11 +41,18 @@ func NewAddressNested(address *NatsAddress, subTopic string) *NatsAddress {
 	}
 }
 
+func NewAddressWithConnection(connection nats.Connection, topic string) *NatsAddress {
+	return &NatsAddress{
+		topic:      topic,
+		connection: connection,
+	}
+}
+
 type NatsAddress struct {
 	servers []string
 	topic   string
 
-	connection *nats_lib.Conn
+	connection nats.Connection
 }
 
 func (address *NatsAddress) Connect() (err error) {
