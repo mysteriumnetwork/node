@@ -48,14 +48,14 @@ func TestRequestUnserialize(t *testing.T) {
 				"identity_id": "123"
 			}`,
 			dialogCreateRequest{
-				IdentityId: identity.FromAddress("123").Address,
+				IdentityId: "123",
 			},
 			nil,
 		},
 		{
 			`{}`,
 			dialogCreateRequest{
-				IdentityId: identity.FromAddress("").Address,
+				IdentityId: "",
 			},
 			nil,
 		},
