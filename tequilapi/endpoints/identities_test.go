@@ -33,7 +33,7 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Register
 	handlerFunc(resp, req, nil)
 
-	assert.Equal(t, 501, resp.Code)
+	assert.Equal(t, http.StatusNotImplemented, resp.Code)
 	assert.JSONEq(
 		t,
 		`{

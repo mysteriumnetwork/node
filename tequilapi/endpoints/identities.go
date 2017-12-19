@@ -29,63 +29,65 @@ type identitiesApi struct {
 	mysteriumClient server.Client
 }
 
+func idToDto(id identity.Identity) identityDto {
+	return identityDto{id.Address}
+}
+
 func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient server.Client) *identitiesApi {
 	return &identitiesApi{idm, mystClient}
 }
 
-func (endpoint *identitiesApi) List(writer http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (endpoint *identitiesApi) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	idArry := endpoint.idm.GetIdentities()
 	idsSerializable := make([]identityDto, len(idArry))
 	for i, id := range idArry {
-		idsSerializable[i] = identityDto{
-			Id: id.Address,
-		}
+		idsSerializable[i] = idToDto(id)
 	}
 
-	utils.WriteAsJson(idsSerializable, writer)
+	utils.WriteAsJson(idsSerializable, resp)
 }
 
-func (endpoint *identitiesApi) Create(writer http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (endpoint *identitiesApi) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	createReq, err := toCreateRequest(request)
 	if err != nil {
-		utils.SendError(writer, err, http.StatusBadRequest)
+		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 	errorMap := validateCreationRequest(createReq)
 	if errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(writer, errorMap)
+		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 	id, err := endpoint.idm.CreateNewIdentity(createReq.Password)
 	if err != nil {
-		utils.SendError(writer, err, http.StatusInternalServerError)
+		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	idDto := identityDto{string(id.Address)}
-	utils.WriteAsJson(idDto, writer)
+	idDto := idToDto(id)
+	utils.WriteAsJson(idDto, resp)
 }
 
-func (endpoint *identitiesApi) Register(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *identitiesApi) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)
 	if err != nil {
-		utils.SendError(writer, err, http.StatusBadRequest)
+		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 	err = validateRegistrationRequest(registerReq)
 	if err != nil {
-		utils.SendError(writer, err, 501)
+		utils.SendError(resp, err, http.StatusNotImplemented)
 		return
 	}
 
 	err = endpoint.mysteriumClient.RegisterIdentity(id)
 	if err != nil {
-		utils.SendError(writer, err, http.StatusInternalServerError)
+		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	writer.WriteHeader(http.StatusAccepted)
+	resp.WriteHeader(http.StatusAccepted)
 }
 
 func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
