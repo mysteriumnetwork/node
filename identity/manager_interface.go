@@ -1,12 +1,8 @@
 package identity
 
-import (
-	"github.com/mysterium/node/service_discovery/dto"
-)
-
 type IdentityManagerInterface interface {
-	CreateNewIdentity(string) (*dto.Identity, error)
-	GetIdentities() []dto.Identity
-	GetIdentity(string) *dto.Identity
+	CreateNewIdentity(string) (Identity, error)
+	GetIdentities() []Identity
+	GetIdentity(string) (Identity, error)
 	HasIdentity(string) bool
 }

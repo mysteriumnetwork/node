@@ -2,7 +2,6 @@ package nats_dialog
 
 import (
 	"github.com/mysterium/node/communication"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
 // Consume is trying to establish new dialog with Provider
@@ -14,7 +13,7 @@ var (
 )
 
 type dialogCreateRequest struct {
-	IdentityId dto_discovery.Identity `json:"identity_id"`
+	IdentityId string `json:"identity_id"`
 }
 
 type dialogCreateResponse struct {

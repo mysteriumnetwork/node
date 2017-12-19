@@ -7,7 +7,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
-	"github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/identity"
 )
 
 func NewDialogWaiter(address *nats_discovery.NatsAddress) *dialogWaiter {
@@ -34,7 +34,7 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 			return &responseInvalidIdentity, nil
 		}
 
-		contactDialog := waiter.newDialogToContact(request.IdentityId)
+		contactDialog := waiter.newDialogToContact(identity.FromAddress(request.IdentityId))
 		log.Info(waiterLogPrefix, fmt.Sprintf("Dialog accepted from: '%s'", request.IdentityId))
 
 		contactDialog.Respond(sessionCreateConsumer)
@@ -48,8 +48,8 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 	return subscribeError
 }
 
-func (waiter *dialogWaiter) newDialogToContact(contactIdentity dto.Identity) *dialog {
-	subTopic := waiter.myAddress.GetTopic() + "." + string(contactIdentity)
+func (waiter *dialogWaiter) newDialogToContact(contactIdentity identity.Identity) *dialog {
+	subTopic := waiter.myAddress.GetTopic() + "." + contactIdentity.Address
 
 	return &dialog{
 		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), subTopic),

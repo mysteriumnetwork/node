@@ -7,6 +7,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"github.com/mysterium/node/identity"
 )
 
 func TestDialogEstablisher_Interface(t *testing.T) {
@@ -14,11 +15,11 @@ func TestDialogEstablisher_Interface(t *testing.T) {
 }
 
 func TestDialogEstablisher_Factory(t *testing.T) {
-	identity := dto_discovery.Identity("123456")
-	establisher := NewDialogEstablisher(identity)
+	id := identity.FromAddress("123456")
+	establisher := NewDialogEstablisher(id)
 
 	assert.NotNil(t, establisher)
-	assert.Equal(t, identity, establisher.myIdentity)
+	assert.Equal(t, id, establisher.myIdentity)
 }
 
 func TestDialogEstablisher_CreateDialog(t *testing.T) {
@@ -33,7 +34,7 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	defer connection.Close()
 
 	establisher := &dialogEstablisher{
-		myIdentity: dto_discovery.Identity("consumer1"),
+		myIdentity: identity.FromAddress("consumer1"),
 		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
 			assert.Exactly(t, dto_discovery.Contact{}, contact)
 			return nats_discovery.NewAddressWithConnection(connection, "provider1"), nil
