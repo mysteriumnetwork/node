@@ -38,7 +38,7 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 
 	identityManager := identity.NewIdentityManager(keystoreInstance)
 
-	vpnManager := client_connection.NewVpnManager(mysteriumClient, dialogEstablisherFactory, options.DirectoryRuntime)
+	vpnManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, options.DirectoryRuntime)
 
 	httpApiServer, err := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort)
 	if err != nil {

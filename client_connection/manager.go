@@ -13,11 +13,10 @@ import (
 
 type DialogEstablisherFactory func(identity identity.Identity) communication.DialogEstablisher
 
-type vpnManager struct {
+type connectionManager struct {
 	//these are passed on creation
 	mysteriumClient            server.Client
 	dialogEstablisherFactory   DialogEstablisherFactory
-	vpnMiddlewares             []openvpn.ManagementMiddleware
 	runtimeDirectory           string
 	vpnClientConfigurationPath string
 	//these are populated by Connect at runtime
@@ -25,12 +24,11 @@ type vpnManager struct {
 	vpnClient *openvpn.Client
 }
 
-func NewVpnManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEstablisherFactory, runtimeDirectory string) *vpnManager {
+func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEstablisherFactory, runtimeDirectory string) *connectionManager {
 	vpnClientConfigFile := filepath.Join(runtimeDirectory, "client.ovpn")
-	return &vpnManager{
+	return &connectionManager{
 		mysteriumClient,
 		dialogEstablisherFactory,
-		[]openvpn.ManagementMiddleware{},
 		runtimeDirectory,
 		vpnClientConfigFile,
 		nil,
@@ -38,59 +36,58 @@ func NewVpnManager(mysteriumClient server.Client, dialogEstablisherFactory Dialo
 	}
 }
 
-func (vpn *vpnManager) Connect(identity identity.Identity, NodeKey string) error {
+func (manager *connectionManager) Connect(identity identity.Identity, NodeKey string) error {
 
-	session, err := vpn.mysteriumClient.SessionCreate(NodeKey)
+	session, err := manager.mysteriumClient.SessionCreate(NodeKey)
 	if err != nil {
 		return err
 	}
 	proposal := session.ServiceProposal
 
-	dialogEstablisher := vpn.dialogEstablisherFactory(identity)
-	vpn.dialog, err = dialogEstablisher.CreateDialog(proposal.ProviderContacts[0])
+	dialogEstablisher := manager.dialogEstablisherFactory(identity)
+	manager.dialog, err = dialogEstablisher.CreateDialog(proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
 
-	vpnSession, err := vpn_session.RequestSessionCreate(vpn.dialog, proposal.Id)
+	vpnSession, err := vpn_session.RequestSessionCreate(manager.dialog, proposal.Id)
 	if err != nil {
 		return err
 	}
 
 	vpnConfig, err := openvpn.NewClientConfigFromString(
 		vpnSession.Config,
-		vpn.vpnClientConfigurationPath,
+		manager.vpnClientConfigurationPath,
 	)
 	if err != nil {
 		return err
 	}
 
-	vpnMiddlewares := append(
-		vpn.vpnMiddlewares,
-		bytescount_client.NewMiddleware(vpn.mysteriumClient, session.Id, 1*time.Minute),
-	)
-	vpn.vpnClient = openvpn.NewClient(
+	vpnMiddlewares := []openvpn.ManagementMiddleware{
+		bytescount_client.NewMiddleware(manager.mysteriumClient, session.Id, 1*time.Minute),
+	}
+	manager.vpnClient = openvpn.NewClient(
 		vpnConfig,
-		vpn.runtimeDirectory,
+		manager.runtimeDirectory,
 		vpnMiddlewares...,
 	)
-	if err := vpn.vpnClient.Start(); err != nil {
+	if err := manager.vpnClient.Start(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (vpn *vpnManager) Status() ConnectionStatus {
+func (manager *connectionManager) Status() ConnectionStatus {
 	return ConnectionStatus{}
 }
 
-func (vpn *vpnManager) Disconnect() error {
-	vpn.dialog.Close()
-	vpn.vpnClient.Stop()
+func (manager *connectionManager) Disconnect() error {
+	manager.dialog.Close()
+	manager.vpnClient.Stop()
 	return nil
 }
 
-func (vpn *vpnManager) Wait() error {
-	return vpn.vpnClient.Wait()
+func (manager *connectionManager) Wait() error {
+	return manager.vpnClient.Wait()
 }
