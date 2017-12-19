@@ -42,8 +42,7 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 	if err != nil || response.(*dialogCreateResponse).Reason != 200 {
 		return nil, fmt.Errorf("Dialog creation rejected: %s", err)
 	}
-
-	dialogAddress := nats_discovery.NewAddressNested(contactAddress, string(establisher.myIdentity.Address))
+	dialogAddress := nats_discovery.NewAddressNested(contactAddress, establisher.myIdentity.Address)
 	dialog := &dialog{nats.NewSender(dialogAddress), nats.NewReceiver(dialogAddress)}
 
 	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", contact))

@@ -54,7 +54,7 @@ func (idm *identityManager) GetIdentities() []Identity {
 func (idm *identityManager) GetIdentity(identityString string) (identity Identity, err error) {
 	identityString = strings.ToLower(identityString)
 	for _, identity := range idm.GetIdentities() {
-		if strings.ToLower(string(identity.Address)) == identityString {
+		if strings.ToLower(identity.Address) == identityString {
 			return identity, nil
 		}
 	}

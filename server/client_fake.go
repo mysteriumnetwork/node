@@ -20,7 +20,7 @@ type clientFake struct {
 }
 
 func (client *clientFake) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
-	client.proposalsByProvider[string(proposal.ProviderId)] = proposal
+	client.proposalsByProvider[proposal.ProviderId] = proposal
 	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake node registered: ", proposal)
 
 	return nil
