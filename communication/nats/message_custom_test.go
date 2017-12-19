@@ -24,7 +24,7 @@ func (producer *customMessageProducer) Produce() (messagePtr interface{}) {
 
 func TestMessageCustomSend(t *testing.T) {
 	connection := StartConnectionFake()
-	defer connection.Stop()
+	defer connection.Close()
 
 	sender := &senderNats{
 		connection: connection,
@@ -38,7 +38,7 @@ func TestMessageCustomSend(t *testing.T) {
 
 func TestMessageCustomSendNull(t *testing.T) {
 	connection := StartConnectionFake()
-	defer connection.Stop()
+	defer connection.Close()
 
 	sender := &senderNats{
 		connection: connection,
@@ -69,7 +69,7 @@ func (consumer *customMessageConsumer) Consume(messagePtr interface{}) error {
 
 func TestMessageCustomReceive(t *testing.T) {
 	connection := StartConnectionFake()
-	defer connection.Stop()
+	defer connection.Close()
 
 	receiver := &receiverNats{
 		connection: connection,

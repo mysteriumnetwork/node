@@ -34,7 +34,7 @@ func (producer *customRequestProducer) Produce() (requestPtr interface{}) {
 func TestCustomRequest(t *testing.T) {
 	connection := StartConnectionFake()
 	connection.MockResponse("custom-request", []byte(`{"FieldOut": "RESPONSE"}`))
-	defer connection.Stop()
+	defer connection.Close()
 
 	sender := &senderNats{
 		connection:     connection,
@@ -69,7 +69,7 @@ func (consumer *customRequestConsumer) Consume(requestPtr interface{}) (response
 
 func TestCustomRespond(t *testing.T) {
 	connection := StartConnectionFake()
-	defer connection.Stop()
+	defer connection.Close()
 
 	receiver := &receiverNats{
 		connection: connection,

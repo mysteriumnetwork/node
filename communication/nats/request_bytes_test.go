@@ -27,7 +27,7 @@ func (producer *bytesRequestProducer) Produce() (requestPtr interface{}) {
 func TestBytesRequest(t *testing.T) {
 	connection := StartConnectionFake()
 	connection.MockResponse("bytes-request", []byte("RESPONSE"))
-	defer connection.Stop()
+	defer connection.Close()
 
 	sender := &senderNats{
 		connection:     connection,
@@ -63,7 +63,7 @@ func (consumer *bytesRequestConsumer) Consume(requestPtr interface{}) (responseP
 
 func TestBytesRespond(t *testing.T) {
 	connection := StartConnectionFake()
-	defer connection.Stop()
+	defer connection.Close()
 
 	receiver := &receiverNats{
 		connection: connection,
