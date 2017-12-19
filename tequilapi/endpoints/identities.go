@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"encoding/json"
+	"errors"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/service_discovery/dto"
@@ -20,8 +21,7 @@ type identityCreationDto struct {
 }
 
 type identityRegistrationDto struct {
-	Id         string `json:"id"`
-	Registered bool   `json:"registered"`
+	Registered bool `json:"registered"`
 }
 
 type identitiesApi struct {
@@ -56,40 +56,34 @@ func (endpoint *identitiesApi) Create(writer http.ResponseWriter, request *http.
 		return
 	}
 	id, err := endpoint.idm.CreateNewIdentity(createReq.Password)
-	idDto := identityDto{string(id)}
 	if err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError) // This should never happen
 		return
 	}
 
+	idDto := identityDto{string(id)}
 	utils.WriteAsJson(idDto, writer)
 }
 
-func (endpoint *identitiesApi) Register(writer http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	registerReq, err := toRegisterRequest(request)
+func (endpoint *identitiesApi) Register(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id, registerReq, err := toRegisterRequest(request, params)
 	if err != nil {
 		utils.SendError(writer, err, http.StatusBadRequest)
 		return
 	}
-	errorMap := validateRegistrationRequest(registerReq)
-	if errorMap.HasErrors() {
-		utils.SendValidationErrorMessage(writer, errorMap)
+	err = validateRegistrationRequest(registerReq)
+	if err != nil {
+		utils.SendError(writer, err, 501)
 		return
 	}
 
-	id := dto.Identity(registerReq.Id)
 	err = endpoint.idm.Register(id)
 	if err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
 		return
 	}
 
-	idRegistered := identityRegistrationDto{
-		registerReq.Id, // is a string already
-		true,
-	}
-
-	utils.WriteAsJson(idRegistered, writer)
+	writer.WriteHeader(http.StatusAccepted)
 }
 
 func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
@@ -101,21 +95,29 @@ func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 	return identityCreationReq, nil
 }
 
-func toRegisterRequest(req *http.Request) (id identityDto, err error) {
-	err = json.NewDecoder(req.Body).Decode(&id)
+func toRegisterRequest(
+	req *http.Request, params httprouter.Params) (id dto.Identity, isRegisterReq identityRegistrationDto, err error) {
+	id = dto.Identity(params.ByName("id"))
+	isRegisterReq = identityRegistrationDto{}
+	err = json.NewDecoder(req.Body).Decode(&isRegisterReq)
 	if err != nil {
 		return
 	}
-	return id, nil
+	return
 }
 
-func validateRegistrationRequest(regReq identityDto) (errors *validation.FieldErrorMap) {
-	errors = validation.NewErrorMap()
+func validateRegistrationRequest(regReq identityRegistrationDto) (err error) {
+	if regReq.Registered == false {
+		err = errors.New("Deregistration not supported")
+	}
 	return
 }
 
 func validateCreationRequest(createReq *identityCreationDto) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
+	if len(createReq.Password) == 0 {
+		errors.ForField("password").AddError("required", "Field is required")
+	}
 	return
 }
 

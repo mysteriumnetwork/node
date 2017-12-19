@@ -18,7 +18,7 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 		identityUrl,
 		bytes.NewBufferString(
 			`{
-				"registered": "false"
+				"registered": false
 			}`))
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
@@ -27,6 +27,7 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 	handlerFunc := NewIdentitiesEndpoint(mockIdm).Register
 	handlerFunc(resp, req, nil)
 
+	assert.Equal(t, 501, resp.Code)
 }
 
 func TestRegisterIdentitySuccess(t *testing.T) {
@@ -35,7 +36,7 @@ func TestRegisterIdentitySuccess(t *testing.T) {
 		identityUrl,
 		bytes.NewBufferString(
 			`{
-				"registered": "true"
+				"registered": true
 			}`))
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
@@ -44,6 +45,34 @@ func TestRegisterIdentitySuccess(t *testing.T) {
 	handlerFunc := NewIdentitiesEndpoint(mockIdm).Register
 	handlerFunc(resp, req, nil)
 
+	assert.Equal(t, http.StatusAccepted, resp.Code)
+
+}
+
+func TestCreateNewIdentityNoPassword(t *testing.T) {
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/identities",
+		bytes.NewBufferString(
+			`{
+                "password": ""
+            }`))
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+
+	mockIdm := identity.NewIdentityManagerFake()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).Create
+	handlerFunc(resp, req, nil)
+
+	assert.JSONEq(
+		t,
+		`{
+            "message" : "validation_error",
+            "errors" : {
+                "password" : [ {"code" : "required" , "message" : "Field is required" } ]
+            }
+        }`, resp.Body.String())
 }
 
 func TestCreateNewIdentity(t *testing.T) {
