@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,7 +32,7 @@ func Test_CreateNewIdentity(t *testing.T) {
 	identity, err := manager.CreateNewIdentity("")
 
 	assert.NoError(t, err)
-	assert.Equal(t, identity, dto.Identity("0x000000000000000000000000000000000000bEEF"))
+	assert.Equal(t, identity, FromAddress("0x000000000000000000000000000000000000bEEF"))
 	assert.Len(t, manager.keystoreManager.Accounts(), 2)
 }
 
@@ -42,7 +41,7 @@ func Test_CreateNewIdentityError(t *testing.T) {
 	identity, err := im.CreateNewIdentity("")
 
 	assert.EqualError(t, err, "identity create failed")
-	assert.Empty(t, identity)
+	assert.Empty(t, identity.Address)
 }
 
 func Test_GetIdentities(t *testing.T) {
@@ -50,8 +49,8 @@ func Test_GetIdentities(t *testing.T) {
 
 	assert.Equal(
 		t,
-		[]dto.Identity{
-			dto.Identity("0x000000000000000000000000000000000000000A"),
+		[]Identity{
+			FromAddress("0x000000000000000000000000000000000000000A"),
 		},
 		manager.GetIdentities(),
 	)
@@ -64,7 +63,7 @@ func Test_GetIdentity(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(
 		t,
-		dto.Identity("0x000000000000000000000000000000000000000A"),
+		FromAddress("0x000000000000000000000000000000000000000A"),
 		identity,
 	)
 
@@ -72,7 +71,7 @@ func Test_GetIdentity(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(
 		t,
-		dto.Identity("0x000000000000000000000000000000000000000A"),
+		FromAddress("0x000000000000000000000000000000000000000A"),
 		identity,
 	)
 

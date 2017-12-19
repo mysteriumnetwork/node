@@ -27,7 +27,7 @@ func TestServiceProposalSerialize(t *testing.T) {
 		ServiceDefinition: TestServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     TestPaymentMethod{},
-		ProviderId:        Identity("node"),
+		ProviderId:        "node",
 		ProviderContacts:  []Contact{},
 	}
 
