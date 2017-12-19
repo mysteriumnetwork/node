@@ -16,11 +16,11 @@ type DialogEstablisherFactory func(identity dto.Identity) communication.DialogEs
 type vpnManager struct {
 	//these are passed on creation
 	mysteriumClient            server.Client
-	dialogEstablisherFactory   func(identity dto.Identity) communication.DialogEstablisher
+	dialogEstablisherFactory   DialogEstablisherFactory
 	vpnMiddlewares             []openvpn.ManagementMiddleware
 	runtimeDirectory           string
 	vpnClientConfigurationPath string
-	//these are created by Connect at runtime
+	//these are populated by Connect at runtime
 	dialog    communication.Dialog
 	vpnClient *openvpn.Client
 }

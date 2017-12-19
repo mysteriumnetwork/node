@@ -3,8 +3,13 @@ package command_run
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
+	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/communication/nats_dialog"
+	"github.com/mysterium/node/communication/nats_discovery"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
+	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	"github.com/mysterium/node/tequilapi/endpoints"
 )
@@ -14,26 +19,52 @@ type CommandRun struct {
 
 	dialogEstablisherFactory client_connection.DialogEstablisherFactory
 
+	//find interface in ethereum?
+	keystore *keystore.KeyStore
+
+	identityManager identity.IdentityManagerInterface
+
+	connectionManager client_connection.Manager
+
 	httpApiServer tequilapi.ApiServer
 }
 
-func (cmd *CommandRun) Run(options CommandOptions) (err error) {
+func NewCommand(options CommandOptions) (*CommandRun, error) {
+	nats_discovery.Bootstrap()
+	openvpn.Bootstrap()
 
-	router := tequilapi.NewApiRouter()
+	mysteriumClient := server.NewClient()
 
-	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
-	idm := identity.NewIdentityManager(keystoreInstance)
-	endpoints.RegisterIdentitiesEndpoint(router, idm)
-
-	vpnManager := client_connection.NewVpnManager(cmd.MysteriumClient, cmd.dialogEstablisherFactory, options.DirectoryRuntime)
-	endpoints.RegisterConnectionEndpoint(router, vpnManager)
-
-	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
-	if err != nil {
-		return err
+	dialogEstablisherFactory := func(identity dto.Identity) communication.DialogEstablisher {
+		return nats_dialog.NewDialogEstablisher(identity)
 	}
 
-	return nil
+	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+
+	identityManager := identity.NewIdentityManager(keystoreInstance)
+
+	vpnManager := client_connection.NewVpnManager(mysteriumClient, dialogEstablisherFactory, options.DirectoryRuntime)
+
+	httpApiServer, err := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CommandRun{
+		mysteriumClient,
+		dialogEstablisherFactory,
+		keystoreInstance,
+		identityManager,
+		vpnManager,
+		httpApiServer,
+	}, nil
+}
+
+func (cmd *CommandRun) Run() {
+	router := tequilapi.NewApiRouter()
+	endpoints.RegisterIdentitiesEndpoint(router, cmd.identityManager)
+	endpoints.RegisterConnectionEndpoint(router, cmd.connectionManager)
+	cmd.httpApiServer.StartServing(router)
 }
 
 func (cmd *CommandRun) Wait() error {

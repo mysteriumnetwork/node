@@ -43,21 +43,19 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 		return errors.New("Failed to get original IP: " + err.Error())
 	}
 
-	cmd.clientCommand = command_client.NewCommand(
-		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
-	)
+	cmd.clientCommand, err = command_client.NewCommand(command_client.CommandOptions{
+		DirectoryRuntime: options.DirectoryRuntime,
+	})
+
+	if err != nil {
+		return errors.New("Failed to create client" + err.Error())
+	}
 
 	nodeProvider.WithEachNode(func(nodeKey string) {
 		cmd.resultWriter.NodeStart(nodeKey)
 		cmd.ipCheckWaiter.Add(1)
 
-		err = cmd.clientCommand.Run(command_client.CommandOptions{
-			DirectoryRuntime: options.DirectoryRuntime,
-		})
-		if err != nil {
-			cmd.resultWriter.NodeError("Client starting error", err)
-			return
-		}
+		//TODO here we need to make tequila api call with connect to node by key
 
 		go cmd.checkClientHandleTimeout()
 

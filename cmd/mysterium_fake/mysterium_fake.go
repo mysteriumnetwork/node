@@ -28,7 +28,15 @@ func main() {
 	serverCommand.NatService = nat.NewServiceFake()
 	runServer(serverCommand, waiter)
 
-	clientCommand := command_client.NewCommand()
+	clientCommand, err := command_client.NewCommand(command_client.CommandOptions{
+		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,
+	})
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Client creation error: ", err)
+		os.Exit(1)
+	}
+	//TODO refactor this internal variable override
 	clientCommand.MysteriumClient = mysteriumClient
 	runClient(clientCommand, waiter)
 
@@ -58,19 +66,13 @@ func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup)
 }
 
 func runClient(clientCommand *command_client.CommandRun, waiter *sync.WaitGroup) {
-	err := clientCommand.Run(command_client.CommandOptions{
-		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,
-	})
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Client starting error: ", err)
-		os.Exit(1)
-	}
+	clientCommand.Run()
 
 	waiter.Add(1)
 	go func() {
 		defer waiter.Done()
 
-		if err = clientCommand.Wait(); err != nil {
+		if err := clientCommand.Wait(); err != nil {
 			fmt.Fprintln(os.Stderr, "Client stopped with error: ", err)
 			os.Exit(1)
 		}

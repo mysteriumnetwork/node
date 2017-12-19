@@ -14,10 +14,11 @@ type tequilapiTestSuite struct {
 
 func (testSuite *tequilapiTestSuite) SetupSuite() {
 	var err error
-	testSuite.server, err = StartNewServer("localhost", 0, NewApiRouter())
+	testSuite.server, err = NewServer("localhost", 0)
 	if err != nil {
 		testSuite.T().FailNow()
 	}
+	testSuite.server.StartServing(NewApiRouter())
 	testSuite.client = NewTestClient(testSuite.T(), testSuite.server.Port())
 }
 
