@@ -34,10 +34,10 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 			return &responseInvalidIdentity, nil
 		}
 
-		dialog := waiter.newDialog(request.IdentityId)
+		contactDialog := waiter.newDialogToContact(request.IdentityId)
 		log.Info(waiterLogPrefix, fmt.Sprintf("Dialog accepted from: '%s'", request.IdentityId))
 
-		dialog.Respond(sessionCreateConsumer)
+		contactDialog.Respond(sessionCreateConsumer)
 
 		return &responseOK, nil
 	}
@@ -48,12 +48,12 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 	return subscribeError
 }
 
-func (waiter *dialogWaiter) newDialog(identity dto.Identity) *dialog {
-	dialogAddress := nats_discovery.NewAddressNested(waiter.myAddress, string(identity))
+func (waiter *dialogWaiter) newDialogToContact(contactIdentity dto.Identity) *dialog {
+	subTopic := waiter.myAddress.GetTopic() + "." + string(contactIdentity)
 
 	return &dialog{
-		Sender:   nats.NewSender(dialogAddress.GetConnection(), dialogAddress.GetTopic()),
-		Receiver: nats.NewReceiver(dialogAddress.GetConnection(), dialogAddress.GetTopic()),
+		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), subTopic),
+		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), subTopic),
 	}
 }
 

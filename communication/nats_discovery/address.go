@@ -33,14 +33,6 @@ func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
 	return NewAddress("127.0.0.1", 4222, contactNats.Topic), nil
 }
 
-func NewAddressNested(address *NatsAddress, subTopic string) *NatsAddress {
-	return &NatsAddress{
-		servers:    address.servers,
-		topic:      address.topic + "." + subTopic,
-		connection: address.connection,
-	}
-}
-
 func NewAddressWithConnection(connection nats.Connection, topic string) *NatsAddress {
 	return &NatsAddress{
 		topic:      topic,

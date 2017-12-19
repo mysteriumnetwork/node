@@ -39,7 +39,21 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 			return nats_discovery.NewAddressWithConnection(connection, "provider1"), nil
 		},
 	}
-	dialog, err := establisher.CreateDialog(dto_discovery.Contact{})
+	dialogInstance, err := establisher.CreateDialog(dto_discovery.Contact{})
+	defer dialogInstance.Close()
 	assert.NoError(t, err)
-	assert.NotNil(t, dialog)
+	assert.NotNil(t, dialogInstance)
+
+	dialogNats, ok := dialogInstance.(*dialog)
+	assert.True(t, ok)
+	assert.Equal(
+		t,
+		nats.NewSender(connection, "provider1.consumer1"),
+		dialogNats.Sender,
+	)
+	assert.Equal(
+		t,
+		nats.NewReceiver(connection, "provider1.consumer1"),
+		dialogNats.Receiver,
+	)
 }
