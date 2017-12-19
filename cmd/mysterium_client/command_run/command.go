@@ -14,12 +14,8 @@ import (
 )
 
 type CommandRun struct {
+	//TODO this must disappear
 	MysteriumClient server.Client
-
-	dialogEstablisherFactory client_connection.DialogEstablisherFactory
-
-	//find interface in ethereum?
-	keystore *keystore.KeyStore
 
 	identityManager identity.IdentityManagerInterface
 
@@ -51,8 +47,6 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 
 	return &CommandRun{
 		mysteriumClient,
-		dialogEstablisherFactory,
-		keystoreInstance,
 		identityManager,
 		vpnManager,
 		httpApiServer,
