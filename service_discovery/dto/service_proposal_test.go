@@ -5,7 +5,6 @@ import (
 	"github.com/mysterium/node/money"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/mysterium/node/identity"
 )
 
 type TestServiceDefinition struct{}
