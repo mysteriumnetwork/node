@@ -1,9 +1,9 @@
 package identity
 
 import (
+	"testing"
 	"github.com/stretchr/testify/assert"
 	"os"
-	"testing"
 )
 
 var file = "/tmp/cache.json"

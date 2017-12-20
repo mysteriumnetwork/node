@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
-	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+    "github.com/mysterium/node/identity"
 )
 
 type fakeManager struct {

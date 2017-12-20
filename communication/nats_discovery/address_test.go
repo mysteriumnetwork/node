@@ -1,11 +1,11 @@
 package nats_discovery
 
 import (
-	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 	"testing"
+    "github.com/mysterium/node/identity"
 )
 
 func TestNewAddress(t *testing.T) {
@@ -16,25 +16,6 @@ func TestNewAddress(t *testing.T) {
 		&NatsAddress{
 			servers: []string{"nats://far-server:1234"},
 			topic:   "topic",
-		},
-		address,
-	)
-}
-
-func TestNewAddressNested(t *testing.T) {
-	parentAddress := &NatsAddress{
-		servers:    []string{"nats://far-server:1234"},
-		topic:      "topic",
-		connection: &nats.Conn{},
-	}
-	address := NewAddressNested(parentAddress, "subtopic")
-
-	assert.Equal(
-		t,
-		&NatsAddress{
-			servers:    []string{"nats://far-server:1234"},
-			topic:      "topic.subtopic",
-			connection: parentAddress.connection,
 		},
 		address,
 	)
