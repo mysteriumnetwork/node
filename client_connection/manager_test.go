@@ -1,6 +1,7 @@
 package client_connection
 
 import (
+	"errors"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
@@ -18,35 +19,48 @@ type test_context struct {
 	suite.Suite
 	connManager         *connectionManager
 	fakeDiscoveryClient server.Client
+	fakeOpenVpn         *fake_openvpn_client
 }
 
-func (tc *test_context) SetupSuite() {
+func (tc *test_context) SetupTest() {
 
 	tc.fakeDiscoveryClient = server.NewClientFake()
+
+	serviceProposal := service_discovery.NewServiceProposal(identity.FromAddress("vpn-node-1"), dto.Contact{})
+	tc.fakeDiscoveryClient.NodeRegister(serviceProposal)
 
 	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
 		return &fake_dialog{}
 	}
 
+	tc.fakeOpenVpn = &fake_openvpn_client{}
 	fakeVpnClientFactory := func(vpnSession *session.VpnSession, session *mysterium_api_client.Session) (openvpn.Client, error) {
-		return &fake_openvpn_client{}, nil
+		return tc.fakeOpenVpn, nil
 	}
 
 	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogEstablisherFactory, fakeVpnClientFactory)
 }
 
-func (tc *test_context) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
-	//given
-	serviceProposal := service_discovery.NewServiceProposal(identity.FromAddress("vpn-node-1"), dto.Contact{})
-	tc.fakeDiscoveryClient.NodeRegister(serviceProposal)
-	//when
-	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
-	//then
-	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), ConnectionStatus{CONNECTED, "vpn-node-1-session"}, tc.connManager.Status())
+func (tc *test_context) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
+	assert.Equal(tc.T(), ConnectionStatus{NOT_CONNECTED, "", nil}, tc.connManager.Status())
 }
 
-func (tc *test_context) TearDownSuite() {
+func (tc *test_context) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet() {
+	fatalVpnError := errors.New("fatal connection error")
+	tc.fakeOpenVpn.onConnectReturnError = fatalVpnError
+
+	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1"))
+	assert.Equal(tc.T(), ConnectionStatus{NOT_CONNECTED, "", fatalVpnError}, tc.connManager.Status())
+}
+
+func (tc *test_context) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
+	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
+
+	assert.NoError(tc.T(), err)
+	assert.Equal(tc.T(), ConnectionStatus{CONNECTED, "vpn-node-1-session", nil}, tc.connManager.Status())
+}
+
+func (tc *test_context) TearDownTest() {
 
 }
 
@@ -55,10 +69,11 @@ func TestConnectionManagerSuite(t *testing.T) {
 }
 
 type fake_openvpn_client struct {
+	onConnectReturnError error
 }
 
 func (foc *fake_openvpn_client) Start() error {
-	return nil
+	return foc.onConnectReturnError
 }
 
 func (foc *fake_openvpn_client) Wait() error {

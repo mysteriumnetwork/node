@@ -20,6 +20,7 @@ var (
 type ConnectionStatus struct {
 	State     State
 	SessionId string
+	LastError error
 }
 
 type Manager interface {

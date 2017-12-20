@@ -31,37 +31,40 @@ func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEs
 		vpnClientFactory,
 		nil,
 		nil,
-		ConnectionStatus{NOT_CONNECTED, ""},
+		statusNotConnected(),
 	}
 }
 
 func (manager *connectionManager) Connect(identity identity.Identity, NodeKey string) error {
-	manager.status = ConnectionStatus{NOT_CONNECTED, ""}
+	manager.status = statusConnecting()
 	session, err := manager.mysteriumClient.SessionCreate(NodeKey)
 	if err != nil {
+		manager.status = statusError(err)
 		return err
 	}
-	manager.status = ConnectionStatus{NEGOTIATING, session.Id}
 
 	proposal := session.ServiceProposal
 
 	dialogEstablisher := manager.dialogEstablisherFactory(identity)
 	manager.dialog, err = dialogEstablisher.CreateDialog(proposal.ProviderContacts[0])
 	if err != nil {
+		manager.status = statusError(err)
 		return err
 	}
 
 	vpnSession, err := vpn_session.RequestSessionCreate(manager.dialog, proposal.Id)
 	if err != nil {
+		manager.status = statusError(err)
 		return err
 	}
 
 	manager.vpnClient, err = manager.vpnClientFactory(vpnSession, &session)
 
 	if err := manager.vpnClient.Start(); err != nil {
+		manager.status = statusError(err)
 		return err
 	}
-	manager.status = ConnectionStatus{CONNECTED, session.Id}
+	manager.status = statusConnected(session.Id)
 	return nil
 }
 
@@ -77,4 +80,20 @@ func (manager *connectionManager) Disconnect() error {
 
 func (manager *connectionManager) Wait() error {
 	return manager.vpnClient.Wait()
+}
+
+func statusError(err error) ConnectionStatus {
+	return ConnectionStatus{NOT_CONNECTED, "", err}
+}
+
+func statusConnecting() ConnectionStatus {
+	return ConnectionStatus{NEGOTIATING, "", nil}
+}
+
+func statusConnected(sessionId string) ConnectionStatus {
+	return ConnectionStatus{CONNECTED, sessionId, nil}
+}
+
+func statusNotConnected() ConnectionStatus {
+	return ConnectionStatus{NOT_CONNECTED, "", nil}
 }
