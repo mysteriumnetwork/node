@@ -83,17 +83,17 @@ func (manager *connectionManager) Wait() error {
 }
 
 func statusError(err error) ConnectionStatus {
-	return ConnectionStatus{NOT_CONNECTED, "", err}
+	return ConnectionStatus{NotConnected, "", err}
 }
 
 func statusConnecting() ConnectionStatus {
-	return ConnectionStatus{NEGOTIATING, "", nil}
+	return ConnectionStatus{Connecting, "", nil}
 }
 
 func statusConnected(sessionId string) ConnectionStatus {
-	return ConnectionStatus{CONNECTED, sessionId, nil}
+	return ConnectionStatus{Connected, sessionId, nil}
 }
 
 func statusNotConnected() ConnectionStatus {
-	return ConnectionStatus{NOT_CONNECTED, "", nil}
+	return ConnectionStatus{NotConnected, "", nil}
 }

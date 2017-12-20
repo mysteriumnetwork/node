@@ -43,7 +43,7 @@ func (tc *test_context) SetupTest() {
 }
 
 func (tc *test_context) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
-	assert.Equal(tc.T(), ConnectionStatus{NOT_CONNECTED, "", nil}, tc.connManager.Status())
+	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
 }
 
 func (tc *test_context) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet() {
@@ -52,7 +52,7 @@ func (tc *test_context) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet(
 	tc.fakeOpenVpn.resumeStart()
 
 	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1"))
-	assert.Equal(tc.T(), ConnectionStatus{NOT_CONNECTED, "", fatalVpnError}, tc.connManager.Status())
+	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", fatalVpnError}, tc.connManager.Status())
 }
 
 func (tc *test_context) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
@@ -61,7 +61,7 @@ func (tc *test_context) TestWhenManagerMadeConnectionStatusReturnsConnectedState
 	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
 
 	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), ConnectionStatus{CONNECTED, "vpn-node-1-session", nil}, tc.connManager.Status())
+	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-node-1-session", nil}, tc.connManager.Status())
 }
 
 func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() {
@@ -73,7 +73,7 @@ func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() 
 	}()
 	//wait for go function actually start, to avoid race condition, when we query Status before Connect call even begins.
 	wg.Wait()
-	assert.Equal(tc.T(), ConnectionStatus{NEGOTIATING, "", nil}, tc.connManager.Status())
+	assert.Equal(tc.T(), ConnectionStatus{Connecting, "", nil}, tc.connManager.Status())
 	tc.fakeOpenVpn.resumeStart()
 }
 

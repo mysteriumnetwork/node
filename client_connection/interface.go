@@ -8,13 +8,13 @@ import (
 type State string
 
 const (
-	NOT_CONNECTED = State("NOT_CONNECTED")
-	NEGOTIATING   = State("NEGOTIATING")
-	CONNECTED     = State("CONNECTED")
+	NotConnected = State("NotConnected")
+	Connecting   = State("Connecting")
+	Connected    = State("Connected")
 )
 
 var (
-	ALREADY_CONNECTED = errors.New("already connected")
+	AlreadyConnectedError = errors.New("already connected")
 )
 
 type ConnectionStatus struct {
