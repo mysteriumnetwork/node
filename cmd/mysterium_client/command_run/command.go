@@ -19,7 +19,7 @@ import (
 )
 
 type CommandRun struct {
-	//TODO this must disappear
+	//TODO this must disappear or become a private field
 	MysteriumClient server.Client
 
 	identityManager identity.IdentityManagerInterface
@@ -43,25 +43,7 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 		return nats_dialog.NewDialogEstablisher(identity)
 	}
 
-	vpnClientFactory := func(vpnSession *session.VpnSession, session *dto.Session) (openvpn.Client, error) {
-		vpnConfig, err := openvpn.NewClientConfigFromString(
-			vpnSession.Config,
-			filepath.Join(options.DirectoryRuntime, "client.ovpn"),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		vpnMiddlewares := []openvpn.ManagementMiddleware{
-			bytescount_client.NewMiddleware(mysteriumClient, session.Id, 1*time.Minute),
-		}
-		return openvpn.NewClient(
-			vpnConfig,
-			options.DirectoryRuntime,
-			vpnMiddlewares...,
-		), nil
-
-	}
+	vpnClientFactory := configureVpnClientFactory(mysteriumClient, options.DirectoryRuntime)
 
 	vpnManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
@@ -91,4 +73,26 @@ func (cmd *CommandRun) Wait() error {
 
 func (cmd *CommandRun) Kill() {
 	cmd.httpApiServer.Stop()
+}
+
+func configureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntimeDirectory string) client_connection.VpnClientFactory {
+	return func(vpnSession *session.VpnSession, session *dto.Session) (openvpn.Client, error) {
+		vpnConfig, err := openvpn.NewClientConfigFromString(
+			vpnSession.Config,
+			filepath.Join(vpnClientRuntimeDirectory, "client.ovpn"),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		vpnMiddlewares := []openvpn.ManagementMiddleware{
+			bytescount_client.NewMiddleware(mysteriumApiClient, session.Id, 1*time.Minute),
+		}
+		return openvpn.NewClient(
+			vpnConfig,
+			vpnClientRuntimeDirectory,
+			vpnMiddlewares...,
+		), nil
+
+	}
 }
