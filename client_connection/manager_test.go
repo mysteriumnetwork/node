@@ -12,6 +12,7 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"sync"
 	"testing"
 )
 
@@ -33,7 +34,7 @@ func (tc *test_context) SetupTest() {
 		return &fake_dialog{}
 	}
 
-	tc.fakeOpenVpn = &fake_openvpn_client{}
+	tc.fakeOpenVpn = &fake_openvpn_client{make(chan int, 1), nil}
 	fakeVpnClientFactory := func(vpnSession *session.VpnSession, session *mysterium_api_client.Session) (openvpn.Client, error) {
 		return tc.fakeOpenVpn, nil
 	}
@@ -48,16 +49,32 @@ func (tc *test_context) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
 func (tc *test_context) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet() {
 	fatalVpnError := errors.New("fatal connection error")
 	tc.fakeOpenVpn.onConnectReturnError = fatalVpnError
+	tc.fakeOpenVpn.resumeStart()
 
 	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1"))
 	assert.Equal(tc.T(), ConnectionStatus{NOT_CONNECTED, "", fatalVpnError}, tc.connManager.Status())
 }
 
 func (tc *test_context) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
+	tc.fakeOpenVpn.resumeStart()
+
 	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
 
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), ConnectionStatus{CONNECTED, "vpn-node-1-session", nil}, tc.connManager.Status())
+}
+
+func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		wg.Done()
+		tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
+	}()
+	//wait for go function actually start, to avoid race condition, when we query Status before Connect call even begins.
+	wg.Wait()
+	assert.Equal(tc.T(), ConnectionStatus{NEGOTIATING, "", nil}, tc.connManager.Status())
+	tc.fakeOpenVpn.resumeStart()
 }
 
 func (tc *test_context) TearDownTest() {
@@ -69,10 +86,16 @@ func TestConnectionManagerSuite(t *testing.T) {
 }
 
 type fake_openvpn_client struct {
+	connectionDelay      chan int
 	onConnectReturnError error
 }
 
+func (foc *fake_openvpn_client) resumeStart() {
+	foc.connectionDelay <- 1
+}
+
 func (foc *fake_openvpn_client) Start() error {
+	<-foc.connectionDelay
 	return foc.onConnectReturnError
 }
 
