@@ -38,7 +38,7 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 	}
 	defer nodeProvider.Close()
 
-	cmd.ipOriginal, err = cmd.IpifyClient.GetIp()
+	cmd.ipOriginal, err = cmd.IpifyClient.GetOutboundIP()
 	if err != nil {
 		return errors.New("Failed to get original IP: " + err.Error())
 	}
@@ -46,8 +46,6 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 	cmd.clientCommand = command_client.NewCommand(
 		state_client.NewMiddleware(cmd.checkClientIpWhenConnected),
 	)
-	cmd.clientCommand.Output = cmd.Output
-	cmd.clientCommand.OutputError = cmd.OutputError
 
 	nodeProvider.WithEachNode(func(nodeKey string) {
 		cmd.resultWriter.NodeStart(nodeKey)
@@ -74,7 +72,7 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 
 func (cmd *CommandRun) checkClientIpWhenConnected(state state_client.State) error {
 	if state == state_client.STATE_CONNECTED {
-		ipForwarded, err := cmd.IpifyClient.GetIp()
+		ipForwarded, err := cmd.IpifyClient.GetOutboundIP()
 		if err != nil {
 			cmd.resultWriter.NodeError("Forwarded IP not detected", err)
 			cmd.ipCheckWaiter.Done()
@@ -101,7 +99,7 @@ func (cmd *CommandRun) checkClientHandleTimeout() {
 }
 
 func (cmd *CommandRun) checkClientIpWhenDisconnected() {
-	ipForwarded, err := cmd.IpifyClient.GetIp()
+	ipForwarded, err := cmd.IpifyClient.GetOutboundIP()
 	if err != nil {
 		cmd.resultWriter.NodeError("Disconnect IP not detected", err)
 		return

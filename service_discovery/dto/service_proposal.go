@@ -25,7 +25,7 @@ type ServiceProposal struct {
 	PaymentMethod PaymentMethod `json:"payment_method"`
 
 	// Unique identifier of a provider
-	ProviderId Identity `json:"provider_id"`
+	ProviderId string `json:"provider_id"`
 
 	// Communication methods possible
 	ProviderContacts []Contact `json:"provider_contacts"`
@@ -134,7 +134,7 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 	genericProposal.Id = jsonData.Id
 	genericProposal.Format = jsonData.Format
 	genericProposal.ServiceType = jsonData.ServiceType
-	genericProposal.ProviderId = Identity(jsonData.ProviderId)
+	genericProposal.ProviderId = jsonData.ProviderId
 	genericProposal.PaymentMethodType = jsonData.PaymentMethodType
 
 	// run the service definition implementation from our registry

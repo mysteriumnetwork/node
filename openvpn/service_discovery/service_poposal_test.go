@@ -2,7 +2,7 @@ package service_discovery
 
 import (
 	"encoding/json"
-	"github.com/mysterium/node/communication/nats"
+	"github.com/mysterium/node/communication/nats_discovery"
 	"github.com/mysterium/node/openvpn"
 	dto_openvpn "github.com/mysterium/node/openvpn/service_discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	nats.Bootstrap()
+	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 }
 
@@ -38,7 +38,7 @@ func TestServiceProposalUnserialize(t *testing.T) {
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
-		ProviderId:        dto_discovery.Identity("node"),
+		ProviderId:        "node",
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
 	assert.Equal(t, expected, actual)
@@ -119,7 +119,7 @@ func TestServiceProposalSerialize(t *testing.T) {
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
-		ProviderId:        dto_discovery.Identity("node"),
+		ProviderId:        "node",
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
 
