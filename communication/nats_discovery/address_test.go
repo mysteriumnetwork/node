@@ -25,7 +25,7 @@ func TestNewAddress(t *testing.T) {
 func TestNewAddressForIdentity(t *testing.T) {
 	identity := identity.FromAddress("provider1")
 	ipifyClient := ipify.NewClient()
-	address := NewAddressForIdentity(identity, ipifyClient)
+	address, _ := NewAddressForIdentity(identity, ipifyClient)
 
 	natsBindIp, _ := ipifyClient.GetOutboundIP()
 

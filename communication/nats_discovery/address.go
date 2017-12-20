@@ -18,12 +18,12 @@ func NewAddress(server string, port int, topic string) *NatsAddress {
 	}
 }
 
-func NewAddressForIdentity(identity identity.Identity, ipifyClient ipify.Client) *NatsAddress {
+func NewAddressForIdentity(identity identity.Identity, ipifyClient ipify.Client) (*NatsAddress, error) {
 	ipToBind, err := ipifyClient.GetOutboundIP()
 	if err != nil {
-		fmt.Errorf("failed to get outbound IP for NATS")
+		return nil, fmt.Errorf("failed to get NATS server IP address")
 	}
-	return NewAddress(ipToBind, 4222, identity.Address)
+	return NewAddress(ipToBind, 4222, identity.Address), nil
 }
 
 func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
