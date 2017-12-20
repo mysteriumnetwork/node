@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Usage example:
+#> echo "source `pwd`/bin/aliases" >> ~/.bashrc && source ~/.bashrc
+#
+#> ln -s `pwd`/bin/aliases ~/.zsh.after/mysterium.zsh && source ~/.zshrc
+
+alias myst-home="cd $GOPATH/src/github.com/mysterium/node"
+alias myst="myst-home"
+
+alias myst-gateway="myst-home && docker-compose up gateway"
+alias myst-nats="myst-gateway"
+
+alias myst-client="myst-home && bin/client_build && bin/client_run -node `whoami`"
+alias myst-server="myst-home && bin/server_build && bin/server_run -node `whoami`"
+alias myst-fake="myst-home && bin/fake_build && bin/fake_run"
+alias myst-monitor="myst-home && bin/monitor_build && bin/monitor_run"

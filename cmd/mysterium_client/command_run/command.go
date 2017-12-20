@@ -1,48 +1,47 @@
 package command_run
 
 import (
-	"encoding/json"
-	"errors"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/bytescount_client"
+	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/communication"
+    "github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"io"
-	"strconv"
+	"github.com/mysterium/node/tequilapi"
+	"github.com/mysterium/node/tequilapi/endpoints"
 	"time"
 )
 
 type CommandRun struct {
-	Output      io.Writer
-	OutputError io.Writer
-
 	MysteriumClient server.Client
 
-	CommunicationClientFactory func(identity dto_discovery.Identity) communication.Client
-	communicationClient        communication.Client
+	DialogEstablisherFactory func(identity identity.Identity) communication.DialogEstablisher
+	dialog                   communication.Dialog
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnClient      *openvpn.Client
+
+	httpApiServer tequilapi.ApiServer
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	consumerId := dto_discovery.Identity("consumer1")
+	consumerId := identity.FromAddress("consumer1")
 
 	session, err := cmd.MysteriumClient.SessionCreate(options.NodeKey)
 	if err != nil {
 		return err
 	}
-
-	cmd.communicationClient = cmd.CommunicationClientFactory(consumerId)
 	proposal := session.ServiceProposal
-	sender, _, err := cmd.communicationClient.CreateDialog(proposal.ProviderContacts[0].Definition)
+
+	dialogEstablisher := cmd.DialogEstablisherFactory(consumerId)
+	cmd.dialog, err = dialogEstablisher.CreateDialog(proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
 
-	vpnSession, err := getVpnSession(sender, strconv.Itoa(proposal.Id))
+	vpnSession, err := vpn_session.RequestSessionCreate(cmd.dialog, proposal.Id)
 	if err != nil {
 		return err
 	}
@@ -68,34 +67,28 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
+	router := tequilapi.NewApiRouter()
+
+	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	idm := identity.NewIdentityManager(keystoreInstance)
+	endpoints.RegisterIdentitiesEndpoint(router, idm)
+
+	endpoints.RegisterConnectionEndpoint(router, client_connection.NewManager())
+
+	cmd.httpApiServer, err = tequilapi.StartNewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (cmd *CommandRun) Wait() error {
-	return cmd.vpnClient.Wait()
+	return cmd.httpApiServer.Wait()
 }
 
 func (cmd *CommandRun) Kill() {
-	cmd.communicationClient.Stop()
+	cmd.dialog.Close()
 	cmd.vpnClient.Stop()
-}
-
-func getVpnSession(sender communication.Sender, proposalId string) (session vpn_session.VpnSession, err error) {
-	sessionJson, err := sender.Request(communication.SESSION_CREATE, proposalId)
-	if err != nil {
-		return
-	}
-
-	var response vpn_session.SessionCreateResponse
-
-	err = json.Unmarshal([]byte(sessionJson), &response)
-	if err != nil {
-		return
-	}
-
-	if response.Success == false {
-		return session, errors.New(response.Message)
-	}
-
-	return response.Session, nil
+	cmd.httpApiServer.Stop()
 }

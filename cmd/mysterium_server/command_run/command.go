@@ -1,8 +1,9 @@
 package command_run
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/communication/nats"
+    "github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -24,15 +25,33 @@ type CommandRun struct {
 	MysteriumClient server.Client
 	NatService      nat.NATService
 
-	CommunicationServerFactory func(identity dto_discovery.Identity) communication.Server
-	communicationServer        communication.Server
+	DialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
+	dialogWaiter        communication.DialogWaiter
+
+	SessionManager session.ManagerInterface
 
 	vpnMiddlewares []openvpn.ManagementMiddleware
 	vpnServer      *openvpn.Server
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	providerId := dto_discovery.Identity(options.NodeKey)
+	ks := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	identityHandler := identity.NewNodeIdentityHandler(ks, options.DirectoryKeystore)
+
+	providerId, err := identityHandler.Select(options.NodeKey)
+	if err != nil {
+		providerId, err = identityHandler.Create()
+		if err != nil {
+			return err
+		}
+
+		if err := cmd.MysteriumClient.RegisterIdentity(providerId); err != nil {
+			return err
+		}
+	}
+
+	var providerContact dto_discovery.Contact
+	cmd.dialogWaiter, providerContact = cmd.DialogWaiterFactory(providerId)
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
 	vpnServerIp, err := cmd.IpifyClient.GetOutboundIP()
@@ -53,16 +72,11 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	proposal := service_discovery.NewServiceProposal(
-		providerId,
-		nats.NewContact(providerId),
-	)
+	proposal := service_discovery.NewServiceProposal(providerId, providerContact)
 
-	sessionResponseHandler := vpn_session.CreateResponseHandler{
-		ProposalId: proposal.Id,
-		SessionManager: &session.Manager{
-			Generator: &session.Generator{},
-		},
+	sessionCreateConsumer := &vpn_session.SessionCreateConsumer{
+		CurrentProposalId: proposal.Id,
+		SessionManager:    cmd.SessionManager,
 		ClientConfigFactory: func() *openvpn.ClientConfig {
 			return openvpn.NewClientConfig(
 				vpnServerIp,
@@ -73,12 +87,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 			)
 		},
 	}
-	handleDialog := func(sender communication.Sender, receiver communication.Receiver) {
-		receiver.Respond(communication.SESSION_CREATE, sessionResponseHandler.Handle)
-	}
-
-	cmd.communicationServer = cmd.CommunicationServerFactory(providerId)
-	if err = cmd.communicationServer.ServeDialogs(handleDialog); err != nil {
+	if err = cmd.dialogWaiter.ServeDialogs(sessionCreateConsumer); err != nil {
 		return err
 	}
 
@@ -115,6 +124,6 @@ func (cmd *CommandRun) Wait() error {
 
 func (cmd *CommandRun) Kill() {
 	cmd.vpnServer.Stop()
-	cmd.communicationServer.Stop()
+	cmd.dialogWaiter.Stop()
 	cmd.NatService.Stop()
 }
