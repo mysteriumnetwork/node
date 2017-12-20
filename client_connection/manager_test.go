@@ -77,10 +77,6 @@ func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() 
 	tc.fakeOpenVpn.resumeStart()
 }
 
-func (tc *test_context) TearDownTest() {
-
-}
-
 func TestConnectionManagerSuite(t *testing.T) {
 	suite.Run(t, new(test_context))
 }

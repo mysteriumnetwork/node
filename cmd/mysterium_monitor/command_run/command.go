@@ -46,7 +46,6 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 	cmd.clientCommand, err = command_client.NewCommand(command_client.CommandOptions{
 		DirectoryRuntime: options.DirectoryRuntime,
 	})
-
 	if err != nil {
 		return errors.New("Failed to create client" + err.Error())
 	}
