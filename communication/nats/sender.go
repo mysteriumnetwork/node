@@ -2,27 +2,25 @@ package nats
 
 import (
 	"github.com/mysterium/node/communication"
-	"github.com/nats-io/go-nats"
 	"time"
 
 	"fmt"
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/communication/nats_discovery"
 )
 
 const SENDER_LOG_PREFIX = "[NATS.Sender] "
 
-func NewSender(address *nats_discovery.NatsAddress) *senderNats {
+func NewSender(connection Connection, topic string) *senderNats {
 	return &senderNats{
-		connection:     address.GetConnection(),
+		connection:     connection,
 		codec:          communication.NewCodecJSON(),
 		timeoutRequest: 500 * time.Millisecond,
-		messageTopic:   address.GetTopic() + ".",
+		messageTopic:   topic + ".",
 	}
 }
 
 type senderNats struct {
-	connection     *nats.Conn
+	connection     Connection
 	codec          communication.Codec
 	timeoutRequest time.Duration
 	messageTopic   string
