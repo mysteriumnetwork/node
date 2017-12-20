@@ -45,7 +45,7 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 
 	vpnClientFactory := configureVpnClientFactory(mysteriumClient, options.DirectoryRuntime)
 
-	vpnManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
+	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
 	httpApiServer, err := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort)
 	if err != nil {
@@ -55,7 +55,7 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 	return &CommandRun{
 		mysteriumClient,
 		identityManager,
-		vpnManager,
+		connectionManager,
 		httpApiServer,
 	}, nil
 }

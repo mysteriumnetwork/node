@@ -74,8 +74,7 @@ func (manager *connectionManager) Status() ConnectionStatus {
 
 func (manager *connectionManager) Disconnect() error {
 	manager.dialog.Close()
-	manager.vpnClient.Stop()
-	return nil
+	return manager.vpnClient.Stop()
 }
 
 func (manager *connectionManager) Wait() error {
