@@ -11,10 +11,10 @@ import (
 	"sync"
 )
 
-const NODE_KEY = "fake"
-const NODE_IP = "127.0.0.1"
-const NODE_DIRECTORY_CONFIG = "bin/tls"
-const CLIENT_DIRECTORY_RUNTIME = "build/fake"
+const NodeKey = "fake"
+const NodeIp = "127.0.0.1"
+const NodeDirectoryConfig = "bin/tls"
+const ClientDirectoryRuntime = "build/fake"
 
 func main() {
 	waiter := &sync.WaitGroup{}
@@ -23,13 +23,13 @@ func main() {
 	serverCommand := command_server.NewCommand()
 	serverCommand.Output = os.Stdout
 	serverCommand.OutputError = os.Stderr
-	serverCommand.IpifyClient = ipify.NewClientFake(NODE_IP)
+	serverCommand.IpifyClient = ipify.NewClientFake(NodeIp)
 	serverCommand.MysteriumClient = mysteriumClient
 	serverCommand.NatService = nat.NewServiceFake()
 	runServer(serverCommand, waiter)
 
 	clientCommand, err := command_client.NewCommand(command_client.CommandOptions{
-		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,
+		DirectoryRuntime: ClientDirectoryRuntime,
 	})
 
 	if err != nil {
@@ -45,9 +45,9 @@ func main() {
 
 func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup) {
 	err := serverCommand.Run(command_server.CommandOptions{
-		NodeKey:          NODE_KEY,
-		DirectoryConfig:  NODE_DIRECTORY_CONFIG,
-		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,
+		NodeKey:          NodeKey,
+		DirectoryConfig:  NodeDirectoryConfig,
+		DirectoryRuntime: ClientDirectoryRuntime,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Server starting error: ", err)
