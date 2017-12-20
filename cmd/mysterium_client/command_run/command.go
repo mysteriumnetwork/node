@@ -22,8 +22,6 @@ type CommandRun struct {
 	//TODO this must disappear or become a private field
 	MysteriumClient server.Client
 
-	identityManager identity.IdentityManagerInterface
-
 	connectionManager client_connection.Manager
 
 	httpApiServer tequilapi.ApiServer
@@ -47,24 +45,24 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
-	httpApiServer, err := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort)
+	router := tequilapi.NewApiRouter()
+	endpoints.RegisterIdentitiesEndpoint(router, identityManager)
+	endpoints.RegisterConnectionEndpoint(router, connectionManager)
+
+	httpApiServer, err := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 	if err != nil {
 		return nil, err
 	}
 
 	return &CommandRun{
 		mysteriumClient,
-		identityManager,
 		connectionManager,
 		httpApiServer,
 	}, nil
 }
 
 func (cmd *CommandRun) Run() {
-	router := tequilapi.NewApiRouter()
-	endpoints.RegisterIdentitiesEndpoint(router, cmd.identityManager)
-	endpoints.RegisterConnectionEndpoint(router, cmd.connectionManager)
-	cmd.httpApiServer.StartServing(router)
+	cmd.httpApiServer.StartServing()
 }
 
 func (cmd *CommandRun) Wait() error {
@@ -73,6 +71,7 @@ func (cmd *CommandRun) Wait() error {
 
 func (cmd *CommandRun) Kill() {
 	cmd.httpApiServer.Stop()
+	cmd.connectionManager.Disconnect()
 }
 
 func configureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntimeDirectory string) client_connection.VpnClientFactory {

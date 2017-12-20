@@ -12,17 +12,18 @@ import (
 type ApiServer interface {
 	Port() int
 	Wait() error
-	StartServing(handler http.Handler)
+	StartServing()
 	Stop()
 }
 
 type apiServer struct {
 	listener     net.Listener
 	errorChannel chan error
+	handler      http.Handler
 	boundPort    int
 }
 
-func NewServer(address string, port int) (ApiServer, error) {
+func NewServer(address string, port int, handler http.Handler) (ApiServer, error) {
 	var err error
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", address, port))
 	if err != nil {
@@ -35,7 +36,7 @@ func NewServer(address string, port int) (ApiServer, error) {
 		return nil, err
 	}
 
-	server := apiServer{listener, make(chan error, 1), boundPort}
+	server := apiServer{listener, make(chan error, 1), handler, boundPort}
 	return &server, nil
 }
 
@@ -51,8 +52,8 @@ func (server *apiServer) Port() int {
 	return server.boundPort
 }
 
-func (server *apiServer) StartServing(handler http.Handler) {
-	go server.serve(handler)
+func (server *apiServer) StartServing() {
+	go server.serve(server.handler)
 }
 
 func (server *apiServer) serve(handler http.Handler) {
