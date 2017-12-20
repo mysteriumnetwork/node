@@ -55,7 +55,6 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
 	vpnServerIp, err := cmd.IpifyClient.GetOutboundIP()
-
 	if err != nil {
 		return err
 	}
