@@ -6,8 +6,9 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/identity"
 	nats_lib "github.com/nats-io/go-nats"
-	"github.com/mysterium/node/ipify"
 )
+
+var natsServerIp string
 
 func NewAddress(server string, port int, topic string) *NatsAddress {
 	return &NatsAddress{
@@ -18,12 +19,8 @@ func NewAddress(server string, port int, topic string) *NatsAddress {
 	}
 }
 
-func NewAddressForIdentity(identity identity.Identity, ipifyClient ipify.Client) (*NatsAddress, error) {
-	ipToBind, err := ipifyClient.GetOutboundIP()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get NATS server IP address")
-	}
-	return NewAddress(ipToBind, 4222, identity.Address), nil
+func NewAddressForIdentity(identity identity.Identity) (*NatsAddress, error) {
+	return NewAddress(natsServerIp, 4222, identity.Address), nil
 }
 
 func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
@@ -36,7 +33,7 @@ func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
 		return nil, fmt.Errorf("Invalid contact definition: %#v", contact.Definition)
 	}
 
-	return NewAddress("127.0.0.1", 4222, contactNats.Topic), nil
+	return NewAddress(natsServerIp, 4222, contactNats.Topic), nil
 }
 
 func NewAddressWithConnection(connection nats.Connection, topic string) *NatsAddress {

@@ -15,17 +15,15 @@ import (
 )
 
 func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
-	ipifyClient := ipify.NewClient()
-
 	return &CommandRun{
 		Output:      os.Stdout,
 		OutputError: os.Stderr,
 
-		IpifyClient:     ipifyClient,
+		IpifyClient:     ipify.NewClient(),
 		MysteriumClient: server.NewClient(),
 		NatService:      nat.NewService(),
 		DialogWaiterFactory: func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
-			address, err  := nats_discovery.NewAddressForIdentity(identity, ipifyClient)
+			address, err  := nats_discovery.NewAddressForIdentity(identity)
 			if err != nil {
 				panic(err)
 			}

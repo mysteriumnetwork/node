@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
     "github.com/mysterium/node/identity"
-	"github.com/mysterium/node/ipify"
 )
 
 func TestNewAddress(t *testing.T) {
@@ -24,15 +23,12 @@ func TestNewAddress(t *testing.T) {
 
 func TestNewAddressForIdentity(t *testing.T) {
 	identity := identity.FromAddress("provider1")
-	ipifyClient := ipify.NewClient()
-	address, _ := NewAddressForIdentity(identity, ipifyClient)
-
-	natsBindIp, _ := ipifyClient.GetOutboundIP()
+	address, _ := NewAddressForIdentity(identity)
 
 	assert.Equal(
 		t,
 		&NatsAddress{
-			servers: []string{"nats://"+natsBindIp+":4222"},
+			servers: []string{"nats://"+natsServerIp+":4222"},
 			topic:   "provider1",
 		},
 		address,
@@ -51,7 +47,7 @@ func TestNewAddressForContact(t *testing.T) {
 	assert.Equal(
 		t,
 		&NatsAddress{
-			servers: []string{"nats://127.0.0.1:4222"},
+			servers: []string{"nats://"+natsServerIp+":4222"},
 			topic:   "123456",
 		},
 		address,
