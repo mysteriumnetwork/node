@@ -14,13 +14,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd, err := command_run.NewCommand(options)
+	cmd := command_run.NewCommand(options)
+
+	err = cmd.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-
-	cmd.Run()
 
 	if err = cmd.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
