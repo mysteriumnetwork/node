@@ -50,6 +50,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
 	}
 	resp.WriteHeader(http.StatusCreated)
 	ce.Status(resp, req, params)
