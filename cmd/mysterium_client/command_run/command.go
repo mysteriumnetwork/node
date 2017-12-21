@@ -41,7 +41,7 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
 	router := tequilapi.NewApiRouter()
-	endpoints.RegisterIdentitiesEndpoint(router, identityManager)
+	endpoints.RegisterIdentitiesEndpoint(router, identityManager, mysteriumClient)
 	endpoints.RegisterConnectionEndpoint(router, connectionManager)
 
 	httpApiServer, err := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
