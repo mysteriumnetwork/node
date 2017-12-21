@@ -1,7 +1,6 @@
 package client_connection
 
 import (
-	"errors"
 	"github.com/mysterium/node/identity"
 )
 

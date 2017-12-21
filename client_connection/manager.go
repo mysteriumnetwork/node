@@ -1,17 +1,20 @@
 package client_connection
 
 import (
+	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
-	vpn_session "github.com/mysterium/node/openvpn/session"
+	"github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/server/dto"
+	"path/filepath"
+	"time"
 )
 
 type DialogEstablisherFactory func(identity identity.Identity) communication.DialogEstablisher
 
-type VpnClientFactory func(vpnSession vpn_session.VpnSession, session dto.Session) (openvpn.Client, error)
+type VpnClientFactory func(vpnSession session.VpnSession, session dto.Session) (openvpn.Client, error)
 
 type connectionManager struct {
 	//these are passed on creation
@@ -37,13 +40,13 @@ func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEs
 
 func (manager *connectionManager) Connect(identity identity.Identity, NodeKey string) error {
 	manager.status = statusConnecting()
-	session, err := manager.mysteriumClient.SessionCreate(NodeKey)
+	clientSession, err := manager.mysteriumClient.SessionCreate(NodeKey)
 	if err != nil {
 		manager.status = statusError(err)
 		return err
 	}
 
-	proposal := session.ServiceProposal
+	proposal := clientSession.ServiceProposal
 
 	dialogEstablisher := manager.dialogEstablisherFactory(identity)
 	manager.dialog, err = dialogEstablisher.CreateDialog(proposal.ProviderContacts[0])
@@ -52,19 +55,19 @@ func (manager *connectionManager) Connect(identity identity.Identity, NodeKey st
 		return err
 	}
 
-	vpnSession, err := vpn_session.RequestSessionCreate(manager.dialog, proposal.Id)
+	vpnSession, err := session.RequestSessionCreate(manager.dialog, proposal.Id)
 	if err != nil {
 		manager.status = statusError(err)
 		return err
 	}
 
-	manager.vpnClient, err = manager.vpnClientFactory(*vpnSession, session)
+	manager.vpnClient, err = manager.vpnClientFactory(*vpnSession, clientSession)
 
 	if err := manager.vpnClient.Start(); err != nil {
 		manager.status = statusError(err)
 		return err
 	}
-	manager.status = statusConnected(session.Id)
+	manager.status = statusConnected(clientSession.Id)
 	return nil
 }
 
@@ -95,4 +98,26 @@ func statusConnected(sessionId string) ConnectionStatus {
 
 func statusNotConnected() ConnectionStatus {
 	return ConnectionStatus{NotConnected, "", nil}
+}
+
+func ConfigureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntimeDirectory string) VpnClientFactory {
+	return func(vpnSession session.VpnSession, session dto.Session) (openvpn.Client, error) {
+		vpnConfig, err := openvpn.NewClientConfigFromString(
+			vpnSession.Config,
+			filepath.Join(vpnClientRuntimeDirectory, "client.ovpn"),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		vpnMiddlewares := []openvpn.ManagementMiddleware{
+			bytescount_client.NewMiddleware(mysteriumApiClient, session.Id, 1*time.Minute),
+		}
+		return openvpn.NewClient(
+			vpnConfig,
+			vpnClientRuntimeDirectory,
+			vpnMiddlewares...,
+		), nil
+
+	}
 }

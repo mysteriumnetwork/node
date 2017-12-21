@@ -11,7 +11,6 @@ import (
 	"sync"
 )
 
-const NodeKey = "fake"
 const NodeIp = "127.0.0.1"
 const NodeDirectoryConfig = "bin/tls"
 const ClientDirectoryRuntime = "build/fake"
@@ -45,7 +44,6 @@ func main() {
 
 func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup) {
 	err := serverCommand.Run(command_server.CommandOptions{
-		NodeKey:          NodeKey,
 		DirectoryConfig:  NodeDirectoryConfig,
 		DirectoryRuntime: ClientDirectoryRuntime,
 	})

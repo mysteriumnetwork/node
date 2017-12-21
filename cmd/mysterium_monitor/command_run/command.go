@@ -66,6 +66,8 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 	return nil
 }
 
+// This is ment to be registered as VpnClient middleware:
+//   state_client.NewMiddleware(cmd.checkClientIpWhenConnected)
 func (cmd *CommandRun) checkClientIpWhenConnected(state state_client.State) error {
 	if state == state_client.STATE_CONNECTED {
 		ipForwarded, err := cmd.IpifyClient.GetIp()
