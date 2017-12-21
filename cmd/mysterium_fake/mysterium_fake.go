@@ -11,10 +11,9 @@ import (
 	"sync"
 )
 
-const NODE_KEY = "fake"
-const NODE_IP = "127.0.0.1"
-const NODE_DIRECTORY_CONFIG = "bin/tls"
-const CLIENT_DIRECTORY_RUNTIME = "build/fake"
+const NodeIp = "127.0.0.1"
+const NodeDirectoryConfig = "bin/tls"
+const ClientDirectoryRuntime = "build/fake"
 
 func main() {
 	waiter := &sync.WaitGroup{}
@@ -23,12 +22,20 @@ func main() {
 	serverCommand := command_server.NewCommand()
 	serverCommand.Output = os.Stdout
 	serverCommand.OutputError = os.Stderr
-	serverCommand.IpifyClient = ipify.NewClientFake(NODE_IP)
+	serverCommand.IpifyClient = ipify.NewClientFake(NodeIp)
 	serverCommand.MysteriumClient = mysteriumClient
 	serverCommand.NatService = nat.NewServiceFake()
 	runServer(serverCommand, waiter)
 
-	clientCommand := command_client.NewCommand()
+	clientCommand, err := command_client.NewCommand(command_client.CommandOptions{
+		DirectoryRuntime: ClientDirectoryRuntime,
+	})
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Client creation error: ", err)
+		os.Exit(1)
+	}
+	//TODO refactor this internal variable override
 	clientCommand.MysteriumClient = mysteriumClient
 	runClient(clientCommand, waiter)
 
@@ -37,9 +44,8 @@ func main() {
 
 func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup) {
 	err := serverCommand.Run(command_server.CommandOptions{
-		NodeKey:          NODE_KEY,
-		DirectoryConfig:  NODE_DIRECTORY_CONFIG,
-		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,
+		DirectoryConfig:  NodeDirectoryConfig,
+		DirectoryRuntime: ClientDirectoryRuntime,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Server starting error: ", err)
@@ -58,20 +64,13 @@ func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup)
 }
 
 func runClient(clientCommand *command_client.CommandRun, waiter *sync.WaitGroup) {
-	err := clientCommand.Run(command_client.CommandOptions{
-		NodeKey:          NODE_KEY,
-		DirectoryRuntime: CLIENT_DIRECTORY_RUNTIME,
-	})
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Client starting error: ", err)
-		os.Exit(1)
-	}
+	clientCommand.Run()
 
 	waiter.Add(1)
 	go func() {
 		defer waiter.Done()
 
-		if err = clientCommand.Wait(); err != nil {
+		if err := clientCommand.Wait(); err != nil {
 			fmt.Fprintln(os.Stderr, "Client stopped with error: ", err)
 			os.Exit(1)
 		}

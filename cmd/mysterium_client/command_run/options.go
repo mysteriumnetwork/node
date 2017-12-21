@@ -1,13 +1,11 @@
 package command_run
 
 import (
-	"errors"
 	"flag"
 	"github.com/mysterium/node/utils/file"
 )
 
 type CommandOptions struct {
-	NodeKey           string
 	DirectoryRuntime  string
 	DirectoryKeystore string
 	TequilaApiAddress string
@@ -16,12 +14,6 @@ type CommandOptions struct {
 
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	flags.StringVar(
-		&options.NodeKey,
-		"node",
-		"",
-		"Mysterium VPN node to make connection with",
-	)
 	flags.StringVar(
 		&options.DirectoryRuntime,
 		"runtime-dir",
@@ -50,11 +42,6 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 
 	err = flags.Parse(args[1:])
 	if err != nil {
-		return
-	}
-
-	if options.NodeKey == "" {
-		err = errors.New("Missing VPN node key!")
 		return
 	}
 
