@@ -22,10 +22,8 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
-		bytes.NewBufferString(
-			`{
-				"registered": false
-			}`))
+		bytes.NewBufferString(`{ "registered": false }`),
+	)
 
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
@@ -36,19 +34,17 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 	assert.Equal(t, http.StatusNotImplemented, resp.Code)
 	assert.JSONEq(
 		t,
-		`{
-            "message": "Unregister not supported"
-        }`, resp.Body.String())
+		`{ "message": "Unregister not supported" }`,
+		resp.Body.String(),
+	)
 }
 
 func TestRegisterIdentitySuccess(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
-		bytes.NewBufferString(
-			`{
-				"registered": true
-			}`))
+		bytes.NewBufferString(`{"registered": true}`),
+	)
 
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
@@ -64,10 +60,8 @@ func TestCreateNewIdentityNoPassword(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
-		bytes.NewBufferString(
-			`{
-                "password": ""
-            }`))
+		bytes.NewBufferString(`{ "password": ""}`),
+	)
 
 	assert.Nil(t, err)
 
@@ -82,17 +76,16 @@ func TestCreateNewIdentityNoPassword(t *testing.T) {
             "errors" : {
                 "password" : [ {"code" : "required" , "message" : "Field is required" } ]
             }
-        }`, resp.Body.String())
+        }`,
+		resp.Body.String(),
+	)
 }
 
 func TestCreateNewIdentity(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
-		bytes.NewBufferString(
-			`{
-				"password": "mypass"
-			}`))
+		bytes.NewBufferString(`{ "password": "mypass" }`))
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
@@ -104,7 +97,9 @@ func TestCreateNewIdentity(t *testing.T) {
 		t,
 		`{
                 "id":"0x000000000000000000000000000000000000bEEF"
-            }`, resp.Body.String())
+		}`,
+		resp.Body.String(),
+	)
 }
 
 func TestListIdentities(t *testing.T) {
@@ -124,5 +119,6 @@ func TestListIdentities(t *testing.T) {
                 "id": "0x000000000000000000000000000000000000bEEF"
             }
         ]`,
-		resp.Body.String())
+		resp.Body.String(),
+	)
 }
