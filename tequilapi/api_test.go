@@ -13,13 +13,12 @@ type tequilapiTestSuite struct {
 }
 
 func (testSuite *tequilapiTestSuite) SetupSuite() {
-	var err error
-	testSuite.server, err = NewServer("localhost", 0, NewApiRouter())
-	if err != nil {
-		testSuite.T().FailNow()
-	}
-	testSuite.server.StartServing()
-	testSuite.client = NewTestClient(testSuite.T(), testSuite.server.Port())
+	testSuite.server = NewServer("localhost", 0, NewApiRouter())
+
+	assert.NoError(testSuite.T(), testSuite.server.StartServing())
+	port, err := testSuite.server.Port()
+	assert.NoError(testSuite.T(), err)
+	testSuite.client = NewTestClient(testSuite.T(), port)
 }
 
 func (testSuite *tequilapiTestSuite) TestHealthCheckReturnsExpectedResponse() {

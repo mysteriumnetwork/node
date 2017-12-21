@@ -22,7 +22,7 @@ type CommandRun struct {
 	httpApiServer tequilapi.ApiServer
 }
 
-func NewCommand(options CommandOptions) (*CommandRun, error) {
+func NewCommand(options CommandOptions) *CommandRun {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 
@@ -44,20 +44,17 @@ func NewCommand(options CommandOptions) (*CommandRun, error) {
 	endpoints.RegisterIdentitiesEndpoint(router, identityManager)
 	endpoints.RegisterConnectionEndpoint(router, connectionManager)
 
-	httpApiServer, err := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
-	if err != nil {
-		return nil, err
-	}
+	httpApiServer := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 
 	return &CommandRun{
 		mysteriumClient,
 		connectionManager,
 		httpApiServer,
-	}, nil
+	}
 }
 
-func (cmd *CommandRun) Run() {
-	cmd.httpApiServer.StartServing()
+func (cmd *CommandRun) Run() error {
+	return cmd.httpApiServer.StartServing()
 }
 
 func (cmd *CommandRun) Wait() error {
