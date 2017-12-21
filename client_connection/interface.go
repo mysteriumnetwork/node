@@ -13,10 +13,6 @@ const (
 	Connected    = State("Connected")
 )
 
-var (
-	AlreadyConnectedError = errors.New("already connected")
-)
-
 type ConnectionStatus struct {
 	State     State
 	SessionId string
