@@ -26,6 +26,7 @@ func TestErrorsListRenderedInJson(t *testing.T) {
 				{ "code" : "invalid" , "message" : "field invalid" }
 			]
 		}`,
-		string(v))
+		string(v),
+	)
 
 }

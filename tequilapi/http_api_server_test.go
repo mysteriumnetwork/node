@@ -6,9 +6,9 @@ import (
 )
 
 func TestLocalApiServerPortIsAsExpected(t *testing.T) {
-	server, err := StartNewServer("localhost", 31337, nil)
+	server, err := NewServer("localhost", 31337, nil)
 	assert.Nil(t, err)
-
+	server.StartServing()
 	assert.Equal(t, 31337, server.Port())
 
 	server.Stop()

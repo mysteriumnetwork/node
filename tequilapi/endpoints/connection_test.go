@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
+	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-    "github.com/mysterium/node/identity"
 )
 
 type fakeManager struct {
@@ -43,7 +43,7 @@ func (fm *fakeManager) Wait() error {
 func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
-		State:     client_connection.NOT_CONNECTED,
+		State:     client_connection.NotConnected,
 		SessionId: "",
 	}
 
@@ -58,7 +58,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"status" : "NOT_CONNECTED"
+			"status" : "NotConnected"
 		}`,
 		resp.Body.String())
 }
@@ -66,7 +66,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 func TestConnectedStateAndSessionIdIsReturnedWhenIsConnection(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
-		State:     client_connection.CONNECTED,
+		State:     client_connection.Connected,
 		SessionId: "My-super-session",
 	}
 
@@ -81,7 +81,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnection(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"status" : "CONNECTED",
+			"status" : "Connected",
 			"sessionId" : "My-super-session"
 		}`,
 		resp.Body.String())
