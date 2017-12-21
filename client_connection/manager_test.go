@@ -19,7 +19,7 @@ import (
 type test_context struct {
 	suite.Suite
 	connManager         *connectionManager
-	fakeDiscoveryClient server.Client
+	fakeDiscoveryClient *server.ClientFake
 	fakeOpenVpn         *fake_openvpn_client
 }
 
