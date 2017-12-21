@@ -35,7 +35,7 @@ func (tc *test_context) SetupTest() {
 	}
 
 	tc.fakeOpenVpn = &fake_openvpn_client{make(chan int, 1), nil}
-	fakeVpnClientFactory := func(vpnSession *session.VpnSession, session *mysterium_api_client.Session) (openvpn.Client, error) {
+	fakeVpnClientFactory := func(vpnSession session.VpnSession, session mysterium_api_client.Session) (openvpn.Client, error) {
 		return tc.fakeOpenVpn, nil
 	}
 

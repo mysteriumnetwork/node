@@ -11,7 +11,7 @@ import (
 
 type DialogEstablisherFactory func(identity identity.Identity) communication.DialogEstablisher
 
-type VpnClientFactory func(vpnSession *vpn_session.VpnSession, session *dto.Session) (openvpn.Client, error)
+type VpnClientFactory func(vpnSession vpn_session.VpnSession, session dto.Session) (openvpn.Client, error)
 
 type connectionManager struct {
 	//these are passed on creation
@@ -58,7 +58,7 @@ func (manager *connectionManager) Connect(identity identity.Identity, NodeKey st
 		return err
 	}
 
-	manager.vpnClient, err = manager.vpnClientFactory(vpnSession, &session)
+	manager.vpnClient, err = manager.vpnClientFactory(*vpnSession, session)
 
 	if err := manager.vpnClient.Start(); err != nil {
 		manager.status = statusError(err)

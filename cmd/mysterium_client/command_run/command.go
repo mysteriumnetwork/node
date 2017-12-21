@@ -75,7 +75,7 @@ func (cmd *CommandRun) Kill() {
 }
 
 func configureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntimeDirectory string) client_connection.VpnClientFactory {
-	return func(vpnSession *session.VpnSession, session *dto.Session) (openvpn.Client, error) {
+	return func(vpnSession session.VpnSession, session dto.Session) (openvpn.Client, error) {
 		vpnConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,
 			filepath.Join(vpnClientRuntimeDirectory, "client.ovpn"),
