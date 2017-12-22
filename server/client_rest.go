@@ -169,7 +169,7 @@ func parseResponseJson(response *http.Response, dto interface{}) error {
 
 func parseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return errors.New(fmt.Sprintf("Server response invalid: %s", response.Status))
+		return errors.New(fmt.Sprintf("Server response invalid: %s (%s)", response.Status, response.Request.URL))
 	}
 
 	return nil
