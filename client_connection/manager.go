@@ -42,7 +42,7 @@ func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEs
 func (manager *connectionManager) Connect(identity identity.Identity, nodeKey string) error {
 	manager.status = statusConnecting()
 
-	proposals, err := manager.mysteriumClient.Proposals(nodeKey)
+	proposals, err := manager.mysteriumClient.FindProposals(nodeKey)
 	if err != nil {
 		manager.status = statusError(err)
 		return err

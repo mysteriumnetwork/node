@@ -71,7 +71,7 @@ func (client *clientRest) NodeSendStats(nodeKey string, sessionList []dto.Sessio
 	return nil
 }
 
-func (client *clientRest) Proposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
+func (client *clientRest) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
 	response, err := client.doRequest("GET", "proposals", dto.ProposalsRequest{
 		NodeKey: nodeKey,
 	})
@@ -86,7 +86,7 @@ func (client *clientRest) Proposals(nodeKey string) (proposals []dto_discovery.S
 		}
 		proposals = proposalsResponse.Proposals
 
-		log.Info(MYSTERIUM_API_LOG_PREFIX, "Proposals fetched: ", proposals)
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "FindProposals fetched: ", proposals)
 	}
 
 	return

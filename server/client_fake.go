@@ -37,7 +37,7 @@ func (client *ClientFake) NodeSendStats(nodeKey string, sessionStats []dto.Sessi
 	return nil
 }
 
-func (client *ClientFake) Proposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
+func (client *ClientFake) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
 	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake proposals requested for node_key: ", nodeKey)
 	if proposal, ok := client.proposalsByProvider[nodeKey]; ok {
 		proposals = []dto_discovery.ServiceProposal{proposal}
