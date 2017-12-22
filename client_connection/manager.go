@@ -1,6 +1,7 @@
 package client_connection
 
 import (
+	"errors"
 	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -38,15 +39,27 @@ func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEs
 	}
 }
 
-func (manager *connectionManager) Connect(identity identity.Identity, NodeKey string) error {
+func (manager *connectionManager) Connect(identity identity.Identity, nodeKey string) error {
 	manager.status = statusConnecting()
-	clientSession, err := manager.mysteriumClient.SessionCreate(NodeKey)
+
+	proposals, err := manager.mysteriumClient.Proposals(nodeKey)
 	if err != nil {
 		manager.status = statusError(err)
 		return err
 	}
+	if len(proposals) == 0 {
+		err = errors.New("node has no service proposals")
+		manager.status = statusError(err)
+		return err
+	}
+	proposal := proposals[0]
 
-	proposal := clientSession.ServiceProposal
+	// TODO: pass in selected proposal to session creation
+	clientSession, err := manager.mysteriumClient.SessionCreate(nodeKey)
+	if err != nil {
+		manager.status = statusError(err)
+		return err
+	}
 
 	dialogEstablisher := manager.dialogEstablisherFactory(identity)
 	manager.dialog, err = dialogEstablisher.CreateDialog(proposal.ProviderContacts[0])

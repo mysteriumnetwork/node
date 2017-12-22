@@ -46,6 +46,13 @@ func (tc *test_context) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
 }
 
+func (tc *test_context) TestWithUnknownNodeKey() {
+	noProposalsError := errors.New("node has no service proposals")
+
+	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), "unknown-node"))
+	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", noProposalsError}, tc.connManager.Status())
+}
+
 func (tc *test_context) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet() {
 	fatalVpnError := errors.New("fatal connection error")
 	tc.fakeOpenVpn.onConnectReturnError = fatalVpnError

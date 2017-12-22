@@ -4,10 +4,10 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/mysterium/node/identity"
 )
 
 func TestDialogEstablisher_Interface(t *testing.T) {

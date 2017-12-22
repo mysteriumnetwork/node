@@ -9,9 +9,9 @@ import (
 	"net/http"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-    "github.com/mysterium/node/identity"
 )
 
 var mysteriumApiUrl string
@@ -31,6 +31,7 @@ func NewClient() Client {
 type clientRest struct {
 	httpClient http.Client
 }
+
 func (client *clientRest) RegisterIdentity(identity identity.Identity) (err error) {
 	response, err := client.doRequest("POST", "identities", dto.CreateIdentityRequest{
 		Identity: identity.Address,
@@ -68,6 +69,27 @@ func (client *clientRest) NodeSendStats(nodeKey string, sessionList []dto.Sessio
 	}
 
 	return nil
+}
+
+func (client *clientRest) Proposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
+	response, err := client.doRequest("GET", "proposals", dto.ProposalsRequest{
+		NodeKey: nodeKey,
+	})
+
+	if err == nil {
+		defer response.Body.Close()
+
+		var proposalsResponse dto.ProposalsResponse
+		err = parseResponseJson(response, &proposalsResponse)
+		if err != nil {
+			return
+		}
+		proposals = proposalsResponse.Proposals
+
+		log.Info(MYSTERIUM_API_LOG_PREFIX, "Proposals fetched: ", proposals)
+	}
+
+	return
 }
 
 func (client *clientRest) SessionCreate(nodeKey string) (session dto.Session, err error) {

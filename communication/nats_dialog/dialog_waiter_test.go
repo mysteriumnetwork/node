@@ -4,9 +4,9 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/mysterium/node/identity"
 )
 
 func TestDialogWaiter_Interface(t *testing.T) {

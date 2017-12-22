@@ -3,7 +3,6 @@ package server
 import (
 	"github.com/mysterium/node/server/dto"
 
-	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
@@ -38,17 +37,21 @@ func (client *ClientFake) NodeSendStats(nodeKey string, sessionStats []dto.Sessi
 	return nil
 }
 
-func (client *ClientFake) SessionCreate(nodeKey string) (session dto.Session, err error) {
+func (client *ClientFake) Proposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
+	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake proposals requested for node_key: ", nodeKey)
 	if proposal, ok := client.proposalsByProvider[nodeKey]; ok {
-		session = dto.Session{
-			Id:              nodeKey + "-session",
-			ServiceProposal: proposal,
-		}
-		return
+		proposals = []dto_discovery.ServiceProposal{proposal}
+	} else {
+		proposals = []dto_discovery.ServiceProposal{}
 	}
 
-	err = fmt.Errorf("Fake node not found: %s", nodeKey)
 	return
+}
+
+func (client *ClientFake) SessionCreate(nodeKey string) (dto.Session, error) {
+	return dto.Session{
+		Id: nodeKey + "-session",
+	}, nil
 }
 
 func (client *ClientFake) SessionSendStats(sessionId string, sessionStats dto.SessionStats) (err error) {
