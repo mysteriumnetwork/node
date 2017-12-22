@@ -77,18 +77,20 @@ func (client *clientRest) FindProposals(nodeKey string) (proposals []dto_discove
 	values.Set("node_key", nodeKey)
 	response, err := client.doGetRequest("proposals", values)
 
-	if err == nil {
-		defer response.Body.Close()
-
-		var proposalsResponse dto.ProposalsResponse
-		err = parseResponseJson(response, &proposalsResponse)
-		if err != nil {
-			return
-		}
-		proposals = proposalsResponse.Proposals
-
-		log.Info(MYSTERIUM_API_LOG_PREFIX, "FindProposals fetched: ", proposals)
+	if err != nil {
+		return
 	}
+
+	defer response.Body.Close()
+
+	var proposalsResponse dto.ProposalsResponse
+	err = parseResponseJson(response, &proposalsResponse)
+	if err != nil {
+		return
+	}
+	proposals = proposalsResponse.Proposals
+
+	log.Info(MYSTERIUM_API_LOG_PREFIX, "FindProposals fetched: ", proposals)
 
 	return
 }
