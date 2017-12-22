@@ -23,7 +23,7 @@ func TestNewAddress(t *testing.T) {
 
 func TestNewAddressForIdentity(t *testing.T) {
 	identity := identity.FromAddress("provider1")
-	address, _ := NewAddressForIdentity(identity)
+	address := NewAddressForIdentity(identity)
 
 	assert.Equal(
 		t,

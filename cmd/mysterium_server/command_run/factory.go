@@ -23,10 +23,7 @@ func NewCommand(vpnMiddlewares ...openvpn.ManagementMiddleware) *CommandRun {
 		MysteriumClient: server.NewClient(),
 		NatService:      nat.NewService(),
 		DialogWaiterFactory: func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
-			address, err  := nats_discovery.NewAddressForIdentity(identity)
-			if err != nil {
-				panic(err)
-			}
+			address  := nats_discovery.NewAddressForIdentity(identity)
 			return nats_dialog.NewDialogWaiter(address), address.GetContact()
 		},
 		SessionManager: &session.Manager{
