@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	log "github.com/cihub/seelog"
+	"net"
 	"time"
 )
 
@@ -31,7 +32,7 @@ type clientRest struct {
 	httpClient http.Client
 }
 
-func (client *clientRest) GetIp() (string, error) {
+func (client *clientRest) GetPublicIP() (string, error) {
 	var ipResponse IpResponse
 
 	request, err := http.NewRequest("GET", IPIFY_API_URL+"/?format=json", nil)
@@ -49,6 +50,18 @@ func (client *clientRest) GetIp() (string, error) {
 
 	log.Info(IPIFY_API_LOG_PREFIX, "IP detected: ", ipResponse.IP)
 	return ipResponse.IP, nil
+}
+
+func (client *clientRest) GetOutboundIP() (string, error) {
+	conn, err := net.Dial("udp", "8.8.8.8:53")
+	defer conn.Close()
+	if err != nil {
+		return "", err
+	}
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	log.Info("[Detect Outbound IP] ", "IP detected: ", localAddr.IP.String())
+	return localAddr.IP.String(), nil
 }
 
 func (client *clientRest) doRequest(request *http.Request, responseDto interface{}) error {
