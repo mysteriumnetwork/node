@@ -10,13 +10,13 @@ services:
       - 4222:4222
       - 8222:8222
 
-  server:
+  server-ubuntu:
     build:
       context: .
       dockerfile: bin/server_docker/ubuntu/Dockerfile
       args:
         PACKAGE_FILE: build/package/mysterium-node_linux_amd64.deb
-    container_name: mysterium-server
+    container_name: mysterium-server-ubuntu
     depends_on:
       - broker
     cap_add:
@@ -29,6 +29,23 @@ services:
     environment:
       NODE: server-ubuntu
 
+  server-golang:
+    build:
+      context: .
+      dockerfile: bin/server_docker/golang_alpine/Dockerfile
+    container_name: mysterium-server-golang
+    depends_on:
+      - broker
+    cap_add:
+      - MKNOD
+      - NET_ADMIN
+    networks:
+      - default
+    volumes:
+      - .:/go/src/github.com/mysterium/node
+    environment:
+      NODE: server-golang
+
   client:
     build:
       context: .
@@ -38,7 +55,8 @@ services:
     container_name: mysterium-client
     depends_on:
       - broker
-      - server
+      - server-ubuntu
+      - server-golang
     networks:
       - default
     environment:
