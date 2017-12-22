@@ -46,6 +46,21 @@ services:
     environment:
       NODE: server-golang
 
+  server-alpine:
+    build:
+      context: .
+      dockerfile: bin/server_docker/alpine/Dockerfile
+    container_name: mysterium-node-alpine
+    depends_on:
+      - broker
+    cap_add:
+      - MKNOD
+      - NET_ADMIN
+    networks:
+      - default
+    environment:
+      NODE: server-alpine
+
   client:
     build:
       context: .
@@ -57,6 +72,7 @@ services:
       - broker
       - server-ubuntu
       - server-golang
+      - server-alpine
     networks:
       - default
     environment:
