@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 OS_DIR_CONFIG="/etc/mysterium-node"
