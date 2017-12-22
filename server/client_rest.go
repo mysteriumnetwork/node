@@ -92,25 +92,6 @@ func (client *clientRest) Proposals(nodeKey string) (proposals []dto_discovery.S
 	return
 }
 
-func (client *clientRest) SessionCreate(nodeKey string) (session dto.Session, err error) {
-	response, err := client.doRequest("POST", "client_create_session", dto.SessionStartRequest{
-		NodeKey: nodeKey,
-	})
-
-	if err == nil {
-		defer response.Body.Close()
-
-		err = parseResponseJson(response, &session)
-		if err != nil {
-			return
-		}
-
-		log.Info(MYSTERIUM_API_LOG_PREFIX, "Session created: ", session.Id)
-	}
-
-	return
-}
-
 func (client *clientRest) SessionSendStats(sessionId string, sessionStats dto.SessionStats) (err error) {
 	response, err := client.doRequest("POST", "client_send_stats", sessionStats)
 	if err == nil {

@@ -48,12 +48,6 @@ func (client *ClientFake) Proposals(nodeKey string) (proposals []dto_discovery.S
 	return
 }
 
-func (client *ClientFake) SessionCreate(nodeKey string) (dto.Session, error) {
-	return dto.Session{
-		Id: nodeKey + "-session",
-	}, nil
-}
-
 func (client *ClientFake) SessionSendStats(sessionId string, sessionStats dto.SessionStats) (err error) {
 	log.Info(MYSTERIUM_API_LOG_PREFIX, "Session stats sent: ", sessionId)
 

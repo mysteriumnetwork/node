@@ -91,6 +91,6 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 func toStatusResponse(status client_connection.ConnectionStatus) statusResponse {
 	return statusResponse{
 		Status:    string(status.State),
-		SessionId: status.SessionId,
+		SessionId: string(status.SessionId),
 	}
 }

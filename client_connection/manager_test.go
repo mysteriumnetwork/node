@@ -8,7 +8,6 @@ import (
 	"github.com/mysterium/node/openvpn/service_discovery"
 	"github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
-	mysterium_api_client "github.com/mysterium/node/server/dto"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -35,7 +34,7 @@ func (tc *test_context) SetupTest() {
 	}
 
 	tc.fakeOpenVpn = &fake_openvpn_client{make(chan int, 1), nil}
-	fakeVpnClientFactory := func(vpnSession session.VpnSession, session mysterium_api_client.Session) (openvpn.Client, error) {
+	var fakeVpnClientFactory VpnClientFactory = func(vpnSession session.VpnSession) (openvpn.Client, error) {
 		return tc.fakeOpenVpn, nil
 	}
 
@@ -68,7 +67,7 @@ func (tc *test_context) TestWhenManagerMadeConnectionStatusReturnsConnectedState
 	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
 
 	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-node-1-session", nil}, tc.connManager.Status())
+	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
 }
 
 func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() {

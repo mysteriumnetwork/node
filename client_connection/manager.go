@@ -8,14 +8,14 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/server/dto"
+	node_session "github.com/mysterium/node/session"
 	"path/filepath"
 	"time"
 )
 
 type DialogEstablisherFactory func(identity identity.Identity) communication.DialogEstablisher
 
-type VpnClientFactory func(vpnSession session.VpnSession, session dto.Session) (openvpn.Client, error)
+type VpnClientFactory func(vpnSession session.VpnSession) (openvpn.Client, error)
 
 type connectionManager struct {
 	//these are passed on creation
@@ -54,13 +54,6 @@ func (manager *connectionManager) Connect(identity identity.Identity, nodeKey st
 	}
 	proposal := proposals[0]
 
-	// TODO: pass in selected proposal to session creation
-	clientSession, err := manager.mysteriumClient.SessionCreate(nodeKey)
-	if err != nil {
-		manager.status = statusError(err)
-		return err
-	}
-
 	dialogEstablisher := manager.dialogEstablisherFactory(identity)
 	manager.dialog, err = dialogEstablisher.CreateDialog(proposal.ProviderContacts[0])
 	if err != nil {
@@ -74,13 +67,13 @@ func (manager *connectionManager) Connect(identity identity.Identity, nodeKey st
 		return err
 	}
 
-	manager.vpnClient, err = manager.vpnClientFactory(*vpnSession, clientSession)
+	manager.vpnClient, err = manager.vpnClientFactory(*vpnSession)
 
 	if err := manager.vpnClient.Start(); err != nil {
 		manager.status = statusError(err)
 		return err
 	}
-	manager.status = statusConnected(clientSession.Id)
+	manager.status = statusConnected(vpnSession.Id)
 	return nil
 }
 
@@ -105,7 +98,7 @@ func statusConnecting() ConnectionStatus {
 	return ConnectionStatus{Connecting, "", nil}
 }
 
-func statusConnected(sessionId string) ConnectionStatus {
+func statusConnected(sessionId node_session.SessionId) ConnectionStatus {
 	return ConnectionStatus{Connected, sessionId, nil}
 }
 
@@ -114,7 +107,7 @@ func statusNotConnected() ConnectionStatus {
 }
 
 func ConfigureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntimeDirectory string) VpnClientFactory {
-	return func(vpnSession session.VpnSession, session dto.Session) (openvpn.Client, error) {
+	return func(vpnSession session.VpnSession) (openvpn.Client, error) {
 		vpnConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,
 			filepath.Join(vpnClientRuntimeDirectory, "client.ovpn"),
@@ -124,7 +117,7 @@ func ConfigureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntim
 		}
 
 		vpnMiddlewares := []openvpn.ManagementMiddleware{
-			bytescount_client.NewMiddleware(mysteriumApiClient, session.Id, 1*time.Minute),
+			bytescount_client.NewMiddleware(mysteriumApiClient, vpnSession.Id, 1*time.Minute),
 		}
 		return openvpn.NewClient(
 			vpnConfig,
