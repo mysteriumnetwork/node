@@ -18,9 +18,10 @@ import (
 
 type test_context struct {
 	suite.Suite
-	connManager         *connectionManager
-	fakeDiscoveryClient *server.ClientFake
-	fakeOpenVpn         *fake_openvpn_client
+	connManager                *connectionManager
+	fakeDiscoveryClient        *server.ClientFake
+	fakeOpenVpn                *fake_openvpn_client
+	fakeDialogResumeDisconnect chan int
 }
 
 func (tc *test_context) SetupTest() {
@@ -30,8 +31,9 @@ func (tc *test_context) SetupTest() {
 	serviceProposal := service_discovery.NewServiceProposal(identity.FromAddress("vpn-node-1"), dto.Contact{})
 	tc.fakeDiscoveryClient.NodeRegister(serviceProposal)
 
+	tc.fakeDialogResumeDisconnect = make(chan int, 1)
 	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
-		return &fake_dialog{}
+		return &fake_dialog{tc.fakeDialogResumeDisconnect}
 	}
 
 	tc.fakeOpenVpn = &fake_openvpn_client{make(chan int, 1), nil}
@@ -73,8 +75,35 @@ func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() 
 	}()
 	//wait for go function actually start, to avoid race condition, when we query Status before Connect call even begins.
 	wg.Wait()
-	assert.Equal(tc.T(), ConnectionStatus{Connecting, "", nil}, tc.connManager.Status())
+	assert.Equal(tc.T(), ConnectionStatus{Connecting, "vpn-node-1-session", nil}, tc.connManager.Status())
 	tc.fakeOpenVpn.resumeStart()
+}
+
+func (tc *test_context) TestStatusReportsDisconnectingThenNotConnected() {
+	tc.fakeOpenVpn.resumeStart()
+
+	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
+
+	assert.NoError(tc.T(), err)
+	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-node-1-session", nil}, tc.connManager.Status())
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		tc.connManager.Disconnect()
+		wg.Done()
+	}()
+	wg.Wait()
+
+	assert.Equal(tc.T(), ConnectionStatus{Disconnecting, "", nil}, tc.connManager.Status())
+	wg.Add(1)
+	go func() {
+		tc.fakeDialogResumeDisconnect <- 1
+		wg.Done()
+	}()
+	wg.Wait()
+
+	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
@@ -104,6 +133,7 @@ func (foc *fake_openvpn_client) Stop() error {
 }
 
 type fake_dialog struct {
+	closeDelay chan int
 }
 
 func (fd *fake_dialog) CreateDialog(contact dto.Contact) (communication.Dialog, error) {
@@ -111,6 +141,7 @@ func (fd *fake_dialog) CreateDialog(contact dto.Contact) (communication.Dialog, 
 }
 
 func (fd *fake_dialog) Close() error {
+	<-fd.closeDelay
 	return nil
 }
 

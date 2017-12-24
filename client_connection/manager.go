@@ -76,6 +76,8 @@ func (manager *connectionManager) Status() ConnectionStatus {
 }
 
 func (manager *connectionManager) Disconnect() error {
+	manager.status = statusDisconnecting()
+	defer func() { manager.status = statusNotConnected() }()
 	manager.dialog.Close()
 	return manager.vpnClient.Stop()
 }
@@ -98,6 +100,10 @@ func statusConnected(sessionId string) ConnectionStatus {
 
 func statusNotConnected() ConnectionStatus {
 	return ConnectionStatus{NotConnected, "", nil}
+}
+
+func statusDisconnecting() ConnectionStatus {
+	return ConnectionStatus{Disconnecting, "", nil}
 }
 
 func ConfigureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntimeDirectory string) VpnClientFactory {
