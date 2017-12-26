@@ -75,7 +75,7 @@ func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() 
 	}()
 	//wait for go function actually start, to avoid race condition, when we query Status before Connect call even begins.
 	wg.Wait()
-	assert.Equal(tc.T(), ConnectionStatus{Connecting, "vpn-node-1-session", nil}, tc.connManager.Status())
+	assert.Equal(tc.T(), ConnectionStatus{Connecting, "", nil}, tc.connManager.Status())
 	tc.fakeOpenVpn.resumeStart()
 }
 
@@ -90,16 +90,16 @@ func (tc *test_context) TestStatusReportsDisconnectingThenNotConnected() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		tc.connManager.Disconnect()
 		wg.Done()
+		tc.connManager.Disconnect()
 	}()
 	wg.Wait()
 
 	assert.Equal(tc.T(), ConnectionStatus{Disconnecting, "", nil}, tc.connManager.Status())
 	wg.Add(1)
 	go func() {
-		tc.fakeDialogResumeDisconnect <- 1
 		wg.Done()
+		tc.fakeDialogResumeDisconnect <- 1
 	}()
 	wg.Wait()
 
