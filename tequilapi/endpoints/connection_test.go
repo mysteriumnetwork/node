@@ -58,12 +58,37 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"status" : "NotConnected"
+			"status" : "Not Connected"
 		}`,
 		resp.Body.String())
 }
 
-func TestConnectedStateAndSessionIdIsReturnedWhenIsConnection(t *testing.T) {
+func TestConnectedStateAndSessionIdIsReturnedWhenIsConnecting(t *testing.T) {
+	var fakeManager = fakeManager{}
+	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
+		State:     client_connection.Connecting,
+		SessionId: "My-super-session",
+	}
+
+	connEndpoint := NewConnectionEndpoint(&fakeManager)
+	req, err := http.NewRequest(http.MethodGet, "/connection", nil)
+	assert.Nil(t, err)
+	resp := httptest.NewRecorder()
+
+	connEndpoint.Status(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+            "status" : "Connecting",
+            "sessionId" : "My-super-session"
+        }`,
+		resp.Body.String())
+
+}
+
+func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
 		State:     client_connection.Connected,

@@ -73,7 +73,7 @@ func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() 
 	}()
 	//wait for go function actually start, to avoid race condition, when we query Status before Connect call even begins.
 	wg.Wait()
-	assert.Equal(tc.T(), ConnectionStatus{Connecting, "", nil}, tc.connManager.Status())
+	assert.Equal(tc.T(), ConnectionStatus{Connecting, "vpn-node-1-session", nil}, tc.connManager.Status())
 	tc.fakeOpenVpn.resumeStart()
 }
 

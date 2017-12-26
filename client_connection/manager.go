@@ -39,12 +39,12 @@ func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEs
 }
 
 func (manager *connectionManager) Connect(identity identity.Identity, NodeKey string) error {
-	manager.status = statusConnecting()
 	clientSession, err := manager.mysteriumClient.SessionCreate(NodeKey)
 	if err != nil {
 		manager.status = statusError(err)
 		return err
 	}
+	manager.status = statusConnecting(clientSession.Id)
 
 	proposal := clientSession.ServiceProposal
 
@@ -88,8 +88,8 @@ func statusError(err error) ConnectionStatus {
 	return ConnectionStatus{NotConnected, "", err}
 }
 
-func statusConnecting() ConnectionStatus {
-	return ConnectionStatus{Connecting, "", nil}
+func statusConnecting(sessionId string) ConnectionStatus {
+	return ConnectionStatus{Connecting, sessionId, nil}
 }
 
 func statusConnected(sessionId string) ConnectionStatus {
