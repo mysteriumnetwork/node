@@ -17,10 +17,10 @@ import (
 
 type test_context struct {
 	suite.Suite
-	connManager                *connectionManager
-	fakeDiscoveryClient        *server.ClientFake
-	fakeOpenVpn                *fake_openvpn_client
-	fakeDialogResumeDisconnect chan int
+	connManager         *connectionManager
+	fakeDiscoveryClient *server.ClientFake
+	fakeOpenVpn         *fake_openvpn_client
+	fakeDialog          *fake_dialog
 }
 
 func (tc *test_context) SetupTest() {
@@ -30,9 +30,10 @@ func (tc *test_context) SetupTest() {
 	serviceProposal := service_discovery.NewServiceProposal(identity.FromAddress("vpn-node-1"), dto.Contact{})
 	tc.fakeDiscoveryClient.NodeRegister(serviceProposal)
 
-	tc.fakeDialogResumeDisconnect = make(chan int, 1)
+	tc.fakeDialog = &fake_dialog{make(chan int, 1)}
+
 	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
-		return &fake_dialog{tc.fakeDialogResumeDisconnect}
+		return tc.fakeDialog
 	}
 
 	tc.fakeOpenVpn = &fake_openvpn_client{make(chan int, 1), nil}
@@ -91,7 +92,7 @@ func (tc *test_context) TestStatusReportsDisconnectingThenNotConnected() {
 	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
 
 	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-node-1-session", nil}, tc.connManager.Status())
+	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -105,7 +106,7 @@ func (tc *test_context) TestStatusReportsDisconnectingThenNotConnected() {
 	wg.Add(1)
 	go func() {
 		wg.Done()
-		tc.fakeDialogResumeDisconnect <- 1
+		tc.fakeDialog.resumeClose()
 	}()
 	wg.Wait()
 
@@ -144,6 +145,10 @@ type fake_dialog struct {
 
 func (fd *fake_dialog) CreateDialog(contact dto.Contact) (communication.Dialog, error) {
 	return fd, nil
+}
+
+func (fd *fake_dialog) resumeClose() {
+	fd.closeDelay <- 1
 }
 
 func (fd *fake_dialog) Close() error {
