@@ -80,10 +80,10 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnecting(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-            "status" : "Connecting"
-        }`,
-		resp.Body.String())
-
+			"status" : "Connecting"
+		}`,
+		resp.Body.String(),
+	)
 }
 
 func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
