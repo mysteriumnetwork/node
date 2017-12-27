@@ -20,6 +20,7 @@ type test_context struct {
 	connManager         *connectionManager
 	fakeDiscoveryClient *server.ClientFake
 	fakeOpenVpn         *fake_openvpn_client
+	fakeDialog          *fake_dialog
 }
 
 func (tc *test_context) SetupTest() {
@@ -29,8 +30,10 @@ func (tc *test_context) SetupTest() {
 	serviceProposal := service_discovery.NewServiceProposal(identity.FromAddress("vpn-node-1"), dto.Contact{})
 	tc.fakeDiscoveryClient.NodeRegister(serviceProposal)
 
+	tc.fakeDialog = &fake_dialog{make(chan int, 1)}
+
 	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
-		return &fake_dialog{}
+		return tc.fakeDialog
 	}
 
 	tc.fakeOpenVpn = &fake_openvpn_client{make(chan int, 1), nil}
@@ -83,6 +86,33 @@ func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() 
 	tc.fakeOpenVpn.resumeStart()
 }
 
+func (tc *test_context) TestStatusReportsDisconnectingThenNotConnected() {
+	tc.fakeOpenVpn.resumeStart()
+
+	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
+
+	assert.NoError(tc.T(), err)
+	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		wg.Done()
+		tc.connManager.Disconnect()
+	}()
+	wg.Wait()
+
+	assert.Equal(tc.T(), ConnectionStatus{Disconnecting, "", nil}, tc.connManager.Status())
+	wg.Add(1)
+	go func() {
+		wg.Done()
+		tc.fakeDialog.resumeClose()
+	}()
+	wg.Wait()
+
+	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
+}
+
 func TestConnectionManagerSuite(t *testing.T) {
 	suite.Run(t, new(test_context))
 }
@@ -110,13 +140,19 @@ func (foc *fake_openvpn_client) Stop() error {
 }
 
 type fake_dialog struct {
+	closeDelay chan int
 }
 
 func (fd *fake_dialog) CreateDialog(contact dto.Contact) (communication.Dialog, error) {
 	return fd, nil
 }
 
+func (fd *fake_dialog) resumeClose() {
+	fd.closeDelay <- 1
+}
+
 func (fd *fake_dialog) Close() error {
+	<-fd.closeDelay
 	return nil
 }
 
