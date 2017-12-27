@@ -7,7 +7,7 @@ import (
 )
 
 type signerInterface interface {
-	Sign(account accounts.Account, message string) ([]byte, error)
+	Sign(account accounts.Account, message []byte) ([]byte, error)
 }
 
 type signer struct {
@@ -22,9 +22,9 @@ func newSigner(keystore keystoreInterface, identity Identity) signerInterface {
 	}
 }
 
-func (s *signer) Sign(account accounts.Account, message string) ([]byte, error) {
+func (s *signer) Sign(account accounts.Account, message []byte) ([]byte, error) {
 	keystoreManager := s.keystoreManager
-	signature, err := keystoreManager.SignHash(account, signHash([]byte(message)))
+	signature, err := keystoreManager.SignHash(account, signHash(message))
 	if err != nil {
 		return nil, err
 	}
