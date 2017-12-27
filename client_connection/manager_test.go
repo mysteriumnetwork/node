@@ -61,7 +61,7 @@ func (tc *test_context) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet(
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", fatalVpnError}, tc.connManager.Status())
 }
 
-func (tc *test_context) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
+func (tc *test_context) TestConnectionStatusReturnsConnectedStateAndSessionId() {
 	tc.fakeOpenVpn.resumeStart()
 
 	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
