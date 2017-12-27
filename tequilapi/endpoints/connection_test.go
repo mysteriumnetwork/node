@@ -81,9 +81,10 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"status" : "NotConnected"
-		}`,
-		resp.Body.String())
+            "status" : "NotConnected"
+        }`,
+		resp.Body.String(),
+	)
 }
 
 func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
@@ -102,11 +103,11 @@ func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(
 		t,
-        `{
+		`{
             "status" : "Connecting"
         }`,
-        resp.Body.String(),
-    )
+		resp.Body.String(),
+	)
 }
 
 func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
