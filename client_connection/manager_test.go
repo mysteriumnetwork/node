@@ -33,7 +33,12 @@ func (tc *test_context) SetupTest() {
 		return &fake_dialog{}
 	}
 
-	tc.fakeOpenVpn = &fake_openvpn_client{make(chan int, 1), nil}
+	tc.fakeOpenVpn = &fake_openvpn_client{
+		false,
+		make(chan int, 1),
+		make(chan int, 1),
+		nil,
+	}
 	var fakeVpnClientFactory VpnClientFactory = func(vpnSession session.VpnSession) (openvpn.Client, error) {
 		return tc.fakeOpenVpn, nil
 	}
@@ -55,15 +60,12 @@ func (tc *test_context) TestWithUnknownNodeKey() {
 func (tc *test_context) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet() {
 	fatalVpnError := errors.New("fatal connection error")
 	tc.fakeOpenVpn.onConnectReturnError = fatalVpnError
-	tc.fakeOpenVpn.resumeStart()
 
 	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1"))
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", fatalVpnError}, tc.connManager.Status())
 }
 
-func (tc *test_context) TestConnectionStatusReturnsConnectedStateAndSessionId() {
-	tc.fakeOpenVpn.resumeStart()
-
+func (tc *test_context) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
 	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
 
 	assert.NoError(tc.T(), err)
@@ -71,16 +73,33 @@ func (tc *test_context) TestConnectionStatusReturnsConnectedStateAndSessionId() 
 }
 
 func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() {
-	wg := sync.WaitGroup{}
-	wg.Add(1)
+	tc.fakeOpenVpn.delayableAction()
 	go func() {
-		wg.Done()
 		tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
 	}()
-	//wait for go function actually start, to avoid race condition, when we query Status before Connect call even begins.
-	wg.Wait()
+	tc.fakeOpenVpn.waitForDelayState()
 	assert.Equal(tc.T(), ConnectionStatus{Connecting, "", nil}, tc.connManager.Status())
-	tc.fakeOpenVpn.resumeStart()
+}
+
+func (tc *test_context) TestStatusReportsDisconnectingThenNotConnected() {
+	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
+
+	assert.NoError(tc.T(), err)
+	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
+
+	tc.fakeOpenVpn.delayableAction()
+	disconnectCompleted := sync.WaitGroup{}
+	disconnectCompleted.Add(1)
+	go func() {
+		tc.connManager.Disconnect()
+		disconnectCompleted.Done()
+	}()
+
+	tc.fakeOpenVpn.waitForDelayState()
+	assert.Equal(tc.T(), ConnectionStatus{Disconnecting, "", nil}, tc.connManager.Status())
+	tc.fakeOpenVpn.resumeAction()
+	disconnectCompleted.Wait()
+	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
@@ -88,16 +107,17 @@ func TestConnectionManagerSuite(t *testing.T) {
 }
 
 type fake_openvpn_client struct {
-	connectionDelay      chan int
-	onConnectReturnError error
-}
-
-func (foc *fake_openvpn_client) resumeStart() {
-	foc.connectionDelay <- 1
+	delayAction               bool
+	delayStateEnteredNotifier chan int
+	resumeFromDelay           chan int
+	onConnectReturnError      error
 }
 
 func (foc *fake_openvpn_client) Start() error {
-	<-foc.connectionDelay
+	if foc.delayAction {
+		foc.delayStateEnteredNotifier <- 1
+		<-foc.resumeFromDelay
+	}
 	return foc.onConnectReturnError
 }
 
@@ -106,7 +126,23 @@ func (foc *fake_openvpn_client) Wait() error {
 }
 
 func (foc *fake_openvpn_client) Stop() error {
+	if foc.delayAction {
+		foc.delayStateEnteredNotifier <- 1
+		<-foc.resumeFromDelay
+	}
 	return nil
+}
+
+func (foc *fake_openvpn_client) delayableAction() {
+	foc.delayAction = true
+}
+
+func (foc *fake_openvpn_client) waitForDelayState() {
+	<-foc.delayStateEnteredNotifier
+}
+
+func (foc *fake_openvpn_client) resumeAction() {
+	foc.resumeFromDelay <- 1
 }
 
 type fake_dialog struct {

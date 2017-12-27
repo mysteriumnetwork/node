@@ -8,9 +8,10 @@ import (
 type State string
 
 const (
-	NotConnected = State("NotConnected")
-	Connecting   = State("Connecting")
-	Connected    = State("Connected")
+	NotConnected  = State("NotConnected")
+	Connecting    = State("Connecting")
+	Connected     = State("Connected")
+	Disconnecting = State("Disconnecting")
 )
 
 type ConnectionStatus struct {
