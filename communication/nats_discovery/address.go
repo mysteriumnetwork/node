@@ -3,8 +3,8 @@ package nats_discovery
 import (
 	"fmt"
 	"github.com/mysterium/node/communication/nats"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/identity"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	nats_lib "github.com/nats-io/go-nats"
 )
 
