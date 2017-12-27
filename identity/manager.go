@@ -51,6 +51,29 @@ func (idm *identityManager) GetIdentities() []Identity {
 	return ids
 }
 
+func (idm *identityManager) Unlock(identity Identity) (error) {
+	keystoreManager := idm.keystoreManager
+	accountExisting := accounts.Account{
+		Address: common.HexToAddress(identity.Address),
+	}
+
+	account, err := keystoreManager.Find(accountExisting)
+	if err != nil {
+		return err
+	}
+
+	err = keystoreManager.Unlock(account, "")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (idm *identityManager) GetSigner(identity Identity) signerInterface {
+	return newSigner(idm.keystoreManager, identity)
+}
+
 func (idm *identityManager) GetIdentity(identityString string) (identity Identity, err error) {
 	identityString = strings.ToLower(identityString)
 	for _, identity := range idm.GetIdentities() {
