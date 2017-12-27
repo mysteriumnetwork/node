@@ -11,7 +11,7 @@ func NewClientFake(IP string) Client {
 }
 
 type clientFake struct {
-	ip string
+	ip         string
 	outboundIp string
 }
 

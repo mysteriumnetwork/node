@@ -58,7 +58,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"status" : "Not Connected"
+			"status" : "NotConnected"
 		}`,
 		resp.Body.String())
 }
@@ -66,8 +66,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 func TestConnectedStateAndSessionIdIsReturnedWhenIsConnecting(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
-		State:     client_connection.Connecting,
-		SessionId: "My-super-session",
+		State: client_connection.Connecting,
 	}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager)
@@ -81,8 +80,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnecting(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-            "status" : "Connecting",
-            "sessionId" : "My-super-session"
+            "status" : "Connecting"
         }`,
 		resp.Body.String())
 

@@ -8,7 +8,7 @@ import (
 type State string
 
 const (
-	NotConnected = State("Not Connected")
+	NotConnected = State("NotConnected")
 	Connecting   = State("Connecting")
 	Connected    = State("Connected")
 )
