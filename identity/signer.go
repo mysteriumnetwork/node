@@ -1,13 +1,12 @@
 package identity
 
 import (
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/crypto"
 	"fmt"
 )
 
 type signerInterface interface {
-	Sign(account accounts.Account, message []byte) ([]byte, error)
+	Sign(message []byte) ([]byte, error)
 }
 
 type signer struct {
@@ -18,13 +17,13 @@ type signer struct {
 func newSigner(keystore keystoreInterface, identity Identity) signerInterface {
 	return &signer{
 		keystoreManager: keystore,
-		identity: identity,
+		identity:        identity,
 	}
 }
 
-func (s *signer) Sign(account accounts.Account, message []byte) ([]byte, error) {
+func (s *signer) Sign(message []byte) ([]byte, error) {
 	keystoreManager := s.keystoreManager
-	signature, err := keystoreManager.SignHash(account, signHash(message))
+	signature, err := keystoreManager.SignHash(identityToAccount(s.identity), signHash(message))
 	if err != nil {
 		return nil, err
 	}

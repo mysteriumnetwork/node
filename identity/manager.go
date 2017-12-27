@@ -25,10 +25,12 @@ func accountToIdentity(account accounts.Account) Identity {
 	return identity
 }
 
-func identityToAccount(identityStr string) accounts.Account {
-	return accounts.Account{
-		Address: common.HexToAddress(identityStr),
+func identityToAccount(identity Identity) accounts.Account {
+	account := accounts.Account{
+		Address: common.HexToAddress(identity.Address),
 	}
+
+	return account
 }
 
 func (idm *identityManager) CreateNewIdentity(passphrase string) (identity Identity, err error) {
@@ -53,9 +55,7 @@ func (idm *identityManager) GetIdentities() []Identity {
 
 func (idm *identityManager) Unlock(identity Identity) (error) {
 	keystoreManager := idm.keystoreManager
-	accountExisting := accounts.Account{
-		Address: common.HexToAddress(identity.Address),
-	}
+	accountExisting := identityToAccount(identity)
 
 	account, err := keystoreManager.Find(accountExisting)
 	if err != nil {
@@ -68,6 +68,17 @@ func (idm *identityManager) Unlock(identity Identity) (error) {
 	}
 
 	return nil
+}
+
+func (idm *identityManager) IsUnlocked(identity Identity) bool {
+	signer := idm.GetSigner(identity)
+
+	_, err := signer.Sign([]byte("1"))
+	if err == nil {
+		return true
+	}
+
+	return false
 }
 
 func (idm *identityManager) GetSigner(identity Identity) signerInterface {
