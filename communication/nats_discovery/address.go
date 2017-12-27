@@ -3,10 +3,12 @@ package nats_discovery
 import (
 	"fmt"
 	"github.com/mysterium/node/communication/nats"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/identity"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	nats_lib "github.com/nats-io/go-nats"
 )
+
+var natsServerIp string
 
 func NewAddress(server string, port int, topic string) *NatsAddress {
 	return &NatsAddress{
@@ -18,7 +20,7 @@ func NewAddress(server string, port int, topic string) *NatsAddress {
 }
 
 func NewAddressForIdentity(identity identity.Identity) *NatsAddress {
-	return NewAddress("127.0.0.1", 4222, identity.Address)
+	return NewAddress(natsServerIp, 4222, identity.Address)
 }
 
 func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
@@ -31,7 +33,7 @@ func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
 		return nil, fmt.Errorf("Invalid contact definition: %#v", contact.Definition)
 	}
 
-	return NewAddress("127.0.0.1", 4222, contactNats.Topic), nil
+	return NewAddress(natsServerIp, 4222, contactNats.Topic), nil
 }
 
 func NewAddressWithConnection(connection nats.Connection, topic string) *NatsAddress {

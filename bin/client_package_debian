@@ -7,6 +7,10 @@
 # - GOPATH must be set
 # - 'fpm' tool must be on the path (https://github.com/jordansissel/fpm)
 #
+# for macOS:
+# - brew install gnu-tar
+# - sudo gem install --no-ri --no-rdoc fpm
+#
 # To package a build, simple execute:
 #> bin/client_package_debian <version> <architecture>
 
@@ -49,7 +53,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --version "$VERSION" \
         --architecture="$ARCH" \
         --package="$PACKAGE_FILE" \
-        --depends "openvpn (>= 2.3.2)" \
+        --depends "openvpn (>= 2.3.3)" \
         --depends "ca-certificates" \
         --after-install bin/client_package/installation/post-install.sh \
         --after-remove bin/client_package/installation/post-uninstall.sh \

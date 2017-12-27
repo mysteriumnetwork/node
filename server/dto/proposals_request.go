@@ -1,5 +1,5 @@
 package dto
 
-type SessionStartRequest struct {
+type ProposalsRequest struct {
 	NodeKey string `json:"node_key"`
 }

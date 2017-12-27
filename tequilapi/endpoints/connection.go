@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
-    "github.com/mysterium/node/identity"
 )
 
 type connectionRequest struct {
@@ -46,7 +46,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	err = ce.manager.Connect( identity.FromAddress(cr.Identity), cr.NodeKey)
+	err = ce.manager.Connect(identity.FromAddress(cr.Identity), cr.NodeKey)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -91,6 +91,6 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 func toStatusResponse(status client_connection.ConnectionStatus) statusResponse {
 	return statusResponse{
 		Status:    string(status.State),
-		SessionId: status.SessionId,
+		SessionId: string(status.SessionId),
 	}
 }

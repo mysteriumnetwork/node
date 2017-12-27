@@ -2,9 +2,9 @@ package nats_dialog
 
 import (
 	"encoding/json"
+	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/mysterium/node/identity"
 )
 
 func TestRequestSerialize(t *testing.T) {
