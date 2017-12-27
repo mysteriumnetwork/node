@@ -12,7 +12,7 @@ func newManager(accountValue string) *identityManager {
 	return &identityManager{
 		keystoreManager: &keyStoreFake{
 			AccountsMock: []accounts.Account{
-				identityToAccount(accountValue),
+				identityToAccount(FromAddress(accountValue)),
 			},
 		},
 	}

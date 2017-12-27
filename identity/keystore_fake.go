@@ -46,3 +46,12 @@ func (self *keyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, err
 
 	panic("implement me")
 }
+
+func (self *keyStoreFake) Find(a accounts.Account) (accounts.Account, error) {
+	if self.ErrorMock != nil {
+		return accounts.Account{}, self.ErrorMock
+	}
+
+	panic("implement me")
+}
+
