@@ -24,7 +24,7 @@ func newSigner(keystore keystoreInterface, identity Identity) Signer {
 
 func (s *keystoreSigner) Sign(account accounts.Account, message []byte) ([]byte, error) {
 	keystoreManager := s.keystoreManager
-	signature, err := keystoreManager.SignHash(account, signHash(message))
+	signature, err := keystoreManager.SignHash(account, messageHash(message))
 	if err != nil {
 		return nil, err
 	}
@@ -32,14 +32,14 @@ func (s *keystoreSigner) Sign(account accounts.Account, message []byte) ([]byte,
 	return signature, nil
 }
 
-// signHash is a helper function that calculates a hash for the given message that can be
+// messageHash is a helper function that calculates a hash for the given message that can be
 // safely used to calculate a signature from.
 //
 // The hash is calulcated as
 //   keccak256("\x19Ethereum Signed Message:\n"${message length}${message}).
 //
 // This gives context to the signed message and prevents keystoreSigner of transactions.
-func signHash(data []byte) []byte {
+func messageHash(data []byte) []byte {
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 
 	return crypto.Keccak256([]byte(msg))
