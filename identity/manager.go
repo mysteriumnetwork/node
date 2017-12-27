@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"strings"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
 type identityManager struct {
@@ -74,11 +75,11 @@ func (idm *identityManager) IsUnlocked(identity Identity) bool {
 	signer := idm.GetSigner(identity)
 
 	_, err := signer.Sign([]byte("1"))
-	if err == nil {
-		return true
+	if err == keystore.ErrLocked {
+		return false
 	}
 
-	return false
+	return true
 }
 
 func (idm *identityManager) GetSigner(identity Identity) Signer {
