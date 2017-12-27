@@ -1,8 +1,8 @@
 package identity
 
 import (
-	"io/ioutil"
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -34,7 +34,7 @@ func (ic *identityCache) GetIdentity() (identity Identity, err error) {
 	return
 }
 
-func (ic *identityCache) StoreIdentity(identity Identity) (error) {
+func (ic *identityCache) StoreIdentity(identity Identity) error {
 	cache := cacheData{
 		Identity: identity,
 	}

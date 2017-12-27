@@ -3,7 +3,7 @@ package command_run
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/communication"
-    "github.com/mysterium/node/identity"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -53,7 +53,8 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	var providerContact dto_discovery.Contact
 	cmd.dialogWaiter, providerContact = cmd.DialogWaiterFactory(providerId)
 
-	vpnServerIp, err := cmd.IpifyClient.GetIp()
+	// if for some reason we will need truly external IP, use GetPublicIP()
+	vpnServerIp, err := cmd.IpifyClient.GetOutboundIP()
 	if err != nil {
 		return err
 	}
@@ -62,6 +63,10 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		SourceAddress: "10.8.0.0/24",
 		TargetIp:      vpnServerIp,
 	})
+
+	// clear probable stale entries
+	cmd.NatService.Stop()
+
 	if err = cmd.NatService.Start(); err != nil {
 		return err
 	}

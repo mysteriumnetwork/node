@@ -25,7 +25,8 @@ fi
 
 source .env
 
-flags="-X 'github.com/mysterium/node/server.mysteriumApiUrl=${MYSTERIUM_API_URL}'"
+flags="-X 'github.com/mysterium/node/server.mysteriumApiUrl=${MYSTERIUM_API_URL}'
+       -X 'github.com/mysterium/node/communication/nats_discovery.natsServerIp=${NATS_SERVER_IP}'"
 
 echo "Compiling 'mysterium_client' for '$GOOS/$GOARCH'.."
 GOBIN=`pwd`/build/client go install -ldflags="$flags" cmd/mysterium_client/mysterium_client.go

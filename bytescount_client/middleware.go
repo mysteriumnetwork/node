@@ -5,6 +5,7 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/server/dto"
+	"github.com/mysterium/node/session"
 	"net"
 	"regexp"
 	"strconv"
@@ -14,12 +15,12 @@ import (
 type middleware struct {
 	mysteriumClient server.Client
 	interval        time.Duration
-	sessionId       string
+	sessionId       session.SessionId
 
 	connection net.Conn
 }
 
-func NewMiddleware(mysteriumClient server.Client, sessionId string, interval time.Duration) openvpn.ManagementMiddleware {
+func NewMiddleware(mysteriumClient server.Client, sessionId session.SessionId, interval time.Duration) openvpn.ManagementMiddleware {
 	return &middleware{
 		mysteriumClient: mysteriumClient,
 		interval:        interval,
@@ -65,8 +66,8 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	err = middleware.mysteriumClient.SessionSendStats(middleware.sessionId, dto.SessionStats{
-		Id:            middleware.sessionId,
+	err = middleware.mysteriumClient.SessionSendStats(string(middleware.sessionId), dto.SessionStats{
+		Id:            string(middleware.sessionId),
 		BytesSent:     bytesOut,
 		BytesReceived: bytesIn,
 	})

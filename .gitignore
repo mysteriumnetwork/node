@@ -2,3 +2,5 @@
 /build
 /vendor
 /.env
+bin/deploy_zolia
+bin/tls/demoCA/
