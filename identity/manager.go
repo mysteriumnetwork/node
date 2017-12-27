@@ -6,8 +6,8 @@ package identity
 import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"strings"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 type identityManager struct {
@@ -51,7 +51,7 @@ func (idm *identityManager) GetIdentities() []Identity {
 	return ids
 }
 
-func (idm *identityManager) Unlock(identity Identity) (error) {
+func (idm *identityManager) Unlock(identity Identity) error {
 	keystoreManager := idm.keystoreManager
 	accountExisting := accounts.Account{
 		Address: common.HexToAddress(identity.Address),
@@ -70,7 +70,7 @@ func (idm *identityManager) Unlock(identity Identity) (error) {
 	return nil
 }
 
-func (idm *identityManager) GetSigner(identity Identity) signerInterface {
+func (idm *identityManager) GetSigner(identity Identity) Signer {
 	return newSigner(idm.keystoreManager, identity)
 }
 
