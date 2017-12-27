@@ -58,8 +58,8 @@ func TestDisconnectingState(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-            "status" : "Disconnecting"
-        }`,
+			"status" : "Disconnecting"
+		}`,
 		resp.Body.String())
 }
 
