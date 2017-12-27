@@ -63,7 +63,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 		resp.Body.String())
 }
 
-func TestConnectedStateAndSessionIdIsReturnedWhenIsConnecting(t *testing.T) {
+func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
 		State: client_connection.Connecting,
