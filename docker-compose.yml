@@ -15,7 +15,7 @@ services:
       context: .
       dockerfile: bin/server_docker/ubuntu/Dockerfile
       args:
-        PACKAGE_FILE: build/package/mysterium-node_linux_amd64.deb
+        PACKAGE_VERSION: 0.0.1-docker
     container_name: mysterium-server-ubuntu
     depends_on:
       - broker
