@@ -16,44 +16,44 @@ import (
 )
 
 type CommandRun struct {
-	IdentitySelector func() (identity.Identity, error)
-	IpifyClient      ipify.Client
-	MysteriumClient  server.Client
-	NatService       nat.NATService
+	identitySelector func() (identity.Identity, error)
+	ipifyClient      ipify.Client
+	mysteriumClient  server.Client
+	natService       nat.NATService
 
-	DialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
+	dialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
 	dialogWaiter        communication.DialogWaiter
 
-	SessionManager session.ManagerInterface
+	sessionManager session.ManagerInterface
 
-	VpnServerFactory func() *openvpn.Server
+	vpnServerFactory func() *openvpn.Server
 	vpnServer        *openvpn.Server
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	providerId, err := cmd.IdentitySelector()
+	providerId, err := cmd.identitySelector()
 	if err != nil {
 		return err
 	}
 
 	var providerContact dto_discovery.Contact
-	cmd.dialogWaiter, providerContact = cmd.DialogWaiterFactory(providerId)
+	cmd.dialogWaiter, providerContact = cmd.dialogWaiterFactory(providerId)
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
-	vpnServerIp, err := cmd.IpifyClient.GetOutboundIP()
+	vpnServerIp, err := cmd.ipifyClient.GetOutboundIP()
 	if err != nil {
 		return err
 	}
 
-	cmd.NatService.Add(nat.RuleForwarding{
+	cmd.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIp:      vpnServerIp,
 	})
 
 	// clear probable stale entries
-	cmd.NatService.Stop()
+	cmd.natService.Stop()
 
-	if err = cmd.NatService.Start(); err != nil {
+	if err = cmd.natService.Start(); err != nil {
 		return err
 	}
 
@@ -61,7 +61,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	sessionCreateConsumer := &vpn_session.SessionCreateConsumer{
 		CurrentProposalId: proposal.Id,
-		SessionManager:    cmd.SessionManager,
+		SessionManager:    cmd.sessionManager,
 		ClientConfigFactory: func() *openvpn.ClientConfig {
 			return openvpn.NewClientConfig(
 				vpnServerIp,
@@ -76,18 +76,18 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	cmd.vpnServer = cmd.VpnServerFactory()
+	cmd.vpnServer = cmd.vpnServerFactory()
 	if err := cmd.vpnServer.Start(); err != nil {
 		return err
 	}
 
-	if err := cmd.MysteriumClient.NodeRegister(proposal); err != nil {
+	if err := cmd.mysteriumClient.NodeRegister(proposal); err != nil {
 		return err
 	}
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.MysteriumClient.NodeSendStats(providerId.Address, []dto_server.SessionStatsDeprecated{})
+			cmd.mysteriumClient.NodeSendStats(providerId.Address, []dto_server.SessionStatsDeprecated{})
 		}
 	}()
 
@@ -101,5 +101,5 @@ func (cmd *CommandRun) Wait() error {
 func (cmd *CommandRun) Kill() {
 	cmd.vpnServer.Stop()
 	cmd.dialogWaiter.Stop()
-	cmd.NatService.Stop()
+	cmd.natService.Stop()
 }
