@@ -36,7 +36,7 @@ func (self *keyStoreFake) Unlock(a accounts.Account, passphrase string) error {
 		return self.ErrorMock
 	}
 
-	panic("implement me")
+	return nil
 }
 
 func (self *keyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, error) {

@@ -54,7 +54,7 @@ func (idm *identityManager) GetIdentities() []Identity {
 	return ids
 }
 
-func (idm *identityManager) Unlock(identity Identity) error {
+func (idm *identityManager) Unlock(identity Identity, passphrase string) error {
 	keystoreManager := idm.keystoreManager
 	accountExisting := identityToAccount(identity)
 
@@ -63,7 +63,7 @@ func (idm *identityManager) Unlock(identity Identity) error {
 		return err
 	}
 
-	err = keystoreManager.Unlock(account, "")
+	err = keystoreManager.Unlock(account, passphrase)
 	if err != nil {
 		return err
 	}
@@ -72,9 +72,8 @@ func (idm *identityManager) Unlock(identity Identity) error {
 }
 
 func (idm *identityManager) IsUnlocked(identity Identity) bool {
-	signer := idm.GetSigner(identity)
+	_, err := idm.keystoreManager.SignHash(identityToAccount(identity), messageHash([]byte("1")))
 
-	_, err := signer.Sign([]byte("1"))
 	if err == keystore.ErrLocked {
 		return false
 	}
