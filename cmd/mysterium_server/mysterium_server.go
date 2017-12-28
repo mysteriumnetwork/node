@@ -15,7 +15,7 @@ func main() {
 
 	cmd := command_run.NewCommand(options)
 
-	if err := cmd.Run(options); err != nil {
+	if err := cmd.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

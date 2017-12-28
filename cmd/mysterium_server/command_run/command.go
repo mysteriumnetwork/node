@@ -30,7 +30,7 @@ type CommandRun struct {
 	vpnServer        *openvpn.Server
 }
 
-func (cmd *CommandRun) Run(options CommandOptions) (err error) {
+func (cmd *CommandRun) Run() (err error) {
 	providerId, err := cmd.identitySelector()
 	if err != nil {
 		return err
