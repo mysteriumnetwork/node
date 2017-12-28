@@ -9,8 +9,10 @@ import (
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
+	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/session"
 )
 
 func NewCommand(options CommandOptions) *CommandRun {
@@ -46,6 +48,15 @@ func NewCommandWith(
 		dialogWaiterFactory: func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
 			address := nats_discovery.NewAddressForIdentity(identity)
 			return nats_dialog.NewDialogWaiter(address), address.GetContact()
+		},
+		sessionManagerFactory: func(vpnServerIp string) session.ManagerInterface {
+			return openvpn_session.NewManager(openvpn.NewClientConfig(
+				vpnServerIp,
+				options.DirectoryConfig+"/ca.crt",
+				options.DirectoryConfig+"/client.crt",
+				options.DirectoryConfig+"/client.key",
+				options.DirectoryConfig+"/ta.key",
+			))
 		},
 		vpnServerFactory: func() *openvpn.Server {
 			vpnServerConfig := openvpn.NewServerConfig(

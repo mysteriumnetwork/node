@@ -5,25 +5,24 @@ import (
 	"github.com/mysterium/node/session"
 )
 
-func NewManager(clientConfigFactory func() *openvpn.ClientConfig) *manager {
+func NewManager(clientConfig *openvpn.ClientConfig) *manager {
 	return &manager{
-		generator:           &session.Generator{},
-		clientConfigFactory: clientConfigFactory,
-		sessions:            make([]session.SessionId, 0),
+		idGenerator:  &session.Generator{},
+		clientConfig: clientConfig,
+		sessions:     make([]session.SessionId, 0),
 	}
 }
 
 type manager struct {
-	generator           session.GeneratorInterface
-	clientConfigFactory func() *openvpn.ClientConfig
-	sessions            []session.SessionId
+	idGenerator  session.GeneratorInterface
+	clientConfig *openvpn.ClientConfig
+	sessions     []session.SessionId
 }
 
 func (manager *manager) Create() (sessionInstance session.Session, err error) {
-	sessionInstance.Id = manager.generator.Generate()
+	sessionInstance.Id = manager.idGenerator.Generate()
 
-	vpnClientConfig := manager.clientConfigFactory()
-	sessionInstance.Config, err = openvpn.ConfigToString(*vpnClientConfig.Config)
+	sessionInstance.Config, err = openvpn.ConfigToString(*manager.clientConfig.Config)
 	if err != nil {
 		return
 	}

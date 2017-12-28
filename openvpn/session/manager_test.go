@@ -13,7 +13,7 @@ func TestManagerAdd(t *testing.T) {
 		Config: "mocked-config",
 	}
 	manager := manager{
-		generator: &session.GeneratorFake{},
+		idGenerator: &session.GeneratorFake{},
 	}
 
 	manager.Add(sessionExpected)
@@ -29,15 +29,15 @@ func TestManagerCreate(t *testing.T) {
 		Id:     session.SessionId("mocked-id"),
 		Config: "port 1000\n",
 	}
+
+	clientConfig := &openvpn.ClientConfig{&openvpn.Config{}}
+	clientConfig.SetPort(1000)
+
 	manager := manager{
-		generator: &session.GeneratorFake{
+		idGenerator: &session.GeneratorFake{
 			SessionIdMock: session.SessionId("mocked-id"),
 		},
-		clientConfigFactory: func() *openvpn.ClientConfig {
-			clientConfig := openvpn.ClientConfig{&openvpn.Config{}}
-			clientConfig.SetPort(1000)
-			return &clientConfig
-		},
+		clientConfig: clientConfig,
 	}
 
 	sessionInstance, err := manager.Create()
