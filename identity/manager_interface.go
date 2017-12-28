@@ -1,8 +1,8 @@
 package identity
 
 type IdentityManagerInterface interface {
-	CreateNewIdentity(string) (Identity, error)
+	CreateNewIdentity(passphrase string) (Identity, error)
 	GetIdentities() []Identity
-	GetIdentity(string) (Identity, error)
-	HasIdentity(string) bool
+	GetIdentity(address string) (Identity, error)
+	HasIdentity(address string) bool
 }

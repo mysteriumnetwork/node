@@ -16,9 +16,9 @@ func NewNodeIdentityHandler(keystore keystoreInterface, cacheDir string) *identi
 	}
 }
 
-func (ih *identityHandler) Select(nodeKey string) (id Identity, err error) {
-	if len(nodeKey) > 0 {
-		id, err = ih.manager.GetIdentity(nodeKey)
+func (ih *identityHandler) Select(identityAddressWanted string) (id Identity, err error) {
+	if len(identityAddressWanted) > 0 {
+		id, err = ih.manager.GetIdentity(identityAddressWanted)
 		if err != nil {
 			return id, err
 		}
