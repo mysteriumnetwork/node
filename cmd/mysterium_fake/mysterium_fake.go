@@ -23,8 +23,6 @@ func main() {
 		DirectoryConfig:  NodeDirectoryConfig,
 		DirectoryRuntime: ClientDirectoryRuntime,
 	})
-	serverCommand.Output = os.Stdout
-	serverCommand.OutputError = os.Stderr
 	serverCommand.IpifyClient = ipify.NewClientFake(NodeIp)
 	serverCommand.MysteriumClient = mysteriumClient
 	serverCommand.NatService = nat.NewServiceFake()

@@ -12,7 +12,6 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
-	"os"
 )
 
 func NewCommand(options CommandOptions) *CommandRun {
@@ -26,9 +25,6 @@ func NewCommand(options CommandOptions) *CommandRun {
 	)
 
 	return &CommandRun{
-		Output:      os.Stdout,
-		OutputError: os.Stderr,
-
 		IdentitySelector: func() (identity.Identity, error) {
 			return identityHandler.Select(options.NodeKey)
 		},

@@ -12,14 +12,10 @@ import (
 	dto_server "github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
-	"io"
 	"time"
 )
 
 type CommandRun struct {
-	Output      io.Writer
-	OutputError io.Writer
-
 	IdentitySelector func() (identity.Identity, error)
 	IpifyClient      ipify.Client
 	MysteriumClient  server.Client

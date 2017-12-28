@@ -3,15 +3,11 @@ package command_run
 import (
 	"github.com/mysterium/node/cmd/mysterium_monitor/command_run/node_provider"
 	"github.com/mysterium/node/ipify"
-	"os"
 	"time"
 )
 
 func NewCommand() *CommandRun {
 	return &CommandRun{
-		Output:      os.Stdout,
-		OutputError: os.Stderr,
-
 		IpifyClient: ipify.NewClientWithTimeout(5 * time.Second),
 	}
 }
