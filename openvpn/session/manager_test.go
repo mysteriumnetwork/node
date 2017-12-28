@@ -11,8 +11,8 @@ func TestManagerAdd(t *testing.T) {
 		Id:     session.SessionId("mocked-session"),
 		Config: "mocked-config",
 	}
-	manager := Manager{
-		Generator: &session.GeneratorFake{},
+	manager := manager{
+		generator: &session.GeneratorFake{},
 	}
 
 	manager.Add(sessionExpected)
@@ -28,8 +28,8 @@ func TestManagerCreate(t *testing.T) {
 		Id:     session.SessionId("mocked-session"),
 		Config: "",
 	}
-	manager := Manager{
-		Generator: &session.GeneratorFake{
+	manager := manager{
+		generator: &session.GeneratorFake{
 			SessionIdMock: session.SessionId("mocked-session"),
 		},
 	}

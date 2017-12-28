@@ -49,9 +49,7 @@ func NewCommandWith(
 			address := nats_discovery.NewAddressForIdentity(identity)
 			return nats_dialog.NewDialogWaiter(address), address.GetContact()
 		},
-		sessionManager: &openvpn_session.Manager{
-			Generator: &session.Generator{},
-		},
+		sessionManager: openvpn_session.NewManager(),
 		vpnServerFactory: func() *openvpn.Server {
 			vpnServerConfig := openvpn.NewServerConfig(
 				"10.8.0.0", "255.255.255.0",

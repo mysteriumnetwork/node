@@ -2,18 +2,25 @@ package session
 
 import "github.com/mysterium/node/session"
 
-type Manager struct {
-	Generator session.GeneratorInterface
+func NewManager() *manager {
+	return &manager{
+		generator: &session.Generator{},
+		sessions:  make([]session.SessionId, 0),
+	}
+}
+
+type manager struct {
+	generator session.GeneratorInterface
 	sessions  []session.SessionId
 }
 
-func (manager *Manager) Add(session session.Session) {
+func (manager *manager) Add(session session.Session) {
 	manager.sessions = append(manager.sessions, session.Id)
 }
 
-func (manager *Manager) Create() session.Session {
+func (manager *manager) Create() session.Session {
 	sessionInstance := session.Session{
-		Id:     manager.Generator.Generate(),
+		Id:     manager.generator.Generate(),
 		Config: "",
 	}
 	manager.Add(sessionInstance)

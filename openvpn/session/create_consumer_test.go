@@ -7,15 +7,15 @@ import (
 	"testing"
 )
 
-var sessionManager = Manager{
-	Generator: &session.GeneratorFake{
+var sessionManager = &manager{
+	generator: &session.GeneratorFake{
 		SessionIdMock: session.SessionId("session-mock"),
 	},
 }
 
 var consumer = SessionCreateConsumer{
 	CurrentProposalId: 101,
-	SessionManager:    &sessionManager,
+	SessionManager:    sessionManager,
 }
 
 func TestConsumer_UnknownProposal(t *testing.T) {
