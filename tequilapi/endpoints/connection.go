@@ -61,7 +61,7 @@ func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func RegisterConnectionEndpoint(router *httprouter.Router, manager client_connection.Manager) {
+func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager) {
 	connectionEndpoint := NewConnectionEndpoint(manager)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
