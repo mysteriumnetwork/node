@@ -2,11 +2,11 @@ package service_discovery
 
 import (
 	"github.com/mysterium/node/datasize"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/money"
 	"github.com/mysterium/node/openvpn/service_discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"time"
-	"github.com/mysterium/node/identity"
 )
 
 var (

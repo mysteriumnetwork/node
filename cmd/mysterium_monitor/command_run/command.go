@@ -38,24 +38,25 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 	}
 	defer nodeProvider.Close()
 
-	cmd.ipOriginal, err = cmd.IpifyClient.GetIp()
+	cmd.ipOriginal, err = cmd.IpifyClient.GetOutboundIP()
 	if err != nil {
 		return errors.New("Failed to get original IP: " + err.Error())
 	}
 
-	cmd.clientCommand, err = command_client.NewCommand(command_client.CommandOptions{
+	cmd.clientCommand = command_client.NewCommand(command_client.CommandOptions{
 		DirectoryRuntime: options.DirectoryRuntime,
 	})
-	if err != nil {
-		return errors.New("Failed to create client" + err.Error())
-	}
 
 	nodeProvider.WithEachNode(func(nodeKey string) {
 		cmd.resultWriter.NodeStart(nodeKey)
 		cmd.ipCheckWaiter.Add(1)
 
 		//TODO here we need to make tequila api call with connect to node by key
-
+		err = cmd.clientCommand.Run()
+		if err != nil {
+			cmd.resultWriter.NodeError("Client starting error", err)
+			return
+		}
 		go cmd.checkClientHandleTimeout()
 
 		cmd.ipCheckWaiter.Wait()
@@ -70,7 +71,7 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 //   state_client.NewMiddleware(cmd.checkClientIpWhenConnected)
 func (cmd *CommandRun) checkClientIpWhenConnected(state state_client.State) error {
 	if state == state_client.STATE_CONNECTED {
-		ipForwarded, err := cmd.IpifyClient.GetIp()
+		ipForwarded, err := cmd.IpifyClient.GetOutboundIP()
 		if err != nil {
 			cmd.resultWriter.NodeError("Forwarded IP not detected", err)
 			cmd.ipCheckWaiter.Done()
@@ -97,7 +98,7 @@ func (cmd *CommandRun) checkClientHandleTimeout() {
 }
 
 func (cmd *CommandRun) checkClientIpWhenDisconnected() {
-	ipForwarded, err := cmd.IpifyClient.GetIp()
+	ipForwarded, err := cmd.IpifyClient.GetOutboundIP()
 	if err != nil {
 		cmd.resultWriter.NodeError("Disconnect IP not detected", err)
 		return

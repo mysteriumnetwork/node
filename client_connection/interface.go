@@ -2,19 +2,21 @@ package client_connection
 
 import (
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/session"
 )
 
 type State string
 
 const (
-	NotConnected = State("NotConnected")
-	Connecting   = State("Connecting")
-	Connected    = State("Connected")
+	NotConnected  = State("NotConnected")
+	Connecting    = State("Connecting")
+	Connected     = State("Connected")
+	Disconnecting = State("Disconnecting")
 )
 
 type ConnectionStatus struct {
 	State     State
-	SessionId string
+	SessionId session.SessionId
 	LastError error
 }
 

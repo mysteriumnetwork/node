@@ -40,6 +40,29 @@ func (fm *fakeManager) Wait() error {
 	return nil
 }
 
+func TestDisconnectingState(t *testing.T) {
+	var fakeManager = fakeManager{}
+	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
+		State:     client_connection.Disconnecting,
+		SessionId: "",
+	}
+
+	connEndpoint := NewConnectionEndpoint(&fakeManager)
+	req, err := http.NewRequest(http.MethodGet, "/irrelevant", nil)
+	assert.Nil(t, err)
+	resp := httptest.NewRecorder()
+
+	connEndpoint.Status(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"status" : "Disconnecting"
+		}`,
+		resp.Body.String())
+}
+
 func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
@@ -58,12 +81,36 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"status" : "NotConnected"
-		}`,
-		resp.Body.String())
+            "status" : "NotConnected"
+        }`,
+		resp.Body.String(),
+	)
 }
 
-func TestConnectedStateAndSessionIdIsReturnedWhenIsConnection(t *testing.T) {
+func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
+	var fakeManager = fakeManager{}
+	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
+		State: client_connection.Connecting,
+	}
+
+	connEndpoint := NewConnectionEndpoint(&fakeManager)
+	req, err := http.NewRequest(http.MethodGet, "/connection", nil)
+	assert.Nil(t, err)
+	resp := httptest.NewRecorder()
+
+	connEndpoint.Status(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+            "status" : "Connecting"
+        }`,
+		resp.Body.String(),
+	)
+}
+
+func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
 		State:     client_connection.Connected,

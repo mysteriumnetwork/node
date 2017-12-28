@@ -11,7 +11,7 @@ type keyStoreFake struct {
 }
 
 func NewKeystoreFake() *keyStoreFake {
-    return &keyStoreFake{}
+	return &keyStoreFake{}
 }
 
 func (self *keyStoreFake) Accounts() []accounts.Account {

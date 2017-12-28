@@ -11,10 +11,16 @@ func NewClientFake(IP string) Client {
 }
 
 type clientFake struct {
-	ip string
+	ip         string
+	outboundIp string
 }
 
-func (client *clientFake) GetIp() (string, error) {
+func (client *clientFake) GetPublicIP() (string, error) {
 	log.Info(IPIFY_API_LOG_PREFIX, "IP faked: ", client.ip)
 	return client.ip, nil
+}
+
+func (client *clientFake) GetOutboundIP() (string, error) {
+	log.Info(IPIFY_API_LOG_PREFIX, "IP faked: ", client.outboundIp)
+	return client.outboundIp, nil
 }

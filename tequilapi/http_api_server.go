@@ -10,34 +10,26 @@ import (
 )
 
 type ApiServer interface {
-	Port() int
+	Port() (int, error)
 	Wait() error
-	StartServing()
+	StartServing() error
 	Stop()
 }
 
 type apiServer struct {
-	listener     net.Listener
-	errorChannel chan error
-	handler      http.Handler
-	boundPort    int
+	errorChannel  chan error
+	handler       http.Handler
+	listenAddress string
+	listener      net.Listener
 }
 
-func NewServer(address string, port int, handler http.Handler) (ApiServer, error) {
-	var err error
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", address, port))
-	if err != nil {
-		return nil, err
-	}
-
-	boundPort, err := extractBoundPort(listener)
-	if err != nil {
-		listener.Close()
-		return nil, err
-	}
-
-	server := apiServer{listener, make(chan error, 1), handler, boundPort}
-	return &server, nil
+func NewServer(address string, port int, handler http.Handler) ApiServer {
+	server := apiServer{
+		make(chan error, 1),
+		handler,
+		fmt.Sprintf("%s:%d", address, port),
+		nil}
+	return &server
 }
 
 func (server *apiServer) Stop() {
@@ -48,12 +40,21 @@ func (server *apiServer) Wait() error {
 	return <-server.errorChannel
 }
 
-func (server *apiServer) Port() int {
-	return server.boundPort
+func (server *apiServer) Port() (int, error) {
+	if server.listener == nil {
+		return 0, errors.New("not bound")
+	}
+	return extractBoundPort(server.listener)
 }
 
-func (server *apiServer) StartServing() {
+func (server *apiServer) StartServing() error {
+	var err error
+	server.listener, err = net.Listen("tcp", server.listenAddress)
+	if err != nil {
+		return err
+	}
 	go server.serve(server.handler)
+	return nil
 }
 
 func (server *apiServer) serve(handler http.Handler) {
