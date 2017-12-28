@@ -30,7 +30,8 @@ type CommandRun struct {
 
 	SessionManager session.ManagerInterface
 
-	vpnServer *openvpn.Server
+	VpnServerFactory func() *openvpn.Server
+	vpnServer        *openvpn.Server
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
@@ -79,16 +80,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 		return err
 	}
 
-	vpnServerConfig := openvpn.NewServerConfig(
-		"10.8.0.0", "255.255.255.0",
-		options.DirectoryConfig+"/ca.crt",
-		options.DirectoryConfig+"/server.crt",
-		options.DirectoryConfig+"/server.key",
-		options.DirectoryConfig+"/dh.pem",
-		options.DirectoryConfig+"/crl.pem",
-		options.DirectoryConfig+"/ta.key",
-	)
-	cmd.vpnServer = openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime)
+	cmd.vpnServer = cmd.VpnServerFactory()
 	if err := cmd.vpnServer.Start(); err != nil {
 		return err
 	}

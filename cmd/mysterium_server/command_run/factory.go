@@ -8,6 +8,7 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
+	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
@@ -40,6 +41,18 @@ func NewCommand(options CommandOptions) *CommandRun {
 		},
 		SessionManager: &session.Manager{
 			Generator: &session.Generator{},
+		},
+		VpnServerFactory: func() *openvpn.Server {
+			vpnServerConfig := openvpn.NewServerConfig(
+				"10.8.0.0", "255.255.255.0",
+				options.DirectoryConfig+"/ca.crt",
+				options.DirectoryConfig+"/server.crt",
+				options.DirectoryConfig+"/server.key",
+				options.DirectoryConfig+"/dh.pem",
+				options.DirectoryConfig+"/crl.pem",
+				options.DirectoryConfig+"/ta.key",
+			)
+			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime)
 		},
 	}
 }
