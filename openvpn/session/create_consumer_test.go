@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var sessionManager = session.Manager{
+var sessionManager = Manager{
 	Generator: &session.GeneratorFake{
 		SessionIdMock: session.SessionId("session-mock"),
 	},

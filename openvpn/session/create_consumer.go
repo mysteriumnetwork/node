@@ -60,10 +60,10 @@ func (consumer *SessionCreateConsumer) newClientConfig() (string, error) {
 }
 
 func (consumer *SessionCreateConsumer) newVpnSession(vpnClientConfig string) SessionDto {
-	sessionId := consumer.SessionManager.Create()
+	sessionInstance := consumer.SessionManager.Create()
 
 	return SessionDto{
-		Id:     sessionId,
+		Id:     sessionInstance.Id,
 		Config: []byte(vpnClientConfig),
 	}
 }
