@@ -7,13 +7,13 @@ import (
 )
 
 func main() {
-	cmd := command_run.NewCommand()
-
 	options, err := command_run.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+
+	cmd := command_run.NewCommand(options)
 
 	if err := cmd.Run(options); err != nil {
 		fmt.Fprintln(os.Stderr, err)

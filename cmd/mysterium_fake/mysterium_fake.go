@@ -19,7 +19,10 @@ func main() {
 	waiter := &sync.WaitGroup{}
 	mysteriumClient := server.NewClientFake()
 
-	serverCommand := command_server.NewCommand()
+	serverCommand := command_server.NewCommand(command_server.CommandOptions{
+		DirectoryConfig:  NodeDirectoryConfig,
+		DirectoryRuntime: ClientDirectoryRuntime,
+	})
 	serverCommand.Output = os.Stdout
 	serverCommand.OutputError = os.Stderr
 	serverCommand.IpifyClient = ipify.NewClientFake(NodeIp)
@@ -39,10 +42,7 @@ func main() {
 }
 
 func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup) {
-	err := serverCommand.Run(command_server.CommandOptions{
-		DirectoryConfig:  NodeDirectoryConfig,
-		DirectoryRuntime: ClientDirectoryRuntime,
-	})
+	err := serverCommand.Run(command_server.CommandOptions{})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Server starting error: ", err)
 		os.Exit(1)

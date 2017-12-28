@@ -1,7 +1,6 @@
 package command_run
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
@@ -21,24 +20,21 @@ type CommandRun struct {
 	Output      io.Writer
 	OutputError io.Writer
 
-	IpifyClient     ipify.Client
-	MysteriumClient server.Client
-	NatService      nat.NATService
+	IdentitySelector func() (identity.Identity, error)
+	IpifyClient      ipify.Client
+	MysteriumClient  server.Client
+	NatService       nat.NATService
 
 	DialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
 	dialogWaiter        communication.DialogWaiter
 
 	SessionManager session.ManagerInterface
 
-	vpnMiddlewares []openvpn.ManagementMiddleware
-	vpnServer      *openvpn.Server
+	vpnServer *openvpn.Server
 }
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
-	ks := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
-	identityHandler := NewNodeIdentityHandler(identity.NewIdentityManager(ks), cmd.MysteriumClient, options.DirectoryKeystore)
-
-	providerId, err := identityHandler.Select(options.NodeKey)
+	providerId, err := cmd.IdentitySelector()
 	if err != nil {
 		return err
 	}
