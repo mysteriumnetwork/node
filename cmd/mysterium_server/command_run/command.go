@@ -36,18 +36,11 @@ type CommandRun struct {
 
 func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	ks := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
-	identityHandler := identity.NewNodeIdentityHandler(ks, options.DirectoryKeystore)
+	identityHandler := NewNodeIdentityHandler(identity.NewIdentityManager(ks), cmd.MysteriumClient, options.DirectoryKeystore)
 
 	providerId, err := identityHandler.Select(options.NodeKey)
 	if err != nil {
-		providerId, err = identityHandler.Create()
-		if err != nil {
-			return err
-		}
-
-		if err := cmd.MysteriumClient.RegisterIdentity(providerId); err != nil {
-			return err
-		}
+		return err
 	}
 
 	var providerContact dto_discovery.Contact

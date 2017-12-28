@@ -59,7 +59,7 @@ func (idm *identityManager) GetIdentity(address string) (identity Identity, err 
 		}
 	}
 
-	return identity, errors.New("identity not found")
+	return identity, errors.New("identity not found: " + address)
 }
 
 func (idm *identityManager) HasIdentity(address string) bool {
