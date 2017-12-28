@@ -50,9 +50,9 @@ func TestConsumer_Success(t *testing.T) {
 		t,
 		&SessionCreateResponse{
 			Success: true,
-			Session: VpnSession{
+			Session: SessionDto{
 				Id:     "session-mock",
-				Config: "port 1000\n",
+				Config: []byte("port 1000\n"),
 			},
 		},
 		sessionResponse,

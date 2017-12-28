@@ -15,7 +15,7 @@ import (
 
 type DialogEstablisherFactory func(identity identity.Identity) communication.DialogEstablisher
 
-type VpnClientFactory func(vpnSession session.VpnSession) (openvpn.Client, error)
+type VpnClientFactory func(vpnSession session.SessionDto) (openvpn.Client, error)
 
 type connectionManager struct {
 	//these are passed on creation
@@ -113,9 +113,9 @@ func statusDisconnecting() ConnectionStatus {
 }
 
 func ConfigureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntimeDirectory string) VpnClientFactory {
-	return func(vpnSession session.VpnSession) (openvpn.Client, error) {
+	return func(vpnSession session.SessionDto) (openvpn.Client, error) {
 		vpnConfig, err := openvpn.NewClientConfigFromString(
-			vpnSession.Config,
+			string(vpnSession.Config),
 			filepath.Join(vpnClientRuntimeDirectory, "client.ovpn"),
 		)
 		if err != nil {

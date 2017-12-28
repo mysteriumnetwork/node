@@ -1,6 +1,10 @@
 package session
 
-import "github.com/mysterium/node/communication"
+import (
+	"encoding/json"
+	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/session"
+)
 
 const SESSION_CREATE = communication.RequestType("session-create")
 
@@ -11,5 +15,10 @@ type SessionCreateRequest struct {
 type SessionCreateResponse struct {
 	Success bool       `json:"success"`
 	Message string     `json:"message"`
-	Session VpnSession `json:"session"`
+	Session SessionDto `json:"session"`
+}
+
+type SessionDto struct {
+	Id     session.SessionId `json:"id"`
+	Config json.RawMessage   `json:"config"`
 }

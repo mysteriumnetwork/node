@@ -39,7 +39,7 @@ func (tc *test_context) SetupTest() {
 		make(chan int, 1),
 		nil,
 	}
-	var fakeVpnClientFactory VpnClientFactory = func(vpnSession session.VpnSession) (openvpn.Client, error) {
+	var fakeVpnClientFactory VpnClientFactory = func(vpnSession session.SessionDto) (openvpn.Client, error) {
 		return tc.fakeOpenVpn, nil
 	}
 
@@ -169,11 +169,12 @@ func (fd *fake_dialog) Send(producer communication.MessageProducer) error {
 
 func (fd *fake_dialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
 	return &session.SessionCreateResponse{
-			true,
-			"Everything is great!",
-			session.VpnSession{
-				"vpn-session-id",
-				"vpn-session-config"},
+			Success: true,
+			Message: "Everything is great!",
+			Session: session.SessionDto{
+				Id:     "vpn-session-id",
+				Config: []byte("vpn-session-config"),
+			},
 		},
 		nil
 }
