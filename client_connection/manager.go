@@ -6,9 +6,8 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
-	node_session "github.com/mysterium/node/session"
+	"github.com/mysterium/node/session"
 	"path/filepath"
 	"time"
 )
@@ -100,7 +99,7 @@ func statusConnecting() ConnectionStatus {
 	return ConnectionStatus{Connecting, "", nil}
 }
 
-func statusConnected(sessionId node_session.SessionId) ConnectionStatus {
+func statusConnected(sessionId session.SessionId) ConnectionStatus {
 	return ConnectionStatus{Connected, sessionId, nil}
 }
 

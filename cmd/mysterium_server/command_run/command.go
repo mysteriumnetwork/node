@@ -7,7 +7,6 @@ import (
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/service_discovery"
-	vpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	dto_server "github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
@@ -59,7 +58,7 @@ func (cmd *CommandRun) Run() (err error) {
 
 	proposal := service_discovery.NewServiceProposal(providerId, providerContact)
 
-	sessionCreateConsumer := &vpn_session.SessionCreateConsumer{
+	sessionCreateConsumer := &session.SessionCreateConsumer{
 		CurrentProposalId: proposal.Id,
 		SessionManager:    cmd.sessionManagerFactory(vpnServerIp),
 	}

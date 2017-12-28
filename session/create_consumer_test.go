@@ -1,14 +1,13 @@
 package session
 
 import (
-	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 var consumer = SessionCreateConsumer{
 	CurrentProposalId: 101,
-	SessionManager:    &session.ManagerFake{},
+	SessionManager:    &ManagerFake{},
 }
 
 func TestConsumer_UnknownProposal(t *testing.T) {

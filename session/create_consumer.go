@@ -3,12 +3,11 @@ package session
 import (
 	"fmt"
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/session"
 )
 
 type SessionCreateConsumer struct {
 	CurrentProposalId int
-	SessionManager    session.ManagerInterface
+	SessionManager    ManagerInterface
 }
 
 func (consumer *SessionCreateConsumer) GetRequestType() communication.RequestType {

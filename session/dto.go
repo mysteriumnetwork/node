@@ -3,7 +3,6 @@ package session
 import (
 	"encoding/json"
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/session"
 )
 
 const SESSION_CREATE = communication.RequestType("session-create")
@@ -19,6 +18,6 @@ type SessionCreateResponse struct {
 }
 
 type SessionDto struct {
-	Id     session.SessionId `json:"id"`
-	Config json.RawMessage   `json:"config"`
+	Id     SessionId       `json:"id"`
+	Config json.RawMessage `json:"config"`
 }
