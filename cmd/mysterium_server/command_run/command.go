@@ -103,7 +103,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.MysteriumClient.NodeSendStats(options.NodeKey, []dto_server.SessionStatsDeprecated{})
+			cmd.MysteriumClient.NodeSendStats(providerId.Address, []dto_server.SessionStatsDeprecated{})
 		}
 	}()
 
