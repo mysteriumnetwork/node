@@ -42,7 +42,7 @@ func (consumer *SessionCreateConsumer) Consume(requestPtr interface{}) (response
 		Success: true,
 		Session: SessionDto{
 			Id:     clientSession.Id,
-			Config: []byte(clientSession.Config),
+			Config: clientSession.Config,
 		},
 	}
 	return

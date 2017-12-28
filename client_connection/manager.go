@@ -114,7 +114,7 @@ func statusDisconnecting() ConnectionStatus {
 func ConfigureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntimeDirectory string) VpnClientFactory {
 	return func(vpnSession session.SessionDto) (openvpn.Client, error) {
 		vpnConfig, err := openvpn.NewClientConfigFromString(
-			string(vpnSession.Config),
+			vpnSession.Config,
 			filepath.Join(vpnClientRuntimeDirectory, "client.ovpn"),
 		)
 		if err != nil {

@@ -173,7 +173,7 @@ func (fd *fake_dialog) Request(producer communication.RequestProducer) (response
 			Message: "Everything is great!",
 			Session: session.SessionDto{
 				Id:     "vpn-session-id",
-				Config: []byte("vpn-session-config"),
+				Config: "vpn-session-config",
 			},
 		},
 		nil

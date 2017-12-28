@@ -38,7 +38,7 @@ func TestConsumer_Success(t *testing.T) {
 			Success: true,
 			Session: SessionDto{
 				Id:     "new-id",
-				Config: []byte("new-config"),
+				Config: "new-config",
 			},
 		},
 		sessionResponse,
