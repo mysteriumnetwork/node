@@ -1,21 +1,14 @@
 package session
 
 import (
-	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-var sessionManager = &manager{
-	generator: &session.GeneratorFake{
-		SessionIdMock: session.SessionId("session-mock"),
-	},
-}
-
 var consumer = SessionCreateConsumer{
 	CurrentProposalId: 101,
-	SessionManager:    sessionManager,
+	SessionManager:    &session.ManagerFake{},
 }
 
 func TestConsumer_UnknownProposal(t *testing.T) {
@@ -35,12 +28,6 @@ func TestConsumer_UnknownProposal(t *testing.T) {
 }
 
 func TestConsumer_Success(t *testing.T) {
-	consumer.ClientConfigFactory = func() *openvpn.ClientConfig {
-		clientConfig := openvpn.ClientConfig{&openvpn.Config{}}
-		clientConfig.SetPort(1000)
-		return &clientConfig
-	}
-
 	request := consumer.NewRequest().(*SessionCreateRequest)
 	request.ProposalId = 101
 	sessionResponse, err := consumer.Consume(request)
@@ -51,8 +38,8 @@ func TestConsumer_Success(t *testing.T) {
 		&SessionCreateResponse{
 			Success: true,
 			Session: SessionDto{
-				Id:     "session-mock",
-				Config: []byte("port 1000\n"),
+				Id:     "new-id",
+				Config: []byte("new-config"),
 			},
 		},
 		sessionResponse,

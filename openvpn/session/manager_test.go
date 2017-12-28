@@ -1,6 +1,7 @@
 package session
 
 import (
+	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -8,7 +9,7 @@ import (
 
 func TestManagerAdd(t *testing.T) {
 	sessionExpected := session.Session{
-		Id:     session.SessionId("mocked-session"),
+		Id:     session.SessionId("mocked-id"),
 		Config: "mocked-config",
 	}
 	manager := manager{
@@ -25,16 +26,22 @@ func TestManagerAdd(t *testing.T) {
 
 func TestManagerCreate(t *testing.T) {
 	sessionExpected := session.Session{
-		Id:     session.SessionId("mocked-session"),
-		Config: "",
+		Id:     session.SessionId("mocked-id"),
+		Config: "port 1000\n",
 	}
 	manager := manager{
 		generator: &session.GeneratorFake{
-			SessionIdMock: session.SessionId("mocked-session"),
+			SessionIdMock: session.SessionId("mocked-id"),
+		},
+		clientConfigFactory: func() *openvpn.ClientConfig {
+			clientConfig := openvpn.ClientConfig{&openvpn.Config{}}
+			clientConfig.SetPort(1000)
+			return &clientConfig
 		},
 	}
 
-	sessionInstance := manager.Create()
+	sessionInstance, err := manager.Create()
+	assert.NoError(t, err)
 	assert.Exactly(t, sessionExpected, sessionInstance)
 	assert.Exactly(
 		t,

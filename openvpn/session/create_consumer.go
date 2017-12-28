@@ -3,14 +3,12 @@ package session
 import (
 	"fmt"
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/session"
 )
 
 type SessionCreateConsumer struct {
-	CurrentProposalId   int
-	SessionManager      session.ManagerInterface
-	ClientConfigFactory func() *openvpn.ClientConfig
+	CurrentProposalId int
+	SessionManager    session.ManagerInterface
 }
 
 func (consumer *SessionCreateConsumer) GetRequestType() communication.RequestType {
@@ -32,38 +30,21 @@ func (consumer *SessionCreateConsumer) Consume(requestPtr interface{}) (response
 		return
 	}
 
-	clientConfig, err := consumer.newClientConfig()
+	clientSession, err := consumer.SessionManager.Create()
 	if err != nil {
 		response = &SessionCreateResponse{
 			Success: false,
-			Message: "Failed to create VPN config.",
+			Message: "Failed to create session.",
 		}
 		return
 	}
-	clientSession := consumer.newVpnSession(clientConfig)
 
 	response = &SessionCreateResponse{
 		Success: true,
-		Session: clientSession,
+		Session: SessionDto{
+			Id:     clientSession.Id,
+			Config: []byte(clientSession.Config),
+		},
 	}
 	return
-}
-
-func (consumer *SessionCreateConsumer) newClientConfig() (string, error) {
-	vpnClientConfig := consumer.ClientConfigFactory()
-	vpnClientConfigString, err := openvpn.ConfigToString(*vpnClientConfig.Config)
-	if err != nil {
-		return "", err
-	}
-
-	return vpnClientConfigString, nil
-}
-
-func (consumer *SessionCreateConsumer) newVpnSession(vpnClientConfig string) SessionDto {
-	sessionInstance := consumer.SessionManager.Create()
-
-	return SessionDto{
-		Id:     sessionInstance.Id,
-		Config: []byte(vpnClientConfig),
-	}
 }

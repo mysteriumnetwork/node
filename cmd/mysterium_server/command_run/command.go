@@ -11,7 +11,6 @@ import (
 	"github.com/mysterium/node/server"
 	dto_server "github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"github.com/mysterium/node/session"
 	"time"
 )
 
@@ -23,8 +22,6 @@ type CommandRun struct {
 
 	dialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
 	dialogWaiter        communication.DialogWaiter
-
-	sessionManager session.ManagerInterface
 
 	vpnServerFactory func() *openvpn.Server
 	vpnServer        *openvpn.Server
@@ -61,8 +58,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 
 	sessionCreateConsumer := &vpn_session.SessionCreateConsumer{
 		CurrentProposalId: proposal.Id,
-		SessionManager:    cmd.sessionManager,
-		ClientConfigFactory: func() *openvpn.ClientConfig {
+		SessionManager: vpn_session.NewManager(func() *openvpn.ClientConfig {
 			return openvpn.NewClientConfig(
 				vpnServerIp,
 				options.DirectoryConfig+"/ca.crt",
@@ -70,7 +66,7 @@ func (cmd *CommandRun) Run(options CommandOptions) (err error) {
 				options.DirectoryConfig+"/client.key",
 				options.DirectoryConfig+"/ta.key",
 			)
-		},
+		}),
 	}
 	if err = cmd.dialogWaiter.ServeDialogs(sessionCreateConsumer); err != nil {
 		return err

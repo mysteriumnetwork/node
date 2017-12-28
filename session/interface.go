@@ -12,6 +12,6 @@ type GeneratorInterface interface {
 }
 
 type ManagerInterface interface {
-	Create() Session
+	Create() (Session, error)
 	Add(Session)
 }
