@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
 type identityManager struct {
@@ -49,30 +48,6 @@ func (idm *identityManager) GetIdentities() []Identity {
 	}
 
 	return ids
-}
-
-func (idm *identityManager) Unlock(identity Identity, passphrase string) error {
-	account, err := idm.keystoreManager.Find(identityToAccount(identity))
-	if err != nil {
-		return err
-	}
-
-	err = idm.keystoreManager.Unlock(account, passphrase)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (idm *identityManager) IsUnlocked(identity Identity) bool {
-	_, err := idm.keystoreManager.SignHash(identityToAccount(identity), messageHash([]byte("1")))
-
-	if err == keystore.ErrLocked {
-		return false
-	}
-
-	return true
 }
 
 func (idm *identityManager) GetSigner(identity Identity) Signer {
