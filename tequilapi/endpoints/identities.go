@@ -16,6 +16,10 @@ type identityDto struct {
 	Id string `json:"id"`
 }
 
+type identityList struct {
+	Identities []identityDto `json:"identities"`
+}
+
 type identityCreationDto struct {
 	Password string `json:"password"`
 }
@@ -47,7 +51,7 @@ func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient ser
 
 func (endpoint *identitiesApi) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	idArry := endpoint.idm.GetIdentities()
-	idsSerializable := mapIdentities(idArry, idToDto)
+	idsSerializable := identityList{mapIdentities(idArry, idToDto)}
 
 	utils.WriteAsJson(idsSerializable, resp)
 }
