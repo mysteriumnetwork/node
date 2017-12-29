@@ -59,7 +59,7 @@ func (client *clientRest) NodeRegister(proposal dto_discovery.ServiceProposal) (
 	return
 }
 
-func (client *clientRest) NodeSendStats(nodeKey string, sessionList []dto.SessionStats) (err error) {
+func (client *clientRest) NodeSendStats(nodeKey string, sessionList []dto.SessionStatsDeprecated) (err error) {
 	response, err := client.doPostRequest("node_send_stats", dto.NodeStatsRequest{
 		NodeKey:  nodeKey,
 		Sessions: sessionList,
@@ -95,8 +95,9 @@ func (client *clientRest) FindProposals(nodeKey string) (proposals []dto_discove
 	return
 }
 
-func (client *clientRest) SessionSendStats(sessionId string, sessionStats dto.SessionStats) (err error) {
-	response, err := client.doPostRequest("client_send_stats", sessionStats)
+func (client *clientRest) CreateSessionStats(sessionId string, sessionStats dto.SessionStats) (err error) {
+	path := fmt.Sprintf("sessions/%s/stats", sessionId)
+	response, err := client.doPostRequest(path, sessionStats)
 	if err == nil {
 		defer response.Body.Close()
 		log.Info(MYSTERIUM_API_LOG_PREFIX, "Session stats sent: ", sessionId)
