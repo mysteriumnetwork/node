@@ -48,7 +48,7 @@ func (client *ClientFake) FindProposals(nodeKey string) (proposals []dto_discove
 	return
 }
 
-func (client *ClientFake) CreateSessionStats(sessionId string, sessionStats dto.SessionStatsDeprecated) (err error) {
+func (client *ClientFake) SendSessionStats(sessionId string, sessionStats dto.SessionStatsDeprecated) (err error) {
 	log.Info(MYSTERIUM_API_LOG_PREFIX, "Session stats sent: ", sessionId)
 
 	return nil

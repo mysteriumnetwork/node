@@ -95,7 +95,7 @@ func (client *clientRest) FindProposals(nodeKey string) (proposals []dto_discove
 	return
 }
 
-func (client *clientRest) CreateSessionStats(sessionId string, sessionStats dto.SessionStats) (err error) {
+func (client *clientRest) SendSessionStats(sessionId string, sessionStats dto.SessionStats) (err error) {
 	path := fmt.Sprintf("sessions/%s/stats", sessionId)
 	response, err := client.doPostRequest(path, sessionStats)
 	if err == nil {

@@ -66,7 +66,7 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	err = middleware.mysteriumClient.CreateSessionStats(string(middleware.sessionId), dto.SessionStats{
+	err = middleware.mysteriumClient.SendSessionStats(string(middleware.sessionId), dto.SessionStats{
 		BytesSent:     bytesOut,
 		BytesReceived: bytesIn,
 	})
