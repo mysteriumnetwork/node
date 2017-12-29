@@ -52,9 +52,7 @@ func (idm *identityManager) GetIdentities() []Identity {
 }
 
 func (idm *identityManager) Unlock(identity Identity, passphrase string) error {
-	account := identityToAccount(identity)
-
-	account, err := idm.keystoreManager.Find(account)
+	account, err := idm.keystoreManager.Find(identityToAccount(identity))
 	if err != nil {
 		return err
 	}
@@ -90,14 +88,6 @@ func (idm *identityManager) GetIdentity(identityString string) (identity Identit
 	identity = accountToIdentity(account)
 
 	return identity, nil
-	//identityString = strings.ToLower(identityString)
-	//for _, identity := range idm.GetIdentities() {
-	//	if strings.ToLower(identity.Address) == identityString {
-	//		return identity, nil
-	//	}
-	//}
-	//
-	//return identity, errors.New("identity not found")
 }
 
 func (idm *identityManager) HasIdentity(identityString string) bool {
