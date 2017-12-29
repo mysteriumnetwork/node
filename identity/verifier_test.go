@@ -26,7 +26,7 @@ func TestVerifyFunctionReturnsFalseWhenSignatureIsIncorrect(t *testing.T) {
 	privateKey, err := crypto.GenerateKey()
 	assert.NoError(t, err)
 
-	signature, err := crypto.Sign(crypto.Keccak256(message), privateKey)
+	signature, err := crypto.Sign(messageHash(message), privateKey)
 	assert.NoError(t, err)
 	//change message
 	message[1] = 'b'
