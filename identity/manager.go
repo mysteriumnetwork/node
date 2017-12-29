@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"strings"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
@@ -27,11 +26,9 @@ func accountToIdentity(account accounts.Account) Identity {
 }
 
 func identityToAccount(identity Identity) accounts.Account {
-	account := accounts.Account{
+	return accounts.Account{
 		Address: common.HexToAddress(identity.Address),
 	}
-
-	return account
 }
 
 func (idm *identityManager) CreateNewIdentity(passphrase string) (identity Identity, err error) {
@@ -55,15 +52,14 @@ func (idm *identityManager) GetIdentities() []Identity {
 }
 
 func (idm *identityManager) Unlock(identity Identity, passphrase string) error {
-	keystoreManager := idm.keystoreManager
-	accountExisting := identityToAccount(identity)
+	account := identityToAccount(identity)
 
-	account, err := keystoreManager.Find(accountExisting)
+	account, err := idm.keystoreManager.Find(account)
 	if err != nil {
 		return err
 	}
 
-	err = keystoreManager.Unlock(account, passphrase)
+	err = idm.keystoreManager.Unlock(account, passphrase)
 	if err != nil {
 		return err
 	}
@@ -86,14 +82,22 @@ func (idm *identityManager) GetSigner(identity Identity) Signer {
 }
 
 func (idm *identityManager) GetIdentity(identityString string) (identity Identity, err error) {
-	identityString = strings.ToLower(identityString)
-	for _, identity := range idm.GetIdentities() {
-		if strings.ToLower(identity.Address) == identityString {
-			return identity, nil
-		}
+	account, err := idm.keystoreManager.Find(identityToAccount(FromAddress(identityString)))
+	if err != nil {
+		return identity, errors.New("identity not found")
 	}
 
-	return identity, errors.New("identity not found")
+	identity = accountToIdentity(account)
+
+	return identity, nil
+	//identityString = strings.ToLower(identityString)
+	//for _, identity := range idm.GetIdentities() {
+	//	if strings.ToLower(identity.Address) == identityString {
+	//		return identity, nil
+	//	}
+	//}
+	//
+	//return identity, errors.New("identity not found")
 }
 
 func (idm *identityManager) HasIdentity(identityString string) bool {

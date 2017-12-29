@@ -3,6 +3,7 @@ package identity
 import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
+	"errors"
 )
 
 type keyStoreFake struct {
@@ -52,6 +53,11 @@ func (self *keyStoreFake) Find(a accounts.Account) (accounts.Account, error) {
 		return accounts.Account{}, self.ErrorMock
 	}
 
-	panic("implement me")
-}
+	for _, acc := range self.AccountsMock {
+		if acc.Address == a.Address {
+			return acc, nil
+		}
+	}
 
+	return a, errors.New("account not found")
+}

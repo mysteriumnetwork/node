@@ -3,6 +3,7 @@ package identity
 import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts"
 )
 
 type Signer interface {
@@ -10,19 +11,19 @@ type Signer interface {
 }
 
 type keystoreSigner struct {
-	keystoreManager keystoreInterface
-	identity        Identity
+	keystore keystoreInterface
+	account  accounts.Account
 }
 
 func NewSigner(keystore keystoreInterface, identity Identity) Signer {
 	return &keystoreSigner{
-		keystoreManager: keystore,
-		identity:        identity,
+		keystore: keystore,
+		account:  identityToAccount(identity),
 	}
 }
 
 func (ksSigner *keystoreSigner) Sign(message []byte) ([]byte, error) {
-	signature, err := ksSigner.keystoreManager.SignHash(identityToAccount(ksSigner.identity), messageHash(message))
+	signature, err := ksSigner.keystore.SignHash(ksSigner.account, messageHash(message))
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +34,8 @@ func (ksSigner *keystoreSigner) Sign(message []byte) ([]byte, error) {
 // messageHash is a helper function that calculates a hash for the given message that can be
 // safely used to calculate a signature from.
 //
-// The hash is calulcated as
-//   keccak256("\x19Ethereum Signed Message:\n"${message length}${message}).
+// The hash is calculated as
+// keccak256("\x19Ethereum Signed Message:\n"${message length}${message}).
 //
 // This gives context to the signed message and prevents keystoreSigner of transactions.
 func messageHash(data []byte) []byte {

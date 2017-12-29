@@ -5,7 +5,6 @@ import (
 	"testing"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/stretchr/testify/assert"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
 func newManager(accountValue string) *identityManager {
@@ -74,6 +73,7 @@ func Test_GetIdentity(t *testing.T) {
 		identity,
 	)
 
+	manager = newManagerWithError(errors.New("identity not found"))
 	identity, err = manager.GetIdentity("0x000000000000000000000000000000000000000B")
 	assert.Error(
 		t,
@@ -88,67 +88,4 @@ func Test_HasIdentity(t *testing.T) {
 	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000A"))
 	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000a"))
 	assert.False(t, manager.HasIdentity("0x000000000000000000000000000000000000000B"))
-}
-
-func Test_IsUnlocked(t *testing.T) {
-	ks := getIdentityTestKeystore()
-
-	tests := []struct {
-		Address    string
-		Passphrase string
-	}{
-		{
-			"0x53a835143c0eF3bBCBFa796D7EB738CA7dd28f68",
-			"",
-		},
-		{
-			"0x1e35193c8cadAA15b43B05ae3D882C91F49BB0Aa",
-			"test_passphrase",
-		},
-	}
-
-	// our test identity
-	manager := NewIdentityManager(ks)
-	for _, test := range tests {
-		identity := FromAddress(test.Address)
-
-		assert.False(t, manager.IsUnlocked(identity))
-
-		err := manager.Unlock(identity, test.Passphrase)
-
-		assert.Nil(t, err)
-		assert.True(t, manager.IsUnlocked(identity))
-	}
-}
-
-func Test_UnlockError(t *testing.T) {
-	ks := getIdentityTestKeystore()
-	testData := struct {
-		Address    string
-		Passphrase string
-	}{
-		"0x53a835143c0eF3bBCBFa796D7EB738CA7dd28f68",
-		"123",
-	}
-
-	// our test identity
-	manager := NewIdentityManager(ks)
-	identity := FromAddress(testData.Address)
-
-	assert.False(t, manager.IsUnlocked(identity))
-
-	err := manager.Unlock(identity, testData.Passphrase)
-
-	assert.Equal(t, errors.New("could not decrypt key with given passphrase"), err)
-	assert.False(t, manager.IsUnlocked(identity))
-}
-
-func getIdentityTestKeystore() keystoreInterface {
-	ks := keystore.NewKeyStore(
-		"test_data",
-		keystore.StandardScryptN,
-		keystore.StandardScryptP,
-	)
-
-	return ks
 }
