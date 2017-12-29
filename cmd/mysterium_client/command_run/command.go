@@ -1,6 +1,7 @@
 package command_run
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/communication"
@@ -54,7 +55,17 @@ func NewCommand(options CommandOptions) *CommandRun {
 }
 
 func (cmd *CommandRun) Run() error {
-	return cmd.httpApiServer.StartServing()
+	err := cmd.httpApiServer.StartServing()
+	if err != nil {
+		return err
+	}
+	port, err := cmd.httpApiServer.Port()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Api started on: %d\n", port)
+	return nil
 }
 
 func (cmd *CommandRun) Wait() error {
