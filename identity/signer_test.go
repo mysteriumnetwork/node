@@ -1,9 +1,9 @@
 package identity
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
 	"encoding/hex"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestSigningMessageWithUnlockedAccount(t *testing.T) {
@@ -14,9 +14,10 @@ func TestSigningMessageWithUnlockedAccount(t *testing.T) {
 	signer := keystoreSigner{ks, identityToAccount(identity)}
 	sig, err := signer.Sign([]byte("Boop!"))
 	assert.NoError(t, err)
+
 	assert.Equal(
 		t,
-		"51e8c02f544c20a5b5b92894ffdd4dad90a71d994cad608cb3157b9ed7757de2758b9c0fc51bfaf079a4d60e81cc83c14cf6900c9bc031ba3f44cb119b82a5f000",
+		"40d313f383460ccfe632176f39102b4a1644f8cbf95c15ccac7c5858e66a1e545efd9ac530fe24f606cb9b33e2b6c124f420c2e3c7324f3b64fc1a7c3d4fc6d001",
 		hex.EncodeToString(sig),
 	)
 }

@@ -1,9 +1,8 @@
 package identity
 
 import (
-	"github.com/ethereum/go-ethereum/crypto"
-	"fmt"
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type Signer interface {
@@ -31,15 +30,6 @@ func (ksSigner *keystoreSigner) Sign(message []byte) ([]byte, error) {
 	return signature, nil
 }
 
-// messageHash is a helper function that calculates a hash for the given message that can be
-// safely used to calculate a signature from.
-//
-// The hash is calculated as
-// keccak256("\x19Ethereum Signed Message:\n"${message length}${message}).
-//
-// This gives context to the signed message and prevents keystoreSigner of transactions.
 func messageHash(data []byte) []byte {
-	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
-
-	return crypto.Keccak256([]byte(msg))
+	return crypto.Keccak256(data)
 }
