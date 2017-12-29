@@ -23,24 +23,74 @@ func (method TestPaymentMethod) GetPrice() money.Money {
 	return money.Money{}
 }
 
-func TestProposalsEndpoint_List(t *testing.T) {
-	proposal := dto_discovery.ServiceProposal{
+var proposals = []dto_discovery.ServiceProposal{
+	{
 		Id:                1,
 		Format:            "service-proposal/v1",
 		ServiceType:       "testprotocol",
 		ServiceDefinition: TestServiceDefinition{},
-		PaymentMethodType: "CASH",
+		PaymentMethodType: "fake_payment",
 		PaymentMethod:     TestPaymentMethod{},
 		ProviderId:        "0xProviderId",
 		ProviderContacts: []dto_discovery.Contact{
-			dto_discovery.Contact{"phone", "what?"},
+			{"phone", "what?"},
 		},
-	}
+	},
+	{
+		Id:                1,
+		Format:            "service-proposal/v1",
+		ServiceType:       "testprotocol",
+		ServiceDefinition: TestServiceDefinition{},
+		PaymentMethodType: "fake_payment",
+		PaymentMethod:     TestPaymentMethod{},
+		ProviderId:        "other_provider",
+		ProviderContacts: []dto_discovery.Contact{
+			{"phone", "what?"},
+		},
+	},
+}
+
+func TestProposalsEndpoint_ListByNodeId(t *testing.T) {
+	proposal := proposals[0]
 	proposalBytes, _ := json.Marshal(proposal)
-	proposalJson := string(proposalBytes)
 
 	discoveryApi := server.NewClientFake()
-	discoveryApi.NodeRegister(proposal)
+	for _, proposal := range proposals {
+		discoveryApi.NodeRegister(proposal)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.Nil(t, err)
+
+	query := req.URL.Query()
+	query.Set("nodeid", "0xProviderId")
+	req.URL.RawQuery = query.Encode()
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewProposalsEndpoint(discoveryApi).List
+	handlerFunc(resp, req, nil)
+
+	assert.JSONEq(
+		t,
+		`{
+            "proposals": [`+string(proposalBytes)+`]
+        }`,
+		resp.Body.String(),
+	)
+}
+
+func TestProposalsEndpoint_List(t *testing.T) {
+	proposalsSerializable := proposalsDto{proposals}
+	proposalsBytes, _ := json.Marshal(proposalsSerializable)
+
+	discoveryApi := server.NewClientFake()
+	for _, proposal := range proposals {
+		discoveryApi.NodeRegister(proposal)
+	}
 
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -55,9 +105,7 @@ func TestProposalsEndpoint_List(t *testing.T) {
 
 	assert.JSONEq(
 		t,
-		`{
-            "proposals": [`+proposalJson+`]
-        }`,
+		string(proposalsBytes),
 		resp.Body.String(),
 	)
 }

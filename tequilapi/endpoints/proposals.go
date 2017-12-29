@@ -22,8 +22,8 @@ func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
 
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 
-	nodeKey := params.ByName("nodeKey")
-	proposals, err := pe.mysteriumClient.FindProposals(nodeKey)
+	nodeId := req.URL.Query().Get("nodeid")
+	proposals, err := pe.mysteriumClient.FindProposals(nodeId)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
