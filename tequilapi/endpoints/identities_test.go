@@ -93,13 +93,13 @@ func TestCreateNewIdentity(t *testing.T) {
 	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Create
 	handlerFunc(resp, req, nil)
 
-	assert.JSONEq(
-		t,
-		`{
-                "id":"0x000000000000000000000000000000000000bEEF"
-		}`,
-		resp.Body.String(),
-	)
+    assert.JSONEq(
+        t,
+        `{
+            "id":"0x000000000000000000000000000000000000bEEF"
+        }`,
+        resp.Body.String(),
+    )
 }
 
 func TestListIdentities(t *testing.T) {
@@ -109,16 +109,14 @@ func TestListIdentities(t *testing.T) {
 	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).List
 	handlerFunc(resp, req, nil)
 
-	assert.JSONEq(
-		t,
-		`[
-            {
-                "id": "0x000000000000000000000000000000000000bEEF"
-            },
-            {
-                "id": "0x000000000000000000000000000000000000bEEF"
-            }
-        ]`,
-		resp.Body.String(),
+    assert.JSONEq(
+        t,
+        `{
+            "identities":[
+                { "id": "0x000000000000000000000000000000000000bEEF" },
+                { "id": "0x000000000000000000000000000000000000bEEF" }
+            ]
+        }`,
+        resp.Body.String(),
 	)
 }
