@@ -60,9 +60,7 @@ func (idm *identityManager) GetIdentity(identityString string) (identity Identit
 		return identity, errors.New("identity not found")
 	}
 
-	identity = accountToIdentity(account)
-
-	return identity, nil
+	return accountToIdentity(account), nil
 }
 
 func (idm *identityManager) HasIdentity(identityString string) bool {

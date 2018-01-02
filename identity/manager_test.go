@@ -58,28 +58,16 @@ func TestManager_GetIdentity(t *testing.T) {
 	manager := newManager("0x000000000000000000000000000000000000000A")
 
 	identity, err := manager.GetIdentity("0x000000000000000000000000000000000000000A")
-	assert.Nil(t, err)
-	assert.Equal(
-		t,
-		FromAddress("0x000000000000000000000000000000000000000A"),
-		identity,
-	)
+	assert.NoError(t, err)
+	assert.Exactly(t, FromAddress("0x000000000000000000000000000000000000000A"), identity)
 
 	identity, err = manager.GetIdentity("0x000000000000000000000000000000000000000a")
-	assert.Nil(t, err)
-	assert.Equal(
-		t,
-		FromAddress("0x000000000000000000000000000000000000000A"),
-		identity,
-	)
+	assert.NoError(t, err)
+	assert.Exactly(t, FromAddress("0x000000000000000000000000000000000000000A"), identity)
 
-	manager = newManagerWithError(errors.New("identity not found"))
 	identity, err = manager.GetIdentity("0x000000000000000000000000000000000000000B")
-	assert.Error(
-		t,
-		err,
-		errors.New("identity not found"),
-	)
+	assert.EqualError(t, err, "identity not found")
+	assert.Exactly(t, Identity{}, identity)
 }
 
 func TestManager_HasIdentity(t *testing.T) {
