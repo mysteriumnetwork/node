@@ -26,17 +26,17 @@ func NewNodeIdentityHandler(
 
 func (ih *identityHandler) Select(identityAddressWanted string) (id identity.Identity, err error) {
 	if len(identityAddressWanted) > 0 {
-		return ih.launchExisting(identityAddressWanted)
+		return ih.useExisting(identityAddressWanted)
 	}
 
-	if id, err = ih.launchLast(); err == nil {
+	if id, err = ih.useLast(); err == nil {
 		return id, err
 	}
 
-	return ih.launchNew()
+	return ih.useNew()
 }
 
-func (ih *identityHandler) launchExisting(address string) (id identity.Identity, err error) {
+func (ih *identityHandler) useExisting(address string) (id identity.Identity, err error) {
 	id, err = ih.manager.GetIdentity(address)
 	if err != nil {
 		return
@@ -46,7 +46,7 @@ func (ih *identityHandler) launchExisting(address string) (id identity.Identity,
 	return
 }
 
-func (ih *identityHandler) launchLast() (identity identity.Identity, err error) {
+func (ih *identityHandler) useLast() (identity identity.Identity, err error) {
 	identity, err = ih.cache.GetIdentity()
 	if err != nil || !ih.manager.HasIdentity(identity.Address) {
 		return identity, errors.New("identity not found in cache")
@@ -55,7 +55,7 @@ func (ih *identityHandler) launchLast() (identity identity.Identity, err error) 
 	return identity, nil
 }
 
-func (ih *identityHandler) launchNew() (id identity.Identity, err error) {
+func (ih *identityHandler) useNew() (id identity.Identity, err error) {
 	// if all fails, create a new one
 	id, err = ih.manager.CreateNewIdentity("")
 	if err != nil {
