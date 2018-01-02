@@ -1,7 +1,6 @@
 package endpoints
 
 import (
-	"github.com/mysterium/node/money"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
@@ -13,39 +12,21 @@ import (
 type TestServiceDefinition struct{}
 
 func (service TestServiceDefinition) GetLocation() dto_discovery.Location {
-	return dto_discovery.Location{ASN: "LT"}
-}
-
-type TestPaymentMethod struct{}
-
-func (method TestPaymentMethod) GetPrice() money.Money {
-	return money.Money{}
+	return dto_discovery.Location{ASN: "LT", Country: "Lithuania", City: "Vilnius"}
 }
 
 var proposals = []dto_discovery.ServiceProposal{
 	{
 		Id:                1,
-		Format:            "service-proposal/v1",
 		ServiceType:       "testprotocol",
 		ServiceDefinition: TestServiceDefinition{},
-		PaymentMethodType: "fake_payment",
-		PaymentMethod:     TestPaymentMethod{},
 		ProviderId:        "0xProviderId",
-		ProviderContacts: []dto_discovery.Contact{
-			{"phone", "what?"},
-		},
 	},
 	{
 		Id:                1,
-		Format:            "service-proposal/v1",
 		ServiceType:       "testprotocol",
 		ServiceDefinition: TestServiceDefinition{},
-		PaymentMethodType: "fake_payment",
-		PaymentMethod:     TestPaymentMethod{},
 		ProviderId:        "other_provider",
-		ProviderContacts: []dto_discovery.Contact{
-			{"phone", "what?"},
-		},
 	},
 }
 
@@ -63,7 +44,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	assert.Nil(t, err)
 
 	query := req.URL.Query()
-	query.Set("provider_id", "0xProviderId")
+	query.Set("providerId", "0xProviderId")
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
@@ -77,9 +58,12 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
                 {
                     "id": 1,
                     "providerId": "0xProviderId",
+                    "serviceType": "testprotocol",
                     "serviceDefinition": {
                         "locationOriginate": {
-                            "asn": "LT"
+                            "asn": "LT",
+                            "country": "Lithuania",
+                            "city": "Vilnius"
                         }
                     }
                 }
@@ -113,18 +97,24 @@ func TestProposalsEndpointList(t *testing.T) {
                 {
                     "id": 1,
                     "providerId": "0xProviderId",
+                    "serviceType": "testprotocol",
                     "serviceDefinition": {
                         "locationOriginate": {
-                            "asn": "LT"
+                            "asn": "LT",
+                            "country": "Lithuania",
+                            "city": "Vilnius"
                         }
                     }
                 },
                 {
                     "id": 1,
                     "providerId": "other_provider",
+                    "serviceType": "testprotocol",
                     "serviceDefinition": {
                         "locationOriginate": {
-                            "asn": "LT"
+                            "asn": "LT",
+                            "country": "Lithuania",
+                            "city": "Vilnius"
                         }
                     }
                 }
