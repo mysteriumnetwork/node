@@ -23,11 +23,6 @@ func NewSigner(keystore keystoreInterface, identity Identity) Signer {
 }
 
 func (ksSigner *keystoreSigner) Sign(message []byte) (string, error) {
-	err := ksSigner.keystore.Unlock(ksSigner.account, "")
-	if err != nil {
-		return "", err
-	}
-
 	signature, err := ksSigner.keystore.SignHash(ksSigner.account, messageHash(message))
 	if err != nil {
 		return "", err

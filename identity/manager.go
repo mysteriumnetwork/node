@@ -54,12 +54,8 @@ func (idm *identityManager) GetIdentities() []Identity {
 	return ids
 }
 
-func (idm *identityManager) GetSigner(identity Identity) Signer {
-	return NewSigner(idm.keystoreManager, identity)
-}
-
 func (idm *identityManager) GetIdentity(identityString string) (identity Identity, err error) {
-	account, err := idm.keystoreManager.Find(addressToAccount(identityString))
+	account, err := idm.findAccount(identityString)
 	if err != nil {
 		return identity, errors.New("identity not found")
 	}
@@ -68,7 +64,24 @@ func (idm *identityManager) GetIdentity(identityString string) (identity Identit
 }
 
 func (idm *identityManager) HasIdentity(identityString string) bool {
-	_, err := idm.GetIdentity(identityString)
-
+	_, err := idm.findAccount(identityString)
 	return err == nil
+}
+
+func (idm *identityManager) Unlock(identityString string, passphrase string) error {
+	account, err := idm.findAccount(identityString)
+	if err != nil {
+		return err
+	}
+
+	return idm.keystoreManager.Unlock(account, passphrase)
+}
+
+func (idm *identityManager) findAccount(identityString string) (accounts.Account, error) {
+	account, err := idm.keystoreManager.Find(addressToAccount(identityString))
+	if err != nil {
+		return accounts.Account{}, errors.New("identity not found: " + identityString)
+	}
+
+	return account, err
 }
