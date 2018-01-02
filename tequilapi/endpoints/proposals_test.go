@@ -1,78 +1,78 @@
 package endpoints
 
 import (
-    "github.com/mysterium/node/money"
-    "github.com/mysterium/node/server"
-    dto_discovery "github.com/mysterium/node/service_discovery/dto"
-    "github.com/stretchr/testify/assert"
-    "net/http"
-    "net/http/httptest"
-    "testing"
+	"github.com/mysterium/node/money"
+	"github.com/mysterium/node/server"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 )
 
 type TestServiceDefinition struct{}
 
 func (service TestServiceDefinition) GetLocation() dto_discovery.Location {
-    return dto_discovery.Location{ASN: "LT"}
+	return dto_discovery.Location{ASN: "LT"}
 }
 
 type TestPaymentMethod struct{}
 
 func (method TestPaymentMethod) GetPrice() money.Money {
-    return money.Money{}
+	return money.Money{}
 }
 
 var proposals = []dto_discovery.ServiceProposal{
-    {
-        Id:                1,
-        Format:            "service-proposal/v1",
-        ServiceType:       "testprotocol",
-        ServiceDefinition: TestServiceDefinition{},
-        PaymentMethodType: "fake_payment",
-        PaymentMethod:     TestPaymentMethod{},
-        ProviderId:        "0xProviderId",
-        ProviderContacts: []dto_discovery.Contact{
-            {"phone", "what?"},
-        },
-    },
-    {
-        Id:                1,
-        Format:            "service-proposal/v1",
-        ServiceType:       "testprotocol",
-        ServiceDefinition: TestServiceDefinition{},
-        PaymentMethodType: "fake_payment",
-        PaymentMethod:     TestPaymentMethod{},
-        ProviderId:        "other_provider",
-        ProviderContacts: []dto_discovery.Contact{
-            {"phone", "what?"},
-        },
-    },
+	{
+		Id:                1,
+		Format:            "service-proposal/v1",
+		ServiceType:       "testprotocol",
+		ServiceDefinition: TestServiceDefinition{},
+		PaymentMethodType: "fake_payment",
+		PaymentMethod:     TestPaymentMethod{},
+		ProviderId:        "0xProviderId",
+		ProviderContacts: []dto_discovery.Contact{
+			{"phone", "what?"},
+		},
+	},
+	{
+		Id:                1,
+		Format:            "service-proposal/v1",
+		ServiceType:       "testprotocol",
+		ServiceDefinition: TestServiceDefinition{},
+		PaymentMethodType: "fake_payment",
+		PaymentMethod:     TestPaymentMethod{},
+		ProviderId:        "other_provider",
+		ProviderContacts: []dto_discovery.Contact{
+			{"phone", "what?"},
+		},
+	},
 }
 
-func TestProposalsEndpoint_ListByNodeId(t *testing.T) {
-    discoveryApi := server.NewClientFake()
-    for _, proposal := range proposals {
-        discoveryApi.NodeRegister(proposal)
-    }
+func TestProposalsEndpointListByNodeId(t *testing.T) {
+	discoveryApi := server.NewClientFake()
+	for _, proposal := range proposals {
+		discoveryApi.NodeRegister(proposal)
+	}
 
-    req, err := http.NewRequest(
-        http.MethodGet,
-        "/irrelevant",
-        nil,
-    )
-    assert.Nil(t, err)
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.Nil(t, err)
 
-    query := req.URL.Query()
-    query.Set("provider_id", "0xProviderId")
-    req.URL.RawQuery = query.Encode()
+	query := req.URL.Query()
+	query.Set("provider_id", "0xProviderId")
+	req.URL.RawQuery = query.Encode()
 
-    resp := httptest.NewRecorder()
-    handlerFunc := NewProposalsEndpoint(discoveryApi).List
-    handlerFunc(resp, req, nil)
+	resp := httptest.NewRecorder()
+	handlerFunc := NewProposalsEndpoint(discoveryApi).List
+	handlerFunc(resp, req, nil)
 
-    assert.JSONEq(
-        t,
-        `{
+	assert.JSONEq(
+		t,
+		`{
             "proposals": [
                 {
                     "id": 1,
@@ -85,30 +85,30 @@ func TestProposalsEndpoint_ListByNodeId(t *testing.T) {
                 }
             ]
         }`,
-        resp.Body.String(),
-    )
+		resp.Body.String(),
+	)
 }
 
-func TestProposalsEndpoint_List(t *testing.T) {
-    discoveryApi := server.NewClientFake()
-    for _, proposal := range proposals {
-        discoveryApi.NodeRegister(proposal)
-    }
+func TestProposalsEndpointList(t *testing.T) {
+	discoveryApi := server.NewClientFake()
+	for _, proposal := range proposals {
+		discoveryApi.NodeRegister(proposal)
+	}
 
-    req, err := http.NewRequest(
-        http.MethodGet,
-        "/irrelevant",
-        nil,
-    )
-    assert.Nil(t, err)
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.Nil(t, err)
 
-    resp := httptest.NewRecorder()
-    handlerFunc := NewProposalsEndpoint(discoveryApi).List
-    handlerFunc(resp, req, nil)
+	resp := httptest.NewRecorder()
+	handlerFunc := NewProposalsEndpoint(discoveryApi).List
+	handlerFunc(resp, req, nil)
 
-    assert.JSONEq(
-        t,
-        `{
+	assert.JSONEq(
+		t,
+		`{
             "proposals": [
                 {
                     "id": 1,
@@ -130,6 +130,6 @@ func TestProposalsEndpoint_List(t *testing.T) {
                 }
             ]
         }`,
-        resp.Body.String(),
-    )
+		resp.Body.String(),
+	)
 }
