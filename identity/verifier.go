@@ -5,7 +5,7 @@ import (
 )
 
 type Verifier interface {
-	Verify(message []byte, signature []byte) bool
+	Verify(message []byte, signature string) bool
 }
 
 type ethereumVerifier struct {
@@ -16,12 +16,17 @@ func NewVerifier(peerIdentity Identity) *ethereumVerifier {
 	return &ethereumVerifier{peerIdentity}
 }
 
-func (ev *ethereumVerifier) Verify(message []byte, signature []byte) bool {
-	hash := messageHash(message)
-	pk, err := crypto.Ecrecover(hash, signature)
+func (ev *ethereumVerifier) Verify(message []byte, signature string) bool {
+	signatureBytes, err := signatureDecode(signature)
 	if err != nil {
 		return false
 	}
-	recoveredAddress := crypto.PubkeyToAddress(*crypto.ToECDSAPub(pk)).Hex()
-	return FromAddress(recoveredAddress) == ev.peerIdentity
+
+	recoveredKey, err := crypto.Ecrecover(messageHash(message), signatureBytes)
+	if err != nil {
+		return false
+	}
+	recoveredAddress := crypto.PubkeyToAddress(*crypto.ToECDSAPub(recoveredKey)).Hex()
+
+	return recoveredAddress == ev.peerIdentity.Address
 }

@@ -2,6 +2,7 @@ package identity
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -14,7 +15,8 @@ func TestVerifyFunctionReturnsTrueWhenSignatureIsCorrect(t *testing.T) {
 	assert.NoError(t, err)
 
 	hash := messageHash(message)
-	signature, err := crypto.Sign(hash, privateKey)
+	signatureBytes, err := crypto.Sign(hash, privateKey)
+	signature := hex.EncodeToString(signatureBytes)
 	assert.NoError(t, err)
 
 	identity := toIdentity(privateKey)
@@ -26,7 +28,8 @@ func TestVerifyFunctionReturnsFalseWhenSignatureIsIncorrect(t *testing.T) {
 	privateKey, err := crypto.GenerateKey()
 	assert.NoError(t, err)
 
-	signature, err := crypto.Sign(messageHash(message), privateKey)
+	signatureBytes, err := crypto.Sign(messageHash(message), privateKey)
+	signature := hex.EncodeToString(signatureBytes)
 	assert.NoError(t, err)
 	//change message
 	message[1] = 'b'
