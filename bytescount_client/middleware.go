@@ -3,8 +3,6 @@ package bytescount_client
 import (
 	"fmt"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/server/dto"
 	"github.com/mysterium/node/session"
 	"net"
 	"regexp"
@@ -13,18 +11,18 @@ import (
 )
 
 type middleware struct {
-	mysteriumClient server.Client
-	interval        time.Duration
-	sessionId       session.SessionId
+	sessionStatsSender SessionStatsSender
+	interval           time.Duration
+	sessionId          session.SessionId
 
 	connection net.Conn
 }
 
-func NewMiddleware(mysteriumClient server.Client, sessionId session.SessionId, interval time.Duration) openvpn.ManagementMiddleware {
+func NewMiddleware(sessionStatsSender SessionStatsSender, sessionId session.SessionId, interval time.Duration) openvpn.ManagementMiddleware {
 	return &middleware{
-		mysteriumClient: mysteriumClient,
-		interval:        interval,
-		sessionId:       sessionId,
+		sessionStatsSender: sessionStatsSender,
+		interval:           interval,
+		sessionId:          sessionId,
 
 		connection: nil,
 	}
@@ -66,10 +64,7 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	err = middleware.mysteriumClient.SendSessionStats(string(middleware.sessionId), dto.SessionStats{
-		BytesSent:     bytesOut,
-		BytesReceived: bytesIn,
-	})
+	err = middleware.sessionStatsSender.send(string(middleware.sessionId), bytesOut, bytesIn)
 
 	return
 }
