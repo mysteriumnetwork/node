@@ -2,9 +2,9 @@ package identity
 
 import (
 	"errors"
-	"testing"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func newManager(accountValue string) *identityManager {
@@ -25,7 +25,7 @@ func newManagerWithError(errorMock error) *identityManager {
 	}
 }
 
-func Test_CreateNewIdentity(t *testing.T) {
+func TestManager_CreateNewIdentity(t *testing.T) {
 	manager := newManager("0x000000000000000000000000000000000000000A")
 	identity, err := manager.CreateNewIdentity("")
 
@@ -34,7 +34,7 @@ func Test_CreateNewIdentity(t *testing.T) {
 	assert.Len(t, manager.keystoreManager.Accounts(), 2)
 }
 
-func Test_CreateNewIdentityError(t *testing.T) {
+func TestManager_CreateNewIdentityError(t *testing.T) {
 	im := newManagerWithError(errors.New("identity create failed"))
 	identity, err := im.CreateNewIdentity("")
 
@@ -42,7 +42,7 @@ func Test_CreateNewIdentityError(t *testing.T) {
 	assert.Empty(t, identity.Address)
 }
 
-func Test_GetIdentities(t *testing.T) {
+func TestManager_GetIdentities(t *testing.T) {
 	manager := newManager("0x000000000000000000000000000000000000000A")
 
 	assert.Equal(
@@ -54,7 +54,7 @@ func Test_GetIdentities(t *testing.T) {
 	)
 }
 
-func Test_GetIdentity(t *testing.T) {
+func TestManager_GetIdentity(t *testing.T) {
 	manager := newManager("0x000000000000000000000000000000000000000A")
 
 	identity, err := manager.GetIdentity("0x000000000000000000000000000000000000000A")
@@ -82,7 +82,7 @@ func Test_GetIdentity(t *testing.T) {
 	)
 }
 
-func Test_HasIdentity(t *testing.T) {
+func TestManager_HasIdentity(t *testing.T) {
 	manager := newManager("0x000000000000000000000000000000000000000A")
 
 	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000A"))

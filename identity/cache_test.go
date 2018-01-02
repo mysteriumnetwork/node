@@ -18,7 +18,7 @@ func TestIdentityCache_StoreIdentity(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_IdentityCacheGetIdentity(t *testing.T) {
+func TestIdentityCache_GetIdentity(t *testing.T) {
 	identity := FromAddress("0x000000000000000000000000000000000000000A")
 	cache := identityCache{
 		File: file,
@@ -32,7 +32,7 @@ func Test_IdentityCacheGetIdentity(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_cacheExists(t *testing.T) {
+func TestIdentityCache_cacheExists(t *testing.T) {
 	identity := FromAddress("0x000000000000000000000000000000000000000A")
 	cache := identityCache{
 		File: file,
