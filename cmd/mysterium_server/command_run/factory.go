@@ -13,6 +13,7 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
+	"path/filepath"
 )
 
 func NewCommand(options CommandOptions) *CommandRun {
@@ -52,21 +53,21 @@ func NewCommandWith(
 		sessionManagerFactory: func(vpnServerIp string) session.ManagerInterface {
 			return openvpn_session.NewManager(openvpn.NewClientConfig(
 				vpnServerIp,
-				options.DirectoryConfig+"/ca.crt",
-				options.DirectoryConfig+"/client.crt",
-				options.DirectoryConfig+"/client.key",
-				options.DirectoryConfig+"/ta.key",
+				filepath.Join(options.DirectoryConfig, "ca.crt"),
+				filepath.Join(options.DirectoryConfig, "client.crt"),
+				filepath.Join(options.DirectoryConfig, "client.key"),
+				filepath.Join(options.DirectoryConfig, "ta.key"),
 			))
 		},
 		vpnServerFactory: func() *openvpn.Server {
 			vpnServerConfig := openvpn.NewServerConfig(
 				"10.8.0.0", "255.255.255.0",
-				options.DirectoryConfig+"/ca.crt",
-				options.DirectoryConfig+"/server.crt",
-				options.DirectoryConfig+"/server.key",
-				options.DirectoryConfig+"/dh.pem",
-				options.DirectoryConfig+"/crl.pem",
-				options.DirectoryConfig+"/ta.key",
+				filepath.Join(options.DirectoryConfig, "ca.crt"),
+				filepath.Join(options.DirectoryConfig, "server.crt"),
+				filepath.Join(options.DirectoryConfig, "server.key"),
+				filepath.Join(options.DirectoryConfig, "dh.pem"),
+				filepath.Join(options.DirectoryConfig, "crl.pem"),
+				filepath.Join(options.DirectoryConfig, "ta.key"),
 			)
 			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime)
 		},

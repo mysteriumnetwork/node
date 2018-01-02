@@ -3,6 +3,7 @@ package command_run
 import (
 	"github.com/mysterium/node/cmd/mysterium_monitor/command_run/node_provider"
 	"github.com/mysterium/node/ipify"
+	"path/filepath"
 	"time"
 )
 
@@ -24,7 +25,7 @@ func NewNodeProvider(options CommandOptions) (nodeProvider node_provider.NodePro
 
 	nodeProvider = node_provider.NewRememberProvider(
 		nodeProvider,
-		options.DirectoryRuntime+"/remember.status",
+		filepath.Join(options.DirectoryRuntime, "remember.status"),
 	)
 	return
 }
