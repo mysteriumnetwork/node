@@ -8,7 +8,6 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/service_discovery"
 	"github.com/mysterium/node/server"
-	dto_server "github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"time"
@@ -77,7 +76,7 @@ func (cmd *CommandRun) Run() (err error) {
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.mysteriumClient.NodeSendStats(providerId.Address, []dto_server.SessionStatsDeprecated{})
+			cmd.mysteriumClient.NodeSendStats(providerId.Address)
 		}
 	}()
 
