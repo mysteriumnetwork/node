@@ -40,13 +40,13 @@ func (client *ClientFake) NodeSendStats(nodeKey string, sessionStats []dto.Sessi
 func (client *ClientFake) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
 	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake proposals requested for node_key: ", nodeKey)
 
-	for _, proposal := range client.proposalsMock {
-		var filterMatched = true
-		if nodeKey != "" {
-			filterMatched = filterMatched && (nodeKey == proposal.ProviderId)
-		}
-		if filterMatched {
-			proposals = append(proposals, proposal)
+	if nodeKey == "" {
+		return client.proposalsMock, nil
+	} else {
+		for _, proposal := range client.proposalsMock {
+			if nodeKey == proposal.ProviderId {
+				proposals = append(proposals, proposal)
+			}
 		}
 	}
 
