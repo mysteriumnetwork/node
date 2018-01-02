@@ -129,7 +129,7 @@ func validateCreationRequest(createReq *identityCreationDto) (errors *validation
 	return
 }
 
-func RegisterIdentitiesEndpoint(
+func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.IdentityManagerInterface,
 	mystClient server.Client,
