@@ -22,7 +22,7 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
-		bytes.NewBufferString(`{ "registered": false }`),
+		bytes.NewBufferString(`{"registered": false}`),
 	)
 
 	assert.Nil(t, err)
@@ -34,7 +34,7 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 	assert.Equal(t, http.StatusNotImplemented, resp.Code)
 	assert.JSONEq(
 		t,
-		`{ "message": "Unregister not supported" }`,
+		`{"message": "Unregister not supported"}`,
 		resp.Body.String(),
 	)
 }
@@ -72,9 +72,9 @@ func TestCreateNewIdentityNoPassword(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-            "message" : "validation_error",
+            "message": "validation_error",
             "errors" : {
-                "password" : [ {"code" : "required" , "message" : "Field is required" } ]
+                "password": [ {"code" : "required" , "message" : "Field is required" } ]
             }
         }`,
 		resp.Body.String(),
@@ -85,7 +85,7 @@ func TestCreateNewIdentity(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
-		bytes.NewBufferString(`{ "password": "mypass" }`),
+		bytes.NewBufferString(`{"password": "mypass"}`),
 	)
 	assert.Nil(t, err)
 
@@ -97,8 +97,8 @@ func TestCreateNewIdentity(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-                "id":"0x000000000000000000000000000000000000beef"
-		}`,
+            "id": "0x000000000000000000000000000000000000beef"
+        }`,
 		resp.Body.String(),
 	)
 }
@@ -112,14 +112,12 @@ func TestListIdentities(t *testing.T) {
 
 	assert.JSONEq(
 		t,
-		`[
-            {
-                "id": "0x000000000000000000000000000000000000beef"
-            },
-            {
-                "id": "0x000000000000000000000000000000000000beef"
-            }
-        ]`,
+		`{
+            "identities": [
+                {"id": "0x000000000000000000000000000000000000beef"},
+                {"id": "0x000000000000000000000000000000000000beef"}
+            ]
+        }`,
 		resp.Body.String(),
 	)
 }
