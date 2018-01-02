@@ -85,7 +85,8 @@ func TestCreateNewIdentity(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
-		bytes.NewBufferString(`{ "password": "mypass" }`))
+		bytes.NewBufferString(`{ "password": "mypass" }`),
+	)
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
@@ -96,7 +97,7 @@ func TestCreateNewIdentity(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-                "id":"0x000000000000000000000000000000000000bEEF"
+                "id":"0x000000000000000000000000000000000000beef"
 		}`,
 		resp.Body.String(),
 	)
@@ -113,10 +114,10 @@ func TestListIdentities(t *testing.T) {
 		t,
 		`[
             {
-                "id": "0x000000000000000000000000000000000000bEEF"
+                "id": "0x000000000000000000000000000000000000beef"
             },
             {
-                "id": "0x000000000000000000000000000000000000bEEF"
+                "id": "0x000000000000000000000000000000000000beef"
             }
         ]`,
 		resp.Body.String(),
