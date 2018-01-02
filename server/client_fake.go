@@ -31,7 +31,7 @@ func (client *ClientFake) RegisterIdentity(identity identity.Identity) (err erro
 	return nil
 }
 
-func (client *ClientFake) NodeSendStats(nodeKey string, sessionStats []dto.SessionStats) (err error) {
+func (client *ClientFake) NodeSendStats(nodeKey string, sessionStats []dto.SessionStatsDeprecated) (err error) {
 	log.Info(MYSTERIUM_API_LOG_PREFIX, "Node stats sent: ", nodeKey)
 
 	return nil
@@ -53,7 +53,7 @@ func (client *ClientFake) FindProposals(nodeKey string) (proposals []dto_discove
 	return proposals, nil
 }
 
-func (client *ClientFake) SessionSendStats(sessionId string, sessionStats dto.SessionStats) (err error) {
+func (client *ClientFake) SendSessionStats(sessionId string, sessionStats dto.SessionStatsDeprecated) (err error) {
 	log.Info(MYSTERIUM_API_LOG_PREFIX, "Session stats sent: ", sessionId)
 
 	return nil
