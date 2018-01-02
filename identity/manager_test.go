@@ -11,7 +11,7 @@ func newManager(accountValue string) *identityManager {
 	return &identityManager{
 		keystoreManager: &keyStoreFake{
 			AccountsMock: []accounts.Account{
-				identityToAccount(FromAddress(accountValue)),
+				addressToAccount(accountValue),
 			},
 		},
 	}
@@ -30,7 +30,7 @@ func TestManager_CreateNewIdentity(t *testing.T) {
 	identity, err := manager.CreateNewIdentity("")
 
 	assert.NoError(t, err)
-	assert.Equal(t, identity, FromAddress("0x000000000000000000000000000000000000bEEF"))
+	assert.Equal(t, identity, Identity{"0x000000000000000000000000000000000000beef"})
 	assert.Len(t, manager.keystoreManager.Accounts(), 2)
 }
 
@@ -48,7 +48,7 @@ func TestManager_GetIdentities(t *testing.T) {
 	assert.Equal(
 		t,
 		[]Identity{
-			FromAddress("0x000000000000000000000000000000000000000A"),
+			{"0x000000000000000000000000000000000000000a"},
 		},
 		manager.GetIdentities(),
 	)
@@ -59,11 +59,11 @@ func TestManager_GetIdentity(t *testing.T) {
 
 	identity, err := manager.GetIdentity("0x000000000000000000000000000000000000000A")
 	assert.NoError(t, err)
-	assert.Exactly(t, FromAddress("0x000000000000000000000000000000000000000A"), identity)
+	assert.Exactly(t, Identity{"0x000000000000000000000000000000000000000a"}, identity)
 
 	identity, err = manager.GetIdentity("0x000000000000000000000000000000000000000a")
 	assert.NoError(t, err)
-	assert.Exactly(t, FromAddress("0x000000000000000000000000000000000000000A"), identity)
+	assert.Exactly(t, Identity{"0x000000000000000000000000000000000000000a"}, identity)
 
 	identity, err = manager.GetIdentity("0x000000000000000000000000000000000000000B")
 	assert.EqualError(t, err, "identity not found")

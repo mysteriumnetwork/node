@@ -7,13 +7,12 @@ import (
 )
 
 func TestSigningMessageWithUnlockedAccount(t *testing.T) {
-	identity := FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68")
 	ks := keystore.NewKeyStore(
 		"test_data",
 		keystore.StandardScryptN,
 		keystore.StandardScryptP,
 	)
-	signer := keystoreSigner{ks, identityToAccount(identity)}
+	signer := keystoreSigner{ks, addressToAccount("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68")}
 
 	signature, err := signer.Sign([]byte("Boop!"))
 	assert.NoError(t, err)

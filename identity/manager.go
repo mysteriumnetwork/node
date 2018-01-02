@@ -25,8 +25,12 @@ func accountToIdentity(account accounts.Account) Identity {
 }
 
 func identityToAccount(identity Identity) accounts.Account {
+	return addressToAccount(identity.Address)
+}
+
+func addressToAccount(identityAddress string) accounts.Account {
 	return accounts.Account{
-		Address: common.HexToAddress(identity.Address),
+		Address: common.HexToAddress(identityAddress),
 	}
 }
 
@@ -55,7 +59,7 @@ func (idm *identityManager) GetSigner(identity Identity) Signer {
 }
 
 func (idm *identityManager) GetIdentity(identityString string) (identity Identity, err error) {
-	account, err := idm.keystoreManager.Find(identityToAccount(FromAddress(identityString)))
+	account, err := idm.keystoreManager.Find(addressToAccount(identityString))
 	if err != nil {
 		return identity, errors.New("identity not found")
 	}
