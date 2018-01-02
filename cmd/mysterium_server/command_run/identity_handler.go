@@ -6,6 +6,8 @@ import (
 	"github.com/mysterium/node/server"
 )
 
+const nodeIdentityPassword = ""
+
 type identityHandler struct {
 	manager     identity.IdentityManagerInterface
 	identityApi server.Client
@@ -57,7 +59,7 @@ func (ih *identityHandler) useLast() (identity identity.Identity, err error) {
 
 func (ih *identityHandler) useNew() (id identity.Identity, err error) {
 	// if all fails, create a new one
-	id, err = ih.manager.CreateNewIdentity("")
+	id, err = ih.manager.CreateNewIdentity(nodeIdentityPassword)
 	if err != nil {
 		return
 	}
