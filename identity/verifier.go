@@ -28,5 +28,5 @@ func (ev *ethereumVerifier) Verify(message []byte, signature string) bool {
 	}
 	recoveredAddress := crypto.PubkeyToAddress(*crypto.ToECDSAPub(recoveredKey)).Hex()
 
-	return recoveredAddress == ev.peerIdentity.Address
+	return FromAddress(recoveredAddress) == ev.peerIdentity
 }
