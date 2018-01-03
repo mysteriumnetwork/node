@@ -10,7 +10,7 @@ var file = "/tmp/cache.json"
 
 func TestIdentityCache_StoreIdentity(t *testing.T) {
 	identity := FromAddress("0x000000000000000000000000000000000000000A")
-	cache := identityCache{
+	cache := IdentityCache{
 		File: file,
 	}
 
@@ -20,7 +20,7 @@ func TestIdentityCache_StoreIdentity(t *testing.T) {
 
 func TestIdentityCache_GetIdentity(t *testing.T) {
 	identity := FromAddress("0x000000000000000000000000000000000000000A")
-	cache := identityCache{
+	cache := IdentityCache{
 		File: file,
 	}
 
@@ -34,7 +34,7 @@ func TestIdentityCache_GetIdentity(t *testing.T) {
 
 func TestIdentityCache_cacheExists(t *testing.T) {
 	identity := FromAddress("0x000000000000000000000000000000000000000A")
-	cache := identityCache{
+	cache := IdentityCache{
 		File: file,
 	}
 

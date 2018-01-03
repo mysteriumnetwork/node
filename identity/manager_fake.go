@@ -18,10 +18,10 @@ func (fakeIdm *idmFake) GetIdentities() []Identity {
 
 	return accountList
 }
-func (fakeIdm *idmFake) GetIdentity(string) (Identity, error) {
+func (fakeIdm *idmFake) GetIdentity(_ string) (Identity, error) {
 	id := FromAddress("0x000000000000000000000000000000000000000A")
 	return id, nil
 }
-func (fakeIdm *idmFake) HasIdentity(string) bool {
+func (fakeIdm *idmFake) HasIdentity(_ string) bool {
 	return true
 }

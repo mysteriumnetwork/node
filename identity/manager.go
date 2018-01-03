@@ -28,9 +28,9 @@ func identityToAccount(identity Identity) accounts.Account {
 	return addressToAccount(identity.Address)
 }
 
-func addressToAccount(identityAddress string) accounts.Account {
+func addressToAccount(address string) accounts.Account {
 	return accounts.Account{
-		Address: common.HexToAddress(identityAddress),
+		Address: common.HexToAddress(address),
 	}
 }
 
@@ -54,8 +54,8 @@ func (idm *identityManager) GetIdentities() []Identity {
 	return ids
 }
 
-func (idm *identityManager) GetIdentity(identityString string) (identity Identity, err error) {
-	account, err := idm.findAccount(identityString)
+func (idm *identityManager) GetIdentity(address string) (identity Identity, err error) {
+	account, err := idm.findAccount(address)
 	if err != nil {
 		return identity, errors.New("identity not found")
 	}
@@ -63,13 +63,13 @@ func (idm *identityManager) GetIdentity(identityString string) (identity Identit
 	return accountToIdentity(account), nil
 }
 
-func (idm *identityManager) HasIdentity(identityString string) bool {
-	_, err := idm.findAccount(identityString)
+func (idm *identityManager) HasIdentity(address string) bool {
+	_, err := idm.findAccount(address)
 	return err == nil
 }
 
-func (idm *identityManager) Unlock(identityString string, passphrase string) error {
-	account, err := idm.findAccount(identityString)
+func (idm *identityManager) Unlock(address string, passphrase string) error {
+	account, err := idm.findAccount(address)
 	if err != nil {
 		return err
 	}
@@ -77,10 +77,10 @@ func (idm *identityManager) Unlock(identityString string, passphrase string) err
 	return idm.keystoreManager.Unlock(account, passphrase)
 }
 
-func (idm *identityManager) findAccount(identityString string) (accounts.Account, error) {
-	account, err := idm.keystoreManager.Find(addressToAccount(identityString))
+func (idm *identityManager) findAccount(address string) (accounts.Account, error) {
+	account, err := idm.keystoreManager.Find(addressToAccount(address))
 	if err != nil {
-		return accounts.Account{}, errors.New("identity not found: " + identityString)
+		return accounts.Account{}, errors.New("identity not found: " + address)
 	}
 
 	return account, err

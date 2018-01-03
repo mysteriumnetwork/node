@@ -3,7 +3,6 @@ package command_run
 import (
 	"errors"
 	"github.com/mysterium/node/ipify"
-	"io"
 
 	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
 	"github.com/mysterium/node/state_client"
@@ -12,9 +11,6 @@ import (
 )
 
 type CommandRun struct {
-	Output      io.Writer
-	OutputError io.Writer
-
 	IpifyClient ipify.Client
 	ipOriginal  string
 

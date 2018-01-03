@@ -24,14 +24,14 @@ func (producer *SessionCreateProducer) Produce() (requestPtr interface{}) {
 	}
 }
 
-func RequestSessionCreate(sender communication.Sender, proposalId int) (*VpnSession, error) {
+func RequestSessionCreate(sender communication.Sender, proposalId int) (*SessionDto, error) {
 	responsePtr, err := sender.Request(&SessionCreateProducer{
 		ProposalId: proposalId,
 	})
 	response := responsePtr.(*SessionCreateResponse)
 
 	if err != nil || !response.Success {
-		return nil, errors.New("Session create failed. " + response.Message)
+		return nil, errors.New("SessionDto create failed. " + response.Message)
 	}
 
 	return &response.Session, nil

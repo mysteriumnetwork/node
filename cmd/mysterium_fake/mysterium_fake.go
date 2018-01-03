@@ -19,30 +19,30 @@ func main() {
 	waiter := &sync.WaitGroup{}
 	mysteriumClient := server.NewClientFake()
 
-	serverCommand := command_server.NewCommand()
-	serverCommand.Output = os.Stdout
-	serverCommand.OutputError = os.Stderr
-	serverCommand.IpifyClient = ipify.NewClientFake(NodeIp)
-	serverCommand.MysteriumClient = mysteriumClient
-	serverCommand.NatService = nat.NewServiceFake()
+	serverCommand := command_server.NewCommandWith(
+		command_server.CommandOptions{
+			DirectoryConfig:  NodeDirectoryConfig,
+			DirectoryRuntime: ClientDirectoryRuntime,
+		},
+		mysteriumClient,
+		ipify.NewClientFake(NodeIp),
+		nat.NewServiceFake(),
+	)
 	runServer(serverCommand, waiter)
 
-	clientCommand := command_client.NewCommand(command_client.CommandOptions{
-		DirectoryRuntime: ClientDirectoryRuntime,
-	})
-
-	//TODO refactor this internal variable override
-	clientCommand.MysteriumClient = mysteriumClient
+	clientCommand := command_client.NewCommandWith(
+		command_client.CommandOptions{
+			DirectoryRuntime: ClientDirectoryRuntime,
+		},
+		mysteriumClient,
+	)
 	runClient(clientCommand, waiter)
 
 	waiter.Wait()
 }
 
 func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup) {
-	err := serverCommand.Run(command_server.CommandOptions{
-		DirectoryConfig:  NodeDirectoryConfig,
-		DirectoryRuntime: ClientDirectoryRuntime,
-	})
+	err := serverCommand.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Server starting error: ", err)
 		os.Exit(1)
