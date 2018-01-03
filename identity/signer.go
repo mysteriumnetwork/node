@@ -1,13 +1,12 @@
 package identity
 
 import (
-	"encoding/hex"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type Signer interface {
-	Sign(message []byte) (string, error)
+	Sign(message []byte) (Signature, error)
 }
 
 type keystoreSigner struct {
@@ -22,23 +21,15 @@ func NewSigner(keystore keystoreInterface, identity Identity) Signer {
 	}
 }
 
-func (ksSigner *keystoreSigner) Sign(message []byte) (string, error) {
+func (ksSigner *keystoreSigner) Sign(message []byte) (Signature, error) {
 	signature, err := ksSigner.keystore.SignHash(ksSigner.account, messageHash(message))
 	if err != nil {
-		return "", err
+		return Signature{}, err
 	}
 
-	return signatureEncode(signature), nil
+	return SignatureBytes(signature), nil
 }
 
 func messageHash(data []byte) []byte {
 	return crypto.Keccak256(data)
-}
-
-func signatureEncode(signature []byte) string {
-	return hex.EncodeToString(signature)
-}
-
-func signatureDecode(signature string) ([]byte, error) {
-	return hex.DecodeString(signature)
 }

@@ -14,5 +14,5 @@ func TestSigningMessageWithUnlockedAccount(t *testing.T) {
 	signature, err := signer.Sign(message)
 	assert.NoError(t, err)
 	assert.Equal(t, messageHash(message), keystore.LastHash)
-	assert.Equal(t, "7369676e6564", signature)
+	assert.Equal(t, SignatureHex("7369676e6564"), signature)
 }

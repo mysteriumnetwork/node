@@ -5,7 +5,7 @@ import (
 )
 
 type Verifier interface {
-	Verify(message []byte, signature string) bool
+	Verify(message []byte, signature Signature) bool
 }
 
 type ethereumVerifier struct {
@@ -16,13 +16,8 @@ func NewVerifier(peerIdentity Identity) *ethereumVerifier {
 	return &ethereumVerifier{peerIdentity}
 }
 
-func (ev *ethereumVerifier) Verify(message []byte, signature string) bool {
-	signatureBytes, err := signatureDecode(signature)
-	if err != nil {
-		return false
-	}
-
-	recoveredKey, err := crypto.Ecrecover(messageHash(message), signatureBytes)
+func (ev *ethereumVerifier) Verify(message []byte, signature Signature) bool {
+	recoveredKey, err := crypto.Ecrecover(messageHash(message), signature.Bytes())
 	if err != nil {
 		return false
 	}
