@@ -47,10 +47,6 @@ func (cmd *CommandRun) Run() (err error) {
 		SourceAddress: "10.8.0.0/24",
 		TargetIp:      vpnServerIp,
 	})
-
-	// clear probable stale entries
-	cmd.natService.Stop()
-
 	if err = cmd.natService.Start(); err != nil {
 		return err
 	}
