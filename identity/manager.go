@@ -51,19 +51,19 @@ func (idm *identityManager) GetIdentities() []Identity {
 	return ids
 }
 
-func (idm *identityManager) GetIdentity(identityString string) (identity Identity, err error) {
-	identityString = strings.ToLower(identityString)
+func (idm *identityManager) GetIdentity(address string) (identity Identity, err error) {
+	address = strings.ToLower(address)
 	for _, identity := range idm.GetIdentities() {
-		if strings.ToLower(identity.Address) == identityString {
+		if strings.ToLower(identity.Address) == address {
 			return identity, nil
 		}
 	}
 
-	return identity, errors.New("identity not found")
+	return identity, errors.New("identity not found: " + address)
 }
 
-func (idm *identityManager) HasIdentity(identityString string) bool {
-	_, err := idm.GetIdentity(identityString)
+func (idm *identityManager) HasIdentity(address string) bool {
+	_, err := idm.GetIdentity(address)
 
 	return err == nil
 }

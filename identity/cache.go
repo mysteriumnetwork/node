@@ -11,17 +11,17 @@ type cacheData struct {
 	Identity Identity `json:"identity"`
 }
 
-type identityCache struct {
+type IdentityCache struct {
 	File string
 }
 
-func NewIdentityCache(dir string, jsonFile string) *identityCache {
-	return &identityCache{
+func NewIdentityCache(dir string, jsonFile string) *IdentityCache {
+	return &IdentityCache{
 		File: filepath.Join(dir, jsonFile),
 	}
 }
 
-func (ic *identityCache) GetIdentity() (identity Identity, err error) {
+func (ic *IdentityCache) GetIdentity() (identity Identity, err error) {
 	if ic.cacheExists() {
 		cache, err := ic.readCache()
 		if err != nil {
@@ -34,7 +34,7 @@ func (ic *identityCache) GetIdentity() (identity Identity, err error) {
 	return
 }
 
-func (ic *identityCache) StoreIdentity(identity Identity) error {
+func (ic *IdentityCache) StoreIdentity(identity Identity) error {
 	cache := cacheData{
 		Identity: identity,
 	}
@@ -42,7 +42,7 @@ func (ic *identityCache) StoreIdentity(identity Identity) error {
 	return ic.writeCache(cache)
 }
 
-func (ic *identityCache) cacheExists() bool {
+func (ic *IdentityCache) cacheExists() bool {
 	if _, err := os.Stat(ic.File); os.IsNotExist(err) {
 		return false
 	}
@@ -50,7 +50,7 @@ func (ic *identityCache) cacheExists() bool {
 	return true
 }
 
-func (ic *identityCache) readCache() (cache *cacheData, err error) {
+func (ic *IdentityCache) readCache() (cache *cacheData, err error) {
 	data, err := ioutil.ReadFile(ic.File)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (ic *identityCache) readCache() (cache *cacheData, err error) {
 	return
 }
 
-func (ic *identityCache) writeCache(cache cacheData) (err error) {
+func (ic *IdentityCache) writeCache(cache cacheData) (err error) {
 	cacheString, err := json.Marshal(cache)
 	if err != nil {
 		return

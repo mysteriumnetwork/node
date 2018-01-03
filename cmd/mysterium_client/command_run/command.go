@@ -14,20 +14,19 @@ import (
 	"github.com/mysterium/node/tequilapi/endpoints"
 )
 
-type CommandRun struct {
-	//TODO this must disappear or become a private field
-	MysteriumClient server.Client
-
-	connectionManager client_connection.Manager
-
-	httpApiServer tequilapi.ApiServer
+func NewCommand(options CommandOptions) *CommandRun {
+	return NewCommandWith(
+		options,
+		server.NewClient(),
+	)
 }
 
-func NewCommand(options CommandOptions) *CommandRun {
+func NewCommandWith(
+	options CommandOptions,
+	mysteriumClient server.Client,
+) *CommandRun {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
-
-	mysteriumClient := server.NewClient()
 
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 
@@ -49,10 +48,14 @@ func NewCommand(options CommandOptions) *CommandRun {
 	httpApiServer := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 
 	return &CommandRun{
-		mysteriumClient,
 		connectionManager,
 		httpApiServer,
 	}
+}
+
+type CommandRun struct {
+	connectionManager client_connection.Manager
+	httpApiServer     tequilapi.ApiServer
 }
 
 func (cmd *CommandRun) Run() error {
