@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 type identityManager struct {
@@ -25,9 +24,13 @@ func accountToIdentity(account accounts.Account) Identity {
 	return identity
 }
 
-func identityToAccount(identityStr string) accounts.Account {
+func identityToAccount(identity Identity) accounts.Account {
+	return addressToAccount(identity.Address)
+}
+
+func addressToAccount(address string) accounts.Account {
 	return accounts.Account{
-		Address: common.HexToAddress(identityStr),
+		Address: common.HexToAddress(address),
 	}
 }
 
@@ -52,18 +55,33 @@ func (idm *identityManager) GetIdentities() []Identity {
 }
 
 func (idm *identityManager) GetIdentity(address string) (identity Identity, err error) {
-	address = strings.ToLower(address)
-	for _, identity := range idm.GetIdentities() {
-		if strings.ToLower(identity.Address) == address {
-			return identity, nil
-		}
+	account, err := idm.findAccount(address)
+	if err != nil {
+		return identity, errors.New("identity not found")
 	}
 
-	return identity, errors.New("identity not found: " + address)
+	return accountToIdentity(account), nil
 }
 
 func (idm *identityManager) HasIdentity(address string) bool {
-	_, err := idm.GetIdentity(address)
-
+	_, err := idm.findAccount(address)
 	return err == nil
+}
+
+func (idm *identityManager) Unlock(address string, passphrase string) error {
+	account, err := idm.findAccount(address)
+	if err != nil {
+		return err
+	}
+
+	return idm.keystoreManager.Unlock(account, passphrase)
+}
+
+func (idm *identityManager) findAccount(address string) (accounts.Account, error) {
+	account, err := idm.keystoreManager.Find(addressToAccount(address))
+	if err != nil {
+		return accounts.Account{}, errors.New("identity not found: " + address)
+	}
+
+	return account, err
 }

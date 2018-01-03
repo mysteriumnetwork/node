@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"errors"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -8,6 +9,7 @@ import (
 type keyStoreFake struct {
 	AccountsMock []accounts.Account
 	ErrorMock    error
+	LastHash     []byte
 }
 
 func NewKeystoreFake() *keyStoreFake {
@@ -36,7 +38,7 @@ func (self *keyStoreFake) Unlock(a accounts.Account, passphrase string) error {
 		return self.ErrorMock
 	}
 
-	panic("implement me")
+	return nil
 }
 
 func (self *keyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
@@ -44,5 +46,20 @@ func (self *keyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, err
 		return []byte{}, self.ErrorMock
 	}
 
-	panic("implement me")
+	self.LastHash = hash
+	return []byte("signed"), nil
+}
+
+func (self *keyStoreFake) Find(a accounts.Account) (accounts.Account, error) {
+	if self.ErrorMock != nil {
+		return accounts.Account{}, self.ErrorMock
+	}
+
+	for _, acc := range self.AccountsMock {
+		if acc.Address == a.Address {
+			return acc, nil
+		}
+	}
+
+	return a, errors.New("account not found")
 }
