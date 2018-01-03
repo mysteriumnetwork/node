@@ -9,7 +9,7 @@ import (
 type Client interface {
 	RegisterIdentity(identity identity.Identity) (err error)
 	NodeRegister(proposal dto_discovery.ServiceProposal) (err error)
-	NodeSendStats(nodeKey string, sessionStats []dto.SessionStatsDeprecated) (err error)
+	NodeSendStats(nodeKey string) (err error)
 	FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error)
 	SendSessionStats(sessionId string, sessionStats dto.SessionStats) (err error)
 }

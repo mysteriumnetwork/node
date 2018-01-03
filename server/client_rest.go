@@ -59,10 +59,11 @@ func (client *clientRest) NodeRegister(proposal dto_discovery.ServiceProposal) (
 	return
 }
 
-func (client *clientRest) NodeSendStats(nodeKey string, sessionList []dto.SessionStatsDeprecated) (err error) {
+func (client *clientRest) NodeSendStats(nodeKey string) (err error) {
 	response, err := client.doPostRequest("node_send_stats", dto.NodeStatsRequest{
-		NodeKey:  nodeKey,
-		Sessions: sessionList,
+		NodeKey: nodeKey,
+		// TODO Refactor Node statistics with new `SessionStats` DTO
+		Sessions: []dto.SessionStats{},
 	})
 	if err == nil {
 		defer response.Body.Close()
