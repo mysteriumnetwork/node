@@ -61,7 +61,7 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	err = middleware.sessionStatsSender.send(bytesOut, bytesIn)
+	err = middleware.sessionStatsSender(bytesOut, bytesIn)
 
 	return
 }

@@ -56,13 +56,14 @@ func (sender *fakeStatsSender) send(bytesSent, bytesReceived int) error {
 }
 
 func Test_Factory(t *testing.T) {
-	middleware := NewMiddleware(&fakeStatsSender{}, 1*time.Minute)
+	statsSender := fakeStatsSender{}
+	middleware := NewMiddleware(statsSender.send, 1*time.Minute)
 	assert.NotNil(t, middleware)
 }
 
 func Test_Start(t *testing.T) {
-	statsSender := &fakeStatsSender{}
-	middleware := NewMiddleware(statsSender, 1*time.Minute)
+	statsSender := fakeStatsSender{}
+	middleware := NewMiddleware(statsSender.send, 1*time.Minute)
 	connection := &fakeConnection{}
 	middleware.Start(connection)
 	assert.Equal(t, []byte("bytecount 60\n"), connection.lastDataWritten)
@@ -89,7 +90,7 @@ func Test_ConsumeLine(t *testing.T) {
 
 	for _, test := range tests {
 		statsSender := &fakeStatsSender{}
-		middleware := NewMiddleware(statsSender, 1*time.Minute)
+		middleware := NewMiddleware(statsSender.send, 1*time.Minute)
 		consumed, err := middleware.ConsumeLine(test.line)
 		if test.expectedError != nil {
 			assert.Error(t, test.expectedError, err.Error(), test.line)
