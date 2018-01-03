@@ -62,7 +62,7 @@ func (client *clientRest) NodeRegister(proposal dto_discovery.ServiceProposal) (
 func (client *clientRest) NodeSendStats(nodeKey string) (err error) {
 	response, err := client.doPostRequest("node_send_stats", dto.NodeStatsRequest{
 		NodeKey: nodeKey,
-		// TODO: remove this struct in favor of `SessionStats`
+		// TODO Refactor Node statistics with new `SessionStats` DTO
 		Sessions: []dto.SessionStats{},
 	})
 	if err == nil {
