@@ -20,20 +20,25 @@ var mysteriumApiUrl string
 const MYSTERIUM_API_CLIENT = "goclient-v0.1"
 const MYSTERIUM_API_LOG_PREFIX = "[Mysterium.api] "
 
+//HttpDoer is extracted one method interface from http.Client
+type HttpDoer interface {
+	Do(r *http.Request) (*http.Response, error)
+}
+
+type mysteriumRestClient struct {
+	http HttpDoer
+}
+
 func NewClient() Client {
 	httpClient := http.Client{
 		Transport: &http.Transport{},
 	}
-	return &clientRest{
-		httpClient: httpClient,
+	return &mysteriumRestClient{
+		http: &httpClient,
 	}
 }
 
-type clientRest struct {
-	httpClient http.Client
-}
-
-func (client *clientRest) RegisterIdentity(identity identity.Identity) (err error) {
+func (client *mysteriumRestClient) RegisterIdentity(identity identity.Identity) (err error) {
 	response, err := client.doPostRequest("identities", dto.CreateIdentityRequest{
 		Identity: identity.Address,
 	})
@@ -46,7 +51,7 @@ func (client *clientRest) RegisterIdentity(identity identity.Identity) (err erro
 	return
 }
 
-func (client *clientRest) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
+func (client *mysteriumRestClient) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
 	response, err := client.doPostRequest("node_register", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	})
@@ -59,7 +64,7 @@ func (client *clientRest) NodeRegister(proposal dto_discovery.ServiceProposal) (
 	return
 }
 
-func (client *clientRest) NodeSendStats(nodeKey string) (err error) {
+func (client *mysteriumRestClient) NodeSendStats(nodeKey string) (err error) {
 	response, err := client.doPostRequest("node_send_stats", dto.NodeStatsRequest{
 		NodeKey: nodeKey,
 		// TODO Refactor Node statistics with new `SessionStats` DTO
@@ -73,7 +78,7 @@ func (client *clientRest) NodeSendStats(nodeKey string) (err error) {
 	return nil
 }
 
-func (client *clientRest) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
+func (client *mysteriumRestClient) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
 	values := url.Values{}
 	values.Set("node_key", nodeKey)
 	response, err := client.doGetRequest("proposals", values)
@@ -96,7 +101,7 @@ func (client *clientRest) FindProposals(nodeKey string) (proposals []dto_discove
 	return
 }
 
-func (client *clientRest) SendSessionStats(sessionId string, sessionStats dto.SessionStats) (err error) {
+func (client *mysteriumRestClient) SendSessionStats(sessionId string, sessionStats dto.SessionStats) (err error) {
 	path := fmt.Sprintf("sessions/%s/stats", sessionId)
 	response, err := client.doPostRequest(path, sessionStats)
 	if err == nil {
@@ -107,16 +112,16 @@ func (client *clientRest) SendSessionStats(sessionId string, sessionStats dto.Se
 	return nil
 }
 
-func (client *clientRest) doGetRequest(path string, values url.Values) (*http.Response, error) {
+func (client *mysteriumRestClient) doGetRequest(path string, values url.Values) (*http.Response, error) {
 	fullPath := fmt.Sprintf("%v/%v?%v", mysteriumApiUrl, path, values.Encode())
 	return client.executeRequest("GET", fullPath, nil)
 }
 
-func (client *clientRest) doPostRequest(path string, payload interface{}) (*http.Response, error) {
+func (client *mysteriumRestClient) doPostRequest(path string, payload interface{}) (*http.Response, error) {
 	return client.doPayloadRequest("POST", path, payload)
 }
 
-func (client *clientRest) doPayloadRequest(method, path string, payload interface{}) (*http.Response, error) {
+func (client *mysteriumRestClient) doPayloadRequest(method, path string, payload interface{}) (*http.Response, error) {
 	payloadJson, err := json.Marshal(payload)
 	if err != nil {
 		log.Critical(MYSTERIUM_API_LOG_PREFIX, err)
@@ -126,7 +131,7 @@ func (client *clientRest) doPayloadRequest(method, path string, payload interfac
 	return client.executeRequest(method, mysteriumApiUrl+"/"+path, payloadJson)
 }
 
-func (client *clientRest) executeRequest(method, fullPath string, payloadJson []byte) (*http.Response, error) {
+func (client *mysteriumRestClient) executeRequest(method, fullPath string, payloadJson []byte) (*http.Response, error) {
 	request, err := http.NewRequest(method, fullPath, bytes.NewBuffer(payloadJson))
 	request.Header.Set("User-Agent", MYSTERIUM_API_CLIENT)
 	request.Header.Set("Content-Type", "application/json")
@@ -136,7 +141,7 @@ func (client *clientRest) executeRequest(method, fullPath string, payloadJson []
 		return nil, err
 	}
 
-	response, err := client.httpClient.Do(request)
+	response, err := client.http.Do(request)
 
 	if err != nil {
 		log.Error(MYSTERIUM_API_LOG_PREFIX, err)
