@@ -16,13 +16,14 @@ func TestHealthCheckReturnsExpectedJsonObject(t *testing.T) {
 	tick1 := time.Unix(0, 0)
 	tick2 := tick1.Add(time.Minute)
 
-	handlerFunc := HealthCheckEndpointFactory(newMockTimer([]time.Time{tick1, tick2}).Now).HealthCheck
+	handlerFunc := HealthCheckEndpointFactory(newMockTimer([]time.Time{tick1, tick2}).Now, func() int { return 1 }).HealthCheck
 	handlerFunc(resp, req, httprouter.Params{})
 
 	assert.JSONEq(
 		t,
 		`{
-			"uptime" : "1m0s"
+			"uptime" : "1m0s",
+			"process" : 1
 		}`,
 		resp.Body.String())
 }
