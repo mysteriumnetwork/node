@@ -40,6 +40,7 @@ func TestNewAddressForContact(t *testing.T) {
 		Type: "nats/v1",
 		Definition: ContactNATSV1{
 			Topic: "123456",
+			BrokerAddresses: []string{"nats://" + natsServerIp + ":4222"},
 		},
 	})
 
