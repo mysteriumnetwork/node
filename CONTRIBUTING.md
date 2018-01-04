@@ -31,7 +31,7 @@ vim .env
 Running
 ------------
 ``` bash
-# Start communication gateway
+# Start communication broker
 docker-compose up broker
 
 # Start node
