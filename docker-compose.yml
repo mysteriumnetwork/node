@@ -49,7 +49,7 @@ services:
       context: .
       dockerfile: bin/client_docker/ubuntu/Dockerfile
       args:
-        PACKAGE_FILE: build/package/mysterium-client_linux_amd64.deb
+        PACKAGE_VERSION: 0.0.1-docker
     container_name: mysterium-client
     depends_on:
       - broker
