@@ -31,8 +31,8 @@ vim .env
 Running
 ------------
 ``` bash
-# Start communication gateway
-docker-compose up gateway
+# Start communication broker
+docker-compose up broker
 
 # Start node
 bin/server_build

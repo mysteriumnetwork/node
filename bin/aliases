@@ -8,8 +8,8 @@
 alias myst-home="cd $GOPATH/src/github.com/mysterium/node"
 alias myst="myst-home"
 
-alias myst-gateway="myst-home && docker-compose up gateway"
-alias myst-nats="myst-gateway"
+alias myst-broker="myst-home && docker-compose up broker"
+alias myst-nats="myst-broker"
 
 alias myst-client="myst-home && bin/client_build && bin/client_run -node `whoami`"
 alias myst-server="myst-home && bin/server_build && bin/server_run -node `whoami`"

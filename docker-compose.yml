@@ -1,13 +1,24 @@
 version: '2'
 services:
 
-  node:
+  broker:
+    image: nats
+    container_name: mysterium-broker
+    networks:
+      - default
+    ports:
+      - 4222:4222
+      - 8222:8222
+
+  server-ubuntu:
     build:
       context: .
-      dockerfile: Dockerfile-mysterium-node
+      dockerfile: bin/server_docker/ubuntu/Dockerfile
       args:
-        VERSION: 0.0.6
-    container_name: mysterium-node
+        PACKAGE_VERSION: 0.0.1-docker
+    container_name: mysterium-server-ubuntu
+    depends_on:
+      - broker
     cap_add:
       - MKNOD
       - NET_ADMIN
@@ -15,28 +26,36 @@ services:
       - default
     ports:
       - 1194:1194
-    volumes:
-      - .:/application
     environment:
-      - NODE=123456
+      NODE: server-ubuntu
+
+  server-alpine:
+    build:
+      context: .
+      dockerfile: bin/server_docker/alpine/Dockerfile
+    container_name: mysterium-server-alpine
+    depends_on:
+      - broker
+    cap_add:
+      - MKNOD
+      - NET_ADMIN
+    networks:
+      - default
+    environment:
+      NODE: server-alpine
 
   client:
     build:
       context: .
-      dockerfile: Dockerfile-mysterium-client
+      dockerfile: bin/client_docker/ubuntu/Dockerfile
       args:
-        PACKAGE_FILE: build/package/mysterium-client_linux_amd64.deb
+        PACKAGE_VERSION: 0.0.1-docker
     container_name: mysterium-client
+    depends_on:
+      - broker
+      - server-ubuntu
+      - server-alpine
     networks:
       - default
-    volumes:
-      - .:/application
-
-  gateway:
-    image: nats
-    container_name: mysterium-gateway
-    networks:
-      - default
-    ports:
-      - 4222:4222
-      - 8222:8222
+    environment:
+      NODE: server-ubuntu
