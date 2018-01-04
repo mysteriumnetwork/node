@@ -19,3 +19,6 @@ testImport:
   subpackages:
   - assert
   - suite
+- package: github.com/golang/lint
+  subpackages:
+  - golint
