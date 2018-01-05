@@ -15,8 +15,8 @@ const finenameCharset = "1234567890abcdefghijklmnopqrstuvwxyz"
 func tempFilename(directory, filePrefix, fileExtension string) (filePath string) {
 	for i := 0; i < 10000; i++ {
 		filePath = directory + "/" + filePrefix + randomString(10, finenameCharset) + fileExtension
-		if _, err := os.Stat(filePath); os.IsExist(err) {
-			continue
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			break
 		}
 	}
 	return
