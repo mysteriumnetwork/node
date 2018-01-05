@@ -39,15 +39,11 @@ func (tc *test_context) SetupTest() {
 		make(chan int, 1),
 		nil,
 	}
-	fakeVpnClientFactory := func(vpnSession session.SessionDto, signer identity.Signer) (openvpn.Client, error) {
+	fakeVpnClientFactory := func(vpnSession session.SessionDto, identity identity.Identity) (openvpn.Client, error) {
 		return tc.fakeOpenVpn, nil
 	}
 
-	fakeSignerFactory := func(identity identity.Identity) identity.Signer {
-		return nil
-	}
-
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, fakeSignerFactory, dialogEstablisherFactory, fakeVpnClientFactory)
+	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogEstablisherFactory, fakeVpnClientFactory)
 }
 
 func (tc *test_context) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
