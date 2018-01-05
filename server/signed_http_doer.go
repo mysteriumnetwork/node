@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"encoding/base64"
 	"github.com/mysterium/node/identity"
 	"io"
 	"net/http"
@@ -26,6 +25,10 @@ func WithRequestSignatures(originalDoer HttpDoer, requestSigner identity.Signer)
 }
 
 func (shd signedHttpDoer) Do(req *http.Request) (*http.Response, error) {
+	if req.Body == nil {
+		//skip requests which has no body at the moment (GET , DELETE etc.)
+		return shd.original.Do(req)
+	}
 	//unfortunatelly body signatures will work if and only if req contains byte.buffers as body (in case of other readers it will fail)
 	//as we have no way to intercept reader, copy/calc hash and then pass reader unaffected to underlying transport
 	//as a result - if body reader is consumed by us, original http request executor will have nothing to read and will send empty body
@@ -42,7 +45,7 @@ func (shd signedHttpDoer) Do(req *http.Request) (*http.Response, error) {
 		req.Body.Close()
 		return nil, err
 	}
-	req.Header.Add(authenticationHeaderName, authenticationSchemaName+" "+base64.StdEncoding.EncodeToString(signature.Bytes()))
+	req.Header.Add(authenticationHeaderName, authenticationSchemaName+" "+signature.Base64())
 	return shd.original.Do(req)
 }
 
