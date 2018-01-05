@@ -101,7 +101,7 @@ func (client *mysteriumRestClient) FindProposals(nodeKey string) (proposals []dt
 	return
 }
 
-func (client *mysteriumRestClient) SendSessionStats(sessionId string, sessionStats dto.SessionStats) (err error) {
+func (client *mysteriumRestClient) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
 	path := fmt.Sprintf("sessions/%s/stats", sessionId)
 	response, err := client.doPostRequest(path, sessionStats)
 	if err == nil {

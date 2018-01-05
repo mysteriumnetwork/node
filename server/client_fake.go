@@ -53,7 +53,7 @@ func (client *ClientFake) FindProposals(nodeKey string) (proposals []dto_discove
 	return proposals, nil
 }
 
-func (client *ClientFake) SendSessionStats(sessionId string, sessionStats dto.SessionStats) (err error) {
+func (client *ClientFake) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
 	log.Info(MYSTERIUM_API_LOG_PREFIX, "Session stats sent: ", sessionId)
 
 	return nil

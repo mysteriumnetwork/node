@@ -38,7 +38,11 @@ func NewCommandWith(
 
 	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime)
 
-	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
+	signerFactory := func(id identity.Identity) identity.Signer {
+		return identity.NewSigner(keystoreInstance, id)
+	}
+
+	connectionManager := client_connection.NewManager(mysteriumClient, signerFactory, dialogEstablisherFactory, vpnClientFactory)
 
 	router := tequilapi.NewApiRouter()
 	endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient)
