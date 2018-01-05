@@ -1,0 +1,1 @@
+go list ./... | xargs go run vendor/github.com/golang/lint/golint/*.go
