@@ -1,5 +1,5 @@
-hash: 84070bc56a0d892ef493515c34a6f29ef647d73755911a975f5c0b41d305e11b
-updated: 2017-12-14T21:45:17.235275+02:00
+hash: 1bb43ef7cb6e2e088fd0d3af4498165cab95fa6ecd77afb147e83631406ccccb
+updated: 2018-01-05T17:30:35.737033+02:00
 imports:
 - name: github.com/aristanetworks/goarista
   version: d1195528dcb23ba20b6b77f38596720af652a572
@@ -50,20 +50,10 @@ imports:
   - v1
 - name: github.com/mitchellh/go-homedir
   version: b8bc1bf767474819792c23f32d8286a45736f1c6
-- name: github.com/nats-io/gnatsd
-  version: ee7b97e6ee3068900d39f1fe4ae7b75f358416ab
-  subpackages:
-  - conf
-  - logger
-  - server
-  - server/pse
-  - test
-  - util
 - name: github.com/nats-io/go-nats
-  version: 29f9728a183bf3fa7e809e14edac00b33be72088
+  version: d66cb54e6b7bdd93f0b28afc8450d84c780dfb68
   subpackages:
   - encoders/builtin
-  - test
   - util
 - name: github.com/nats-io/nuid
   version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
@@ -90,33 +80,16 @@ imports:
 - name: golang.org/x/crypto
   version: 9477e0b78b9ac3d0b03822fd95422e2fe07627cd
   subpackages:
-  - bcrypt
-  - blowfish
   - pbkdf2
   - scrypt
 - name: golang.org/x/sys
-  version: f7928cfef4d09d1b080aa2b6fd3ca9ba1567c733
-  repo: https://go.googlesource.com/sys
+  version: 28a7276518d399b9634904daad79e18b44d481bc
   subpackages:
   - unix
-  - windows
-  - windows/registry
-  - windows/svc
-  - windows/svc/debug
-  - windows/svc/eventlog
-  - windows/svc/mgr
 - name: gopkg.in/fatih/set.v0
   version: 27c40922c40b43fe04554d8223a402af3ea333f3
 - name: gopkg.in/karalabe/cookiejar.v2
   version: 8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57
   subpackages:
   - collections/prque
-testImports:
-- name: github.com/dshearer/jobber
-  version: 46c7286074d12669112cd4152825c5bc7cb246d2
-  subpackages:
-  - Godeps/_workspace/src/github.com/stretchr/testify/assert
-- name: github.com/magiconair/properties
-  version: 49d762b9817ba1c2e9d0c69183c2b4a8b8f1d934
-  subpackages:
-  - assert
+testImports: []
