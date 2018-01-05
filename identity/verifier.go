@@ -17,7 +17,12 @@ func NewVerifier(peerIdentity Identity) *ethereumVerifier {
 }
 
 func (ev *ethereumVerifier) Verify(message []byte, signature Signature) bool {
-	recoveredKey, err := crypto.Ecrecover(messageHash(message), signature.Bytes())
+	signatureBytes := signature.Bytes()
+	if len(signatureBytes) == 0 {
+		return false
+	}
+
+	recoveredKey, err := crypto.Ecrecover(messageHash(message), signatureBytes)
 	if err != nil {
 		return false
 	}
