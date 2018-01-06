@@ -1,10 +1,10 @@
-package signer
+package nats_dialog
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
-	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 func NewCodecSigner(

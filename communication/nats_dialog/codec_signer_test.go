@@ -1,4 +1,4 @@
-package signer
+package nats_dialog
 
 import (
 	"github.com/mysterium/node/communication"
