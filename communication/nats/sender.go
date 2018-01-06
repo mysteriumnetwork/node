@@ -10,10 +10,10 @@ import (
 
 const SENDER_LOG_PREFIX = "[NATS.Sender] "
 
-func NewSender(connection Connection, topic string) *senderNats {
+func NewSender(connection Connection, codec communication.Codec, topic string) *senderNats {
 	return &senderNats{
 		connection:     connection,
-		codec:          communication.NewCodecJSON(),
+		codec:          codec,
 		timeoutRequest: 500 * time.Millisecond,
 		messageTopic:   topic + ".",
 	}

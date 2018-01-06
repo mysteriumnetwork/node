@@ -13,6 +13,7 @@ import (
 func NewDialogWaiter(address *nats_discovery.NatsAddress) *dialogWaiter {
 	return &dialogWaiter{
 		myAddress: address,
+		myCodec:   communication.NewCodecJSON(),
 	}
 }
 
@@ -20,6 +21,7 @@ const waiterLogPrefix = "[NATS.DialogWaiter] "
 
 type dialogWaiter struct {
 	myAddress *nats_discovery.NatsAddress
+	myCodec   communication.Codec
 }
 
 func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.RequestConsumer) error {
@@ -52,7 +54,7 @@ func (waiter *dialogWaiter) newDialogToContact(contactIdentity identity.Identity
 	subTopic := waiter.myAddress.GetTopic() + "." + contactIdentity.Address
 
 	return &dialog{
-		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), subTopic),
+		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), waiter.myCodec, subTopic),
 		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), subTopic),
 	}
 }

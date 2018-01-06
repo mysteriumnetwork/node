@@ -23,14 +23,16 @@ func TestDialogWaiter_Factory(t *testing.T) {
 
 func TestDialogWaiter_newDialogToContact(t *testing.T) {
 	connection := nats.NewConnectionFake()
+	codec := communication.NewCodecJSON()
 
 	waiter := &dialogWaiter{
 		myAddress: nats_discovery.NewAddressWithConnection(connection, "provider1"),
+		myCodec:   codec,
 	}
 	dialog := waiter.newDialogToContact(identity.FromAddress("customer1"))
 	assert.Equal(
 		t,
-		nats.NewSender(connection, "provider1.customer1"),
+		nats.NewSender(connection, codec, "provider1.customer1"),
 		dialog.Sender,
 	)
 	assert.Equal(

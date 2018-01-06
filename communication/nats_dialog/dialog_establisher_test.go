@@ -33,8 +33,11 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	)
 	defer connection.Close()
 
+	codec := communication.NewCodecJSON()
+
 	establisher := &dialogEstablisher{
 		myIdentity: identity.FromAddress("consumer1"),
+		myCodec:    codec,
 		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
 			assert.Exactly(t, dto_discovery.Contact{}, contact)
 			return nats_discovery.NewAddressWithConnection(connection, "provider1"), nil
@@ -49,7 +52,7 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(
 		t,
-		nats.NewSender(connection, "provider1.consumer1"),
+		nats.NewSender(connection, codec, "provider1.consumer1"),
 		dialogNats.Sender,
 	)
 	assert.Equal(

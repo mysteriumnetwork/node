@@ -13,6 +13,7 @@ import (
 func NewDialogEstablisher(identity identity.Identity) *dialogEstablisher {
 	return &dialogEstablisher{
 		myIdentity: identity,
+		myCodec:    communication.NewCodecJSON(),
 		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
 			address, err := nats_discovery.NewAddressForContact(contact)
 			if err == nil {
@@ -28,6 +29,7 @@ const establisherLogPrefix = "[NATS.DialogEstablisher] "
 
 type dialogEstablisher struct {
 	myIdentity            identity.Identity
+	myCodec               communication.Codec
 	contactAddressFactory func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error)
 }
 
@@ -38,7 +40,7 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 		return nil, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
 	}
 
-	contactSender := nats.NewSender(contactAddress.GetConnection(), contactAddress.GetTopic())
+	contactSender := nats.NewSender(contactAddress.GetConnection(), establisher.myCodec, contactAddress.GetTopic())
 	response, err := contactSender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
 			IdentityId: establisher.myIdentity.Address,
@@ -61,7 +63,7 @@ func (establisher *dialogEstablisher) newDialogToContact(contactAddress *nats_di
 	subTopic := contactAddress.GetTopic() + "." + establisher.myIdentity.Address
 
 	return &dialog{
-		Sender:   nats.NewSender(contactAddress.GetConnection(), subTopic),
+		Sender:   nats.NewSender(contactAddress.GetConnection(), establisher.myCodec, subTopic),
 		Receiver: nats.NewReceiver(contactAddress.GetConnection(), subTopic),
 	}
 }
