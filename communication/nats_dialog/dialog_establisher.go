@@ -34,10 +34,12 @@ type dialogEstablisher struct {
 }
 
 func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact) (communication.Dialog, error) {
+	var dialog *dialog
+
 	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", contact))
 	contactAddress, err := establisher.contactAddressFactory(contact)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
+		return dialog, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
 	}
 
 	contactSender := nats.NewSender(contactAddress.GetConnection(), establisher.myCodec, contactAddress.GetTopic())
@@ -47,16 +49,16 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Dialog creation error. %s", err)
+		return dialog, fmt.Errorf("Dialog creation error. %s", err)
 	}
 	if response.(*dialogCreateResponse).Reason != 200 {
-		return nil, fmt.Errorf("Dialog creation rejected. %#v", response)
+		return dialog, fmt.Errorf("Dialog creation rejected. %#v", response)
 	}
 
-	dialog := establisher.newDialogToContact(contactAddress)
+	dialog = establisher.newDialogToContact(contactAddress)
 	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", contact))
 
-	return dialog, err
+	return dialog, nil
 }
 
 func (establisher *dialogEstablisher) newDialogToContact(contactAddress *nats_discovery.NatsAddress) *dialog {
@@ -64,6 +66,6 @@ func (establisher *dialogEstablisher) newDialogToContact(contactAddress *nats_di
 
 	return &dialog{
 		Sender:   nats.NewSender(contactAddress.GetConnection(), establisher.myCodec, subTopic),
-		Receiver: nats.NewReceiver(contactAddress.GetConnection(), subTopic),
+		Receiver: nats.NewReceiver(contactAddress.GetConnection(), establisher.myCodec, subTopic),
 	}
 }

@@ -10,10 +10,10 @@ import (
 
 const RECEIVER_LOG_PREFIX = "[NATS.Receiver] "
 
-func NewReceiver(connection Connection, topic string) *receiverNats {
+func NewReceiver(connection Connection, codec communication.Codec, topic string) *receiverNats {
 	return &receiverNats{
 		connection:   connection,
-		codec:        communication.NewCodecJSON(),
+		codec:        codec,
 		messageTopic: topic + ".",
 	}
 }

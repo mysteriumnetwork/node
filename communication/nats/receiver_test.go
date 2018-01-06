@@ -12,14 +12,15 @@ func TestReceiverInterface(t *testing.T) {
 
 func TestReceiverNew(t *testing.T) {
 	connection := &connectionFake{}
+	codec := communication.NewCodecFake()
 
 	assert.Equal(
 		t,
 		&receiverNats{
 			connection:   connection,
-			codec:        communication.NewCodecJSON(),
+			codec:        codec,
 			messageTopic: "custom.",
 		},
-		NewReceiver(connection, "custom"),
+		NewReceiver(connection, codec, "custom"),
 	)
 }

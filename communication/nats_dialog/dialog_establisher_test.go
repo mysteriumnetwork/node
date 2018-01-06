@@ -57,7 +57,7 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	)
 	assert.Equal(
 		t,
-		nats.NewReceiver(connection, "provider1.consumer1"),
+		nats.NewReceiver(connection, codec, "provider1.consumer1"),
 		dialogNats.Receiver,
 	)
 }

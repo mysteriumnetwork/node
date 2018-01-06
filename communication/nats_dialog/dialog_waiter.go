@@ -44,7 +44,7 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 		return &responseOK, nil
 	}
 
-	myReceiver := nats.NewReceiver(waiter.myAddress.GetConnection(), waiter.myAddress.GetTopic())
+	myReceiver := nats.NewReceiver(waiter.myAddress.GetConnection(), waiter.myCodec, waiter.myAddress.GetTopic())
 	subscribeError := myReceiver.Respond(&dialogCreateConsumer{createDialog})
 
 	return subscribeError
@@ -55,7 +55,7 @@ func (waiter *dialogWaiter) newDialogToContact(contactIdentity identity.Identity
 
 	return &dialog{
 		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), waiter.myCodec, subTopic),
-		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), subTopic),
+		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), waiter.myCodec, subTopic),
 	}
 }
 
