@@ -15,9 +15,13 @@ type keystoreSigner struct {
 }
 
 func NewSigner(keystore keystoreInterface, identity Identity) Signer {
+	account := identityToAccount(identity)
+	// TODO Unlock should be done thru special Tequilapi endpoint
+	keystore.Unlock(account, "")
+
 	return &keystoreSigner{
 		keystore: keystore,
-		account:  identityToAccount(identity),
+		account:  account,
 	}
 }
 
