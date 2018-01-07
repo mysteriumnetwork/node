@@ -10,10 +10,10 @@ import (
 	"github.com/mysterium/node/identity"
 )
 
-func NewDialogWaiter(address *nats_discovery.NatsAddress) *dialogWaiter {
+func NewDialogWaiter(address *nats_discovery.NatsAddress, signer identity.Signer) *dialogWaiter {
 	return &dialogWaiter{
 		myAddress: address,
-		myCodec:   communication.NewCodecJSON(),
+		mySigner:  signer,
 	}
 }
 
@@ -21,7 +21,7 @@ const waiterLogPrefix = "[NATS.DialogWaiter] "
 
 type dialogWaiter struct {
 	myAddress *nats_discovery.NatsAddress
-	myCodec   communication.Codec
+	mySigner  identity.Signer
 }
 
 func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.RequestConsumer) error {
@@ -44,7 +44,8 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 		return &responseOK, nil
 	}
 
-	myReceiver := nats.NewReceiver(waiter.myAddress.GetConnection(), waiter.myCodec, waiter.myAddress.GetTopic())
+	myCodec := NewCodecSigner(communication.NewCodecJSON(), waiter.mySigner, identity.NewVerifyIsAuthorized())
+	myReceiver := nats.NewReceiver(waiter.myAddress.GetConnection(), myCodec, waiter.myAddress.GetTopic())
 	subscribeError := myReceiver.Respond(&dialogCreateConsumer{createDialog})
 
 	return subscribeError
@@ -52,10 +53,15 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 
 func (waiter *dialogWaiter) newDialogToContact(contactIdentity identity.Identity) *dialog {
 	subTopic := waiter.myAddress.GetTopic() + "." + contactIdentity.Address
+	contactCodec := NewCodecSigner(
+		communication.NewCodecJSON(),
+		waiter.mySigner,
+		identity.NewVerifyIdentity(contactIdentity),
+	)
 
 	return &dialog{
-		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), waiter.myCodec, subTopic),
-		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), waiter.myCodec, subTopic),
+		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), contactCodec, subTopic),
+		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), contactCodec, subTopic),
 	}
 }
 

@@ -32,9 +32,9 @@ func NewCommandWith(
 	natService nat.NATService,
 ) *CommandRun {
 
-	ks := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	identityHandler := NewNodeIdentityHandler(
-		identity.NewIdentityManager(ks),
+		identity.NewIdentityManager(keystoreInstance),
 		mysteriumClient,
 		options.DirectoryKeystore,
 	)
@@ -46,9 +46,10 @@ func NewCommandWith(
 		ipifyClient:     ipifyClient,
 		mysteriumClient: mysteriumClient,
 		natService:      natService,
-		dialogWaiterFactory: func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
-			address := nats_discovery.NewAddressGenerate(identity)
-			return nats_dialog.NewDialogWaiter(address), address.GetContact()
+		dialogWaiterFactory: func(myIdentity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
+			myAddress := nats_discovery.NewAddressGenerate(myIdentity)
+			waiter := nats_dialog.NewDialogWaiter(myAddress, identity.NewSigner(keystoreInstance, myIdentity))
+			return waiter, myAddress.GetContact()
 		},
 		sessionManagerFactory: func(vpnServerIp string) session.ManagerInterface {
 			return openvpn_session.NewManager(openvpn.NewClientConfig(
