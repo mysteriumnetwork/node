@@ -10,10 +10,11 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
-func NewDialogEstablisher(identity identity.Identity) *dialogEstablisher {
+func NewDialogEstablisher(myIdentity identity.Identity, signer identity.Signer) *dialogEstablisher {
+
 	return &dialogEstablisher{
-		myIdentity: identity,
-		myCodec:    communication.NewCodecJSON(),
+		myIdentity: myIdentity,
+		mySigner:   signer,
 		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
 			address, err := nats_discovery.NewAddressForContact(contact)
 			if err == nil {
@@ -29,7 +30,7 @@ const establisherLogPrefix = "[NATS.DialogEstablisher] "
 
 type dialogEstablisher struct {
 	myIdentity            identity.Identity
-	myCodec               communication.Codec
+	mySigner              identity.Signer
 	contactAddressFactory func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error)
 }
 
@@ -42,7 +43,9 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 		return dialog, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
 	}
 
-	contactSender := nats.NewSender(contactAddress.GetConnection(), establisher.myCodec, contactAddress.GetTopic())
+	contactCodec := NewCodecSigner(communication.NewCodecJSON(), establisher.mySigner, identity.NewVerifyIsAuthorized())
+	contactSender := nats.NewSender(contactAddress.GetConnection(), contactCodec, contactAddress.GetTopic())
+
 	response, err := contactSender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
 			IdentityId: establisher.myIdentity.Address,
@@ -55,17 +58,20 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 		return dialog, fmt.Errorf("Dialog creation rejected. %#v", response)
 	}
 
-	dialog = establisher.newDialogToContact(contactAddress)
+	dialog = establisher.newDialogToContact(contactAddress, contactCodec)
 	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", contact))
 
 	return dialog, nil
 }
 
-func (establisher *dialogEstablisher) newDialogToContact(contactAddress *nats_discovery.NatsAddress) *dialog {
+func (establisher *dialogEstablisher) newDialogToContact(
+	contactAddress *nats_discovery.NatsAddress,
+	contactCodec communication.Codec,
+) *dialog {
 	subTopic := contactAddress.GetTopic() + "." + establisher.myIdentity.Address
 
 	return &dialog{
-		Sender:   nats.NewSender(contactAddress.GetConnection(), establisher.myCodec, subTopic),
-		Receiver: nats.NewReceiver(contactAddress.GetConnection(), establisher.myCodec, subTopic),
+		Sender:   nats.NewSender(contactAddress.GetConnection(), contactCodec, subTopic),
+		Receiver: nats.NewReceiver(contactAddress.GetConnection(), contactCodec, subTopic),
 	}
 }
