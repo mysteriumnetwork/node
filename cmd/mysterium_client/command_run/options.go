@@ -10,6 +10,7 @@ type CommandOptions struct {
 	DirectoryKeystore string
 	TequilaApiAddress string
 	TequilaApiPort    int
+	InteractiveCli    bool
 }
 
 func ParseArguments(args []string) (options CommandOptions, err error) {
@@ -38,6 +39,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"tequilapi.port",
 		4050,
 		"Port for listening incoming api requests. By default - 4050",
+	)
+
+	flags.BoolVar(
+		&options.InteractiveCli,
+		"interactive-cli",
+		false,
+		"Run an interactive CLI client",
 	)
 
 	err = flags.Parse(args[1:])

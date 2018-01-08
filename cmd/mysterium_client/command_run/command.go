@@ -12,6 +12,7 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	"github.com/mysterium/node/tequilapi/endpoints"
+	"github.com/mysterium/node/cli"
 )
 
 //NewCommand function created new client command with options passed from commandline
@@ -53,16 +54,24 @@ func NewCommandWith(
 
 	httpApiServer := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 
-	return &CommandRun{
+	cmd := &CommandRun{
 		connectionManager,
 		httpApiServer,
+		nil,
 	}
+
+	if options.InteractiveCli {
+		cmd.cli = cli.NewCliClient()
+	}
+
+	return cmd
 }
 
 //CommandRun represent entry point for MysteriumVpn client with top level components
 type CommandRun struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.ApiServer
+	cli               *cli.Client
 }
 
 //Run starts tequilaApi service - does not block
@@ -77,6 +86,11 @@ func (cmd *CommandRun) Run() error {
 	}
 
 	fmt.Printf("Api started on: %d\n", port)
+
+	if cmd.cli != nil {
+		cmd.cli.Run()
+	}
+
 	return nil
 }
 

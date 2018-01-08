@@ -1,5 +1,5 @@
-hash: fcb0014fc6c0c66c464c53652f7f1479735043de32692a98f0f19aa568f97669
-updated: 2018-01-05T12:04:16.079046+02:00
+hash: 34a455641b6f73f602846f070872694116d3598e01018b25a920d573fa651561
+updated: 2018-01-17T11:05:17.320093+02:00
 imports:
 - name: github.com/aristanetworks/goarista
   version: d1195528dcb23ba20b6b77f38596720af652a572
@@ -9,6 +9,8 @@ imports:
   version: 8cea3866d0f7fb12d567a20744942c0d078c7d15
   subpackages:
   - btcec
+- name: github.com/chzyer/readline
+  version: 62c6fe6193755f722b8b8788aa7357be55a50ff1
 - name: github.com/cihub/seelog
   version: d2c6e5aa9fbfdd1c624e140287063c7730654115
 - name: github.com/davecgh/go-spew
@@ -38,16 +40,6 @@ imports:
   version: 259ab82a6cad3992b4e21ff5cac294ccb06474bc
 - name: github.com/julienschmidt/httprouter
   version: 8c199fb6259ffc1af525cc3ad52ee60ba8359669
-- name: github.com/mattn/go-colorable
-  version: 6fcc0c1fd9b620311d821b106a400b35dc95c497
-- name: github.com/mattn/go-isatty
-  version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
-- name: github.com/mgutz/ansi
-  version: 9520e82c474b0a04dd04f8a40959027271bab992
-- name: github.com/mgutz/logxi
-  version: aebf8a7d67ab4625e0fd4a665766fef9a709161b
-  subpackages:
-  - v1
 - name: github.com/mitchellh/go-homedir
   version: b8bc1bf767474819792c23f32d8286a45736f1c6
 - name: github.com/nats-io/go-nats
@@ -70,7 +62,7 @@ imports:
 - name: github.com/rjeczalik/notify
   version: 767eb674ef14b09119b2fff3601e64558d530c47
 - name: github.com/satori/go.uuid
-  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/stretchr/testify
   version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   subpackages:
