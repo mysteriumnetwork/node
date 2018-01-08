@@ -18,9 +18,7 @@ func (service *serviceIpTables) Add(rule RuleForwarding) {
 }
 
 func (service *serviceIpTables) Start() error {
-	if err := service.clearStaleRules(); err != nil {
-		return err
-	}
+	service.clearStaleRules()
 
 	if err := service.enableIPForwarding(); err != nil {
 		return err
@@ -102,6 +100,6 @@ func (service *serviceIpTables) disableRules() error {
 	return nil
 }
 
-func (service *serviceIpTables) clearStaleRules() error {
-	return service.disableRules()
+func (service *serviceIpTables) clearStaleRules() {
+	service.disableRules()
 }
