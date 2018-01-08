@@ -1,0 +1,122 @@
+package server
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/server/dto"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"net/url"
+)
+
+const (
+	mysteriumApiLogPrefix = "[Mysterium.api] "
+)
+
+var mysteriumApiUrl string
+
+type mysteriumApiClient struct {
+	http HttpClient
+}
+
+func NewClient() Client {
+	return &mysteriumApiClient{
+		http: NewJsonClient(
+			mysteriumApiUrl,
+			&http.Client{
+				Transport: &http.Transport{},
+			}),
+	}
+}
+
+func (client *mysteriumApiClient) RegisterIdentity(identity identity.Identity) (err error) {
+	response, err := client.http.DoPost("identities", dto.CreateIdentityRequest{
+		Identity: identity.Address,
+	})
+
+	if err == nil {
+		defer response.Body.Close()
+		log.Info(mysteriumApiLogPrefix, "Identity registered: ", identity)
+	}
+
+	return
+}
+
+func (client *mysteriumApiClient) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
+	response, err := client.http.DoPost("node_register", dto.NodeRegisterRequest{
+		ServiceProposal: proposal,
+	})
+
+	if err == nil {
+		defer response.Body.Close()
+		log.Info(mysteriumApiLogPrefix, "Node registered: ", proposal.ProviderId)
+	}
+
+	return
+}
+
+func (client *mysteriumApiClient) NodeSendStats(nodeKey string) (err error) {
+	response, err := client.http.DoPost("node_send_stats", dto.NodeStatsRequest{
+		NodeKey: nodeKey,
+		// TODO Refactor Node statistics with new `SessionStats` DTO
+		Sessions: []dto.SessionStats{},
+	})
+	if err == nil {
+		defer response.Body.Close()
+		log.Info(mysteriumApiLogPrefix, "Node stats sent: ", nodeKey)
+	}
+
+	return nil
+}
+
+func (client *mysteriumApiClient) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
+	values := url.Values{}
+	values.Set("node_key", nodeKey)
+	response, err := client.http.DoGet("proposals", values)
+
+	if err != nil {
+		return
+	}
+
+	defer response.Body.Close()
+
+	var proposalsResponse dto.ProposalsResponse
+	err = parseResponseJson(response, &proposalsResponse)
+	if err != nil {
+		return
+	}
+	proposals = proposalsResponse.Proposals
+
+	log.Info(mysteriumApiLogPrefix, "FindProposals fetched: ", proposals)
+
+	return
+}
+
+func (client *mysteriumApiClient) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
+	path := fmt.Sprintf("sessions/%s/stats", sessionId)
+	response, err := client.http.DoSignedPost(path, sessionStats, signer)
+	if err == nil {
+		defer response.Body.Close()
+		log.Info(mysteriumApiLogPrefix, "Session stats sent: ", sessionId)
+	}
+
+	return nil
+}
+
+func parseResponseJson(response *http.Response, dto interface{}) error {
+	responseJson, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(responseJson, dto)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
