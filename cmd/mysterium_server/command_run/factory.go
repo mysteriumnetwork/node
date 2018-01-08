@@ -47,7 +47,7 @@ func NewCommandWith(
 		mysteriumClient: mysteriumClient,
 		natService:      natService,
 		dialogWaiterFactory: func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
-			address := nats_discovery.NewAddressForIdentity(identity)
+			address := nats_discovery.NewAddressGenerate(identity)
 			return nats_dialog.NewDialogWaiter(address), address.GetContact()
 		},
 		sessionManagerFactory: func(vpnServerIp string) session.ManagerInterface {

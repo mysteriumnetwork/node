@@ -10,24 +10,18 @@ import (
 
 var natsServerIp string
 
-func NewAddress(server string, port int, topic string) *NatsAddress {
+func NewAddress(topic string, address string) *NatsAddress {
 	return &NatsAddress{
 		servers: []string{
-			fmt.Sprintf("nats://%s:%d", server, port),
+			address,
 		},
 		topic: topic,
 	}
 }
 
-func NewBrokerAddresses(contact ContactNATSV1) *NatsAddress {
-	return &NatsAddress{
-		servers: contact.BrokerAddresses,
-		topic: contact.Topic,
-	}
-}
-
-func NewAddressForIdentity(identity identity.Identity) *NatsAddress {
-	return NewAddress(natsServerIp, 4222, identity.Address)
+func NewAddressGenerate(identity identity.Identity) *NatsAddress {
+	address := "nats://" + natsServerIp + ":4222"
+	return NewAddress(identity.Address, address)
 }
 
 func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
@@ -40,7 +34,10 @@ func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
 		return nil, fmt.Errorf("Invalid contact definition: %#v", contact.Definition)
 	}
 
-	return NewBrokerAddresses(contactNats), nil
+	return &NatsAddress{
+		servers: contactNats.BrokerAddresses,
+		topic:   contactNats.Topic,
+	}, nil
 }
 
 func NewAddressWithConnection(connection nats.Connection, topic string) *NatsAddress {
@@ -81,7 +78,7 @@ func (address *NatsAddress) GetContact() dto_discovery.Contact {
 	return dto_discovery.Contact{
 		Type: CONTACT_NATS_V1,
 		Definition: ContactNATSV1{
-			Topic: address.topic,
+			Topic:           address.topic,
 			BrokerAddresses: address.servers,
 		},
 	}
