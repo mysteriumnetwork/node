@@ -2,6 +2,7 @@ version: '2'
 services:
 
   broker:
+    tty: true
     image: nats
     container_name: mysterium-broker
     networks:
@@ -11,6 +12,8 @@ services:
       - 8222:8222
 
   server-ubuntu:
+    privileged: true
+    tty: true
     build:
       context: .
       dockerfile: bin/server_docker/ubuntu/Dockerfile
@@ -29,22 +32,9 @@ services:
     environment:
       NODE: server-ubuntu
 
-  server-alpine:
-    build:
-      context: .
-      dockerfile: bin/server_docker/alpine/Dockerfile
-    container_name: mysterium-server-alpine
-    depends_on:
-      - broker
-    cap_add:
-      - MKNOD
-      - NET_ADMIN
-    networks:
-      - default
-    environment:
-      NODE: server-alpine
-
   client:
+    privileged: true
+    tty: true
     build:
       context: .
       dockerfile: bin/client_docker/ubuntu/Dockerfile
@@ -54,7 +44,6 @@ services:
     depends_on:
       - broker
       - server-ubuntu
-      - server-alpine
     networks:
       - default
     environment:

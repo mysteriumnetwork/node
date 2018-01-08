@@ -14,7 +14,7 @@ func TestDialogWaiter_Interface(t *testing.T) {
 }
 
 func TestDialogWaiter_Factory(t *testing.T) {
-	address := nats_discovery.NewAddress("127.0.0.1", 4222, "custom")
+	address := nats_discovery.NewAddress("custom", "nats://127.0.0.1:4222",)
 	waiter := NewDialogWaiter(address)
 
 	assert.NotNil(t, waiter)

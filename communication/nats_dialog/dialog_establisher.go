@@ -2,7 +2,7 @@ package nats_dialog
 
 import (
 	"fmt"
-	"github.com/mgutz/logxi/v1"
+	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats_discovery"
