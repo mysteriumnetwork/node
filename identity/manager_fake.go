@@ -1,6 +1,6 @@
 package identity
 
-type idmFake struct{
+type idmFake struct {
 	FakeIdentity1 Identity
 	FakeIdentity2 Identity
 }

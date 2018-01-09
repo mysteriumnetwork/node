@@ -22,7 +22,7 @@ func NewNodeIdentityHandler(
 	return &identityHandler{
 		manager:     manager,
 		identityApi: identityApi,
-		cache: cache,
+		cache:       cache,
 	}
 }
 

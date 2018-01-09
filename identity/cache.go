@@ -2,10 +2,10 @@ package identity
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"errors"
 )
 
 type cacheData struct {
