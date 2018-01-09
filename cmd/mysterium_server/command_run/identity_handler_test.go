@@ -43,6 +43,7 @@ func Test_identityHandler_UseNew(t *testing.T) {
 	handler := NewNodeIdentityHandler(identityManager, client, cache)
 
 	id, err := handler.UseNew()
+	assert.Equal(t, identityManager.FakeIdentity2, client.RegisteredIdentity)
 	assert.Equal(t, identityManager.FakeIdentity2, id)
 	assert.Nil(t, err)
 }
