@@ -1,6 +1,9 @@
 package communication
 
-import dto_discovery "github.com/mysterium/node/service_discovery/dto"
+import (
+	"github.com/mysterium/node/identity"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+)
 
 // DialogWaiter defines server which:
 //   - waits and servers incoming dialog requests
@@ -15,7 +18,7 @@ type DialogWaiter interface {
 //   - initiates Dialog requests to network
 //   - creates Dialog, when it is negotiated
 type DialogEstablisher interface {
-	CreateDialog(contact dto_discovery.Contact) (Dialog, error)
+	CreateDialog(peerId identity.Identity, peerContact dto_discovery.Contact) (Dialog, error)
 }
 
 // Dialog represent established connection between 2 peers in network.
