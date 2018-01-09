@@ -1,9 +1,7 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	log "github.com/cihub/seelog"
@@ -17,105 +15,111 @@ const (
 	mysteriumApiLogPrefix = "[Mysterium.api] "
 )
 
-var mysteriumApiUrl string
+//HttpTransport interface with single method do is extracted from net/transport.Client structure
+type HttpTransport interface {
+	Do(*http.Request) (*http.Response, error)
+}
 
 type mysteriumApi struct {
-	json JsonClient
+	http HttpTransport
 }
 
 func NewClient() Client {
 	return &mysteriumApi{
-		json: NewJsonClient(
-			mysteriumApiUrl,
-			&http.Client{
-				Transport: &http.Transport{},
-			}),
+		&http.Client{
+			Transport: &http.Transport{},
+		},
 	}
 }
 
-func (mApi *mysteriumApi) RegisterIdentity(identity identity.Identity) (err error) {
-	response, err := mApi.json.Post("identities", dto.CreateIdentityRequest{
+func (mApi *mysteriumApi) RegisterIdentity(identity identity.Identity) error {
+	req, err := newPostRequest("identities", dto.CreateIdentityRequest{
 		Identity: identity.Address,
 	})
-
-	if err == nil {
-		defer response.Body.Close()
-		log.Info(mysteriumApiLogPrefix, "Identity registered: ", identity)
+	if err != nil {
+		return err
 	}
 
-	return
+	resp, err := mApi.http.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+		log.Info(mysteriumApiLogPrefix, "Identity registered: ", identity)
+	}
+	return err
 }
 
-func (mApi *mysteriumApi) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
-	response, err := mApi.json.Post("node_register", dto.NodeRegisterRequest{
+func (mApi *mysteriumApi) NodeRegister(proposal dto_discovery.ServiceProposal) error {
+	req, err := newPostRequest("node_register", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	})
+	if err != nil {
+		return err
+	}
 
+	resp, err := mApi.http.Do(req)
 	if err == nil {
-		defer response.Body.Close()
+		defer resp.Body.Close()
 		log.Info(mysteriumApiLogPrefix, "Node registered: ", proposal.ProviderId)
 	}
 
-	return
+	return err
 }
 
-func (mApi *mysteriumApi) NodeSendStats(nodeKey string) (err error) {
-	response, err := mApi.json.Post("node_send_stats", dto.NodeStatsRequest{
+func (mApi *mysteriumApi) NodeSendStats(nodeKey string) error {
+	req, err := newPostRequest("node_send_stats", dto.NodeStatsRequest{
 		NodeKey: nodeKey,
 		// TODO Refactor Node statistics with new `SessionStats` DTO
 		Sessions: []dto.SessionStats{},
 	})
+	if err != nil {
+		return err
+	}
+
+	resp, err := mApi.http.Do(req)
 	if err == nil {
-		defer response.Body.Close()
+		defer resp.Body.Close()
 		log.Info(mysteriumApiLogPrefix, "Node stats sent: ", nodeKey)
 	}
-
-	return nil
+	return err
 }
 
-func (mApi *mysteriumApi) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
+func (mApi *mysteriumApi) FindProposals(nodeKey string) ([]dto_discovery.ServiceProposal, error) {
 	values := url.Values{}
 	values.Set("node_key", nodeKey)
-	response, err := mApi.json.Get("proposals", values)
-
+	req, err := newGetRequest("proposals", values)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	defer response.Body.Close()
+	resp, err := mApi.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
 
 	var proposalsResponse dto.ProposalsResponse
-	err = parseResponseJson(response, &proposalsResponse)
+	err = parseResponseJson(resp, &proposalsResponse)
 	if err != nil {
-		return
+		return nil, err
 	}
-	proposals = proposalsResponse.Proposals
+	proposals := proposalsResponse.Proposals
 
 	log.Info(mysteriumApiLogPrefix, "FindProposals fetched: ", proposals)
 
-	return
+	return proposals, nil
 }
 
-func (mApi *mysteriumApi) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
+func (mApi *mysteriumApi) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionId)
-	response, err := mApi.json.SignedPost(path, sessionStats, signer)
+	req, err := newSignedPostRequest(path, sessionStats, signer)
+	if err != nil {
+		return err
+	}
+
+	resp, err := mApi.http.Do(req)
 	if err == nil {
-		defer response.Body.Close()
+		defer resp.Body.Close()
 		log.Info(mysteriumApiLogPrefix, "Session stats sent: ", sessionId)
-	}
-
-	return nil
-}
-
-func parseResponseJson(response *http.Response, dto interface{}) error {
-	responseJson, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(responseJson, dto)
-	if err != nil {
-		return err
 	}
 
 	return nil
