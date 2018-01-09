@@ -1,26 +1,30 @@
 package identity
 
-type idmFake struct{}
+type idmFake struct{
+	FakeIdentity1 Identity
+	FakeIdentity2 Identity
+}
 
 func NewIdentityManagerFake() *idmFake {
-	return &idmFake{}
+	return &idmFake{
+		FromAddress("0x000000000000000000000000000000000000000A"),
+		FromAddress("0x000000000000000000000000000000000000bEEF"),
+	}
 }
 
 func (fakeIdm *idmFake) CreateNewIdentity(_ string) (Identity, error) {
-	id := FromAddress("0x000000000000000000000000000000000000bEEF")
-	return id, nil
+	return fakeIdm.FakeIdentity2, nil
 }
 func (fakeIdm *idmFake) GetIdentities() []Identity {
 	accountList := []Identity{
-		FromAddress("0x000000000000000000000000000000000000bEEF"),
-		FromAddress("0x000000000000000000000000000000000000bEEF"),
+		fakeIdm.FakeIdentity2,
+		fakeIdm.FakeIdentity2,
 	}
 
 	return accountList
 }
 func (fakeIdm *idmFake) GetIdentity(_ string) (Identity, error) {
-	id := FromAddress("0x000000000000000000000000000000000000000A")
-	return id, nil
+	return fakeIdm.FakeIdentity1, nil
 }
 func (fakeIdm *idmFake) HasIdentity(_ string) bool {
 	return true

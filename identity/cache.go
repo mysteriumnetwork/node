@@ -16,7 +16,7 @@ type IdentityCache struct {
 	File string
 }
 
-func NewIdentityCache(dir string, jsonFile string) *IdentityCache {
+func NewIdentityCache(dir string, jsonFile string) IdentityCacheInterface {
 	return &IdentityCache{
 		File: filepath.Join(dir, jsonFile),
 	}

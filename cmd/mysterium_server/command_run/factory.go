@@ -33,15 +33,16 @@ func NewCommandWith(
 ) *CommandRun {
 
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	cache := identity.NewIdentityCache(options.DirectoryKeystore, "remember.json")
 	identityHandler := NewNodeIdentityHandler(
 		identity.NewIdentityManager(keystoreInstance),
 		mysteriumClient,
-		options.DirectoryKeystore,
+		cache,
 	)
 
 	return &CommandRun{
 		identitySelector: func() (identity.Identity, error) {
-			return identityHandler.Select(options.NodeKey)
+			return SelectIdentity(identityHandler, options.NodeKey)
 		},
 		ipifyClient:     ipifyClient,
 		mysteriumClient: mysteriumClient,
@@ -73,4 +74,16 @@ func NewCommandWith(
 			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime)
 		},
 	}
+}
+
+func SelectIdentity(identityHandler *identityHandler, keyOption string) (id identity.Identity, err error) {
+	if len(keyOption) > 0 {
+		return identityHandler.UseExisting(keyOption)
+	}
+
+	if id, err = identityHandler.UseLast(); err == nil {
+		return id, err
+	}
+
+	return identityHandler.UseNew()
 }
