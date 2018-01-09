@@ -1,1 +1,16 @@
-go list ./... | xargs go run vendor/github.com/golang/lint/golint/*.go
+#!/bin/bash
+
+# Run code Linter for project packages
+#
+# Usage example:
+#> bin/lint
+#> bin/lint ./...
+#> bin/lint ./communication
+#> bin/lint ./communication/...
+
+ARGUMENTS=$@
+if [ -z "$ARGUMENTS" ]; then
+    ARGUMENTS=`go list ./... | grep -v /vendor/`
+fi
+
+go run vendor/github.com/golang/lint/golint/*.go -min_confidence=1 -set_exit_status ${ARGUMENTS}
