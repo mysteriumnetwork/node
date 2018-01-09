@@ -18,6 +18,7 @@ func NewSessionStatsSender(mysteriumClient server.Client, sessionId session.Sess
 				BytesSent:     bytesSent,
 				BytesReceived: bytesReceived,
 			},
-			signer)
+			signer,
+		)
 	}
 }

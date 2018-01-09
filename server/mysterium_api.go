@@ -19,13 +19,13 @@ const (
 
 var mysteriumApiUrl string
 
-type mysteriumApiClient struct {
-	http HttpClient
+type mysteriumApi struct {
+	json JsonClient
 }
 
 func NewClient() Client {
-	return &mysteriumApiClient{
-		http: NewJsonClient(
+	return &mysteriumApi{
+		json: NewJsonClient(
 			mysteriumApiUrl,
 			&http.Client{
 				Transport: &http.Transport{},
@@ -33,8 +33,8 @@ func NewClient() Client {
 	}
 }
 
-func (client *mysteriumApiClient) RegisterIdentity(identity identity.Identity) (err error) {
-	response, err := client.http.DoPost("identities", dto.CreateIdentityRequest{
+func (mApi *mysteriumApi) RegisterIdentity(identity identity.Identity) (err error) {
+	response, err := mApi.json.Post("identities", dto.CreateIdentityRequest{
 		Identity: identity.Address,
 	})
 
@@ -46,8 +46,8 @@ func (client *mysteriumApiClient) RegisterIdentity(identity identity.Identity) (
 	return
 }
 
-func (client *mysteriumApiClient) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
-	response, err := client.http.DoPost("node_register", dto.NodeRegisterRequest{
+func (mApi *mysteriumApi) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
+	response, err := mApi.json.Post("node_register", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	})
 
@@ -59,8 +59,8 @@ func (client *mysteriumApiClient) NodeRegister(proposal dto_discovery.ServicePro
 	return
 }
 
-func (client *mysteriumApiClient) NodeSendStats(nodeKey string) (err error) {
-	response, err := client.http.DoPost("node_send_stats", dto.NodeStatsRequest{
+func (mApi *mysteriumApi) NodeSendStats(nodeKey string) (err error) {
+	response, err := mApi.json.Post("node_send_stats", dto.NodeStatsRequest{
 		NodeKey: nodeKey,
 		// TODO Refactor Node statistics with new `SessionStats` DTO
 		Sessions: []dto.SessionStats{},
@@ -73,10 +73,10 @@ func (client *mysteriumApiClient) NodeSendStats(nodeKey string) (err error) {
 	return nil
 }
 
-func (client *mysteriumApiClient) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
+func (mApi *mysteriumApi) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
 	values := url.Values{}
 	values.Set("node_key", nodeKey)
-	response, err := client.http.DoGet("proposals", values)
+	response, err := mApi.json.Get("proposals", values)
 
 	if err != nil {
 		return
@@ -96,9 +96,9 @@ func (client *mysteriumApiClient) FindProposals(nodeKey string) (proposals []dto
 	return
 }
 
-func (client *mysteriumApiClient) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
+func (mApi *mysteriumApi) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
 	path := fmt.Sprintf("sessions/%s/stats", sessionId)
-	response, err := client.http.DoSignedPost(path, sessionStats, signer)
+	response, err := mApi.json.SignedPost(path, sessionStats, signer)
 	if err == nil {
 		defer response.Body.Close()
 		log.Info(mysteriumApiLogPrefix, "Session stats sent: ", sessionId)

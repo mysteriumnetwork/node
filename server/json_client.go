@@ -18,10 +18,10 @@ const (
 
 var noSignature = identity.SignatureBytes(nil)
 
-type HttpClient interface {
-	DoGet(path string, values url.Values) (*http.Response, error)
-	DoPost(path string, body interface{}) (*http.Response, error)
-	DoSignedPost(path string, body interface{}, signer identity.Signer) (*http.Response, error)
+type JsonClient interface {
+	Get(path string, values url.Values) (*http.Response, error)
+	Post(path string, body interface{}) (*http.Response, error)
+	SignedPost(path string, body interface{}, signer identity.Signer) (*http.Response, error)
 }
 
 //HttpTransport interface with single method do is extracted from net/transport.Client structure
@@ -29,33 +29,33 @@ type HttpTransport interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-func NewJsonClient(baseUrl string, transport HttpTransport) *jsonHttpClient {
-	return &jsonHttpClient{
+func NewJsonClient(baseUrl string, transport HttpTransport) *mysteriumJsonClient {
+	return &mysteriumJsonClient{
 		baseUrl,
 		transport,
 	}
 }
 
-type jsonHttpClient struct {
+type mysteriumJsonClient struct {
 	baseApiUrl string
 	transport  HttpTransport
 }
 
-func (jhc *jsonHttpClient) DoGet(path string, values url.Values) (*http.Response, error) {
+func (jhc *mysteriumJsonClient) Get(path string, values url.Values) (*http.Response, error) {
 	pathWithQuery := fmt.Sprintf("%v?%v", path, values.Encode())
 	return jhc.executeRequest(http.MethodGet, pathWithQuery, nil, noSignature)
 
 }
 
-func (jhc *jsonHttpClient) DoPost(path string, body interface{}) (*http.Response, error) {
+func (jhc *mysteriumJsonClient) Post(path string, body interface{}) (*http.Response, error) {
 	return jhc.doSignedPayloadRequest(http.MethodPost, path, body, noOpSigner{})
 }
 
-func (jhc *jsonHttpClient) DoSignedPost(path string, body interface{}, signer identity.Signer) (*http.Response, error) {
+func (jhc *mysteriumJsonClient) SignedPost(path string, body interface{}, signer identity.Signer) (*http.Response, error) {
 	return jhc.doSignedPayloadRequest(http.MethodPost, path, body, signer)
 }
 
-func (jhc *jsonHttpClient) doSignedPayloadRequest(method string, path string, body interface{}, signer identity.Signer) (*http.Response, error) {
+func (jhc *mysteriumJsonClient) doSignedPayloadRequest(method string, path string, body interface{}, signer identity.Signer) (*http.Response, error) {
 	payloadJson, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (jhc *jsonHttpClient) doSignedPayloadRequest(method string, path string, bo
 	return jhc.executeRequest(method, path, payloadJson, signature)
 }
 
-func (jhc *jsonHttpClient) executeRequest(method string, path string, body []byte, signature identity.Signature) (*http.Response, error) {
+func (jhc *mysteriumJsonClient) executeRequest(method string, path string, body []byte, signature identity.Signature) (*http.Response, error) {
 	fullPath := fmt.Sprintf("%v/%v", jhc.baseApiUrl, path)
 	req, err := http.NewRequest(method, fullPath, bytes.NewBuffer(body))
 	if err != nil {

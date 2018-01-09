@@ -29,7 +29,7 @@ type signedJsonClientTestContext struct {
 	suite.Suite
 	mockedHttpTransport *mockedHttpTransport
 	mockedSigner        *mockedSigner
-	jsonHttpClient      *jsonHttpClient
+	jsonHttpClient      *mysteriumJsonClient
 }
 
 func (ctx *signedJsonClientTestContext) SetupTest() {
@@ -41,8 +41,8 @@ func (ctx *signedJsonClientTestContext) SetupTest() {
 		},
 	}
 	ctx.mockedSigner = &mockedSigner{}
-	ctx.jsonHttpClient = &jsonHttpClient{
-		"http://testUrl",
+	ctx.jsonHttpClient = &mysteriumJsonClient{
+		"json://testUrl",
 		ctx.mockedHttpTransport,
 	}
 }
@@ -51,7 +51,7 @@ func (ctx *signedJsonClientTestContext) TestSignatureIsInsertedForSignedPost() {
 
 	ctx.mockedSigner.signatureToReturn = identity.SignatureHex("deadbeef") //valid hex :)
 
-	_, err := ctx.jsonHttpClient.DoSignedPost("/post-path", testPayload{"abc"}, ctx.mockedSigner)
+	_, err := ctx.jsonHttpClient.SignedPost("/post-path", testPayload{"abc"}, ctx.mockedSigner)
 
 	assert.NoError(ctx.T(), err)
 	assert.NotEmpty(ctx.T(), ctx.mockedHttpTransport.recordedRequest.Header.Get("Authorization"))
@@ -62,16 +62,16 @@ func (ctx *signedJsonClientTestContext) TestDoGetContactsPassedValuesForUrl() {
 	params["param1"] = []string{"value1"}
 	params["param2"] = []string{"value2"}
 
-	_, err := ctx.jsonHttpClient.DoGet("get-path", params)
+	_, err := ctx.jsonHttpClient.Get("get-path", params)
 
 	assert.NoError(ctx.T(), err)
-	assert.Equal(ctx.T(), "http://testUrl/get-path?param1=value1&param2=value2", ctx.mockedHttpTransport.recordedRequest.URL.String())
+	assert.Equal(ctx.T(), "json://testUrl/get-path?param1=value1&param2=value2", ctx.mockedHttpTransport.recordedRequest.URL.String())
 
 }
 
 func (ctx *signedJsonClientTestContext) TestPayloadIsSerializedSuccessfullyForPostMethod() {
 
-	_, err := ctx.jsonHttpClient.DoPost("post-path", testPayload{"abc"})
+	_, err := ctx.jsonHttpClient.Post("post-path", testPayload{"abc"})
 
 	assert.NoError(ctx.T(), err)
 
@@ -93,7 +93,7 @@ func (ctx *signedJsonClientTestContext) TestHttpErrorIsReportedAsErrorReturnValu
 	ctx.mockedHttpTransport.responseToReturn = &http.Response{
 		StatusCode: 400,
 	}
-	_, err := ctx.jsonHttpClient.DoGet("some-path", nil)
+	_, err := ctx.jsonHttpClient.Get("some-path", nil)
 	assert.Error(ctx.T(), err)
 }
 
