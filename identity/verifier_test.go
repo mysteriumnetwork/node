@@ -19,7 +19,7 @@ func TestVerifier_extractSignerWhenSignatureIsEmpty(t *testing.T) {
 	signature := SignatureHex("")
 
 	signerId, err := extractSignerIdentity(message, signature)
-	assert.EqualError(t, err, "Signature is empty")
+	assert.EqualError(t, err, "empty signature")
 	assert.Exactly(t, Identity{}, signerId)
 }
 

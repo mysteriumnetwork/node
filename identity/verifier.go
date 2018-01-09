@@ -40,7 +40,7 @@ func (verifier *verifierIdentity) Verify(message []byte, signature Signature) bo
 func extractSignerIdentity(message []byte, signature Signature) (Identity, error) {
 	signatureBytes := signature.Bytes()
 	if len(signatureBytes) == 0 {
-		return Identity{}, errors.New("Signature is empty")
+		return Identity{}, errors.New("empty signature")
 	}
 
 	recoveredKey, err := crypto.Ecrecover(messageHash(message), signatureBytes)
