@@ -7,25 +7,25 @@ import (
 	"github.com/mysterium/node/identity"
 )
 
-func NewCodecSigner(
+func NewCodecSecured(
 	codecPacker communication.Codec,
 	signer identity.Signer,
 	verifier identity.Verifier,
-) *codecSigner {
-	return &codecSigner{
+) *codecSecured {
+	return &codecSecured{
 		codecPacker: codecPacker,
 		signer:      signer,
 		verifier:    verifier,
 	}
 }
 
-type codecSigner struct {
+type codecSecured struct {
 	codecPacker communication.Codec
 	signer      identity.Signer
 	verifier    identity.Verifier
 }
 
-func (codec *codecSigner) Pack(payloadPtr interface{}) ([]byte, error) {
+func (codec *codecSecured) Pack(payloadPtr interface{}) ([]byte, error) {
 	payloadData, err := codec.codecPacker.Pack(payloadPtr)
 	if err != nil {
 		return []byte{}, err
@@ -42,7 +42,7 @@ func (codec *codecSigner) Pack(payloadPtr interface{}) ([]byte, error) {
 	})
 }
 
-func (codec *codecSigner) Unpack(data []byte, payloadPtr interface{}) error {
+func (codec *codecSecured) Unpack(data []byte, payloadPtr interface{}) error {
 	envelope := &messageEnvelope{}
 	err := codec.codecPacker.Unpack(data, envelope)
 	if err != nil {

@@ -34,7 +34,7 @@ func TestDialogWaiter_newDialogToContact(t *testing.T) {
 	}
 	dialog := waiter.newDialogToContact(contactIdentity)
 
-	expectedCodec := NewCodecSigner(communication.NewCodecJSON(), signer, identity.NewVerifierIdentity(contactIdentity))
+	expectedCodec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierIdentity(contactIdentity))
 	assert.Equal(
 		t,
 		nats.NewSender(connection, expectedCodec, "provider1.customer1"),

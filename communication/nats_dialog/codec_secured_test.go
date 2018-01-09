@@ -13,7 +13,7 @@ type customPayload struct {
 }
 
 func TestCodecSigner_Interface(t *testing.T) {
-	var _ communication.Codec = NewCodecSigner(
+	var _ communication.Codec = NewCodecSecured(
 		communication.NewCodecJSON(),
 		&identity.SignerFake{},
 		&identity.VerifierFake{},
@@ -55,7 +55,7 @@ func TestCodecSigner_Pack(t *testing.T) {
 		},
 	}
 
-	codec := NewCodecSigner(
+	codec := NewCodecSecured(
 		communication.NewCodecJSON(),
 		&identity.SignerFake{},
 		&identity.VerifierFake{},
@@ -69,7 +69,7 @@ func TestCodecSigner_Pack(t *testing.T) {
 }
 
 func TestCodecSigner_PackError(t *testing.T) {
-	codec := NewCodecSigner(
+	codec := NewCodecSecured(
 		communication.NewCodecJSON(),
 		&identity.SignerFake{ErrorMock: errors.New("Signing failed")},
 		&identity.VerifierFake{},
@@ -126,7 +126,7 @@ func TestCodecSigner_Unpack(t *testing.T) {
 		},
 	}
 
-	codec := NewCodecSigner(
+	codec := NewCodecSecured(
 		communication.NewCodecJSON(),
 		&identity.SignerFake{},
 		&identity.VerifierFake{},
@@ -201,7 +201,7 @@ func TestCodecSigner_UnpackError(t *testing.T) {
 		},
 	}
 
-	codec := NewCodecSigner(
+	codec := NewCodecSecured(
 		communication.NewCodecJSON(),
 		&identity.SignerFake{},
 		&identity.VerifierFake{},
