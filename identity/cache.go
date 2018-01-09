@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"errors"
 )
 
 type cacheData struct {
@@ -22,16 +23,17 @@ func NewIdentityCache(dir string, jsonFile string) *IdentityCache {
 }
 
 func (ic *IdentityCache) GetIdentity() (identity Identity, err error) {
-	if ic.cacheExists() {
-		cache, err := ic.readCache()
-		if err != nil {
-			return identity, err
-		}
-
-		return cache.Identity, nil
+	if !ic.cacheExists() {
+		err = errors.New("cache file does not exist")
+		return
 	}
 
-	return
+	cache, err := ic.readCache()
+	if err != nil {
+		return
+	}
+
+	return cache.Identity, nil
 }
 
 func (ic *IdentityCache) StoreIdentity(identity Identity) error {

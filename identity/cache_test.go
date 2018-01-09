@@ -4,6 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+	"errors"
 )
 
 var file = "/tmp/cache.json"
@@ -30,6 +31,16 @@ func TestIdentityCache_GetIdentity(t *testing.T) {
 
 	assert.Equal(t, id, identity)
 	assert.Nil(t, err)
+}
+
+func TestIdentityCache_GetIdentityWithNoCache(t *testing.T) {
+	cache := IdentityCache{
+		File: "does-not-exist",
+	}
+
+	_, err := cache.GetIdentity()
+
+	assert.Equal(t, errors.New("cache file does not exist"), err)
 }
 
 func TestIdentityCache_cacheExists(t *testing.T) {
