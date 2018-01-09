@@ -44,7 +44,7 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 		return &responseOK, nil
 	}
 
-	myCodec := NewCodecSigner(communication.NewCodecJSON(), waiter.mySigner, identity.NewVerifyIsAuthorized())
+	myCodec := NewCodecSigner(communication.NewCodecJSON(), waiter.mySigner, identity.NewVerifierSigned())
 	myReceiver := nats.NewReceiver(waiter.myAddress.GetConnection(), myCodec, waiter.myAddress.GetTopic())
 	subscribeError := myReceiver.Respond(&dialogCreateConsumer{createDialog})
 
@@ -56,7 +56,7 @@ func (waiter *dialogWaiter) newDialogToContact(contactIdentity identity.Identity
 	contactCodec := NewCodecSigner(
 		communication.NewCodecJSON(),
 		waiter.mySigner,
-		identity.NewVerifyIdentity(contactIdentity),
+		identity.NewVerifierIdentity(contactIdentity),
 	)
 
 	return &dialog{

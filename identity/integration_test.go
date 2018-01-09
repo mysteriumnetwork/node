@@ -22,6 +22,6 @@ func Test_UnlockAndSignAndVerify(t *testing.T) {
 		signature,
 	)
 
-	verifier := NewVerifyIdentity(FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"))
+	verifier := NewVerifierIdentity(FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"))
 	assert.True(t, verifier.Verify([]byte("Boop!"), signature))
 }

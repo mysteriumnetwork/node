@@ -56,7 +56,7 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	dialogNats, ok := dialogInstance.(*dialog)
 	assert.True(t, ok)
 
-	expectedCodec := NewCodecSigner(communication.NewCodecJSON(), signer, identity.NewVerifyIsAuthorized())
+	expectedCodec := NewCodecSigner(communication.NewCodecJSON(), signer, identity.NewVerifierSigned())
 	assert.Equal(
 		t,
 		nats.NewSender(connection, expectedCodec, "provider1.consumer1"),

@@ -9,26 +9,26 @@ type Verifier interface {
 	Verify(message []byte, signature Signature) bool
 }
 
-func NewVerifyIsAuthorized() *verifyIsAuthorized {
-	return &verifyIsAuthorized{}
+func NewVerifierSigned() *verifierSigned {
+	return &verifierSigned{}
 }
 
-func NewVerifyIdentity(peerIdentity Identity) *verifyIdentity {
-	return &verifyIdentity{peerIdentity}
+func NewVerifierIdentity(peerIdentity Identity) *verifierIdentity {
+	return &verifierIdentity{peerIdentity}
 }
 
-type verifyIsAuthorized struct{}
+type verifierSigned struct{}
 
-func (ev *verifyIsAuthorized) Verify(message []byte, signature Signature) bool {
+func (ev *verifierSigned) Verify(message []byte, signature Signature) bool {
 	_, err := extractSignerIdentity(message, signature)
 	return err == nil
 }
 
-type verifyIdentity struct {
+type verifierIdentity struct {
 	peerIdentity Identity
 }
 
-func (ev *verifyIdentity) Verify(message []byte, signature Signature) bool {
+func (ev *verifierIdentity) Verify(message []byte, signature Signature) bool {
 	identity, err := extractSignerIdentity(message, signature)
 	if err != nil {
 		return false

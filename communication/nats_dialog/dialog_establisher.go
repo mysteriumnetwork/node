@@ -43,7 +43,7 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 		return dialog, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
 	}
 
-	contactCodec := NewCodecSigner(communication.NewCodecJSON(), establisher.mySigner, identity.NewVerifyIsAuthorized())
+	contactCodec := NewCodecSigner(communication.NewCodecJSON(), establisher.mySigner, identity.NewVerifierSigned())
 	contactSender := nats.NewSender(contactAddress.GetConnection(), contactCodec, contactAddress.GetTopic())
 
 	response, err := contactSender.Request(&dialogCreateProducer{
