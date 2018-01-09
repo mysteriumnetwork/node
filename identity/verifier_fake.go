@@ -1,9 +1,10 @@
 package identity
 
+import "bytes"
+
 type VerifierFake struct{}
 
 func (verifier *VerifierFake) Verify(message []byte, signature Signature) bool {
-	signatureExpected := "signed" + string(message)
-
-	return signature.String() == signatureExpected
+	signatureExpected := messageFakeHash(message)
+	return bytes.Equal(signature.raw, signatureExpected)
 }

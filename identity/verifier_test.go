@@ -15,7 +15,7 @@ func TestVerifier_extractSignerWhenSignatureIsCorrect(t *testing.T) {
 }
 
 func TestVerifier_extractSignerWhenSignatureIsEmpty(t *testing.T) {
-	message := []byte("boop!")
+	message := []byte("Boop!")
 	signature := SignatureHex("")
 
 	signerId, err := extractSignerIdentity(message, signature)
@@ -24,7 +24,7 @@ func TestVerifier_extractSignerWhenSignatureIsEmpty(t *testing.T) {
 }
 
 func TestVerifier_extractSignerWhenSignatureIsMalformed(t *testing.T) {
-	message := []byte("boop!")
+	message := []byte("Boop!")
 	signature := SignatureHex("7369676e6564")
 
 	signerId, err := extractSignerIdentity(message, signature)
@@ -33,12 +33,12 @@ func TestVerifier_extractSignerWhenSignatureIsMalformed(t *testing.T) {
 }
 
 func TestVerifier_extractSignerWhenMessageIsChanged(t *testing.T) {
-	message := []byte("boop!")
+	message := []byte("Boop changed!")
 	signature := SignatureHex("1f89542f406b2d638fe09cd9912d0b8c0b5ebb4aef67d52ab046973e34fb430a1953576cd19d140eddb099aea34b2985fbd99e716d3b2f96a964141fdb84b32000")
 
 	signerId, err := extractSignerIdentity(message, signature)
 	assert.NoError(t, err)
-	assert.Exactly(t, FromAddress("0xb1fe295162488f618201b92672e3299436b80d9e"), signerId)
+	assert.Exactly(t, FromAddress("0xded9913d38bfe94845b9e21fd32f43d0240e2f34"), signerId)
 }
 
 func TestVerifierIdentity_Verify(t *testing.T) {
@@ -81,8 +81,8 @@ func TestVerifierSigned_VerifyWhenMalformedSignature(t *testing.T) {
 	assert.False(t, verifier.Verify(message, signature))
 }
 
-func TestVerifierSigned_VerifyWhenWrongSender(t *testing.T) {
-	message := []byte("boop!")
+func TestVerifierSigned_VerifyWhenMessageIsChanged(t *testing.T) {
+	message := []byte("Boop changed!")
 	signature := SignatureHex("1f89542f406b2d638fe09cd9912d0b8c0b5ebb4aef67d52ab046973e34fb430a1953576cd19d140eddb099aea34b2985fbd99e716d3b2f96a964141fdb84b32000")
 
 	verifier := NewVerifierSigned()
