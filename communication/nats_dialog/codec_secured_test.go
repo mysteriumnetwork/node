@@ -169,7 +169,7 @@ func TestCodecSigner_UnpackError(t *testing.T) {
 			`{
 				"payload": "hello \"name\""
 			}`,
-			"Invalid message signature: ",
+			"invalid message signature ''",
 		},
 		{
 			`{
@@ -183,14 +183,14 @@ func TestCodecSigner_UnpackError(t *testing.T) {
 				"payload": "hello \"name\" change",
 				"signature": "7369676e65642268656c6c6f205c226e616d655c2222"
 			}`,
-			"Invalid message signature: 7369676e65642268656c6c6f205c226e616d655c2222",
+			"invalid message signature '7369676e65642268656c6c6f205c226e616d655c2222'",
 		},
 		{
 			`{
 				"payload": "hello \"name\"",
 				"signature": "7369676e65642268656c6c6f205c226e616d655c2222-change"
 			}`,
-			"Invalid message signature: 7369676e65642268656c6c6f205c226e616d655c2222-change",
+			"invalid message signature '7369676e65642268656c6c6f205c226e616d655c2222-change'",
 		},
 		{
 			`{

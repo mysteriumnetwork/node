@@ -2,7 +2,7 @@ package nats_dialog
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 )
@@ -50,7 +50,7 @@ func (codec *codecSecured) Unpack(data []byte, payloadPtr interface{}) error {
 	}
 
 	if !codec.verifier.Verify(envelope.Payload, identity.SignatureHex(envelope.Signature)) {
-		return errors.New("Invalid message signature: " + envelope.Signature)
+		return fmt.Errorf("invalid message signature '%s'", envelope.Signature)
 	}
 
 	return codec.codecPacker.Unpack(envelope.Payload, payloadPtr)
