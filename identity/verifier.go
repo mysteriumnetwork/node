@@ -1,8 +1,8 @@
 package identity
 
 import (
+	"errors"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 type Verifier interface {
@@ -19,7 +19,7 @@ func NewVerifierIdentity(peerIdentity Identity) *verifierIdentity {
 
 type verifierSigned struct{}
 
-func (ev *verifierSigned) Verify(message []byte, signature Signature) bool {
+func (verifier *verifierSigned) Verify(message []byte, signature Signature) bool {
 	_, err := extractSignerIdentity(message, signature)
 	return err == nil
 }
@@ -28,13 +28,13 @@ type verifierIdentity struct {
 	peerIdentity Identity
 }
 
-func (ev *verifierIdentity) Verify(message []byte, signature Signature) bool {
+func (verifier *verifierIdentity) Verify(message []byte, signature Signature) bool {
 	identity, err := extractSignerIdentity(message, signature)
 	if err != nil {
 		return false
 	}
 
-	return identity == ev.peerIdentity
+	return identity == verifier.peerIdentity
 }
 
 func extractSignerIdentity(message []byte, signature Signature) (Identity, error) {

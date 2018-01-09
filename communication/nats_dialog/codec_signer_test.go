@@ -1,10 +1,10 @@
 package nats_dialog
 
 import (
+	"errors"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
-	"github.com/syndtr/goleveldb/leveldb/errors"
 	"testing"
 )
 
