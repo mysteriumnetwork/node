@@ -1,6 +1,10 @@
 package identity
 
-import "encoding/hex"
+import (
+	"bytes"
+	"encoding/base64"
+	"encoding/hex"
+)
 
 func SignatureBytes(signatureBytes []byte) Signature {
 	return Signature{signatureBytes}
@@ -19,10 +23,14 @@ func (signature *Signature) Hex() string {
 	return hex.EncodeToString(signature.raw)
 }
 
-func (signature *Signature) String() string {
-	return string(signature.raw)
+func (signature *Signature) Base64() string {
+	return base64.StdEncoding.EncodeToString(signature.Bytes())
 }
 
 func (signature *Signature) Bytes() []byte {
 	return signature.raw
+}
+
+func (signature Signature) EqualsTo(other Signature) bool {
+	return bytes.Equal(signature.raw, other.raw)
 }

@@ -36,7 +36,11 @@ func NewCommandWith(
 		return nats_dialog.NewDialogEstablisher(identity)
 	}
 
-	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime)
+	signerFactory := func(id identity.Identity) identity.Signer {
+		return identity.NewSigner(keystoreInstance, id)
+	}
+
+	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime, signerFactory)
 
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 

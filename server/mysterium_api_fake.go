@@ -20,25 +20,25 @@ type ClientFake struct {
 
 func (client *ClientFake) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
 	client.proposalsMock = append(client.proposalsMock, proposal)
-	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake node registered: ", proposal)
+	log.Info(mysteriumApiLogPrefix, "Fake node registered: ", proposal)
 
 	return nil
 }
 
 func (client *ClientFake) RegisterIdentity(identity identity.Identity) (err error) {
-	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake identity registered: ", identity)
+	log.Info(mysteriumApiLogPrefix, "Fake identity registered: ", identity)
 
 	return nil
 }
 
 func (client *ClientFake) NodeSendStats(nodeKey string) (err error) {
-	log.Info(MYSTERIUM_API_LOG_PREFIX, "Node stats sent: ", nodeKey)
+	log.Info(mysteriumApiLogPrefix, "Node stats sent: ", nodeKey)
 
 	return nil
 }
 
 func (client *ClientFake) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
-	log.Info(MYSTERIUM_API_LOG_PREFIX, "Fake proposals requested for node_key: ", nodeKey)
+	log.Info(mysteriumApiLogPrefix, "Fake proposals requested for node_key: ", nodeKey)
 
 	for _, proposal := range client.proposalsMock {
 		var filterMatched = true
@@ -53,8 +53,8 @@ func (client *ClientFake) FindProposals(nodeKey string) (proposals []dto_discove
 	return proposals, nil
 }
 
-func (client *ClientFake) SendSessionStats(sessionId string, sessionStats dto.SessionStats) (err error) {
-	log.Info(MYSTERIUM_API_LOG_PREFIX, "Session stats sent: ", sessionId)
+func (client *ClientFake) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
+	log.Info(mysteriumApiLogPrefix, "Session stats sent: ", sessionId)
 
 	return nil
 }

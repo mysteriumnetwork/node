@@ -39,7 +39,7 @@ func (tc *test_context) SetupTest() {
 		make(chan int, 1),
 		nil,
 	}
-	var fakeVpnClientFactory VpnClientFactory = func(vpnSession session.SessionDto) (openvpn.Client, error) {
+	fakeVpnClientFactory := func(vpnSession session.SessionDto, identity identity.Identity) (openvpn.Client, error) {
 		return tc.fakeOpenVpn, nil
 	}
 
