@@ -31,6 +31,7 @@ type identityRegistrationDto struct {
 type identitiesApi struct {
 	idm             identity.IdentityManagerInterface
 	mysteriumClient server.Client
+	signerFactory   identity.SignerFactory
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -45,8 +46,9 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 	return
 }
 
-func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient server.Client) *identitiesApi {
-	return &identitiesApi{idm, mystClient}
+//NewIdentitiesEndpoint creates identities api controller used by tequilapi service
+func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient server.Client, signerFactory identity.SignerFactory) *identitiesApi {
+	return &identitiesApi{idm, mystClient, signerFactory}
 }
 
 func (endpoint *identitiesApi) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
@@ -90,7 +92,7 @@ func (endpoint *identitiesApi) Register(resp http.ResponseWriter, request *http.
 		return
 	}
 
-	err = endpoint.mysteriumClient.RegisterIdentity(id)
+	err = endpoint.mysteriumClient.RegisterIdentity(id, endpoint.signerFactory(id))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -129,12 +131,14 @@ func validateCreationRequest(createReq *identityCreationDto) (errors *validation
 	return
 }
 
+//AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.IdentityManagerInterface,
 	mystClient server.Client,
+	signerFactory identity.SignerFactory,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, mystClient)
+	idmEnd := NewIdentitiesEndpoint(idm, mystClient, signerFactory)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id/registration", idmEnd.Register)

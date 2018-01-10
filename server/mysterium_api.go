@@ -24,6 +24,7 @@ type mysteriumApi struct {
 	http HttpTransport
 }
 
+//NewClient creates mysterium centralized api instance with real communcation
 func NewClient() Client {
 	return &mysteriumApi{
 		&http.Client{
@@ -32,10 +33,10 @@ func NewClient() Client {
 	}
 }
 
-func (mApi *mysteriumApi) RegisterIdentity(identity identity.Identity) error {
-	req, err := newPostRequest("identities", dto.CreateIdentityRequest{
+func (mApi *mysteriumApi) RegisterIdentity(identity identity.Identity, signer identity.Signer) error {
+	req, err := newSignedPostRequest("identities", dto.CreateIdentityRequest{
 		Identity: identity.Address,
-	})
+	}, signer)
 	if err != nil {
 		return err
 	}

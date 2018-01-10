@@ -38,6 +38,7 @@ func NewCommandWith(
 		identity.NewIdentityManager(keystoreInstance),
 		mysteriumClient,
 		cache,
+		func(id identity.Identity) identity.Signer { return identity.NewSigner(keystoreInstance, id) },
 	)
 
 	return &CommandRun{

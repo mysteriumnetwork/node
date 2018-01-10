@@ -14,8 +14,9 @@ import (
 const identityUrl = "/irrelevant"
 
 var (
-	mockIdm    = identity.NewIdentityManagerFake()
-	mystClient = server.NewClientFake()
+	mockIdm           = identity.NewIdentityManagerFake()
+	mystClient        = server.NewClientFake()
+	fakeSignerFactory = func(id identity.Identity) identity.Signer { return nil } //it works in this case - it's passed to fake myst client
 )
 
 func TestRegisterExistingIdentityRequest(t *testing.T) {
@@ -28,7 +29,7 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Register
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Register
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusNotImplemented, resp.Code)
@@ -50,7 +51,7 @@ func TestRegisterIdentitySuccess(t *testing.T) {
 	resp := httptest.NewRecorder()
 
 	mockIdm := identity.NewIdentityManagerFake()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Register
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Register
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
@@ -66,7 +67,7 @@ func TestCreateNewIdentityNoPassword(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Create
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -91,7 +92,7 @@ func TestCreateNewIdentity(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Create
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -107,7 +108,7 @@ func TestListIdentities(t *testing.T) {
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).List
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(

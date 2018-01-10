@@ -5,6 +5,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+type SignerFactory func(id Identity) Signer
+
 type Signer interface {
 	Sign(message []byte) (Signature, error)
 }

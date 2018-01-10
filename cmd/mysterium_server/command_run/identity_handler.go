@@ -6,6 +6,7 @@ import (
 	"github.com/mysterium/node/server"
 )
 
+//SelectIdentity selects lastUsed identity or creates new one if keyOption is not present
 func SelectIdentity(identityHandler *identityHandler, keyOption string) (id identity.Identity, err error) {
 	if len(keyOption) > 0 {
 		return identityHandler.UseExisting(keyOption)
@@ -21,20 +22,24 @@ func SelectIdentity(identityHandler *identityHandler, keyOption string) (id iden
 const nodeIdentityPassword = ""
 
 type identityHandler struct {
-	manager     identity.IdentityManagerInterface
-	identityApi server.Client
-	cache       identity.IdentityCacheInterface
+	manager       identity.IdentityManagerInterface
+	identityApi   server.Client
+	cache         identity.IdentityCacheInterface
+	signerFactory identity.SignerFactory
 }
 
+//NewNodeIdentityHandler creates new identity handler used by node
 func NewNodeIdentityHandler(
 	manager identity.IdentityManagerInterface,
 	identityApi server.Client,
 	cache identity.IdentityCacheInterface,
+	signerFactory identity.SignerFactory,
 ) *identityHandler {
 	return &identityHandler{
-		manager:     manager,
-		identityApi: identityApi,
-		cache:       cache,
+		manager:       manager,
+		identityApi:   identityApi,
+		cache:         cache,
+		signerFactory: signerFactory,
 	}
 }
 
@@ -64,7 +69,7 @@ func (ih *identityHandler) UseNew() (id identity.Identity, err error) {
 		return
 	}
 
-	if err = ih.identityApi.RegisterIdentity(id); err != nil {
+	if err = ih.identityApi.RegisterIdentity(id, ih.signerFactory(id)); err != nil {
 		return
 	}
 

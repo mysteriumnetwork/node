@@ -26,9 +26,9 @@ func (client *ClientFake) NodeRegister(proposal dto_discovery.ServiceProposal) (
 	return nil
 }
 
-func (client *ClientFake) RegisterIdentity(identity identity.Identity) (err error) {
-	client.RegisteredIdentity = identity
-	log.Info(mysteriumApiLogPrefix, "Fake identity registered: ", identity)
+func (client *ClientFake) RegisterIdentity(newIdentity identity.Identity, signer identity.Signer) (err error) {
+	client.RegisteredIdentity = newIdentity
+	log.Info(mysteriumApiLogPrefix, "Fake newIdentity registered: ", newIdentity)
 
 	return nil
 }
