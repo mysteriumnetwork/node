@@ -40,9 +40,8 @@ func (mApi *mysteriumApi) RegisterIdentity(identity identity.Identity) error {
 		return err
 	}
 
-	resp, err := mApi.http.Do(req)
+	err = mApi.doRequest(req)
 	if err == nil {
-		defer resp.Body.Close()
 		log.Info(mysteriumApiLogPrefix, "Identity registered: ", identity)
 	}
 	return err
@@ -56,9 +55,8 @@ func (mApi *mysteriumApi) NodeRegister(proposal dto_discovery.ServiceProposal) e
 		return err
 	}
 
-	resp, err := mApi.http.Do(req)
+	err = mApi.doRequest(req)
 	if err == nil {
-		defer resp.Body.Close()
 		log.Info(mysteriumApiLogPrefix, "Node registered: ", proposal.ProviderId)
 	}
 
@@ -75,9 +73,8 @@ func (mApi *mysteriumApi) NodeSendStats(nodeKey string) error {
 		return err
 	}
 
-	resp, err := mApi.http.Do(req)
+	err = mApi.doRequest(req)
 	if err == nil {
-		defer resp.Body.Close()
 		log.Info(mysteriumApiLogPrefix, "Node stats sent: ", nodeKey)
 	}
 	return err
@@ -91,22 +88,15 @@ func (mApi *mysteriumApi) FindProposals(nodeKey string) ([]dto_discovery.Service
 		return nil, err
 	}
 
-	resp, err := mApi.http.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
 	var proposalsResponse dto.ProposalsResponse
-	err = parseResponseJson(resp, &proposalsResponse)
+	err = mApi.doRequestAndParseResponse(req, &proposalsResponse)
 	if err != nil {
 		return nil, err
 	}
-	proposals := proposalsResponse.Proposals
 
-	log.Info(mysteriumApiLogPrefix, "FindProposals fetched: ", proposals)
+	log.Info(mysteriumApiLogPrefix, "FindProposals fetched: ", proposalsResponse.Proposals)
 
-	return proposals, nil
+	return proposalsResponse.Proposals, nil
 }
 
 func (mApi *mysteriumApi) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) error {
@@ -116,11 +106,33 @@ func (mApi *mysteriumApi) SendSessionStats(sessionId string, sessionStats dto.Se
 		return err
 	}
 
-	resp, err := mApi.http.Do(req)
+	err = mApi.doRequest(req)
 	if err == nil {
-		defer resp.Body.Close()
 		log.Info(mysteriumApiLogPrefix, "Session stats sent: ", sessionId)
 	}
 
 	return nil
+}
+
+func (mApi *mysteriumApi) doRequest(req *http.Request) error {
+	resp, err := mApi.http.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
+	return parseResponseError(resp)
+}
+
+func (mApi *mysteriumApi) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
+	resp, err := mApi.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	err = parseResponseError(resp)
+	if err != nil {
+		return err
+	}
+
+	return parseResponseJson(resp, responseValue)
 }
