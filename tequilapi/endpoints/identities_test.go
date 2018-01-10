@@ -56,11 +56,11 @@ func TestRegisterIdentitySuccess(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, resp.Code)
 }
 
-func TestCreateNewIdentityNoPassword(t *testing.T) {
+func TestCreateNewIdentityEmptyPassword(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
-		bytes.NewBufferString(`{ "password": ""}`),
+		bytes.NewBufferString(`{"password": ""}`),
 	)
 
 	assert.Nil(t, err)
@@ -69,14 +69,31 @@ func TestCreateNewIdentityNoPassword(t *testing.T) {
 	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Create
 	handlerFunc(resp, req, nil)
 
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
+func TestCreateNewIdentityNoPassword(t *testing.T) {
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/identities",
+		bytes.NewBufferString(`{}`),
+	)
+
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Create
+	handlerFunc(resp, req, nil)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
 		t,
 		`{
-            "message": "validation_error",
-            "errors" : {
-                "password": [ {"code" : "required" , "message" : "Field is required" } ]
-            }
-        }`,
+			"message": "validation_error",
+			"errors" : {
+				"password": [ {"code" : "required" , "message" : "Field is required" } ]
+			}
+		}`,
 		resp.Body.String(),
 	)
 }
