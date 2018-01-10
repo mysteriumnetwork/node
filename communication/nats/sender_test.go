@@ -13,15 +13,16 @@ func TestSenderInterface(t *testing.T) {
 
 func TestSenderNew(t *testing.T) {
 	connection := &connectionFake{}
+	codec := communication.NewCodecFake()
 
 	assert.Equal(
 		t,
 		&senderNats{
 			connection:     connection,
-			codec:          communication.NewCodecJSON(),
+			codec:          codec,
 			timeoutRequest: 500 * time.Millisecond,
 			messageTopic:   "custom.",
 		},
-		NewSender(connection, "custom"),
+		NewSender(connection, codec, "custom"),
 	)
 }

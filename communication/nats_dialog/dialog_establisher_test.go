@@ -16,10 +16,12 @@ func TestDialogEstablisher_Interface(t *testing.T) {
 
 func TestDialogEstablisher_Factory(t *testing.T) {
 	id := identity.FromAddress("123456")
-	establisher := NewDialogEstablisher(id)
+	signer := &identity.SignerFake{}
 
+	establisher := NewDialogEstablisher(id, signer)
 	assert.NotNil(t, establisher)
 	assert.Equal(t, id, establisher.myIdentity)
+	assert.Equal(t, signer, establisher.mySigner)
 }
 
 func TestDialogEstablisher_CreateDialog(t *testing.T) {
@@ -27,14 +29,20 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	connection.MockResponse(
 		"provider1.dialog-create",
 		[]byte(`{
-			"reason":200,
-			"reasonMessage": "OK"
+			"payload": {
+				"reason": 200,
+				"reasonMessage": "OK"
+			},
+			"signature": "d9183d29a6c95dd604b0c2f29e8799f3ee1c5a36ae1ee66aff274813436e365d69b2ef80573ffc7c76aa746f3509481fd9d3501e37223953da8046fe5fafffb200"
 		}`),
 	)
 	defer connection.Close()
 
+	signer := &identity.SignerFake{}
+
 	establisher := &dialogEstablisher{
 		myIdentity: identity.FromAddress("consumer1"),
+		mySigner:   signer,
 		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
 			assert.Exactly(t, dto_discovery.Contact{}, contact)
 			return nats_discovery.NewAddressWithConnection(connection, "provider1"), nil
@@ -47,14 +55,16 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 
 	dialogNats, ok := dialogInstance.(*dialog)
 	assert.True(t, ok)
+
+	expectedCodec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierSigned())
 	assert.Equal(
 		t,
-		nats.NewSender(connection, "provider1.consumer1"),
+		nats.NewSender(connection, expectedCodec, "provider1.consumer1"),
 		dialogNats.Sender,
 	)
 	assert.Equal(
 		t,
-		nats.NewReceiver(connection, "provider1.consumer1"),
+		nats.NewReceiver(connection, expectedCodec, "provider1.consumer1"),
 		dialogNats.Receiver,
 	)
 }
