@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/mysterium/node/identity"
 	"net/http"
@@ -51,8 +52,7 @@ func newSignedPostRequest(path string, requestBody interface{}, signer identity.
 }
 
 func encodeToJson(value interface{}) ([]byte, error) {
-
-	return nil, nil
+	return json.Marshal(value)
 }
 
 func newRequest(method, path string, body []byte) (*http.Request, error) {
