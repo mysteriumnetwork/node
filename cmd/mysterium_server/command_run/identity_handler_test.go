@@ -18,6 +18,7 @@ func Test_identityHandler_UseExisting(t *testing.T) {
 	id, err := handler.UseExisting("address")
 	assert.Equal(t, identityManager.FakeIdentity1, id)
 	assert.Nil(t, err)
+	assert.Equal(t, "", client.RegisteredIdentity.Address)
 }
 
 func Test_identityHandler_UseLast(t *testing.T) {
@@ -33,6 +34,7 @@ func Test_identityHandler_UseLast(t *testing.T) {
 	id, err := handler.UseLast()
 	assert.Equal(t, fakeIdentity, id)
 	assert.Nil(t, err)
+	assert.Equal(t, "", client.RegisteredIdentity.Address)
 }
 
 func Test_identityHandler_UseNew(t *testing.T) {
