@@ -15,7 +15,8 @@ func NewClientFake() *ClientFake {
 }
 
 type ClientFake struct {
-	proposalsMock []dto_discovery.ServiceProposal
+	RegisteredIdentity identity.Identity
+	proposalsMock      []dto_discovery.ServiceProposal
 }
 
 func (client *ClientFake) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
@@ -26,6 +27,7 @@ func (client *ClientFake) NodeRegister(proposal dto_discovery.ServiceProposal) (
 }
 
 func (client *ClientFake) RegisterIdentity(identity identity.Identity) (err error) {
+	client.RegisteredIdentity = identity
 	log.Info(mysteriumApiLogPrefix, "Fake identity registered: ", identity)
 
 	return nil
