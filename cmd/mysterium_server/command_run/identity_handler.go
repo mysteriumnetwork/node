@@ -6,6 +6,18 @@ import (
 	"github.com/mysterium/node/server"
 )
 
+func SelectIdentity(identityHandler *identityHandler, keyOption string) (id identity.Identity, err error) {
+	if len(keyOption) > 0 {
+		return identityHandler.UseExisting(keyOption)
+	}
+
+	if id, err = identityHandler.UseLast(); err == nil {
+		return id, err
+	}
+
+	return identityHandler.UseNew()
+}
+
 const nodeIdentityPassword = ""
 
 type identityHandler struct {
