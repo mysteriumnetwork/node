@@ -57,7 +57,7 @@ func (receiver *receiverNats) Receive(consumer communication.MessageConsumer) er
 
 func (receiver *receiverNats) Respond(consumer communication.RequestConsumer) error {
 
-	requestType := string(consumer.GetRequestType())
+	requestType := string(consumer.GetRequestEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
 		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' received: %s", requestType, msg.Data))

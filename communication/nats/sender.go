@@ -51,7 +51,7 @@ func (sender *senderNats) Send(producer communication.MessageProducer) error {
 
 func (sender *senderNats) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
 
-	requestType := string(producer.GetRequestType())
+	requestType := string(producer.GetRequestEndpoint())
 	responsePtr = producer.NewResponse()
 
 	requestData, err := sender.codec.Pack(producer.Produce())

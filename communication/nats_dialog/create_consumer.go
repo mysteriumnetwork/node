@@ -8,8 +8,8 @@ type dialogCreateConsumer struct {
 	Callback func(request *dialogCreateRequest) (*dialogCreateResponse, error)
 }
 
-func (consumer *dialogCreateConsumer) GetRequestType() communication.RequestType {
-	return ENDPOINT_DIALOG_CREATE
+func (consumer *dialogCreateConsumer) GetRequestEndpoint() communication.RequestEndpoint {
+	return endpointDialogCreate
 }
 
 func (consumer *dialogCreateConsumer) NewRequest() (requestPtr interface{}) {
