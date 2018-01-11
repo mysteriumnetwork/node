@@ -8,9 +8,10 @@ import (
 
 //Client interface for mysterium centralized api - will be removed in the future
 type Client interface {
-	RegisterIdentity(identity identity.Identity, signer identity.Signer) (err error)
-	NodeRegister(proposal dto_discovery.ServiceProposal) (err error)
-	NodeSendStats(nodeKey string) (err error)
 	FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error)
+	//these functions have side effects - therefore signer required
+	RegisterIdentity(identity identity.Identity, signer identity.Signer) (err error)
+	RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
+	NodeSendStats(nodeKey string, signer identity.Signer) (err error)
 	SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error)
 }

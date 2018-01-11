@@ -34,17 +34,21 @@ func NewCommandWith(
 
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	cache := identity.NewIdentityCache(options.DirectoryKeystore, "remember.json")
+	createSigner := func(id identity.Identity) identity.Signer {
+		return identity.NewSigner(keystoreInstance, id)
+	}
 	identityHandler := NewNodeIdentityHandler(
 		identity.NewIdentityManager(keystoreInstance),
 		mysteriumClient,
 		cache,
-		func(id identity.Identity) identity.Signer { return identity.NewSigner(keystoreInstance, id) },
+		createSigner,
 	)
 
 	return &CommandRun{
 		identitySelector: func() (identity.Identity, error) {
 			return SelectIdentity(identityHandler, options.NodeKey)
 		},
+		createSigner:    createSigner,
 		ipifyClient:     ipifyClient,
 		mysteriumClient: mysteriumClient,
 		natService:      natService,

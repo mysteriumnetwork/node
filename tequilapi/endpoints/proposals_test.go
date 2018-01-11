@@ -33,7 +33,7 @@ var proposals = []dto_discovery.ServiceProposal{
 func TestProposalsEndpointListByNodeId(t *testing.T) {
 	discoveryApi := server.NewClientFake()
 	for _, proposal := range proposals {
-		discoveryApi.NodeRegister(proposal)
+		discoveryApi.RegisterProposal(proposal, nil)
 	}
 
 	req, err := http.NewRequest(
@@ -76,7 +76,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 func TestProposalsEndpointList(t *testing.T) {
 	discoveryApi := server.NewClientFake()
 	for _, proposal := range proposals {
-		discoveryApi.NodeRegister(proposal)
+		discoveryApi.RegisterProposal(proposal, nil)
 	}
 
 	req, err := http.NewRequest(

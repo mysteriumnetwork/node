@@ -48,10 +48,10 @@ func (mApi *mysteriumApi) RegisterIdentity(identity identity.Identity, signer id
 	return err
 }
 
-func (mApi *mysteriumApi) NodeRegister(proposal dto_discovery.ServiceProposal) error {
-	req, err := newPostRequest("node_register", dto.NodeRegisterRequest{
+func (mApi *mysteriumApi) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+	req, err := newSignedPostRequest("node_register", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
-	})
+	}, signer)
 	if err != nil {
 		return err
 	}
@@ -64,12 +64,12 @@ func (mApi *mysteriumApi) NodeRegister(proposal dto_discovery.ServiceProposal) e
 	return err
 }
 
-func (mApi *mysteriumApi) NodeSendStats(nodeKey string) error {
-	req, err := newPostRequest("node_send_stats", dto.NodeStatsRequest{
+func (mApi *mysteriumApi) NodeSendStats(nodeKey string, signer identity.Signer) error {
+	req, err := newSignedPostRequest("node_send_stats", dto.NodeStatsRequest{
 		NodeKey: nodeKey,
 		// TODO Refactor Node statistics with new `SessionStats` DTO
 		Sessions: []dto.SessionStats{},
-	})
+	}, signer)
 	if err != nil {
 		return err
 	}
