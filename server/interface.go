@@ -9,7 +9,7 @@ import (
 //Client interface for mysterium centralized api - will be removed in the future
 type Client interface {
 	FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error)
-	//these functions have side effects - therefore signer required
+	//these functions are signed because they require authorization
 	RegisterIdentity(identity identity.Identity, signer identity.Signer) (err error)
 	RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 	NodeSendStats(nodeKey string, signer identity.Signer) (err error)
