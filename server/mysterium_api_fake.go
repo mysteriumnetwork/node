@@ -19,7 +19,7 @@ type ClientFake struct {
 	proposalsMock      []dto_discovery.ServiceProposal
 }
 
-func (client *ClientFake) NodeRegister(proposal dto_discovery.ServiceProposal) (err error) {
+func (client *ClientFake) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error) {
 	client.proposalsMock = append(client.proposalsMock, proposal)
 	log.Info(mysteriumApiLogPrefix, "Fake node registered: ", proposal)
 
@@ -33,7 +33,7 @@ func (client *ClientFake) RegisterIdentity(newIdentity identity.Identity, signer
 	return nil
 }
 
-func (client *ClientFake) NodeSendStats(nodeKey string) (err error) {
+func (client *ClientFake) NodeSendStats(nodeKey string, signer identity.Signer) (err error) {
 	log.Info(mysteriumApiLogPrefix, "Node stats sent: ", nodeKey)
 
 	return nil

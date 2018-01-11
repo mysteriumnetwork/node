@@ -27,7 +27,7 @@ func (tc *test_context) SetupTest() {
 	tc.fakeDiscoveryClient = server.NewClientFake()
 
 	serviceProposal := service_discovery.NewServiceProposal(identity.FromAddress("vpn-node-1"), dto.Contact{})
-	tc.fakeDiscoveryClient.NodeRegister(serviceProposal)
+	tc.fakeDiscoveryClient.RegisterProposal(serviceProposal, nil)
 
 	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
 		return &fake_dialog{}

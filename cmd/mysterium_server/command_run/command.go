@@ -15,6 +15,7 @@ import (
 
 type CommandRun struct {
 	identitySelector func() (identity.Identity, error)
+	createSigner     identity.SignerFactory
 	ipifyClient      ipify.Client
 	mysteriumClient  server.Client
 	natService       nat.NATService
@@ -66,13 +67,15 @@ func (cmd *CommandRun) Run() (err error) {
 		return err
 	}
 
-	if err := cmd.mysteriumClient.NodeRegister(proposal); err != nil {
+	signer := cmd.createSigner(providerId)
+
+	if err := cmd.mysteriumClient.RegisterProposal(proposal, signer); err != nil {
 		return err
 	}
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.mysteriumClient.NodeSendStats(providerId.Address)
+			cmd.mysteriumClient.NodeSendStats(providerId.Address, signer)
 		}
 	}()
 
