@@ -26,7 +26,7 @@ type apiServer struct {
 func NewServer(address string, port int, handler http.Handler) ApiServer {
 	server := apiServer{
 		make(chan error, 1),
-		handler,
+		ApplyCors(handler),
 		fmt.Sprintf("%s:%d", address, port),
 		nil}
 	return &server
