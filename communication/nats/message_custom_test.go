@@ -14,8 +14,8 @@ type customMessageProducer struct {
 	Message *customMessage
 }
 
-func (producer *customMessageProducer) GetMessageType() communication.MessageType {
-	return communication.MessageType("custom-message")
+func (producer *customMessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
+	return communication.MessageEndpoint("custom-message")
 }
 
 func (producer *customMessageProducer) Produce() (messagePtr interface{}) {
@@ -54,8 +54,8 @@ type customMessageConsumer struct {
 	messageReceived chan interface{}
 }
 
-func (consumer *customMessageConsumer) GetMessageType() communication.MessageType {
-	return communication.MessageType("custom-message")
+func (consumer *customMessageConsumer) GetMessageEndpoint() communication.MessageEndpoint {
+	return communication.MessageEndpoint("custom-message")
 }
 
 func (consumer *customMessageConsumer) NewMessage() (messagePtr interface{}) {

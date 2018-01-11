@@ -10,8 +10,8 @@ type bytesMessageProducer struct {
 	Message []byte
 }
 
-func (producer *bytesMessageProducer) GetMessageType() communication.MessageType {
-	return communication.MessageType("bytes-message")
+func (producer *bytesMessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
+	return communication.MessageEndpoint("bytes-message")
 }
 
 func (producer *bytesMessageProducer) Produce() (messagePtr interface{}) {
@@ -22,8 +22,8 @@ type bytesMessageConsumer struct {
 	messageReceived chan interface{}
 }
 
-func (consumer *bytesMessageConsumer) GetMessageType() communication.MessageType {
-	return communication.MessageType("bytes-message")
+func (consumer *bytesMessageConsumer) GetMessageEndpoint() communication.MessageEndpoint {
+	return communication.MessageEndpoint("bytes-message")
 }
 
 func (consumer *bytesMessageConsumer) NewMessage() (messagePtr interface{}) {

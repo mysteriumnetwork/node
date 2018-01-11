@@ -28,7 +28,7 @@ type senderNats struct {
 
 func (sender *senderNats) Send(producer communication.MessageProducer) error {
 
-	messageType := string(producer.GetMessageType())
+	messageType := string(producer.GetMessageEndpoint())
 
 	messageData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {

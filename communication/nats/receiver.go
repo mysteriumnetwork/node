@@ -26,7 +26,7 @@ type receiverNats struct {
 
 func (receiver *receiverNats) Receive(consumer communication.MessageConsumer) error {
 
-	messageType := string(consumer.GetMessageType())
+	messageType := string(consumer.GetMessageEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
 		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Message '%s' received: %s", messageType, msg.Data))
