@@ -21,9 +21,9 @@ func TestNewAddress(t *testing.T) {
 	)
 }
 
-func TestNewAddressForIdentity(t *testing.T) {
-	identity := identity.FromAddress("provider1")
-	address := NewAddressGenerate(identity)
+func TestNewAddressGenerate(t *testing.T) {
+	myIdentity := identity.FromAddress("provider1")
+	address := NewAddressGenerate(myIdentity)
 
 	assert.Equal(
 		t,
