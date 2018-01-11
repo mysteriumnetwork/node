@@ -8,8 +8,11 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-const SENDER_LOG_PREFIX = "[NATS.Sender] "
+const senderLogPrefix = "[NATS.Sender] "
 
+// NewSender constructs new Sender's instance which works thru NATS connection.
+// Codec packs/unpacks messages to byte payloads.
+// Topic (optional) if need to send messages prefixed topic.
 func NewSender(connection Connection, codec communication.Codec, topic string) *senderNats {
 	return &senderNats{
 		connection:     connection,
@@ -36,7 +39,7 @@ func (sender *senderNats) Send(producer communication.MessageProducer) error {
 		return err
 	}
 
-	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Message '%s' sending: %s", messageType, messageData))
+	log.Debug(senderLogPrefix, fmt.Sprintf("Message '%s' sending: %s", messageType, messageData))
 	err = sender.connection.Publish(
 		sender.messageTopic+messageType,
 		messageData,
@@ -60,7 +63,7 @@ func (sender *senderNats) Request(producer communication.RequestProducer) (respo
 		return
 	}
 
-	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Request '%s' sending: %s", requestType, requestData))
+	log.Debug(senderLogPrefix, fmt.Sprintf("Request '%s' sending: %s", requestType, requestData))
 	msg, err := sender.connection.Request(
 		sender.messageTopic+requestType,
 		requestData,
@@ -71,11 +74,11 @@ func (sender *senderNats) Request(producer communication.RequestProducer) (respo
 		return
 	}
 
-	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Received response for '%s': %s", requestType, msg.Data))
+	log.Debug(senderLogPrefix, fmt.Sprintf("Received response for '%s': %s", requestType, msg.Data))
 	err = sender.codec.Unpack(msg.Data, responsePtr)
 	if err != nil {
 		err = fmt.Errorf("Failed to unpack response '%s'. %s", requestType, err)
-		log.Error(RECEIVER_LOG_PREFIX, err)
+		log.Error(receiverLogPrefix, err)
 		return
 	}
 

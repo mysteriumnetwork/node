@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+// NewConnectionFake constructs new NATS connection
+// which delivers published messages to local subscribers
 func NewConnectionFake() *connectionFake {
 	return &connectionFake{
 		subscriptions: make(map[string][]nats.MsgHandler),
@@ -15,6 +17,7 @@ func NewConnectionFake() *connectionFake {
 	}
 }
 
+// StartConnectionFake creates connection and starts it immediately
 func StartConnectionFake() *connectionFake {
 	connection := NewConnectionFake()
 	connection.Start()
