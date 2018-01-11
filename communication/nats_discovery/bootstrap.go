@@ -5,6 +5,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
+// Bootstrap loads NATS discovery package into the overall system
 func Bootstrap() {
 	dto_discovery.RegisterContactDefinitionUnserializer(
 		CONTACT_NATS_V1,
