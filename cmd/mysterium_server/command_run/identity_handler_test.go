@@ -70,5 +70,5 @@ type fakeSigner struct {
 }
 
 func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
-	return identity.SignatureHex("deadbeef"), nil //real hex!
+	return identity.SignatureBase64Decode("deadbeef"), nil
 }
