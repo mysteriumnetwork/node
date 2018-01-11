@@ -1,4 +1,4 @@
-package tequilapi
+package cli
 
 import (
 	"net/http"
@@ -6,12 +6,11 @@ import (
 	"io/ioutil"
 	"net/url"
 	"github.com/mysterium/node/identity"
-	rest "github.com/mysterium/node/http"
 )
 
 func NewTequilaClient() *TequilaClient {
 	return &TequilaClient{
-		http: rest.NewClient(
+		http: NewHttpClient(
 			"http://127.0.0.1:4050",
 			"[Tequilla.api.client]",
 			"goclient-v0.1",
@@ -20,7 +19,7 @@ func NewTequilaClient() *TequilaClient {
 }
 
 type TequilaClient struct {
-	http *rest.Client
+	http HttpClientInterface
 }
 
 type StatusDto struct {

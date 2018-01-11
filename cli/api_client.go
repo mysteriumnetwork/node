@@ -6,19 +6,18 @@ import (
 	"strings"
 	"log"
 	"fmt"
-	"github.com/mysterium/node/tequilapi"
 	"github.com/mysterium/node/identity"
 	"os"
 )
 
 func NewCliClient() *Client {
 	return &Client{
-		TequilaClient: tequilapi.NewTequilaClient(),
+		TequilaClient: NewTequilaClient(),
 	}
 }
 
 type Client struct {
-	TequilaClient *tequilapi.TequilaClient
+	TequilaClient *TequilaClient
 }
 
 func (c *Client) Run() {
@@ -35,6 +34,7 @@ func (c *Client) Run() {
 	if err != nil {
 		panic(err)
 	}
+
 	defer rl.Close()
 
 	log.SetOutput(rl.Stderr())
@@ -182,7 +182,7 @@ func (c *Client) identities(line string) {
 	}
 }
 
-func getIdentityOptionList(restClient *tequilapi.TequilaClient) func(string) []string {
+func getIdentityOptionList(restClient *TequilaClient) func(string) []string {
 	return func(line string) [] string {
 		identities := []string{"new"}
 		ids, err := restClient.GetIdentities()
@@ -198,7 +198,7 @@ func getIdentityOptionList(restClient *tequilapi.TequilaClient) func(string) []s
 	}
 }
 
-func getAutocompleterMenu(restClient *tequilapi.TequilaClient) *readline.PrefixCompleter {
+func getAutocompleterMenu(restClient *TequilaClient) *readline.PrefixCompleter {
 	var completer = readline.NewPrefixCompleter(
 		readline.PcItem(
 			"connect",

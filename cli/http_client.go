@@ -1,4 +1,4 @@
-package http
+package cli
 
 import (
 	"fmt"
@@ -10,43 +10,54 @@ import (
 	"errors"
 )
 
-func NewClient(baseUrl string, logPrefix string, ua string) *Client {
+type HttpClientInterface interface {
+	Get(path string, values url.Values) (*http.Response, error)
+	Post(path string, payload interface{}) (*http.Response, error)
+	Put(path string, payload interface{}) (*http.Response, error)
+	Delete(path string, payload interface{}) (*http.Response, error)
+}
+
+type HttpRequestInterface interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+func NewHttpClient(baseUrl string, logPrefix string, ua string) *HttpClient {
 	httpClient := http.Client{
 		Transport: &http.Transport{},
 	}
-	return &Client{
-		http:      httpClient,
+	return &HttpClient{
+		http:      &httpClient,
 		baseUrl:   baseUrl,
 		logPrefix: logPrefix,
 		ua:        ua,
 	}
 }
 
-type Client struct {
-	http      http.Client
+type HttpClient struct {
+	http      HttpRequestInterface
 	baseUrl   string
 	logPrefix string
 	ua        string
 }
 
-func (client *Client) Get(path string, values url.Values) (*http.Response, error) {
+func (client *HttpClient) Get(path string, values url.Values) (*http.Response, error) {
 	fullPath := fmt.Sprintf("%v/%v?%v", client.baseUrl, path, values.Encode())
 	return client.executeRequest("GET", fullPath, nil)
 }
 
-func (client *Client) Post(path string, payload interface{}) (*http.Response, error) {
+func (client *HttpClient) Post(path string, payload interface{}) (*http.Response, error) {
 	return client.doPayloadRequest("POST", path, payload)
 }
 
-func (client *Client) Put(path string, payload interface{}) (*http.Response, error) {
+func (client *HttpClient) Put(path string, payload interface{}) (*http.Response, error) {
 	return client.doPayloadRequest("PUT", path, payload)
 }
 
-func (client *Client) Delete(path string, payload interface{}) (*http.Response, error) {
+func (client *HttpClient) Delete(path string, payload interface{}) (*http.Response, error) {
 	return client.doPayloadRequest("DELETE", path, payload)
 }
 
-func (client Client) doPayloadRequest(method, path string, payload interface{}) (*http.Response, error) {
+func (client HttpClient) doPayloadRequest(method, path string, payload interface{}) (*http.Response, error) {
 	payloadJson, err := json.Marshal(payload)
 	if err != nil {
 		log.Critical(client.logPrefix, err)
@@ -56,7 +67,7 @@ func (client Client) doPayloadRequest(method, path string, payload interface{}) 
 	return client.executeRequest(method, client.baseUrl+"/"+path, payloadJson)
 }
 
-func (client *Client) executeRequest(method, fullPath string, payloadJson []byte) (*http.Response, error) {
+func (client *HttpClient) executeRequest(method, fullPath string, payloadJson []byte) (*http.Response, error) {
 	request, err := http.NewRequest(method, fullPath, bytes.NewBuffer(payloadJson))
 	request.Header.Set("User-Agent", client.ua)
 	request.Header.Set("Content-Type", "application/json")
