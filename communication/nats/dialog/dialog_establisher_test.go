@@ -1,9 +1,9 @@
-package nats_dialog
+package dialog
 
 import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
-	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
@@ -42,9 +42,9 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	establisher := &dialogEstablisher{
 		myIdentity: identity.FromAddress("consumer1"),
 		mySigner:   signer,
-		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
+		contactAddressFactory: func(contact dto_discovery.Contact) (*discovery.NatsAddress, error) {
 			assert.Exactly(t, dto_discovery.Contact{}, contact)
-			return nats_discovery.NewAddressWithConnection(connection, "provider1"), nil
+			return discovery.NewAddressWithConnection(connection, "provider1"), nil
 		},
 	}
 	dialogInstance, err := establisher.CreateDialog(dto_discovery.Contact{})

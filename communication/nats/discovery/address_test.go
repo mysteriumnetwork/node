@@ -1,4 +1,4 @@
-package nats_discovery
+package discovery
 
 import (
 	"github.com/mysterium/node/identity"
@@ -72,7 +72,7 @@ func TestNewAddressForContact_UnknownDefinition(t *testing.T) {
 		Definition: badDefinition{},
 	})
 
-	assert.EqualError(t, err, "Invalid contact definition: nats_discovery.badDefinition{}")
+	assert.EqualError(t, err, "Invalid contact definition: discovery.badDefinition{}")
 	assert.Nil(t, address)
 }
 

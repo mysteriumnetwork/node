@@ -1,4 +1,4 @@
-package nats_dialog
+package dialog
 
 import (
 	"fmt"
@@ -6,12 +6,12 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication/nats"
-	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
 )
 
 // NewDialogWaiter constructs new DialogWaiter which works thru NATS connection.
-func NewDialogWaiter(address *nats_discovery.NatsAddress, signer identity.Signer) *dialogWaiter {
+func NewDialogWaiter(address *discovery.NatsAddress, signer identity.Signer) *dialogWaiter {
 	return &dialogWaiter{
 		myAddress: address,
 		mySigner:  signer,
@@ -21,7 +21,7 @@ func NewDialogWaiter(address *nats_discovery.NatsAddress, signer identity.Signer
 const waiterLogPrefix = "[NATS.DialogWaiter] "
 
 type dialogWaiter struct {
-	myAddress *nats_discovery.NatsAddress
+	myAddress *discovery.NatsAddress
 	mySigner  identity.Signer
 }
 

@@ -3,8 +3,8 @@ package command_run
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/communication/nats_dialog"
-	"github.com/mysterium/node/communication/nats_discovery"
+	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
+	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"

@@ -1,4 +1,4 @@
-package nats_discovery
+package discovery
 
 // CONTACT_NATS_V1 type for  NATS contact type
 const CONTACT_NATS_V1 = "nats/v1"

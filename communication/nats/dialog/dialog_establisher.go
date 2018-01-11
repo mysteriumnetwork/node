@@ -1,11 +1,11 @@
-package nats_dialog
+package dialog
 
 import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
-	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
@@ -16,8 +16,8 @@ func NewDialogEstablisher(myIdentity identity.Identity, signer identity.Signer) 
 	return &dialogEstablisher{
 		myIdentity: myIdentity,
 		mySigner:   signer,
-		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
-			address, err := nats_discovery.NewAddressForContact(contact)
+		contactAddressFactory: func(contact dto_discovery.Contact) (*discovery.NatsAddress, error) {
+			address, err := discovery.NewAddressForContact(contact)
 			if err == nil {
 				err = address.Connect()
 			}
@@ -32,7 +32,7 @@ const establisherLogPrefix = "[NATS.DialogEstablisher] "
 type dialogEstablisher struct {
 	myIdentity            identity.Identity
 	mySigner              identity.Signer
-	contactAddressFactory func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error)
+	contactAddressFactory func(contact dto_discovery.Contact) (*discovery.NatsAddress, error)
 }
 
 func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact) (communication.Dialog, error) {
@@ -66,7 +66,7 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 }
 
 func (establisher *dialogEstablisher) newDialogToContact(
-	contactAddress *nats_discovery.NatsAddress,
+	contactAddress *discovery.NatsAddress,
 	contactCodec communication.Codec,
 ) *dialog {
 	subTopic := contactAddress.GetTopic() + "." + establisher.myIdentity.Address
