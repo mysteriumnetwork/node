@@ -10,6 +10,7 @@ import (
 	"github.com/mysterium/node/identity"
 )
 
+// NewDialogWaiter constructs new DialogWaiter which works thru NATS connection.
 func NewDialogWaiter(address *nats_discovery.NatsAddress, signer identity.Signer) *dialogWaiter {
 	return &dialogWaiter{
 		myAddress: address,

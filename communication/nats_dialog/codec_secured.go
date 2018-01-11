@@ -7,6 +7,10 @@ import (
 	"github.com/mysterium/node/identity"
 )
 
+// NewCodecSecured returns codec which:
+//   - encodes/decodes payloads with any packer codec
+//   - wraps encoded message with signature
+//   - verifiers decoded message's signature
 func NewCodecSecured(
 	codecPacker communication.Codec,
 	signer identity.Signer,

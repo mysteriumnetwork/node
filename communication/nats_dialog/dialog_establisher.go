@@ -10,6 +10,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
+// NewDialogEstablisher constructs new DialogEstablisher which works thru NATS connection.
 func NewDialogEstablisher(myIdentity identity.Identity, signer identity.Signer) *dialogEstablisher {
 
 	return &dialogEstablisher{
