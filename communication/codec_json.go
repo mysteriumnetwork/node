@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 )
 
+// NewCodecJSON returns codec which:
+//   - encodes/decodes payloads forward & backward JSON format
 func NewCodecJSON() *codecJSON {
 	return &codecJSON{}
 }
