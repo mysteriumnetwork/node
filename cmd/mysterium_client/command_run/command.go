@@ -14,6 +14,7 @@ import (
 	"github.com/mysterium/node/tequilapi/endpoints"
 )
 
+//NewCommand function created new client command with options passed from commandline
 func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(
 		options,
@@ -21,6 +22,7 @@ func NewCommand(options CommandOptions) *CommandRun {
 	)
 }
 
+//NewCommandWith does the same as NewCommand with posibility to override mysterium api client for external communication
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
@@ -45,7 +47,7 @@ func NewCommandWith(
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
 	router := tequilapi.NewApiRouter()
-	endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient)
+	endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	endpoints.AddRoutesForConnection(router, connectionManager)
 	endpoints.AddRoutesForProposals(router, mysteriumClient)
 
@@ -57,11 +59,13 @@ func NewCommandWith(
 	}
 }
 
+//CommandRun represent entry point for MysteriumVpn client with top level components
 type CommandRun struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.ApiServer
 }
 
+//Run starts tequilaApi service - does not block
 func (cmd *CommandRun) Run() error {
 	err := cmd.httpApiServer.StartServing()
 	if err != nil {
@@ -76,10 +80,12 @@ func (cmd *CommandRun) Run() error {
 	return nil
 }
 
+//Wait blocks until tequilapi service is stopped
 func (cmd *CommandRun) Wait() error {
 	return cmd.httpApiServer.Wait()
 }
 
+//Kill stops tequilapi service
 func (cmd *CommandRun) Kill() {
 	cmd.httpApiServer.Stop()
 	cmd.connectionManager.Disconnect()
