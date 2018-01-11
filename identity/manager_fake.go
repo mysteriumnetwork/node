@@ -1,30 +1,29 @@
 package identity
 
+import "github.com/pkg/errors"
+
 type idmFake struct {
-	FakeIdentity1 Identity
-	FakeIdentity2 Identity
+	existingIdentities []Identity
+	newIdentity        Identity
 }
 
-func NewIdentityManagerFake() *idmFake {
-	return &idmFake{
-		FromAddress("0x000000000000000000000000000000000000000A"),
-		FromAddress("0x000000000000000000000000000000000000bEEF"),
-	}
+func NewIdentityManagerFake(existingIdentities []Identity, newIdentity Identity) *idmFake {
+	return &idmFake{existingIdentities, newIdentity}
 }
 
 func (fakeIdm *idmFake) CreateNewIdentity(_ string) (Identity, error) {
-	return fakeIdm.FakeIdentity2, nil
+	return fakeIdm.newIdentity, nil
 }
 func (fakeIdm *idmFake) GetIdentities() []Identity {
-	accountList := []Identity{
-		fakeIdm.FakeIdentity2,
-		fakeIdm.FakeIdentity2,
-	}
-
-	return accountList
+	return fakeIdm.existingIdentities
 }
-func (fakeIdm *idmFake) GetIdentity(_ string) (Identity, error) {
-	return fakeIdm.FakeIdentity1, nil
+func (fakeIdm *idmFake) GetIdentity(address string) (Identity, error) {
+	for _, fakeIdentity := range fakeIdm.existingIdentities {
+		if address == fakeIdentity.Address {
+			return fakeIdentity, nil
+		}
+	}
+	return Identity{}, errors.New("Identity not found")
 }
 func (fakeIdm *idmFake) HasIdentity(_ string) bool {
 	return true

@@ -14,7 +14,10 @@ import (
 const identityUrl = "/irrelevant"
 
 var (
-	mockIdm           = identity.NewIdentityManagerFake()
+	mockIdm = identity.NewIdentityManagerFake([]identity.Identity{
+		{"0x000000000000000000000000000000000000000a"},
+		{"0x000000000000000000000000000000000000beef"},
+	}, identity.Identity{"0x000000000000000000000000000000000000aaac"})
 	mystClient        = server.NewClientFake()
 	fakeSignerFactory = func(id identity.Identity) identity.Signer { return nil } //it works in this case - it's passed to fake myst client
 )
@@ -50,7 +53,6 @@ func TestRegisterIdentitySuccess(t *testing.T) {
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 
-	mockIdm := identity.NewIdentityManagerFake()
 	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Register
 	handlerFunc(resp, req, nil)
 
@@ -67,7 +69,7 @@ func TestCreateNewIdentityEmptyPassword(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Create
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
@@ -115,7 +117,7 @@ func TestCreateNewIdentity(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-            "id": "0x000000000000000000000000000000000000beef"
+            "id": "0x000000000000000000000000000000000000aaac"
         }`,
 		resp.Body.String(),
 	)
@@ -132,7 +134,7 @@ func TestListIdentities(t *testing.T) {
 		t,
 		`{
             "identities": [
-                {"id": "0x000000000000000000000000000000000000beef"},
+                {"id": "0x000000000000000000000000000000000000000a"},
                 {"id": "0x000000000000000000000000000000000000beef"}
             ]
         }`,
