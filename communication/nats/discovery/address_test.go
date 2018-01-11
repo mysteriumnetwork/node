@@ -60,7 +60,7 @@ func TestNewAddressForContact_UnknownType(t *testing.T) {
 		Type: "natc/v1",
 	})
 
-	assert.EqualError(t, err, "Invalid contact type: natc/v1")
+	assert.EqualError(t, err, "invalid contact type: natc/v1")
 	assert.Nil(t, address)
 }
 
@@ -72,7 +72,7 @@ func TestNewAddressForContact_UnknownDefinition(t *testing.T) {
 		Definition: badDefinition{},
 	})
 
-	assert.EqualError(t, err, "Invalid contact definition: discovery.badDefinition{}")
+	assert.EqualError(t, err, "invalid contact definition: discovery.badDefinition{}")
 	assert.Nil(t, address)
 }
 

@@ -114,7 +114,7 @@ func (conn *connectionFake) Request(subject string, payload []byte, timeout time
 	case response := <-responseCh:
 		return response, nil
 	case <-time.After(timeout):
-		return nil, fmt.Errorf("Request '%s' timeout", subject)
+		return nil, fmt.Errorf("request '%s' timeout", subject)
 	}
 }
 

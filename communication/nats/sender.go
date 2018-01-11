@@ -31,21 +31,18 @@ type senderNats struct {
 
 func (sender *senderNats) Send(producer communication.MessageProducer) error {
 
-	messageType := string(producer.GetMessageEndpoint())
+	messageTopic := sender.messageTopic + string(producer.GetMessageEndpoint())
 
 	messageData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
-		err = fmt.Errorf("Failed to encode message '%s'. %s", messageType, err)
+		err = fmt.Errorf("failed to encode message '%s'. %s", messageTopic, err)
 		return err
 	}
 
-	log.Debug(senderLogPrefix, fmt.Sprintf("Message '%s' sending: %s", messageType, messageData))
-	err = sender.connection.Publish(
-		sender.messageTopic+messageType,
-		messageData,
-	)
+	log.Debug(senderLogPrefix, fmt.Sprintf("Message '%s' sending: %s", messageTopic, messageData))
+	err = sender.connection.Publish(messageTopic, messageData)
 	if err != nil {
-		err = fmt.Errorf("Failed to send message '%s'. %s", messageType, err)
+		err = fmt.Errorf("failed to send message '%s'. %s", messageTopic, err)
 		return err
 	}
 
@@ -54,30 +51,26 @@ func (sender *senderNats) Send(producer communication.MessageProducer) error {
 
 func (sender *senderNats) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
 
-	requestType := string(producer.GetRequestEndpoint())
+	requestTopic := sender.messageTopic + string(producer.GetRequestEndpoint())
 	responsePtr = producer.NewResponse()
 
 	requestData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
-		err = fmt.Errorf("Failed to pack request '%s'. %s", requestType, err)
+		err = fmt.Errorf("failed to pack request '%s'. %s", requestTopic, err)
 		return
 	}
 
-	log.Debug(senderLogPrefix, fmt.Sprintf("Request '%s' sending: %s", requestType, requestData))
-	msg, err := sender.connection.Request(
-		sender.messageTopic+requestType,
-		requestData,
-		sender.timeoutRequest,
-	)
+	log.Debug(senderLogPrefix, fmt.Sprintf("Request '%s' sending: %s", requestTopic, requestData))
+	msg, err := sender.connection.Request(requestTopic, requestData, sender.timeoutRequest)
 	if err != nil {
-		err = fmt.Errorf("Failed to send request '%s'. %s", requestType, err)
+		err = fmt.Errorf("failed to send request '%s'. %s", requestTopic, err)
 		return
 	}
 
-	log.Debug(senderLogPrefix, fmt.Sprintf("Received response for '%s': %s", requestType, msg.Data))
+	log.Debug(senderLogPrefix, fmt.Sprintf("Received response for '%s': %s", requestTopic, msg.Data))
 	err = sender.codec.Unpack(msg.Data, responsePtr)
 	if err != nil {
-		err = fmt.Errorf("Failed to unpack response '%s'. %s", requestType, err)
+		err = fmt.Errorf("failed to unpack response '%s'. %s", requestTopic, err)
 		log.Error(receiverLogPrefix, err)
 		return
 	}

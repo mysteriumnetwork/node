@@ -29,7 +29,7 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 	log.Info(waiterLogPrefix, fmt.Sprintf("Connecting to: %#v", waiter.myAddress))
 	err := waiter.myAddress.Connect()
 	if err != nil {
-		return fmt.Errorf("Failed to start my connection. %s", waiter.myAddress)
+		return fmt.Errorf("failed to start my connection. %s", waiter.myAddress)
 	}
 
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {

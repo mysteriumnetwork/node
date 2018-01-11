@@ -27,12 +27,12 @@ func NewAddressGenerate(myIdentity identity.Identity) *NatsAddress {
 // NewAddressForContact extracts NATS address from given contact structure
 func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
 	if contact.Type != CONTACT_NATS_V1 {
-		return nil, fmt.Errorf("Invalid contact type: %s", contact.Type)
+		return nil, fmt.Errorf("invalid contact type: %s", contact.Type)
 	}
 
 	contactNats, ok := contact.Definition.(ContactNATSV1)
 	if !ok {
-		return nil, fmt.Errorf("Invalid contact definition: %#v", contact.Definition)
+		return nil, fmt.Errorf("invalid contact definition: %#v", contact.Definition)
 	}
 
 	return &NatsAddress{

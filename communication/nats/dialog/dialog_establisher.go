@@ -41,7 +41,7 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", contact))
 	contactAddress, err := establisher.contactAddressFactory(contact)
 	if err != nil {
-		return dialog, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
+		return dialog, fmt.Errorf("failed to connect to: %#v. %s", contact, err)
 	}
 
 	contactCodec := NewCodecSecured(communication.NewCodecJSON(), establisher.mySigner, identity.NewVerifierSigned())
@@ -53,10 +53,10 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 		},
 	})
 	if err != nil {
-		return dialog, fmt.Errorf("Dialog creation error. %s", err)
+		return dialog, fmt.Errorf("dialog creation error. %s", err)
 	}
 	if response.(*dialogCreateResponse).Reason != 200 {
-		return dialog, fmt.Errorf("Dialog creation rejected. %#v", response)
+		return dialog, fmt.Errorf("dialog creation rejected. %#v", response)
 	}
 
 	dialog = establisher.newDialogToContact(contactAddress, contactCodec)
