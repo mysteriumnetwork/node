@@ -23,12 +23,11 @@ func (signer *mockedSigner) Sign(message []byte) (identity.Signature, error) {
 
 func TestSignatureIsInsertedForSignedPost(t *testing.T) {
 
-	signer := mockedSigner{identity.SignatureHex("deadbeef")}
+	signer := mockedSigner{identity.SignatureBase64("deadbeef")}
 
 	req, err := newSignedPostRequest("/post-path", testPayload{"abc"}, &signer)
-
 	assert.NoError(t, err)
-	assert.NotEmpty(t, req.Header.Get("Authorization"))
+	assert.Equal(t, req.Header.Get("Authorization"), "Signature deadbeef")
 }
 
 func TestDoGetContactsPassedValuesForUrl(t *testing.T) {
