@@ -1,6 +1,6 @@
 package communication
 
-// MessageEndpoint is ppecial type that describes unique message endpoint
+// MessageEndpoint is special type that describes unique message endpoint
 type MessageEndpoint string
 
 // MessageProducer represents instance which creates messages of specific endpoint

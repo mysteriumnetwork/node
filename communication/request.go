@@ -1,6 +1,6 @@
 package communication
 
-// RequestEndpoint is ppecial type that describes unique message endpoint
+// RequestEndpoint is special type that describes unique message endpoint
 type RequestEndpoint string
 
 // RequestProducer represents instance which creates requests/responses of specific endpoint
