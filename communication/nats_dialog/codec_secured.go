@@ -38,7 +38,7 @@ func (codec *codecSecured) Pack(payloadPtr interface{}) ([]byte, error) {
 
 	return codec.codecPacker.Pack(&messageEnvelope{
 		Payload:   payloadData,
-		Signature: signature.Hex(),
+		Signature: signature.Base64(),
 	})
 }
 
@@ -49,7 +49,7 @@ func (codec *codecSecured) Unpack(data []byte, payloadPtr interface{}) error {
 		return err
 	}
 
-	if !codec.verifier.Verify(envelope.Payload, identity.SignatureHex(envelope.Signature)) {
+	if !codec.verifier.Verify(envelope.Payload, identity.SignatureBase64(envelope.Signature)) {
 		return fmt.Errorf("invalid message signature '%s'", envelope.Signature)
 	}
 

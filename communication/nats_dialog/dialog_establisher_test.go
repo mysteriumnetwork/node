@@ -33,9 +33,8 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 				"reason": 200,
 				"reasonMessage": "OK"
 			},
-			"signature": "d9183d29a6c95dd604b0c2f29e8799f3ee1c5a36ae1ee66aff274813436e365d69b2ef80573ffc7c76aa746f3509481fd9d3501e37223953da8046fe5fafffb200"
-		}`),
-	)
+            "signature": "2Rg9KabJXdYEsMLynoeZ8+4cWjauHuZq/ydIE0NuNl1psu+AVz/8fHaqdG81CUgf2dNQHjciOVPagEb+X6//sgA="
+		}`))
 	defer connection.Close()
 
 	signer := &identity.SignerFake{}

@@ -29,28 +29,28 @@ func TestCodecSigner_Pack(t *testing.T) {
 			`hello "name"`,
 			`{
 				"payload": "hello \"name\"",
-				"signature": "7369676e65642268656c6c6f205c226e616d655c2222"
+				"signature": "c2lnbmVkImhlbGxvIFwibmFtZVwiIg=="
 			}`,
 		},
 		{
 			true,
 			`{
 				"payload": true,
-				"signature": "7369676e656474727565"
+				"signature": "c2lnbmVkdHJ1ZQ=="
 			}`,
 		},
 		{
 			nil,
 			`{
 				"payload": null,
-				"signature": "7369676e65646e756c6c"
+				"signature": "c2lnbmVkbnVsbA=="
 			}`,
 		},
 		{
 			&customPayload{123},
 			`{
 				"payload": {"Field":123},
-				"signature": "7369676e65647b224669656c64223a3132337d"
+				"signature": "c2lnbmVkeyJGaWVsZCI6MTIzfQ=="
 			}`,
 		},
 	}
@@ -95,7 +95,7 @@ func TestCodecSigner_Unpack(t *testing.T) {
 		{
 			`{
 				"payload": "hello \"name\"",
-				"signature": "7369676e65642268656c6c6f205c226e616d655c2222"
+				"signature": "c2lnbmVkImhlbGxvIFwibmFtZVwiIg=="
 			}`,
 			typeString,
 			`hello "name"`,
@@ -103,7 +103,7 @@ func TestCodecSigner_Unpack(t *testing.T) {
 		{
 			`{
 				"payload": true,
-				"signature": "7369676e656474727565"
+				"signature": "c2lnbmVkdHJ1ZQ=="
 			}`,
 			typeBool,
 			true,
@@ -111,7 +111,7 @@ func TestCodecSigner_Unpack(t *testing.T) {
 		{
 			`{
 				"payload": null,
-				"signature": "7369676e65646e756c6c"
+				"signature": "c2lnbmVkbnVsbA=="
 			}`,
 			typeBool,
 			nil,
@@ -119,7 +119,7 @@ func TestCodecSigner_Unpack(t *testing.T) {
 		{
 			`{
 				"payload": {"Field":123},
-				"signature": "7369676e65647b224669656c64223a3132337d"
+				"signature": "c2lnbmVkeyJGaWVsZCI6MTIzfQ=="
 			}`,
 			typeCustom,
 			&customPayload{123},
@@ -195,7 +195,7 @@ func TestCodecSigner_UnpackError(t *testing.T) {
 		{
 			`{
 				"payload": true,
-				"signature": "7369676e656474727565"
+				"signature": "c2lnbmVkdHJ1ZQ=="
 			}`,
 			"json: cannot unmarshal bool into Go value of type string",
 		},
