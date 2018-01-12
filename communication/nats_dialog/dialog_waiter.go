@@ -31,9 +31,9 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 		return fmt.Errorf("Failed to start my connection. %s", waiter.myAddress)
 	}
 
-	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
+	createDialog := func(request dialogCreateRequest) (dialogCreateResponse, error) {
 		if request.IdentityId == "" {
-			return &responseInvalidIdentity, nil
+			return responseInvalidIdentity, nil
 		}
 
 		contactDialog := waiter.newDialogToContact(identity.FromAddress(request.IdentityId))
@@ -41,7 +41,7 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 
 		contactDialog.Respond(sessionCreateConsumer)
 
-		return &responseOK, nil
+		return responseOK, nil
 	}
 
 	myCodec := NewCodecSecured(communication.NewCodecJSON(), waiter.mySigner, identity.NewVerifierSigned())

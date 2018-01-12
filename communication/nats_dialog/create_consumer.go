@@ -5,7 +5,7 @@ import (
 )
 
 type dialogCreateConsumer struct {
-	Callback func(request *dialogCreateRequest) (*dialogCreateResponse, error)
+	Callback func(request dialogCreateRequest) (dialogCreateResponse, error)
 }
 
 func (consumer *dialogCreateConsumer) GetRequestType() communication.RequestType {
@@ -16,6 +16,6 @@ func (consumer *dialogCreateConsumer) NewRequest() (requestPtr interface{}) {
 	return &dialogCreateRequest{}
 }
 
-func (consumer *dialogCreateConsumer) Consume(requestPtr interface{}) (responsePtr interface{}, err error) {
-	return consumer.Callback(requestPtr.(*dialogCreateRequest))
+func (consumer *dialogCreateConsumer) Consume(request interface{}) (response interface{}, err error) {
+	return consumer.Callback(request.(dialogCreateRequest))
 }

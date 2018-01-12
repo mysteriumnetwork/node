@@ -50,10 +50,10 @@ func TestCodecBytesUnpackToByte(t *testing.T) {
 	codec := codecBytes{}
 
 	var payload []byte
-	err := codec.Unpack([]byte(`hello`), payload)
+	err := codec.Unpack([]byte(`hello`), &payload)
 
-	assert.Error(t, err)
-	assert.EqualError(t, err, "Cant unpack to payload: []uint8")
+	assert.NoError(t, err)
+	assert.Exactly(t, []byte(`hello`), payload)
 }
 
 func TestCodecBytesUnpack(t *testing.T) {

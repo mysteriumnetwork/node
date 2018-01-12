@@ -5,11 +5,11 @@ type RequestType string
 type RequestProducer interface {
 	GetRequestType() RequestType
 	NewResponse() (responsePtr interface{})
-	Produce() (requestPtr interface{})
+	Produce() (request interface{})
 }
 
 type RequestConsumer interface {
 	GetRequestType() RequestType
 	NewRequest() (messagePtr interface{})
-	Consume(requestPtr interface{}) (responsePtr interface{}, err error)
+	Consume(request interface{}) (response interface{}, err error)
 }

@@ -14,7 +14,7 @@ func (producer *bytesMessageProducer) GetMessageType() communication.MessageType
 	return communication.MessageType("bytes-message")
 }
 
-func (producer *bytesMessageProducer) Produce() (messagePtr interface{}) {
+func (producer *bytesMessageProducer) Produce() (message interface{}) {
 	return producer.Message
 }
 
@@ -26,13 +26,13 @@ func (consumer *bytesMessageConsumer) GetMessageType() communication.MessageType
 	return communication.MessageType("bytes-message")
 }
 
-func (consumer *bytesMessageConsumer) NewMessage() (messagePtr interface{}) {
+func (consumer *bytesMessageConsumer) NewMessage() interface{} {
 	var message []byte
 	return &message
 }
 
-func (consumer *bytesMessageConsumer) Consume(messagePtr interface{}) error {
-	consumer.messageReceived <- messagePtr
+func (consumer *bytesMessageConsumer) Consume(message interface{}) error {
+	consumer.messageReceived <- message
 	return nil
 }
 
@@ -68,5 +68,8 @@ func TestMessageBytesReceive(t *testing.T) {
 	connection.Publish("bytes-message", []byte("123"))
 	message, err := connection.MessageWait(consumer.messageReceived)
 	assert.NoError(t, err)
-	assert.Equal(t, []byte("123"), *message.(*[]byte))
+	// assert.Equal(t, []byte("123"), message.([]byte))
+	// assert.Equal(t, []byte("123"), *message.(*[]byte))
+	expected := []byte("123")
+	assert.Equal(t, &expected, message)
 }

@@ -16,6 +16,6 @@ func (producer *dialogCreateProducer) NewResponse() (responsePtr interface{}) {
 	return &dialogCreateResponse{}
 }
 
-func (producer *dialogCreateProducer) Produce() (requestPtr interface{}) {
+func (producer *dialogCreateProducer) Produce() (request interface{}) {
 	return producer.Request
 }
