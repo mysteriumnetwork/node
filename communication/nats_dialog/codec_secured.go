@@ -38,7 +38,7 @@ func (codec *codecSecured) Pack(payloadPtr interface{}) ([]byte, error) {
 
 	return codec.codecPacker.Pack(&messageEnvelope{
 		Payload:   payloadData,
-		Signature: signature.Base64Encode(),
+		Signature: signature.Base64(),
 	})
 }
 

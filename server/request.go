@@ -46,7 +46,7 @@ func newSignedPostRequest(path string, requestBody interface{}, signer identity.
 		return nil, err
 	}
 
-	req.Header.Add(authenticationHeaderName, authenticationSchemaName+" "+signature.Base64Encode())
+	req.Header.Add(authenticationHeaderName, authenticationSchemaName+" "+signature.Base64())
 
 	return req, nil
 }

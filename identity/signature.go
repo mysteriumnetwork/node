@@ -17,20 +17,20 @@ func SignatureHex(signature string) Signature {
 	return Signature{signatureBytes}
 }
 
+// SignatureBase64 decodes base64 string signature into Signature
+func SignatureBase64(signature string) Signature {
+	signatureBytes, _ := base64.StdEncoding.DecodeString(signature)
+	return Signature{signatureBytes}
+}
+
 // Signature structure
 type Signature struct {
 	raw []byte
 }
 
-// Base64Encode encodes signature into Base64 format
-func (signature *Signature) Base64Encode() string {
+// Base64 encodes signature into Base64 format
+func (signature *Signature) Base64() string {
 	return base64.StdEncoding.EncodeToString(signature.Bytes())
-}
-
-// SignatureBase64 decodes base64 string signature into Signature
-func SignatureBase64(signature string) Signature {
-	signatureBytes, _ := base64.StdEncoding.DecodeString(signature)
-	return Signature{signatureBytes}
 }
 
 // Bytes returns signature in raw bytes format
