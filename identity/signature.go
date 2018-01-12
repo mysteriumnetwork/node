@@ -27,8 +27,8 @@ func (signature *Signature) Base64Encode() string {
 	return base64.StdEncoding.EncodeToString(signature.Bytes())
 }
 
-// SignatureBase64Decode decodes base64 string signature into raw bytes format
-func SignatureBase64Decode(signature string) Signature {
+// SignatureBase64 decodes base64 string signature into Signature
+func SignatureBase64(signature string) Signature {
 	signatureBytes, _ := base64.StdEncoding.DecodeString(signature)
 	return Signature{signatureBytes}
 }

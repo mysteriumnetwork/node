@@ -49,7 +49,7 @@ func (codec *codecSecured) Unpack(data []byte, payloadPtr interface{}) error {
 		return err
 	}
 
-	if !codec.verifier.Verify(envelope.Payload, identity.SignatureBase64Decode(envelope.Signature)) {
+	if !codec.verifier.Verify(envelope.Payload, identity.SignatureBase64(envelope.Signature)) {
 		return fmt.Errorf("invalid message signature '%s'", envelope.Signature)
 	}
 
