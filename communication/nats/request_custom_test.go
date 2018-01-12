@@ -36,7 +36,7 @@ func TestCustomRequest(t *testing.T) {
 	connection.MockResponse("custom-request", []byte(`{"FieldOut": "RESPONSE"}`))
 	defer connection.Close()
 
-	sender := &senderNats{
+	sender := &senderNATS{
 		connection:     connection,
 		codec:          communication.NewCodecJSON(),
 		timeoutRequest: 100 * time.Millisecond,
@@ -71,7 +71,7 @@ func TestCustomRespond(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	receiver := &receiverNats{
+	receiver := &receiverNATS{
 		connection: connection,
 		codec:      communication.NewCodecJSON(),
 	}

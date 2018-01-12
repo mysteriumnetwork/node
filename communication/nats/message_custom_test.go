@@ -26,7 +26,7 @@ func TestMessageCustomSend(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	sender := &senderNats{
+	sender := &senderNATS{
 		connection: connection,
 		codec:      communication.NewCodecJSON(),
 	}
@@ -40,7 +40,7 @@ func TestMessageCustomSendNull(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	sender := &senderNats{
+	sender := &senderNATS{
 		connection: connection,
 		codec:      communication.NewCodecJSON(),
 	}
@@ -71,7 +71,7 @@ func TestMessageCustomReceive(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	receiver := &receiverNats{
+	receiver := &receiverNATS{
 		connection: connection,
 		codec:      communication.NewCodecJSON(),
 	}

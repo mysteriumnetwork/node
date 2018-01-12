@@ -8,7 +8,7 @@ import (
 )
 
 func TestSenderInterface(t *testing.T) {
-	var _ communication.Sender = &senderNats{}
+	var _ communication.Sender = &senderNATS{}
 }
 
 func TestSenderNew(t *testing.T) {
@@ -17,7 +17,7 @@ func TestSenderNew(t *testing.T) {
 
 	assert.Equal(
 		t,
-		&senderNats{
+		&senderNATS{
 			connection:     connection,
 			codec:          codec,
 			timeoutRequest: 500 * time.Millisecond,

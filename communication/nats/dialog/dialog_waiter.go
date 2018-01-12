@@ -11,7 +11,7 @@ import (
 )
 
 // NewDialogWaiter constructs new DialogWaiter which works thru NATS connection.
-func NewDialogWaiter(address *discovery.NatsAddress, signer identity.Signer) *dialogWaiter {
+func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer) *dialogWaiter {
 	return &dialogWaiter{
 		myAddress: address,
 		mySigner:  signer,
@@ -21,7 +21,7 @@ func NewDialogWaiter(address *discovery.NatsAddress, signer identity.Signer) *di
 const waiterLogPrefix = "[NATS.DialogWaiter] "
 
 type dialogWaiter struct {
-	myAddress *discovery.NatsAddress
+	myAddress *discovery.AddressNATS
 	mySigner  identity.Signer
 }
 

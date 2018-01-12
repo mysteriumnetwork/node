@@ -42,7 +42,7 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	establisher := &dialogEstablisher{
 		myIdentity: identity.FromAddress("consumer1"),
 		mySigner:   signer,
-		contactAddressFactory: func(contact dto_discovery.Contact) (*discovery.NatsAddress, error) {
+		contactAddressFactory: func(contact dto_discovery.Contact) (*discovery.AddressNATS, error) {
 			assert.Exactly(t, dto_discovery.Contact{}, contact)
 			return discovery.NewAddressWithConnection(connection, "provider1"), nil
 		},

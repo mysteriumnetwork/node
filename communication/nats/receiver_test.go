@@ -7,7 +7,7 @@ import (
 )
 
 func TestReceiverInterface(t *testing.T) {
-	var _ communication.Receiver = &receiverNats{}
+	var _ communication.Receiver = &receiverNATS{}
 }
 
 func TestReceiverNew(t *testing.T) {
@@ -16,7 +16,7 @@ func TestReceiverNew(t *testing.T) {
 
 	assert.Equal(
 		t,
-		&receiverNats{
+		&receiverNATS{
 			connection:   connection,
 			codec:        codec,
 			messageTopic: "custom.",

@@ -11,22 +11,22 @@ import (
 var natsServerIp string
 
 // NewAddress creates NATS address to known host or cluster of hosts
-func NewAddress(topic string, addresses ...string) *NatsAddress {
-	return &NatsAddress{
+func NewAddress(topic string, addresses ...string) *AddressNATS {
+	return &AddressNATS{
 		servers: addresses,
 		topic:   topic,
 	}
 }
 
 // NewAddressGenerate generates NATS address for current node
-func NewAddressGenerate(myIdentity identity.Identity) *NatsAddress {
+func NewAddressGenerate(myIdentity identity.Identity) *AddressNATS {
 	address := "nats://" + natsServerIp + ":4222"
 	return NewAddress(myIdentity.Address, address)
 }
 
 // NewAddressForContact extracts NATS address from given contact structure
-func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
-	if contact.Type != CONTACT_NATS_V1 {
+func NewAddressForContact(contact dto_discovery.Contact) (*AddressNATS, error) {
+	if contact.Type != TypeContactNATSV1 {
 		return nil, fmt.Errorf("invalid contact type: %s", contact.Type)
 	}
 
@@ -35,22 +35,22 @@ func NewAddressForContact(contact dto_discovery.Contact) (*NatsAddress, error) {
 		return nil, fmt.Errorf("invalid contact definition: %#v", contact.Definition)
 	}
 
-	return &NatsAddress{
+	return &AddressNATS{
 		servers: contactNats.BrokerAddresses,
 		topic:   contactNats.Topic,
 	}, nil
 }
 
 // NewAddressWithConnection constructs NATS address to already active NATS connection
-func NewAddressWithConnection(connection nats.Connection, topic string) *NatsAddress {
-	return &NatsAddress{
+func NewAddressWithConnection(connection nats.Connection, topic string) *AddressNATS {
+	return &AddressNATS{
 		topic:      topic,
 		connection: connection,
 	}
 }
 
-// NatsAddress structure defines details how NATS connection can be established
-type NatsAddress struct {
+// AddressNATS structure defines details how NATS connection can be established
+type AddressNATS struct {
 	servers []string
 	topic   string
 
@@ -58,7 +58,7 @@ type NatsAddress struct {
 }
 
 // Connect establishes connection
-func (address *NatsAddress) Connect() (err error) {
+func (address *AddressNATS) Connect() (err error) {
 	options := nats_lib.GetDefaultOptions()
 	options.Servers = address.servers
 
@@ -67,25 +67,25 @@ func (address *NatsAddress) Connect() (err error) {
 }
 
 // Disconnect stops currently established connection
-func (address *NatsAddress) Disconnect() {
+func (address *AddressNATS) Disconnect() {
 	address.connection.Close()
 }
 
 // GetConnection returns currently established connection
-func (address *NatsAddress) GetConnection() nats.Connection {
+func (address *AddressNATS) GetConnection() nats.Connection {
 	return address.connection
 }
 
 // GetTopic returns topic.
 // Address points to this topic in established connection.
-func (address *NatsAddress) GetTopic() string {
+func (address *AddressNATS) GetTopic() string {
 	return address.topic
 }
 
 // GetContact serializes current address to Contact structure.
-func (address *NatsAddress) GetContact() dto_discovery.Contact {
+func (address *AddressNATS) GetContact() dto_discovery.Contact {
 	return dto_discovery.Contact{
-		Type: CONTACT_NATS_V1,
+		Type: TypeContactNATSV1,
 		Definition: ContactNATSV1{
 			Topic:           address.topic,
 			BrokerAddresses: address.servers,

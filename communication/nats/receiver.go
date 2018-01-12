@@ -13,21 +13,21 @@ const receiverLogPrefix = "[NATS.Receiver] "
 // NewReceiver constructs new Receiver's instance which works thru NATS connection.
 // Codec packs/unpacks messages to byte payloads.
 // Topic (optional) if need to send messages prefixed topic.
-func NewReceiver(connection Connection, codec communication.Codec, topic string) *receiverNats {
-	return &receiverNats{
+func NewReceiver(connection Connection, codec communication.Codec, topic string) *receiverNATS {
+	return &receiverNATS{
 		connection:   connection,
 		codec:        codec,
 		messageTopic: topic + ".",
 	}
 }
 
-type receiverNats struct {
+type receiverNATS struct {
 	connection   Connection
 	codec        communication.Codec
 	messageTopic string
 }
 
-func (receiver *receiverNats) Receive(consumer communication.MessageConsumer) error {
+func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) error {
 
 	messageTopic := receiver.messageTopic + string(consumer.GetMessageEndpoint())
 
@@ -58,7 +58,7 @@ func (receiver *receiverNats) Receive(consumer communication.MessageConsumer) er
 	return nil
 }
 
-func (receiver *receiverNats) Respond(consumer communication.RequestConsumer) error {
+func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) error {
 
 	requestTopic := receiver.messageTopic + string(consumer.GetRequestEndpoint())
 

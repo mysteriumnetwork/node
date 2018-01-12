@@ -29,7 +29,7 @@ func TestBytesRequest(t *testing.T) {
 	connection.MockResponse("bytes-request", []byte("RESPONSE"))
 	defer connection.Close()
 
-	sender := &senderNats{
+	sender := &senderNATS{
 		connection:     connection,
 		codec:          communication.NewCodecBytes(),
 		timeoutRequest: time.Millisecond,
@@ -65,7 +65,7 @@ func TestBytesRespond(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	receiver := &receiverNats{
+	receiver := &receiverNATS{
 		connection: connection,
 		codec:      communication.NewCodecBytes(),
 	}

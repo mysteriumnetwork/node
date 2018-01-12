@@ -13,8 +13,8 @@ const senderLogPrefix = "[NATS.Sender] "
 // NewSender constructs new Sender's instance which works thru NATS connection.
 // Codec packs/unpacks messages to byte payloads.
 // Topic (optional) if need to send messages prefixed topic.
-func NewSender(connection Connection, codec communication.Codec, topic string) *senderNats {
-	return &senderNats{
+func NewSender(connection Connection, codec communication.Codec, topic string) *senderNATS {
+	return &senderNATS{
 		connection:     connection,
 		codec:          codec,
 		timeoutRequest: 500 * time.Millisecond,
@@ -22,14 +22,14 @@ func NewSender(connection Connection, codec communication.Codec, topic string) *
 	}
 }
 
-type senderNats struct {
+type senderNATS struct {
 	connection     Connection
 	codec          communication.Codec
 	timeoutRequest time.Duration
 	messageTopic   string
 }
 
-func (sender *senderNats) Send(producer communication.MessageProducer) error {
+func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 
 	messageTopic := sender.messageTopic + string(producer.GetMessageEndpoint())
 
@@ -49,7 +49,7 @@ func (sender *senderNats) Send(producer communication.MessageProducer) error {
 	return nil
 }
 
-func (sender *senderNats) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
+func (sender *senderNATS) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
 
 	requestTopic := sender.messageTopic + string(producer.GetRequestEndpoint())
 	responsePtr = producer.NewResponse()

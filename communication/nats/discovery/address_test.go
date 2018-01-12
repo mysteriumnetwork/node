@@ -13,7 +13,7 @@ func TestNewAddress(t *testing.T) {
 
 	assert.Equal(
 		t,
-		&NatsAddress{
+		&AddressNATS{
 			servers: []string{"nats://far-server:1234"},
 			topic:   "topic1234",
 		},
@@ -27,7 +27,7 @@ func TestNewAddressGenerate(t *testing.T) {
 
 	assert.Equal(
 		t,
-		&NatsAddress{
+		&AddressNATS{
 			servers: []string{"nats://" + natsServerIp + ":4222"},
 			topic:   "provider1",
 		},
@@ -47,7 +47,7 @@ func TestNewAddressForContact(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		&NatsAddress{
+		&AddressNATS{
 			servers: []string{"nats://far-server:4222"},
 			topic:   "123456",
 		},
@@ -78,19 +78,19 @@ func TestNewAddressForContact_UnknownDefinition(t *testing.T) {
 
 func TestAddress_GetConnection(t *testing.T) {
 	expectedConnectin := &nats.Conn{}
-	address := &NatsAddress{connection: expectedConnectin}
+	address := &AddressNATS{connection: expectedConnectin}
 
 	assert.Exactly(t, expectedConnectin, address.GetConnection())
 }
 
 func TestAddress_GetTopic(t *testing.T) {
-	address := &NatsAddress{topic: "123456"}
+	address := &AddressNATS{topic: "123456"}
 
 	assert.Equal(t, "123456", address.GetTopic())
 }
 
 func TestAddress_GetContact(t *testing.T) {
-	address := &NatsAddress{
+	address := &AddressNATS{
 		servers: []string{"nats://far-server:4222"},
 		topic:   "123456",
 	}

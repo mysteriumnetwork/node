@@ -16,7 +16,7 @@ func NewDialogEstablisher(myIdentity identity.Identity, signer identity.Signer) 
 	return &dialogEstablisher{
 		myIdentity: myIdentity,
 		mySigner:   signer,
-		contactAddressFactory: func(contact dto_discovery.Contact) (*discovery.NatsAddress, error) {
+		contactAddressFactory: func(contact dto_discovery.Contact) (*discovery.AddressNATS, error) {
 			address, err := discovery.NewAddressForContact(contact)
 			if err == nil {
 				err = address.Connect()
@@ -32,7 +32,7 @@ const establisherLogPrefix = "[NATS.DialogEstablisher] "
 type dialogEstablisher struct {
 	myIdentity            identity.Identity
 	mySigner              identity.Signer
-	contactAddressFactory func(contact dto_discovery.Contact) (*discovery.NatsAddress, error)
+	contactAddressFactory func(contact dto_discovery.Contact) (*discovery.AddressNATS, error)
 }
 
 func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact) (communication.Dialog, error) {
@@ -66,7 +66,7 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 }
 
 func (establisher *dialogEstablisher) newDialogToContact(
-	contactAddress *discovery.NatsAddress,
+	contactAddress *discovery.AddressNATS,
 	contactCodec communication.Codec,
 ) *dialog {
 	subTopic := contactAddress.GetTopic() + "." + establisher.myIdentity.Address
