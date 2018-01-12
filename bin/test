@@ -11,7 +11,7 @@
 
 ARGUMENTS=$@
 if [ -z "$ARGUMENTS" ]; then
-    ARGUMENTS=`go list ./... | grep -v /vendor/`
+    ARGUMENTS=`go list ./...`
 fi
 
 go test -cover ${ARGUMENTS}
