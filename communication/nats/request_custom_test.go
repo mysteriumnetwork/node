@@ -19,8 +19,8 @@ type customRequestProducer struct {
 	Request *customRequest
 }
 
-func (producer *customRequestProducer) GetRequestType() communication.RequestType {
-	return communication.RequestType("custom-request")
+func (producer *customRequestProducer) GetRequestEndpoint() communication.RequestEndpoint {
+	return communication.RequestEndpoint("custom-request")
 }
 
 func (producer *customRequestProducer) NewResponse() (responsePtr interface{}) {
@@ -36,7 +36,7 @@ func TestCustomRequest(t *testing.T) {
 	connection.MockResponse("custom-request", []byte(`{"FieldOut": "RESPONSE"}`))
 	defer connection.Close()
 
-	sender := &senderNats{
+	sender := &senderNATS{
 		connection:     connection,
 		codec:          communication.NewCodecJSON(),
 		timeoutRequest: 100 * time.Millisecond,
@@ -54,8 +54,8 @@ type customRequestConsumer struct {
 	requestReceived interface{}
 }
 
-func (consumer *customRequestConsumer) GetRequestType() communication.RequestType {
-	return communication.RequestType("custom-response")
+func (consumer *customRequestConsumer) GetRequestEndpoint() communication.RequestEndpoint {
+	return communication.RequestEndpoint("custom-response")
 }
 
 func (consumer *customRequestConsumer) NewRequest() (requestPtr interface{}) {
@@ -71,7 +71,7 @@ func TestCustomRespond(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	receiver := &receiverNats{
+	receiver := &receiverNATS{
 		connection: connection,
 		codec:      communication.NewCodecJSON(),
 	}

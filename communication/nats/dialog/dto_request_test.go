@@ -1,4 +1,4 @@
-package nats_dialog
+package dialog
 
 import (
 	"encoding/json"

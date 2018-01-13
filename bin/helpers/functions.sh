@@ -4,6 +4,6 @@
 function get_linker_ldflags {
     echo "
         -X 'github.com/mysterium/node/server.mysteriumApiUrl=${MYSTERIUM_API_URL}'
-        -X 'github.com/mysterium/node/communication/nats_discovery.natsServerIp=${NATS_SERVER_IP}'
+        -X 'github.com/mysterium/node/communication/nats/discovery.natsServerIp=${NATS_SERVER_IP}'
     "
 }

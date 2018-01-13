@@ -1,5 +1,7 @@
 package communication
 
+// NewCodecFake returns codec which:
+//   - allows to mock encoded/decoded payloads
 func NewCodecFake() *codecFake {
 	return &codecFake{}
 }

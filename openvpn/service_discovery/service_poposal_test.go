@@ -2,7 +2,7 @@ package service_discovery
 
 import (
 	"encoding/json"
-	"github.com/mysterium/node/communication/nats_discovery"
+	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/openvpn"
 	dto_openvpn "github.com/mysterium/node/openvpn/service_discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"

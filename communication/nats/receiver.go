@@ -8,93 +8,96 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-const RECEIVER_LOG_PREFIX = "[NATS.Receiver] "
+const receiverLogPrefix = "[NATS.Receiver] "
 
-func NewReceiver(connection Connection, codec communication.Codec, topic string) *receiverNats {
-	return &receiverNats{
+// NewReceiver constructs new Receiver's instance which works thru NATS connection.
+// Codec packs/unpacks messages to byte payloads.
+// Topic (optional) if need to send messages prefixed topic.
+func NewReceiver(connection Connection, codec communication.Codec, topic string) *receiverNATS {
+	return &receiverNATS{
 		connection:   connection,
 		codec:        codec,
 		messageTopic: topic + ".",
 	}
 }
 
-type receiverNats struct {
+type receiverNATS struct {
 	connection   Connection
 	codec        communication.Codec
 	messageTopic string
 }
 
-func (receiver *receiverNats) Receive(consumer communication.MessageConsumer) error {
+func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) error {
 
-	messageType := string(consumer.GetMessageType())
+	messageTopic := receiver.messageTopic + string(consumer.GetMessageEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
-		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Message '%s' received: %s", messageType, msg.Data))
+		log.Debug(receiverLogPrefix, fmt.Sprintf("Message '%s' received: %s", messageTopic, msg.Data))
 		messagePtr := consumer.NewMessage()
 		err := receiver.codec.Unpack(msg.Data, messagePtr)
 		if err != nil {
-			err = fmt.Errorf("Failed to unpack message '%s'. %s", messageType, err)
-			log.Error(RECEIVER_LOG_PREFIX, err)
+			err = fmt.Errorf("failed to unpack message '%s'. %s", messageTopic, err)
+			log.Error(receiverLogPrefix, err)
 			return
 		}
 
 		err = consumer.Consume(messagePtr)
 		if err != nil {
-			err = fmt.Errorf("Failed to process message '%s'. %s", messageType, err)
-			log.Error(RECEIVER_LOG_PREFIX, err)
+			err = fmt.Errorf("failed to process message '%s'. %s", messageTopic, err)
+			log.Error(receiverLogPrefix, err)
 			return
 		}
 	}
 
-	_, err := receiver.connection.Subscribe(receiver.messageTopic+messageType, messageHandler)
+	_, err := receiver.connection.Subscribe(messageTopic, messageHandler)
 	if err != nil {
-		err = fmt.Errorf("Failed subscribe message '%s'. %s", messageType, err)
+		err = fmt.Errorf("failed subscribe message '%s'. %s", messageTopic, err)
 		return err
 	}
 
 	return nil
 }
 
-func (receiver *receiverNats) Respond(consumer communication.RequestConsumer) error {
+func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) error {
 
-	requestType := string(consumer.GetRequestType())
+	requestTopic := receiver.messageTopic + string(consumer.GetRequestEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
-		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' received: %s", requestType, msg.Data))
+		log.Debug(receiverLogPrefix, fmt.Sprintf("Request '%s' received: %s", requestTopic, msg.Data))
 		requestPtr := consumer.NewRequest()
 		err := receiver.codec.Unpack(msg.Data, requestPtr)
 		if err != nil {
-			err = fmt.Errorf("Failed to unpack request '%s'. %s", requestType, err)
-			log.Error(RECEIVER_LOG_PREFIX, err)
+			err = fmt.Errorf("failed to unpack request '%s'. %s", requestTopic, err)
+			log.Error(receiverLogPrefix, err)
 			return
 		}
 
 		response, err := consumer.Consume(requestPtr)
 		if err != nil {
-			err = fmt.Errorf("Failed to process request '%s'. %s", requestType, err)
-			log.Error(RECEIVER_LOG_PREFIX, err)
+			err = fmt.Errorf("failed to process request '%s'. %s", requestTopic, err)
+			log.Error(receiverLogPrefix, err)
 			return
 		}
 
 		responseData, err := receiver.codec.Pack(response)
 		if err != nil {
-			err = fmt.Errorf("Failed to pack response '%s'. %s", requestType, err)
-			log.Error(RECEIVER_LOG_PREFIX, err)
+			err = fmt.Errorf("failed to pack response '%s'. %s", requestTopic, err)
+			log.Error(receiverLogPrefix, err)
 			return
 		}
 
-		log.Debug(RECEIVER_LOG_PREFIX, fmt.Sprintf("Request '%s' response: %s", requestType, responseData))
+		log.Debug(receiverLogPrefix, fmt.Sprintf("Request '%s' response: %s", requestTopic, responseData))
 		err = receiver.connection.Publish(msg.Reply, responseData)
 		if err != nil {
-			err = fmt.Errorf("Failed to send response '%s'. %s", requestType, err)
-			log.Error(RECEIVER_LOG_PREFIX, err)
+			err = fmt.Errorf("failed to send response '%s'. %s", requestTopic, err)
+			log.Error(receiverLogPrefix, err)
 			return
 		}
 	}
 
-	_, err := receiver.connection.Subscribe(receiver.messageTopic+requestType, messageHandler)
+	_, err := receiver.connection.Subscribe(requestTopic, messageHandler)
 	if err != nil {
-		err = fmt.Errorf("Failed subscribe request '%s'. %s", requestType, err)
+		err = fmt.Errorf("failed subscribe request '%s'. %s", requestTopic, err)
 		return err
 	}
 

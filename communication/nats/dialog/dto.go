@@ -1,11 +1,11 @@
-package nats_dialog
+package dialog
 
 import (
 	"github.com/mysterium/node/communication"
 )
 
 // Consume is trying to establish new dialog with Provider
-const ENDPOINT_DIALOG_CREATE = communication.RequestType("dialog-create")
+const endpointDialogCreate = communication.RequestEndpoint("dialog-create")
 
 var (
 	responseOK              = dialogCreateResponse{200, "OK"}

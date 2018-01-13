@@ -14,8 +14,8 @@ type customMessageProducer struct {
 	Message *customMessage
 }
 
-func (producer *customMessageProducer) GetMessageType() communication.MessageType {
-	return communication.MessageType("custom-message")
+func (producer *customMessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
+	return communication.MessageEndpoint("custom-message")
 }
 
 func (producer *customMessageProducer) Produce() (messagePtr interface{}) {
@@ -26,7 +26,7 @@ func TestMessageCustomSend(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	sender := &senderNats{
+	sender := &senderNATS{
 		connection: connection,
 		codec:      communication.NewCodecJSON(),
 	}
@@ -40,7 +40,7 @@ func TestMessageCustomSendNull(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	sender := &senderNats{
+	sender := &senderNATS{
 		connection: connection,
 		codec:      communication.NewCodecJSON(),
 	}
@@ -54,8 +54,8 @@ type customMessageConsumer struct {
 	messageReceived chan interface{}
 }
 
-func (consumer *customMessageConsumer) GetMessageType() communication.MessageType {
-	return communication.MessageType("custom-message")
+func (consumer *customMessageConsumer) GetMessageEndpoint() communication.MessageEndpoint {
+	return communication.MessageEndpoint("custom-message")
 }
 
 func (consumer *customMessageConsumer) NewMessage() (messagePtr interface{}) {
@@ -71,7 +71,7 @@ func TestMessageCustomReceive(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	receiver := &receiverNats{
+	receiver := &receiverNATS{
 		connection: connection,
 		codec:      communication.NewCodecJSON(),
 	}
