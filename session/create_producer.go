@@ -9,8 +9,8 @@ type SessionCreateProducer struct {
 	ProposalId int
 }
 
-func (producer *SessionCreateProducer) GetRequestType() communication.RequestType {
-	return SESSION_CREATE
+func (producer *SessionCreateProducer) GetRequestEndpoint() communication.RequestEndpoint {
+	return endpointSessionCreate
 }
 
 func (producer *SessionCreateProducer) NewResponse() (responsePtr interface{}) {

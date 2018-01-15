@@ -1,4 +1,4 @@
-package nats_dialog
+package dialog
 
 import (
 	"github.com/mysterium/node/communication"
@@ -8,8 +8,8 @@ type dialogCreateProducer struct {
 	Request *dialogCreateRequest
 }
 
-func (producer *dialogCreateProducer) GetRequestType() communication.RequestType {
-	return ENDPOINT_DIALOG_CREATE
+func (producer *dialogCreateProducer) GetRequestEndpoint() communication.RequestEndpoint {
+	return endpointDialogCreate
 }
 
 func (producer *dialogCreateProducer) NewResponse() (responsePtr interface{}) {

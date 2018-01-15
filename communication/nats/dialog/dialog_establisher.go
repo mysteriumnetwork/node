@@ -1,22 +1,23 @@
-package nats_dialog
+package dialog
 
 import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
-	"github.com/mysterium/node/communication/nats_discovery"
+	"github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
+// NewDialogEstablisher constructs new DialogEstablisher which works thru NATS connection.
 func NewDialogEstablisher(myIdentity identity.Identity, signer identity.Signer) *dialogEstablisher {
 
 	return &dialogEstablisher{
 		myIdentity: myIdentity,
 		mySigner:   signer,
-		contactAddressFactory: func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error) {
-			address, err := nats_discovery.NewAddressForContact(contact)
+		contactAddressFactory: func(contact dto_discovery.Contact) (*discovery.AddressNATS, error) {
+			address, err := discovery.NewAddressForContact(contact)
 			if err == nil {
 				err = address.Connect()
 			}
@@ -31,7 +32,7 @@ const establisherLogPrefix = "[NATS.DialogEstablisher] "
 type dialogEstablisher struct {
 	myIdentity            identity.Identity
 	mySigner              identity.Signer
-	contactAddressFactory func(contact dto_discovery.Contact) (*nats_discovery.NatsAddress, error)
+	contactAddressFactory func(contact dto_discovery.Contact) (*discovery.AddressNATS, error)
 }
 
 func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact) (communication.Dialog, error) {
@@ -40,7 +41,7 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", contact))
 	contactAddress, err := establisher.contactAddressFactory(contact)
 	if err != nil {
-		return dialog, fmt.Errorf("Failed to connect to: %#v. %s", contact, err)
+		return dialog, fmt.Errorf("failed to connect to: %#v. %s", contact, err)
 	}
 
 	contactCodec := NewCodecSecured(communication.NewCodecJSON(), establisher.mySigner, identity.NewVerifierSigned())
@@ -52,10 +53,10 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 		},
 	})
 	if err != nil {
-		return dialog, fmt.Errorf("Dialog creation error. %s", err)
+		return dialog, fmt.Errorf("dialog creation error. %s", err)
 	}
 	if response.(*dialogCreateResponse).Reason != 200 {
-		return dialog, fmt.Errorf("Dialog creation rejected. %#v", response)
+		return dialog, fmt.Errorf("dialog creation rejected. %#v", response)
 	}
 
 	dialog = establisher.newDialogToContact(contactAddress, contactCodec)
@@ -65,7 +66,7 @@ func (establisher *dialogEstablisher) CreateDialog(contact dto_discovery.Contact
 }
 
 func (establisher *dialogEstablisher) newDialogToContact(
-	contactAddress *nats_discovery.NatsAddress,
+	contactAddress *discovery.AddressNATS,
 	contactCodec communication.Codec,
 ) *dialog {
 	subTopic := contactAddress.GetTopic() + "." + establisher.myIdentity.Address

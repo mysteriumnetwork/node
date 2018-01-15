@@ -10,8 +10,8 @@ type SessionCreateConsumer struct {
 	SessionManager    ManagerInterface
 }
 
-func (consumer *SessionCreateConsumer) GetRequestType() communication.RequestType {
-	return SESSION_CREATE
+func (consumer *SessionCreateConsumer) GetRequestEndpoint() communication.RequestEndpoint {
+	return endpointSessionCreate
 }
 
 func (consumer *SessionCreateConsumer) NewRequest() (requestPtr interface{}) {

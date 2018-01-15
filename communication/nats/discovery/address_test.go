@@ -1,4 +1,4 @@
-package nats_discovery
+package discovery
 
 import (
 	"github.com/mysterium/node/identity"
@@ -13,7 +13,7 @@ func TestNewAddress(t *testing.T) {
 
 	assert.Equal(
 		t,
-		&NatsAddress{
+		&AddressNATS{
 			servers: []string{"nats://far-server:1234"},
 			topic:   "topic1234",
 		},
@@ -21,13 +21,13 @@ func TestNewAddress(t *testing.T) {
 	)
 }
 
-func TestNewAddressForIdentity(t *testing.T) {
-	identity := identity.FromAddress("provider1")
-	address := NewAddressGenerate(identity)
+func TestNewAddressGenerate(t *testing.T) {
+	myIdentity := identity.FromAddress("provider1")
+	address := NewAddressGenerate(myIdentity)
 
 	assert.Equal(
 		t,
-		&NatsAddress{
+		&AddressNATS{
 			servers: []string{"nats://" + natsServerIp + ":4222"},
 			topic:   "provider1",
 		},
@@ -47,7 +47,7 @@ func TestNewAddressForContact(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		&NatsAddress{
+		&AddressNATS{
 			servers: []string{"nats://far-server:4222"},
 			topic:   "123456",
 		},
@@ -60,7 +60,7 @@ func TestNewAddressForContact_UnknownType(t *testing.T) {
 		Type: "natc/v1",
 	})
 
-	assert.EqualError(t, err, "Invalid contact type: natc/v1")
+	assert.EqualError(t, err, "invalid contact type: natc/v1")
 	assert.Nil(t, address)
 }
 
@@ -72,25 +72,25 @@ func TestNewAddressForContact_UnknownDefinition(t *testing.T) {
 		Definition: badDefinition{},
 	})
 
-	assert.EqualError(t, err, "Invalid contact definition: nats_discovery.badDefinition{}")
+	assert.EqualError(t, err, "invalid contact definition: discovery.badDefinition{}")
 	assert.Nil(t, address)
 }
 
 func TestAddress_GetConnection(t *testing.T) {
 	expectedConnectin := &nats.Conn{}
-	address := &NatsAddress{connection: expectedConnectin}
+	address := &AddressNATS{connection: expectedConnectin}
 
 	assert.Exactly(t, expectedConnectin, address.GetConnection())
 }
 
 func TestAddress_GetTopic(t *testing.T) {
-	address := &NatsAddress{topic: "123456"}
+	address := &AddressNATS{topic: "123456"}
 
 	assert.Equal(t, "123456", address.GetTopic())
 }
 
 func TestAddress_GetContact(t *testing.T) {
-	address := &NatsAddress{
+	address := &AddressNATS{
 		servers: []string{"nats://far-server:4222"},
 		topic:   "123456",
 	}

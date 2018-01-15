@@ -8,10 +8,13 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-const SENDER_LOG_PREFIX = "[NATS.Sender] "
+const senderLogPrefix = "[NATS.Sender] "
 
-func NewSender(connection Connection, codec communication.Codec, topic string) *senderNats {
-	return &senderNats{
+// NewSender constructs new Sender's instance which works thru NATS connection.
+// Codec packs/unpacks messages to byte payloads.
+// Topic (optional) if need to send messages prefixed topic.
+func NewSender(connection Connection, codec communication.Codec, topic string) *senderNATS {
+	return &senderNATS{
 		connection:     connection,
 		codec:          codec,
 		timeoutRequest: 500 * time.Millisecond,
@@ -19,63 +22,56 @@ func NewSender(connection Connection, codec communication.Codec, topic string) *
 	}
 }
 
-type senderNats struct {
+type senderNATS struct {
 	connection     Connection
 	codec          communication.Codec
 	timeoutRequest time.Duration
 	messageTopic   string
 }
 
-func (sender *senderNats) Send(producer communication.MessageProducer) error {
+func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 
-	messageType := string(producer.GetMessageType())
+	messageTopic := sender.messageTopic + string(producer.GetMessageEndpoint())
 
 	messageData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
-		err = fmt.Errorf("Failed to encode message '%s'. %s", messageType, err)
+		err = fmt.Errorf("failed to encode message '%s'. %s", messageTopic, err)
 		return err
 	}
 
-	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Message '%s' sending: %s", messageType, messageData))
-	err = sender.connection.Publish(
-		sender.messageTopic+messageType,
-		messageData,
-	)
+	log.Debug(senderLogPrefix, fmt.Sprintf("Message '%s' sending: %s", messageTopic, messageData))
+	err = sender.connection.Publish(messageTopic, messageData)
 	if err != nil {
-		err = fmt.Errorf("Failed to send message '%s'. %s", messageType, err)
+		err = fmt.Errorf("failed to send message '%s'. %s", messageTopic, err)
 		return err
 	}
 
 	return nil
 }
 
-func (sender *senderNats) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
+func (sender *senderNATS) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
 
-	requestType := string(producer.GetRequestType())
+	requestTopic := sender.messageTopic + string(producer.GetRequestEndpoint())
 	responsePtr = producer.NewResponse()
 
 	requestData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
-		err = fmt.Errorf("Failed to pack request '%s'. %s", requestType, err)
+		err = fmt.Errorf("failed to pack request '%s'. %s", requestTopic, err)
 		return
 	}
 
-	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Request '%s' sending: %s", requestType, requestData))
-	msg, err := sender.connection.Request(
-		sender.messageTopic+requestType,
-		requestData,
-		sender.timeoutRequest,
-	)
+	log.Debug(senderLogPrefix, fmt.Sprintf("Request '%s' sending: %s", requestTopic, requestData))
+	msg, err := sender.connection.Request(requestTopic, requestData, sender.timeoutRequest)
 	if err != nil {
-		err = fmt.Errorf("Failed to send request '%s'. %s", requestType, err)
+		err = fmt.Errorf("failed to send request '%s'. %s", requestTopic, err)
 		return
 	}
 
-	log.Debug(SENDER_LOG_PREFIX, fmt.Sprintf("Received response for '%s': %s", requestType, msg.Data))
+	log.Debug(senderLogPrefix, fmt.Sprintf("Received response for '%s': %s", requestTopic, msg.Data))
 	err = sender.codec.Unpack(msg.Data, responsePtr)
 	if err != nil {
-		err = fmt.Errorf("Failed to unpack response '%s'. %s", requestType, err)
-		log.Error(RECEIVER_LOG_PREFIX, err)
+		err = fmt.Errorf("failed to unpack response '%s'. %s", requestTopic, err)
+		log.Error(receiverLogPrefix, err)
 		return
 	}
 

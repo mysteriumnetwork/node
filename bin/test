@@ -1,3 +1,17 @@
 #!/bin/bash
 
-go test $(go list ./... | grep -v /vendor/) -cover $@
+# Run tests for project packages
+#
+# Usage example:
+#> bin/test
+#> bin/test .
+#> bin/test ./...
+#> bin/test ./communication
+#> bin/test ./communication/...
+
+ARGUMENTS=$@
+if [ -z "$ARGUMENTS" ]; then
+    ARGUMENTS=`go list ./...`
+fi
+
+go test -cover ${ARGUMENTS}

@@ -11,8 +11,8 @@ type bytesRequestProducer struct {
 	Request []byte
 }
 
-func (producer *bytesRequestProducer) GetRequestType() communication.RequestType {
-	return communication.RequestType("bytes-request")
+func (producer *bytesRequestProducer) GetRequestEndpoint() communication.RequestEndpoint {
+	return communication.RequestEndpoint("bytes-request")
 }
 
 func (producer *bytesRequestProducer) NewResponse() (responsePtr interface{}) {
@@ -29,7 +29,7 @@ func TestBytesRequest(t *testing.T) {
 	connection.MockResponse("bytes-request", []byte("RESPONSE"))
 	defer connection.Close()
 
-	sender := &senderNats{
+	sender := &senderNATS{
 		connection:     connection,
 		codec:          communication.NewCodecBytes(),
 		timeoutRequest: time.Millisecond,
@@ -47,8 +47,8 @@ type bytesRequestConsumer struct {
 	requestReceived interface{}
 }
 
-func (consumer *bytesRequestConsumer) GetRequestType() communication.RequestType {
-	return communication.RequestType("bytes-response")
+func (consumer *bytesRequestConsumer) GetRequestEndpoint() communication.RequestEndpoint {
+	return communication.RequestEndpoint("bytes-response")
 }
 
 func (consumer *bytesRequestConsumer) NewRequest() (requestPtr interface{}) {
@@ -65,7 +65,7 @@ func TestBytesRespond(t *testing.T) {
 	connection := StartConnectionFake()
 	defer connection.Close()
 
-	receiver := &receiverNats{
+	receiver := &receiverNATS{
 		connection: connection,
 		codec:      communication.NewCodecBytes(),
 	}

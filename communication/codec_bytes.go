@@ -5,6 +5,9 @@ import (
 	"reflect"
 )
 
+// NewCodecBytes returns codec which:
+//   - supports only byte payloads
+//   - does not perform any fancy encoding/decoding on payloads
 func NewCodecBytes() *codecBytes {
 	return &codecBytes{}
 }

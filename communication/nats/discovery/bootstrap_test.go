@@ -1,4 +1,4 @@
-package nats_discovery
+package discovery
 
 import (
 	"encoding/json"
@@ -37,7 +37,7 @@ func TestServiceProposalUnserializeNatsContact(t *testing.T) {
 	assert.Exactly(
 		t,
 		dto_discovery.Contact{
-			Type: CONTACT_NATS_V1,
+			Type: TypeContactNATSV1,
 			Definition: ContactNATSV1{
 				Topic: "test-topic",
 			},
