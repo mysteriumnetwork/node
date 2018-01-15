@@ -16,6 +16,8 @@ import (
 	"path/filepath"
 )
 
+const identityPassword = ""
+
 func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(
 		options,
@@ -34,11 +36,13 @@ func NewCommandWith(
 
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	cache := identity.NewIdentityCache(options.DirectoryKeystore, "remember.json")
+	identityManager := identity.NewIdentityManager(keystoreInstance)
 	createSigner := func(id identity.Identity) identity.Signer {
+		identityManager.Unlock(id.Address, identityPassword)
 		return identity.NewSigner(keystoreInstance, id)
 	}
 	identityHandler := NewNodeIdentityHandler(
-		identity.NewIdentityManager(keystoreInstance),
+		identityManager,
 		mysteriumClient,
 		cache,
 		createSigner,
@@ -54,6 +58,7 @@ func NewCommandWith(
 		natService:      natService,
 		dialogWaiterFactory: func(myIdentity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
 			myAddress := nats_discovery.NewAddressGenerate(myIdentity)
+			identityManager.Unlock(myIdentity.Address, identityPassword)
 			waiter := nats_dialog.NewDialogWaiter(myAddress, identity.NewSigner(keystoreInstance, myIdentity))
 			return waiter, myAddress.GetContact()
 		},

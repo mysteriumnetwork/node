@@ -14,6 +14,8 @@ import (
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
 )
 
+const identityPassword = ""
+
 //NewCommand function created new client command with options passed from commandline
 func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(
@@ -22,7 +24,7 @@ func NewCommand(options CommandOptions) *CommandRun {
 	)
 }
 
-//NewCommandWith does the same as NewCommand with posibility to override mysterium api client for external communication
+//NewCommandWith does the same as NewCommand with possibility to override mysterium api client for external communication
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
@@ -35,10 +37,12 @@ func NewCommandWith(
 	identityManager := identity.NewIdentityManager(keystoreInstance)
 
 	dialogEstablisherFactory := func(myIdentity identity.Identity) communication.DialogEstablisher {
+		identityManager.Unlock(myIdentity.Address, identityPassword)
 		return nats_dialog.NewDialogEstablisher(myIdentity, identity.NewSigner(keystoreInstance, myIdentity))
 	}
 
 	signerFactory := func(id identity.Identity) identity.Signer {
+		identityManager.Unlock(id.Address, identityPassword)
 		return identity.NewSigner(keystoreInstance, id)
 	}
 
