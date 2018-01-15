@@ -18,8 +18,8 @@ func (producer *SessionCreateProducer) NewResponse() (responsePtr interface{}) {
 	return &response
 }
 
-func (producer *SessionCreateProducer) Produce() (requestPtr interface{}) {
-	return &SessionCreateRequest{
+func (producer *SessionCreateProducer) Produce() (request interface{}) {
+	return SessionCreateRequest{
 		ProposalId: producer.ProposalId,
 	}
 }

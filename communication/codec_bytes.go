@@ -34,6 +34,7 @@ func (codec *codecBytes) Pack(payloadPtr interface{}) ([]byte, error) {
 }
 
 func (codec *codecBytes) Unpack(data []byte, payloadPtr interface{}) error {
+
 	switch payload := payloadPtr.(type) {
 	case *[]byte:
 		*payload = data

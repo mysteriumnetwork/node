@@ -7,12 +7,12 @@ type RequestEndpoint string
 type RequestProducer interface {
 	GetRequestEndpoint() RequestEndpoint
 	NewResponse() (responsePtr interface{})
-	Produce() (requestPtr interface{})
+	Produce() (request interface{})
 }
 
 // RequestConsumer represents instance which handles requests/responses of specific endpoint
 type RequestConsumer interface {
 	GetRequestEndpoint() RequestEndpoint
 	NewRequest() (messagePtr interface{})
-	Consume(requestPtr interface{}) (responsePtr interface{}, err error)
+	Consume(request interface{}) (response interface{}, err error)
 }
