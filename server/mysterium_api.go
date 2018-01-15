@@ -77,8 +77,6 @@ func (mApi *mysteriumApi) NodeSendStats(nodeKey string, signer identity.Signer) 
 	err = mApi.doRequest(req)
 	if err == nil {
 		log.Info(mysteriumApiLogPrefix, "Node stats sent: ", nodeKey)
-	} else {
-		log.Error(mysteriumApiLogPrefix, "Node stats failed: ", err)
 	}
 	return err
 }
@@ -120,6 +118,7 @@ func (mApi *mysteriumApi) SendSessionStats(sessionId string, sessionStats dto.Se
 func (mApi *mysteriumApi) doRequest(req *http.Request) error {
 	resp, err := mApi.http.Do(req)
 	if err != nil {
+		log.Error(mysteriumApiLogPrefix, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -129,12 +128,14 @@ func (mApi *mysteriumApi) doRequest(req *http.Request) error {
 func (mApi *mysteriumApi) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
 	resp, err := mApi.http.Do(req)
 	if err != nil {
+		log.Error(mysteriumApiLogPrefix, err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	err = parseResponseError(resp)
 	if err != nil {
+		log.Error(mysteriumApiLogPrefix, err)
 		return err
 	}
 
