@@ -25,7 +25,7 @@ type dialogWaiter struct {
 	mySigner  identity.Signer
 }
 
-func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.RequestConsumer) error {
+func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
 	log.Info(waiterLogPrefix, fmt.Sprintf("Connecting to: %#v", waiter.myAddress))
 	err := waiter.myAddress.Connect()
 	if err != nil {
@@ -38,10 +38,13 @@ func (waiter *dialogWaiter) ServeDialogs(sessionCreateConsumer communication.Req
 		}
 
 		contactDialog := waiter.newDialogToContact(identity.FromAddress(request.IdentityId))
-		log.Info(waiterLogPrefix, fmt.Sprintf("Dialog accepted from: '%s'", request.IdentityId))
+		err = dialogHandler(contactDialog)
+		if err != nil {
+			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.IdentityId, err))
+			return &responseInternalError, nil
+		}
 
-		contactDialog.Respond(sessionCreateConsumer)
-
+		log.Info(waiterLogPrefix, fmt.Sprintf("Accepted dialog from: '%s'", request.IdentityId))
 		return &responseOK, nil
 	}
 

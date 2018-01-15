@@ -70,7 +70,10 @@ func (cmd *CommandRun) Run() (err error) {
 		CurrentProposalID: proposal.ID,
 		SessionManager:    cmd.sessionManagerFactory(vpnServerIP),
 	}
-	if err = cmd.dialogWaiter.ServeDialogs(sessionCreateConsumer); err != nil {
+	err = cmd.dialogWaiter.ServeDialogs(communication.DialogHandler(func(dialog communication.Dialog) error {
+		return dialog.Respond(sessionCreateConsumer)
+	}))
+	if err != nil {
 		return err
 	}
 
