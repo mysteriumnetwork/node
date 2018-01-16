@@ -1,40 +1,47 @@
-package cli
+package rest
 
 import (
-	"net/http"
 	"encoding/json"
-	"io/ioutil"
-	"net/url"
+	"fmt"
 	"github.com/mysterium/node/identity"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 )
 
-func NewTequilaClient() *TequilaClient {
+// NewTequilaClient returns a new instance of TequilaClient
+func NewTequilaClient(ip string, port int) *TequilaClient {
 	return &TequilaClient{
 		http: NewHttpClient(
-			"http://127.0.0.1:4050",
+			fmt.Sprintf("http://%s:%d", ip, port),
 			"[Tequilla.api.client]",
 			"goclient-v0.1",
 		),
 	}
 }
 
+// TequilaClient uses http client
 type TequilaClient struct {
 	http HttpClientInterface
 }
 
+// StatusDto holds connection status and session id
 type StatusDto struct {
 	Status    string `json:"status"`
 	SessionId string `json:"sessionId"`
 }
 
-type identityDto struct {
+// IdentityDto holds identity address
+type IdentityDto struct {
 	Address string `json:"id"`
 }
 
-type identityList struct {
-	Identities []identityDto `json:"identities"`
+// IdentityList holds returned list of identities
+type IdentityList struct {
+	Identities []IdentityDto `json:"identities"`
 }
 
+// GetIdentities returns a list of client identities
 func (client *TequilaClient) GetIdentities() (identities []identity.Identity, err error) {
 	response, err := client.http.Get("identities", url.Values{})
 	if err != nil {
@@ -43,7 +50,7 @@ func (client *TequilaClient) GetIdentities() (identities []identity.Identity, er
 
 	defer response.Body.Close()
 
-	var list identityList
+	var list IdentityList
 	err = parseResponseJson(response, &list)
 	if err != nil {
 		return
@@ -57,6 +64,7 @@ func (client *TequilaClient) GetIdentities() (identities []identity.Identity, er
 	return
 }
 
+// NewIdentity create a new client identity
 func (client *TequilaClient) NewIdentity() (id identity.Identity, err error) {
 	payload := struct {
 		Password string `json:"password"`
@@ -81,6 +89,7 @@ func (client *TequilaClient) NewIdentity() (id identity.Identity, err error) {
 	return identity.FromAddress(idDto.Id), nil
 }
 
+// Register registers given identity to discovery service
 func (client *TequilaClient) Register() (id identity.Identity, err error) {
 	payload := struct {
 		Id string `json:"id"`
@@ -105,6 +114,7 @@ func (client *TequilaClient) Register() (id identity.Identity, err error) {
 	return identity.FromAddress(idDto.Id), nil
 }
 
+// Connect initiates a new connection to a host identified by providerId
 func (client *TequilaClient) Connect(id identity.Identity, providerId identity.Identity) (err error) {
 	payload := struct {
 		Identity string `json:"identity"`
@@ -123,6 +133,7 @@ func (client *TequilaClient) Connect(id identity.Identity, providerId identity.I
 	return nil
 }
 
+// Disconnect terminates current connection
 func (client *TequilaClient) Disconnect() (err error) {
 	response, err := client.http.Delete("connection", nil)
 	if err != nil {
@@ -134,6 +145,7 @@ func (client *TequilaClient) Disconnect() (err error) {
 	return nil
 }
 
+// Status returns connection status
 func (client *TequilaClient) Status() (status StatusDto, err error) {
 	response, err := client.http.Get("connection", url.Values{})
 	defer response.Body.Close()

@@ -1,38 +1,46 @@
-package cli
+package interactive
 
 import (
-	"github.com/chzyer/readline"
-	"io"
-	"strings"
-	"log"
 	"fmt"
+	"github.com/chzyer/readline"
+	"github.com/mysterium/node/cmd/mysterium_client/rest"
 	"github.com/mysterium/node/identity"
+	"io"
+	"log"
 	"os"
+	"strings"
 )
 
-func NewCliClient() *Client {
+// NewCliClient returns instance or cli based tequila client
+func NewCliClient(historyFile string, tequilaClient *rest.TequilaClient) *Client {
 	return &Client{
-		TequilaClient: NewTequilaClient(),
+		HistoryFile:   historyFile,
+		TequilaClient: tequilaClient,
 	}
 }
 
+// Client describes cli based tequila client
 type Client struct {
-	TequilaClient *TequilaClient
+	HistoryFile   string
+	TequilaClient *rest.TequilaClient
 }
 
-func (c *Client) Run() {
+const redColor = "\033[31m%s\033[0m"
+
+// Run executes cli based tequila client
+func (c *Client) Run() error {
 	completer := getAutocompleterMenu(c.TequilaClient)
 
 	rl, err := readline.NewEx(&readline.Config{
-		Prompt:          "\033[31m»\033[0m ",
-		HistoryFile:     "/tmp/mysterium-cli.log",
+		Prompt:          fmt.Sprintf(redColor, "» "),
+		HistoryFile:     c.HistoryFile,
 		AutoComplete:    completer,
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
 	})
 
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	defer rl.Close()
@@ -53,6 +61,7 @@ func (c *Client) Run() {
 
 		c.handleActions(completer, line)
 	}
+	return nil
 }
 
 func (c *Client) handleActions(completer *readline.PrefixCompleter, line string) {
@@ -182,8 +191,8 @@ func (c *Client) identities(line string) {
 	}
 }
 
-func getIdentityOptionList(restClient *TequilaClient) func(string) []string {
-	return func(line string) [] string {
+func getIdentityOptionList(restClient *rest.TequilaClient) func(string) []string {
+	return func(line string) []string {
 		identities := []string{"new"}
 		ids, err := restClient.GetIdentities()
 		if err != nil {
@@ -198,7 +207,7 @@ func getIdentityOptionList(restClient *TequilaClient) func(string) []string {
 	}
 }
 
-func getAutocompleterMenu(restClient *TequilaClient) *readline.PrefixCompleter {
+func getAutocompleterMenu(restClient *rest.TequilaClient) *readline.PrefixCompleter {
 	var completer = readline.NewPrefixCompleter(
 		readline.PcItem(
 			"connect",

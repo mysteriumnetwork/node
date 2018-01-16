@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
+	"github.com/mysterium/node/cmd/mysterium_client/interactive"
+	"github.com/mysterium/node/cmd/mysterium_client/rest"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -12,7 +14,7 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	"github.com/mysterium/node/tequilapi/endpoints"
-	"github.com/mysterium/node/cli"
+	"path/filepath"
 )
 
 //NewCommand function created new client command with options passed from commandline
@@ -61,7 +63,9 @@ func NewCommandWith(
 	}
 
 	if options.InteractiveCli {
-		cmd.cli = cli.NewCliClient()
+		historyFile := filepath.Join(options.DirectoryRuntime, "mysterium-cli.log")
+		tequilaClient := rest.NewTequilaClient(options.TequilaApiAddress, options.TequilaApiPort)
+		cmd.cli = interactive.NewCliClient(historyFile, tequilaClient)
 	}
 
 	return cmd
@@ -71,7 +75,7 @@ func NewCommandWith(
 type CommandRun struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.ApiServer
-	cli               *cli.Client
+	cli               *interactive.Client
 }
 
 //Run starts tequilaApi service - does not block
@@ -88,7 +92,10 @@ func (cmd *CommandRun) Run() error {
 	fmt.Printf("Api started on: %d\n", port)
 
 	if cmd.cli != nil {
-		cmd.cli.Run()
+		err := cmd.cli.Run()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

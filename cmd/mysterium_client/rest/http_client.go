@@ -1,13 +1,13 @@
-package cli
+package rest
 
 import (
-	"fmt"
 	"bytes"
-	"net/url"
-	"net/http"
 	"encoding/json"
-	log "github.com/cihub/seelog"
 	"errors"
+	"fmt"
+	log "github.com/cihub/seelog"
+	"net/http"
+	"net/url"
 )
 
 type HttpClientInterface interface {
