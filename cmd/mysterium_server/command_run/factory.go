@@ -38,7 +38,6 @@ func NewCommandWith(
 	cache := identity.NewIdentityCache(options.DirectoryKeystore, "remember.json")
 	identityManager := identity.NewIdentityManager(keystoreInstance)
 	createSigner := func(id identity.Identity) identity.Signer {
-		identityManager.Unlock(id.Address, identityPassword)
 		return identity.NewSigner(keystoreInstance, id)
 	}
 	identityHandler := NewNodeIdentityHandler(
@@ -49,8 +48,8 @@ func NewCommandWith(
 	)
 
 	return &CommandRun{
-		identitySelector: func() (identity.Identity, error) {
-			return SelectIdentity(identityHandler, options.NodeKey)
+		identityLoader: func() (identity.Identity, error) {
+			return LoadIdentity(identityHandler, options.NodeKey, identityPassword)
 		},
 		createSigner:    createSigner,
 		ipifyClient:     ipifyClient,
@@ -58,7 +57,6 @@ func NewCommandWith(
 		natService:      natService,
 		dialogWaiterFactory: func(myIdentity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
 			myAddress := nats_discovery.NewAddressGenerate(myIdentity)
-			identityManager.Unlock(myIdentity.Address, identityPassword)
 			waiter := nats_dialog.NewDialogWaiter(myAddress, identity.NewSigner(keystoreInstance, myIdentity))
 			return waiter, myAddress.GetContact()
 		},

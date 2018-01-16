@@ -6,20 +6,18 @@ import (
 	"github.com/mysterium/node/server"
 )
 
-//SelectIdentity selects lastUsed identity or creates new one if keyOption is not present
-func SelectIdentity(identityHandler *identityHandler, keyOption string) (id identity.Identity, err error) {
+//LoadIdentity selects and unlocks lastUsed identity or creates and unlocks new one if keyOption is not present
+func LoadIdentity(identityHandler *identityHandler, keyOption, passphrase string) (id identity.Identity, err error) {
 	if len(keyOption) > 0 {
-		return identityHandler.UseExisting(keyOption)
+		return identityHandler.UseExisting(keyOption, passphrase)
 	}
 
-	if id, err = identityHandler.UseLast(); err == nil {
+	if id, err = identityHandler.UseLast(passphrase); err == nil {
 		return id, err
 	}
 
-	return identityHandler.UseNew()
+	return identityHandler.UseNew(passphrase)
 }
-
-const nodeIdentityPassword = ""
 
 type identityHandler struct {
 	manager       identity.IdentityManagerInterface
@@ -43,8 +41,12 @@ func NewNodeIdentityHandler(
 	}
 }
 
-func (ih *identityHandler) UseExisting(address string) (id identity.Identity, err error) {
+func (ih *identityHandler) UseExisting(address, passphrase string) (id identity.Identity, err error) {
 	id, err = ih.manager.GetIdentity(address)
+	if err != nil {
+		return
+	}
+	err = ih.manager.Unlock(address, passphrase)
 	if err != nil {
 		return
 	}
@@ -53,18 +55,28 @@ func (ih *identityHandler) UseExisting(address string) (id identity.Identity, er
 	return
 }
 
-func (ih *identityHandler) UseLast() (identity identity.Identity, err error) {
+func (ih *identityHandler) UseLast(passphrase string) (identity identity.Identity, err error) {
 	identity, err = ih.cache.GetIdentity()
 	if err != nil || !ih.manager.HasIdentity(identity.Address) {
 		return identity, errors.New("identity not found in cache")
 	}
 
+	err = ih.manager.Unlock(identity.Address, passphrase)
+	if err != nil {
+		return identity, err
+	}
+
 	return identity, nil
 }
 
-func (ih *identityHandler) UseNew() (id identity.Identity, err error) {
+func (ih *identityHandler) UseNew(passphrase string) (id identity.Identity, err error) {
 	// if all fails, create a new one
-	id, err = ih.manager.CreateNewIdentity(nodeIdentityPassword)
+	id, err = ih.manager.CreateNewIdentity(passphrase)
+	if err != nil {
+		return
+	}
+
+	err = ih.manager.Unlock(id.Address, passphrase)
 	if err != nil {
 		return
 	}
