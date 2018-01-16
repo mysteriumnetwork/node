@@ -14,7 +14,6 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/server/auth"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"path/filepath"
 )
@@ -47,6 +46,7 @@ func NewCommandWith(
 		cache,
 		createSigner,
 	)
+
 	// Country database downloaded from http://dev.maxmind.com/geoip/geoip2/geolite2/
 	databasePath := filepath.Join(options.DirectoryConfig, "GeoLite2-Country.mmdb")
 	locationDetector := location.NewDetector(databasePath)
@@ -60,10 +60,11 @@ func NewCommandWith(
 		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,
-		dialogWaiterFactory: func(myIdentity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
-			myAddress := nats_discovery.NewAddressGenerate(myIdentity)
-			waiter := nats_dialog.NewDialogWaiter(myAddress, identity.NewSigner(keystoreInstance, myIdentity))
-			return waiter, myAddress.GetContact()
+		dialogWaiterFactory: func(myIdentity identity.Identity) communication.DialogWaiter {
+			return nats_dialog.NewDialogWaiter(
+				nats_discovery.NewAddressGenerate(myIdentity),
+				identity.NewSigner(keystoreInstance, myIdentity),
+			)
 		},
 		sessionManagerFactory: func(vpnServerIP string) session.ManagerInterface {
 			return openvpn_session.NewManager(openvpn.NewClientConfig(

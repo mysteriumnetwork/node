@@ -10,8 +10,9 @@ import (
 //   - negotiates with Dialog initiator
 //   - finally creates Dialog, when it is accepted
 type DialogWaiter interface {
-	ServeDialogs(dialogManager DialogHandler) error
+	Start() (dto_discovery.Contact, error)
 	Stop() error
+	ServeDialogs(dialogManager DialogHandler) error
 }
 
 // DialogHandler defines how to handle incoming Dialog

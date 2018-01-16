@@ -24,7 +24,7 @@ type CommandRun struct {
 	natService       nat.NATService
 	locationDetector location.Detector
 
-	dialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
+	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
 	sessionManagerFactory func(serverIP string) session.ManagerInterface
@@ -39,8 +39,8 @@ func (cmd *CommandRun) Run() (err error) {
 		return err
 	}
 
-	var providerContact dto_discovery.Contact
-	cmd.dialogWaiter, providerContact = cmd.dialogWaiterFactory(providerID)
+	cmd.dialogWaiter = cmd.dialogWaiterFactory(providerID)
+	providerContact, err := cmd.dialogWaiter.Start()
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
 	vpnServerIP, err := cmd.ipResolver.GetOutboundIP()
@@ -60,14 +60,12 @@ func (cmd *CommandRun) Run() (err error) {
 	if err != nil {
 		return err
 	}
-	log.Info("Country detected: ", country)
 
 	location := dto_discovery.Location{Country: country}
-
 	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, location)
 
 	dialogHandler := session.NewDialogHandler(proposal.ID, cmd.sessionManagerFactory(vpnServerIP))
-	if err = cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
+	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}
 
@@ -101,6 +99,8 @@ func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (
 	if err != nil {
 		return "", errors.New("Country detection failed: " + err.Error())
 	}
+
+	log.Info("Country detected: ", country)
 	return country, nil
 }
 

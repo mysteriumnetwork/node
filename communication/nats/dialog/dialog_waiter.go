@@ -8,6 +8,7 @@ import (
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
 // NewDialogWaiter constructs new DialogWaiter which works thru NATS connection.
@@ -27,13 +28,27 @@ type dialogWaiter struct {
 	dialogs   []communication.Dialog
 }
 
-func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
+func (waiter *dialogWaiter) Start() (dto_discovery.Contact, error) {
 	log.Info(waiterLogPrefix, fmt.Sprintf("Connecting to: %#v", waiter.myAddress))
+
 	err := waiter.myAddress.Connect()
 	if err != nil {
-		return fmt.Errorf("failed to start my connection. %s", waiter.myAddress)
+		return dto_discovery.Contact{}, fmt.Errorf("failed to start my connection. %s", waiter.myAddress)
 	}
 
+	return waiter.myAddress.GetContact(), nil
+}
+
+func (waiter *dialogWaiter) Stop() error {
+	for _, dialog := range waiter.dialogs {
+		dialog.Close()
+	}
+	waiter.myAddress.Disconnect()
+
+	return nil
+}
+
+func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
 		if request.IdentityId == "" {
 			return &responseInvalidIdentity, nil
@@ -42,7 +57,7 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		contactDialog := waiter.newDialogToContact(identity.FromAddress(request.IdentityId))
 		waiter.dialogs = append(waiter.dialogs, contactDialog)
 
-		err = dialogHandler.Handle(contactDialog)
+		err := dialogHandler.Handle(contactDialog)
 		if err != nil {
 			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.IdentityId, err))
 			return &responseInternalError, nil
@@ -71,13 +86,4 @@ func (waiter *dialogWaiter) newDialogToContact(contactIdentity identity.Identity
 		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), contactCodec, subTopic),
 		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), contactCodec, subTopic),
 	}
-}
-
-func (waiter *dialogWaiter) Stop() error {
-	for _, dialog := range waiter.dialogs {
-		dialog.Close()
-	}
-	waiter.myAddress.Disconnect()
-
-	return nil
 }
