@@ -11,7 +11,7 @@ func NewServerConfig(
 ) *ServerConfig {
 	config := ServerConfig{NewConfig()}
 	config.SetServerMode(1194, network, netmask)
-	config.SetTlsCertificate(caFile, certFile, certKeyFile)
+	config.SetTlsCertificate(caFile)
 	config.SetTlsServer(dhFile, caCrtFile)
 	config.SetTlsAuth(authFile)
 
@@ -31,11 +31,11 @@ func NewServerConfig(
 
 func NewClientConfig(
 	remote string,
-	caFile, certFile, certKeyFile, authFile string,
+	caFile, authFile string,
 ) *ClientConfig {
 	config := ClientConfig{NewConfig()}
 	config.SetClientMode(remote, 1194)
-	config.SetTlsCertificate(caFile, certFile, certKeyFile)
+	config.SetTlsCertificate(caFile)
 	config.SetTlsAuth(authFile)
 
 	config.SetDevice("tun")

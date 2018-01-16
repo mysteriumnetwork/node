@@ -47,10 +47,8 @@ func (c *Config) SetDevice(deviceName string) {
 	c.setParam("dev", deviceName)
 }
 
-func (c *Config) SetTlsCertificate(caFile, certFile, certKeyFile string) {
+func (c *Config) SetTlsCertificate(caFile string) {
 	c.AddOptions(OptionFile("ca", caFile))
-	c.AddOptions(OptionFile("cert", certFile))
-	c.AddOptions(OptionFile("key", certKeyFile))
 }
 
 func (c *Config) SetTlsAuth(authFile string) {
