@@ -15,6 +15,7 @@ func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer) *di
 	return &dialogWaiter{
 		myAddress: address,
 		mySigner:  signer,
+		dialogs:   make([]communication.Dialog, 0),
 	}
 }
 
@@ -23,6 +24,7 @@ const waiterLogPrefix = "[NATS.DialogWaiter] "
 type dialogWaiter struct {
 	myAddress *discovery.AddressNATS
 	mySigner  identity.Signer
+	dialogs   []communication.Dialog
 }
 
 func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
@@ -38,7 +40,9 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		}
 
 		contactDialog := waiter.newDialogToContact(identity.FromAddress(request.IdentityId))
-		err = dialogHandler(contactDialog)
+		waiter.dialogs = append(waiter.dialogs, contactDialog)
+
+		err = dialogHandler.Handle(contactDialog)
 		if err != nil {
 			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.IdentityId, err))
 			return &responseInternalError, nil
@@ -70,6 +74,9 @@ func (waiter *dialogWaiter) newDialogToContact(contactIdentity identity.Identity
 }
 
 func (waiter *dialogWaiter) Stop() error {
+	for _, dialog := range waiter.dialogs {
+		dialog.Close()
+	}
 	waiter.myAddress.Disconnect()
 
 	return nil

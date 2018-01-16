@@ -66,14 +66,8 @@ func (cmd *CommandRun) Run() (err error) {
 
 	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, location)
 
-	sessionCreateConsumer := &session.SessionCreateConsumer{
-		CurrentProposalID: proposal.ID,
-		SessionManager:    cmd.sessionManagerFactory(vpnServerIP),
-	}
-	err = cmd.dialogWaiter.ServeDialogs(communication.DialogHandler(func(dialog communication.Dialog) error {
-		return dialog.Respond(sessionCreateConsumer)
-	}))
-	if err != nil {
+	dialogHandler := session.NewDialogHandler(proposal.ID, cmd.sessionManagerFactory(vpnServerIP))
+	if err = cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}
 

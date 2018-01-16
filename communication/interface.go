@@ -10,12 +10,14 @@ import (
 //   - negotiates with Dialog initiator
 //   - finally creates Dialog, when it is accepted
 type DialogWaiter interface {
-	ServeDialogs(dialogHandler DialogHandler) error
+	ServeDialogs(dialogManager DialogHandler) error
 	Stop() error
 }
 
-// DialogHandler defines how to handle new incoming Dialog
-type DialogHandler func(Dialog) error
+// DialogHandler defines how to handle incoming Dialog
+type DialogHandler interface {
+	Handle(Dialog) error
+}
 
 // DialogEstablisher interface defines client which:
 //   - initiates Dialog requests to network
