@@ -3,12 +3,15 @@ package identity
 import "github.com/pkg/errors"
 
 type idmFake struct {
-	existingIdentities []Identity
-	newIdentity        Identity
+	LastUnlockAddress    string
+	LastUnlockPassphrase string
+	UnlockFails          bool
+	existingIdentities   []Identity
+	newIdentity          Identity
 }
 
 func NewIdentityManagerFake(existingIdentities []Identity, newIdentity Identity) *idmFake {
-	return &idmFake{existingIdentities, newIdentity}
+	return &idmFake{"", "", false, existingIdentities, newIdentity}
 }
 
 func (fakeIdm *idmFake) CreateNewIdentity(_ string) (Identity, error) {
@@ -27,4 +30,19 @@ func (fakeIdm *idmFake) GetIdentity(address string) (Identity, error) {
 }
 func (fakeIdm *idmFake) HasIdentity(_ string) bool {
 	return true
+}
+
+func (fakeIdm *idmFake) Unlock(address string, passphrase string) error {
+	fakeIdm.LastUnlockAddress = address
+	fakeIdm.LastUnlockPassphrase = passphrase
+	if fakeIdm.UnlockFails {
+		return errors.New("Unlock failed")
+	}
+	return nil
+}
+
+func (fakeIdm *idmFake) CleanStatus() {
+	fakeIdm.LastUnlockAddress = ""
+	fakeIdm.LastUnlockPassphrase = ""
+	fakeIdm.UnlockFails = false
 }

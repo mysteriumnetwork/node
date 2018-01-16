@@ -9,6 +9,7 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/server"
 	"github.com/stretchr/testify/assert"
+	"github.com/julienschmidt/httprouter"
 )
 
 const identityUrl = "/irrelevant"
@@ -57,6 +58,67 @@ func TestRegisterIdentitySuccess(t *testing.T) {
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
+}
+
+func TestUnlockIdentitySuccess(t *testing.T) {
+	mockIdm.CleanStatus()
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodPut,
+		identityUrl,
+		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
+	)
+	params := httprouter.Params{{"id", "1234abcd"}}
+	assert.Nil(t, err)
+
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Unlock
+	handlerFunc(resp, req, params)
+
+	assert.Equal(t, http.StatusAccepted, resp.Code)
+
+	assert.Equal(t, "1234abcd", mockIdm.LastUnlockAddress)
+	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
+}
+
+func TestUnlockIdentityWithInvalidJson(t *testing.T) {
+	mockIdm.CleanStatus()
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodPut,
+		identityUrl,
+		bytes.NewBufferString(`{invalid json}`),
+	)
+	params := httprouter.Params{{"id", "1234abcd"}}
+	assert.Nil(t, err)
+
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Unlock
+	handlerFunc(resp, req, params)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestUnlockFailure(t *testing.T) {
+	mockIdm.CleanStatus()
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodPut,
+		identityUrl,
+		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
+	)
+	params := httprouter.Params{{"id", "1234abcd"}}
+	assert.Nil(t, err)
+
+	mockIdm.UnlockFails = true
+
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Unlock
+	handlerFunc(resp, req, params)
+
+	mockIdm.UnlockFails = false
+
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+
+	assert.Equal(t, "1234abcd", mockIdm.LastUnlockAddress)
+	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
 }
 
 func TestCreateNewIdentityEmptyPassword(t *testing.T) {
