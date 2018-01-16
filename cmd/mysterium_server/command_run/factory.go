@@ -61,8 +61,6 @@ func NewCommandWith(
 			return openvpn_session.NewManager(openvpn.NewClientConfig(
 				vpnServerIp,
 				filepath.Join(options.DirectoryConfig, "ca.crt"),
-				filepath.Join(options.DirectoryConfig, "client.crt"),
-				filepath.Join(options.DirectoryConfig, "client.key"),
 				filepath.Join(options.DirectoryConfig, "ta.key"),
 			))
 		},
