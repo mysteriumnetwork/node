@@ -69,8 +69,8 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 
 	myCodec := NewCodecSecured(communication.NewCodecJSON(), waiter.mySigner, identity.NewVerifierSigned())
 	myReceiver := nats.NewReceiver(waiter.myAddress.GetConnection(), myCodec, waiter.myAddress.GetTopic())
-	subscribeError := myReceiver.Respond(&dialogCreateConsumer{createDialog})
 
+	subscribeError := myReceiver.Respond(&dialogCreateConsumer{createDialog})
 	return subscribeError
 }
 
