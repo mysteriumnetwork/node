@@ -9,6 +9,7 @@ import (
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/middlewares/server/auth"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
@@ -74,7 +75,11 @@ func NewCommandWith(
 				filepath.Join(options.DirectoryConfig, "crl.pem"),
 				filepath.Join(options.DirectoryConfig, "ta.key"),
 			)
-			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime)
+			authenticator := auth.NewAuthenticator(mysteriumClient)
+			vpnMiddlewares := []openvpn.ManagementMiddleware{
+				auth.NewMiddleware(authenticator),
+			}
+			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime, vpnMiddlewares...)
 		},
 	}
 }
