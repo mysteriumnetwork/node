@@ -11,16 +11,16 @@ import (
 	"strings"
 )
 
-// NewCliClient constructs instance of CLI based Mysterium UI
-func NewCliClient(historyFile string, tequilaClient *tequilapi_client.Client) *Client {
-	return &Client{
+// NewCommand constructs instance of CLI based Mysterium UI
+func NewCommand(historyFile string, tequilaClient *tequilapi_client.Client) *Command {
+	return &Command{
 		HistoryFile:   historyFile,
 		TequilaClient: tequilaClient,
 	}
 }
 
-// Client describes CLI based Mysterium UI
-type Client struct {
+// Command describes CLI based Mysterium UI
+type Command struct {
 	HistoryFile   string
 	TequilaClient *tequilapi_client.Client
 }
@@ -28,7 +28,7 @@ type Client struct {
 const redColor = "\033[31m%s\033[0m"
 
 // Run starts CLI interface
-func (c *Client) Run() error {
+func (c *Command) Run() error {
 	completer := getAutocompleterMenu(c.TequilaClient)
 
 	rl, err := readline.NewEx(&readline.Config{
@@ -64,7 +64,7 @@ func (c *Client) Run() error {
 	return nil
 }
 
-func (c *Client) handleActions(completer *readline.PrefixCompleter, line string) {
+func (c *Command) handleActions(completer *readline.PrefixCompleter, line string) {
 	line = strings.TrimSpace(line)
 	switch {
 	case strings.HasPrefix(line, "connect"):
@@ -98,7 +98,7 @@ func (c *Client) handleActions(completer *readline.PrefixCompleter, line string)
 	}
 }
 
-func (c *Client) connect(completer *readline.PrefixCompleter, line string) {
+func (c *Command) connect(completer *readline.PrefixCompleter, line string) {
 	connectionArgs := strings.TrimSpace(line[7:])
 	if len(connectionArgs) == 0 {
 		info("Press tab to select identity or create a new one. Connect <your-identity> <node-identity>")
@@ -135,7 +135,7 @@ func (c *Client) connect(completer *readline.PrefixCompleter, line string) {
 	success("Connected.")
 }
 
-func (c *Client) disconnect() {
+func (c *Command) disconnect() {
 	err := c.TequilaClient.Disconnect()
 	if err != nil {
 		warn(err)
@@ -145,7 +145,7 @@ func (c *Client) disconnect() {
 	success("Disconnected.")
 }
 
-func (c *Client) status() {
+func (c *Command) status() {
 	status, err := c.TequilaClient.Status()
 	if err != nil {
 		warn(err)
@@ -156,12 +156,12 @@ func (c *Client) status() {
 	info("SID", status.SessionId)
 }
 
-func (c *Client) help(completer *readline.PrefixCompleter) {
+func (c *Command) help(completer *readline.PrefixCompleter) {
 	info("Mysterium CLI tequilapi commands:")
 	fmt.Println(completer.Tree("  "))
 }
 
-func (c *Client) identities(line string) {
+func (c *Command) identities(line string) {
 	action := strings.TrimSpace(line[10:])
 	if len(action) == 0 {
 		info("identities command:\n    list\n    new")

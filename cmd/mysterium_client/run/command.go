@@ -65,7 +65,7 @@ func NewCommandWith(
 	if options.CLI {
 		historyFile := filepath.Join(options.DirectoryRuntime, "mysterium-cli.log")
 		tequilaClient := tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort)
-		cmd.cli = cli.NewCliClient(historyFile, tequilaClient)
+		cmd.cli = cli.NewCommand(historyFile, tequilaClient)
 	}
 
 	return cmd
@@ -75,7 +75,7 @@ func NewCommandWith(
 type CommandRun struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.ApiServer
-	cli               *cli.Client
+	cli               *cli.Command
 }
 
 //Run starts Tequilapi service - does not block
