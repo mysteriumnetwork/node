@@ -3,16 +3,16 @@ package interactive
 import (
 	"fmt"
 	"github.com/chzyer/readline"
-	"github.com/mysterium/node/cmd/mysterium_client/rest"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/tequilapi/client"
 	"io"
 	"log"
 	"os"
 	"strings"
 )
 
-// NewCliClient returns instance or cli based tequila client
-func NewCliClient(historyFile string, tequilaClient *rest.TequilaClient) *Client {
+// NewCliClient returns instance or cli based tequila tequilapi
+func NewCliClient(historyFile string, tequilaClient *client.TequilaClient) *Client {
 	return &Client{
 		HistoryFile:   historyFile,
 		TequilaClient: tequilaClient,
@@ -22,7 +22,7 @@ func NewCliClient(historyFile string, tequilaClient *rest.TequilaClient) *Client
 // Client describes cli based tequila client
 type Client struct {
 	HistoryFile   string
-	TequilaClient *rest.TequilaClient
+	TequilaClient *client.TequilaClient
 }
 
 const redColor = "\033[31m%s\033[0m"
@@ -157,7 +157,7 @@ func (c *Client) status() {
 }
 
 func (c *Client) help(completer *readline.PrefixCompleter) {
-	info("Mysterium CLI client commands:")
+	info("Mysterium CLI tequilapi commands:")
 	fmt.Println(completer.Tree("  "))
 }
 
@@ -191,7 +191,7 @@ func (c *Client) identities(line string) {
 	}
 }
 
-func getIdentityOptionList(restClient *rest.TequilaClient) func(string) []string {
+func getIdentityOptionList(restClient *client.TequilaClient) func(string) []string {
 	return func(line string) []string {
 		identities := []string{"new"}
 		ids, err := restClient.GetIdentities()
@@ -207,7 +207,7 @@ func getIdentityOptionList(restClient *rest.TequilaClient) func(string) []string
 	}
 }
 
-func getAutocompleterMenu(restClient *rest.TequilaClient) *readline.PrefixCompleter {
+func getAutocompleterMenu(restClient *client.TequilaClient) *readline.PrefixCompleter {
 	var completer = readline.NewPrefixCompleter(
 		readline.PcItem(
 			"connect",

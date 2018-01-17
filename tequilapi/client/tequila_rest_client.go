@@ -1,4 +1,4 @@
-package rest
+package client
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 // NewTequilaClient returns a new instance of TequilaClient
 func NewTequilaClient(ip string, port int) *TequilaClient {
 	return &TequilaClient{
-		http: NewHttpClient(
+		http: newHttpClient(
 			fmt.Sprintf("http://%s:%d", ip, port),
 			"[Tequilla.api.client]",
 			"goclient-v0.1",
@@ -22,7 +22,7 @@ func NewTequilaClient(ip string, port int) *TequilaClient {
 
 // TequilaClient uses http client
 type TequilaClient struct {
-	http HttpClientInterface
+	http httpClientInterface
 }
 
 // StatusDto holds connection status and session id

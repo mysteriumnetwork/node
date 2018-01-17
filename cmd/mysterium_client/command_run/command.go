@@ -5,7 +5,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/cmd/mysterium_client/interactive"
-	"github.com/mysterium/node/cmd/mysterium_client/rest"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -13,6 +12,7 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
+	"github.com/mysterium/node/tequilapi/client"
 	"github.com/mysterium/node/tequilapi/endpoints"
 	"path/filepath"
 )
@@ -64,7 +64,7 @@ func NewCommandWith(
 
 	if options.InteractiveCli {
 		historyFile := filepath.Join(options.DirectoryRuntime, "mysterium-cli.log")
-		tequilaClient := rest.NewTequilaClient(options.TequilaApiAddress, options.TequilaApiPort)
+		tequilaClient := client.NewTequilaClient(options.TequilaApiAddress, options.TequilaApiPort)
 		cmd.cli = interactive.NewCliClient(historyFile, tequilaClient)
 	}
 
