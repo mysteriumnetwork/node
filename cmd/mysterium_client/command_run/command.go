@@ -12,8 +12,8 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
-	"github.com/mysterium/node/tequilapi/client"
-	"github.com/mysterium/node/tequilapi/endpoints"
+	tequilapi_client "github.com/mysterium/node/tequilapi/client"
+	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
 	"path/filepath"
 )
 
@@ -50,9 +50,9 @@ func NewCommandWith(
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
 	router := tequilapi.NewApiRouter()
-	endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	endpoints.AddRoutesForConnection(router, connectionManager)
-	endpoints.AddRoutesForProposals(router, mysteriumClient)
+	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager)
+	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
 	httpApiServer := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
 
@@ -64,7 +64,7 @@ func NewCommandWith(
 
 	if options.InteractiveCli {
 		historyFile := filepath.Join(options.DirectoryRuntime, "mysterium-cli.log")
-		tequilaClient := client.NewClient(options.TequilaApiAddress, options.TequilaApiPort)
+		tequilaClient := tequilapi_client.NewClient(options.TequilaApiAddress, options.TequilaApiPort)
 		cmd.cli = interactive.NewCliClient(historyFile, tequilaClient)
 	}
 
