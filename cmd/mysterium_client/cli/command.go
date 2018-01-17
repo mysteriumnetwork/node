@@ -14,26 +14,26 @@ import (
 // NewCommand constructs instance of CLI based Mysterium UI
 func NewCommand(historyFile string, tequilaClient *tequilapi_client.Client) *Command {
 	return &Command{
-		HistoryFile:   historyFile,
-		TequilaClient: tequilaClient,
+		historyFile:   historyFile,
+		tequilaClient: tequilaClient,
 	}
 }
 
 // Command describes CLI based Mysterium UI
 type Command struct {
-	HistoryFile   string
-	TequilaClient *tequilapi_client.Client
+	historyFile   string
+	tequilaClient *tequilapi_client.Client
 }
 
 const redColor = "\033[31m%s\033[0m"
 
 // Run starts CLI interface
 func (c *Command) Run() error {
-	completer := getAutocompleterMenu(c.TequilaClient)
+	completer := getAutocompleterMenu(c.tequilaClient)
 
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:          fmt.Sprintf(redColor, "» "),
-		HistoryFile:     c.HistoryFile,
+		HistoryFile:     c.historyFile,
 		AutoComplete:    completer,
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
@@ -115,7 +115,7 @@ func (c *Command) connect(completer *readline.PrefixCompleter, line string) {
 	clientIdentity, nodeIdentity := identities[0], identities[1]
 
 	if clientIdentity == "new" {
-		id, err := c.TequilaClient.NewIdentity()
+		id, err := c.tequilaClient.NewIdentity()
 		if err != nil {
 			warn(err)
 			return
@@ -126,7 +126,7 @@ func (c *Command) connect(completer *readline.PrefixCompleter, line string) {
 
 	status("CONNECTING", "from:", clientIdentity, "to:", nodeIdentity)
 
-	err := c.TequilaClient.Connect(identity.FromAddress(clientIdentity), identity.FromAddress(nodeIdentity))
+	err := c.tequilaClient.Connect(identity.FromAddress(clientIdentity), identity.FromAddress(nodeIdentity))
 	if err != nil {
 		warn(err)
 		return
@@ -136,7 +136,7 @@ func (c *Command) connect(completer *readline.PrefixCompleter, line string) {
 }
 
 func (c *Command) disconnect() {
-	err := c.TequilaClient.Disconnect()
+	err := c.tequilaClient.Disconnect()
 	if err != nil {
 		warn(err)
 		return
@@ -146,7 +146,7 @@ func (c *Command) disconnect() {
 }
 
 func (c *Command) status() {
-	status, err := c.TequilaClient.Status()
+	status, err := c.tequilaClient.Status()
 	if err != nil {
 		warn(err)
 		return
@@ -169,7 +169,7 @@ func (c *Command) identities(line string) {
 	}
 
 	if action == "list" {
-		ids, err := c.TequilaClient.GetIdentities()
+		ids, err := c.tequilaClient.GetIdentities()
 		if err != nil {
 			fmt.Println("Error occured:", err)
 			return
@@ -182,7 +182,7 @@ func (c *Command) identities(line string) {
 	}
 
 	if action == "new" {
-		id, err := c.TequilaClient.NewIdentity()
+		id, err := c.tequilaClient.NewIdentity()
 		if err != nil {
 			warn(err)
 			return

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
-	"github.com/mysterium/node/cmd/mysterium_client/cli"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -12,9 +11,7 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
-	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
-	"path/filepath"
 )
 
 //NewCommand function created new client command with options passed from commandline
@@ -56,26 +53,16 @@ func NewCommandWith(
 
 	httpApiServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
-	cmd := &CommandRun{
+	return &CommandRun{
 		connectionManager,
 		httpApiServer,
-		nil,
 	}
-
-	if options.CLI {
-		historyFile := filepath.Join(options.DirectoryRuntime, "mysterium-cli.log")
-		tequilaClient := tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort)
-		cmd.cli = cli.NewCommand(historyFile, tequilaClient)
-	}
-
-	return cmd
 }
 
 //CommandRun represent entry point for MysteriumVpn client with top level components
 type CommandRun struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.ApiServer
-	cli               *cli.Command
 }
 
 //Run starts Tequilapi service - does not block
@@ -84,19 +71,12 @@ func (cmd *CommandRun) Run() error {
 	if err != nil {
 		return err
 	}
+
 	port, err := cmd.httpApiServer.Port()
 	if err != nil {
 		return err
 	}
-
 	fmt.Printf("Api started on: %d\n", port)
-
-	if cmd.cli != nil {
-		err := cmd.cli.Run()
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
