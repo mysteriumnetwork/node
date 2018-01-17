@@ -117,21 +117,25 @@ func (mApi *mysteriumApi) SendSessionStats(sessionId string, sessionStats dto.Se
 
 func (mApi *mysteriumApi) doRequest(req *http.Request) error {
 	resp, err := mApi.http.Do(req)
-	if err == nil {
-		resp.Body.Close()
+	if err != nil {
+		log.Error(mysteriumApiLogPrefix, err)
+		return err
 	}
+	defer resp.Body.Close()
 	return parseResponseError(resp)
 }
 
 func (mApi *mysteriumApi) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
 	resp, err := mApi.http.Do(req)
 	if err != nil {
+		log.Error(mysteriumApiLogPrefix, err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	err = parseResponseError(resp)
 	if err != nil {
+		log.Error(mysteriumApiLogPrefix, err)
 		return err
 	}
 
