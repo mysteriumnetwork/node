@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/mysterium/node/ipify"
 
-	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
+	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
 	"github.com/mysterium/node/state_client"
 	"sync"
 	"time"
