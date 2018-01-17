@@ -1,11 +1,8 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/mysterium/node/identity"
-	"io/ioutil"
-	"net/http"
 	"net/url"
 )
 
@@ -23,22 +20,6 @@ func NewClient(ip string, port int) *Client {
 // Client is able perform remote requests to Teuilapi server
 type Client struct {
 	http httpClientInterface
-}
-
-// StatusDto holds connection status and session id
-type StatusDto struct {
-	Status    string `json:"status"`
-	SessionId string `json:"sessionId"`
-}
-
-// IdentityDto holds identity address
-type IdentityDto struct {
-	Address string `json:"id"`
-}
-
-// IdentityList holds returned list of identities
-type IdentityList struct {
-	Identities []IdentityDto `json:"identities"`
 }
 
 // GetIdentities returns a list of client identities
@@ -159,18 +140,4 @@ func (client *Client) Status() (status StatusDto, err error) {
 	}
 
 	return status, nil
-}
-
-func parseResponseJson(response *http.Response, dto interface{}) error {
-	responseJson, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(responseJson, dto)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
