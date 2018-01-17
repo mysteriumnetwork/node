@@ -12,7 +12,7 @@ import (
 )
 
 // NewCliClient returns instance or cli based tequila tequilapi
-func NewCliClient(historyFile string, tequilaClient *client.TequilaClient) *Client {
+func NewCliClient(historyFile string, tequilaClient *client.Client) *Client {
 	return &Client{
 		HistoryFile:   historyFile,
 		TequilaClient: tequilaClient,
@@ -22,7 +22,7 @@ func NewCliClient(historyFile string, tequilaClient *client.TequilaClient) *Clie
 // Client describes cli based tequila client
 type Client struct {
 	HistoryFile   string
-	TequilaClient *client.TequilaClient
+	TequilaClient *client.Client
 }
 
 const redColor = "\033[31m%s\033[0m"
@@ -191,7 +191,7 @@ func (c *Client) identities(line string) {
 	}
 }
 
-func getIdentityOptionList(restClient *client.TequilaClient) func(string) []string {
+func getIdentityOptionList(restClient *client.Client) func(string) []string {
 	return func(line string) []string {
 		identities := []string{"new"}
 		ids, err := restClient.GetIdentities()
@@ -207,7 +207,7 @@ func getIdentityOptionList(restClient *client.TequilaClient) func(string) []stri
 	}
 }
 
-func getAutocompleterMenu(restClient *client.TequilaClient) *readline.PrefixCompleter {
+func getAutocompleterMenu(restClient *client.Client) *readline.PrefixCompleter {
 	var completer = readline.NewPrefixCompleter(
 		readline.PcItem(
 			"connect",

@@ -64,7 +64,7 @@ func NewCommandWith(
 
 	if options.InteractiveCli {
 		historyFile := filepath.Join(options.DirectoryRuntime, "mysterium-cli.log")
-		tequilaClient := client.NewTequilaClient(options.TequilaApiAddress, options.TequilaApiPort)
+		tequilaClient := client.NewClient(options.TequilaApiAddress, options.TequilaApiPort)
 		cmd.cli = interactive.NewCliClient(historyFile, tequilaClient)
 	}
 
