@@ -15,7 +15,7 @@ type Management struct {
 	socketAddress string
 	logPrefix     string
 
-	lineReceived chan string
+	lineReceiver chan string
 	middlewares  []ManagementMiddleware
 
 	listenerShutdownStarted chan bool
@@ -33,7 +33,7 @@ func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMid
 		socketAddress: socketAddress,
 		logPrefix:     logPrefix,
 
-		lineReceived: make(chan string),
+		lineReceiver: make(chan string),
 		middlewares:  middlewares,
 
 		listenerShutdownStarted: make(chan bool),
@@ -113,7 +113,7 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 
 		// Try to deliver the message
 		select {
-		case management.lineReceived <- line:
+		case management.lineReceiver <- line:
 		case <-time.After(time.Second):
 			log.Error(management.logPrefix, "Failed to transport line: ", line)
 		}
@@ -122,8 +122,8 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 
 func (management *Management) deliverLines() {
 	for {
-		line := <-management.lineReceived
-		log.Debug(management.logPrefix, "Line delivering: ", line)
+		line := <-management.lineReceiver
+		// log.Debug(management.logPrefix, "Line delivering: ", line)
 
 		lineConsumed := false
 		for _, middleware := range management.middlewares {
@@ -135,7 +135,7 @@ func (management *Management) deliverLines() {
 			lineConsumed = lineConsumed || consumed
 		}
 		if !lineConsumed {
-			log.Warn(management.logPrefix, "Line not delivered: ", line)
+			// log.Warn(management.logPrefix, "Line not delivered: ", line)
 		}
 	}
 }

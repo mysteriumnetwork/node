@@ -141,3 +141,8 @@ func (mApi *mysteriumApi) doRequestAndParseResponse(req *http.Request, responseV
 
 	return parseResponseJson(resp, responseValue)
 }
+
+func (mApi *mysteriumApi) AuthenticateClient(username, password string) (bool, error) {
+	// TODO: implement
+	return true, nil
+}

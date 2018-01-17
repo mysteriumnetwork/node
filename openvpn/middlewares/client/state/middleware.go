@@ -1,4 +1,4 @@
-package state_client
+package state
 
 import (
 	"github.com/mysterium/node/openvpn"
