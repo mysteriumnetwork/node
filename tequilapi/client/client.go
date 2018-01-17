@@ -28,7 +28,6 @@ func (client *Client) GetIdentities() (identities []identity.Identity, err error
 	if err != nil {
 		return
 	}
-
 	defer response.Body.Close()
 
 	var list IdentityList
@@ -56,7 +55,6 @@ func (client *Client) NewIdentity() (id identity.Identity, err error) {
 	if err != nil {
 		return
 	}
-
 	defer response.Body.Close()
 
 	var idDto struct {
@@ -81,7 +79,6 @@ func (client *Client) Register() (id identity.Identity, err error) {
 	if err != nil {
 		return
 	}
-
 	defer response.Body.Close()
 
 	var idDto struct {
@@ -108,8 +105,7 @@ func (client *Client) Connect(id identity.Identity, providerId identity.Identity
 	if err != nil {
 		return
 	}
-
-	response.Body.Close()
+	defer response.Body.Close()
 
 	return nil
 }
@@ -120,8 +116,7 @@ func (client *Client) Disconnect() (err error) {
 	if err != nil {
 		return
 	}
-
-	response.Body.Close()
+	defer response.Body.Close()
 
 	return nil
 }
@@ -129,10 +124,10 @@ func (client *Client) Disconnect() (err error) {
 // Status returns connection status
 func (client *Client) Status() (status StatusDto, err error) {
 	response, err := client.http.Get("connection", url.Values{})
-	defer response.Body.Close()
 	if err != nil {
 		return
 	}
+	defer response.Body.Close()
 
 	err = parseResponseJson(response, &status)
 	if err != nil {
