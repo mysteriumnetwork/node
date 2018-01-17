@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
-	"github.com/mysterium/node/cmd/mysterium_client/interactive"
+	"github.com/mysterium/node/cmd/mysterium_client/cli"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -62,10 +62,10 @@ func NewCommandWith(
 		nil,
 	}
 
-	if options.InteractiveCli {
+	if options.CLI {
 		historyFile := filepath.Join(options.DirectoryRuntime, "mysterium-cli.log")
 		tequilaClient := tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort)
-		cmd.cli = interactive.NewCliClient(historyFile, tequilaClient)
+		cmd.cli = cli.NewCliClient(historyFile, tequilaClient)
 	}
 
 	return cmd
@@ -75,7 +75,7 @@ func NewCommandWith(
 type CommandRun struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.ApiServer
-	cli               *interactive.Client
+	cli               *cli.Client
 }
 
 //Run starts Tequilapi service - does not block

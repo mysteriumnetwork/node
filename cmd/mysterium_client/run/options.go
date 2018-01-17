@@ -5,14 +5,16 @@ import (
 	"github.com/mysterium/node/utils/file"
 )
 
+// CommandOptions describes options which are required to start CommandRun
 type CommandOptions struct {
 	DirectoryRuntime  string
 	DirectoryKeystore string
 	TequilapiAddress  string
 	TequilapiPort     int
-	InteractiveCli    bool
+	CLI               bool
 }
 
+// ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.StringVar(
@@ -42,10 +44,10 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	)
 
 	flags.BoolVar(
-		&options.InteractiveCli,
-		"interactive-cli",
+		&options.CLI,
+		"cli",
 		false,
-		"Run an interactive CLI client",
+		"Run an interactive CLI based Mysterium UI",
 	)
 
 	err = flags.Parse(args[1:])
