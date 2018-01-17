@@ -54,7 +54,7 @@ func NewCommandWith(
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
-	httpApiServer := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
+	httpApiServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
 	cmd := &CommandRun{
 		connectionManager,
@@ -64,7 +64,7 @@ func NewCommandWith(
 
 	if options.InteractiveCli {
 		historyFile := filepath.Join(options.DirectoryRuntime, "mysterium-cli.log")
-		tequilaClient := tequilapi_client.NewClient(options.TequilaApiAddress, options.TequilaApiPort)
+		tequilaClient := tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort)
 		cmd.cli = interactive.NewCliClient(historyFile, tequilaClient)
 	}
 
@@ -78,7 +78,7 @@ type CommandRun struct {
 	cli               *interactive.Client
 }
 
-//Run starts tequilaApi service - does not block
+//Run starts Tequilapi service - does not block
 func (cmd *CommandRun) Run() error {
 	err := cmd.httpApiServer.StartServing()
 	if err != nil {

@@ -8,8 +8,8 @@ import (
 type CommandOptions struct {
 	DirectoryRuntime  string
 	DirectoryKeystore string
-	TequilaApiAddress string
-	TequilaApiPort    int
+	TequilapiAddress  string
+	TequilapiPort     int
 	InteractiveCli    bool
 }
 
@@ -28,14 +28,14 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"Keystore directory",
 	)
 	flags.StringVar(
-		&options.TequilaApiAddress,
+		&options.TequilapiAddress,
 		"tequilapi.address",
 		"localhost",
 		"IP address of interface to listen for incoming connections. By default - bind to local interface",
 	)
 
 	flags.IntVar(
-		&options.TequilaApiPort,
+		&options.TequilapiPort,
 		"tequilapi.port",
 		4050,
 		"Port for listening incoming api requests. By default - 4050",

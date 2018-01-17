@@ -47,7 +47,7 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 		cmd.resultWriter.NodeStart(nodeKey)
 		cmd.ipCheckWaiter.Add(1)
 
-		//TODO here we need to make tequila api call with connect to node by key
+		//TODO here we need to make Tequilapi call with connect to node by key
 		err = cmd.clientCommand.Run()
 		if err != nil {
 			cmd.resultWriter.NodeError("Client starting error", err)

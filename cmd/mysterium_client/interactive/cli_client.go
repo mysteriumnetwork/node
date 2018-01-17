@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// NewCliClient returns instance or cli based tequila tequilapi
+// NewCliClient constructs instance of CLI based Mysterium UI
 func NewCliClient(historyFile string, tequilaClient *tequilapi_client.Client) *Client {
 	return &Client{
 		HistoryFile:   historyFile,
@@ -19,7 +19,7 @@ func NewCliClient(historyFile string, tequilaClient *tequilapi_client.Client) *C
 	}
 }
 
-// Client describes cli based tequila client
+// Client describes CLI based Mysterium UI
 type Client struct {
 	HistoryFile   string
 	TequilaClient *tequilapi_client.Client
@@ -27,7 +27,7 @@ type Client struct {
 
 const redColor = "\033[31m%s\033[0m"
 
-// Run executes cli based tequila client
+// Run starts CLI interface
 func (c *Client) Run() error {
 	completer := getAutocompleterMenu(c.TequilaClient)
 

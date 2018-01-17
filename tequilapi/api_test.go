@@ -36,6 +36,6 @@ func (testSuite *tequilapiTestSuite) TearDownSuite() {
 	testSuite.server.Wait()
 }
 
-func TestTequilaApiTestSuite(t *testing.T) {
+func TestTequilapiTestSuite(t *testing.T) {
 	suite.Run(t, new(tequilapiTestSuite))
 }
