@@ -115,7 +115,7 @@ func TestUnlockFailure(t *testing.T) {
 
 	mockIdm.UnlockFails = false
 
-	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	assert.Equal(t, http.StatusForbidden, resp.Code)
 
 	assert.Equal(t, "1234abcd", mockIdm.LastUnlockAddress)
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)

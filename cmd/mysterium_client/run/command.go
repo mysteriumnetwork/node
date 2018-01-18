@@ -37,12 +37,10 @@ func NewCommandWith(
 	identityManager := identity.NewIdentityManager(keystoreInstance)
 
 	dialogEstablisherFactory := func(myIdentity identity.Identity) communication.DialogEstablisher {
-		identityManager.Unlock(myIdentity.Address, identityPassword)
 		return nats_dialog.NewDialogEstablisher(myIdentity, identity.NewSigner(keystoreInstance, myIdentity))
 	}
 
 	signerFactory := func(id identity.Identity) identity.Signer {
-		identityManager.Unlock(id.Address, identityPassword)
 		return identity.NewSigner(keystoreInstance, id)
 	}
 

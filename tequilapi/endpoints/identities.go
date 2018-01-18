@@ -29,7 +29,6 @@ type identityRegistrationDto struct {
 }
 
 type identityUnlockingDto struct {
-	Id         string `json:"id"`
 	Passphrase string `json:"passphrase"`
 }
 
@@ -116,7 +115,7 @@ func (endpoint *identitiesApi) Unlock(resp http.ResponseWriter, request *http.Re
 
 	err = endpoint.idm.Unlock(id, unlockReq.Passphrase)
 	if err != nil {
-		utils.SendError(resp, err, http.StatusUnprocessableEntity)
+		utils.SendError(resp, err, http.StatusForbidden)
 		return
 	}
 	resp.WriteHeader(http.StatusAccepted)
