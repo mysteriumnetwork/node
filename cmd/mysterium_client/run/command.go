@@ -87,7 +87,14 @@ func (cmd *CommandRun) Wait() error {
 }
 
 //Kill stops tequilapi service
-func (cmd *CommandRun) Kill() {
+func (cmd *CommandRun) Kill() error {
+	err := cmd.connectionManager.Disconnect()
+	if err != nil {
+		return err
+	}
+
 	cmd.httpApiServer.Stop()
-	cmd.connectionManager.Disconnect()
+	fmt.Printf("Api stopped\n")
+
+	return nil
 }

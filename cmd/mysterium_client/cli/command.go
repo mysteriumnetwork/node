@@ -7,75 +7,90 @@ import (
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"io"
 	"log"
-	"os"
 	"strings"
 )
 
-// NewCommand constructs instance of CLI based Mysterium UI
-func NewCommand(historyFile string, tequilaClient *tequilapi_client.Client) *Command {
+// NewCommand constructs CLI based with possibility to control quiting
+func NewCommand(
+	historyFile string,
+	tequilapi *tequilapi_client.Client,
+	quitHandler func() error,
+) *Command {
 	return &Command{
-		historyFile:   historyFile,
-		tequilaClient: tequilaClient,
+		historyFile: historyFile,
+		tequilapi:   tequilapi,
+		completer:   newAutocompleter(tequilapi),
+		quitHandler: quitHandler,
 	}
 }
 
 // Command describes CLI based Mysterium UI
 type Command struct {
-	historyFile   string
-	tequilaClient *tequilapi_client.Client
+	historyFile string
+	tequilapi   *tequilapi_client.Client
+	quitHandler func() error
+	completer   *readline.PrefixCompleter
+	reader      *readline.Instance
 }
 
 const redColor = "\033[31m%s\033[0m"
 
 // Run starts CLI interface
-func (c *Command) Run() error {
-	completer := getAutocompleterMenu(c.tequilaClient)
-
-	rl, err := readline.NewEx(&readline.Config{
+func (c *Command) Run() (err error) {
+	c.reader, err = readline.NewEx(&readline.Config{
 		Prompt:          fmt.Sprintf(redColor, "» "),
 		HistoryFile:     c.historyFile,
-		AutoComplete:    completer,
+		AutoComplete:    c.completer,
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
 	})
-
 	if err != nil {
 		return err
 	}
-
-	defer rl.Close()
-
-	log.SetOutput(rl.Stderr())
+	// TODO Should overtake output of CommandRun
+	log.SetOutput(c.reader.Stderr())
 
 	for {
-		line, err := rl.Readline()
+		line, err := c.reader.Readline()
 		if err == readline.ErrInterrupt {
 			if len(line) == 0 {
-				break
+				c.quit()
 			} else {
 				continue
 			}
 		} else if err == io.EOF {
-			break
+			c.quit()
 		}
 
-		c.handleActions(completer, line)
+		c.handleActions(line)
 	}
+
 	return nil
 }
 
-func (c *Command) handleActions(completer *readline.PrefixCompleter, line string) {
+//Kill stops tequilapi service
+func (c *Command) Kill() error {
+	c.reader.Clean()
+	err := c.reader.Close()
+	if err != nil {
+		return err
+	}
+
+	return c.quitHandler()
+}
+
+func (c *Command) handleActions(line string) {
 	line = strings.TrimSpace(line)
 	switch {
 	case strings.HasPrefix(line, "connect"):
-		c.connect(completer, line)
+		c.connect(line)
 		break
 	case line == "exit" || line == "quit":
-		os.Exit(0)
+		c.quit()
 		break
 
 	case line == "help":
-		c.help(completer)
+		c.help()
 		break
 
 	case line == "status":
@@ -92,13 +107,13 @@ func (c *Command) handleActions(completer *readline.PrefixCompleter, line string
 
 	default:
 		if len(line) > 0 {
-			c.help(completer)
+			c.help()
 			break
 		}
 	}
 }
 
-func (c *Command) connect(completer *readline.PrefixCompleter, line string) {
+func (c *Command) connect(line string) {
 	connectionArgs := strings.TrimSpace(line[7:])
 	if len(connectionArgs) == 0 {
 		info("Press tab to select identity or create a new one. Connect <your-identity> <node-identity>")
@@ -115,7 +130,7 @@ func (c *Command) connect(completer *readline.PrefixCompleter, line string) {
 	clientIdentity, nodeIdentity := identities[0], identities[1]
 
 	if clientIdentity == "new" {
-		id, err := c.tequilaClient.NewIdentity()
+		id, err := c.tequilapi.NewIdentity()
 		if err != nil {
 			warn(err)
 			return
@@ -126,7 +141,7 @@ func (c *Command) connect(completer *readline.PrefixCompleter, line string) {
 
 	status("CONNECTING", "from:", clientIdentity, "to:", nodeIdentity)
 
-	err := c.tequilaClient.Connect(identity.FromAddress(clientIdentity), identity.FromAddress(nodeIdentity))
+	err := c.tequilapi.Connect(identity.FromAddress(clientIdentity), identity.FromAddress(nodeIdentity))
 	if err != nil {
 		warn(err)
 		return
@@ -136,7 +151,7 @@ func (c *Command) connect(completer *readline.PrefixCompleter, line string) {
 }
 
 func (c *Command) disconnect() {
-	err := c.tequilaClient.Disconnect()
+	err := c.tequilapi.Disconnect()
 	if err != nil {
 		warn(err)
 		return
@@ -146,7 +161,7 @@ func (c *Command) disconnect() {
 }
 
 func (c *Command) status() {
-	status, err := c.tequilaClient.Status()
+	status, err := c.tequilapi.Status()
 	if err != nil {
 		warn(err)
 		return
@@ -156,9 +171,17 @@ func (c *Command) status() {
 	info("SID", status.SessionId)
 }
 
-func (c *Command) help(completer *readline.PrefixCompleter) {
+func (c *Command) help() {
 	info("Mysterium CLI tequilapi commands:")
-	fmt.Println(completer.Tree("  "))
+	fmt.Println(c.completer.Tree("  "))
+}
+
+func (c *Command) quit() {
+	err := c.Kill()
+	if err != nil {
+		warn(err)
+		return
+	}
 }
 
 func (c *Command) identities(line string) {
@@ -169,7 +192,7 @@ func (c *Command) identities(line string) {
 	}
 
 	if action == "list" {
-		ids, err := c.tequilaClient.GetIdentities()
+		ids, err := c.tequilapi.GetIdentities()
 		if err != nil {
 			fmt.Println("Error occured:", err)
 			return
@@ -182,7 +205,7 @@ func (c *Command) identities(line string) {
 	}
 
 	if action == "new" {
-		id, err := c.tequilaClient.NewIdentity()
+		id, err := c.tequilapi.NewIdentity()
 		if err != nil {
 			warn(err)
 			return
@@ -191,10 +214,10 @@ func (c *Command) identities(line string) {
 	}
 }
 
-func getIdentityOptionList(restClient *tequilapi_client.Client) func(string) []string {
+func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []string {
 	return func(line string) []string {
 		identities := []string{"new"}
-		ids, err := restClient.GetIdentities()
+		ids, err := tequilapi.GetIdentities()
 		if err != nil {
 			warn(err)
 			return identities
@@ -207,12 +230,12 @@ func getIdentityOptionList(restClient *tequilapi_client.Client) func(string) []s
 	}
 }
 
-func getAutocompleterMenu(restClient *tequilapi_client.Client) *readline.PrefixCompleter {
-	var completer = readline.NewPrefixCompleter(
+func newAutocompleter(tequilapi *tequilapi_client.Client) *readline.PrefixCompleter {
+	return readline.NewPrefixCompleter(
 		readline.PcItem(
 			"connect",
 			readline.PcItemDynamic(
-				getIdentityOptionList(restClient),
+				getIdentityOptionList(tequilapi),
 			),
 		),
 		readline.PcItem(
@@ -225,6 +248,4 @@ func getAutocompleterMenu(restClient *tequilapi_client.Client) *readline.PrefixC
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
 	)
-
-	return completer
 }

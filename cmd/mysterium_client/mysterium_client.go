@@ -27,9 +27,9 @@ func main() {
 		cmdCli := cli.NewCommand(
 			filepath.Join(options.DirectoryRuntime, ".cli_history"),
 			tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
+			newStopHandler(cmdRun),
 		)
-		err := cmdCli.Run()
-		if cmdCli.Run(); err != nil {
+		if err := cmdCli.Run(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
@@ -38,5 +38,16 @@ func main() {
 	if err = cmdRun.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+}
+
+func newStopHandler(cmdRun *run.CommandRun) func() error {
+	return func() error {
+		if err := cmdRun.Kill(); err != nil {
+			return err
+		}
+
+		os.Exit(0)
+		return nil
 	}
 }
