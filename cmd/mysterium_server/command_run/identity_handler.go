@@ -6,8 +6,14 @@ import (
 	"github.com/mysterium/node/server"
 )
 
+type identityHandlerInterface interface {
+	UseExisting(address, passphrase string) (id identity.Identity, err error)
+	UseLast(passphrase string) (identity identity.Identity, err error)
+	UseNew(passphrase string) (id identity.Identity, err error)
+}
+
 //LoadIdentity selects and unlocks lastUsed identity or creates and unlocks new one if keyOption is not present
-func LoadIdentity(identityHandler *identityHandler, keyOption, passphrase string) (id identity.Identity, err error) {
+func LoadIdentity(identityHandler identityHandlerInterface, keyOption, passphrase string) (id identity.Identity, err error) {
 	if len(keyOption) > 0 {
 		return identityHandler.UseExisting(keyOption, passphrase)
 	}
