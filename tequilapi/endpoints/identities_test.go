@@ -15,15 +15,17 @@ import (
 const identityUrl = "/irrelevant"
 
 var (
-	mockIdm = identity.NewIdentityManagerFake([]identity.Identity{
+	existingIdentities = []identity.Identity{
 		{"0x000000000000000000000000000000000000000a"},
 		{"0x000000000000000000000000000000000000beef"},
-	}, identity.Identity{"0x000000000000000000000000000000000000aaac"})
+	}
+	newIdentity       = identity.Identity{"0x000000000000000000000000000000000000aaac"}
 	mystClient        = server.NewClientFake()
 	fakeSignerFactory = func(id identity.Identity) identity.Signer { return nil } //it works in this case - it's passed to fake myst client
 )
 
 func TestRegisterExistingIdentityRequest(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
@@ -45,6 +47,7 @@ func TestRegisterExistingIdentityRequest(t *testing.T) {
 }
 
 func TestRegisterIdentitySuccess(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req, err := http.NewRequest(
 		http.MethodPut,
 		identityUrl,
@@ -61,7 +64,7 @@ func TestRegisterIdentitySuccess(t *testing.T) {
 }
 
 func TestUnlockIdentitySuccess(t *testing.T) {
-	mockIdm.CleanStatus()
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPut,
@@ -81,7 +84,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 }
 
 func TestUnlockIdentityWithInvalidJson(t *testing.T) {
-	mockIdm.CleanStatus()
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPut,
@@ -98,7 +101,7 @@ func TestUnlockIdentityWithInvalidJson(t *testing.T) {
 }
 
 func TestUnlockFailure(t *testing.T) {
-	mockIdm.CleanStatus()
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPut,
@@ -113,8 +116,6 @@ func TestUnlockFailure(t *testing.T) {
 	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Unlock
 	handlerFunc(resp, req, params)
 
-	mockIdm.UnlockFails = false
-
 	assert.Equal(t, http.StatusForbidden, resp.Code)
 
 	assert.Equal(t, "1234abcd", mockIdm.LastUnlockAddress)
@@ -122,6 +123,7 @@ func TestUnlockFailure(t *testing.T) {
 }
 
 func TestCreateNewIdentityEmptyPassword(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
@@ -138,6 +140,7 @@ func TestCreateNewIdentityEmptyPassword(t *testing.T) {
 }
 
 func TestCreateNewIdentityNoPassword(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
@@ -164,6 +167,7 @@ func TestCreateNewIdentityNoPassword(t *testing.T) {
 }
 
 func TestCreateNewIdentity(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
@@ -186,6 +190,7 @@ func TestCreateNewIdentity(t *testing.T) {
 }
 
 func TestListIdentities(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 

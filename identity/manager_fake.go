@@ -40,9 +40,3 @@ func (fakeIdm *idmFake) Unlock(address string, passphrase string) error {
 	}
 	return nil
 }
-
-func (fakeIdm *idmFake) CleanStatus() {
-	fakeIdm.LastUnlockAddress = ""
-	fakeIdm.LastUnlockPassphrase = ""
-	fakeIdm.UnlockFails = false
-}

@@ -13,10 +13,9 @@ var fakeSignerFactory = func(id identity.Identity) identity.Signer {
 }
 var existingIdentity = identity.Identity{"existing"}
 var newIdentity = identity.Identity{"new"}
-var identityManager = identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 
 func Test_identityHandler_UseExisting(t *testing.T) {
-	identityManager.CleanStatus()
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
 
@@ -32,6 +31,7 @@ func Test_identityHandler_UseExisting(t *testing.T) {
 }
 
 func Test_identityHandler_UseExistingNotFound(t *testing.T) {
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
 
@@ -42,7 +42,7 @@ func Test_identityHandler_UseExistingNotFound(t *testing.T) {
 }
 
 func Test_identityHandler_UseExistingUnlockFails(t *testing.T) {
-	identityManager.CleanStatus()
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	identityManager.UnlockFails = true
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
@@ -54,7 +54,7 @@ func Test_identityHandler_UseExistingUnlockFails(t *testing.T) {
 }
 
 func Test_identityHandler_UseLast(t *testing.T) {
-	identityManager.CleanStatus()
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
 
@@ -74,7 +74,7 @@ func Test_identityHandler_UseLast(t *testing.T) {
 }
 
 func Test_identityHandler_UseLastUnlockFails(t *testing.T) {
-	identityManager.CleanStatus()
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	identityManager.UnlockFails = true
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
@@ -89,7 +89,7 @@ func Test_identityHandler_UseLastUnlockFails(t *testing.T) {
 }
 
 func Test_identityHandler_UseNew(t *testing.T) {
-	identityManager.CleanStatus()
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
 
@@ -106,7 +106,7 @@ func Test_identityHandler_UseNew(t *testing.T) {
 }
 
 func Test_identityHandler_UseNewUnlockFails(t *testing.T) {
-	identityManager.CleanStatus()
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	identityManager.UnlockFails = true
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
