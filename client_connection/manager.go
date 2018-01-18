@@ -5,6 +5,7 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/middlewares/client/auth"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
@@ -133,8 +134,10 @@ func ConfigureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntim
 		}
 
 		statsSender := bytescount.NewSessionStatsSender(mysteriumApiClient, vpnSession.Id, signerFactory(id))
+		authenticator := auth.NewAuthenticator()
 		vpnMiddlewares := []openvpn.ManagementMiddleware{
 			bytescount.NewMiddleware(statsSender, 1*time.Minute),
+			auth.NewMiddleware(authenticator),
 		}
 		return openvpn.NewClient(
 			vpnConfig,

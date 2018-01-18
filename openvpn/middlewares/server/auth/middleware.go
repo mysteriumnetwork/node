@@ -82,7 +82,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	match = rule.FindStringSubmatch(line)
 	if len(match) > 0 {
 		if m.clientId < 0 {
-			return false, fmt.Errorf("wrong auth state")
+			return false, fmt.Errorf("wrong auth state, no client id")
 		}
 		m.password = match[1]
 		return true, nil
@@ -96,7 +96,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	match = rule.FindStringSubmatch(line)
 	if len(match) > 0 {
 		if m.clientId < 0 {
-			return false, fmt.Errorf("wrong auth state")
+			return false, fmt.Errorf("wrong auth state, no client id")
 		}
 		m.username = match[1]
 		return true, nil

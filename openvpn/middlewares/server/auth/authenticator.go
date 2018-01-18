@@ -1,16 +1,13 @@
 package auth
 
-import (
-	"github.com/mysterium/node/server"
-)
-
 type Authenticator func(username, password string) (bool, error)
 
-func NewAuthenticator(mysteriumClient server.Client) Authenticator {
+func NewAuthenticator() Authenticator {
 	return func(username, password string) (bool, error) {
-		return mysteriumClient.AuthenticateClient(
-			username,
-			password,
-		)
+		if username == "bad" {
+			return false, nil
+		}
+
+		return true, nil
 	}
 }

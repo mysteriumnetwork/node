@@ -80,7 +80,7 @@ func NewCommandWith(
 				filepath.Join(options.DirectoryConfig, "crl.pem"),
 				filepath.Join(options.DirectoryConfig, "ta.key"),
 			)
-			authenticator := auth.NewAuthenticator(mysteriumClient)
+			authenticator := auth.NewAuthenticator()
 			vpnMiddlewares := []openvpn.ManagementMiddleware{
 				auth.NewMiddleware(authenticator),
 			}

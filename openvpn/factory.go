@@ -50,6 +50,7 @@ func NewClientConfig(
 	config.SetPersistTun()
 	config.SetPersistKey()
 
+	config.setParam("reneg-sec", "60")
 	config.setParam("resolv-retry", "infinite")
 	config.setParam("setenv", "opt block-outside-dns")
 	config.setParam("redirect-gateway", "def1 bypass-dhcp")
