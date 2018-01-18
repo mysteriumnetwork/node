@@ -17,8 +17,6 @@ import (
 	"path/filepath"
 )
 
-const identityPassword = ""
-
 func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(
 		options,
@@ -51,9 +49,9 @@ func NewCommandWith(
 	return &CommandRun{
 		identityLoader: func() (identity.Identity, error) {
 			identitySelector := func() (identity.Identity, error) {
-				return identity_handler.SelectIdentity(identityHandler, options.NodeKey, identityPassword)
+				return identity_handler.SelectIdentity(identityHandler, options.NodeKey, options.Passphrase)
 			}
-			return identity_handler.LoadIdentity(identitySelector, identityManager, identityPassword)
+			return identity_handler.LoadIdentity(identitySelector, identityManager, options.Passphrase)
 		},
 		createSigner:    createSigner,
 		ipifyClient:     ipifyClient,
