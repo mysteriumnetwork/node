@@ -14,6 +14,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"path/filepath"
+	"github.com/mysterium/node/cmd/mysterium_server/command_run/identity_handler"
 )
 
 const identityPassword = ""
@@ -40,7 +41,7 @@ func NewCommandWith(
 	createSigner := func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(keystoreInstance, id)
 	}
-	identityHandler := NewNodeIdentityHandler(
+	identityHandler := identity_handler.NewNodeIdentityHandler(
 		identityManager,
 		mysteriumClient,
 		cache,
@@ -49,7 +50,7 @@ func NewCommandWith(
 
 	return &CommandRun{
 		identityLoader: func() (identity.Identity, error) {
-			return LoadIdentity(identityHandler, options.NodeKey, identityPassword)
+			return identity_handler.LoadIdentity(identityHandler, options.NodeKey, identityPassword)
 		},
 		createSigner:    createSigner,
 		ipifyClient:     ipifyClient,
