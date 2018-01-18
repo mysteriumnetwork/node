@@ -111,7 +111,7 @@ func TestUnlockFailure(t *testing.T) {
 	params := httprouter.Params{{"id", "1234abcd"}}
 	assert.Nil(t, err)
 
-	mockIdm.UnlockFails = true
+	mockIdm.MarkUnlockToFail()
 
 	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Unlock
 	handlerFunc(resp, req, params)

@@ -2,6 +2,7 @@ package command_run
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/mysterium/node/cmd/mysterium_server/command_run/identity_handler"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -14,7 +15,6 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"path/filepath"
-	"github.com/mysterium/node/cmd/mysterium_server/command_run/identity_handler"
 )
 
 const identityPassword = ""
@@ -50,7 +50,10 @@ func NewCommandWith(
 
 	return &CommandRun{
 		identityLoader: func() (identity.Identity, error) {
-			return identity_handler.LoadIdentity(identityHandler, options.NodeKey, identityPassword)
+			identitySelector := func() (identity.Identity, error) {
+				return identity_handler.SelectIdentity(identityHandler, options.NodeKey, identityPassword)
+			}
+			return identity_handler.LoadIdentity(identitySelector, identityManager, identityPassword)
 		},
 		createSigner:    createSigner,
 		ipifyClient:     ipifyClient,

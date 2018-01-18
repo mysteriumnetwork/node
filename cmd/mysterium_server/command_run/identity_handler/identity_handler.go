@@ -19,7 +19,7 @@ func NewNodeIdentityHandler(
 	identityApi server.Client,
 	cache identity.IdentityCacheInterface,
 	signerFactory identity.SignerFactory,
-) *identityHandler {
+) IdentityHandlerInterface {
 	return &identityHandler{
 		manager:       manager,
 		identityApi:   identityApi,
@@ -28,12 +28,8 @@ func NewNodeIdentityHandler(
 	}
 }
 
-func (ih *identityHandler) UseExisting(address, passphrase string) (id identity.Identity, err error) {
+func (ih *identityHandler) UseExisting(address string) (id identity.Identity, err error) {
 	id, err = ih.manager.GetIdentity(address)
-	if err != nil {
-		return
-	}
-	err = ih.manager.Unlock(address, passphrase)
 	if err != nil {
 		return
 	}
@@ -42,15 +38,10 @@ func (ih *identityHandler) UseExisting(address, passphrase string) (id identity.
 	return
 }
 
-func (ih *identityHandler) UseLast(passphrase string) (identity identity.Identity, err error) {
+func (ih *identityHandler) UseLast() (identity identity.Identity, err error) {
 	identity, err = ih.cache.GetIdentity()
 	if err != nil || !ih.manager.HasIdentity(identity.Address) {
 		return identity, errors.New("identity not found in cache")
-	}
-
-	err = ih.manager.Unlock(identity.Address, passphrase)
-	if err != nil {
-		return identity, err
 	}
 
 	return identity, nil
@@ -59,11 +50,6 @@ func (ih *identityHandler) UseLast(passphrase string) (identity identity.Identit
 func (ih *identityHandler) UseNew(passphrase string) (id identity.Identity, err error) {
 	// if all fails, create a new one
 	id, err = ih.manager.CreateNewIdentity(passphrase)
-	if err != nil {
-		return
-	}
-
-	err = ih.manager.Unlock(id.Address, passphrase)
 	if err != nil {
 		return
 	}

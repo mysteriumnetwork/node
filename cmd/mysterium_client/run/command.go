@@ -14,8 +14,6 @@ import (
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
 )
 
-const identityPassword = ""
-
 //NewCommand function created new client command with options passed from commandline
 func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(

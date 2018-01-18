@@ -5,13 +5,17 @@ import "github.com/pkg/errors"
 type idmFake struct {
 	LastUnlockAddress    string
 	LastUnlockPassphrase string
-	UnlockFails          bool
 	existingIdentities   []Identity
 	newIdentity          Identity
+	unlockFails          bool
 }
 
 func NewIdentityManagerFake(existingIdentities []Identity, newIdentity Identity) *idmFake {
-	return &idmFake{"", "", false, existingIdentities, newIdentity}
+	return &idmFake{"", "", existingIdentities, newIdentity, false}
+}
+
+func (fakeIdm *idmFake) MarkUnlockToFail() {
+	fakeIdm.unlockFails = true
 }
 
 func (fakeIdm *idmFake) CreateNewIdentity(_ string) (Identity, error) {
@@ -35,7 +39,7 @@ func (fakeIdm *idmFake) HasIdentity(_ string) bool {
 func (fakeIdm *idmFake) Unlock(address string, passphrase string) error {
 	fakeIdm.LastUnlockAddress = address
 	fakeIdm.LastUnlockPassphrase = passphrase
-	if fakeIdm.UnlockFails {
+	if fakeIdm.unlockFails {
 		return errors.New("Unlock failed")
 	}
 	return nil

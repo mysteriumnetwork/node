@@ -2,8 +2,8 @@ package identity_handler
 
 import "github.com/mysterium/node/identity"
 
-type identityHandlerInterface interface {
-	UseExisting(address, passphrase string) (id identity.Identity, err error)
-	UseLast(passphrase string) (identity identity.Identity, err error)
-	UseNew(passphrase string) (id identity.Identity, err error)
+type IdentityHandlerInterface interface {
+	UseExisting(address string) (identity.Identity, error)
+	UseLast() (identity.Identity, error)
+	UseNew(passphrase string) (identity.Identity, error)
 }
