@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"github.com/mysterium/node/identity"
 	"net/url"
 )
 
@@ -23,7 +22,7 @@ type Client struct {
 }
 
 // GetIdentities returns a list of client identities
-func (client *Client) GetIdentities() (identities []identity.Identity, err error) {
+func (client *Client) GetIdentities() (ids []IdentityDto, err error) {
 	response, err := client.http.Get("identities", url.Values{})
 	if err != nil {
 		return
@@ -32,24 +31,16 @@ func (client *Client) GetIdentities() (identities []identity.Identity, err error
 
 	var list IdentityList
 	err = parseResponseJson(response, &list)
-	if err != nil {
-		return
-	}
 
-	identities = make([]identity.Identity, len(list.Identities))
-	for i, id := range list.Identities {
-		identities[i] = identity.FromAddress(id.Address)
-	}
-
-	return
+	return list.Identities, err
 }
 
-// NewIdentity create a new client identity
-func (client *Client) NewIdentity() (id identity.Identity, err error) {
+// NewIdentity creates a new client identity
+func (client *Client) NewIdentity(password string) (id IdentityDto, err error) {
 	payload := struct {
 		Password string `json:"password"`
 	}{
-		"",
+		password,
 	}
 	response, err := client.http.Post("identities", payload)
 	if err != nil {
@@ -57,49 +48,34 @@ func (client *Client) NewIdentity() (id identity.Identity, err error) {
 	}
 	defer response.Body.Close()
 
-	var idDto struct {
-		Id string `json:"id"`
-	}
-	err = parseResponseJson(response, &idDto)
-	if err != nil {
-		return
-	}
-
-	return identity.FromAddress(idDto.Id), nil
+	err = parseResponseJson(response, &id)
+	return id, err
 }
 
-// Register registers given identity to discovery service
-func (client *Client) Register() (id identity.Identity, err error) {
+// RegisterIdentity registers given identity
+func (client *Client) RegisterIdentity(address string) (err error) {
 	payload := struct {
-		Id string `json:"id"`
+		Registered bool `json:"registered"`
 	}{
-		"",
+		true,
 	}
-	response, err := client.http.Put("identities/"+id.Address+"/registration", payload)
+	response, err := client.http.Put("identities/"+address+"/registration", payload)
 	if err != nil {
 		return
 	}
 	defer response.Body.Close()
 
-	var idDto struct {
-		Id string `json:"id"`
-	}
-	err = parseResponseJson(response, &idDto)
-	if err != nil {
-		return
-	}
-
-	return identity.FromAddress(idDto.Id), nil
+	return nil
 }
 
 // Connect initiates a new connection to a host identified by providerId
-func (client *Client) Connect(id identity.Identity, providerId identity.Identity) (err error) {
+func (client *Client) Connect(consumerId, providerId string) (status StatusDto, err error) {
 	payload := struct {
 		Identity string `json:"identity"`
 		NodeKey  string `json:"nodeKey"`
 	}{
-		id.Address,
-		providerId.Address,
+		consumerId,
+		providerId,
 	}
 	response, err := client.http.Put("connection", payload)
 	if err != nil {
@@ -107,7 +83,8 @@ func (client *Client) Connect(id identity.Identity, providerId identity.Identity
 	}
 	defer response.Body.Close()
 
-	return nil
+	err = parseResponseJson(response, &status)
+	return status, err
 }
 
 // Disconnect terminates current connection
@@ -130,9 +107,5 @@ func (client *Client) Status() (status StatusDto, err error) {
 	defer response.Body.Close()
 
 	err = parseResponseJson(response, &status)
-	if err != nil {
-		return
-	}
-
-	return status, nil
+	return status, err
 }

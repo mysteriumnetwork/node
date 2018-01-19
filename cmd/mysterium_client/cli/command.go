@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"github.com/chzyer/readline"
-	"github.com/mysterium/node/identity"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"io"
 	"log"
@@ -34,6 +33,7 @@ type Command struct {
 }
 
 const redColor = "\033[31m%s\033[0m"
+const identityDefaultPassword = ""
 
 // Run starts CLI interface
 func (c *Command) Run() (err error) {
@@ -127,21 +127,21 @@ func (c *Command) connect(line string) {
 		return
 	}
 
-	clientIdentity, nodeIdentity := identities[0], identities[1]
+	consumerId, providerId := identities[0], identities[1]
 
-	if clientIdentity == "new" {
-		id, err := c.tequilapi.NewIdentity()
+	if consumerId == "new" {
+		id, err := c.tequilapi.NewIdentity(identityDefaultPassword)
 		if err != nil {
 			warn(err)
 			return
 		}
-		clientIdentity = id.Address
-		success("New identity created:", clientIdentity)
+		consumerId = id.Address
+		success("New identity created:", consumerId)
 	}
 
-	status("CONNECTING", "from:", clientIdentity, "to:", nodeIdentity)
+	status("CONNECTING", "from:", consumerId, "to:", providerId)
 
-	err := c.tequilapi.Connect(identity.FromAddress(clientIdentity), identity.FromAddress(nodeIdentity))
+	_, err := c.tequilapi.Connect(consumerId, providerId)
 	if err != nil {
 		warn(err)
 		return
@@ -168,7 +168,7 @@ func (c *Command) status() {
 	}
 
 	info("Status:", status.Status)
-	info("SID", status.SessionId)
+	info("SID:", status.SessionId)
 }
 
 func (c *Command) help() {
@@ -205,7 +205,7 @@ func (c *Command) identities(line string) {
 	}
 
 	if action == "new" {
-		id, err := c.tequilapi.NewIdentity()
+		id, err := c.tequilapi.NewIdentity(identityDefaultPassword)
 		if err != nil {
 			warn(err)
 			return
