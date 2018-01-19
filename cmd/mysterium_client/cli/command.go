@@ -84,31 +84,27 @@ func (c *Command) handleActions(line string) {
 	switch {
 	case strings.HasPrefix(line, "connect"):
 		c.connect(line)
-		break
 	case line == "exit" || line == "quit":
 		c.quit()
-		break
+
+	case strings.HasPrefix(line, "unlock"):
+		c.unlock(line)
 
 	case line == "help":
 		c.help()
-		break
 
 	case line == "status":
 		c.status()
-		break
 
 	case line == "disconnect":
 		c.disconnect()
-		break
 
 	case strings.HasPrefix(line, "identities"):
 		c.identities(line)
-		break
 
 	default:
 		if len(line) > 0 {
 			c.help()
-			break
 		}
 	}
 }
@@ -148,6 +144,37 @@ func (c *Command) connect(line string) {
 	}
 
 	success("Connected.")
+}
+
+func (c *Command) unlock(line string) {
+	connectionArgs := strings.TrimSpace(line[7:])
+
+	unlockSignature := "Unlock <identity> <passphrase (optional)>"
+	if len(connectionArgs) == 0 {
+		info("Press tab to select identity.", unlockSignature)
+		return
+	}
+
+	args := strings.Fields(connectionArgs)
+	var identity, passphrase string
+
+	if len(args) == 1 {
+		identity, passphrase = args[0], ""
+	} else if len(args) == 2 {
+		identity, passphrase = args[0], args[1]
+	} else {
+		info("Please type in identity and optional passphrase.", unlockSignature)
+		return
+	}
+
+	info("Unlocking", identity)
+	err := c.tequilapi.Unlock(identity, passphrase)
+	if err != nil {
+		warn(err)
+		return
+	}
+
+	success(fmt.Sprintf("Identity %s unlocked.", identity))
 }
 
 func (c *Command) disconnect() {
@@ -247,5 +274,11 @@ func newAutocompleter(tequilapi *tequilapi_client.Client) *readline.PrefixComple
 		readline.PcItem("disconnect"),
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
+		readline.PcItem(
+			"unlock",
+			readline.PcItemDynamic(
+				getIdentityOptionList(tequilapi),
+			),
+		),
 	)
 }
