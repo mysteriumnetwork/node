@@ -1,4 +1,4 @@
-package state
+package middlewares
 
 type State string
 

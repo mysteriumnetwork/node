@@ -14,5 +14,4 @@ type Client interface {
 	RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 	NodeSendStats(nodeKey string, signer identity.Signer) (err error)
 	SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error)
-	AuthenticateClient(username string, password string) (authenticated bool, err error)
 }
