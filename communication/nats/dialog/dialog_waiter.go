@@ -53,15 +53,16 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		if request.IdentityId == "" {
 			return &responseInvalidIdentity, nil
 		}
+		peerId := identity.FromAddress(request.IdentityId)
 
-		contactDialog := waiter.newDialogToContact(identity.FromAddress(request.IdentityId))
-		waiter.dialogs = append(waiter.dialogs, contactDialog)
-
-		err := dialogHandler.Handle(contactDialog)
+		dialog := waiter.newDialogToPeer(peerId, waiter.newCodecToPeer(peerId))
+		err := dialogHandler.Handle(dialog)
 		if err != nil {
 			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.IdentityId, err))
 			return &responseInternalError, nil
 		}
+
+		waiter.dialogs = append(waiter.dialogs, dialog)
 
 		log.Info(waiterLogPrefix, fmt.Sprintf("Accepted dialog from: '%s'", request.IdentityId))
 		return &responseOK, nil
@@ -74,16 +75,20 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 	return subscribeError
 }
 
-func (waiter *dialogWaiter) newDialogToContact(contactIdentity identity.Identity) *dialog {
-	subTopic := waiter.myAddress.GetTopic() + "." + contactIdentity.Address
-	contactCodec := NewCodecSecured(
+func (waiter *dialogWaiter) newCodecToPeer(peerId identity.Identity) *codecSecured {
+
+	return NewCodecSecured(
 		communication.NewCodecJSON(),
 		waiter.mySigner,
-		identity.NewVerifierIdentity(contactIdentity),
+		identity.NewVerifierIdentity(peerId),
 	)
+}
+
+func (waiter *dialogWaiter) newDialogToPeer(peerId identity.Identity, peerCodec *codecSecured) *dialog {
+	subTopic := waiter.myAddress.GetTopic() + "." + peerId.Address
 
 	return &dialog{
-		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), contactCodec, subTopic),
-		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), contactCodec, subTopic),
+		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), peerCodec, subTopic),
+		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), peerCodec, subTopic),
 	}
 }
