@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
+	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
 	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
 	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/nat"

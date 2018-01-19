@@ -1,17 +1,20 @@
-package command_run
+package run
 
 import (
 	"flag"
 	"github.com/mysterium/node/utils/file"
 )
 
+// CommandOptions describes options which are required to start CommandRun
 type CommandOptions struct {
 	DirectoryRuntime  string
 	DirectoryKeystore string
-	TequilaApiAddress string
-	TequilaApiPort    int
+	TequilapiAddress  string
+	TequilapiPort     int
+	CLI               bool
 }
 
+// ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.StringVar(
@@ -27,17 +30,24 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"Keystore directory",
 	)
 	flags.StringVar(
-		&options.TequilaApiAddress,
+		&options.TequilapiAddress,
 		"tequilapi.address",
 		"localhost",
 		"IP address of interface to listen for incoming connections. By default - bind to local interface",
 	)
 
 	flags.IntVar(
-		&options.TequilaApiPort,
+		&options.TequilapiPort,
 		"tequilapi.port",
 		4050,
 		"Port for listening incoming api requests. By default - 4050",
+	)
+
+	flags.BoolVar(
+		&options.CLI,
+		"cli",
+		false,
+		"Run an interactive CLI based Mysterium UI",
 	)
 
 	err = flags.Parse(args[1:])

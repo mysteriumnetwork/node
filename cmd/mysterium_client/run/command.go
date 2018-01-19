@@ -1,4 +1,4 @@
-package command_run
+package run
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
-	"github.com/mysterium/node/tequilapi/endpoints"
+	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
 )
 
 //NewCommand function created new client command with options passed from commandline
@@ -47,11 +47,11 @@ func NewCommandWith(
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
 	router := tequilapi.NewApiRouter()
-	endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	endpoints.AddRoutesForConnection(router, connectionManager)
-	endpoints.AddRoutesForProposals(router, mysteriumClient)
+	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager)
+	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
-	httpApiServer := tequilapi.NewServer(options.TequilaApiAddress, options.TequilaApiPort, router)
+	httpApiServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
 	return &CommandRun{
 		connectionManager,
@@ -65,18 +65,19 @@ type CommandRun struct {
 	httpApiServer     tequilapi.ApiServer
 }
 
-//Run starts tequilaApi service - does not block
+//Run starts Tequilapi service - does not block
 func (cmd *CommandRun) Run() error {
 	err := cmd.httpApiServer.StartServing()
 	if err != nil {
 		return err
 	}
+
 	port, err := cmd.httpApiServer.Port()
 	if err != nil {
 		return err
 	}
-
 	fmt.Printf("Api started on: %d\n", port)
+
 	return nil
 }
 
@@ -86,7 +87,14 @@ func (cmd *CommandRun) Wait() error {
 }
 
 //Kill stops tequilapi service
-func (cmd *CommandRun) Kill() {
+func (cmd *CommandRun) Kill() error {
+	err := cmd.connectionManager.Disconnect()
+	if err != nil {
+		return err
+	}
+
 	cmd.httpApiServer.Stop()
-	cmd.connectionManager.Disconnect()
+	fmt.Printf("Api stopped\n")
+
+	return nil
 }

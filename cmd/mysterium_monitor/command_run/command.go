@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/mysterium/node/ipify"
 
-	command_client "github.com/mysterium/node/cmd/mysterium_client/command_run"
+	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
 	"github.com/mysterium/node/state_client"
 	"sync"
 	"time"
@@ -47,7 +47,7 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 		cmd.resultWriter.NodeStart(nodeKey)
 		cmd.ipCheckWaiter.Add(1)
 
-		//TODO here we need to make tequila api call with connect to node by key
+		//TODO here we need to make Tequilapi call with connect to node by key
 		err = cmd.clientCommand.Run()
 		if err != nil {
 			cmd.resultWriter.NodeError("Client starting error", err)

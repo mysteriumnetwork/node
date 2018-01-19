@@ -67,11 +67,11 @@ func (manager *connectionManager) Connect(id identity.Identity, nodeKey string) 
 	}
 
 	manager.vpnClient, err = manager.vpnClientFactory(*vpnSession, id)
-
 	if err := manager.vpnClient.Start(); err != nil {
 		manager.status = statusError(err)
 		return err
 	}
+
 	manager.status = statusConnected(vpnSession.Id)
 	return nil
 }
@@ -82,9 +82,20 @@ func (manager *connectionManager) Status() ConnectionStatus {
 
 func (manager *connectionManager) Disconnect() error {
 	manager.status = statusDisconnecting()
-	defer func() { manager.status = statusNotConnected() }()
-	manager.dialog.Close()
-	return manager.vpnClient.Stop()
+
+	if manager.vpnClient != nil {
+		if err := manager.vpnClient.Stop(); err != nil {
+			return err
+		}
+	}
+	if manager.dialog != nil {
+		if err := manager.dialog.Close(); err != nil {
+			return err
+		}
+	}
+
+	manager.status = statusNotConnected()
+	return nil
 }
 
 func (manager *connectionManager) Wait() error {
