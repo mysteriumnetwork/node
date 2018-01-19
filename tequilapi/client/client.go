@@ -16,7 +16,7 @@ func NewClient(ip string, port int) *Client {
 	}
 }
 
-// Client is able perform remote requests to Teuilapi server
+// Client is able perform remote requests to Tequilapi server
 type Client struct {
 	http httpClientInterface
 }
@@ -108,4 +108,21 @@ func (client *Client) Status() (status StatusDto, err error) {
 
 	err = parseResponseJson(response, &status)
 	return status, err
+}
+
+func (client *Client) Unlock(identity, passphrase string) error {
+	path := fmt.Sprintf("identities/%s/unlock", identity)
+	payload := struct {
+		Passphrase string `json:"passphrase"`
+	}{
+		passphrase,
+	}
+
+	response, err := client.http.Put(path, payload)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
 }

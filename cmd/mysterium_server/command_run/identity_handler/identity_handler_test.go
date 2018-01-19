@@ -1,4 +1,4 @@
-package command_run
+package identity_handler
 
 import (
 	"testing"
@@ -59,7 +59,7 @@ func Test_identityHandler_UseNew(t *testing.T) {
 
 	handler := NewNodeIdentityHandler(identityManager, client, cache, fakeSignerFactory)
 
-	id, err := handler.UseNew()
+	id, err := handler.UseNew("pass")
 	assert.Equal(t, newIdentity, id)
 	assert.Nil(t, err)
 

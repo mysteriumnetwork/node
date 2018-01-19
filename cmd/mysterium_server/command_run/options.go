@@ -10,6 +10,7 @@ type CommandOptions struct {
 	DirectoryConfig   string
 	DirectoryRuntime  string
 	DirectoryKeystore string
+	Passphrase        string
 }
 
 func ParseArguments(args []string) (options CommandOptions, err error) {
@@ -40,6 +41,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"keystore-dir",
 		file.GetMysteriumDirectory("keystore"),
 		"Keystore directory",
+	)
+
+	flags.StringVar(
+		&options.Passphrase,
+		"passphrase",
+		"",
+		"Identity passphrase",
 	)
 
 	err = flags.Parse(args[1:])

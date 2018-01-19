@@ -5,4 +5,5 @@ type IdentityManagerInterface interface {
 	GetIdentities() []Identity
 	GetIdentity(address string) (Identity, error)
 	HasIdentity(address string) bool
+	Unlock(address string, passphrase string) error
 }

@@ -14,11 +14,11 @@ import (
 )
 
 type CommandRun struct {
-	identitySelector func() (identity.Identity, error)
-	createSigner     identity.SignerFactory
-	ipifyClient      ipify.Client
-	mysteriumClient  server.Client
-	natService       nat.NATService
+	identityLoader  func() (identity.Identity, error)
+	createSigner    identity.SignerFactory
+	ipifyClient     ipify.Client
+	mysteriumClient server.Client
+	natService      nat.NATService
 
 	dialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
 	dialogWaiter        communication.DialogWaiter
@@ -30,7 +30,7 @@ type CommandRun struct {
 }
 
 func (cmd *CommandRun) Run() (err error) {
-	providerId, err := cmd.identitySelector()
+	providerId, err := cmd.identityLoader()
 	if err != nil {
 		return err
 	}

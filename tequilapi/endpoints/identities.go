@@ -28,6 +28,10 @@ type identityRegistrationDto struct {
 	Registered bool `json:"registered"`
 }
 
+type identityUnlockingDto struct {
+	Passphrase string `json:"passphrase"`
+}
+
 type identitiesApi struct {
 	idm             identity.IdentityManagerInterface
 	mysteriumClient server.Client
@@ -101,6 +105,22 @@ func (endpoint *identitiesApi) Register(resp http.ResponseWriter, request *http.
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+func (endpoint *identitiesApi) Unlock(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+	unlockReq, err := toUnlockRequest(request)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	err = endpoint.idm.Unlock(id, unlockReq.Passphrase)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusForbidden)
+		return
+	}
+	resp.WriteHeader(http.StatusAccepted)
+}
+
 func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 	var identityCreationReq = &identityCreationDto{}
 	err := json.NewDecoder(req.Body).Decode(&identityCreationReq)
@@ -108,6 +128,12 @@ func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 		return nil, err
 	}
 	return identityCreationReq, nil
+}
+
+func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, err error) {
+	isUnlockingReq = identityUnlockingDto{}
+	err = json.NewDecoder(req.Body).Decode(&isUnlockingReq)
+	return
 }
 
 func toRegisterRequest(req *http.Request) (isRegisterReq identityRegistrationDto, err error) {
@@ -142,4 +168,5 @@ func AddRoutesForIdentities(
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id/registration", idmEnd.Register)
+	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 }

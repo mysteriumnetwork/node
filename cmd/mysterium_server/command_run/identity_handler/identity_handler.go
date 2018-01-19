@@ -1,25 +1,10 @@
-package command_run
+package identity_handler
 
 import (
 	"errors"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/server"
 )
-
-//SelectIdentity selects lastUsed identity or creates new one if keyOption is not present
-func SelectIdentity(identityHandler *identityHandler, keyOption string) (id identity.Identity, err error) {
-	if len(keyOption) > 0 {
-		return identityHandler.UseExisting(keyOption)
-	}
-
-	if id, err = identityHandler.UseLast(); err == nil {
-		return id, err
-	}
-
-	return identityHandler.UseNew()
-}
-
-const nodeIdentityPassword = ""
 
 type identityHandler struct {
 	manager       identity.IdentityManagerInterface
@@ -34,7 +19,7 @@ func NewNodeIdentityHandler(
 	identityApi server.Client,
 	cache identity.IdentityCacheInterface,
 	signerFactory identity.SignerFactory,
-) *identityHandler {
+) IdentityHandlerInterface {
 	return &identityHandler{
 		manager:       manager,
 		identityApi:   identityApi,
@@ -62,9 +47,9 @@ func (ih *identityHandler) UseLast() (identity identity.Identity, err error) {
 	return identity, nil
 }
 
-func (ih *identityHandler) UseNew() (id identity.Identity, err error) {
+func (ih *identityHandler) UseNew(passphrase string) (id identity.Identity, err error) {
 	// if all fails, create a new one
-	id, err = ih.manager.CreateNewIdentity(nodeIdentityPassword)
+	id, err = ih.manager.CreateNewIdentity(passphrase)
 	if err != nil {
 		return
 	}

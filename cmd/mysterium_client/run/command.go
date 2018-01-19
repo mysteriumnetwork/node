@@ -22,7 +22,7 @@ func NewCommand(options CommandOptions) *CommandRun {
 	)
 }
 
-//NewCommandWith does the same as NewCommand with posibility to override mysterium api client for external communication
+//NewCommandWith does the same as NewCommand with possibility to override mysterium api client for external communication
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,

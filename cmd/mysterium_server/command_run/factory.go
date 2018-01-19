@@ -2,6 +2,7 @@ package command_run
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/mysterium/node/cmd/mysterium_server/command_run/identity_handler"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -34,19 +35,23 @@ func NewCommandWith(
 
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	cache := identity.NewIdentityCache(options.DirectoryKeystore, "remember.json")
+	identityManager := identity.NewIdentityManager(keystoreInstance)
 	createSigner := func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(keystoreInstance, id)
 	}
-	identityHandler := NewNodeIdentityHandler(
-		identity.NewIdentityManager(keystoreInstance),
+	identityHandler := identity_handler.NewNodeIdentityHandler(
+		identityManager,
 		mysteriumClient,
 		cache,
 		createSigner,
 	)
 
 	return &CommandRun{
-		identitySelector: func() (identity.Identity, error) {
-			return SelectIdentity(identityHandler, options.NodeKey)
+		identityLoader: func() (identity.Identity, error) {
+			identitySelector := func() (identity.Identity, error) {
+				return identity_handler.SelectIdentity(identityHandler, options.NodeKey, options.Passphrase)
+			}
+			return identity_handler.LoadIdentity(identitySelector, identityManager, options.Passphrase)
 		},
 		createSigner:    createSigner,
 		ipifyClient:     ipifyClient,
