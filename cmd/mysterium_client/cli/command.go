@@ -147,15 +147,15 @@ func (c *Command) connect(line string) {
 }
 
 func (c *Command) unlock(line string) {
-	connectionArgs := strings.TrimSpace(line[7:])
+	unlockArgs := strings.TrimSpace(line[7:])
 
-	unlockSignature := "Unlock <identity> <passphrase (optional)>"
-	if len(connectionArgs) == 0 {
+	unlockSignature := "Unlock <identity> [passphrase]"
+	if len(unlockArgs) == 0 {
 		info("Press tab to select identity.", unlockSignature)
 		return
 	}
 
-	args := strings.Fields(connectionArgs)
+	args := strings.Fields(unlockArgs)
 	var identity, passphrase string
 
 	if len(args) == 1 {
