@@ -3,7 +3,7 @@ package auth
 import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/client/state"
+	"github.com/mysterium/node/openvpn/middlewares"
 	"net"
 	"regexp"
 )
@@ -13,9 +13,7 @@ type middleware struct {
 	connection    net.Conn
 	username      string
 	password      string
-	clientId      int
-	keyId         int
-	state         state.State
+	state         middlewares.State
 }
 
 func NewMiddleware(authenticator Authenticator) openvpn.ManagementMiddleware {
@@ -36,9 +34,13 @@ func (m *middleware) Stop() error {
 	return nil
 }
 
+func (m *middleware) State() middlewares.State {
+	return m.state
+}
+
 func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
-	// PASSWORD:Need 'Auth' username/password
-	rule, err := regexp.Compile("^>PASSWORD:Need 'Auth'.*$")
+	//>PASSWORD:Need 'Auth' username/password
+	rule, err := regexp.Compile("^>PASSWORD:Need 'Auth' username/password$")
 	if err != nil {
 		return false, err
 	}
@@ -46,7 +48,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	match := rule.FindStringSubmatch(line)
 	if len(match) > 0 {
 		m.Reset()
-		m.state = state.STATE_AUTH
+		m.state = middlewares.STATE_AUTH
 		username, password, err := m.authenticator()
 		log.Info("authenticating user ", username, " with pass: ", password)
 
@@ -69,7 +71,5 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 func (m *middleware) Reset() {
 	m.username = ""
 	m.password = ""
-	m.clientId = -1
-	m.keyId = -1
-	m.state = state.STATE_WAIT
+	m.state = middlewares.STATE_WAIT
 }

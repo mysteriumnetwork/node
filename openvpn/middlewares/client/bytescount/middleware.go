@@ -3,6 +3,7 @@ package bytescount
 import (
 	"fmt"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/middlewares"
 	"net"
 	"regexp"
 	"strconv"
@@ -13,6 +14,7 @@ type middleware struct {
 	sessionStatsSender SessionStatsSender
 	interval           time.Duration
 
+	state      middlewares.State
 	connection net.Conn
 }
 
@@ -37,6 +39,10 @@ func (middleware *middleware) Start(connection net.Conn) error {
 func (middleware *middleware) Stop() error {
 	_, err := middleware.connection.Write([]byte("bytecount 0\n"))
 	return err
+}
+
+func (middleware *middleware) State() middlewares.State {
+	return middleware.state
 }
 
 func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error) {

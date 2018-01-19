@@ -4,7 +4,7 @@ import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/client/state"
+	"github.com/mysterium/node/openvpn/middlewares"
 	"net"
 	"regexp"
 	"strconv"
@@ -17,7 +17,7 @@ type middleware struct {
 	password      string
 	clientId      int
 	keyId         int
-	state         state.State
+	state         middlewares.State
 }
 
 func NewMiddleware(authenticator Authenticator) openvpn.ManagementMiddleware {
@@ -39,6 +39,10 @@ func (m *middleware) Stop() error {
 	return err
 }
 
+func (m *middleware) State() middlewares.State {
+	return m.state
+}
+
 func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 
 	rule, err := regexp.Compile("^>CLIENT:REAUTH,(\\d),(\\d)$")
@@ -49,7 +53,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	match := rule.FindStringSubmatch(line)
 	if len(match) > 0 {
 		m.Reset()
-		m.state = state.STATE_AUTH
+		m.state = middlewares.STATE_AUTH
 		m.clientId, err = strconv.Atoi(match[1])
 		m.keyId, err = strconv.Atoi(match[2])
 		return true, nil
@@ -63,14 +67,14 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	match = rule.FindStringSubmatch(line)
 	if len(match) > 0 {
 		m.Reset()
-		m.state = state.STATE_AUTH
+		m.state = middlewares.STATE_AUTH
 		m.clientId, err = strconv.Atoi(match[1])
 		m.keyId, err = strconv.Atoi(match[2])
 		return true, nil
 	}
 
 	// further proceed only if in AUTH state
-	if m.state != state.STATE_AUTH {
+	if m.state != middlewares.STATE_AUTH {
 		return false, nil
 	}
 
@@ -144,5 +148,5 @@ func (m *middleware) Reset() {
 	m.password = ""
 	m.clientId = -1
 	m.keyId = -1
-	m.state = state.STATE_WAIT
+	m.state = middlewares.STATE_WAIT
 }
