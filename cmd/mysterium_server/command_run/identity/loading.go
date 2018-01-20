@@ -1,4 +1,4 @@
-package identity_handler
+package identity
 
 import "github.com/mysterium/node/identity"
 
@@ -20,7 +20,7 @@ func LoadIdentity(identitySelector IdentitySelector, identityManager identity.Id
 }
 
 //SelectIdentity selects lastUsed identity or creates and unlocks new one if keyOption is not present
-func SelectIdentity(identityHandler IdentityHandlerInterface, keyOption, passphrase string) (identity.Identity, error) {
+func SelectIdentity(identityHandler HandlerInterface, keyOption, passphrase string) (identity.Identity, error) {
 	if len(keyOption) > 0 {
 		return identityHandler.UseExisting(keyOption)
 	}

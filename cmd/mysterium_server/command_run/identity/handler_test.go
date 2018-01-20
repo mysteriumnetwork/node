@@ -1,4 +1,4 @@
-package identity_handler
+package identity
 
 import (
 	"testing"
@@ -19,7 +19,7 @@ func Test_identityHandler_UseExisting(t *testing.T) {
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
 
-	handler := NewNodeIdentityHandler(identityManager, client, cache, fakeSignerFactory)
+	handler := NewHandler(identityManager, client, cache, fakeSignerFactory)
 
 	id, err := handler.UseExisting(existingIdentity.Address)
 	assert.Equal(t, existingIdentity, id)
@@ -31,7 +31,7 @@ func Test_identityHandler_UseExistingNotFound(t *testing.T) {
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
 
-	handler := NewNodeIdentityHandler(identityManager, client, cache, fakeSignerFactory)
+	handler := NewHandler(identityManager, client, cache, fakeSignerFactory)
 
 	_, err := handler.UseExisting("does-not-exist")
 	assert.NotNil(t, err)
@@ -44,7 +44,7 @@ func Test_identityHandler_UseLast(t *testing.T) {
 	fakeIdentity := identity.FromAddress("abc")
 	cache.StoreIdentity(fakeIdentity)
 
-	handler := NewNodeIdentityHandler(identityManager, client, cache, fakeSignerFactory)
+	handler := NewHandler(identityManager, client, cache, fakeSignerFactory)
 
 	id, err := handler.UseLast()
 	assert.Equal(t, fakeIdentity, id)
@@ -57,7 +57,7 @@ func Test_identityHandler_UseNew(t *testing.T) {
 	client := server.NewClientFake()
 	cache := identity.NewIdentityCacheFake()
 
-	handler := NewNodeIdentityHandler(identityManager, client, cache, fakeSignerFactory)
+	handler := NewHandler(identityManager, client, cache, fakeSignerFactory)
 
 	id, err := handler.UseNew("pass")
 	assert.Equal(t, newIdentity, id)

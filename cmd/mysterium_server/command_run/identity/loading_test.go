@@ -1,4 +1,4 @@
-package identity_handler
+package identity
 
 import (
 	"errors"
@@ -45,21 +45,21 @@ func Test_LoadIdentityUnlockFails(t *testing.T) {
 }
 
 func Test_SelectIdentityExisting(t *testing.T) {
-	identityHandler := &identityHandlerFake{}
+	identityHandler := &handlerFake{}
 	id, err := SelectIdentity(identityHandler, "existing", "")
 	assert.Equal(t, "existing", id.Address)
 	assert.Nil(t, err)
 }
 
 func Test_SelectIdentityLast(t *testing.T) {
-	identityHandler := &identityHandlerFake{LastAddress: "last"}
+	identityHandler := &handlerFake{LastAddress: "last"}
 	id, err := SelectIdentity(identityHandler, "", "")
 	assert.Equal(t, "last", id.Address)
 	assert.Nil(t, err)
 }
 
 func Test_SelectIdentityNew(t *testing.T) {
-	identityHandler := &identityHandlerFake{}
+	identityHandler := &handlerFake{}
 	id, err := SelectIdentity(identityHandler, "", "")
 	assert.Equal(t, "new", id.Address)
 	assert.Nil(t, err)
