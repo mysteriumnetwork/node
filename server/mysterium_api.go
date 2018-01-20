@@ -24,7 +24,7 @@ type mysteriumApi struct {
 	http HttpTransport
 }
 
-//NewClient creates mysterium centralized api instance with real communcation
+//NewClient creates mysterium centralized api instance with real communication
 func NewClient() Client {
 	return &mysteriumApi{
 		&http.Client{
