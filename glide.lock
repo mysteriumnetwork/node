@@ -1,5 +1,5 @@
-hash: 34a455641b6f73f602846f070872694116d3598e01018b25a920d573fa651561
-updated: 2018-01-17T11:05:17.320093+02:00
+hash: 5e43fcf0414f763bf225c903dbb2a4b5617f8e5bd447c619e9373ff65a966f84
+updated: 2018-01-19T16:22:44.18441+02:00
 imports:
 - name: github.com/aristanetworks/goarista
   version: d1195528dcb23ba20b6b77f38596720af652a572
@@ -49,6 +49,10 @@ imports:
   - util
 - name: github.com/nats-io/nuid
   version: 3cf34f9fca4e88afa9da8eabd75e3326c9941b44
+- name: github.com/oschwald/geoip2-golang
+  version: 5b1dc16861f81d05d9836bb21c2d0d65282fc0b8
+- name: github.com/oschwald/maxminddb-golang
+  version: 8727e98aa1b91610eb184ed1ab615943b8d9deb0
 - name: github.com/pborman/uuid
   version: e533369306653d193b93dae055f6083cbf8ba54f
 - name: github.com/pkg/errors
@@ -78,6 +82,7 @@ imports:
   version: 28a7276518d399b9634904daad79e18b44d481bc
   subpackages:
   - unix
+  - windows
 - name: gopkg.in/fatih/set.v0
   version: 27c40922c40b43fe04554d8223a402af3ea333f3
 - name: gopkg.in/karalabe/cookiejar.v2

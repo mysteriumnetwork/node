@@ -1,15 +1,18 @@
 package command_run
 
 import (
+	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/service_discovery"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
+	"github.com/pkg/errors"
 	"time"
 )
 
@@ -52,7 +55,14 @@ func (cmd *CommandRun) Run() (err error) {
 		return err
 	}
 
-	proposal := service_discovery.NewServiceProposal(providerId, providerContact)
+	country, err := detectCountry()
+	if err != nil {
+		return err
+	}
+	log.Info("Country detected: ", country)
+
+	location := dto_discovery.Location{Country: country}
+	proposal := service_discovery.NewServiceProposalWithLocation(providerId, providerContact, location)
 
 	sessionCreateConsumer := &session.SessionCreateConsumer{
 		CurrentProposalId: proposal.Id,
@@ -80,6 +90,20 @@ func (cmd *CommandRun) Run() (err error) {
 	}()
 
 	return nil
+}
+
+func detectCountry() (string, error) {
+	ipifyClient := ipify.NewClient()
+	ip, err := ipifyClient.GetPublicIP()
+	if err != nil {
+		return "", errors.New("IP detection failed: " + err.Error())
+	}
+
+	country, err := location.DetectCountry(ip)
+	if err != nil {
+		return "", errors.New("Country detection failed: " + err.Error())
+	}
+	return country, nil
 }
 
 func (cmd *CommandRun) Wait() error {
