@@ -12,6 +12,9 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 //NewCommand function created new client command with options passed from commandline
@@ -52,11 +55,25 @@ func NewCommandWith(
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
 	httpApiServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
-
-	return &CommandRun{
+	cmd := &CommandRun{
 		connectionManager,
 		httpApiServer,
 	}
+	sigterm := make(chan os.Signal, 2)
+	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	go sarahConnor(sigterm, cmd)
+	return cmd
+}
+
+// she handles Terminator signals
+func sarahConnor(terminator chan os.Signal, cmd *CommandRun) {
+	<-terminator
+	err := cmd.Kill()
+	if err != nil {
+		fmt.Printf("Unable to disconnect %q\n", err.Error())
+	}
+	fmt.Println("Good bye")
+	os.Exit(1)
 }
 
 //CommandRun represent entry point for MysteriumVpn client with top level components
