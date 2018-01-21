@@ -55,25 +55,11 @@ func NewCommandWith(
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
 	httpApiServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
-	cmd := &CommandRun{
+
+	return &CommandRun{
 		connectionManager,
 		httpApiServer,
 	}
-	sigterm := make(chan os.Signal, 2)
-	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-	go sarahConnor(sigterm, cmd)
-	return cmd
-}
-
-// she handles Terminator signals
-func sarahConnor(terminator chan os.Signal, cmd *CommandRun) {
-	<-terminator
-	err := cmd.Kill()
-	if err != nil {
-		fmt.Printf("Unable to disconnect %q\n", err.Error())
-	}
-	fmt.Println("Good bye")
-	os.Exit(1)
 }
 
 //CommandRun represent entry point for MysteriumVpn client with top level components
@@ -84,6 +70,10 @@ type CommandRun struct {
 
 //Run starts Tequilapi service - does not block
 func (cmd *CommandRun) Run() error {
+	sigterm := make(chan os.Signal, 2)
+	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	go sigtermListener(sigterm, cmd)
+
 	err := cmd.httpApiServer.StartServing()
 	if err != nil {
 		return err
@@ -114,4 +104,14 @@ func (cmd *CommandRun) Kill() error {
 	fmt.Printf("Api stopped\n")
 
 	return nil
+}
+
+func sigtermListener(terminator chan os.Signal, cmd *CommandRun) {
+	<-terminator
+	err := cmd.Kill()
+	if err != nil {
+		fmt.Printf("Unable to kill one of subroutines %q\n", err.Error())
+	}
+	fmt.Println("Good bye")
+	os.Exit(1)
 }
