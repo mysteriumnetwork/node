@@ -21,7 +21,7 @@ dep:
 	glide install
 
 server:
-	go build -o $(BUILD_OUTPUT)/server cmd/mysterium_server/mysterium_server.go
+	./bin/server_build
 
 client:
-	go build -o $(BUILD_OUTPUT)/client cmd/mysterium_client/mysterium_client.go
+	./bin/client_build
