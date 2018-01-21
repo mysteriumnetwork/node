@@ -3,7 +3,6 @@
 default: help
 
 CMD_GLIDE := $(shell which glide)
-BUILD_OUTPUT = build
 SERVER_DOCKERFILE = bin/server_docker/ubuntu/Dockerfile
 SERVER_IMAGE_NAME = mysteriumnetwork/mysterium-node:latest
 CLIENT_DOCKERFILE = bin/client_docker/ubuntu/Dockerfile
