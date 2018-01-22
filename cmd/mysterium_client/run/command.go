@@ -12,9 +12,6 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 //NewCommand function created new client command with options passed from commandline
@@ -70,10 +67,6 @@ type CommandRun struct {
 
 //Run starts Tequilapi service - does not block
 func (cmd *CommandRun) Run() error {
-	sigterm := make(chan os.Signal, 2)
-	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-	go sigtermListener(sigterm, cmd)
-
 	err := cmd.httpApiServer.StartServing()
 	if err != nil {
 		return err
@@ -104,14 +97,4 @@ func (cmd *CommandRun) Kill() error {
 	fmt.Printf("Api stopped\n")
 
 	return nil
-}
-
-func sigtermListener(terminator chan os.Signal, cmd *CommandRun) {
-	<-terminator
-	err := cmd.Kill()
-	if err != nil {
-		fmt.Printf("Unable to kill one of subroutines %q\n", err.Error())
-	}
-	fmt.Println("Good bye")
-	os.Exit(1)
 }

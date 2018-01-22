@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/mysterium_client/cli"
 	"github.com/mysterium/node/cmd/mysterium_client/run"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
@@ -18,6 +19,8 @@ func main() {
 	}
 
 	cmdRun := run.NewCommand(options)
+	cmd.NewTerminator(cmdRun)
+
 	if cmdRun.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
