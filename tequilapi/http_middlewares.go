@@ -8,7 +8,7 @@ type corsHandler struct {
 
 func (wrapper corsHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if isPreflightCorsRequest(req) {
-		applyPreflightCorsResponse(resp)
+		generatePreflightResponse(req, resp)
 		return
 	}
 
@@ -24,7 +24,6 @@ func ApplyCors(original http.Handler) http.Handler {
 func allowAllCorsActions(resp http.ResponseWriter) {
 	resp.Header().Set("Access-Control-Allow-Origin", "*")
 	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	resp.Header().Set("Access-Control-Allow-Headers", "Content-type")
 }
 
 func isPreflightCorsRequest(req *http.Request) bool {
@@ -34,6 +33,10 @@ func isPreflightCorsRequest(req *http.Request) bool {
 	return isOptionsMethod && containsAccessControlRequestHeader && containsAccessControlRequestMethod
 }
 
-func applyPreflightCorsResponse(resp http.ResponseWriter) {
+func generatePreflightResponse(req *http.Request, resp http.ResponseWriter) {
 	allowAllCorsActions(resp)
+	//allow all headers which were defined in preflight request
+	for _, headerValue := range req.Header["Access-Control-Request-Headers"] {
+		resp.Header().Add("Access-Control-Allow-Headers", headerValue)
+	}
 }

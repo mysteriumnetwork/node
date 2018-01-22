@@ -37,6 +37,7 @@ func TestPreflightCorsCheckIsHandled(t *testing.T) {
 
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Origin"))
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
+	assert.Equal(t, "origin, x-requested-with", respRecorder.Header().Get("Access-Control-Allow-Headers"))
 	assert.Equal(t, 0, respRecorder.Body.Len())
 	assert.False(t, mock.wasCalled)
 }
