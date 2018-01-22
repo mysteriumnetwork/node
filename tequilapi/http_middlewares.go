@@ -24,6 +24,7 @@ func ApplyCors(original http.Handler) http.Handler {
 func allowAllCorsActions(resp http.ResponseWriter) {
 	resp.Header().Set("Access-Control-Allow-Origin", "*")
 	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	resp.Header().Set("Access-Control-Allow-Headers", "Content-type")
 }
 
 func isPreflightCorsRequest(req *http.Request) bool {
