@@ -33,7 +33,6 @@ func SendError(writer http.ResponseWriter, err error, httpCode int) {
 
 func SendErrorMessage(writer http.ResponseWriter, message interface{}, httpCode int) {
 	writer.WriteHeader(httpCode)
-	spew.Dump(message)
 	WriteAsJson(message, writer)
 }
 
