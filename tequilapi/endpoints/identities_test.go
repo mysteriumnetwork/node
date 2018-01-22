@@ -122,12 +122,12 @@ func TestUnlockFailure(t *testing.T) {
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
 }
 
-func TestCreateNewIdentityEmptyPassword(t *testing.T) {
+func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
-		bytes.NewBufferString(`{"password": ""}`),
+		bytes.NewBufferString(`{"passphrase": ""}`),
 	)
 
 	assert.Nil(t, err)
@@ -139,7 +139,7 @@ func TestCreateNewIdentityEmptyPassword(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.Code)
 }
 
-func TestCreateNewIdentityNoPassword(t *testing.T) {
+func TestCreateNewIdentityNoPassphrase(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req, err := http.NewRequest(
 		http.MethodPost,
@@ -159,7 +159,7 @@ func TestCreateNewIdentityNoPassword(t *testing.T) {
 		`{
 			"message": "validation_error",
 			"errors" : {
-				"password": [ {"code" : "required" , "message" : "Field is required" } ]
+				"passphrase": [ {"code" : "required" , "message" : "Field is required" } ]
 			}
 		}`,
 		resp.Body.String(),
@@ -171,7 +171,7 @@ func TestCreateNewIdentity(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
-		bytes.NewBufferString(`{"password": "mypass"}`),
+		bytes.NewBufferString(`{"passphrase": "mypass"}`),
 	)
 	assert.Nil(t, err)
 

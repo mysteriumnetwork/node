@@ -21,7 +21,7 @@ type identityList struct {
 }
 
 type identityCreationDto struct {
-	Password *string `json:"password"`
+	Passphrase *string `json:"passphrase"`
 }
 
 type identityRegistrationDto struct {
@@ -73,7 +73,7 @@ func (endpoint *identitiesApi) Create(resp http.ResponseWriter, request *http.Re
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
-	id, err := endpoint.idm.CreateNewIdentity(*createReq.Password)
+	id, err := endpoint.idm.CreateNewIdentity(*createReq.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -151,8 +151,8 @@ func validateRegistrationRequest(regReq identityRegistrationDto) (err error) {
 
 func validateCreationRequest(createReq *identityCreationDto) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
-	if createReq.Password == nil {
-		errors.ForField("password").AddError("required", "Field is required")
+	if createReq.Passphrase == nil {
+		errors.ForField("passphrase").AddError("required", "Field is required")
 	}
 	return
 }

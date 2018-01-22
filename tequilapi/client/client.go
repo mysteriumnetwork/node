@@ -36,11 +36,11 @@ func (client *Client) GetIdentities() (ids []IdentityDto, err error) {
 }
 
 // NewIdentity creates a new client identity
-func (client *Client) NewIdentity(password string) (id IdentityDto, err error) {
+func (client *Client) NewIdentity(passphrase string) (id IdentityDto, err error) {
 	payload := struct {
-		Password string `json:"password"`
+		Passphrase string `json:"passphrase"`
 	}{
-		password,
+		passphrase,
 	}
 	response, err := client.http.Post("identities", payload)
 	if err != nil {
