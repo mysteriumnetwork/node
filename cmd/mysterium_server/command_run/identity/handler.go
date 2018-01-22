@@ -8,7 +8,7 @@ import (
 
 type handler struct {
 	manager       identity.IdentityManagerInterface
-	identityApi   server.Client
+	identityAPI   server.Client
 	cache         identity.IdentityCacheInterface
 	signerFactory identity.SignerFactory
 }
@@ -16,13 +16,13 @@ type handler struct {
 //NewHandler creates new identity handler used by node
 func NewHandler(
 	manager identity.IdentityManagerInterface,
-	identityApi server.Client,
+	identityAPI server.Client,
 	cache identity.IdentityCacheInterface,
 	signerFactory identity.SignerFactory,
 ) HandlerInterface {
 	return &handler{
 		manager:       manager,
-		identityApi:   identityApi,
+		identityAPI:   identityAPI,
 		cache:         cache,
 		signerFactory: signerFactory,
 	}
@@ -54,7 +54,7 @@ func (h *handler) UseNew(passphrase string) (id identity.Identity, err error) {
 		return
 	}
 
-	if err = h.identityApi.RegisterIdentity(id, h.signerFactory(id)); err != nil {
+	if err = h.identityAPI.RegisterIdentity(id, h.signerFactory(id)); err != nil {
 		return
 	}
 

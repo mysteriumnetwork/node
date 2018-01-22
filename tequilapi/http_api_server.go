@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-type ApiServer interface {
+type APIServer interface {
 	Port() (int, error)
 	Wait() error
 	StartServing() error
@@ -23,7 +23,7 @@ type apiServer struct {
 	listener      net.Listener
 }
 
-func NewServer(address string, port int, handler http.Handler) ApiServer {
+func NewServer(address string, port int, handler http.Handler) APIServer {
 	server := apiServer{
 		make(chan error, 1),
 		ApplyCors(handler),

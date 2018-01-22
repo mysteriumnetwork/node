@@ -69,13 +69,13 @@ func (client *Client) RegisterIdentity(address string) (err error) {
 }
 
 // Connect initiates a new connection to a host identified by providerId
-func (client *Client) Connect(consumerId, providerId string) (status StatusDto, err error) {
+func (client *Client) Connect(consumerID, providerID string) (status StatusDto, err error) {
 	payload := struct {
 		Identity string `json:"identity"`
 		NodeKey  string `json:"nodeKey"`
 	}{
-		consumerId,
-		providerId,
+		consumerID,
+		providerID,
 	}
 	response, err := client.http.Put("connection", payload)
 	if err != nil {

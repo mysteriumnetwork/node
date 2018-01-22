@@ -21,31 +21,31 @@ type ClientFake struct {
 
 func (client *ClientFake) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error) {
 	client.proposalsMock = append(client.proposalsMock, proposal)
-	log.Info(mysteriumApiLogPrefix, "Fake node registered: ", proposal)
+	log.Info(mysteriumAPILogPrefix, "Fake node registered: ", proposal)
 
 	return nil
 }
 
 func (client *ClientFake) RegisterIdentity(newIdentity identity.Identity, signer identity.Signer) (err error) {
 	client.RegisteredIdentity = newIdentity
-	log.Info(mysteriumApiLogPrefix, "Fake newIdentity registered: ", newIdentity)
+	log.Info(mysteriumAPILogPrefix, "Fake newIdentity registered: ", newIdentity)
 
 	return nil
 }
 
 func (client *ClientFake) NodeSendStats(nodeKey string, signer identity.Signer) (err error) {
-	log.Info(mysteriumApiLogPrefix, "Node stats sent: ", nodeKey)
+	log.Info(mysteriumAPILogPrefix, "Node stats sent: ", nodeKey)
 
 	return nil
 }
 
 func (client *ClientFake) FindProposals(nodeKey string) (proposals []dto_discovery.ServiceProposal, err error) {
-	log.Info(mysteriumApiLogPrefix, "Fake proposals requested for node_key: ", nodeKey)
+	log.Info(mysteriumAPILogPrefix, "Fake proposals requested for node_key: ", nodeKey)
 
 	for _, proposal := range client.proposalsMock {
 		var filterMatched = true
 		if nodeKey != "" {
-			filterMatched = filterMatched && (nodeKey == proposal.ProviderId)
+			filterMatched = filterMatched && (nodeKey == proposal.ProviderID)
 		}
 		if filterMatched {
 			proposals = append(proposals, proposal)
@@ -56,7 +56,7 @@ func (client *ClientFake) FindProposals(nodeKey string) (proposals []dto_discove
 }
 
 func (client *ClientFake) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
-	log.Info(mysteriumApiLogPrefix, "Session stats sent: ", sessionId)
+	log.Info(mysteriumAPILogPrefix, "Session stats sent: ", sessionId)
 
 	return nil
 }

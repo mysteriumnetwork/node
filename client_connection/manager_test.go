@@ -15,14 +15,14 @@ import (
 	"testing"
 )
 
-type test_context struct {
+type testContext struct {
 	suite.Suite
 	connManager         *connectionManager
 	fakeDiscoveryClient *server.ClientFake
-	fakeOpenVpn         *fake_openvpn_client
+	fakeOpenVpn         *fakeOpenvpnClient
 }
 
-func (tc *test_context) SetupTest() {
+func (tc *testContext) SetupTest() {
 
 	tc.fakeDiscoveryClient = server.NewClientFake()
 
@@ -30,10 +30,10 @@ func (tc *test_context) SetupTest() {
 	tc.fakeDiscoveryClient.RegisterProposal(serviceProposal, nil)
 
 	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
-		return &fake_dialog{}
+		return &fakeDialog{}
 	}
 
-	tc.fakeOpenVpn = &fake_openvpn_client{
+	tc.fakeOpenVpn = &fakeOpenvpnClient{
 		false,
 		make(chan int, 1),
 		make(chan int, 1),
@@ -46,18 +46,18 @@ func (tc *test_context) SetupTest() {
 	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogEstablisherFactory, fakeVpnClientFactory)
 }
 
-func (tc *test_context) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
+func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
 }
 
-func (tc *test_context) TestWithUnknownNodeKey() {
+func (tc *testContext) TestWithUnknownNodeKey() {
 	noProposalsError := errors.New("node has no service proposals")
 
 	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), "unknown-node"))
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", noProposalsError}, tc.connManager.Status())
 }
 
-func (tc *test_context) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet() {
+func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet() {
 	fatalVpnError := errors.New("fatal connection error")
 	tc.fakeOpenVpn.onConnectReturnError = fatalVpnError
 
@@ -65,14 +65,14 @@ func (tc *test_context) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet(
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", fatalVpnError}, tc.connManager.Status())
 }
 
-func (tc *test_context) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
+func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
 	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
 
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
 }
 
-func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() {
+func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.fakeOpenVpn.delayableAction()
 	go func() {
 		tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
@@ -81,7 +81,7 @@ func (tc *test_context) TestStatusReportsConnectingWhenConnectionIsInProgress() 
 	assert.Equal(tc.T(), ConnectionStatus{Connecting, "", nil}, tc.connManager.Status())
 }
 
-func (tc *test_context) TestStatusReportsDisconnectingThenNotConnected() {
+func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
 
 	assert.NoError(tc.T(), err)
@@ -103,17 +103,17 @@ func (tc *test_context) TestStatusReportsDisconnectingThenNotConnected() {
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
-	suite.Run(t, new(test_context))
+	suite.Run(t, new(testContext))
 }
 
-type fake_openvpn_client struct {
+type fakeOpenvpnClient struct {
 	delayAction               bool
 	delayStateEnteredNotifier chan int
 	resumeFromDelay           chan int
 	onConnectReturnError      error
 }
 
-func (foc *fake_openvpn_client) Start() error {
+func (foc *fakeOpenvpnClient) Start() error {
 	if foc.delayAction {
 		foc.delayStateEnteredNotifier <- 1
 		<-foc.resumeFromDelay
@@ -121,11 +121,11 @@ func (foc *fake_openvpn_client) Start() error {
 	return foc.onConnectReturnError
 }
 
-func (foc *fake_openvpn_client) Wait() error {
+func (foc *fakeOpenvpnClient) Wait() error {
 	return nil
 }
 
-func (foc *fake_openvpn_client) Stop() error {
+func (foc *fakeOpenvpnClient) Stop() error {
 	if foc.delayAction {
 		foc.delayStateEnteredNotifier <- 1
 		<-foc.resumeFromDelay
@@ -133,46 +133,46 @@ func (foc *fake_openvpn_client) Stop() error {
 	return nil
 }
 
-func (foc *fake_openvpn_client) delayableAction() {
+func (foc *fakeOpenvpnClient) delayableAction() {
 	foc.delayAction = true
 }
 
-func (foc *fake_openvpn_client) waitForDelayState() {
+func (foc *fakeOpenvpnClient) waitForDelayState() {
 	<-foc.delayStateEnteredNotifier
 }
 
-func (foc *fake_openvpn_client) resumeAction() {
+func (foc *fakeOpenvpnClient) resumeAction() {
 	foc.resumeFromDelay <- 1
 }
 
-type fake_dialog struct {
+type fakeDialog struct {
 }
 
-func (fd *fake_dialog) CreateDialog(contact dto.Contact) (communication.Dialog, error) {
+func (fd *fakeDialog) CreateDialog(contact dto.Contact) (communication.Dialog, error) {
 	return fd, nil
 }
 
-func (fd *fake_dialog) Close() error {
+func (fd *fakeDialog) Close() error {
 	return nil
 }
 
-func (fd *fake_dialog) Receive(consumer communication.MessageConsumer) error {
+func (fd *fakeDialog) Receive(consumer communication.MessageConsumer) error {
 	return nil
 }
-func (fd *fake_dialog) Respond(consumer communication.RequestConsumer) error {
-	return nil
-}
-
-func (fd *fake_dialog) Send(producer communication.MessageProducer) error {
+func (fd *fakeDialog) Respond(consumer communication.RequestConsumer) error {
 	return nil
 }
 
-func (fd *fake_dialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
+func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
+	return nil
+}
+
+func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
 	return &session.SessionCreateResponse{
 			Success: true,
 			Message: "Everything is great!",
 			Session: session.SessionDto{
-				Id:     "vpn-session-id",
+				ID:     "vpn-session-id",
 				Config: "vpn-session-config",
 			},
 		},

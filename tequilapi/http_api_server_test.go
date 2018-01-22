@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestLocalApiServerPortIsAsExpected(t *testing.T) {
+func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
 	server := NewServer("localhost", 31337, nil)
 
 	assert.NoError(t, server.StartServing())

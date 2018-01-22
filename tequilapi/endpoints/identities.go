@@ -13,7 +13,7 @@ import (
 )
 
 type identityDto struct {
-	Id string `json:"id"`
+	ID string `json:"id"`
 }
 
 type identityList struct {
@@ -32,7 +32,7 @@ type identityUnlockingDto struct {
 	Passphrase string `json:"passphrase"`
 }
 
-type identitiesApi struct {
+type identitiesAPI struct {
 	idm             identity.IdentityManagerInterface
 	mysteriumClient server.Client
 	signerFactory   identity.SignerFactory
@@ -51,18 +51,18 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient server.Client, signerFactory identity.SignerFactory) *identitiesApi {
-	return &identitiesApi{idm, mystClient, signerFactory}
+func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient server.Client, signerFactory identity.SignerFactory) *identitiesAPI {
+	return &identitiesAPI{idm, mystClient, signerFactory}
 }
 
-func (endpoint *identitiesApi) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	idArry := endpoint.idm.GetIdentities()
 	idsSerializable := identityList{mapIdentities(idArry, idToDto)}
 
-	utils.WriteAsJson(idsSerializable, resp)
+	utils.WriteAsJSON(idsSerializable, resp)
 }
 
-func (endpoint *identitiesApi) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	createReq, err := toCreateRequest(request)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
@@ -80,10 +80,10 @@ func (endpoint *identitiesApi) Create(resp http.ResponseWriter, request *http.Re
 	}
 
 	idDto := idToDto(id)
-	utils.WriteAsJson(idDto, resp)
+	utils.WriteAsJSON(idDto, resp)
 }
 
-func (endpoint *identitiesApi) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)
 	if err != nil {
@@ -105,7 +105,7 @@ func (endpoint *identitiesApi) Register(resp http.ResponseWriter, request *http.
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func (endpoint *identitiesApi) Unlock(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 	unlockReq, err := toUnlockRequest(request)
 	if err != nil {

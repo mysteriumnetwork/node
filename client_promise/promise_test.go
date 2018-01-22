@@ -7,27 +7,27 @@ import (
 	"testing"
 )
 
-const CURRENCY_TOKEN = money.Currency("Token")
+const CurrencyToken = money.Currency("Token")
 
 func Test_PromiseBody(t *testing.T) {
 
 	amount := money.Money{
 		Amount:   uint64(5),
-		Currency: CURRENCY_TOKEN,
+		Currency: CurrencyToken,
 	}
 
 	promise := dto.PromiseBody{
 		SerialNumber: 1,
-		IssuerId:     "issuer1",
-		BenefiterId:  "benefiter1",
+		IssuerID:     "issuer1",
+		BenefiterID:  "benefiter1",
 		Amount:       amount,
 	}
 
 	assert.Equal(t, promise.SerialNumber, 1)
-	assert.Equal(t, promise.IssuerId, "issuer1")
-	assert.Equal(t, promise.BenefiterId, "benefiter1")
+	assert.Equal(t, promise.IssuerID, "issuer1")
+	assert.Equal(t, promise.BenefiterID, "benefiter1")
 	assert.Equal(t, promise.Amount.Amount, uint64(5))
-	assert.Equal(t, promise.Amount.Currency, CURRENCY_TOKEN)
+	assert.Equal(t, promise.Amount.Currency, CurrencyToken)
 }
 
 func Test_SignedPromise(t *testing.T) {

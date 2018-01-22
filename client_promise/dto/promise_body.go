@@ -6,7 +6,7 @@ import (
 
 type PromiseBody struct {
 	SerialNumber int
-	IssuerId     string
-	BenefiterId  string
+	IssuerID     string
+	BenefiterID  string
 	Amount       money.Money
 }

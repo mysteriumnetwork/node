@@ -26,7 +26,7 @@ func NewServiceProposalWithLocation(
 	nodeLocation dto_discovery.Location,
 ) dto_discovery.ServiceProposal {
 	return dto_discovery.ServiceProposal{
-		Id:          1,
+		ID:          1,
 		Format:      "service-proposal/v1",
 		ServiceType: "openvpn",
 		ServiceDefinition: dto.ServiceDefinition{
@@ -40,7 +40,7 @@ func NewServiceProposalWithLocation(
 			Price:    money.NewMoney(0.125, money.CURRENCY_MYST),
 			Duration: 1 * time.Hour,
 		},
-		ProviderId:       identity.Address,
+		ProviderID:       identity.Address,
 		ProviderContacts: []dto_discovery.Contact{providerContact},
 	}
 }

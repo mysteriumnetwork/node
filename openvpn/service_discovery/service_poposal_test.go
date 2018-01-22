@@ -32,13 +32,13 @@ func TestServiceProposalUnserialize(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := dto_discovery.ServiceProposal{
-		Id:                1,
+		ID:                1,
 		Format:            "service-proposal/v1",
 		ServiceType:       "openvpn",
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
-		ProviderId:        "node",
+		ProviderID:        "node",
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
 	assert.Equal(t, expected, actual)
@@ -113,13 +113,13 @@ func TestServiceProposalSerialize(t *testing.T) {
 	}`
 
 	sp := dto_discovery.ServiceProposal{
-		Id:                1,
+		ID:                1,
 		Format:            "service-proposal/v1",
 		ServiceType:       "openvpn",
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
-		ProviderId:        "node",
+		ProviderID:        "node",
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
 

@@ -26,30 +26,30 @@ type CommandRun struct {
 	dialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
 	dialogWaiter        communication.DialogWaiter
 
-	sessionManagerFactory func(serverIp string) session.ManagerInterface
+	sessionManagerFactory func(serverIP string) session.ManagerInterface
 
 	vpnServerFactory func() *openvpn.Server
 	vpnServer        *openvpn.Server
 }
 
 func (cmd *CommandRun) Run() (err error) {
-	providerId, err := cmd.identityLoader()
+	providerID, err := cmd.identityLoader()
 	if err != nil {
 		return err
 	}
 
 	var providerContact dto_discovery.Contact
-	cmd.dialogWaiter, providerContact = cmd.dialogWaiterFactory(providerId)
+	cmd.dialogWaiter, providerContact = cmd.dialogWaiterFactory(providerID)
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
-	vpnServerIp, err := cmd.ipifyClient.GetOutboundIP()
+	vpnServerIP, err := cmd.ipifyClient.GetOutboundIP()
 	if err != nil {
 		return err
 	}
 
 	cmd.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
-		TargetIp:      vpnServerIp,
+		TargetIP:      vpnServerIP,
 	})
 	if err = cmd.natService.Start(); err != nil {
 		return err
@@ -62,11 +62,11 @@ func (cmd *CommandRun) Run() (err error) {
 	log.Info("Country detected: ", country)
 
 	location := dto_discovery.Location{Country: country}
-	proposal := service_discovery.NewServiceProposalWithLocation(providerId, providerContact, location)
+	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, location)
 
 	sessionCreateConsumer := &session.SessionCreateConsumer{
-		CurrentProposalId: proposal.Id,
-		SessionManager:    cmd.sessionManagerFactory(vpnServerIp),
+		CurrentProposalID: proposal.ID,
+		SessionManager:    cmd.sessionManagerFactory(vpnServerIP),
 	}
 	if err = cmd.dialogWaiter.ServeDialogs(sessionCreateConsumer); err != nil {
 		return err
@@ -77,7 +77,7 @@ func (cmd *CommandRun) Run() (err error) {
 		return err
 	}
 
-	signer := cmd.createSigner(providerId)
+	signer := cmd.createSigner(providerID)
 
 	if err := cmd.mysteriumClient.RegisterProposal(proposal, signer); err != nil {
 		return err
@@ -85,7 +85,7 @@ func (cmd *CommandRun) Run() (err error) {
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.mysteriumClient.NodeSendStats(providerId.Address, signer)
+			cmd.mysteriumClient.NodeSendStats(providerID.Address, signer)
 		}
 	}()
 

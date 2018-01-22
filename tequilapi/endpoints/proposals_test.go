@@ -17,23 +17,23 @@ func (service TestServiceDefinition) GetLocation() dto_discovery.Location {
 
 var proposals = []dto_discovery.ServiceProposal{
 	{
-		Id:                1,
+		ID:                1,
 		ServiceType:       "testprotocol",
 		ServiceDefinition: TestServiceDefinition{},
-		ProviderId:        "0xProviderId",
+		ProviderID:        "0xProviderId",
 	},
 	{
-		Id:                1,
+		ID:                1,
 		ServiceType:       "testprotocol",
 		ServiceDefinition: TestServiceDefinition{},
-		ProviderId:        "other_provider",
+		ProviderID:        "other_provider",
 	},
 }
 
 func TestProposalsEndpointListByNodeId(t *testing.T) {
-	discoveryApi := server.NewClientFake()
+	discoveryAPI := server.NewClientFake()
 	for _, proposal := range proposals {
-		discoveryApi.RegisterProposal(proposal, nil)
+		discoveryAPI.RegisterProposal(proposal, nil)
 	}
 
 	req, err := http.NewRequest(
@@ -48,7 +48,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryApi).List
+	handlerFunc := NewProposalsEndpoint(discoveryAPI).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -74,9 +74,9 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 }
 
 func TestProposalsEndpointList(t *testing.T) {
-	discoveryApi := server.NewClientFake()
+	discoveryAPI := server.NewClientFake()
 	for _, proposal := range proposals {
-		discoveryApi.RegisterProposal(proposal, nil)
+		discoveryAPI.RegisterProposal(proposal, nil)
 	}
 
 	req, err := http.NewRequest(
@@ -87,7 +87,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryApi).List
+	handlerFunc := NewProposalsEndpoint(discoveryAPI).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(

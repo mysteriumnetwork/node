@@ -7,7 +7,7 @@ import (
 
 type ServiceProposal struct {
 	// Per provider unique serial number of service description provided
-	Id int `json:"id"`
+	ID int `json:"id"`
 
 	// A version number is included in the proposal to allow extensions to the proposal format
 	Format string `json:"format"`
@@ -25,7 +25,7 @@ type ServiceProposal struct {
 	PaymentMethod PaymentMethod `json:"payment_method"`
 
 	// Unique identifier of a provider
-	ProviderId string `json:"provider_id"`
+	ProviderID string `json:"provider_id"`
 
 	// Communication methods possible
 	ProviderContacts []Contact `json:"provider_contacts"`
@@ -118,7 +118,7 @@ func unserializeContactDefinition(message *json.RawMessage) (contactList []Conta
 
 func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 	var jsonData struct {
-		Id                int              `json:"id"`
+		ID                int              `json:"id"`
 		Format            string           `json:"format"`
 		ServiceType       string           `json:"service_type"`
 		ProviderId        string           `json:"provider_id"`
@@ -131,10 +131,10 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 		return
 	}
 
-	genericProposal.Id = jsonData.Id
+	genericProposal.ID = jsonData.ID
 	genericProposal.Format = jsonData.Format
 	genericProposal.ServiceType = jsonData.ServiceType
-	genericProposal.ProviderId = jsonData.ProviderId
+	genericProposal.ProviderID = jsonData.ProviderId
 	genericProposal.PaymentMethodType = jsonData.PaymentMethodType
 
 	// run the service definition implementation from our registry

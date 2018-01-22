@@ -1,9 +1,9 @@
 package session
 
 type GeneratorFake struct {
-	SessionIdMock SessionId
+	SessionIdMock SessionID
 }
 
-func (generator *GeneratorFake) Generate() SessionId {
+func (generator *GeneratorFake) Generate() SessionID {
 	return generator.SessionIdMock
 }
