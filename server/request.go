@@ -23,7 +23,7 @@ func newGetRequest(path string, params url.Values) (*http.Request, error) {
 }
 
 func newPostRequest(path string, requestBody interface{}) (*http.Request, error) {
-	bodyBytes, err := encodeToJson(requestBody)
+	bodyBytes, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func newPostRequest(path string, requestBody interface{}) (*http.Request, error)
 }
 
 func newSignedPostRequest(path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
-	bodyBytes, err := encodeToJson(requestBody)
+	bodyBytes, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func newSignedPostRequest(path string, requestBody interface{}, signer identity.
 	return req, nil
 }
 
-func encodeToJson(value interface{}) ([]byte, error) {
+func encodeToJSON(value interface{}) ([]byte, error) {
 	return json.Marshal(value)
 }
 

@@ -1,5 +1,5 @@
 package ipify
 
-type IpResponse struct {
+type IPResponse struct {
 	IP string `json:"IP"`
 }

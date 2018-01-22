@@ -28,7 +28,7 @@ func TestNewAddressGenerate(t *testing.T) {
 	assert.Equal(
 		t,
 		&AddressNATS{
-			servers: []string{"nats://" + natsServerIp + ":4222"},
+			servers: []string{"nats://" + natsServerIP + ":4222"},
 			topic:   "provider1",
 		},
 		address,

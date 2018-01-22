@@ -7,17 +7,17 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-const NAT_LOG_PREFIX = "[nat] "
+const NatLogPrefix = "[nat] "
 
-type serviceIpTables struct {
+type serviceIPTables struct {
 	rules []RuleForwarding
 }
 
-func (service *serviceIpTables) Add(rule RuleForwarding) {
+func (service *serviceIPTables) Add(rule RuleForwarding) {
 	service.rules = append(service.rules, rule)
 }
 
-func (service *serviceIpTables) Start() error {
+func (service *serviceIPTables) Start() error {
 	service.clearStaleRules()
 
 	if err := service.enableIPForwarding(); err != nil {
@@ -31,7 +31,7 @@ func (service *serviceIpTables) Start() error {
 	return nil
 }
 
-func (service *serviceIpTables) Stop() error {
+func (service *serviceIPTables) Stop() error {
 	if err := service.disableRules(); err != nil {
 		return err
 	}
@@ -42,27 +42,27 @@ func (service *serviceIpTables) Stop() error {
 	return nil
 }
 
-func (service *serviceIpTables) enableIPForwarding() (err error) {
+func (service *serviceIPTables) enableIPForwarding() (err error) {
 	cmd := exec.Command("sysctl", "-w", "net.ipv4.ip_forward=1")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Failed to enable IP forwarding: %s", err)
 	}
 
-	log.Info(NAT_LOG_PREFIX, "IP forwarding enabled")
+	log.Info(NatLogPrefix, "IP forwarding enabled")
 	return nil
 }
 
-func (service *serviceIpTables) disableIPForwarding() (err error) {
+func (service *serviceIPTables) disableIPForwarding() (err error) {
 	cmd := exec.Command("sysctl", "-w", "net.ipv4.ip_forward=0")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Failed to disable IP forwarding. %s", err)
 	}
 
-	log.Info(NAT_LOG_PREFIX, "IP forwarding disabled")
+	log.Info(NatLogPrefix, "IP forwarding disabled")
 	return nil
 }
 
-func (service *serviceIpTables) enableRules() error {
+func (service *serviceIPTables) enableRules() error {
 	for _, rule := range service.rules {
 		cmd := exec.Command(
 			"iptables",
@@ -71,17 +71,17 @@ func (service *serviceIpTables) enableRules() error {
 			"--source", rule.SourceAddress,
 			"!", "--destination", rule.SourceAddress,
 			"--jump", "SNAT",
-			"--to", rule.TargetIp,
+			"--to", rule.TargetIP,
 		)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("Failed to create ip forwarding rule: %s. %s", cmd.Args, err.Error())
 		}
-		log.Info(NAT_LOG_PREFIX, "Forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIp)
+		log.Info(NatLogPrefix, "Forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
 	}
 	return nil
 }
 
-func (service *serviceIpTables) disableRules() error {
+func (service *serviceIPTables) disableRules() error {
 	for _, rule := range service.rules {
 		cmd := exec.Command(
 			"iptables",
@@ -90,16 +90,16 @@ func (service *serviceIpTables) disableRules() error {
 			"--source", rule.SourceAddress,
 			"!", "--destination", rule.SourceAddress,
 			"--jump", "SNAT",
-			"--to", rule.TargetIp,
+			"--to", rule.TargetIP,
 		)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("Failed to delete ip forwarding rule: %s. %s", cmd.Args, err.Error())
 		}
-		log.Info(NAT_LOG_PREFIX, "Stopped forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIp)
+		log.Info(NatLogPrefix, "Stopped forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
 	}
 	return nil
 }
 
-func (service *serviceIpTables) clearStaleRules() {
+func (service *serviceIPTables) clearStaleRules() {
 	service.disableRules()
 }

@@ -6,7 +6,7 @@ import (
 )
 
 type SessionCreateConsumer struct {
-	CurrentProposalId int
+	CurrentProposalID int
 	SessionManager    ManagerInterface
 }
 
@@ -21,7 +21,7 @@ func (consumer *SessionCreateConsumer) NewRequest() (requestPtr interface{}) {
 
 func (consumer *SessionCreateConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*SessionCreateRequest)
-	if consumer.CurrentProposalId != request.ProposalId {
+	if consumer.CurrentProposalID != request.ProposalId {
 		response = &SessionCreateResponse{
 			Success: false,
 			Message: fmt.Sprintf("Proposal doesn't exist: %d", request.ProposalId),
@@ -41,7 +41,7 @@ func (consumer *SessionCreateConsumer) Consume(requestPtr interface{}) (response
 	response = &SessionCreateResponse{
 		Success: true,
 		Session: SessionDto{
-			Id:     clientSession.Id,
+			ID:     clientSession.ID,
 			Config: clientSession.Config,
 		},
 	}

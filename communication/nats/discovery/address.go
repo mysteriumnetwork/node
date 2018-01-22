@@ -8,7 +8,7 @@ import (
 	nats_lib "github.com/nats-io/go-nats"
 )
 
-var natsServerIp string
+var natsServerIP string
 
 // NewAddress creates NATS address to known host or cluster of hosts
 func NewAddress(topic string, addresses ...string) *AddressNATS {
@@ -20,7 +20,7 @@ func NewAddress(topic string, addresses ...string) *AddressNATS {
 
 // NewAddressGenerate generates NATS address for current node
 func NewAddressGenerate(myIdentity identity.Identity) *AddressNATS {
-	address := "nats://" + natsServerIp + ":4222"
+	address := "nats://" + natsServerIP + ":4222"
 	return NewAddress(myIdentity.Address, address)
 }
 
