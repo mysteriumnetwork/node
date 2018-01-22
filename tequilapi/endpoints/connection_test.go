@@ -44,7 +44,7 @@ func TestDisconnectingState(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
 		State:     client_connection.Disconnecting,
-		SessionId: "",
+		SessionID: "",
 	}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager)
@@ -67,7 +67,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
 		State:     client_connection.NotConnected,
-		SessionId: "",
+		SessionID: "",
 	}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager)
@@ -114,7 +114,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
 		State:     client_connection.Connected,
-		SessionId: "My-super-session",
+		SessionID: "My-super-session",
 	}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager)

@@ -21,13 +21,13 @@ func (method TestPaymentMethod) GetPrice() money.Money {
 
 func TestServiceProposalSerialize(t *testing.T) {
 	sp := ServiceProposal{
-		Id:                1,
+		ID:                1,
 		Format:            "service-proposal/v1",
 		ServiceType:       "openvpn",
 		ServiceDefinition: TestServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
 		PaymentMethod:     TestPaymentMethod{},
-		ProviderId:        "node",
+		ProviderID:        "node",
 		ProviderContacts:  []Contact{},
 	}
 

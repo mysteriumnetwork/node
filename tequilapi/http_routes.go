@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func NewApiRouter() *httprouter.Router {
+func NewAPIRouter() *httprouter.Router {
 	router := httprouter.New()
 	router.HandleMethodNotAllowed = true
 

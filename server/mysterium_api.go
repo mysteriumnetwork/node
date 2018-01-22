@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	mysteriumApiLogPrefix = "[Mysterium.api] "
+	mysteriumAPILogPrefix = "[Mysterium.api] "
 )
 
 //HttpTransport interface with single method do is extracted from net/transport.Client structure
@@ -20,20 +20,20 @@ type HttpTransport interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-type mysteriumApi struct {
+type mysteriumAPI struct {
 	http HttpTransport
 }
 
 //NewClient creates mysterium centralized api instance with real communication
 func NewClient() Client {
-	return &mysteriumApi{
+	return &mysteriumAPI{
 		&http.Client{
 			Transport: &http.Transport{},
 		},
 	}
 }
 
-func (mApi *mysteriumApi) RegisterIdentity(identity identity.Identity, signer identity.Signer) error {
+func (mApi *mysteriumAPI) RegisterIdentity(identity identity.Identity, signer identity.Signer) error {
 	req, err := newSignedPostRequest("identities", dto.CreateIdentityRequest{
 		Identity: identity.Address,
 	}, signer)
@@ -43,12 +43,12 @@ func (mApi *mysteriumApi) RegisterIdentity(identity identity.Identity, signer id
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumApiLogPrefix, "Identity registered: ", identity)
+		log.Info(mysteriumAPILogPrefix, "Identity registered: ", identity)
 	}
 	return err
 }
 
-func (mApi *mysteriumApi) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := newSignedPostRequest("node_register", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	}, signer)
@@ -58,13 +58,13 @@ func (mApi *mysteriumApi) RegisterProposal(proposal dto_discovery.ServiceProposa
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumApiLogPrefix, "Node registered: ", proposal.ProviderId)
+		log.Info(mysteriumAPILogPrefix, "Node registered: ", proposal.ProviderID)
 	}
 
 	return err
 }
 
-func (mApi *mysteriumApi) NodeSendStats(nodeKey string, signer identity.Signer) error {
+func (mApi *mysteriumAPI) NodeSendStats(nodeKey string, signer identity.Signer) error {
 	req, err := newSignedPostRequest("node_send_stats", dto.NodeStatsRequest{
 		NodeKey: nodeKey,
 		// TODO Refactor Node statistics with new `SessionStats` DTO
@@ -76,12 +76,12 @@ func (mApi *mysteriumApi) NodeSendStats(nodeKey string, signer identity.Signer) 
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumApiLogPrefix, "Node stats sent: ", nodeKey)
+		log.Info(mysteriumAPILogPrefix, "Node stats sent: ", nodeKey)
 	}
 	return err
 }
 
-func (mApi *mysteriumApi) FindProposals(nodeKey string) ([]dto_discovery.ServiceProposal, error) {
+func (mApi *mysteriumAPI) FindProposals(nodeKey string) ([]dto_discovery.ServiceProposal, error) {
 	values := url.Values{}
 	values.Set("node_key", nodeKey)
 	req, err := newGetRequest("proposals", values)
@@ -95,12 +95,12 @@ func (mApi *mysteriumApi) FindProposals(nodeKey string) ([]dto_discovery.Service
 		return nil, err
 	}
 
-	log.Info(mysteriumApiLogPrefix, "FindProposals fetched: ", proposalsResponse.Proposals)
+	log.Info(mysteriumAPILogPrefix, "FindProposals fetched: ", proposalsResponse.Proposals)
 
 	return proposalsResponse.Proposals, nil
 }
 
-func (mApi *mysteriumApi) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) error {
+func (mApi *mysteriumAPI) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionId)
 	req, err := newSignedPostRequest(path, sessionStats, signer)
 	if err != nil {
@@ -109,33 +109,33 @@ func (mApi *mysteriumApi) SendSessionStats(sessionId string, sessionStats dto.Se
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumApiLogPrefix, "Session stats sent: ", sessionId)
+		log.Info(mysteriumAPILogPrefix, "Session stats sent: ", sessionId)
 	}
 
 	return nil
 }
 
-func (mApi *mysteriumApi) doRequest(req *http.Request) error {
+func (mApi *mysteriumAPI) doRequest(req *http.Request) error {
 	resp, err := mApi.http.Do(req)
 	if err != nil {
-		log.Error(mysteriumApiLogPrefix, err)
+		log.Error(mysteriumAPILogPrefix, err)
 		return err
 	}
 	defer resp.Body.Close()
 	return parseResponseError(resp)
 }
 
-func (mApi *mysteriumApi) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
+func (mApi *mysteriumAPI) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
 	resp, err := mApi.http.Do(req)
 	if err != nil {
-		log.Error(mysteriumApiLogPrefix, err)
+		log.Error(mysteriumAPILogPrefix, err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	err = parseResponseError(resp)
 	if err != nil {
-		log.Error(mysteriumApiLogPrefix, err)
+		log.Error(mysteriumAPILogPrefix, err)
 		return err
 	}
 

@@ -9,11 +9,11 @@ import (
 
 type SessionStatsSender func(bytesSent, bytesReceived int) error
 
-func NewSessionStatsSender(mysteriumClient server.Client, sessionId session.SessionId, signer identity.Signer) SessionStatsSender {
-	sessionIdString := string(sessionId)
+func NewSessionStatsSender(mysteriumClient server.Client, sessionID session.SessionID, signer identity.Signer) SessionStatsSender {
+	sessionIDString := string(sessionID)
 	return func(bytesSent, bytesReceived int) error {
 		return mysteriumClient.SendSessionStats(
-			sessionIdString,
+			sessionIDString,
 			dto.SessionStats{
 				BytesSent:     bytesSent,
 				BytesReceived: bytesReceived,

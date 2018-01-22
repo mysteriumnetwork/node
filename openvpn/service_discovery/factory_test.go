@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	providerId      = identity.FromAddress("123456")
+	providerID      = identity.FromAddress("123456")
 	providerContact = dto_discovery.Contact{
 		Type: "type1",
 	}
@@ -19,7 +19,7 @@ var (
 )
 
 func Test_NewServiceProposal(t *testing.T) {
-	proposal := NewServiceProposal(providerId, providerContact)
+	proposal := NewServiceProposal(providerID, providerContact)
 
 	serviceDefinition, ok := proposal.ServiceDefinition.(dto.ServiceDefinition)
 	assert.True(t, ok)
@@ -28,10 +28,10 @@ func Test_NewServiceProposal(t *testing.T) {
 }
 
 func Test_NewServiceProposalWithLocation(t *testing.T) {
-	proposal := NewServiceProposalWithLocation(providerId, providerContact, locationLTTelia)
+	proposal := NewServiceProposalWithLocation(providerID, providerContact, locationLTTelia)
 
 	assert.NotNil(t, proposal)
-	assert.Equal(t, 1, proposal.Id)
+	assert.Equal(t, 1, proposal.ID)
 	assert.Equal(t, "service-proposal/v1", proposal.Format)
 	assert.Equal(t, "openvpn", proposal.ServiceType)
 	assert.Equal(
@@ -52,6 +52,6 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 		},
 		proposal.PaymentMethod,
 	)
-	assert.Equal(t, providerId.Address, proposal.ProviderId)
+	assert.Equal(t, providerID.Address, proposal.ProviderID)
 	assert.Equal(t, []dto_discovery.Contact{providerContact}, proposal.ProviderContacts)
 }

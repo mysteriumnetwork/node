@@ -1,14 +1,14 @@
 package session
 
-type SessionId string
+type SessionID string
 
 type Session struct {
-	Id     SessionId
+	ID     SessionID
 	Config string
 }
 
 type GeneratorInterface interface {
-	Generate() SessionId
+	Generate() SessionID
 }
 
 type ManagerInterface interface {

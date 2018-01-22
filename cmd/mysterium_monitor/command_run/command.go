@@ -56,15 +56,15 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 
 		cmd.ipCheckWaiter.Wait()
 		cmd.clientCommand.Kill()
-		cmd.checkClientIpWhenDisconnected()
+		cmd.checkClientIPWhenDisconnected()
 	})
 
 	return nil
 }
 
-// This is ment to be registered as VpnClient middleware:
-//   state.NewMiddleware(cmd.checkClientIpWhenConnected)
-func (cmd *CommandRun) checkClientIpWhenConnected(state middlewares.State) error {
+// This is meant to be registered as VpnClient middleware:
+//   state.NewMiddleware(cmd.checkClientIPWhenConnected)
+func (cmd *CommandRun) checkClientIPWhenConnected(state middlewares.State) error {
 	if state == middlewares.STATE_CONNECTED {
 		ipForwarded, err := cmd.IpifyClient.GetOutboundIP()
 		if err != nil {
@@ -92,7 +92,7 @@ func (cmd *CommandRun) checkClientHandleTimeout() {
 	cmd.ipCheckWaiter.Done()
 }
 
-func (cmd *CommandRun) checkClientIpWhenDisconnected() {
+func (cmd *CommandRun) checkClientIPWhenDisconnected() {
 	ipForwarded, err := cmd.IpifyClient.GetOutboundIP()
 	if err != nil {
 		cmd.resultWriter.NodeError("Disconnect IP not detected", err)

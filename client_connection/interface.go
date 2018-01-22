@@ -16,7 +16,7 @@ const (
 
 type ConnectionStatus struct {
 	State     State
-	SessionId session.SessionId
+	SessionID session.SessionID
 	LastError error
 }
 

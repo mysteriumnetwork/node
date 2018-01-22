@@ -22,7 +22,7 @@ type serviceDefinitionRes struct {
 }
 
 type proposalRes struct {
-	Id                int                  `json:"id"`
+	ID                int                  `json:"id"`
 	ProviderId        string               `json:"providerId"`
 	ServiceType       string               `json:"serviceType"`
 	ServiceDefinition serviceDefinitionRes `json:"serviceDefinition"`
@@ -30,8 +30,8 @@ type proposalRes struct {
 
 func proposalToRes(p dto_discovery.ServiceProposal) proposalRes {
 	return proposalRes{
-		Id:          p.Id,
-		ProviderId:  p.ProviderId,
+		ID:          p.ID,
+		ProviderId:  p.ProviderID,
 		ServiceType: p.ServiceType,
 		ServiceDefinition: serviceDefinitionRes{
 			LocationOriginate: locationRes{
@@ -71,7 +71,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		return
 	}
 	proposalsRes := proposalsRes{mapProposalsToRes(proposals, proposalToRes)}
-	utils.WriteAsJson(proposalsRes, resp)
+	utils.WriteAsJSON(proposalsRes, resp)
 }
 
 func AddRoutesForProposals(router *httprouter.Router, mc server.Client) {

@@ -17,7 +17,7 @@ type connectionRequest struct {
 
 type statusResponse struct {
 	Status    string `json:"status"`
-	SessionId string `json:"sessionId,omitempty"`
+	SessionID string `json:"sessionId,omitempty"`
 }
 
 type connectionEndpoint struct {
@@ -30,7 +30,7 @@ func NewConnectionEndpoint(manager client_connection.Manager) *connectionEndpoin
 
 func (ce *connectionEndpoint) Status(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	statusResponse := toStatusResponse(ce.manager.Status())
-	utils.WriteAsJson(statusResponse, resp)
+	utils.WriteAsJSON(statusResponse, resp)
 }
 
 func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
@@ -91,6 +91,6 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 func toStatusResponse(status client_connection.ConnectionStatus) statusResponse {
 	return statusResponse{
 		Status:    string(status.State),
-		SessionId: string(status.SessionId),
+		SessionID: string(status.SessionID),
 	}
 }

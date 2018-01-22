@@ -3,16 +3,15 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
 )
 
 /*
-WriteAsJson takes value as the first argument and handles json marshaling with returning appropriate errors if needed,
+WriteAsJSON takes value as the first argument and handles json marshaling with returning appropriate errors if needed,
 also enforces application/json and charset response headers
 */
-func WriteAsJson(v interface{}, writer http.ResponseWriter) {
+func WriteAsJSON(v interface{}, writer http.ResponseWriter) {
 
 	writer.Header().Add("Content-type", "application/json")
 	writer.Header().Add("Content-type", "charset=utf-8")
@@ -33,7 +32,7 @@ func SendError(writer http.ResponseWriter, err error, httpCode int) {
 
 func SendErrorMessage(writer http.ResponseWriter, message interface{}, httpCode int) {
 	writer.WriteHeader(httpCode)
-	WriteAsJson(message, writer)
+	WriteAsJSON(message, writer)
 }
 
 type validationErrorMessage struct {

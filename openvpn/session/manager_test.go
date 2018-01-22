@@ -9,7 +9,7 @@ import (
 
 func TestManagerAdd(t *testing.T) {
 	sessionExpected := session.Session{
-		Id:     session.SessionId("mocked-id"),
+		ID:     session.SessionID("mocked-id"),
 		Config: "mocked-config",
 	}
 	manager := manager{
@@ -19,14 +19,14 @@ func TestManagerAdd(t *testing.T) {
 	manager.Add(sessionExpected)
 	assert.Exactly(
 		t,
-		[]session.SessionId{sessionExpected.Id},
+		[]session.SessionID{sessionExpected.ID},
 		manager.sessions,
 	)
 }
 
 func TestManagerCreate(t *testing.T) {
 	sessionExpected := session.Session{
-		Id:     session.SessionId("mocked-id"),
+		ID:     session.SessionID("mocked-id"),
 		Config: "port 1000\n",
 	}
 
@@ -35,7 +35,7 @@ func TestManagerCreate(t *testing.T) {
 
 	manager := manager{
 		idGenerator: &session.GeneratorFake{
-			SessionIdMock: session.SessionId("mocked-id"),
+			SessionIdMock: session.SessionID("mocked-id"),
 		},
 		clientConfig: clientConfig,
 	}
@@ -45,7 +45,7 @@ func TestManagerCreate(t *testing.T) {
 	assert.Exactly(t, sessionExpected, sessionInstance)
 	assert.Exactly(
 		t,
-		[]session.SessionId{sessionExpected.Id},
+		[]session.SessionID{sessionExpected.ID},
 		manager.sessions,
 	)
 }
