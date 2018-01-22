@@ -20,6 +20,7 @@ type middleware struct {
 	state         middlewares.State
 }
 
+// NewMiddleware creates server user_auth challenge authentication middleware
 func NewMiddleware(authenticator Authenticator) openvpn.ManagementMiddleware {
 	return &middleware{
 		authenticator: authenticator,
@@ -148,5 +149,5 @@ func (m *middleware) Reset() {
 	m.password = ""
 	m.clientId = -1
 	m.keyId = -1
-	m.state = middlewares.STATE_WAIT
+	m.state = middlewares.STATE_UNDEFINED
 }

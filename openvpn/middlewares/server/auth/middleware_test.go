@@ -19,21 +19,6 @@ func NewFakeAuthenticator() Authenticator {
 	}
 }
 
-type fakeAuthenticator struct {
-	username string
-	password string
-}
-
-func (a *fakeAuthenticator) auth() (username string, password string, err error) {
-	return
-}
-
-func (a *fakeAuthenticator) authWithValid() (username string, password string, err error) {
-	username = "valid_username"
-	password = "valid_password"
-	return
-}
-
 type fakeConnection struct {
 	lastDataWritten []byte
 	net.Conn
@@ -58,8 +43,8 @@ func Test_ConsumeLineSkips(t *testing.T) {
 	var tests = []struct {
 		line string
 	}{
-		{">SOME_LINE_DELIVERED"},
-		{">ANOTHER_LINE_DELIVERED"},
+		{">SOME_LINE_TO_BE_DELIVERED"},
+		{">ANOTHER_LINE_TO_BE_DELIVERED"},
 	}
 	authenticator := NewFakeAuthenticator()
 	middleware := NewMiddleware(authenticator)
@@ -73,13 +58,12 @@ func Test_ConsumeLineSkips(t *testing.T) {
 
 func Test_ConsumeLineTakes(t *testing.T) {
 	var tests = []struct {
-		line          string
-		expectedState middlewares.State
+		line string
 	}{
-		{">CLIENT:REAUTH,0,0", middlewares.STATE_AUTH},
-		{">CLIENT:CONNECT,0,0", middlewares.STATE_AUTH},
-		{">CLIENT:ENV,password=(.*)", middlewares.STATE_AUTH},
-		{">CLIENT:ENV,username=(.*)", middlewares.STATE_AUTH},
+		{">CLIENT:REAUTH,0,0"},
+		{">CLIENT:CONNECT,0,0"},
+		{">CLIENT:ENV,password=12341234"},
+		{">CLIENT:ENV,username=username"},
 	}
 
 	authenticator := NewFakeAuthenticator()
@@ -91,6 +75,49 @@ func Test_ConsumeLineTakes(t *testing.T) {
 		consumed, err := middleware.ConsumeLine(test.line)
 		assert.NoError(t, err, test.line)
 		assert.True(t, consumed, test.line)
+	}
+}
+
+func Test_ConsumeLineAuthState(t *testing.T) {
+	var tests = []struct {
+		line          string
+		expectedState middlewares.State
+	}{
+		{">CLIENT:REAUTH,0,0", middlewares.STATE_AUTH},
+		{">CLIENT:CONNECT,0,0", middlewares.STATE_AUTH},
+	}
+
+	for _, test := range tests {
+		authenticator := NewFakeAuthenticator()
+		middleware := NewMiddleware(authenticator)
+		connection := &fakeConnection{}
+		middleware.Start(connection)
+
+		consumed, err := middleware.ConsumeLine(test.line)
+		assert.NoError(t, err, test.line)
+		assert.True(t, consumed, test.line)
 		assert.Equal(t, test.expectedState, middleware.State())
+	}
+}
+
+func Test_ConsumeLineNotAuthState(t *testing.T) {
+	var tests = []struct {
+		line            string
+		unexpectedState middlewares.State
+	}{
+		{">CLIENT:ENV,password=12341234", middlewares.STATE_AUTH},
+		{">CLIENT:ENV,username=username", middlewares.STATE_AUTH},
+	}
+
+	for _, test := range tests {
+		authenticator := NewFakeAuthenticator()
+		middleware := NewMiddleware(authenticator)
+		connection := &fakeConnection{}
+		middleware.Start(connection)
+
+		consumed, err := middleware.ConsumeLine(test.line)
+		assert.NoError(t, err, test.line)
+		assert.False(t, consumed, test.line)
+		assert.NotEqual(t, test.unexpectedState, middleware.State())
 	}
 }
