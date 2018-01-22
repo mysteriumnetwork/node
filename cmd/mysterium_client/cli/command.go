@@ -33,7 +33,7 @@ type Command struct {
 }
 
 const redColor = "\033[31m%s\033[0m"
-const identityDefaultPassword = ""
+const identityDefaultPassphrase = ""
 
 // Run starts CLI interface
 func (c *Command) Run() (err error) {
@@ -126,7 +126,7 @@ func (c *Command) connect(line string) {
 	consumerId, providerId := identities[0], identities[1]
 
 	if consumerId == "new" {
-		id, err := c.tequilapi.NewIdentity(identityDefaultPassword)
+		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)
 		if err != nil {
 			warn(err)
 			return
@@ -232,7 +232,7 @@ func (c *Command) identities(line string) {
 	}
 
 	if action == "new" {
-		id, err := c.tequilapi.NewIdentity(identityDefaultPassword)
+		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)
 		if err != nil {
 			warn(err)
 			return
