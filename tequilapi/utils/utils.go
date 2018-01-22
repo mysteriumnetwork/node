@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
 )
@@ -27,12 +28,12 @@ type errorMessage struct {
 }
 
 func SendError(writer http.ResponseWriter, err error, httpCode int) {
-
 	SendErrorMessage(writer, &errorMessage{fmt.Sprint(err)}, httpCode)
 }
 
 func SendErrorMessage(writer http.ResponseWriter, message interface{}, httpCode int) {
 	writer.WriteHeader(httpCode)
+	spew.Dump(message)
 	WriteAsJson(message, writer)
 }
 

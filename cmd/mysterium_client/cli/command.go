@@ -147,7 +147,7 @@ func (c *Command) connect(line string) {
 }
 
 func (c *Command) unlock(line string) {
-	unlockArgs := strings.TrimSpace(line[7:])
+	unlockArgs := strings.TrimSpace(line[6:])
 
 	unlockSignature := "Unlock <identity> [passphrase]"
 	if len(unlockArgs) == 0 {
