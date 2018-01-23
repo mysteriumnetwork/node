@@ -8,8 +8,6 @@ import (
 )
 
 type Command interface {
-	Run() error
-	Wait() error
 	Kill() error
 }
 

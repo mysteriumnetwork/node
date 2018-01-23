@@ -110,15 +110,13 @@ func (cmd *CommandRun) Wait() error {
 	return cmd.vpnServer.Wait()
 }
 
-func (cmd *CommandRun) Kill() (err error) {
+func (cmd *CommandRun) Kill() error {
 	cmd.vpnServer.Stop()
-	err = cmd.dialogWaiter.Stop()
+	err := cmd.dialogWaiter.Stop()
 	if err != nil {
 		return err
 	}
 	err = cmd.natService.Stop()
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return err
 }

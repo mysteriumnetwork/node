@@ -32,6 +32,7 @@ func main() {
 			tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 			newStopHandler(cmdRun),
 		)
+		cmd.NewTerminator(cmdCli)
 		if err := cmdCli.Run(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
