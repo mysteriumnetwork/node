@@ -33,6 +33,9 @@ func NewServer(address string, port int, handler http.Handler) APIServer {
 }
 
 func (server *apiServer) Stop() {
+	if server.listener == nil {
+		return
+	}
 	server.listener.Close()
 }
 
