@@ -8,5 +8,5 @@ type NATService interface {
 
 type RuleForwarding struct {
 	SourceAddress string
-	TargetIp      string
+	TargetIP      string
 }

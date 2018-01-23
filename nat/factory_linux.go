@@ -1,5 +1,5 @@
 package nat
 
 func NewService() NATService {
-	return &serviceIpTables{}
+	return &serviceIPTables{}
 }

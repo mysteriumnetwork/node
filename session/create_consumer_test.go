@@ -6,7 +6,7 @@ import (
 )
 
 var consumer = SessionCreateConsumer{
-	CurrentProposalId: 101,
+	CurrentProposalID: 101,
 	SessionManager:    &ManagerFake{},
 }
 
@@ -37,7 +37,7 @@ func TestConsumer_Success(t *testing.T) {
 		&SessionCreateResponse{
 			Success: true,
 			Session: SessionDto{
-				Id:     "new-id",
+				ID:     "new-id",
 				Config: "new-config",
 			},
 		},

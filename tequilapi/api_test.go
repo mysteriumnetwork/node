@@ -8,12 +8,12 @@ import (
 
 type tequilapiTestSuite struct {
 	suite.Suite
-	server ApiServer
+	server APIServer
 	client TestClient
 }
 
 func (testSuite *tequilapiTestSuite) SetupSuite() {
-	testSuite.server = NewServer("localhost", 0, NewApiRouter())
+	testSuite.server = NewServer("localhost", 0, NewAPIRouter())
 
 	assert.NoError(testSuite.T(), testSuite.server.StartServing())
 	port, err := testSuite.server.Port()

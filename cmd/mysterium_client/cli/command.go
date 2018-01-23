@@ -33,7 +33,7 @@ type Command struct {
 }
 
 const redColor = "\033[31m%s\033[0m"
-const identityDefaultPassword = ""
+const identityDefaultPassphrase = ""
 
 // Run starts CLI interface
 func (c *Command) Run() (err error) {
@@ -126,7 +126,7 @@ func (c *Command) connect(line string) {
 	consumerId, providerId := identities[0], identities[1]
 
 	if consumerId == "new" {
-		id, err := c.tequilapi.NewIdentity(identityDefaultPassword)
+		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)
 		if err != nil {
 			warn(err)
 			return
@@ -212,13 +212,25 @@ func (c *Command) quit() {
 }
 
 func (c *Command) identities(line string) {
-	action := strings.TrimSpace(line[10:])
-	if len(action) == 0 {
-		info("identities command:\n    list\n    new")
+	argsString := strings.TrimSpace(line[10:])
+	const usage = "identities command:\n    list\n    new [passphrase]"
+	if len(argsString) == 0 {
+		info(usage)
 		return
 	}
 
+	args := strings.Fields(argsString)
+	if len(args) < 1 {
+		info(usage)
+		return
+	}
+
+	action := args[0]
 	if action == "list" {
+		if len(args) > 1 {
+			info(usage)
+			return
+		}
 		ids, err := c.tequilapi.GetIdentities()
 		if err != nil {
 			fmt.Println("Error occured:", err)
@@ -232,7 +244,17 @@ func (c *Command) identities(line string) {
 	}
 
 	if action == "new" {
-		id, err := c.tequilapi.NewIdentity(identityDefaultPassword)
+		var passphrase string
+		if len(args) == 1 {
+			passphrase = identityDefaultPassphrase
+		} else if len(args) == 2 {
+			passphrase = args[1]
+		} else {
+			info(usage)
+			return
+		}
+
+		id, err := c.tequilapi.NewIdentity(passphrase)
 		if err != nil {
 			warn(err)
 			return

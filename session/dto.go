@@ -17,6 +17,6 @@ type SessionCreateResponse struct {
 }
 
 type SessionDto struct {
-	Id     SessionId `json:"id"`
+	ID     SessionID `json:"id"`
 	Config string    `json:"config"`
 }

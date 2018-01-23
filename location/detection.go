@@ -9,10 +9,12 @@ import (
 // Database downloaded from http://dev.maxmind.com/geoip/geoip2/geolite2/
 const Database = "data/GeoLite2-Country.mmdb"
 
+// DetectCountry maps ip to country using default database
 func DetectCountry(ip string) (string, error) {
 	return DetectCountryWithDatabase(ip, Database)
 }
 
+// DetectCountryWithDatabase maps ip to country using custom database
 func DetectCountryWithDatabase(ip, database string) (string, error) {
 	db, err := geoip2.Open(database)
 	if err != nil {

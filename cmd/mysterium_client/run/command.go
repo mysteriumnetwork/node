@@ -46,23 +46,23 @@ func NewCommandWith(
 
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
-	router := tequilapi.NewApiRouter()
+	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
-	httpApiServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
+	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
 	return &CommandRun{
 		connectionManager,
-		httpApiServer,
+		httpAPIServer,
 	}
 }
 
 //CommandRun represent entry point for MysteriumVpn client with top level components
 type CommandRun struct {
 	connectionManager client_connection.Manager
-	httpApiServer     tequilapi.ApiServer
+	httpApiServer     tequilapi.APIServer
 }
 
 //Run starts Tequilapi service - does not block

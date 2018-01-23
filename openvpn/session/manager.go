@@ -9,18 +9,18 @@ func NewManager(clientConfig *openvpn.ClientConfig) *manager {
 	return &manager{
 		idGenerator:  &session.Generator{},
 		clientConfig: clientConfig,
-		sessions:     make([]session.SessionId, 0),
+		sessions:     make([]session.SessionID, 0),
 	}
 }
 
 type manager struct {
 	idGenerator  session.GeneratorInterface
 	clientConfig *openvpn.ClientConfig
-	sessions     []session.SessionId
+	sessions     []session.SessionID
 }
 
 func (manager *manager) Create() (sessionInstance session.Session, err error) {
-	sessionInstance.Id = manager.idGenerator.Generate()
+	sessionInstance.ID = manager.idGenerator.Generate()
 
 	sessionInstance.Config, err = openvpn.ConfigToString(*manager.clientConfig.Config)
 	if err != nil {
@@ -32,5 +32,5 @@ func (manager *manager) Create() (sessionInstance session.Session, err error) {
 }
 
 func (manager *manager) Add(session session.Session) {
-	manager.sessions = append(manager.sessions, session.Id)
+	manager.sessions = append(manager.sessions, session.ID)
 }

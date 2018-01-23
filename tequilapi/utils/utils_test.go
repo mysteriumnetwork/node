@@ -18,7 +18,7 @@ func TestWriteAsJsonReturnsExpectedResponse(t *testing.T) {
 		StringField string `json:"renamed"`
 	}
 
-	WriteAsJson(TestStruct{1, "abc"}, respRecorder)
+	WriteAsJSON(TestStruct{1, "abc"}, respRecorder)
 
 	result := respRecorder.Result()
 

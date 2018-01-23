@@ -60,7 +60,7 @@ func (manager *connectionManager) Connect(id identity.Identity, nodeKey string) 
 		return err
 	}
 
-	vpnSession, err := session.RequestSessionCreate(manager.dialog, proposal.Id)
+	vpnSession, err := session.RequestSessionCreate(manager.dialog, proposal.ID)
 	if err != nil {
 		manager.status = statusError(err)
 		return err
@@ -72,7 +72,7 @@ func (manager *connectionManager) Connect(id identity.Identity, nodeKey string) 
 		return err
 	}
 
-	manager.status = statusConnected(vpnSession.Id)
+	manager.status = statusConnected(vpnSession.ID)
 	return nil
 }
 
@@ -110,8 +110,8 @@ func statusConnecting() ConnectionStatus {
 	return ConnectionStatus{Connecting, "", nil}
 }
 
-func statusConnected(sessionId session.SessionId) ConnectionStatus {
-	return ConnectionStatus{Connected, sessionId, nil}
+func statusConnected(sessionID session.SessionID) ConnectionStatus {
+	return ConnectionStatus{Connected, sessionID, nil}
 }
 
 func statusNotConnected() ConnectionStatus {
@@ -122,7 +122,7 @@ func statusDisconnecting() ConnectionStatus {
 	return ConnectionStatus{Disconnecting, "", nil}
 }
 
-func ConfigureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntimeDirectory string, signerFactory identity.SignerFactory) VpnClientFactory {
+func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntimeDirectory string, signerFactory identity.SignerFactory) VpnClientFactory {
 	return func(vpnSession session.SessionDto, id identity.Identity) (openvpn.Client, error) {
 		vpnConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,
@@ -132,7 +132,7 @@ func ConfigureVpnClientFactory(mysteriumApiClient server.Client, vpnClientRuntim
 			return nil, err
 		}
 
-		statsSender := bytescount_client.NewSessionStatsSender(mysteriumApiClient, vpnSession.Id, signerFactory(id))
+		statsSender := bytescount_client.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, signerFactory(id))
 		vpnMiddlewares := []openvpn.ManagementMiddleware{
 			bytescount_client.NewMiddleware(statsSender, 1*time.Minute),
 		}

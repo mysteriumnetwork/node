@@ -12,7 +12,7 @@ import (
 	"sync"
 )
 
-const NodeIp = "127.0.0.1"
+const NodeIP = "127.0.0.1"
 const NodeDirectoryConfig = "bin/tls"
 const ClientDirectoryRuntime = "build/fake"
 
@@ -26,7 +26,7 @@ func main() {
 			DirectoryRuntime: ClientDirectoryRuntime,
 		},
 		mysteriumClient,
-		ipify.NewClientFake(NodeIp),
+		ipify.NewClientFake(NodeIP),
 		nat.NewServiceFake(),
 	)
 	cmd.NewTerminator(serverCommand)

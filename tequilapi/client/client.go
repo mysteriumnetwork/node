@@ -36,11 +36,11 @@ func (client *Client) GetIdentities() (ids []IdentityDto, err error) {
 }
 
 // NewIdentity creates a new client identity
-func (client *Client) NewIdentity(password string) (id IdentityDto, err error) {
+func (client *Client) NewIdentity(passphrase string) (id IdentityDto, err error) {
 	payload := struct {
-		Password string `json:"password"`
+		Passphrase string `json:"passphrase"`
 	}{
-		password,
+		passphrase,
 	}
 	response, err := client.http.Post("identities", payload)
 	if err != nil {
@@ -69,13 +69,13 @@ func (client *Client) RegisterIdentity(address string) (err error) {
 }
 
 // Connect initiates a new connection to a host identified by providerId
-func (client *Client) Connect(consumerId, providerId string) (status StatusDto, err error) {
+func (client *Client) Connect(consumerID, providerID string) (status StatusDto, err error) {
 	payload := struct {
 		Identity string `json:"identity"`
 		NodeKey  string `json:"nodeKey"`
 	}{
-		consumerId,
-		providerId,
+		consumerID,
+		providerID,
 	}
 	response, err := client.http.Put("connection", payload)
 	if err != nil {
