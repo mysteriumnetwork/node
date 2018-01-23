@@ -212,13 +212,25 @@ func (c *Command) quit() {
 }
 
 func (c *Command) identities(line string) {
-	action := strings.TrimSpace(line[10:])
-	if len(action) == 0 {
-		info("identities command:\n    list\n    new")
+	argsString := strings.TrimSpace(line[10:])
+	const usage = "identities command:\n    list\n    new [passphrase]"
+	if len(argsString) == 0 {
+		info(usage)
 		return
 	}
 
+	args := strings.Fields(argsString)
+	if len(args) < 1 {
+		info(usage)
+		return
+	}
+
+	action := args[0]
 	if action == "list" {
+		if len(args) > 1 {
+			info(usage)
+			return
+		}
 		ids, err := c.tequilapi.GetIdentities()
 		if err != nil {
 			fmt.Println("Error occured:", err)
@@ -232,7 +244,17 @@ func (c *Command) identities(line string) {
 	}
 
 	if action == "new" {
-		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)
+		var passphrase string
+		if len(args) == 1 {
+			passphrase = identityDefaultPassphrase
+		} else if len(args) == 2 {
+			passphrase = args[1]
+		} else {
+			info(usage)
+			return
+		}
+
+		id, err := c.tequilapi.NewIdentity(passphrase)
 		if err != nil {
 			warn(err)
 			return
