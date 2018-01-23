@@ -62,6 +62,7 @@ func (cmd *CommandRun) Run() (err error) {
 	log.Info("Country detected: ", country)
 
 	location := dto_discovery.Location{Country: country}
+
 	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, location)
 
 	sessionCreateConsumer := &session.SessionCreateConsumer{
