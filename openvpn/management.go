@@ -8,7 +8,6 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/openvpn/middlewares"
 )
 
 // https://openvpn.net/index.php/open-source/documentation/miscellaneous/79-management-interface.html
@@ -27,7 +26,7 @@ type ManagementMiddleware interface {
 	Start(connection net.Conn) error
 	Stop() error
 	ConsumeLine(line string) (consumed bool, err error)
-	State() (state middlewares.State)
+	State() (state State)
 }
 
 func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMiddleware) *Management {

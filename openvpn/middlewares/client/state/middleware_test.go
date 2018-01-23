@@ -1,14 +1,14 @@
 package state
 
 import (
-	"github.com/mysterium/node/openvpn/middlewares"
+	"github.com/mysterium/node/openvpn"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-var currentState middlewares.State
+var currentState openvpn.State
 
-func updateCurrentState(state middlewares.State) error {
+func updateCurrentState(state openvpn.State) error {
 	currentState = state
 	return nil
 }
@@ -37,11 +37,11 @@ func Test_ConsumeLineSkips(t *testing.T) {
 func Test_ConsumeLineTakes(t *testing.T) {
 	var tests = []struct {
 		line          string
-		expectedState middlewares.State
+		expectedState openvpn.State
 	}{
-		{">STATE:1495493709,AUTH,,,,,,", middlewares.STATE_AUTH},
-		{">STATE:1495891020,RECONNECTING,ping-restart,,,,,", middlewares.STATE_RECONNECTING},
-		{">STATE:1495891025,WAIT,,,,,,", middlewares.STATE_WAIT},
+		{">STATE:1495493709,AUTH,,,,,,", openvpn.STATE_AUTH},
+		{">STATE:1495891020,RECONNECTING,ping-restart,,,,,", openvpn.STATE_RECONNECTING},
+		{">STATE:1495891025,WAIT,,,,,,", openvpn.STATE_WAIT},
 	}
 
 	middleware := &middleware{}

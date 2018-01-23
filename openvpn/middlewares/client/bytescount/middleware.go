@@ -3,7 +3,6 @@ package bytescount
 import (
 	"fmt"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares"
 	"net"
 	"regexp"
 	"strconv"
@@ -14,7 +13,7 @@ type middleware struct {
 	sessionStatsSender SessionStatsSender
 	interval           time.Duration
 
-	state      middlewares.State
+	state      openvpn.State
 	connection net.Conn
 }
 
@@ -41,7 +40,7 @@ func (middleware *middleware) Stop() error {
 	return err
 }
 
-func (middleware *middleware) State() middlewares.State {
+func (middleware *middleware) State() openvpn.State {
 	return middleware.state
 }
 

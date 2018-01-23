@@ -4,7 +4,6 @@ import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares"
 	"net"
 	"regexp"
 	"strconv"
@@ -13,11 +12,11 @@ import (
 type middleware struct {
 	authenticator Authenticator
 	connection    net.Conn
-	username      string
-	password      string
+	lastUsername  string
+	lastPassword  string
 	clientID      int
 	keyID         int
-	state         middlewares.State
+	state         openvpn.State
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
@@ -40,7 +39,7 @@ func (m *middleware) Stop() error {
 	return err
 }
 
-func (m *middleware) State() middlewares.State {
+func (m *middleware) State() openvpn.State {
 	return m.state
 }
 
@@ -54,7 +53,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	match := rule.FindStringSubmatch(line)
 	if len(match) > 0 {
 		m.Reset()
-		m.state = middlewares.STATE_AUTH
+		m.state = openvpn.STATE_AUTH
 		m.clientID, err = strconv.Atoi(match[1])
 		m.keyID, err = strconv.Atoi(match[2])
 		return true, nil
@@ -68,14 +67,14 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	match = rule.FindStringSubmatch(line)
 	if len(match) > 0 {
 		m.Reset()
-		m.state = middlewares.STATE_AUTH
+		m.state = openvpn.STATE_AUTH
 		m.clientID, err = strconv.Atoi(match[1])
 		m.keyID, err = strconv.Atoi(match[2])
 		return true, nil
 	}
 
 	// further proceed only if in AUTH state
-	if m.state != middlewares.STATE_AUTH {
+	if m.state != openvpn.STATE_AUTH {
 		return false, nil
 	}
 
@@ -89,7 +88,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 		if m.clientID < 0 {
 			return false, fmt.Errorf("wrong auth state, no client id")
 		}
-		m.password = match[1]
+		m.lastPassword = match[1]
 		return true, nil
 	}
 
@@ -103,7 +102,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 		if m.clientID < 0 {
 			return false, fmt.Errorf("wrong auth state, no client id")
 		}
-		m.username = match[1]
+		m.lastUsername = match[1]
 		return true, nil
 	}
 
@@ -123,13 +122,13 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 func (m *middleware) authenticateClient() (consumed bool, err error) {
 	defer m.Reset()
 
-	if m.username == "" || m.password == "" {
+	if m.lastUsername == "" || m.lastPassword == "" {
 		return false, fmt.Errorf("missing username or password")
 	}
 
-	log.Info("authenticating user: ", m.username, " clientID: ", m.clientID, " keyID: ", m.keyID)
+	log.Info("authenticating user: ", m.lastUsername, " clientID: ", m.clientID, " keyID: ", m.keyID)
 
-	authenticated, err := m.authenticator(m.username, m.password)
+	authenticated, err := m.authenticator(m.lastUsername, m.lastPassword)
 	if err != nil {
 		return false, err
 	}
@@ -150,9 +149,9 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 }
 
 func (m *middleware) Reset() {
-	m.username = ""
-	m.password = ""
+	m.lastUsername = ""
+	m.lastPassword = ""
 	m.clientID = -1
 	m.keyID = -1
-	m.state = middlewares.STATE_UNDEFINED
+	m.state = openvpn.STATE_UNDEFINED
 }

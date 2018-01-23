@@ -1,13 +1,13 @@
 package auth
 
 import (
-	"github.com/mysterium/node/openvpn/middlewares"
+	"github.com/mysterium/node/openvpn"
 	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
 )
 
-var currentState middlewares.State
+var currentState openvpn.State
 
 type fakeAuthenticator struct {
 }
@@ -62,9 +62,9 @@ func Test_ConsumeLineSkips(t *testing.T) {
 func Test_ConsumeLineTakes(t *testing.T) {
 	var tests = []struct {
 		line          string
-		expectedState middlewares.State
+		expectedState openvpn.State
 	}{
-		{">PASSWORD:Need 'Auth' username/password", middlewares.STATE_AUTH},
+		{">PASSWORD:Need 'Auth' username/password", openvpn.STATE_AUTH},
 	}
 
 	authenticator := &fakeAuthenticator{}

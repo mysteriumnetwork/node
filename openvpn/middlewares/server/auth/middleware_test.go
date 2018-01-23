@@ -1,13 +1,13 @@
 package auth
 
 import (
-	"github.com/mysterium/node/openvpn/middlewares"
+	"github.com/mysterium/node/openvpn"
 	"github.com/stretchr/testify/assert"
 	"net"
 	"testing"
 )
 
-var currentState middlewares.State
+var currentState openvpn.State
 
 func NewFakeAuthenticator() Authenticator {
 	return func(username, password string) (bool, error) {
@@ -81,10 +81,10 @@ func Test_ConsumeLineTakes(t *testing.T) {
 func Test_ConsumeLineAuthState(t *testing.T) {
 	var tests = []struct {
 		line          string
-		expectedState middlewares.State
+		expectedState openvpn.State
 	}{
-		{">CLIENT:REAUTH,0,0", middlewares.STATE_AUTH},
-		{">CLIENT:CONNECT,0,0", middlewares.STATE_AUTH},
+		{">CLIENT:REAUTH,0,0", openvpn.STATE_AUTH},
+		{">CLIENT:CONNECT,0,0", openvpn.STATE_AUTH},
 	}
 
 	for _, test := range tests {
@@ -103,10 +103,10 @@ func Test_ConsumeLineAuthState(t *testing.T) {
 func Test_ConsumeLineNotAuthState(t *testing.T) {
 	var tests = []struct {
 		line            string
-		unexpectedState middlewares.State
+		unexpectedState openvpn.State
 	}{
-		{">CLIENT:ENV,password=12341234", middlewares.STATE_AUTH},
-		{">CLIENT:ENV,username=username", middlewares.STATE_AUTH},
+		{">CLIENT:ENV,password=12341234", openvpn.STATE_AUTH},
+		{">CLIENT:ENV,username=username", openvpn.STATE_AUTH},
 	}
 
 	for _, test := range tests {
