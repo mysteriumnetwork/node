@@ -2,10 +2,11 @@ package identity
 
 import "github.com/mysterium/node/identity"
 
-type IdentitySelector func() (identity.Identity, error)
+// Selector selects the identity
+type Selector func() (identity.Identity, error)
 
 // LoadIdentity selects and unlocks identity
-func LoadIdentity(identitySelector IdentitySelector, identityManager identity.IdentityManagerInterface, passphrase string) (identity.Identity, error) {
+func LoadIdentity(identitySelector Selector, identityManager identity.IdentityManagerInterface, passphrase string) (identity.Identity, error) {
 	id, err := identitySelector()
 
 	if err != nil {
