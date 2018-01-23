@@ -17,3 +17,8 @@ func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
 	server.Stop()
 	server.Wait()
 }
+
+func TestStopBeforeStartingListeningDoesNotCausePanic(t *testing.T) {
+	server := NewServer("", 12345, nil)
+	server.Stop()
+}
