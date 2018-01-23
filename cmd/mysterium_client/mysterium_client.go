@@ -21,7 +21,7 @@ func main() {
 	cmdRun := run.NewCommand(options)
 	cmd.NewTerminator(cmdRun)
 
-	if cmdRun.Run(); err != nil {
+	if err := cmdRun.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
