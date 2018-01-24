@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/mysterium/node/cmd"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
 	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
 	"github.com/mysterium/node/ipify"
@@ -28,6 +29,7 @@ func main() {
 		ipify.NewClientFake(NodeIP),
 		nat.NewServiceFake(),
 	)
+	cmd.NewTerminator(serverCommand)
 	runServer(serverCommand, waiter)
 
 	clientCommand := command_client.NewCommandWith(
@@ -36,6 +38,7 @@ func main() {
 		},
 		mysteriumClient,
 	)
+	cmd.NewTerminator(clientCommand)
 	runClient(clientCommand, waiter)
 
 	waiter.Wait()
