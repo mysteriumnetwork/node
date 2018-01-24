@@ -9,11 +9,11 @@ type handlerFake struct {
 	LastAddress string
 }
 
-func (hf *handlerFake) UseExisting(address string) (identity.Identity, error) {
+func (hf *handlerFake) UseExisting(address, passphrase string) (identity.Identity, error) {
 	return identity.Identity{Address: address}, nil
 }
 
-func (hf *handlerFake) UseLast() (id identity.Identity, err error) {
+func (hf *handlerFake) UseLast(passphrase string) (id identity.Identity, err error) {
 	if hf.LastAddress != "" {
 		id = identity.Identity{Address: hf.LastAddress}
 	} else {

@@ -28,9 +28,13 @@ func NewHandler(
 	}
 }
 
-func (h *handler) UseExisting(address string) (id identity.Identity, err error) {
+func (h *handler) UseExisting(address, passphrase string) (id identity.Identity, err error) {
 	id, err = h.manager.GetIdentity(address)
 	if err != nil {
+		return
+	}
+
+	if err = h.manager.Unlock(id.Address, passphrase); err != nil {
 		return
 	}
 
@@ -38,10 +42,14 @@ func (h *handler) UseExisting(address string) (id identity.Identity, err error) 
 	return
 }
 
-func (h *handler) UseLast() (identity identity.Identity, err error) {
+func (h *handler) UseLast(passphrase string) (identity identity.Identity, err error) {
 	identity, err = h.cache.GetIdentity()
 	if err != nil || !h.manager.HasIdentity(identity.Address) {
 		return identity, errors.New("identity not found in cache")
+	}
+
+	if err = h.manager.Unlock(identity.Address, passphrase); err != nil {
+		return
 	}
 
 	return identity, nil
@@ -51,6 +59,10 @@ func (h *handler) UseNew(passphrase string) (id identity.Identity, err error) {
 	// if all fails, create a new one
 	id, err = h.manager.CreateNewIdentity(passphrase)
 	if err != nil {
+		return
+	}
+
+	if err = h.manager.Unlock(id.Address, passphrase); err != nil {
 		return
 	}
 

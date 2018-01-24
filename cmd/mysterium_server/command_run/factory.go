@@ -48,10 +48,7 @@ func NewCommandWith(
 
 	return &CommandRun{
 		identityLoader: func() (identity.Identity, error) {
-			identitySelector := func() (identity.Identity, error) {
-				return identity_handler.SelectIdentity(identityHandler, options.NodeKey, options.Passphrase)
-			}
-			return identity_handler.LoadIdentity(identitySelector, identityManager, options.Passphrase)
+			return identity_handler.LoadIdentity(identityHandler, options.NodeKey, options.Passphrase)
 		},
 		createSigner:    createSigner,
 		ipifyClient:     ipifyClient,
