@@ -7,18 +7,7 @@ import (
 	"testing"
 )
 
-var currentState openvpn.State
-
-type fakeAuthenticator struct {
-}
-
-func (a *fakeAuthenticator) auth() (username string, password string, err error) {
-	return
-}
-
-func (a *fakeAuthenticator) authWithValid() (username string, password string, err error) {
-	username = "valid_username"
-	password = "valid_password"
+func auth() (username string, password string, err error) {
 	return
 }
 
@@ -37,8 +26,7 @@ func (conn *fakeConnection) Write(b []byte) (n int, err error) {
 }
 
 func Test_Factory(t *testing.T) {
-	authenticator := &fakeAuthenticator{}
-	middleware := NewMiddleware(authenticator.auth)
+	middleware := NewMiddleware(auth)
 	assert.NotNil(t, middleware)
 }
 
@@ -50,8 +38,7 @@ func Test_ConsumeLineSkips(t *testing.T) {
 		{">ANOTHER_LINE_DELIVERED"},
 		{">PASSWORD"},
 	}
-	authenticator := &fakeAuthenticator{}
-	middleware := NewMiddleware(authenticator.auth)
+	middleware := NewMiddleware(auth)
 
 	for _, test := range tests {
 		consumed, err := middleware.ConsumeLine(test.line)
@@ -68,8 +55,7 @@ func Test_ConsumeLineTakes(t *testing.T) {
 		{">PASSWORD:Need 'Auth' username/password", openvpn.STATE_AUTH},
 	}
 
-	authenticator := &fakeAuthenticator{}
-	middleware := NewMiddleware(authenticator.auth)
+	middleware := NewMiddleware(auth)
 	connection := &fakeConnection{}
 	middleware.Start(connection)
 

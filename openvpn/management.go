@@ -26,7 +26,6 @@ type ManagementMiddleware interface {
 	Start(connection net.Conn) error
 	Stop() error
 	ConsumeLine(line string) (consumed bool, err error)
-	State() (state State)
 }
 
 func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMiddleware) *Management {

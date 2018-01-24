@@ -20,7 +20,7 @@ type middleware struct {
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(authenticator AuthenticatorChecker) openvpn.ManagementMiddleware {
+func NewMiddleware(authenticator AuthenticatorChecker) *middleware {
 	return &middleware{
 		authenticator: authenticator,
 		connection:    nil,
@@ -30,17 +30,13 @@ func NewMiddleware(authenticator AuthenticatorChecker) openvpn.ManagementMiddlew
 func (m *middleware) Start(connection net.Conn) error {
 	m.connection = connection
 
-	_, err := m.connection.Write([]byte("state on all\n"))
+	_, err := m.connection.Write([]byte("state on\n"))
 	return err
 }
 
 func (m *middleware) Stop() error {
-	_, err := m.connection.Write([]byte("state off all\n"))
+	_, err := m.connection.Write([]byte("state off\n"))
 	return err
-}
-
-func (m *middleware) State() openvpn.State {
-	return m.state
 }
 
 func (m *middleware) checkReAuth(line string) (cont bool, consumed bool, err error) {
@@ -166,7 +162,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 }
 
 func (m *middleware) authenticateClient() (consumed bool, err error) {
-	defer m.Reset()
+	m.state = openvpn.STATE_UNDEFINED
 
 	if m.lastUsername == "" || m.lastPassword == "" {
 		return false, fmt.Errorf("missing username or password")

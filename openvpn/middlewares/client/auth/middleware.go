@@ -15,8 +15,8 @@ type middleware struct {
 	state         openvpn.State
 }
 
-// NewMiddleware creates clint user_auth challenge authentication middleware
-func NewMiddleware(authenticator Authenticator) openvpn.ManagementMiddleware {
+// NewMiddleware creates client user_auth challenge authentication middleware
+func NewMiddleware(authenticator Authenticator) *middleware {
 	return &middleware{
 		authenticator: authenticator,
 		connection:    nil,
@@ -31,10 +31,6 @@ func (m *middleware) Start(connection net.Conn) error {
 
 func (m *middleware) Stop() error {
 	return nil
-}
-
-func (m *middleware) State() openvpn.State {
-	return m.state
 }
 
 func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
