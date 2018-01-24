@@ -10,7 +10,7 @@ import (
 )
 
 type middleware struct {
-	authenticator Authenticator
+	authenticator AuthenticatorChecker
 	connection    net.Conn
 	lastUsername  string
 	lastPassword  string
@@ -20,7 +20,7 @@ type middleware struct {
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(authenticator Authenticator) openvpn.ManagementMiddleware {
+func NewMiddleware(authenticator AuthenticatorChecker) openvpn.ManagementMiddleware {
 	return &middleware{
 		authenticator: authenticator,
 		connection:    nil,
@@ -43,11 +43,11 @@ func (m *middleware) State() openvpn.State {
 	return m.state
 }
 
-func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
+func (m *middleware) checkReAuth(line string) (cont bool, consumed bool, err error) {
 
 	rule, err := regexp.Compile("^>CLIENT:REAUTH,(\\d),(\\d)$")
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
 	match := rule.FindStringSubmatch(line)
@@ -56,21 +56,90 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 		m.state = openvpn.STATE_AUTH
 		m.clientID, err = strconv.Atoi(match[1])
 		m.keyID, err = strconv.Atoi(match[2])
-		return true, nil
+		return false, true, nil
 	}
+	return true, false, nil
+}
 
-	rule, err = regexp.Compile("^>CLIENT:CONNECT,(\\d),(\\d)$")
+func (m *middleware) checkConnect(line string) (cont bool, consumed bool, err error) {
+
+	rule, err := regexp.Compile("^>CLIENT:CONNECT,(\\d),(\\d)$")
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 
-	match = rule.FindStringSubmatch(line)
+	match := rule.FindStringSubmatch(line)
 	if len(match) > 0 {
 		m.Reset()
 		m.state = openvpn.STATE_AUTH
 		m.clientID, err = strconv.Atoi(match[1])
 		m.keyID, err = strconv.Atoi(match[2])
-		return true, nil
+		return false, true, nil
+	}
+
+	return true, false, nil
+}
+
+func (m *middleware) checkPassword(line string) (cont bool, consumed bool, err error) {
+
+	rule, err := regexp.Compile("^>CLIENT:ENV,password=(.*)$")
+	if err != nil {
+		return false, false, err
+	}
+
+	match := rule.FindStringSubmatch(line)
+	if len(match) > 0 {
+		if m.clientID < 0 {
+			return false, false, fmt.Errorf("wrong auth state, no client id")
+		}
+		m.lastPassword = match[1]
+		return false, true, nil
+	}
+
+	return true, false, nil
+}
+
+func (m *middleware) checkUsername(line string) (cont bool, consumed bool, err error) {
+
+	rule, err := regexp.Compile("^>CLIENT:ENV,username=(.*)$")
+	if err != nil {
+		return false, false, err
+	}
+
+	match := rule.FindStringSubmatch(line)
+	if len(match) > 0 {
+		if m.clientID < 0 {
+			return false, false, fmt.Errorf("wrong auth state, no client id")
+		}
+		m.lastUsername = match[1]
+		return false, true, nil
+	}
+
+	return true, false, nil
+}
+
+func (m *middleware) checkEnvEnd(line string) (cont bool, consumed bool, err error) {
+
+	rule, err := regexp.Compile("^>CLIENT:ENV,END$")
+	if err != nil {
+		return false, false, err
+	}
+
+	match := rule.FindStringSubmatch(line)
+	if len(match) > 0 {
+		return false, true, nil
+	}
+
+	return true, false, nil
+}
+
+func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
+	if cont, consumed, err := m.checkReAuth(line); !cont {
+		return consumed, err
+	}
+
+	if cont, consumed, err := m.checkConnect(line); !cont {
+		return consumed, err
 	}
 
 	// further proceed only if in AUTH state
@@ -78,45 +147,22 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 		return false, nil
 	}
 
-	rule, err = regexp.Compile("^>CLIENT:ENV,password=(.*)$")
-	if err != nil {
-		return false, err
+	if cont, consumed, err := m.checkUsername(line); !cont {
+		return consumed, err
 	}
 
-	match = rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		if m.clientID < 0 {
-			return false, fmt.Errorf("wrong auth state, no client id")
+	if cont, consumed, err := m.checkPassword(line); !cont {
+		return consumed, err
+	}
+
+	if cont, consumed, err := m.checkEnvEnd(line); !cont {
+		if consumed {
+			return m.authenticateClient()
 		}
-		m.lastPassword = match[1]
-		return true, nil
+		return consumed, err
 	}
 
-	rule, err = regexp.Compile("^>CLIENT:ENV,username=(.*)$")
-	if err != nil {
-		return false, err
-	}
-
-	match = rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		if m.clientID < 0 {
-			return false, fmt.Errorf("wrong auth state, no client id")
-		}
-		m.lastUsername = match[1]
-		return true, nil
-	}
-
-	rule, err = regexp.Compile("^>CLIENT:ENV,END$")
-	if err != nil {
-		return false, err
-	}
-
-	match = rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		return m.authenticateClient()
-	}
-
-	return false, nil
+	return false, err
 }
 
 func (m *middleware) authenticateClient() (consumed bool, err error) {

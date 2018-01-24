@@ -48,6 +48,7 @@ func Test_ConsumeLineSkips(t *testing.T) {
 	}{
 		{">SOME_LINE_DELIVERED"},
 		{">ANOTHER_LINE_DELIVERED"},
+		{">PASSWORD"},
 	}
 	authenticator := &fakeAuthenticator{}
 	middleware := NewMiddleware(authenticator.auth)
