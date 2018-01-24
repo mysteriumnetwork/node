@@ -8,6 +8,7 @@ import (
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
@@ -45,15 +46,19 @@ func NewCommandWith(
 		cache,
 		createSigner,
 	)
+	// Country database downloaded from http://dev.maxmind.com/geoip/geoip2/geolite2/
+	databasePath := filepath.Join(options.DirectoryConfig, "GeoLite2-Country.mmdb")
+	locationDetector := location.NewDetector(databasePath)
 
 	return &CommandRun{
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, options.NodeKey, options.Passphrase)
 		},
-		createSigner:    createSigner,
-		ipifyClient:     ipifyClient,
-		mysteriumClient: mysteriumClient,
-		natService:      natService,
+		createSigner:     createSigner,
+		locationDetector: locationDetector,
+		ipifyClient:      ipifyClient,
+		mysteriumClient:  mysteriumClient,
+		natService:       natService,
 		dialogWaiterFactory: func(myIdentity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {
 			myAddress := nats_discovery.NewAddressGenerate(myIdentity)
 			waiter := nats_dialog.NewDialogWaiter(myAddress, identity.NewSigner(keystoreInstance, myIdentity))

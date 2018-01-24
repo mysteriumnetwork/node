@@ -1,11 +1,10 @@
 package location
 
 import (
-	"path/filepath"
 	"testing"
 )
 
-func TestDetectCountryWithDatabase(t *testing.T) {
+func TestDetectorDetectCountry(t *testing.T) {
 	tests := []struct {
 		ip      string
 		want    string
@@ -18,7 +17,8 @@ func TestDetectCountryWithDatabase(t *testing.T) {
 		{"asd", "", true},
 	}
 	for _, tt := range tests {
-		got, err := DetectCountryWithDatabase(tt.ip, filepath.Join("../", Database))
+		detector := NewDetector("../bin/server_package/config/GeoLite2-Country.mmdb")
+		got, err := detector.DetectCountry(tt.ip)
 		if (err != nil) != tt.wantErr {
 			t.Errorf("DetectCountry() error = %v, wantErr %v", err, tt.wantErr)
 			return
