@@ -17,11 +17,12 @@ import (
 )
 
 type CommandRun struct {
-	identityLoader  func() (identity.Identity, error)
-	createSigner    identity.SignerFactory
-	ipifyClient     ipify.Client
-	mysteriumClient server.Client
-	natService      nat.NATService
+	identityLoader   func() (identity.Identity, error)
+	createSigner     identity.SignerFactory
+	ipifyClient      ipify.Client
+	mysteriumClient  server.Client
+	natService       nat.NATService
+	locationDetector location.Detector
 
 	dialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
 	dialogWaiter        communication.DialogWaiter
@@ -55,7 +56,7 @@ func (cmd *CommandRun) Run() (err error) {
 		return err
 	}
 
-	country, err := detectCountry()
+	country, err := detectCountry(cmd.ipifyClient, cmd.locationDetector)
 	if err != nil {
 		return err
 	}
@@ -92,14 +93,13 @@ func (cmd *CommandRun) Run() (err error) {
 	return nil
 }
 
-func detectCountry() (string, error) {
-	ipifyClient := ipify.NewClient()
+func detectCountry(ipifyClient ipify.Client, detector location.Detector) (string, error) {
 	ip, err := ipifyClient.GetPublicIP()
 	if err != nil {
 		return "", errors.New("IP detection failed: " + err.Error())
 	}
 
-	country, err := location.DetectCountry(ip)
+	country, err := detector.DetectCountry(ip)
 	if err != nil {
 		return "", errors.New("Country detection failed: " + err.Error())
 	}
