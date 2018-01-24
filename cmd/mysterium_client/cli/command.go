@@ -90,6 +90,7 @@ func (c *Command) handleActions(line string) {
 		{"quit", c.quit},
 		{"help", c.help},
 		{"status", c.status},
+		{"ip", c.ip},
 		{"disconnect", c.disconnect},
 	}
 
@@ -208,6 +209,16 @@ func (c *Command) status() {
 	info("SID:", status.SessionId)
 }
 
+func (c *Command) ip() {
+	ip, err := c.tequilapi.Ip()
+	if err != nil {
+		warn(err)
+		return
+	}
+
+	info("IP:", ip)
+}
+
 func (c *Command) help() {
 	info("Mysterium CLI tequilapi commands:")
 	fmt.Println(c.completer.Tree("  "))
@@ -302,6 +313,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client) *readline.PrefixComple
 			readline.PcItem("list"),
 		),
 		readline.PcItem("status"),
+		readline.PcItem("ip"),
 		readline.PcItem("disconnect"),
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
