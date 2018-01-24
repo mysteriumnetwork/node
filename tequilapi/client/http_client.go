@@ -40,7 +40,15 @@ type httpClient struct {
 }
 
 func (client *httpClient) Get(path string, values url.Values) (*http.Response, error) {
-	fullPath := fmt.Sprintf("%v/%v?%v", client.baseUrl, path, values.Encode())
+	basePath := fmt.Sprintf("%v/%v", client.baseUrl, path)
+
+	var fullPath string
+	params := values.Encode()
+	if params == "" {
+		fullPath = basePath
+	} else {
+		fullPath = fmt.Sprintf("%v?%v", basePath, params)
+	}
 	return client.executeRequest("GET", fullPath, nil)
 }
 
