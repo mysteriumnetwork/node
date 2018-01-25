@@ -49,7 +49,7 @@ func NewCommandWith(
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	ipResolver := ip.NewResolver().GetPublicIP
+	ipResolver := ip.NewResolver()
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 

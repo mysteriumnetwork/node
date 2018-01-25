@@ -5,6 +5,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/ip"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -44,9 +45,7 @@ func (fm *fakeManager) Wait() error {
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
-	ipResolver := func() (string, error) {
-		return "123.123.123.123", nil
-	}
+	ipResolver := ip.NewFakeResolver("123.123.123.123")
 
 	AddRoutesForConnection(router, &fakeManager, ipResolver)
 
@@ -259,9 +258,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 
 func TestGetIPEndpointSucceeds(t *testing.T) {
 	manager := fakeManager{}
-	ipResolver := func() (string, error) {
-		return "123.123.123.123", nil
-	}
+	ipResolver := ip.NewFakeResolver("123.123.123.123")
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver)
 	resp := httptest.NewRecorder()
 
@@ -279,9 +276,7 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	manager := fakeManager{}
-	ipResolver := func() (string, error) {
-		return "", errors.New("fake error")
-	}
+	ipResolver := ip.NewFailingFakeResolver(errors.New("fake error"))
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver)
 	resp := httptest.NewRecorder()
 

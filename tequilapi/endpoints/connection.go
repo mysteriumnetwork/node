@@ -5,6 +5,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
@@ -22,12 +23,10 @@ type statusResponse struct {
 
 type connectionEndpoint struct {
 	manager    client_connection.Manager
-	ipResolver ipResolver
+	ipResolver ip.Resolver
 }
 
-type ipResolver func() (string, error)
-
-func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ipResolver) *connectionEndpoint {
+func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver) *connectionEndpoint {
 	return &connectionEndpoint{
 		manager:    manager,
 		ipResolver: ipResolver,
@@ -69,7 +68,7 @@ func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 
 // GetIP responds with current ip, using its ip resolver
 func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	ip, err := ce.ipResolver()
+	ip, err := ce.ipResolver.GetPublicIP()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
 		return
@@ -83,7 +82,7 @@ func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 }
 
 // TODO: Uppercase IPResolver?
-func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ipResolver) {
+func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ip.Resolver) {
 	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)

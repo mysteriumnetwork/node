@@ -1,26 +1,28 @@
 package ip
 
-import (
-	log "github.com/cihub/seelog"
-)
-
-func NewFakeResolver(IP string) Resolver {
+func NewFakeResolver(ip string) Resolver {
 	return &fakeResolver{
-		ip: IP,
+		ip:    ip,
+		error: nil,
+	}
+}
+
+func NewFailingFakeResolver(err error) Resolver {
+	return &fakeResolver{
+		ip:    "",
+		error: err,
 	}
 }
 
 type fakeResolver struct {
-	ip         string
-	outboundIP string
+	ip    string
+	error error
 }
 
 func (client *fakeResolver) GetPublicIP() (string, error) {
-	log.Info(IpifiAPILogPrefix, "IP faked: ", client.ip)
-	return client.ip, nil
+	return client.ip, client.error
 }
 
 func (client *fakeResolver) GetOutboundIP() (string, error) {
-	log.Info(IpifiAPILogPrefix, "IP faked: ", client.outboundIP)
-	return client.outboundIP, nil
+	return client.ip, client.error
 }
