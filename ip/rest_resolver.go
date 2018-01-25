@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-const IpifyAPIURL = "https://api.ipify.org/"
-const IpifiAPICLient = "goclient-v0.1"
-const IpifiAPILogPrefix = "[ipify.api] "
+const ipifyAPIURL = "https://api.ipify.org/"
+const ipifyAPIClient = "goclient-v0.1"
+const ipifyAPILogPrefix = "[ipify.api] "
 
 func NewResolver() Resolver {
 	return NewResolverWithTimeout(60 * time.Second)
@@ -34,11 +34,11 @@ type clientRest struct {
 func (client *clientRest) GetPublicIP() (string, error) {
 	var ipResponse IPResponse
 
-	request, err := http.NewRequest("GET", IpifyAPIURL+"/?format=json", nil)
-	request.Header.Set("User-Agent", IpifiAPICLient)
+	request, err := http.NewRequest("GET", ipifyAPIURL+"/?format=json", nil)
+	request.Header.Set("User-Agent", ipifyAPIClient)
 	request.Header.Set("Accept", "application/json")
 	if err != nil {
-		log.Critical(IpifiAPILogPrefix, err)
+		log.Critical(ipifyAPILogPrefix, err)
 		return "", err
 	}
 
@@ -47,7 +47,7 @@ func (client *clientRest) GetPublicIP() (string, error) {
 		return "", err
 	}
 
-	log.Info(IpifiAPILogPrefix, "IP detected: ", ipResponse.IP)
+	log.Info(ipifyAPILogPrefix, "IP detected: ", ipResponse.IP)
 	return ipResponse.IP, nil
 }
 
@@ -66,14 +66,14 @@ func (client *clientRest) GetOutboundIP() (string, error) {
 func (client *clientRest) doRequest(request *http.Request, responseDto interface{}) error {
 	response, err := client.httpClient.Do(request)
 	if err != nil {
-		log.Error(IpifiAPILogPrefix, err)
+		log.Error(ipifyAPILogPrefix, err)
 		return err
 	}
 	defer response.Body.Close()
 
 	err = parseResponseError(response)
 	if err != nil {
-		log.Error(IpifiAPILogPrefix, err)
+		log.Error(ipifyAPILogPrefix, err)
 		return err
 	}
 

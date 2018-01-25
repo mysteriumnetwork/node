@@ -2,8 +2,8 @@ package command_run
 
 import (
 	"errors"
-	"github.com/mysterium/node/ip"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
+	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn"
 	"sync"
 	"time"
