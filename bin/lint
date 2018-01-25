@@ -13,4 +13,4 @@ if [ -z "$ARGUMENTS" ]; then
     ARGUMENTS=`go list ./...`
 fi
 
-go run vendor/github.com/golang/lint/golint/*.go -set_exit_status ${ARGUMENTS}
+go run vendor/github.com/golang/lint/golint/*.go --set_exit_status --min_confidence=1 ${ARGUMENTS}
