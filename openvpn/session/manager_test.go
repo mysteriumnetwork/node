@@ -7,25 +7,8 @@ import (
 	"testing"
 )
 
-func TestManagerAdd(t *testing.T) {
-	sessionExpected := session.Session{
-		ID:     session.SessionID("mocked-id"),
-		Config: "mocked-config",
-	}
-	manager := manager{
-		idGenerator: &session.GeneratorFake{},
-	}
-
-	manager.Add(sessionExpected)
-	assert.Exactly(
-		t,
-		[]session.SessionID{sessionExpected.ID},
-		manager.sessions,
-	)
-}
-
-func TestManagerCreate(t *testing.T) {
-	sessionExpected := session.Session{
+func TestManagerCreatesNewSession(t *testing.T) {
+	expectedSession := session.Session{
 		ID:     session.SessionID("mocked-id"),
 		Config: "port 1000\n",
 	}
@@ -38,14 +21,36 @@ func TestManagerCreate(t *testing.T) {
 			SessionIdMock: session.SessionID("mocked-id"),
 		},
 		clientConfig: clientConfig,
+		sessionMap:   make(map[session.SessionID]session.Session),
 	}
 
 	sessionInstance, err := manager.Create()
 	assert.NoError(t, err)
-	assert.Exactly(t, sessionExpected, sessionInstance)
+	assert.Exactly(t, expectedSession, sessionInstance)
+
+	expectedSessionMap := make(map[session.SessionID]session.Session)
+	expectedSessionMap[expectedSession.ID] = expectedSession
 	assert.Exactly(
 		t,
-		[]session.SessionID{sessionExpected.ID},
-		manager.sessions,
+		expectedSessionMap,
+		manager.sessionMap,
 	)
+}
+
+func TestManagerLookupsExistingSession(t *testing.T) {
+	expectedSession := session.Session{
+		ID:     session.SessionID("mocked-id"),
+		Config: "port 1000\n",
+	}
+
+	sessionMap := make(map[session.SessionID]session.Session)
+	sessionMap[expectedSession.ID] = expectedSession
+
+	manager := manager{
+		sessionMap: sessionMap,
+	}
+
+	session, found := manager.FindSession(session.SessionID("mocked-id"))
+	assert.True(t, found)
+	assert.Exactly(t, expectedSession, session)
 }

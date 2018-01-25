@@ -5,18 +5,19 @@ import (
 	"github.com/mysterium/node/session"
 )
 
+//NewManager returns session manager which maintans a map of session id -> session
 func NewManager(clientConfig *openvpn.ClientConfig) *manager {
 	return &manager{
 		idGenerator:  &session.Generator{},
 		clientConfig: clientConfig,
-		sessions:     make([]session.SessionID, 0),
+		sessionMap:   make(map[session.SessionID]session.Session),
 	}
 }
 
 type manager struct {
 	idGenerator  session.GeneratorInterface
 	clientConfig *openvpn.ClientConfig
-	sessions     []session.SessionID
+	sessionMap   map[session.SessionID]session.Session
 }
 
 func (manager *manager) Create() (sessionInstance session.Session, err error) {
@@ -27,10 +28,15 @@ func (manager *manager) Create() (sessionInstance session.Session, err error) {
 		return
 	}
 
-	manager.Add(sessionInstance)
+	manager.add(sessionInstance)
 	return sessionInstance, nil
 }
 
-func (manager *manager) Add(session session.Session) {
-	manager.sessions = append(manager.sessions, session.ID)
+func (manager *manager) add(session session.Session) {
+	manager.sessionMap[session.ID] = session
+}
+
+func (manager *manager) FindSession(id session.SessionID) (session.Session, bool) {
+	sessionInstance, found := manager.sessionMap[id]
+	return sessionInstance, found
 }
