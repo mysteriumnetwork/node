@@ -1,13 +1,14 @@
 package endpoints
 
 import (
-	"bytes"
+	"errors"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -40,6 +41,53 @@ func (fm *fakeManager) Wait() error {
 	return nil
 }
 
+func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
+	router := httprouter.New()
+	fakeManager := fakeManager{}
+	ipResolver := func() (string, error) {
+		return "123.123.123.123", nil
+	}
+
+	AddRoutesForConnection(router, &fakeManager, ipResolver)
+
+	tests := []struct {
+		method         string
+		path           string
+		body           string
+		expectedStatus int
+		expectedJSON   string
+	}{
+		{
+			http.MethodGet, "/connection", "",
+			http.StatusOK, `{"status": ""}`,
+		},
+		{
+			http.MethodPut, "/connection", `{"identity": "identity", "nodeKey": "nodeKey"}`,
+			http.StatusCreated, `{"status": ""}`,
+		},
+		{
+			http.MethodDelete, "/connection", "",
+			http.StatusAccepted, "",
+		},
+		{
+			http.MethodGet, "/connection/ip", "",
+			http.StatusOK, `{"ip": "123.123.123.123"}`,
+		},
+	}
+
+	for _, test := range tests {
+		resp := httptest.NewRecorder()
+		req := httptest.NewRequest(test.method, test.path, strings.NewReader(test.body))
+		router.ServeHTTP(resp, req)
+		assert.Equal(t, test.expectedStatus, resp.Code)
+		if test.expectedJSON != "" {
+			assert.JSONEq(t, test.expectedJSON, resp.Body.String())
+		} else {
+			assert.Equal(t, "", resp.Body.String())
+		}
+	}
+}
+
 func TestDisconnectingState(t *testing.T) {
 	var fakeManager = fakeManager{}
 	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
@@ -47,12 +95,11 @@ func TestDisconnectingState(t *testing.T) {
 		SessionID: "",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager)
-	req, err := http.NewRequest(http.MethodGet, "/irrelevant", nil)
-	assert.Nil(t, err)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil)
+	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	connEndpoint.Status(resp, req, httprouter.Params{})
+	connEndpoint.Status(resp, req, nil)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(
@@ -70,9 +117,8 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 		SessionID: "",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager)
-	req, err := http.NewRequest(http.MethodGet, "/connection", nil)
-	assert.Nil(t, err)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil)
+	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
 	connEndpoint.Status(resp, req, httprouter.Params{})
@@ -93,9 +139,8 @@ func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 		State: client_connection.Connecting,
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager)
-	req, err := http.NewRequest(http.MethodGet, "/connection", nil)
-	assert.Nil(t, err)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil)
+	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
 	connEndpoint.Status(resp, req, httprouter.Params{})
@@ -117,9 +162,8 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 		SessionID: "My-super-session",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager)
-	req, err := http.NewRequest(http.MethodGet, "/connection", nil)
-	assert.Nil(t, err)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil)
+	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
 	connEndpoint.Status(resp, req, httprouter.Params{})
@@ -138,9 +182,8 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 func TestPutReturns400ErrorIfRequestBodyIsNotJson(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager)
-	req, err := http.NewRequest(http.MethodPut, "/connection", bytes.NewBufferString("a"))
-	assert.Nil(t, err)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil)
+	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
 
 	connEndpoint.Create(resp, req, httprouter.Params{})
@@ -158,9 +201,8 @@ func TestPutReturns400ErrorIfRequestBodyIsNotJson(t *testing.T) {
 func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager)
-	req, err := http.NewRequest(http.MethodPut, "/connection", bytes.NewBufferString("{}"))
-	assert.Nil(t, err)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil)
+	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
 
 	connEndpoint.Create(resp, req, httprouter.Params{})
@@ -181,16 +223,15 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager)
-	req, err := http.NewRequest(
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil)
+	req := httptest.NewRequest(
 		http.MethodPut,
-		"/connection",
-		bytes.NewBufferString(
+		"/irrelevant",
+		strings.NewReader(
 			`{
 				"identity" : "my-identity",
 				"nodeKey" : "required-node"
 			}`))
-	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 
 	connEndpoint.Create(resp, req, httprouter.Params{})
@@ -205,9 +246,8 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 func TestDeleteCallsDisconnect(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager)
-	req, err := http.NewRequest(http.MethodDelete, "/connection", nil)
-	assert.Nil(t, err)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil)
+	req := httptest.NewRequest(http.MethodDelete, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
 	connEndpoint.Kill(resp, req, httprouter.Params{})
@@ -215,4 +255,44 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, resp.Code)
 
 	assert.Equal(t, fakeManager.disconnectCount, 1)
+}
+
+func TestGetIPEndpointSucceeds(t *testing.T) {
+	manager := fakeManager{}
+	ipResolver := func() (string, error) {
+		return "123.123.123.123", nil
+	}
+	connEndpoint := NewConnectionEndpoint(&manager, ipResolver)
+	resp := httptest.NewRecorder()
+
+	connEndpoint.GetIP(resp, nil, nil)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"ip": "123.123.123.123"
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
+	manager := fakeManager{}
+	ipResolver := func() (string, error) {
+		return "", errors.New("fake error")
+	}
+	connEndpoint := NewConnectionEndpoint(&manager, ipResolver)
+	resp := httptest.NewRecorder()
+
+	connEndpoint.GetIP(resp, nil, nil)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message": "fake error"
+		}`,
+		resp.Body.String(),
+	)
 }

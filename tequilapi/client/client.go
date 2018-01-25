@@ -118,8 +118,9 @@ func (client *Client) Status() (status StatusDto, err error) {
 	return status, err
 }
 
+// GetIP returns public ip
 func (client *Client) GetIP() (string, error) {
-	response, err := client.http.Get("ip", url.Values{})
+	response, err := client.http.Get("connection/ip", url.Values{})
 	if err != nil {
 		return "", err
 	}
