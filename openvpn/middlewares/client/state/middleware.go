@@ -9,7 +9,6 @@ import (
 type middleware struct {
 	listeners  []clientStateCallback
 	connection net.Conn
-	state      openvpn.State
 }
 
 type clientStateCallback func(state openvpn.State) error
@@ -31,10 +30,6 @@ func (middleware *middleware) Start(connection net.Conn) error {
 func (middleware *middleware) Stop() error {
 	_, err := middleware.connection.Write([]byte("state off\n"))
 	return err
-}
-
-func (middleware *middleware) State() openvpn.State {
-	return middleware.state
 }
 
 func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error) {

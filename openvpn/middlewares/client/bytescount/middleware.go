@@ -40,10 +40,6 @@ func (middleware *middleware) Stop() error {
 	return err
 }
 
-func (middleware *middleware) State() openvpn.State {
-	return middleware.state
-}
-
 func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	rule, err := regexp.Compile("^>BYTECOUNT:(.*),(.*)$")
 	if err != nil {

@@ -7,12 +7,24 @@ import (
 	"testing"
 )
 
-func fakeAuthenticator(username, password string) (bool, error) {
+type fakeAuthenticatorStub struct {
+	called        bool
+	authenticated bool
+}
+
+func (f *fakeAuthenticatorStub) fakeAuthenticator(username, password string) (bool, error) {
+	f.called = true
+
 	if username == "bad" {
 		return false, nil
 	}
 
+	f.authenticated = true
 	return true, nil
+}
+
+func newFakeAuthenticatorStub() fakeAuthenticatorStub {
+	return fakeAuthenticatorStub{}
 }
 
 type fakeConnection struct {
@@ -30,7 +42,9 @@ func (conn *fakeConnection) Write(b []byte) (n int, err error) {
 }
 
 func Test_Factory(t *testing.T) {
-	middleware := NewMiddleware(fakeAuthenticator)
+
+	fas := newFakeAuthenticatorStub()
+	middleware := NewMiddleware(fas.fakeAuthenticator)
 	assert.NotNil(t, middleware)
 }
 
@@ -43,7 +57,8 @@ func Test_ConsumeLineSkips(t *testing.T) {
 		{">PASSWORD"},
 		{">USERNAME"},
 	}
-	middleware := NewMiddleware(fakeAuthenticator)
+	fas := newFakeAuthenticatorStub()
+	middleware := NewMiddleware(fas.fakeAuthenticator)
 
 	for _, test := range tests {
 		consumed, err := middleware.ConsumeLine(test.line)
@@ -62,7 +77,8 @@ func Test_ConsumeLineTakes(t *testing.T) {
 		{">CLIENT:ENV,username=username"},
 	}
 
-	middleware := NewMiddleware(fakeAuthenticator)
+	fas := newFakeAuthenticatorStub()
+	middleware := NewMiddleware(fas.fakeAuthenticator)
 	connection := &fakeConnection{}
 	middleware.Start(connection)
 
@@ -83,7 +99,8 @@ func Test_ConsumeLineAuthState(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		middleware := NewMiddleware(fakeAuthenticator)
+		fas := newFakeAuthenticatorStub()
+		middleware := NewMiddleware(fas.fakeAuthenticator)
 		connection := &fakeConnection{}
 		middleware.Start(connection)
 
@@ -104,7 +121,8 @@ func Test_ConsumeLineNotAuthState(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		middleware := NewMiddleware(fakeAuthenticator)
+		fas := newFakeAuthenticatorStub()
+		middleware := NewMiddleware(fas.fakeAuthenticator)
 		connection := &fakeConnection{}
 		middleware.Start(connection)
 
@@ -112,6 +130,7 @@ func Test_ConsumeLineNotAuthState(t *testing.T) {
 		assert.NoError(t, err, test.line)
 		assert.False(t, consumed, test.line)
 		assert.NotEqual(t, test.unexpectedState, middleware.state)
+		assert.False(t, fas.called)
 	}
 }
 
@@ -126,7 +145,8 @@ func Test_ConsumeLineParseChecker(t *testing.T) {
 		{">CLIENT:ENV,END", openvpn.STATE_UNDEFINED},
 	}
 
-	middleware := NewMiddleware(fakeAuthenticator)
+	fas := newFakeAuthenticatorStub()
+	middleware := NewMiddleware(fas.fakeAuthenticator)
 	connection := &fakeConnection{}
 	middleware.Start(connection)
 
@@ -136,6 +156,7 @@ func Test_ConsumeLineParseChecker(t *testing.T) {
 		assert.True(t, consumed, test.line)
 		assert.Equal(t, test.expectedState, middleware.state)
 	}
+	assert.True(t, fas.called)
 	assert.Equal(t, "username1", middleware.lastUsername)
 	assert.Equal(t, "12341234", middleware.lastPassword)
 }
@@ -150,8 +171,8 @@ func Test_ConsumeLineAuthTrueChecker(t *testing.T) {
 		{">CLIENT:ENV,username=username1", openvpn.STATE_AUTH},
 		{">CLIENT:ENV,END", openvpn.STATE_UNDEFINED},
 	}
-	authFake := NewAuthenticatorFake()
-	middleware := NewMiddleware(fakeAuthenticator)
+	fas := newFakeAuthenticatorStub()
+	middleware := NewMiddleware(fas.fakeAuthenticator)
 	connection := &fakeConnection{}
 	middleware.Start(connection)
 
@@ -161,8 +182,8 @@ func Test_ConsumeLineAuthTrueChecker(t *testing.T) {
 		assert.True(t, consumed, test.line)
 		assert.Equal(t, test.expectedState, middleware.state)
 	}
-	authenticated, _ := authFake(middleware.lastUsername, middleware.lastPassword)
-	assert.True(t, authenticated)
+	assert.True(t, fas.called)
+	assert.True(t, fas.authenticated)
 }
 
 func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
@@ -175,8 +196,8 @@ func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
 		{">CLIENT:ENV,password=12341234", openvpn.STATE_AUTH},
 		{">CLIENT:ENV,END", openvpn.STATE_UNDEFINED},
 	}
-	authFake := NewAuthenticatorFake()
-	middleware := NewMiddleware(fakeAuthenticator)
+	fas := newFakeAuthenticatorStub()
+	middleware := NewMiddleware(fas.fakeAuthenticator)
 	connection := &fakeConnection{}
 	middleware.Start(connection)
 
@@ -186,6 +207,6 @@ func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
 		assert.True(t, consumed, test.line)
 		assert.Equal(t, test.expectedState, middleware.state)
 	}
-	authenticated, _ := authFake(middleware.lastUsername, middleware.lastPassword)
-	assert.False(t, authenticated)
+	assert.True(t, fas.called)
+	assert.False(t, fas.authenticated)
 }
