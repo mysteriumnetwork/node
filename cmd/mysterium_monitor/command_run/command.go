@@ -2,10 +2,9 @@ package command_run
 
 import (
 	"errors"
-	"github.com/mysterium/node/ipify"
-
 	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
-	"github.com/mysterium/node/state_client"
+	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/openvpn"
 	"sync"
 	"time"
 )
@@ -64,9 +63,9 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 }
 
 // This is meant to be registered as VpnClient middleware:
-//   state_client.NewMiddleware(cmd.checkClientIPWhenConnected)
-func (cmd *CommandRun) checkClientIPWhenConnected(state state_client.State) error {
-	if state == state_client.STATE_CONNECTED {
+//   state.NewMiddleware(cmd.checkClientIPWhenConnected)
+func (cmd *CommandRun) checkClientIPWhenConnected(state openvpn.State) error {
+	if state == openvpn.STATE_CONNECTED {
 		ipForwarded, err := cmd.IpifyClient.GetOutboundIP()
 		if err != nil {
 			cmd.resultWriter.NodeError("Forwarded IP not detected", err)

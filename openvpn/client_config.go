@@ -10,4 +10,6 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort int) {
 	c.SetPort(serverPort)
 	c.setFlag("nobind")
 	c.setParam("remote-cert-tls", "server")
+	c.setFlag("auth-user-pass")
+	c.setFlag("management-query-passwords")
 }

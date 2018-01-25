@@ -1,4 +1,4 @@
-package state_client
+package state
 
 import (
 	"github.com/mysterium/node/openvpn"
@@ -11,7 +11,7 @@ type middleware struct {
 	connection net.Conn
 }
 
-type clientStateCallback func(state State) error
+type clientStateCallback func(state openvpn.State) error
 
 func NewMiddleware(listeners ...clientStateCallback) openvpn.ManagementMiddleware {
 	return &middleware{
@@ -44,7 +44,7 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	state := State(match[1])
+	state := openvpn.State(match[1])
 	for _, listener := range middleware.listeners {
 		err = listener(state)
 		if err != nil {

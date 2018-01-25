@@ -1,4 +1,4 @@
-package bytescount_client
+package bytescount
 
 import (
 	"github.com/mysterium/node/identity"

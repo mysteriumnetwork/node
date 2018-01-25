@@ -47,8 +47,11 @@ func (c *Config) SetDevice(deviceName string) {
 	c.setParam("dev", deviceName)
 }
 
-func (c *Config) SetTlsCertificate(caFile, certFile, certKeyFile string) {
+func (c *Config) SetTLSCACertificate(caFile string) {
 	c.AddOptions(OptionFile("ca", caFile))
+}
+
+func (c *Config) SetTLSPrivatePubKeys(certFile string, certKeyFile string) {
 	c.AddOptions(OptionFile("cert", certFile))
 	c.AddOptions(OptionFile("key", certKeyFile))
 }

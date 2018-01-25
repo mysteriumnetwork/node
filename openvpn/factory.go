@@ -11,7 +11,8 @@ func NewServerConfig(
 ) *ServerConfig {
 	config := ServerConfig{NewConfig()}
 	config.SetServerMode(1194, network, netmask)
-	config.SetTlsCertificate(caFile, certFile, certKeyFile)
+	config.SetTLSCACertificate(caFile)
+	config.SetTLSPrivatePubKeys(certFile, certKeyFile)
 	config.SetTlsServer(dhFile, caCrtFile)
 	config.SetTlsAuth(authFile)
 
@@ -19,6 +20,8 @@ func NewServerConfig(
 	config.setParam("cipher", "AES-256-CBC")
 	config.setParam("verb", "3")
 	config.setParam("tls-version-min", "1.2")
+	config.setFlag("management-client-auth")
+	config.setParam("verify-client-cert", "none")
 	config.setParam("tls-cipher", "TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384")
 	config.setParam("reneg-sec", "60")
 	config.SetKeepAlive(10, 60)
@@ -31,11 +34,11 @@ func NewServerConfig(
 
 func NewClientConfig(
 	remote string,
-	caFile, certFile, certKeyFile, authFile string,
+	caFile, authFile string,
 ) *ClientConfig {
 	config := ClientConfig{NewConfig()}
 	config.SetClientMode(remote, 1194)
-	config.SetTlsCertificate(caFile, certFile, certKeyFile)
+	config.SetTLSCACertificate(caFile)
 	config.SetTlsAuth(authFile)
 
 	config.SetDevice("tun")
@@ -47,6 +50,7 @@ func NewClientConfig(
 	config.SetPersistTun()
 	config.SetPersistKey()
 
+	config.setParam("reneg-sec", "60")
 	config.setParam("resolv-retry", "infinite")
 	config.setParam("setenv", "opt block-outside-dns")
 	config.setParam("redirect-gateway", "def1 bypass-dhcp")

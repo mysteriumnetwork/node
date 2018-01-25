@@ -1,4 +1,4 @@
-package bytescount_client
+package bytescount
 
 import (
 	"fmt"
@@ -13,6 +13,7 @@ type middleware struct {
 	sessionStatsSender SessionStatsSender
 	interval           time.Duration
 
+	state      openvpn.State
 	connection net.Conn
 }
 

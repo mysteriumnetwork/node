@@ -27,7 +27,6 @@ type errorMessage struct {
 }
 
 func SendError(writer http.ResponseWriter, err error, httpCode int) {
-
 	SendErrorMessage(writer, &errorMessage{fmt.Sprint(err)}, httpCode)
 }
 

@@ -1,7 +1,8 @@
-package state_client
+package openvpn
 
 type State string
 
+const STATE_UNDEFINED = State("UNDEFINED")
 const STATE_CONNECTING = State("CONNECTING")
 const STATE_WAIT = State("WAIT")
 const STATE_AUTH = State("AUTH")

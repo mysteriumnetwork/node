@@ -2,10 +2,11 @@ package client_connection
 
 import (
 	"errors"
-	"github.com/mysterium/node/bytescount_client"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/middlewares/client/auth"
+	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
 	"path/filepath"
@@ -132,15 +133,16 @@ func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntim
 			return nil, err
 		}
 
-		statsSender := bytescount_client.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, signerFactory(id))
+		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, signerFactory(id))
+		authenticator := auth.NewAuthenticatorFake()
 		vpnMiddlewares := []openvpn.ManagementMiddleware{
-			bytescount_client.NewMiddleware(statsSender, 1*time.Minute),
+			bytescount.NewMiddleware(statsSender, 1*time.Minute),
+			auth.NewMiddleware(authenticator),
 		}
 		return openvpn.NewClient(
 			vpnConfig,
 			vpnClientRuntimeDirectory,
 			vpnMiddlewares...,
 		), nil
-
 	}
 }

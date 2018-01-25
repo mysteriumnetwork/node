@@ -11,6 +11,7 @@ import (
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/middlewares/server/auth"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
@@ -68,8 +69,6 @@ func NewCommandWith(
 			return openvpn_session.NewManager(openvpn.NewClientConfig(
 				vpnServerIP,
 				filepath.Join(options.DirectoryConfig, "ca.crt"),
-				filepath.Join(options.DirectoryConfig, "client.crt"),
-				filepath.Join(options.DirectoryConfig, "client.key"),
 				filepath.Join(options.DirectoryConfig, "ta.key"),
 			))
 		},
@@ -83,7 +82,11 @@ func NewCommandWith(
 				filepath.Join(options.DirectoryConfig, "crl.pem"),
 				filepath.Join(options.DirectoryConfig, "ta.key"),
 			)
-			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime)
+			authenticator := auth.NewCheckerFake()
+			vpnMiddlewares := []openvpn.ManagementMiddleware{
+				auth.NewMiddleware(authenticator),
+			}
+			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime, vpnMiddlewares...)
 		},
 	}
 }
