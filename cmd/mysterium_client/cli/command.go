@@ -210,7 +210,7 @@ func (c *Command) status() {
 }
 
 func (c *Command) ip() {
-	ip, err := c.tequilapi.Ip()
+	ip, err := c.tequilapi.GetIP()
 	if err != nil {
 		warn(err)
 		return

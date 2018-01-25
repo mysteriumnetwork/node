@@ -118,7 +118,7 @@ func (client *Client) Status() (status StatusDto, err error) {
 	return status, err
 }
 
-func (client *Client) Ip() (string, error) {
+func (client *Client) GetIP() (string, error) {
 	response, err := client.http.Get("ip", url.Values{})
 	if err != nil {
 		return "", err
@@ -126,10 +126,10 @@ func (client *Client) Ip() (string, error) {
 	defer response.Body.Close()
 
 	var ipData struct {
-		Ip string `json:"ip"`
+		IP string `json:"ip"`
 	}
 	err = parseResponseJson(response, &ipData)
-	return ipData.Ip, nil
+	return ipData.IP, nil
 }
 
 func (client *Client) Unlock(identity, passphrase string) error {
