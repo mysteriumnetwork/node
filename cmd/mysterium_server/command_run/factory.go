@@ -7,7 +7,7 @@ import (
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -23,7 +23,7 @@ func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(
 		options,
 		server.NewClient(),
-		ipify.NewClient(),
+		ip.NewResolver(),
 		nat.NewService(),
 	)
 }
@@ -31,7 +31,7 @@ func NewCommand(options CommandOptions) *CommandRun {
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
-	ipifyClient ipify.Client,
+	ipResolver ip.Resolver,
 	natService nat.NATService,
 ) *CommandRun {
 
@@ -57,7 +57,7 @@ func NewCommandWith(
 		},
 		createSigner:     createSigner,
 		locationDetector: locationDetector,
-		ipifyClient:      ipifyClient,
+		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,
 		dialogWaiterFactory: func(myIdentity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact) {

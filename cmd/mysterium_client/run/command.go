@@ -8,7 +8,7 @@ import (
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
@@ -49,7 +49,7 @@ func NewCommandWith(
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	ipResolver := ipify.NewClient().GetPublicIP
+	ipResolver := ip.NewResolver().GetPublicIP
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 

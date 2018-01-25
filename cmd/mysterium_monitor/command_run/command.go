@@ -2,16 +2,16 @@ package command_run
 
 import (
 	"errors"
+	"github.com/mysterium/node/ip"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
-	"github.com/mysterium/node/ipify"
 	"github.com/mysterium/node/openvpn"
 	"sync"
 	"time"
 )
 
 type CommandRun struct {
-	IpifyClient ipify.Client
-	ipOriginal  string
+	ipResolver ip.Resolver
+	ipOriginal string
 
 	clientCommand *command_client.CommandRun
 	ipCheckWaiter sync.WaitGroup
@@ -33,7 +33,7 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 	}
 	defer nodeProvider.Close()
 
-	cmd.ipOriginal, err = cmd.IpifyClient.GetOutboundIP()
+	cmd.ipOriginal, err = cmd.ipResolver.GetOutboundIP()
 	if err != nil {
 		return errors.New("Failed to get original IP: " + err.Error())
 	}
@@ -66,7 +66,7 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 //   state.NewMiddleware(cmd.checkClientIPWhenConnected)
 func (cmd *CommandRun) checkClientIPWhenConnected(state openvpn.State) error {
 	if state == openvpn.STATE_CONNECTED {
-		ipForwarded, err := cmd.IpifyClient.GetOutboundIP()
+		ipForwarded, err := cmd.ipResolver.GetOutboundIP()
 		if err != nil {
 			cmd.resultWriter.NodeError("Forwarded IP not detected", err)
 			cmd.ipCheckWaiter.Done()
@@ -93,7 +93,7 @@ func (cmd *CommandRun) checkClientHandleTimeout() {
 }
 
 func (cmd *CommandRun) checkClientIPWhenDisconnected() {
-	ipForwarded, err := cmd.IpifyClient.GetOutboundIP()
+	ipForwarded, err := cmd.ipResolver.GetOutboundIP()
 	if err != nil {
 		cmd.resultWriter.NodeError("Disconnect IP not detected", err)
 		return

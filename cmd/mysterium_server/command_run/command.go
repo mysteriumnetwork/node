@@ -4,7 +4,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
@@ -19,7 +19,7 @@ import (
 type CommandRun struct {
 	identityLoader   func() (identity.Identity, error)
 	createSigner     identity.SignerFactory
-	ipifyClient      ipify.Client
+	ipResolver       ip.Resolver
 	mysteriumClient  server.Client
 	natService       nat.NATService
 	locationDetector location.Detector
@@ -43,7 +43,7 @@ func (cmd *CommandRun) Run() (err error) {
 	cmd.dialogWaiter, providerContact = cmd.dialogWaiterFactory(providerID)
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
-	vpnServerIP, err := cmd.ipifyClient.GetOutboundIP()
+	vpnServerIP, err := cmd.ipResolver.GetOutboundIP()
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (cmd *CommandRun) Run() (err error) {
 		return err
 	}
 
-	country, err := detectCountry(cmd.ipifyClient, cmd.locationDetector)
+	country, err := detectCountry(cmd.ipResolver, cmd.locationDetector)
 	if err != nil {
 		return err
 	}
@@ -94,13 +94,13 @@ func (cmd *CommandRun) Run() (err error) {
 	return nil
 }
 
-func detectCountry(ipifyClient ipify.Client, detector location.Detector) (string, error) {
-	ip, err := ipifyClient.GetPublicIP()
+func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (string, error) {
+	ip, err := ipResolver.GetPublicIP()
 	if err != nil {
 		return "", errors.New("IP detection failed: " + err.Error())
 	}
 
-	country, err := detector.DetectCountry(ip)
+	country, err := locationDetector.DetectCountry(ip)
 	if err != nil {
 		return "", errors.New("Country detection failed: " + err.Error())
 	}

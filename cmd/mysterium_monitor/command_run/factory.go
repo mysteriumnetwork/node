@@ -2,14 +2,14 @@ package command_run
 
 import (
 	"github.com/mysterium/node/cmd/mysterium_monitor/command_run/node_provider"
-	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/ip"
 	"path/filepath"
 	"time"
 )
 
 func NewCommand() *CommandRun {
 	return &CommandRun{
-		IpifyClient: ipify.NewClientWithTimeout(5 * time.Second),
+		ipResolver: ip.NewResolverWithTimeout(5 * time.Second),
 	}
 }
 
