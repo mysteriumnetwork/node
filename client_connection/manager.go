@@ -134,7 +134,7 @@ func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntim
 		}
 		signer := signerFactory(id)
 		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, signer)
-		authenticator := auth.NewSignedSessionIdAuthenticator(vpnSession.ID, signer)
+		authenticator := auth.NewSignedSessionIdCredentialsProvider(vpnSession.ID, signer)
 		vpnMiddlewares := []openvpn.ManagementMiddleware{
 			bytescount.NewMiddleware(statsSender, 1*time.Minute),
 			auth.NewMiddleware(authenticator),
