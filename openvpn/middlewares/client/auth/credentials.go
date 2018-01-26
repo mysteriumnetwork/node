@@ -8,16 +8,7 @@ import (
 // CredentialsProvider returns client's current auth primitives (i.e. customer identity signature / node's sessionId)
 type CredentialsProvider func() (username string, password string, err error)
 
-// NewCredentialsProviderFake returns CredentialsProvider callback
-func NewCredentialsProviderFake() CredentialsProvider {
-	return func() (username string, password string, err error) {
-		username = "valid_user_name"
-		password = "valid_password"
-		err = nil
-		return
-	}
-}
-
+//NewSignedSessionIdCredentialsProvider returns session id as username and id signed with given signer as password
 func NewSignedSessionIdCredentialsProvider(id session.SessionID, signer identity.Signer) CredentialsProvider {
 
 	signature, err := signer.Sign([]byte(id))
