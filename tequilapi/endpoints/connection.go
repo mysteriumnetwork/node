@@ -6,6 +6,7 @@ import (
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
+	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
@@ -81,13 +82,25 @@ func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 	utils.WriteAsJSON(response, writer)
 }
 
-// TODO: Uppercase IPResolver?
+func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	stats := bytescount.GetSessionStatsStore().Get()
+	response := struct {
+		BytesSent     int `json:"bytesSent"`
+		BytesReceived int `json:"bytesReceived"`
+	}{
+		BytesSent:     stats.BytesSent,
+		BytesReceived: stats.BytesReceived,
+	}
+	utils.WriteAsJSON(response, writer)
+}
+
 func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ip.Resolver) {
 	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)
 	router.GET("/connection/ip", connectionEndpoint.GetIP)
+	router.GET("/connection/statistics", connectionEndpoint.GetStatistics)
 }
 
 func toConnectionRequest(req *http.Request) (*connectionRequest, error) {

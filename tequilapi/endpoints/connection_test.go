@@ -6,6 +6,7 @@ import (
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
+	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -46,6 +47,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
 	ipResolver := ip.NewFakeResolver("123.123.123.123")
+	bytescount.GetSessionStatsStore().Clear()
 
 	AddRoutesForConnection(router, &fakeManager, ipResolver)
 
@@ -71,6 +73,10 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 		{
 			http.MethodGet, "/connection/ip", "",
 			http.StatusOK, `{"ip": "123.123.123.123"}`,
+		},
+		{
+			http.MethodGet, "/connection/statistics", "",
+			http.StatusOK, `{"bytesSent": 0, "bytesReceived": 0}`,
 		},
 	}
 
@@ -287,6 +293,25 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 		t,
 		`{
 			"message": "fake error"
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
+	stats := bytescount.SessionStats{BytesSent: 1, BytesReceived: 2}
+	bytescount.GetSessionStatsStore().Set(stats)
+
+	manager := fakeManager{}
+	connEndpoint := NewConnectionEndpoint(&manager, nil)
+
+	resp := httptest.NewRecorder()
+	connEndpoint.GetStatistics(resp, nil, nil)
+	assert.JSONEq(
+		t,
+		`{
+			"bytesSent": 1,
+			"bytesReceived": 2
 		}`,
 		resp.Body.String(),
 	)
