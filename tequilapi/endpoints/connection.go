@@ -23,16 +23,16 @@ type statusResponse struct {
 }
 
 type connectionEndpoint struct {
-	manager    client_connection.Manager
-	ipResolver ip.Resolver
-	statsStore *bytescount.SessionStatsStore
+	manager     client_connection.Manager
+	ipResolver  ip.Resolver
+	statsKeeper *bytescount.SessionStatsKeeper
 }
 
-func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver, statsStore *bytescount.SessionStatsStore) *connectionEndpoint {
+func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver, statsKeeper *bytescount.SessionStatsKeeper) *connectionEndpoint {
 	return &connectionEndpoint{
-		manager:    manager,
-		ipResolver: ipResolver,
-		statsStore: statsStore,
+		manager:     manager,
+		ipResolver:  ipResolver,
+		statsKeeper: statsKeeper,
 	}
 }
 
@@ -86,7 +86,7 @@ func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 
 // GetStatistics returns statistics about current connection
 func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	stats := ce.statsStore.Retrieve()
+	stats := ce.statsKeeper.Retrieve()
 	response := struct {
 		BytesSent     int `json:"bytesSent"`
 		BytesReceived int `json:"bytesReceived"`
@@ -99,8 +99,8 @@ func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ip.Resolver,
-	statsStore *bytescount.SessionStatsStore) {
-	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsStore)
+	statsKeeper *bytescount.SessionStatsKeeper) {
+	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)

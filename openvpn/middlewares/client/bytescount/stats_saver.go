@@ -1,9 +1,9 @@
 package bytescount
 
-// NewSessionStatsSaver returns stats handler, which saves stats to global stats store
-func NewSessionStatsSaver(statsStore *SessionStatsStore) SessionStatsHandler {
+// NewSessionStatsSaver returns stats handler, which saves stats stats keeper
+func NewSessionStatsSaver(statsKeeper *SessionStatsKeeper) SessionStatsHandler {
 	return func(sessionStats SessionStats) error {
-		statsStore.Save(sessionStats)
+		statsKeeper.Save(sessionStats)
 		return nil
 	}
 }

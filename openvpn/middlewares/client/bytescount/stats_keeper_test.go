@@ -6,9 +6,9 @@ import (
 )
 
 func TestSessionStatsStoreWorks(t *testing.T) {
-	statsStore := &SessionStatsStore{}
+	statsKeeper := &SessionStatsKeeper{}
 	stats := SessionStats{BytesSent: 1, BytesReceived: 2}
 
-	statsStore.Save(stats)
-	assert.Equal(t, stats, statsStore.Retrieve())
+	statsKeeper.Save(stats)
+	assert.Equal(t, stats, statsKeeper.Retrieve())
 }

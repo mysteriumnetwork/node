@@ -44,16 +44,16 @@ func NewCommandWith(
 		return identity.NewSigner(keystoreInstance, id)
 	}
 
-	statsStore := &bytescount.SessionStatsStore{}
+	statsKeeper := &bytescount.SessionStatsKeeper{}
 
-	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime, signerFactory, statsStore)
+	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime, signerFactory, statsKeeper)
 
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	ipResolver := ip.NewResolver()
-	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsStore)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)

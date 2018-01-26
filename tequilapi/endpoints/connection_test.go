@@ -47,9 +47,9 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
 	ipResolver := ip.NewFakeResolver("123.123.123.123")
-	statsStore := &bytescount.SessionStatsStore{}
+	statsKeeper := &bytescount.SessionStatsKeeper{}
 
-	AddRoutesForConnection(router, &fakeManager, ipResolver, statsStore)
+	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper)
 
 	tests := []struct {
 		method         string
@@ -299,12 +299,12 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 }
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
-	statsStore := &bytescount.SessionStatsStore{}
+	statsKeeper := &bytescount.SessionStatsKeeper{}
 	stats := bytescount.SessionStats{BytesSent: 1, BytesReceived: 2}
-	statsStore.Save(stats)
+	statsKeeper.Save(stats)
 
 	manager := fakeManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, nil, statsStore)
+	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper)
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)

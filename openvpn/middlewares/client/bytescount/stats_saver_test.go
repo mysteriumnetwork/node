@@ -6,10 +6,10 @@ import (
 )
 
 func TestNewSessionStatsSaver(t *testing.T) {
-	statsStore := &SessionStatsStore{}
+	statsKeeper := &SessionStatsKeeper{}
 
-	saver := NewSessionStatsSaver(statsStore)
+	saver := NewSessionStatsSaver(statsKeeper)
 	stats := SessionStats{BytesSent: 1, BytesReceived: 2}
 	saver(stats)
-	assert.Equal(t, stats, statsStore.Retrieve())
+	assert.Equal(t, stats, statsKeeper.Retrieve())
 }

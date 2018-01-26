@@ -124,7 +124,7 @@ func statusDisconnecting() ConnectionStatus {
 }
 
 func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntimeDirectory string,
-	signerFactory identity.SignerFactory, statsStore *bytescount.SessionStatsStore) VpnClientFactory {
+	signerFactory identity.SignerFactory, statsKeeper *bytescount.SessionStatsKeeper) VpnClientFactory {
 	return func(vpnSession session.SessionDto, id identity.Identity) (openvpn.Client, error) {
 		vpnConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,
@@ -134,7 +134,7 @@ func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntim
 			return nil, err
 		}
 
-		statsSaver := bytescount.NewSessionStatsSaver(statsStore)
+		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, signerFactory(id))
 		statsHandler := bytescount.NewCompositeStatsHandler(statsSaver, statsSender)
 
