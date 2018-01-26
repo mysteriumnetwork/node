@@ -1,24 +1,16 @@
 package bytescount
 
-type sessionStatsStore struct {
+// SessionStatsStore keeps session stats
+type SessionStatsStore struct {
 	sessionStats SessionStats
 }
 
-func (store *sessionStatsStore) Clear() {
-	store.sessionStats = SessionStats{}
-}
-
-func (store *sessionStatsStore) Set(stats SessionStats) {
+// Save saves session stats to store
+func (store *SessionStatsStore) Save(stats SessionStats) {
 	store.sessionStats = stats
 }
 
-func (store *sessionStatsStore) Get() SessionStats {
+// Retrieve retrieves session stats from store
+func (store *SessionStatsStore) Retrieve() SessionStats {
 	return store.sessionStats
-}
-
-var globalStatsStore sessionStatsStore
-
-// GetSessionStatsStore returns singleton store, which keeps session stats
-func GetSessionStatsStore() *sessionStatsStore {
-	return &globalStatsStore
 }

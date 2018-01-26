@@ -10,6 +10,7 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
@@ -43,14 +44,16 @@ func NewCommandWith(
 		return identity.NewSigner(keystoreInstance, id)
 	}
 
-	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime, signerFactory)
+	statsStore := &bytescount.SessionStatsStore{}
+
+	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime, signerFactory, statsStore)
 
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	ipResolver := ip.NewResolver()
-	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsStore)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)

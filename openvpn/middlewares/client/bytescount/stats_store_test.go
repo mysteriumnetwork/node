@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-func TestGetSessionStatsStoreReturnsSameInstance(t *testing.T) {
-	GetSessionStatsStore().Clear()
-
+func TestSessionStatsStoreWorks(t *testing.T) {
+	statsStore := &SessionStatsStore{}
 	stats := SessionStats{BytesSent: 1, BytesReceived: 2}
-	GetSessionStatsStore().Set(stats)
-	assert.Equal(t, stats, GetSessionStatsStore().Get())
+
+	statsStore.Save(stats)
+	assert.Equal(t, stats, statsStore.Retrieve())
 }

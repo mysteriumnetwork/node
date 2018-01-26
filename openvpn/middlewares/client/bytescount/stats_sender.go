@@ -7,6 +7,7 @@ import (
 	"github.com/mysterium/node/session"
 )
 
+// SessionStatsSender sends statistics to server
 type SessionStatsSender func(bytesSent, bytesReceived int) error
 
 // NewSessionStatsSender returns new session stats handler, which sends statistics to server
