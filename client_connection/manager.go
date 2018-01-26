@@ -123,7 +123,8 @@ func statusDisconnecting() ConnectionStatus {
 	return ConnectionStatus{Disconnecting, "", nil}
 }
 
-func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntimeDirectory string, signerFactory identity.SignerFactory) VpnClientFactory {
+func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntimeDirectory string,
+	signerFactory identity.SignerFactory, statsKeeper *bytescount.SessionStatsKeeper) VpnClientFactory {
 	return func(vpnSession session.SessionDto, id identity.Identity) (openvpn.Client, error) {
 		vpnConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,
@@ -132,11 +133,16 @@ func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntim
 		if err != nil {
 			return nil, err
 		}
+
 		signer := signerFactory(id)
+
+		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, signer)
+		statsHandler := bytescount.NewCompositeStatsHandler(statsSaver, statsSender)
+
 		authenticator := auth.NewSignedSessionIdCredentialsProvider(vpnSession.ID, signer)
 		vpnMiddlewares := []openvpn.ManagementMiddleware{
-			bytescount.NewMiddleware(statsSender, 1*time.Minute),
+			bytescount.NewMiddleware(statsHandler, 1*time.Minute),
 			auth.NewMiddleware(authenticator),
 		}
 		return openvpn.NewClient(
