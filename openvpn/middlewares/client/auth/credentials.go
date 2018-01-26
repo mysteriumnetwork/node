@@ -10,7 +10,6 @@ type CredentialsProvider func() (username string, password string, err error)
 
 //NewSignedSessionIdCredentialsProvider returns session id as username and id signed with given signer as password
 func NewSignedSessionIdCredentialsProvider(id session.SessionID, signer identity.Signer) CredentialsProvider {
-
 	signature, err := signer.Sign([]byte(id))
 
 	return func() (string, string, error) {
