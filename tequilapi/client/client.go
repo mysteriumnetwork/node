@@ -118,6 +118,21 @@ func (client *Client) Status() (status StatusDto, err error) {
 	return status, err
 }
 
+// GetIP returns public ip
+func (client *Client) GetIP() (string, error) {
+	response, err := client.http.Get("connection/ip", url.Values{})
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	var ipData struct {
+		IP string `json:"ip"`
+	}
+	err = parseResponseJson(response, &ipData)
+	return ipData.IP, nil
+}
+
 func (client *Client) Unlock(identity, passphrase string) error {
 	path := fmt.Sprintf("identities/%s/unlock", identity)
 	payload := struct {

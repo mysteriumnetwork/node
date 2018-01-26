@@ -5,7 +5,7 @@ import (
 	"github.com/mysterium/node/cmd"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
 	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
-	"github.com/mysterium/node/ipify"
+	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/server"
 	"os"
@@ -26,7 +26,7 @@ func main() {
 			DirectoryRuntime: ClientDirectoryRuntime,
 		},
 		mysteriumClient,
-		ipify.NewClientFake(NodeIP),
+		ip.NewFakeResolver(NodeIP),
 		nat.NewServiceFake(),
 	)
 	cmd.NewTerminator(serverCommand)

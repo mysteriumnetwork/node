@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// NewAPIRouter returns new api router with status endpoints
 func NewAPIRouter() *httprouter.Router {
 	router := httprouter.New()
 	router.HandleMethodNotAllowed = true

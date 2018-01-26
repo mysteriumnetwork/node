@@ -1,4 +1,4 @@
-package ipify
+package ip
 
 import (
 	"encoding/json"
@@ -11,15 +11,15 @@ import (
 	"time"
 )
 
-const IPIFY_API_URL = "https://api.ipify.org/"
-const IPIFY_API_CLIENT = "goclient-v0.1"
-const IPIFY_API_LOG_PREFIX = "[ipify.api] "
+const ipifyAPIURL = "https://api.ipify.org/"
+const ipifyAPIClient = "goclient-v0.1"
+const ipifyAPILogPrefix = "[ipify.api] "
 
-func NewClient() Client {
-	return NewClientWithTimeout(60 * time.Second)
+func NewResolver() Resolver {
+	return NewResolverWithTimeout(60 * time.Second)
 }
 
-func NewClientWithTimeout(timeout time.Duration) Client {
+func NewResolverWithTimeout(timeout time.Duration) Resolver {
 	return &clientRest{
 		httpClient: http.Client{
 			Timeout: timeout,
@@ -34,11 +34,11 @@ type clientRest struct {
 func (client *clientRest) GetPublicIP() (string, error) {
 	var ipResponse IPResponse
 
-	request, err := http.NewRequest("GET", IPIFY_API_URL+"/?format=json", nil)
-	request.Header.Set("User-Agent", IPIFY_API_CLIENT)
+	request, err := http.NewRequest("GET", ipifyAPIURL+"/?format=json", nil)
+	request.Header.Set("User-Agent", ipifyAPIClient)
 	request.Header.Set("Accept", "application/json")
 	if err != nil {
-		log.Critical(IPIFY_API_LOG_PREFIX, err)
+		log.Critical(ipifyAPILogPrefix, err)
 		return "", err
 	}
 
@@ -47,7 +47,7 @@ func (client *clientRest) GetPublicIP() (string, error) {
 		return "", err
 	}
 
-	log.Info(IPIFY_API_LOG_PREFIX, "IP detected: ", ipResponse.IP)
+	log.Info(ipifyAPILogPrefix, "IP detected: ", ipResponse.IP)
 	return ipResponse.IP, nil
 }
 
@@ -66,14 +66,14 @@ func (client *clientRest) GetOutboundIP() (string, error) {
 func (client *clientRest) doRequest(request *http.Request, responseDto interface{}) error {
 	response, err := client.httpClient.Do(request)
 	if err != nil {
-		log.Error(IPIFY_API_LOG_PREFIX, err)
+		log.Error(ipifyAPILogPrefix, err)
 		return err
 	}
 	defer response.Body.Close()
 
 	err = parseResponseError(response)
 	if err != nil {
-		log.Error(IPIFY_API_LOG_PREFIX, err)
+		log.Error(ipifyAPILogPrefix, err)
 		return err
 	}
 

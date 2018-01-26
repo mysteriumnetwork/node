@@ -5,6 +5,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
@@ -21,11 +22,15 @@ type statusResponse struct {
 }
 
 type connectionEndpoint struct {
-	manager client_connection.Manager
+	manager    client_connection.Manager
+	ipResolver ip.Resolver
 }
 
-func NewConnectionEndpoint(manager client_connection.Manager) *connectionEndpoint {
-	return &connectionEndpoint{manager}
+func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver) *connectionEndpoint {
+	return &connectionEndpoint{
+		manager:    manager,
+		ipResolver: ipResolver,
+	}
 }
 
 func (ce *connectionEndpoint) Status(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
@@ -61,11 +66,28 @@ func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 	resp.WriteHeader(http.StatusAccepted)
 }
 
-func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager) {
-	connectionEndpoint := NewConnectionEndpoint(manager)
+// GetIP responds with current ip, using its ip resolver
+func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ip, err := ce.ipResolver.GetPublicIP()
+	if err != nil {
+		utils.SendError(writer, err, http.StatusInternalServerError)
+		return
+	}
+	response := struct {
+		IP string `json:"ip"`
+	}{
+		IP: ip,
+	}
+	utils.WriteAsJSON(response, writer)
+}
+
+// TODO: Uppercase IPResolver?
+func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ip.Resolver) {
+	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)
+	router.GET("/connection/ip", connectionEndpoint.GetIP)
 }
 
 func toConnectionRequest(req *http.Request) (*connectionRequest, error) {

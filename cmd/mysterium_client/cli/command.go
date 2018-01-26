@@ -81,42 +81,55 @@ func (c *Command) Kill() error {
 
 func (c *Command) handleActions(line string) {
 	line = strings.TrimSpace(line)
-	switch {
-	case strings.HasPrefix(line, "connect"):
-		c.connect(line)
-	case line == "exit" || line == "quit":
-		c.quit()
 
-	case strings.HasPrefix(line, "unlock"):
-		c.unlock(line)
+	staticCmds := []struct {
+		command string
+		handler func()
+	}{
+		{"exit", c.quit},
+		{"quit", c.quit},
+		{"help", c.help},
+		{"status", c.status},
+		{"ip", c.ip},
+		{"disconnect", c.disconnect},
+	}
 
-	case line == "help":
-		c.help()
+	argCmds := []struct {
+		command string
+		handler func(argsString string)
+	}{
+		{command: "connect", handler: c.connect},
+		{command: "unlock", handler: c.unlock},
+		{command: "identities", handler: c.identities},
+	}
 
-	case line == "status":
-		c.status()
-
-	case line == "disconnect":
-		c.disconnect()
-
-	case strings.HasPrefix(line, "identities"):
-		c.identities(line)
-
-	default:
-		if len(line) > 0 {
-			c.help()
+	for _, cmd := range staticCmds {
+		if line == cmd.command {
+			cmd.handler()
+			return
 		}
+	}
+
+	for _, cmd := range argCmds {
+		if strings.HasPrefix(line, cmd.command) {
+			argsString := strings.TrimSpace(line[len(cmd.command):])
+			cmd.handler(argsString)
+			return
+		}
+	}
+
+	if len(line) > 0 {
+		c.help()
 	}
 }
 
-func (c *Command) connect(line string) {
-	connectionArgs := strings.TrimSpace(line[7:])
-	if len(connectionArgs) == 0 {
+func (c *Command) connect(argsString string) {
+	if len(argsString) == 0 {
 		info("Press tab to select identity or create a new one. Connect <your-identity> <node-identity>")
 		return
 	}
 
-	identities := strings.Fields(connectionArgs)
+	identities := strings.Fields(argsString)
 
 	if len(identities) != 2 {
 		info("Please type in the node identity. Connect <your-identity> <node-identity>")
@@ -146,16 +159,14 @@ func (c *Command) connect(line string) {
 	success("Connected.")
 }
 
-func (c *Command) unlock(line string) {
-	unlockArgs := strings.TrimSpace(line[6:])
-
+func (c *Command) unlock(argsString string) {
 	unlockSignature := "Unlock <identity> [passphrase]"
-	if len(unlockArgs) == 0 {
+	if len(argsString) == 0 {
 		info("Press tab to select identity.", unlockSignature)
 		return
 	}
 
-	args := strings.Fields(unlockArgs)
+	args := strings.Fields(argsString)
 	var identity, passphrase string
 
 	if len(args) == 1 {
@@ -198,6 +209,16 @@ func (c *Command) status() {
 	info("SID:", status.SessionId)
 }
 
+func (c *Command) ip() {
+	ip, err := c.tequilapi.GetIP()
+	if err != nil {
+		warn(err)
+		return
+	}
+
+	info("IP:", ip)
+}
+
 func (c *Command) help() {
 	info("Mysterium CLI tequilapi commands:")
 	fmt.Println(c.completer.Tree("  "))
@@ -211,8 +232,7 @@ func (c *Command) quit() {
 	}
 }
 
-func (c *Command) identities(line string) {
-	argsString := strings.TrimSpace(line[10:])
+func (c *Command) identities(argsString string) {
 	const usage = "identities command:\n    list\n    new [passphrase]"
 	if len(argsString) == 0 {
 		info(usage)
@@ -293,6 +313,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client) *readline.PrefixComple
 			readline.PcItem("list"),
 		),
 		readline.PcItem("status"),
+		readline.PcItem("ip"),
 		readline.PcItem("disconnect"),
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
