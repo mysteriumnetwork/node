@@ -16,10 +16,10 @@ func TestCompositeHandlerWithNoHandlers(t *testing.T) {
 }
 
 func TestCompositeHandlerWithSuccessfulHandler(t *testing.T) {
-	fakeHandler := fakeStatsHandler{}
-	compositeHandler := NewCompositeStatsHandler(fakeHandler.save)
+	statsRecorder := fakeStatsRecorder{}
+	compositeHandler := NewCompositeStatsHandler(statsRecorder.record)
 	assert.NoError(t, compositeHandler(stats))
-	assert.Equal(t, stats, fakeHandler.LastSessionStats)
+	assert.Equal(t, stats, statsRecorder.LastSessionStats)
 }
 
 func TestCompositeHandlerWithFailingHandler(t *testing.T) {
@@ -29,12 +29,12 @@ func TestCompositeHandlerWithFailingHandler(t *testing.T) {
 }
 
 func TestCompositeHandlerWithMultipleHandlers(t *testing.T) {
-	fakeHandler1 := fakeStatsHandler{}
-	fakeHandler2 := fakeStatsHandler{}
+	recorder1 := fakeStatsRecorder{}
+	recorder2 := fakeStatsRecorder{}
 
-	compositeHandler := NewCompositeStatsHandler(fakeHandler1.save, fakeHandler2.save)
+	compositeHandler := NewCompositeStatsHandler(recorder1.record, recorder2.record)
 	assert.NoError(t, compositeHandler(stats))
 
-	assert.Equal(t, stats, fakeHandler1.LastSessionStats)
-	assert.Equal(t, stats, fakeHandler2.LastSessionStats)
+	assert.Equal(t, stats, recorder1.LastSessionStats)
+	assert.Equal(t, stats, recorder2.LastSessionStats)
 }

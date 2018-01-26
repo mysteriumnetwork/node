@@ -1,10 +1,10 @@
 package bytescount
 
-type fakeStatsHandler struct {
+type fakeStatsRecorder struct {
 	LastSessionStats SessionStats
 }
 
-func (sender *fakeStatsHandler) save(sessionStats SessionStats) error {
+func (sender *fakeStatsRecorder) record(sessionStats SessionStats) error {
 	sender.LastSessionStats = sessionStats
 	return nil
 }
