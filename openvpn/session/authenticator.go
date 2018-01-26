@@ -27,7 +27,7 @@ func (sa *sessionAuthenticator) ValidateSession(sessionString, signatureString s
 		return false, nil
 	}
 
-	verifier := sa.createVerifier(currentSession.PeerIdentity)
+	verifier := sa.createVerifier(currentSession.ConsumerIdentity)
 	signature := identity.SignatureBase64(signatureString)
 
 	return verifier.Verify([]byte(sessionString), signature), nil

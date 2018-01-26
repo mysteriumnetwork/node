@@ -8,14 +8,14 @@ import (
 //NewManager returns session manager which maintans a map of session id -> session
 func NewManager(clientConfig *openvpn.ClientConfig) *manager {
 	return &manager{
-		idGenerator:  &session.Generator{},
+		idGenerator:  &session.UUIDGenerator{},
 		clientConfig: clientConfig,
 		sessionMap:   make(map[session.SessionID]session.Session),
 	}
 }
 
 type manager struct {
-	idGenerator  session.GeneratorInterface
+	idGenerator  session.Generator
 	clientConfig *openvpn.ClientConfig
 	sessionMap   map[session.SessionID]session.Session
 }

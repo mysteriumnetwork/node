@@ -65,7 +65,7 @@ func NewCommandWith(
 			waiter := nats_dialog.NewDialogWaiter(myAddress, identity.NewSigner(keystoreInstance, myIdentity))
 			return waiter, myAddress.GetContact()
 		},
-		sessionManagerFactory: func(vpnServerIP string) session.ManagerInterface {
+		sessionManagerFactory: func(vpnServerIP string) session.Manager {
 			return openvpn_session.NewManager(openvpn.NewClientConfig(
 				vpnServerIP,
 				filepath.Join(options.DirectoryConfig, "ca.crt"),

@@ -7,18 +7,18 @@ type SessionID string
 
 //Session structure holds all required information about current session between service consumer and provider
 type Session struct {
-	ID           SessionID
-	Config       string
-	PeerIdentity identity.Identity
+	ID               SessionID
+	Config           string
+	ConsumerIdentity identity.Identity
 }
 
-//GeneratorInterface defines method for session id generation
-type GeneratorInterface interface {
+//Generator defines method for session id generation
+type Generator interface {
 	Generate() SessionID
 }
 
-//ManagerInterface defines methods for session management
-type ManagerInterface interface {
+//Manager defines methods for session management
+type Manager interface {
 	Create() (Session, error)
 	FindSession(SessionID) (Session, bool)
 }

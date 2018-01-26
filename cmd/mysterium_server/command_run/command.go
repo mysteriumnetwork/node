@@ -27,7 +27,7 @@ type CommandRun struct {
 	dialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
 	dialogWaiter        communication.DialogWaiter
 
-	sessionManagerFactory func(serverIP string) session.ManagerInterface
+	sessionManagerFactory func(serverIP string) session.Manager
 
 	vpnServerFactory func() *openvpn.Server
 	vpnServer        *openvpn.Server

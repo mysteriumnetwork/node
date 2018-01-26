@@ -7,7 +7,7 @@ import (
 
 type SessionCreateConsumer struct {
 	CurrentProposalID int
-	SessionManager    ManagerInterface
+	SessionManager    Manager
 }
 
 func (consumer *SessionCreateConsumer) GetRequestEndpoint() communication.RequestEndpoint {

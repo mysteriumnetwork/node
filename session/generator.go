@@ -2,8 +2,10 @@ package session
 
 import "github.com/satori/go.uuid"
 
-type Generator struct{}
+//UUIDGenerator generates session ids based on random UUIDs
+type UUIDGenerator struct{}
 
-func (generator *Generator) Generate() SessionID {
+//Generate method returns SessionID based on random UUID
+func (generator *UUIDGenerator) Generate() SessionID {
 	return SessionID(uuid.NewV4().String())
 }
