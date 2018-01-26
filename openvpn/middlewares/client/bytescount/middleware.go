@@ -10,7 +10,7 @@ import (
 )
 
 // SessionStatsHandler is invoked when middleware receives statistics
-type SessionStatsHandler func(bytesSent, bytesReceived int) error
+type SessionStatsHandler func(SessionStats) error
 
 type middleware struct {
 	sessionStatsHandler SessionStatsHandler
@@ -66,7 +66,8 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	err = middleware.sessionStatsHandler(bytesOut, bytesIn)
+	stats := SessionStats{BytesSent: bytesOut, BytesReceived: bytesIn}
+	err = middleware.sessionStatsHandler(stats)
 
 	return
 }

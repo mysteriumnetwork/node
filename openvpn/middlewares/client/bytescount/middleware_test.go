@@ -46,12 +46,11 @@ func (conn *fakeConnection) SetWriteDeadline(t time.Time) error {
 }
 
 type fakeStatsHandler struct {
-	lastBytesSent, lastBytesReceived int
+	lastSessionStats SessionStats
 }
 
-func (sender *fakeStatsHandler) save(bytesSent, bytesReceived int) error {
-	sender.lastBytesSent = bytesSent
-	sender.lastBytesReceived = bytesReceived
+func (sender *fakeStatsHandler) save(sessionStats SessionStats) error {
+	sender.lastSessionStats = sessionStats
 	return nil
 }
 
@@ -98,7 +97,7 @@ func Test_ConsumeLine(t *testing.T) {
 			assert.NoError(t, err, test.line)
 		}
 		assert.Equal(t, test.expectedConsumed, consumed, test.line)
-		assert.Equal(t, test.expectedBytesReceived, statsHandler.lastBytesReceived)
-		assert.Equal(t, test.expectedBytesSent, statsHandler.lastBytesSent)
+		assert.Equal(t, test.expectedBytesReceived, statsHandler.lastSessionStats.BytesReceived)
+		assert.Equal(t, test.expectedBytesSent, statsHandler.lastSessionStats.BytesSent)
 	}
 }
