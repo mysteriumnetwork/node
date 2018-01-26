@@ -9,18 +9,22 @@ import (
 	"time"
 )
 
+// SessionStatsHandler is invoked when middleware receives statistics
+type SessionStatsHandler func(bytesSent, bytesReceived int) error
+
 type middleware struct {
-	sessionStatsSender SessionStatsSender
-	interval           time.Duration
+	sessionStatsHandler SessionStatsHandler
+	interval            time.Duration
 
 	state      openvpn.State
 	connection net.Conn
 }
 
-func NewMiddleware(sessionStatsSender SessionStatsSender, interval time.Duration) openvpn.ManagementMiddleware {
+// NewMiddleware returns new bytescount middleware
+func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Duration) openvpn.ManagementMiddleware {
 	return &middleware{
-		sessionStatsSender: sessionStatsSender,
-		interval:           interval,
+		sessionStatsHandler: sessionStatsHandler,
+		interval:            interval,
 
 		connection: nil,
 	}
@@ -62,7 +66,7 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	err = middleware.sessionStatsSender(bytesOut, bytesIn)
+	err = middleware.sessionStatsHandler(bytesOut, bytesIn)
 
 	return
 }
