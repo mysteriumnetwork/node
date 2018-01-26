@@ -6,6 +6,7 @@ import (
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
+	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
@@ -22,14 +23,16 @@ type statusResponse struct {
 }
 
 type connectionEndpoint struct {
-	manager    client_connection.Manager
-	ipResolver ip.Resolver
+	manager     client_connection.Manager
+	ipResolver  ip.Resolver
+	statsKeeper *bytescount.SessionStatsKeeper
 }
 
-func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver) *connectionEndpoint {
+func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver, statsKeeper *bytescount.SessionStatsKeeper) *connectionEndpoint {
 	return &connectionEndpoint{
-		manager:    manager,
-		ipResolver: ipResolver,
+		manager:     manager,
+		ipResolver:  ipResolver,
+		statsKeeper: statsKeeper,
 	}
 }
 
@@ -81,13 +84,28 @@ func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 	utils.WriteAsJSON(response, writer)
 }
 
-// TODO: Uppercase IPResolver?
-func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ip.Resolver) {
-	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver)
+// GetStatistics returns statistics about current connection
+func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	stats := ce.statsKeeper.Retrieve()
+	response := struct {
+		BytesSent     int `json:"bytesSent"`
+		BytesReceived int `json:"bytesReceived"`
+	}{
+		BytesSent:     stats.BytesSent,
+		BytesReceived: stats.BytesReceived,
+	}
+	utils.WriteAsJSON(response, writer)
+}
+
+// AddRoutesForConnection adds connections routes to given router
+func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ip.Resolver,
+	statsKeeper *bytescount.SessionStatsKeeper) {
+	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)
 	router.GET("/connection/ip", connectionEndpoint.GetIP)
+	router.GET("/connection/statistics", connectionEndpoint.GetStatistics)
 }
 
 func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
