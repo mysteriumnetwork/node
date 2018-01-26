@@ -45,15 +45,6 @@ func (conn *fakeConnection) SetWriteDeadline(t time.Time) error {
 	return nil
 }
 
-type fakeStatsHandler struct {
-	lastSessionStats SessionStats
-}
-
-func (sender *fakeStatsHandler) save(sessionStats SessionStats) error {
-	sender.lastSessionStats = sessionStats
-	return nil
-}
-
 func Test_Factory(t *testing.T) {
 	statsHandler := fakeStatsHandler{}
 	middleware := NewMiddleware(statsHandler.save, 1*time.Minute)
@@ -97,7 +88,7 @@ func Test_ConsumeLine(t *testing.T) {
 			assert.NoError(t, err, test.line)
 		}
 		assert.Equal(t, test.expectedConsumed, consumed, test.line)
-		assert.Equal(t, test.expectedBytesReceived, statsHandler.lastSessionStats.BytesReceived)
-		assert.Equal(t, test.expectedBytesSent, statsHandler.lastSessionStats.BytesSent)
+		assert.Equal(t, test.expectedBytesReceived, statsHandler.LastSessionStats.BytesReceived)
+		assert.Equal(t, test.expectedBytesSent, statsHandler.LastSessionStats.BytesSent)
 	}
 }
