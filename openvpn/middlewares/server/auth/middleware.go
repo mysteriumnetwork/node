@@ -9,21 +9,24 @@ import (
 	"strconv"
 )
 
+// CredentialsChecker callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
+type CredentialsChecker func(username, password string) (bool, error)
+
 type middleware struct {
-	authenticator AuthenticatorChecker
-	connection    net.Conn
-	lastUsername  string
-	lastPassword  string
-	clientID      int
-	keyID         int
-	state         openvpn.State
+	checkCredentials CredentialsChecker
+	connection       net.Conn
+	lastUsername     string
+	lastPassword     string
+	clientID         int
+	keyID            int
+	state            openvpn.State
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(authenticator AuthenticatorChecker) *middleware {
+func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
 	return &middleware{
-		authenticator: authenticator,
-		connection:    nil,
+		checkCredentials: credentialsChecker,
+		connection:       nil,
 	}
 }
 
@@ -170,7 +173,7 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 
 	log.Info("authenticating user: ", m.lastUsername, " clientID: ", m.clientID, " keyID: ", m.keyID)
 
-	authenticated, err := m.authenticator(m.lastUsername, m.lastPassword)
+	authenticated, err := m.checkCredentials(m.lastUsername, m.lastPassword)
 	if err != nil {
 		return false, err
 	}

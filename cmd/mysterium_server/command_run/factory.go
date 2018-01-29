@@ -72,7 +72,7 @@ func NewCommandWith(
 				filepath.Join(options.DirectoryConfig, "ta.key"),
 			))
 		},
-		vpnServerFactory: func() *openvpn.Server {
+		vpnServerFactory: func(manager session.Manager) *openvpn.Server {
 			vpnServerConfig := openvpn.NewServerConfig(
 				"10.8.0.0", "255.255.255.0",
 				filepath.Join(options.DirectoryConfig, "ca.crt"),
@@ -82,9 +82,14 @@ func NewCommandWith(
 				filepath.Join(options.DirectoryConfig, "crl.pem"),
 				filepath.Join(options.DirectoryConfig, "ta.key"),
 			)
-			authenticator := auth.NewCheckerFake()
+			sessionAuthenticator := openvpn_session.NewSessionAuthenticator(
+				manager.FindSession,
+				func(peerIdentity identity.Identity) identity.Verifier {
+					return identity.NewVerifierIdentity(peerIdentity)
+				},
+			)
 			vpnMiddlewares := []openvpn.ManagementMiddleware{
-				auth.NewMiddleware(authenticator),
+				auth.NewMiddleware(sessionAuthenticator.ValidateSession),
 			}
 			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime, vpnMiddlewares...)
 		},

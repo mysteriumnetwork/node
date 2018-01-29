@@ -29,7 +29,7 @@ type CommandRun struct {
 
 	sessionManagerFactory func(serverIP string) session.Manager
 
-	vpnServerFactory func() *openvpn.Server
+	vpnServerFactory func(sessionManager session.Manager) *openvpn.Server
 	vpnServer        *openvpn.Server
 }
 
@@ -66,15 +66,17 @@ func (cmd *CommandRun) Run() (err error) {
 
 	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, location)
 
+	sessionManager := cmd.sessionManagerFactory(vpnServerIP)
+
 	sessionCreateConsumer := &session.SessionCreateConsumer{
 		CurrentProposalID: proposal.ID,
-		SessionManager:    cmd.sessionManagerFactory(vpnServerIP),
+		SessionManager:    sessionManager,
 	}
 	if err = cmd.dialogWaiter.ServeDialogs(sessionCreateConsumer); err != nil {
 		return err
 	}
 
-	cmd.vpnServer = cmd.vpnServerFactory()
+	cmd.vpnServer = cmd.vpnServerFactory(sessionManager)
 	if err := cmd.vpnServer.Start(); err != nil {
 		return err
 	}
