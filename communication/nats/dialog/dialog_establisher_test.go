@@ -20,13 +20,13 @@ func TestDialogEstablisher_Factory(t *testing.T) {
 
 	establisher := NewDialogEstablisher(id, signer)
 	assert.NotNil(t, establisher)
-	assert.Equal(t, id, establisher.myId)
+	assert.Equal(t, id, establisher.myID)
 	assert.Equal(t, signer, establisher.mySigner)
 }
 
 func TestDialogEstablisher_CreateDialog(t *testing.T) {
-	myId := identity.FromAddress("0x6B21b441D0D2Fa1d86407977A3a5C6eD90Ff1A62")
-	peerId := identity.FromAddress("0x0d1a35e53b7f3478d00B7C23838C0D48b2a81017")
+	myID := identity.FromAddress("0x6B21b441D0D2Fa1d86407977A3a5C6eD90Ff1A62")
+	peerID := identity.FromAddress("0x0d1a35e53b7f3478d00B7C23838C0D48b2a81017")
 
 	connection := nats.StartConnectionFake()
 	connection.MockResponse(
@@ -39,9 +39,9 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	defer connection.Close()
 
 	signer := &identity.SignerFake{}
-	establisher := mockEstablisher(myId, connection, signer)
+	establisher := mockEstablisher(myID, connection, signer)
 
-	dialogInstance, err := establisher.CreateDialog(peerId, dto_discovery.Contact{})
+	dialogInstance, err := establisher.CreateDialog(peerID, dto_discovery.Contact{})
 	defer dialogInstance.Close()
 	assert.NoError(t, err)
 	assert.NotNil(t, dialogInstance)
@@ -49,22 +49,22 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	dialogNats, ok := dialogInstance.(*dialog)
 	assert.True(t, ok)
 
-	expectedCodec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierIdentity(peerId))
+	expectedCodec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierIdentity(peerID))
 	assert.Equal(
 		t,
-		nats.NewSender(connection, expectedCodec, "peer-topic."+myId.Address),
+		nats.NewSender(connection, expectedCodec, "peer-topic."+myID.Address),
 		dialogNats.Sender,
 	)
 	assert.Equal(
 		t,
-		nats.NewReceiver(connection, expectedCodec, "peer-topic."+myId.Address),
+		nats.NewReceiver(connection, expectedCodec, "peer-topic."+myID.Address),
 		dialogNats.Receiver,
 	)
 }
 
 func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
-	myId := identity.FromAddress("0x6B21b441D0D2Fa1d86407977A3a5C6eD90Ff1A62")
-	peerId := identity.FromAddress("0x0d1a35e53b7f3478d00B7C23838C0D48b2a81017")
+	myID := identity.FromAddress("0x6B21b441D0D2Fa1d86407977A3a5C6eD90Ff1A62")
+	peerID := identity.FromAddress("0x0d1a35e53b7f3478d00B7C23838C0D48b2a81017")
 
 	connection := nats.StartConnectionFake()
 	connection.MockResponse(
@@ -76,9 +76,9 @@ func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
 	)
 	defer connection.Close()
 
-	establisher := mockEstablisher(myId, connection, &identity.SignerFake{})
+	establisher := mockEstablisher(myID, connection, &identity.SignerFake{})
 
-	dialogInstance, err := establisher.CreateDialog(peerId, dto_discovery.Contact{})
+	dialogInstance, err := establisher.CreateDialog(peerID, dto_discovery.Contact{})
 	defer dialogInstance.Close()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "dialog creation error. failed to unpack response 'peer-topic.dialog-create'. invalid message signature ")
@@ -88,11 +88,11 @@ func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func mockEstablisher(myId identity.Identity, connection nats.Connection, signer identity.Signer) *dialogEstablisher {
+func mockEstablisher(myID identity.Identity, connection nats.Connection, signer identity.Signer) *dialogEstablisher {
 	peerTopic := "peer-topic"
 
 	return &dialogEstablisher{
-		myId:     myId,
+		myID:     myID,
 		mySigner: signer,
 		peerAddressFactory: func(contact dto_discovery.Contact) (*discovery.AddressNATS, error) {
 			return discovery.NewAddressWithConnection(connection, peerTopic), nil

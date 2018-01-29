@@ -2,20 +2,18 @@ package dialog
 
 import (
 	"encoding/json"
-	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestRequestSerialize(t *testing.T) {
-	var identity = identity.FromAddress("123")
 	var tests = []struct {
 		model        dialogCreateRequest
 		expectedJson string
 	}{
 		{
 			dialogCreateRequest{
-				IdentityId: identity.Address,
+				IdentityID: "123",
 			},
 			`{
 				"identity_id": "123"
@@ -48,14 +46,14 @@ func TestRequestUnserialize(t *testing.T) {
 				"identity_id": "123"
 			}`,
 			dialogCreateRequest{
-				IdentityId: "123",
+				IdentityID: "123",
 			},
 			nil,
 		},
 		{
 			`{}`,
 			dialogCreateRequest{
-				IdentityId: "",
+				IdentityID: "",
 			},
 			nil,
 		},

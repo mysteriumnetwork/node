@@ -16,8 +16,8 @@ func NewVerifierSigned() *verifierSigned {
 //   - checks signature's sanity
 //   - checks if message was unchanged by middleman
 //   - checks if message is from exact identity
-func NewVerifierIdentity(peerIdentity Identity) *verifierIdentity {
-	return &verifierIdentity{NewAuthenticator(), peerIdentity}
+func NewVerifierIdentity(peerID Identity) *verifierIdentity {
+	return &verifierIdentity{NewAuthenticator(), peerID}
 }
 
 type verifierSigned struct {
@@ -31,7 +31,7 @@ func (verifier *verifierSigned) Verify(message []byte, signature Signature) bool
 
 type verifierIdentity struct {
 	authenticator Authenticator
-	peerIdentity  Identity
+	peerID        Identity
 }
 
 func (verifier *verifierIdentity) Verify(message []byte, signature Signature) bool {
@@ -40,5 +40,5 @@ func (verifier *verifierIdentity) Verify(message []byte, signature Signature) bo
 		return false
 	}
 
-	return identity == verifier.peerIdentity
+	return identity == verifier.peerID
 }

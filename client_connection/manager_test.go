@@ -169,7 +169,7 @@ func (foc *fakeOpenvpnClient) resumeAction() {
 type fakeDialog struct {
 }
 
-func (fd *fakeDialog) CreateDialog(peerId identity.Identity, peerContact dto_discovery.Contact) (communication.Dialog, error) {
+func (fd *fakeDialog) CreateDialog(peerID identity.Identity, peerContact dto_discovery.Contact) (communication.Dialog, error) {
 	return fd, nil
 }
 

@@ -50,21 +50,21 @@ func (waiter *dialogWaiter) Stop() error {
 
 func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-		if request.IdentityId == "" {
+		if request.IdentityID == "" {
 			return &responseInvalidIdentity, nil
 		}
-		peerId := identity.FromAddress(request.IdentityId)
+		peerID := identity.FromAddress(request.IdentityID)
 
-		dialog := waiter.newDialogToPeer(peerId, waiter.newCodecToPeer(peerId))
+		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecToPeer(peerID))
 		err := dialogHandler.Handle(dialog)
 		if err != nil {
-			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.IdentityId, err))
+			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.IdentityID, err))
 			return &responseInternalError, nil
 		}
 
 		waiter.dialogs = append(waiter.dialogs, dialog)
 
-		log.Info(waiterLogPrefix, fmt.Sprintf("Accepted dialog from: '%s'", request.IdentityId))
+		log.Info(waiterLogPrefix, fmt.Sprintf("Accepted dialog from: '%s'", request.IdentityID))
 		return &responseOK, nil
 	}
 
@@ -75,17 +75,17 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 	return subscribeError
 }
 
-func (waiter *dialogWaiter) newCodecToPeer(peerId identity.Identity) *codecSecured {
+func (waiter *dialogWaiter) newCodecToPeer(peerID identity.Identity) *codecSecured {
 
 	return NewCodecSecured(
 		communication.NewCodecJSON(),
 		waiter.mySigner,
-		identity.NewVerifierIdentity(peerId),
+		identity.NewVerifierIdentity(peerID),
 	)
 }
 
-func (waiter *dialogWaiter) newDialogToPeer(peerId identity.Identity, peerCodec *codecSecured) *dialog {
-	subTopic := waiter.myAddress.GetTopic() + "." + peerId.Address
+func (waiter *dialogWaiter) newDialogToPeer(peerID identity.Identity, peerCodec *codecSecured) *dialog {
+	subTopic := waiter.myAddress.GetTopic() + "." + peerID.Address
 
 	return &dialog{
 		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), peerCodec, subTopic),

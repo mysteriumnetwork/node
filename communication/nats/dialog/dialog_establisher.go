@@ -11,10 +11,10 @@ import (
 )
 
 // NewDialogEstablisher constructs new DialogEstablisher which works thru NATS connection.
-func NewDialogEstablisher(myId identity.Identity, signer identity.Signer) *dialogEstablisher {
+func NewDialogEstablisher(myID identity.Identity, signer identity.Signer) *dialogEstablisher {
 
 	return &dialogEstablisher{
-		myId:     myId,
+		myID:     myID,
 		mySigner: signer,
 		peerAddressFactory: func(contact dto_discovery.Contact) (*discovery.AddressNATS, error) {
 			address, err := discovery.NewAddressForContact(contact)
@@ -30,13 +30,13 @@ func NewDialogEstablisher(myId identity.Identity, signer identity.Signer) *dialo
 const establisherLogPrefix = "[NATS.DialogEstablisher] "
 
 type dialogEstablisher struct {
-	myId               identity.Identity
+	myID               identity.Identity
 	mySigner           identity.Signer
 	peerAddressFactory func(contact dto_discovery.Contact) (*discovery.AddressNATS, error)
 }
 
 func (establisher *dialogEstablisher) CreateDialog(
-	peerId identity.Identity,
+	peerID identity.Identity,
 	peerContact dto_discovery.Contact,
 ) (communication.Dialog, error) {
 	var dialog *dialog
@@ -47,7 +47,7 @@ func (establisher *dialogEstablisher) CreateDialog(
 		return dialog, fmt.Errorf("failed to connect to: %#v. %s", peerContact, err)
 	}
 
-	peerCodec := establisher.newCodecToPeer(peerId)
+	peerCodec := establisher.newCodecToPeer(peerID)
 
 	peerSender := establisher.newSenderToPeer(peerAddress, peerCodec)
 	err = establisher.negotiateDialog(peerSender)
@@ -64,7 +64,7 @@ func (establisher *dialogEstablisher) CreateDialog(
 func (establisher *dialogEstablisher) negotiateDialog(sender communication.Sender) error {
 	response, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
-			IdentityId: establisher.myId.Address,
+			IdentityID: establisher.myID.Address,
 		},
 	})
 	if err != nil {
@@ -77,12 +77,12 @@ func (establisher *dialogEstablisher) negotiateDialog(sender communication.Sende
 	return nil
 }
 
-func (establisher *dialogEstablisher) newCodecToPeer(peerId identity.Identity) *codecSecured {
+func (establisher *dialogEstablisher) newCodecToPeer(peerID identity.Identity) *codecSecured {
 
 	return NewCodecSecured(
 		communication.NewCodecJSON(),
 		establisher.mySigner,
-		identity.NewVerifierIdentity(peerId),
+		identity.NewVerifierIdentity(peerID),
 	)
 }
 
@@ -103,7 +103,7 @@ func (establisher *dialogEstablisher) newDialogToPeer(
 	peerCodec *codecSecured,
 ) *dialog {
 
-	subTopic := peerAddress.GetTopic() + "." + establisher.myId.Address
+	subTopic := peerAddress.GetTopic() + "." + establisher.myID.Address
 	return &dialog{
 		Sender:   nats.NewSender(peerAddress.GetConnection(), peerCodec, subTopic),
 		Receiver: nats.NewReceiver(peerAddress.GetConnection(), peerCodec, subTopic),

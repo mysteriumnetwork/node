@@ -60,10 +60,10 @@ func NewCommandWith(
 		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,
-		dialogWaiterFactory: func(myIdentity identity.Identity) communication.DialogWaiter {
+		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
-				nats_discovery.NewAddressGenerate(myIdentity),
-				identity.NewSigner(keystoreInstance, myIdentity),
+				nats_discovery.NewAddressGenerate(myID),
+				identity.NewSigner(keystoreInstance, myID),
 			)
 		},
 		sessionManagerFactory: func(vpnServerIP string) session.ManagerInterface {

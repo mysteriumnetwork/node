@@ -26,7 +26,7 @@ func TestDialogWaiter_Factory(t *testing.T) {
 }
 
 func TestDialogWaiter_ServeDialogs(t *testing.T) {
-	peerId := identity.FromAddress("0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea")
+	peerID := identity.FromAddress("0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea")
 
 	connection := nats.StartConnectionFake()
 	defer connection.Close()
@@ -47,7 +47,7 @@ func TestDialogWaiter_ServeDialogs(t *testing.T) {
 	dialogNats, ok := dialogInstance.(*dialog)
 	assert.True(t, ok)
 
-	expectedCodec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierIdentity(peerId))
+	expectedCodec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierIdentity(peerID))
 	assert.Equal(
 		t,
 		nats.NewSender(connection, expectedCodec, "my-topic.0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea"),

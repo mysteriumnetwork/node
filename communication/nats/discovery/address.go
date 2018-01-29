@@ -19,9 +19,9 @@ func NewAddress(topic string, addresses ...string) *AddressNATS {
 }
 
 // NewAddressGenerate generates NATS address for current node
-func NewAddressGenerate(myIdentity identity.Identity) *AddressNATS {
+func NewAddressGenerate(myID identity.Identity) *AddressNATS {
 	address := "nats://" + natsServerIP + ":4222"
-	return NewAddress(myIdentity.Address, address)
+	return NewAddress(myID.Address, address)
 }
 
 // NewAddressForContact extracts NATS address from given contact structure
