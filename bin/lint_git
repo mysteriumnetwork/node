@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Shows linter warnings only for modified files.
+
+all_warnings=`bin/lint`
+
+for changed_file in `git diff --name-only origin/master`
+  do
+    echo "$all_warnings" | grep "$changed_file"
+  done
