@@ -56,13 +56,11 @@ func (cmd *CommandRun) Run() (err error) {
 		return err
 	}
 
-	country, err := detectCountry(cmd.ipResolver, cmd.locationDetector)
+	serviceLocation, err := detectCountry(cmd.ipResolver, cmd.locationDetector)
 	if err != nil {
 		return err
 	}
-
-	location := dto_discovery.Location{Country: country}
-	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, location)
+	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation)
 
 	dialogHandler := session.NewDialogHandler(proposal.ID, cmd.sessionManagerFactory(vpnServerIP))
 	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
@@ -89,19 +87,19 @@ func (cmd *CommandRun) Run() (err error) {
 	return nil
 }
 
-func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (string, error) {
-	ip, err := ipResolver.GetPublicIP()
+func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (dto_discovery.Location, error) {
+	myIP, err := ipResolver.GetPublicIP()
 	if err != nil {
-		return "", errors.New("IP detection failed: " + err.Error())
+		return dto_discovery.Location{}, errors.New("IP detection failed: " + err.Error())
 	}
 
-	country, err := locationDetector.DetectCountry(ip)
+	myCountry, err := locationDetector.DetectCountry(myIP)
 	if err != nil {
-		return "", errors.New("Country detection failed: " + err.Error())
+		return dto_discovery.Location{}, errors.New("Country detection failed: " + err.Error())
 	}
 
-	log.Info("Country detected: ", country)
-	return country, nil
+	log.Info("Country detected: ", myCountry)
+	return dto_discovery.Location{Country: myCountry}, nil
 }
 
 func (cmd *CommandRun) Wait() error {

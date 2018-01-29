@@ -6,9 +6,8 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/openvpn/service_discovery"
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/service_discovery/dto"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -25,11 +24,18 @@ type testContext struct {
 	fakeStatsKeeper     *fakeSessionStatsKeeper
 }
 
+var (
+	activeProviderId      = "vpn-node-1"
+	activeProviderContact = dto_discovery.Contact{}
+	activeProposal        = dto_discovery.ServiceProposal{
+		ProviderID:       activeProviderId,
+		ProviderContacts: []dto_discovery.Contact{activeProviderContact},
+	}
+)
+
 func (tc *testContext) SetupTest() {
 	tc.fakeDiscoveryClient = server.NewClientFake()
-
-	serviceProposal := service_discovery.NewServiceProposal(identity.FromAddress("vpn-node-1"), dto.Contact{})
-	tc.fakeDiscoveryClient.RegisterProposal(serviceProposal, nil)
+	tc.fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
 
 	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
 		return &fakeDialog{}
@@ -66,14 +72,14 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSetAn
 	fatalVpnError := errors.New("fatal connection error")
 	tc.fakeOpenVpn.onConnectReturnError = fatalVpnError
 
-	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1"))
+	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderId))
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", fatalVpnError}, tc.connManager.Status())
 
 	assert.False(tc.T(), tc.fakeStatsKeeper.SessionStartMarked)
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
-	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
+	err := tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderId)
 
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
@@ -90,14 +96,14 @@ func (tc *testContext) TestWhenManagerMadeConnectionSessionStartIsMarked() {
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.fakeOpenVpn.delayableAction()
 	go func() {
-		tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
+		tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderId)
 	}()
 	tc.fakeOpenVpn.waitForDelayState()
 	assert.Equal(tc.T(), ConnectionStatus{Connecting, "", nil}, tc.connManager.Status())
 }
 
 func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
-	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
+	err := tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderId)
 
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
@@ -163,7 +169,7 @@ func (foc *fakeOpenvpnClient) resumeAction() {
 type fakeDialog struct {
 }
 
-func (fd *fakeDialog) CreateDialog(peerId identity.Identity, peerContact dto.Contact) (communication.Dialog, error) {
+func (fd *fakeDialog) CreateDialog(peerId identity.Identity, peerContact dto_discovery.Contact) (communication.Dialog, error) {
 	return fd, nil
 }
 
