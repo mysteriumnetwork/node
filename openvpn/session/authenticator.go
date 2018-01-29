@@ -5,18 +5,18 @@ import (
 	"github.com/mysterium/node/session"
 )
 
-type sessionLookupF func(session session.SessionID) (session.Session, bool)
+type sessionLookupFunc func(session session.SessionID) (session.Session, bool)
 
 type verifierFactory func(identity.Identity) identity.Verifier
 
 type sessionAuthenticator struct {
-	sessionLookup  sessionLookupF
+	sessionLookup  sessionLookupFunc
 	createVerifier verifierFactory
 }
 
 //NewSessionAuthenticator provides glue code for openvpn management interface to validate incoming client login request,
 //it expects session id as username, and session signature signed by client as password
-func NewSessionAuthenticator(sessionLookup sessionLookupF, verifierCreator verifierFactory) *sessionAuthenticator {
+func NewSessionAuthenticator(sessionLookup sessionLookupFunc, verifierCreator verifierFactory) *sessionAuthenticator {
 	return &sessionAuthenticator{sessionLookup: sessionLookup, createVerifier: verifierCreator}
 }
 

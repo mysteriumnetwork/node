@@ -7,12 +7,17 @@ import (
 	"testing"
 )
 
-var sessionNotFoundFunction = func(sessionId session.SessionID) (session.Session, bool) {
+var returnSessionNotFound = func(sessionId session.SessionID) (session.Session, bool) {
 	return session.Session{}, false
 }
 
-var sessionFoundFunction = func(sessionId session.SessionID) (session.Session, bool) {
-	return session.Session{}, true
+var returnSessionFound = func(sessionId session.SessionID) (session.Session, bool) {
+	return session.Session{
+			ID:               session.SessionID("fake-id"),
+			Config:           "vpn-session-configuration-string",
+			ConsumerIdentity: identity.FromAddress("deadbeef"),
+		},
+		true
 }
 
 var validSignatureVerifierFactory = func(identity identity.Identity) identity.Verifier {
@@ -24,7 +29,7 @@ var invalidSignatureVerifierFactory = func(identity identity.Identity) identity.
 }
 
 func TestAuthenticatorReturnsFalseWhenNoSessionFound(t *testing.T) {
-	authenticator := NewSessionAuthenticator(sessionNotFoundFunction, validSignatureVerifierFactory)
+	authenticator := NewSessionAuthenticator(returnSessionNotFound, validSignatureVerifierFactory)
 
 	authenticated, err := authenticator.ValidateSession("not important", "not important")
 	assert.NoError(t, err)
@@ -32,7 +37,7 @@ func TestAuthenticatorReturnsFalseWhenNoSessionFound(t *testing.T) {
 }
 
 func TestAuthenticatorReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
-	authenticator := NewSessionAuthenticator(sessionFoundFunction, invalidSignatureVerifierFactory)
+	authenticator := NewSessionAuthenticator(returnSessionFound, invalidSignatureVerifierFactory)
 
 	authenticated, err := authenticator.ValidateSession("not important", "not important")
 	assert.NoError(t, err)
@@ -40,7 +45,7 @@ func TestAuthenticatorReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
 }
 
 func TestAuthenticatorReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing.T) {
-	authenticator := NewSessionAuthenticator(sessionFoundFunction, validSignatureVerifierFactory)
+	authenticator := NewSessionAuthenticator(returnSessionFound, validSignatureVerifierFactory)
 
 	authenticated, err := authenticator.ValidateSession("not important", "not important")
 	assert.NoError(t, err)
