@@ -25,10 +25,10 @@ type statusResponse struct {
 type connectionEndpoint struct {
 	manager     client_connection.Manager
 	ipResolver  ip.Resolver
-	statsKeeper *bytescount.SessionStatsKeeper
+	statsKeeper bytescount.SessionStatsKeeper
 }
 
-func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver, statsKeeper *bytescount.SessionStatsKeeper) *connectionEndpoint {
+func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *connectionEndpoint {
 	return &connectionEndpoint{
 		manager:     manager,
 		ipResolver:  ipResolver,
@@ -99,7 +99,7 @@ func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ip.Resolver,
-	statsKeeper *bytescount.SessionStatsKeeper) {
+	statsKeeper bytescount.SessionStatsKeeper) {
 	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)

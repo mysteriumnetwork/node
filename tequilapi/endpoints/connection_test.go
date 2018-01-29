@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type fakeManager struct {
@@ -47,7 +48,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
 	ipResolver := ip.NewFakeResolver("123.123.123.123")
-	statsKeeper := &bytescount.SessionStatsKeeper{}
+	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
 
 	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper)
 
@@ -299,7 +300,7 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 }
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
-	statsKeeper := &bytescount.SessionStatsKeeper{}
+	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
 	stats := bytescount.SessionStats{BytesSent: 1, BytesReceived: 2}
 	statsKeeper.Save(stats)
 
