@@ -46,19 +46,19 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, dialogInstance)
 
-	dialogNats, ok := dialogInstance.(*dialog)
+	dialog, ok := dialogInstance.(*dialog)
 	assert.True(t, ok)
 
 	expectedCodec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierIdentity(peerID))
 	assert.Equal(
 		t,
 		nats.NewSender(connection, expectedCodec, "peer-topic."+myID.Address),
-		dialogNats.Sender,
+		dialog.Sender,
 	)
 	assert.Equal(
 		t,
 		nats.NewReceiver(connection, expectedCodec, "peer-topic."+myID.Address),
-		dialogNats.Receiver,
+		dialog.Receiver,
 	)
 }
 

@@ -44,19 +44,19 @@ func TestDialogWaiter_ServeDialogs(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, dialogInstance)
 
-	dialogNats, ok := dialogInstance.(*dialog)
+	dialog, ok := dialogInstance.(*dialog)
 	assert.True(t, ok)
 
 	expectedCodec := NewCodecSecured(communication.NewCodecJSON(), signer, identity.NewVerifierIdentity(peerID))
 	assert.Equal(
 		t,
 		nats.NewSender(connection, expectedCodec, "my-topic.0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea"),
-		dialogNats.Sender,
+		dialog.Sender,
 	)
 	assert.Equal(
 		t,
 		nats.NewReceiver(connection, expectedCodec, "my-topic.0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea"),
-		dialogNats.Receiver,
+		dialog.Receiver,
 	)
 }
 
