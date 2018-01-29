@@ -21,7 +21,7 @@ type handler struct {
 func (handler *handler) Handle(dialog communication.Dialog) error {
 	subscribeError := dialog.Respond(handler.sessionCreateConsumer)
 	if subscribeError != nil {
-		return nil
+		return subscribeError
 	}
 
 	return nil

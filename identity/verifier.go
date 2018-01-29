@@ -9,7 +9,7 @@ type Verifier interface {
 //   - checks signature's sanity
 //   - checks if message was unchanged by middleman
 func NewVerifierSigned() *verifierSigned {
-	return &verifierSigned{NewAuthenticator()}
+	return &verifierSigned{NewExtractor()}
 }
 
 // NewVerifierIdentity construct Verifier which:
@@ -17,25 +17,25 @@ func NewVerifierSigned() *verifierSigned {
 //   - checks if message was unchanged by middleman
 //   - checks if message is from exact identity
 func NewVerifierIdentity(peerID Identity) *verifierIdentity {
-	return &verifierIdentity{NewAuthenticator(), peerID}
+	return &verifierIdentity{NewExtractor(), peerID}
 }
 
 type verifierSigned struct {
-	authenticator Authenticator
+	extractor Extractor
 }
 
 func (verifier *verifierSigned) Verify(message []byte, signature Signature) bool {
-	_, err := verifier.authenticator.Authenticate(message, signature)
+	_, err := verifier.extractor.Extract(message, signature)
 	return err == nil
 }
 
 type verifierIdentity struct {
-	authenticator Authenticator
-	peerID        Identity
+	extractor Extractor
+	peerID    Identity
 }
 
 func (verifier *verifierIdentity) Verify(message []byte, signature Signature) bool {
-	identity, err := verifier.authenticator.Authenticate(message, signature)
+	identity, err := verifier.extractor.Extract(message, signature)
 	if err != nil {
 		return false
 	}

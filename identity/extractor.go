@@ -5,19 +5,19 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// Authenticator extracts identity
-type Authenticator interface {
-	Authenticate(message []byte, signature Signature) (Identity, error)
+// Extractor extracts identity
+type Extractor interface {
+	Extract(message []byte, signature Signature) (Identity, error)
 }
 
-// NewAuthenticator extracts identity which was used to sign message
-func NewAuthenticator() *authenticator {
-	return &authenticator{}
+// NewExtractor extracts identity which was used to sign message
+func NewExtractor() *extractor {
+	return &extractor{}
 }
 
-type authenticator struct{}
+type extractor struct{}
 
-func (authenticator *authenticator) Authenticate(message []byte, signature Signature) (Identity, error) {
+func (extractor *extractor) Extract(message []byte, signature Signature) (Identity, error) {
 	signatureBytes := signature.Bytes()
 	if len(signatureBytes) == 0 {
 		return Identity{}, errors.New("empty signature")

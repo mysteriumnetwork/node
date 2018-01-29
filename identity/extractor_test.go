@@ -14,8 +14,8 @@ func TestAuthenticate_WhenSignatureIsCorrect(t *testing.T) {
 	message := []byte("Boop!")
 	signature := SignatureHex("1f89542f406b2d638fe09cd9912d0b8c0b5ebb4aef67d52ab046973e34fb430a1953576cd19d140eddb099aea34b2985fbd99e716d3b2f96a964141fdb84b32000")
 
-	authenticator := &authenticator{}
-	signerID, err := authenticator.Authenticate(message, signature)
+	extractor := &extractor{}
+	signerID, err := extractor.Extract(message, signature)
 	assert.NoError(t, err)
 	assert.Exactly(t, originalSignerID, signerID, "Original signer should be extracted")
 }
@@ -24,8 +24,8 @@ func TestAuthenticate_WhenSignatureIsEmpty(t *testing.T) {
 	message := []byte("Boop!")
 	signature := SignatureHex("")
 
-	authenticator := &authenticator{}
-	signerID, err := authenticator.Authenticate(message, signature)
+	extractor := &extractor{}
+	signerID, err := extractor.Extract(message, signature)
 	assert.EqualError(t, err, "empty signature")
 	assert.Exactly(t, Identity{}, signerID)
 }
@@ -34,8 +34,8 @@ func TestAuthenticate_WhenSignatureIsMalformed(t *testing.T) {
 	message := []byte("Boop!")
 	signature := SignatureHex("7369676e6564")
 
-	authenticator := &authenticator{}
-	signerID, err := authenticator.Authenticate(message, signature)
+	extractor := &extractor{}
+	signerID, err := extractor.Extract(message, signature)
 	assert.EqualError(t, err, "invalid signature length")
 	assert.Exactly(t, Identity{}, signerID)
 }
@@ -44,8 +44,8 @@ func TestAuthenticate_WhenMessageIsChanged(t *testing.T) {
 	message := []byte("Boop changed!")
 	signature := SignatureHex("1f89542f406b2d638fe09cd9912d0b8c0b5ebb4aef67d52ab046973e34fb430a1953576cd19d140eddb099aea34b2985fbd99e716d3b2f96a964141fdb84b32000")
 
-	authenticator := &authenticator{}
-	signerID, err := authenticator.Authenticate(message, signature)
+	extractor := &extractor{}
+	signerID, err := extractor.Extract(message, signature)
 	assert.NoError(t, err)
 	assert.NotEqual(t, originalSignerID, signerID, "Original signer should not be extracted")
 	assert.Exactly(t, hijackedSignerID, signerID, "Another signer extracted")
