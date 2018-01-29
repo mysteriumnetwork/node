@@ -13,18 +13,18 @@ type SessionStatsKeeper interface {
 	GetSessionDuration() (time.Duration, error)
 }
 
-// Clock function returns current time
-type Clock func() time.Time
+// TimeGetter function returns current time
+type TimeGetter func() time.Time
 
 type sessionStatsKeeper struct {
 	sessionStats SessionStats
-	clock        Clock
+	timeGetter   TimeGetter
 	sessionStart *time.Time
 }
 
-// NewSessionStatsKeeper returns new session stats keeper with given clock function
-func NewSessionStatsKeeper(clock Clock) SessionStatsKeeper {
-	return &sessionStatsKeeper{clock: clock}
+// NewSessionStatsKeeper returns new session stats keeper with given timeGetter function
+func NewSessionStatsKeeper(timeGetter TimeGetter) SessionStatsKeeper {
+	return &sessionStatsKeeper{timeGetter: timeGetter}
 }
 
 // Save saves session stats to keeper
@@ -39,7 +39,7 @@ func (keeper *sessionStatsKeeper) Retrieve() SessionStats {
 
 // MarkSessionStart marks current time as session start time for statistics
 func (keeper *sessionStatsKeeper) MarkSessionStart() {
-	time := keeper.clock()
+	time := keeper.timeGetter()
 	keeper.sessionStart = &time
 }
 
@@ -48,6 +48,6 @@ func (keeper *sessionStatsKeeper) GetSessionDuration() (time.Duration, error) {
 	if keeper.sessionStart == nil {
 		return time.Duration(0), errors.New("session start was not marked")
 	}
-	duration := keeper.clock().Sub(*keeper.sessionStart)
+	duration := keeper.timeGetter().Sub(*keeper.sessionStart)
 	return duration, nil
 }
