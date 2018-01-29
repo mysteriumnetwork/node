@@ -47,7 +47,7 @@ func (establisher *dialogEstablisher) CreateDialog(
 		return dialog, fmt.Errorf("failed to connect to: %#v. %s", peerContact, err)
 	}
 
-	peerCodec := establisher.newCodecToPeer(peerID)
+	peerCodec := establisher.newCodecForPeer(peerID)
 
 	peerSender := establisher.newSenderToPeer(peerAddress, peerCodec)
 	err = establisher.negotiateDialog(peerSender)
@@ -77,7 +77,7 @@ func (establisher *dialogEstablisher) negotiateDialog(sender communication.Sende
 	return nil
 }
 
-func (establisher *dialogEstablisher) newCodecToPeer(peerID identity.Identity) *codecSecured {
+func (establisher *dialogEstablisher) newCodecForPeer(peerID identity.Identity) *codecSecured {
 
 	return NewCodecSecured(
 		communication.NewCodecJSON(),

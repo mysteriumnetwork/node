@@ -55,7 +55,7 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		}
 		peerID := identity.FromAddress(request.PeerID)
 
-		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecToPeer(peerID))
+		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecForPeer(peerID))
 		err := dialogHandler.Handle(dialog)
 		if err != nil {
 			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.PeerID, err))
@@ -75,7 +75,7 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 	return subscribeError
 }
 
-func (waiter *dialogWaiter) newCodecToPeer(peerID identity.Identity) *codecSecured {
+func (waiter *dialogWaiter) newCodecForPeer(peerID identity.Identity) *codecSecured {
 
 	return NewCodecSecured(
 		communication.NewCodecJSON(),

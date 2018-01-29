@@ -5,14 +5,14 @@ type Verifier interface {
 	Verify(message []byte, signature Signature) bool
 }
 
-// NewVerifierSigned construct Verifier which:
+// NewVerifierSigned constructs Verifier which:
 //   - checks signature's sanity
 //   - checks if message was unchanged by middleman
 func NewVerifierSigned() *verifierSigned {
 	return &verifierSigned{NewExtractor()}
 }
 
-// NewVerifierIdentity construct Verifier which:
+// NewVerifierIdentity constructs Verifier which:
 //   - checks signature's sanity
 //   - checks if message was unchanged by middleman
 //   - checks if message is from exact identity

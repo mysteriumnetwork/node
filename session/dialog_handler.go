@@ -4,7 +4,7 @@ import (
 	"github.com/mysterium/node/communication"
 )
 
-// NewDialogHandler constructs handler which get all incoming dialogs does starts handling them
+// NewDialogHandler constructs handler which gets all incoming dialogs and starts handling them
 func NewDialogHandler(proposalId int, sessionManager ManagerInterface) *handler {
 	return &handler{
 		sessionCreateConsumer: &SessionCreateConsumer{
