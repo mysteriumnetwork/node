@@ -13,16 +13,16 @@ func TestRequestSerialize(t *testing.T) {
 	}{
 		{
 			dialogCreateRequest{
-				IdentityID: "123",
+				PeerID: "123",
 			},
 			`{
-				"identity_id": "123"
+				"peer_id": "123"
 			}`,
 		},
 		{
 			dialogCreateRequest{},
 			`{
-				"identity_id": ""
+				"peer_id": ""
 			}`,
 		},
 	}
@@ -43,17 +43,17 @@ func TestRequestUnserialize(t *testing.T) {
 	}{
 		{
 			`{
-				"identity_id": "123"
+				"peer_id": "123"
 			}`,
 			dialogCreateRequest{
-				IdentityID: "123",
+				PeerID: "123",
 			},
 			nil,
 		},
 		{
 			`{}`,
 			dialogCreateRequest{
-				IdentityID: "",
+				PeerID: "",
 			},
 			nil,
 		},

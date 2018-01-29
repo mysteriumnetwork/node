@@ -14,7 +14,7 @@ var (
 )
 
 type dialogCreateRequest struct {
-	IdentityID string `json:"identity_id"`
+	PeerID string `json:"peer_id"`
 }
 
 type dialogCreateResponse struct {

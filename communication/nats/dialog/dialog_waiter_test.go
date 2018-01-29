@@ -36,7 +36,7 @@ func TestDialogWaiter_ServeDialogs(t *testing.T) {
 	defer waiter.Stop()
 
 	dialogAsk(connection, `{
-		"payload": {"identity_id":"0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea"},
+		"payload": {"peer_id":"0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea"},
 		"signature": "tl+WbYkJdXD5foaIP3bqVGFHfr6kdd5FzmJAmu1GdpINEnNR3bTto6wgEoke/Fpy4zsWOjrulDVfrc32f5ArTgA="
 	}`)
 	dialogInstance, err := dialogWait(handler)
@@ -69,7 +69,7 @@ func TestDialogWaiter_ServeDialogsRejectInvalidSignature(t *testing.T) {
 	defer waiter.Stop()
 
 	dialogAsk(connection, `{
-		"payload": {"identity_id":"0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea"},
+		"payload": {"peer_id":"0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea"},
 		"signature": "malformed"
 	}`)
 	dialogInstance, err := dialogWait(handler)

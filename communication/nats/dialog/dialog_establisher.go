@@ -64,7 +64,7 @@ func (establisher *dialogEstablisher) CreateDialog(
 func (establisher *dialogEstablisher) negotiateDialog(sender communication.Sender) error {
 	response, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
-			IdentityID: establisher.myID.Address,
+			PeerID: establisher.myID.Address,
 		},
 	})
 	if err != nil {

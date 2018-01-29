@@ -50,21 +50,21 @@ func (waiter *dialogWaiter) Stop() error {
 
 func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-		if request.IdentityID == "" {
+		if request.PeerID == "" {
 			return &responseInvalidIdentity, nil
 		}
-		peerID := identity.FromAddress(request.IdentityID)
+		peerID := identity.FromAddress(request.PeerID)
 
 		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecToPeer(peerID))
 		err := dialogHandler.Handle(dialog)
 		if err != nil {
-			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.IdentityID, err))
+			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.PeerID, err))
 			return &responseInternalError, nil
 		}
 
 		waiter.dialogs = append(waiter.dialogs, dialog)
 
-		log.Info(waiterLogPrefix, fmt.Sprintf("Accepted dialog from: '%s'", request.IdentityID))
+		log.Info(waiterLogPrefix, fmt.Sprintf("Accepted dialog from: '%s'", request.PeerID))
 		return &responseOK, nil
 	}
 
