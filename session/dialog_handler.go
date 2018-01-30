@@ -18,6 +18,7 @@ type handler struct {
 	sessionCreateConsumer communication.RequestConsumer
 }
 
+// Handle starts serving services in given Dialog instance
 func (handler *handler) Handle(dialog communication.Dialog) error {
 	subscribeError := dialog.Respond(handler.sessionCreateConsumer)
 	if subscribeError != nil {

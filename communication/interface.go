@@ -12,7 +12,7 @@ import (
 type DialogWaiter interface {
 	Start() (dto_discovery.Contact, error)
 	Stop() error
-	ServeDialogs(dialogManager DialogHandler) error
+	ServeDialogs(DialogHandler) error
 }
 
 // DialogHandler defines how to handle incoming Dialog
