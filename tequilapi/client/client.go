@@ -107,27 +107,29 @@ func (client *Client) Disconnect() (err error) {
 }
 
 // ConnectionStatistics returns statistics about current connection
-func (client *Client) ConnectionStatistics() (statistics StatisticsDTO, err error) {
+func (client *Client) ConnectionStatistics() (StatisticsDTO, error) {
 	response, err := client.http.Get("connection/statistics", url.Values{})
 	if err != nil {
-		return
+		return StatisticsDTO{}, err
 	}
 	defer response.Body.Close()
 
+	var statistics StatisticsDTO
 	err = parseResponseJson(response, &statistics)
-	return
+	return statistics, err
 }
 
 // Status returns connection status
-func (client *Client) Status() (status StatusDTO, err error) {
+func (client *Client) Status() (StatusDTO, error) {
 	response, err := client.http.Get("connection", url.Values{})
 	if err != nil {
-		return
+		return StatusDTO{}, err
 	}
 	defer response.Body.Close()
 
+	var status StatusDTO
 	err = parseResponseJson(response, &status)
-	return
+	return status, err
 }
 
 // GetIP returns public ip
