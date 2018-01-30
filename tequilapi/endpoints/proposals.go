@@ -23,7 +23,7 @@ type serviceDefinitionRes struct {
 
 type proposalRes struct {
 	ID                int                  `json:"id"`
-	ProviderId        string               `json:"providerId"`
+	ProviderID        string               `json:"providerId"`
 	ServiceType       string               `json:"serviceType"`
 	ServiceDefinition serviceDefinitionRes `json:"serviceDefinition"`
 }
@@ -31,7 +31,7 @@ type proposalRes struct {
 func proposalToRes(p dto_discovery.ServiceProposal) proposalRes {
 	return proposalRes{
 		ID:          p.ID,
-		ProviderId:  p.ProviderID,
+		ProviderID:  p.ProviderID,
 		ServiceType: p.ServiceType,
 		ServiceDefinition: serviceDefinitionRes{
 			LocationOriginate: locationRes{
@@ -64,8 +64,8 @@ func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
 
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 
-	providerId := req.URL.Query().Get("providerId")
-	proposals, err := pe.mysteriumClient.FindProposals(providerId)
+	providerID := req.URL.Query().Get("providerId")
+	proposals, err := pe.mysteriumClient.FindProposals(providerID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return

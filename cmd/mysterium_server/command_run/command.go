@@ -24,7 +24,7 @@ type CommandRun struct {
 	natService       nat.NATService
 	locationDetector location.Detector
 
-	dialogWaiterFactory func(identity identity.Identity) (communication.DialogWaiter, dto_discovery.Contact)
+	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
 	sessionManagerFactory func(serverIP string) session.ManagerInterface
@@ -39,8 +39,8 @@ func (cmd *CommandRun) Run() (err error) {
 		return err
 	}
 
-	var providerContact dto_discovery.Contact
-	cmd.dialogWaiter, providerContact = cmd.dialogWaiterFactory(providerID)
+	cmd.dialogWaiter = cmd.dialogWaiterFactory(providerID)
+	providerContact, err := cmd.dialogWaiter.Start()
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
 	vpnServerIP, err := cmd.ipResolver.GetOutboundIP()
@@ -56,21 +56,14 @@ func (cmd *CommandRun) Run() (err error) {
 		return err
 	}
 
-	country, err := detectCountry(cmd.ipResolver, cmd.locationDetector)
+	serviceLocation, err := detectCountry(cmd.ipResolver, cmd.locationDetector)
 	if err != nil {
 		return err
 	}
-	log.Info("Country detected: ", country)
+	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation)
 
-	location := dto_discovery.Location{Country: country}
-
-	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, location)
-
-	sessionCreateConsumer := &session.SessionCreateConsumer{
-		CurrentProposalID: proposal.ID,
-		SessionManager:    cmd.sessionManagerFactory(vpnServerIP),
-	}
-	if err = cmd.dialogWaiter.ServeDialogs(sessionCreateConsumer); err != nil {
+	dialogHandler := session.NewDialogHandler(proposal.ID, cmd.sessionManagerFactory(vpnServerIP))
+	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}
 
@@ -94,17 +87,19 @@ func (cmd *CommandRun) Run() (err error) {
 	return nil
 }
 
-func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (string, error) {
-	ip, err := ipResolver.GetPublicIP()
+func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (dto_discovery.Location, error) {
+	myIP, err := ipResolver.GetPublicIP()
 	if err != nil {
-		return "", errors.New("IP detection failed: " + err.Error())
+		return dto_discovery.Location{}, errors.New("IP detection failed: " + err.Error())
 	}
 
-	country, err := locationDetector.DetectCountry(ip)
+	myCountry, err := locationDetector.DetectCountry(myIP)
 	if err != nil {
-		return "", errors.New("Country detection failed: " + err.Error())
+		return dto_discovery.Location{}, errors.New("Country detection failed: " + err.Error())
 	}
-	return country, nil
+
+	log.Info("Country detected: ", myCountry)
+	return dto_discovery.Location{Country: myCountry}, nil
 }
 
 func (cmd *CommandRun) Wait() error {

@@ -69,7 +69,7 @@ func (client *Client) RegisterIdentity(address string) (err error) {
 	return nil
 }
 
-// Connect initiates a new connection to a host identified by providerId
+// Connect initiates a new connection to a host identified by providerID
 func (client *Client) Connect(consumerID, providerID string) (status StatusDto, err error) {
 	payload := struct {
 		Identity string `json:"identity"`

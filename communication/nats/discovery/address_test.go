@@ -22,8 +22,8 @@ func TestNewAddress(t *testing.T) {
 }
 
 func TestNewAddressGenerate(t *testing.T) {
-	myIdentity := identity.FromAddress("provider1")
-	address := NewAddressGenerate(myIdentity)
+	myID := identity.FromAddress("provider1")
+	address := NewAddressGenerate(myID)
 
 	assert.Equal(
 		t,

@@ -9,29 +9,18 @@ import (
 	"time"
 )
 
-var (
-	locationUnknown = dto_discovery.Location{}
-)
-
-func NewServiceProposal(
-	providerId identity.Identity,
-	providerContact dto_discovery.Contact,
-) dto_discovery.ServiceProposal {
-	return NewServiceProposalWithLocation(providerId, providerContact, locationUnknown)
-}
-
 func NewServiceProposalWithLocation(
-	identity identity.Identity,
+	providerID identity.Identity,
 	providerContact dto_discovery.Contact,
-	nodeLocation dto_discovery.Location,
+	serviceLocation dto_discovery.Location,
 ) dto_discovery.ServiceProposal {
 	return dto_discovery.ServiceProposal{
 		ID:          1,
 		Format:      "service-proposal/v1",
 		ServiceType: "openvpn",
 		ServiceDefinition: dto.ServiceDefinition{
-			Location:          nodeLocation,
-			LocationOriginate: nodeLocation,
+			Location:          serviceLocation,
+			LocationOriginate: serviceLocation,
 			SessionBandwidth:  dto.Bandwidth(10 * datasize.MB),
 		},
 		PaymentMethodType: dto.PAYMENT_METHOD_PER_TIME,
@@ -40,7 +29,7 @@ func NewServiceProposalWithLocation(
 			Price:    money.NewMoney(0.125, money.CURRENCY_MYST),
 			Duration: 1 * time.Hour,
 		},
-		ProviderID:       identity.Address,
+		ProviderID:       providerID.Address,
 		ProviderContacts: []dto_discovery.Contact{providerContact},
 	}
 }
