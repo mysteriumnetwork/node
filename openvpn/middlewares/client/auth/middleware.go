@@ -7,6 +7,9 @@ import (
 	"regexp"
 )
 
+// CredentialsProvider returns client's current auth primitives (i.e. customer identity signature / node's sessionId)
+type CredentialsProvider func() (username string, password string, err error)
+
 type middleware struct {
 	credentials  CredentialsProvider
 	connection   net.Conn
