@@ -87,7 +87,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 			http.StatusOK, `{
 				"bytesSent": 0,
 				"bytesReceived": 0,
-				"durationSeconds": 60
+				"duration": 60
 			}`,
 		},
 	}
@@ -331,7 +331,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 		`{
 			"bytesSent": 1,
 			"bytesReceived": 2,
-			"durationSeconds": 60
+			"duration": 60
 		}`,
 		resp.Body.String(),
 	)
@@ -353,7 +353,7 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 		`{
 			"bytesSent": 1,
 			"bytesReceived": 2,
-			"durationSeconds": 0
+			"duration": 0
 		}`,
 		resp.Body.String(),
 	)

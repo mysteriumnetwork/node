@@ -213,7 +213,7 @@ func (c *Command) status() {
 		if err != nil {
 			warn(err)
 		} else {
-			info(fmt.Sprintf("Connection duration: %ds", statistics.DurationSeconds))
+			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
 			info("Bytes sent:", statistics.BytesSent)
 			info("Bytes received:", statistics.BytesReceived)
 		}
