@@ -202,11 +202,19 @@ func (c *Command) status() {
 	status, err := c.tequilapi.Status()
 	if err != nil {
 		warn(err)
-		return
+	} else {
+		info("Status:", status.Status)
+		info("SID:", status.SessionId)
 	}
 
-	info("Status:", status.Status)
-	info("SID:", status.SessionId)
+	statistics, err := c.tequilapi.ConnectionStatistics()
+	if err != nil {
+		warn(err)
+	} else {
+		info(fmt.Sprintf("Connection duration: %ds", statistics.DurationSeconds))
+		info("Bytes sent:", statistics.BytesSent)
+		info("Bytes received:", statistics.BytesReceived)
+	}
 }
 
 func (c *Command) ip() {
