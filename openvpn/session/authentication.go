@@ -2,8 +2,20 @@ package session
 
 import (
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/openvpn/middlewares/client/auth"
 	"github.com/mysterium/node/session"
 )
+
+const sessionSignaturePrefix = "SessionId:"
+
+//NewSignedSessionIdCredentialsProvider returns session id as username and id signed with given signer as password
+func NewSignedSessionIdCredentialsProvider(id session.SessionID, signer identity.Signer) auth.CredentialsProvider {
+	signature, err := signer.Sign([]byte(sessionSignaturePrefix + id))
+
+	return func() (string, string, error) {
+		return string(id), signature.Base64(), err
+	}
+}
 
 type sessionLookupFunc func(session session.SessionID) (session.Session, bool)
 
@@ -20,6 +32,7 @@ func NewSessionAuthenticator(sessionLookup sessionLookupFunc, verifierCreator ve
 	return &sessionAuthenticator{sessionLookup: sessionLookup, createVerifier: verifierCreator}
 }
 
+//ValidateSession validates provided session id and signature, by retrieving peer identity and checking session signature
 func (sa *sessionAuthenticator) ValidateSession(sessionString, signatureString string) (bool, error) {
 	sessionId := session.SessionID(sessionString)
 	currentSession, found := sa.sessionLookup(sessionId)
@@ -30,5 +43,5 @@ func (sa *sessionAuthenticator) ValidateSession(sessionString, signatureString s
 	verifier := sa.createVerifier(currentSession.ConsumerIdentity)
 	signature := identity.SignatureBase64(signatureString)
 
-	return verifier.Verify([]byte(sessionString), signature), nil
+	return verifier.Verify([]byte(sessionSignaturePrefix+sessionString), signature), nil
 }
