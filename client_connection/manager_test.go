@@ -5,6 +5,7 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/openvpn/service_discovery"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"sync"
 	"testing"
+	"time"
 )
 
 type testContext struct {
@@ -20,10 +22,10 @@ type testContext struct {
 	connManager         *connectionManager
 	fakeDiscoveryClient *server.ClientFake
 	fakeOpenVpn         *fakeOpenvpnClient
+	fakeStatsKeeper     *fakeSessionStatsKeeper
 }
 
 func (tc *testContext) SetupTest() {
-
 	tc.fakeDiscoveryClient = server.NewClientFake()
 
 	serviceProposal := service_discovery.NewServiceProposal(identity.FromAddress("vpn-node-1"), dto.Contact{})
@@ -42,27 +44,32 @@ func (tc *testContext) SetupTest() {
 	fakeVpnClientFactory := func(vpnSession session.SessionDto, identity identity.Identity) (openvpn.Client, error) {
 		return tc.fakeOpenVpn, nil
 	}
+	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogEstablisherFactory, fakeVpnClientFactory)
+	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogEstablisherFactory, fakeVpnClientFactory, tc.fakeStatsKeeper)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
 }
 
-func (tc *testContext) TestWithUnknownNodeKey() {
+func (tc *testContext) TestWithUnknownNodeKeyConnectionIsNotMade() {
 	noProposalsError := errors.New("node has no service proposals")
 
 	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), "unknown-node"))
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", noProposalsError}, tc.connManager.Status())
+
+	assert.False(tc.T(), tc.fakeStatsKeeper.SessionStartMarked)
 }
 
-func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSet() {
+func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSetAndSessionStartIsNotMarked() {
 	fatalVpnError := errors.New("fatal connection error")
 	tc.fakeOpenVpn.onConnectReturnError = fatalVpnError
 
 	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1"))
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", fatalVpnError}, tc.connManager.Status())
+
+	assert.False(tc.T(), tc.fakeStatsKeeper.SessionStartMarked)
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
@@ -70,6 +77,14 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
+}
+
+func (tc *testContext) TestWhenManagerMadeConnectionSessionStartIsMarked() {
+	err := tc.connManager.Connect(identity.FromAddress("identity-1"), "vpn-node-1")
+
+	assert.NoError(tc.T(), err)
+
+	assert.True(tc.T(), tc.fakeStatsKeeper.SessionStartMarked)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
@@ -177,4 +192,23 @@ func (fd *fakeDialog) Request(producer communication.RequestProducer) (responseP
 			},
 		},
 		nil
+}
+
+type fakeSessionStatsKeeper struct {
+	SessionStartMarked bool
+}
+
+func (fsk *fakeSessionStatsKeeper) Save(stats bytescount.SessionStats) {
+}
+
+func (fsk *fakeSessionStatsKeeper) Retrieve() bytescount.SessionStats {
+	return bytescount.SessionStats{}
+}
+
+func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
+	fsk.SessionStartMarked = true
+}
+
+func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
+	return time.Duration(0)
 }

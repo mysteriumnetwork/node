@@ -22,20 +22,23 @@ type connectionManager struct {
 	mysteriumClient          server.Client
 	dialogEstablisherFactory DialogEstablisherFactory
 	vpnClientFactory         VpnClientFactory
+	statsKeeper              bytescount.SessionStatsKeeper
 	//these are populated by Connect at runtime
 	dialog    communication.Dialog
 	vpnClient openvpn.Client
 	status    ConnectionStatus
 }
 
-func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEstablisherFactory, vpnClientFactory VpnClientFactory) *connectionManager {
+func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEstablisherFactory,
+	vpnClientFactory VpnClientFactory, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
-		mysteriumClient,
-		dialogEstablisherFactory,
-		vpnClientFactory,
-		nil,
-		nil,
-		statusNotConnected(),
+		mysteriumClient:          mysteriumClient,
+		dialogEstablisherFactory: dialogEstablisherFactory,
+		vpnClientFactory:         vpnClientFactory,
+		statsKeeper:              statsKeeper,
+		dialog:                   nil,
+		vpnClient:                nil,
+		status:                   statusNotConnected(),
 	}
 }
 
@@ -73,6 +76,7 @@ func (manager *connectionManager) Connect(id identity.Identity, nodeKey string) 
 		return err
 	}
 
+	manager.statsKeeper.MarkSessionStart()
 	manager.status = statusConnected(vpnSession.ID)
 	return nil
 }
@@ -124,7 +128,7 @@ func statusDisconnecting() ConnectionStatus {
 }
 
 func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntimeDirectory string,
-	signerFactory identity.SignerFactory, statsKeeper *bytescount.SessionStatsKeeper) VpnClientFactory {
+	signerFactory identity.SignerFactory, statsKeeper bytescount.SessionStatsKeeper) VpnClientFactory {
 	return func(vpnSession session.SessionDto, id identity.Identity) (openvpn.Client, error) {
 		vpnConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,
