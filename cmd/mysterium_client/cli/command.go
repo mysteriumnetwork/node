@@ -34,6 +34,7 @@ type Command struct {
 
 const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
+const statusConnected = "Connected"
 
 // Run starts CLI interface
 func (c *Command) Run() (err error) {
@@ -207,13 +208,15 @@ func (c *Command) status() {
 		info("SID:", status.SessionID)
 	}
 
-	statistics, err := c.tequilapi.ConnectionStatistics()
-	if err != nil {
-		warn(err)
-	} else {
-		info(fmt.Sprintf("Connection duration: %ds", statistics.DurationSeconds))
-		info("Bytes sent:", statistics.BytesSent)
-		info("Bytes received:", statistics.BytesReceived)
+	if status.Status == statusConnected {
+		statistics, err := c.tequilapi.ConnectionStatistics()
+		if err != nil {
+			warn(err)
+		} else {
+			info(fmt.Sprintf("Connection duration: %ds", statistics.DurationSeconds))
+			info("Bytes sent:", statistics.BytesSent)
+			info("Bytes received:", statistics.BytesReceived)
+		}
 	}
 }
 
