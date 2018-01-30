@@ -55,7 +55,7 @@ func (establisher *dialogEstablisher) CreateDialog(
 		return dialog, err
 	}
 
-	dialog = establisher.newDialogToPeer(peerAddress, peerCodec)
+	dialog = establisher.newDialogToPeer(peerID, peerAddress, peerCodec)
 	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", peerContact))
 
 	return dialog, nil
@@ -99,12 +99,14 @@ func (establisher *dialogEstablisher) newSenderToPeer(
 }
 
 func (establisher *dialogEstablisher) newDialogToPeer(
+	peerID identity.Identity,
 	peerAddress *discovery.AddressNATS,
 	peerCodec *codecSecured,
 ) *dialog {
 
 	subTopic := peerAddress.GetTopic() + "." + establisher.myID.Address
 	return &dialog{
+		peerID:   peerID,
 		Sender:   nats.NewSender(peerAddress.GetConnection(), peerCodec, subTopic),
 		Receiver: nats.NewReceiver(peerAddress.GetConnection(), peerCodec, subTopic),
 	}

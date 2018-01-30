@@ -167,10 +167,16 @@ func (foc *fakeOpenvpnClient) resumeAction() {
 }
 
 type fakeDialog struct {
+	peerId identity.Identity
 }
 
 func (fd *fakeDialog) CreateDialog(peerID identity.Identity, peerContact dto_discovery.Contact) (communication.Dialog, error) {
+	fd.peerId = peerID
 	return fd, nil
+}
+
+func (fd *fakeDialog) GetPeerID() identity.Identity {
+	return fd.peerId
 }
 
 func (fd *fakeDialog) Close() error {

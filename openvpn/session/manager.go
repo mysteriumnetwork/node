@@ -1,6 +1,7 @@
 package session
 
 import (
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/session"
 )
@@ -20,20 +21,16 @@ type manager struct {
 	sessionMap   map[session.SessionID]session.Session
 }
 
-func (manager *manager) Create() (sessionInstance session.Session, err error) {
+func (manager *manager) Create(peerId identity.Identity) (sessionInstance session.Session, err error) {
 	sessionInstance.ID = manager.idGenerator.Generate()
-
+	sessionInstance.ConsumerIdentity = peerId
 	sessionInstance.Config, err = openvpn.ConfigToString(*manager.clientConfig.Config)
 	if err != nil {
 		return
 	}
 
-	manager.add(sessionInstance)
+	manager.sessionMap[sessionInstance.ID] = sessionInstance
 	return sessionInstance, nil
-}
-
-func (manager *manager) add(session session.Session) {
-	manager.sessionMap[session.ID] = session
 }
 
 func (manager *manager) FindSession(id session.SessionID) (session.Session, bool) {

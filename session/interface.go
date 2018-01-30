@@ -19,6 +19,6 @@ type Generator interface {
 
 //Manager defines methods for session management
 type Manager interface {
-	Create() (Session, error)
+	Create(identity.Identity) (Session, error)
 	FindSession(SessionID) (Session, bool)
 }
