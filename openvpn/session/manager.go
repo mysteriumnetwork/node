@@ -4,14 +4,16 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/session"
+	"sync"
 )
 
 //NewManager returns session manager which maintans a map of session id -> session
-func NewManager(clientConfig *openvpn.ClientConfig) *manager {
+func NewManager(clientConfig *openvpn.ClientConfig, idGenerator session.Generator) *manager {
 	return &manager{
-		idGenerator:  &session.UUIDGenerator{},
+		idGenerator:  idGenerator,
 		clientConfig: clientConfig,
 		sessionMap:   make(map[session.SessionID]session.Session),
+		creationLock: &sync.Mutex{},
 	}
 }
 
@@ -19,9 +21,12 @@ type manager struct {
 	idGenerator  session.Generator
 	clientConfig *openvpn.ClientConfig
 	sessionMap   map[session.SessionID]session.Session
+	creationLock *sync.Mutex
 }
 
 func (manager *manager) Create(peerId identity.Identity) (sessionInstance session.Session, err error) {
+	manager.creationLock.Lock()
+	defer manager.creationLock.Unlock()
 	sessionInstance.ID = manager.idGenerator.Generate()
 	sessionInstance.ConsumerIdentity = peerId
 	sessionInstance.Config, err = openvpn.ConfigToString(*manager.clientConfig.Config)

@@ -67,11 +67,14 @@ func NewCommandWith(
 			)
 		},
 		sessionManagerFactory: func(vpnServerIP string) session.Manager {
-			return openvpn_session.NewManager(openvpn.NewClientConfig(
-				vpnServerIP,
-				filepath.Join(options.DirectoryConfig, "ca.crt"),
-				filepath.Join(options.DirectoryConfig, "ta.key"),
-			))
+			return openvpn_session.NewManager(
+				openvpn.NewClientConfig(
+					vpnServerIP,
+					filepath.Join(options.DirectoryConfig, "ca.crt"),
+					filepath.Join(options.DirectoryConfig, "ta.key"),
+				),
+				&session.UUIDGenerator{},
+			)
 		},
 		vpnServerFactory: func(manager session.Manager) *openvpn.Server {
 			vpnServerConfig := openvpn.NewServerConfig(

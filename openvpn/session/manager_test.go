@@ -18,13 +18,12 @@ func TestManagerCreatesNewSession(t *testing.T) {
 	clientConfig := &openvpn.ClientConfig{&openvpn.Config{}}
 	clientConfig.SetPort(1000)
 
-	manager := manager{
-		idGenerator: &session.GeneratorFake{
+	manager := NewManager(
+		clientConfig,
+		&session.GeneratorFake{
 			SessionIdMock: session.SessionID("mocked-id"),
 		},
-		clientConfig: clientConfig,
-		sessionMap:   make(map[session.SessionID]session.Session),
-	}
+	)
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"))
 	assert.NoError(t, err)
