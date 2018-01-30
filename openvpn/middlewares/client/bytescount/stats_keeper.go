@@ -1,7 +1,6 @@
 package bytescount
 
 import (
-	"errors"
 	"time"
 )
 
@@ -10,7 +9,7 @@ type SessionStatsKeeper interface {
 	Save(stats SessionStats)
 	Retrieve() SessionStats
 	MarkSessionStart()
-	GetSessionDuration() (time.Duration, error)
+	GetSessionDuration() time.Duration
 }
 
 // TimeGetter function returns current time
@@ -44,10 +43,10 @@ func (keeper *sessionStatsKeeper) MarkSessionStart() {
 }
 
 // GetSessionDuration returns elapsed time from marked session start
-func (keeper *sessionStatsKeeper) GetSessionDuration() (time.Duration, error) {
+func (keeper *sessionStatsKeeper) GetSessionDuration() time.Duration {
 	if keeper.sessionStart == nil {
-		return time.Duration(0), errors.New("session start was not marked")
+		return time.Duration(0)
 	}
 	duration := keeper.timeGetter().Sub(*keeper.sessionStart)
-	return duration, nil
+	return duration
 }

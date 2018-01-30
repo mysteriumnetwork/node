@@ -2,7 +2,6 @@ package endpoints
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/identity"
@@ -89,12 +88,7 @@ func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	stats := ce.statsKeeper.Retrieve()
 
-	duration, err := ce.statsKeeper.GetSessionDuration()
-	if err != nil {
-		newErr := fmt.Errorf("unable to retrieve session duration: %v", err.Error())
-		utils.SendError(writer, newErr, http.StatusUnprocessableEntity)
-		return
-	}
+	duration := ce.statsKeeper.GetSessionDuration()
 
 	response := struct {
 		BytesSent       int `json:"bytesSent"`

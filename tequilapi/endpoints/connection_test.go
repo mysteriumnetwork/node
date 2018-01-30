@@ -337,7 +337,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	)
 }
 
-func TestGetStatisticsEndpointReturnsErrorWhenSessionIsNotStarted(t *testing.T) {
+func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testing.T) {
 	settableClock := utils.SettableClock{}
 	statsKeeper := bytescount.NewSessionStatsKeeper(settableClock.GetTime)
 	stats := bytescount.SessionStats{BytesSent: 1, BytesReceived: 2}
@@ -348,11 +348,12 @@ func TestGetStatisticsEndpointReturnsErrorWhenSessionIsNotStarted(t *testing.T) 
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)
-	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
 		t,
 		`{
-			"message": "unable to retrieve session duration: session start was not marked"
+			"bytesSent": 1,
+			"bytesReceived": 2,
+			"durationSeconds": 0
 		}`,
 		resp.Body.String(),
 	)

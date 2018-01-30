@@ -209,6 +209,6 @@ func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
 	fsk.SessionStartMarked = true
 }
 
-func (fsk *fakeSessionStatsKeeper) GetSessionDuration() (time.Duration, error) {
-	return time.Duration(0), nil
+func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
+	return time.Duration(0)
 }
