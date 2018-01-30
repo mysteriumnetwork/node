@@ -23,7 +23,7 @@ type Client struct {
 }
 
 // GetIdentities returns a list of client identities
-func (client *Client) GetIdentities() (ids []IdentityDto, err error) {
+func (client *Client) GetIdentities() (ids []IdentityDTO, err error) {
 	response, err := client.http.Get("identities", url.Values{})
 	if err != nil {
 		return
@@ -37,7 +37,7 @@ func (client *Client) GetIdentities() (ids []IdentityDto, err error) {
 }
 
 // NewIdentity creates a new client identity
-func (client *Client) NewIdentity(passphrase string) (id IdentityDto, err error) {
+func (client *Client) NewIdentity(passphrase string) (id IdentityDTO, err error) {
 	payload := struct {
 		Passphrase string `json:"passphrase"`
 	}{
@@ -70,7 +70,7 @@ func (client *Client) RegisterIdentity(address string) (err error) {
 }
 
 // Connect initiates a new connection to a host identified by providerID
-func (client *Client) Connect(consumerID, providerID string) (status StatusDto, err error) {
+func (client *Client) Connect(consumerID, providerID string) (status StatusDTO, err error) {
 	payload := struct {
 		Identity string `json:"identity"`
 		NodeKey  string `json:"nodeKey"`
@@ -119,7 +119,7 @@ func (client *Client) ConnectionStatistics() (statistics StatisticsDTO, err erro
 }
 
 // Status returns connection status
-func (client *Client) Status() (status StatusDto, err error) {
+func (client *Client) Status() (status StatusDTO, err error) {
 	response, err := client.http.Get("connection", url.Values{})
 	if err != nil {
 		return
@@ -145,6 +145,7 @@ func (client *Client) GetIP() (string, error) {
 	return ipData.IP, nil
 }
 
+// Unlock allows using identity in following commands
 func (client *Client) Unlock(identity, passphrase string) error {
 	path := fmt.Sprintf("identities/%s/unlock", identity)
 	payload := struct {

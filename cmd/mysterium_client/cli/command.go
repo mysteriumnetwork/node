@@ -204,7 +204,7 @@ func (c *Command) status() {
 		warn(err)
 	} else {
 		info("Status:", status.Status)
-		info("SID:", status.SessionId)
+		info("SID:", status.SessionID)
 	}
 
 	statistics, err := c.tequilapi.ConnectionStatistics()
