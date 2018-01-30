@@ -18,15 +18,6 @@ var (
 	locationLTTelia = dto_discovery.Location{"LT", "Vilnius", "AS8764"}
 )
 
-func Test_NewServiceProposal(t *testing.T) {
-	proposal := NewServiceProposal(providerID, providerContact)
-
-	serviceDefinition, ok := proposal.ServiceDefinition.(dto.ServiceDefinition)
-	assert.True(t, ok)
-	assert.Equal(t, locationUnknown, serviceDefinition.Location)
-	assert.Equal(t, locationUnknown, serviceDefinition.LocationOriginate)
-}
-
 func Test_NewServiceProposalWithLocation(t *testing.T) {
 	proposal := NewServiceProposalWithLocation(providerID, providerContact, locationLTTelia)
 

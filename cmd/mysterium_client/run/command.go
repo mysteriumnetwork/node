@@ -14,6 +14,7 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
+	"time"
 )
 
 //NewCommand function created new client command with options passed from commandline
@@ -36,19 +37,19 @@ func NewCommandWith(
 
 	identityManager := identity.NewIdentityManager(keystoreInstance)
 
-	dialogEstablisherFactory := func(myIdentity identity.Identity) communication.DialogEstablisher {
-		return nats_dialog.NewDialogEstablisher(myIdentity, identity.NewSigner(keystoreInstance, myIdentity))
+	dialogEstablisherFactory := func(myID identity.Identity) communication.DialogEstablisher {
+		return nats_dialog.NewDialogEstablisher(myID, identity.NewSigner(keystoreInstance, myID))
 	}
 
 	signerFactory := func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(keystoreInstance, id)
 	}
 
-	statsKeeper := &bytescount.SessionStatsKeeper{}
+	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
 
 	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime, signerFactory, statsKeeper)
 
-	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory)
+	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)

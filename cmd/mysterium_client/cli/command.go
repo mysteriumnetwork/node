@@ -136,21 +136,21 @@ func (c *Command) connect(argsString string) {
 		return
 	}
 
-	consumerId, providerId := identities[0], identities[1]
+	consumerID, providerID := identities[0], identities[1]
 
-	if consumerId == "new" {
+	if consumerID == "new" {
 		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)
 		if err != nil {
 			warn(err)
 			return
 		}
-		consumerId = id.Address
-		success("New identity created:", consumerId)
+		consumerID = id.Address
+		success("New identity created:", consumerID)
 	}
 
-	status("CONNECTING", "from:", consumerId, "to:", providerId)
+	status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	_, err := c.tequilapi.Connect(consumerId, providerId)
+	_, err := c.tequilapi.Connect(consumerID, providerID)
 	if err != nil {
 		warn(err)
 		return

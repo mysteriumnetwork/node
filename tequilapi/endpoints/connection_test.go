@@ -7,11 +7,13 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
+	"github.com/mysterium/node/utils"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type fakeManager struct {
@@ -46,8 +48,14 @@ func (fm *fakeManager) Wait() error {
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
+	settableClock := utils.SettableClock{}
 	ipResolver := ip.NewFakeResolver("123.123.123.123")
-	statsKeeper := &bytescount.SessionStatsKeeper{}
+	statsKeeper := bytescount.NewSessionStatsKeeper(settableClock.GetTime)
+
+	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
+	settableClock.SetTime(sessionStart)
+	statsKeeper.MarkSessionStart()
+	settableClock.SetTime(sessionStart.Add(time.Minute))
 
 	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper)
 
@@ -76,7 +84,11 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 		},
 		{
 			http.MethodGet, "/connection/statistics", "",
-			http.StatusOK, `{"bytesSent": 0, "bytesReceived": 0}`,
+			http.StatusOK, `{
+				"bytesSent": 0,
+				"bytesReceived": 0,
+				"durationSeconds": 60
+			}`,
 		},
 	}
 
@@ -299,7 +311,35 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 }
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
-	statsKeeper := &bytescount.SessionStatsKeeper{}
+	settableClock := utils.SettableClock{}
+	statsKeeper := bytescount.NewSessionStatsKeeper(settableClock.GetTime)
+	stats := bytescount.SessionStats{BytesSent: 1, BytesReceived: 2}
+	statsKeeper.Save(stats)
+
+	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
+	settableClock.SetTime(sessionStart)
+	statsKeeper.MarkSessionStart()
+	settableClock.SetTime(sessionStart.Add(time.Minute))
+
+	manager := fakeManager{}
+	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper)
+
+	resp := httptest.NewRecorder()
+	connEndpoint.GetStatistics(resp, nil, nil)
+	assert.JSONEq(
+		t,
+		`{
+			"bytesSent": 1,
+			"bytesReceived": 2,
+			"durationSeconds": 60
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testing.T) {
+	settableClock := utils.SettableClock{}
+	statsKeeper := bytescount.NewSessionStatsKeeper(settableClock.GetTime)
 	stats := bytescount.SessionStats{BytesSent: 1, BytesReceived: 2}
 	statsKeeper.Save(stats)
 
@@ -312,7 +352,8 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 		t,
 		`{
 			"bytesSent": 1,
-			"bytesReceived": 2
+			"bytesReceived": 2,
+			"durationSeconds": 0
 		}`,
 		resp.Body.String(),
 	)

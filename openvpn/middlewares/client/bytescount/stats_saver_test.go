@@ -3,10 +3,11 @@ package bytescount
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestNewSessionStatsSaver(t *testing.T) {
-	statsKeeper := &SessionStatsKeeper{}
+	statsKeeper := NewSessionStatsKeeper(time.Now)
 
 	saver := NewSessionStatsSaver(statsKeeper)
 	stats := SessionStats{BytesSent: 1, BytesReceived: 2}

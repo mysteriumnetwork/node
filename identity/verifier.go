@@ -1,53 +1,44 @@
 package identity
 
-import (
-	"errors"
-	"github.com/ethereum/go-ethereum/crypto"
-)
-
+// Verifier checks message's sanity
 type Verifier interface {
 	Verify(message []byte, signature Signature) bool
 }
 
+// NewVerifierSigned constructs Verifier which:
+//   - checks signature's sanity
+//   - checks if message was unchanged by middleman
 func NewVerifierSigned() *verifierSigned {
-	return &verifierSigned{}
+	return &verifierSigned{NewExtractor()}
 }
 
-func NewVerifierIdentity(peerIdentity Identity) *verifierIdentity {
-	return &verifierIdentity{peerIdentity}
+// NewVerifierIdentity constructs Verifier which:
+//   - checks signature's sanity
+//   - checks if message was unchanged by middleman
+//   - checks if message is from exact identity
+func NewVerifierIdentity(peerID Identity) *verifierIdentity {
+	return &verifierIdentity{NewExtractor(), peerID}
 }
 
-type verifierSigned struct{}
+type verifierSigned struct {
+	extractor Extractor
+}
 
 func (verifier *verifierSigned) Verify(message []byte, signature Signature) bool {
-	_, err := extractSignerIdentity(message, signature)
+	_, err := verifier.extractor.Extract(message, signature)
 	return err == nil
 }
 
 type verifierIdentity struct {
-	peerIdentity Identity
+	extractor Extractor
+	peerID    Identity
 }
 
 func (verifier *verifierIdentity) Verify(message []byte, signature Signature) bool {
-	identity, err := extractSignerIdentity(message, signature)
+	identity, err := verifier.extractor.Extract(message, signature)
 	if err != nil {
 		return false
 	}
 
-	return identity == verifier.peerIdentity
-}
-
-func extractSignerIdentity(message []byte, signature Signature) (Identity, error) {
-	signatureBytes := signature.Bytes()
-	if len(signatureBytes) == 0 {
-		return Identity{}, errors.New("empty signature")
-	}
-
-	recoveredKey, err := crypto.Ecrecover(messageHash(message), signatureBytes)
-	if err != nil {
-		return Identity{}, err
-	}
-	recoveredAddress := crypto.PubkeyToAddress(*crypto.ToECDSAPub(recoveredKey)).Hex()
-
-	return FromAddress(recoveredAddress), nil
+	return identity == verifier.peerID
 }

@@ -25,10 +25,10 @@ type statusResponse struct {
 type connectionEndpoint struct {
 	manager     client_connection.Manager
 	ipResolver  ip.Resolver
-	statsKeeper *bytescount.SessionStatsKeeper
+	statsKeeper bytescount.SessionStatsKeeper
 }
 
-func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver, statsKeeper *bytescount.SessionStatsKeeper) *connectionEndpoint {
+func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *connectionEndpoint {
 	return &connectionEndpoint{
 		manager:     manager,
 		ipResolver:  ipResolver,
@@ -87,19 +87,24 @@ func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 // GetStatistics returns statistics about current connection
 func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	stats := ce.statsKeeper.Retrieve()
+
+	duration := ce.statsKeeper.GetSessionDuration()
+
 	response := struct {
-		BytesSent     int `json:"bytesSent"`
-		BytesReceived int `json:"bytesReceived"`
+		BytesSent       int `json:"bytesSent"`
+		BytesReceived   int `json:"bytesReceived"`
+		DurationSeconds int `json:"durationSeconds"`
 	}{
-		BytesSent:     stats.BytesSent,
-		BytesReceived: stats.BytesReceived,
+		BytesSent:       stats.BytesSent,
+		BytesReceived:   stats.BytesReceived,
+		DurationSeconds: int(duration.Seconds()),
 	}
 	utils.WriteAsJSON(response, writer)
 }
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ip.Resolver,
-	statsKeeper *bytescount.SessionStatsKeeper) {
+	statsKeeper bytescount.SessionStatsKeeper) {
 	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)

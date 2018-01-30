@@ -121,7 +121,7 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 		ID                int              `json:"id"`
 		Format            string           `json:"format"`
 		ServiceType       string           `json:"service_type"`
-		ProviderId        string           `json:"provider_id"`
+		ProviderID        string           `json:"provider_id"`
 		PaymentMethodType string           `json:"payment_method_type"`
 		ServiceDefinition *json.RawMessage `json:"service_definition"`
 		PaymentMethod     *json.RawMessage `json:"payment_method"`
@@ -134,7 +134,7 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 	genericProposal.ID = jsonData.ID
 	genericProposal.Format = jsonData.Format
 	genericProposal.ServiceType = jsonData.ServiceType
-	genericProposal.ProviderID = jsonData.ProviderId
+	genericProposal.ProviderID = jsonData.ProviderID
 	genericProposal.PaymentMethodType = jsonData.PaymentMethodType
 
 	// run the service definition implementation from our registry
