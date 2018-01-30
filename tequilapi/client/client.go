@@ -23,7 +23,7 @@ type Client struct {
 }
 
 // GetIdentities returns a list of client identities
-func (client *Client) GetIdentities() (ids []IdentityDto, err error) {
+func (client *Client) GetIdentities() (ids []IdentityDTO, err error) {
 	response, err := client.http.Get("identities", url.Values{})
 	if err != nil {
 		return
@@ -37,7 +37,7 @@ func (client *Client) GetIdentities() (ids []IdentityDto, err error) {
 }
 
 // NewIdentity creates a new client identity
-func (client *Client) NewIdentity(passphrase string) (id IdentityDto, err error) {
+func (client *Client) NewIdentity(passphrase string) (id IdentityDTO, err error) {
 	payload := struct {
 		Passphrase string `json:"passphrase"`
 	}{
@@ -70,7 +70,7 @@ func (client *Client) RegisterIdentity(address string) (err error) {
 }
 
 // Connect initiates a new connection to a host identified by providerID
-func (client *Client) Connect(consumerID, providerID string) (status StatusDto, err error) {
+func (client *Client) Connect(consumerID, providerID string) (status StatusDTO, err error) {
 	payload := struct {
 		Identity string `json:"identity"`
 		NodeKey  string `json:"nodeKey"`
@@ -106,14 +106,28 @@ func (client *Client) Disconnect() (err error) {
 	return nil
 }
 
-// Status returns connection status
-func (client *Client) Status() (status StatusDto, err error) {
-	response, err := client.http.Get("connection", url.Values{})
+// ConnectionStatistics returns statistics about current connection
+func (client *Client) ConnectionStatistics() (StatisticsDTO, error) {
+	response, err := client.http.Get("connection/statistics", url.Values{})
 	if err != nil {
-		return
+		return StatisticsDTO{}, err
 	}
 	defer response.Body.Close()
 
+	var statistics StatisticsDTO
+	err = parseResponseJson(response, &statistics)
+	return statistics, err
+}
+
+// Status returns connection status
+func (client *Client) Status() (StatusDTO, error) {
+	response, err := client.http.Get("connection", url.Values{})
+	if err != nil {
+		return StatusDTO{}, err
+	}
+	defer response.Body.Close()
+
+	var status StatusDTO
 	err = parseResponseJson(response, &status)
 	return status, err
 }
@@ -133,6 +147,7 @@ func (client *Client) GetIP() (string, error) {
 	return ipData.IP, nil
 }
 
+// Unlock allows using identity in following commands
 func (client *Client) Unlock(identity, passphrase string) error {
 	path := fmt.Sprintf("identities/%s/unlock", identity)
 	payload := struct {

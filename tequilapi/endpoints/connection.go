@@ -91,13 +91,13 @@ func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 	duration := ce.statsKeeper.GetSessionDuration()
 
 	response := struct {
-		BytesSent       int `json:"bytesSent"`
-		BytesReceived   int `json:"bytesReceived"`
-		DurationSeconds int `json:"durationSeconds"`
+		BytesSent     int `json:"bytesSent"`
+		BytesReceived int `json:"bytesReceived"`
+		Duration      int `json:"duration"`
 	}{
-		BytesSent:       stats.BytesSent,
-		BytesReceived:   stats.BytesReceived,
-		DurationSeconds: int(duration.Seconds()),
+		BytesSent:     stats.BytesSent,
+		BytesReceived: stats.BytesReceived,
+		Duration:      int(duration.Seconds()),
 	}
 	utils.WriteAsJSON(response, writer)
 }
