@@ -25,10 +25,10 @@ type testContext struct {
 }
 
 var (
-	activeProviderId      = "vpn-node-1"
+	activeProviderID      = "vpn-node-1"
 	activeProviderContact = dto_discovery.Contact{}
 	activeProposal        = dto_discovery.ServiceProposal{
-		ProviderID:       activeProviderId,
+		ProviderID:       activeProviderID,
 		ProviderContacts: []dto_discovery.Contact{activeProviderContact},
 	}
 )
@@ -72,14 +72,14 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSetAn
 	fatalVpnError := errors.New("fatal connection error")
 	tc.fakeOpenVpn.onConnectReturnError = fatalVpnError
 
-	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderId))
+	assert.Error(tc.T(), tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderID))
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", fatalVpnError}, tc.connManager.Status())
 
 	assert.False(tc.T(), tc.fakeStatsKeeper.SessionStartMarked)
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
-	err := tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderId)
+	err := tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderID)
 
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
@@ -96,14 +96,14 @@ func (tc *testContext) TestWhenManagerMadeConnectionSessionStartIsMarked() {
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.fakeOpenVpn.delayableAction()
 	go func() {
-		tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderId)
+		tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderID)
 	}()
 	tc.fakeOpenVpn.waitForDelayState()
 	assert.Equal(tc.T(), ConnectionStatus{Connecting, "", nil}, tc.connManager.Status())
 }
 
 func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
-	err := tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderId)
+	err := tc.connManager.Connect(identity.FromAddress("identity-1"), activeProviderID)
 
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())

@@ -45,7 +45,7 @@ func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEs
 func (manager *connectionManager) Connect(myID identity.Identity, nodeKey string) error {
 	manager.status = statusConnecting()
 
-	providerId := identity.FromAddress(nodeKey)
+	providerID := identity.FromAddress(nodeKey)
 
 	proposals, err := manager.mysteriumClient.FindProposals(nodeKey)
 	if err != nil {
@@ -60,7 +60,7 @@ func (manager *connectionManager) Connect(myID identity.Identity, nodeKey string
 	proposal := proposals[0]
 
 	dialogEstablisher := manager.dialogEstablisherFactory(myID)
-	manager.dialog, err = dialogEstablisher.CreateDialog(providerId, proposal.ProviderContacts[0])
+	manager.dialog, err = dialogEstablisher.CreateDialog(providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		manager.status = statusError(err)
 		return err
