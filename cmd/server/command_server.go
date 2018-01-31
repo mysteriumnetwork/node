@@ -1,4 +1,4 @@
-package command_run
+package server
 
 import (
 	log "github.com/cihub/seelog"
@@ -16,8 +16,8 @@ import (
 	"time"
 )
 
-// CommandRun represent entrypoint for Mysterium server with top level components
-type CommandRun struct {
+// Command represent entrypoint for Mysterium server with top level components
+type Command struct {
 	identityLoader   func() (identity.Identity, error)
 	createSigner     identity.SignerFactory
 	ipResolver       ip.Resolver
@@ -35,7 +35,7 @@ type CommandRun struct {
 }
 
 // Run starts server - does not block
-func (cmd *CommandRun) Run() (err error) {
+func (cmd *Command) Run() (err error) {
 	providerID, err := cmd.identityLoader()
 	if err != nil {
 		return err
@@ -107,12 +107,12 @@ func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (
 }
 
 // Wait blocks until server is stopped
-func (cmd *CommandRun) Wait() error {
+func (cmd *Command) Wait() error {
 	return cmd.vpnServer.Wait()
 }
 
 // Kill stops server
-func (cmd *CommandRun) Kill() error {
+func (cmd *Command) Kill() error {
 	cmd.vpnServer.Stop()
 	err := cmd.dialogWaiter.Stop()
 	if err != nil {
