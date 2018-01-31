@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
 	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
-	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
+	command_server "github.com/mysterium/node/cmd/server"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/server"
@@ -44,7 +44,7 @@ func main() {
 	waiter.Wait()
 }
 
-func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup) {
+func runServer(serverCommand *command_server.Command, waiter *sync.WaitGroup) {
 	err := serverCommand.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Server starting error: ", err)

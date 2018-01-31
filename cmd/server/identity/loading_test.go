@@ -7,14 +7,6 @@ import (
 	"testing"
 )
 
-var fakeSuccessIdentitySelector = func() (identity.Identity, error) {
-	return identity.Identity{Address: "fake"}, nil
-}
-
-var fakeFailureIdentitySelector = func() (identity.Identity, error) {
-	return identity.Identity{}, errors.New("selection failed")
-}
-
 func Test_LoadIdentityExisting(t *testing.T) {
 	identityHandler := &handlerFake{}
 	id, err := LoadIdentity(identityHandler, "existing", "")
