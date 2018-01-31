@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-//NewManager returns session manager which maintans a map of session id -> session
+// NewManager returns session manager which maintans a map of session id -> session
 func NewManager(clientConfig *openvpn.ClientConfig, idGenerator session.Generator) *manager {
 	return &manager{
 		idGenerator:  idGenerator,
