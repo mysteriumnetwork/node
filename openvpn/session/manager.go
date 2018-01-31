@@ -24,11 +24,11 @@ type manager struct {
 	creationLock *sync.Mutex
 }
 
-func (manager *manager) Create(peerId identity.Identity) (sessionInstance session.Session, err error) {
+func (manager *manager) Create(peerID identity.Identity) (sessionInstance session.Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 	sessionInstance.ID = manager.idGenerator.Generate()
-	sessionInstance.ConsumerIdentity = peerId
+	sessionInstance.ConsumerID = peerID
 	sessionInstance.Config, err = openvpn.ConfigToString(*manager.clientConfig.Config)
 	if err != nil {
 		return

@@ -7,9 +7,9 @@ type SessionID string
 
 //Session structure holds all required information about current session between service consumer and provider
 type Session struct {
-	ID               SessionID
-	Config           string
-	ConsumerIdentity identity.Identity
+	ID         SessionID
+	Config     string
+	ConsumerID identity.Identity
 }
 
 //Generator defines method for session id generation

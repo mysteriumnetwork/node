@@ -23,7 +23,7 @@ func (handler *handler) Handle(dialog communication.Dialog) error {
 		&SessionCreateConsumer{
 			CurrentProposalID: handler.CurrentProposalID,
 			SessionManager:    handler.SessionManager,
-			PeerID:            dialog.GetPeerID(),
+			PeerID:            dialog.PeerID(),
 		},
 	)
 	if subscribeError != nil {

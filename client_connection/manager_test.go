@@ -175,7 +175,7 @@ func (fd *fakeDialog) CreateDialog(peerID identity.Identity, peerContact dto_dis
 	return fd, nil
 }
 
-func (fd *fakeDialog) GetPeerID() identity.Identity {
+func (fd *fakeDialog) PeerID() identity.Identity {
 	return fd.peerId
 }
 

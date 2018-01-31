@@ -10,9 +10,9 @@ import (
 
 func TestManagerCreatesNewSession(t *testing.T) {
 	expectedSession := session.Session{
-		ID:               session.SessionID("mocked-id"),
-		Config:           "port 1000\n",
-		ConsumerIdentity: identity.FromAddress("deadbeef"),
+		ID:         session.SessionID("mocked-id"),
+		Config:     "port 1000\n",
+		ConsumerID: identity.FromAddress("deadbeef"),
 	}
 
 	clientConfig := &openvpn.ClientConfig{&openvpn.Config{}}

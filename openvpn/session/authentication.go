@@ -2,17 +2,17 @@ package session
 
 import (
 	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/openvpn/middlewares/client/auth"
+	client_auth "github.com/mysterium/node/openvpn/middlewares/client/auth"
+	server_auth "github.com/mysterium/node/openvpn/middlewares/server/auth"
 	"github.com/mysterium/node/session"
 )
 
-const sessionSignaturePrefix = "SessionId:"
+const sessionSignaturePrefix = "MystVpnSessionId:"
 
-//NewSignedSessionIdCredentialsProvider returns session id as username and id signed with given signer as password
-func NewSignedSessionIdCredentialsProvider(id session.SessionID, signer identity.Signer) auth.CredentialsProvider {
-	signature, err := signer.Sign([]byte(sessionSignaturePrefix + id))
-
+// SignatureCredentialsProvider returns session id as username and id signed with given signer as password
+func SignatureCredentialsProvider(id session.SessionID, signer identity.Signer) client_auth.CredentialsProvider {
 	return func() (string, string, error) {
+		signature, err := signer.Sign([]byte(sessionSignaturePrefix + id))
 		return string(id), signature.Base64(), err
 	}
 }
@@ -21,27 +21,21 @@ type sessionLookupFunc func(session session.SessionID) (session.Session, bool)
 
 type verifierFactory func(identity.Identity) identity.Verifier
 
-type sessionAuthenticator struct {
-	sessionLookup  sessionLookupFunc
-	createVerifier verifierFactory
-}
+// NewSessionValidator provides glue code for openvpn management interface to validate incoming client login request,
+// it expects session id as username, and session signature signed by client as password
+func NewSessionValidator(sessionLookup sessionLookupFunc, extractor identity.Extractor) server_auth.CredentialsChecker {
+	return func(sessionString, signatureString string) (bool, error) {
+		sessionId := session.SessionID(sessionString)
+		currentSession, found := sessionLookup(sessionId)
+		if !found {
+			return false, nil
+		}
 
-//NewSessionAuthenticator provides glue code for openvpn management interface to validate incoming client login request,
-//it expects session id as username, and session signature signed by client as password
-func NewSessionAuthenticator(sessionLookup sessionLookupFunc, verifierCreator verifierFactory) *sessionAuthenticator {
-	return &sessionAuthenticator{sessionLookup: sessionLookup, createVerifier: verifierCreator}
-}
-
-//ValidateSession validates provided session id and signature, by retrieving peer identity and checking session signature
-func (sa *sessionAuthenticator) ValidateSession(sessionString, signatureString string) (bool, error) {
-	sessionId := session.SessionID(sessionString)
-	currentSession, found := sa.sessionLookup(sessionId)
-	if !found {
-		return false, nil
+		signature := identity.SignatureBase64(signatureString)
+		extractedIdentity, err := extractor.Extract([]byte(sessionSignaturePrefix+sessionString), signature)
+		if err != nil {
+			return false, err
+		}
+		return currentSession.ConsumerID == extractedIdentity, nil
 	}
-
-	verifier := sa.createVerifier(currentSession.ConsumerIdentity)
-	signature := identity.SignatureBase64(signatureString)
-
-	return verifier.Verify([]byte(sessionSignaturePrefix+sessionString), signature), nil
 }

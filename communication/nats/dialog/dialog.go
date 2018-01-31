@@ -15,6 +15,6 @@ func (dialog *dialog) Close() error {
 	return nil
 }
 
-func (dialog *dialog) GetPeerID() identity.Identity {
+func (dialog *dialog) PeerID() identity.Identity {
 	return dialog.peerID
 }

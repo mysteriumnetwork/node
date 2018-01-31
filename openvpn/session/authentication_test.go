@@ -13,50 +13,43 @@ var returnSessionNotFound = func(sessionId session.SessionID) (session.Session, 
 
 var returnSessionFound = func(sessionId session.SessionID) (session.Session, bool) {
 	return session.Session{
-			ID:               session.SessionID("fake-id"),
-			Config:           "vpn-session-configuration-string",
-			ConsumerIdentity: identity.FromAddress("deadbeef"),
+			ID:         session.SessionID("fake-id"),
+			Config:     "vpn-session-configuration-string",
+			ConsumerID: identity.FromAddress("deadbeef"),
 		},
 		true
 }
 
-var validSignatureVerifierFactory = func(identity identity.Identity) identity.Verifier {
-	return &mockVerifier{validSignature: true}
-}
-
-var invalidSignatureVerifierFactory = func(identity identity.Identity) identity.Verifier {
-	return &mockVerifier{validSignature: false}
-}
-
 func TestAuthenticatorReturnsFalseWhenNoSessionFound(t *testing.T) {
-	authenticator := NewSessionAuthenticator(returnSessionNotFound, validSignatureVerifierFactory)
+	validateCredentials := NewSessionValidator(returnSessionNotFound, &mockExtractor{})
 
-	authenticated, err := authenticator.ValidateSession("not important", "not important")
+	authenticated, err := validateCredentials("not important", "not important")
 	assert.NoError(t, err)
 	assert.False(t, authenticated)
 }
 
 func TestAuthenticatorReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
-	authenticator := NewSessionAuthenticator(returnSessionFound, invalidSignatureVerifierFactory)
+	validateCredentials := NewSessionValidator(returnSessionFound, &mockExtractor{identity.FromAddress("wrongsignature"), nil})
 
-	authenticated, err := authenticator.ValidateSession("not important", "not important")
+	authenticated, err := validateCredentials("not important", "not important")
 	assert.NoError(t, err)
 	assert.False(t, authenticated)
 }
 
 func TestAuthenticatorReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing.T) {
-	authenticator := NewSessionAuthenticator(returnSessionFound, validSignatureVerifierFactory)
+	validateCredentials := NewSessionValidator(returnSessionFound, &mockExtractor{identity.FromAddress("deadbeef"), nil})
 
-	authenticated, err := authenticator.ValidateSession("not important", "not important")
+	authenticated, err := validateCredentials("not important", "not important")
 	assert.NoError(t, err)
 	assert.True(t, authenticated)
 
 }
 
-type mockVerifier struct {
-	validSignature bool
+type mockExtractor struct {
+	onExtractReturnIdentity identity.Identity
+	onExtractReturnError    error
 }
 
-func (mv *mockVerifier) Verify(message []byte, signature identity.Signature) bool {
-	return mv.validSignature
+func (mv *mockExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
+	return mv.onExtractReturnIdentity, mv.onExtractReturnError
 }

@@ -86,14 +86,12 @@ func NewCommandWith(
 				filepath.Join(options.DirectoryConfig, "crl.pem"),
 				filepath.Join(options.DirectoryConfig, "ta.key"),
 			)
-			sessionAuthenticator := openvpn_session.NewSessionAuthenticator(
+			sessionValidator := openvpn_session.NewSessionValidator(
 				manager.FindSession,
-				func(peerIdentity identity.Identity) identity.Verifier {
-					return identity.NewVerifierIdentity(peerIdentity)
-				},
+				identity.NewExtractor(),
 			)
 			vpnMiddlewares := []openvpn.ManagementMiddleware{
-				auth.NewMiddleware(sessionAuthenticator.ValidateSession),
+				auth.NewMiddleware(sessionValidator),
 			}
 			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime, vpnMiddlewares...)
 		},
