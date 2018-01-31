@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/cmd/client"
 	"github.com/mysterium/node/cmd/mysterium_client/cli"
-	"github.com/mysterium/node/cmd/mysterium_client/run"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"os"
 	"path/filepath"
@@ -12,13 +12,13 @@ import (
 
 func main() {
 
-	options, err := run.ParseArguments(os.Args)
+	options, err := client.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	cmdRun := run.NewCommand(options)
+	cmdRun := client.NewCommand(options)
 	cmd.NewTerminator(cmdRun)
 
 	if err := cmdRun.Run(); err != nil {
@@ -45,7 +45,7 @@ func main() {
 	}
 }
 
-func newStopHandler(cmdRun *run.CommandRun) func() error {
+func newStopHandler(cmdRun *client.Command) func() error {
 	return func() error {
 		if err := cmdRun.Kill(); err != nil {
 			return err

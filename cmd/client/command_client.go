@@ -1,4 +1,4 @@
-package run
+package client
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ import (
 )
 
 //NewCommand function creates new client command by given options
-func NewCommand(options CommandOptions) *CommandRun {
+func NewCommand(options CommandOptions) *Command {
 	return NewCommandWith(
 		options,
 		server.NewClient(),
@@ -29,7 +29,7 @@ func NewCommand(options CommandOptions) *CommandRun {
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
-) *CommandRun {
+) *Command {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 
@@ -59,20 +59,20 @@ func NewCommandWith(
 
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
-	return &CommandRun{
+	return &Command{
 		connectionManager,
 		httpAPIServer,
 	}
 }
 
-//CommandRun represent entrypoint for Mysterium client with top level components
-type CommandRun struct {
+//Command represent entrypoint for Mysterium client with top level components
+type Command struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.APIServer
 }
 
 //Run starts Tequilapi service - does not block
-func (cmd *CommandRun) Run() error {
+func (cmd *Command) Run() error {
 	err := cmd.httpApiServer.StartServing()
 	if err != nil {
 		return err
@@ -88,12 +88,12 @@ func (cmd *CommandRun) Run() error {
 }
 
 //Wait blocks until tequilapi service is stopped
-func (cmd *CommandRun) Wait() error {
+func (cmd *Command) Wait() error {
 	return cmd.httpApiServer.Wait()
 }
 
 //Kill stops tequilapi service
-func (cmd *CommandRun) Kill() error {
+func (cmd *Command) Kill() error {
 	err := cmd.connectionManager.Disconnect()
 	if err != nil {
 		return err

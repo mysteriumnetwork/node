@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"errors"
-	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
+	command_client "github.com/mysterium/node/cmd/client"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn"
 	"sync"
@@ -14,7 +14,7 @@ type Command struct {
 	ipResolver ip.Resolver
 	ipOriginal string
 
-	clientCommand *command_client.CommandRun
+	clientCommand *command_client.Command
 	ipCheckWaiter sync.WaitGroup
 	resultWriter  *resultWriter
 }
