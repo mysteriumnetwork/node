@@ -26,13 +26,19 @@ func (d *detector) DetectCountry(ip string) (string, error) {
 	defer db.Close()
 
 	ipObject := net.ParseIP(ip)
+	if ipObject == nil {
+		return "", errors.New("failed to parse IP")
+	}
+
 	countryRecord, err := db.Country(ipObject)
 	if err != nil {
 		return "", err
 	}
+
 	country := countryRecord.Country.IsoCode
 	if country == "" {
-		return "", errors.New("country was not found")
+		country = countryRecord.RegisteredCountry.IsoCode
 	}
+
 	return country, nil
 }
