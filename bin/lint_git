@@ -2,7 +2,8 @@
 
 # Shows linter warnings only for modified files.
 
-all_warnings=`bin/lint`
+packages=`go list ./...`
+all_warnings=`go run vendor/github.com/golang/lint/golint/*.go --set_exit_status ${packages}`
 
 for changed_file in `git diff --name-only origin/master`
   do
