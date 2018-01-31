@@ -21,7 +21,9 @@ var returnSessionFound = func(sessionId session.SessionID) (session.Session, boo
 }
 
 func TestAuthenticatorReturnsFalseWhenNoSessionFound(t *testing.T) {
-	validateCredentials := NewSessionValidator(returnSessionNotFound, &mockExtractor{})
+	mockManager := &mockSessionManager{}
+	mockExtractor := &mockExtractor{}
+	validateCredentials := NewSessionValidator(mockManager.FindSession, mockExtractor)
 
 	authenticated, err := validateCredentials("not important", "not important")
 	assert.NoError(t, err)
@@ -29,7 +31,19 @@ func TestAuthenticatorReturnsFalseWhenNoSessionFound(t *testing.T) {
 }
 
 func TestAuthenticatorReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
-	validateCredentials := NewSessionValidator(returnSessionFound, &mockExtractor{identity.FromAddress("wrongsignature"), nil})
+	mockManager := mockSessionManager{
+		session.Session{
+			ID:         session.SessionID("fake-id"),
+			Config:     "vpn-session-configuration-string",
+			ConsumerID: identity.FromAddress("deadbeef"),
+		},
+		true,
+	}
+	mockExtractor := &mockExtractor{
+		identity.FromAddress("wrongsignature"),
+		nil,
+	}
+	validateCredentials := NewSessionValidator(mockManager.FindSession, mockExtractor)
 
 	authenticated, err := validateCredentials("not important", "not important")
 	assert.NoError(t, err)
@@ -37,7 +51,19 @@ func TestAuthenticatorReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
 }
 
 func TestAuthenticatorReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing.T) {
-	validateCredentials := NewSessionValidator(returnSessionFound, &mockExtractor{identity.FromAddress("deadbeef"), nil})
+	mockManager := mockSessionManager{
+		session.Session{
+			ID:         session.SessionID("fake-id"),
+			Config:     "vpn-session-configuration-string",
+			ConsumerID: identity.FromAddress("deadbeef"),
+		},
+		true,
+	}
+	mockExtractor := &mockExtractor{
+		identity.FromAddress("deadbeef"),
+		nil,
+	}
+	validateCredentials := NewSessionValidator(mockManager.FindSession, mockExtractor)
 
 	authenticated, err := validateCredentials("not important", "not important")
 	assert.NoError(t, err)
@@ -45,11 +71,20 @@ func TestAuthenticatorReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing
 
 }
 
+type mockSessionManager struct {
+	onFindReturnSession session.Session
+	onFindReturnSuccess bool
+}
+
+func (manager *mockSessionManager) FindSession(sessionId session.SessionID) (session.Session, bool) {
+	return manager.onFindReturnSession, manager.onFindReturnSuccess
+}
+
 type mockExtractor struct {
 	onExtractReturnIdentity identity.Identity
 	onExtractReturnError    error
 }
 
-func (mv *mockExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
-	return mv.onExtractReturnIdentity, mv.onExtractReturnError
+func (extractor *mockExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
+	return extractor.onExtractReturnIdentity, extractor.onExtractReturnError
 }

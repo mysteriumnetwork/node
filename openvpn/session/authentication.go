@@ -17,13 +17,11 @@ func SignatureCredentialsProvider(id session.SessionID, signer identity.Signer) 
 	}
 }
 
-type sessionLookupFunc func(session session.SessionID) (session.Session, bool)
-
-type verifierFactory func(identity.Identity) identity.Verifier
+type sessionFinder func(session session.SessionID) (session.Session, bool)
 
 // NewSessionValidator provides glue code for openvpn management interface to validate incoming client login request,
 // it expects session id as username, and session signature signed by client as password
-func NewSessionValidator(sessionLookup sessionLookupFunc, extractor identity.Extractor) server_auth.CredentialsChecker {
+func NewSessionValidator(sessionLookup sessionFinder, extractor identity.Extractor) server_auth.CredentialsChecker {
 	return func(sessionString, signatureString string) (bool, error) {
 		sessionId := session.SessionID(sessionString)
 		currentSession, found := sessionLookup(sessionId)

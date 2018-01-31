@@ -28,7 +28,7 @@ func NewMiddleware(credentials CredentialsProvider) *middleware {
 
 func (m *middleware) Start(connection net.Conn) error {
 	m.connection = connection
-	log.Info("starting client user-pass fetchCredentials middleware")
+	log.Info("starting client user-pass provider middleware")
 	return nil
 }
 

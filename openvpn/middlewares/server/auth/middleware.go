@@ -175,6 +175,8 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 
 	authenticated, err := m.checkCredentials(m.lastUsername, m.lastPassword)
 	if err != nil {
+		log.Error("Authentication error: ", err)
+		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "internal error")
 		return false, err
 	}
 
@@ -184,13 +186,18 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 			return false, err
 		}
 	} else {
-		_, err = m.connection.Write([]byte("client-deny " + strconv.Itoa(m.clientID) + " " + strconv.Itoa(m.keyID) +
-			" wrong username or password \n"))
+		err = denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "wrong username or password")
 		if err != nil {
 			return false, err
 		}
 	}
 	return true, nil
+}
+
+func denyClientAuthWithMessage(conn net.Conn, clientID, keyID int, message string) error {
+	_, err := conn.Write([]byte("client-deny " + strconv.Itoa(clientID) + " " + strconv.Itoa(keyID) + " " +
+		message + "\n"))
+	return err
 }
 
 func (m *middleware) Reset() {
