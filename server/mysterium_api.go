@@ -95,8 +95,6 @@ func (mApi *mysteriumAPI) FindProposals(nodeKey string) ([]dto_discovery.Service
 		return nil, err
 	}
 
-	log.Info(mysteriumAPILogPrefix, "FindProposals fetched: ", proposalsResponse.Proposals)
-
 	return proposalsResponse.Proposals, nil
 }
 
@@ -122,6 +120,7 @@ func (mApi *mysteriumAPI) doRequest(req *http.Request) error {
 		return err
 	}
 	defer resp.Body.Close()
+
 	return parseResponseError(resp)
 }
 
