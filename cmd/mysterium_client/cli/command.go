@@ -225,7 +225,8 @@ func (c *Command) status() {
 }
 
 func (c *Command) proposals() {
-	proposals := c.fetchedProposals
+	proposals := c.fetchProposals()
+	c.fetchedProposals = proposals
 	info(fmt.Sprintf("Found %v proposals", len(proposals)))
 
 	for _, proposal := range proposals {
