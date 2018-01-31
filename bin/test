@@ -14,4 +14,8 @@ if [ -z "$ARGUMENTS" ]; then
     ARGUMENTS=`go list ./...`
 fi
 
-go test -cover ${ARGUMENTS}
+if go test -cover ${ARGUMENTS} ; then
+    echo "All tests passed."
+else
+    echo "Some tests failed!"
+fi
