@@ -23,7 +23,7 @@ export GOARCH=${GOARCH:=`go env GOHOSTARCH`}
 export GOBIN=`pwd`/build/monitor
 echo "Compiling 'mysterium_fake' for '$GOOS/$GOARCH'.."
 
-go install -ldflags="$(get_linker_ldflags)" cmd/mysterium_monitor/mysterium_monitor.go
+go install -ldflags="$(get_linker_ldflags)" mysterium_monitor.go
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Compile failed!"
     exit 1
