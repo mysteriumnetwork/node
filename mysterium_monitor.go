@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/mysterium/node/cmd/mysterium_monitor/command_run"
+	"github.com/mysterium/node/cmd/monitor"
 	"os"
 )
 
 func main() {
-	cmd := command_run.NewCommand()
+	cmd := monitor.NewCommand()
 
-	options, err := command_run.ParseArguments(os.Args)
+	options, err := monitor.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

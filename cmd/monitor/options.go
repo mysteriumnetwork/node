@@ -1,11 +1,11 @@
-package command_run
+package monitor
 
 import (
 	"errors"
 	"flag"
 )
 
-// CommandOptions describes options which are required to start CommandRun
+// CommandOptions describes options which are required to start Command
 type CommandOptions struct {
 	DirectoryRuntime string
 	Node             string
