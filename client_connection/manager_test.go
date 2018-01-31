@@ -69,7 +69,7 @@ func (tc *testContext) TestWithUnknownProviderConnectionIsNotMade() {
 	assert.Error(tc.T(), tc.connManager.Connect(myID, identity.FromAddress("unknown-node")))
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", noProposalsError}, tc.connManager.Status())
 
-	assert.False(tc.T(), tc.fakeStatsKeeper.SessionStartMarked)
+	assert.False(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
 }
 
 func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSetAndSessionStartIsNotMarked() {
@@ -79,7 +79,7 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSetAn
 	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID))
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", fatalVpnError}, tc.connManager.Status())
 
-	assert.False(tc.T(), tc.fakeStatsKeeper.SessionStartMarked)
+	assert.False(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
@@ -94,7 +94,7 @@ func (tc *testContext) TestWhenManagerMadeConnectionSessionStartIsMarked() {
 
 	assert.NoError(tc.T(), err)
 
-	assert.True(tc.T(), tc.fakeStatsKeeper.SessionStartMarked)
+	assert.True(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
@@ -218,7 +218,7 @@ func (fd *fakeDialog) Request(producer communication.RequestProducer) (responseP
 }
 
 type fakeSessionStatsKeeper struct {
-	SessionStartMarked bool
+	sessionStartMarked bool
 }
 
 func (fsk *fakeSessionStatsKeeper) Save(stats bytescount.SessionStats) {
@@ -229,7 +229,7 @@ func (fsk *fakeSessionStatsKeeper) Retrieve() bytescount.SessionStats {
 }
 
 func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
-	fsk.SessionStartMarked = true
+	fsk.sessionStartMarked = true
 }
 
 func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
