@@ -1,5 +1,5 @@
-hash: 5e43fcf0414f763bf225c903dbb2a4b5617f8e5bd447c619e9373ff65a966f84
-updated: 2018-01-19T16:22:44.18441+02:00
+hash: 61e52a707039f0bc4826d02ab455c08b8d129f88ee99925abdd9670380264dbc
+updated: 2018-01-29T16:42:00.01902+02:00
 imports:
 - name: github.com/aristanetworks/goarista
   version: d1195528dcb23ba20b6b77f38596720af652a572
@@ -67,6 +67,8 @@ imports:
   version: 767eb674ef14b09119b2fff3601e64558d530c47
 - name: github.com/satori/go.uuid
   version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
+- name: github.com/stamp/go-openssl.git
+  version: b5cda0941b72f2c6054ecf84c07f8c55a6813df4
 - name: github.com/stretchr/testify
   version: 890a5c3458b43e6104ff5da8dfa139d013d77544
   subpackages:

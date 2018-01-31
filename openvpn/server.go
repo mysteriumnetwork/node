@@ -1,6 +1,8 @@
 package openvpn
 
-import "sync"
+import (
+	"sync"
+)
 
 func NewServer(config *ServerConfig, directoryRuntime string, middlewares ...ManagementMiddleware) *Server {
 	// Add the management interface socketAddress to the config

@@ -12,6 +12,7 @@ import (
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/server/auth"
+	"github.com/mysterium/node/openvpn/primitives"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
@@ -58,6 +59,10 @@ func NewCommandWith(
 		locationDetector = location.NewDetectorFake("")
 	}
 
+	// (Re)generate required security primitives before openvpn start
+	openVPNPrimitives := primitives.NewOpenVPNSecPrimitives()
+	openVPNPrimitives.Generate()
+
 	return &CommandRun{
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, options.NodeKey, options.Passphrase)
@@ -73,12 +78,12 @@ func NewCommandWith(
 				identity.NewSigner(keystoreInstance, myID),
 			)
 		},
+
 		sessionManagerFactory: func(vpnServerIP string) session.Manager {
 			return openvpn_session.NewManager(
 				openvpn.NewClientConfig(
 					vpnServerIP,
-					filepath.Join(options.DirectoryConfig, "ca.crt"),
-					filepath.Join(options.DirectoryConfig, "ta.key"),
+					openVPNPrimitives,
 				),
 				&session.UUIDGenerator{},
 			)
@@ -86,12 +91,7 @@ func NewCommandWith(
 		vpnServerFactory: func(manager session.Manager) *openvpn.Server {
 			vpnServerConfig := openvpn.NewServerConfig(
 				"10.8.0.0", "255.255.255.0",
-				filepath.Join(options.DirectoryConfig, "ca.crt"),
-				filepath.Join(options.DirectoryConfig, "server.crt"),
-				filepath.Join(options.DirectoryConfig, "server.key"),
-				filepath.Join(options.DirectoryConfig, "dh.pem"),
-				filepath.Join(options.DirectoryConfig, "crl.pem"),
-				filepath.Join(options.DirectoryConfig, "ta.key"),
+				openVPNPrimitives,
 			)
 			sessionValidator := openvpn_session.NewSessionValidator(
 				manager.FindSession,
