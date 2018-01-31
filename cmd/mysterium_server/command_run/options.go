@@ -38,7 +38,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		&options.DirectoryRuntime,
 		"runtime-dir",
 		file.GetMysteriumDirectory("run"),
-		"Runtime directory for temp files (should be writable)",
+		"Runtime writable directory for temp files",
 	)
 
 	flags.StringVar(
@@ -59,7 +59,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		&options.LocationDatabase,
 		"location.database",
 		"GeoLite2-Country.mmdb",
-		"Service location autodetect database (GeoLite2 formatted e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/)",
+		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 	flags.StringVar(
 		&options.LocationCountry,
