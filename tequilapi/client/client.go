@@ -132,6 +132,19 @@ func (client *Client) Status() (StatusDTO, error) {
 	return status, err
 }
 
+// Proposals returns all available proposals for services
+func (client *Client) Proposals() ([]ProposalDTO, error) {
+	response, err := client.http.Get("proposals", url.Values{})
+	if err != nil {
+		return []ProposalDTO{}, err
+	}
+	defer response.Body.Close()
+
+	var proposals ProposalList
+	err = parseResponseJson(response, &proposals)
+	return proposals.Proposals, err
+}
+
 // GetIP returns public ip
 func (client *Client) GetIP() (string, error) {
 	response, err := client.http.Get("connection/ip", url.Values{})

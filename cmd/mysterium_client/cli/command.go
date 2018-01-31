@@ -91,6 +91,7 @@ func (c *Command) handleActions(line string) {
 		{"quit", c.quit},
 		{"help", c.help},
 		{"status", c.status},
+		{"proposals", c.proposals},
 		{"ip", c.ip},
 		{"disconnect", c.disconnect},
 	}
@@ -220,6 +221,28 @@ func (c *Command) status() {
 	}
 }
 
+func (c *Command) proposals() {
+	proposals, err := c.tequilapi.Proposals()
+	if err != nil {
+		warn(err)
+		return
+	}
+
+	info(fmt.Sprintf("Found %v proposals", len(proposals)))
+
+	for _, proposal := range proposals {
+		country := proposal.ServiceDefinition.LocationOriginate.Country
+		var countryString string
+		if country != nil {
+			countryString = *country
+		} else {
+			countryString = "Unknown"
+		}
+		msg := fmt.Sprintf("- provider id: %v, proposal id: %v, country: %v", proposal.ProviderID, proposal.ID, countryString)
+		info(msg)
+	}
+}
+
 func (c *Command) ip() {
 	ip, err := c.tequilapi.GetIP()
 	if err != nil {
@@ -324,6 +347,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client) *readline.PrefixComple
 			readline.PcItem("list"),
 		),
 		readline.PcItem("status"),
+		readline.PcItem("proposals"),
 		readline.PcItem("ip"),
 		readline.PcItem("disconnect"),
 		readline.PcItem("help"),
