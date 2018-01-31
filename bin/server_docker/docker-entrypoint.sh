@@ -15,4 +15,4 @@ if [ ! -d "$OS_DIR_RUN" ]; then
     mkdir -p $OS_DIR_RUN
 fi
 
-exec /usr/bin/mysterium_server --config-dir=$OS_DIR_CONFIG --runtime-dir=$OS_DIR_RUN
+exec /usr/bin/mysterium_server --config-dir=$OS_DIR_CONFIG --runtime-dir=$OS_DIR_RUN --country=$NODE_COUNTRY
