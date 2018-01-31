@@ -11,6 +11,7 @@ type CommandOptions struct {
 	DirectoryRuntime  string
 	DirectoryKeystore string
 	Passphrase        string
+	Country           string
 }
 
 func ParseArguments(args []string) (options CommandOptions, err error) {
@@ -48,6 +49,12 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"passphrase",
 		"",
 		"Identity passphrase",
+	)
+	flags.StringVar(
+		&options.Country,
+		"country",
+		"",
+		"Country code for service location. By default - country is auto detected",
 	)
 
 	err = flags.Parse(args[1:])

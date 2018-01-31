@@ -47,9 +47,13 @@ func NewCommandWith(
 		createSigner,
 	)
 
-	// Country database downloaded from http://dev.maxmind.com/geoip/geoip2/geolite2/
-	databasePath := filepath.Join(options.DirectoryConfig, "GeoLite2-Country.mmdb")
-	locationDetector := location.NewDetector(databasePath)
+	var locationDetector location.Detector
+	if options.Country != "" {
+		locationDetector = location.NewDetectorFake(options.Country)
+	} else {
+		// Country database downloaded from http://dev.maxmind.com/geoip/geoip2/geolite2/
+		locationDetector = location.NewDetector(filepath.Join(options.DirectoryConfig, "GeoLite2-Country.mmdb"))
+	}
 
 	return &CommandRun{
 		identityLoader: func() (identity.Identity, error) {
