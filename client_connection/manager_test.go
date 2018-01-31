@@ -6,6 +6,7 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
+	"github.com/mysterium/node/openvpn/middlewares/client/state"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
@@ -47,8 +48,10 @@ func (tc *testContext) SetupTest() {
 		make(chan int, 1),
 		make(chan int, 1),
 		nil,
+		nil,
 	}
-	fakeVpnClientFactory := func(vpnSession session.SessionDto, identity identity.Identity) (openvpn.Client, error) {
+	fakeVpnClientFactory := func(vpnSession session.SessionDto, identity identity.Identity, callback state.ClientStateCallback) (openvpn.Client, error) {
+		tc.fakeOpenVpn.stateCallback = callback
 		return tc.fakeOpenVpn, nil
 	}
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
@@ -105,6 +108,7 @@ func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 
 func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	err := tc.connManager.Connect(myID, activeProviderID)
+	tc.fakeOpenVpn.reportState(openvpn.STATE_CONNECTED)
 
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
@@ -120,6 +124,7 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	tc.fakeOpenVpn.waitForDelayState()
 	assert.Equal(tc.T(), ConnectionStatus{Disconnecting, "", nil}, tc.connManager.Status())
 	tc.fakeOpenVpn.resumeAction()
+	tc.fakeOpenVpn.reportState(openvpn.STATE_EXITING)
 	disconnectCompleted.Wait()
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
 }
@@ -133,6 +138,7 @@ type fakeOpenvpnClient struct {
 	delayStateEnteredNotifier chan int
 	resumeFromDelay           chan int
 	onConnectReturnError      error
+	stateCallback             state.ClientStateCallback
 }
 
 func (foc *fakeOpenvpnClient) Start() error {
@@ -165,6 +171,10 @@ func (foc *fakeOpenvpnClient) waitForDelayState() {
 
 func (foc *fakeOpenvpnClient) resumeAction() {
 	foc.resumeFromDelay <- 1
+}
+
+func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
+	foc.stateCallback(state)
 }
 
 type fakeDialog struct {

@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"syscall"
 )
 
 func NewProcess(logPrefix string) *Process {
@@ -102,8 +103,9 @@ func (process *Process) waitForShutdown(cmd *exec.Cmd) {
 	select {
 	// Wait for shutdown
 	case <-process.cmdShutdownStarted:
-		// Kill the server
-		if err := cmd.Process.Kill(); err != nil {
+		//First - shutdown gracefully
+		//TOOD - add timer and send SIGKILL after timeout?
+		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
 			return
 		}
 

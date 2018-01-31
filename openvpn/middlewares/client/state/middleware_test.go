@@ -8,9 +8,8 @@ import (
 
 var currentState openvpn.State
 
-func updateCurrentState(state openvpn.State) error {
+func updateCurrentState(state openvpn.State) {
 	currentState = state
-	return nil
 }
 
 func Test_Factory(t *testing.T) {
