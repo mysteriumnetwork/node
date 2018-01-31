@@ -7,19 +7,6 @@ import (
 	"testing"
 )
 
-var returnSessionNotFound = func(sessionId session.SessionID) (session.Session, bool) {
-	return session.Session{}, false
-}
-
-var returnSessionFound = func(sessionId session.SessionID) (session.Session, bool) {
-	return session.Session{
-			ID:         session.SessionID("fake-id"),
-			Config:     "vpn-session-configuration-string",
-			ConsumerID: identity.FromAddress("deadbeef"),
-		},
-		true
-}
-
 func TestAuthenticatorReturnsFalseWhenNoSessionFound(t *testing.T) {
 	mockManager := &mockSessionManager{}
 	mockExtractor := &mockExtractor{}
