@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 )
 
+// NewCommand function creates new server command by given options
 func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(
 		options,
@@ -27,6 +28,7 @@ func NewCommand(options CommandOptions) *CommandRun {
 	)
 }
 
+// NewCommandWith function creates new client command by given options + injects given dependencies
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,

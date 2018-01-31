@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-//NewCommand function created new client command with options passed from commandline
+//NewCommand function creates new client command by given options
 func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(
 		options,
@@ -65,7 +65,7 @@ func NewCommandWith(
 	}
 }
 
-//CommandRun represent entry point for MysteriumVpn client with top level components
+//CommandRun represent entrypoint for Mysterium client with top level components
 type CommandRun struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.APIServer
