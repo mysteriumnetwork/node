@@ -13,7 +13,7 @@ RUN GOOS=linux GOARCH=amd64 bin/server_build
 
 FROM alpine:3.6
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
-ENV NODE_COUNTRY ""
+ENV NODE_LOCATION_COUNTRY ""
 
 # Install packages
 RUN apk update \

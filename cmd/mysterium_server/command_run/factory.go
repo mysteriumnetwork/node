@@ -48,11 +48,12 @@ func NewCommandWith(
 	)
 
 	var locationDetector location.Detector
-	if options.Country != "" {
-		locationDetector = location.NewDetectorFake(options.Country)
+	if options.LocationCountry != "" {
+		locationDetector = location.NewDetectorFake(options.LocationCountry)
+	} else if options.LocationDatabase != "" {
+		locationDetector = location.NewDetector(filepath.Join(options.DirectoryConfig, options.LocationDatabase))
 	} else {
-		// Country database downloaded from http://dev.maxmind.com/geoip/geoip2/geolite2/
-		locationDetector = location.NewDetector(filepath.Join(options.DirectoryConfig, "GeoLite2-Country.mmdb"))
+		locationDetector = location.NewDetectorFake("")
 	}
 
 	return &CommandRun{
