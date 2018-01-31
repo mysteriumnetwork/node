@@ -53,10 +53,10 @@ func (client *clientRest) GetPublicIP() (string, error) {
 
 func (client *clientRest) GetOutboundIP() (string, error) {
 	conn, err := net.Dial("udp", "8.8.8.8:53")
-	defer conn.Close()
 	if err != nil {
 		return "", err
 	}
+	defer conn.Close()
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 	log.Info("[Detect Outbound IP] ", "IP detected: ", localAddr.IP.String())
