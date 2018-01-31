@@ -5,6 +5,7 @@ import (
 	"github.com/mysterium/node/utils/file"
 )
 
+// CommandOptions describes options which are required to start CommandRun
 type CommandOptions struct {
 	NodeKey           string
 	DirectoryConfig   string
@@ -16,6 +17,7 @@ type CommandOptions struct {
 	LocationDatabase string
 }
 
+// ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.StringVar(
