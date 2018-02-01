@@ -29,8 +29,8 @@ func allowAllCorsActions(resp http.ResponseWriter) {
 func isPreflightCorsRequest(req *http.Request) bool {
 	isOptionsMethod := req.Method == http.MethodOptions
 	containsAccessControlRequestMethod := req.Header.Get("Access-Control-Request-Method") != ""
-	containsAccessControlRequestHeader := req.Header.Get("Access-Control-Request-Headers") != ""
-	return isOptionsMethod && containsAccessControlRequestHeader && containsAccessControlRequestMethod
+	containsOriginHeader := req.Header.Get("Origin") != ""
+	return isOptionsMethod && containsOriginHeader && containsAccessControlRequestMethod
 }
 
 func generatePreflightResponse(req *http.Request, resp http.ResponseWriter) {
