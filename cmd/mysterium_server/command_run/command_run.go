@@ -8,7 +8,7 @@ import (
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/service_discovery"
+	"github.com/mysterium/node/openvpn/discovery"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
@@ -16,6 +16,7 @@ import (
 	"time"
 )
 
+// CommandRun represent entrypoint for Mysterium server with top level components
 type CommandRun struct {
 	identityLoader   func() (identity.Identity, error)
 	createSigner     identity.SignerFactory
@@ -33,6 +34,7 @@ type CommandRun struct {
 	vpnServer        *openvpn.Server
 }
 
+// Run starts server - does not block
 func (cmd *CommandRun) Run() (err error) {
 	providerID, err := cmd.identityLoader()
 	if err != nil {
@@ -60,7 +62,7 @@ func (cmd *CommandRun) Run() (err error) {
 	if err != nil {
 		return err
 	}
-	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation)
+	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation)
 
 	sessionManager := cmd.sessionManagerFactory(vpnServerIP)
 
@@ -104,10 +106,12 @@ func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (
 	return dto_discovery.Location{Country: myCountry}, nil
 }
 
+// Wait blocks until server is stopped
 func (cmd *CommandRun) Wait() error {
 	return cmd.vpnServer.Wait()
 }
 
+// Kill stops server
 func (cmd *CommandRun) Kill() error {
 	cmd.vpnServer.Stop()
 	err := cmd.dialogWaiter.Stop()

@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 )
 
+// NewCommand function creates new server command by given options
 func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(
 		options,
@@ -27,6 +28,7 @@ func NewCommand(options CommandOptions) *CommandRun {
 	)
 }
 
+// NewCommandWith function creates new client command by given options + injects given dependencies
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
@@ -47,9 +49,14 @@ func NewCommandWith(
 		createSigner,
 	)
 
-	// Country database downloaded from http://dev.maxmind.com/geoip/geoip2/geolite2/
-	databasePath := filepath.Join(options.DirectoryConfig, "GeoLite2-Country.mmdb")
-	locationDetector := location.NewDetector(databasePath)
+	var locationDetector location.Detector
+	if options.LocationCountry != "" {
+		locationDetector = location.NewDetectorFake(options.LocationCountry)
+	} else if options.LocationDatabase != "" {
+		locationDetector = location.NewDetector(filepath.Join(options.DirectoryConfig, options.LocationDatabase))
+	} else {
+		locationDetector = location.NewDetectorFake("")
+	}
 
 	return &CommandRun{
 		identityLoader: func() (identity.Identity, error) {

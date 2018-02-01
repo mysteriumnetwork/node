@@ -5,6 +5,7 @@ import (
 	"flag"
 )
 
+// CommandOptions describes options which are required to start CommandRun
 type CommandOptions struct {
 	DirectoryRuntime string
 	Node             string
@@ -12,6 +13,7 @@ type CommandOptions struct {
 	ResultFile       string
 }
 
+// ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.StringVar(

@@ -11,12 +11,14 @@ type detector struct {
 }
 
 // NewDetector returns Detector which uses country database
-func NewDetector(databasePath string) Detector {
-	return detector{databasePath: databasePath}
+func NewDetector(databasePath string) *detector {
+	return &detector{
+		databasePath: databasePath,
+	}
 }
 
 // DetectCountry maps given ip to country
-func (d detector) DetectCountry(ip string) (string, error) {
+func (d *detector) DetectCountry(ip string) (string, error) {
 	db, err := geoip2.Open(d.databasePath)
 	if err != nil {
 		return "", err
@@ -24,13 +26,19 @@ func (d detector) DetectCountry(ip string) (string, error) {
 	defer db.Close()
 
 	ipObject := net.ParseIP(ip)
+	if ipObject == nil {
+		return "", errors.New("failed to parse IP")
+	}
+
 	countryRecord, err := db.Country(ipObject)
 	if err != nil {
 		return "", err
 	}
+
 	country := countryRecord.Country.IsoCode
 	if country == "" {
-		return "", errors.New("country was not found")
+		country = countryRecord.RegisteredCountry.IsoCode
 	}
+
 	return country, nil
 }

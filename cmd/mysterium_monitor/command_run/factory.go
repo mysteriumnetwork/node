@@ -7,12 +7,14 @@ import (
 	"time"
 )
 
+// NewCommand function creates new monitor command by given options
 func NewCommand() *CommandRun {
 	return &CommandRun{
 		ipResolver: ip.NewResolverWithTimeout(5 * time.Second),
 	}
 }
 
+// NewNodeProvider creates provider to return monitored nodes
 func NewNodeProvider(options CommandOptions) (nodeProvider node_provider.NodeProvider, err error) {
 	if options.Node != "" {
 		nodeProvider = node_provider.NewArrayProvider([]string{options.Node})

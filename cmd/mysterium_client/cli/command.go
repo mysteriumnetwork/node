@@ -18,25 +18,29 @@ func NewCommand(
 	return &Command{
 		historyFile: historyFile,
 		tequilapi:   tequilapi,
-		completer:   newAutocompleter(tequilapi),
 		quitHandler: quitHandler,
 	}
 }
 
 // Command describes CLI based Mysterium UI
 type Command struct {
-	historyFile string
-	tequilapi   *tequilapi_client.Client
-	quitHandler func() error
-	completer   *readline.PrefixCompleter
-	reader      *readline.Instance
+	historyFile      string
+	tequilapi        *tequilapi_client.Client
+	quitHandler      func() error
+	fetchedProposals []tequilapi_client.ProposalDTO
+	completer        *readline.PrefixCompleter
+	reader           *readline.Instance
 }
 
 const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
+const statusConnected = "Connected"
 
 // Run starts CLI interface
 func (c *Command) Run() (err error) {
+	c.fetchedProposals = c.fetchProposals()
+	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
+
 	c.reader, err = readline.NewEx(&readline.Config{
 		Prompt:          fmt.Sprintf(redColor, "» "),
 		HistoryFile:     c.historyFile,
@@ -90,6 +94,7 @@ func (c *Command) handleActions(line string) {
 		{"quit", c.quit},
 		{"help", c.help},
 		{"status", c.status},
+		{"proposals", c.proposals},
 		{"ip", c.ip},
 		{"disconnect", c.disconnect},
 	}
@@ -202,11 +207,48 @@ func (c *Command) status() {
 	status, err := c.tequilapi.Status()
 	if err != nil {
 		warn(err)
-		return
+	} else {
+		info("Status:", status.Status)
+		info("SID:", status.SessionID)
 	}
 
-	info("Status:", status.Status)
-	info("SID:", status.SessionId)
+	if status.Status == statusConnected {
+		statistics, err := c.tequilapi.ConnectionStatistics()
+		if err != nil {
+			warn(err)
+		} else {
+			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
+			info("Bytes sent:", statistics.BytesSent)
+			info("Bytes received:", statistics.BytesReceived)
+		}
+	}
+}
+
+func (c *Command) proposals() {
+	proposals := c.fetchProposals()
+	c.fetchedProposals = proposals
+	info(fmt.Sprintf("Found %v proposals", len(proposals)))
+
+	for _, proposal := range proposals {
+		country := proposal.ServiceDefinition.LocationOriginate.Country
+		var countryString string
+		if country != nil {
+			countryString = *country
+		} else {
+			countryString = "Unknown"
+		}
+		msg := fmt.Sprintf("- provider id: %v, proposal id: %v, country: %v", proposal.ProviderID, proposal.ID, countryString)
+		info(msg)
+	}
+}
+
+func (c *Command) fetchProposals() []tequilapi_client.ProposalDTO {
+	proposals, err := c.tequilapi.Proposals()
+	if err != nil {
+		warn(err)
+		return []tequilapi_client.ProposalDTO{}
+	}
+	return proposals
 }
 
 func (c *Command) ip() {
@@ -299,12 +341,25 @@ func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []st
 	}
 }
 
-func newAutocompleter(tequilapi *tequilapi_client.Client) *readline.PrefixCompleter {
+func getProposalOptionList(proposals []tequilapi_client.ProposalDTO) func(string) []string {
+	return func(line string) []string {
+		var providerIDS []string
+		for _, proposal := range proposals {
+			providerIDS = append(providerIDS, proposal.ProviderID)
+		}
+		return providerIDS
+	}
+}
+
+func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_client.ProposalDTO) *readline.PrefixCompleter {
 	return readline.NewPrefixCompleter(
 		readline.PcItem(
 			"connect",
 			readline.PcItemDynamic(
 				getIdentityOptionList(tequilapi),
+				readline.PcItemDynamic(
+					getProposalOptionList(proposals),
+				),
 			),
 		),
 		readline.PcItem(
@@ -313,6 +368,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client) *readline.PrefixComple
 			readline.PcItem("list"),
 		),
 		readline.PcItem("status"),
+		readline.PcItem("proposals"),
 		readline.PcItem("ip"),
 		readline.PcItem("disconnect"),
 		readline.PcItem("help"),
