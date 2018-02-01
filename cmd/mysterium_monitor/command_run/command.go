@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// CommandRun represent Mysterium monitor, client which checks connection to nodes
 type CommandRun struct {
 	ipResolver ip.Resolver
 	ipOriginal string
@@ -18,6 +19,7 @@ type CommandRun struct {
 	resultWriter  *resultWriter
 }
 
+// Run starts monitor command - does not block
 func (cmd *CommandRun) Run(options CommandOptions) error {
 	var err error
 
@@ -105,10 +107,12 @@ func (cmd *CommandRun) checkClientIPWhenDisconnected() {
 	}
 }
 
+// Wait blocks until monitoring is finished
 func (cmd *CommandRun) Wait() error {
 	return nil
 }
 
+// Kill stops monitoring client
 func (cmd *CommandRun) Kill() {
 	cmd.clientCommand.Kill()
 }

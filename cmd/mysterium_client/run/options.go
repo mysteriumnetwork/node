@@ -33,14 +33,14 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		&options.TequilapiAddress,
 		"tequilapi.address",
 		"localhost",
-		"IP address of interface to listen for incoming connections. By default - bind to local interface",
+		"IP address of interface to listen for incoming connections",
 	)
 
 	flags.IntVar(
 		&options.TequilapiPort,
 		"tequilapi.port",
 		4050,
-		"Port for listening incoming api requests. By default - 4050",
+		"Port for listening incoming api requests",
 	)
 
 	flags.BoolVar(

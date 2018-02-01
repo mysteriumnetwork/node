@@ -5,14 +5,19 @@ import (
 	"github.com/mysterium/node/utils/file"
 )
 
+// CommandOptions describes options which are required to start CommandRun
 type CommandOptions struct {
 	NodeKey           string
 	DirectoryConfig   string
 	DirectoryRuntime  string
 	DirectoryKeystore string
 	Passphrase        string
+
+	LocationCountry  string
+	LocationDatabase string
 }
 
+// ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.StringVar(
@@ -33,7 +38,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		&options.DirectoryRuntime,
 		"runtime-dir",
 		file.GetMysteriumDirectory("run"),
-		"Runtime directory for temp files (should be writable)",
+		"Runtime writable directory for temp files",
 	)
 
 	flags.StringVar(
@@ -48,6 +53,19 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"passphrase",
 		"",
 		"Identity passphrase",
+	)
+
+	flags.StringVar(
+		&options.LocationDatabase,
+		"location.database",
+		"GeoLite2-Country.mmdb",
+		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
+	)
+	flags.StringVar(
+		&options.LocationCountry,
+		"location.country",
+		"",
+		"Service location country. If not given country is autodetected",
 	)
 
 	err = flags.Parse(args[1:])
