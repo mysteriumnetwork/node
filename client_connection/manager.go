@@ -48,7 +48,7 @@ func (manager *connectionManager) Connect(myID identity.Identity, nodeKey string
 
 	providerID := identity.FromAddress(nodeKey)
 
-	proposals, err := manager.mysteriumClient.FindProposals(nodeKey)
+	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
 	if err != nil {
 		manager.status = statusError(err)
 		return err

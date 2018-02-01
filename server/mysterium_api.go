@@ -24,7 +24,7 @@ type mysteriumAPI struct {
 	http HttpTransport
 }
 
-//NewClient creates mysterium centralized api instance with real communication
+// NewClient creates Mysterium centralized api instance with real communication
 func NewClient() Client {
 	return &mysteriumAPI{
 		&http.Client{
@@ -81,9 +81,12 @@ func (mApi *mysteriumAPI) NodeSendStats(nodeKey string, signer identity.Signer) 
 	return err
 }
 
-func (mApi *mysteriumAPI) FindProposals(nodeKey string) ([]dto_discovery.ServiceProposal, error) {
+func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.ServiceProposal, error) {
 	values := url.Values{}
-	values.Set("node_key", nodeKey)
+	if providerID != "" {
+		values.Set("node_key", providerID)
+	}
+
 	req, err := newGetRequest("proposals", values)
 	if err != nil {
 		return nil, err
