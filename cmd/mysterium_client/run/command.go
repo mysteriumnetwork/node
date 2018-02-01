@@ -2,6 +2,7 @@ package run
 
 import (
 	"fmt"
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
 	"github.com/mysterium/node/communication"
@@ -14,6 +15,7 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
+	"os"
 	"time"
 )
 
@@ -52,20 +54,46 @@ func NewCommandWith(
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
+
+	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
+
+	commandRun := &CommandRun{
+		connectionManager,
+		httpAPIServer,
+	}
+
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	ipResolver := ip.NewResolver()
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
-	tequilapi_endpoints.AddRouteForStop(router, func() {
-		fmt.Println("Server received command to be stopped")
-	})
+	tequilapi_endpoints.AddRouteForStop(router, newDelayedCommandStopper(commandRun))
 
-	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
+	return commandRun
+}
 
-	return &CommandRun{
-		connectionManager,
-		httpAPIServer,
+func newDelayedCommandStopper(commandRun *CommandRun) func() {
+	return func() {
+		stop := func() { kill(commandRun) }
+		go delay(stop)
 	}
+}
+
+// TODO: DRY
+func kill(command *CommandRun) {
+	err := command.Kill()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to kill one of subroutines %q\n", err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Println("Good bye")
+	os.Exit(0)
+}
+
+func delay(stop func()) {
+	log.Info("Client is stopping")
+	time.Sleep(3 * time.Second)
+	stop()
 }
 
 //CommandRun represent entrypoint for Mysterium client with top level components
