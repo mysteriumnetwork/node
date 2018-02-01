@@ -105,10 +105,6 @@ func (manager *connectionManager) Disconnect() error {
 	return nil
 }
 
-func (manager *connectionManager) Wait() error {
-	return manager.vpnClient.Wait()
-}
-
 func (manager *connectionManager) onVpnStateChanged(state openvpn.State) {
 	switch state {
 	case openvpn.STATE_CONNECTED:

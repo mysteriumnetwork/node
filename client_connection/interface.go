@@ -24,5 +24,4 @@ type Manager interface {
 	Connect(consumerID identity.Identity, providerID identity.Identity) error
 	Status() ConnectionStatus
 	Disconnect() error
-	Wait() error
 }
