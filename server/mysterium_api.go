@@ -33,9 +33,9 @@ func NewClient() Client {
 	}
 }
 
-func (mApi *mysteriumAPI) RegisterIdentity(identity identity.Identity, signer identity.Signer) error {
+func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
 	req, err := newSignedPostRequest("identities", dto.CreateIdentityRequest{
-		Identity: identity.Address,
+		Identity: id.Address,
 	}, signer)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func (mApi *mysteriumAPI) RegisterIdentity(identity identity.Identity, signer id
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Identity registered: ", identity)
+		log.Info(mysteriumAPILogPrefix, "Identity registered: ", id.Address)
 	}
 	return err
 }

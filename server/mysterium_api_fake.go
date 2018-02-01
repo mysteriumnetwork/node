@@ -30,9 +30,9 @@ func (client *ClientFake) RegisterProposal(proposal dto_discovery.ServiceProposa
 }
 
 // RegisterIdentity announces that new identity was created
-func (client *ClientFake) RegisterIdentity(newIdentity identity.Identity, signer identity.Signer) (err error) {
-	client.RegisteredIdentity = newIdentity
-	log.Info(mysteriumAPILogPrefix, "Fake newIdentity registered: ", newIdentity)
+func (client *ClientFake) RegisterIdentity(id identity.Identity, signer identity.Signer) (err error) {
+	client.RegisteredIdentity = id
+	log.Info(mysteriumAPILogPrefix, "Fake newIdentity registered: ", id.Address)
 
 	return nil
 }
