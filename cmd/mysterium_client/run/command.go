@@ -56,6 +56,9 @@ func NewCommandWith(
 	ipResolver := ip.NewResolver()
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
+	tequilapi_endpoints.AddRouteForStop(router, func() {
+		fmt.Println("Server received command to be stopped")
+	})
 
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
