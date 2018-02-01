@@ -4,6 +4,7 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/session"
+	"github.com/mysterium/node/openvpn/middlewares/client/state"
 )
 
 type connection struct {
@@ -13,17 +14,22 @@ type connection struct {
 	currentSession session.SessionID
 }
 
-func newConnection(dialog communication.Dialog, vpnClient openvpn.Client, currentSession session.SessionID) *connection {
+type vpnClientCreator func(callback state.ClientStateCallback) (*openvpn.Client, error)
+
+func newConnection(dialog communication.Dialog, currentSession session.SessionID, createVpnClient vpnClientCreator) (*connection , error) {
+
+	vpnClient, err := createVpnClient(conn.)
+
 	return &connection{
 		dialog,
 		vpnClient,
 
 		statusConnecting(),
 		currentSession,
-	}
+	},nil
 }
 
-func (conn *connection) onVpnStateChanged(state openvpn.State) {
+func (conn *connection) onVpnStateChanged(connection ,state openvpn.State) {
 	switch state {
 	case openvpn.STATE_CONNECTED:
 		conn.status = statusConnected(conn.currentSession)
