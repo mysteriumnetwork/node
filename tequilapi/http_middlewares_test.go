@@ -25,8 +25,8 @@ func TestCorsHeadersAreAppliedToResponse(t *testing.T) {
 func TestPreflightCorsCheckIsHandled(t *testing.T) {
 	req, err := http.NewRequest(http.MethodOptions, "/not-important", nil)
 	assert.NoError(t, err)
-
-	req.Header.Add("Access-Control-Request-Method", "DELETE")
+	req.Header.Add("Origin", "Original site")
+	req.Header.Add("Access-Control-Request-Method", "POST")
 	req.Header.Add("Access-Control-Request-Headers", "origin, x-requested-with")
 
 	respRecorder := httptest.NewRecorder()
@@ -40,6 +40,25 @@ func TestPreflightCorsCheckIsHandled(t *testing.T) {
 	assert.Equal(t, "origin, x-requested-with", respRecorder.Header().Get("Access-Control-Allow-Headers"))
 	assert.Equal(t, 0, respRecorder.Body.Len())
 	assert.False(t, mock.wasCalled)
+}
+
+func TestDeleteCorsPreflightCheckIsHandledCorrectly(t *testing.T) {
+	req, err := http.NewRequest(http.MethodOptions, "/not-important", nil)
+	assert.NoError(t, err)
+	req.Header.Add("Origin", "Original site")
+	req.Header.Add("Access-Control-Request-Method", "DELETE")
+
+	respRecorder := httptest.NewRecorder()
+
+	mock := &mockedHttpHandler{}
+
+	ApplyCors(mock).ServeHTTP(respRecorder, req)
+
+	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Origin"))
+	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
+	assert.Equal(t, 0, respRecorder.Body.Len())
+	assert.False(t, mock.wasCalled)
+
 }
 
 type mockedHttpHandler struct {
