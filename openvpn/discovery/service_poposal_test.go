@@ -1,10 +1,10 @@
-package service_discovery
+package discovery
 
 import (
 	"encoding/json"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/openvpn"
-	dto_openvpn "github.com/mysterium/node/openvpn/service_discovery/dto"
+	dto_openvpn "github.com/mysterium/node/openvpn/discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"

@@ -8,7 +8,7 @@ import (
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/service_discovery"
+	"github.com/mysterium/node/openvpn/discovery"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
@@ -60,7 +60,7 @@ func (cmd *CommandRun) Run() (err error) {
 	if err != nil {
 		return err
 	}
-	proposal := service_discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation)
+	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation)
 
 	dialogHandler := session.NewDialogHandler(proposal.ID, cmd.sessionManagerFactory(vpnServerIP))
 	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
