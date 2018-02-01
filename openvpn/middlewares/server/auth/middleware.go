@@ -168,7 +168,8 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 	m.state = openvpn.STATE_UNDEFINED
 
 	if m.lastUsername == "" || m.lastPassword == "" {
-		return false, fmt.Errorf("missing username or password")
+		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "missing username or password")
+		return true, nil
 	}
 
 	log.Info("authenticating user: ", m.lastUsername, " clientID: ", m.clientID, " keyID: ", m.keyID)
@@ -177,27 +178,30 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 	if err != nil {
 		log.Error("Authentication error: ", err)
 		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "internal error")
-		return false, err
+		return true, nil
 	}
 
 	if authenticated {
-		_, err = m.connection.Write([]byte("client-auth-nt " + strconv.Itoa(m.clientID) + " " + strconv.Itoa(m.keyID) + "\n"))
-		if err != nil {
-			return false, err
-		}
+		approveClient(m.connection, m.clientID, m.keyID)
 	} else {
-		err = denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "wrong username or password")
-		if err != nil {
-			return false, err
-		}
+		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "wrong username or password")
 	}
 	return true, nil
 }
 
-func denyClientAuthWithMessage(conn net.Conn, clientID, keyID int, message string) error {
-	_, err := conn.Write([]byte("client-deny " + strconv.Itoa(clientID) + " " + strconv.Itoa(keyID) + " " +
-		message + "\n"))
-	return err
+func approveClient(conn net.Conn, clientID, keyID int) {
+	writeStringToConn(conn, "client-auth-nt "+strconv.Itoa(clientID)+" "+strconv.Itoa(keyID)+"\n")
+}
+
+func denyClientAuthWithMessage(conn net.Conn, clientID, keyID int, message string) {
+	writeStringToConn(conn, "client-deny "+strconv.Itoa(clientID)+" "+strconv.Itoa(keyID)+" "+message+"\n")
+}
+
+func writeStringToConn(conn net.Conn, message string) {
+	_, err := conn.Write([]byte(message + "\n"))
+	if err != nil {
+		log.Error("Management communication error: ", err)
+	}
 }
 
 func (m *middleware) Reset() {
