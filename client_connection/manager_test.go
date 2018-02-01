@@ -84,14 +84,14 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSetAn
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
 	err := tc.connManager.Connect(myID, activeProviderID)
-
+	tc.fakeOpenVpn.reportState(openvpn.STATE_CONNECTED)
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), ConnectionStatus{Connected, "vpn-session-id", nil}, tc.connManager.Status())
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionSessionStartIsMarked() {
 	err := tc.connManager.Connect(myID, activeProviderID)
-
+	tc.fakeOpenVpn.reportState(openvpn.STATE_CONNECTED)
 	assert.NoError(tc.T(), err)
 
 	assert.True(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
