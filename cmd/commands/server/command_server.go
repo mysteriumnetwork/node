@@ -84,7 +84,7 @@ func (cmd *Command) Run() (err error) {
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.mysteriumClient.NodeSendStats(providerID.Address, signer)
+			cmd.mysteriumClient.SendProposalStats(providerID.Address, signer)
 		}
 	}()
 

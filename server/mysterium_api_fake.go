@@ -24,7 +24,7 @@ type ClientFake struct {
 // RegisterProposal announces service proposal
 func (client *ClientFake) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error) {
 	client.proposalsMock = append(client.proposalsMock, proposal)
-	log.Info(mysteriumAPILogPrefix, "Fake node registered: ", proposal)
+	log.Info(mysteriumAPILogPrefix, "Fake proposal registered: ", proposal)
 
 	return nil
 }
@@ -37,9 +37,9 @@ func (client *ClientFake) RegisterIdentity(id identity.Identity, signer identity
 	return nil
 }
 
-// NodeSendStats heartbeats that service proposal is still active
-func (client *ClientFake) NodeSendStats(nodeKey string, signer identity.Signer) (err error) {
-	log.Info(mysteriumAPILogPrefix, "Node stats sent: ", nodeKey)
+// SendProposalStats heartbeats that service proposal is still active
+func (client *ClientFake) SendProposalStats(providerID string, signer identity.Signer) (err error) {
+	log.Info(mysteriumAPILogPrefix, "Proposal stats sent: ", providerID)
 
 	return nil
 }

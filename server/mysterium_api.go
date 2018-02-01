@@ -64,11 +64,9 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 	return err
 }
 
-func (mApi *mysteriumAPI) NodeSendStats(nodeKey string, signer identity.Signer) error {
+func (mApi *mysteriumAPI) SendProposalStats(providerID string, signer identity.Signer) error {
 	req, err := newSignedPostRequest("node_send_stats", dto.NodeStatsRequest{
-		NodeKey: nodeKey,
-		// TODO Refactor Node statistics with new `SessionStats` DTO
-		Sessions: []dto.SessionStats{},
+		NodeKey: providerID,
 	}, signer)
 	if err != nil {
 		return err
@@ -76,7 +74,7 @@ func (mApi *mysteriumAPI) NodeSendStats(nodeKey string, signer identity.Signer) 
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Node stats sent: ", nodeKey)
+		log.Info(mysteriumAPILogPrefix, "Node stats sent: ", providerID)
 	}
 	return err
 }
