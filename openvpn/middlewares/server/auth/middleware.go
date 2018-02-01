@@ -9,21 +9,24 @@ import (
 	"strconv"
 )
 
+// CredentialsChecker callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
+type CredentialsChecker func(username, password string) (bool, error)
+
 type middleware struct {
-	authenticator AuthenticatorChecker
-	connection    net.Conn
-	lastUsername  string
-	lastPassword  string
-	clientID      int
-	keyID         int
-	state         openvpn.State
+	checkCredentials CredentialsChecker
+	connection       net.Conn
+	lastUsername     string
+	lastPassword     string
+	clientID         int
+	keyID            int
+	state            openvpn.State
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(authenticator AuthenticatorChecker) *middleware {
+func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
 	return &middleware{
-		authenticator: authenticator,
-		connection:    nil,
+		checkCredentials: credentialsChecker,
+		connection:       nil,
 	}
 }
 
@@ -165,29 +168,40 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 	m.state = openvpn.STATE_UNDEFINED
 
 	if m.lastUsername == "" || m.lastPassword == "" {
-		return false, fmt.Errorf("missing username or password")
+		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "missing username or password")
+		return true, nil
 	}
 
 	log.Info("authenticating user: ", m.lastUsername, " clientID: ", m.clientID, " keyID: ", m.keyID)
 
-	authenticated, err := m.authenticator(m.lastUsername, m.lastPassword)
+	authenticated, err := m.checkCredentials(m.lastUsername, m.lastPassword)
 	if err != nil {
-		return false, err
+		log.Error("Authentication error: ", err)
+		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "internal error")
+		return true, nil
 	}
 
 	if authenticated {
-		_, err = m.connection.Write([]byte("client-auth-nt " + strconv.Itoa(m.clientID) + " " + strconv.Itoa(m.keyID) + "\n"))
-		if err != nil {
-			return false, err
-		}
+		approveClient(m.connection, m.clientID, m.keyID)
 	} else {
-		_, err = m.connection.Write([]byte("client-deny " + strconv.Itoa(m.clientID) + " " + strconv.Itoa(m.keyID) +
-			" wrong username or password \n"))
-		if err != nil {
-			return false, err
-		}
+		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "wrong username or password")
 	}
 	return true, nil
+}
+
+func approveClient(conn net.Conn, clientID, keyID int) {
+	writeStringToConn(conn, "client-auth-nt "+strconv.Itoa(clientID)+" "+strconv.Itoa(keyID)+"\n")
+}
+
+func denyClientAuthWithMessage(conn net.Conn, clientID, keyID int, message string) {
+	writeStringToConn(conn, "client-deny "+strconv.Itoa(clientID)+" "+strconv.Itoa(keyID)+" "+message+"\n")
+}
+
+func writeStringToConn(conn net.Conn, message string) {
+	_, err := conn.Write([]byte(message + "\n"))
+	if err != nil {
+		log.Error("Management communication error: ", err)
+	}
 }
 
 func (m *middleware) Reset() {

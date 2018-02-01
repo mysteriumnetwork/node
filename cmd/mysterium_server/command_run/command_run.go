@@ -28,9 +28,9 @@ type CommandRun struct {
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
-	sessionManagerFactory func(serverIP string) session.ManagerInterface
+	sessionManagerFactory func(serverIP string) session.Manager
 
-	vpnServerFactory func() *openvpn.Server
+	vpnServerFactory func(sessionManager session.Manager) *openvpn.Server
 	vpnServer        *openvpn.Server
 }
 
@@ -64,12 +64,14 @@ func (cmd *CommandRun) Run() (err error) {
 	}
 	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation)
 
-	dialogHandler := session.NewDialogHandler(proposal.ID, cmd.sessionManagerFactory(vpnServerIP))
+	sessionManager := cmd.sessionManagerFactory(vpnServerIP)
+
+	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}
 
-	cmd.vpnServer = cmd.vpnServerFactory()
+	cmd.vpnServer = cmd.vpnServerFactory(sessionManager)
 	if err := cmd.vpnServer.Start(); err != nil {
 		return err
 	}

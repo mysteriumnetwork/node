@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var generator Generator
+var generator UUIDGenerator
 
 func TestSessionIdLength(t *testing.T) {
 	sid := generator.Generate()

@@ -30,6 +30,7 @@ type DialogEstablisher interface {
 // Dialog represent established connection between 2 peers in network.
 // Enables bidirectional communication with another peer.
 type Dialog interface {
+	PeerID() identity.Identity
 	Sender
 	Receiver
 	Close() error

@@ -3,11 +3,13 @@ package session
 import (
 	"fmt"
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/identity"
 )
 
 type SessionCreateConsumer struct {
 	CurrentProposalID int
-	SessionManager    ManagerInterface
+	SessionManager    Manager
+	PeerID            identity.Identity
 }
 
 func (consumer *SessionCreateConsumer) GetRequestEndpoint() communication.RequestEndpoint {
@@ -29,7 +31,7 @@ func (consumer *SessionCreateConsumer) Consume(requestPtr interface{}) (response
 		return
 	}
 
-	clientSession, err := consumer.SessionManager.Create()
+	clientSession, err := consumer.SessionManager.Create(consumer.PeerID)
 	if err != nil {
 		response = &SessionCreateResponse{
 			Success: false,

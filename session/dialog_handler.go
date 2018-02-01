@@ -5,22 +5,27 @@ import (
 )
 
 // NewDialogHandler constructs handler which gets all incoming dialogs and starts handling them
-func NewDialogHandler(proposalId int, sessionManager ManagerInterface) *handler {
+func NewDialogHandler(proposalId int, sessionManager Manager) *handler {
 	return &handler{
-		sessionCreateConsumer: &SessionCreateConsumer{
-			CurrentProposalID: proposalId,
-			SessionManager:    sessionManager,
-		},
+		CurrentProposalID: proposalId,
+		SessionManager:    sessionManager,
 	}
 }
 
 type handler struct {
-	sessionCreateConsumer communication.RequestConsumer
+	CurrentProposalID int
+	SessionManager    Manager
 }
 
 // Handle starts serving services in given Dialog instance
 func (handler *handler) Handle(dialog communication.Dialog) error {
-	subscribeError := dialog.Respond(handler.sessionCreateConsumer)
+	subscribeError := dialog.Respond(
+		&SessionCreateConsumer{
+			CurrentProposalID: handler.CurrentProposalID,
+			SessionManager:    handler.SessionManager,
+			PeerID:            dialog.PeerID(),
+		},
+	)
 	if subscribeError != nil {
 		return subscribeError
 	}

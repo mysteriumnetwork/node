@@ -7,25 +7,28 @@ import (
 	"regexp"
 )
 
+// CredentialsProvider returns client's current auth primitives (i.e. customer identity signature / node's sessionId)
+type CredentialsProvider func() (username string, password string, err error)
+
 type middleware struct {
-	authenticator Authenticator
-	connection    net.Conn
-	lastUsername  string
-	lastPassword  string
-	state         openvpn.State
+	fetchCredentials CredentialsProvider
+	connection       net.Conn
+	lastUsername     string
+	lastPassword     string
+	state            openvpn.State
 }
 
 // NewMiddleware creates client user_auth challenge authentication middleware
-func NewMiddleware(authenticator Authenticator) *middleware {
+func NewMiddleware(credentials CredentialsProvider) *middleware {
 	return &middleware{
-		authenticator: authenticator,
-		connection:    nil,
+		fetchCredentials: credentials,
+		connection:       nil,
 	}
 }
 
 func (m *middleware) Start(connection net.Conn) error {
 	m.connection = connection
-	log.Info("starting client user-pass authenticator middleware")
+	log.Info("starting client user-pass provider middleware")
 	return nil
 }
 
@@ -43,7 +46,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	if len(match) > 0 {
 		m.Reset()
 		m.state = openvpn.STATE_AUTH
-		username, password, err := m.authenticator()
+		username, password, err := m.fetchCredentials()
 		log.Info("authenticating user ", username, " with pass: ", password)
 
 		_, err = m.connection.Write([]byte("password 'Auth' " + password + "\n"))

@@ -73,14 +73,17 @@ func NewCommandWith(
 				identity.NewSigner(keystoreInstance, myID),
 			)
 		},
-		sessionManagerFactory: func(vpnServerIP string) session.ManagerInterface {
-			return openvpn_session.NewManager(openvpn.NewClientConfig(
-				vpnServerIP,
-				filepath.Join(options.DirectoryConfig, "ca.crt"),
-				filepath.Join(options.DirectoryConfig, "ta.key"),
-			))
+		sessionManagerFactory: func(vpnServerIP string) session.Manager {
+			return openvpn_session.NewManager(
+				openvpn.NewClientConfig(
+					vpnServerIP,
+					filepath.Join(options.DirectoryConfig, "ca.crt"),
+					filepath.Join(options.DirectoryConfig, "ta.key"),
+				),
+				&session.UUIDGenerator{},
+			)
 		},
-		vpnServerFactory: func() *openvpn.Server {
+		vpnServerFactory: func(manager session.Manager) *openvpn.Server {
 			vpnServerConfig := openvpn.NewServerConfig(
 				"10.8.0.0", "255.255.255.0",
 				filepath.Join(options.DirectoryConfig, "ca.crt"),
@@ -90,9 +93,12 @@ func NewCommandWith(
 				filepath.Join(options.DirectoryConfig, "crl.pem"),
 				filepath.Join(options.DirectoryConfig, "ta.key"),
 			)
-			authenticator := auth.NewCheckerFake()
+			sessionValidator := openvpn_session.NewSessionValidator(
+				manager.FindSession,
+				identity.NewExtractor(),
+			)
 			vpnMiddlewares := []openvpn.ManagementMiddleware{
-				auth.NewMiddleware(authenticator),
+				auth.NewMiddleware(sessionValidator),
 			}
 			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime, vpnMiddlewares...)
 		},

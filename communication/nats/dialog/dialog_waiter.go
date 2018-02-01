@@ -88,6 +88,7 @@ func (waiter *dialogWaiter) newDialogToPeer(peerID identity.Identity, peerCodec 
 	subTopic := waiter.myAddress.GetTopic() + "." + peerID.Address
 
 	return &dialog{
+		peerID:   peerID,
 		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), peerCodec, subTopic),
 		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), peerCodec, subTopic),
 	}
