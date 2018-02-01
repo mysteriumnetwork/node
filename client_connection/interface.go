@@ -1,24 +1,16 @@
 package client_connection
 
 import (
+	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/middlewares/client/state"
 	"github.com/mysterium/node/session"
 )
 
-type State string
+type DialogEstablisherCreator func(identity identity.Identity) communication.DialogEstablisher
 
-const (
-	NotConnected  = State("NotConnected")
-	Connecting    = State("Connecting")
-	Connected     = State("Connected")
-	Disconnecting = State("Disconnecting")
-)
-
-type ConnectionStatus struct {
-	State     State
-	SessionID session.SessionID
-	LastError error
-}
+type VpnClientCreator func(session.SessionDto, identity.Identity, state.ClientStateCallback) (openvpn.Client, error)
 
 type Manager interface {
 	Connect(consumerID identity.Identity, providerID identity.Identity) error
