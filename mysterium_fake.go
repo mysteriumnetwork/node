@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
-	command_client "github.com/mysterium/node/cmd/client"
-	command_server "github.com/mysterium/node/cmd/server"
+	command_client "github.com/mysterium/node/cmd/commands/client"
+	command_server "github.com/mysterium/node/cmd/commands/server"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/server"

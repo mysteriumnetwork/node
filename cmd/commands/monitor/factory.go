@@ -1,7 +1,7 @@
 package monitor
 
 import (
-	"github.com/mysterium/node/cmd/monitor/node_provider"
+	"github.com/mysterium/node/cmd/commands/monitor/node_provider"
 	"github.com/mysterium/node/ip"
 	"path/filepath"
 	"time"

@@ -2,7 +2,7 @@ package server
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	identity_handler "github.com/mysterium/node/cmd/server/identity"
+	identity_handler "github.com/mysterium/node/cmd/commands/server/identity"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"

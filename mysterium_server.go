@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/mysterium/node/cmd/server"
+	"github.com/mysterium/node/cmd/commands/server"
 	"os"
 )
 

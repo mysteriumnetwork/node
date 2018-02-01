@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"errors"
-	command_client "github.com/mysterium/node/cmd/client"
+	command_client "github.com/mysterium/node/cmd/commands/client"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn"
 	"sync"

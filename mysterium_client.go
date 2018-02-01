@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/cmd/cli"
-	"github.com/mysterium/node/cmd/client"
+	"github.com/mysterium/node/cmd/commands/cli"
+	"github.com/mysterium/node/cmd/commands/client"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"os"
 	"path/filepath"

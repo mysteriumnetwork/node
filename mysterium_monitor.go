@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/mysterium/node/cmd/monitor"
+	"github.com/mysterium/node/cmd/commands/monitor"
 	"os"
 )
 
