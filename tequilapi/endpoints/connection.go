@@ -13,8 +13,8 @@ import (
 )
 
 type connectionRequest struct {
-	Identity string `json:"identity"`
-	NodeKey  string `json:"nodeKey"`
+	Identity   string `json:"identity"`
+	ProviderID string `json:"providerId"`
 }
 
 type statusResponse struct {
@@ -54,7 +54,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	err = ce.manager.Connect(identity.FromAddress(cr.Identity), identity.FromAddress(cr.NodeKey))
+	err = ce.manager.Connect(identity.FromAddress(cr.Identity), identity.FromAddress(cr.ProviderID))
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -127,8 +127,8 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 	if len(cr.Identity) == 0 {
 		errors.ForField("identity").AddError("required", "Field is required")
 	}
-	if len(cr.NodeKey) == 0 {
-		errors.ForField("nodeKey").AddError("required", "Field is required")
+	if len(cr.ProviderID) == 0 {
+		errors.ForField("providerId").AddError("required", "Field is required")
 	}
 	return errors
 }
