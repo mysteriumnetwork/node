@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-
 	options, err := run.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -19,39 +18,31 @@ func main() {
 	}
 
 	cmdRun := run.NewCommand(options)
-	cmd.NewTerminator(cmd.NewApplicationStopper(cmdRun.Kill))
 
 	if err := cmdRun.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	killers := []cmd.Killer{cmdRun.Kill}
 
 	if options.CLI {
 		cmdCli := cli.NewCommand(
 			filepath.Join(options.DirectoryRuntime, ".cli_history"),
 			tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
-			newStopHandler(cmdRun),
+			cmdRun.Kill,
 		)
-		cmd.NewTerminator(cmd.NewApplicationStopper(cmdCli.Kill))
 		if err := cmdCli.Run(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+		killers = append([]cmd.Killer{cmdCli.Kill}, killers...)
 	}
+
+	stopper := cmd.NewApplicationStopper(killers...)
+	cmd.NewTerminator(stopper)
 
 	if err = cmdRun.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	}
-}
-
-func newStopHandler(cmdRun *run.CommandRun) func() error {
-	return func() error {
-		if err := cmdRun.Kill(); err != nil {
-			return err
-		}
-
-		os.Exit(0)
-		return nil
 	}
 }
