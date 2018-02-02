@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
-	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
-	command_server "github.com/mysterium/node/cmd/mysterium_server/command_run"
+	command_client "github.com/mysterium/node/cmd/commands/client"
+	command_server "github.com/mysterium/node/cmd/commands/server"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/server"
@@ -44,7 +44,7 @@ func main() {
 	waiter.Wait()
 }
 
-func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup) {
+func runServer(serverCommand *command_server.Command, waiter *sync.WaitGroup) {
 	err := serverCommand.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Server starting error: ", err)
@@ -62,7 +62,7 @@ func runServer(serverCommand *command_server.CommandRun, waiter *sync.WaitGroup)
 	}()
 }
 
-func runClient(clientCommand *command_client.CommandRun, waiter *sync.WaitGroup) {
+func runClient(clientCommand *command_client.Command, waiter *sync.WaitGroup) {
 	err := clientCommand.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Client runtime error: ", err)

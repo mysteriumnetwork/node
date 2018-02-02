@@ -3,21 +3,22 @@ package main
 import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/cmd/mysterium_client/cli"
-	"github.com/mysterium/node/cmd/mysterium_client/run"
+	"github.com/mysterium/node/cmd/commands/cli"
+	"github.com/mysterium/node/cmd/commands/client"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"os"
 	"path/filepath"
 )
 
 func main() {
-	options, err := run.ParseArguments(os.Args)
+
+	options, err := client.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	cmdRun := run.NewCommand(options)
+	cmdRun := client.NewCommand(options)
 
 	if err := cmdRun.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

@@ -1,8 +1,8 @@
-package command_run
+package server
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	identity_handler "github.com/mysterium/node/cmd/mysterium_server/command_run/identity"
+	identity_handler "github.com/mysterium/node/cmd/commands/server/identity"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -19,7 +19,7 @@ import (
 )
 
 // NewCommand function creates new server command by given options
-func NewCommand(options CommandOptions) *CommandRun {
+func NewCommand(options CommandOptions) *Command {
 	return NewCommandWith(
 		options,
 		server.NewClient(),
@@ -34,7 +34,7 @@ func NewCommandWith(
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	natService nat.NATService,
-) *CommandRun {
+) *Command {
 
 	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
 	cache := identity.NewIdentityCache(options.DirectoryKeystore, "remember.json")
@@ -58,7 +58,7 @@ func NewCommandWith(
 		locationDetector = location.NewDetectorFake("")
 	}
 
-	return &CommandRun{
+	return &Command{
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, options.NodeKey, options.Passphrase)
 		},
