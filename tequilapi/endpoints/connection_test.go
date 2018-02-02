@@ -71,7 +71,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 			http.StatusOK, `{"status": ""}`,
 		},
 		{
-			http.MethodPut, "/connection", `{"identity": "me", "providerId": "node1"}`,
+			http.MethodPut, "/connection", `{"consumerId": "me", "providerId": "node1"}`,
 			http.StatusCreated, `{"status": ""}`,
 		},
 		{
@@ -231,7 +231,7 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 		`{
 			"message" : "validation_error",
 			"errors" : {
-				"identity" : [ { "code" : "required" , "message" : "Field is required" } ],
+				"consumerId" : [ { "code" : "required" , "message" : "Field is required" } ],
 				"providerId" : [ {"code" : "required" , "message" : "Field is required" } ]
 			}
 		}`, resp.Body.String())
@@ -246,7 +246,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(
 			`{
-				"identity" : "my-identity",
+				"consumerId" : "my-identity",
 				"providerId" : "required-node"
 			}`))
 	resp := httptest.NewRecorder()
