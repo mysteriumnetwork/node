@@ -1,7 +1,6 @@
 package openvpn
 
 import (
-	"path/filepath"
 	"strconv"
 )
 
