@@ -6,6 +6,8 @@ type ClientConfig struct {
 
 func (c *ClientConfig) SetClientMode(serverIP string, serverPort int) {
 	c.setFlag("client")
+	c.setParam("script-security", "2")
+	c.setFlag("auth-nocache")
 	c.setParam("remote", serverIP)
 	c.SetPort(serverPort)
 	c.setFlag("nobind")

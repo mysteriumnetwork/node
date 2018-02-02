@@ -1,6 +1,7 @@
 package openvpn
 
 import (
+	"path/filepath"
 	"strconv"
 )
 
@@ -37,6 +38,11 @@ func (c *Config) setFlag(name string) {
 func (c *Config) SetManagementSocket(socketAddress string) {
 	c.setParam("management", socketAddress+" unix")
 	c.setFlag("management-client")
+}
+
+func (c *Config) SetScripts(runtimeDirectory string) {
+	c.setParam("up", filepath.Join(runtimeDirectory, "update-resolv-conf"))
+	c.setParam("down", filepath.Join(runtimeDirectory, "update-resolv-conf"))
 }
 
 func (c *Config) SetPort(port int) {
