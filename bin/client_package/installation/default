@@ -1,0 +1,7 @@
+# This is the configuration file for /etc/init.d/mysterium-client
+
+# IP address of interface to listen for incoming connections
+MYSTERIUM_CLIENT_TEQUILAPI_ADDRESS="localhost"
+
+# Port for listening incoming api requests
+MYSTERIUM_CLIENT_TEQUILAPI_PORT="4050"

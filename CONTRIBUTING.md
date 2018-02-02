@@ -40,7 +40,7 @@ bin/server_run --node 123456
 
 # Client connects to node
 bin/client_build
-bin/client_run --node 123456
+bin/client_run --cli
 ```
 
 Dependency management

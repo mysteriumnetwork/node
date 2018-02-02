@@ -60,7 +60,10 @@ sudo service mysterium-client status
 ### Debugging
 ```bash
 sudo tail -f /var/log/mysterium-client/*
-sudo mysterium_client --config-dir=/etc/mysterium-client --runtime-dir=/tmp --node=123456
+```
+### Runing standalone
+```
+sudo mysterium_client --config-dir=/etc/mysterium-client --runtime-dir=/tmp --cli
 ```
 
 
@@ -84,7 +87,7 @@ sudo mysterium_server --config-dir=/etc/mysterium-node --node=123456
 ### Running
 ```bash
 mysterium_client --help
-sudo mysterium_client --node=123456
+sudo mysterium_client --cli
 ```
 
 

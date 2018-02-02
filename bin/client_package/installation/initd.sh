@@ -13,9 +13,6 @@ OS_DIR_BIN="/usr/bin"
 OS_DIR_LOG="/var/log/mysterium-client"
 OS_DIR_RUN="/var/run/mysterium-client"
 
-#Mysterium VPN node to make connection with
-MYSTERIUM_CLIENT_NODE=""
-
 # Process name (For display)
 DAEMON_NAME="mysterium-client"
 #Daemon name, where is the actual executable
@@ -111,9 +108,10 @@ function start() {
         --group $DAEMON_GROUP \
         --exec $DAEMON_BIN \
         -- \
-        --node=$MYSTERIUM_CLIENT_NODE \
         --config-dir=$OS_DIR_CONFIG \
         --runtime-dir=$OS_DIR_RUN \
+        --tequilapi.address=$MYSTERIUM_CLIENT_TEQUILAPI_ADDRESS \
+        --tequilapi.port=$MYSTERIUM_CLIENT_TEQUILAPI_PORT \
         >>$DAEMON_STDOUT \
         2>>$DAEMON_STDERR
 
