@@ -29,7 +29,7 @@ func main() {
 		ip.NewFakeResolver(NodeIP),
 		nat.NewServiceFake(),
 	)
-	cmd.NewTerminator(cmd.NewStopper(serverCommand.Kill))
+	cmd.NewTerminator(cmd.NewApplicationStopper(serverCommand.Kill))
 	runServer(serverCommand, waiter)
 
 	clientCommand := command_client.NewCommandWith(
@@ -38,7 +38,7 @@ func main() {
 		},
 		mysteriumClient,
 	)
-	cmd.NewTerminator(cmd.NewStopper(clientCommand.Kill))
+	cmd.NewTerminator(cmd.NewApplicationStopper(clientCommand.Kill))
 	runClient(clientCommand, waiter)
 
 	waiter.Wait()

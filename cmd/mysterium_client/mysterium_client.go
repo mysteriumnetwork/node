@@ -19,7 +19,7 @@ func main() {
 	}
 
 	cmdRun := run.NewCommand(options)
-	cmd.NewTerminator(cmd.NewStopper(cmdRun.Kill))
+	cmd.NewTerminator(cmd.NewApplicationStopper(cmdRun.Kill))
 
 	if err := cmdRun.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -32,7 +32,7 @@ func main() {
 			tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 			newStopHandler(cmdRun),
 		)
-		cmd.NewTerminator(cmd.NewStopper(cmdCli.Kill))
+		cmd.NewTerminator(cmd.NewApplicationStopper(cmdCli.Kill))
 		if err := cmdCli.Run(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)

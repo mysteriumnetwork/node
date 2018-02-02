@@ -7,21 +7,35 @@ import (
 
 type Killer func() error
 
-// NewStopper stops application by invoking given killer and exiting from application
-func NewStopper(kill Killer) func() {
+// NewApplicationStopper invokes all killers and stops application
+func NewApplicationStopper(killers ...Killer) func() {
+	return newStopper(os.Exit, killers...)
+}
+
+type exitter func(code int)
+
+func newStopper(exit exitter, killers ...Killer) func() {
 	return func() {
-		stop(kill)
+		stop(exit, killers...)
 	}
 }
 
-func stop(kill Killer) {
-	err := kill()
-	if err != nil {
-		msg := fmt.Sprintf("Error while killing process: %v\n", err.Error())
-		fmt.Fprintln(os.Stderr, msg)
-		os.Exit(1)
+func stop(exit exitter, killers ...Killer) {
+	killerFailed := false
+	for _, kill := range killers {
+		err := kill()
+		if err != nil {
+			msg := fmt.Sprintf("Error while killing process: %v\n", err.Error())
+			fmt.Fprintln(os.Stderr, msg)
+			killerFailed = true
+		}
 	}
 
 	fmt.Println("Good bye")
-	os.Exit(0)
+
+	if killerFailed {
+		exit(1)
+		return
+	}
+	exit(0)
 }

@@ -73,7 +73,7 @@ func NewCommandWith(
 
 func newDelayedCommandStopper(commandRun *CommandRun) func() {
 	return func() {
-		stop := cmd.NewStopper(commandRun.Kill)
+		stop := cmd.NewApplicationStopper(commandRun.Kill)
 		// TODO: kill CLI if it was started
 		delay(stop)
 	}
