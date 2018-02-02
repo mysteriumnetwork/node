@@ -20,11 +20,13 @@ NMSRVRS=()
 SRCHS=()
 adapters=()
 
+NETWORKSETUP=/usr/sbin/networksetup
+
 # Set bash delimeter to be line break (temporarily)
 IFSSAVE=$IFS
 IFS=$'\n'
 # Get adapter list
-for i in `networksetup -listallnetworkservices |grep -v denotes`; do
+for i in `$NETWORKSETUP -listallnetworkservices |grep -v denotes`; do
         adapters=(${adapters[@]} "$i")
 done
 IFS=$IFSSAVE
@@ -43,10 +45,10 @@ update_all_dns()
         echo updating dns for $adapter
         # set dns server to the vpn dns server
         if [[ "${SRCHS[@]}" ]]; then
-			networksetup -setsearchdomains "$adapter" "${SRCHS[@]}"
+			$NETWORKSETUP -setsearchdomains "$adapter" "${SRCHS[@]}"
         fi
         if [[ "${NMSRVRS[@]}" ]]; then
-			networksetup -setdnsservers "$adapter" "${NMSRVRS[@]}"
+			$NETWORKSETUP -setdnsservers "$adapter" "${NMSRVRS[@]}"
 		fi
         done
 }
@@ -56,8 +58,8 @@ clear_all_dns()
         for adapter in "${adapters[@]}"
         do
         echo updating dns for $adapter
-        networksetup -setdnsservers "$adapter" empty
-        networksetup -setsearchdomains "$adapter" empty
+        $NETWORKSETUP -setdnsservers "$adapter" empty
+        $NETWORKSETUP -setsearchdomains "$adapter" empty
         done
 }
 
