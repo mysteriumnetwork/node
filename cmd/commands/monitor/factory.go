@@ -1,15 +1,15 @@
-package command_run
+package monitor
 
 import (
-	"github.com/mysterium/node/cmd/mysterium_monitor/command_run/node_provider"
+	"github.com/mysterium/node/cmd/commands/monitor/node_provider"
 	"github.com/mysterium/node/ip"
 	"path/filepath"
 	"time"
 )
 
 // NewCommand function creates new monitor command by given options
-func NewCommand() *CommandRun {
-	return &CommandRun{
+func NewCommand() *Command {
+	return &Command{
 		ipResolver: ip.NewResolverWithTimeout(5 * time.Second),
 	}
 }

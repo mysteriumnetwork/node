@@ -1,26 +1,26 @@
-package command_run
+package monitor
 
 import (
 	"errors"
-	command_client "github.com/mysterium/node/cmd/mysterium_client/run"
+	command_client "github.com/mysterium/node/cmd/commands/client"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn"
 	"sync"
 	"time"
 )
 
-// CommandRun represent Mysterium monitor, client which checks connection to nodes
-type CommandRun struct {
+// Command represent Mysterium monitor, client which checks connection to nodes
+type Command struct {
 	ipResolver ip.Resolver
 	ipOriginal string
 
-	clientCommand *command_client.CommandRun
+	clientCommand *command_client.Command
 	ipCheckWaiter sync.WaitGroup
 	resultWriter  *resultWriter
 }
 
 // Run starts monitor command - does not block
-func (cmd *CommandRun) Run(options CommandOptions) error {
+func (cmd *Command) Run(options CommandOptions) error {
 	var err error
 
 	cmd.resultWriter, err = NewResultWriter(options.ResultFile)
@@ -66,7 +66,7 @@ func (cmd *CommandRun) Run(options CommandOptions) error {
 
 // This is meant to be registered as VpnClient middleware:
 //   state.NewMiddleware(cmd.checkClientIPWhenConnected)
-func (cmd *CommandRun) checkClientIPWhenConnected(state openvpn.State) error {
+func (cmd *Command) checkClientIPWhenConnected(state openvpn.State) error {
 	if state == openvpn.STATE_CONNECTED {
 		ipForwarded, err := cmd.ipResolver.GetOutboundIP()
 		if err != nil {
@@ -87,14 +87,14 @@ func (cmd *CommandRun) checkClientIPWhenConnected(state openvpn.State) error {
 	return nil
 }
 
-func (cmd *CommandRun) checkClientHandleTimeout() {
+func (cmd *Command) checkClientHandleTimeout() {
 	<-time.After(10 * time.Second)
 
 	cmd.resultWriter.NodeStatus("Client not connected")
 	cmd.ipCheckWaiter.Done()
 }
 
-func (cmd *CommandRun) checkClientIPWhenDisconnected() {
+func (cmd *Command) checkClientIPWhenDisconnected() {
 	ipForwarded, err := cmd.ipResolver.GetOutboundIP()
 	if err != nil {
 		cmd.resultWriter.NodeError("Disconnect IP not detected", err)
@@ -108,11 +108,11 @@ func (cmd *CommandRun) checkClientIPWhenDisconnected() {
 }
 
 // Wait blocks until monitoring is finished
-func (cmd *CommandRun) Wait() error {
+func (cmd *Command) Wait() error {
 	return nil
 }
 
 // Kill stops monitoring client
-func (cmd *CommandRun) Kill() {
+func (cmd *Command) Kill() {
 	cmd.clientCommand.Kill()
 }

@@ -1,11 +1,11 @@
-package run
+package client
 
 import (
 	"flag"
 	"github.com/mysterium/node/utils/file"
 )
 
-// CommandOptions describes options which are required to start CommandRun
+// CommandOptions describes options which are required to start Command
 type CommandOptions struct {
 	DirectoryRuntime  string
 	DirectoryKeystore string
