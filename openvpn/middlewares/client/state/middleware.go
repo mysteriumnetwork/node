@@ -23,7 +23,7 @@ func NewMiddleware(listeners ...ClientStateCallback) openvpn.ManagementMiddlewar
 func (middleware *middleware) Start(connection net.Conn) error {
 	middleware.connection = connection
 
-	_, err := middleware.connection.Write([]byte("state on\n"))
+	_, err := middleware.connection.Write([]byte("state on all\n"))
 	return err
 }
 

@@ -63,13 +63,25 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return err
 	}
 
-	vpnClient, err := manager.newVpnClient(*vpnSession, consumerID, manager.onVpnStateChanged)
+	vpnStateChannel := make(vpnStateChannel, 1)
+	vpnClient, err := manager.newVpnClient(*vpnSession, consumerID, channelToStateCallback(vpnStateChannel))
 
 	if err := vpnClient.Start(); err != nil {
 		dialog.Close()
 		return err
 	}
-	manager.conn = newConnection(dialog, vpnClient, vpnSession.ID)
+	manager.conn = newConnection(dialog, vpnClient, vpnSession.ID, vpnStateChannel)
+	go func() {
+		for {
+			state, more := <-manager.conn.stateChannel
+			if !more {
+				break
+			}
+			manager.onConnectionStatusUpdate(state)
+		}
+		manager.conn = nil
+		close(vpnStateChannel)
+	}()
 	return nil
 }
 
@@ -88,6 +100,13 @@ func (manager *connectionManager) Disconnect() error {
 	return nil
 }
 
+func (manager *connectionManager) onConnectionStatusUpdate(state State) {
+	switch state {
+	case Connected:
+		manager.statsKeeper.MarkSessionStart()
+	}
+}
+
 // TODO this can be extraced as depencency later when node selection criteria will be clear
 func (manager *connectionManager) findProposalByNode(nodeID identity.Identity) (*dto.ServiceProposal, error) {
 	proposals, err := manager.mysteriumClient.FindProposals(nodeID.Address)
@@ -95,7 +114,7 @@ func (manager *connectionManager) findProposalByNode(nodeID identity.Identity) (
 		return nil, err
 	}
 	if len(proposals) == 0 {
-		err = errors.New("node has no service proposals")
+		err = errors.New("provider has no service proposals")
 		return nil, err
 	}
 	return &proposals[0], nil

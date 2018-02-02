@@ -4,42 +4,57 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/session"
-	"github.com/mysterium/node/openvpn/middlewares/client/state"
 )
+
+type ConnectionStateChannel chan State
 
 type connection struct {
 	dialog         communication.Dialog
 	vpnClient      openvpn.Client
 	status         ConnectionStatus
 	currentSession session.SessionID
+	stateChannel   ConnectionStateChannel
 }
 
-type vpnClientCreator func(callback state.ClientStateCallback) (*openvpn.Client, error)
+func newConnection(dialog communication.Dialog, vpnClient openvpn.Client, currentSession session.SessionID, channel vpnStateChannel) *connection {
 
-func newConnection(dialog communication.Dialog, currentSession session.SessionID, createVpnClient vpnClientCreator) (*connection , error) {
-
-	vpnClient, err := createVpnClient(conn.)
-
-	return &connection{
+	conn := &connection{
 		dialog,
 		vpnClient,
-
-		statusConnecting(),
+		statusNotConnected(),
 		currentSession,
-	},nil
-}
-
-func (conn *connection) onVpnStateChanged(connection ,state openvpn.State) {
-	switch state {
-	case openvpn.STATE_CONNECTED:
-		conn.status = statusConnected(conn.currentSession)
-	case openvpn.STATE_RECONNECTING:
-		conn.status = statusConnecting()
-	case openvpn.STATE_EXITING:
-		conn.status = statusNotConnected()
+		make(ConnectionStateChannel, 1),
 	}
+
+	go func() {
+		for {
+			conn.onVpnStateChanged(<-channel)
+		}
+	}()
+
+	return conn
 }
 
 func (conn *connection) close() {
+	conn.status = statusDisconnecting()
+	conn.vpnClient.Stop()
+}
 
+func (conn *connection) onVpnStateChanged(state openvpn.State) {
+	switch state {
+	case openvpn.STATE_CONNECTING:
+		conn.status = statusConnecting()
+		conn.stateChannel <- Connecting
+	case openvpn.STATE_CONNECTED:
+		conn.status = statusConnected(conn.currentSession)
+		conn.stateChannel <- Connected
+	case openvpn.STATE_RECONNECTING:
+		conn.status = statusReconnecting()
+		conn.stateChannel <- Reconnecting
+	case openvpn.STATE_EXITING:
+		conn.dialog.Close()
+		conn.status = statusNotConnected()
+		conn.stateChannel <- NotConnected
+		close(conn.stateChannel)
+	}
 }

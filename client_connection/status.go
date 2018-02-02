@@ -9,6 +9,7 @@ const (
 	Connecting    = State("Connecting")
 	Connected     = State("Connected")
 	Disconnecting = State("Disconnecting")
+	Reconnecting  = State("Reconnecting")
 )
 
 type ConnectionStatus struct {
@@ -31,6 +32,10 @@ func statusConnected(sessionID session.SessionID) ConnectionStatus {
 
 func statusNotConnected() ConnectionStatus {
 	return ConnectionStatus{NotConnected, "", nil}
+}
+
+func statusReconnecting() ConnectionStatus {
+	return ConnectionStatus{Reconnecting, "", nil}
 }
 
 func statusDisconnecting() ConnectionStatus {
