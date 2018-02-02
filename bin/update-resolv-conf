@@ -9,8 +9,8 @@
 # To use set as 'up' and 'down' script in your openvpn *.conf:
 # up /etc/openvpn/update-resolv-conf
 # down /etc/openvpn/update-resolv-conf
-# Myst client installation:
-# copy to myst client runtime directory
+# installation:
+# copy update-resolv-conf to myst client current directory
 # build/client/ (by default)
 
 [ "$script_type" ] || exit 0

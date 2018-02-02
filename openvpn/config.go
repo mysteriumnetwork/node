@@ -40,9 +40,9 @@ func (c *Config) SetManagementSocket(socketAddress string) {
 	c.setFlag("management-client")
 }
 
-func (c *Config) SetScripts(runtimeDirectory string) {
-	c.setParam("up", filepath.Join(runtimeDirectory, "update-resolv-conf"))
-	c.setParam("down", filepath.Join(runtimeDirectory, "update-resolv-conf"))
+func (c *Config) SetScripts() {
+	c.setParam("up", "update-resolv-conf")
+	c.setParam("down", "update-resolv-conf")
 }
 
 func (c *Config) SetPort(port int) {
