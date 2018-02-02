@@ -5,6 +5,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
+	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -15,11 +16,10 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
-	"os"
 	"time"
 )
 
-//NewCommand function creates new client command by given options
+// NewCommand function creates new client command by given options
 func NewCommand(options CommandOptions) *CommandRun {
 	return NewCommandWith(
 		options,
@@ -27,7 +27,7 @@ func NewCommand(options CommandOptions) *CommandRun {
 	)
 }
 
-//NewCommandWith does the same as NewCommand with possibility to override mysterium api client for external communication
+// NewCommandWith does the same as NewCommand with possibility to override mysterium api client for external communication
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
@@ -73,36 +73,27 @@ func NewCommandWith(
 
 func newDelayedCommandStopper(commandRun *CommandRun) func() {
 	return func() {
-		stop := func() { kill(commandRun) }
-		go delay(stop)
+		stop := cmd.NewStopper(commandRun.Kill)
+		// TODO: kill CLI if it was started
+		delay(stop)
 	}
-}
-
-// TODO: DRY
-func kill(command *CommandRun) {
-	err := command.Kill()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to kill one of subroutines %q\n", err.Error())
-		os.Exit(1)
-	}
-
-	fmt.Println("Good bye")
-	os.Exit(0)
 }
 
 func delay(stop func()) {
 	log.Info("Client is stopping")
-	time.Sleep(3 * time.Second)
-	stop()
+	go func() {
+		time.Sleep(5 * time.Second)
+		stop()
+	}()
 }
 
-//CommandRun represent entrypoint for Mysterium client with top level components
+// CommandRun represent entry point for Mysterium client with top level components
 type CommandRun struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.APIServer
 }
 
-//Run starts Tequilapi service - does not block
+// Run starts Tequilapi service - does not block
 func (cmd *CommandRun) Run() error {
 	err := cmd.httpApiServer.StartServing()
 	if err != nil {
@@ -118,12 +109,12 @@ func (cmd *CommandRun) Run() error {
 	return nil
 }
 
-//Wait blocks until tequilapi service is stopped
+// Wait blocks until tequilapi service is stopped
 func (cmd *CommandRun) Wait() error {
 	return cmd.httpApiServer.Wait()
 }
 
-//Kill stops tequilapi service
+// Kill stops tequilapi service
 func (cmd *CommandRun) Kill() error {
 	err := cmd.connectionManager.Disconnect()
 	if err != nil {

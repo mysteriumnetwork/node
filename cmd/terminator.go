@@ -1,32 +1,21 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
-type Command interface {
-	Kill() error
-}
+type Stopper func()
 
-func NewTerminator(command Command) {
+func NewTerminator(stop Stopper) {
 	sigterm := make(chan os.Signal)
 	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 
-	go waitTerminatorSignals(sigterm, command)
+	go waitTerminatorSignals(sigterm, stop)
 }
 
-func waitTerminatorSignals(terminator chan os.Signal, command Command) {
+func waitTerminatorSignals(terminator chan os.Signal, stop Stopper) {
 	<-terminator
-
-	err := command.Kill()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Unable to kill one of subroutines %q\n", err.Error())
-		os.Exit(1)
-	}
-
-	fmt.Println("Good bye")
-	os.Exit(0)
+	stop()
 }
