@@ -1,0 +1,4 @@
+# This is the configuration file for /etc/init.d/mysterium-server
+
+# Unique identifier for Mysterium VPN node
+MYSTERIUM_SERVER_NODE=""
