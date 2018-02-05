@@ -122,7 +122,7 @@ func (cmd *Command) stopAfterDelay() {
 
 func delay(stop func()) {
 	go func() {
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 		stop()
 	}()
 }
