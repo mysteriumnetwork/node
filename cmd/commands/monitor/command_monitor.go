@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"errors"
+	node_cmd "github.com/mysterium/node/cmd"
 	command_client "github.com/mysterium/node/cmd/commands/client"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn"
@@ -40,9 +41,11 @@ func (cmd *Command) Run(options CommandOptions) error {
 		return errors.New("Failed to get original IP: " + err.Error())
 	}
 
+	stop := node_cmd.NewApplicationStopper()
+
 	cmd.clientCommand = command_client.NewCommand(command_client.CommandOptions{
 		DirectoryRuntime: options.DirectoryRuntime,
-	})
+	}, stop)
 
 	nodeProvider.WithEachNode(func(nodeKey string) {
 		cmd.resultWriter.NodeStart(nodeKey)

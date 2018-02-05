@@ -18,29 +18,39 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmdRun := client.NewCommand(options)
+	var cmdRun *client.Command
+	var cmdCli *cli.Command
+
+	stop := func() {
+		var killers []cmd.Killer
+		if cmdRun != nil {
+			killers = append(killers, cmdRun.Kill)
+		}
+		// TODO: add CLI killer once it's not blocking anymore
+		cmd.NewApplicationStopper(killers...)
+		os.Exit(0)
+	}
+
+	cmdRun = client.NewCommand(options, stop)
 
 	if err := cmdRun.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	killers := []cmd.Killer{cmdRun.Kill}
 
 	if options.CLI {
-		cmdCli := cli.NewCommand(
+		cmdCli = cli.NewCommand(
 			filepath.Join(options.DirectoryRuntime, ".cli_history"),
 			tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
-			cmdRun.Kill,
+			stop,
 		)
 		if err := cmdCli.Run(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		killers = append([]cmd.Killer{cmdCli.Kill}, killers...)
 	}
 
-	stopper := cmd.NewApplicationStopper(killers...)
-	cmd.NewTerminator(stopper)
+	cmd.NewTerminator(stop)
 
 	if err = cmdRun.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

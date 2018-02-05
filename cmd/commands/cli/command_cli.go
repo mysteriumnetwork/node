@@ -14,12 +14,12 @@ import (
 func NewCommand(
 	historyFile string,
 	tequilapi *tequilapi_client.Client,
-	clientKiller func() error,
+	stop cmd.Stopper,
 ) *Command {
 	return &Command{
-		historyFile:  historyFile,
-		tequilapi:    tequilapi,
-		clientKiller: clientKiller,
+		historyFile: historyFile,
+		tequilapi:   tequilapi,
+		stop:        stop,
 	}
 }
 
@@ -27,7 +27,7 @@ func NewCommand(
 type Command struct {
 	historyFile      string
 	tequilapi        *tequilapi_client.Client
-	clientKiller     func() error
+	stop             cmd.Stopper
 	fetchedProposals []tequilapi_client.ProposalDTO
 	completer        *readline.PrefixCompleter
 	reader           *readline.Instance
@@ -37,7 +37,8 @@ const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
-// Run starts CLI interface
+// Run starts CLI interface in the same thread while blocking it
+// TODO: rename method to clarify that it's blocking
 func (c *Command) Run() (err error) {
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
@@ -264,8 +265,7 @@ func (c *Command) help() {
 
 // quit stops cli and client commands and exits application
 func (c *Command) quit() {
-	stop := cmd.NewApplicationStopper(c.Kill, c.clientKiller)
-	stop()
+	c.stop()
 }
 
 func (c *Command) identities(argsString string) {

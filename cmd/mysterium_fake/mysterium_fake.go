@@ -20,7 +20,22 @@ func main() {
 	waiter := &sync.WaitGroup{}
 	mysteriumClient := server.NewClientFake()
 
-	serverCommand := command_server.NewCommandWith(
+	var serverCommand *command_server.Command
+	var clientCommand *command_client.Command
+
+	stop := func() {
+		var killers []cmd.Killer
+		if serverCommand != nil {
+			killers = append(killers, serverCommand.Kill)
+		}
+		if clientCommand != nil {
+			killers = append(killers, serverCommand.Kill)
+		}
+		stop := cmd.NewApplicationStopper(killers...)
+		stop()
+	}
+
+	serverCommand = command_server.NewCommandWith(
 		command_server.CommandOptions{
 			DirectoryConfig:  NodeDirectoryConfig,
 			DirectoryRuntime: ClientDirectoryRuntime,
@@ -31,13 +46,15 @@ func main() {
 	)
 	runServer(serverCommand, waiter)
 
-	clientCommand := command_client.NewCommandWith(
+	clientCommand = command_client.NewCommandWith(
 		command_client.CommandOptions{
 			DirectoryRuntime: ClientDirectoryRuntime,
 		},
 		mysteriumClient,
+		stop,
 	)
-	cmd.NewApplicationStopper(serverCommand.Kill, clientCommand.Kill)
+
+	cmd.NewTerminator(stop)
 
 	runClient(clientCommand, waiter)
 

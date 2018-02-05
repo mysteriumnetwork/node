@@ -20,10 +20,11 @@ import (
 )
 
 // NewCommand function creates new client command by given options
-func NewCommand(options CommandOptions) *Command {
+func NewCommand(options CommandOptions, stop cmd.Stopper) *Command {
 	return NewCommandWith(
 		options,
 		server.NewClient(),
+		stop,
 	)
 }
 
@@ -31,6 +32,7 @@ func NewCommand(options CommandOptions) *Command {
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
+	stop cmd.Stopper,
 ) *Command {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
@@ -58,39 +60,25 @@ func NewCommandWith(
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
 	command := &Command{
-		connectionManager,
-		httpAPIServer,
+		stop:              stop,
+		connectionManager: connectionManager,
+		httpApiServer:     httpAPIServer,
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	ipResolver := ip.NewResolver()
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
-	tequilapi_endpoints.AddRouteForStop(router, newDelayedCommandStopper(command))
+	tequilapi_endpoints.AddRouteForStop(router, command.stopAfterDelay)
 
 	return command
-}
-
-func newDelayedCommandStopper(command *Command) func() {
-	return func() {
-		stop := cmd.NewApplicationStopper(command.Kill)
-		// TODO: kill CLI if it was started
-		delay(stop)
-	}
-}
-
-func delay(stop func()) {
-	log.Info("Client is stopping")
-	go func() {
-		time.Sleep(5 * time.Second)
-		stop()
-	}()
 }
 
 //Command represent entrypoint for Mysterium client with top level components
 type Command struct {
 	connectionManager client_connection.Manager
 	httpApiServer     tequilapi.APIServer
+	stop              cmd.Stopper
 }
 
 // Run starts Tequilapi service - does not block
@@ -125,4 +113,16 @@ func (cmd *Command) Kill() error {
 	fmt.Printf("Api stopped\n")
 
 	return nil
+}
+
+func (cmd *Command) stopAfterDelay() {
+	log.Info("Client is stopping")
+	delay(cmd.stop)
+}
+
+func delay(stop func()) {
+	go func() {
+		time.Sleep(5 * time.Second)
+		stop()
+	}()
 }
