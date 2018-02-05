@@ -57,7 +57,6 @@ func (process *Process) Wait() error {
 }
 
 func (process *Process) Stop() {
-	close(process.cmdShutdownStarted)
 	process.once.Do(func() {
 		close(process.cmdShutdownStarted)
 	})
