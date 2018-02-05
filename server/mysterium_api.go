@@ -96,6 +96,8 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 		return nil, err
 	}
 
+	log.Info(mysteriumAPILogPrefix, "Proposals fetched: ", len(proposalsResponse.Proposals))
+
 	return proposalsResponse.Proposals, nil
 }
 
