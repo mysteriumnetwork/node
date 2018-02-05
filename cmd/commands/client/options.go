@@ -2,7 +2,7 @@ package client
 
 import (
 	"flag"
-	"github.com/mysterium/node/utils/file"
+	"github.com/mysterium/node/cmd"
 )
 
 // CommandOptions describes options which are required to start Command
@@ -23,19 +23,19 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.DirectoryConfig,
 		"config-dir",
-		file.GetMysteriumDirectory("config"),
+		cmd.GetMysteriumDirectory("config"),
 		"Configs directory containing all configuration files",
 	)
 	flags.StringVar(
 		&options.DirectoryRuntime,
 		"runtime-dir",
-		file.GetMysteriumDirectory("run"),
+		cmd.GetMysteriumDirectory("run"),
 		"Runtime writable directory for temp files",
 	)
 	flags.StringVar(
 		&options.DirectoryKeystore,
 		"keystore-dir",
-		file.GetMysteriumDirectory("keystore"),
+		cmd.GetMysteriumDirectory("keystore"),
 		"Keystore directory",
 	)
 
