@@ -27,7 +27,9 @@ type connectionManager struct {
 }
 
 var (
-	NoConnection  = errors.New("no connection exists")
+	// NoConnection error indicates that action applied to manager expects active connection (i.e. disconnect)
+	NoConnection = errors.New("no connection exists")
+	// AlreadyExists error indicates that aciton applieto to manager expects no active connection (i.e. connect)
 	AlreadyExists = errors.New("connection already exists")
 )
 
@@ -68,6 +70,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 
 	if err := vpnClient.Start(); err != nil {
 		dialog.Close()
+		close(vpnStateChannel)
 		return err
 	}
 	manager.conn = newConnection(dialog, vpnClient, vpnSession.ID, vpnStateChannel)
@@ -79,8 +82,8 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 			}
 			manager.onConnectionStatusUpdate(state)
 		}
-		manager.conn = nil
 		close(vpnStateChannel)
+		manager.conn = nil
 	}()
 	return nil
 }
@@ -108,8 +111,8 @@ func (manager *connectionManager) onConnectionStatusUpdate(state State) {
 }
 
 // TODO this can be extraced as depencency later when node selection criteria will be clear
-func (manager *connectionManager) findProposalByNode(nodeID identity.Identity) (*dto.ServiceProposal, error) {
-	proposals, err := manager.mysteriumClient.FindProposals(nodeID.Address)
+func (manager *connectionManager) findProposalByNode(providerID identity.Identity) (*dto.ServiceProposal, error) {
+	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
 	if err != nil {
 		return nil, err
 	}
