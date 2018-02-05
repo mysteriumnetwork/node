@@ -27,8 +27,8 @@ func main() {
 			killers = append(killers, cmdRun.Kill)
 		}
 		// TODO: add CLI killer once it's not blocking anymore
-		cmd.NewApplicationStopper(killers...)
-		os.Exit(0)
+		stop := cmd.NewApplicationStopper(killers...)
+		stop()
 	}
 
 	cmdRun = client.NewCommand(options, stop)
