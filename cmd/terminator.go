@@ -6,8 +6,10 @@ import (
 	"syscall"
 )
 
+// Stopper stops application and performs required cleanup tasks
 type Stopper func()
 
+// NewTerminator invokes given stopper on SIGTERM and SIGHUP interrupts
 func NewTerminator(stop Stopper) {
 	sigterm := make(chan os.Signal)
 	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)

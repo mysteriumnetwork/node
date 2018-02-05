@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func NewFakeKiller(killReturnsError bool) *fakeKiller {
+func newFakeKiller(killReturnsError bool) *fakeKiller {
 	return &fakeKiller{
 		Killed:           false,
 		killReturnsError: killReturnsError,
@@ -26,7 +26,7 @@ func (fk *fakeKiller) Kill() error {
 	return nil
 }
 
-func NewFakeExiter() fakeExiter {
+func newFakeExiter() fakeExiter {
 	return fakeExiter{-1}
 }
 
@@ -39,8 +39,8 @@ func (fe *fakeExiter) Exit(code int) {
 }
 
 func TestNewStopper(t *testing.T) {
-	killer := NewFakeKiller(false)
-	exiter := NewFakeExiter()
+	killer := newFakeKiller(false)
+	exiter := newFakeExiter()
 	stopper := newStopper(exiter.Exit, killer.Kill)
 	assert.NotNil(t, stopper)
 }
@@ -52,28 +52,28 @@ func TestStop(t *testing.T) {
 	}{
 		// Successful killer
 		{
-			[]*fakeKiller{NewFakeKiller(false)},
+			[]*fakeKiller{newFakeKiller(false)},
 			0,
 		},
 		// Failing killer
 		{
-			[]*fakeKiller{NewFakeKiller(true)},
+			[]*fakeKiller{newFakeKiller(true)},
 			1,
 		},
 		// Two successful killers
 		{
-			[]*fakeKiller{NewFakeKiller(false), NewFakeKiller(false)},
+			[]*fakeKiller{newFakeKiller(false), newFakeKiller(false)},
 			0,
 		},
 		// First killer fails, second gets executed
 		{
-			[]*fakeKiller{NewFakeKiller(true), NewFakeKiller(false)},
+			[]*fakeKiller{newFakeKiller(true), newFakeKiller(false)},
 			1,
 		},
 	}
 
 	for _, test := range tests {
-		exiter := NewFakeExiter()
+		exiter := newFakeExiter()
 		var killers []Killer
 		for _, fakeKiller := range test.fakeKillers {
 			killers = append(killers, fakeKiller.Kill)

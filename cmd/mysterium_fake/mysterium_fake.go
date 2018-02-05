@@ -53,9 +53,7 @@ func main() {
 		mysteriumClient,
 		stop,
 	)
-
 	cmd.NewTerminator(stop)
-
 	runClient(clientCommand, waiter)
 
 	waiter.Wait()

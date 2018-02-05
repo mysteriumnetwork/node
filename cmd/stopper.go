@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// Killer kills some resource and performs cleanup
 type Killer func() error
 
 // NewApplicationStopper invokes all killers and stops application

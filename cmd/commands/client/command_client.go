@@ -62,7 +62,7 @@ func NewCommandWith(
 	command := &Command{
 		stop:              stop,
 		connectionManager: connectionManager,
-		httpApiServer:     httpAPIServer,
+		httpAPIServer:     httpAPIServer,
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
@@ -77,18 +77,18 @@ func NewCommandWith(
 //Command represent entrypoint for Mysterium client with top level components
 type Command struct {
 	connectionManager client_connection.Manager
-	httpApiServer     tequilapi.APIServer
+	httpAPIServer     tequilapi.APIServer
 	stop              cmd.Stopper
 }
 
 // Run starts Tequilapi service - does not block
 func (cmd *Command) Run() error {
-	err := cmd.httpApiServer.StartServing()
+	err := cmd.httpAPIServer.StartServing()
 	if err != nil {
 		return err
 	}
 
-	port, err := cmd.httpApiServer.Port()
+	port, err := cmd.httpAPIServer.Port()
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (cmd *Command) Run() error {
 
 // Wait blocks until tequilapi service is stopped
 func (cmd *Command) Wait() error {
-	return cmd.httpApiServer.Wait()
+	return cmd.httpAPIServer.Wait()
 }
 
 // Kill stops tequilapi service
@@ -109,7 +109,7 @@ func (cmd *Command) Kill() error {
 		return err
 	}
 
-	cmd.httpApiServer.Stop()
+	cmd.httpAPIServer.Stop()
 	fmt.Printf("Api stopped\n")
 
 	return nil
@@ -117,12 +117,12 @@ func (cmd *Command) Kill() error {
 
 func (cmd *Command) stopAfterDelay() {
 	log.Info("Client is stopping")
-	delay(cmd.stop)
+	delay(cmd.stop, 1*time.Second)
 }
 
-func delay(stop func()) {
+func delay(function func(), duration time.Duration) {
 	go func() {
-		time.Sleep(1 * time.Second)
-		stop()
+		time.Sleep(duration)
+		function()
 	}()
 }
