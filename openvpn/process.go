@@ -16,6 +16,8 @@ func NewProcess(logPrefix string) *Process {
 		cmdExitError:       make(chan error),
 		cmdShutdownStarted: make(chan bool),
 		cmdShutdownWaiter:  sync.WaitGroup{},
+
+		once: sync.Once{},
 	}
 }
 
@@ -25,6 +27,7 @@ type Process struct {
 	cmdExitError       chan error
 	cmdShutdownStarted chan bool
 	cmdShutdownWaiter  sync.WaitGroup
+	once               sync.Once
 }
 
 func (process *Process) Start(arguments []string) (err error) {
@@ -55,6 +58,9 @@ func (process *Process) Wait() error {
 
 func (process *Process) Stop() {
 	close(process.cmdShutdownStarted)
+	process.once.Do(func() {
+		close(process.cmdShutdownStarted)
+	})
 	process.cmdShutdownWaiter.Wait()
 }
 

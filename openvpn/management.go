@@ -20,6 +20,7 @@ type Management struct {
 
 	listenerShutdownStarted chan bool
 	listenerShutdownWaiter  sync.WaitGroup
+	once                    sync.Once
 }
 
 type ManagementMiddleware interface {
@@ -38,6 +39,7 @@ func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMid
 
 		listenerShutdownStarted: make(chan bool),
 		listenerShutdownWaiter:  sync.WaitGroup{},
+		once: sync.Once{},
 	}
 }
 
@@ -59,7 +61,9 @@ func (management *Management) Start() error {
 
 func (management *Management) Stop() {
 	log.Info(management.logPrefix, "Shutdown")
-	close(management.listenerShutdownStarted)
+	management.once.Do(func() {
+		close(management.listenerShutdownStarted)
+	})
 
 	management.listenerShutdownWaiter.Wait()
 	log.Info(management.logPrefix, "Shutdown finished")
@@ -67,11 +71,6 @@ func (management *Management) Stop() {
 
 func (management *Management) waitForShutdown(listener net.Listener) {
 	<-management.listenerShutdownStarted
-
-	for _, middleware := range management.middlewares {
-		middleware.Stop()
-	}
-
 	listener.Close()
 }
 
@@ -101,6 +100,12 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 	for _, middleware := range management.middlewares {
 		middleware.Start(connection)
 	}
+
+	defer func() {
+		for _, middleware := range management.middlewares {
+			middleware.Stop()
+		}
+	}()
 
 	reader := textproto.NewReader(bufio.NewReader(connection))
 	for {
