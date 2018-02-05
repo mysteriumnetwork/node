@@ -27,20 +27,19 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		file.GetMysteriumDirectory("config"),
 		"Configs directory containing all configuration files",
 	)
-
 	flags.StringVar(
 		&options.DirectoryRuntime,
 		"runtime-dir",
 		file.GetMysteriumDirectory("run"),
 		"Runtime writable directory for temp files",
 	)
-
 	flags.StringVar(
 		&options.DirectoryKeystore,
 		"keystore-dir",
 		file.GetMysteriumDirectory("keystore"),
 		"Keystore directory",
 	)
+
 	flags.StringVar(
 		&options.Identity,
 		"identity",
