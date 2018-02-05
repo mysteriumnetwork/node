@@ -56,6 +56,9 @@ func NewClientConfig(
 	config.setParam("dhcp-option", "DNS 208.67.222.222")
 	config.setParam("dhcp-option", "DNS 208.67.220.220")
 
+	config.setParam("up", "update-resolv-conf")
+	config.setParam("down", "update-resolv-conf")
+
 	return &config
 }
 
