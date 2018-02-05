@@ -18,6 +18,7 @@
 #> bin/client_package_debian 0.0.1 amd64
 
 OS_DIR_BIN="/usr/bin"
+OS_DIR_CONFIG="/etc/mysterium-node"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-client/installation"
 
 VERSION=$1
@@ -59,6 +60,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --after-remove bin/client_package/installation/post-uninstall.sh \
         -s dir -t deb \
         build/client/mysterium_client=${OS_DIR_BIN}/ \
+        bin/client_package/config/=${OS_DIR_CONFIG}/ \
         bin/client_package/installation/=${OS_DIR_INSTALLATION}/
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Failed to build Debian package!"
