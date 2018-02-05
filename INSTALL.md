@@ -28,15 +28,18 @@ wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/myster
 sudo dpkg --install --force-depends mysterium-node_linux_amd64.deb
 sudo apt-get install --fix-broken
 ```
-### Running
+### Running service
 ```bash
 sudo service mysterium-node start
 sudo service mysterium-node status
 ```
-### Debugging
+### Debugging service
 ```bash
 sudo tail -f /var/log/mysterium-node/*
-sudo mysterium_server --config-dir=/etc/mysterium-node --runtime-dir=/tmp --node=123456
+```
+### Debugging standalone
+```
+sudo mysterium_server --config-dir=/etc/mysterium-node --runtime-dir=/tmp --node=0x123456..
 ```
 
 
@@ -52,16 +55,16 @@ wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/myster
 sudo dpkg --install --force-depends mysterium-client_linux_amd64.deb
 sudo apt-get install --fix-broken
 ```
-### Running
+### Running service
 ```bash
 sudo service mysterium-client start
 sudo service mysterium-client status
 ```
-### Debugging
+### Debugging service
 ```bash
 sudo tail -f /var/log/mysterium-client/*
 ```
-### Runing standalone
+### Debugging standalone
 ```
 sudo mysterium_client --config-dir=/etc/mysterium-client --runtime-dir=/tmp --cli
 ```
@@ -75,7 +78,7 @@ sudo mysterium_client --config-dir=/etc/mysterium-client --runtime-dir=/tmp --cl
 ### Running
 ```bash
 mysterium_server --help
-sudo mysterium_server --config-dir=/etc/mysterium-node --node=123456
+sudo mysterium_server --config-dir=/etc/mysterium-node --node=0x123456..
 ```
 
 
