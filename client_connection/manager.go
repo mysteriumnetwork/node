@@ -129,12 +129,19 @@ func statusDisconnecting() ConnectionStatus {
 	return ConnectionStatus{Disconnecting, "", nil}
 }
 
-func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntimeDirectory string,
-	signerFactory identity.SignerFactory, statsKeeper bytescount.SessionStatsKeeper) VpnClientFactory {
+func ConfigureVpnClientFactory(
+	mysteriumAPIClient server.Client,
+	configDirectory string,
+	runtimeDirectory string,
+	signerFactory identity.SignerFactory,
+	statsKeeper bytescount.SessionStatsKeeper,
+) VpnClientFactory {
 	return func(vpnSession session.SessionDto, id identity.Identity) (openvpn.Client, error) {
 		vpnConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,
-			filepath.Join(vpnClientRuntimeDirectory, "client.ovpn"),
+			filepath.Join(runtimeDirectory, "client.ovpn"),
+			filepath.Join(configDirectory, "update-resolv-conf"),
+			filepath.Join(configDirectory, "update-resolv-conf"),
 		)
 		if err != nil {
 			return nil, err
@@ -153,7 +160,7 @@ func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntim
 		}
 		return openvpn.NewClient(
 			vpnConfig,
-			vpnClientRuntimeDirectory,
+			runtimeDirectory,
 			vpnMiddlewares...,
 		), nil
 	}

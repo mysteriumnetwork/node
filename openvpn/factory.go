@@ -56,13 +56,13 @@ func NewClientConfig(
 	config.setParam("dhcp-option", "DNS 208.67.222.222")
 	config.setParam("dhcp-option", "DNS 208.67.220.220")
 
-	config.setParam("up", "update-resolv-conf")
-	config.setParam("down", "update-resolv-conf")
-
 	return &config
 }
 
-func NewClientConfigFromString(configString, configFile string) (*ClientConfig, error) {
+func NewClientConfigFromString(
+	configString, configFile string,
+	scriptUp, scriptDown string,
+) (*ClientConfig, error) {
 	err := ioutil.WriteFile(configFile, []byte(configString), 0600)
 	if err != nil {
 		return nil, err
@@ -70,5 +70,9 @@ func NewClientConfigFromString(configString, configFile string) (*ClientConfig, 
 
 	config := ClientConfig{NewConfig()}
 	config.AddOptions(OptionParam("config", configFile))
+
+	config.setParam("up", scriptUp)
+	config.setParam("down", scriptDown)
+
 	return &config, nil
 }
