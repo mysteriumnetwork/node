@@ -14,7 +14,8 @@ func AddRouteForStop(router *httprouter.Router, stop Stopper) {
 }
 
 func newStopHandler(stop Stopper) httprouter.Handle {
-	return func(_ http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+	return func(response http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 		stop()
+		response.WriteHeader(http.StatusAccepted)
 	}
 }

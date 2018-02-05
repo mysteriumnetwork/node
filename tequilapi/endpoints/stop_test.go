@@ -25,7 +25,7 @@ func TestAddRouteForStop(t *testing.T) {
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/stop", strings.NewReader(""))
 	router.ServeHTTP(resp, req)
-	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.Equal(t, http.StatusAccepted, resp.Code)
 
 	assert.True(t, stopper.stopped)
 }
