@@ -61,7 +61,7 @@ func (client *ClientFake) FindProposals(providerID string) (proposals []dto_disc
 	return proposals, nil
 }
 
-// SendSessionStats heartbeats that session is still active
+// SendSessionStats heartbeats that session is still active + session upload and download amounts
 func (client *ClientFake) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
 	log.Info(mysteriumAPILogPrefix, "Session stats sent: ", sessionId)
 
