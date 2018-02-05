@@ -123,7 +123,7 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 func (management *Management) deliverLines() {
 	for {
 		line := <-management.lineReceiver
-		// log.Debug(management.logPrefix, "Line delivering: ", line)
+		log.Trace(management.logPrefix, "Line delivering: ", line)
 
 		lineConsumed := false
 		for _, middleware := range management.middlewares {
@@ -135,7 +135,7 @@ func (management *Management) deliverLines() {
 			lineConsumed = lineConsumed || consumed
 		}
 		if !lineConsumed {
-			// log.Warn(management.logPrefix, "Line not delivered: ", line)
+			log.Trace(management.logPrefix, "Line not delivered: ", line)
 		}
 	}
 }
