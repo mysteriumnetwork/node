@@ -18,7 +18,6 @@ func NewClient(config *ClientConfig, directoryRuntime string, middlewares ...Man
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
 	config.SetManagementSocket(socketAddress)
-	config.SetScripts()
 
 	return &openVpnClient{
 		config:     config,
