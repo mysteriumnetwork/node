@@ -158,6 +158,15 @@ func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	tc.fakeOpenVpn.reportState(openvpn.STATE_EXITING)
 	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
+
+	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
+	tc.fakeOpenVpn.reportState(openvpn.STATE_CONNECTING)
+	tc.fakeOpenVpn.reportState(openvpn.STATE_CONNECTED)
+
+	assert.NoError(tc.T(), tc.connManager.Disconnect())
+	tc.fakeOpenVpn.reportState(openvpn.STATE_EXITING)
+	assert.Equal(tc.T(), ConnectionStatus{NotConnected, "", nil}, tc.connManager.Status())
+
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
