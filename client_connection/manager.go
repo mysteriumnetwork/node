@@ -6,47 +6,45 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/openvpn/middlewares/client/state"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 )
 
-type DialogEstablisherFactory func(identity identity.Identity) communication.DialogEstablisher
-
-type VpnClientFactory func(session.SessionDto, identity.Identity, state.ClientStateCallback) (openvpn.Client, error)
+var (
+	// ErrNoConnection error indicates that action applied to manager expects active connection (i.e. disconnect)
+	ErrNoConnection = errors.New("no connection exists")
+	// ErrAlreadyExists error indicates that aciton applieto to manager expects no active connection (i.e. connect)
+	ErrAlreadyExists = errors.New("connection already exists")
+)
 
 type connectionManager struct {
 	//these are passed on creation
 	mysteriumClient  server.Client
-	newDialogCreator DialogEstablisherFactory
-	newVpnClient     VpnClientFactory
+	newDialogCreator DialogEstablisherCreator
+	newVpnClient     VpnClientCreator
 	statsKeeper      bytescount.SessionStatsKeeper
 	//these are populated by Connect at runtime
-	conn *connection
+	status        ConnectionStatus
+	dialog        communication.Dialog
+	openvpnClient openvpn.Client
+	sessionId     session.SessionID
 }
 
-var (
-	// NoConnection error indicates that action applied to manager expects active connection (i.e. disconnect)
-	NoConnection = errors.New("no connection exists")
-	// AlreadyExists error indicates that aciton applieto to manager expects no active connection (i.e. connect)
-	AlreadyExists = errors.New("connection already exists")
-)
-
-func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEstablisherFactory,
-	vpnClientFactory VpnClientFactory, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
+func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEstablisherCreator,
+	vpnClientFactory VpnClientCreator, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
 		mysteriumClient:  mysteriumClient,
 		newDialogCreator: dialogEstablisherFactory,
 		newVpnClient:     vpnClientFactory,
 		statsKeeper:      statsKeeper,
-		conn:             nil,
+		status:           statusNotConnected(),
 	}
 }
 
 func (manager *connectionManager) Connect(consumerID, providerID identity.Identity) error {
-	if manager.conn != nil {
-		return AlreadyExists
+	if manager.status.State != NotConnected {
+		return ErrAlreadyExists
 	}
 
 	proposal, err := manager.findProposalByNode(providerID)
@@ -55,58 +53,50 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	}
 
 	dialogCreator := manager.newDialogCreator(consumerID)
-	dialog, err := dialogCreator.CreateDialog(providerID, proposal.ProviderContacts[0])
+	manager.dialog, err = dialogCreator.CreateDialog(providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
 
-	vpnSession, err := session.RequestSessionCreate(dialog, proposal.ID)
+	vpnSession, err := session.RequestSessionCreate(manager.dialog, proposal.ID)
 	if err != nil {
 		return err
 	}
+	manager.sessionId = vpnSession.ID
 
-	vpnStateChannel := make(vpnStateChannel, 1)
-	vpnClient, err := manager.newVpnClient(*vpnSession, consumerID, channelToStateCallback(vpnStateChannel))
+	manager.openvpnClient, err = manager.newVpnClient(*vpnSession, consumerID, manager.onVpnStatusUpdate)
 
-	if err := vpnClient.Start(); err != nil {
-		dialog.Close()
-		close(vpnStateChannel)
+	if err := manager.openvpnClient.Start(); err != nil {
+		manager.dialog.Close()
 		return err
 	}
-	manager.conn = newConnection(dialog, vpnClient, vpnSession.ID, vpnStateChannel)
-	go func() {
-		for {
-			state, more := <-manager.conn.stateChannel
-			if !more {
-				break
-			}
-			manager.onConnectionStatusUpdate(state)
-		}
-		close(vpnStateChannel)
-		manager.conn = nil
-	}()
 	return nil
 }
 
 func (manager *connectionManager) Status() ConnectionStatus {
-	if manager.conn == nil {
-		return statusNotConnected()
-	}
-	return manager.conn.status
+	return manager.status
 }
 
 func (manager *connectionManager) Disconnect() error {
-	if manager.conn == nil {
-		return NoConnection
+	if manager.status.State == NotConnected {
+		return ErrNoConnection
 	}
-	manager.conn.close()
+	manager.status = statusDisconnecting()
+	manager.openvpnClient.Stop()
 	return nil
 }
 
-func (manager *connectionManager) onConnectionStatusUpdate(state State) {
-	switch state {
-	case Connected:
+func (manager *connectionManager) onVpnStatusUpdate(vpnState openvpn.State) {
+	switch vpnState {
+	case openvpn.STATE_CONNECTING:
+		manager.status = statusConnecting()
+	case openvpn.STATE_CONNECTED:
 		manager.statsKeeper.MarkSessionStart()
+		manager.status = statusConnected(manager.sessionId)
+	case openvpn.STATE_EXITING:
+		manager.status = statusNotConnected()
+	case openvpn.STATE_RECONNECTING:
+		manager.status = statusReconnecting()
 	}
 }
 

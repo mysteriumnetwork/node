@@ -15,29 +15,24 @@ const (
 type ConnectionStatus struct {
 	State     State
 	SessionID session.SessionID
-	LastError error
-}
-
-func statusError(err error) ConnectionStatus {
-	return ConnectionStatus{NotConnected, "", err}
 }
 
 func statusConnecting() ConnectionStatus {
-	return ConnectionStatus{Connecting, "", nil}
+	return ConnectionStatus{Connecting, ""}
 }
 
 func statusConnected(sessionID session.SessionID) ConnectionStatus {
-	return ConnectionStatus{Connected, sessionID, nil}
+	return ConnectionStatus{Connected, sessionID}
 }
 
 func statusNotConnected() ConnectionStatus {
-	return ConnectionStatus{NotConnected, "", nil}
+	return ConnectionStatus{NotConnected, ""}
 }
 
 func statusReconnecting() ConnectionStatus {
-	return ConnectionStatus{Reconnecting, "", nil}
+	return ConnectionStatus{Reconnecting, ""}
 }
 
 func statusDisconnecting() ConnectionStatus {
-	return ConnectionStatus{Disconnecting, "", nil}
+	return ConnectionStatus{Disconnecting, ""}
 }

@@ -19,7 +19,7 @@ func ConfigureVpnClientFactory(
 	runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	statsKeeper bytescount.SessionStatsKeeper,
-) VpnClientFactory {
+) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, stateCallback state.ClientStateCallback) (openvpn.Client, error) {
 		vpnClientConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,

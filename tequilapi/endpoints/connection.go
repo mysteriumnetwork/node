@@ -58,7 +58,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 
 	if err != nil {
 		switch err {
-		case client_connection.AlreadyExists:
+		case client_connection.ErrAlreadyExists:
 			utils.SendError(resp, err, http.StatusConflict)
 		default:
 			utils.SendError(resp, err, http.StatusInternalServerError)
@@ -73,7 +73,7 @@ func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 	err := ce.manager.Disconnect()
 	if err != nil {
 		switch err {
-		case client_connection.NoConnection:
+		case client_connection.ErrNoConnection:
 			utils.SendError(resp, err, http.StatusConflict)
 		default:
 			utils.SendError(resp, err, http.StatusInternalServerError)

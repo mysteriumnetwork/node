@@ -361,7 +361,7 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 
 func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 	manager := fakeManager{}
-	manager.onConnectReturn = client_connection.AlreadyExists
+	manager.onConnectReturn = client_connection.ErrAlreadyExists
 
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
 
@@ -389,7 +389,7 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 
 func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 	manager := fakeManager{}
-	manager.onDisconnectReturn = client_connection.NoConnection
+	manager.onDisconnectReturn = client_connection.ErrNoConnection
 
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
 
