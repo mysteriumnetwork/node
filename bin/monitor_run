@@ -1,3 +1,0 @@
-#!/bin/bash
-
-sudo GODEBUG=http2debug=2 ./build/monitor/mysterium_monitor --runtime-dir=build/monitor $@
