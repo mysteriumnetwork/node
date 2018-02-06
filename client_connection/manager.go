@@ -129,32 +129,37 @@ func statusDisconnecting() ConnectionStatus {
 	return ConnectionStatus{Disconnecting, "", nil}
 }
 
-func ConfigureVpnClientFactory(mysteriumAPIClient server.Client, vpnClientRuntimeDirectory string,
-	signerFactory identity.SignerFactory, statsKeeper bytescount.SessionStatsKeeper) VpnClientFactory {
-	return func(vpnSession session.SessionDto, id identity.Identity) (openvpn.Client, error) {
-		vpnConfig, err := openvpn.NewClientConfigFromString(
+func ConfigureVpnClientFactory(
+	mysteriumAPIClient server.Client,
+	configDirectory string,
+	runtimeDirectory string,
+	signerFactory identity.SignerFactory,
+	statsKeeper bytescount.SessionStatsKeeper,
+) VpnClientFactory {
+	return func(vpnSession session.SessionDto, consumerID identity.Identity) (openvpn.Client, error) {
+		vpnClientConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,
-			filepath.Join(vpnClientRuntimeDirectory, "client.ovpn"),
+			filepath.Join(runtimeDirectory, "client.ovpn"),
+			filepath.Join(configDirectory, "update-resolv-conf"),
+			filepath.Join(configDirectory, "update-resolv-conf"),
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		signer := signerFactory(id)
+		signer := signerFactory(consumerID)
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, signer)
 		statsHandler := bytescount.NewCompositeStatsHandler(statsSaver, statsSender)
 
 		credentialsProvider := openvpnSession.SignatureCredentialsProvider(vpnSession.ID, signer)
-		vpnMiddlewares := []openvpn.ManagementMiddleware{
+
+		return openvpn.NewClient(
+			vpnClientConfig,
+			runtimeDirectory,
 			bytescount.NewMiddleware(statsHandler, 1*time.Minute),
 			auth.NewMiddleware(credentialsProvider),
-		}
-		return openvpn.NewClient(
-			vpnConfig,
-			vpnClientRuntimeDirectory,
-			vpnMiddlewares...,
 		), nil
 	}
 }

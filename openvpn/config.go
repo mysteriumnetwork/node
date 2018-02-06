@@ -39,11 +39,6 @@ func (c *Config) SetManagementSocket(socketAddress string) {
 	c.setFlag("management-client")
 }
 
-func (c *Config) SetScripts() {
-	c.setParam("up", "update-resolv-conf")
-	c.setParam("down", "update-resolv-conf")
-}
-
 func (c *Config) SetPort(port int) {
 	c.setParam("port", strconv.Itoa(port))
 }
