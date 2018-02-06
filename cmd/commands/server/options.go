@@ -7,10 +7,11 @@ import (
 
 // CommandOptions describes options which are required to start Command
 type CommandOptions struct {
-	NodeKey           string
-	DirectoryConfig   string
-	DirectoryRuntime  string
+	DirectoryConfig  string
+	DirectoryRuntime string
+
 	DirectoryKeystore string
+	Identity          string
 	Passphrase        string
 
 	LocationCountry  string
@@ -20,13 +21,6 @@ type CommandOptions struct {
 // ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	flags.StringVar(
-		&options.NodeKey,
-		"node",
-		"",
-		"Unique identifier for Mysterium VPN node",
-	)
-
 	flags.StringVar(
 		&options.DirectoryConfig,
 		"config-dir",
@@ -47,7 +41,12 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		file.GetMysteriumDirectory("keystore"),
 		"Keystore directory",
 	)
-
+	flags.StringVar(
+		&options.Identity,
+		"identity",
+		"",
+		"Unique identifier for Mysterium VPN node",
+	)
 	flags.StringVar(
 		&options.Passphrase,
 		"passphrase",

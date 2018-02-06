@@ -21,7 +21,7 @@ type ConnectionStatus struct {
 }
 
 type Manager interface {
-	Connect(identity identity.Identity, NodeKey string) error
+	Connect(consumerID identity.Identity, providerID identity.Identity) error
 	Status() ConnectionStatus
 	Disconnect() error
 	Wait() error

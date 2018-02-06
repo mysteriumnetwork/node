@@ -130,14 +130,14 @@ func (c *Command) handleActions(line string) {
 
 func (c *Command) connect(argsString string) {
 	if len(argsString) == 0 {
-		info("Press tab to select identity or create a new one. Connect <your-identity> <node-identity>")
+		info("Press tab to select identity or create a new one. Connect <consumer-identity> <provider-identity>")
 		return
 	}
 
 	identities := strings.Fields(argsString)
 
 	if len(identities) != 2 {
-		info("Please type in the node identity. Connect <your-identity> <node-identity>")
+		info("Please type in the provider identity. Connect <consumer-identity> <provider-identity>")
 		return
 	}
 

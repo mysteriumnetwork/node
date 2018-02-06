@@ -43,24 +43,22 @@ func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEs
 	}
 }
 
-func (manager *connectionManager) Connect(myID identity.Identity, nodeKey string) error {
+func (manager *connectionManager) Connect(consumerID identity.Identity, providerID identity.Identity) error {
 	manager.status = statusConnecting()
 
-	providerID := identity.FromAddress(nodeKey)
-
-	proposals, err := manager.mysteriumClient.FindProposals(nodeKey)
+	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
 	if err != nil {
 		manager.status = statusError(err)
 		return err
 	}
 	if len(proposals) == 0 {
-		err = errors.New("node has no service proposals")
+		err = errors.New("provider has no service proposals")
 		manager.status = statusError(err)
 		return err
 	}
 	proposal := proposals[0]
 
-	dialogEstablisher := manager.dialogEstablisherFactory(myID)
+	dialogEstablisher := manager.dialogEstablisherFactory(consumerID)
 	manager.dialog, err = dialogEstablisher.CreateDialog(providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		manager.status = statusError(err)
@@ -73,7 +71,7 @@ func (manager *connectionManager) Connect(myID identity.Identity, nodeKey string
 		return err
 	}
 
-	manager.vpnClient, err = manager.vpnClientFactory(*vpnSession, myID)
+	manager.vpnClient, err = manager.vpnClientFactory(*vpnSession, consumerID)
 
 	if err := manager.vpnClient.Start(); err != nil {
 		manager.status = statusError(err)
