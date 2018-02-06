@@ -100,7 +100,7 @@ func (cmd *Command) Wait() error {
 func (cmd *Command) Kill() error {
 	err := cmd.connectionManager.Disconnect()
 	if err != nil {
-		return err
+		fmt.Printf("Disconnect error: %s\n", err)
 	}
 
 	cmd.httpApiServer.Stop()
