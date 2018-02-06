@@ -38,8 +38,8 @@ func (client *ClientFake) RegisterIdentity(id identity.Identity, signer identity
 }
 
 // PingProposal heartbeats that service proposal is still active
-func (client *ClientFake) PingProposal(providerID string, signer identity.Signer) (err error) {
-	log.Info(mysteriumAPILogPrefix, "Proposal stats sent: ", providerID)
+func (client *ClientFake) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error) {
+	log.Info(mysteriumAPILogPrefix, "Proposal stats sent: ", proposal.ProviderID)
 
 	return nil
 }

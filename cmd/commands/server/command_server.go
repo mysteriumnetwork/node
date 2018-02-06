@@ -84,7 +84,7 @@ func (cmd *Command) Run() (err error) {
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			cmd.mysteriumClient.PingProposal(providerID.Address, signer)
+			cmd.mysteriumClient.PingProposal(proposal, signer)
 		}
 	}()
 
