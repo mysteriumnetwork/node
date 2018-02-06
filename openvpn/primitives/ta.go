@@ -8,11 +8,9 @@ import (
 	"os"
 )
 
-type SymmetricKey []byte
-
-func (sp *SecurityPrimitives) CreateTA(filename string) error {
-	var taKey SymmetricKey
-	taKey = make([]byte, 256)
+// CreateTLSCryptKey generates symmetric key in HEX format 2048 bits length
+func (sp *SecurityPrimitives) CreateTLSCryptKey(filename string) error {
+	taKey := make([]byte, 256)
 	_, err := rand.Read(taKey)
 	if err != nil {
 		fmt.Println("error:", err)

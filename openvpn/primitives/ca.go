@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+// CreateCA creates Certificate Authority certificate and private key
 func (p *SecurityPrimitives) CreateCA() (*x509.Certificate, error) {
 	log.Info("Create CA (", p.caCertPath, ", ", p.caKeyPath, ")")
 
@@ -33,7 +34,6 @@ func (p *SecurityPrimitives) CreateCA() (*x509.Certificate, error) {
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 	}
-	//pri, err := rsa.GenerateKey(rand.Reader, 1024)
 	var err error
 	p.caPrivateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -83,6 +83,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 	}
 }
 
+// CreateCert creates certificate and private key signed by given CA certificate
 func (p *SecurityPrimitives) CreateCert(parentCA *x509.Certificate, server bool) error {
 	log.Info("Create certificate (", p.serverCertPath, ", ", p.serverKeyPath, ")")
 
@@ -103,12 +104,10 @@ func (p *SecurityPrimitives) CreateCert(parentCA *x509.Certificate, server bool)
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(1, 0, 0),
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
-		//ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		ExtKeyUsage: []x509.ExtKeyUsage{extUsage},
-		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:  []x509.ExtKeyUsage{extUsage},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 	}
 
-	//pri, _ := rsa.GenerateKey(rand.Reader, 1024)
 	var err error
 	p.serverPrivateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
@@ -120,7 +119,7 @@ func (p *SecurityPrimitives) CreateCert(parentCA *x509.Certificate, server bool)
 	p.serverCertBytes = certBytes
 	p.checkCertificate(p.caBytes, p.serverCertBytes)
 
-	// server cert in PEM
+	// cert in PEM
 	certOut, err := os.Create(p.serverCertPath)
 	if err != nil {
 		log.Info("failed to open "+p.serverCertPath+" for writing: %s", err)
@@ -129,7 +128,7 @@ func (p *SecurityPrimitives) CreateCert(parentCA *x509.Certificate, server bool)
 	certOut.Close()
 	log.Debug("written " + p.serverCertPath)
 
-	// server key in PEM
+	// key in PEM
 	keyOut, err := os.OpenFile(p.serverKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		log.Info("failed to open "+p.serverKeyPath+" for writing:", err)

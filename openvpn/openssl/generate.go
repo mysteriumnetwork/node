@@ -125,7 +125,7 @@ func (sp *SecurityPrimitives) Generate() {
 	sp.dhPEM = dh.GetFilePath()
 
 	if ta, err = ssl.CreateTA(sp.taKey); err != nil {
-		log.Println("CreateTA failed: ", err)
+		log.Println("CreateTLSCryptKey failed: ", err)
 		return
 	}
 	sp.taKey = ta.GetFilePath()
