@@ -60,7 +60,7 @@ func NewCommandWith(
 
 	return &Command{
 		identityLoader: func() (identity.Identity, error) {
-			return identity_handler.LoadIdentity(identityHandler, options.NodeKey, options.Passphrase)
+			return identity_handler.LoadIdentity(identityHandler, options.Identity, options.Passphrase)
 		},
 		createSigner:     createSigner,
 		locationDetector: locationDetector,
@@ -97,10 +97,12 @@ func NewCommandWith(
 				manager.FindSession,
 				identity.NewExtractor(),
 			)
-			vpnMiddlewares := []openvpn.ManagementMiddleware{
+
+			return openvpn.NewServer(
+				vpnServerConfig,
+				options.DirectoryRuntime,
 				auth.NewMiddleware(sessionValidator),
-			}
-			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime, vpnMiddlewares...)
+			)
 		},
 	}
 }

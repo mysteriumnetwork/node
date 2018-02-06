@@ -51,7 +51,6 @@ func main() {
 			DirectoryRuntime: ClientDirectoryRuntime,
 		},
 		mysteriumClient,
-		stop,
 	)
 	cmd.NewTerminator(stop)
 	runClient(clientCommand, waiter)

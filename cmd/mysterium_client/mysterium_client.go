@@ -11,48 +11,43 @@ import (
 )
 
 func main() {
-
 	options, err := client.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	var cmdRun *client.Command
-	var cmdCli *cli.Command
-
-	stop := func() {
-		var killers []cmd.Killer
-		if cmdRun != nil {
-			killers = append(killers, cmdRun.Kill)
-		}
-		// TODO: add CLI killer once it's not blocking anymore
-		stop := cmd.NewApplicationStopper(killers...)
-		stop()
+	if options.CLI {
+		runCLI(options)
+	} else {
+		runCMD(options)
 	}
+}
 
-	cmdRun = client.NewCommand(options, stop)
+func runCLI(options client.CommandOptions) {
+	cmdCli := cli.NewCommand(
+		filepath.Join(options.DirectoryRuntime, ".cli_history"),
+		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
+	)
+	stop := cmd.NewApplicationStopper()
+	cmd.NewTerminator(stop)
+	if err := cmdCli.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func runCMD(options client.CommandOptions) {
+	cmdRun := client.NewCommand(options)
+	stop := cmd.NewApplicationStopper(cmdRun.Kill)
+	cmd.NewTerminator(stop)
 
 	if err := cmdRun.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	if options.CLI {
-		cmdCli = cli.NewCommand(
-			filepath.Join(options.DirectoryRuntime, ".cli_history"),
-			tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
-			stop,
-		)
-		if err := cmdCli.Run(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
-	}
-
-	cmd.NewTerminator(stop)
-
-	if err = cmdRun.Wait(); err != nil {
+	if err := cmdRun.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

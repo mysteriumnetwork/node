@@ -21,13 +21,13 @@ type fakeManager struct {
 	onDisconnectReturn error
 	onStatusReturn     client_connection.ConnectionStatus
 	disconnectCount    int
-	requestedIdentity  identity.Identity
-	requestedNode      string
+	requestedConsumer  identity.Identity
+	requestedProvider  identity.Identity
 }
 
-func (fm *fakeManager) Connect(identity identity.Identity, node string) error {
-	fm.requestedIdentity = identity
-	fm.requestedNode = node
+func (fm *fakeManager) Connect(consumerID identity.Identity, providerID identity.Identity) error {
+	fm.requestedConsumer = consumerID
+	fm.requestedProvider = providerID
 	return fm.onConnectReturn
 }
 
@@ -71,7 +71,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 			http.StatusOK, `{"status": ""}`,
 		},
 		{
-			http.MethodPut, "/connection", `{"identity": "identity", "nodeKey": "nodeKey"}`,
+			http.MethodPut, "/connection", `{"consumerId": "me", "providerId": "node1"}`,
 			http.StatusCreated, `{"status": ""}`,
 		},
 		{
@@ -231,8 +231,8 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 		`{
 			"message" : "validation_error",
 			"errors" : {
-				"identity" : [ { "code" : "required" , "message" : "Field is required" } ],
-				"nodeKey" : [ {"code" : "required" , "message" : "Field is required" } ]
+				"consumerId" : [ { "code" : "required" , "message" : "Field is required" } ],
+				"providerId" : [ {"code" : "required" , "message" : "Field is required" } ]
 			}
 		}`, resp.Body.String())
 }
@@ -246,8 +246,8 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 		"/irrelevant",
 		strings.NewReader(
 			`{
-				"identity" : "my-identity",
-				"nodeKey" : "required-node"
+				"consumerId" : "my-identity",
+				"providerId" : "required-node"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -255,8 +255,8 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
-	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedIdentity)
-	assert.Equal(t, "required-node", fakeManager.requestedNode)
+	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumer)
+	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
 
 }
 

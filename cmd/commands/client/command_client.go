@@ -5,7 +5,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
-	"github.com/mysterium/node/cmd"
+	node_cmd "github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -20,11 +20,10 @@ import (
 )
 
 // NewCommand function creates new client command by given options
-func NewCommand(options CommandOptions, stop cmd.Stopper) *Command {
+func NewCommand(options CommandOptions) *Command {
 	return NewCommandWith(
 		options,
 		server.NewClient(),
-		stop,
 	)
 }
 
@@ -32,7 +31,6 @@ func NewCommand(options CommandOptions, stop cmd.Stopper) *Command {
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
-	stop cmd.Stopper,
 ) *Command {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
@@ -51,8 +49,13 @@ func NewCommandWith(
 
 	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
 
-	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime, signerFactory, statsKeeper)
-
+	vpnClientFactory := client_connection.ConfigureVpnClientFactory(
+		mysteriumClient,
+		options.DirectoryConfig,
+		options.DirectoryRuntime,
+		signerFactory,
+		statsKeeper,
+	)
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
@@ -60,14 +63,12 @@ func NewCommandWith(
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
 	command := &Command{
-		stop:              stop,
 		connectionManager: connectionManager,
 		httpAPIServer:     httpAPIServer,
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	ipResolver := ip.NewResolver()
-	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ip.NewResolver(), statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	tequilapi_endpoints.AddRouteForStop(router, command.stopAfterDelay)
 
@@ -78,7 +79,6 @@ func NewCommandWith(
 type Command struct {
 	connectionManager client_connection.Manager
 	httpAPIServer     tequilapi.APIServer
-	stop              cmd.Stopper
 }
 
 // Run starts Tequilapi service - does not block
@@ -117,7 +117,8 @@ func (cmd *Command) Kill() error {
 
 func (cmd *Command) stopAfterDelay() {
 	log.Info("Client is stopping")
-	delay(cmd.stop, 1*time.Second)
+	stop := node_cmd.NewApplicationStopper(cmd.Kill)
+	delay(stop, 1*time.Second)
 }
 
 func delay(function func(), duration time.Duration) {

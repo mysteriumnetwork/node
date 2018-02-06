@@ -6,9 +6,9 @@ import "github.com/mysterium/node/identity"
 type Selector func() (identity.Identity, error)
 
 // LoadIdentity chooses which identity to use and invokes it using identityHandler
-func LoadIdentity(identityHandler HandlerInterface, keyOption, passphrase string) (identity.Identity, error) {
-	if len(keyOption) > 0 {
-		return identityHandler.UseExisting(keyOption, passphrase)
+func LoadIdentity(identityHandler HandlerInterface, identityOption, passphrase string) (identity.Identity, error) {
+	if len(identityOption) > 0 {
+		return identityHandler.UseExisting(identityOption, passphrase)
 	}
 
 	if id, err := identityHandler.UseLast(passphrase); err == nil {

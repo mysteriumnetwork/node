@@ -14,12 +14,10 @@ import (
 func NewCommand(
 	historyFile string,
 	tequilapi *tequilapi_client.Client,
-	stop cmd.Stopper,
 ) *Command {
 	return &Command{
 		historyFile: historyFile,
 		tequilapi:   tequilapi,
-		stop:        stop,
 	}
 }
 
@@ -27,7 +25,6 @@ func NewCommand(
 type Command struct {
 	historyFile      string
 	tequilapi        *tequilapi_client.Client
-	stop             cmd.Stopper
 	fetchedProposals []tequilapi_client.ProposalDTO
 	completer        *readline.PrefixCompleter
 	reader           *readline.Instance
@@ -127,14 +124,14 @@ func (c *Command) handleActions(line string) {
 
 func (c *Command) connect(argsString string) {
 	if len(argsString) == 0 {
-		info("Press tab to select identity or create a new one. Connect <your-identity> <node-identity>")
+		info("Press tab to select identity or create a new one. Connect <consumer-identity> <provider-identity>")
 		return
 	}
 
 	identities := strings.Fields(argsString)
 
 	if len(identities) != 2 {
-		info("Please type in the node identity. Connect <your-identity> <node-identity>")
+		info("Please type in the provider identity. Connect <consumer-identity> <provider-identity>")
 		return
 	}
 
@@ -265,7 +262,8 @@ func (c *Command) help() {
 
 // quit stops cli and client commands and exits application
 func (c *Command) quit() {
-	c.stop()
+	stop := cmd.NewApplicationStopper(c.Kill)
+	stop()
 }
 
 func (c *Command) identities(argsString string) {
