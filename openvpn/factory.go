@@ -13,8 +13,8 @@ func NewServerConfig(
 	config.SetServerMode(1194, network, netmask)
 	config.SetTLSCACertificate(secPrimitives.CACert())
 	config.SetTLSPrivatePubKeys(secPrimitives.ServerCert(), secPrimitives.ServerKey())
-	config.SetTlsServer(secPrimitives.DhPEM(), secPrimitives.CrlPEM())
-	//config.SetTlsAuth(secPrimitives.TAKey())
+	config.SetTlsServer(secPrimitives.CrlPEM())
+	config.SetTlsAuth(secPrimitives.TAKey())
 
 	config.SetDevice("tun")
 	config.setParam("cipher", "AES-256-GCM")

@@ -11,20 +11,19 @@ import (
 
 type SecurityPrimitives struct {
 	directory        string
-	caCert           string
-	caKey            string
-	serverCert       string
-	serverKey        string
-	dhPEM            string
-	crlPEM           string
-	taKey            string
+	caCertPath       string
+	caKeyPath        string
+	serverCertPath   string
+	serverKeyPath    string
+	crlPEMPath       string
+	taKeyPath        string
 	caBytes          []byte
 	caPrivateKey     *ecdsa.PrivateKey
 	serverCertBytes  []byte
 	serverPrivateKey *ecdsa.PrivateKey
 }
 
-func (sp *SecurityPrimitives) mkdir(dir string) {
+func (sp *SecurityPrimitives) mkDir(dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		log.Debug("Creating dir (" + dir + ")")
 		os.Mkdir(dir, 0600)
@@ -34,11 +33,11 @@ func (sp *SecurityPrimitives) mkdir(dir string) {
 func (sp *SecurityPrimitives) Init() {
 	sp.cleanupDir()
 
-	sp.mkdir(sp.directory)
-	sp.mkdir(filepath.Join(sp.directory, "ca"))
-	sp.mkdir(filepath.Join(sp.directory, "server"))
-	sp.mkdir(filepath.Join(sp.directory, "clients"))
-	sp.mkdir(filepath.Join(sp.directory, "common"))
+	sp.mkDir(sp.directory)
+	sp.mkDir(filepath.Join(sp.directory, "ca"))
+	sp.mkDir(filepath.Join(sp.directory, "server"))
+	sp.mkDir(filepath.Join(sp.directory, "clients"))
+	sp.mkDir(filepath.Join(sp.directory, "common"))
 }
 
 func NewOpenVPNSecPrimitives() *SecurityPrimitives {
@@ -49,7 +48,6 @@ func NewOpenVPNSecPrimitives() *SecurityPrimitives {
 		filepath.Join(dir, "ca", "ca.key"),
 		filepath.Join(dir, "server", "server.crt"),
 		filepath.Join(dir, "server", "server.key"),
-		"none",
 		filepath.Join("bin", "tls", "crl.pem"),
 		filepath.Join(dir, "ta.key"),
 		nil,
@@ -60,27 +58,23 @@ func NewOpenVPNSecPrimitives() *SecurityPrimitives {
 }
 
 func (sp *SecurityPrimitives) CACert() string {
-	return sp.caCert
+	return sp.caCertPath
 }
 
 func (sp *SecurityPrimitives) CrlPEM() string {
-	return sp.crlPEM
-}
-
-func (sp *SecurityPrimitives) DhPEM() string {
-	return sp.dhPEM
+	return sp.crlPEMPath
 }
 
 func (sp *SecurityPrimitives) TAKey() string {
-	return sp.taKey
+	return sp.taKeyPath
 }
 
 func (sp *SecurityPrimitives) ServerCert() string {
-	return sp.serverCert
+	return sp.serverCertPath
 }
 
 func (sp *SecurityPrimitives) ServerKey() string {
-	return sp.serverKey
+	return sp.serverKeyPath
 }
 
 func (sp *SecurityPrimitives) cleanupDir() {
@@ -115,21 +109,8 @@ func RemoveContents(dir string) error {
 
 func (sp *SecurityPrimitives) Generate() {
 	var err error
-	//var ca *openssl.CA
+
 	var ca *x509.Certificate
-
-	/*
-		ssl := openssl.Openssl{
-			Path: "certs", // A storage folder, where to store all certs
-
-			Country:      "GI",
-			Province:     "MYST",
-			City:         "Blockchain",
-			Organization: "Mysterium Network",
-			CommonName:   "Mysterium CA",
-			Email:        "private@mysterium.network",
-		}
-	*/
 
 	sp.Init()
 
@@ -143,11 +124,8 @@ func (sp *SecurityPrimitives) Generate() {
 		return
 	}
 
-	/*
-		if ta, err = ssl.CreateTA(sp.taKey); err != nil {
-		log.Println("CreateTA failed: ", err)
-			return
-		}
-		sp.taKey = ta.GetFilePath()
-	*/
+	if err = sp.CreateTA(sp.taKeyPath); err != nil {
+		log.Info("CreateTA failed: ", err)
+		return
+	}
 }
