@@ -19,9 +19,9 @@ func (sp *SecurityPrimitives) CreateTA(filename string) error {
 		return err
 	}
 
-	keyOut, err := os.OpenFile(sp.taKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(sp.tlsCryptKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Info("failed to open "+sp.taKeyPath+" for writing:", err)
+		log.Info("failed to open "+sp.tlsCryptKeyPath+" for writing:", err)
 		return err
 	}
 	defer keyOut.Close()
@@ -38,7 +38,7 @@ func (sp *SecurityPrimitives) CreateTA(filename string) error {
 		}
 	}
 
-	log.Debug("written " + sp.taKeyPath)
+	log.Debug("written " + sp.tlsCryptKeyPath)
 
 	return nil
 }

@@ -16,7 +16,7 @@ type SecurityPrimitives struct {
 	serverCertPath   string
 	serverKeyPath    string
 	crlPEMPath       string
-	taKeyPath        string
+	tlsCryptKeyPath  string
 	caBytes          []byte
 	caPrivateKey     *ecdsa.PrivateKey
 	serverCertBytes  []byte
@@ -65,8 +65,8 @@ func (sp *SecurityPrimitives) CrlPEM() string {
 	return sp.crlPEMPath
 }
 
-func (sp *SecurityPrimitives) TAKey() string {
-	return sp.taKeyPath
+func (sp *SecurityPrimitives) TLSCryptKey() string {
+	return sp.tlsCryptKeyPath
 }
 
 func (sp *SecurityPrimitives) ServerCert() string {
@@ -124,7 +124,7 @@ func (sp *SecurityPrimitives) Generate() {
 		return
 	}
 
-	if err = sp.CreateTA(sp.taKeyPath); err != nil {
+	if err = sp.CreateTA(sp.tlsCryptKeyPath); err != nil {
 		log.Info("CreateTA failed: ", err)
 		return
 	}
