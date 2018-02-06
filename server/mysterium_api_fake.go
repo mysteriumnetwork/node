@@ -37,8 +37,8 @@ func (client *ClientFake) RegisterIdentity(id identity.Identity, signer identity
 	return nil
 }
 
-// SendProposalStats heartbeats that service proposal is still active
-func (client *ClientFake) SendProposalStats(providerID string, signer identity.Signer) (err error) {
+// PingProposal heartbeats that service proposal is still active
+func (client *ClientFake) PingProposal(providerID string, signer identity.Signer) (err error) {
 	log.Info(mysteriumAPILogPrefix, "Proposal stats sent: ", providerID)
 
 	return nil

@@ -64,7 +64,7 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 	return err
 }
 
-func (mApi *mysteriumAPI) SendProposalStats(providerID string, signer identity.Signer) error {
+func (mApi *mysteriumAPI) PingProposal(providerID string, signer identity.Signer) error {
 	req, err := newSignedPostRequest("node_send_stats", dto.NodeStatsRequest{
 		NodeKey: providerID,
 	}, signer)
