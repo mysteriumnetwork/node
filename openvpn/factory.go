@@ -40,7 +40,7 @@ func NewClientConfig(
 	config := ClientConfig{NewConfig()}
 	config.SetClientMode(remote, 1194)
 	config.SetTLSCACertificate(secPrimitives.CACert())
-	//config.SetTlsAuth(secPrimitives.TAKey())
+	config.SetTlsAuth(secPrimitives.TAKey())
 
 	config.SetDevice("tun")
 	config.setParam("cipher", "AES-256-GCM")

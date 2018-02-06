@@ -2,14 +2,17 @@ package primitives
 
 import (
 	"crypto/rand"
-	"encoding/pem"
+	"encoding/hex"
 	"fmt"
 	log "github.com/cihub/seelog"
 	"os"
 )
 
+type SymmetricKey []byte
+
 func (sp *SecurityPrimitives) CreateTA(filename string) error {
-	taKey := make([]byte, 2048)
+	var taKey SymmetricKey
+	taKey = make([]byte, 256)
 	_, err := rand.Read(taKey)
 	if err != nil {
 		fmt.Println("error:", err)
@@ -23,11 +26,19 @@ func (sp *SecurityPrimitives) CreateTA(filename string) error {
 	}
 	defer keyOut.Close()
 
-	if err := pem.Encode(keyOut, pemBlockForKey(taKey)); err != nil {
-		log.Info("failed to PEM encode TLS auth key", err)
+	var keyEntries []string
+	keyEntries = append(keyEntries, "-----BEGIN OpenVPN Static key V1-----\n")
+	keyEntries = append(keyEntries, hex.EncodeToString(taKey))
+	keyEntries = append(keyEntries, "\n-----END OpenVPN Static key V1-----\n")
+
+	for _, s := range keyEntries {
+		_, err := keyOut.WriteString(s)
+		if err != nil {
+			return err
+		}
 	}
 
-	log.Debug("written " + sp.taKeyPath + "\n")
+	log.Debug("written " + sp.taKeyPath)
 
 	return nil
 }

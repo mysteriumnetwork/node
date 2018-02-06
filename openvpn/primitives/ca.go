@@ -53,7 +53,7 @@ func (p *SecurityPrimitives) CreateCA() (*x509.Certificate, error) {
 	}
 	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: p.caBytes})
 	certOut.Close()
-	log.Info("written " + p.caCertPath + "\n")
+	log.Info("written " + p.caCertPath)
 
 	keyOut, err := os.OpenFile(p.caKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -62,7 +62,7 @@ func (p *SecurityPrimitives) CreateCA() (*x509.Certificate, error) {
 	}
 	pem.Encode(keyOut, pemBlockForKey(p.caPrivateKey))
 	keyOut.Close()
-	log.Info("written " + p.caKeyPath + "\n")
+	log.Info("written " + p.caKeyPath)
 
 	return ca, nil
 }
@@ -127,7 +127,7 @@ func (p *SecurityPrimitives) CreateCert(parentCA *x509.Certificate, server bool)
 	}
 	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
 	certOut.Close()
-	log.Debug("written " + p.serverCertPath + "\n")
+	log.Debug("written " + p.serverCertPath)
 
 	// server key in PEM
 	keyOut, err := os.OpenFile(p.serverKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
@@ -137,7 +137,7 @@ func (p *SecurityPrimitives) CreateCert(parentCA *x509.Certificate, server bool)
 	}
 	pem.Encode(keyOut, pemBlockForKey(p.serverPrivateKey))
 	keyOut.Close()
-	log.Debug("written " + p.serverKeyPath + "\n")
+	log.Debug("written " + p.serverKeyPath)
 
 	return nil
 }
