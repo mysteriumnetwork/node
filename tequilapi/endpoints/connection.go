@@ -57,7 +57,12 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.ProviderID))
 
 	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
+		switch err {
+		case client_connection.AlreadyExists:
+			utils.SendError(resp, err, http.StatusConflict)
+		default:
+			utils.SendError(resp, err, http.StatusInternalServerError)
+		}
 		return
 	}
 	resp.WriteHeader(http.StatusCreated)
@@ -65,7 +70,16 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 }
 
 func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	ce.manager.Disconnect()
+	err := ce.manager.Disconnect()
+	if err != nil {
+		switch err {
+		case client_connection.NoConnection:
+			utils.SendError(resp, err, http.StatusConflict)
+		default:
+			utils.SendError(resp, err, http.StatusInternalServerError)
+		}
+		return
+	}
 	resp.WriteHeader(http.StatusAccepted)
 }
 
