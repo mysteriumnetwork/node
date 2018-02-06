@@ -15,13 +15,9 @@ printf "\n\nStopping application at '$SSH_SERVER':\n" \
 && printf "\n\nDeploying application:\n" \
     && ssh $SSH_SERVER "mkdir -pv $SSH_SERVER_DIR" \
     && scp /build/client/mysterium_client \
-        bin/server_package/config/* \
         bin/client_check \
         $SSH_SERVER:$SSH_SERVER_DIR/ \
 && printf "\n\nStarting application:\n" \
-    && ssh $SSH_SERVER "sudo $SSH_SERVER_DIR/mysterium_client \
-        --config-dir=$SSH_SERVER_DIR \
-        --runtime-dir=$SSH_SERVER_DIR \
-        $@"
+    && ssh $SSH_SERVER "sudo $SSH_SERVER_DIR/mysterium_client"
 
 exit 0

@@ -97,12 +97,10 @@ func NewCommandWith(
 				manager.FindSession,
 				identity.NewExtractor(),
 			)
-
-			return openvpn.NewServer(
-				vpnServerConfig,
-				options.DirectoryRuntime,
+			vpnMiddlewares := []openvpn.ManagementMiddleware{
 				auth.NewMiddleware(sessionValidator),
-			)
+			}
+			return openvpn.NewServer(vpnServerConfig, options.DirectoryRuntime, vpnMiddlewares...)
 		},
 	}
 }

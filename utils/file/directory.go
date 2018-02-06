@@ -1,12 +1,14 @@
-package cmd
+package file
 
 import (
 	"github.com/mitchellh/go-homedir"
 	"path/filepath"
 )
 
-// GetMysteriumDirectory makes path to full path in home directory
 func GetMysteriumDirectory(path string) string {
 	dir, _ := homedir.Dir()
-	return filepath.Join(dir, ".mysterium", path)
+
+	dir = filepath.Join(dir, ".mysterium", path)
+
+	return dir
 }

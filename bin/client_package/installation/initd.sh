@@ -112,7 +112,6 @@ function start() {
         --exec $DAEMON_BIN \
         -- \
         --node=$MYSTERIUM_CLIENT_NODE \
-        --config-dir=$OS_DIR_CONFIG \
         --runtime-dir=$OS_DIR_RUN \
         >>$DAEMON_STDOUT \
         2>>$DAEMON_STDERR

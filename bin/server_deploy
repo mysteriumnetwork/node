@@ -19,8 +19,8 @@ printf "\n\nStopping application at '$SSH_SERVER':\n" \
         $SSH_SERVER:$SSH_SERVER_DIR/ \
 && printf "\n\nStarting application:\n" \
     && ssh $SSH_SERVER "sudo $SSH_SERVER_DIR/mysterium_server \
-        --config-dir=$SSH_SERVER_DIR \
+        --config-dir=$SSH_SERVER_DIR" \
         --runtime-dir=$SSH_SERVER_DIR \
-        $@"
+        $@
 
 exit 0

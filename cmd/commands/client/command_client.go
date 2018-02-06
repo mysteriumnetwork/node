@@ -47,18 +47,14 @@ func NewCommandWith(
 
 	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
 
-	vpnClientFactory := client_connection.ConfigureVpnClientFactory(
-		mysteriumClient,
-		options.DirectoryConfig,
-		options.DirectoryRuntime,
-		signerFactory,
-		statsKeeper,
-	)
+	vpnClientFactory := client_connection.ConfigureVpnClientFactory(mysteriumClient, options.DirectoryRuntime, signerFactory, statsKeeper)
+
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ip.NewResolver(), statsKeeper)
+	ipResolver := ip.NewResolver()
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)

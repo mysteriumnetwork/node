@@ -59,10 +59,7 @@ func NewClientConfig(
 	return &config
 }
 
-func NewClientConfigFromString(
-	configString, configFile string,
-	scriptUp, scriptDown string,
-) (*ClientConfig, error) {
+func NewClientConfigFromString(configString, configFile string) (*ClientConfig, error) {
 	err := ioutil.WriteFile(configFile, []byte(configString), 0600)
 	if err != nil {
 		return nil, err
@@ -70,9 +67,5 @@ func NewClientConfigFromString(
 
 	config := ClientConfig{NewConfig()}
 	config.AddOptions(OptionParam("config", configFile))
-
-	config.setParam("up", scriptUp)
-	config.setParam("down", scriptDown)
-
 	return &config, nil
 }
