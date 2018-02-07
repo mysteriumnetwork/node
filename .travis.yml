@@ -4,9 +4,12 @@ language: go
 go:
   - 1.9.2
 go_import_path: github.com/mysterium/node
-#This is called when travis pulls project dependencies - ugly git checkout freezes glide version (0.13.1)
 install:
-  - go install -v github.com/Masterminds/glide
-  - $GOPATH/bin/glide install
+  - export GLIDE_VERSION="0.13.1"
+  - wget "https://github.com/Masterminds/glide/releases/download/$GLIDE_VERSION/glide-$GLIDE_VERSION-linux-amd64.tar.gz"
+  - mkdir -p $HOME/bin
+  - tar -vxz -C $HOME/bin --strip=1 -f glide-$GLIDE_VERSION-linux-amd64.tar.gz
+  - export PATH="$HOME/bin:$PATH"
+  - glide install
 #This is actual build/test command
 script: bin/test
