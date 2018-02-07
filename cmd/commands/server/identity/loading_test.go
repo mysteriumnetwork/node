@@ -1,19 +1,9 @@
 package identity
 
 import (
-	"errors"
-	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
-
-var fakeSuccessIdentitySelector = func() (identity.Identity, error) {
-	return identity.Identity{Address: "fake"}, nil
-}
-
-var fakeFailureIdentitySelector = func() (identity.Identity, error) {
-	return identity.Identity{}, errors.New("selection failed")
-}
 
 func Test_LoadIdentityExisting(t *testing.T) {
 	identityHandler := &handlerFake{}

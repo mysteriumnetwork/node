@@ -24,7 +24,7 @@ type mysteriumAPI struct {
 	http HttpTransport
 }
 
-//NewClient creates mysterium centralized api instance with real communication
+// NewClient creates Mysterium centralized api instance with real communication
 func NewClient() Client {
 	return &mysteriumAPI{
 		&http.Client{
@@ -33,9 +33,9 @@ func NewClient() Client {
 	}
 }
 
-func (mApi *mysteriumAPI) RegisterIdentity(identity identity.Identity, signer identity.Signer) error {
+func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
 	req, err := newSignedPostRequest("identities", dto.CreateIdentityRequest{
-		Identity: identity.Address,
+		Identity: id.Address,
 	}, signer)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func (mApi *mysteriumAPI) RegisterIdentity(identity identity.Identity, signer id
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Identity registered: ", identity)
+		log.Info(mysteriumAPILogPrefix, "Identity registered: ", id.Address)
 	}
 	return err
 }
@@ -64,11 +64,9 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 	return err
 }
 
-func (mApi *mysteriumAPI) NodeSendStats(nodeKey string, signer identity.Signer) error {
+func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := newSignedPostRequest("node_send_stats", dto.NodeStatsRequest{
-		NodeKey: nodeKey,
-		// TODO Refactor Node statistics with new `SessionStats` DTO
-		Sessions: []dto.SessionStats{},
+		NodeKey: proposal.ProviderID,
 	}, signer)
 	if err != nil {
 		return err
@@ -76,14 +74,17 @@ func (mApi *mysteriumAPI) NodeSendStats(nodeKey string, signer identity.Signer) 
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Node stats sent: ", nodeKey)
+		log.Info(mysteriumAPILogPrefix, "Node stats sent: ", proposal.ProviderID)
 	}
 	return err
 }
 
-func (mApi *mysteriumAPI) FindProposals(nodeKey string) ([]dto_discovery.ServiceProposal, error) {
+func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.ServiceProposal, error) {
 	values := url.Values{}
-	values.Set("node_key", nodeKey)
+	if providerID != "" {
+		values.Set("node_key", providerID)
+	}
+
 	req, err := newGetRequest("proposals", values)
 	if err != nil {
 		return nil, err
@@ -95,7 +96,7 @@ func (mApi *mysteriumAPI) FindProposals(nodeKey string) ([]dto_discovery.Service
 		return nil, err
 	}
 
-	log.Info(mysteriumAPILogPrefix, "FindProposals fetched: ", proposalsResponse.Proposals)
+	log.Info(mysteriumAPILogPrefix, "Proposals fetched: ", len(proposalsResponse.Proposals))
 
 	return proposalsResponse.Proposals, nil
 }
@@ -122,6 +123,7 @@ func (mApi *mysteriumAPI) doRequest(req *http.Request) error {
 		return err
 	}
 	defer resp.Body.Close()
+
 	return parseResponseError(resp)
 }
 

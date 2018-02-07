@@ -3,55 +3,52 @@ package main
 import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/cmd/mysterium_client/cli"
-	"github.com/mysterium/node/cmd/mysterium_client/run"
+	"github.com/mysterium/node/cmd/commands/cli"
+	"github.com/mysterium/node/cmd/commands/client"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"os"
 	"path/filepath"
 )
 
 func main() {
-
-	options, err := run.ParseArguments(os.Args)
+	options, err := client.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	cmdRun := run.NewCommand(options)
-	cmd.NewTerminator(cmdRun)
-
-	if err := cmdRun.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-
 	if options.CLI {
-		cmdCli := cli.NewCommand(
-			filepath.Join(options.DirectoryRuntime, ".cli_history"),
-			tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
-			newStopHandler(cmdRun),
-		)
-		cmd.NewTerminator(cmdCli)
-		if err := cmdCli.Run(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
+		runCLI(options)
+	} else {
+		runCMD(options)
 	}
+}
 
-	if err = cmdRun.Wait(); err != nil {
+func runCLI(options client.CommandOptions) {
+	cmdCli := cli.NewCommand(
+		filepath.Join(options.DirectoryRuntime, ".cli_history"),
+		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
+	)
+	stop := cmd.NewApplicationStopper(cmdCli.Kill)
+	cmd.StopOnInterrupts(stop)
+	if err := cmdCli.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func newStopHandler(cmdRun *run.CommandRun) func() error {
-	return func() error {
-		if err := cmdRun.Kill(); err != nil {
-			return err
-		}
+func runCMD(options client.CommandOptions) {
+	cmdRun := client.NewCommand(options)
+	stop := cmd.NewApplicationStopper(cmdRun.Kill)
+	cmd.StopOnInterrupts(stop)
 
-		os.Exit(0)
-		return nil
+	if err := cmdRun.Start(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if err := cmdRun.Wait(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }

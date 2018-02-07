@@ -2,20 +2,20 @@ package main
 
 import (
 	"fmt"
-	"github.com/mysterium/node/cmd/mysterium_server/command_run"
+	"github.com/mysterium/node/cmd/commands/server"
 	"os"
 )
 
 func main() {
-	options, err := command_run.ParseArguments(os.Args)
+	options, err := server.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	cmd := command_run.NewCommand(options)
+	cmd := server.NewCommand(options)
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

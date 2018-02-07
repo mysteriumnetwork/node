@@ -1,0 +1,2 @@
+bin/client_run &
+bin/client_run --cli
