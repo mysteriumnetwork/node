@@ -28,9 +28,10 @@ type connectionManager struct {
 	status        ConnectionStatus
 	dialog        communication.Dialog
 	openvpnClient openvpn.Client
-	sessionId     session.SessionID
+	sessionID     session.SessionID
 }
 
+// NewManager creates connection manager with given dependencies
 func NewManager(mysteriumClient server.Client, dialogEstablisherCreator DialogEstablisherCreator,
 	vpnClientCreator VpnClientCreator, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
@@ -62,7 +63,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	if err != nil {
 		return err
 	}
-	manager.sessionId = vpnSession.ID
+	manager.sessionID = vpnSession.ID
 
 	manager.openvpnClient, err = manager.newVpnClient(*vpnSession, consumerID, manager.onVpnStatusUpdate)
 
@@ -92,7 +93,7 @@ func (manager *connectionManager) onVpnStatusUpdate(vpnState openvpn.State) {
 		manager.status = statusConnecting()
 	case openvpn.STATE_CONNECTED:
 		manager.statsKeeper.MarkSessionStart()
-		manager.status = statusConnected(manager.sessionId)
+		manager.status = statusConnected(manager.sessionID)
 	case openvpn.STATE_EXITING:
 		manager.status = statusNotConnected()
 	case openvpn.STATE_RECONNECTING:
