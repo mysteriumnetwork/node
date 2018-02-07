@@ -20,7 +20,7 @@ type Management struct {
 
 	listenerShutdownStarted chan bool
 	listenerShutdownWaiter  sync.WaitGroup
-	once                    sync.Once
+	closesOnce              sync.Once
 }
 
 type ManagementMiddleware interface {
@@ -39,7 +39,6 @@ func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMid
 
 		listenerShutdownStarted: make(chan bool),
 		listenerShutdownWaiter:  sync.WaitGroup{},
-		once: sync.Once{},
 	}
 }
 
@@ -61,7 +60,7 @@ func (management *Management) Start() error {
 
 func (management *Management) Stop() {
 	log.Info(management.logPrefix, "Shutdown")
-	management.once.Do(func() {
+	management.closesOnce.Do(func() {
 		close(management.listenerShutdownStarted)
 	})
 

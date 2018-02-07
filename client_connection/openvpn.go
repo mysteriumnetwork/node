@@ -13,10 +13,10 @@ import (
 	"time"
 )
 
+// ConfigureVpnClientFactory creates openvpn construction function by given vpn session, consumer id and state callbacks
 func ConfigureVpnClientFactory(
 	mysteriumAPIClient server.Client,
-	configDirectory string,
-	runtimeDirectory string,
+	configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	statsKeeper bytescount.SessionStatsKeeper,
 ) VpnClientCreator {

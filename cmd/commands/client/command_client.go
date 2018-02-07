@@ -102,12 +102,12 @@ func (cmd *Command) Kill() error {
 	if err != nil {
 		switch err {
 		case client_connection.ErrNoConnection:
-			fmt.Printf("No active connection - proceeding")
+			fmt.Println("No active connection - proceeding")
 		default:
 			return err
 		}
 	} else {
-		fmt.Println("Connection closed\n")
+		fmt.Println("Connection closed")
 	}
 
 	cmd.httpApiServer.Stop()
