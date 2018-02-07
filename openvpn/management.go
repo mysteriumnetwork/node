@@ -101,11 +101,7 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 		middleware.Start(connection)
 	}
 
-	defer func() {
-		for _, middleware := range management.middlewares {
-			middleware.Stop()
-		}
-	}()
+	defer management.cleanConnection(connection)
 
 	reader := textproto.NewReader(bufio.NewReader(connection))
 	for {
@@ -123,6 +119,13 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 			log.Error(management.logPrefix, "Failed to transport line: ", line)
 		}
 	}
+}
+
+func (management *Management) cleanConnection(connection net.Conn) {
+	for _, middleware := range management.middlewares {
+		middleware.Stop()
+	}
+	connection.Close()
 }
 
 func (management *Management) deliverLines() {
