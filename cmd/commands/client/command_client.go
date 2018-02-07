@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
 	node_cmd "github.com/mysterium/node/cmd"
@@ -70,7 +69,7 @@ func NewCommandWith(
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ip.NewResolver(), statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
-	tequilapi_endpoints.AddRouteForStop(router, command.stopAfterDelay)
+	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill), time.Second)
 
 	return command
 }
@@ -113,17 +112,4 @@ func (cmd *Command) Kill() error {
 	fmt.Printf("Api stopped\n")
 
 	return nil
-}
-
-func (cmd *Command) stopAfterDelay() {
-	log.Info("Client is stopping")
-	stop := node_cmd.NewApplicationStopper(cmd.Kill)
-	delay(stop, 1*time.Second)
-}
-
-func delay(function func(), duration time.Duration) {
-	go func() {
-		time.Sleep(duration)
-		function()
-	}()
 }

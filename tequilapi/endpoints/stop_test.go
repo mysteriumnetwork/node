@@ -7,25 +7,42 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 type fakeStopper struct {
-	stopped bool
+	stopAllowed chan struct{}
+	stopped     chan struct{}
+}
+
+func (fs *fakeStopper) AllowStop() {
+	fs.stopAllowed <- struct{}{}
 }
 
 func (fs *fakeStopper) Stop() {
-	fs.stopped = true
+	<-fs.stopAllowed
+	fs.stopped <- struct{}{}
 }
 
 func TestAddRouteForStop(t *testing.T) {
-	stopper := fakeStopper{}
+	stopper := fakeStopper{
+		stopAllowed: make(chan struct{}),
+		stopped:     make(chan struct{}),
+	}
 	router := httprouter.New()
-	AddRouteForStop(router, stopper.Stop)
+	AddRouteForStop(router, stopper.Stop, 0)
 
 	resp := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/stop", strings.NewReader(""))
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusAccepted, resp.Code)
+	assert.Equal(t, 0, len(stopper.stopped))
 
-	assert.True(t, stopper.stopped)
+	stopper.AllowStop()
+
+	select {
+	case <-stopper.stopped:
+	case <-time.After(time.Second):
+		t.Error("Stopper was not executed")
+	}
 }
