@@ -11,10 +11,10 @@ func NewServerConfig(
 ) *ServerConfig {
 	config := ServerConfig{NewConfig()}
 	config.SetServerMode(1194, network, netmask)
-	config.SetTLSCACertificate(secPrimitives.CACert())
-	config.SetTLSPrivatePubKeys(secPrimitives.ServerCert(), secPrimitives.ServerKey())
-	config.SetTlsServer(secPrimitives.CrlPEM())
-	config.SetTlsCrypt(secPrimitives.TLSCryptKey())
+	config.SetTLSCACertificate(secPrimitives.CACertPath)
+	config.SetTLSPrivatePubKeys(secPrimitives.ServerCertPath, secPrimitives.ServerKeyPath)
+	config.SetTlsServer(secPrimitives.CRLPEMPath)
+	config.SetTlsCrypt(secPrimitives.TLSCryptKeyPath)
 
 	config.SetDevice("tun")
 	config.setParam("cipher", "AES-256-GCM")
@@ -38,8 +38,8 @@ func NewClientConfig(
 ) *ClientConfig {
 	config := ClientConfig{NewConfig()}
 	config.SetClientMode(remote, 1194)
-	config.SetTLSCACertificate(secPrimitives.CACert())
-	config.SetTlsCrypt(secPrimitives.TLSCryptKey())
+	config.SetTLSCACertificate(secPrimitives.CACertPath)
+	config.SetTlsCrypt(secPrimitives.TLSCryptKeyPath)
 
 	config.SetDevice("tun")
 	config.setParam("cipher", "AES-256-GCM")

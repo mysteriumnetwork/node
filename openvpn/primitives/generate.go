@@ -12,22 +12,35 @@ import (
 // SecurityPrimitives describes security primitives
 type SecurityPrimitives struct {
 	directory        string
-	caCertPath       string
-	caKeyPath        string
-	serverCertPath   string
-	serverKeyPath    string
-	crlPEMPath       string
-	tlsCryptKeyPath  string
+	CACertPath       string
+	CAKeyPath        string
+	ServerCertPath   string
+	ServerKeyPath    string
+	CRLPEMPath       string
+	TLSCryptKeyPath  string
 	caBytes          []byte
 	caPrivateKey     *ecdsa.PrivateKey
 	serverCertBytes  []byte
 	serverPrivateKey *ecdsa.PrivateKey
 }
 
+func exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return true, err
+}
+
 func (sp *SecurityPrimitives) mkDir(dir string) {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
+	if e, err := exists(dir); !e {
 		log.Debug("Creating dir (" + dir + ")")
-		os.Mkdir(dir, 0600)
+		os.Mkdir(dir, 0700)
+	} else {
+		log.Errorf("Error creating directory", err)
 	}
 }
 
@@ -66,31 +79,6 @@ func NewOpenVPNSecPrimitives() *SecurityPrimitives {
 	}
 }
 
-// CACert returns CA certificate file path
-func (sp *SecurityPrimitives) CACert() string {
-	return sp.caCertPath
-}
-
-// CrlPEM returns CRL file path
-func (sp *SecurityPrimitives) CrlPEM() string {
-	return sp.crlPEMPath
-}
-
-// TLSCryptKey returns TLS crypt file path
-func (sp *SecurityPrimitives) TLSCryptKey() string {
-	return sp.tlsCryptKeyPath
-}
-
-// ServerCert returns server TLS certificate
-func (sp *SecurityPrimitives) ServerCert() string {
-	return sp.serverCertPath
-}
-
-// ServerKey returns server private key
-func (sp *SecurityPrimitives) ServerKey() string {
-	return sp.serverKeyPath
-}
-
 func (sp *SecurityPrimitives) cleanupDir() {
 	if _, err := os.Stat(sp.directory); os.IsNotExist(err) {
 		return
@@ -108,15 +96,10 @@ func removeContents(dir string) error {
 		return err
 	}
 	defer d.Close()
-	names, err := d.Readdirnames(-1)
+
+	err = os.RemoveAll(dir)
 	if err != nil {
 		return err
-	}
-	for _, name := range names {
-		err = os.RemoveAll(filepath.Join(dir, name))
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -139,7 +122,12 @@ func (sp *SecurityPrimitives) Generate() {
 		return
 	}
 
-	if err = sp.CreateTLSCryptKey(sp.tlsCryptKeyPath); err != nil {
+	if err = sp.CheckCertificate(); err != nil {
+		log.Info("CheckCertificate failed: ", err)
+		return
+	}
+
+	if err = sp.CreateTLSCryptKey(); err != nil {
 		log.Info("CreateTLSCryptKey failed: ", err)
 		return
 	}

@@ -17,7 +17,7 @@ import (
 
 // CreateCA creates Certificate Authority certificate and private key
 func (p *SecurityPrimitives) CreateCA() (*x509.Certificate, error) {
-	log.Info("Create CA (", p.caCertPath, ", ", p.caKeyPath, ")")
+	log.Info("Create CA (", p.CACertPath, ", ", p.CAKeyPath, ")")
 
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(1653),
@@ -47,22 +47,22 @@ func (p *SecurityPrimitives) CreateCA() (*x509.Certificate, error) {
 		return nil, err
 	}
 
-	certOut, err := os.Create(p.caCertPath)
+	certOut, err := os.Create(p.CACertPath)
 	if err != nil {
-		log.Info("failed to open "+p.caCertPath+" for writing: %s", err)
+		log.Info("failed to open "+p.CACertPath+" for writing: %s", err)
 	}
 	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: p.caBytes})
 	certOut.Close()
-	log.Info("written " + p.caCertPath)
+	log.Info("written " + p.CACertPath)
 
-	keyOut, err := os.OpenFile(p.caKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(p.CAKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Info("failed to open "+p.caKeyPath+" for writing:", err)
+		log.Info("failed to open "+p.CAKeyPath+" for writing:", err)
 		return nil, err
 	}
 	pem.Encode(keyOut, pemBlockForKey(p.caPrivateKey))
 	keyOut.Close()
-	log.Info("written " + p.caKeyPath)
+	log.Info("written " + p.CAKeyPath)
 
 	return ca, nil
 }
@@ -85,7 +85,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 
 // CreateCert creates certificate and private key signed by given CA certificate
 func (p *SecurityPrimitives) CreateCert(parentCA *x509.Certificate, server bool) error {
-	log.Info("Create certificate (", p.serverCertPath, ", ", p.serverKeyPath, ")")
+	log.Info("Create certificate (", p.ServerCertPath, ", ", p.ServerKeyPath, ")")
 
 	extUsage := x509.ExtKeyUsageClientAuth
 
@@ -117,35 +117,44 @@ func (p *SecurityPrimitives) CreateCert(parentCA *x509.Certificate, server bool)
 		return err
 	}
 	p.serverCertBytes = certBytes
-	p.checkCertificate(p.caBytes, p.serverCertBytes)
 
 	// cert in PEM
-	certOut, err := os.Create(p.serverCertPath)
+	certOut, err := os.Create(p.ServerCertPath)
 	if err != nil {
-		log.Info("failed to open "+p.serverCertPath+" for writing: %s", err)
+		log.Info("failed to open "+p.ServerCertPath+" for writing: %s", err)
 	}
 	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
 	certOut.Close()
-	log.Debug("written " + p.serverCertPath)
+	log.Debug("written " + p.ServerCertPath)
 
 	// key in PEM
-	keyOut, err := os.OpenFile(p.serverKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(p.ServerKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Info("failed to open "+p.serverKeyPath+" for writing:", err)
+		log.Info("failed to open "+p.ServerKeyPath+" for writing:", err)
 		return err
 	}
 	pem.Encode(keyOut, pemBlockForKey(p.serverPrivateKey))
 	keyOut.Close()
-	log.Debug("written " + p.serverKeyPath)
+	log.Debug("written " + p.ServerKeyPath)
 
 	return nil
 }
 
-func (p *SecurityPrimitives) checkCertificate(caBytes []byte, certBytes []byte) {
-	ca, _ := x509.ParseCertificate(caBytes)
-	cert, _ := x509.ParseCertificate(certBytes)
-	err := cert.CheckSignatureFrom(ca)
+// CheckCertificate checks if generated certificate signature is from parentCA
+func (p *SecurityPrimitives) CheckCertificate() error {
+	ca, err := x509.ParseCertificate(p.caBytes)
 	if err != nil {
-		log.Info("failed to check signature ", err)
+		return log.Errorf("failed to parse CA certificate: ", err)
 	}
+
+	cert, err := x509.ParseCertificate(p.serverCertBytes)
+	if err != nil {
+		return log.Errorf("failed to parse server certificate: ", err)
+	}
+
+	err = cert.CheckSignatureFrom(ca)
+	if err != nil {
+		return log.Errorf("failed to check signature: ", err)
+	}
+	return nil
 }

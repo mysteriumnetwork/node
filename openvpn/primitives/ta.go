@@ -9,7 +9,7 @@ import (
 )
 
 // CreateTLSCryptKey generates symmetric key in HEX format 2048 bits length
-func (sp *SecurityPrimitives) CreateTLSCryptKey(filename string) error {
+func (sp *SecurityPrimitives) CreateTLSCryptKey() error {
 	taKey := make([]byte, 256)
 	_, err := rand.Read(taKey)
 	if err != nil {
@@ -17,9 +17,9 @@ func (sp *SecurityPrimitives) CreateTLSCryptKey(filename string) error {
 		return err
 	}
 
-	keyOut, err := os.OpenFile(sp.tlsCryptKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(sp.TLSCryptKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Info("failed to open "+sp.tlsCryptKeyPath+" for writing:", err)
+		log.Info("failed to open "+sp.TLSCryptKeyPath+" for writing:", err)
 		return err
 	}
 	defer keyOut.Close()
@@ -36,7 +36,7 @@ func (sp *SecurityPrimitives) CreateTLSCryptKey(filename string) error {
 		}
 	}
 
-	log.Debug("written " + sp.tlsCryptKeyPath)
+	log.Debug("written " + sp.TLSCryptKeyPath)
 
 	return nil
 }
