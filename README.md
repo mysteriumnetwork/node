@@ -2,6 +2,7 @@
 # Decentralized VPN built on blockchain
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/MysteriumNetwork/node)](https://goreportcard.com/report/github.com/MysteriumNetwork/node)
+[![Build Status](https://travis-ci.org/MysteriumNetwork/node.svg?branch=master)](https://travis-ci.org/MysteriumNetwork/node)
 
 VPN server and client for Mysterium Network
 
