@@ -34,8 +34,8 @@ type Command struct {
 	vpnServer        *openvpn.Server
 }
 
-// Run starts server - does not block
-func (cmd *Command) Run() (err error) {
+// Start starts server - does not block
+func (cmd *Command) Start() (err error) {
 	providerID, err := cmd.identityLoader()
 	if err != nil {
 		return err

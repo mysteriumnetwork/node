@@ -34,8 +34,7 @@ const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
-// Run starts CLI interface in the same thread while blocking it
-// TODO: rename method to clarify that it's blocking
+// Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)

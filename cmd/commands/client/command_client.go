@@ -81,8 +81,8 @@ type Command struct {
 	httpAPIServer     tequilapi.APIServer
 }
 
-// Run starts Tequilapi service - does not block
-func (cmd *Command) Run() error {
+// Start starts Tequilapi service - does not block
+func (cmd *Command) Start() error {
 	err := cmd.httpAPIServer.StartServing()
 	if err != nil {
 		return err

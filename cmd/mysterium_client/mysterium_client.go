@@ -42,7 +42,7 @@ func runCMD(options client.CommandOptions) {
 	stop := cmd.NewApplicationStopper(cmdRun.Kill)
 	cmd.StopOnInterrupts(stop)
 
-	if err := cmdRun.Run(); err != nil {
+	if err := cmdRun.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
