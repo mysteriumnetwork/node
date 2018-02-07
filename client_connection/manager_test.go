@@ -68,7 +68,7 @@ func (tc *testContext) TestWithUnknownProviderConnectionIsNotMade() {
 	assert.False(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
 }
 
-func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndLastErrorIsSetAndSessionStartIsNotMarked() {
+func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndSessionStartIsNotMarked() {
 	fatalVpnError := errors.New("fatal connection error")
 	tc.fakeOpenVpn.onConnectReturnError = fatalVpnError
 
