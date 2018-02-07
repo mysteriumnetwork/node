@@ -111,7 +111,7 @@ func (process *Process) waitForShutdown(cmd *exec.Cmd) {
 		//First - shutdown gracefully
 		//TOOD - add timer and send SIGKILL after timeout?
 		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			log.Error(process.logPrefix, "Error killing process", err)
+			log.Error(process.logPrefix, "Error killing process = ", err)
 		}
 
 		// Allow goroutine to exit
