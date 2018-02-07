@@ -3,6 +3,7 @@ language: go
 
 go:
   - 1.9.2
+go_import_path: github.com/mysterium/node
 #This is called when travis pulls project dependencies - ugly git checkout freezes glide version (0.13.1)
 install:
   - go get -v github.com/Masterminds/glide
