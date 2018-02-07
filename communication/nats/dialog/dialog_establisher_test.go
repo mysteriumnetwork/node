@@ -24,7 +24,7 @@ func TestDialogEstablisher_Factory(t *testing.T) {
 	assert.Equal(t, signer, establisher.mySigner)
 }
 
-func TestDialogEstablisher_CreateDialog(t *testing.T) {
+func TestDialogEstablisher_EstablishDialog(t *testing.T) {
 	myID := identity.FromAddress("0x6B21b441D0D2Fa1d86407977A3a5C6eD90Ff1A62")
 	peerID := identity.FromAddress("0x0d1a35e53b7f3478d00B7C23838C0D48b2a81017")
 
@@ -41,7 +41,7 @@ func TestDialogEstablisher_CreateDialog(t *testing.T) {
 	signer := &identity.SignerFake{}
 	establisher := mockEstablisher(myID, connection, signer)
 
-	dialogInstance, err := establisher.CreateDialog(peerID, dto_discovery.Contact{})
+	dialogInstance, err := establisher.EstablishDialog(peerID, dto_discovery.Contact{})
 	defer dialogInstance.Close()
 	assert.NoError(t, err)
 	assert.NotNil(t, dialogInstance)
@@ -78,7 +78,7 @@ func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
 
 	establisher := mockEstablisher(myID, connection, &identity.SignerFake{})
 
-	dialogInstance, err := establisher.CreateDialog(peerID, dto_discovery.Contact{})
+	dialogInstance, err := establisher.EstablishDialog(peerID, dto_discovery.Contact{})
 	defer dialogInstance.Close()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "dialog creation error. failed to unpack response 'peer-topic.dialog-create'. invalid message signature ")

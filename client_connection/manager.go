@@ -20,10 +20,10 @@ var (
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient  server.Client
-	newDialogCreator DialogEstablisherCreator
-	newVpnClient     VpnClientCreator
-	statsKeeper      bytescount.SessionStatsKeeper
+	mysteriumClient      server.Client
+	newDialogEstablisher DialogEstablisherCreator
+	newVpnClient         VpnClientCreator
+	statsKeeper          bytescount.SessionStatsKeeper
 	//these are populated by Connect at runtime
 	status        ConnectionStatus
 	dialog        communication.Dialog
@@ -31,14 +31,14 @@ type connectionManager struct {
 	sessionId     session.SessionID
 }
 
-func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEstablisherCreator,
-	vpnClientFactory VpnClientCreator, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
+func NewManager(mysteriumClient server.Client, dialogEstablisherCreator DialogEstablisherCreator,
+	vpnClientCreator VpnClientCreator, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
-		mysteriumClient:  mysteriumClient,
-		newDialogCreator: dialogEstablisherFactory,
-		newVpnClient:     vpnClientFactory,
-		statsKeeper:      statsKeeper,
-		status:           statusNotConnected(),
+		mysteriumClient:      mysteriumClient,
+		newDialogEstablisher: dialogEstablisherCreator,
+		newVpnClient:         vpnClientCreator,
+		statsKeeper:          statsKeeper,
+		status:               statusNotConnected(),
 	}
 }
 
@@ -47,13 +47,13 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return ErrAlreadyExists
 	}
 
-	proposal, err := manager.findProposalByNode(providerID)
+	proposal, err := manager.findProposalByProviderId(providerID)
 	if err != nil {
 		return err
 	}
 
-	dialogCreator := manager.newDialogCreator(consumerID)
-	manager.dialog, err = dialogCreator.CreateDialog(providerID, proposal.ProviderContacts[0])
+	dialogEstablisher := manager.newDialogEstablisher(consumerID)
+	manager.dialog, err = dialogEstablisher.EstablishDialog(providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (manager *connectionManager) onVpnStatusUpdate(vpnState openvpn.State) {
 }
 
 // TODO this can be extraced as depencency later when node selection criteria will be clear
-func (manager *connectionManager) findProposalByNode(providerID identity.Identity) (*dto.ServiceProposal, error) {
+func (manager *connectionManager) findProposalByProviderId(providerID identity.Identity) (*dto.ServiceProposal, error) {
 	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
 	if err != nil {
 		return nil, err

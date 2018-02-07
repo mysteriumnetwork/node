@@ -198,7 +198,7 @@ type fakeDialog struct {
 	peerId identity.Identity
 }
 
-func (fd *fakeDialog) CreateDialog(peerID identity.Identity, peerContact dto_discovery.Contact) (communication.Dialog, error) {
+func (fd *fakeDialog) EstablishDialog(peerID identity.Identity, peerContact dto_discovery.Contact) (communication.Dialog, error) {
 	fd.peerId = peerID
 	return fd, nil
 }
