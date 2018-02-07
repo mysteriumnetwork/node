@@ -30,7 +30,7 @@ func runCLI(options client.CommandOptions) {
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 	)
 	stop := cmd.NewApplicationStopper()
-	cmd.NewTerminator(stop)
+	cmd.StopOnInterrupts(stop)
 	if err := cmdCli.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -40,7 +40,7 @@ func runCLI(options client.CommandOptions) {
 func runCMD(options client.CommandOptions) {
 	cmdRun := client.NewCommand(options)
 	stop := cmd.NewApplicationStopper(cmdRun.Kill)
-	cmd.NewTerminator(stop)
+	cmd.StopOnInterrupts(stop)
 
 	if err := cmdRun.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
