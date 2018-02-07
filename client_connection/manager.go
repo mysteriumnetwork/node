@@ -48,7 +48,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return ErrAlreadyExists
 	}
 
-	proposal, err := manager.findProposalByProviderId(providerID)
+	proposal, err := manager.findProposalByProviderID(providerID)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (manager *connectionManager) onVpnStatusUpdate(vpnState openvpn.State) {
 }
 
 // TODO this can be extraced as depencency later when node selection criteria will be clear
-func (manager *connectionManager) findProposalByProviderId(providerID identity.Identity) (*dto.ServiceProposal, error) {
+func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity) (*dto.ServiceProposal, error) {
 	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
 	if err != nil {
 		return nil, err
