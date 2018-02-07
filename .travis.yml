@@ -5,7 +5,7 @@ go:
   - 1.9.2
 go_import_path: github.com/mysterium/node
 install:
-  - export GLIDE_VERSION="0.13.1"
+  - export GLIDE_VERSION="v0.13.1"
   - wget "https://github.com/Masterminds/glide/releases/download/$GLIDE_VERSION/glide-$GLIDE_VERSION-linux-amd64.tar.gz"
   - mkdir -p $HOME/bin
   - tar -vxz -C $HOME/bin --strip=1 -f glide-$GLIDE_VERSION-linux-amd64.tar.gz
