@@ -29,7 +29,7 @@ func runCLI(options client.CommandOptions) {
 		filepath.Join(options.DirectoryRuntime, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 	)
-	stop := cmd.NewApplicationStopper()
+	stop := cmd.NewApplicationStopper(cmdCli.Kill)
 	cmd.StopOnInterrupts(stop)
 	if err := cmdCli.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

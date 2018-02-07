@@ -41,50 +41,28 @@ func (fe *fakeExiter) Exit(code int) {
 func TestNewStopper(t *testing.T) {
 	killer := newFakeKiller(false)
 	exiter := newFakeExiter()
-	stopper := newStopper(exiter.Exit, killer.Kill)
+	stopper := newStopper(killer.Kill, exiter.Exit)
 	assert.NotNil(t, stopper)
 }
 
-func TestStop(t *testing.T) {
-	tests := []struct {
-		fakeKillers      []*fakeKiller
-		expectedExitCode int
-	}{
-		// Successful killer
-		{
-			[]*fakeKiller{newFakeKiller(false)},
-			0,
-		},
-		// Failing killer
-		{
-			[]*fakeKiller{newFakeKiller(true)},
-			1,
-		},
-		// Two successful killers
-		{
-			[]*fakeKiller{newFakeKiller(false), newFakeKiller(false)},
-			0,
-		},
-		// First killer fails, second gets executed
-		{
-			[]*fakeKiller{newFakeKiller(true), newFakeKiller(false)},
-			1,
-		},
-	}
+func TestStopperExitsWithSuccessWhenKillerSucceeds(t *testing.T) {
+	exiter := newFakeExiter()
+	fakeKiller := newFakeKiller(false)
 
-	for _, test := range tests {
-		exiter := newFakeExiter()
-		var killers []Killer
-		for _, fakeKiller := range test.fakeKillers {
-			killers = append(killers, fakeKiller.Kill)
-		}
+	stopper := newStopper(fakeKiller.Kill, exiter.Exit)
+	stopper()
 
-		stopper := newStopper(exiter.Exit, killers...)
-		stopper()
+	assert.Equal(t, 0, exiter.LastCode)
+	assert.True(t, fakeKiller.Killed)
+}
 
-		assert.Equal(t, test.expectedExitCode, exiter.LastCode)
-		for _, fakeKiller := range test.fakeKillers {
-			assert.True(t, fakeKiller.Killed)
-		}
-	}
+func TestStopperExitsWithErrorWhenKillerFails(t *testing.T) {
+	exiter := newFakeExiter()
+	fakeKiller := newFakeKiller(true)
+
+	stopper := newStopper(fakeKiller.Kill, exiter.Exit)
+	stopper()
+
+	assert.Equal(t, 1, exiter.LastCode)
+	assert.True(t, fakeKiller.Killed)
 }
