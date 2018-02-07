@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client_connection"
+	node_cmd "github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -17,7 +18,7 @@ import (
 	"time"
 )
 
-//NewCommand function creates new client command by given options
+// NewCommand function creates new client command by given options
 func NewCommand(options CommandOptions) *Command {
 	return NewCommandWith(
 		options,
@@ -25,7 +26,7 @@ func NewCommand(options CommandOptions) *Command {
 	)
 }
 
-//NewCommandWith does the same as NewCommand with possibility to override mysterium api client for external communication
+// NewCommandWith does the same as NewCommand with possibility to override mysterium api client for external communication
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
@@ -57,32 +58,36 @@ func NewCommandWith(
 	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
-	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ip.NewResolver(), statsKeeper)
-	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
-	return &Command{
-		connectionManager,
-		httpAPIServer,
+	command := &Command{
+		connectionManager: connectionManager,
+		httpAPIServer:     httpAPIServer,
 	}
+
+	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ip.NewResolver(), statsKeeper)
+	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
+	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill), time.Second)
+
+	return command
 }
 
 //Command represent entrypoint for Mysterium client with top level components
 type Command struct {
 	connectionManager client_connection.Manager
-	httpApiServer     tequilapi.APIServer
+	httpAPIServer     tequilapi.APIServer
 }
 
-//Run starts Tequilapi service - does not block
-func (cmd *Command) Run() error {
-	err := cmd.httpApiServer.StartServing()
+// Start starts Tequilapi service - does not block
+func (cmd *Command) Start() error {
+	err := cmd.httpAPIServer.StartServing()
 	if err != nil {
 		return err
 	}
 
-	port, err := cmd.httpApiServer.Port()
+	port, err := cmd.httpAPIServer.Port()
 	if err != nil {
 		return err
 	}
@@ -91,19 +96,19 @@ func (cmd *Command) Run() error {
 	return nil
 }
 
-//Wait blocks until tequilapi service is stopped
+// Wait blocks until tequilapi service is stopped
 func (cmd *Command) Wait() error {
-	return cmd.httpApiServer.Wait()
+	return cmd.httpAPIServer.Wait()
 }
 
-//Kill stops tequilapi service
+// Kill stops tequilapi service
 func (cmd *Command) Kill() error {
 	err := cmd.connectionManager.Disconnect()
 	if err != nil {
 		return err
 	}
 
-	cmd.httpApiServer.Stop()
+	cmd.httpAPIServer.Stop()
 	fmt.Printf("Api stopped\n")
 
 	return nil

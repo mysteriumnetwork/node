@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"github.com/chzyer/readline"
+	"github.com/mysterium/node/cmd"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"io"
 	"log"
@@ -13,12 +14,10 @@ import (
 func NewCommand(
 	historyFile string,
 	tequilapi *tequilapi_client.Client,
-	quitHandler func() error,
 ) *Command {
 	return &Command{
 		historyFile: historyFile,
 		tequilapi:   tequilapi,
-		quitHandler: quitHandler,
 	}
 }
 
@@ -26,7 +25,6 @@ func NewCommand(
 type Command struct {
 	historyFile      string
 	tequilapi        *tequilapi_client.Client
-	quitHandler      func() error
 	fetchedProposals []tequilapi_client.ProposalDTO
 	completer        *readline.PrefixCompleter
 	reader           *readline.Instance
@@ -36,7 +34,7 @@ const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
-// Run starts CLI interface
+// Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
@@ -72,15 +70,10 @@ func (c *Command) Run() (err error) {
 	return nil
 }
 
-//Kill stops tequilapi service
+// Kill stops cli
 func (c *Command) Kill() error {
 	c.reader.Clean()
-	err := c.reader.Close()
-	if err != nil {
-		return err
-	}
-
-	return c.quitHandler()
+	return c.reader.Close()
 }
 
 func (c *Command) handleActions(line string) {
@@ -266,12 +259,10 @@ func (c *Command) help() {
 	fmt.Println(c.completer.Tree("  "))
 }
 
+// quit stops cli and client commands and exits application
 func (c *Command) quit() {
-	err := c.Kill()
-	if err != nil {
-		warn(err)
-		return
-	}
+	stop := cmd.NewApplicationStopper(c.Kill)
+	stop()
 }
 
 func (c *Command) identities(argsString string) {

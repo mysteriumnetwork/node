@@ -28,9 +28,9 @@ func runCLI(options client.CommandOptions) {
 	cmdCli := cli.NewCommand(
 		filepath.Join(options.DirectoryRuntime, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
-		newStopHandler(),
 	)
-	cmd.NewTerminator(cmdCli)
+	stop := cmd.NewApplicationStopper(cmdCli.Kill)
+	cmd.StopOnInterrupts(stop)
 	if err := cmdCli.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -39,8 +39,10 @@ func runCLI(options client.CommandOptions) {
 
 func runCMD(options client.CommandOptions) {
 	cmdRun := client.NewCommand(options)
+	stop := cmd.NewApplicationStopper(cmdRun.Kill)
+	cmd.StopOnInterrupts(stop)
 
-	if err := cmdRun.Run(); err != nil {
+	if err := cmdRun.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -48,14 +50,5 @@ func runCMD(options client.CommandOptions) {
 	if err := cmdRun.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	}
-
-	cmd.NewTerminator(cmdRun)
-}
-
-func newStopHandler() func() error {
-	return func() error {
-		os.Exit(0)
-		return nil
 	}
 }

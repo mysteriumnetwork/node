@@ -15,7 +15,7 @@ func main() {
 
 	cmd := server.NewCommand(options)
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
