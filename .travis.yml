@@ -7,15 +7,16 @@ go_import_path: github.com/mysterium/node
 
 env:
   - TRAVIS_TOOLS_PATH=$HOME/travis_tools
+  - GLIDE_HOME=$HOME/glide-home
 
 cache:
   directories:
   - $TRAVIS_TOOLS_PATH #cache our binary tools for travis
-  - $TRAVIS_BUILD_DIR/vendor #cache dependencies (glide will check them later if needed)
+  - $GLIDE_HOME #cache glide home dir
 
 install:
   - source bin/travis_scripts/setup_tools_dir
   - source bin/travis_scripts/ensure_glide
-  - glide install
+  - glide "-home" $GLIDE_HOME install
 #This is actual build/test command
 script: bin/test
