@@ -24,7 +24,7 @@ type DialogHandler interface {
 //   - initiates Dialog requests to network
 //   - creates Dialog, when it is negotiated
 type DialogEstablisher interface {
-	CreateDialog(peerID identity.Identity, peerContact dto_discovery.Contact) (Dialog, error)
+	EstablishDialog(peerID identity.Identity, peerContact dto_discovery.Contact) (Dialog, error)
 }
 
 // Dialog represent established connection between 2 peers in network.

@@ -35,7 +35,7 @@ type dialogEstablisher struct {
 	peerAddressFactory func(contact dto_discovery.Contact) (*discovery.AddressNATS, error)
 }
 
-func (establisher *dialogEstablisher) CreateDialog(
+func (establisher *dialogEstablisher) EstablishDialog(
 	peerID identity.Identity,
 	peerContact dto_discovery.Contact,
 ) (communication.Dialog, error) {

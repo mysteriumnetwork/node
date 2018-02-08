@@ -7,13 +7,13 @@ import (
 )
 
 type middleware struct {
-	listeners  []clientStateCallback
+	listeners  []ClientStateCallback
 	connection net.Conn
 }
 
-type clientStateCallback func(state openvpn.State) error
+type ClientStateCallback func(state openvpn.State)
 
-func NewMiddleware(listeners ...clientStateCallback) openvpn.ManagementMiddleware {
+func NewMiddleware(listeners ...ClientStateCallback) openvpn.ManagementMiddleware {
 	return &middleware{
 		listeners:  listeners,
 		connection: nil,
@@ -23,7 +23,7 @@ func NewMiddleware(listeners ...clientStateCallback) openvpn.ManagementMiddlewar
 func (middleware *middleware) Start(connection net.Conn) error {
 	middleware.connection = connection
 
-	_, err := middleware.connection.Write([]byte("state on\n"))
+	_, err := middleware.connection.Write([]byte("state on all\n"))
 	return err
 }
 
@@ -46,15 +46,12 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 
 	state := openvpn.State(match[1])
 	for _, listener := range middleware.listeners {
-		err = listener(state)
-		if err != nil {
-			return
-		}
+		listener(state)
 	}
 
 	return
 }
 
-func (middleware *middleware) Subscribe(listener clientStateCallback) {
+func (middleware *middleware) Subscribe(listener ClientStateCallback) {
 	middleware.listeners = append(middleware.listeners, listener)
 }

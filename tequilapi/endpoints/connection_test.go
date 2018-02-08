@@ -358,3 +358,56 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 		resp.Body.String(),
 	)
 }
+
+func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
+	manager := fakeManager{}
+	manager.onConnectReturn = client_connection.ErrAlreadyExists
+
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
+
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/irrelevant",
+		strings.NewReader(
+			`{
+				"consumerId" : "my-identity",
+				"providerId" : "required-node"
+			}`))
+	resp := httptest.NewRecorder()
+
+	connectionEndpoint.Create(resp, req, nil)
+
+	assert.Equal(t, http.StatusConflict, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message" : "connection already exists"
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
+	manager := fakeManager{}
+	manager.onDisconnectReturn = client_connection.ErrNoConnection
+
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
+
+	req := httptest.NewRequest(
+		http.MethodDelete,
+		"/irrelevant",
+		nil,
+	)
+	resp := httptest.NewRecorder()
+
+	connectionEndpoint.Kill(resp, req, nil)
+
+	assert.Equal(t, http.StatusConflict, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message" : "no connection exists"
+		}`,
+		resp.Body.String(),
+	)
+}

@@ -5,81 +5,72 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/client/auth"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	openvpnSession "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
+	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
-	"path/filepath"
-	"time"
 )
 
-type DialogEstablisherFactory func(identity identity.Identity) communication.DialogEstablisher
-
-type VpnClientFactory func(vpnSession session.SessionDto, identity identity.Identity) (openvpn.Client, error)
+var (
+	// ErrNoConnection error indicates that action applied to manager expects active connection (i.e. disconnect)
+	ErrNoConnection = errors.New("no connection exists")
+	// ErrAlreadyExists error indicates that aciton applieto to manager expects no active connection (i.e. connect)
+	ErrAlreadyExists = errors.New("connection already exists")
+)
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient          server.Client
-	dialogEstablisherFactory DialogEstablisherFactory
-	vpnClientFactory         VpnClientFactory
-	statsKeeper              bytescount.SessionStatsKeeper
+	mysteriumClient      server.Client
+	newDialogEstablisher DialogEstablisherCreator
+	newVpnClient         VpnClientCreator
+	statsKeeper          bytescount.SessionStatsKeeper
 	//these are populated by Connect at runtime
-	dialog    communication.Dialog
-	vpnClient openvpn.Client
-	status    ConnectionStatus
+	status        ConnectionStatus
+	dialog        communication.Dialog
+	openvpnClient openvpn.Client
+	sessionID     session.SessionID
 }
 
-func NewManager(mysteriumClient server.Client, dialogEstablisherFactory DialogEstablisherFactory,
-	vpnClientFactory VpnClientFactory, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
+// NewManager creates connection manager with given dependencies
+func NewManager(mysteriumClient server.Client, dialogEstablisherCreator DialogEstablisherCreator,
+	vpnClientCreator VpnClientCreator, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
-		mysteriumClient:          mysteriumClient,
-		dialogEstablisherFactory: dialogEstablisherFactory,
-		vpnClientFactory:         vpnClientFactory,
-		statsKeeper:              statsKeeper,
-		dialog:                   nil,
-		vpnClient:                nil,
-		status:                   statusNotConnected(),
+		mysteriumClient:      mysteriumClient,
+		newDialogEstablisher: dialogEstablisherCreator,
+		newVpnClient:         vpnClientCreator,
+		statsKeeper:          statsKeeper,
+		status:               statusNotConnected(),
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID identity.Identity, providerID identity.Identity) error {
-	manager.status = statusConnecting()
+func (manager *connectionManager) Connect(consumerID, providerID identity.Identity) error {
+	if manager.status.State != NotConnected {
+		return ErrAlreadyExists
+	}
 
-	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
+	proposal, err := manager.findProposalByProviderID(providerID)
 	if err != nil {
-		manager.status = statusError(err)
 		return err
 	}
-	if len(proposals) == 0 {
-		err = errors.New("provider has no service proposals")
-		manager.status = statusError(err)
-		return err
-	}
-	proposal := proposals[0]
 
-	dialogEstablisher := manager.dialogEstablisherFactory(consumerID)
-	manager.dialog, err = dialogEstablisher.CreateDialog(providerID, proposal.ProviderContacts[0])
+	dialogEstablisher := manager.newDialogEstablisher(consumerID)
+	manager.dialog, err = dialogEstablisher.EstablishDialog(providerID, proposal.ProviderContacts[0])
 	if err != nil {
-		manager.status = statusError(err)
 		return err
 	}
 
 	vpnSession, err := session.RequestSessionCreate(manager.dialog, proposal.ID)
 	if err != nil {
-		manager.status = statusError(err)
 		return err
 	}
+	manager.sessionID = vpnSession.ID
 
-	manager.vpnClient, err = manager.vpnClientFactory(*vpnSession, consumerID)
+	manager.openvpnClient, err = manager.newVpnClient(*vpnSession, consumerID, manager.onVpnStatusUpdate)
 
-	if err := manager.vpnClient.Start(); err != nil {
-		manager.status = statusError(err)
+	if err := manager.openvpnClient.Start(); err != nil {
+		manager.dialog.Close()
 		return err
 	}
-
-	manager.statsKeeper.MarkSessionStart()
-	manager.status = statusConnected(vpnSession.ID)
 	return nil
 }
 
@@ -88,78 +79,37 @@ func (manager *connectionManager) Status() ConnectionStatus {
 }
 
 func (manager *connectionManager) Disconnect() error {
+	if manager.status.State == NotConnected {
+		return ErrNoConnection
+	}
 	manager.status = statusDisconnecting()
-
-	if manager.vpnClient != nil {
-		if err := manager.vpnClient.Stop(); err != nil {
-			return err
-		}
-	}
-	if manager.dialog != nil {
-		if err := manager.dialog.Close(); err != nil {
-			return err
-		}
-	}
-
-	manager.status = statusNotConnected()
+	manager.openvpnClient.Stop()
 	return nil
 }
 
-func (manager *connectionManager) Wait() error {
-	return manager.vpnClient.Wait()
-}
-
-func statusError(err error) ConnectionStatus {
-	return ConnectionStatus{NotConnected, "", err}
-}
-
-func statusConnecting() ConnectionStatus {
-	return ConnectionStatus{Connecting, "", nil}
-}
-
-func statusConnected(sessionID session.SessionID) ConnectionStatus {
-	return ConnectionStatus{Connected, sessionID, nil}
-}
-
-func statusNotConnected() ConnectionStatus {
-	return ConnectionStatus{NotConnected, "", nil}
-}
-
-func statusDisconnecting() ConnectionStatus {
-	return ConnectionStatus{Disconnecting, "", nil}
-}
-
-func ConfigureVpnClientFactory(
-	mysteriumAPIClient server.Client,
-	configDirectory string,
-	runtimeDirectory string,
-	signerFactory identity.SignerFactory,
-	statsKeeper bytescount.SessionStatsKeeper,
-) VpnClientFactory {
-	return func(vpnSession session.SessionDto, consumerID identity.Identity) (openvpn.Client, error) {
-		vpnClientConfig, err := openvpn.NewClientConfigFromString(
-			vpnSession.Config,
-			filepath.Join(runtimeDirectory, "client.ovpn"),
-			filepath.Join(configDirectory, "update-resolv-conf"),
-			filepath.Join(configDirectory, "update-resolv-conf"),
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		signer := signerFactory(consumerID)
-
-		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
-		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, signer)
-		statsHandler := bytescount.NewCompositeStatsHandler(statsSaver, statsSender)
-
-		credentialsProvider := openvpnSession.SignatureCredentialsProvider(vpnSession.ID, signer)
-
-		return openvpn.NewClient(
-			vpnClientConfig,
-			runtimeDirectory,
-			bytescount.NewMiddleware(statsHandler, 1*time.Minute),
-			auth.NewMiddleware(credentialsProvider),
-		), nil
+func (manager *connectionManager) onVpnStatusUpdate(vpnState openvpn.State) {
+	switch vpnState {
+	case openvpn.STATE_CONNECTING:
+		manager.status = statusConnecting()
+	case openvpn.STATE_CONNECTED:
+		manager.statsKeeper.MarkSessionStart()
+		manager.status = statusConnected(manager.sessionID)
+	case openvpn.STATE_EXITING:
+		manager.status = statusNotConnected()
+	case openvpn.STATE_RECONNECTING:
+		manager.status = statusReconnecting()
 	}
+}
+
+// TODO this can be extraced as depencency later when node selection criteria will be clear
+func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity) (*dto.ServiceProposal, error) {
+	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
+	if err != nil {
+		return nil, err
+	}
+	if len(proposals) == 0 {
+		err = errors.New("provider has no service proposals")
+		return nil, err
+	}
+	return &proposals[0], nil
 }
