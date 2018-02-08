@@ -7,17 +7,21 @@ go_import_path: github.com/mysterium/node
 
 env:
   global:
-    - TRAVIS_TOOLS_PATH=$HOME/travis_tools
+    - CACHE_ROOT_DIR=$HOME/cache
+    - TRAVIS_TOOLS_PATH=$CACHE_ROOT_DIR/travis_tools
+    #don't cache glide dependencies yet - it always triggers cache changes and slows down build even more, something to do with git index files
     - GLIDE_HOME=$HOME/glide-home
 
 cache:
   directories:
-  - $TRAVIS_TOOLS_PATH #cache our binary tools for travis
-  - $GLIDE_HOME #cache glide home dir
+  - $CACHE_ROOT_DIR #cache everything in cache root dir
 
 install:
+  #setups PATH variable to contain travis tools dir and creates directory if needed (it could be already created by cache setup)
   - source bin/travis_scripts/setup_tools_dir
+  #ensure that we have glide (possibly from cache) or setup a fresh one
   - source bin/travis_scripts/ensure_glide
+  #run glide dependencies setup (it takes about 52 secs to download it from scratch)
   - glide "-home" $GLIDE_HOME install
 #This is actual build/test command
 script: bin/test
