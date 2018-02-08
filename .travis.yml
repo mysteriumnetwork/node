@@ -6,8 +6,9 @@ go:
 go_import_path: github.com/mysterium/node
 
 env:
-  - TRAVIS_TOOLS_PATH=$HOME/travis_tools
-  - GLIDE_HOME=$HOME/glide-home
+  global:
+    - TRAVIS_TOOLS_PATH=$HOME/travis_tools
+    - GLIDE_HOME=$HOME/glide-home
 
 cache:
   directories:
