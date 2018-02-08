@@ -14,8 +14,8 @@ cache:
   - $TRAVIS_BUILD_DIR/vendor #cache dependencies (glide will check them later if needed)
 
 install:
-  - travis_scripts/setup_tools_dir
-  - travis_scripts/ensure_glide
+  - bin/travis_scripts/setup_tools_dir
+  - bin/travis_scripts/ensure_glide
   - glide install
 #This is actual build/test command
 script: bin/test
