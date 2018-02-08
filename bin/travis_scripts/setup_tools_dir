@@ -1,4 +1,5 @@
 #!/bin/bash
 
+echo "Ensuring $TRAVIS_TOOLS_PATH exists and is added to PATH"
 mkdir -p $TRAVIS_TOOLS_PATH
 export PATH="$TRAVIS_TOOLS_PATH:$PATH"
