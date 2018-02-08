@@ -5,7 +5,7 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/auth"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/openvpn/middlewares/client/state"
+	"github.com/mysterium/node/openvpn/middlewares/state"
 	openvpnSession "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"

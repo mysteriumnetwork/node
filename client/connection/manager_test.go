@@ -6,7 +6,7 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/openvpn/middlewares/client/state"
+	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"

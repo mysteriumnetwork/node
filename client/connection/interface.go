@@ -4,7 +4,7 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/client/state"
+	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/session"
 )
 
