@@ -11,7 +11,7 @@ env:
 cache:
   directories:
   - $TRAVIS_TOOLS_PATH #cache our binary tools for travis
-  - $GOPATH/src/github.com/mysterium/node/vendor #cache dependencies (glide will check them later if needed)
+  - $TRAVIS_BUILD_DIR/vendor #cache dependencies (glide will check them later if needed)
 
 install:
   - travis_scripts/setup_tools_dir
