@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mkdir -p $TRAVIS_TOOLS_PATH
+export PATH="$TRAVIS_TOOLS_PATH:$PATH"

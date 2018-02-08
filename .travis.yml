@@ -4,12 +4,18 @@ language: go
 go:
   - 1.9.2
 go_import_path: github.com/mysterium/node
+
+env:
+  - TRAVIS_TOOLS_PATH=$HOME/travis_tools
+
+cache:
+  directories:
+  - $TRAVIS_TOOLS_PATH #cache our binary tools for travis
+  - $GOPATH/src/github.com/mysterium/node/vendor #cache dependencies (glide will check them later if needed)
+
 install:
-  - export GLIDE_VERSION="v0.13.1"
-  - wget "https://github.com/Masterminds/glide/releases/download/$GLIDE_VERSION/glide-$GLIDE_VERSION-linux-amd64.tar.gz"
-  - mkdir -p $HOME/bin
-  - tar -vxz -C $HOME/bin --strip=1 -f glide-$GLIDE_VERSION-linux-amd64.tar.gz
-  - export PATH="$HOME/bin:$PATH"
+  - travis_scripts/setup_tools_dir
+  - travis_scripts/ensure_glide
   - glide install
 #This is actual build/test command
 script: bin/test
