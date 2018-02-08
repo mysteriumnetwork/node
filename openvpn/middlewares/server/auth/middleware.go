@@ -32,14 +32,11 @@ func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
 
 func (m *middleware) Start(connection net.Conn) error {
 	m.connection = connection
-
-	_, err := m.connection.Write([]byte("state on\n"))
-	return err
+	return nil
 }
 
 func (m *middleware) Stop() error {
-	_, err := m.connection.Write([]byte("state off\n"))
-	return err
+	return nil
 }
 
 func (m *middleware) checkReAuth(line string) (cont bool, consumed bool, err error) {
