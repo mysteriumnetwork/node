@@ -39,7 +39,7 @@ sudo tail -f /var/log/mysterium-node/*
 ```
 ### Debugging standalone
 ```
-sudo mysterium_server --config-dir=/etc/mysterium-node --runtime-dir=/tmp --node=0x123456..
+sudo mysterium_server --config-dir=/etc/mysterium-node --runtime-dir=/tmp --identity=0x123456..
 ```
 
 
@@ -78,7 +78,7 @@ sudo mysterium_client --config-dir=/etc/mysterium-client --runtime-dir=/tmp --cl
 ### Running
 ```bash
 mysterium_server --help
-sudo mysterium_server --config-dir=/etc/mysterium-node --node=0x123456..
+sudo mysterium_server --config-dir=/etc/mysterium-node --identity=0x123456..
 ```
 
 

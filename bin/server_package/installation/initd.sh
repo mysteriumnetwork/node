@@ -111,7 +111,8 @@ function start() {
         -- \
         --config-dir=$OS_DIR_CONFIG \
         --runtime-dir=$OS_DIR_RUN \
-        --node=$MYSTERIUM_SERVER_NODE \
+        --identity=$MYSTERIUM_SERVER_IDENTITY \
+        --identity.passphrase=$MYSTERIUM_SERVER_IDENTITY_PASSPHRASE \
         >>$DAEMON_STDOUT \
         2>>$DAEMON_STDERR
 

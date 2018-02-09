@@ -44,13 +44,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		&options.Identity,
 		"identity",
 		"",
-		"Unique identifier for Mysterium VPN node",
+		"Keystore's identity used to provide service. If not given identity will be created automatically",
 	)
 	flags.StringVar(
 		&options.Passphrase,
-		"passphrase",
+		"identity.passphrase",
 		"",
-		"Identity passphrase",
+		"Used to unlock keystore's identity",
 	)
 
 	flags.StringVar(

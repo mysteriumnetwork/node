@@ -36,7 +36,7 @@ docker-compose up broker
 
 # Start node
 bin/server_build
-bin/server_run --node 123456
+bin/server_run --identity=0x123456..
 
 # Client connects to node
 bin/client_build

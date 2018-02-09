@@ -1,4 +1,7 @@
 # This is the configuration file for /etc/init.d/mysterium-server
 
-# Unique identifier for Mysterium VPN node
-MYSTERIUM_SERVER_NODE=""
+# Keystore's identity used to provide service. If not given single identity will be created automatically
+MYSTERIUM_SERVER_IDENTITY=""
+
+# Used to unlock keystore's identity
+MYSTERIUM_SERVER_IDENTITY_PASSPHRASE=""
