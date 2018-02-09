@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 )
 
-// GetMysteriumDirectory makes path to full path in home directory
-func GetMysteriumDirectory(path string) string {
+// GetDataDirectory makes full path to application's data
+func GetDataDirectory() string {
 	dir, _ := homedir.Dir()
-	return filepath.Join(dir, ".mysterium", path)
+	return filepath.Join(dir, ".mysterium")
 }

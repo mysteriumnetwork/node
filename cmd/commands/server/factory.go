@@ -36,16 +36,16 @@ func NewCommandWith(
 	natService nat.NATService,
 ) *Command {
 
-	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
-	cache := identity.NewIdentityCache(options.DirectoryKeystore, "remember.json")
-	identityManager := identity.NewIdentityManager(keystoreInstance)
+	keystoreDirectory := filepath.Join(options.DirectoryData, "keystore")
+	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
 	createSigner := func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(keystoreInstance, id)
 	}
+
 	identityHandler := identity_handler.NewHandler(
-		identityManager,
+		identity.NewIdentityManager(keystoreInstance),
 		mysteriumClient,
-		cache,
+		identity.NewIdentityCache(keystoreDirectory, "remember.json"),
 		createSigner,
 	)
 
