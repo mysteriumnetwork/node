@@ -41,6 +41,10 @@ func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMid
 	}
 }
 
+func (management *Management) SocketAddress() string {
+	return management.socketAddress
+}
+
 func (management *Management) Start() error {
 	log.Info(management.logPrefix, "Connecting to socket:", management.socketAddress)
 

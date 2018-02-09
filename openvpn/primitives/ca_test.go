@@ -29,9 +29,8 @@ HjA6UZc4AnnGZlqRef3Tt2k23FkOtym0xw==
 -----END EC PRIVATE KEY-----`
 
 func TestCreateCAFilesExists(t *testing.T) {
-	sp := NewOpenVPNSecPrimitives()
-	sp.init()
-	sp.CreateCA()
+	sp := newOpenVPNSecPrimitives(runDir)
+	sp.createCA()
 
 	if _, err := os.Stat(sp.CACertPath); os.IsNotExist(err) {
 		t.Errorf("file %s should exist", sp.CACertPath)
@@ -43,8 +42,7 @@ func TestCreateCAFilesExists(t *testing.T) {
 }
 
 func TestCreateCertFilesExists(t *testing.T) {
-	sp := NewOpenVPNSecPrimitives()
-	sp.init()
+	sp := newOpenVPNSecPrimitives(runDir)
 
 	// get parent ca
 	block, _ := pem.Decode([]byte(caCertPEM))
@@ -57,7 +55,7 @@ func TestCreateCertFilesExists(t *testing.T) {
 	sp.caPrivateKey = key
 
 	// generate sever cert / key
-	sp.CreateCert(ca, true)
+	sp.createCert(ca, true)
 
 	if _, err := os.Stat(sp.ServerCertPath); os.IsNotExist(err) {
 		t.Errorf("file %s should exist", sp.ServerCertPath)
@@ -69,8 +67,7 @@ func TestCreateCertFilesExists(t *testing.T) {
 }
 
 func TestServerCertFileIsValid(t *testing.T) {
-	sp := NewOpenVPNSecPrimitives()
-	sp.init()
+	sp := newOpenVPNSecPrimitives(runDir)
 
 	// get parent ca
 	block, _ := pem.Decode([]byte(caCertPEM))
@@ -83,37 +80,35 @@ func TestServerCertFileIsValid(t *testing.T) {
 	sp.caPrivateKey = key
 
 	// generate sever cert / key
-	sp.CreateCert(ca, true)
+	sp.createCert(ca, true)
 
-	if err := sp.CheckCertificate(); err != nil {
+	if err := sp.checkCertificate(); err != nil {
 		t.Errorf("certificate should be valid %s", err)
 	}
 }
 
 func TestCACertFileIsNotValid(t *testing.T) {
-	sp := NewOpenVPNSecPrimitives()
-	sp.init()
+	sp := newOpenVPNSecPrimitives(runDir)
 
 	// get parent ca
 	block, _ := pem.Decode([]byte(caCertPEM))
 
 	// generate own ca
-	ownCA, _ := sp.CreateCA()
+	ownCA, _ := sp.createCA()
 
 	// generate sever cert / key on ownCA
-	sp.CreateCert(ownCA, true)
+	sp.createCert(ownCA, true)
 
 	// substitude with different ca
 	sp.caBytes = block.Bytes
 
-	if err := sp.CheckCertificate(); err == nil {
+	if err := sp.checkCertificate(); err == nil {
 		t.Errorf("CA certificate should be invalid %s", err)
 	}
 }
 
 func TestServerCertFileIsNotValid(t *testing.T) {
-	sp := NewOpenVPNSecPrimitives()
-	sp.init()
+	sp := newOpenVPNSecPrimitives(runDir)
 
 	// get parent ca
 	block, _ := pem.Decode([]byte(caCertPEM))
@@ -122,7 +117,7 @@ func TestServerCertFileIsNotValid(t *testing.T) {
 	// set bad server cert
 	sp.serverCertBytes = []byte{0, 0, 0, 0, 0}
 
-	if err := sp.CheckCertificate(); err == nil {
+	if err := sp.checkCertificate(); err == nil {
 		t.Errorf("Server certificate should be invalid %s", err)
 	}
 }

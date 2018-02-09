@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -12,7 +13,6 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
-	"github.com/pkg/errors"
 	"time"
 )
 

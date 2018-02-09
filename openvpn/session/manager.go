@@ -7,21 +7,21 @@ import (
 	"sync"
 )
 
-// NewManager returns session manager which maintans a map of session id -> session
-func NewManager(clientConfig *openvpn.ClientConfig, idGenerator session.Generator) *manager {
+// NewManager returns session manager which maintains a map of session id -> session
+func NewManager(clientConfigGenerator openvpn.ClientConfigGenerator, idGenerator session.Generator) *manager {
 	return &manager{
-		idGenerator:  idGenerator,
-		clientConfig: clientConfig,
-		sessionMap:   make(map[session.SessionID]session.Session),
-		creationLock: sync.Mutex{},
+		idGenerator:          idGenerator,
+		generateClientConfig: clientConfigGenerator,
+		sessionMap:           make(map[session.SessionID]session.Session),
+		creationLock:         sync.Mutex{},
 	}
 }
 
 type manager struct {
-	idGenerator  session.Generator
-	clientConfig *openvpn.ClientConfig
-	sessionMap   map[session.SessionID]session.Session
-	creationLock sync.Mutex
+	idGenerator          session.Generator
+	generateClientConfig openvpn.ClientConfigGenerator
+	sessionMap           map[session.SessionID]session.Session
+	creationLock         sync.Mutex
 }
 
 func (manager *manager) Create(peerID identity.Identity) (sessionInstance session.Session, err error) {
@@ -29,7 +29,7 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance sessio
 	defer manager.creationLock.Unlock()
 	sessionInstance.ID = manager.idGenerator.Generate()
 	sessionInstance.ConsumerID = peerID
-	sessionInstance.Config, err = openvpn.ConfigToString(*manager.clientConfig.Config)
+	sessionInstance.Config, err = openvpn.ConfigToString(*manager.generateClientConfig().Config)
 	if err != nil {
 		return
 	}

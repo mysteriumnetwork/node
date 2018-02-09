@@ -4,9 +4,9 @@
 package identity
 
 import (
+	"errors"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 )
 
 type identityManager struct {

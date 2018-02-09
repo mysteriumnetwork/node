@@ -12,7 +12,6 @@ import (
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/server/auth"
-	"github.com/mysterium/node/openvpn/primitives"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
@@ -59,10 +58,6 @@ func NewCommandWith(
 		locationDetector = location.NewDetectorFake("")
 	}
 
-	// (Re)generate required security primitives before openvpn start
-	openVPNPrimitives := primitives.NewOpenVPNSecPrimitives()
-	openVPNPrimitives.Generate()
-
 	return &Command{
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, options.Identity, options.Passphrase)
@@ -80,26 +75,22 @@ func NewCommandWith(
 		},
 
 		sessionManagerFactory: func(vpnServerIP string) session.Manager {
+			clientConfigGenerator := openvpn.NewClientConfigGenerator(options.DirectoryRuntime, vpnServerIP)
+
 			return openvpn_session.NewManager(
-				openvpn.NewClientConfig(
-					vpnServerIP,
-					openVPNPrimitives,
-				),
+				clientConfigGenerator,
 				&session.UUIDGenerator{},
 			)
 		},
 		vpnServerFactory: func(manager session.Manager) *openvpn.Server {
-			vpnServerConfig := openvpn.NewServerConfig(
-				"10.8.0.0", "255.255.255.0",
-				openVPNPrimitives,
-			)
+			serverConfigGenerator := openvpn.NewServerConfigGenerator(options.DirectoryRuntime)
 			sessionValidator := openvpn_session.NewSessionValidator(
 				manager.FindSession,
 				identity.NewExtractor(),
 			)
 
 			return openvpn.NewServer(
-				vpnServerConfig,
+				serverConfigGenerator,
 				options.DirectoryRuntime,
 				auth.NewMiddleware(sessionValidator),
 			)

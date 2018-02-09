@@ -10,8 +10,7 @@ func (c *ServerConfig) SetServerMode(port int, network, netmask string) {
 	c.setParam("topology", "subnet")
 }
 
-func (c *ServerConfig) SetTlsServer(caCrtFile string) {
+func (c *ServerConfig) SetTLSServer() {
 	c.setFlag("tls-server")
 	c.AddOptions(OptionFile("dh", "none"))
-	c.AddOptions(OptionFile("crl-verify", caCrtFile))
 }

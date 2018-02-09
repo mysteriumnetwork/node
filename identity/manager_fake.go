@@ -1,6 +1,6 @@
 package identity
 
-import "github.com/pkg/errors"
+import "errors"
 
 type idmFake struct {
 	LastUnlockAddress    string

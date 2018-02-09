@@ -1,35 +1,63 @@
 package openvpn
 
 import (
+	"github.com/mysterium/node/openvpn/primitives"
 	"sync"
 )
 
-func NewServer(config *ServerConfig, directoryRuntime string, middlewares ...ManagementMiddleware) *Server {
+// NewServer constructs new openvpn server instance
+func NewServer(generateConfig ServerConfigGenerator, directoryRuntime string, middlewares ...ManagementMiddleware) *Server {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
-	config.SetManagementSocket(socketAddress)
-
 	return &Server{
-		config:     config,
-		management: NewManagement(socketAddress, "[server-management] ", middlewares...),
-		process:    NewProcess("[server-openvpn] "),
+		generateConfig: generateConfig,
+		management:     NewManagement(socketAddress, "[server-management] ", middlewares...),
+		process:        NewProcess("[server-openvpn] "),
 	}
 }
 
-type Server struct {
-	config     *ServerConfig
-	management *Management
-	process    *Process
+// ConfigGenerator callback returns generated server config
+type ServerConfigGenerator func() (*ServerConfig, error)
+
+// NewServerConfigGenerator returns function generating server config and generates required security primitives
+func NewServerConfigGenerator(directoryRuntime string) ServerConfigGenerator {
+	return func() (*ServerConfig, error) {
+		// (Re)generate required security primitives before openvpn start
+		openVPNPrimitives, err := primitives.GenerateOpenVPNSecPrimitives(directoryRuntime)
+		if err != nil {
+			return nil, err
+		}
+		vpnServerConfig := NewServerConfig(
+			"10.8.0.0", "255.255.255.0",
+			openVPNPrimitives,
+		)
+		return vpnServerConfig, err
+	}
 }
 
+// Server structure describes openvpn server
+type Server struct {
+	generateConfig ServerConfigGenerator
+	management     *Management
+	process        *Process
+}
+
+// Start starts openvpn server generating required config and starting management interface on the way
 func (server *Server) Start() error {
+	config, err := server.generateConfig()
+	if err != nil {
+		return err
+	}
+
+	config.SetManagementSocket(server.management.SocketAddress())
+
 	// Start the management interface (if it isnt already started)
 	if err := server.management.Start(); err != nil {
 		return err
 	}
 
 	// Fetch the current params
-	arguments, err := ConfigToArguments(*server.config.Config)
+	arguments, err := ConfigToArguments(*config.Config)
 	if err != nil {
 		return err
 	}
@@ -37,10 +65,12 @@ func (server *Server) Start() error {
 	return server.process.Start(arguments)
 }
 
-func (client *Server) Wait() error {
-	return client.process.Wait()
+// Wait waits for openvpn server to exit
+func (server *Server) Wait() error {
+	return server.process.Wait()
 }
 
+// Stop instructs openvpn server to stop
 func (server *Server) Stop() {
 	waiter := sync.WaitGroup{}
 

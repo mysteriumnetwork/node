@@ -3,23 +3,27 @@ package primitives
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	log "github.com/cihub/seelog"
 	"os"
 )
 
-// CreateTLSCryptKey generates symmetric key in HEX format 2048 bits length
-func (sp *SecurityPrimitives) CreateTLSCryptKey() error {
-	taKey := make([]byte, 256)
-	_, err := rand.Read(taKey)
-	if err != nil {
-		fmt.Println("error:", err)
+// createTLSCryptKey generates symmetric key in HEX format 2048 bits length
+func (p *SecurityPrimitives) createTLSCryptKey() error {
+
+	if err := p.cleanup(p.TLSCryptKeyPath); err != nil {
 		return err
 	}
 
-	keyOut, err := os.OpenFile(sp.TLSCryptKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	taKey := make([]byte, 256)
+	_, err := rand.Read(taKey)
 	if err != nil {
-		log.Info("failed to open "+sp.TLSCryptKeyPath+" for writing:", err)
+		log.Error(logPrefix, "failed to create random key:", err)
+		return err
+	}
+
+	keyOut, err := os.OpenFile(p.TLSCryptKeyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		log.Error(logPrefix, "failed to open "+p.TLSCryptKeyPath+" for writing:", err)
 		return err
 	}
 	defer keyOut.Close()
@@ -36,7 +40,7 @@ func (sp *SecurityPrimitives) CreateTLSCryptKey() error {
 		}
 	}
 
-	log.Debug("written " + sp.TLSCryptKeyPath)
+	log.Debug(logPrefix, "written "+p.TLSCryptKeyPath)
 
 	return nil
 }
