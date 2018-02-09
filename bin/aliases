@@ -13,5 +13,3 @@ alias myst-nats="myst-broker"
 
 alias myst-client="myst-home && bin/client_build && bin/client_run"
 alias myst-server="myst-home && bin/server_build && bin/server_run"
-alias myst-fake="myst-home && bin/fake_build && bin/fake_run"
-alias myst-monitor="myst-home && bin/monitor_build && bin/monitor_run"
