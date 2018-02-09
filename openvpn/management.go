@@ -1,5 +1,7 @@
 package openvpn
 
+// https://openvpn.net/index.php/open-source/documentation/miscellaneous/79-management-interface.html
+
 import (
 	"bufio"
 	"net"
@@ -10,7 +12,7 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-// https://openvpn.net/index.php/open-source/documentation/miscellaneous/79-management-interface.html
+// Management structure represents connection and interface to openvpn management
 type Management struct {
 	socketAddress string
 	logPrefix     string
@@ -23,6 +25,7 @@ type Management struct {
 	closesOnce              sync.Once
 }
 
+// CommandWriter represents command write abstraction for middlewares to be able to send commands to openvpn management interface
 type CommandWriter interface {
 	PrintfLine(format string, args ...interface{}) error
 }
@@ -33,6 +36,7 @@ type ManagementMiddleware interface {
 	ConsumeLine(line string) (consumed bool, err error)
 }
 
+// NewManagement creates new manager for given sock address, uses given log prefix for logging and takes a list of middlewares
 func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMiddleware) *Management {
 	return &Management{
 		socketAddress: socketAddress,
