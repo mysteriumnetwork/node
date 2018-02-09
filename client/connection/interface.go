@@ -12,7 +12,7 @@ import (
 type DialogEstablisherCreator func(identity.Identity) communication.DialogEstablisher
 
 // VpnClientCreator creates new vpn client by given session, provider identity and uses state callback to report state changes
-type VpnClientCreator func(session.SessionDto, identity.Identity, state.ClientStateCallback) (openvpn.Client, error)
+type VpnClientCreator func(session.SessionDto, identity.Identity, state.Callback) (openvpn.Client, error)
 
 // Manager interface provides methods to manage connection
 type Manager interface {

@@ -5,14 +5,14 @@ import (
 	"regexp"
 )
 
-// ClientStateCallback is called when openvpn process state changes
-type ClientStateCallback func(state openvpn.State)
+// Callback is called when openvpn process state changes
+type Callback func(state openvpn.State)
 
 type middleware struct {
-	listeners []ClientStateCallback
+	listeners []Callback
 }
 
-func NewMiddleware(listeners ...ClientStateCallback) openvpn.ManagementMiddleware {
+func NewMiddleware(listeners ...Callback) openvpn.ManagementMiddleware {
 	return &middleware{
 		listeners: listeners,
 	}
@@ -46,6 +46,6 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 	return
 }
 
-func (middleware *middleware) Subscribe(listener ClientStateCallback) {
+func (middleware *middleware) Subscribe(listener Callback) {
 	middleware.listeners = append(middleware.listeners, listener)
 }
