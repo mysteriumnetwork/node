@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-const runDir = "runDir"
+const runDir = "."
 
 func TestGenerateRequiredFiles(t *testing.T) {
 	sp, _ := GenerateOpenVPNSecPrimitives(runDir)
@@ -34,14 +34,14 @@ func TestGenerateRequiredFiles(t *testing.T) {
 }
 
 func TestDoubleGenerateFilesDiffer(t *testing.T) {
-	sp, err := GenerateOpenVPNSecPrimitives()
+	sp, err := GenerateOpenVPNSecPrimitives(runDir)
 
 	content1, err := ioutil.ReadFile(sp.ServerCertPath)
 	if err != nil {
 		t.Errorf("file %s should exist: %s", sp.ServerCertPath, err)
 	}
 
-	sp, err = GenerateOpenVPNSecPrimitives()
+	sp, err = GenerateOpenVPNSecPrimitives(runDir)
 
 	content2, err := ioutil.ReadFile(sp.ServerCertPath)
 	if err != nil {

@@ -3,10 +3,23 @@ package session
 import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/primitives"
 	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
+
+func NewFakeClientConfigGenerator(directoryRuntime, vpnServerIP string, port int) openvpn.ClientConfigGenerator {
+	return func() *openvpn.ClientConfig {
+		vpnClientConfig := openvpn.NewClientConfig(
+			vpnServerIP,
+			primitives.CACertPath(directoryRuntime),
+			primitives.TLSCryptKeyPath(directoryRuntime),
+		)
+		vpnClientConfig.SetPort(port)
+		return vpnClientConfig
+	}
+}
 
 func TestManagerCreatesNewSession(t *testing.T) {
 	expectedSession := session.Session{
@@ -15,11 +28,10 @@ func TestManagerCreatesNewSession(t *testing.T) {
 		ConsumerID: identity.FromAddress("deadbeef"),
 	}
 
-	clientConfig := &openvpn.ClientConfig{&openvpn.Config{}}
-	clientConfig.SetPort(1000)
+	clientConfigGenerator := NewFakeClientConfigGenerator("fake dir", "0.0.0.0", 1000)
 
 	manager := NewManager(
-		clientConfig,
+		clientConfigGenerator,
 		&session.GeneratorFake{
 			SessionIdMock: session.SessionID("mocked-id"),
 		},
