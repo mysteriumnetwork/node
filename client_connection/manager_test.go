@@ -18,10 +18,11 @@ import (
 
 type testContext struct {
 	suite.Suite
-	connManager         *connectionManager
-	fakeDiscoveryClient *server.ClientFake
-	fakeOpenVpn         *fakeOpenvpnClient
-	fakeStatsKeeper     *fakeSessionStatsKeeper
+	connManager          *connectionManager
+	fakeDiscoveryClient  *server.ClientFake
+	fakeOpenVpn          *fakeOpenvpnClient
+	fakeStatsKeeper      *fakeSessionStatsKeeper
+	openvpnCreationError error
 }
 
 var (
@@ -46,7 +47,14 @@ func (tc *testContext) SetupTest() {
 		nil,
 		nil,
 	}
+
+	tc.openvpnCreationError = nil
 	fakeVpnClientFactory := func(vpnSession session.SessionDto, identity identity.Identity, callback state.ClientStateCallback) (openvpn.Client, error) {
+		//each test can set this value to simulate openvpn creation error, this flag is reset BEFORE each test
+		if tc.openvpnCreationError != nil {
+			return nil, tc.openvpnCreationError
+		}
+
 		tc.fakeOpenVpn.stateCallback = callback
 		return tc.fakeOpenVpn, nil
 	}
@@ -167,6 +175,11 @@ func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 	tc.fakeOpenVpn.reportState(openvpn.STATE_EXITING)
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
+}
+
+func (tc *testContext) TestConnectFailsIfOpenvpnFactoryReturnsError() {
+	tc.openvpnCreationError = errors.New("failed to create vpn instanse")
+	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID))
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
