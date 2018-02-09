@@ -42,6 +42,7 @@ func ConfigureVpnClientFactory(
 		return openvpn.NewClient(
 			vpnClientConfig,
 			runtimeDirectory,
+			state.NewMiddleware(stateCallback),
 			bytescount.NewMiddleware(statsHandler, 1*time.Minute),
 			auth.NewMiddleware(credentialsProvider),
 		), nil
