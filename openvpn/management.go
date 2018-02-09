@@ -106,7 +106,12 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 	log.Info(management.logPrefix, "New connection started")
 
 	for _, middleware := range management.middlewares {
-		middleware.Start(textproto.NewWriter(bufio.NewWriter(connection)))
+		err := middleware.Start(textproto.NewWriter(bufio.NewWriter(connection)))
+		if err != nil {
+			//TODO what we should do with errors on middleware start? Stop already running, close conn, bailout?
+			//at least log errors for now
+			log.Error(management.logPrefix, "Middleware startup error: ", err)
+		}
 	}
 
 	defer management.cleanConnection(connection)
@@ -131,7 +136,11 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 
 func (management *Management) cleanConnection(connection net.Conn) {
 	for _, middleware := range management.middlewares {
-		middleware.Stop(textproto.NewWriter(bufio.NewWriter(connection)))
+		err := middleware.Stop(textproto.NewWriter(bufio.NewWriter(connection)))
+		if err != nil {
+			//log error but do not stop cleaning process
+			log.Warn(management.logPrefix, "Middleware stop error. ", err)
+		}
 	}
 	connection.Close()
 }
