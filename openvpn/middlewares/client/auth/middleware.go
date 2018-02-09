@@ -3,7 +3,6 @@ package auth
 import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn"
-	"net"
 	"regexp"
 )
 
@@ -12,7 +11,7 @@ type CredentialsProvider func() (username string, password string, err error)
 
 type middleware struct {
 	fetchCredentials CredentialsProvider
-	connection       net.Conn
+	commandWriter    openvpn.CommandWriter
 	lastUsername     string
 	lastPassword     string
 	state            openvpn.State
@@ -22,17 +21,17 @@ type middleware struct {
 func NewMiddleware(credentials CredentialsProvider) *middleware {
 	return &middleware{
 		fetchCredentials: credentials,
-		connection:       nil,
+		commandWriter:    nil,
 	}
 }
 
-func (m *middleware) Start(connection net.Conn) error {
-	m.connection = connection
+func (m *middleware) Start(commandWriter openvpn.CommandWriter) error {
+	m.commandWriter = commandWriter
 	log.Info("starting client user-pass provider middleware")
 	return nil
 }
 
-func (m *middleware) Stop() error {
+func (m *middleware) Stop(commandWriter openvpn.CommandWriter) error {
 	return nil
 }
 
@@ -43,30 +42,20 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	}
 
 	match := rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		m.Reset()
-		m.state = openvpn.STATE_AUTH
-		username, password, err := m.fetchCredentials()
-		log.Info("authenticating user ", username, " with pass: ", password)
+	if len(match) == 0 {
+		return false, nil
+	}
+	username, password, err := m.fetchCredentials()
+	log.Info("authenticating user ", username, " with pass: ", password)
 
-		_, err = m.connection.Write([]byte("password 'Auth' " + password + "\n"))
-		if err != nil {
-			return false, err
-		}
-
-		_, err = m.connection.Write([]byte("username 'Auth' " + username + "\n"))
-		if err != nil {
-			return false, err
-		}
-
-		return true, nil
+	err = m.commandWriter.PrintfLine("password 'Auth' %s", password)
+	if err != nil {
+		return true, err
 	}
 
-	return false, nil
-}
-
-func (m *middleware) Reset() {
-	m.lastUsername = ""
-	m.lastPassword = ""
-	m.state = openvpn.STATE_UNDEFINED
+	err = m.commandWriter.PrintfLine("username 'Auth' %s", username)
+	if err != nil {
+		return true, err
+	}
+	return true, nil
 }

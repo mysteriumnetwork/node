@@ -1,9 +1,7 @@
 package bytescount
 
 import (
-	"fmt"
 	"github.com/mysterium/node/openvpn"
-	"net"
 	"regexp"
 	"strconv"
 	"time"
@@ -12,12 +10,11 @@ import (
 // SessionStatsHandler is invoked when middleware receives statistics
 type SessionStatsHandler func(SessionStats) error
 
+const byteCountCommandTemplate = "bytecount %d"
+
 type middleware struct {
 	sessionStatsHandler SessionStatsHandler
 	interval            time.Duration
-
-	state      openvpn.State
-	connection net.Conn
 }
 
 // NewMiddleware returns new bytescount middleware
@@ -25,23 +22,15 @@ func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Durati
 	return &middleware{
 		sessionStatsHandler: sessionStatsHandler,
 		interval:            interval,
-
-		connection: nil,
 	}
 }
 
-func (middleware *middleware) Start(connection net.Conn) error {
-	middleware.connection = connection
-
-	command := fmt.Sprintf("bytecount %d\n", int(middleware.interval.Seconds()))
-	_, err := middleware.connection.Write([]byte(command))
-
-	return err
+func (middleware *middleware) Start(commandWriter openvpn.CommandWriter) error {
+	return commandWriter.PrintfLine(byteCountCommandTemplate, int(middleware.interval.Seconds()))
 }
 
-func (middleware *middleware) Stop() error {
-	_, err := middleware.connection.Write([]byte("bytecount 0\n"))
-	return err
+func (middleware *middleware) Stop(commandWriter openvpn.CommandWriter) error {
+	return commandWriter.PrintfLine(byteCountCommandTemplate, 0)
 }
 
 func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error) {

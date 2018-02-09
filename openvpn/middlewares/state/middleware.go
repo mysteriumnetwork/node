@@ -2,34 +2,28 @@ package state
 
 import (
 	"github.com/mysterium/node/openvpn"
-	"net"
 	"regexp"
 )
 
-type middleware struct {
-	listeners  []ClientStateCallback
-	connection net.Conn
-}
-
+// ClientStateCallback is called when openvpn process state changes
 type ClientStateCallback func(state openvpn.State)
+
+type middleware struct {
+	listeners []ClientStateCallback
+}
 
 func NewMiddleware(listeners ...ClientStateCallback) openvpn.ManagementMiddleware {
 	return &middleware{
-		listeners:  listeners,
-		connection: nil,
+		listeners: listeners,
 	}
 }
 
-func (middleware *middleware) Start(connection net.Conn) error {
-	middleware.connection = connection
-
-	_, err := middleware.connection.Write([]byte("state on all\n"))
-	return err
+func (middleware *middleware) Start(commandWriter openvpn.CommandWriter) error {
+	return commandWriter.PrintfLine("state on all")
 }
 
-func (middleware *middleware) Stop() error {
-	_, err := middleware.connection.Write([]byte("state off\n"))
-	return err
+func (middleware *middleware) Stop(commandWriter openvpn.CommandWriter) error {
+	return commandWriter.PrintfLine("state off")
 }
 
 func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error) {

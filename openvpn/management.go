@@ -23,9 +23,13 @@ type Management struct {
 	closesOnce              sync.Once
 }
 
+type CommandWriter interface {
+	PrintfLine(format string, args ...interface{}) error
+}
+
 type ManagementMiddleware interface {
-	Start(connection net.Conn) error
-	Stop() error
+	Start(CommandWriter) error
+	Stop(CommandWriter) error
 	ConsumeLine(line string) (consumed bool, err error)
 }
 
@@ -102,7 +106,7 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 	log.Info(management.logPrefix, "New connection started")
 
 	for _, middleware := range management.middlewares {
-		middleware.Start(connection)
+		middleware.Start(textproto.NewWriter(bufio.NewWriter(connection)))
 	}
 
 	defer management.cleanConnection(connection)
@@ -127,7 +131,7 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 
 func (management *Management) cleanConnection(connection net.Conn) {
 	for _, middleware := range management.middlewares {
-		middleware.Stop()
+		middleware.Stop(textproto.NewWriter(bufio.NewWriter(connection)))
 	}
 	connection.Close()
 }

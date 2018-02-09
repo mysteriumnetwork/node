@@ -4,7 +4,6 @@ import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn"
-	"net"
 	"regexp"
 	"strconv"
 )
@@ -14,28 +13,27 @@ type CredentialsChecker func(username, password string) (bool, error)
 
 type middleware struct {
 	checkCredentials CredentialsChecker
-	connection       net.Conn
+	commandWriter    openvpn.CommandWriter
 	lastUsername     string
 	lastPassword     string
 	clientID         int
 	keyID            int
-	state            openvpn.State
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
 func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
 	return &middleware{
 		checkCredentials: credentialsChecker,
-		connection:       nil,
+		commandWriter:    nil,
 	}
 }
 
-func (m *middleware) Start(connection net.Conn) error {
-	m.connection = connection
+func (m *middleware) Start(commandWriter openvpn.CommandWriter) error {
+	m.commandWriter = commandWriter
 	return nil
 }
 
-func (m *middleware) Stop() error {
+func (m *middleware) Stop(commandWriter openvpn.CommandWriter) error {
 	return nil
 }
 
@@ -49,7 +47,6 @@ func (m *middleware) checkReAuth(line string) (cont bool, consumed bool, err err
 	match := rule.FindStringSubmatch(line)
 	if len(match) > 0 {
 		m.Reset()
-		m.state = openvpn.STATE_AUTH
 		m.clientID, err = strconv.Atoi(match[1])
 		m.keyID, err = strconv.Atoi(match[2])
 		return false, true, nil
@@ -65,15 +62,14 @@ func (m *middleware) checkConnect(line string) (cont bool, consumed bool, err er
 	}
 
 	match := rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		m.Reset()
-		m.state = openvpn.STATE_AUTH
-		m.clientID, err = strconv.Atoi(match[1])
-		m.keyID, err = strconv.Atoi(match[2])
-		return false, true, nil
+	if len(match) == 0 {
+		return true, false, nil
 	}
+	m.Reset()
+	m.clientID, err = strconv.Atoi(match[1])
+	m.keyID, err = strconv.Atoi(match[2])
+	return false, true, nil
 
-	return true, false, nil
 }
 
 func (m *middleware) checkPassword(line string) (cont bool, consumed bool, err error) {
@@ -138,11 +134,6 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 		return consumed, err
 	}
 
-	// further proceed only if in AUTH state
-	if m.state != openvpn.STATE_AUTH {
-		return false, nil
-	}
-
 	if cont, consumed, err := m.checkUsername(line); !cont {
 		return consumed, err
 	}
@@ -162,10 +153,9 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 }
 
 func (m *middleware) authenticateClient() (consumed bool, err error) {
-	m.state = openvpn.STATE_UNDEFINED
 
 	if m.lastUsername == "" || m.lastPassword == "" {
-		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "missing username or password")
+		denyClientAuthWithMessage(m.commandWriter, m.clientID, m.keyID, "missing username or password")
 		return true, nil
 	}
 
@@ -174,31 +164,24 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 	authenticated, err := m.checkCredentials(m.lastUsername, m.lastPassword)
 	if err != nil {
 		log.Error("Authentication error: ", err)
-		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "internal error")
+		denyClientAuthWithMessage(m.commandWriter, m.clientID, m.keyID, "internal error")
 		return true, nil
 	}
 
 	if authenticated {
-		approveClient(m.connection, m.clientID, m.keyID)
+		approveClient(m.commandWriter, m.clientID, m.keyID)
 	} else {
-		denyClientAuthWithMessage(m.connection, m.clientID, m.keyID, "wrong username or password")
+		denyClientAuthWithMessage(m.commandWriter, m.clientID, m.keyID, "wrong username or password")
 	}
 	return true, nil
 }
 
-func approveClient(conn net.Conn, clientID, keyID int) {
-	writeStringToConn(conn, "client-auth-nt "+strconv.Itoa(clientID)+" "+strconv.Itoa(keyID)+"\n")
+func approveClient(commandWriter openvpn.CommandWriter, clientID, keyID int) error {
+	return commandWriter.PrintfLine("client-auth-nt %d %d", clientID, keyID)
 }
 
-func denyClientAuthWithMessage(conn net.Conn, clientID, keyID int, message string) {
-	writeStringToConn(conn, "client-deny "+strconv.Itoa(clientID)+" "+strconv.Itoa(keyID)+" "+message+"\n")
-}
-
-func writeStringToConn(conn net.Conn, message string) {
-	_, err := conn.Write([]byte(message + "\n"))
-	if err != nil {
-		log.Error("Management communication error: ", err)
-	}
+func denyClientAuthWithMessage(commandWriter openvpn.CommandWriter, clientID, keyID int, message string) error {
+	return commandWriter.PrintfLine("client-deny %d %d %s", clientID, keyID, message)
 }
 
 func (m *middleware) Reset() {
@@ -206,5 +189,4 @@ func (m *middleware) Reset() {
 	m.lastPassword = ""
 	m.clientID = -1
 	m.keyID = -1
-	m.state = openvpn.STATE_UNDEFINED
 }

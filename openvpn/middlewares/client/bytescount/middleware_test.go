@@ -2,48 +2,11 @@ package bytescount
 
 import (
 	"errors"
+	"github.com/mysterium/node/openvpn/middlewares"
 	"github.com/stretchr/testify/assert"
-	"net"
 	"testing"
 	"time"
 )
-
-type fakeConnection struct {
-	lastDataWritten []byte
-}
-
-func (conn *fakeConnection) Read(b []byte) (int, error) {
-	return 0, nil
-}
-
-func (conn *fakeConnection) Write(b []byte) (n int, err error) {
-	conn.lastDataWritten = b
-	return 0, nil
-}
-
-func (conn *fakeConnection) Close() error {
-	return nil
-}
-
-func (conn *fakeConnection) LocalAddr() net.Addr {
-	return nil
-}
-
-func (conn *fakeConnection) RemoteAddr() net.Addr {
-	return nil
-}
-
-func (conn *fakeConnection) SetDeadline(t time.Time) error {
-	return nil
-}
-
-func (conn *fakeConnection) SetReadDeadline(t time.Time) error {
-	return nil
-}
-
-func (conn *fakeConnection) SetWriteDeadline(t time.Time) error {
-	return nil
-}
 
 func Test_Factory(t *testing.T) {
 	statsRecorder := fakeStatsRecorder{}
@@ -54,9 +17,9 @@ func Test_Factory(t *testing.T) {
 func Test_Start(t *testing.T) {
 	statsRecorder := fakeStatsRecorder{}
 	middleware := NewMiddleware(statsRecorder.record, 1*time.Minute)
-	connection := &fakeConnection{}
-	middleware.Start(connection)
-	assert.Equal(t, []byte("bytecount 60\n"), connection.lastDataWritten)
+	mockWritter := &middlewares.MockCommandWriter{}
+	middleware.Start(mockWritter)
+	assert.Equal(t, "bytecount 60", mockWritter.LastLine)
 }
 
 func Test_ConsumeLine(t *testing.T) {
