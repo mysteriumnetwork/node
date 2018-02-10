@@ -11,6 +11,7 @@
 
 OS_DIR_BIN="/usr/bin"
 OS_DIR_CONFIG="/etc/mysterium-node"
+OS_DIR_DATA="/var/lib/mysterium-node"
 OS_DIR_LOG="/var/log/mysterium-node"
 OS_DIR_RUN="/var/run/mysterium-node"
 
@@ -110,6 +111,7 @@ function start() {
         --exec $DAEMON_BIN \
         -- \
         --config-dir=$OS_DIR_CONFIG \
+        --data-dir=$OS_DIR_DATA \
         --runtime-dir=$OS_DIR_RUN \
         --identity=$MYSTERIUM_SERVER_IDENTITY \
         --identity.passphrase=$MYSTERIUM_SERVER_IDENTITY_PASSPHRASE \

@@ -10,6 +10,8 @@
 # If you modify this, please make sure to also edit systemd.service
 
 OS_DIR_BIN="/usr/bin"
+OS_DIR_CONFIG="/etc/mysterium-client"
+OS_DIR_DATA="/var/lib/mysterium-client"
 OS_DIR_LOG="/var/log/mysterium-client"
 OS_DIR_RUN="/var/run/mysterium-client"
 
@@ -109,6 +111,7 @@ function start() {
         --exec $DAEMON_BIN \
         -- \
         --config-dir=$OS_DIR_CONFIG \
+        --data-dir=$OS_DIR_DATA \
         --runtime-dir=$OS_DIR_RUN \
         --tequilapi.address=$MYSTERIUM_CLIENT_TEQUILAPI_ADDRESS \
         --tequilapi.port=$MYSTERIUM_CLIENT_TEQUILAPI_PORT \
