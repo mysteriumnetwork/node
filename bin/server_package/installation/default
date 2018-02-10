@@ -5,3 +5,9 @@ MYSTERIUM_SERVER_IDENTITY=""
 
 # Used to unlock keystore's identity
 MYSTERIUM_SERVER_IDENTITY_PASSPHRASE=""
+
+# Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/
+MYSTERIUM_SERVER_COUNTRY_DATABASE=""
+
+# Service location country. If not given country is autodetected
+MYSTERIUM_SERVER_COUNTRY=""

@@ -20,4 +20,5 @@ exec /usr/bin/mysterium_server \
     --config-dir=$OS_DIR_CONFIG \
     --data-dir=$OS_DIR_DATA \
     --runtime-dir=$OS_DIR_RUN \
-    --location.country=$NODE_LOCATION_COUNTRY
+    --location.database=$MYSTERIUM_SERVER_COUNTRY_DATABASE \
+    --location.country=$MYSTERIUM_SERVER_COUNTRY

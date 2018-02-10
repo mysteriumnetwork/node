@@ -113,6 +113,8 @@ function start() {
         --config-dir=$OS_DIR_CONFIG \
         --data-dir=$OS_DIR_DATA \
         --runtime-dir=$OS_DIR_RUN \
+        --location.database=$MYSTERIUM_SERVER_COUNTRY_DATABASE \
+        --location.country=$MYSTERIUM_SERVER_COUNTRY \
         --identity=$MYSTERIUM_SERVER_IDENTITY \
         --identity.passphrase=$MYSTERIUM_SERVER_IDENTITY_PASSPHRASE \
         >>$DAEMON_STDOUT \
