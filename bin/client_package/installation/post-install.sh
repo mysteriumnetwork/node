@@ -76,7 +76,7 @@ fi
 
 # Add defaults file, if it doesn't exist
 if [[ ! -f $DAEMON_DEFAULT ]]; then
-    echo "MYSTERIUM_CLIENT_NODE=" > $DAEMON_DEFAULT
+    cp $OS_DIR_INSTALLATION/default $DAEMON_DEFAULT
 fi
 
 printf "\nInstallation successfully finished.\n" \

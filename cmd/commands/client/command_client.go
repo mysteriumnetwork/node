@@ -15,6 +15,7 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
+	"path/filepath"
 	"time"
 )
 
@@ -34,7 +35,8 @@ func NewCommandWith(
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 
-	keystoreInstance := keystore.NewKeyStore(options.DirectoryKeystore, keystore.StandardScryptN, keystore.StandardScryptP)
+	keystoreDirectory := filepath.Join(options.DirectoryData, "keystore")
+	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	identityManager := identity.NewIdentityManager(keystoreInstance)
 

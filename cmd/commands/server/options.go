@@ -3,16 +3,17 @@ package server
 import (
 	"flag"
 	"github.com/mysterium/node/cmd"
+	"path/filepath"
 )
 
 // CommandOptions describes options which are required to start Command
 type CommandOptions struct {
 	DirectoryConfig  string
 	DirectoryRuntime string
+	DirectoryData    string
 
-	DirectoryKeystore string
-	Identity          string
-	Passphrase        string
+	Identity   string
+	Passphrase string
 
 	LocationCountry  string
 	LocationDatabase string
@@ -22,35 +23,35 @@ type CommandOptions struct {
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flags.StringVar(
+		&options.DirectoryData,
+		"data-dir",
+		cmd.GetDataDirectory(),
+		"Data directory containing keystore & other persistent files",
+	)
+	flags.StringVar(
 		&options.DirectoryConfig,
 		"config-dir",
-		cmd.GetMysteriumDirectory("config"),
+		filepath.Join(cmd.GetDataDirectory(), "config"),
 		"Configs directory containing all configuration files",
 	)
 	flags.StringVar(
 		&options.DirectoryRuntime,
 		"runtime-dir",
-		cmd.GetMysteriumDirectory("run"),
+		filepath.Join(cmd.GetDataDirectory(), "run"),
 		"Runtime writable directory for temp files",
-	)
-	flags.StringVar(
-		&options.DirectoryKeystore,
-		"keystore-dir",
-		cmd.GetMysteriumDirectory("keystore"),
-		"Keystore directory",
 	)
 
 	flags.StringVar(
 		&options.Identity,
 		"identity",
 		"",
-		"Unique identifier for Mysterium VPN node",
+		"Keystore's identity used to provide service. If not given identity will be created automatically",
 	)
 	flags.StringVar(
 		&options.Passphrase,
-		"passphrase",
+		"identity.passphrase",
 		"",
-		"Identity passphrase",
+		"Used to unlock keystore's identity",
 	)
 
 	flags.StringVar(

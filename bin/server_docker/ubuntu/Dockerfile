@@ -6,7 +6,8 @@ ARG PACKAGE_VERSION
 RUN apt-get update \
     && apt-get install -y ruby-dev build-essential \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
-    && gem install fpm
+    && gem install ffi -v 1.9.18 \
+    && gem install fpm -v 1.9.3
 
 # Install Debber
 RUN go get github.com/debber/debber-v0.3/cmd/debber
@@ -21,7 +22,6 @@ RUN GOOS=linux GOARCH=amd64 bin/server_build \
 
 FROM ubuntu:16.04
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
-ENV NODE_LOCATION_COUNTRY ""
 
 # Install packages
 COPY --from=builder /go/src/github.com/mysterium/node/build/package/mysterium-node_linux_amd64.deb /tmp/mysterium-node.deb
