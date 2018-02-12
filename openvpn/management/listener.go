@@ -15,8 +15,8 @@ type Management struct {
 	socketAddress string
 	logPrefix     string
 
-	lineReceiver chan string
-	middlewares  []Middleware
+	openvpnEventChannel chan string
+	middlewares         []Middleware
 
 	listenerShutdownStarted chan bool
 	listenerShutdownWaiter  sync.WaitGroup
@@ -29,8 +29,8 @@ func NewManagement(socketAddress, logPrefix string, middlewares ...Middleware) *
 		socketAddress: socketAddress,
 		logPrefix:     logPrefix,
 
-		lineReceiver: make(chan string),
-		middlewares:  middlewares,
+		openvpnEventChannel: make(chan string),
+		middlewares:         middlewares,
 
 		listenerShutdownStarted: make(chan bool),
 		listenerShutdownWaiter:  sync.WaitGroup{},
@@ -47,7 +47,7 @@ func (management *Management) Start() error {
 	}
 
 	go management.waitForShutdown(listener)
-	go management.deliverLines()
+	go management.consumeOpenvpnEvents()
 	go management.waitForConnections(listener)
 
 	return nil
@@ -99,7 +99,7 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 	for _, middleware := range management.middlewares {
 		err := middleware.Start(textproto.NewWriter(bufio.NewWriter(connection)))
 		if err != nil {
-			//TODO what we should do with errors on middleware start? Stop already running, close conn, bailout?
+			//TODO what we should do with errors on middleware start? Stop already running, close cmdWriter, bailout?
 			//at least log errors for now
 			log.Error(management.logPrefix, "Middleware startup error: ", err)
 		}
@@ -118,7 +118,7 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 
 		// Try to deliver the message
 		select {
-		case management.lineReceiver <- line:
+		case management.openvpnEventChannel <- line:
 		case <-time.After(time.Second):
 			log.Error(management.logPrefix, "Failed to transport line: ", line)
 		}
@@ -136,22 +136,22 @@ func (management *Management) cleanConnection(connection net.Conn) {
 	connection.Close()
 }
 
-func (management *Management) deliverLines() {
+func (management *Management) consumeOpenvpnEvents() {
 	for {
-		line := <-management.lineReceiver
-		log.Trace(management.logPrefix, "Line delivering: ", line)
+		event := <-management.openvpnEventChannel
+		log.Trace(management.logPrefix, "Line delivering: ", event)
 
 		lineConsumed := false
 		for _, middleware := range management.middlewares {
-			consumed, err := middleware.ConsumeLine(line)
+			consumed, err := middleware.ConsumeLine(event)
 			if err != nil {
-				log.Error(management.logPrefix, "Failed to deliver line: ", line, ". ", err)
+				log.Error(management.logPrefix, "Failed to deliver event: ", event, ". ", err)
 			}
 
 			lineConsumed = lineConsumed || consumed
 		}
 		if !lineConsumed {
-			log.Trace(management.logPrefix, "Line not delivered: ", line)
+			log.Trace(management.logPrefix, "Line not delivered: ", event)
 		}
 	}
 }
