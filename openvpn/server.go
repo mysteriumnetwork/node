@@ -10,7 +10,7 @@ import (
 )
 
 // NewServer constructs new openvpn server instance
-func NewServer(generateConfig ServerConfigGenerator, directoryRuntime string, middlewares ...management.ManagementMiddleware) *Server {
+func NewServer(generateConfig ServerConfigGenerator, directoryRuntime string, middlewares ...management.Middleware) *Server {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
 	return &Server{

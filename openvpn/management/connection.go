@@ -16,7 +16,7 @@ type Management struct {
 	logPrefix     string
 
 	lineReceiver chan string
-	middlewares  []ManagementMiddleware
+	middlewares  []Middleware
 
 	listenerShutdownStarted chan bool
 	listenerShutdownWaiter  sync.WaitGroup
@@ -24,7 +24,7 @@ type Management struct {
 }
 
 // NewManagement creates new manager for given sock address, uses given log prefix for logging and takes a list of middlewares
-func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMiddleware) *Management {
+func NewManagement(socketAddress, logPrefix string, middlewares ...Middleware) *Management {
 	return &Management{
 		socketAddress: socketAddress,
 		logPrefix:     logPrefix,

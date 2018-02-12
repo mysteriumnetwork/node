@@ -16,7 +16,7 @@ type openVpnClient struct {
 	process    *Process
 }
 
-func NewClient(config *ClientConfig, directoryRuntime string, middlewares ...management.ManagementMiddleware) *openVpnClient {
+func NewClient(config *ClientConfig, directoryRuntime string, middlewares ...management.Middleware) *openVpnClient {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
 	config.SetManagementSocket(socketAddress)

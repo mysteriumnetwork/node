@@ -13,7 +13,7 @@ type middleware struct {
 	listeners []Callback
 }
 
-func NewMiddleware(listeners ...Callback) management.ManagementMiddleware {
+func NewMiddleware(listeners ...Callback) management.Middleware {
 	return &middleware{
 		listeners: listeners,
 	}

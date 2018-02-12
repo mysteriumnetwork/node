@@ -18,7 +18,7 @@ type middleware struct {
 }
 
 // NewMiddleware returns new bytescount middleware
-func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Duration) management.ManagementMiddleware {
+func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Duration) management.Middleware {
 	return &middleware{
 		sessionStatsHandler: sessionStatsHandler,
 		interval:            interval,
