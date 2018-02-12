@@ -2,7 +2,7 @@ package bytescount
 
 import (
 	"errors"
-	"github.com/mysterium/node/openvpn/middlewares"
+	"github.com/mysterium/node/openvpn/management"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -17,9 +17,9 @@ func Test_Factory(t *testing.T) {
 func Test_Start(t *testing.T) {
 	statsRecorder := fakeStatsRecorder{}
 	middleware := NewMiddleware(statsRecorder.record, 1*time.Minute)
-	mockWritter := &middlewares.MockCommandWriter{}
-	middleware.Start(mockWritter)
-	assert.Equal(t, "bytecount 60", mockWritter.LastLine)
+	mockConnection := &management.MockConnection{}
+	middleware.Start(mockConnection)
+	assert.Equal(t, "bytecount 60", mockConnection.LastLine)
 }
 
 func Test_ConsumeLine(t *testing.T) {

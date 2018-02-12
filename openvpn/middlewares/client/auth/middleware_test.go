@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/mysterium/node/openvpn/middlewares"
+	"github.com/mysterium/node/openvpn/management"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -36,7 +36,7 @@ func Test_ConsumeLineTakes(t *testing.T) {
 	passwordRequest := ">PASSWORD:Need 'Auth' username/password"
 
 	middleware := NewMiddleware(auth)
-	mockCmdWriter := &middlewares.MockCommandWriter{}
+	mockCmdWriter := &management.MockConnection{}
 	middleware.Start(mockCmdWriter)
 
 	consumed, err := middleware.ConsumeLine(passwordRequest)

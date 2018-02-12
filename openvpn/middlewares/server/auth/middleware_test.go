@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/mysterium/node/openvpn/middlewares"
+	"github.com/mysterium/node/openvpn/management"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -62,7 +62,7 @@ func Test_ConsumeLineTakes(t *testing.T) {
 
 	fas := newFakeAuthenticatorStub()
 	middleware := NewMiddleware(fas.fakeAuthenticator)
-	mockWriter := &middlewares.MockCommandWriter{}
+	mockWriter := &management.MockConnection{}
 	middleware.Start(mockWriter)
 
 	for _, test := range tests {
@@ -83,7 +83,7 @@ func Test_ConsumeLineAuthState(t *testing.T) {
 	for _, test := range tests {
 		fas := newFakeAuthenticatorStub()
 		middleware := NewMiddleware(fas.fakeAuthenticator)
-		mockWritter := &middlewares.MockCommandWriter{}
+		mockWritter := &management.MockConnection{}
 		middleware.Start(mockWritter)
 
 		consumed, err := middleware.ConsumeLine(test.line)
@@ -103,7 +103,7 @@ func Test_ConsumeLineNotAuthState(t *testing.T) {
 	for _, test := range tests {
 		fas := newFakeAuthenticatorStub()
 		middleware := NewMiddleware(fas.fakeAuthenticator)
-		mockWriter := &middlewares.MockCommandWriter{}
+		mockWriter := &management.MockConnection{}
 		middleware.Start(mockWriter)
 
 		consumed, err := middleware.ConsumeLine(test.line)
@@ -125,7 +125,7 @@ func Test_ConsumeLineAuthTrueChecker(t *testing.T) {
 	fas := newFakeAuthenticatorStub()
 	fas.authenticated = true
 	middleware := NewMiddleware(fas.fakeAuthenticator)
-	mockWriter := &middlewares.MockCommandWriter{}
+	mockWriter := &management.MockConnection{}
 	middleware.Start(mockWriter)
 
 	for _, test := range tests {
@@ -151,7 +151,7 @@ func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
 	fas := newFakeAuthenticatorStub()
 	fas.authenticated = false
 	middleware := NewMiddleware(fas.fakeAuthenticator)
-	mockWriter := &middlewares.MockCommandWriter{}
+	mockWriter := &management.MockConnection{}
 	middleware.Start(mockWriter)
 
 	for _, test := range tests {

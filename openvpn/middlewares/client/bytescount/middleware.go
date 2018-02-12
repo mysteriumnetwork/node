@@ -11,6 +11,7 @@ import (
 type SessionStatsHandler func(SessionStats) error
 
 const byteCountCommandTemplate = "bytecount %d"
+const byteCountLogPrefix = "[bytecount]"
 
 type middleware struct {
 	sessionStatsHandler SessionStatsHandler
@@ -26,11 +27,13 @@ func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Durati
 }
 
 func (middleware *middleware) Start(commandWriter management.Connection) error {
-	return commandWriter.PrintfLine(byteCountCommandTemplate, int(middleware.interval.Seconds()))
+	_, err := commandWriter.SingleOutputCommand(byteCountCommandTemplate, int(middleware.interval.Seconds()))
+	return err
 }
 
 func (middleware *middleware) Stop(commandWriter management.Connection) error {
-	return commandWriter.PrintfLine(byteCountCommandTemplate, 0)
+	_, err := commandWriter.SingleOutputCommand(byteCountCommandTemplate, 0)
+	return err
 }
 
 func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error) {

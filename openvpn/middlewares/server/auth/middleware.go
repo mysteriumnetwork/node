@@ -177,11 +177,13 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 }
 
 func approveClient(commandWriter management.Connection, clientID, keyID int) error {
-	return commandWriter.PrintfLine("client-auth-nt %d %d", clientID, keyID)
+	_, err := commandWriter.SingleOutputCommand("client-auth-nt %d %d", clientID, keyID)
+	return err
 }
 
 func denyClientAuthWithMessage(commandWriter management.Connection, clientID, keyID int, message string) error {
-	return commandWriter.PrintfLine("client-deny %d %d %s", clientID, keyID, message)
+	_, err := commandWriter.SingleOutputCommand("client-deny %d %d %s", clientID, keyID, message)
+	return err
 }
 
 func (m *middleware) Reset() {

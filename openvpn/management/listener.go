@@ -8,6 +8,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"strings"
 )
 
 // Management structure represents connection and interface to openvpn management
@@ -93,11 +94,15 @@ func (management *Management) waitForConnections(listener net.Listener) {
 	}
 }
 
-func (management *Management) serveNewConnection(connection net.Conn) {
-	log.Info(management.logPrefix, "New connection started")
+func (management *Management) serveNewConnection(netConn net.Conn) {
+	log.Info(management.logPrefix, "New netConn started")
+	defer netConn.Close()
+
+	cmdOutputChannel := make(chan string)
+	connection := newSocketConnection(netConn, cmdOutputChannel)
 
 	for _, middleware := range management.middlewares {
-		err := middleware.Start(textproto.NewWriter(bufio.NewWriter(connection)))
+		err := middleware.Start(connection)
 		if err != nil {
 			//TODO what we should do with errors on middleware start? Stop already running, close cmdWriter, bailout?
 			//at least log errors for now
@@ -107,7 +112,7 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 
 	defer management.cleanConnection(connection)
 
-	reader := textproto.NewReader(bufio.NewReader(connection))
+	reader := textproto.NewReader(bufio.NewReader(netConn))
 	for {
 		line, err := reader.ReadLine()
 		if err != nil {
@@ -116,24 +121,28 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 		}
 		log.Debug(management.logPrefix, "Line received: ", line)
 
+		outputChannel := cmdOutputChannel
+		if strings.HasPrefix(line, ">") {
+			outputChannel = management.openvpnEventChannel
+		}
+
 		// Try to deliver the message
 		select {
-		case management.openvpnEventChannel <- line:
+		case outputChannel <- line:
 		case <-time.After(time.Second):
 			log.Error(management.logPrefix, "Failed to transport line: ", line)
 		}
 	}
 }
 
-func (management *Management) cleanConnection(connection net.Conn) {
+func (management *Management) cleanConnection(connection Connection) {
 	for _, middleware := range management.middlewares {
-		err := middleware.Stop(textproto.NewWriter(bufio.NewWriter(connection)))
+		err := middleware.Stop(connection)
 		if err != nil {
 			//log error but do not stop cleaning process
 			log.Warn(management.logPrefix, "Middleware stop error. ", err)
 		}
 	}
-	connection.Close()
 }
 
 func (management *Management) consumeOpenvpnEvents() {

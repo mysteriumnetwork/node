@@ -10,9 +10,8 @@ import (
 
 // Connection represents openvpn management interface abstraction for middlewares to be able to send commands to openvpn process
 type Connection interface {
-	//SingleOutputCommand(template string, args ...interface{}) (string, error)
-	//MultiOutputCommand(template string, args ...interface{}) (string, []string, error)
-	PrintfLine(template string, args ...interface{}) error
+	SingleOutputCommand(template string, args ...interface{}) (string, error)
+	MultiOutputCommand(template string, args ...interface{}) (string, []string, error)
 }
 
 const cmdSuccess = "SUCCESS"
