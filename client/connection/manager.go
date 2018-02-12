@@ -1,4 +1,4 @@
-package client_connection
+package connection
 
 import (
 	"errors"

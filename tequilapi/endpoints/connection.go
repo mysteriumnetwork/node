@@ -3,7 +3,7 @@ package endpoints
 import (
 	"encoding/json"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/client_connection"
+	"github.com/mysterium/node/client/connection"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
@@ -23,12 +23,12 @@ type statusResponse struct {
 }
 
 type connectionEndpoint struct {
-	manager     client_connection.Manager
+	manager     connection.Manager
 	ipResolver  ip.Resolver
 	statsKeeper bytescount.SessionStatsKeeper
 }
 
-func NewConnectionEndpoint(manager client_connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *connectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *connectionEndpoint {
 	return &connectionEndpoint{
 		manager:     manager,
 		ipResolver:  ipResolver,
@@ -58,7 +58,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 
 	if err != nil {
 		switch err {
-		case client_connection.ErrAlreadyExists:
+		case connection.ErrAlreadyExists:
 			utils.SendError(resp, err, http.StatusConflict)
 		default:
 			utils.SendError(resp, err, http.StatusInternalServerError)
@@ -73,7 +73,7 @@ func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 	err := ce.manager.Disconnect()
 	if err != nil {
 		switch err {
-		case client_connection.ErrNoConnection:
+		case connection.ErrNoConnection:
 			utils.SendError(resp, err, http.StatusConflict)
 		default:
 			utils.SendError(resp, err, http.StatusInternalServerError)
@@ -117,7 +117,7 @@ func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 }
 
 // AddRoutesForConnection adds connections routes to given router
-func AddRoutesForConnection(router *httprouter.Router, manager client_connection.Manager, ipResolver ip.Resolver,
+func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager, ipResolver ip.Resolver,
 	statsKeeper bytescount.SessionStatsKeeper) {
 	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper)
 	router.GET("/connection", connectionEndpoint.Status)
@@ -147,7 +147,7 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 	return errors
 }
 
-func toStatusResponse(status client_connection.ConnectionStatus) statusResponse {
+func toStatusResponse(status connection.ConnectionStatus) statusResponse {
 	return statusResponse{
 		Status:    string(status.State),
 		SessionID: string(status.SessionID),

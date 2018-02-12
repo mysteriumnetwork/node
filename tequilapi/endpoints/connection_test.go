@@ -3,7 +3,7 @@ package endpoints
 import (
 	"errors"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/client_connection"
+	"github.com/mysterium/node/client/connection"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
@@ -19,7 +19,7 @@ import (
 type fakeManager struct {
 	onConnectReturn    error
 	onDisconnectReturn error
-	onStatusReturn     client_connection.ConnectionStatus
+	onStatusReturn     connection.ConnectionStatus
 	disconnectCount    int
 	requestedConsumer  identity.Identity
 	requestedProvider  identity.Identity
@@ -31,7 +31,7 @@ func (fm *fakeManager) Connect(consumerID identity.Identity, providerID identity
 	return fm.onConnectReturn
 }
 
-func (fm *fakeManager) Status() client_connection.ConnectionStatus {
+func (fm *fakeManager) Status() connection.ConnectionStatus {
 
 	return fm.onStatusReturn
 }
@@ -107,8 +107,8 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 
 func TestDisconnectingState(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
-		State:     client_connection.Disconnecting,
+	fakeManager.onStatusReturn = connection.ConnectionStatus{
+		State:     connection.Disconnecting,
 		SessionID: "",
 	}
 
@@ -129,8 +129,8 @@ func TestDisconnectingState(t *testing.T) {
 
 func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
-		State:     client_connection.NotConnected,
+	fakeManager.onStatusReturn = connection.ConnectionStatus{
+		State:     connection.NotConnected,
 		SessionID: "",
 	}
 
@@ -152,8 +152,8 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 
 func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
-		State: client_connection.Connecting,
+	fakeManager.onStatusReturn = connection.ConnectionStatus{
+		State: connection.Connecting,
 	}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil)
@@ -174,8 +174,8 @@ func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 
 func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = client_connection.ConnectionStatus{
-		State:     client_connection.Connected,
+	fakeManager.onStatusReturn = connection.ConnectionStatus{
+		State:     connection.Connected,
 		SessionID: "My-super-session",
 	}
 
@@ -361,7 +361,7 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 
 func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 	manager := fakeManager{}
-	manager.onConnectReturn = client_connection.ErrAlreadyExists
+	manager.onConnectReturn = connection.ErrAlreadyExists
 
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
 
@@ -389,7 +389,7 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 
 func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 	manager := fakeManager{}
-	manager.onDisconnectReturn = client_connection.ErrNoConnection
+	manager.onDisconnectReturn = connection.ErrNoConnection
 
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
 

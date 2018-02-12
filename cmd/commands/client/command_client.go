@@ -3,7 +3,7 @@ package client
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/mysterium/node/client_connection"
+	"github.com/mysterium/node/client/connection"
 	node_cmd "github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
@@ -48,14 +48,14 @@ func NewCommandWith(
 
 	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
 
-	vpnClientFactory := client_connection.ConfigureVpnClientFactory(
+	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
 		options.DirectoryConfig,
 		options.DirectoryRuntime,
 		signerFactory,
 		statsKeeper,
 	)
-	connectionManager := client_connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
+	connectionManager := connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 
@@ -76,7 +76,7 @@ func NewCommandWith(
 
 //Command represent entrypoint for Mysterium client with top level components
 type Command struct {
-	connectionManager client_connection.Manager
+	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
 }
 
@@ -106,7 +106,7 @@ func (cmd *Command) Kill() error {
 	err := cmd.connectionManager.Disconnect()
 	if err != nil {
 		switch err {
-		case client_connection.ErrNoConnection:
+		case connection.ErrNoConnection:
 			fmt.Println("No active connection - proceeding")
 		default:
 			return err
