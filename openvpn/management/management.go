@@ -5,7 +5,7 @@ package management
 
 // Middleware used to control openvpn process through management interface
 type Middleware interface {
-	Start(Interface) error
-	Stop(Interface) error
+	Start(Connection) error
+	Stop(Connection) error
 	ConsumeLine(line string) (consumed bool, err error)
 }

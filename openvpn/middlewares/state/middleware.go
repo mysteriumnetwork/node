@@ -19,11 +19,11 @@ func NewMiddleware(listeners ...Callback) management.Middleware {
 	}
 }
 
-func (middleware *middleware) Start(commandWriter management.Interface) error {
+func (middleware *middleware) Start(commandWriter management.Connection) error {
 	return commandWriter.PrintfLine("state on all")
 }
 
-func (middleware *middleware) Stop(commandWriter management.Interface) error {
+func (middleware *middleware) Stop(commandWriter management.Connection) error {
 	return commandWriter.PrintfLine("state off")
 }
 

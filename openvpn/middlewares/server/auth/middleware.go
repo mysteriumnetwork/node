@@ -13,7 +13,7 @@ type CredentialsChecker func(username, password string) (bool, error)
 
 type middleware struct {
 	checkCredentials CredentialsChecker
-	commandWriter    management.Interface
+	commandWriter    management.Connection
 	lastUsername     string
 	lastPassword     string
 	clientID         int
@@ -28,12 +28,12 @@ func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
 	}
 }
 
-func (m *middleware) Start(commandWriter management.Interface) error {
+func (m *middleware) Start(commandWriter management.Connection) error {
 	m.commandWriter = commandWriter
 	return nil
 }
 
-func (m *middleware) Stop(commandWriter management.Interface) error {
+func (m *middleware) Stop(commandWriter management.Connection) error {
 	return nil
 }
 
@@ -176,11 +176,11 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 	return true, nil
 }
 
-func approveClient(commandWriter management.Interface, clientID, keyID int) error {
+func approveClient(commandWriter management.Connection, clientID, keyID int) error {
 	return commandWriter.PrintfLine("client-auth-nt %d %d", clientID, keyID)
 }
 
-func denyClientAuthWithMessage(commandWriter management.Interface, clientID, keyID int, message string) error {
+func denyClientAuthWithMessage(commandWriter management.Connection, clientID, keyID int, message string) error {
 	return commandWriter.PrintfLine("client-deny %d %d %s", clientID, keyID, message)
 }
 
