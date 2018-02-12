@@ -1,4 +1,4 @@
-package client_connection
+package connection
 
 import (
 	"github.com/mysterium/node/communication"
