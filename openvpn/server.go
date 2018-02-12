@@ -1,7 +1,9 @@
 package openvpn
 
 import (
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn/primitives"
+	"github.com/mysterium/node/service_discovery/dto"
 	"sync"
 )
 
@@ -20,10 +22,10 @@ func NewServer(generateConfig ServerConfigGenerator, directoryRuntime string, mi
 type ServerConfigGenerator func() (*ServerConfig, error)
 
 // NewServerConfigGenerator returns function generating server config and generates required security primitives
-func NewServerConfigGenerator(directoryRuntime string) ServerConfigGenerator {
+func NewServerConfigGenerator(directoryRuntime string, serviceLocation dto.Location, providerID identity.Identity) ServerConfigGenerator {
 	return func() (*ServerConfig, error) {
 		// (Re)generate required security primitives before openvpn start
-		openVPNPrimitives, err := primitives.GenerateOpenVPNSecPrimitives(directoryRuntime)
+		openVPNPrimitives, err := primitives.GenerateOpenVPNSecPrimitives(directoryRuntime, serviceLocation, providerID)
 		if err != nil {
 			return nil, err
 		}

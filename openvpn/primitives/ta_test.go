@@ -7,7 +7,7 @@ import (
 )
 
 func TestCreateTLSCryptKeyFileExists(t *testing.T) {
-	sp := newOpenVPNSecPrimitives(runDir)
+	sp := newOpenVPNSecPrimitives(fakeRunDir)
 	sp.createTLSCryptKey()
 
 	if _, err := os.Stat(sp.TLSCryptKeyPath); os.IsNotExist(err) {
@@ -16,7 +16,7 @@ func TestCreateTLSCryptKeyFileExists(t *testing.T) {
 }
 
 func TestTLSCryptKeyFileContentsAreValid(t *testing.T) {
-	sp := newOpenVPNSecPrimitives(runDir)
+	sp := newOpenVPNSecPrimitives(fakeRunDir)
 	sp.createTLSCryptKey()
 
 	keyFile, err := os.OpenFile(sp.TLSCryptKeyPath, os.O_RDONLY, 0600)

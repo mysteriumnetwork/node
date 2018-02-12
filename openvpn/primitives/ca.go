@@ -8,11 +8,13 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/service_discovery/dto"
 	"os"
 )
 
 // createCA creates Certificate Authority certificate and private key
-func (p *SecurityPrimitives) createCA() (*x509.Certificate, error) {
+func (p *SecurityPrimitives) createCA(serviceLocation dto.Location) (*x509.Certificate, error) {
 
 	if err := p.cleanup(p.CACertPath); err != nil {
 		return nil, err
@@ -24,7 +26,7 @@ func (p *SecurityPrimitives) createCA() (*x509.Certificate, error) {
 
 	log.Info(logPrefix, "Create CA (", p.CACertPath, ", ", p.CAKeyPath, ")")
 
-	ca := newCACert()
+	ca := newCACert(serviceLocation)
 
 	var err error
 	p.caPrivateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -51,7 +53,7 @@ func (p *SecurityPrimitives) createCA() (*x509.Certificate, error) {
 }
 
 // createCert creates certificate and private key signed by given CA certificate
-func (p *SecurityPrimitives) createCert(parentCA *x509.Certificate, server bool) error {
+func (p *SecurityPrimitives) createCert(parentCA *x509.Certificate, server bool, serviceLocation dto.Location, providerID identity.Identity) error {
 
 	if err := p.cleanup(p.ServerCertPath); err != nil {
 		return err
@@ -69,7 +71,7 @@ func (p *SecurityPrimitives) createCert(parentCA *x509.Certificate, server bool)
 		extUsage = x509.ExtKeyUsageServerAuth
 	}
 
-	cert := newServerCert(extUsage)
+	cert := newServerCert(extUsage, serviceLocation, providerID)
 
 	var err error
 	p.serverPrivateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

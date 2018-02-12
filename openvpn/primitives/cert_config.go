@@ -3,15 +3,17 @@ package primitives
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/service_discovery/dto"
 	"math/big"
 	"time"
 )
 
-func newCACert() *x509.Certificate {
+func newCACert(serviceLocation dto.Location) *x509.Certificate {
 	return &x509.Certificate{
-		SerialNumber: big.NewInt(1653),
+		SerialNumber: big.NewInt(1111),
 		Subject: pkix.Name{
-			Country:            []string{"Gibraltar"},
+			Country:            []string{serviceLocation.Country},
 			Organization:       []string{"Mystermium.network"},
 			OrganizationalUnit: []string{"Mysterium Team"},
 		},
@@ -24,14 +26,14 @@ func newCACert() *x509.Certificate {
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 	}
 }
-func newServerCert(extUsage x509.ExtKeyUsage) *x509.Certificate {
+func newServerCert(extUsage x509.ExtKeyUsage, serviceLocation dto.Location, providerID identity.Identity) *x509.Certificate {
 	return &x509.Certificate{
-		SerialNumber: big.NewInt(1658),
+		SerialNumber: big.NewInt(2222),
 		Subject: pkix.Name{
-			Country:            []string{"Germany"},
-			CommonName:         "Mysterium Node",
-			Organization:       []string{"User Company"},
-			OrganizationalUnit: []string{"User Company dev team"},
+			Country:            []string{serviceLocation.Country},
+			CommonName:         providerID.Address,
+			Organization:       []string{"Mysterium node operator company"},
+			OrganizationalUnit: []string{"Node operator team"},
 		},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(1, 0, 0),

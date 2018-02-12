@@ -56,7 +56,7 @@ func (c *Config) SetTLSPrivatePubKeys(certFile string, certKeyFile string) {
 	c.AddOptions(OptionFile("key", certKeyFile))
 }
 
-func (c *Config) SetTlsCrypt(cryptFile string) {
+func (c *Config) SetTLSCrypt(cryptFile string) {
 	c.AddOptions(OptionFile("tls-crypt", cryptFile))
 }
 

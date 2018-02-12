@@ -41,6 +41,7 @@ func NewManagement(socketAddress, logPrefix string, middlewares ...ManagementMid
 	}
 }
 
+// SocketAddress returns management socket address
 func (management *Management) SocketAddress() string {
 	return management.socketAddress
 }

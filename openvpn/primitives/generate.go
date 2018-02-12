@@ -4,6 +4,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/service_discovery/dto"
 	"os"
 	"path/filepath"
 )
@@ -21,13 +23,13 @@ type SecurityPrimitives struct {
 }
 
 // GenerateOpenVPNSecPrimitives returns pre-initialized SecurityPrimitives structure
-func GenerateOpenVPNSecPrimitives(directoryRuntime string) (*SecurityPrimitives, error) {
+func GenerateOpenVPNSecPrimitives(directoryRuntime string, serviceLocation dto.Location, providerID identity.Identity) (*SecurityPrimitives, error) {
 	sp := newOpenVPNSecPrimitives(directoryRuntime)
-	err := sp.generateAll()
+	err := sp.generateAll(serviceLocation, providerID)
 	return sp, err
 }
 
-const logPrefix = "[config-generator] "
+const logPrefix = "[config-openvpn] "
 
 const (
 	caCertFile      = "ca.crt"
@@ -76,16 +78,16 @@ func (p *SecurityPrimitives) cleanup(filePath string) error {
 }
 
 // generateAll generates required security primitives
-func (p *SecurityPrimitives) generateAll() error {
+func (p *SecurityPrimitives) generateAll(serviceLocation dto.Location, providerID identity.Identity) error {
 	var err error
 	var ca *x509.Certificate
 
-	if ca, err = p.createCA(); err != nil {
+	if ca, err = p.createCA(serviceLocation); err != nil {
 		log.Info(logPrefix, "createCA failed: ", err)
 		return err
 	}
 
-	if err = p.createCert(ca, true); err != nil {
+	if err = p.createCert(ca, true, serviceLocation, providerID); err != nil {
 		log.Info(logPrefix, "createCert failed: ", err)
 		return err
 	}
