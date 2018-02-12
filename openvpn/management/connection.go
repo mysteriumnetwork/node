@@ -56,7 +56,7 @@ func (sc *socketConnection) SingleOutputCommand(template string, args ...interfa
 }
 
 func (sc *socketConnection) MultiOutputCommand(template string, args ...interface{}) (string, []string, error) {
-	success, err := sc.SingleOutputCommand(template, args)
+	success, err := sc.SingleOutputCommand(template, args...)
 	if err != nil {
 		return "", nil, err
 	}

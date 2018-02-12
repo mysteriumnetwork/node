@@ -8,6 +8,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"io"
 	"strings"
 )
 
@@ -16,8 +17,7 @@ type Management struct {
 	socketAddress string
 	logPrefix     string
 
-	openvpnEventChannel chan string
-	middlewares         []Middleware
+	middlewares []Middleware
 
 	listenerShutdownStarted chan bool
 	listenerShutdownWaiter  sync.WaitGroup
@@ -30,8 +30,7 @@ func NewManagement(socketAddress, logPrefix string, middlewares ...Middleware) *
 		socketAddress: socketAddress,
 		logPrefix:     logPrefix,
 
-		openvpnEventChannel: make(chan string),
-		middlewares:         middlewares,
+		middlewares: middlewares,
 
 		listenerShutdownStarted: make(chan bool),
 		listenerShutdownWaiter:  sync.WaitGroup{},
@@ -48,7 +47,6 @@ func (management *Management) Start() error {
 	}
 
 	go management.waitForShutdown(listener)
-	go management.consumeOpenvpnEvents()
 	go management.waitForConnections(listener)
 
 	return nil
@@ -95,12 +93,28 @@ func (management *Management) waitForConnections(listener net.Listener) {
 }
 
 func (management *Management) serveNewConnection(netConn net.Conn) {
-	log.Info(management.logPrefix, "New netConn started")
+	log.Info(management.logPrefix, "New connection started")
 	defer netConn.Close()
 
 	cmdOutputChannel := make(chan string)
+	eventChannel := make(chan string)
 	connection := newSocketConnection(netConn, cmdOutputChannel)
+	go management.deliverOpenvpnManagementEvents(eventChannel)
 
+	outputConsuming := sync.WaitGroup{}
+	outputConsuming.Add(1)
+	go func() {
+		management.consumeOpenvpnConnectionOutput(netConn, cmdOutputChannel, eventChannel)
+		outputConsuming.Done()
+	}()
+
+	management.startMiddlewares(connection)
+	defer management.stopMiddlewares(connection)
+
+	outputConsuming.Wait()
+}
+
+func (management *Management) startMiddlewares(connection Connection) {
 	for _, middleware := range management.middlewares {
 		err := middleware.Start(connection)
 		if err != nil {
@@ -109,33 +123,9 @@ func (management *Management) serveNewConnection(netConn net.Conn) {
 			log.Error(management.logPrefix, "Middleware startup error: ", err)
 		}
 	}
-
-	defer management.cleanConnection(connection)
-
-	reader := textproto.NewReader(bufio.NewReader(netConn))
-	for {
-		line, err := reader.ReadLine()
-		if err != nil {
-			log.Warn(management.logPrefix, "Connection failed to read. ", err)
-			return
-		}
-		log.Debug(management.logPrefix, "Line received: ", line)
-
-		outputChannel := cmdOutputChannel
-		if strings.HasPrefix(line, ">") {
-			outputChannel = management.openvpnEventChannel
-		}
-
-		// Try to deliver the message
-		select {
-		case outputChannel <- line:
-		case <-time.After(time.Second):
-			log.Error(management.logPrefix, "Failed to transport line: ", line)
-		}
-	}
 }
 
-func (management *Management) cleanConnection(connection Connection) {
+func (management *Management) stopMiddlewares(connection Connection) {
 	for _, middleware := range management.middlewares {
 		err := middleware.Stop(connection)
 		if err != nil {
@@ -145,9 +135,33 @@ func (management *Management) cleanConnection(connection Connection) {
 	}
 }
 
-func (management *Management) consumeOpenvpnEvents() {
+func (management *Management) consumeOpenvpnConnectionOutput(input io.Reader, outputChannel, eventChannel chan string) {
+	reader := textproto.NewReader(bufio.NewReader(input))
 	for {
-		event := <-management.openvpnEventChannel
+		line, err := reader.ReadLine()
+		if err != nil {
+			log.Warn(management.logPrefix, "Connection failed to read. ", err)
+			return
+		}
+		log.Debug(management.logPrefix, "Line received: ", line)
+
+		output := outputChannel
+		if strings.HasPrefix(line, ">") {
+			output = eventChannel
+		}
+
+		// Try to deliver the message
+		select {
+		case output <- line:
+		case <-time.After(time.Second):
+			log.Error(management.logPrefix, "Failed to transport line: ", line)
+		}
+	}
+}
+
+func (management *Management) deliverOpenvpnManagementEvents(eventChannel chan string) {
+	for {
+		event := <-eventChannel
 		log.Trace(management.logPrefix, "Line delivering: ", event)
 
 		lineConsumed := false

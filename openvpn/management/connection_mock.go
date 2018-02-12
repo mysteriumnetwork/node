@@ -19,5 +19,6 @@ func (conn *MockConnection) SingleOutputCommand(format string, args ...interface
 }
 
 func (conn *MockConnection) MultiOutputCommand(format string, args ...interface{}) (string, []string, error) {
+	_, _ = conn.SingleOutputCommand(format, args...)
 	return conn.CommandResult, conn.MultilineResponse, nil
 }

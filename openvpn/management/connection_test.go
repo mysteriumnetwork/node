@@ -53,8 +53,9 @@ func TestMultipleOutputCommandHandlesResults(t *testing.T) {
 		outputChannel <- "END"
 	}()
 
-	success, output, err := conn.MultiOutputCommand("anything")
+	success, output, err := conn.MultiOutputCommand("test: %s , %d", "value", 123)
 	assert.NoError(t, err)
+	assert.Equal(t, "test: value , 123\n", mockWriter.receivedCommand)
 	assert.Equal(t, "great", success)
 	assert.Equal(
 		t,
