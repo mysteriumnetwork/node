@@ -1,7 +1,7 @@
 package bytescount
 
 import (
-	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/management"
 	"regexp"
 	"strconv"
 	"time"
@@ -18,18 +18,18 @@ type middleware struct {
 }
 
 // NewMiddleware returns new bytescount middleware
-func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Duration) openvpn.ManagementMiddleware {
+func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Duration) management.ManagementMiddleware {
 	return &middleware{
 		sessionStatsHandler: sessionStatsHandler,
 		interval:            interval,
 	}
 }
 
-func (middleware *middleware) Start(commandWriter openvpn.CommandWriter) error {
+func (middleware *middleware) Start(commandWriter management.CommandWriter) error {
 	return commandWriter.PrintfLine(byteCountCommandTemplate, int(middleware.interval.Seconds()))
 }
 
-func (middleware *middleware) Stop(commandWriter openvpn.CommandWriter) error {
+func (middleware *middleware) Stop(commandWriter management.CommandWriter) error {
 	return commandWriter.PrintfLine(byteCountCommandTemplate, 0)
 }
 

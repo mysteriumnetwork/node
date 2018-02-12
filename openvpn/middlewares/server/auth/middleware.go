@@ -3,7 +3,7 @@ package auth
 import (
 	"fmt"
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/management"
 	"regexp"
 	"strconv"
 )
@@ -13,7 +13,7 @@ type CredentialsChecker func(username, password string) (bool, error)
 
 type middleware struct {
 	checkCredentials CredentialsChecker
-	commandWriter    openvpn.CommandWriter
+	commandWriter    management.CommandWriter
 	lastUsername     string
 	lastPassword     string
 	clientID         int
@@ -28,12 +28,12 @@ func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
 	}
 }
 
-func (m *middleware) Start(commandWriter openvpn.CommandWriter) error {
+func (m *middleware) Start(commandWriter management.CommandWriter) error {
 	m.commandWriter = commandWriter
 	return nil
 }
 
-func (m *middleware) Stop(commandWriter openvpn.CommandWriter) error {
+func (m *middleware) Stop(commandWriter management.CommandWriter) error {
 	return nil
 }
 
@@ -176,11 +176,11 @@ func (m *middleware) authenticateClient() (consumed bool, err error) {
 	return true, nil
 }
 
-func approveClient(commandWriter openvpn.CommandWriter, clientID, keyID int) error {
+func approveClient(commandWriter management.CommandWriter, clientID, keyID int) error {
 	return commandWriter.PrintfLine("client-auth-nt %d %d", clientID, keyID)
 }
 
-func denyClientAuthWithMessage(commandWriter openvpn.CommandWriter, clientID, keyID int, message string) error {
+func denyClientAuthWithMessage(commandWriter management.CommandWriter, clientID, keyID int, message string) error {
 	return commandWriter.PrintfLine("client-deny %d %d %s", clientID, keyID, message)
 }
 

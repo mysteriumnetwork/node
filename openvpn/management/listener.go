@@ -1,6 +1,4 @@
-package openvpn
-
-// https://openvpn.net/index.php/open-source/documentation/miscellaneous/79-management-interface.html
+package management
 
 import (
 	"bufio"
@@ -23,17 +21,6 @@ type Management struct {
 	listenerShutdownStarted chan bool
 	listenerShutdownWaiter  sync.WaitGroup
 	closesOnce              sync.Once
-}
-
-// CommandWriter represents command write abstraction for middlewares to be able to send commands to openvpn management interface
-type CommandWriter interface {
-	PrintfLine(format string, args ...interface{}) error
-}
-
-type ManagementMiddleware interface {
-	Start(CommandWriter) error
-	Stop(CommandWriter) error
-	ConsumeLine(line string) (consumed bool, err error)
 }
 
 // NewManagement creates new manager for given sock address, uses given log prefix for logging and takes a list of middlewares

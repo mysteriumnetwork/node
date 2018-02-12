@@ -1,9 +1,8 @@
 package openvpn
 
-import (
-	"github.com/mysterium/node/openvpn/primitives"
-	"sync"
-)
+import "sync"
+import "github.com/mysterium/node/openvpn/primitives"
+import "github.com/mysterium/node/openvpn/management"
 
 type Client interface {
 	Start() error
@@ -13,18 +12,18 @@ type Client interface {
 
 type openVpnClient struct {
 	config     *ClientConfig
-	management *Management
+	management *management.Management
 	process    *Process
 }
 
-func NewClient(config *ClientConfig, directoryRuntime string, middlewares ...ManagementMiddleware) *openVpnClient {
+func NewClient(config *ClientConfig, directoryRuntime string, middlewares ...management.ManagementMiddleware) *openVpnClient {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
 	config.SetManagementSocket(socketAddress)
 
 	return &openVpnClient{
 		config:     config,
-		management: NewManagement(socketAddress, "[client-management] ", middlewares...),
+		management: management.NewManagement(socketAddress, "[client-management] ", middlewares...),
 		process:    NewProcess("[client-openvpn] "),
 	}
 }

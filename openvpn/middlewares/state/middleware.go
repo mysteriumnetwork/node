@@ -2,6 +2,7 @@ package state
 
 import (
 	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/management"
 	"regexp"
 )
 
@@ -12,17 +13,17 @@ type middleware struct {
 	listeners []Callback
 }
 
-func NewMiddleware(listeners ...Callback) openvpn.ManagementMiddleware {
+func NewMiddleware(listeners ...Callback) management.ManagementMiddleware {
 	return &middleware{
 		listeners: listeners,
 	}
 }
 
-func (middleware *middleware) Start(commandWriter openvpn.CommandWriter) error {
+func (middleware *middleware) Start(commandWriter management.CommandWriter) error {
 	return commandWriter.PrintfLine("state on all")
 }
 
-func (middleware *middleware) Stop(commandWriter openvpn.CommandWriter) error {
+func (middleware *middleware) Stop(commandWriter management.CommandWriter) error {
 	return commandWriter.PrintfLine("state off")
 }
 

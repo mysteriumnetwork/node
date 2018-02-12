@@ -1,6 +1,8 @@
 package openvpn
 
 import (
+	"github.com/mysterium/node/openvpn/management"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn/primitives"
 	"github.com/mysterium/node/service_discovery/dto"
@@ -8,12 +10,12 @@ import (
 )
 
 // NewServer constructs new openvpn server instance
-func NewServer(generateConfig ServerConfigGenerator, directoryRuntime string, middlewares ...ManagementMiddleware) *Server {
+func NewServer(generateConfig ServerConfigGenerator, directoryRuntime string, middlewares ...management.ManagementMiddleware) *Server {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
 	return &Server{
 		generateConfig: generateConfig,
-		management:     NewManagement(socketAddress, "[server-management] ", middlewares...),
+		management:     management.NewManagement(socketAddress, "[server-management] ", middlewares...),
 		process:        NewProcess("[server-openvpn] "),
 	}
 }
@@ -40,7 +42,7 @@ func NewServerConfigGenerator(directoryRuntime string, serviceLocation dto.Locat
 // Server structure describes openvpn server
 type Server struct {
 	generateConfig ServerConfigGenerator
-	management     *Management
+	management     *management.Management
 	process        *Process
 }
 
