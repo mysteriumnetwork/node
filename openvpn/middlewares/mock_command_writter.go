@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// MockCommandWriter is mock openvpn management interface used for middleware testing
 type MockCommandWriter struct {
 	WrittenLines []string
 	LastLine     string

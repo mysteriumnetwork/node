@@ -12,7 +12,7 @@ type CredentialsProvider func() (username string, password string, err error)
 
 type middleware struct {
 	fetchCredentials CredentialsProvider
-	commandWriter    management.CommandWriter
+	commandWriter    management.Interface
 	lastUsername     string
 	lastPassword     string
 	state            openvpn.State
@@ -26,13 +26,13 @@ func NewMiddleware(credentials CredentialsProvider) *middleware {
 	}
 }
 
-func (m *middleware) Start(commandWriter management.CommandWriter) error {
+func (m *middleware) Start(commandWriter management.Interface) error {
 	m.commandWriter = commandWriter
 	log.Info("starting client user-pass provider middleware")
 	return nil
 }
 
-func (m *middleware) Stop(commandWriter management.CommandWriter) error {
+func (m *middleware) Stop(commandWriter management.Interface) error {
 	return nil
 }
 
