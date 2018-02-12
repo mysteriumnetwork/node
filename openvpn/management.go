@@ -20,6 +20,7 @@ type Management struct {
 
 	listenerShutdownStarted chan bool
 	listenerShutdownWaiter  sync.WaitGroup
+	closesOnce              sync.Once
 }
 
 type ManagementMiddleware interface {
@@ -64,7 +65,9 @@ func (management *Management) Start() error {
 
 func (management *Management) Stop() {
 	log.Info(management.logPrefix, "Shutdown")
-	close(management.listenerShutdownStarted)
+	management.closesOnce.Do(func() {
+		close(management.listenerShutdownStarted)
+	})
 
 	management.listenerShutdownWaiter.Wait()
 	log.Info(management.logPrefix, "Shutdown finished")
@@ -72,11 +75,6 @@ func (management *Management) Stop() {
 
 func (management *Management) waitForShutdown(listener net.Listener) {
 	<-management.listenerShutdownStarted
-
-	for _, middleware := range management.middlewares {
-		middleware.Stop()
-	}
-
 	listener.Close()
 }
 
@@ -107,6 +105,8 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 		middleware.Start(connection)
 	}
 
+	defer management.cleanConnection(connection)
+
 	reader := textproto.NewReader(bufio.NewReader(connection))
 	for {
 		line, err := reader.ReadLine()
@@ -123,6 +123,13 @@ func (management *Management) serveNewConnection(connection net.Conn) {
 			log.Error(management.logPrefix, "Failed to transport line: ", line)
 		}
 	}
+}
+
+func (management *Management) cleanConnection(connection net.Conn) {
+	for _, middleware := range management.middlewares {
+		middleware.Stop()
+	}
+	connection.Close()
 }
 
 func (management *Management) deliverLines() {

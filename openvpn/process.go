@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"syscall"
 )
 
 func NewProcess(logPrefix string) *Process {
@@ -24,6 +25,7 @@ type Process struct {
 	cmdExitError       chan error
 	cmdShutdownStarted chan bool
 	cmdShutdownWaiter  sync.WaitGroup
+	closesOnce         sync.Once
 }
 
 func (process *Process) Start(arguments []string) (err error) {
@@ -53,7 +55,9 @@ func (process *Process) Wait() error {
 }
 
 func (process *Process) Stop() {
-	close(process.cmdShutdownStarted)
+	process.closesOnce.Do(func() {
+		close(process.cmdShutdownStarted)
+	})
 	process.cmdShutdownWaiter.Wait()
 }
 
@@ -102,9 +106,10 @@ func (process *Process) waitForShutdown(cmd *exec.Cmd) {
 	select {
 	// Wait for shutdown
 	case <-process.cmdShutdownStarted:
-		// Kill the server
-		if err := cmd.Process.Kill(); err != nil {
-			return
+		//First - shutdown gracefully
+		//TODO - add timer and send SIGKILL after timeout?
+		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			log.Error(process.logPrefix, "Error killing process = ", err)
 		}
 
 		// Allow goroutine to exit

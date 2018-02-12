@@ -11,11 +11,9 @@
 
 OS_DIR_BIN="/usr/bin"
 OS_DIR_CONFIG="/etc/mysterium-node"
+OS_DIR_DATA="/var/lib/mysterium-node"
 OS_DIR_LOG="/var/log/mysterium-node"
 OS_DIR_RUN="/var/run/mysterium-node"
-
-# Unique identifier for Mysterium VPN node
-MYSTERIUM_SERVER_NODE=""
 
 # Process name (For display)
 DAEMON_NAME="mysterium-node"
@@ -112,9 +110,13 @@ function start() {
         --group $DAEMON_GROUP \
         --exec $DAEMON_BIN \
         -- \
-        --node=$MYSTERIUM_SERVER_NODE \
         --config-dir=$OS_DIR_CONFIG \
+        --data-dir=$OS_DIR_DATA \
         --runtime-dir=$OS_DIR_RUN \
+        --identity=$MYSTERIUM_SERVER_IDENTITY \
+        --identity.passphrase=$MYSTERIUM_SERVER_IDENTITY_PASSPHRASE \
+        --location.database=$MYSTERIUM_SERVER_COUNTRY_DATABASE \
+        --location.country=$MYSTERIUM_SERVER_COUNTRY \
         >>$DAEMON_STDOUT \
         2>>$DAEMON_STDERR
 

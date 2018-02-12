@@ -30,7 +30,8 @@ services:
     ports:
       - 1194:1194
     environment:
-      NODE: server-ubuntu
+      MYSTERIUM_SERVER_IDENTITY: ""
+      MYSTERIUM_SERVER_IDENTITY_PASSPHRASE: ""
 
   client:
     privileged: true
@@ -46,5 +47,7 @@ services:
       - server-ubuntu
     networks:
       - default
+    ports:
+      - 4050:4050
     environment:
-      NODE: server-ubuntu
+      MYSTERIUM_CLIENT_TEQUILAPI_PORT: 4050

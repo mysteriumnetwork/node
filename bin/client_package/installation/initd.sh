@@ -10,11 +10,10 @@
 # If you modify this, please make sure to also edit systemd.service
 
 OS_DIR_BIN="/usr/bin"
+OS_DIR_CONFIG="/etc/mysterium-client"
+OS_DIR_DATA="/var/lib/mysterium-client"
 OS_DIR_LOG="/var/log/mysterium-client"
 OS_DIR_RUN="/var/run/mysterium-client"
-
-#Mysterium VPN node to make connection with
-MYSTERIUM_CLIENT_NODE=""
 
 # Process name (For display)
 DAEMON_NAME="mysterium-client"
@@ -111,9 +110,11 @@ function start() {
         --group $DAEMON_GROUP \
         --exec $DAEMON_BIN \
         -- \
-        --node=$MYSTERIUM_CLIENT_NODE \
         --config-dir=$OS_DIR_CONFIG \
+        --data-dir=$OS_DIR_DATA \
         --runtime-dir=$OS_DIR_RUN \
+        --tequilapi.address=$MYSTERIUM_CLIENT_TEQUILAPI_ADDRESS \
+        --tequilapi.port=$MYSTERIUM_CLIENT_TEQUILAPI_PORT \
         >>$DAEMON_STDOUT \
         2>>$DAEMON_STDERR
 
