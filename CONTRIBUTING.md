@@ -36,11 +36,11 @@ docker-compose up broker
 
 # Start node
 bin/server_build
-bin/server_run --identity=0x123456..
+bin/server_run
 
 # Client connects to node
 bin/client_build
-bin/client_run --cli
+bin/client_run
 ```
 
 Dependency management

@@ -90,7 +90,7 @@ sudo mysterium_server --config-dir=/etc/mysterium-node --identity=0x123456..
 ### Running
 ```bash
 mysterium_client --help
-sudo mysterium_client --cli
+sudo mysterium_client && mysterium_client --cli
 ```
 
 
