@@ -1,7 +1,7 @@
-package client_promise
+package promise
 
 import (
-	dto "github.com/mysterium/node/client_promise/dto"
+	dto "github.com/mysterium/node/client/promise/dto"
 	"github.com/mysterium/node/money"
 	"github.com/stretchr/testify/assert"
 	"testing"
