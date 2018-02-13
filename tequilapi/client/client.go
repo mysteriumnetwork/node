@@ -177,3 +177,15 @@ func (client *Client) Unlock(identity, passphrase string) error {
 
 	return nil
 }
+
+// Stop kills mysterium client
+func (client *Client) Stop() error {
+	emptyPayload := struct{}{}
+	response, err := client.http.Post("/stop", emptyPayload)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
+}
