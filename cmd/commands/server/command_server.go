@@ -77,9 +77,9 @@ func (cmd *Command) Start() (err error) {
 	stopPinger := make(chan int)
 	vpnStateCallback := func(state openvpn.State) {
 		switch state {
-		case openvpn.STATE_CONNECTED:
+		case openvpn.ConnectedState:
 			log.Info("Open vpn service started")
-		case openvpn.STATE_EXITING:
+		case openvpn.ExitingState:
 			log.Info("Open vpn service exiting")
 			close(stopPinger)
 		}

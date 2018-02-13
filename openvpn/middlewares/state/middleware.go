@@ -72,12 +72,12 @@ func (middleware *middleware) callListeners(state openvpn.State) {
 func extractOpenvpnState(line string) (openvpn.State, error) {
 	rule, err := regexp.Compile(stateOutputMatcher)
 	if err != nil {
-		return openvpn.STATE_UNDEFINED, err
+		return openvpn.UndefinedState, err
 	}
 
 	matches := rule.FindStringSubmatch(line)
 	if len(matches) < 2 {
-		return openvpn.STATE_UNDEFINED, errors.New("Line mismatch: " + line)
+		return openvpn.UndefinedState, errors.New("Line mismatch: " + line)
 	}
 
 	return openvpn.State(matches[1]), nil

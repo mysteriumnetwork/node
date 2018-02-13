@@ -2,13 +2,13 @@ package openvpn
 
 type State string
 
-const STATE_UNDEFINED = State("UNDEFINED")
-const STATE_CONNECTING = State("CONNECTING")
-const STATE_WAIT = State("WAIT")
-const STATE_AUTH = State("AUTH")
-const STATE_GET_CONFIG = State("GET_CONFIG")
-const STATE_ASSIGN_IP = State("ASSIGN_IP")
-const STATE_ADD_ROUTES = State("ADD_ROUTES")
-const STATE_CONNECTED = State("CONNECTED")
-const STATE_RECONNECTING = State("RECONNECTING")
-const STATE_EXITING = State("EXITING")
+const UndefinedState = State("UNDEFINED")
+const ConnectingState = State("CONNECTING")
+const WaitState = State("WAIT")
+const AuthenticatingState = State("AUTH")
+const GetConfigState = State("GET_CONFIG")
+const AssignIpState = State("ASSIGN_IP")
+const AddRoutesState = State("ADD_ROUTES")
+const ConnectedState = State("CONNECTED")
+const ReconnectingState = State("RECONNECTING")
+const ExitingState = State("EXITING")

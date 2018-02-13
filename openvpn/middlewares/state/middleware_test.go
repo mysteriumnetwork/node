@@ -33,9 +33,9 @@ func Test_ConsumeLineTakes(t *testing.T) {
 		line          string
 		expectedState openvpn.State
 	}{
-		{">STATE:1495493709,AUTH,,,,,,", openvpn.STATE_AUTH},
-		{">STATE:1495891020,RECONNECTING,ping-restart,,,,,", openvpn.STATE_RECONNECTING},
-		{">STATE:1495891025,WAIT,,,,,,", openvpn.STATE_WAIT},
+		{">STATE:1495493709,AUTH,,,,,,", openvpn.AuthenticatingState},
+		{">STATE:1495891020,RECONNECTING,ping-restart,,,,,", openvpn.ReconnectingState},
+		{">STATE:1495891025,WAIT,,,,,,", openvpn.WaitState},
 	}
 
 	middleware := &middleware{}
@@ -68,10 +68,10 @@ func Test_StartCommandWritesExpectedStringToConnection(t *testing.T) {
 	assert.Equal(t, "state on all", mockConnection.LastLine)
 	assert.Equal(t,
 		[]openvpn.State{
-			openvpn.STATE_CONNECTING,
-			openvpn.STATE_ASSIGN_IP,
-			openvpn.STATE_CONNECTED,
-			openvpn.STATE_EXITING,
+			openvpn.ConnectingState,
+			openvpn.AssignIpState,
+			openvpn.ConnectedState,
+			openvpn.ExitingState,
 		},
 		stateTracker.states,
 	)
