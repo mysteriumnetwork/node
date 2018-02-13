@@ -8,29 +8,23 @@ import (
 	"strings"
 )
 
-// Connection represents openvpn management interface abstraction for middlewares to be able to send commands to openvpn process
-type Connection interface {
-	SingleOutputCommand(template string, args ...interface{}) (string, error)
-	MultiOutputCommand(template string, args ...interface{}) (string, []string, error)
-}
-
 const cmdSuccess = "SUCCESS"
 const cmdError = "ERROR"
 const endOfCmdOutput = "END"
 
-type socketConnection struct {
+type channelConnection struct {
 	cmdWriter io.Writer
 	cmdOutput chan string
 }
 
-func newSocketConnection(cmdWriter io.Writer, cmdOutput chan string) *socketConnection {
-	return &socketConnection{
+func newChannelConnection(cmdWriter io.Writer, cmdOutput chan string) *channelConnection {
+	return &channelConnection{
 		cmdWriter: cmdWriter,
 		cmdOutput: cmdOutput,
 	}
 }
 
-func (sc *socketConnection) SingleOutputCommand(template string, args ...interface{}) (string, error) {
+func (sc *channelConnection) SingleLineCommand(template string, args ...interface{}) (string, error) {
 	cmd := fmt.Sprintf(template, args...)
 
 	_, err := fmt.Fprintf(sc.cmdWriter, "%s\n", cmd)
@@ -55,8 +49,8 @@ func (sc *socketConnection) SingleOutputCommand(template string, args ...interfa
 	}
 }
 
-func (sc *socketConnection) MultiOutputCommand(template string, args ...interface{}) (string, []string, error) {
-	success, err := sc.SingleOutputCommand(template, args...)
+func (sc *channelConnection) MultiLineCommand(template string, args ...interface{}) (string, []string, error) {
+	success, err := sc.SingleLineCommand(template, args...)
 	if err != nil {
 		return "", nil, err
 	}

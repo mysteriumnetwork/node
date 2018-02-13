@@ -49,12 +49,12 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	username, password, err := m.fetchCredentials()
 	log.Info("authenticating user ", username, " with pass: ", password)
 
-	_, err = m.connection.SingleOutputCommand("password 'Auth' %s", password)
+	_, err = m.connection.SingleLineCommand("password 'Auth' %s", password)
 	if err != nil {
 		return true, err
 	}
 
-	_, err = m.connection.SingleOutputCommand("username 'Auth' %s", username)
+	_, err = m.connection.SingleLineCommand("username 'Auth' %s", username)
 	if err != nil {
 		return true, err
 	}

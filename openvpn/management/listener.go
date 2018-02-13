@@ -99,7 +99,7 @@ func (management *Management) serveNewConnection(netConn net.Conn) {
 	cmdOutputChannel := make(chan string)
 	//make event channel buffered, so we can assure all middlewares are started before first event is delivered to middleware
 	eventChannel := make(chan string, 100)
-	connection := newSocketConnection(netConn, cmdOutputChannel)
+	connection := newChannelConnection(netConn, cmdOutputChannel)
 
 	outputConsuming := sync.WaitGroup{}
 	outputConsuming.Add(1)

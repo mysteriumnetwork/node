@@ -9,10 +9,10 @@ import (
 func TestSingleOutputCommandHandlesSuccess(t *testing.T) {
 	mockWriter := &mockWriter{}
 	outputChannel := make(chan string, 1)
-	conn := newSocketConnection(mockWriter, outputChannel)
+	conn := newChannelConnection(mockWriter, outputChannel)
 	outputChannel <- "SUCCESS: message"
 
-	success, err := conn.SingleOutputCommand("template: %d", 123)
+	success, err := conn.SingleLineCommand("template: %d", 123)
 	assert.NoError(t, err)
 	assert.Equal(t, "message", success)
 	assert.Equal(t, "template: 123\n", mockWriter.receivedCommand)
@@ -21,10 +21,10 @@ func TestSingleOutputCommandHandlesSuccess(t *testing.T) {
 func TestSingleOutputCommandHandlesFailure(t *testing.T) {
 	mockWriter := &mockWriter{}
 	outputChannel := make(chan string, 1)
-	conn := newSocketConnection(mockWriter, outputChannel)
+	conn := newChannelConnection(mockWriter, outputChannel)
 	outputChannel <- "ERROR: error"
 
-	success, err := conn.SingleOutputCommand("anything")
+	success, err := conn.SingleLineCommand("anything")
 	assert.Empty(t, success)
 	assert.Equal(t, errors.New("command error: error"), err)
 }
@@ -32,10 +32,10 @@ func TestSingleOutputCommandHandlesFailure(t *testing.T) {
 func TestSingleOutputCommandHandlesUnknownResponse(t *testing.T) {
 	mockWriter := &mockWriter{}
 	outputChannel := make(chan string, 1)
-	conn := newSocketConnection(mockWriter, outputChannel)
+	conn := newChannelConnection(mockWriter, outputChannel)
 	outputChannel <- "200 OK HTTP/1.1"
 
-	success, err := conn.SingleOutputCommand("anything")
+	success, err := conn.SingleLineCommand("anything")
 	assert.Empty(t, success)
 	assert.Equal(t, errors.New("unknown command response: 200 OK HTTP/1.1"), err)
 
@@ -45,7 +45,7 @@ func TestMultipleOutputCommandHandlesResults(t *testing.T) {
 
 	mockWriter := &mockWriter{}
 	outputChannel := make(chan string, 1)
-	conn := newSocketConnection(mockWriter, outputChannel)
+	conn := newChannelConnection(mockWriter, outputChannel)
 	go func() {
 		outputChannel <- "SUCCESS: great"
 		outputChannel <- "This is"
@@ -53,7 +53,7 @@ func TestMultipleOutputCommandHandlesResults(t *testing.T) {
 		outputChannel <- "END"
 	}()
 
-	success, output, err := conn.MultiOutputCommand("test: %s , %d", "value", 123)
+	success, output, err := conn.MultiLineCommand("test: %s , %d", "value", 123)
 	assert.NoError(t, err)
 	assert.Equal(t, "test: value , 123\n", mockWriter.receivedCommand)
 	assert.Equal(t, "great", success)
