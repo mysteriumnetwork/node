@@ -97,20 +97,23 @@ func (management *Management) serveNewConnection(netConn net.Conn) {
 	defer netConn.Close()
 
 	cmdOutputChannel := make(chan string)
-	eventChannel := make(chan string)
+	//make event channel buffered, so we can assure all middlewares are started before first event is delivered to middleware
+	eventChannel := make(chan string, 100)
 	connection := newSocketConnection(netConn, cmdOutputChannel)
-	go management.deliverOpenvpnManagementEvents(eventChannel)
 
 	outputConsuming := sync.WaitGroup{}
 	outputConsuming.Add(1)
 	go func() {
+		defer outputConsuming.Done()
 		management.consumeOpenvpnConnectionOutput(netConn, cmdOutputChannel, eventChannel)
-		outputConsuming.Done()
 	}()
 
 	management.startMiddlewares(connection)
 	defer management.stopMiddlewares(connection)
 
+	//start delivering events to middlewares
+	go management.deliverOpenvpnManagementEvents(eventChannel)
+	//block until output consumption is done - usually when connection is closed by openvpn process
 	outputConsuming.Wait()
 }
 
