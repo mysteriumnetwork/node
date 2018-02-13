@@ -11,7 +11,6 @@ import (
 type SessionStatsHandler func(SessionStats) error
 
 const byteCountCommandTemplate = "bytecount %d"
-const byteCountLogPrefix = "[bytecount]"
 
 type middleware struct {
 	sessionStatsHandler SessionStatsHandler
