@@ -90,6 +90,7 @@ func (c *Command) handleActions(line string) {
 		{"proposals", c.proposals},
 		{"ip", c.ip},
 		{"disconnect", c.disconnect},
+		{"stop", c.stopClient},
 	}
 
 	argCmds := []struct {
@@ -316,6 +317,14 @@ func (c *Command) identities(argsString string) {
 	}
 }
 
+func (c *Command) stopClient() {
+	err := c.tequilapi.Stop()
+	if err != nil {
+		warn("Cannot stop client:", err)
+	}
+	success("Client stopped")
+}
+
 func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []string {
 	return func(line string) []string {
 		identities := []string{"new"}
@@ -364,6 +373,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		readline.PcItem("disconnect"),
 		readline.PcItem("help"),
 		readline.PcItem("quit"),
+		readline.PcItem("stop"),
 		readline.PcItem(
 			"unlock",
 			readline.PcItemDynamic(
