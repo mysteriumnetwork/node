@@ -1,0 +1,11 @@
+prefix=/Users/ignas/Code/Mysterium/build/built/pkcs11-helper
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+features= token data certificate engine_crypto_openssl engine_crypto_nss engine_crypto_mbedtls engine_crypto_cryptoapi engine_crypto_gnutls engine_crypto
+
+Name: pkcs11-helper
+Description: PKCS#11 helper library
+Version: 1.22
+Cflags: -I${includedir}
+Libs: -ldl  -L${libdir} -lpkcs11-helper
