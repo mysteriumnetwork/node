@@ -1,10 +1,10 @@
 #!/bin/bash
 
 ###########################################################################
-# Creates Docker image and uploads it DockerHub https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
+# Creates Docker image and uploads it to DockerHub https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
 #
-# To create a release, simple execute:
-#> bin/server_package_docker <version> [<docker_tag>]
+# To create a release, simply execute:
+#> bin/server_package_docker version [docker_tag]
 
 # Usage example:
 #> bin/server_package_docker 0.0.1
