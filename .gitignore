@@ -3,3 +3,4 @@
 /vendor
 /.env
 bin/deploy_zolia
+testdataoutput
