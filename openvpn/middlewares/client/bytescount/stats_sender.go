@@ -11,7 +11,7 @@ import (
 type SessionStatsSender func(bytesSent, bytesReceived int) error
 
 // NewSessionStatsSender returns new session stats handler, which sends statistics to server
-func NewSessionStatsSender(mysteriumClient server.Client, sessionID session.SessionID, signer identity.Signer) SessionStatsHandler {
+func NewSessionStatsSender(mysteriumClient server.Client, sessionID session.SessionID, providerID identity.Identity, signer identity.Signer) SessionStatsHandler {
 	sessionIDString := string(sessionID)
 	return func(sessionStats SessionStats) error {
 		return mysteriumClient.SendSessionStats(
@@ -19,6 +19,7 @@ func NewSessionStatsSender(mysteriumClient server.Client, sessionID session.Sess
 			dto.SessionStats{
 				BytesSent:     sessionStats.BytesSent,
 				BytesReceived: sessionStats.BytesReceived,
+				ProviderID:    providerID.Address,
 			},
 			signer,
 		)

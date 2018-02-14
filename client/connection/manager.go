@@ -65,7 +65,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	}
 	manager.sessionID = vpnSession.ID
 
-	manager.openvpnClient, err = manager.newVpnClient(*vpnSession, consumerID, manager.onVpnStatusUpdate)
+	manager.openvpnClient, err = manager.newVpnClient(*vpnSession, consumerID, providerID, manager.onVpnStatusUpdate)
 	if err != nil {
 		manager.dialog.Close()
 		return err
