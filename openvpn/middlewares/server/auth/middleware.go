@@ -44,7 +44,7 @@ func (m *middleware) Stop() error {
 
 func (m *middleware) checkReAuth(line string) (cont bool, consumed bool, err error) {
 
-	rule, err := regexp.Compile("^>CLIENT:REAUTH,(\\d),(\\d)$")
+	rule, err := regexp.Compile("^>CLIENT:REAUTH,(\\d+),(\\d+)$")
 	if err != nil {
 		return false, false, err
 	}
@@ -62,7 +62,7 @@ func (m *middleware) checkReAuth(line string) (cont bool, consumed bool, err err
 
 func (m *middleware) checkConnect(line string) (cont bool, consumed bool, err error) {
 
-	rule, err := regexp.Compile("^>CLIENT:CONNECT,(\\d),(\\d)$")
+	rule, err := regexp.Compile("^>CLIENT:CONNECT,(\\d+),(\\d+)$")
 	if err != nil {
 		return false, false, err
 	}

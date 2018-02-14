@@ -210,3 +210,18 @@ func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
 	assert.True(t, fas.called)
 	assert.False(t, fas.authenticated)
 }
+
+func TestMiddlewareConsumesClientIdsAntKeysWithSeveralDigits(t *testing.T) {
+	var tests = []string{
+		">CLIENT:CONNECT,115,23",
+		">CLIENT:REAUTH,11,27",
+	}
+
+	fas := newFakeAuthenticatorStub()
+	middleware := NewMiddleware(fas.fakeAuthenticator)
+	for _, testLine := range tests {
+		consumed, err := middleware.ConsumeLine(testLine)
+		assert.NoError(t, err, testLine)
+		assert.Equal(t, true, consumed, testLine)
+	}
+}
