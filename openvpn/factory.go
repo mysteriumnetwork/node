@@ -1,28 +1,28 @@
 package openvpn
 
 import (
+	"github.com/mysterium/node/openvpn/primitives"
 	"io/ioutil"
 )
 
 func NewServerConfig(
 	network, netmask string,
-	caFile, certFile, certKeyFile,
-	dhFile, caCrtFile, authFile string,
+	secPrimitives *primitives.SecurityPrimitives,
 ) *ServerConfig {
 	config := ServerConfig{NewConfig()}
 	config.SetServerMode(1194, network, netmask)
-	config.SetTLSCACertificate(caFile)
-	config.SetTLSPrivatePubKeys(certFile, certKeyFile)
-	config.SetTlsServer(dhFile, caCrtFile)
-	config.SetTlsAuth(authFile)
+	config.SetTLSServer()
+	config.SetTLSCACertificate(secPrimitives.CACertPath)
+	config.SetTLSPrivatePubKeys(secPrimitives.ServerCertPath, secPrimitives.ServerKeyPath)
+	config.SetTLSCrypt(secPrimitives.TLSCryptKeyPath)
 
 	config.SetDevice("tun")
-	config.setParam("cipher", "AES-256-CBC")
+	config.setParam("cipher", "AES-256-GCM")
 	config.setParam("verb", "3")
 	config.setParam("tls-version-min", "1.2")
 	config.setFlag("management-client-auth")
 	config.setParam("verify-client-cert", "none")
-	config.setParam("tls-cipher", "TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384")
+	config.setParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
 	config.setParam("reneg-sec", "60")
 	config.SetKeepAlive(10, 60)
 	config.SetPingTimerRemote()
@@ -34,17 +34,17 @@ func NewServerConfig(
 
 func NewClientConfig(
 	remote string,
-	caFile, authFile string,
+	caCertPath, tlsCryptKeyPath string,
 ) *ClientConfig {
 	config := ClientConfig{NewConfig()}
 	config.SetClientMode(remote, 1194)
-	config.SetTLSCACertificate(caFile)
-	config.SetTlsAuth(authFile)
+	config.SetTLSCACertificate(caCertPath)
+	config.SetTLSCrypt(tlsCryptKeyPath)
 
 	config.SetDevice("tun")
-	config.setParam("cipher", "AES-256-CBC")
+	config.setParam("cipher", "AES-256-GCM")
 	config.setParam("verb", "3")
-	config.setParam("tls-cipher", "TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384")
+	config.setParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
 	config.SetKeepAlive(10, 60)
 	config.SetPingTimerRemote()
 	config.SetPersistTun()

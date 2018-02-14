@@ -1,8 +1,8 @@
 package location
 
 import (
+	"errors"
 	"github.com/oschwald/geoip2-golang"
-	"github.com/pkg/errors"
 	"net"
 )
 

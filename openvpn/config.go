@@ -56,8 +56,8 @@ func (c *Config) SetTLSPrivatePubKeys(certFile string, certKeyFile string) {
 	c.AddOptions(OptionFile("key", certKeyFile))
 }
 
-func (c *Config) SetTlsAuth(authFile string) {
-	c.AddOptions(OptionFile("tls-auth", authFile))
+func (c *Config) SetTLSCrypt(cryptFile string) {
+	c.AddOptions(OptionFile("tls-crypt", cryptFile))
 }
 
 func (c *Config) SetKeepAlive(interval, timeout int) {

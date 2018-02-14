@@ -14,6 +14,7 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/server/auth"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
+	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"path/filepath"
 )
@@ -73,33 +74,24 @@ func NewCommandWith(
 				identity.NewSigner(keystoreInstance, myID),
 			)
 		},
+
 		sessionManagerFactory: func(vpnServerIP string) session.Manager {
+			clientConfigGenerator := openvpn.NewClientConfigGenerator(options.DirectoryRuntime, vpnServerIP)
+
 			return openvpn_session.NewManager(
-				openvpn.NewClientConfig(
-					vpnServerIP,
-					filepath.Join(options.DirectoryConfig, "ca.crt"),
-					filepath.Join(options.DirectoryConfig, "ta.key"),
-				),
+				clientConfigGenerator,
 				&session.UUIDGenerator{},
 			)
 		},
-		vpnServerFactory: func(manager session.Manager) *openvpn.Server {
-			vpnServerConfig := openvpn.NewServerConfig(
-				"10.8.0.0", "255.255.255.0",
-				filepath.Join(options.DirectoryConfig, "ca.crt"),
-				filepath.Join(options.DirectoryConfig, "server.crt"),
-				filepath.Join(options.DirectoryConfig, "server.key"),
-				filepath.Join(options.DirectoryConfig, "dh.pem"),
-				filepath.Join(options.DirectoryConfig, "crl.pem"),
-				filepath.Join(options.DirectoryConfig, "ta.key"),
-			)
+		vpnServerFactory: func(manager session.Manager, serviceLocation dto.Location, providerID identity.Identity) *openvpn.Server {
+			serverConfigGenerator := openvpn.NewServerConfigGenerator(options.DirectoryRuntime, serviceLocation, providerID)
 			sessionValidator := openvpn_session.NewSessionValidator(
 				manager.FindSession,
 				identity.NewExtractor(),
 			)
 
 			return openvpn.NewServer(
-				vpnServerConfig,
+				serverConfigGenerator,
 				options.DirectoryRuntime,
 				auth.NewMiddleware(sessionValidator),
 			)

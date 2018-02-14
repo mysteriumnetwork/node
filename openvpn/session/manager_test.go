@@ -8,6 +8,14 @@ import (
 	"testing"
 )
 
+func NewFakeClientConfigGenerator(port int) openvpn.ClientConfigGenerator {
+	return func() *openvpn.ClientConfig {
+		vpnClientConfig := &openvpn.ClientConfig{&openvpn.Config{}}
+		vpnClientConfig.SetPort(port)
+		return vpnClientConfig
+	}
+}
+
 func TestManagerCreatesNewSession(t *testing.T) {
 	expectedSession := session.Session{
 		ID:         session.SessionID("mocked-id"),
@@ -15,11 +23,10 @@ func TestManagerCreatesNewSession(t *testing.T) {
 		ConsumerID: identity.FromAddress("deadbeef"),
 	}
 
-	clientConfig := &openvpn.ClientConfig{&openvpn.Config{}}
-	clientConfig.SetPort(1000)
+	clientConfigGenerator := NewFakeClientConfigGenerator(1000)
 
 	manager := NewManager(
-		clientConfig,
+		clientConfigGenerator,
 		&session.GeneratorFake{
 			SessionIdMock: session.SessionID("mocked-id"),
 		},

@@ -1,6 +1,9 @@
 package openvpn
 
-import "sync"
+import (
+	"github.com/mysterium/node/openvpn/primitives"
+	"sync"
+)
 
 type Client interface {
 	Start() error
@@ -23,6 +26,22 @@ func NewClient(config *ClientConfig, directoryRuntime string, middlewares ...Man
 		config:     config,
 		management: NewManagement(socketAddress, "[client-management] ", middlewares...),
 		process:    NewProcess("[client-openvpn] "),
+	}
+}
+
+// ConfigGenerator callback returns generated server config
+type ClientConfigGenerator func() *ClientConfig
+
+// NewServerConfigGenerator returns function generating server config and generates required security primitives
+func NewClientConfigGenerator(directoryRuntime, vpnServerIP string) ClientConfigGenerator {
+	return func() *ClientConfig {
+		// (Re)generate required security primitives before openvpn start
+		vpnClientConfig := NewClientConfig(
+			vpnServerIP,
+			primitives.CACertPath(directoryRuntime),
+			primitives.TLSCryptKeyPath(directoryRuntime),
+		)
+		return vpnClientConfig
 	}
 }
 

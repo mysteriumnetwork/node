@@ -2,7 +2,7 @@ package dialog
 
 import (
 	"encoding/json"
-	"github.com/pkg/errors"
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

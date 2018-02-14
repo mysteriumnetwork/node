@@ -1,5 +1,5 @@
 hash: 5e43fcf0414f763bf225c903dbb2a4b5617f8e5bd447c619e9373ff65a966f84
-updated: 2018-01-19T16:22:44.18441+02:00
+updated: 2018-02-08T13:26:40.406076+02:00
 imports:
 - name: github.com/aristanetworks/goarista
   version: d1195528dcb23ba20b6b77f38596720af652a572
@@ -55,8 +55,6 @@ imports:
   version: 8727e98aa1b91610eb184ed1ab615943b8d9deb0
 - name: github.com/pborman/uuid
   version: e533369306653d193b93dae055f6083cbf8ba54f
-- name: github.com/pkg/errors
-  version: 8842a6e0cc595d1cc9d931f6c875883967280e32
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:

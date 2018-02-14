@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -12,7 +13,6 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
-	"github.com/pkg/errors"
 	"time"
 )
 
@@ -30,8 +30,10 @@ type Command struct {
 
 	sessionManagerFactory func(serverIP string) session.Manager
 
-	vpnServerFactory func(sessionManager session.Manager) *openvpn.Server
-	vpnServer        *openvpn.Server
+	vpnServerFactory func(sessionManager session.Manager, serviceLocation dto_discovery.Location,
+		providerID identity.Identity) *openvpn.Server
+
+	vpnServer *openvpn.Server
 }
 
 // Start starts server - does not block
@@ -71,7 +73,7 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	cmd.vpnServer = cmd.vpnServerFactory(sessionManager)
+	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, serviceLocation, providerID)
 	if err := cmd.vpnServer.Start(); err != nil {
 		return err
 	}

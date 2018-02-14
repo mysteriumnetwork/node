@@ -1,8 +1,8 @@
 package session
 
 import (
+	"errors"
 	"github.com/mysterium/node/communication"
-	"github.com/pkg/errors"
 )
 
 type SessionCreateProducer struct {
