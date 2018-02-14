@@ -20,7 +20,7 @@ func ConfigureVpnClientFactory(
 	signerFactory identity.SignerFactory,
 	statsKeeper bytescount.SessionStatsKeeper,
 ) VpnClientCreator {
-	return func(vpnSession session.SessionDto, consumerID identity.Identity, stateCallback state.ClientStateCallback) (openvpn.Client, error) {
+	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.ClientStateCallback) (openvpn.Client, error) {
 		vpnClientConfig, err := openvpn.NewClientConfigFromString(
 			vpnSession.Config,
 			filepath.Join(runtimeDirectory, "client.ovpn"),
@@ -34,7 +34,7 @@ func ConfigureVpnClientFactory(
 		signer := signerFactory(consumerID)
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
-		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, signer)
+		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, providerID, signer)
 		statsHandler := bytescount.NewCompositeStatsHandler(statsSaver, statsSender)
 
 		credentialsProvider := openvpnSession.SignatureCredentialsProvider(vpnSession.ID, signer)
