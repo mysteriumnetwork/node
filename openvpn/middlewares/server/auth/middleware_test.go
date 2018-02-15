@@ -62,8 +62,8 @@ func Test_ConsumeLineTakes(t *testing.T) {
 
 	fas := newFakeAuthenticatorStub()
 	middleware := NewMiddleware(fas.fakeAuthenticator)
-	mockWriter := &management.MockConnection{}
-	middleware.Start(mockWriter)
+	mockConnection := &management.MockConnection{}
+	middleware.Start(mockConnection)
 
 	for _, test := range tests {
 		consumed, err := middleware.ConsumeLine(test.line)
@@ -83,8 +83,8 @@ func Test_ConsumeLineAuthState(t *testing.T) {
 	for _, test := range tests {
 		fas := newFakeAuthenticatorStub()
 		middleware := NewMiddleware(fas.fakeAuthenticator)
-		mockWritter := &management.MockConnection{}
-		middleware.Start(mockWritter)
+		mockConnection := &management.MockConnection{}
+		middleware.Start(mockConnection)
 
 		consumed, err := middleware.ConsumeLine(test.line)
 		assert.NoError(t, err, test.line)
@@ -103,8 +103,8 @@ func Test_ConsumeLineNotAuthState(t *testing.T) {
 	for _, test := range tests {
 		fas := newFakeAuthenticatorStub()
 		middleware := NewMiddleware(fas.fakeAuthenticator)
-		mockWriter := &management.MockConnection{}
-		middleware.Start(mockWriter)
+		mockConnection := &management.MockConnection{}
+		middleware.Start(mockConnection)
 
 		consumed, err := middleware.ConsumeLine(test.line)
 		assert.NoError(t, err, test.line)
@@ -125,8 +125,8 @@ func Test_ConsumeLineAuthTrueChecker(t *testing.T) {
 	fas := newFakeAuthenticatorStub()
 	fas.authenticated = true
 	middleware := NewMiddleware(fas.fakeAuthenticator)
-	mockWriter := &management.MockConnection{}
-	middleware.Start(mockWriter)
+	mockConnection := &management.MockConnection{}
+	middleware.Start(mockConnection)
 
 	for _, test := range tests {
 		consumed, err := middleware.ConsumeLine(test.line)
@@ -136,7 +136,7 @@ func Test_ConsumeLineAuthTrueChecker(t *testing.T) {
 	assert.True(t, fas.called)
 	assert.Equal(t, "username1", fas.username)
 	assert.Equal(t, "12341234", fas.password)
-	assert.Equal(t, "client-auth-nt 1 2", mockWriter.LastLine)
+	assert.Equal(t, "client-auth-nt 1 2", mockConnection.LastLine)
 }
 
 func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
@@ -151,15 +151,15 @@ func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
 	fas := newFakeAuthenticatorStub()
 	fas.authenticated = false
 	middleware := NewMiddleware(fas.fakeAuthenticator)
-	mockWriter := &management.MockConnection{}
-	middleware.Start(mockWriter)
+	mockConnection := &management.MockConnection{}
+	middleware.Start(mockConnection)
 
 	for _, test := range tests {
 		consumed, err := middleware.ConsumeLine(test.line)
 		assert.NoError(t, err, test.line)
 		assert.True(t, consumed, test.line)
 	}
-	assert.Equal(t, "client-deny 3 4 wrong username or password", mockWriter.LastLine)
+	assert.Equal(t, "client-deny 3 4 wrong username or password", mockConnection.LastLine)
 }
 
 func TestMiddlewareConsumesClientIdsAntKeysWithSeveralDigits(t *testing.T) {
