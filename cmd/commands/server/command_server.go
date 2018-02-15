@@ -10,6 +10,7 @@ import (
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/discovery"
+	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
@@ -31,7 +32,7 @@ type Command struct {
 	sessionManagerFactory func(serverIP string) session.Manager
 
 	vpnServerFactory func(sessionManager session.Manager, serviceLocation dto_discovery.Location,
-		providerID identity.Identity) *openvpn.Server
+		providerID identity.Identity, callback state.Callback) *openvpn.Server
 
 	vpnServer *openvpn.Server
 }
@@ -73,7 +74,17 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, serviceLocation, providerID)
+	stopPinger := make(chan int)
+	vpnStateCallback := func(state openvpn.State) {
+		switch state {
+		case openvpn.ConnectedState:
+			log.Info("Open vpn service started")
+		case openvpn.ExitingState:
+			log.Info("Open vpn service exiting")
+			close(stopPinger)
+		}
+	}
+	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, serviceLocation, providerID, vpnStateCallback)
 	if err := cmd.vpnServer.Start(); err != nil {
 		return err
 	}
@@ -85,8 +96,18 @@ func (cmd *Command) Start() (err error) {
 	}
 	go func() {
 		for {
-			time.Sleep(1 * time.Minute)
-			cmd.mysteriumClient.PingProposal(proposal, signer)
+			select {
+			case <-time.After(1 * time.Minute):
+				err := cmd.mysteriumClient.PingProposal(proposal, signer)
+				if err != nil {
+					//TODO failed to refresh proposal. Stop everything?
+					log.Error("Failed to ping proposal", err)
+					cmd.Kill()
+				}
+			case <-stopPinger:
+				log.Info("Stopping proposal pinger")
+				return
+			}
 		}
 	}()
 

@@ -3,7 +3,7 @@ package auth
 import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn"
-	"net"
+	"github.com/mysterium/node/openvpn/management"
 	"regexp"
 )
 
@@ -12,7 +12,7 @@ type CredentialsProvider func() (username string, password string, err error)
 
 type middleware struct {
 	fetchCredentials CredentialsProvider
-	connection       net.Conn
+	connection       management.Connection
 	lastUsername     string
 	lastPassword     string
 	state            openvpn.State
@@ -26,13 +26,13 @@ func NewMiddleware(credentials CredentialsProvider) *middleware {
 	}
 }
 
-func (m *middleware) Start(connection net.Conn) error {
+func (m *middleware) Start(connection management.Connection) error {
 	m.connection = connection
 	log.Info("starting client user-pass provider middleware")
 	return nil
 }
 
-func (m *middleware) Stop() error {
+func (m *middleware) Stop(connection management.Connection) error {
 	return nil
 }
 
@@ -43,30 +43,20 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	}
 
 	match := rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		m.Reset()
-		m.state = openvpn.STATE_AUTH
-		username, password, err := m.fetchCredentials()
-		log.Info("authenticating user ", username, " with pass: ", password)
+	if len(match) == 0 {
+		return false, nil
+	}
+	username, password, err := m.fetchCredentials()
+	log.Info("authenticating user ", username, " with pass: ", password)
 
-		_, err = m.connection.Write([]byte("password 'Auth' " + password + "\n"))
-		if err != nil {
-			return false, err
-		}
-
-		_, err = m.connection.Write([]byte("username 'Auth' " + username + "\n"))
-		if err != nil {
-			return false, err
-		}
-
-		return true, nil
+	_, err = m.connection.SingleLineCommand("password 'Auth' %s", password)
+	if err != nil {
+		return true, err
 	}
 
-	return false, nil
-}
-
-func (m *middleware) Reset() {
-	m.lastUsername = ""
-	m.lastPassword = ""
-	m.state = openvpn.STATE_UNDEFINED
+	_, err = m.connection.SingleLineCommand("username 'Auth' %s", username)
+	if err != nil {
+		return true, err
+	}
+	return true, nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/server/auth"
+	"github.com/mysterium/node/openvpn/middlewares/state"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
@@ -83,7 +84,7 @@ func NewCommandWith(
 				&session.UUIDGenerator{},
 			)
 		},
-		vpnServerFactory: func(manager session.Manager, serviceLocation dto.Location, providerID identity.Identity) *openvpn.Server {
+		vpnServerFactory: func(manager session.Manager, serviceLocation dto.Location, providerID identity.Identity, callback state.Callback) *openvpn.Server {
 			serverConfigGenerator := openvpn.NewServerConfigGenerator(options.DirectoryRuntime, serviceLocation, providerID)
 			sessionValidator := openvpn_session.NewSessionValidator(
 				manager.FindSession,
@@ -94,6 +95,7 @@ func NewCommandWith(
 				serverConfigGenerator,
 				options.DirectoryRuntime,
 				auth.NewMiddleware(sessionValidator),
+				state.NewMiddleware(callback),
 			)
 		},
 	}

@@ -1,44 +1,27 @@
 package auth
 
 import (
-	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/management"
 	"github.com/stretchr/testify/assert"
-	"net"
 	"testing"
 )
 
 type fakeAuthenticatorStub struct {
+	username      string
+	password      string
 	called        bool
 	authenticated bool
 }
 
 func (f *fakeAuthenticatorStub) fakeAuthenticator(username, password string) (bool, error) {
 	f.called = true
-
-	if username == "bad" {
-		return false, nil
-	}
-
-	f.authenticated = true
-	return true, nil
+	f.username = username
+	f.password = password
+	return f.authenticated, nil
 }
 
 func newFakeAuthenticatorStub() fakeAuthenticatorStub {
 	return fakeAuthenticatorStub{}
-}
-
-type fakeConnection struct {
-	lastDataWritten []byte
-	net.Conn
-}
-
-func (conn *fakeConnection) Read(b []byte) (int, error) {
-	return 0, nil
-}
-
-func (conn *fakeConnection) Write(b []byte) (n int, err error) {
-	conn.lastDataWritten = b
-	return 0, nil
 }
 
 func Test_Factory(t *testing.T) {
@@ -79,8 +62,8 @@ func Test_ConsumeLineTakes(t *testing.T) {
 
 	fas := newFakeAuthenticatorStub()
 	middleware := NewMiddleware(fas.fakeAuthenticator)
-	connection := &fakeConnection{}
-	middleware.Start(connection)
+	mockConnection := &management.MockConnection{}
+	middleware.Start(mockConnection)
 
 	for _, test := range tests {
 		consumed, err := middleware.ConsumeLine(test.line)
@@ -91,124 +74,92 @@ func Test_ConsumeLineTakes(t *testing.T) {
 
 func Test_ConsumeLineAuthState(t *testing.T) {
 	var tests = []struct {
-		line          string
-		expectedState openvpn.State
+		line string
 	}{
-		{">CLIENT:REAUTH,0,0", openvpn.STATE_AUTH},
-		{">CLIENT:CONNECT,0,0", openvpn.STATE_AUTH},
+		{">CLIENT:REAUTH,0,0"},
+		{">CLIENT:CONNECT,0,0"},
 	}
 
 	for _, test := range tests {
 		fas := newFakeAuthenticatorStub()
 		middleware := NewMiddleware(fas.fakeAuthenticator)
-		connection := &fakeConnection{}
-		middleware.Start(connection)
+		mockConnection := &management.MockConnection{}
+		middleware.Start(mockConnection)
 
 		consumed, err := middleware.ConsumeLine(test.line)
 		assert.NoError(t, err, test.line)
 		assert.True(t, consumed, test.line)
-		assert.Equal(t, test.expectedState, middleware.state)
 	}
 }
 
 func Test_ConsumeLineNotAuthState(t *testing.T) {
 	var tests = []struct {
-		line            string
-		unexpectedState openvpn.State
+		line string
 	}{
-		{">CLIENT:ENV,password=12341234", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,username=username", openvpn.STATE_AUTH},
+		{">CLIENT:ENV,password=12341234"},
+		{">CLIENT:ENV,username=username"},
 	}
 
 	for _, test := range tests {
 		fas := newFakeAuthenticatorStub()
 		middleware := NewMiddleware(fas.fakeAuthenticator)
-		connection := &fakeConnection{}
-		middleware.Start(connection)
+		mockConnection := &management.MockConnection{}
+		middleware.Start(mockConnection)
 
 		consumed, err := middleware.ConsumeLine(test.line)
 		assert.NoError(t, err, test.line)
-		assert.False(t, consumed, test.line)
-		assert.NotEqual(t, test.unexpectedState, middleware.state)
+		assert.True(t, consumed, test.line)
 		assert.False(t, fas.called)
 	}
 }
 
-func Test_ConsumeLineParseChecker(t *testing.T) {
-	var tests = []struct {
-		line          string
-		expectedState openvpn.State
-	}{
-		{">CLIENT:CONNECT,0,0", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,password=12341234", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,username=username1", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,END", openvpn.STATE_UNDEFINED},
-	}
-
-	fas := newFakeAuthenticatorStub()
-	middleware := NewMiddleware(fas.fakeAuthenticator)
-	connection := &fakeConnection{}
-	middleware.Start(connection)
-
-	for _, test := range tests {
-		consumed, err := middleware.ConsumeLine(test.line)
-		assert.NoError(t, err, test.line)
-		assert.True(t, consumed, test.line)
-		assert.Equal(t, test.expectedState, middleware.state)
-	}
-	assert.True(t, fas.called)
-	assert.Equal(t, "username1", middleware.lastUsername)
-	assert.Equal(t, "12341234", middleware.lastPassword)
-}
-
 func Test_ConsumeLineAuthTrueChecker(t *testing.T) {
 	var tests = []struct {
-		line          string
-		expectedState openvpn.State
+		line string
 	}{
-		{">CLIENT:CONNECT,0,0", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,password=12341234", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,username=username1", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,END", openvpn.STATE_UNDEFINED},
+		{">CLIENT:CONNECT,1,2"},
+		{">CLIENT:ENV,password=12341234"},
+		{">CLIENT:ENV,username=username1"},
+		{">CLIENT:ENV,END"},
 	}
 	fas := newFakeAuthenticatorStub()
+	fas.authenticated = true
 	middleware := NewMiddleware(fas.fakeAuthenticator)
-	connection := &fakeConnection{}
-	middleware.Start(connection)
+	mockConnection := &management.MockConnection{}
+	middleware.Start(mockConnection)
 
 	for _, test := range tests {
 		consumed, err := middleware.ConsumeLine(test.line)
 		assert.NoError(t, err, test.line)
 		assert.True(t, consumed, test.line)
-		assert.Equal(t, test.expectedState, middleware.state)
 	}
 	assert.True(t, fas.called)
-	assert.True(t, fas.authenticated)
+	assert.Equal(t, "username1", fas.username)
+	assert.Equal(t, "12341234", fas.password)
+	assert.Equal(t, "client-auth-nt 1 2", mockConnection.LastLine)
 }
 
 func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
 	var tests = []struct {
-		line          string
-		expectedState openvpn.State
+		line string
 	}{
-		{">CLIENT:CONNECT,0,0", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,username=bad", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,password=12341234", openvpn.STATE_AUTH},
-		{">CLIENT:ENV,END", openvpn.STATE_UNDEFINED},
+		{">CLIENT:CONNECT,3,4"},
+		{">CLIENT:ENV,username=bad"},
+		{">CLIENT:ENV,password=12341234"},
+		{">CLIENT:ENV,END"},
 	}
 	fas := newFakeAuthenticatorStub()
+	fas.authenticated = false
 	middleware := NewMiddleware(fas.fakeAuthenticator)
-	connection := &fakeConnection{}
-	middleware.Start(connection)
+	mockConnection := &management.MockConnection{}
+	middleware.Start(mockConnection)
 
 	for _, test := range tests {
 		consumed, err := middleware.ConsumeLine(test.line)
 		assert.NoError(t, err, test.line)
 		assert.True(t, consumed, test.line)
-		assert.Equal(t, test.expectedState, middleware.state)
 	}
-	assert.True(t, fas.called)
-	assert.False(t, fas.authenticated)
+	assert.Equal(t, "client-deny 3 4 wrong username or password", mockConnection.LastLine)
 }
 
 func TestMiddlewareConsumesClientIdsAntKeysWithSeveralDigits(t *testing.T) {

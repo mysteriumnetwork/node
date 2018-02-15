@@ -1,9 +1,7 @@
 package bytescount
 
 import (
-	"fmt"
-	"github.com/mysterium/node/openvpn"
-	"net"
+	"github.com/mysterium/node/openvpn/management"
 	"regexp"
 	"strconv"
 	"time"
@@ -12,35 +10,28 @@ import (
 // SessionStatsHandler is invoked when middleware receives statistics
 type SessionStatsHandler func(SessionStats) error
 
+const byteCountCommandTemplate = "bytecount %d"
+
 type middleware struct {
 	sessionStatsHandler SessionStatsHandler
 	interval            time.Duration
-
-	state      openvpn.State
-	connection net.Conn
 }
 
 // NewMiddleware returns new bytescount middleware
-func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Duration) openvpn.ManagementMiddleware {
+func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Duration) management.Middleware {
 	return &middleware{
 		sessionStatsHandler: sessionStatsHandler,
 		interval:            interval,
-
-		connection: nil,
 	}
 }
 
-func (middleware *middleware) Start(connection net.Conn) error {
-	middleware.connection = connection
-
-	command := fmt.Sprintf("bytecount %d\n", int(middleware.interval.Seconds()))
-	_, err := middleware.connection.Write([]byte(command))
-
+func (middleware *middleware) Start(commandWriter management.Connection) error {
+	_, err := commandWriter.SingleLineCommand(byteCountCommandTemplate, int(middleware.interval.Seconds()))
 	return err
 }
 
-func (middleware *middleware) Stop() error {
-	_, err := middleware.connection.Write([]byte("bytecount 0\n"))
+func (middleware *middleware) Stop(commandWriter management.Connection) error {
+	_, err := commandWriter.SingleLineCommand(byteCountCommandTemplate, 0)
 	return err
 }
 

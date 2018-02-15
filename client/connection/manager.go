@@ -93,14 +93,14 @@ func (manager *connectionManager) Disconnect() error {
 
 func (manager *connectionManager) onVpnStatusUpdate(vpnState openvpn.State) {
 	switch vpnState {
-	case openvpn.STATE_CONNECTING:
+	case openvpn.ConnectingState:
 		manager.status = statusConnecting()
-	case openvpn.STATE_CONNECTED:
+	case openvpn.ConnectedState:
 		manager.statsKeeper.MarkSessionStart()
 		manager.status = statusConnected(manager.sessionID)
-	case openvpn.STATE_EXITING:
+	case openvpn.ExitingState:
 		manager.status = statusNotConnected()
-	case openvpn.STATE_RECONNECTING:
+	case openvpn.ReconnectingState:
 		manager.status = statusReconnecting()
 	}
 }

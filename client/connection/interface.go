@@ -4,7 +4,7 @@ import (
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/client/state"
+	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/session"
 )
 
@@ -13,7 +13,7 @@ type DialogEstablisherCreator func(identity.Identity) communication.DialogEstabl
 
 // VpnClientCreator creates new vpn client by given session,
 // consumer identity, provider identity and uses state callback to report state changes
-type VpnClientCreator func(session.SessionDto, identity.Identity, identity.Identity, state.ClientStateCallback) (openvpn.Client, error)
+type VpnClientCreator func(session.SessionDto, identity.Identity, identity.Identity, state.Callback) (openvpn.Client, error)
 
 // Manager interface provides methods to manage connection
 type Manager interface {
