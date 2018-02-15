@@ -54,8 +54,10 @@ func NewCommandWith(
 	var locationDetector location.Detector
 	if options.LocationCountry != "" {
 		locationDetector = location.NewDetectorFake(options.LocationCountry)
-	} else {
+	} else if options.LocationDatabase != "" {
 		locationDetector = location.NewDetector(filepath.Join(options.DirectoryConfig, options.LocationDatabase))
+	} else {
+		locationDetector = location.NewDetector(filepath.Join(options.DirectoryConfig, defaultLocationDatabase))
 	}
 
 	return &Command{

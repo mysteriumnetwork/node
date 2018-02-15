@@ -74,9 +74,5 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		return
 	}
 
-	if options.LocationDatabase == "" {
-		options.LocationDatabase = defaultLocationDatabase
-	}
-
 	return options, err
 }
