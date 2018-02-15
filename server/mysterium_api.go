@@ -49,7 +49,7 @@ func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 }
 
 func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := newSignedPostRequest("node_register", dto.NodeRegisterRequest{
+	req, err := newSignedPostRequest("register_proposal", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	}, signer)
 	if err != nil {
@@ -58,14 +58,14 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Node registered: ", proposal.ProviderID)
+		log.Info(mysteriumAPILogPrefix, "Proposal registered for node: ", proposal.ProviderID)
 	}
 
 	return err
 }
 
 func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := newSignedPostRequest("node_send_stats", dto.NodeStatsRequest{
+	req, err := newSignedPostRequest("ping_proposal", dto.NodeStatsRequest{
 		NodeKey: proposal.ProviderID,
 	}, signer)
 	if err != nil {
@@ -74,7 +74,7 @@ func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, s
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Node stats sent: ", proposal.ProviderID)
+		log.Info(mysteriumAPILogPrefix, "Proposal pinged for node: ", proposal.ProviderID)
 	}
 	return err
 }
