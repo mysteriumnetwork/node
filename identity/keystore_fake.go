@@ -16,46 +16,46 @@ func NewKeystoreFake() *keyStoreFake {
 	return &keyStoreFake{}
 }
 
-func (self *keyStoreFake) Accounts() []accounts.Account {
-	return self.AccountsMock
+func (keyStore *keyStoreFake) Accounts() []accounts.Account {
+	return keyStore.AccountsMock
 }
 
-func (self *keyStoreFake) NewAccount(_ string) (accounts.Account, error) {
-	if self.ErrorMock != nil {
-		return accounts.Account{}, self.ErrorMock
+func (keyStore *keyStoreFake) NewAccount(_ string) (accounts.Account, error) {
+	if keyStore.ErrorMock != nil {
+		return accounts.Account{}, keyStore.ErrorMock
 	}
 
 	accountNew := accounts.Account{
 		Address: common.HexToAddress("0x000000000000000000000000000000000000bEEF"),
 	}
-	self.AccountsMock = append(self.AccountsMock, accountNew)
+	keyStore.AccountsMock = append(keyStore.AccountsMock, accountNew)
 
 	return accountNew, nil
 }
 
-func (self *keyStoreFake) Unlock(a accounts.Account, passphrase string) error {
-	if self.ErrorMock != nil {
-		return self.ErrorMock
+func (keyStore *keyStoreFake) Unlock(a accounts.Account, passphrase string) error {
+	if keyStore.ErrorMock != nil {
+		return keyStore.ErrorMock
 	}
 
 	return nil
 }
 
-func (self *keyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
-	if self.ErrorMock != nil {
-		return []byte{}, self.ErrorMock
+func (keyStore *keyStoreFake) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
+	if keyStore.ErrorMock != nil {
+		return []byte{}, keyStore.ErrorMock
 	}
 
-	self.LastHash = hash
+	keyStore.LastHash = hash
 	return []byte("signed"), nil
 }
 
-func (self *keyStoreFake) Find(a accounts.Account) (accounts.Account, error) {
-	if self.ErrorMock != nil {
-		return accounts.Account{}, self.ErrorMock
+func (keyStore *keyStoreFake) Find(a accounts.Account) (accounts.Account, error) {
+	if keyStore.ErrorMock != nil {
+		return accounts.Account{}, keyStore.ErrorMock
 	}
 
-	for _, acc := range self.AccountsMock {
+	for _, acc := range keyStore.AccountsMock {
 		if acc.Address == a.Address {
 			return acc, nil
 		}
