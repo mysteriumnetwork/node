@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"encoding/json"
+	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client/connection"
 	"github.com/mysterium/node/identity"
@@ -27,6 +28,8 @@ type connectionEndpoint struct {
 	ipResolver  ip.Resolver
 	statsKeeper bytescount.SessionStatsKeeper
 }
+
+const connectionLogPrefix = "[Connection] "
 
 func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *connectionEndpoint {
 	return &connectionEndpoint{
@@ -61,6 +64,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		case connection.ErrAlreadyExists:
 			utils.SendError(resp, err, http.StatusConflict)
 		default:
+			log.Error(connectionLogPrefix, err)
 			utils.SendError(resp, err, http.StatusInternalServerError)
 		}
 		return
