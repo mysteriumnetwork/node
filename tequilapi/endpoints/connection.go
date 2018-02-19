@@ -91,7 +91,7 @@ func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	ip, err := ce.ipResolver.GetPublicIP()
 	if err != nil {
-		utils.SendError(writer, err, http.StatusInternalServerError)
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return
 	}
 	response := struct {
