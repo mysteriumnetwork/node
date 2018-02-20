@@ -60,6 +60,13 @@ func (c *Config) SetTLSCrypt(cryptFile string) {
 	c.AddOptions(OptionFile("tls-crypt", cryptFile))
 }
 
+func (c *Config) SetReconnectLimits() {
+	c.setParam("connect-retry-max", "2")
+	c.setParam("remap-usr1", "SIGTERM")
+	c.setFlag("single-session")
+	c.setFlag("tls-exit")
+}
+
 func (c *Config) SetKeepAlive(interval, timeout int) {
 	c.setParam("keepalive", strconv.Itoa(interval)+" "+strconv.Itoa(timeout))
 }

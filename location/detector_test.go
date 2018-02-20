@@ -16,6 +16,7 @@ func TestDetectorDetectCountry(t *testing.T) {
 		{"95.85.39.36", "NL", ""},
 		{"127.0.0.1", "", ""},
 		{"8.8.8.8.8", "", "failed to parse IP"},
+		{"185.243.112.225", "", ""},
 		{"asd", "", "failed to parse IP"},
 	}
 

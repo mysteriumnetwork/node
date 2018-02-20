@@ -40,6 +40,7 @@ func NewClientConfig(
 	config.SetClientMode(remote, 1194)
 	config.SetTLSCACertificate(caCertPath)
 	config.SetTLSCrypt(tlsCryptKeyPath)
+	config.SetReconnectLimits()
 
 	config.SetDevice("tun")
 	config.setParam("cipher", "AES-256-GCM")
