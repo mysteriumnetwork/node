@@ -37,7 +37,7 @@ func TestServiceProposalUnserialize(t *testing.T) {
 		ServiceType:       "openvpn",
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
-		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
+		PaymentMethod:     dto_openvpn.PaymentPerTime{},
 		ProviderID:        "node",
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
@@ -74,7 +74,7 @@ func TestServiceProposalUnserializePerTimePaymentMethod(t *testing.T) {
 	err := json.Unmarshal(jsonData, &actual)
 
 	assert.Nil(t, err)
-	assert.Exactly(t, dto_openvpn.PaymentMethodPerTime{}, actual.PaymentMethod)
+	assert.Exactly(t, dto_openvpn.PaymentPerTime{}, actual.PaymentMethod)
 }
 
 func TestServiceProposalUnserializeUnknownPaymentMethod(t *testing.T) {
@@ -118,7 +118,7 @@ func TestServiceProposalSerialize(t *testing.T) {
 		ServiceType:       "openvpn",
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 		PaymentMethodType: "PER_TIME",
-		PaymentMethod:     dto_openvpn.PaymentMethodPerTime{},
+		PaymentMethod:     dto_openvpn.PaymentPerTime{},
 		ProviderID:        "node",
 		ProviderContacts:  []dto_discovery.Contact{},
 	}

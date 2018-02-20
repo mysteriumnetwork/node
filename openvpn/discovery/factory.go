@@ -23,8 +23,8 @@ func NewServiceProposalWithLocation(
 			LocationOriginate: serviceLocation,
 			SessionBandwidth:  dto.Bandwidth(10 * datasize.MB),
 		},
-		PaymentMethodType: dto.PAYMENT_METHOD_PER_TIME,
-		PaymentMethod: dto.PaymentMethodPerTime{
+		PaymentMethodType: dto.PaymentMethodPerTime,
+		PaymentMethod: dto.PaymentPerTime{
 			// 15 MYST/month = 0,5 MYST/day = 0,125 MYST/hour
 			Price:    money.NewMoney(0.125, money.CURRENCY_MYST),
 			Duration: 1 * time.Hour,

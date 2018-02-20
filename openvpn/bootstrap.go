@@ -18,9 +18,9 @@ func Bootstrap() {
 	)
 
 	dto_discovery.RegisterPaymentMethodUnserializer(
-		dto_openvpn.PAYMENT_METHOD_PER_TIME,
+		dto_openvpn.PaymentMethodPerTime,
 		func(rawDefinition *json.RawMessage) (dto_discovery.PaymentMethod, error) {
-			var method dto_openvpn.PaymentMethodPerTime
+			var method dto_openvpn.PaymentPerTime
 			err := json.Unmarshal(*rawDefinition, &method)
 
 			return method, err
@@ -28,9 +28,9 @@ func Bootstrap() {
 	)
 
 	dto_discovery.RegisterPaymentMethodUnserializer(
-		dto_openvpn.PAYMENT_METHOD_PER_BYTES,
+		dto_openvpn.PaymentMethodPerBytes,
 		func(rawDefinition *json.RawMessage) (dto_discovery.PaymentMethod, error) {
-			var method dto_openvpn.PaymentMethodPerBytes
+			var method dto_openvpn.PaymentPerBytes
 			err := json.Unmarshal(*rawDefinition, &method)
 
 			return method, err

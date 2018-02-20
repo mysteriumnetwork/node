@@ -5,15 +5,15 @@ import (
 	"github.com/mysterium/node/money"
 )
 
-const PAYMENT_METHOD_PER_BYTES = "PER_BYTES"
+const PaymentMethodPerBytes = "PER_BYTES"
 
-type PaymentMethodPerBytes struct {
+type PaymentPerBytes struct {
 	Price money.Money `json:"price"`
 
 	// Service bytes provided for paid price
 	Bytes datasize.BitSize `json:"bytes,omitempty"`
 }
 
-func (method PaymentMethodPerBytes) GetPrice() money.Money {
+func (method PaymentPerBytes) GetPrice() money.Money {
 	return method.Price
 }
