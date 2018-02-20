@@ -16,6 +16,9 @@ cache:
   directories:
   - $CACHE_ROOT_DIR #cache everything in cache root dir
 
+before_install:
+  - echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
+  - echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
 install:
   #setups PATH variable to contain travis tools dir and creates directory if needed (it could be already created by cache setup)
   - source bin/travis_scripts/setup_tools_dir $BUILD_TOOLS_PATH
