@@ -16,6 +16,8 @@ fi
 
 if go test -cover ${ARGUMENTS} ; then
     echo "All tests passed."
+    exit 0
 else
     echo "Some tests failed!"
+    exit -1
 fi
