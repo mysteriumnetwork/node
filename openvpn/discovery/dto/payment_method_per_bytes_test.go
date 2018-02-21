@@ -14,11 +14,11 @@ var (
 
 func TestPaymentMethodPerBytesSerialize(t *testing.T) {
 	var tests = []struct {
-		model        PaymentMethodPerBytes
+		model        PaymentPerBytes
 		expectedJson string
 	}{
 		{
-			PaymentMethodPerBytes{
+			PaymentPerBytes{
 				Price: price,
 				Bytes: datasize.Gigabyte,
 			},
@@ -31,7 +31,7 @@ func TestPaymentMethodPerBytesSerialize(t *testing.T) {
 			}`,
 		},
 		{
-			PaymentMethodPerBytes{},
+			PaymentPerBytes{},
 			`{
 				"price": {}
 			}`,
@@ -49,7 +49,7 @@ func TestPaymentMethodPerBytesSerialize(t *testing.T) {
 func TestPaymentMethodPerBytesUnserialize(t *testing.T) {
 	var tests = []struct {
 		json          string
-		expectedModel PaymentMethodPerBytes
+		expectedModel PaymentPerBytes
 		expectedError error
 	}{
 		{
@@ -60,7 +60,7 @@ func TestPaymentMethodPerBytesUnserialize(t *testing.T) {
 				},
 				"bytes": 8589934592
 			}`,
-			PaymentMethodPerBytes{
+			PaymentPerBytes{
 				Price: price,
 				Bytes: datasize.Gigabyte,
 			},
@@ -71,18 +71,18 @@ func TestPaymentMethodPerBytesUnserialize(t *testing.T) {
 				"price": {},
 				"bytes": 0
 			}`,
-			PaymentMethodPerBytes{},
+			PaymentPerBytes{},
 			nil,
 		},
 		{
 			`{}`,
-			PaymentMethodPerBytes{},
+			PaymentPerBytes{},
 			nil,
 		},
 	}
 
 	for _, test := range tests {
-		var model PaymentMethodPerBytes
+		var model PaymentPerBytes
 		err := json.Unmarshal([]byte(test.json), &model)
 
 		assert.Equal(t, test.expectedModel, model)

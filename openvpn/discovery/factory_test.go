@@ -34,10 +34,10 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 		},
 		proposal.ServiceDefinition,
 	)
-	assert.Equal(t, dto.PAYMENT_METHOD_PER_TIME, proposal.PaymentMethodType)
+	assert.Equal(t, dto.PaymentMethodPerTime, proposal.PaymentMethodType)
 	assert.Equal(
 		t,
-		dto.PaymentMethodPerTime{
+		dto.PaymentPerTime{
 			Price:    money.Money{12500000, money.Currency("MYST")},
 			Duration: 60 * time.Minute,
 		},
