@@ -42,25 +42,31 @@ before_deploy:
 
 deploy:
   - provider: pages
-      local-dir: binaries
-      skip-cleanup: true
-      github-token: "$GIT_RELEASES_API_KEY"
-      keep-history: false
-      target-branch: mysterium_$TRAVIS_OS_NAME
-      repo: MysteriumNetwork/build-artifacts
-      on:
-        branch: master
+    local-dir: binaries
+    skip-cleanup: true
+    github-token: "$GIT_RELEASES_API_KEY"
+    keep-history: false
+    target-branch: mysterium_$TRAVIS_OS_NAME
+    repo: MysteriumNetwork/build-artifacts
+    on:
+      branch: master
   - provider: releases
-      file_glob: true
-      file: binaries/*
-      skip_cleanup: true
-      api_key: "$GIT_RELEASES_API_KEY"
-      on:
-        tags: true
-        branch: master
+    file_glob: true
+    file: binaries/*
+    skip_cleanup: true
+    api_key: "$GIT_RELEASES_API_KEY"
+    on:
+      tags: true
+      branch: master
 notifications:
   slack:
-    secure: "JOxs0kN/SscwjODlHIEYrWzPE2L/IwmpIoMd31qZFzp3nLgE/LTbFfMGT3b872YqPdApD7ASlsyQ3k9ab2fMgu29V7ER87XKx8JmDuAJrIUnc5SyTbWMs1lwihnidGKExNgcbDPifBHVQPQYBQW7D6uqmb0UfcR5N958pbWY/bNdmgA+AdG/vuBWE2fTYmAxMo7FDU/KQd26Vd6ztmWcQNYoEuIjcCm5R/NQ/4ApM3KNH3prj4QGnsjoa0YLrhy2gFIYPoB0J00ETZCb14Xgv49fwgVX85vOVRVR3bq22hABrAiVirvV3sK8WHxegeTcRpF4QJIjN6tNqFFzKEUbcu3JBbjR3ot+rsBmuxq+62Yby9Bpy+H/XtGHc/g1B0SmYz8CedHkFNpET2lcuUpF7rbNJnl63Orim6dBI5KgMLhdmVtgVKojOe3rTwGywDLHyCTuauCY5Fh1TiCM8YxEWjNU4+09pTDHOv7QLTP0JzWN60LwdGtyXbFvWY31ZNg/8YJTFNmxgN34lcvOiDOWwajtXT0kUGQjlW7PWkbkYDoWo82X54HXd7NWaknuB8SIvQkiafsXHpKCCYr1GEfCrEFd9m3cAxYq8Zr+QegUHuNQ4DlzxSMO+8Adx7/0YlMM3uqy8o3Jguuk3ikKteAH4suyUBTqCREP6X8JOHohaC0="secure: "JOxs0kN/SscwjODlHIEYrWzPE2L/IwmpIoMd31qZFzp3nLgE/LTbFfMGT3b872YqPdApD7ASlsyQ3k9ab2fMgu29V7ER87XKx8JmDuAJrIUnc5SyTbWMs1lwihnidGKExNgcbDPifBHVQPQYBQW7D6uqmb0UfcR5N958pbWY/bNdmgA+AdG/vuBWE2fTYmAxMo7FDU/KQd26Vd6ztmWcQNYoEuIjcCm5R/NQ/4ApM3KNH3prj4QGnsjoa0YLrhy2gFIYPoB0J00ETZCb14Xgv49fwgVX85vOVRVR3bq22hABrAiVirvV3sK8WHxegeTcRpF4QJIjN6tNqFFzKEUbcu3JBbjR3ot+rsBmuxq+62Yby9Bpy+H/XtGHc/g1B0SmYz8CedHkFNpET2lcuUpF7rbNJnl63Orim6dBI5KgMLhdmVtgVKojOe3rTwGywDLHyCTuauCY5Fh1TiCM8YxEWjNU4+09pTDHOv7QLTP0JzWN60LwdGtyXbFvWY31ZNg/8YJTFNmxgN34lcvOiDOWwajtXT0kUGQjlW7PWkbkYDoWo82X54HXd7NWaknuB8SIvQkiafsXHpKCCYr1GEfCrEFd9m3cAxYq8Zr+QegUHuNQ4DlzxSMO+8Adx7/0YlMM3uqy8o3Jguuk3ikKteAH4suyUBTqCREP6X8JOHohaC0="
+    secure: >
+      JOxs0kN/SscwjODlHIEYrWzPE2L/IwmpIoMd31qZFzp3nLgE/LTbFfMGT3b872YqPdApD7ASlsyQ3k9ab2fMgu29V7ER87XKx8JmDuAJrIUnc5SyTb
+      WMs1lwihnidGKExNgcbDPifBHVQPQYBQW7D6uqmb0UfcR5N958pbWY/bNdmgA+AdG/vuBWE2fTYmAxMo7FDU/KQd26Vd6ztmWcQNYoEuIjcCm5R/NQ
+      /4ApM3KNH3prj4QGnsjoa0YLrhy2gFIYPoB0J00ETZCb14Xgv49fwgVX85vOVRVR3bq22hABrAiVirvV3sK8WHxegeTcRpF4QJIjN6tNqFFzKEUbcu
+      3JBbjR3ot+rsBmuxq+62Yby9Bpy+H/XtGHc/g1B0SmYz8CedHkFNpET2lcuUpF7rbNJnl63Orim6dBI5KgMLhdmVtgVKojOe3rTwGywDLHyCTuauCY
+      5Fh1TiCM8YxEWjNU4+09pTDHOv7QLTP0JzWN60LwdGtyXbFvWY31ZNg/8YJTFNmxgN34lcvOiDOWwajtXT0kUGQjlW7PWkbkYDoWo82X54HXd7NWak
+      nuB8SIvQkiafsXHpKCCYr1GEfCrEFd9m3cAxYq8Zr+QegUHuNQ4DlzxSMO+8Adx7/0YlMM3uqy8o3Jguuk3ikKteAH4suyUBTqCREP6X8JOHohaC0=
     on_failure: always
     on_success: change
     on_pull_requests: false
