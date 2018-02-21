@@ -45,12 +45,11 @@ deploy:
     target-branch: master
     repo: MysteriumNetwork/build-artifacts
     on:
-      branch: improvement/upload-mysterium-binaries-on-master-branch-commit #change this to master if it works
+      branch: master
 
   - provider: releases
-    file:
-      - "build/client/mysterium_client"
-      - "build/server/mysterium_server"
+    file_glob: true
+    file: binaries/*
     skip_cleanup: true
     api_key: "$GIT_RELEASES_API_KEY"
     on:
