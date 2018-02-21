@@ -42,6 +42,7 @@ deploy:
     skip-cleanup: true
     github-token: "$GIT_RELEASES_API_KEY"
     keep-history: true
+    traget-branch: master
     repo: MysteriumNetwork/build-artifacts
     on:
       branch: improvement/upload-mysterium-binaries-on-master-branch-commit #change this to master if it works
