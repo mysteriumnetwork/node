@@ -16,7 +16,7 @@ const ipifyAPIClient = "goclient-v0.1"
 const ipifyAPILogPrefix = "[ipify.api] "
 
 func NewResolver() Resolver {
-	return NewResolverWithTimeout(60 * time.Second)
+	return NewResolverWithTimeout(5 * time.Second)
 }
 
 func NewResolverWithTimeout(timeout time.Duration) Resolver {

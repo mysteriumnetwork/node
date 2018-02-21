@@ -300,7 +300,7 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 
 	connEndpoint.GetIP(resp, nil, nil)
 
-	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 	assert.JSONEq(
 		t,
 		`{
