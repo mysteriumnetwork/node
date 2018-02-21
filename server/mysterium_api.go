@@ -21,20 +21,22 @@ type HttpTransport interface {
 }
 
 type mysteriumAPI struct {
-	http HttpTransport
+	http                HttpTransport
+	discoveryAPIAddress string
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
-func NewClient() Client {
+func NewClient(discoveryAPIAddress string) Client {
 	return &mysteriumAPI{
 		&http.Client{
 			Transport: &http.Transport{},
 		},
+		discoveryAPIAddress,
 	}
 }
 
 func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
-	req, err := newSignedPostRequest("identities", dto.CreateIdentityRequest{
+	req, err := newSignedPostRequest(mApi.discoveryAPIAddress, "identities", dto.CreateIdentityRequest{
 		Identity: id.Address,
 	}, signer)
 	if err != nil {
@@ -49,7 +51,7 @@ func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 }
 
 func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := newSignedPostRequest("register_proposal", dto.NodeRegisterRequest{
+	req, err := newSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	}, signer)
 	if err != nil {
@@ -65,7 +67,7 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 }
 
 func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := newSignedPostRequest("ping_proposal", dto.NodeStatsRequest{
+	req, err := newSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
 		NodeKey: proposal.ProviderID,
 	}, signer)
 	if err != nil {
@@ -85,7 +87,7 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 		values.Set("node_key", providerID)
 	}
 
-	req, err := newGetRequest("proposals", values)
+	req, err := newGetRequest(mApi.discoveryAPIAddress, "proposals", values)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +105,7 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 
 func (mApi *mysteriumAPI) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionId)
-	req, err := newSignedPostRequest(path, sessionStats, signer)
+	req, err := newSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
 	if err != nil {
 		return err
 	}

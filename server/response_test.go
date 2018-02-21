@@ -9,7 +9,7 @@ import (
 )
 
 func TestHttpErrorIsReportedAsErrorReturnValue(t *testing.T) {
-	req, err := newGetRequest("path", nil)
+	req, err := newGetRequest(testMysteriumApiUrl, "path", nil)
 	assert.NoError(t, err)
 
 	response := &http.Response{
@@ -26,7 +26,7 @@ type testResponse struct {
 
 func TestHttpResponseBodyIsParsedCorrectly(t *testing.T) {
 
-	req, err := newGetRequest("path", nil)
+	req, err := newGetRequest(testMysteriumApiUrl, "path", nil)
 	assert.NoError(t, err)
 
 	response := &http.Response{
