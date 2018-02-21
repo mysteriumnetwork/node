@@ -60,6 +60,14 @@ func (c *Config) SetTLSCrypt(cryptFile string) {
 	c.AddOptions(OptionFile("tls-crypt", cryptFile))
 }
 
+// RestrictReconnects describes conditions which enforces client to close a session in case of failed authentication
+func (c *Config) RestrictReconnects() {
+	c.setParam("connect-retry-max", "2")
+	c.setParam("remap-usr1", "SIGTERM")
+	c.setFlag("single-session")
+	c.setFlag("tls-exit")
+}
+
 func (c *Config) SetKeepAlive(interval, timeout int) {
 	c.setParam("keepalive", strconv.Itoa(interval)+" "+strconv.Itoa(timeout))
 }
