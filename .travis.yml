@@ -1,6 +1,10 @@
 sudo: false
 language: go
 
+os:
+  - linux
+  - osx
+
 go:
   - 1.9.2
 go_import_path: github.com/mysterium/node
@@ -45,7 +49,7 @@ deploy:
     skip-cleanup: true
     github-token: "$GIT_RELEASES_API_KEY"
     keep-history: false
-    target-branch: master
+    target-branch: mysterium #each project should use separate branch for artifact storage as each branch will force pushed - no history is preserved
     repo: MysteriumNetwork/build-artifacts
     on:
       branch: master
