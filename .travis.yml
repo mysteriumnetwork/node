@@ -29,7 +29,10 @@ install:
   - glide "-home" $GLIDE_HOME install
 
 #This is actual build/test command
-script: bin/test && bin/client_build && bin/server_build
+script:
+  - bin/test
+  - bin/client_build
+  - bin/server_build
 
 before_deploy:
   - mkdir binaries
