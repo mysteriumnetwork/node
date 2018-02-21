@@ -1,64 +1,55 @@
 sudo: false
 language: go
-
 os:
-  - linux
-  - osx
-
+- linux
+- osx
 go:
-  - 1.9.2
+- 1.9.2
 go_import_path: github.com/mysterium/node
-
 env:
   global:
-    - CACHE_ROOT_DIR=$HOME/cache
-    - BUILD_TOOLS_PATH=$CACHE_ROOT_DIR/build_tools
-    #don't cache glide dependencies yet - it always triggers cache changes and slows down build even more, something to do with git index files
-    - GLIDE_HOME=$HOME/glide-home
-
+  - CACHE_ROOT_DIR=$HOME/cache
+  - BUILD_TOOLS_PATH=$CACHE_ROOT_DIR/build_tools
+  - GLIDE_HOME=$HOME/glide-home
 cache:
   directories:
-  - $CACHE_ROOT_DIR #cache everything in cache root dir
-
+  - "$CACHE_ROOT_DIR"
 before_install:
-  - rm -f .env
-  - echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
-  - echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
+- rm -f .env
+- echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
+- echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
 install:
-  #setups PATH variable to contain travis tools dir and creates directory if needed (it could be already created by cache setup)
-  - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
-  #ensure that we have glide (possibly from cache) or setup a fresh one
-  - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
-  #run glide dependencies setup (it takes about 52 secs to download it from scratch)
-  - glide "-home" $GLIDE_HOME install
-
-#This is actual build/test command
+- source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
+- source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
+- glide "-home" $GLIDE_HOME install
 script:
-  - bin/test
-  - bin/client_build
-  - bin/server_build
-
+- bin/test
+- bin/client_build
+- bin/server_build
 before_deploy:
-  - mkdir binaries
-  - cp build/client/mysterium_client binaries/mysterium_client_$TRAVIS_OS_NAME
-  - cp build/server/mysterium_server binaries/mysterium_server_$TRAVIS_OS_NAME
-
+- mkdir binaries
+- cp build/client/mysterium_client binaries/mysterium_client_$TRAVIS_OS_NAME
+- cp build/server/mysterium_server binaries/mysterium_server_$TRAVIS_OS_NAME
 deploy:
-  - provider: pages
-    local-dir: binaries
-    skip-cleanup: true
-    github-token: "$GIT_RELEASES_API_KEY"
-    keep-history: false
-    target-branch: mysterium_$TRAVIS_OS_NAME #each project should use separate branch for artifact storage as each branch will force pushed - no history is preserved
-    repo: MysteriumNetwork/build-artifacts
-    on:
-      branch: master
-
-  - provider: releases
-    file_glob: true
-    file: binaries/*
-    skip_cleanup: true
-    api_key: "$GIT_RELEASES_API_KEY"
-    on:
-      tags: true
-      branch: master
+- provider: pages
+  local-dir: binaries
+  skip-cleanup: true
+  github-token: "$GIT_RELEASES_API_KEY"
+  keep-history: false
+  target-branch: mysterium_$TRAVIS_OS_NAME
+  repo: MysteriumNetwork/build-artifacts
+  on:
+    branch: master
+- provider: releases
+  file_glob: true
+  file: binaries/*
+  skip_cleanup: true
+  api_key: "$GIT_RELEASES_API_KEY"
+  on:
+    tags: true
+    branch: master
+notifications:
+  slack:
+    secure: 2k6kFzD1UBFCP0Y0V4UgMoe5b+FKbwtoCqlK+SUF5ADMDQ7Svivq1qNz17SJiiCMQnj7u8grR3FQRcy81yGbkNbwunqBa3raV4a7RoBhrLZH0yunFbsP7kWqRfBIiLd+PMLeq/vHI0uWW0EAS9fCs2gmod5zfrZ3fJ7Na5avM3JXU+H1scMbx20h6AmM9PIvNdnilbexTzmWUUZNHAWTsTzx5W/ieprVTLgOHkm/iJCUCeelviQQ1Bs6t99eqnrjHBJRexEipDtPuqU5mKHHkGD4VTS6cRZDzJNEj17iClQJoC9agzbnhCyGRLvabi0gBuJW3q9Z6Oj7+ZWyk4cgNS2h5D7P13yDDxmJJzKTo0vXz61qAzrk42YzWl4FfZWTFkpaXZGdmTI/yiJwUiwDYtbu2vKZ8Nw1X7HSUE+Gi3TBx0Io6iChKGU6eifjV+HC/Sqc55DSor0b+wMg58H2b20sXxoGm2pFOAvrgdmC5FMRsiJ73bJ9IOzDE598cVu44s6qyyk/LBx2BW/MdAEiPfCTUikTCOunmbgsuFanenPntA6XUPnnzs3DUb/BsA/dXILtyerA6D1F8OD5HyOUyMJ5G6k9hN0Ds5L0mPNmaMI1NTXdpNFZd7oDNt4Kje2N8mEVmyD7D3JvmGGLw0XYKNLEbaEMONfXwS85gXvijDI=
+    on_failure: always
+    on_success: change
