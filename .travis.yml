@@ -1,53 +1,63 @@
 sudo: false
 language: go
+
 os:
-- linux
-- osx
+  - linux
+  - osx
+
 go:
-- 1.9.2
+  - 1.9.2
+
 go_import_path: github.com/mysterium/node
+
 env:
   global:
-  - CACHE_ROOT_DIR=$HOME/cache
-  - BUILD_TOOLS_PATH=$CACHE_ROOT_DIR/build_tools
-  - GLIDE_HOME=$HOME/glide-home
+    - CACHE_ROOT_DIR=$HOME/cache
+    - BUILD_TOOLS_PATH=$CACHE_ROOT_DIR/build_tools
+    - GLIDE_HOME=$HOME/glide-home
+
 cache:
   directories:
-  - "$CACHE_ROOT_DIR"
+    - "$CACHE_ROOT_DIR"
+
 before_install:
-- rm -f .env
-- echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
-- echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
+  - rm -f .env
+  - echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
+  - echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
+
 install:
-- source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
-- source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
-- glide "-home" $GLIDE_HOME install
+  - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
+  - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
+  - glide "-home" $GLIDE_HOME install
+
 script:
-- bin/test
-- bin/client_build
-- bin/server_build
+  - bin/test
+  - bin/client_build
+  - bin/server_build
+
 before_deploy:
-- mkdir binaries
-- cp build/client/mysterium_client binaries/mysterium_client_$TRAVIS_OS_NAME
-- cp build/server/mysterium_server binaries/mysterium_server_$TRAVIS_OS_NAME
+  - mkdir binaries
+  - cp build/client/mysterium_client binaries/mysterium_client_$TRAVIS_OS_NAME
+  - cp build/server/mysterium_server binaries/mysterium_server_$TRAVIS_OS_NAME
+
 deploy:
-- provider: pages
-  local-dir: binaries
-  skip-cleanup: true
-  github-token: "$GIT_RELEASES_API_KEY"
-  keep-history: false
-  target-branch: mysterium_$TRAVIS_OS_NAME
-  repo: MysteriumNetwork/build-artifacts
-  on:
-    branch: master
-- provider: releases
-  file_glob: true
-  file: binaries/*
-  skip_cleanup: true
-  api_key: "$GIT_RELEASES_API_KEY"
-  on:
-    tags: true
-    branch: master
+  - provider: pages
+      local-dir: binaries
+      skip-cleanup: true
+      github-token: "$GIT_RELEASES_API_KEY"
+      keep-history: false
+      target-branch: mysterium_$TRAVIS_OS_NAME
+      repo: MysteriumNetwork/build-artifacts
+      on:
+        branch: master
+  - provider: releases
+      file_glob: true
+      file: binaries/*
+      skip_cleanup: true
+      api_key: "$GIT_RELEASES_API_KEY"
+      on:
+        tags: true
+        branch: master
 notifications:
   slack:
     secure: "JOxs0kN/SscwjODlHIEYrWzPE2L/IwmpIoMd31qZFzp3nLgE/LTbFfMGT3b872YqPdApD7ASlsyQ3k9ab2fMgu29V7ER87XKx8JmDuAJrIUnc5SyTbWMs1lwihnidGKExNgcbDPifBHVQPQYBQW7D6uqmb0UfcR5N958pbWY/bNdmgA+AdG/vuBWE2fTYmAxMo7FDU/KQd26Vd6ztmWcQNYoEuIjcCm5R/NQ/4ApM3KNH3prj4QGnsjoa0YLrhy2gFIYPoB0J00ETZCb14Xgv49fwgVX85vOVRVR3bq22hABrAiVirvV3sK8WHxegeTcRpF4QJIjN6tNqFFzKEUbcu3JBbjR3ot+rsBmuxq+62Yby9Bpy+H/XtGHc/g1B0SmYz8CedHkFNpET2lcuUpF7rbNJnl63Orim6dBI5KgMLhdmVtgVKojOe3rTwGywDLHyCTuauCY5Fh1TiCM8YxEWjNU4+09pTDHOv7QLTP0JzWN60LwdGtyXbFvWY31ZNg/8YJTFNmxgN34lcvOiDOWwajtXT0kUGQjlW7PWkbkYDoWo82X54HXd7NWaknuB8SIvQkiafsXHpKCCYr1GEfCrEFd9m3cAxYq8Zr+QegUHuNQ4DlzxSMO+8Adx7/0YlMM3uqy8o3Jguuk3ikKteAH4suyUBTqCREP6X8JOHohaC0="secure: "JOxs0kN/SscwjODlHIEYrWzPE2L/IwmpIoMd31qZFzp3nLgE/LTbFfMGT3b872YqPdApD7ASlsyQ3k9ab2fMgu29V7ER87XKx8JmDuAJrIUnc5SyTbWMs1lwihnidGKExNgcbDPifBHVQPQYBQW7D6uqmb0UfcR5N958pbWY/bNdmgA+AdG/vuBWE2fTYmAxMo7FDU/KQd26Vd6ztmWcQNYoEuIjcCm5R/NQ/4ApM3KNH3prj4QGnsjoa0YLrhy2gFIYPoB0J00ETZCb14Xgv49fwgVX85vOVRVR3bq22hABrAiVirvV3sK8WHxegeTcRpF4QJIjN6tNqFFzKEUbcu3JBbjR3ot+rsBmuxq+62Yby9Bpy+H/XtGHc/g1B0SmYz8CedHkFNpET2lcuUpF7rbNJnl63Orim6dBI5KgMLhdmVtgVKojOe3rTwGywDLHyCTuauCY5Fh1TiCM8YxEWjNU4+09pTDHOv7QLTP0JzWN60LwdGtyXbFvWY31ZNg/8YJTFNmxgN34lcvOiDOWwajtXT0kUGQjlW7PWkbkYDoWo82X54HXd7NWaknuB8SIvQkiafsXHpKCCYr1GEfCrEFd9m3cAxYq8Zr+QegUHuNQ4DlzxSMO+8Adx7/0YlMM3uqy8o3Jguuk3ikKteAH4suyUBTqCREP6X8JOHohaC0="
