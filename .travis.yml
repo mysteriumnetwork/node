@@ -52,7 +52,7 @@ deploy:
     target-branch: mysterium_$TRAVIS_OS_NAME #each project should use separate branch for artifact storage as each branch will force pushed - no history is preserved
     repo: MysteriumNetwork/build-artifacts
     on:
-      branch: hotfix/enable-history-preserve-for-pages-provider
+      branch: master
 
   - provider: releases
     file_glob: true
