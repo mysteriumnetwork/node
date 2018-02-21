@@ -52,7 +52,7 @@ deploy:
     target-branch: mysterium #each project should use separate branch for artifact storage as each branch will force pushed - no history is preserved
     repo: MysteriumNetwork/build-artifacts
     on:
-      branch: master
+      branch: hotfix/enable-history-preserve-for-pages-provider
 
   - provider: releases
     file_glob: true
