@@ -17,15 +17,39 @@ cache:
   - $CACHE_ROOT_DIR #cache everything in cache root dir
 
 before_install:
+  - rm -f .env
   - echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
   - echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
 install:
   #setups PATH variable to contain travis tools dir and creates directory if needed (it could be already created by cache setup)
-  - source bin/travis_scripts/setup_tools_dir $BUILD_TOOLS_PATH
+  - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
   #ensure that we have glide (possibly from cache) or setup a fresh one
-  - source bin/travis_scripts/ensure_glide $BUILD_TOOLS_PATH "v0.13.1"
+  - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
   #run glide dependencies setup (it takes about 52 secs to download it from scratch)
   - glide "-home" $GLIDE_HOME install
 
 #This is actual build/test command
 script: bin/test && bin/client_build && bin/server_build
+
+before_deploy:
+  - mkdir binaries
+  - cp build/client/mysterium_client binaries/mysterium_client_$TRAVIS_OS_NAME
+  - cp build/server/mysterium_server binaries/mysterium_server_$TRAVIS_OS_NAME
+
+deploy:
+  - provider: pages
+    localdir: binaries
+    skip-cleanup: true
+    github-token: "$GIT_RELEASES_API_KEY"
+    keep-history: true
+    repo: MysteriumNetwork/binaries
+
+  - provider: releases
+    file:
+      - "build/client/mysterium_client"
+      - "build/server/mysterium_server"
+    skip_cleanup: true
+    api_key: "$GIT_RELEASES_API_KEY"
+    on:
+      tags: true
+      branch: master
