@@ -22,7 +22,6 @@ type CommandOptions struct {
 }
 
 var mysteriumApiUrl string
-var natsServerIP string
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
@@ -71,12 +70,6 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"discovery-address",
 		mysteriumApiUrl,
 		"Address (URL form) of discovery service",
-	)
-	flags.StringVar(
-		&options.BrokerAddress,
-		"broker-address",
-		natsServerIP,
-		"Address (IP or domain name) of message broker",
 	)
 
 	err = flags.Parse(args[1:])

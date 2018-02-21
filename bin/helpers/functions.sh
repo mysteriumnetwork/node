@@ -6,6 +6,5 @@ function get_linker_ldflags {
         -X 'github.com/mysterium/node/server.mysteriumApiUrl=${MYSTERIUM_API_URL}'
         -X 'github.com/mysterium/node/server.natsServerIP=${NATS_SERVER_IP}'
         -X 'github.com/mysterium/node/client.mysteriumApiUrl=${MYSTERIUM_API_URL}'
-        -X 'github.com/mysterium/node/client.natsServerIP=${NATS_SERVER_IP}'
     "
 }
