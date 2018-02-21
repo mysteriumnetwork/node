@@ -7,32 +7,29 @@ os:
 
 go:
   - 1.9.2
+
 go_import_path: github.com/mysterium/node
 
 env:
   global:
     - CACHE_ROOT_DIR=$HOME/cache
     - BUILD_TOOLS_PATH=$CACHE_ROOT_DIR/build_tools
-    #don't cache glide dependencies yet - it always triggers cache changes and slows down build even more, something to do with git index files
     - GLIDE_HOME=$HOME/glide-home
 
 cache:
   directories:
-  - $CACHE_ROOT_DIR #cache everything in cache root dir
+    - "$CACHE_ROOT_DIR"
 
 before_install:
   - rm -f .env
   - echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
   - echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
+
 install:
-  #setups PATH variable to contain travis tools dir and creates directory if needed (it could be already created by cache setup)
   - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
-  #ensure that we have glide (possibly from cache) or setup a fresh one
   - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
-  #run glide dependencies setup (it takes about 52 secs to download it from scratch)
   - glide "-home" $GLIDE_HOME install
 
-#This is actual build/test command
 script:
   - bin/test
   - bin/client_build
@@ -49,11 +46,10 @@ deploy:
     skip-cleanup: true
     github-token: "$GIT_RELEASES_API_KEY"
     keep-history: false
-    target-branch: mysterium #each project should use separate branch for artifact storage as each branch will force pushed - no history is preserved
+    target-branch: mysterium_$TRAVIS_OS_NAME
     repo: MysteriumNetwork/build-artifacts
     on:
       branch: master
-
   - provider: releases
     file_glob: true
     file: binaries/*
@@ -62,3 +58,15 @@ deploy:
     on:
       tags: true
       branch: master
+notifications:
+  slack:
+    secure: >
+      JOxs0kN/SscwjODlHIEYrWzPE2L/IwmpIoMd31qZFzp3nLgE/LTbFfMGT3b872YqPdApD7ASlsyQ3k9ab2fMgu29V7ER87XKx8JmDuAJrIUnc5SyTb
+      WMs1lwihnidGKExNgcbDPifBHVQPQYBQW7D6uqmb0UfcR5N958pbWY/bNdmgA+AdG/vuBWE2fTYmAxMo7FDU/KQd26Vd6ztmWcQNYoEuIjcCm5R/NQ
+      /4ApM3KNH3prj4QGnsjoa0YLrhy2gFIYPoB0J00ETZCb14Xgv49fwgVX85vOVRVR3bq22hABrAiVirvV3sK8WHxegeTcRpF4QJIjN6tNqFFzKEUbcu
+      3JBbjR3ot+rsBmuxq+62Yby9Bpy+H/XtGHc/g1B0SmYz8CedHkFNpET2lcuUpF7rbNJnl63Orim6dBI5KgMLhdmVtgVKojOe3rTwGywDLHyCTuauCY
+      5Fh1TiCM8YxEWjNU4+09pTDHOv7QLTP0JzWN60LwdGtyXbFvWY31ZNg/8YJTFNmxgN34lcvOiDOWwajtXT0kUGQjlW7PWkbkYDoWo82X54HXd7NWak
+      nuB8SIvQkiafsXHpKCCYr1GEfCrEFd9m3cAxYq8Zr+QegUHuNQ4DlzxSMO+8Adx7/0YlMM3uqy8o3Jguuk3ikKteAH4suyUBTqCREP6X8JOHohaC0=
+    on_failure: always
+    on_success: change
+    on_pull_requests: false
