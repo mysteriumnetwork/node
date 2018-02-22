@@ -31,6 +31,7 @@ type connectionEndpoint struct {
 
 const connectionLogPrefix = "[Connection] "
 
+// NewConnectionEndpoint creates and returns connection endpoint
 func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *connectionEndpoint {
 	return &connectionEndpoint{
 		manager:     manager,
@@ -39,11 +40,13 @@ func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, s
 	}
 }
 
+// Status returns status of connection
 func (ce *connectionEndpoint) Status(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	statusResponse := toStatusResponse(ce.manager.Status())
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
+// Create starts connection
 func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	cr, err := toConnectionRequest(req)
 	if err != nil {
@@ -73,6 +76,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	ce.Status(resp, req, params)
 }
 
+// Kill stops connection
 func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	err := ce.manager.Disconnect()
 	if err != nil {

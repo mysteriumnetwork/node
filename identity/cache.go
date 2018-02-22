@@ -12,16 +12,19 @@ type cacheData struct {
 	Identity Identity `json:"identity"`
 }
 
+// IdentityCache saves identity to file
 type IdentityCache struct {
 	File string
 }
 
+// NewIdentityCache creates and returns identityCache
 func NewIdentityCache(dir string, jsonFile string) IdentityCacheInterface {
 	return &IdentityCache{
 		File: filepath.Join(dir, jsonFile),
 	}
 }
 
+// GetIdentity retrieves identity from cache
 func (ic *IdentityCache) GetIdentity() (identity Identity, err error) {
 	if !ic.cacheExists() {
 		err = errors.New("cache file does not exist")
@@ -36,6 +39,7 @@ func (ic *IdentityCache) GetIdentity() (identity Identity, err error) {
 	return cache.Identity, nil
 }
 
+// StoreIdentity stores identity to cache
 func (ic *IdentityCache) StoreIdentity(identity Identity) error {
 	cache := cacheData{
 		Identity: identity,
