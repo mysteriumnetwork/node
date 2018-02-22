@@ -3,6 +3,7 @@ package client
 import (
 	"flag"
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/cmd/commands/server"
 	"path/filepath"
 )
 
@@ -20,8 +21,6 @@ type CommandOptions struct {
 	DiscoveryAPIAddress string
 	BrokerAddress       string
 }
-
-var mysteriumApiUrl string
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
@@ -68,7 +67,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.DiscoveryAPIAddress,
 		"discovery-address",
-		mysteriumApiUrl,
+		server.MysteriumApiUrl,
 		"Address (URL form) of discovery service",
 	)
 
