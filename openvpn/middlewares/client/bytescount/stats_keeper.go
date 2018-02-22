@@ -10,6 +10,7 @@ type SessionStatsKeeper interface {
 	Retrieve() SessionStats
 	MarkSessionStart()
 	GetSessionDuration() time.Duration
+	MarkSessionEnd()
 }
 
 // TimeGetter function returns current time
@@ -49,4 +50,9 @@ func (keeper *sessionStatsKeeper) GetSessionDuration() time.Duration {
 	}
 	duration := keeper.timeGetter().Sub(*keeper.sessionStart)
 	return duration
+}
+
+// MarkSessionEnd stops counting session duration
+func (keeper *sessionStatsKeeper) MarkSessionEnd() {
+	keeper.sessionStart = nil
 }

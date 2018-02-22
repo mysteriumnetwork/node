@@ -34,3 +34,15 @@ func TestGetSessionDurationFailsWhenSessionStartNotMarked(t *testing.T) {
 
 	assert.Equal(t, time.Duration(0), statsKeeper.GetSessionDuration())
 }
+
+func TestStopSessionResetsSessionDuration(t *testing.T) {
+	settableClock := utils.SettableClock{}
+	statsKeeper := NewSessionStatsKeeper(settableClock.GetTime)
+
+	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 3, 0, time.UTC))
+	statsKeeper.MarkSessionStart()
+
+	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 4, 700000000, time.UTC))
+	statsKeeper.MarkSessionEnd()
+	assert.Equal(t, time.Duration(0), statsKeeper.GetSessionDuration())
+}

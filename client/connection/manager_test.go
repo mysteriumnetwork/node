@@ -119,6 +119,8 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 
 	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
+
+	assert.True(tc.T(), tc.fakeStatsKeeper.sessionEndMarked)
 }
 
 func (tc *testContext) TestConnectResultsInAlreadyConnectedErrorWhenConnectionExists() {
@@ -248,7 +250,7 @@ func (fd *fakeDialog) Request(producer communication.RequestProducer) (responseP
 }
 
 type fakeSessionStatsKeeper struct {
-	sessionStartMarked bool
+	sessionStartMarked, sessionEndMarked bool
 }
 
 func (fsk *fakeSessionStatsKeeper) Save(stats bytescount.SessionStats) {
@@ -264,4 +266,8 @@ func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
 
 func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
 	return time.Duration(0)
+}
+
+func (fsk *fakeSessionStatsKeeper) MarkSessionEnd() {
+	fsk.sessionEndMarked = true
 }
