@@ -11,6 +11,7 @@ type CommandOptions struct {
 	DirectoryConfig  string
 	DirectoryRuntime string
 	DirectoryData    string
+	OpenvpnBinary    string
 
 	Identity   string
 	Passphrase string
@@ -41,6 +42,12 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"runtime-dir",
 		filepath.Join(cmd.GetDataDirectory(), "run"),
 		"Runtime writable directory for temp files",
+	)
+	flags.StringVar(
+		&options.OpenvpnBinary,
+		"openvpn.binary",
+		"openvpn", //search in $PATH by default,
+		"openvpn binary to use for Open VPN connections",
 	)
 
 	flags.StringVar(

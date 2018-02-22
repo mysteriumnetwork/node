@@ -9,10 +9,10 @@ import (
 	"syscall"
 )
 
-func NewProcess(logPrefix string) *Process {
+func NewProcess(openvpnBinary, logPrefix string) *Process {
 	return &Process{
-		logPrefix: logPrefix,
-
+		logPrefix:          logPrefix,
+		openvpnBinary:      openvpnBinary,
 		cmdExitError:       make(chan error),
 		cmdShutdownStarted: make(chan bool),
 		cmdShutdownWaiter:  sync.WaitGroup{},
@@ -20,8 +20,8 @@ func NewProcess(logPrefix string) *Process {
 }
 
 type Process struct {
-	logPrefix string
-
+	logPrefix          string
+	openvpnBinary      string
 	cmdExitError       chan error
 	cmdShutdownStarted chan bool
 	cmdShutdownWaiter  sync.WaitGroup
@@ -31,7 +31,7 @@ type Process struct {
 func (process *Process) Start(arguments []string) (err error) {
 	// Create the command
 	log.Info(process.logPrefix, "Starting process with arguments: ", arguments)
-	cmd := exec.Command("openvpn", arguments...)
+	cmd := exec.Command(process.openvpnBinary, arguments...)
 
 	// Attach monitors for stdout, stderr and exit
 	process.stdoutMonitor(cmd)

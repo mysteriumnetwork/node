@@ -16,7 +16,7 @@ import (
 // ConfigureVpnClientFactory creates openvpn construction function by given vpn session, consumer id and state callbacks
 func ConfigureVpnClientFactory(
 	mysteriumAPIClient server.Client,
-	configDirectory, runtimeDirectory string,
+	openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	statsKeeper bytescount.SessionStatsKeeper,
 ) VpnClientCreator {
@@ -45,6 +45,7 @@ func ConfigureVpnClientFactory(
 		credentialsProvider := openvpnSession.SignatureCredentialsProvider(vpnSession.ID, signer)
 
 		return openvpn.NewClient(
+			openvpnBinary,
 			vpnClientConfig,
 			runtimeDirectory,
 			state.NewMiddleware(stateCallback),
