@@ -52,6 +52,7 @@ func NewCommandWith(
 
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
+		options.OpenvpnBinary,
 		options.DirectoryConfig,
 		options.DirectoryRuntime,
 		signerFactory,

@@ -92,6 +92,7 @@ func NewCommandWith(
 			)
 
 			return openvpn.NewServer(
+				options.OpenvpnBinary,
 				serverConfigGenerator,
 				options.DirectoryRuntime,
 				auth.NewMiddleware(sessionValidator),
