@@ -26,10 +26,12 @@ type errorMessage struct {
 	Message string `json:"message"`
 }
 
+// SendError generates error response for error
 func SendError(writer http.ResponseWriter, err error, httpCode int) {
 	SendErrorMessage(writer, &errorMessage{fmt.Sprint(err)}, httpCode)
 }
 
+// SendErrorMessage generates error response with custom message
 func SendErrorMessage(writer http.ResponseWriter, message interface{}, httpCode int) {
 	writer.WriteHeader(httpCode)
 	WriteAsJSON(message, writer)
@@ -40,6 +42,7 @@ type validationErrorMessage struct {
 	ValidationErrors *validation.FieldErrorMap `json:"errors"`
 }
 
+// SendValidationErrorMessage generates error response for validation errors
 func SendValidationErrorMessage(resp http.ResponseWriter, errorMap *validation.FieldErrorMap) {
 	errorResponse := errorMessage{Message: "validation_error"}
 
