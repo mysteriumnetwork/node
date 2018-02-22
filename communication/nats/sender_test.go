@@ -20,7 +20,7 @@ func TestSenderNew(t *testing.T) {
 		&senderNATS{
 			connection:     connection,
 			codec:          codec,
-			timeoutRequest: 500 * time.Millisecond,
+			timeoutRequest: 2 * time.Second,
 			messageTopic:   "custom.",
 		},
 		NewSender(connection, codec, "custom"),

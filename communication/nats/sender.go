@@ -17,7 +17,7 @@ func NewSender(connection Connection, codec communication.Codec, topic string) *
 	return &senderNATS{
 		connection:     connection,
 		codec:          codec,
-		timeoutRequest: 500 * time.Millisecond,
+		timeoutRequest: 2 * time.Second,
 		messageTopic:   topic + ".",
 	}
 }
