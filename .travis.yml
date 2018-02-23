@@ -37,8 +37,8 @@ script:
 
 before_deploy:
   - mkdir binaries
-  - cp build/client/mysterium_client binaries/mysterium_client_$TRAVIS_OS_NAME
-  - cp build/server/mysterium_server binaries/mysterium_server_$TRAVIS_OS_NAME
+  - bin/travis_scripts/package_tar_gz.sh client binaries/mysterium_client.tar.gz
+  - bin/travis_scripts/package_tar_gz.sh server binaries/mysterium_server.tar.gz
 
 deploy:
   - provider: pages
@@ -49,7 +49,7 @@ deploy:
     target-branch: mysterium_$TRAVIS_OS_NAME
     repo: MysteriumNetwork/build-artifacts
     on:
-      branch: master
+      branch: improvement/archive-client-server-as-tar-gz
   - provider: releases
     file_glob: true
     file: binaries/*
