@@ -49,7 +49,7 @@ func ConfigureVpnClientFactory(
 			vpnClientConfig,
 			runtimeDirectory,
 			state.NewMiddleware(stateCallback),
-			bytescount.NewMiddleware(statsHandler, 1*time.Minute),
+			bytescount.NewMiddleware(statsHandler, 1*time.Second),
 			auth.NewMiddleware(credentialsProvider),
 		), nil
 	}
