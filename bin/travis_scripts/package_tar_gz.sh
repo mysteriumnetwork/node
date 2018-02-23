@@ -14,4 +14,4 @@ cp "build/$KIND/mysterium_$KIND" "$FULL_ARCHIVE_DIR"
 cp -r "bin/${KIND}_package/config" "$FULL_ARCHIVE_DIR"
 
 tar -zcvf "$ARCHIVE_NAME" -C "$ARCHIVE_ROOT" "$ARCHIVE_DIR"
-rm -rf "$ARCHIVE_DIR"
+rm -rf "$FULL_ARCHIVE_DIR"
