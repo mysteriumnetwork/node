@@ -1,20 +1,23 @@
 package bytescount
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 	"time"
 )
 
 // NewIntervalStatsHandler creates and returns composite handler, which invokes internal handler at given interval
-func NewIntervalStatsHandler(handler SessionStatsHandler, clock func() time.Time, interval time.Duration) (SessionStatsHandler, error) {
+func NewIntervalStatsHandler(handler SessionStatsHandler, currentTime func() time.Time, interval time.Duration) (SessionStatsHandler, error) {
 	if interval < 0 {
 		return nil, errors.New("Invalid 'interval' parameter")
 	}
-	var lastTime *time.Time = nil
+
+	firstTime := true
+	var lastTime time.Time
 	return func(sessionStats SessionStats) error {
-		now := clock()
-		if lastTime == nil || (now.Sub(*lastTime)) >= interval {
-			lastTime = &now
+		now := currentTime()
+		if firstTime || (now.Sub(lastTime)) >= interval {
+			firstTime = false
+			lastTime = now
 			return handler(sessionStats)
 		}
 		return nil
