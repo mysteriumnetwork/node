@@ -28,7 +28,10 @@ type mysteriumAPI struct {
 func NewClient() Client {
 	return &mysteriumAPI{
 		&http.Client{
-			Transport: &http.Transport{},
+			Transport: &http.Transport{
+				//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
+				DisableKeepAlives: true,
+			},
 		},
 	}
 }
