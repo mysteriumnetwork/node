@@ -24,6 +24,7 @@ type CommandOptions struct {
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
 
+// TODO: rename to brokerAddress
 var natsServerIP string
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure

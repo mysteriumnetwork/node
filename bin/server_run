@@ -5,6 +5,6 @@ source bin/helpers/load_run_environment.sh
 sudo ./build/server/mysterium_server \
    --config-dir=bin/server_package/config \
    --runtime-dir=build/server \
-   $DISCOVERY \
-   $BROKER \
+   $DISCOVERY_OPTION \
+   $BROKER_OPTION \
    $@

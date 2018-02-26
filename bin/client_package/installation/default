@@ -6,5 +6,5 @@ MYSTERIUM_CLIENT_TEQUILAPI_ADDRESS="localhost"
 # Port for listening incoming api requests
 MYSTERIUM_CLIENT_TEQUILAPI_PORT="4050"
 
-# Mysterium discovery address (default: http://testnet.mysterium.network:5000/v1)
+# Mysterium discovery address (eg.: http://testnet.mysterium.network:5000/v1)
 MYSTERIUM_DISCOVERY_ADDRESS: ""

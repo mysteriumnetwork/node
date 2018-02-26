@@ -7,13 +7,13 @@ import (
 	"net/http"
 )
 
-type ErrorResponse struct {
+type errorResponse struct {
 	Error string `json:"error"`
 }
 
 func parseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		var error ErrorResponse
+		var error errorResponse
 		parseResponseJson(response, &error)
 		return fmt.Errorf("server response invalid: %s (%s) error message: %s",
 			response.Status, response.Request.URL, error)

@@ -5,5 +5,5 @@ source bin/helpers/load_run_environment.sh
 sudo ./build/client/mysterium_client \
    --config-dir=bin/client_package/config \
    --runtime-dir=build/client \
-   $DISCOVERY \
+   $DISCOVERY_OPTION\
    $@

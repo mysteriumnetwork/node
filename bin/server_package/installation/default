@@ -12,8 +12,8 @@ MYSTERIUM_SERVER_COUNTRY_DATABASE=""
 # Service location country. If not given country is autodetected
 MYSTERIUM_SERVER_COUNTRY=""
 
-# Mysterium discovery address (default: http://testnet.mysterium.network:5000/v1)
+# Mysterium discovery address (eg.: http://testnet.mysterium.network:5000/v1)
 MYSTERIUM_DISCOVERY_ADDRESS: ""
 
-# Mysterium broker address (default: testnet.mysterium.network)
+# Mysterium broker address (eg.: testnet.mysterium.network)
 MYSTERIUM_BROKER_ADDRESS: ""
