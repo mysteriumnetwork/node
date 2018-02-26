@@ -24,7 +24,6 @@ type CommandOptions struct {
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
 
-var MysteriumApiUrl string
 var natsServerIP string
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
@@ -78,7 +77,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.DiscoveryAPIAddress,
 		"discovery-address",
-		MysteriumApiUrl,
+		cmd.MysteriumAPIURL,
 		"Address (URL form) of discovery service",
 	)
 	flags.StringVar(

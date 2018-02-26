@@ -1,4 +1,4 @@
-package server
+package requestor
 
 import (
 	"bytes"
@@ -15,12 +15,12 @@ const (
 	authenticationSchemaName = "Signature"
 )
 
-func newGetRequest(apiURI, path string, params url.Values) (*http.Request, error) {
+func NewGetRequest(apiURI, path string, params url.Values) (*http.Request, error) {
 	pathWithQuery := fmt.Sprintf("%v?%v", path, params.Encode())
 	return newRequest(http.MethodGet, apiURI, pathWithQuery, nil)
 }
 
-func newPostRequest(apiURI, path string, requestBody interface{}) (*http.Request, error) {
+func NewPostRequest(apiURI, path string, requestBody interface{}) (*http.Request, error) {
 	bodyBytes, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func newPostRequest(apiURI, path string, requestBody interface{}) (*http.Request
 	return newRequest(http.MethodPost, apiURI, path, bodyBytes)
 }
 
-func newSignedPostRequest(apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
+func NewSignedPostRequest(apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
 	bodyBytes, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
