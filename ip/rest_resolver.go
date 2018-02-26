@@ -23,6 +23,11 @@ func NewResolverWithTimeout(timeout time.Duration) Resolver {
 	return &clientRest{
 		httpClient: http.Client{
 			Timeout: timeout,
+			Transport: &http.Transport{
+				//dont cache tcp connections - first requests after state change (direct -> tunneled and vice versa) will always fail
+				//as stale tcp states are not closed after switch. Probably some kind of CloseIdleConnections will help in the future
+				DisableKeepAlives: true,
+			},
 		},
 	}
 }
