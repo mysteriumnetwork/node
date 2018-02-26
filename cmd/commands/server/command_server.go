@@ -100,9 +100,8 @@ func (cmd *Command) Start() (err error) {
 			case <-time.After(1 * time.Minute):
 				err := cmd.mysteriumClient.PingProposal(proposal, signer)
 				if err != nil {
-					//TODO failed to refresh proposal. Stop everything?
 					log.Error("Failed to ping proposal", err)
-					cmd.Kill()
+					// do not stop server on missing ping to discovery. More on this in MYST-362 and MYST-370
 				}
 			case <-stopPinger:
 				log.Info("Stopping proposal pinger")
