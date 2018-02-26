@@ -1,4 +1,4 @@
-package server
+package requests
 
 import (
 	"bytes"
@@ -17,6 +17,8 @@ type mockedSigner struct {
 	signatureToReturn identity.Signature
 }
 
+var testRequestApiUrl = "http://testUrl"
+
 func (signer *mockedSigner) Sign(message []byte) (identity.Signature, error) {
 	return signer.signatureToReturn, nil
 }
@@ -25,19 +27,18 @@ func TestSignatureIsInsertedForSignedPost(t *testing.T) {
 
 	signer := mockedSigner{identity.SignatureBase64("deadbeef")}
 
-	req, err := newSignedPostRequest("/post-path", testPayload{"abc"}, &signer)
+	req, err := NewSignedPostRequest(testRequestApiUrl, "/post-path", testPayload{"abc"}, &signer)
 	assert.NoError(t, err)
 	assert.Equal(t, req.Header.Get("Authorization"), "Signature deadbeef")
 }
 
 func TestDoGetContactsPassedValuesForUrl(t *testing.T) {
-	mysteriumApiUrl = "http://testUrl"
 
 	params := url.Values{}
 	params["param1"] = []string{"value1"}
 	params["param2"] = []string{"value2"}
 
-	req, err := newGetRequest("get-path", params)
+	req, err := NewGetRequest(testRequestApiUrl, "get-path", params)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "http://testUrl/get-path?param1=value1&param2=value2", req.URL.String())
@@ -46,7 +47,7 @@ func TestDoGetContactsPassedValuesForUrl(t *testing.T) {
 
 func TestPayloadIsSerializedSuccessfullyForPostMethod(t *testing.T) {
 
-	req, err := newPostRequest("post-path", testPayload{"abc"})
+	req, err := NewPostRequest(testRequestApiUrl, "post-path", testPayload{"abc"})
 
 	assert.NoError(t, err)
 

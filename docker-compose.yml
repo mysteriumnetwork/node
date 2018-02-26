@@ -32,6 +32,8 @@ services:
     environment:
       MYSTERIUM_SERVER_IDENTITY: ""
       MYSTERIUM_SERVER_IDENTITY_PASSPHRASE: ""
+      MYSTERIUM_DISCOVERY_ADDRESS: ""
+      MYSTERIUM_BROKER_ADDRESS: ""
 
   client:
     privileged: true
@@ -51,3 +53,4 @@ services:
       - 4050:4050
     environment:
       MYSTERIUM_CLIENT_TEQUILAPI_PORT: 4050
+      MYSTERIUM_DISCOVERY_ADDRESS: ""

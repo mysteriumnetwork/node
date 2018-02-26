@@ -23,4 +23,6 @@ exec /usr/bin/mysterium_server \
     --identity=$MYSTERIUM_SERVER_IDENTITY \
     --identity.passphrase=$MYSTERIUM_SERVER_IDENTITY_PASSPHRASE \
     --location.database=$MYSTERIUM_SERVER_COUNTRY_DATABASE \
-    --location.country=$MYSTERIUM_SERVER_COUNTRY
+    --location.country=$MYSTERIUM_SERVER_COUNTRY \
+    --discovery-address=$MYSTERIUM_DISCOVERY_ADDRESS \
+    --broker-address=$MYSTERIUM_BROKER_ADDRESS

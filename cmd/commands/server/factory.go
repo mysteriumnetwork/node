@@ -24,7 +24,7 @@ import (
 func NewCommand(options CommandOptions) *Command {
 	return NewCommandWith(
 		options,
-		server.NewClient(),
+		server.NewClient(options.DiscoveryAPIAddress),
 		ip.NewResolver(),
 		nat.NewService(),
 	)
@@ -71,7 +71,7 @@ func NewCommandWith(
 		natService:       natService,
 		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
-				nats_discovery.NewAddressGenerate(myID),
+				nats_discovery.NewAddressGenerate(options.BrokerAddress, myID),
 				identity.NewSigner(keystoreInstance, myID),
 			)
 		},

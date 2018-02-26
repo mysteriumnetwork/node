@@ -10,4 +10,5 @@ exec /usr/bin/mysterium_client \
     --data-dir=$OS_DIR_DATA \
     --runtime-dir=$OS_DIR_RUN \
     --tequilapi.address=localhost \
-    --tequilapi.port=$MYSTERIUM_CLIENT_TEQUILAPI_PORT
+    --tequilapi.port=$MYSTERIUM_CLIENT_TEQUILAPI_PORT \
+    --discovery-address=$MYSTERIUM_DISCOVERY_ADDRESS \

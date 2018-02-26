@@ -23,12 +23,13 @@ func TestNewAddress(t *testing.T) {
 
 func TestNewAddressGenerate(t *testing.T) {
 	myID := identity.FromAddress("provider1")
-	address := NewAddressGenerate(myID)
+	brokerIP := "127.0.0.1"
+	address := NewAddressGenerate(brokerIP, myID)
 
 	assert.Equal(
 		t,
 		&AddressNATS{
-			servers: []string{"nats://" + natsServerIP + ":4222"},
+			servers: []string{"nats://" + brokerIP + ":4222"},
 			topic:   "provider1",
 		},
 		address,

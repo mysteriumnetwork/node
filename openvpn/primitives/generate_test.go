@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-const fakeRunDir = "testdataoutput"
+const fakeRunDir = ""
 
 func TestGenerateRequiredFiles(t *testing.T) {
 	sp, _ := GenerateOpenVPNSecPrimitives(fakeRunDir, fakeServiceLocation, fakeProviderID)

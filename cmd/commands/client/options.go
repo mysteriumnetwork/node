@@ -17,6 +17,9 @@ type CommandOptions struct {
 	TequilapiPort    int
 
 	CLI bool
+
+	DiscoveryAPIAddress string
+	BrokerAddress       string
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
@@ -65,6 +68,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"cli",
 		false,
 		"Run an interactive CLI based Mysterium UI",
+	)
+
+	flags.StringVar(
+		&options.DiscoveryAPIAddress,
+		"discovery-address",
+		cmd.MysteriumAPIURL,
+		"Address (URL form) of discovery service",
 	)
 
 	err = flags.Parse(args[1:])

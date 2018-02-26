@@ -18,9 +18,15 @@ type CommandOptions struct {
 
 	LocationCountry  string
 	LocationDatabase string
+
+	DiscoveryAPIAddress string
+	BrokerAddress       string
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
+
+// TODO: rename to brokerAddress
+var natsServerIP string
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
@@ -74,6 +80,19 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"location.country",
 		"",
 		"Service location country. If not given country is autodetected",
+	)
+
+	flags.StringVar(
+		&options.DiscoveryAPIAddress,
+		"discovery-address",
+		cmd.MysteriumAPIURL,
+		"Address (URL form) of discovery service",
+	)
+	flags.StringVar(
+		&options.BrokerAddress,
+		"broker-address",
+		natsServerIP,
+		"Address (IP or domain name) of message broker",
 	)
 
 	err = flags.Parse(args[1:])

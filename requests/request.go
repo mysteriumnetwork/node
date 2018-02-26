@@ -1,4 +1,4 @@
-package server
+package requests
 
 import (
 	"bytes"
@@ -15,22 +15,23 @@ const (
 	authenticationSchemaName = "Signature"
 )
 
-var mysteriumApiUrl string
-
-func newGetRequest(path string, params url.Values) (*http.Request, error) {
+// NewGetRequest generates http Get request
+func NewGetRequest(apiURI, path string, params url.Values) (*http.Request, error) {
 	pathWithQuery := fmt.Sprintf("%v?%v", path, params.Encode())
-	return newRequest(http.MethodGet, pathWithQuery, nil)
+	return newRequest(http.MethodGet, apiURI, pathWithQuery, nil)
 }
 
-func newPostRequest(path string, requestBody interface{}) (*http.Request, error) {
+// NewPostRequest generates http Post request
+func NewPostRequest(apiURI, path string, requestBody interface{}) (*http.Request, error) {
 	bodyBytes, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
 	}
-	return newRequest(http.MethodPost, path, bodyBytes)
+	return newRequest(http.MethodPost, apiURI, path, bodyBytes)
 }
 
-func newSignedPostRequest(path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
+// NewSignedPostRequest signs payload and generates http Post request
+func NewSignedPostRequest(apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
 	bodyBytes, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
@@ -41,7 +42,7 @@ func newSignedPostRequest(path string, requestBody interface{}, signer identity.
 		return nil, err
 	}
 
-	req, err := newRequest(http.MethodPost, path, bodyBytes)
+	req, err := newRequest(http.MethodPost, apiURI, path, bodyBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -55,9 +56,9 @@ func encodeToJSON(value interface{}) ([]byte, error) {
 	return json.Marshal(value)
 }
 
-func newRequest(method, path string, body []byte) (*http.Request, error) {
+func newRequest(method, apiURI, path string, body []byte) (*http.Request, error) {
 
-	fullUrl := fmt.Sprintf("%v/%v", mysteriumApiUrl, path)
+	fullUrl := fmt.Sprintf("%v/%v", apiURI, path)
 	req, err := http.NewRequest(method, fullUrl, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err

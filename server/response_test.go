@@ -2,14 +2,17 @@ package server
 
 import (
 	"bytes"
+	"github.com/mysterium/node/requests"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"testing"
 )
 
+var testRequestAPIURL = "http://testUrl"
+
 func TestHttpErrorIsReportedAsErrorReturnValue(t *testing.T) {
-	req, err := newGetRequest("path", nil)
+	req, err := requests.NewGetRequest(testRequestAPIURL, "path", nil)
 	assert.NoError(t, err)
 
 	response := &http.Response{
@@ -26,7 +29,7 @@ type testResponse struct {
 
 func TestHttpResponseBodyIsParsedCorrectly(t *testing.T) {
 
-	req, err := newGetRequest("path", nil)
+	req, err := requests.NewGetRequest(testRequestAPIURL, "path", nil)
 	assert.NoError(t, err)
 
 	response := &http.Response{

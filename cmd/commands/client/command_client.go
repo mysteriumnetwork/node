@@ -23,7 +23,7 @@ import (
 func NewCommand(options CommandOptions) *Command {
 	return NewCommandWith(
 		options,
-		server.NewClient(),
+		server.NewClient(options.DiscoveryAPIAddress),
 	)
 }
 
