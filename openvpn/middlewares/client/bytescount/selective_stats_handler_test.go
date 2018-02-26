@@ -14,7 +14,7 @@ func TestNewSelectiveStatsHandlerEach(t *testing.T) {
 		BytesReceived: 2,
 	}
 
-	handler, err := NewSelectiveStatsHandler(statsRecorder.record, time.Now, time.Duration(0))
+	handler, err := NewIntervalStatsHandler(statsRecorder.record, time.Now, time.Duration(0))
 	assert.NoError(t, err)
 
 	handler(stats)
@@ -24,7 +24,7 @@ func TestNewSelectiveStatsHandlerEach(t *testing.T) {
 func TestNewSelectiveStatsHandlerEveryTheeSeconds(t *testing.T) {
 	clock := utils.SettableClock{}
 	statsRecorder := fakeStatsRecorder{}
-	handler, _ := NewSelectiveStatsHandler(statsRecorder.record, clock.GetTime, 3*time.Second)
+	handler, _ := NewIntervalStatsHandler(statsRecorder.record, clock.GetTime, 3*time.Second)
 
 	stats := SessionStats{
 		BytesSent:     1,
@@ -59,6 +59,6 @@ func TestNewSelectiveStatsHandlerEveryTheeSeconds(t *testing.T) {
 func TestNewSelectiveStatsHandlerInvalidValues(t *testing.T) {
 	statsRecorder := fakeStatsRecorder{}
 
-	_, err := NewSelectiveStatsHandler(statsRecorder.record, time.Now, -1*time.Nanosecond)
+	_, err := NewIntervalStatsHandler(statsRecorder.record, time.Now, -1*time.Nanosecond)
 	assert.EqualError(t, err, "Invalid 'interval' parameter")
 }

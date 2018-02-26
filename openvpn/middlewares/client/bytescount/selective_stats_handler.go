@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// NewSelectiveStatsHandler creates and returns composite handler, which invokes internal handler at given interval
-func NewSelectiveStatsHandler(handler SessionStatsHandler, clock func() time.Time, interval time.Duration) (SessionStatsHandler, error) {
+// NewIntervalStatsHandler creates and returns composite handler, which invokes internal handler at given interval
+func NewIntervalStatsHandler(handler SessionStatsHandler, clock func() time.Time, interval time.Duration) (SessionStatsHandler, error) {
 	if interval < 0 {
 		return nil, errors.New("Invalid 'interval' parameter")
 	}
