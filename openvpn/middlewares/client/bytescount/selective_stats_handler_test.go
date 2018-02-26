@@ -28,6 +28,11 @@ func TestNewSelectiveStatsHandlerEveryThird(t *testing.T) {
 	emptyStats := SessionStats{}
 
 	handler(stats)
+	assert.Equal(t, stats, statsRecorder.LastSessionStats)
+
+	statsRecorder.LastSessionStats = emptyStats
+
+	handler(stats)
 	assert.Equal(t, emptyStats, statsRecorder.LastSessionStats)
 	handler(stats)
 	handler(stats)

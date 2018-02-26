@@ -6,13 +6,13 @@ func NewSelectiveStatsHandler(handler SessionStatsHandler, times int) (SessionSt
 	if times <= 0 {
 		return nil, errors.New("Invalid 'times' parameter")
 	}
-	skipped := 0
+	delayLeft := 0
 	return func(sessionStats SessionStats) error {
-		if skipped == times-1 {
-			skipped = 0
+		if delayLeft == 0 {
+			delayLeft = times - 1
 			return handler(sessionStats)
 		} else {
-			skipped++
+			delayLeft--
 		}
 		return nil
 	}, nil
