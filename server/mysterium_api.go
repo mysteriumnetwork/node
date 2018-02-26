@@ -6,7 +6,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/requestor"
+	"github.com/mysterium/node/requests"
 	"github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"net/url"
@@ -37,7 +37,7 @@ func NewClient(discoveryAPIAddress string) Client {
 }
 
 func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
-	req, err := requestor.NewSignedPostRequest(mApi.discoveryAPIAddress, "identities", dto.CreateIdentityRequest{
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "identities", dto.CreateIdentityRequest{
 		Identity: id.Address,
 	}, signer)
 	if err != nil {
@@ -52,7 +52,7 @@ func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 }
 
 func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := requestor.NewSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", dto.NodeRegisterRequest{
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	}, signer)
 	if err != nil {
@@ -68,7 +68,7 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 }
 
 func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := requestor.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
 		NodeKey: proposal.ProviderID,
 	}, signer)
 	if err != nil {
@@ -88,7 +88,7 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 		values.Set("node_key", providerID)
 	}
 
-	req, err := requestor.NewGetRequest(mApi.discoveryAPIAddress, "proposals", values)
+	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", values)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 
 func (mApi *mysteriumAPI) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionId)
-	req, err := requestor.NewSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
 	if err != nil {
 		return err
 	}
