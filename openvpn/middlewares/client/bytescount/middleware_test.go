@@ -10,16 +10,16 @@ import (
 
 func Test_Factory(t *testing.T) {
 	statsRecorder := fakeStatsRecorder{}
-	middleware := NewMiddleware(statsRecorder.record, 1*time.Minute)
+	middleware := NewMiddleware(statsRecorder.record, 1*time.Second)
 	assert.NotNil(t, middleware)
 }
 
 func Test_Start(t *testing.T) {
 	statsRecorder := fakeStatsRecorder{}
-	middleware := NewMiddleware(statsRecorder.record, 1*time.Minute)
+	middleware := NewMiddleware(statsRecorder.record, 1*time.Second)
 	mockConnection := &management.MockConnection{}
 	middleware.Start(mockConnection)
-	assert.Equal(t, "bytecount 60", mockConnection.LastLine)
+	assert.Equal(t, "bytecount 1", mockConnection.LastLine)
 }
 
 func Test_ConsumeLine(t *testing.T) {
@@ -43,7 +43,7 @@ func Test_ConsumeLine(t *testing.T) {
 
 	for _, test := range tests {
 		statsRecorder := &fakeStatsRecorder{}
-		middleware := NewMiddleware(statsRecorder.record, 1*time.Minute)
+		middleware := NewMiddleware(statsRecorder.record, 1*time.Second)
 		consumed, err := middleware.ConsumeLine(test.line)
 		if test.expectedError != nil {
 			assert.Error(t, test.expectedError, err.Error(), test.line)

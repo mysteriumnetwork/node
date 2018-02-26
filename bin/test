@@ -14,10 +14,13 @@ if [ -z "$ARGUMENTS" ]; then
     ARGUMENTS=`go list ./...`
 fi
 
+SUCCESS_COLOR='\033[0;32m' # green
+FAILURE_COLOR="\033[0;31m" # red
+
 if go test -cover ${ARGUMENTS} ; then
-    echo "All tests passed."
+    echo -e $SUCCESS_COLOR"All tests passed."
     exit 0
 else
-    echo "Some tests failed!"
+    echo -e $FAILURE_COLOR"Some tests failed!"
     exit -1
 fi
