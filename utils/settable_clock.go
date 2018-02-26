@@ -8,11 +8,17 @@ type SettableClock struct {
 }
 
 // SetTime sets time to be returned from GetTime
-func (fc *SettableClock) SetTime(time time.Time) {
-	fc.time = time
+func (clock *SettableClock) SetTime(time time.Time) {
+	clock.time = time
 }
 
 // GetTime returns set time
-func (fc *SettableClock) GetTime() time.Time {
-	return fc.time
+func (clock *SettableClock) GetTime() time.Time {
+	return clock.time
+}
+
+// AddTime adds given duration to current clock time
+func (clock *SettableClock) AddTime(duration time.Duration) {
+	newTime := clock.GetTime().Add(duration)
+	clock.SetTime(newTime)
 }

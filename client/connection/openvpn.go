@@ -39,7 +39,7 @@ func ConfigureVpnClientFactory(
 			go statsSender(stats)
 			return nil
 		}
-		selectiveAsyncStatsSender, err := bytescount.NewSelectiveStatsHandler(asyncStatsSender, 60)
+		selectiveAsyncStatsSender, err := bytescount.NewSelectiveStatsHandler(asyncStatsSender, time.Now, 60)
 		if err != nil {
 			return nil, err
 		}
