@@ -39,8 +39,11 @@ func ConfigureVpnClientFactory(
 			go statsSender(stats)
 			return nil
 		}
-
-		statsHandler := bytescount.NewCompositeStatsHandler(statsSaver, asyncStatsSender)
+		selectiveAsyncStatsSender, err := bytescount.NewSelectiveStatsHandler(asyncStatsSender, 60)
+		if err != nil {
+			return nil, err
+		}
+		statsHandler := bytescount.NewCompositeStatsHandler(statsSaver, selectiveAsyncStatsSender)
 
 		credentialsProvider := openvpnSession.SignatureCredentialsProvider(vpnSession.ID, signer)
 
