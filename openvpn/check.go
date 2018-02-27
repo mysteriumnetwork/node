@@ -1,7 +1,9 @@
 package openvpn
 
 import (
+	"errors"
 	"os/exec"
+	"strconv"
 	"syscall"
 )
 
@@ -15,10 +17,15 @@ func CheckOpenvpnBinary(openvpnBinary string) error {
 	cmdResult := process.Wait()
 
 	exitCode, err := extractExitCodeFromCmdResult(cmdResult)
-	//openvpn returns exit code 1 in case of --version paramter, if anything else is returned - treat as error
-	if err != nil || exitCode != 1 {
+	if err != nil {
 		return err
 	}
+
+	//openvpn returns exit code 1 in case of --version parameter, if anything else is returned - treat as error
+	if exitCode != 1 {
+		return errors.New("unexpected openvpn code: " + strconv.Itoa(exitCode))
+	}
+
 	return nil
 }
 
