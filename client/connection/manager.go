@@ -100,6 +100,7 @@ func (manager *connectionManager) onVpnStatusUpdate(vpnState openvpn.State) {
 		manager.status = statusConnected(manager.sessionID)
 	case openvpn.ExitingState:
 		manager.status = statusNotConnected()
+		manager.statsKeeper.MarkSessionEnd()
 	case openvpn.ReconnectingState:
 		manager.status = statusReconnecting()
 	}
