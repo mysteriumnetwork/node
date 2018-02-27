@@ -4,7 +4,6 @@ services:
   broker:
     tty: true
     image: nats
-    container_name: mysterium-broker
     networks:
       - default
     ports:
@@ -19,7 +18,6 @@ services:
       dockerfile: bin/server_docker/ubuntu/Dockerfile
       args:
         PACKAGE_VERSION: 0.0.1-docker
-    container_name: mysterium-server-ubuntu
     depends_on:
       - broker
     cap_add:
@@ -43,7 +41,6 @@ services:
       dockerfile: bin/client_docker/ubuntu/Dockerfile
       args:
         PACKAGE_VERSION: 0.0.1-docker
-    container_name: mysterium-client
     depends_on:
       - broker
       - server-ubuntu
