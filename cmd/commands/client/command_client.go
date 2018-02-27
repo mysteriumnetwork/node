@@ -67,6 +67,9 @@ func NewCommandWith(
 	command := &Command{
 		connectionManager: connectionManager,
 		httpAPIServer:     httpAPIServer,
+		checkOpenvpn: func() error {
+			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
+		},
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
@@ -81,11 +84,17 @@ func NewCommandWith(
 type Command struct {
 	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
+	checkOpenvpn      func() error
 }
 
 // Start starts Tequilapi service - does not block
 func (cmd *Command) Start() error {
-	err := cmd.httpAPIServer.StartServing()
+	err := cmd.checkOpenvpn()
+	if err != nil {
+		return err
+	}
+
+	err = cmd.httpAPIServer.StartServing()
 	if err != nil {
 		return err
 	}
