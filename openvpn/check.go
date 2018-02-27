@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-//CheckOpenvpnBinary function checks that openvpn is available, given path to openvpn binary
+// CheckOpenvpnBinary function checks that openvpn is available, given path to openvpn binary
 func CheckOpenvpnBinary(openvpnBinary string) error {
 
 	process := NewProcess(openvpnBinary, "[openvpn binary check]")
