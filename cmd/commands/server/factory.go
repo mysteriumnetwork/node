@@ -99,5 +99,8 @@ func NewCommandWith(
 				state.NewMiddleware(callback),
 			)
 		},
+		openvpnBinaryCheck: func() error {
+			return openvpn.Version(options.OpenvpnBinary)
+		},
 	}
 }

@@ -34,11 +34,17 @@ type Command struct {
 	vpnServerFactory func(sessionManager session.Manager, serviceLocation dto_discovery.Location,
 		providerID identity.Identity, callback state.Callback) *openvpn.Server
 
-	vpnServer *openvpn.Server
+	vpnServer          *openvpn.Server
+	openvpnBinaryCheck func() error
 }
 
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
+	err = cmd.openvpnBinaryCheck()
+	if err != nil {
+		return err
+	}
+
 	providerID, err := cmd.identityLoader()
 	if err != nil {
 		return err
