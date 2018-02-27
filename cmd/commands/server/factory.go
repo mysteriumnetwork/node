@@ -100,7 +100,7 @@ func NewCommandWith(
 			)
 		},
 		checkOpenvpn: func() error {
-			return openvpn.Version(options.OpenvpnBinary)
+			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
 	}
 }

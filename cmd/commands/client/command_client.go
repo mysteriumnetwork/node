@@ -68,7 +68,7 @@ func NewCommandWith(
 		connectionManager: connectionManager,
 		httpAPIServer:     httpAPIServer,
 		checkOpenvpn: func() error {
-			return openvpn.Version(options.OpenvpnBinary)
+			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
 	}
 
