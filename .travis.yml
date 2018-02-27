@@ -1,4 +1,4 @@
-sudo: false
+sudo: true
 language: go
 
 os:
@@ -34,6 +34,7 @@ script:
   - bin/test
   - bin/client_build
   - bin/server_build
+  - if [[ $TRAVIS_BRANCH == 'master' ]]; then bin/integration_test.sh; fi
 
 before_deploy:
   - mkdir binaries
