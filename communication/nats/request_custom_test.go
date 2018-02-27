@@ -80,7 +80,7 @@ func TestCustomRespond(t *testing.T) {
 	err := receiver.Respond(consumer)
 	assert.NoError(t, err)
 
-	response, err := connection.Request("custom-response", []byte(`{"FieldIn": "REQUEST"}`), time.Millisecond)
+	response, err := connection.Request("custom-response", []byte(`{"FieldIn": "REQUEST"}`), 100*time.Millisecond)
 	assert.NoError(t, err)
 	assert.Equal(t, &customRequest{"REQUEST"}, consumer.requestReceived)
 	assert.JSONEq(t, `{"FieldOut": "RESPONSE"}`, string(response.Data))
