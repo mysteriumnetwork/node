@@ -1,7 +1,7 @@
 package client
 
 import (
-	"fmt"
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client/connection"
 	node_cmd "github.com/mysterium/node/cmd"
@@ -15,6 +15,7 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
+	"github.com/mysterium/node/version"
 	"path/filepath"
 	"time"
 )
@@ -89,6 +90,7 @@ type Command struct {
 
 // Start starts Tequilapi service - does not block
 func (cmd *Command) Start() error {
+	log.Info("[Client version]", version.AsString())
 	err := cmd.checkOpenvpn()
 	if err != nil {
 		return err
@@ -103,7 +105,7 @@ func (cmd *Command) Start() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Api started on: %d\n", port)
+	log.Infof("Api started on: %d", port)
 
 	return nil
 }
@@ -119,16 +121,16 @@ func (cmd *Command) Kill() error {
 	if err != nil {
 		switch err {
 		case connection.ErrNoConnection:
-			fmt.Println("No active connection - proceeding")
+			log.Info("No active connection - proceeding")
 		default:
 			return err
 		}
 	} else {
-		fmt.Println("Connection closed")
+		log.Info("Connection closed")
 	}
 
 	cmd.httpAPIServer.Stop()
-	fmt.Printf("Api stopped\n")
+	log.Info("Api stopped")
 
 	return nil
 }

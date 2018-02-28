@@ -14,6 +14,7 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
+	"github.com/mysterium/node/version"
 	"time"
 )
 
@@ -40,6 +41,7 @@ type Command struct {
 
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
+	log.Info("[Server version]", version.AsString())
 	err = cmd.checkOpenvpn()
 	if err != nil {
 		return err
