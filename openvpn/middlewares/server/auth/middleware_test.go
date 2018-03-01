@@ -20,6 +20,12 @@ func (f *fakeAuthenticatorStub) fakeAuthenticator(username, password string) (bo
 	return f.authenticated, nil
 }
 
+func (f *fakeAuthenticatorStub) reset() {
+	f.called = false
+	f.username = ""
+	f.password = ""
+}
+
 func newFakeAuthenticatorStub() fakeAuthenticatorStub {
 	return fakeAuthenticatorStub{}
 }
@@ -174,5 +180,67 @@ func TestMiddlewareConsumesClientIdsAntKeysWithSeveralDigits(t *testing.T) {
 		consumed, err := middleware.ConsumeLine(testLine)
 		assert.NoError(t, err, testLine)
 		assert.Equal(t, true, consumed, testLine)
+	}
+}
+
+func TestSecondClientIsNotDisconnectedWhenFirstClientDisconnects(t *testing.T) {
+	var firstClientConnected = []string{
+		">CLIENT:CONNECT,1,4",
+		">CLIENT:ENV,username=client1",
+		">CLIENT:ENV,password=passwd1",
+		">CLIENT:ENV,END",
+	}
+
+	var secondClientConnected = []string{
+		">CLIENT:CONNECT,2,4",
+		">CLIENT:ENV,username=client2",
+		">CLIENT:ENV,password=passwd2",
+		">CLIENT:ENV,END",
+	}
+
+	var firstClientDisconnected = []string{
+		">CLIENT:DISCONNECT,1,4",
+		">CLIENT:ENV,username=client1",
+		">CLIENT:ENV,password=passwd1",
+		">CLIENT:ENV,END",
+	}
+
+	fas := newFakeAuthenticatorStub()
+	fas.authenticated = true
+
+	mockMangement := &management.MockConnection{
+		CommandResult: "SUCCESS",
+	}
+
+	middleware := NewMiddleware(fas.fakeAuthenticator)
+	middleware.Start(mockMangement)
+
+	feedLinesToMiddleware(middleware, firstClientConnected)
+
+	assert.True(t, fas.called)
+	assert.Equal(t, "client1", fas.username)
+	assert.Equal(t, "passwd1", fas.password)
+	assert.Equal(t, "client-auth-nt 1 4", mockMangement.LastLine)
+
+	fas.reset()
+	feedLinesToMiddleware(middleware, secondClientConnected)
+	assert.True(t, fas.called)
+	assert.Equal(t, "client2", fas.username)
+	assert.Equal(t, "passwd2", fas.password)
+	assert.Equal(t, "client-auth-nt 2 4", mockMangement.LastLine)
+
+	fas.reset()
+	mockMangement.LastLine = ""
+	feedLinesToMiddleware(middleware, firstClientDisconnected)
+	assert.Empty(t, fas.username)
+	assert.Empty(t, fas.password)
+	assert.False(t, fas.called)
+	assert.Empty(t, mockMangement.LastLine)
+
+}
+
+func feedLinesToMiddleware(middleware management.Middleware, lines []string) {
+	for _, line := range lines {
+		middleware.ConsumeLine(line)
 	}
 }
