@@ -5,6 +5,7 @@ import (
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/cli"
 	"github.com/mysterium/node/cmd/commands/client"
+	_ "github.com/mysterium/node/logconfig"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"os"
 	"path/filepath"

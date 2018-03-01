@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
+	_ "github.com/mysterium/node/logconfig"
 	"os"
 )
 
