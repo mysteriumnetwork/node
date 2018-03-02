@@ -131,7 +131,7 @@ func (m *middleware) handleClientEvent(event clientEvent) {
 		password := event.env["password"]
 		err := m.authenticateClient(event.clientID, event.clientKey, username, password)
 		if err != nil {
-			log.Critical("Unable to authenticate client. Error: ", err)
+			log.Error("Unable to authenticate client. Error: ", err)
 		}
 	case established:
 		log.Info("Client with ID: ", event.clientID, " connection established successfully")
