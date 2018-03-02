@@ -1,11 +1,9 @@
 package auth
 
 import (
-	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn/management"
-	"regexp"
-	"strconv"
+	"strings"
 )
 
 // CredentialsChecker callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
@@ -14,10 +12,7 @@ type CredentialsChecker func(username, password string) (bool, error)
 type middleware struct {
 	checkCredentials CredentialsChecker
 	commandWriter    management.Connection
-	lastUsername     string
-	lastPassword     string
-	clientID         int
-	keyID            int
+	currentEvent     clientEvent
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
@@ -25,7 +20,35 @@ func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
 	return &middleware{
 		checkCredentials: credentialsChecker,
 		commandWriter:    nil,
+		currentEvent:     undefinedEvent,
 	}
+}
+
+type clientEventType string
+
+const (
+	connect     = clientEventType("CONNECT")
+	reauth      = clientEventType("REAUTH")
+	established = clientEventType("ESTABLISHED")
+	disconnect  = clientEventType("DISCONNECT")
+	address     = clientEventType("ADDRESS")
+	//pseudo event type ENV - that means some of above defined events are multiline and ENV messages are part of it
+	env = clientEventType("ENV")
+	//constant which means that id of type int is undefined
+	undefined = -1
+)
+
+type clientEvent struct {
+	eventType clientEventType
+	clientID  int
+	clientKey int
+	env       map[string]string
+}
+
+var undefinedEvent = clientEvent{
+	clientID:  undefined,
+	clientKey: undefined,
+	env:       make(map[string]string),
 }
 
 func (m *middleware) Start(commandWriter management.Connection) error {
@@ -37,143 +60,104 @@ func (m *middleware) Stop(commandWriter management.Connection) error {
 	return nil
 }
 
-func (m *middleware) checkReAuth(line string) (cont bool, consumed bool, err error) {
+func (m *middleware) ConsumeLine(line string) (bool, error) {
+	if !strings.HasPrefix(line, ">CLIENT:") {
+		return false, nil
+	}
 
-	rule, err := regexp.Compile("^>CLIENT:REAUTH,(\\d+),(\\d+)$")
+	clientLine := strings.TrimPrefix(line, ">CLIENT:")
+
+	eventType, eventData, err := parseClientEvent(clientLine)
 	if err != nil {
-		return false, false, err
+		return true, err
 	}
 
-	match := rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		m.Reset()
-		m.clientID, err = strconv.Atoi(match[1])
-		m.keyID, err = strconv.Atoi(match[2])
-		return false, true, nil
-	}
-	return true, false, nil
-}
-
-func (m *middleware) checkConnect(line string) (cont bool, consumed bool, err error) {
-
-	rule, err := regexp.Compile("^>CLIENT:CONNECT,(\\d+),(\\d+)$")
-	if err != nil {
-		return false, false, err
-	}
-
-	match := rule.FindStringSubmatch(line)
-	if len(match) == 0 {
-		return true, false, nil
-	}
-	m.Reset()
-	m.clientID, err = strconv.Atoi(match[1])
-	m.keyID, err = strconv.Atoi(match[2])
-	return false, true, nil
-
-}
-
-func (m *middleware) checkPassword(line string) (cont bool, consumed bool, err error) {
-
-	rule, err := regexp.Compile("^>CLIENT:ENV,password=(.*)$")
-	if err != nil {
-		return false, false, err
-	}
-
-	match := rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		if m.clientID < 0 {
-			return false, false, fmt.Errorf("wrong auth state, no client id")
+	switch eventType {
+	case connect, reauth:
+		ID, key, err := parseIDAndKey(eventData)
+		if err != nil {
+			return true, err
 		}
-		m.lastPassword = match[1]
-		return false, true, nil
-	}
-
-	return true, false, nil
-}
-
-func (m *middleware) checkUsername(line string) (cont bool, consumed bool, err error) {
-
-	rule, err := regexp.Compile("^>CLIENT:ENV,username=(.*)$")
-	if err != nil {
-		return false, false, err
-	}
-
-	match := rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		if m.clientID < 0 {
-			return false, false, fmt.Errorf("wrong auth state, no client id")
+		m.startOfEvent(eventType, ID, key)
+	case env:
+		if strings.ToLower(eventData) == "end" {
+			m.endOfEvent()
+			return true, nil
 		}
-		m.lastUsername = match[1]
-		return false, true, nil
-	}
 
-	return true, false, nil
-}
-
-func (m *middleware) checkEnvEnd(line string) (cont bool, consumed bool, err error) {
-
-	rule, err := regexp.Compile("^>CLIENT:ENV,END$")
-	if err != nil {
-		return false, false, err
-	}
-
-	match := rule.FindStringSubmatch(line)
-	if len(match) > 0 {
-		return false, true, nil
-	}
-
-	return true, false, nil
-}
-
-func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
-	if cont, consumed, err := m.checkReAuth(line); !cont {
-		return consumed, err
-	}
-
-	if cont, consumed, err := m.checkConnect(line); !cont {
-		return consumed, err
-	}
-
-	if cont, consumed, err := m.checkUsername(line); !cont {
-		return consumed, err
-	}
-
-	if cont, consumed, err := m.checkPassword(line); !cont {
-		return consumed, err
-	}
-
-	if cont, consumed, err := m.checkEnvEnd(line); !cont {
-		if consumed {
-			return m.authenticateClient()
+		key, val, err := parseEnvVar(eventData)
+		if err != nil {
+			return true, err
 		}
-		return consumed, err
+		m.addEnvVar(key, val)
+	case established, disconnect:
+		ID, err := parseID(eventData)
+		if err != nil {
+			return true, err
+		}
+		m.startOfEvent(eventType, ID, undefined)
+	case address:
+		log.Info("Address for client: ", eventData)
+	default:
+		log.Error("Undefined user notification event: ", eventType, eventData)
+		log.Error("Original line was: ", line)
 	}
-
-	return false, err
+	return true, nil
 }
 
-func (m *middleware) authenticateClient() (consumed bool, err error) {
+func (m *middleware) startOfEvent(eventType clientEventType, clientID int, keyID int) {
+	m.currentEvent.eventType = eventType
+	m.currentEvent.clientID = clientID
+	m.currentEvent.clientKey = keyID
+}
 
-	if m.lastUsername == "" || m.lastPassword == "" {
-		denyClientAuthWithMessage(m.commandWriter, m.clientID, m.keyID, "missing username or password")
-		return true, nil
+func (m *middleware) addEnvVar(key string, val string) {
+	m.currentEvent.env[key] = val
+}
+
+func (m *middleware) endOfEvent() {
+	m.handleClientEvent(m.currentEvent)
+	m.reset()
+}
+
+func (m *middleware) reset() {
+	m.currentEvent = undefinedEvent
+}
+
+func (m *middleware) handleClientEvent(event clientEvent) {
+	switch event.eventType {
+	case connect, reauth:
+		username := event.env["username"]
+		password := event.env["password"]
+		err := m.authenticateClient(event.clientID, event.clientKey, username, password)
+		if err != nil {
+			log.Error("Unable to authenticate client. Error: ", err)
+		}
+	case established:
+		log.Info("Client with ID: ", event.clientID, " connection established successfully")
+	case disconnect:
+		log.Info("Client with ID: ", event.clientID, " disconnected")
+	}
+}
+
+func (m *middleware) authenticateClient(clientID, clientKey int, username, password string) error {
+
+	if username == "" || password == "" {
+		return denyClientAuthWithMessage(m.commandWriter, clientID, clientKey, "missing username or password")
 	}
 
-	log.Info("authenticating user: ", m.lastUsername, " clientID: ", m.clientID, " keyID: ", m.keyID)
+	log.Info("authenticating user: ", username, " clientID: ", clientID, " clientKey: ", clientKey)
 
-	authenticated, err := m.checkCredentials(m.lastUsername, m.lastPassword)
+	authenticated, err := m.checkCredentials(username, password)
 	if err != nil {
 		log.Error("Authentication error: ", err)
-		denyClientAuthWithMessage(m.commandWriter, m.clientID, m.keyID, "internal error")
-		return true, nil
+		return denyClientAuthWithMessage(m.commandWriter, clientID, clientKey, "internal error")
 	}
 
 	if authenticated {
-		approveClient(m.commandWriter, m.clientID, m.keyID)
-	} else {
-		denyClientAuthWithMessage(m.commandWriter, m.clientID, m.keyID, "wrong username or password")
+		return approveClient(m.commandWriter, clientID, clientKey)
 	}
-	return true, nil
+	return denyClientAuthWithMessage(m.commandWriter, clientID, clientKey, "wrong username or password")
 }
 
 func approveClient(commandWriter management.Connection, clientID, keyID int) error {
@@ -184,11 +168,4 @@ func approveClient(commandWriter management.Connection, clientID, keyID int) err
 func denyClientAuthWithMessage(commandWriter management.Connection, clientID, keyID int, message string) error {
 	_, err := commandWriter.SingleLineCommand("client-deny %d %d %s", clientID, keyID, message)
 	return err
-}
-
-func (m *middleware) Reset() {
-	m.lastUsername = ""
-	m.lastPassword = ""
-	m.clientID = -1
-	m.keyID = -1
 }
