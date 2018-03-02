@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func parseClientEvent(line string) (clientEvent, string, error) {
+func parseClientEvent(line string) (clientEventType, string, error) {
 	rule, err := regexp.Compile("^(\\w+),(.*)$")
 	if err != nil {
 		return "", "", err
@@ -16,7 +16,7 @@ func parseClientEvent(line string) (clientEvent, string, error) {
 	if len(match) < 3 {
 		return "", "", errors.New("unable to parse event: " + line)
 	}
-	event := clientEvent(match[1])
+	event := clientEventType(match[1])
 	return event, match[2], nil
 }
 
@@ -30,7 +30,7 @@ func parseEnvVar(data string) (string, string, error) {
 	return "", "", errors.New("invalid env var: " + data)
 }
 
-func parseIdAndKey(data string) (int, int, error) {
+func parseIDAndKey(data string) (int, int, error) {
 	rule, err := regexp.Compile("^(\\d+),(\\d+)$")
 	if err != nil {
 		return undefined, undefined, err
@@ -50,7 +50,7 @@ func parseIdAndKey(data string) (int, int, error) {
 	return ID, key, nil
 }
 
-func parseId(data string) (int, error) {
+func parseID(data string) (int, error) {
 	rule, err := regexp.Compile("^(\\d+)$")
 	if err != nil {
 		return undefined, err

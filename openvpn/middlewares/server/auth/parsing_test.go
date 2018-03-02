@@ -9,7 +9,7 @@ import (
 func TestClientEventIsParsed(t *testing.T) {
 	var testData = []struct {
 		testLine  string
-		event     clientEvent
+		event     clientEventType
 		eventData string
 		err       error
 	}{
@@ -65,7 +65,7 @@ func TestIDAndKeyIsParsed(t *testing.T) {
 	}
 
 	for _, test := range testData {
-		ID, key, err := parseIdAndKey(test.testLine)
+		ID, key, err := parseIDAndKey(test.testLine)
 		assert.Equal(t, test.ID, ID, test.testLine)
 		assert.Equal(t, test.key, key, test.testLine)
 		assert.Equal(t, test.err, err, test.testLine)
@@ -83,7 +83,7 @@ func TestIDIsParsed(t *testing.T) {
 	}
 
 	for _, test := range testData {
-		ID, err := parseId(test.testLine)
+		ID, err := parseID(test.testLine)
 		assert.Equal(t, test.ID, ID, test.testLine)
 		assert.Equal(t, test.err, err, test.testLine)
 	}
