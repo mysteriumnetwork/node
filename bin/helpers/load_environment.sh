@@ -5,3 +5,6 @@ if [ ! -f .env ]; then
     exit 1
 fi
 source .env
+
+TRAVIS_COMMIT="$(git rev-parse --short HEAD 2> /dev/null | sed "s/\(.*\)/\1/")"
+TRAVIS_BRANCH="$(git symbolic-ref --short -q HEAD)"

@@ -4,6 +4,12 @@ package version
 
 import "fmt"
 
+type Info struct {
+	Commit      string
+	Branch      string
+	BuildNumber string
+}
+
 // GitCommit comes from TRAVIS_COMMIT env variable
 var GitCommit = "<unknown>"
 
@@ -16,4 +22,12 @@ var BuildNumber = "dev-build"
 // AsString returns all defined build constants as single string
 func AsString() string {
 	return fmt.Sprintf("Branch: %s. Build id: %s. Commit: %s", GitBranch, BuildNumber, GitCommit)
+}
+
+func GetInfo() *Info {
+	return &Info{
+		Commit:      GitCommit,
+		Branch:      GitBranch,
+		BuildNumber: BuildNumber,
+	}
 }

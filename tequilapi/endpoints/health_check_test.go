@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysterium/node/version"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
@@ -19,17 +20,25 @@ func TestHealthCheckReturnsExpectedJsonObject(t *testing.T) {
 	handlerFunc := HealthCheckEndpointFactory(
 		newMockTimer([]time.Time{tick1, tick2}).Now,
 		func() int { return 1 },
-		"version_string",
+		&version.Info{
+			Branch:      "some",
+			Commit:      "abc123",
+			BuildNumber: "travis build #",
+		},
 	).HealthCheck
 	handlerFunc(resp, req, httprouter.Params{})
 
 	assert.JSONEq(
 		t,
 		`{
-			"uptime" : "1m0s",
-			"process" : 1,
-			"version" : "version_string"
-		}`,
+            "uptime" : "1m0s",
+            "process" : 1,
+            "version" : {
+                "branch": "some",
+                "commit": "abc123",
+                "buildNumber": "travis build #"
+            }
+        }`,
 		resp.Body.String())
 }
 

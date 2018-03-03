@@ -13,7 +13,7 @@ func NewAPIRouter() *httprouter.Router {
 	router := httprouter.New()
 	router.HandleMethodNotAllowed = true
 
-	router.GET("/healthcheck", endpoints.HealthCheckEndpointFactory(time.Now, os.Getpid, version.AsString()).HealthCheck)
+	router.GET("/healthcheck", endpoints.HealthCheckEndpointFactory(time.Now, os.Getpid, version.GetInfo()).HealthCheck)
 
 	return router
 }
