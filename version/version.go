@@ -4,30 +4,32 @@ package version
 
 import "fmt"
 
+// Info stores build details
 type Info struct {
 	Commit      string
 	Branch      string
 	BuildNumber string
 }
 
-// GitCommit comes from TRAVIS_COMMIT env variable
-var GitCommit = "<unknown>"
+// gitCommit comes from COMMIT env variable
+var gitCommit = "<unknown>"
 
-// GitBranch comes from TRAVIS_BRANCH env variable - if it's github release, this variable will contain release tag name
-var GitBranch = "<unknown>"
+// gitBranch comes from BRANCH env variable - if it's github release, this variable will contain release tag name
+var gitBranch = "<unknown>"
 
-// BuildNumber comes from TRAVIS_JOB_NUMBER env variable
-var BuildNumber = "dev-build"
+// buildNumber comes from TRAVIS_JOB_NUMBER env variable
+var buildNumber = "dev-build"
 
 // AsString returns all defined build constants as single string
 func AsString() string {
-	return fmt.Sprintf("Branch: %s. Build id: %s. Commit: %s", GitBranch, BuildNumber, GitCommit)
+	return fmt.Sprintf("Branch: %s. Build id: %s. Commit: %s", gitBranch, buildNumber, gitCommit)
 }
 
+// GetInfo returns build details.
 func GetInfo() *Info {
 	return &Info{
-		Commit:      GitCommit,
-		Branch:      GitBranch,
-		BuildNumber: BuildNumber,
+		Commit:      gitCommit,
+		Branch:      gitBranch,
+		BuildNumber: buildNumber,
 	}
 }
