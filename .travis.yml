@@ -1,9 +1,9 @@
-sudo: false
+sudo: true
 language: go
 
 os:
   - linux
-  - osx
+#  - osx
 
 go:
   - 1.9.2
@@ -34,6 +34,11 @@ script:
   - bin/test
   - bin/client_build
   - bin/server_build
+  - if [[ "$TRAVIS_OS_NAME" == 'linux' ]]; then
+      source bin/travis_scripts/ensure_docker.sh;
+      source bin/travis_scripts/ensure_docker_compose.sh;
+      bin/integration_test.sh;
+    fi
 
 before_deploy:
   - mkdir binaries

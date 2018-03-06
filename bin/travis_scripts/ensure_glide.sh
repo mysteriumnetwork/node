@@ -5,10 +5,11 @@ GLIDE_VERSION=$2
 
 
 OS_ARCH="linux-amd64"
-if [ "$TRAVIS_OS_NAME"=="osx" ]; then
+echo $TRAVIS_OS_NAME
+if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     OS_ARCH="darwin-amd64"
 fi
-
+echo $OS_ARCH
 glide --version
 if [ $? -eq 0 ]; then
     echo "Glide found"
