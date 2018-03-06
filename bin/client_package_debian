@@ -43,6 +43,7 @@ fi
 DIR_BUILD="build/package"
 PACKAGE_FILE="${DIR_BUILD}/mysterium-client_linux_${ARCH}.deb"
 printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
+    && mkdir -p ${DIR_BUILD}
     && rm -f ${PACKAGE_FILE} \
     && ${FPM_BIN} \
         --name="mysterium-client" \
