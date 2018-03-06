@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 PROJECT_NAME="nodetest"
 SUCCESS_COLOR='\033[0;32m' # green
 FAILURE_COLOR="\033[0;31m" # red
