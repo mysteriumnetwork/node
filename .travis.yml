@@ -32,8 +32,6 @@ install:
 
 script:
   - bin/test
-  - bin/client_build
-  - bin/server_build
   - if [[ "$TRAVIS_OS_NAME" == 'linux' ]]; then
       source bin/travis_scripts/ensure_docker.sh;
       source bin/travis_scripts/ensure_docker_compose.sh;
@@ -41,6 +39,8 @@ script:
     fi
 
 before_deploy:
+  - bin/client_build
+  - bin/server_build
   - mkdir binaries
   - bin/travis_scripts/package_tar_gz.sh client binaries/mysterium_client.tar.gz
   - bin/travis_scripts/package_tar_gz.sh server binaries/mysterium_server.tar.gz
