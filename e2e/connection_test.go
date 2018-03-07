@@ -12,7 +12,7 @@ var port = flag.Int("tequila.port", 4050, "Specify tequila port for e2e tests")
 
 func TestClientConnectsToNode(t *testing.T) {
 	//we cannot move tequilApi as var outside - host and port are not initialized yet :(
-	//something to do, when "go test" calls flag.Parse()
+	//something related to how "go test" calls flag.Parse()
 	tequilApi := client.NewClient(*host, *port)
 
 	status, err := tequilApi.Status()
