@@ -7,33 +7,36 @@ services:
       - 4222
       - 8222
 
-  server-ubuntu:
-    privileged: true
+  node:
     build:
       context: ..
-      dockerfile: bin/server_docker/ubuntu/Dockerfile
-      args:
-        PACKAGE_VERSION: 0.0.1-docker
+      dockerfile: e2e/Dockerfile.node
     depends_on:
       - broker
+    privileged: true
     cap_add:
       - MKNOD
       - NET_ADMIN
     expose:
       - 1194
+    command: "--data-dir=/mysterium --config-dir=/mysterium/server_config --runtime-dir=/mysterium --broker-address=broker"
 
   client:
-    privileged: true
     build:
       context: ..
-      dockerfile: bin/client_docker/ubuntu/Dockerfile
-      args:
-        PACKAGE_VERSION: 0.0.1-docker
+      #this effectively reuses node image built earlier
+      dockerfile: e2e/Dockerfile.node
     depends_on:
       - broker
-      - server-ubuntu
+      - node
+    privileged: true
+    cap_add:
+      - MKNOD
+      - NET_ADMIN
     ports:
       - 4052:4050
-    environment:
-      MYSTERIUM_CLIENT_TEQUILAPI_PORT: 4050
-      MYSTERIUM_DISCOVERY_ADDRESS: ""
+    entrypoint:
+      "/mysterium/mysterium_client"
+    command:
+      "--data-dir=/mysterium --config-dir=/mysterium/client_config --runtime-dir=/mysterium
+      --discovery-address=http://notyetdefined:9999 --tequilapi.address=0.0.0.0 --tequilapi.port=4050"
