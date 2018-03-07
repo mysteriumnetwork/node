@@ -1,0 +1,39 @@
+version: '2'
+services:
+
+  broker:
+    image: nats
+    expose:
+      - 4222
+      - 8222
+
+  server-ubuntu:
+    privileged: true
+    build:
+      context: ..
+      dockerfile: bin/server_docker/ubuntu/Dockerfile
+      args:
+        PACKAGE_VERSION: 0.0.1-docker
+    depends_on:
+      - broker
+    cap_add:
+      - MKNOD
+      - NET_ADMIN
+    expose:
+      - 1194
+
+  client:
+    privileged: true
+    build:
+      context: ..
+      dockerfile: bin/client_docker/ubuntu/Dockerfile
+      args:
+        PACKAGE_VERSION: 0.0.1-docker
+    depends_on:
+      - broker
+      - server-ubuntu
+    ports:
+      - 4052:4050
+    environment:
+      MYSTERIUM_CLIENT_TEQUILAPI_PORT: 4050
+      MYSTERIUM_DISCOVERY_ADDRESS: ""
