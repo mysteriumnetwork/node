@@ -17,7 +17,7 @@ print_error () {
 }
 
 setup () {
-    sudo ${dockerComposeCmd} build
+    ${dockerComposeCmd} build
     if [ ! $? -eq 0 ]; then
         print_error "Building docker images failed"
         exit 1
