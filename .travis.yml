@@ -15,6 +15,9 @@ env:
     - CACHE_ROOT_DIR=$HOME/cache
     - BUILD_TOOLS_PATH=$CACHE_ROOT_DIR/build_tools
     - GLIDE_HOME=$HOME/glide-home
+    - COMMIT=$TRAVIS_COMMIT
+    - BRANCH=$TRAVIS_BRANCH
+    - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
 
 cache:
   directories:
