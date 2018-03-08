@@ -1,18 +1,19 @@
-FROM golang:1.9.2 AS builder
+FROM golang:1.9.2-alpine AS builder
+
+# Install packages
+RUN apk add --update bash g++ make\
+    && rm -rf /var/cache/apk/*
 
 WORKDIR /go/src/github.com/mysterium/node
 ADD . .
 RUN GOOS=linux GOARCH=amd64 bin/server_build && bin/client_build
 
-FROM ubuntu:16.04
-RUN apt-get update \
-    && apt-get install -y curl \
-    && curl -s https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add \
-    && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list \
-    && apt-get update \
-    && apt-get install -y --fix-broken \
-    && apt-get install -y openvpn \
-    && apt-get install -y iptables
+FROM alpine:3.6
+
+# Install packages
+RUN apk update \
+    && apk add --no-cache iptables ca-certificates openvpn \
+    && rm -rf /var/cache/apk/*
 
 WORKDIR /mysterium
 # Copy node stuff
