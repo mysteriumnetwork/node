@@ -35,7 +35,7 @@ install:
 
 script:
   - bin/test
-  - if [ "$TRAVIS_OS_NAME" == 'linux' ] && [ "$TRAVIS_PULL_REQUEST"!=false ]; then
+  - if [ "$TRAVIS_OS_NAME" == 'linux' ] && [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       bin/travis_scripts/check_docker.sh;
       bin/travis_scripts/check_docker_compose.sh;
       bin/run_e2e_tests;
