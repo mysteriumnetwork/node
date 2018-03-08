@@ -19,7 +19,7 @@ env:
 cache:
   directories:
     - "$CACHE_ROOT_DIR"
-    - "var/lib/docker" #try to cache already downloaded docker images
+    - "/var/lib/docker" #try to cache already downloaded docker images
 
 before_install:
   - rm -f .env
