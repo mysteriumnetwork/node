@@ -13,6 +13,7 @@ services:
       dockerfile: bin/server_docker/alpine/Dockerfile
     depends_on:
       - broker
+      - discovery
     privileged: true
     cap_add:
       - MKNOD
@@ -31,6 +32,7 @@ services:
     depends_on:
       - broker
       - node
+      - discovery
     privileged: true
     cap_add:
       - MKNOD
@@ -40,3 +42,28 @@ services:
     environment:
       MYSTERIUM_DISCOVERY_ADDRESS: "http://notdefiendyet:6666"
       MYSTERIUM_CLIENT_TEQUILAPI_PORT: "4050"
+
+  #infrastructure - centralized api and db
+  db:
+      image: percona:5.7
+      restart: always
+      expose:
+        - 3306
+      environment:
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_DATABASE: myst_api
+        MYSQL_USER: myst_api
+        MYSQL_PASSWORD: myst_api
+
+  discovery:
+      image: mysteriumnetwork/mysterium-api:0.1.5
+      expose:
+      - 80
+      environment:
+        APP_PORT: 80
+        DB_HOST: db
+        DB_NAME: myst_api
+        DB_USER: myst_api
+        DB_PASSWORD: myst_api
+      depends_on:
+        - db

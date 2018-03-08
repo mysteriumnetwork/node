@@ -28,6 +28,7 @@ setup () {
         print_error "Starting built docker images failed"
         exit 1
     fi
+    ${dockerComposeCmd} logs -f > e2e_tests.log &
 }
 
 cleanup () {
