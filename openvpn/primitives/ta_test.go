@@ -29,7 +29,7 @@ func TestTLSCryptKeyFileContentsAreValid(t *testing.T) {
 	contentLen, _ := keyFile.Read(keyBytes)
 
 	if fileLen != contentLen {
-		t.Errorf("content lengh %s should be %s", contentLen, fileLen)
+		t.Errorf("content length %d, should be %d", contentLen, fileLen)
 		assert.Equal(t, contentLen, fileLen)
 	}
 
