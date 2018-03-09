@@ -35,6 +35,7 @@ install:
 
 script:
   - bin/test
+  #run e2e on Pull Requests and linux env only - travis OSX VM doesnt support docker (yet?)
   - if [ "$TRAVIS_OS_NAME" == 'linux' ] && [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       bin/travis_scripts/check_docker.sh;
       bin/travis_scripts/check_docker_compose.sh;
