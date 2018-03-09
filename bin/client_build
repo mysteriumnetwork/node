@@ -13,7 +13,7 @@
 #> GOOS=windows GOARCH=amd64 bin/client_build
 #
 # Check if program has dynamic libraries:
-#> readelf -d /build/client/mysterium_client
+#> readelf -d build/client/mysterium_client
 
 source bin/helpers/functions.sh
 source bin/helpers/load_environment.sh
