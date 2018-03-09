@@ -17,15 +17,30 @@ print_error () {
 }
 
 setup () {
+    ${dockerComposeCmd} up -d db # start database first - it takes about 10 sec untils db startsup, and otherwise db migration fails
+    if [ ! $? -eq 0 ]; then
+        print_error "Db startup failed"
+        cleanup
+        exit 1
+    fi
+
     ${dockerComposeCmd} build
     if [ ! $? -eq 0 ]; then
         print_error "Building docker images failed"
         exit 1
     fi
 
+    ${dockerComposeCmd} run --entrypoint bin/db-upgrade discovery
+    if [ ! $? -eq 0 ]; then
+        print_error "Db migration failed"
+        cleanup
+        exit 1
+    fi
+
     ${dockerComposeCmd} up -d
     if [ ! $? -eq 0 ]; then
         print_error "Starting built docker images failed"
+        cleanup
         exit 1
     fi
     ${dockerComposeCmd} logs -f > e2e_tests.log &

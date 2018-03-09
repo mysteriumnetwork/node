@@ -3,3 +3,4 @@
 /vendor
 /.env
 testdataoutput
+e2e_tests.log
