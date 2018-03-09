@@ -3,7 +3,7 @@ language: go
 
 os:
   - linux
-  - osx
+#  - osx
 
 go:
   - 1.9.2
@@ -14,21 +14,23 @@ env:
   global:
     - CACHE_ROOT_DIR=$HOME/cache
     - BUILD_TOOLS_PATH=$CACHE_ROOT_DIR/build_tools
-    - GLIDE_HOME=$HOME/glide-home
+    - DEP_HOME=$HOME/dep-home
 
 cache:
   directories:
     - "$CACHE_ROOT_DIR"
 
 before_install:
+  # TODO: create .env.travis
   - rm -f .env
   - echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
   - echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
 
 install:
   - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
-  - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
-  - glide "-home" $GLIDE_HOME install
+  - source bin/travis_scripts/ensure_dep.sh $BUILD_TOOLS_PATH "v0.4.1"
+  # TODO: install to custom home
+  - dep ensure
 
 script:
   - bin/test
