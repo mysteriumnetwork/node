@@ -10,6 +10,27 @@ services:
       - 4222:4222
       - 8222:8222
 
+  server-alpine:
+    privileged: true
+    tty: true
+    build:
+      context: .
+      dockerfile: bin/server_docker/alpine/Dockerfile
+    depends_on:
+      - broker
+    cap_add:
+      - MKNOD
+      - NET_ADMIN
+    networks:
+      - default
+    ports:
+      - 1194:1194
+    environment:
+      MYSTERIUM_SERVER_IDENTITY: ""
+      MYSTERIUM_SERVER_IDENTITY_PASSPHRASE: ""
+      MYSTERIUM_DISCOVERY_ADDRESS: ""
+      MYSTERIUM_BROKER_ADDRESS: "broker"
+
   server-ubuntu:
     privileged: true
     tty: true
@@ -43,6 +64,7 @@ services:
         PACKAGE_VERSION: 0.0.1-docker
     depends_on:
       - broker
+      - server-alpine
       - server-ubuntu
     networks:
       - default
