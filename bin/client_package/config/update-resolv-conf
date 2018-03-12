@@ -9,9 +9,6 @@
 # To use set as 'up' and 'down' script in your openvpn *.conf:
 # up /etc/openvpn/update-resolv-conf
 # down /etc/openvpn/update-resolv-conf
-# installation:
-# copy update-resolv-conf to myst client current directory
-# build/client/ (by default)
 
 [ "$script_type" ] || exit 0
 [ "$dev" ] || exit 0
@@ -20,7 +17,11 @@ NMSRVRS=()
 SRCHS=()
 adapters=()
 
+# TODO Investigate DNS on Linux environment
 NETWORKSETUP=/usr/sbin/networksetup
+if [ ! -x "$NETWORKSETUP" ]; then
+    exit 0
+fi
 
 # Set bash delimeter to be line break (temporarily)
 IFSSAVE=$IFS
