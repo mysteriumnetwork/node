@@ -25,7 +25,7 @@ func NewCommand(options CommandOptions) *Command {
 	return NewCommandWith(
 		options,
 		server.NewClient(options.DiscoveryAPIAddress),
-		ip.NewResolver(),
+		ip.NewResolver(options.IpifyUrl),
 		nat.NewService(),
 	)
 }

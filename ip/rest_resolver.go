@@ -11,16 +11,18 @@ import (
 	"time"
 )
 
-const ipifyAPIURL = "https://api.ipify.org/"
 const ipifyAPIClient = "goclient-v0.1"
 const ipifyAPILogPrefix = "[ipify.api] "
 
-func NewResolver() Resolver {
-	return NewResolverWithTimeout(1 * time.Minute)
+// NewResolver creates new ipify based resolver with default timeout of one minute
+func NewResolver(ipifyUrl string) Resolver {
+	return NewResolverWithTimeout(ipifyUrl, 1*time.Minute)
 }
 
-func NewResolverWithTimeout(timeout time.Duration) Resolver {
+// NewResolverWithTimeout creates new ipify based resolver with specified timeout
+func NewResolverWithTimeout(ipifyUrl string, timeout time.Duration) Resolver {
 	return &clientRest{
+		ipifyUrl: ipifyUrl,
 		httpClient: http.Client{
 			Timeout: timeout,
 			Transport: &http.Transport{
@@ -33,13 +35,14 @@ func NewResolverWithTimeout(timeout time.Duration) Resolver {
 }
 
 type clientRest struct {
+	ipifyUrl   string
 	httpClient http.Client
 }
 
 func (client *clientRest) GetPublicIP() (string, error) {
 	var ipResponse IPResponse
 
-	request, err := http.NewRequest("GET", ipifyAPIURL+"/?format=json", nil)
+	request, err := http.NewRequest("GET", client.ipifyUrl+"/?format=json", nil)
 	request.Header.Set("User-Agent", ipifyAPIClient)
 	request.Header.Set("Accept", "application/json")
 	if err != nil {
