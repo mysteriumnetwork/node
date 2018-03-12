@@ -1,7 +1,5 @@
 FROM golang:1.9.2 AS builder
 
-ARG PACKAGE_VERSION
-
 # Install FPM
 RUN apt-get update \
     && apt-get install -y ruby-dev build-essential \

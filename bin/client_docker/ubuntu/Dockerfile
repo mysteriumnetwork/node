@@ -1,4 +1,4 @@
-FROM golang:1.9.2 AS builder
+FROM mysteriumnetwork/mysterium-node-builder AS builder
 
 ARG PACKAGE_VERSION
 

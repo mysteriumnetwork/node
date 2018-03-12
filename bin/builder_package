@@ -1,0 +1,35 @@
+#!/bin/bash
+
+###########################################################################
+# Creates builder Docker image and uploads it to DockerHub https://hub.docker.com/r/mysteriumnetwork/mysterium-node-builder/
+#
+# To create a builder image, simply execute:
+#> bin/builder_package [latest]
+
+# Usage - build local image:
+#> bin/builder_package
+
+# Usage - build image and push to docker hub:
+#> bin/builder_package latest
+
+DOCKER_IMAGE="mysteriumnetwork/mysterium-node-builder"
+
+printf "Building Docker image '$DOCKER_IMAGE' ..\n" \
+    && docker build \
+        --file bin/util_docker/builder/Dockerfile \
+        --build-arg PACKAGE_VERSION=latest \
+        --tag $DOCKER_IMAGE:latest \
+        .
+
+if [ $# -ge 1 ] && [ $1 == "latest" ]; then
+    docker push $DOCKER_IMAGE:latest
+fi
+
+if [ $? -ne 0 ] ; then
+    printf "\e[0;31m%s\e[0m\n" "Failed to build Docker image!"
+    exit 1
+fi
+
+printf "\e[0;32m%s\e[0m\n" "Docker image building process complete!"
+
+exit 0
