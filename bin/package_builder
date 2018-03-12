@@ -1,0 +1,44 @@
+#!/bin/bash
+
+###########################################################################
+# Packaging script which creates Debian package using builder image
+#
+# Requirements:
+#    docker
+#    mysteriumnetwork/mysterium-node-builder docker image
+#
+#
+# To create a deb package execute:
+#> bin/server_package_deb version arch [docker_tag]
+
+# Usage example:
+#> bin/server_package_deb 0.0.1 amd64
+
+COMMAND=$1
+if [ -z "$COMMAND" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing command!"
+    exit 1
+fi
+
+VERSION=$2
+if [ -z "$VERSION" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing version!"
+    exit 1
+fi
+
+ARCH=$3
+if [ -z "$ARCH" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing architecture!"
+    exit 1
+fi
+
+printf "\e[0;32m%s\e[0m\n" "Building deb ..\n" \
+
+docker run --rm -v $(pwd):/go/src/github.com/mysterium/node mysteriumnetwork/mysterium-node-builder -c "${COMMAND} ${VERSION} ${ARCH}"
+
+if [ $? -ne 0 ] ; then
+    printf "\e[0;31m%s\e[0m\n" "Failed to build Debian package!"
+    exit 1
+fi
+
+exit 0

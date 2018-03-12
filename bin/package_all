@@ -22,33 +22,24 @@ printf "Creating build directory '$DIR_BUILD' ..\n" \
     && mkdir -p $DIR_BUILD \
     && cp INSTALL.md $DIR_BUILD/INSTALL.txt \
 && printf "\n\n" \
-    && GOOS=linux GOARCH=amd64 bin/server_build \
-    && bin/server_package_debian $VERSION amd64 \
+    && bin/package_builder "bin/server_build; bin/server_package_debian" $VERSION amd64 \
     && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_linux_amd64 \
 && printf "\n\n" \
-    && GOOS=linux GOARCH=386 bin/server_build \
-    && bin/server_package_debian $VERSION i386 \
+    && bin/package_builder "bin/server_build; bin/server_package_debian" $VERSION i386 \
     && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_linux_386 \
 && printf "\n\n" \
-    && GOOS=linux GOARCH=arm bin/server_build \
-    && bin/server_package_debian $VERSION armhf \
+    && bin/package_builder "bin/server_build; bin/server_package_debian" $VERSION armhf \
     && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_linux_arm \
 && printf "\n\n" \
-    && GOOS=linux GOARCH=amd64 bin/client_build \
-    && bin/client_package_debian $VERSION amd64 \
+    && bin/package_builder "bin/client_build; bin/client_package_debian" $VERSION amd64 \
     && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_linux_amd64 \
 && printf "\n\n" \
-    && GOOS=linux GOARCH=386 bin/client_build \
-    && bin/client_package_debian $VERSION i386 \
+    && bin/package_builder "bin/client_build; bin/client_package_debian" $VERSION i386 \
     && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_linux_386 \
 && printf "\n\n" \
-    && GOOS=linux GOARCH=arm bin/client_build \
-    && bin/client_package_debian $VERSION armhf \
+    && bin/package_builder "bin/client_build; bin/client_package_debian" $VERSION armhf \
     && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_linux_arm \
 && printf "\n\n" \
     && GOOS=darwin GOARCH=amd64 bin/client_build \
     && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_osx_amd64 \
-&& printf "\n\n" \
-    && GOOS=darwin GOARCH=386 bin/client_build \
-    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_osx_386 \
 && printf "\e[0;32m%s\e[0m\n" "All packages successfully packaged to directory '$DIR_BUILD'!"
