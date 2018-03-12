@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 services:
 
   broker:
@@ -14,6 +14,7 @@ services:
     depends_on:
       - broker
       - discovery
+      - ipify
     privileged: true
     cap_add:
       - MKNOD
@@ -33,6 +34,7 @@ services:
       - broker
       - node
       - discovery
+      - ipify
     privileged: true
     cap_add:
       - MKNOD
@@ -72,4 +74,3 @@ services:
     image: owlab/ipify
     expose:
     - 3000
-

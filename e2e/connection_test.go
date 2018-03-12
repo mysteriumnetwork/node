@@ -36,6 +36,10 @@ func TestClientConnectsToNode(t *testing.T) {
 	err = tequilApi.Unlock(identity.Address, "")
 	assert.NoError(t, err)
 
+	nonVpnIp, err := tequilApi.GetIP()
+	assert.NoError(t, err)
+	seelog.Info("Direct client address is: ", nonVpnIp)
+
 	proposals, err := tequilApi.Proposals()
 	if err != nil {
 		assert.Error(t, err)
@@ -57,6 +61,10 @@ func TestClientConnectsToNode(t *testing.T) {
 	status, err = tequilApi.Status()
 	assert.NoError(t, err)
 	assert.Equal(t, "Connected", status.Status)
+
+	vpnIp, err := tequilApi.GetIP()
+	assert.NoError(t, err)
+	seelog.Info("VPN client address is: ", vpnIp)
 
 	err = tequilApi.Disconnect()
 	assert.NoError(t, err)
