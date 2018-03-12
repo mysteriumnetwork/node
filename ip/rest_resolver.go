@@ -11,7 +11,6 @@ import (
 	"time"
 )
 
-//const ipifyAPIURL = "https://api.ipify.org/"
 const ipifyAPIClient = "goclient-v0.1"
 const ipifyAPILogPrefix = "[ipify.api] "
 
