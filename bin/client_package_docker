@@ -4,11 +4,11 @@
 # Creates Docker image and uploads it to DockerHub https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
 #
 # To create a release, simply execute:
-#> bin/server_package_docker version [tag..]
+#> bin/client_package_docker version [tag..]
 
 # Usage example:
-#> bin/server_package_docker 0.0.1
-#> bin/server_package_docker 0.0.1 0.0.1-alpine alpine latest
+#> bin/client_package_docker 0.0.1
+#> bin/client_package_docker 0.0.1 0.0.1-alpine alpine latest
 
 VERSION=$1
 if [ -z "$VERSION" ]; then
@@ -16,11 +16,11 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-DOCKER_IMAGE="mysteriumnetwork/mysterium-node"
+DOCKER_IMAGE="mysteriumnetwork/mysterium-client"
 
 printf "Building Alpine image..\n" \
     && docker build \
-        --file bin/server_docker/alpine/Dockerfile \
+        --file bin/client_docker/alpine/Dockerfile \
         --build-arg PACKAGE_VERSION=$VERSION \
         --tag $DOCKER_IMAGE:$VERSION-alpine \
         .

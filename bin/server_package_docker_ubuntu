@@ -7,8 +7,8 @@
 #> bin/server_package_docker version [tag..]
 
 # Usage example:
-#> bin/server_package_docker 0.0.1
-#> bin/server_package_docker 0.0.1 0.0.1-alpine alpine latest
+#> bin/server_package_docker_ubuntu 0.0.1
+#> bin/server_package_docker_ubuntu 0.0.1 0.0.1-ubuntu ubuntu
 
 VERSION=$1
 if [ -z "$VERSION" ]; then
@@ -18,14 +18,14 @@ fi
 
 DOCKER_IMAGE="mysteriumnetwork/mysterium-node"
 
-printf "Building Alpine image..\n" \
+printf "Building Ubuntu image..\n" \
     && docker build \
-        --file bin/server_docker/alpine/Dockerfile \
+        --file bin/server_docker/ubuntu/Dockerfile \
         --build-arg PACKAGE_VERSION=$VERSION \
-        --tag $DOCKER_IMAGE:$VERSION-alpine \
+        --tag $DOCKER_IMAGE:$VERSION-ubuntu \
         .
 if [ $? -ne 0 ] ; then
-    printf "\e[0;31m%s\e[0m\n" "Failed to build Alpine image!"
+    printf "\e[0;31m%s\e[0m\n" "Failed to build Ubuntu image!"
     exit 1
 fi
 
@@ -33,7 +33,7 @@ shift
 while test $# -gt 0; do
     DOCKER_TAG=$1
     printf "Publishing version '$DOCKER_TAG' image..\n" \
-        && docker tag $DOCKER_IMAGE:$VERSION-alpine $DOCKER_IMAGE:$DOCKER_TAG \
+        && docker tag $DOCKER_IMAGE:$VERSION-ubuntu $DOCKER_IMAGE:$DOCKER_TAG \
         && docker push $DOCKER_IMAGE:$DOCKER_TAG
     shift
 done
