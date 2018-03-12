@@ -4,8 +4,6 @@ services:
   broker:
     tty: true
     image: nats
-    networks:
-      - default
     ports:
       - 4222:4222
       - 8222:8222
@@ -21,8 +19,6 @@ services:
     cap_add:
       - MKNOD
       - NET_ADMIN
-    networks:
-      - default
     ports:
       - 11941:1194
     environment:
@@ -42,8 +38,6 @@ services:
     cap_add:
       - MKNOD
       - NET_ADMIN
-    networks:
-      - default
     ports:
       - 11942:1194
     environment:
@@ -56,8 +50,6 @@ services:
     build:
       context: .
       dockerfile: bin/client_docker/alpine/Dockerfile
-    networks:
-      - default
     ports:
       - 40501:4050
     environment:
@@ -71,8 +63,6 @@ services:
       dockerfile: bin/client_docker/ubuntu/Dockerfile
       args:
         PACKAGE_VERSION: 0.0.1-docker
-    networks:
-      - default
     ports:
       - 40502:4050
     environment:
