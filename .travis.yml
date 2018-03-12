@@ -53,7 +53,7 @@ deploy:
     target-branch: mysterium_$TRAVIS_OS_NAME
     repo: MysteriumNetwork/build-artifacts
     on:
-      branch: hotfix/fix-travis-yml
+      branch: master
   - provider: releases
     file_glob: true
     file: binaries/*
