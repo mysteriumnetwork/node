@@ -20,6 +20,8 @@ type CommandOptions struct {
 
 	DiscoveryAPIAddress string
 	BrokerAddress       string
+
+	IpifyUrl string
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
@@ -75,6 +77,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"discovery-address",
 		cmd.MysteriumAPIURL,
 		"Address (URL form) of discovery service",
+	)
+
+	flags.StringVar(
+		&options.IpifyUrl,
+		"ipify-url",
+		"https://api.ipify.org/",
+		"Address (URL form) of ipify service",
 	)
 
 	err = flags.Parse(args[1:])

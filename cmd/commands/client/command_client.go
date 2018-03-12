@@ -74,7 +74,7 @@ func NewCommandWith(
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ip.NewResolver(), statsKeeper)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ip.NewResolver(options.IpifyUrl), statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill), time.Second)
 
