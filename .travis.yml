@@ -41,7 +41,11 @@ before_deploy:
   - bin/travis_scripts/package_tar_gz.sh server binaries/mysterium_server.tar.gz
 
 deploy:
-  - provider: pages
+  #This is workaround for travis issue https://github.com/travis-ci/travis-ci/issues/9312
+  #Will be fixed in version 1.9.1
+  - edge:
+    branch: v1.8.47
+    provider: pages
     local-dir: binaries
     skip-cleanup: true
     github-token: "$GIT_RELEASES_API_KEY"
