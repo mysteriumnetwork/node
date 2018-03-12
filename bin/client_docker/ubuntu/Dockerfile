@@ -24,16 +24,18 @@ FROM ubuntu:16.04
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
 # Install packages
-COPY --from=builder /go/src/github.com/mysterium/node/build/package/mysterium-client_linux_amd64.deb /tmp/mysterium-client.deb
-
 RUN apt-get update \
     && apt-get install -y curl \
     && curl -s https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add \
     && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list \
     && apt-get update \
-    && dpkg --install --force-depends /tmp/mysterium-client.deb \
-    && apt-get install -y --fix-broken \
-    && rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/mysterium-client.deb
+    && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
 COPY bin/client_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# Install application
+COPY --from=builder /go/src/github.com/mysterium/node/build/package/mysterium-client_linux_amd64.deb /tmp/mysterium-client.deb
+RUN dpkg --install --force-depends /tmp/mysterium-client.deb \
+    && apt-get install -y --fix-broken \
+    && /tmp/mysterium-client.deb
