@@ -51,6 +51,8 @@ printf "Creating build directory '$DIR_BUILD' ..\n" \
 && printf "\n\n" \
     && bin/server_package_docker $VERSION $VERSION-alpine alpine latest \
     && bin/server_package_docker_ubuntu $VERSION $VERSION-ubuntu ubuntu \
+    && bin/client_package_docker $VERSION $VERSION-alpine alpine latest \
+    && bin/client_package_docker_ubuntu $VERSION $VERSION-ubuntu ubuntu \
 && printf "\n\n" \
 
 && printf "\e[0;32m%s\e[0m\n" "All packages successfully packaged to directory '$DIR_BUILD'!"

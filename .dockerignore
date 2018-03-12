@@ -1,5 +1,1 @@
-build/server/ca.*
-build/server/server.*
-build/server/tc.key
-build/server/*.sock
-build/client/*.sock
+build
