@@ -24,12 +24,10 @@ services:
     networks:
       - default
     ports:
-      - 1194:1194
+      - 11941:1194
     environment:
       MYSTERIUM_SERVER_IDENTITY: ""
       MYSTERIUM_SERVER_IDENTITY_PASSPHRASE: ""
-      MYSTERIUM_DISCOVERY_ADDRESS: ""
-      MYSTERIUM_BROKER_ADDRESS: "broker"
 
   server-ubuntu:
     privileged: true
@@ -47,14 +45,25 @@ services:
     networks:
       - default
     ports:
-      - 1194:1194
+      - 11942:1194
     environment:
       MYSTERIUM_SERVER_IDENTITY: ""
       MYSTERIUM_SERVER_IDENTITY_PASSPHRASE: ""
-      MYSTERIUM_DISCOVERY_ADDRESS: ""
-      MYSTERIUM_BROKER_ADDRESS: ""
 
-  client:
+  client-alpine:
+    privileged: true
+    tty: true
+    build:
+      context: .
+      dockerfile: bin/client_docker/alpine/Dockerfile
+    networks:
+      - default
+    ports:
+      - 40501:4050
+    environment:
+      MYSTERIUM_CLIENT_TEQUILAPI_PORT: 4050
+
+  client-ubuntu:
     privileged: true
     tty: true
     build:
@@ -62,14 +71,9 @@ services:
       dockerfile: bin/client_docker/ubuntu/Dockerfile
       args:
         PACKAGE_VERSION: 0.0.1-docker
-    depends_on:
-      - broker
-      - server-alpine
-      - server-ubuntu
     networks:
       - default
     ports:
-      - 4050:4050
+      - 40502:4050
     environment:
       MYSTERIUM_CLIENT_TEQUILAPI_PORT: 4050
-      MYSTERIUM_DISCOVERY_ADDRESS: ""
