@@ -10,7 +10,7 @@ services:
   node:
     build:
       context: ..
-      dockerfile: e2e/Dockerfile.node
+      dockerfile: bin/server_docker/alpine/Dockerfile
     depends_on:
       - broker
     privileged: true
@@ -19,13 +19,15 @@ services:
       - NET_ADMIN
     expose:
       - 1194
-    command: "--data-dir=/mysterium --config-dir=/mysterium/server_config --runtime-dir=/mysterium --broker-address=broker"
+    environment:
+      MYSTERIUM_BROKER_ADDRESS: "broker"
+      MYSTERIUM_DISCOVERY_ADDRESS: "http://notdefinedyet:6666"
+      MYSTERIUM_SERVER_COUNTRY: "e2e-land"
 
   client:
     build:
       context: ..
-      #this effectively reuses node image built earlier
-      dockerfile: e2e/Dockerfile.node
+      dockerfile: bin/client_docker/alpine/Dockerfile
     depends_on:
       - broker
       - node
@@ -35,8 +37,6 @@ services:
       - NET_ADMIN
     ports:
       - 4052:4050
-    entrypoint:
-      "/mysterium/mysterium_client"
-    command:
-      "--data-dir=/mysterium --config-dir=/mysterium/client_config --runtime-dir=/mysterium
-      --discovery-address=http://notyetdefined:9999 --tequilapi.address=0.0.0.0 --tequilapi.port=4050"
+    environment:
+      MYSTERIUM_DISCOVERY_ADDRESS: "http://notdefiendyet:6666"
+      MYSTERIUM_CLIENT_TEQUILAPI_PORT: "4050"
