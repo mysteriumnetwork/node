@@ -5,7 +5,7 @@ GLIDE_VERSION=$2
 
 
 OS_ARCH="linux-amd64"
-if [ "$TRAVIS_OS_NAME"=="osx" ]; then
+if [ "$TRAVIS_OS_NAME" == "osx" ]; then
     OS_ARCH="darwin-amd64"
 fi
 
