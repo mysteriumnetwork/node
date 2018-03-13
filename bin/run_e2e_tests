@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
-PROJECT_NAME="nodetest"
+PROJECT_NAME="node_e2e_test"
+PROJECT_FILE="e2e/docker-compose.yml"
 SUCCESS_COLOR='\033[0;32m' # green
 FAILURE_COLOR="\033[0;31m" # red
 DEFAULT_COLOR="\033[0;0m"
+
+dockerComposeCmd="docker-compose -f $PROJECT_FILE -p $PROJECT_NAME"
 
 print_success () {
     echo -e $SUCCESS_COLOR$1$DEFAULT_COLOR
@@ -14,13 +17,13 @@ print_error () {
 }
 
 setup () {
-    sudo docker-compose -p $PROJECT_NAME build
+    ${dockerComposeCmd} build
     if [ ! $? -eq 0 ]; then
         print_error "Building docker images failed"
         exit 1
     fi
 
-    docker-compose -p $PROJECT_NAME up -d
+    ${dockerComposeCmd} up -d
     if [ ! $? -eq 0 ]; then
         print_error "Starting built docker images failed"
         exit 1
@@ -29,16 +32,16 @@ setup () {
 
 cleanup () {
     echo "Cleaning up"
-    docker-compose -p $PROJECT_NAME down
+    ${dockerComposeCmd} down
 }
 
 
 setup
 
-result=`curl localhost:4050/connection`
-if [ "$result" != '{"status":"NotConnected"}' ]
+go test -v ./e2e/... -args --tequila.host=localhost --tequila.port=4052
+if [ ! $? -eq 0 ]
 then
-    print_error "Unexpected status response: $result"
+    print_error "Tests failed"
     cleanup
     exit 1
 fi

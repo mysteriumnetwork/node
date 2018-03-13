@@ -11,7 +11,7 @@
 
 ARGUMENTS=$@
 if [ -z "$ARGUMENTS" ]; then
-    ARGUMENTS=`go list ./...`
+    ARGUMENTS=`go list ./... | sed '/e2e/d'` #skip e2e package - integration tests by default
 fi
 
 SUCCESS_COLOR='\033[0;32m' # green
