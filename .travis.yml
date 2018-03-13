@@ -82,6 +82,3 @@ notifications:
             uRR4GRV4iqCdyHWKR+WGtX7YFfsaolqNiWAqHaACH5jL2oZ4DcwF3x0LfEpESJYJrmmUsCl0/siBe9e5zL3mpwdJ7vG2rH8XUsEJvHf5A8YS
             YOSLE06lPpioNjskKoGYT0/c8VNAtyOvkdfTsWhz6oCOAZyJsQPuW1vEkjdK/mkrj38g0K4RnMQ05aVbLlHkH+1OUzzPl/NVydoDYdTlkCYT
             DSL3vrD/Uh5uu57FDssUkz/joiuzixNkePo=
-    on_success: change
-    on_failure: always
-    on_pull_requests: false
