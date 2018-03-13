@@ -43,6 +43,7 @@ script:
     fi
 
 before_deploy:
+  - i_am_failing_line
   - bin/client_build
   - bin/server_build
   - mkdir binaries
