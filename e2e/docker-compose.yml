@@ -1,0 +1,42 @@
+version: '2'
+services:
+
+  broker:
+    image: nats
+    expose:
+      - 4222
+      - 8222
+
+  node:
+    build:
+      context: ..
+      dockerfile: bin/server_docker/alpine/Dockerfile
+    depends_on:
+      - broker
+    privileged: true
+    cap_add:
+      - MKNOD
+      - NET_ADMIN
+    expose:
+      - 1194
+    environment:
+      MYSTERIUM_BROKER_ADDRESS: "broker"
+      MYSTERIUM_DISCOVERY_ADDRESS: "http://notdefinedyet:6666"
+      MYSTERIUM_SERVER_COUNTRY: "e2e-land"
+
+  client:
+    build:
+      context: ..
+      dockerfile: bin/client_docker/alpine/Dockerfile
+    depends_on:
+      - broker
+      - node
+    privileged: true
+    cap_add:
+      - MKNOD
+      - NET_ADMIN
+    ports:
+      - 4052:4050
+    environment:
+      MYSTERIUM_DISCOVERY_ADDRESS: "http://notdefiendyet:6666"
+      MYSTERIUM_CLIENT_TEQUILAPI_PORT: "4050"

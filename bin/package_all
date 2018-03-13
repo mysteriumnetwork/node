@@ -39,4 +39,10 @@ done
 
 GOOS=darwin GOARCH=amd64 bin/client_build \
     && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_osx_amd64 \
-    && printf "\e[0;32m%s\e[0m\n" "All packages successfully packaged to directory '$DIR_BUILD'!"
+      && printf "\n\n" \
+    && bin/server_package_docker $VERSION $VERSION-alpine alpine latest \
+    && bin/server_package_docker_ubuntu $VERSION $VERSION-ubuntu ubuntu \
+    && bin/client_package_docker $VERSION $VERSION-alpine alpine latest \
+    && bin/client_package_docker_ubuntu $VERSION $VERSION-ubuntu ubuntu \
+      && printf "\n\n" \
+      && printf "\e[0;32m%s\e[0m\n" "All packages successfully packaged to directory '$DIR_BUILD'!"
