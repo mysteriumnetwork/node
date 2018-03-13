@@ -73,8 +73,8 @@ sudo mysterium_client --data-dir=/var/lib/mysterium-client --config-dir=/etc/mys
 ## Mysterium VPN node (standalone Linux binaries)
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_amd64
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_386
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_arm
+ * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_i386
+ * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_armhf
 ### Running
 ```bash
 mysterium_server --help
@@ -85,8 +85,8 @@ sudo mysterium_server --config-dir=/etc/mysterium-node --identity=0x123456..
 ## Mysterium VPN client (standalone Linux binaries)
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_amd64
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_386
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_arm
+ * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_i386
+ * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_armhf
 ### Running
 ```bash
 mysterium_client --help
@@ -96,7 +96,6 @@ sudo mysterium_client && mysterium_client --cli
 
 ## Mysterium VPN client (standalone Apple Mac/OSX/Darwin binaries)
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_osx_amd64
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_osx_386
 
 
 ## Build from source code
