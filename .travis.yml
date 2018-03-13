@@ -74,7 +74,7 @@ deploy:
       branch: master
 notifications:
   slack:
-    secure: >
+    secure: >-
       uzg7QbKd09rm6q/7iXk1HFfXo61vqFbENueRM/a6Jg+o2/YZEQXtKLO+gLg2gY/4ok9P4goUF8PuAA1/YLnhzJAr0ks35z69kns36E2eJkU2
       kB72D8K44Mi5fhPFrcbbkPPqFtMoeXUkEjNvB6LT3w0xpWOUBS68N/HJrpi2Y3kn1tp96tcsneLyBick3JrlJc3aptHq/bNFLaWFS9orzcp9
       wWDjxNeWaVzeGM0Y1GCFQymff9UOf2r6Vy/MjESo9QjHH+gJbEzH13d6YcBi2ktZF3c6ZDqsjOOQZKQzwrgYk6sVLQsikDtA0vPgXVVyTVgc
