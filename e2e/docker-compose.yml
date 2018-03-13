@@ -23,7 +23,7 @@ services:
       - 1194
     environment:
       MYSTERIUM_BROKER_ADDRESS: "broker"
-      MYSTERIUM_DISCOVERY_ADDRESS: "http://notdefinedyet:6666"
+      MYSTERIUM_DISCOVERY_ADDRESS: "http://discovery/v1"
       MYSTERIUM_SERVER_COUNTRY: "e2e-land"
 
   client:
@@ -42,7 +42,7 @@ services:
     ports:
       - 4052:4050
     environment:
-      MYSTERIUM_DISCOVERY_ADDRESS: "http://notdefiendyet:6666"
+      MYSTERIUM_DISCOVERY_ADDRESS: "http://discovery/v1"
       MYSTERIUM_CLIENT_TEQUILAPI_PORT: "4050"
 
   #infrastructure - centralized api and db
