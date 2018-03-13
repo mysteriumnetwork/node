@@ -24,6 +24,7 @@ cache:
     - "$CACHE_ROOT_DIR"
 
 before_install:
+  - i_am_failing_line
   - rm -f .env
   - echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
   - echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
@@ -43,7 +44,6 @@ script:
     fi
 
 before_deploy:
-  - i_am_failing_line
   - bin/client_build
   - bin/server_build
   - mkdir binaries
