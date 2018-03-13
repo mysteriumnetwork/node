@@ -13,7 +13,8 @@
 # copy update-resolv-conf to myst client current directory
 # build/client/ (by default)
 
-[ "$OSTYPE" == "darwin"* ] || exit 0
+#This check helps to avoid running this script in linux (win :)) based environments
+[[ $OSTYPE = "darwin"* ]] || exit 0
 
 [ "$script_type" ] || exit 0
 [ "$dev" ] || exit 0
