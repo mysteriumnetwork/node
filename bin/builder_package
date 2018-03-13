@@ -17,7 +17,6 @@ DOCKER_IMAGE="mysteriumnetwork/mysterium-node-builder"
 printf "Building Docker image '$DOCKER_IMAGE' ..\n" \
     && docker build \
         --file bin/util_docker/builder/Dockerfile \
-        --build-arg PACKAGE_VERSION=latest \
         --tag $DOCKER_IMAGE:latest \
         .
 
