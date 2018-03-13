@@ -24,7 +24,6 @@ cache:
     - "$CACHE_ROOT_DIR"
 
 before_install:
-  - i_am_failing_line
   - rm -f .env
   - echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
   - echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
@@ -35,6 +34,7 @@ install:
   - glide "-home" $GLIDE_HOME install
 
 script:
+  - fail
   - bin/test
   #run e2e on Pull Requests and linux env only - travis OSX VM doesnt support docker (yet?)
   - if [ "$TRAVIS_OS_NAME" == 'linux' ] && [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
@@ -84,3 +84,4 @@ notifications:
             DSL3vrD/Uh5uu57FDssUkz/joiuzixNkePo=
     on_success: change
     on_failure: always
+    on_pull_requests: false
