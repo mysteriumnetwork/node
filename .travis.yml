@@ -34,7 +34,6 @@ install:
   - glide "-home" $GLIDE_HOME install
 
 script:
-  - fail
   - bin/test
   #run e2e on Pull Requests and linux env only - travis OSX VM doesnt support docker (yet?)
   - if [ "$TRAVIS_OS_NAME" == 'linux' ] && [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
@@ -82,5 +81,5 @@ notifications:
           gJXvpwn6tsW6o2DJJpq4MXFOm2z+S20KNbhSj5BLzYmVOKnJhyDAFFYWLDfF0ZJs3D0Pezjtu8HsMvkX3REYXUaBEZuRR4GRV4iqCdyHWKR+WGtX7Y
           FfsaolqNiWAqHaACH5jL2oZ4DcwF3x0LfEpESJYJrmmUsCl0/siBe9e5zL3mpwdJ7vG2rH8XUsEJvHf5A8YSYOSLE06lPpioNjskKoGYT0/c8VNAty
           OvkdfTsWhz6oCOAZyJsQPuW1vEkjdK/mkrj38g0K4RnMQ05aVbLlHkH+1OUzzPl/NVydoDYdTlkCYTDSL3vrD/Uh5uu57FDssUkz/joiuzixNkePo=
-    on_success: never
+    on_success: change
     on_failure: always
