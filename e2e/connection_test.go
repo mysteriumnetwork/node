@@ -52,7 +52,7 @@ func TestClientConnectsToNode(t *testing.T) {
 	}
 
 	proposal := proposals[0]
-	seelog.Info("Connecting to provider: ", proposal)
+	seelog.Info("Selected proposal is: ", proposal)
 
 	_, err = tequilApi.Connect(identity.Address, proposal.ProviderID)
 	assert.NoError(t, err)
