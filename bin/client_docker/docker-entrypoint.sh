@@ -14,3 +14,4 @@ exec /usr/bin/mysterium_client \
     --tequilapi.address=0.0.0.0 \
     --tequilapi.port=$MYSTERIUM_CLIENT_TEQUILAPI_PORT \
     --discovery-address=$MYSTERIUM_DISCOVERY_ADDRESS \
+    $@
