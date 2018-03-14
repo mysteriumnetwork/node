@@ -5,7 +5,9 @@ OS_DIR_CONFIG="/etc/mysterium-client"
 OS_DIR_DATA="/var/lib/mysterium-client"
 OS_DIR_RUN="/var/run/mysterium-client"
 
-mkdir -p $OS_DIR_RUN
+if [ ! -d "$OS_DIR_RUN" ]; then
+    mkdir -p $OS_DIR_RUN
+fi
 
 exec /usr/bin/mysterium_client \
     --config-dir=$OS_DIR_CONFIG \
