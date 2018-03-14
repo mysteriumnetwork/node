@@ -34,7 +34,7 @@ func ConfigureVpnClientFactory(
 		signer := signerFactory(consumerID)
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
-		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, providerID, signer)
+		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, providerID, signer, "")
 		asyncStatsSender := func(stats bytescount.SessionStats) error {
 			go statsSender(stats)
 			return nil
