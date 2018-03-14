@@ -25,6 +25,7 @@ services:
       MYSTERIUM_BROKER_ADDRESS: "broker"
       MYSTERIUM_DISCOVERY_ADDRESS: "http://discovery/v1"
       MYSTERIUM_SERVER_COUNTRY: "e2e-land"
+    command: "--ipify-url=http://ipify:3000"
 
   client:
     build:
@@ -44,6 +45,7 @@ services:
     environment:
       MYSTERIUM_DISCOVERY_ADDRESS: "http://discovery/v1"
       MYSTERIUM_CLIENT_TEQUILAPI_PORT: "4050"
+    command: "--ipify-url=http://ipify:3000"
 
   #infrastructure - centralized api and db
   db:
