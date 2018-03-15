@@ -103,13 +103,11 @@ func (tc *testContext) TestWhenManagerMadeConnectionSessionStartIsMarked() {
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.connManager.Connect(myID, activeProviderID)
-	tc.fakeOpenVpn.reportState(openvpn.ConnectingState)
 	assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	err := tc.connManager.Connect(myID, activeProviderID)
-	tc.fakeOpenVpn.reportState(openvpn.ConnectingState)
 	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
@@ -125,7 +123,6 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 
 func (tc *testContext) TestConnectResultsInAlreadyConnectedErrorWhenConnectionExists() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectingState)
 	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	assert.Equal(tc.T(), ErrAlreadyExists, tc.connManager.Connect(myID, activeProviderID))
 }
@@ -136,7 +133,6 @@ func (tc *testContext) TestDisconnectReturnsErrorWhenNoConnectionExists() {
 
 func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconnectingState() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectingState)
 	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	tc.fakeOpenVpn.reportState(openvpn.ReconnectingState)
 	assert.Equal(tc.T(), statusReconnecting(), tc.connManager.Status())
@@ -144,7 +140,6 @@ func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconn
 
 func (tc *testContext) TestNotConnectedStatusIsReportedWhenOpenvpnReportsExiting() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectingState)
 	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
@@ -162,7 +157,6 @@ func (tc *testContext) TestDoubleDisconnectResultsInError() {
 
 func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectingState)
 	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
@@ -170,7 +164,6 @@ func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectingState)
 	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
