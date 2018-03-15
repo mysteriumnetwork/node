@@ -5,6 +5,6 @@ type Resolver interface {
 	ResolveCountry(ip string) (string, error)
 }
 
-type LocationDetector interface {
+type Detector interface {
 	DetectCountry() (string, error)
 }

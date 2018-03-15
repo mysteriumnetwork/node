@@ -21,7 +21,7 @@ func ConfigureVpnClientFactory(
 	openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	statsKeeper bytescount.SessionStatsKeeper,
-	countryDetector location.LocationDetector,
+	locationDetector location.Detector,
 ) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback) (openvpn.Client, error) {
 		vpnClientConfig, err := openvpn.NewClientConfigFromString(
@@ -38,7 +38,7 @@ func ConfigureVpnClientFactory(
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 
-		detectedCountry, err := countryDetector.DetectCountry()
+		detectedCountry, err := locationDetector.DetectCountry()
 		if err != nil {
 			return nil, err
 		}
