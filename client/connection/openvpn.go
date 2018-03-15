@@ -24,6 +24,7 @@ func ConfigureVpnClientFactory(
 	signerFactory identity.SignerFactory,
 	statsKeeper bytescount.SessionStatsKeeper,
 	ipResolver ip.Resolver,
+	locationDetector location.Detector,
 ) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback) (openvpn.Client, error) {
 		vpnClientConfig, err := openvpn.NewClientConfigFromString(
@@ -39,7 +40,7 @@ func ConfigureVpnClientFactory(
 		signer := signerFactory(consumerID)
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
-		clientCountry, _ := detectCountry(ipResolver)
+		clientCountry, _ := detectCountry(ipResolver, locationDetector)
 		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, providerID, signer, clientCountry)
 		asyncStatsSender := func(stats bytescount.SessionStats) error {
 			go statsSender(stats)
@@ -64,9 +65,7 @@ func ConfigureVpnClientFactory(
 	}
 }
 
-func detectCountry(ipResolver ip.Resolver) (string, error) {
-	locationDetector := location.NewDetector("")
-
+func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (string, error) {
 	ip, err := ipResolver.GetPublicIP()
 	if err != nil {
 		return "", errors.New("IP detection failed: " + err.Error())

@@ -18,6 +18,7 @@ import (
 	"github.com/mysterium/node/version"
 	"path/filepath"
 	"time"
+	"github.com/mysterium/node/location"
 )
 
 // NewCommand function creates new client command by given options
@@ -53,6 +54,8 @@ func NewCommandWith(
 
 	ipResolver := ip.NewResolver(options.IpifyUrl)
 
+	locationDetector := location.NewDetector(filepath.Join(options.DirectoryConfig, options.LocationDatabase))
+
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
 		options.OpenvpnBinary,
@@ -61,6 +64,7 @@ func NewCommandWith(
 		signerFactory,
 		statsKeeper,
 		ipResolver,
+		locationDetector,
 	)
 	connectionManager := connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
 
