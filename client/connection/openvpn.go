@@ -11,7 +11,6 @@ import (
 	"github.com/mysterium/node/session"
 	"path/filepath"
 	"time"
-	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
 	log "github.com/cihub/seelog"
 )
@@ -22,8 +21,7 @@ func ConfigureVpnClientFactory(
 	openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	statsKeeper bytescount.SessionStatsKeeper,
-	ipResolver ip.Resolver,
-	locationDetector location.Detector,
+	countryDetector location.LocationDetector,
 ) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback) (openvpn.Client, error) {
 		vpnClientConfig, err := openvpn.NewClientConfigFromString(
@@ -40,11 +38,12 @@ func ConfigureVpnClientFactory(
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 
-		clientCountry, err := detectCountry(ipResolver, locationDetector)
+		clientCountry, err := countryDetector.DetectCountry()
 		if err != nil {
 			return nil, err
 		}
-		
+		log.Info("Country detected: ", clientCountry)
+
 		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, providerID, signer, clientCountry)
 		asyncStatsSender := func(stats bytescount.SessionStats) error {
 			go statsSender(stats)
@@ -67,19 +66,4 @@ func ConfigureVpnClientFactory(
 			auth.NewMiddleware(credentialsProvider),
 		), nil
 	}
-}
-
-func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (string, error) {
-	ip, err := ipResolver.GetPublicIP()
-	if err != nil {
-		return "", err
-	}
-
-	country, err := locationDetector.DetectCountry(ip)
-	if err != nil {
-		return "", err
-	}
-
-	log.Info("Country detected: ", country)
-	return country, nil
 }

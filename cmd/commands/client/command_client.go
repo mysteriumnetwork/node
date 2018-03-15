@@ -54,7 +54,10 @@ func NewCommandWith(
 
 	ipResolver := ip.NewResolver(options.IpifyUrl)
 
-	locationDetector := location.NewDetector(filepath.Join(options.DirectoryConfig, options.LocationDatabase))
+	countryDetector := location.NewLocationDetector(
+		ipResolver,
+		filepath.Join(options.DirectoryConfig, options.LocationDatabase),
+	)
 
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
@@ -63,8 +66,7 @@ func NewCommandWith(
 		options.DirectoryRuntime,
 		signerFactory,
 		statsKeeper,
-		ipResolver,
-		locationDetector,
+		countryDetector,
 	)
 	connectionManager := connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
 
