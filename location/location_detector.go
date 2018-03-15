@@ -6,13 +6,13 @@ import (
 
 type locationDetector struct {
 	ipResolver ip.Resolver
-	locationDetector Detector
+	locationDetector Resolver
 }
 
 func NewLocationDetector(ipResolver ip.Resolver, databasePath string) *locationDetector {
 	return &locationDetector{
 		ipResolver: ipResolver,
-		locationDetector: NewDetector(databasePath),
+		locationDetector: NewResolver(databasePath),
 	}
 }
 
@@ -22,7 +22,7 @@ func (cd *locationDetector) DetectCountry() (string, error) {
 		return "", err
 	}
 
-	country, err := cd.locationDetector.DetectCountry(ip)
+	country, err := cd.locationDetector.ResolveCountry(ip)
 	if err != nil {
 		return "", err
 	}

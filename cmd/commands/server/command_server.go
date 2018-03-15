@@ -25,7 +25,7 @@ type Command struct {
 	ipResolver       ip.Resolver
 	mysteriumClient  server.Client
 	natService       nat.NATService
-	locationDetector location.Detector
+	locationResolver location.Resolver
 
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
@@ -69,7 +69,7 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	serviceLocation, err := detectCountry(cmd.ipResolver, cmd.locationDetector)
+	serviceLocation, err := detectCountry(cmd.ipResolver, cmd.locationResolver)
 	if err != nil {
 		return err
 	}
@@ -121,13 +121,13 @@ func (cmd *Command) Start() (err error) {
 	return nil
 }
 
-func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (dto_discovery.Location, error) {
+func detectCountry(ipResolver ip.Resolver, locationResolver location.Resolver) (dto_discovery.Location, error) {
 	myIP, err := ipResolver.GetPublicIP()
 	if err != nil {
 		return dto_discovery.Location{}, errors.New("IP detection failed: " + err.Error())
 	}
 
-	myCountry, err := locationDetector.DetectCountry(myIP)
+	myCountry, err := locationResolver.ResolveCountry(myIP)
 	if err != nil {
 		return dto_discovery.Location{}, errors.New("Country detection failed: " + err.Error())
 	}

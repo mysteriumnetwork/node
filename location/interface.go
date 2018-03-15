@@ -1,8 +1,8 @@
 package location
 
-// Detector allows detecting location
-type Detector interface {
-	DetectCountry(ip string) (string, error)
+// Resolver allows resolving location by ip
+type Resolver interface {
+	ResolveCountry(ip string) (string, error)
 }
 
 type LocationDetector interface {

@@ -51,13 +51,13 @@ func NewCommandWith(
 		createSigner,
 	)
 
-	var locationDetector location.Detector
+	var locationResolver location.Resolver
 	if options.LocationCountry != "" {
-		locationDetector = location.NewDetectorFake(options.LocationCountry)
+		locationResolver = location.NewResolverFake(options.LocationCountry)
 	} else if options.LocationDatabase != "" {
-		locationDetector = location.NewDetector(filepath.Join(options.DirectoryConfig, options.LocationDatabase))
+		locationResolver = location.NewResolver(filepath.Join(options.DirectoryConfig, options.LocationDatabase))
 	} else {
-		locationDetector = location.NewDetector(filepath.Join(options.DirectoryConfig, defaultLocationDatabase))
+		locationResolver = location.NewResolver(filepath.Join(options.DirectoryConfig, defaultLocationDatabase))
 	}
 
 	return &Command{
@@ -65,7 +65,7 @@ func NewCommandWith(
 			return identity_handler.LoadIdentity(identityHandler, options.Identity, options.Passphrase)
 		},
 		createSigner:     createSigner,
-		locationDetector: locationDetector,
+		locationResolver: locationResolver,
 		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,

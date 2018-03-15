@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestDetectorDetectCountry(t *testing.T) {
+func TestResolverResolveCountry(t *testing.T) {
 	tests := []struct {
 		ip      string
 		want    string
@@ -20,9 +20,9 @@ func TestDetectorDetectCountry(t *testing.T) {
 		{"asd", "", "failed to parse IP"},
 	}
 
-	detector := NewDetector("../bin/server_package/config/GeoLite2-Country.mmdb")
+	resolver := NewResolver("../bin/server_package/config/GeoLite2-Country.mmdb")
 	for _, tt := range tests {
-		got, err := detector.DetectCountry(tt.ip)
+		got, err := resolver.ResolveCountry(tt.ip)
 
 		assert.Equal(t, tt.want, got, tt.ip)
 		if tt.wantErr != "" {

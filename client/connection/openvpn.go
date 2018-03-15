@@ -38,13 +38,19 @@ func ConfigureVpnClientFactory(
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 
-		clientCountry, err := countryDetector.DetectCountry()
+		detectedCountry, err := countryDetector.DetectCountry()
 		if err != nil {
 			return nil, err
 		}
-		log.Info("Country detected: ", clientCountry)
+		log.Info("Country detected: ", detectedCountry)
 
-		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, providerID, signer, clientCountry)
+		statsSender := bytescount.NewSessionStatsSender(
+			mysteriumAPIClient,
+			vpnSession.ID,
+			providerID,
+			signer,
+			detectedCountry,
+		)
 		asyncStatsSender := func(stats bytescount.SessionStats) error {
 			go statsSender(stats)
 			return nil

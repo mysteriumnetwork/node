@@ -6,20 +6,20 @@ import (
 	"net"
 )
 
-type detector struct {
+type resolver struct {
 	databasePath string
 }
 
-// NewDetector returns Detector which uses country database
-func NewDetector(databasePath string) *detector {
-	return &detector{
+// NewResolver returns Resolver which uses country database
+func NewResolver(databasePath string) *resolver {
+	return &resolver{
 		databasePath: databasePath,
 	}
 }
 
-// DetectCountry maps given ip to country
-func (d *detector) DetectCountry(ip string) (string, error) {
-	db, err := geoip2.Open(d.databasePath)
+// ResolveCountry maps given ip to country
+func (r *resolver) ResolveCountry(ip string) (string, error) {
+	db, err := geoip2.Open(r.databasePath)
 	if err != nil {
 		return "", err
 	}
