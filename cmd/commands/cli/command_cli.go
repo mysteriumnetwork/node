@@ -225,11 +225,10 @@ func (c *Command) proposals() {
 
 	for _, proposal := range proposals {
 		country := proposal.ServiceDefinition.LocationOriginate.Country
-		var countryString string
-		if len(country) == 0 {
+		if country == "" {
 			country = "Unknown"
 		}
-		msg := fmt.Sprintf("- provider id: %v, proposal id: %v, country: %v", proposal.ProviderID, proposal.ID, countryString)
+		msg := fmt.Sprintf("- provider id: %v, proposal id: %v, country: %v", proposal.ProviderID, proposal.ID, country)
 		info(msg)
 	}
 }

@@ -27,6 +27,7 @@ setup () {
     ${dockerComposeCmd} build
     if [ ! $? -eq 0 ]; then
         print_error "Building docker images failed"
+        cleanup
         exit 1
     fi
 
