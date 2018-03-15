@@ -17,11 +17,7 @@ NMSRVRS=()
 SRCHS=()
 adapters=()
 
-# TODO Investigate DNS on Linux environment
 NETWORKSETUP=/usr/sbin/networksetup
-if [ ! -x "$NETWORKSETUP" ]; then
-    exit 0
-fi
 
 # Set bash delimeter to be line break (temporarily)
 IFSSAVE=$IFS
