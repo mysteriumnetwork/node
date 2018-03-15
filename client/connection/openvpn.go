@@ -14,7 +14,6 @@ import (
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
 	log "github.com/cihub/seelog"
-	"errors"
 )
 
 // ConfigureVpnClientFactory creates openvpn construction function by given vpn session, consumer id and state callbacks
@@ -68,12 +67,12 @@ func ConfigureVpnClientFactory(
 func detectCountry(ipResolver ip.Resolver, locationDetector location.Detector) (string, error) {
 	ip, err := ipResolver.GetPublicIP()
 	if err != nil {
-		return "", errors.New("IP detection failed: " + err.Error())
+		return "", err
 	}
 
 	country, err := locationDetector.DetectCountry(ip)
 	if err != nil {
-		return "", errors.New("Country detection failed: " + err.Error())
+		return "", err
 	}
 
 	log.Info("Country detected: ", country)
