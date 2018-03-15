@@ -11,6 +11,10 @@ import (
 	"github.com/mysterium/node/session"
 	"path/filepath"
 	"time"
+	"github.com/mysterium/node/ip"
+	"github.com/mysterium/node/location"
+	log "github.com/cihub/seelog"
+	"errors"
 )
 
 // ConfigureVpnClientFactory creates openvpn construction function by given vpn session, consumer id and state callbacks
@@ -34,7 +38,8 @@ func ConfigureVpnClientFactory(
 		signer := signerFactory(consumerID)
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
-		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, providerID, signer, "")
+		clientCountry, _ := detectCountry()
+		statsSender := bytescount.NewSessionStatsSender(mysteriumAPIClient, vpnSession.ID, providerID, signer, clientCountry)
 		asyncStatsSender := func(stats bytescount.SessionStats) error {
 			go statsSender(stats)
 			return nil
@@ -56,4 +61,22 @@ func ConfigureVpnClientFactory(
 			auth.NewMiddleware(credentialsProvider),
 		), nil
 	}
+}
+
+func detectCountry() (string, error) {
+	ipResolver := ip.NewResolver("")
+	locationDetector := location.NewDetector("")
+
+	ip, err := ipResolver.GetPublicIP()
+	if err != nil {
+		return "", errors.New("IP detection failed: " + err.Error())
+	}
+
+	country, err := locationDetector.DetectCountry(ip)
+	if err != nil {
+		return "", errors.New("Country detection failed: " + err.Error())
+	}
+
+	log.Info("Country detected: ", country)
+	return country, nil
 }
