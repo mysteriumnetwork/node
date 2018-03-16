@@ -9,9 +9,6 @@
 # To use set as 'up' and 'down' script in your openvpn *.conf:
 # up /etc/openvpn/update-resolv-conf
 # down /etc/openvpn/update-resolv-conf
-# installation:
-# copy update-resolv-conf to myst client current directory
-# build/client/ (by default)
 
 #This check helps to avoid running this script in linux (win :)) based environments
 [[ $OSTYPE = "darwin"* ]] || exit 0

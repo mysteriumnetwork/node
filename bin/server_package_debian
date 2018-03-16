@@ -7,6 +7,10 @@
 # - GOPATH must be set
 # - 'fpm' tool must be on the path (https://github.com/jordansissel/fpm)
 #
+# for macOS:
+# - brew install gnu-tar
+# - sudo gem install --no-ri --no-rdoc fpm
+#
 # To package a build, simple execute:
 #> bin/server_package_debian <version> <architecture>
 
@@ -37,10 +41,10 @@ fi
 
 
 DIR_BUILD="build/package"
-
 PACKAGE_FILE="${DIR_BUILD}/mysterium-node_linux_${ARCH}.deb"
+
 printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
-    && mkdir -p $DIR_BUILD \
+    && mkdir -p ${DIR_BUILD} \
     && rm -f ${PACKAGE_FILE} \
     && ${FPM_BIN} \
         --name="mysterium-node" \
