@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -69,10 +68,14 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	serviceLocation, err := detectCountry(cmd.ipResolver, cmd.locationResolver)
+	locationDetector := location.NewDetectorWithLocationResolver(cmd.ipResolver, cmd.locationResolver)
+	serviceCountry, err := locationDetector.DetectCountry()
 	if err != nil {
 		return err
 	}
+	log.Info("Country detected: ", serviceCountry)
+	serviceLocation := dto_discovery.Location{Country: serviceCountry}
+
 	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation)
 
 	sessionManager := cmd.sessionManagerFactory(vpnServerIP)
@@ -119,21 +122,6 @@ func (cmd *Command) Start() (err error) {
 	}()
 
 	return nil
-}
-
-func detectCountry(ipResolver ip.Resolver, locationResolver location.Resolver) (dto_discovery.Location, error) {
-	myIP, err := ipResolver.GetPublicIP()
-	if err != nil {
-		return dto_discovery.Location{}, errors.New("IP detection failed: " + err.Error())
-	}
-
-	myCountry, err := locationResolver.ResolveCountry(myIP)
-	if err != nil {
-		return dto_discovery.Location{}, errors.New("Country detection failed: " + err.Error())
-	}
-
-	log.Info("Country detected: ", myCountry)
-	return dto_discovery.Location{Country: myCountry}, nil
 }
 
 // Wait blocks until server is stopped
