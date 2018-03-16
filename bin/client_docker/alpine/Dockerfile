@@ -18,9 +18,19 @@ MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 RUN apk add --update --no-cache bash iptables ca-certificates openvpn \
     && rm -rf /var/cache/apk/*
 
-# Install application
-COPY bin/client_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+# Directories
+RUN mkdir -p /etc/mysterium-client \
+    && mkdir -p /var/lib/mysterium-client \
+    && mkdir -p /var/run/mysterium-client
 
 COPY bin/client_package/config /etc/mysterium-client
 COPY --from=builder /go/src/github.com/mysterium/node/build/client/mysterium_client /usr/bin/mysterium_client
+
+WORKDIR /var/run/mysterium-client
+
+ENTRYPOINT [ "/usr/bin/mysterium_client", \
+    "--config-dir=/etc/mysterium-client", \
+    "--data-dir=/var/lib/mysterium-client", \
+    "--runtime-dir=/var/run/mysterium-client", \
+    "--tequilapi.address=0.0.0.0" ]
+

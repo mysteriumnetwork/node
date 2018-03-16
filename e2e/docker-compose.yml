@@ -3,6 +3,8 @@ services:
 
   broker:
     image: nats
+    networks:
+      - testnet
     expose:
       - 4222
       - 8222
@@ -19,6 +21,8 @@ services:
     cap_add:
       - MKNOD
       - NET_ADMIN
+    networks:
+      - testnet
     expose:
       - 1194
     environment:
@@ -40,17 +44,18 @@ services:
     cap_add:
       - MKNOD
       - NET_ADMIN
+    networks:
+      - testnet
     ports:
       - 4052:4050
-    environment:
-      MYSTERIUM_DISCOVERY_ADDRESS: "http://discovery/v1"
-      MYSTERIUM_CLIENT_TEQUILAPI_PORT: "4050"
-    command: "--ipify-url=http://ipify:3000"
+    command: "--ipify-url=http://ipify:3000 --discovery-address=http://discovery/v1"
 
   #infrastructure - centralized api and db
   db:
     image: percona:5.7
     restart: always
+    networks:
+      - testnet
     expose:
       - 3306
     environment:
@@ -61,6 +66,8 @@ services:
 
   discovery:
     image: mysteriumnetwork/mysterium-api:0.1.6
+    networks:
+      - testnet
     expose:
     - 80
     environment:
@@ -74,5 +81,12 @@ services:
   #'external' IP detection
   ipify:
     image: owlab/ipify
+    networks:
+      - testnet
     expose:
     - 3000
+
+  #define internal network - isolated from outside
+networks:
+  testnet:
+    internal: true

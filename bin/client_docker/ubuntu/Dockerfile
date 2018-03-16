@@ -35,5 +35,5 @@ RUN apt-get update \
     && apt-get install -y --fix-broken \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/mysterium-client.deb
 
-COPY bin/client_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY bin/client_docker/ubuntu/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
