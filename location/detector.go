@@ -9,7 +9,7 @@ type detector struct {
 	locationResolver Resolver
 }
 
-func NewLocationDetector(ipResolver ip.Resolver, databasePath string) *detector {
+func NewDetector(ipResolver ip.Resolver, databasePath string) *detector {
 	return &detector{
 		ipResolver: ipResolver,
 		locationResolver: NewResolver(databasePath),

@@ -54,7 +54,7 @@ func NewCommandWith(
 
 	ipResolver := ip.NewResolver(options.IpifyUrl)
 
-	locationDetector := location.NewLocationDetector(
+	locationDetector := location.NewDetector(
 		ipResolver,
 		filepath.Join(options.DirectoryConfig, options.LocationDatabase),
 	)
