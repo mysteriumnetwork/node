@@ -21,11 +21,11 @@ services:
       - NET_ADMIN
     expose:
       - 1194
-    environment:
-      MYSTERIUM_BROKER_ADDRESS: "broker"
-      MYSTERIUM_DISCOVERY_ADDRESS: "http://discovery/v1"
-      MYSTERIUM_SERVER_COUNTRY: "e2e-land"
-    command: "--ipify-url=http://ipify:3000"
+    command: >
+      --ipify-url=http://ipify:3000
+      --broker-address=broker
+      --discovery-address=http://discovery/v1
+      --location.country=e2e-land
 
   client:
     build:

@@ -10,10 +10,8 @@ if [ ! -d "$OS_DIR_RUN" ]; then
 fi
 
 exec /usr/bin/mysterium_client \
-    --config-dir=$OS_DIR_CONFIG \
-    --data-dir=$OS_DIR_DATA \
-    --runtime-dir=$OS_DIR_RUN \
-    --tequilapi.address=0.0.0.0 \
-    --tequilapi.port=$MYSTERIUM_CLIENT_TEQUILAPI_PORT \
-    --discovery-address=$MYSTERIUM_DISCOVERY_ADDRESS \
-    $@
+ --config-dir=$OS_DIR_CONFIG \
+ --data-dir=$OS_DIR_DATA \
+ --runtime-dir=$OS_DIR_RUN \
+ --tequilapi.address=0.0.0.0 \
+ $@
