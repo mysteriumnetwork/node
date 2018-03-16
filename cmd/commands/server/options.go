@@ -23,6 +23,8 @@ type CommandOptions struct {
 	BrokerAddress       string
 
 	IpifyUrl string
+
+	Protocol string
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
@@ -102,6 +104,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"ipify-url",
 		"https://api.ipify.org/",
 		"Address (URL form) of ipify service",
+	)
+
+	flags.StringVar(
+		&options.Protocol,
+		"protocol",
+		"udp",
+		"Protocol to use. Options: { udp, tcp }",
 	)
 
 	err = flags.Parse(args[1:])

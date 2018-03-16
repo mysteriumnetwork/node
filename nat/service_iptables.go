@@ -5,12 +5,14 @@ import (
 	"os/exec"
 
 	log "github.com/cihub/seelog"
+	"strings"
 )
 
 const NatLogPrefix = "[nat] "
 
 type serviceIPTables struct {
 	rules []RuleForwarding
+	forward bool
 }
 
 func (service *serviceIPTables) Add(rule RuleForwarding) {
@@ -43,6 +45,17 @@ func (service *serviceIPTables) Stop() error {
 }
 
 func (service *serviceIPTables) enableIPForwarding() (err error) {
+	out, err := exec.Command("sysctl", "-n", "net.ipv4.ip_forward").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("Failed to check IP forwarding status: %s", err)
+	}
+
+	if strings.TrimSpace(string(out)) == "1" {
+		service.forward = true
+		log.Info(NatLogPrefix, "IP forwarding already enabled")
+		return nil
+	}
+
 	cmd := exec.Command("sysctl", "-w", "net.ipv4.ip_forward=1")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Failed to enable IP forwarding: %s", err)
@@ -53,6 +66,10 @@ func (service *serviceIPTables) enableIPForwarding() (err error) {
 }
 
 func (service *serviceIPTables) disableIPForwarding() (err error) {
+	if service.forward {
+		return nil
+	}
+
 	cmd := exec.Command("sysctl", "-w", "net.ipv4.ip_forward=0")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Failed to disable IP forwarding. %s", err)

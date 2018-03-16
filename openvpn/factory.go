@@ -8,10 +8,12 @@ import (
 func NewServerConfig(
 	network, netmask string,
 	secPrimitives *primitives.SecurityPrimitives,
+	protocol string,
 ) *ServerConfig {
 	config := ServerConfig{NewConfig()}
 	config.SetServerMode(1194, network, netmask)
 	config.SetTLSServer()
+	config.SetProtocol(protocol)
 	config.SetTLSCACertificate(secPrimitives.CACertPath)
 	config.SetTLSPrivatePubKeys(secPrimitives.ServerCertPath, secPrimitives.ServerKeyPath)
 	config.SetTLSCrypt(secPrimitives.TLSCryptKeyPath)
@@ -35,9 +37,11 @@ func NewServerConfig(
 func NewClientConfig(
 	remote string,
 	caCertPath, tlsCryptKeyPath string,
+	protocol string,
 ) *ClientConfig {
 	config := ClientConfig{NewConfig()}
 	config.SetClientMode(remote, 1194)
+	config.SetProtocol(protocol)
 	config.SetTLSCACertificate(caCertPath)
 	config.SetTLSCrypt(tlsCryptKeyPath)
 	config.RestrictReconnects()

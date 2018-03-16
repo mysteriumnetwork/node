@@ -32,13 +32,14 @@ func NewClient(openvpnBinary string, config *ClientConfig, directoryRuntime stri
 type ClientConfigGenerator func() *ClientConfig
 
 // NewServerConfigGenerator returns function generating server config and generates required security primitives
-func NewClientConfigGenerator(directoryRuntime, vpnServerIP string) ClientConfigGenerator {
+func NewClientConfigGenerator(directoryRuntime, vpnServerIP string, protocol string) ClientConfigGenerator {
 	return func() *ClientConfig {
 		// (Re)generate required security primitives before openvpn start
 		vpnClientConfig := NewClientConfig(
 			vpnServerIP,
 			primitives.CACertPath(directoryRuntime),
 			primitives.TLSCryptKeyPath(directoryRuntime),
+			protocol,
 		)
 		return vpnClientConfig
 	}
