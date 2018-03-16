@@ -40,9 +40,10 @@ func ConfigureVpnClientFactory(
 
 		detectedCountry, err := locationDetector.DetectCountry()
 		if err != nil {
-			return nil, err
+			log.Error("Failed to detect country", err)
+		} else {
+			log.Info("Country detected: ", detectedCountry)
 		}
-		log.Info("Country detected: ", detectedCountry)
 
 		statsSender := bytescount.NewSessionStatsSender(
 			mysteriumAPIClient,
