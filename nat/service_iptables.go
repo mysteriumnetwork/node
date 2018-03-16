@@ -44,15 +44,29 @@ func (service *serviceIPTables) Stop() error {
 	return nil
 }
 
-func (service *serviceIPTables) enableIPForwarding() (err error) {
+
+func (service *serviceIPTables) isIPForwardingEnabled() (enabled bool, err error) {
 	out, err := exec.Command("sysctl", "-n", "net.ipv4.ip_forward").CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("Failed to check IP forwarding status: %s", err)
+		return false, fmt.Errorf("Failed to check IP forwarding status: %s", err)
 	}
 
 	if strings.TrimSpace(string(out)) == "1" {
 		service.forward = true
 		log.Info(NatLogPrefix, "IP forwarding already enabled")
+		return true,nil
+	}
+	return false, nil
+}
+
+func (service *serviceIPTables) enableIPForwarding() (err error) {
+
+	enabled, err := service.isIPForwardingEnabled()
+	if  err != nil {
+		return err
+	}
+
+	if enabled {
 		return nil
 	}
 

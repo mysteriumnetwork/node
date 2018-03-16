@@ -119,7 +119,6 @@ function start() {
         --location.country=$MYSTERIUM_SERVER_COUNTRY \
         --discovery-address=$MYSTERIUM_DISCOVERY_ADDRESS \
         --broker-address=$MYSTERIUM_BROKER_ADDRESS \
-        --protocol=$MYSTERIUM_SERVER_PROTOCOL \
         >>$DAEMON_STDOUT \
         2>>$DAEMON_STDERR
 

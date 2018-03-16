@@ -17,6 +17,3 @@ MYSTERIUM_DISCOVERY_ADDRESS: ""
 
 # Mysterium broker address (eg.: testnet.mysterium.network)
 MYSTERIUM_BROKER_ADDRESS: ""
-
-# Mysterium server protocol (options: {udp, tcp})
-MYSTERIUM_SERVER_PROTOCOL: ""

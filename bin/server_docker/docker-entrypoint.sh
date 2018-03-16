@@ -26,6 +26,5 @@ exec /usr/bin/mysterium_server \
     --location.country=$MYSTERIUM_SERVER_COUNTRY \
     --discovery-address=$MYSTERIUM_DISCOVERY_ADDRESS \
     --broker-address=$MYSTERIUM_BROKER_ADDRESS \
-    --protocol=$MYSTERIUM_SERVER_PROTOCOL \
     $@
 
