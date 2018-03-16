@@ -16,6 +16,13 @@ func NewDetector(ipResolver ip.Resolver, databasePath string) *detector {
 	}
 }
 
+func NewDetectorWithLocationResolver(ipResolver ip.Resolver, locationResolver Resolver) *detector {
+	return &detector{
+		ipResolver: ipResolver,
+		locationResolver: locationResolver,
+	}
+}
+
 func (d *detector) DetectCountry() (string, error) {
 	ip, err := d.ipResolver.GetPublicIP()
 	if err != nil {
