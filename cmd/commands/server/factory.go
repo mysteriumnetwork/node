@@ -102,5 +102,6 @@ func NewCommandWith(
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
+		protocol: options.Protocol,
 	}
 }

@@ -37,6 +37,7 @@ type Command struct {
 
 	vpnServer    *openvpn.Server
 	checkOpenvpn func() error
+	protocol	string
 }
 
 // Start starts server - does not block
@@ -73,7 +74,7 @@ func (cmd *Command) Start() (err error) {
 	if err != nil {
 		return err
 	}
-	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation)
+	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
 
 	sessionManager := cmd.sessionManagerFactory(vpnServerIP)
 

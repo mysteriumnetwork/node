@@ -52,7 +52,6 @@ func (service *serviceIPTables) isIPForwardingEnabled() (enabled bool, err error
 	}
 
 	if strings.TrimSpace(string(out)) == "1" {
-		service.forward = true
 		log.Info(NatLogPrefix, "IP forwarding already enabled")
 		return true,nil
 	}
@@ -67,6 +66,7 @@ func (service *serviceIPTables) enableIPForwarding() (err error) {
 	}
 
 	if enabled {
+		service.forward = true
 		return nil
 	}
 

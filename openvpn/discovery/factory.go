@@ -13,6 +13,7 @@ func NewServiceProposalWithLocation(
 	providerID identity.Identity,
 	providerContact dto_discovery.Contact,
 	serviceLocation dto_discovery.Location,
+	protocol string,
 ) dto_discovery.ServiceProposal {
 	return dto_discovery.ServiceProposal{
 		ID:          1,
@@ -22,6 +23,7 @@ func NewServiceProposalWithLocation(
 			Location:          serviceLocation,
 			LocationOriginate: serviceLocation,
 			SessionBandwidth:  dto.Bandwidth(10 * datasize.MB),
+			Protocol:		   protocol,
 		},
 		PaymentMethodType: dto.PaymentMethodPerTime,
 		PaymentMethod: dto.PaymentPerTime{

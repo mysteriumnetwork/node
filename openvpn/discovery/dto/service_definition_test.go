@@ -12,6 +12,7 @@ var (
 	locationUS = dto_discovery.Location{
 		Country: "US",
 	}
+	protocol = "tcp"
 )
 
 func TestServiceDefinitionSerialize(t *testing.T) {
@@ -24,6 +25,7 @@ func TestServiceDefinitionSerialize(t *testing.T) {
 				Location:          locationUS,
 				LocationOriginate: locationUS,
 				SessionBandwidth:  Bandwidth(10 * datasize.Bit),
+				Protocol:          protocol,
 			},
 			`{
 				"location": {
@@ -32,7 +34,8 @@ func TestServiceDefinitionSerialize(t *testing.T) {
 				"location_originate": {
 					"country": "US"
 				},
-				"session_bandwidth": 10
+				"session_bandwidth": 10,
+				"protocol": "tcp"
 			}`,
 		},
 		{
@@ -66,12 +69,14 @@ func TestServiceDefinitionUnserialize(t *testing.T) {
 				"location_originate": {
 					"country": "US"
 				},
-				"session_bandwidth": 8
+				"session_bandwidth": 8,
+				"protocol": "tcp"
 			}`,
 			ServiceDefinition{
 				Location:          locationUS,
 				LocationOriginate: locationUS,
 				SessionBandwidth:  Bandwidth(1 * datasize.Byte),
+				Protocol: 		   protocol,
 			},
 			nil,
 		},
