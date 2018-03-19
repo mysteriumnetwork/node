@@ -1,5 +1,6 @@
 package dto
 
+// SessionStats mapped to json structure
 type SessionStats struct {
 	BytesSent     int    `json:"bytes_sent"`
 	BytesReceived int    `json:"bytes_received"`

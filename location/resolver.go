@@ -11,7 +11,7 @@ type resolver struct {
 }
 
 // NewResolver returns Resolver which uses country database
-func NewResolver(databasePath string) *resolver {
+func NewResolver(databasePath string) Resolver {
 	return &resolver{
 		databasePath: databasePath,
 	}

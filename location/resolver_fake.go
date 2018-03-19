@@ -5,7 +5,7 @@ type resolverFake struct {
 	error error
 }
 
-// NewResolverFake returns Resolver which uses statically entered value
+// NewResolverFake returns resolverFake which uses statically entered value
 func NewResolverFake(country string) *resolverFake {
 	return &resolverFake{
 		country: country,
@@ -13,6 +13,7 @@ func NewResolverFake(country string) *resolverFake {
 	}
 }
 
+// NewFailingResolverFake returns resolverFake with entered error
 func NewFailingResolverFake(err error) *resolverFake {
 	return &resolverFake{
 		country:  "",

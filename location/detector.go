@@ -9,20 +9,23 @@ type detector struct {
 	locationResolver Resolver
 }
 
-func NewDetector(ipResolver ip.Resolver, databasePath string) *detector {
+// NewDetector constructs Detector
+func NewDetector(ipResolver ip.Resolver, databasePath string) Detector {
 	return &detector{
 		ipResolver: ipResolver,
 		locationResolver: NewResolver(databasePath),
 	}
 }
 
-func NewDetectorWithLocationResolver(ipResolver ip.Resolver, locationResolver Resolver) *detector {
+// NewDetectorWithLocationResolver constructs Detector
+func NewDetectorWithLocationResolver(ipResolver ip.Resolver, locationResolver Resolver) Detector {
 	return &detector{
 		ipResolver: ipResolver,
 		locationResolver: locationResolver,
 	}
 }
 
+// Maps current ip to country
 func (d *detector) DetectCountry() (string, error) {
 	ip, err := d.ipResolver.GetPublicIP()
 	if err != nil {
