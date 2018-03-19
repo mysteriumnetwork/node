@@ -14,3 +14,9 @@ func (c *ServerConfig) SetTLSServer() {
 	c.setFlag("tls-server")
 	c.AddOptions(OptionFile("dh", "none"))
 }
+
+func (c *ServerConfig) SetProtocol(protocol string) {
+	if protocol == "tcp" {
+		c.setParam("proto", "tcp-server")
+	}
+}

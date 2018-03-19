@@ -15,3 +15,9 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort int) {
 	c.setFlag("auth-user-pass")
 	c.setFlag("management-query-passwords")
 }
+
+func (c *ClientConfig) SetProtocol(protocol string) {
+	if protocol == "tcp" {
+		c.setParam("proto", "tcp-client")
+	}
+}
