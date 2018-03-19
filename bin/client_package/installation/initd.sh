@@ -113,9 +113,7 @@ function start() {
         --config-dir=$OS_DIR_CONFIG \
         --data-dir=$OS_DIR_DATA \
         --runtime-dir=$OS_DIR_RUN \
-        --tequilapi.address=$MYSTERIUM_CLIENT_TEQUILAPI_ADDRESS \
-        --tequilapi.port=$MYSTERIUM_CLIENT_TEQUILAPI_PORT \
-        --discovery-address=$MYSTERIUM_DISCOVERY_ADDRESS \
+        $(DAEMON_OPTS) \
         >>$DAEMON_STDOUT \
         2>>$DAEMON_STDERR
 
