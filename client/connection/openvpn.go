@@ -38,11 +38,11 @@ func ConfigureVpnClientFactory(
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 
-		detectedCountry, err := locationDetector.DetectCountry()
+		consumerCountry, err := locationDetector.DetectCountry()
 		if err != nil {
 			log.Warn("Failed to detect country", err)
 		} else {
-			log.Info("Country detected: ", detectedCountry)
+			log.Info("Country detected: ", consumerCountry)
 		}
 
 		statsSender := bytescount.NewSessionStatsSender(
@@ -50,7 +50,7 @@ func ConfigureVpnClientFactory(
 			vpnSession.ID,
 			providerID,
 			signer,
-			detectedCountry,
+			consumerCountry,
 		)
 		asyncStatsSender := func(stats bytescount.SessionStats) error {
 			go statsSender(stats)
