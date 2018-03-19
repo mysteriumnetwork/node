@@ -43,10 +43,17 @@ func NewManager(mysteriumClient server.Client, dialogEstablisherCreator DialogEs
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID, providerID identity.Identity) error {
+func (manager *connectionManager) Connect(consumerID, providerID identity.Identity) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
+
+	manager.status = statusConnecting()
+	defer func() {
+		if err != nil {
+			manager.status = statusNotConnected()
+		}
+	}()
 
 	proposal, err := manager.findProposalByProviderID(providerID)
 	if err != nil {
@@ -71,7 +78,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return err
 	}
 
-	if err := manager.openvpnClient.Start(); err != nil {
+	if err = manager.openvpnClient.Start(); err != nil {
 		manager.dialog.Close()
 		return err
 	}
@@ -93,8 +100,6 @@ func (manager *connectionManager) Disconnect() error {
 
 func (manager *connectionManager) onVpnStatusUpdate(vpnState openvpn.State) {
 	switch vpnState {
-	case openvpn.ConnectingState:
-		manager.status = statusConnecting()
 	case openvpn.ConnectedState:
 		manager.statsKeeper.MarkSessionStart()
 		manager.status = statusConnected(manager.sessionID)
