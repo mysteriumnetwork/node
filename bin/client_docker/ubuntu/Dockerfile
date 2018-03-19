@@ -18,7 +18,7 @@ RUN apt-get update \
     && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
-COPY bin/client_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY bin/client_docker/ubuntu/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Install application
