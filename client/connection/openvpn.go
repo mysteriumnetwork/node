@@ -40,7 +40,7 @@ func ConfigureVpnClientFactory(
 
 		detectedCountry, err := locationDetector.DetectCountry()
 		if err != nil {
-			log.Error("Failed to detect country", err)
+			log.Warn("Failed to detect country", err)
 		} else {
 			log.Info("Country detected: ", detectedCountry)
 		}
