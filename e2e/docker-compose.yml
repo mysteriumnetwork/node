@@ -15,9 +15,7 @@ services:
       - broker
       - discovery
       - ipify
-    privileged: true
     cap_add:
-      - MKNOD
       - NET_ADMIN
     expose:
       - 1194
@@ -36,9 +34,7 @@ services:
       - node
       - discovery
       - ipify
-    privileged: true
     cap_add:
-      - MKNOD
       - NET_ADMIN
     ports:
       - 4052:4050
