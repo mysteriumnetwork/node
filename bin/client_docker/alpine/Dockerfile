@@ -1,7 +1,7 @@
 FROM golang:1.9.2-alpine AS builder
 
 # Install packages
-RUN apk add --update --no-cache bash g++ make \
+RUN apk add --update --no-cache bash gcc musl-dev make \
     && rm -rf /var/cache/apk/*
 
 # Compile application
@@ -15,12 +15,11 @@ FROM alpine:3.6
 MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
 # Install packages
-RUN apk add --update --no-cache bash iptables ca-certificates openvpn \
+RUN apk add --update --no-cache iptables ca-certificates openvpn bash \
     && rm -rf /var/cache/apk/*
 
 # Directories
-RUN mkdir -p /etc/mysterium-client \
-    && mkdir -p /var/lib/mysterium-client \
+RUN mkdir -p /var/lib/mysterium-client \
     && mkdir -p /var/run/mysterium-client
 
 COPY bin/client_package/config /etc/mysterium-client
