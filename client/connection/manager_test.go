@@ -177,6 +177,11 @@ func (tc *testContext) TestConnectFailsIfOpenvpnFactoryReturnsError() {
 	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID))
 }
 
+func (tc *testContext) TestStatusIsConnectingWhenConnectCommandReturnsWithoutError() {
+	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
+	assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
+}
+
 func TestConnectionManagerSuite(t *testing.T) {
 	suite.Run(t, new(testContext))
 }
