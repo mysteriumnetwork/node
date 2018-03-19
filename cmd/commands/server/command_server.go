@@ -24,7 +24,7 @@ type Command struct {
 	ipResolver       ip.Resolver
 	mysteriumClient  server.Client
 	natService       nat.NATService
-	locationResolver location.Resolver
+	locationDetector location.Detector
 
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
@@ -67,9 +67,8 @@ func (cmd *Command) Start() (err error) {
 	if err = cmd.natService.Start(); err != nil {
 		return err
 	}
-
-	locationDetector := location.NewDetectorWithLocationResolver(cmd.ipResolver, cmd.locationResolver)
-	serviceCountry, err := locationDetector.DetectCountry()
+	
+	serviceCountry, err := cmd.locationDetector.DetectCountry()
 	if err != nil {
 		return err
 	}

@@ -60,12 +60,14 @@ func NewCommandWith(
 		locationResolver = location.NewResolver(filepath.Join(options.DirectoryConfig, defaultLocationDatabase))
 	}
 
+	locationDetector := location.NewDetectorWithLocationResolver(ipResolver, locationResolver)
+
 	return &Command{
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, options.Identity, options.Passphrase)
 		},
 		createSigner:     createSigner,
-		locationResolver: locationResolver,
+		locationDetector: locationDetector,
 		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,
