@@ -79,7 +79,7 @@ func NewCommandWith(
 		},
 
 		sessionManagerFactory: func(vpnServerIP string) session.Manager {
-			clientConfigGenerator := openvpn.NewClientConfigGenerator(options.DirectoryRuntime, vpnServerIP)
+			clientConfigGenerator := openvpn.NewClientConfigGenerator(options.DirectoryRuntime, vpnServerIP, options.Protocol)
 
 			return openvpn_session.NewManager(
 				clientConfigGenerator,
@@ -87,7 +87,7 @@ func NewCommandWith(
 			)
 		},
 		vpnServerFactory: func(manager session.Manager, serviceLocation dto.Location, providerID identity.Identity, callback state.Callback) *openvpn.Server {
-			serverConfigGenerator := openvpn.NewServerConfigGenerator(options.DirectoryRuntime, serviceLocation, providerID)
+			serverConfigGenerator := openvpn.NewServerConfigGenerator(options.DirectoryRuntime, serviceLocation, providerID, options.Protocol)
 			sessionValidator := openvpn_session.NewSessionValidator(
 				manager.FindSession,
 				identity.NewExtractor(),
@@ -104,5 +104,6 @@ func NewCommandWith(
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
+		protocol: options.Protocol,
 	}
 }

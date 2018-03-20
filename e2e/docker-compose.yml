@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 services:
 
   broker:
@@ -13,16 +13,19 @@ services:
       dockerfile: bin/server_docker/alpine/Dockerfile
     depends_on:
       - broker
+      - discovery
+      - ipify
     privileged: true
     cap_add:
       - MKNOD
       - NET_ADMIN
     expose:
       - 1194
-    environment:
-      MYSTERIUM_BROKER_ADDRESS: "broker"
-      MYSTERIUM_DISCOVERY_ADDRESS: "http://notdefinedyet:6666"
-      MYSTERIUM_SERVER_COUNTRY: "e2e-land"
+    command: >
+      --ipify-url=http://ipify:3000
+      --broker-address=broker
+      --discovery-address=http://discovery/v1
+      --location.country=e2e-land
 
   client:
     build:
@@ -31,12 +34,42 @@ services:
     depends_on:
       - broker
       - node
+      - discovery
+      - ipify
     privileged: true
     cap_add:
       - MKNOD
       - NET_ADMIN
     ports:
       - 4052:4050
+    command: "--ipify-url=http://ipify:3000 --discovery-address=http://discovery/v1"
+
+  #infrastructure - centralized api and db
+  db:
+    image: percona:5.7
+    restart: always
+    expose:
+      - 3306
     environment:
-      MYSTERIUM_DISCOVERY_ADDRESS: "http://notdefiendyet:6666"
-      MYSTERIUM_CLIENT_TEQUILAPI_PORT: "4050"
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: myst_api
+      MYSQL_USER: myst_api
+      MYSQL_PASSWORD: myst_api
+
+  discovery:
+    image: mysteriumnetwork/mysterium-api:0.1.6
+    expose:
+    - 80
+    environment:
+      APP_PORT: 80
+      DB_HOST: db
+      DB_NAME: myst_api
+      DB_USER: myst_api
+      DB_PASSWORD: myst_api
+    depends_on:
+    - db
+  #'external' IP detection
+  ipify:
+    image: owlab/ipify
+    expose:
+    - 3000

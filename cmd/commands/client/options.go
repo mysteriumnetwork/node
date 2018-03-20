@@ -57,7 +57,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.TequilapiAddress,
 		"tequilapi.address",
-		"localhost",
+		"127.0.0.1",
 		"IP address of interface to listen for incoming connections",
 	)
 	flags.IntVar(

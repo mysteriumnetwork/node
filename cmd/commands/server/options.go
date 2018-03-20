@@ -23,6 +23,8 @@ type CommandOptions struct {
 	BrokerAddress       string
 
 	IpifyUrl string
+
+	Protocol string
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
@@ -56,6 +58,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"openvpn.binary",
 		"openvpn", //search in $PATH by default,
 		"openvpn binary to use for Open VPN connections",
+	)
+
+	flags.StringVar(
+		&options.Protocol,
+		"openvpn.proto",
+		"udp",
+		"Protocol to use. Options: { udp, tcp }",
 	)
 
 	flags.StringVar(

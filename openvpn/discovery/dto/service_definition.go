@@ -13,6 +13,9 @@ type ServiceDefinition struct {
 
 	// Available per session bandwidth
 	SessionBandwidth Bandwidth `json:"session_bandwidth,omitempty"`
+
+	// Transport protocol used by service
+	Protocol string `json:"protocol,omitempty"`
 }
 
 func (service ServiceDefinition) GetLocation() dto_discovery.Location {

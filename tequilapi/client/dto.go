@@ -1,5 +1,7 @@
 package client
 
+import "fmt"
+
 // StatusDTO holds connection status and session id
 type StatusDTO struct {
 	Status    string `json:"status"`
@@ -25,6 +27,10 @@ type ProposalDTO struct {
 	ServiceDefinition ServiceDefinitionDTO `json:"serviceDefinition"`
 }
 
+func (p ProposalDTO) String() string {
+	return fmt.Sprintf("Id: %d , Provider: %s, Country: %s", p.ID, p.ProviderID, p.ServiceDefinition.LocationOriginate.Country)
+}
+
 // ServiceDefinitionDTO describes service of proposal
 type ServiceDefinitionDTO struct {
 	LocationOriginate LocationDTO `json:"locationOriginate"`
@@ -32,7 +38,7 @@ type ServiceDefinitionDTO struct {
 
 // LocationDTO describes location
 type LocationDTO struct {
-	Country *string `json:"country"`
+	Country string `json:"country"`
 }
 
 // IdentityDTO holds identity address
