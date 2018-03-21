@@ -21,7 +21,6 @@ DOCKER_IMAGE="mysteriumnetwork/mysterium-node"
 printf "Building Alpine image..\n" \
     && docker build \
         --file bin/server_docker/alpine/Dockerfile \
-        --build-arg PACKAGE_VERSION=$VERSION \
         --tag $DOCKER_IMAGE:$VERSION-alpine \
         .
 if [ $? -ne 0 ] ; then

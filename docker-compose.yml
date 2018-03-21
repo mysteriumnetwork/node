@@ -2,32 +2,23 @@ version: '2'
 services:
 
   broker:
-    tty: true
     image: nats
     ports:
       - 4222:4222
       - 8222:8222
 
   server-alpine:
-    privileged: true
-    tty: true
     build:
       context: .
       dockerfile: bin/server_docker/alpine/Dockerfile
     depends_on:
       - broker
     cap_add:
-      - MKNOD
       - NET_ADMIN
     ports:
       - 11941:1194
-    environment:
-      MYSTERIUM_SERVER_IDENTITY: ""
-      MYSTERIUM_SERVER_IDENTITY_PASSPHRASE: ""
 
   server-ubuntu:
-    privileged: true
-    tty: true
     build:
       context: .
       dockerfile: bin/server_docker/ubuntu/Dockerfile
@@ -36,28 +27,18 @@ services:
     depends_on:
       - broker
     cap_add:
-      - MKNOD
       - NET_ADMIN
     ports:
       - 11942:1194
-    environment:
-      MYSTERIUM_SERVER_IDENTITY: ""
-      MYSTERIUM_SERVER_IDENTITY_PASSPHRASE: ""
 
   client-alpine:
-    privileged: true
-    tty: true
     build:
       context: .
       dockerfile: bin/client_docker/alpine/Dockerfile
     ports:
       - 40501:4050
-    environment:
-      MYSTERIUM_CLIENT_TEQUILAPI_PORT: 4050
 
   client-ubuntu:
-    privileged: true
-    tty: true
     build:
       context: .
       dockerfile: bin/client_docker/ubuntu/Dockerfile
@@ -65,5 +46,3 @@ services:
         PACKAGE_VERSION: 0.0.1-docker
     ports:
       - 40502:4050
-    environment:
-      MYSTERIUM_CLIENT_TEQUILAPI_PORT: 4050
