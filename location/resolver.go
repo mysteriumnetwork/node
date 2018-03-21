@@ -38,6 +38,9 @@ func (r *resolver) ResolveCountry(ip string) (string, error) {
 	country := countryRecord.Country.IsoCode
 	if country == "" {
 		country = countryRecord.RegisteredCountry.IsoCode
+		if country == "" {
+			return "", errors.New("failed to resolve country")
+		}
 	}
 
 	return country, nil
