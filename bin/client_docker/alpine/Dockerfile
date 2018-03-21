@@ -18,9 +18,7 @@ MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 RUN apk add --update --no-cache iptables ca-certificates openvpn bash \
     && rm -rf /var/cache/apk/*
 
-# Directories
-RUN mkdir -p /var/lib/mysterium-client
-
+COPY bin/client_docker/prepare-run-env.sh /usr/local/bin/prepare-run-env.sh
 COPY bin/client_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
