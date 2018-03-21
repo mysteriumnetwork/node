@@ -22,6 +22,8 @@ type CommandOptions struct {
 	BrokerAddress       string
 
 	IpifyUrl string
+
+	LocationDatabase string
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
@@ -84,6 +86,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"ipify-url",
 		"https://api.ipify.org/",
 		"Address (URL form) of ipify service",
+	)
+
+	flags.StringVar(
+		&options.LocationDatabase,
+		"location.database",
+		"GeoLite2-Country.mmdb",
+		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 
 	err = flags.Parse(args[1:])

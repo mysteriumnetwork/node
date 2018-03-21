@@ -1,43 +1,37 @@
 package location
 
 import (
-	"errors"
-	"github.com/oschwald/geoip2-golang"
-	"net"
+	"github.com/mysterium/node/ip"
 )
 
 type detector struct {
-	databasePath string
+	ipResolver ip.Resolver
+	locationResolver Resolver
 }
 
-// NewDetector returns Detector which uses country database
-func NewDetector(databasePath string) *detector {
+// NewDetector constructs Detector
+func NewDetector(ipResolver ip.Resolver, databasePath string) Detector {
+	return NewDetectorWithLocationResolver(ipResolver, NewResolver(databasePath))
+}
+
+// NewDetectorWithLocationResolver constructs Detector
+func NewDetectorWithLocationResolver(ipResolver ip.Resolver, locationResolver Resolver) Detector {
 	return &detector{
-		databasePath: databasePath,
+		ipResolver: ipResolver,
+		locationResolver: locationResolver,
 	}
 }
 
-// DetectCountry maps given ip to country
-func (d *detector) DetectCountry(ip string) (string, error) {
-	db, err := geoip2.Open(d.databasePath)
-	if err != nil {
-		return "", err
-	}
-	defer db.Close()
-
-	ipObject := net.ParseIP(ip)
-	if ipObject == nil {
-		return "", errors.New("failed to parse IP")
-	}
-
-	countryRecord, err := db.Country(ipObject)
+// Maps current ip to country
+func (d *detector) DetectCountry() (string, error) {
+	ip, err := d.ipResolver.GetPublicIP()
 	if err != nil {
 		return "", err
 	}
 
-	country := countryRecord.Country.IsoCode
-	if country == "" {
-		country = countryRecord.RegisteredCountry.IsoCode
+	country, err := d.locationResolver.ResolveCountry(ip)
+	if err != nil {
+		return "", err
 	}
 
 	return country, nil

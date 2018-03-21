@@ -1,34 +1,35 @@
 package location
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+	"errors"
+	"github.com/mysterium/node/ip"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestDetectorDetectCountry(t *testing.T) {
-	tests := []struct {
-		ip      string
-		want    string
-		wantErr string
-	}{
-		{"8.8.8.8", "US", ""},
-		{"8.8.4.4", "US", ""},
-		{"95.85.39.36", "NL", ""},
-		{"127.0.0.1", "", ""},
-		{"8.8.8.8.8", "", "failed to parse IP"},
-		{"185.243.112.225", "", ""},
-		{"asd", "", "failed to parse IP"},
-	}
+func TestNewDetector(t *testing.T) {
+	ipResolver := ip.NewFakeResolver("8.8.8.8")
+	detector := NewDetector(ipResolver, "../bin/client_package/config/GeoLite2-Country.mmdb")
+	country, err := detector.DetectCountry()
+	assert.Equal(t, "US", country)
+	assert.NoError(t, err)
+}
 
-	detector := NewDetector("../bin/server_package/config/GeoLite2-Country.mmdb")
-	for _, tt := range tests {
-		got, err := detector.DetectCountry(tt.ip)
+func TestWithIpResolverFailing(t *testing.T) {
+	ipErr := errors.New("ip resolver error")
+	ipResolver := ip.NewFailingFakeResolver(ipErr)
+	detector := NewDetectorWithLocationResolver(ipResolver, NewResolverFake(""))
+	country, err := detector.DetectCountry()
+	assert.EqualError(t, ipErr, err.Error())
+	assert.Equal(t, "", country)
+}
 
-		assert.Equal(t, tt.want, got, tt.ip)
-		if tt.wantErr != "" {
-			assert.EqualError(t, err, tt.wantErr, tt.ip)
-		} else {
-			assert.NoError(t, err, tt.ip)
-		}
-	}
+func TestWithLocationResolverFailing(t *testing.T) {
+	ipResolver := ip.NewFakeResolver("")
+	locationErr := errors.New("location resolver error")
+	locationResolver := NewFailingResolverFake(locationErr)
+	detector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
+	country, err := detector.DetectCountry()
+	assert.EqualError(t, locationErr, err.Error())
+	assert.Equal(t, "", country)
 }

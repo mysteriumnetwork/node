@@ -18,6 +18,7 @@ import (
 	"github.com/mysterium/node/version"
 	"path/filepath"
 	"time"
+	"github.com/mysterium/node/location"
 )
 
 // NewCommand function creates new client command by given options
@@ -51,6 +52,13 @@ func NewCommandWith(
 
 	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
 
+	ipResolver := ip.NewResolver(options.IpifyUrl)
+
+	locationDetector := location.NewDetector(
+		ipResolver,
+		filepath.Join(options.DirectoryConfig, options.LocationDatabase),
+	)
+
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
 		options.OpenvpnBinary,
@@ -58,6 +66,7 @@ func NewCommandWith(
 		options.DirectoryRuntime,
 		signerFactory,
 		statsKeeper,
+		locationDetector,
 	)
 	connectionManager := connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
 
@@ -74,7 +83,7 @@ func NewCommandWith(
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ip.NewResolver(options.IpifyUrl), statsKeeper)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill), time.Second)
 
