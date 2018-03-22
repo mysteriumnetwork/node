@@ -20,10 +20,10 @@ var (
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient      server.Client
-	newDialogEstablisher DialogEstablisherCreator
-	newVpnClient         VpnClientCreator
-	statsKeeper          bytescount.SessionStatsKeeper
+	mysteriumClient server.Client
+	newDialog       DialogCreator
+	newVpnClient    VpnClientCreator
+	statsKeeper     bytescount.SessionStatsKeeper
 	//these are populated by Connect at runtime
 	status        ConnectionStatus
 	dialog        communication.Dialog
@@ -32,14 +32,14 @@ type connectionManager struct {
 }
 
 // NewManager creates connection manager with given dependencies
-func NewManager(mysteriumClient server.Client, dialogEstablisherCreator DialogEstablisherCreator,
+func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator,
 	vpnClientCreator VpnClientCreator, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
-		mysteriumClient:      mysteriumClient,
-		newDialogEstablisher: dialogEstablisherCreator,
-		newVpnClient:         vpnClientCreator,
-		statsKeeper:          statsKeeper,
-		status:               statusNotConnected(),
+		mysteriumClient: mysteriumClient,
+		newDialog:       dialogCreator,
+		newVpnClient:    vpnClientCreator,
+		statsKeeper:     statsKeeper,
+		status:          statusNotConnected(),
 	}
 }
 
@@ -60,8 +60,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return err
 	}
 
-	dialogEstablisher := manager.newDialogEstablisher(consumerID)
-	manager.dialog, err = dialogEstablisher.EstablishDialog(providerID, proposal.ProviderContacts[0])
+	manager.dialog, err = manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}

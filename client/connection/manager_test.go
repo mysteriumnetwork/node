@@ -8,7 +8,7 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -28,10 +28,10 @@ type testContext struct {
 var (
 	myID                  = identity.FromAddress("identity-1")
 	activeProviderID      = identity.FromAddress("vpn-node-1")
-	activeProviderContact = dto_discovery.Contact{}
-	activeProposal        = dto_discovery.ServiceProposal{
+	activeProviderContact = dto.Contact{}
+	activeProposal        = dto.ServiceProposal{
 		ProviderID:       activeProviderID.Address,
-		ProviderContacts: []dto_discovery.Contact{activeProviderContact},
+		ProviderContacts: []dto.Contact{activeProviderContact},
 	}
 )
 
@@ -39,8 +39,8 @@ func (tc *testContext) SetupTest() {
 	tc.fakeDiscoveryClient = server.NewClientFake()
 	tc.fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
 
-	dialogEstablisherFactory := func(identity identity.Identity) communication.DialogEstablisher {
-		return &fakeDialog{}
+	dialogCreator := func(consumer, provider identity.Identity, contact dto.Contact) (communication.Dialog, error) {
+		return &fakeDialog{}, nil
 	}
 
 	tc.fakeOpenVpn = &fakeOpenvpnClient{
@@ -60,7 +60,7 @@ func (tc *testContext) SetupTest() {
 	}
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogEstablisherFactory, fakeVpnClientFactory, tc.fakeStatsKeeper)
+	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, fakeVpnClientFactory, tc.fakeStatsKeeper)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
@@ -209,11 +209,6 @@ func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
 
 type fakeDialog struct {
 	peerId identity.Identity
-}
-
-func (fd *fakeDialog) EstablishDialog(peerID identity.Identity, peerContact dto_discovery.Contact) (communication.Dialog, error) {
-	fd.peerId = peerID
-	return fd, nil
 }
 
 func (fd *fakeDialog) PeerID() identity.Identity {
