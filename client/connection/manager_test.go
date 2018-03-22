@@ -46,6 +46,7 @@ func (tc *testContext) SetupTest() {
 	tc.fakeOpenVpn = &fakeOpenvpnClient{
 		nil,
 		nil,
+		nil,
 	}
 
 	tc.openvpnCreationError = nil
@@ -138,11 +139,11 @@ func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconn
 	assert.Equal(tc.T(), statusReconnecting(), tc.connManager.Status())
 }
 
-func (tc *testContext) TestNotConnectedStatusIsReportedWhenOpenvpnReportsExiting() {
+func (tc *testContext) TestConnectedStatusIsReportedWhenOpenvpnReportsExiting() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
 	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
-	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
 }
 
 func (tc *testContext) TestDoubleDisconnectResultsInError() {
@@ -189,22 +190,27 @@ func TestConnectionManagerSuite(t *testing.T) {
 type fakeOpenvpnClient struct {
 	onConnectReturnError error
 	stateCallback        state.Callback
+	stopProcess          chan int
 }
 
 func (foc *fakeOpenvpnClient) Start() error {
+	foc.stopProcess = make(chan int)
 	return foc.onConnectReturnError
 }
 
 func (foc *fakeOpenvpnClient) Wait() error {
+	<-foc.stopProcess
 	return nil
 }
 
 func (foc *fakeOpenvpnClient) Stop() error {
+	close(foc.stopProcess)
 	return nil
 }
 
 func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
 	foc.stateCallback(state)
+	time.Sleep(time.Millisecond)
 }
 
 type fakeDialog struct {
