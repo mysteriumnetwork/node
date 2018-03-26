@@ -45,6 +45,9 @@ func (tc *testContext) SetupTest() {
 
 	tc.fakeOpenVpn = &fakeOpenvpnClient{
 		nil,
+		[]openvpn.State{openvpn.ConnectedState},
+		[]openvpn.State{openvpn.ExitingState},
+		nil,
 		nil,
 		nil,
 	}
@@ -89,34 +92,43 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndSessionStartIsNo
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
 	err := tc.connManager.Connect(myID, activeProviderID)
-	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionSessionStartIsMarked() {
 	err := tc.connManager.Connect(myID, activeProviderID)
-	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	assert.NoError(tc.T(), err)
 
 	assert.True(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
-	tc.connManager.Connect(myID, activeProviderID)
-	assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
+	tc.fakeOpenVpn.onStartReportStates = []openvpn.State{}
+	syncChannel := make(chan error)
+	go func() {
+		<-syncChannel
+		syncChannel <- tc.connManager.Connect(myID, activeProviderID)
+	}()
+	syncChannel <- nil
+	select {
+	case err := <-syncChannel:
+		assert.Fail(tc.T(), "Connect error not expected: ", err)
+	default:
+		assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
+	}
 }
 
 func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	err := tc.connManager.Connect(myID, activeProviderID)
-	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
 
+	waiter := tc.fakeOpenVpn.holdOnClose()
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	assert.Equal(tc.T(), statusDisconnecting(), tc.connManager.Status())
-
-	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
+	close(waiter)
+	time.Sleep(100 * time.Millisecond)
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
 	assert.True(tc.T(), tc.fakeStatsKeeper.sessionEndMarked)
@@ -124,7 +136,6 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 
 func (tc *testContext) TestConnectResultsInAlreadyConnectedErrorWhenConnectionExists() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	assert.Equal(tc.T(), ErrAlreadyExists, tc.connManager.Connect(myID, activeProviderID))
 }
 
@@ -134,41 +145,36 @@ func (tc *testContext) TestDisconnectReturnsErrorWhenNoConnectionExists() {
 
 func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconnectingState() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	tc.fakeOpenVpn.reportState(openvpn.ReconnectingState)
 	assert.Equal(tc.T(), statusReconnecting(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestConnectedStatusIsReportedWhenOpenvpnReportsExiting() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
 	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
 }
 
 func (tc *testContext) TestDoubleDisconnectResultsInError() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
-
+	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
-	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
+	time.Sleep(10 * time.Millisecond)
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 	assert.Equal(tc.T(), ErrNoConnection, tc.connManager.Disconnect())
 }
 
 func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
-	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
+	time.Sleep(100 * time.Millisecond)
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	tc.fakeOpenVpn.reportState(openvpn.ConnectedState)
 
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
-	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
+	time.Sleep(100 * time.Millisecond)
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
 }
@@ -178,9 +184,48 @@ func (tc *testContext) TestConnectFailsIfOpenvpnFactoryReturnsError() {
 	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID))
 }
 
-func (tc *testContext) TestStatusIsConnectingWhenConnectCommandReturnsWithoutError() {
-	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
-	assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
+func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutError() {
+	tc.connManager.Connect(myID, activeProviderID)
+	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
+}
+
+func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
+	tc.fakeOpenVpn.onStartReportStates = []openvpn.State{}
+	syncChannel := make(chan error)
+	go func() {
+		<-syncChannel
+		syncChannel <- tc.connManager.Connect(myID, activeProviderID)
+	}()
+	syncChannel <- nil
+	assert.NoError(tc.T(), tc.connManager.Disconnect())
+	time.Sleep(100 * time.Millisecond)
+	select {
+	case err := <-syncChannel:
+		assert.Equal(tc.T(), ErrConnectionCancelled, err)
+	default:
+		assert.Fail(tc.T(), "Expected error returned by connect")
+	}
+}
+
+func (tc *testContext) TestConnectMethodReturnsErrorIfOpenvpnClientExitsDuringConnect() {
+	tc.fakeOpenVpn.onStartReportStates = []openvpn.State{}
+	tc.fakeOpenVpn.onStopReportStates = []openvpn.State{}
+	syncChannel := make(chan error)
+
+	go func() {
+		<-syncChannel
+		syncChannel <- tc.connManager.Connect(myID, activeProviderID)
+	}()
+	syncChannel <- nil
+	time.Sleep(50 * time.Millisecond)
+	tc.fakeOpenVpn.Stop()
+	time.Sleep(50 * time.Millisecond)
+	select {
+	case err := <-syncChannel:
+		assert.Equal(tc.T(), ErrOpenvpnProcessDied, err)
+	default:
+		assert.Fail(tc.T(), "Expected error returned by connect")
+	}
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
@@ -189,12 +234,18 @@ func TestConnectionManagerSuite(t *testing.T) {
 
 type fakeOpenvpnClient struct {
 	onConnectReturnError error
+	onStartReportStates  []openvpn.State
+	onStopReportStates   []openvpn.State
 	stateCallback        state.Callback
 	stopProcess          chan int
+	closeHoldChannel     chan int
 }
 
 func (foc *fakeOpenvpnClient) Start() error {
 	foc.stopProcess = make(chan int)
+	for _, openvpnState := range foc.onStartReportStates {
+		foc.reportState(openvpnState)
+	}
 	return foc.onConnectReturnError
 }
 
@@ -204,6 +255,12 @@ func (foc *fakeOpenvpnClient) Wait() error {
 }
 
 func (foc *fakeOpenvpnClient) Stop() error {
+	if foc.closeHoldChannel != nil {
+		<-foc.closeHoldChannel
+	}
+	for _, openvpnState := range foc.onStopReportStates {
+		foc.reportState(openvpnState)
+	}
 	close(foc.stopProcess)
 	return nil
 }
@@ -211,6 +268,10 @@ func (foc *fakeOpenvpnClient) Stop() error {
 func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
 	foc.stateCallback(state)
 	time.Sleep(time.Millisecond)
+}
+func (foc *fakeOpenvpnClient) holdOnClose() chan int {
+	foc.closeHoldChannel = make(chan int)
+	return foc.closeHoldChannel
 }
 
 type fakeDialog struct {

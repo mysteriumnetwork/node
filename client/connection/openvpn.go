@@ -1,7 +1,9 @@
 package connection
 
 import (
+	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/auth"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
@@ -11,8 +13,6 @@ import (
 	"github.com/mysterium/node/session"
 	"path/filepath"
 	"time"
-	"github.com/mysterium/node/location"
-	log "github.com/cihub/seelog"
 )
 
 // ConfigureVpnClientFactory creates openvpn construction function by given vpn session, consumer id and state callbacks
@@ -72,5 +72,11 @@ func ConfigureVpnClientFactory(
 			bytescount.NewMiddleware(statsHandler, 1*time.Second),
 			auth.NewMiddleware(credentialsProvider),
 		), nil
+	}
+}
+
+func channelToStateCallbackAdapter(channel chan openvpn.State) state.Callback {
+	return func(state openvpn.State) {
+		channel <- state
 	}
 }

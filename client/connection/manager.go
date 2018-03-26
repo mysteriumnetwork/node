@@ -20,6 +20,10 @@ var (
 	ErrNoConnection = errors.New("no connection exists")
 	// ErrAlreadyExists error indicates that aciton applieto to manager expects no active connection (i.e. connect)
 	ErrAlreadyExists = errors.New("connection already exists")
+	// ErrConnectionCancelled indicates that connection in progress was cancelled by request of api user
+	ErrConnectionCancelled = errors.New("connection was cancelled")
+	// ErrOpenvpnProcessDied indicates that Connect method didn't reach "Connected" phase due to openvpn error
+	ErrOpenvpnProcessDied = errors.New("openvpn process died")
 )
 
 type connectionManager struct {
@@ -88,21 +92,12 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return err
 	}
 
+	stateChannel := make(chan openvpn.State, 10)
 	openvpnClient, err := manager.newVpnClient(
 		*vpnSession,
 		consumerID,
 		providerID,
-		func(state openvpn.State) {
-			switch state {
-			case openvpn.ConnectedState:
-				manager.statsKeeper.MarkSessionStart()
-				manager.status = statusConnected(vpnSession.ID)
-			case openvpn.ExitingState:
-				manager.statsKeeper.MarkSessionEnd()
-			case openvpn.ReconnectingState:
-				manager.status = statusReconnecting()
-			}
-		},
+		channelToStateCallbackAdapter(stateChannel),
 	)
 	if err != nil {
 		return err
@@ -112,9 +107,35 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return err
 	}
 
-	go clientStopper(closeRequest, openvpnClient)
-	go manager.clientWaiter(openvpnClient)
+	go manager.clientWaiter(openvpnClient, stateChannel)
 
+connectBlocker:
+	for {
+		select {
+		case state := <-stateChannel:
+			switch state {
+			case openvpn.ConnectedState:
+				manager.onStateChanged(state, vpnSession.ID)
+				break connectBlocker
+			case "":
+				//empty "state" means that channel was closed by clientWaiter (openvpn process exited)
+				return ErrOpenvpnProcessDied
+			default:
+				manager.onStateChanged(state, vpnSession.ID)
+			}
+		case <-closeRequest:
+			return ErrConnectionCancelled
+		}
+	}
+	go func() {
+		for state := range stateChannel {
+			manager.onStateChanged(state, vpnSession.ID)
+		}
+		manager.status = statusNotConnected()
+		log.Info("State updater stopped")
+	}()
+
+	go clientStopper(openvpnClient, closeRequest)
 	return nil
 }
 
@@ -149,7 +170,7 @@ func dialogCloser(closeRequest <-chan int, dialog communication.Dialog) {
 	dialog.Close()
 }
 
-func clientStopper(closeRequest <-chan int, openvpnClient openvpn.Client) {
+func clientStopper(openvpnClient openvpn.Client, closeRequest <-chan int) {
 	<-closeRequest
 	log.Info(managerLogPrefix, "Stopping openvpn client")
 	err := openvpnClient.Stop()
@@ -158,12 +179,23 @@ func clientStopper(closeRequest <-chan int, openvpnClient openvpn.Client) {
 	}
 }
 
-func (manager *connectionManager) clientWaiter(openvpnClient openvpn.Client) {
+func (manager *connectionManager) clientWaiter(openvpnClient openvpn.Client, stateChannel chan openvpn.State) {
 	err := openvpnClient.Wait()
 	if err != nil {
 		log.Error(managerLogPrefix, "Openvpn client exited with error: ", err)
 	} else {
 		log.Info(managerLogPrefix, "Openvpn client exited")
 	}
-	manager.status = statusNotConnected()
+	close(stateChannel)
+}
+func (manager *connectionManager) onStateChanged(state openvpn.State, sessionID session.SessionID) {
+	switch state {
+	case openvpn.ConnectedState:
+		manager.statsKeeper.MarkSessionStart()
+		manager.status = statusConnected(sessionID)
+	case openvpn.ExitingState:
+		manager.statsKeeper.MarkSessionEnd()
+	case openvpn.ReconnectingState:
+		manager.status = statusReconnecting()
+	}
 }
