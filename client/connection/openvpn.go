@@ -78,5 +78,9 @@ func ConfigureVpnClientFactory(
 func channelToStateCallbackAdapter(channel chan openvpn.State) state.Callback {
 	return func(state openvpn.State) {
 		channel <- state
+		if state == openvpn.ExitingState {
+			//this is the last state - close channel (according to best practices of go - channel writer controls channel)
+			close(channel)
+		}
 	}
 }
