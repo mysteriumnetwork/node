@@ -68,36 +68,54 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}
 	}()
 
-	closeRequest := make(chan int)
-	manager.closeAction = applyOnce(func() {
+	cancelRequest := make(cancelChannel, 1)
+	manager.closeAction = callOnce(func() {
 		log.Info(managerLogPrefix, "Closing active connection")
 		manager.status = statusDisconnecting()
-		close(closeRequest)
+		close(cancelRequest)
 	})
 
-	proposal, err := manager.findProposalByProviderID(providerID)
+	val, err := cancelableAction(func() (interface{}, error) {
+		return manager.findProposalByProviderID(providerID)
+	}, cancelRequest)
 	if err != nil {
 		return err
 	}
+	proposal := val.(*dto.ServiceProposal)
 
-	dialog, err := manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
+	val, err = cancelableActionWithCleanup(func() (interface{}, error) {
+		return manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
+	}, func(val interface{}, err error) {
+		val.(communication.Dialog).Close()
+	}, cancelRequest)
 	if err != nil {
 		return err
 	}
+	dialog := val.(communication.Dialog)
 
-	vpnSession, err := session.RequestSessionCreate(dialog, proposal.ID)
+	val, err = cancelableAction(func() (interface{}, error) {
+		return session.RequestSessionCreate(dialog, proposal.ID)
+	}, cancelRequest)
 	if err != nil {
 		return err
 	}
+	vpnSession := val.(*session.SessionDto)
 
-	stateChannel, openvpnClient, err := manager.startOpenvpnClient(*vpnSession, consumerID, providerID)
+	stateChannel := make(chan openvpn.State, 10)
+	val, err = cancelableActionWithCleanup(func() (interface{}, error) {
+		return manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel)
+	}, func(val interface{}, err error) {
+		val.(openvpn.Client).Stop()
+	}, cancelRequest)
 	if err != nil {
 		return err
 	}
-	go openvpnClientStopper(openvpnClient, closeRequest)
+	openvpnClient := val.(openvpn.Client)
+
+	go openvpnClientStopper(openvpnClient, cancelRequest)
 	go openvpnClientWaiter(openvpnClient, dialog)
 
-	err = manager.waitForConnectedState(stateChannel, vpnSession.ID, closeRequest)
+	err = manager.waitForConnectedState(stateChannel, vpnSession.ID, cancelRequest)
 	if err != nil {
 		return err
 	}
@@ -131,8 +149,8 @@ func (manager *connectionManager) findProposalByProviderID(providerID identity.I
 	return &proposals[0], nil
 }
 
-func openvpnClientStopper(openvpnClient openvpn.Client, closeRequest <-chan int) {
-	<-closeRequest
+func openvpnClientStopper(openvpnClient openvpn.Client, cancelRequest cancelChannel) {
+	<-cancelRequest
 	log.Debug(managerLogPrefix, "Stopping openvpn client")
 	err := openvpnClient.Stop()
 	if err != nil {
@@ -150,8 +168,7 @@ func openvpnClientWaiter(openvpnClient openvpn.Client, dialog communication.Dial
 	}
 }
 
-func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity) (chan openvpn.State, openvpn.Client, error) {
-	stateChannel := make(chan openvpn.State, 10)
+func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity, stateChannel chan openvpn.State) (openvpn.Client, error) {
 	openvpnClient, err := manager.newVpnClient(
 		vpnSession,
 		consumerID,
@@ -159,17 +176,17 @@ func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionD
 		channelToStateCallbackAdapter(stateChannel),
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err = openvpnClient.Start(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return stateChannel, openvpnClient, nil
+	return openvpnClient, nil
 }
 
-func (manager *connectionManager) waitForConnectedState(stateChannel <-chan openvpn.State, sessionID session.SessionID, closeRequest <-chan int) error {
+func (manager *connectionManager) waitForConnectedState(stateChannel <-chan openvpn.State, sessionID session.SessionID, cancelRequest cancelChannel) error {
 
 	for {
 		select {
@@ -183,7 +200,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan open
 			default:
 				manager.onStateChanged(state, sessionID)
 			}
-		case <-closeRequest:
+		case <-cancelRequest:
 			return ErrConnectionCancelled
 		}
 	}

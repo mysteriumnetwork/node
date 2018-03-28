@@ -114,7 +114,7 @@ func (tc *testContext) TestWhenManagerMadeConnectionSessionStartIsMarked() {
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.fakeOpenVpn.onStartReportStates = []openvpn.State{}
-	errorChannel := make(chan error)
+	errorChannel := make(chan error, 1)
 
 	go func() {
 		errorChannel <- tc.connManager.Connect(myID, activeProviderID)
@@ -217,7 +217,7 @@ func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
 func (tc *testContext) TestConnectMethodReturnsErrorIfOpenvpnClientExitsDuringConnect() {
 	tc.fakeOpenVpn.onStartReportStates = []openvpn.State{}
 	tc.fakeOpenVpn.onStopReportStates = []openvpn.State{}
-	errorChannel := make(chan error)
+	errorChannel := make(chan error, 1)
 
 	go func() {
 		errorChannel <- tc.connManager.Connect(myID, activeProviderID)

@@ -2,7 +2,7 @@ package connection
 
 import "sync"
 
-func applyOnce(f func()) func() {
+func callOnce(f func()) func() {
 	once := sync.Once{}
 	return func() {
 		once.Do(f)

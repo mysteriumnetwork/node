@@ -8,7 +8,7 @@ import (
 func TestProviderFunctionIsCalledOnce(t *testing.T) {
 	val := 1
 
-	incOnce := applyOnce(func() {
+	incOnce := callOnce(func() {
 		val = val + 1
 	})
 	incOnce()
