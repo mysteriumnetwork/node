@@ -10,7 +10,7 @@ import (
 
 func TestBlockingFunctionResultIsPropagatedToCaller(t *testing.T) {
 	val, err := newCancelable().
-		action(func() (interface{}, error) {
+		request(func() (interface{}, error) {
 			return 1, errors.New("message")
 		}).
 		call()
@@ -21,7 +21,7 @@ func TestBlockingFunctionResultIsPropagatedToCaller(t *testing.T) {
 
 func TestBlockingFunctionIsCancelledIfCancelWasCalled(t *testing.T) {
 	cancelable := newCancelable().
-		action(func() (interface{}, error) {
+		request(func() (interface{}, error) {
 			return nil, nil
 		})
 	cancelable.cancel()
@@ -36,7 +36,7 @@ func TestCleanupFunctionIsCalledWithReturnedValueIfCancelWasCalled(t *testing.T)
 	cleanupWaiter.Add(1)
 
 	cancelable := newCancelable().
-		action(func() (interface{}, error) {
+		request(func() (interface{}, error) {
 			return 1, nil
 		}).
 		cleanup(func(val interface{}, err error) {
@@ -55,7 +55,7 @@ func TestCleanupFunctionIsCalledWithReturnedValueIfCancelWasCalled(t *testing.T)
 func TestCleanupFunctionIsNotCalledIfBlockingFunctionReturnsError(t *testing.T) {
 	var cleanupCalled = false
 	cancelable := newCancelable().
-		action(func() (interface{}, error) {
+		request(func() (interface{}, error) {
 			return 5, errors.New("failed")
 		}).
 		cleanup(func(val interface{}, err error) {
@@ -71,7 +71,7 @@ func TestCleanupFunctionIsNotCalledIfBlockingFunctionReturnsError(t *testing.T) 
 func TestRealBlockingFunctionIsCancelled(t *testing.T) {
 	errorChannel := make(chan error, 1)
 	cancelable := newCancelable().
-		action(func() (interface{}, error) {
+		request(func() (interface{}, error) {
 			select {} //effective infinite loop - blocks forever
 			return 1, nil
 		})
@@ -92,7 +92,7 @@ func TestRealBlockingFunctionIsCancelled(t *testing.T) {
 
 func TestUnspecifiedActionMethodProducesError(t *testing.T) {
 	_, err := newCancelable().call()
-	assert.Equal(t, errUndefinedAction, err)
+	assert.Equal(t, errUndefinedRequest, err)
 }
 
 func TestSkipOnErrorProvidesFunctionWhichIsCalledOnlyWhenErrorParameterIsNil(t *testing.T) {

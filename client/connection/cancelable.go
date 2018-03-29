@@ -15,16 +15,16 @@ type actionResult struct {
 
 type actionResultChannel chan actionResult
 
-var errActionCancelled = errors.New("action was cancelled")
+var errActionCancelled = errors.New("request was cancelled")
 
-var errUndefinedAction = errors.New("undefined action called")
+var errUndefinedRequest = errors.New("undefined request called")
 
 func noCleanup(interface{}, error) {
 
 }
 
-func undefinedAction() (interface{}, error) {
-	return nil, errUndefinedAction
+func undefinedRequest() (interface{}, error) {
+	return nil, errUndefinedRequest
 }
 
 func skipOnError(callback func(interface{})) cleanupF {
@@ -35,40 +35,40 @@ func skipOnError(callback func(interface{})) cleanupF {
 	}
 }
 
-type cancelable struct {
-	cancelChannel  cancelChannel
-	blockingAction blockingF
-	cleanupAction  cleanupF
-	cancelAction   func()
+type cancelableAction struct {
+	cancelled     cancelChannel
+	requestAction blockingF
+	cleanupAction cleanupF
+	cancelAction  func()
 }
 
-func newCancelable() cancelable {
+func newCancelable() cancelableAction {
 	channel := make(cancelChannel, 1)
-	return cancelable{
-		cancelChannel:  channel,
-		blockingAction: undefinedAction,
-		cleanupAction:  noCleanup,
+	return cancelableAction{
+		cancelled:     channel,
+		requestAction: undefinedRequest,
+		cleanupAction: noCleanup,
 		cancelAction: callOnce(func() {
 			close(channel)
 		}),
 	}
 }
 
-func (c cancelable) action(method blockingF) cancelable {
-	c.blockingAction = method
+func (c cancelableAction) request(method blockingF) cancelableAction {
+	c.requestAction = method
 	return c
 }
 
-func (c cancelable) cleanup(cleanup cleanupF) cancelable {
+func (c cancelableAction) cleanup(cleanup cleanupF) cancelableAction {
 	c.cleanupAction = cleanup
 	return c
 }
 
-func (c cancelable) call() (interface{}, error) {
-	return callBlockingAction(c.blockingAction, c.cleanupAction, c.cancelChannel)
+func (c cancelableAction) call() (interface{}, error) {
+	return callBlockingAction(c.requestAction, c.cleanupAction, c.cancelled)
 }
 
-func (c cancelable) cancel() {
+func (c cancelableAction) cancel() {
 	c.cancelAction()
 }
 
