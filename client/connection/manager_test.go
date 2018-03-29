@@ -23,6 +23,7 @@ type testContext struct {
 	fakeDiscoveryClient  *server.ClientFake
 	fakeOpenVpn          *fakeOpenvpnClient
 	fakeStatsKeeper      *fakeSessionStatsKeeper
+	fakeDialog           *fakeDialog
 	openvpnCreationError error
 }
 
@@ -39,9 +40,10 @@ var (
 func (tc *testContext) SetupTest() {
 	tc.fakeDiscoveryClient = server.NewClientFake()
 	tc.fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
+	tc.fakeDialog = &fakeDialog{}
 
 	dialogCreator := func(consumer, provider identity.Identity, contact dto.Contact) (communication.Dialog, error) {
-		return &fakeDialog{}, nil
+		return tc.fakeDialog, nil
 	}
 
 	tc.fakeOpenVpn = &fakeOpenvpnClient{
@@ -95,7 +97,7 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnectedAndSessionStartIsNo
 
 	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID))
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
-
+	assert.True(tc.T(), tc.fakeDialog.closed)
 	assert.False(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
 }
 
@@ -277,6 +279,7 @@ func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
 
 type fakeDialog struct {
 	peerId identity.Identity
+	closed bool
 }
 
 func (fd *fakeDialog) PeerID() identity.Identity {
@@ -284,6 +287,7 @@ func (fd *fakeDialog) PeerID() identity.Identity {
 }
 
 func (fd *fakeDialog) Close() error {
+	fd.closed = true
 	return nil
 }
 

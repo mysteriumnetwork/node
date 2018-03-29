@@ -63,7 +63,6 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	manager.status = statusConnecting()
 	defer func() {
 		if err != nil {
-			manager.closeAction()
 			manager.status = statusNotConnected()
 		}
 	}()
@@ -104,6 +103,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}).
 		call()
 	if err != nil {
+		dialog.Close()
 		return err
 	}
 	vpnSession := val.(*session.SessionDto)
@@ -118,18 +118,20 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		})).
 		call()
 	if err != nil {
+		dialog.Close()
 		return err
 	}
 	openvpnClient := val.(openvpn.Client)
 
-	go openvpnClientStopper(openvpnClient, cancelable.cancelled)
-	go openvpnClientWaiter(openvpnClient, dialog)
-
 	err = manager.waitForConnectedState(stateChannel, vpnSession.ID, cancelable.cancelled)
 	if err != nil {
+		dialog.Close()
+		openvpnClient.Stop()
 		return err
 	}
 
+	go openvpnClientStopper(openvpnClient, cancelable.cancelled)
+	go openvpnClientWaiter(openvpnClient, dialog)
 	go manager.consumeOpenvpnStates(stateChannel, vpnSession.ID)
 	return nil
 }
