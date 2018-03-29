@@ -83,7 +83,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	}
 	proposal := val.(*dto.ServiceProposal)
 
-	val, err = cancelableActionWithCleanup(func() (interface{}, error) {
+	val, err = callBlockingAction(func() (interface{}, error) {
 		return manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	}, func(val interface{}, err error) {
 		val.(communication.Dialog).Close()
@@ -102,7 +102,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	vpnSession := val.(*session.SessionDto)
 
 	stateChannel := make(chan openvpn.State, 10)
-	val, err = cancelableActionWithCleanup(func() (interface{}, error) {
+	val, err = callBlockingAction(func() (interface{}, error) {
 		return manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel)
 	}, func(val interface{}, err error) {
 		val.(openvpn.Client).Stop()

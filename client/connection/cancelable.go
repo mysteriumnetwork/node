@@ -6,28 +6,79 @@ type blockingF func() (interface{}, error)
 
 type cleanupF func(interface{}, error)
 
-func noCleanup(interface{}, error) {
-
-}
-
 type cancelChannel chan int
 
-var errActionCancelled = errors.New("action was cancelled")
-
-type functionResult struct {
+type actionResult struct {
 	val interface{}
 	err error
 }
 
-type functionResultChannel chan functionResult
+type actionResultChannel chan actionResult
 
-func cancelableActionWithCleanup(method blockingF, cleanup cleanupF, cancel cancelChannel) (interface{}, error) {
+var errActionCancelled = errors.New("action was cancelled")
 
-	resultChannel := make(functionResultChannel, 1)
+var errUndefinedAction = errors.New("undefined action called")
+
+func noCleanup(interface{}, error) {
+
+}
+
+func undefinedAction() (interface{}, error) {
+	return nil, errUndefinedAction
+}
+
+func skipOnError(callback func(interface{})) cleanupF {
+	return func(val interface{}, err error) {
+		if err == nil {
+			callback(val)
+		}
+	}
+}
+
+type cancelable struct {
+	cancelChannel  cancelChannel
+	blockingAction blockingF
+	cleanupAction  cleanupF
+	cancelAction   func()
+}
+
+func newCancelable() cancelable {
+	channel := make(cancelChannel, 1)
+	return cancelable{
+		cancelChannel:  channel,
+		blockingAction: undefinedAction,
+		cleanupAction:  noCleanup,
+		cancelAction: callOnce(func() {
+			close(channel)
+		}),
+	}
+}
+
+func (c cancelable) action(method blockingF) cancelable {
+	c.blockingAction = method
+	return c
+}
+
+func (c cancelable) cleanup(cleanup cleanupF) cancelable {
+	c.cleanupAction = cleanup
+	return c
+}
+
+func (c cancelable) call() (interface{}, error) {
+	return callBlockingAction(c.blockingAction, c.cleanupAction, c.cancelChannel)
+}
+
+func (c cancelable) cancel() {
+	c.cancelAction()
+}
+
+func callBlockingAction(method blockingF, cleanup cleanupF, cancel cancelChannel) (interface{}, error) {
+
+	resultChannel := make(actionResultChannel, 1)
 
 	go func() {
 		val, err := method()
-		resultChannel <- functionResult{val, err}
+		resultChannel <- actionResult{val, err}
 	}()
 
 	select {
@@ -40,8 +91,4 @@ func cancelableActionWithCleanup(method blockingF, cleanup cleanupF, cancel canc
 		}()
 		return nil, errActionCancelled
 	}
-}
-
-func cancelableAction(method blockingF, cancel cancelChannel) (interface{}, error) {
-	return cancelableActionWithCleanup(method, noCleanup, cancel)
 }
