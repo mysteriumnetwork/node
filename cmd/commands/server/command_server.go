@@ -95,10 +95,6 @@ func (cmd *Command) Start() (err error) {
 		case openvpn.ExitingState:
 			log.Info("Open vpn service exiting")
 			close(stopPinger)
-			err := cmd.mysteriumClient.UnregisterProposal(providerID.Address, signer)
-			if err != nil {
-				log.Error("Failed to unregister proposal", err)
-			}
 		}
 	}
 	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, serviceLocation, providerID, vpnStateCallback)
@@ -109,21 +105,8 @@ func (cmd *Command) Start() (err error) {
 	if err := cmd.mysteriumClient.RegisterProposal(proposal, signer); err != nil {
 		return err
 	}
-	go func() {
-		for {
-			select {
-			case <-time.After(1 * time.Minute):
-				err := cmd.mysteriumClient.PingProposal(proposal, signer)
-				if err != nil {
-					log.Error("Failed to ping proposal", err)
-					// do not stop server on missing ping to discovery. More on this in MYST-362 and MYST-370
-				}
-			case <-stopPinger:
-				log.Info("Stopping proposal pinger")
-				return
-			}
-		}
-	}()
+
+	go PingProposalLoop(proposal, cmd.mysteriumClient, signer, stopPinger)
 
 	return nil
 }
@@ -145,4 +128,25 @@ func (cmd *Command) Kill() error {
 	err = cmd.natService.Stop()
 
 	return err
+}
+
+// Ping proposal until stopped, then unregister proposal
+func PingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient  server.Client, signer identity.Signer, stopPinger <- chan int) {
+	for {
+		select {
+		case <-time.After(1 * time.Minute):
+			err := mysteriumClient.PingProposal(proposal, signer)
+			if err != nil {
+				log.Error("Failed to ping proposal", err)
+				// do not stop server on missing ping to discovery. More on this in MYST-362 and MYST-370
+			}
+		case <-stopPinger:
+			log.Info("Stopping proposal pinger")
+			err := mysteriumClient.UnregisterProposal(proposal.ProviderID, signer)
+			if err != nil {
+				log.Error("Failed to unregister proposal", err)
+			}
+			return
+		}
+	}
 }
