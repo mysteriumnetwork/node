@@ -31,20 +31,14 @@ func (client *ClientFake) RegisterProposal(proposal dto_discovery.ServiceProposa
 
 //UnregisterProposal unregisters a service proposal when client disconnects
 func (client *ClientFake) UnregisterProposal(providerID string, signer identity.Signer) error {
-	matchingProposals, err := client.FindProposals(providerID)
-	if err != nil {
-		return err
-	}
-	if len(matchingProposals) == 0 {
-		return nil
-	}
+	remainingProposals := make([]dto_discovery.ServiceProposal, 0)
 
-	remainingProposals := make([]dto_discovery.ServiceProposal, len(client.proposalsMock) - len(matchingProposals))
 	for _, proposal := range client.proposalsMock {
 		if providerID != proposal.ProviderID {
 			remainingProposals = append(remainingProposals, proposal)
 		}
 	}
+	client.proposalsMock = remainingProposals
 
 	log.Info(mysteriumAPILogPrefix, "Fake proposal unregistered: ", providerID)
 
