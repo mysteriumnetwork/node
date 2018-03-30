@@ -70,6 +70,22 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 	return err
 }
 
+func (mApi *mysteriumAPI) UnregisterProposal(providerID string, signer identity.Signer) error {
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "unregister_proposal", dto.NodeUnregisterRequest{
+		ProviderID: providerID,
+	}, signer)
+	if err != nil {
+		return err
+	}
+
+	err = mApi.doRequest(req)
+	if err == nil {
+		log.Info(mysteriumAPILogPrefix, "Proposal unregistered for node: ", providerID)
+	}
+
+	return err
+}
+
 func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
 		NodeKey: proposal.ProviderID,
