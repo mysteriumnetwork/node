@@ -71,7 +71,7 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 }
 
 func (mApi *mysteriumAPI) UnregisterProposal(providerID string, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "unregister_proposal", dto.NodeUnregisterRequest{
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "unregister_proposal", dto.ProposalUnregisterRequest{
 		ProviderID: providerID,
 	}, signer)
 	if err != nil {

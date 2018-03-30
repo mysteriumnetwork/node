@@ -95,7 +95,10 @@ func (cmd *Command) Start() (err error) {
 		case openvpn.ExitingState:
 			log.Info("Open vpn service exiting")
 			close(stopPinger)
-			cmd.mysteriumClient.UnregisterProposal(providerID.Address, signer)
+			err := cmd.mysteriumClient.UnregisterProposal(providerID.Address, signer)
+			if err != nil {
+				log.Error("Failed to unregister proposal", err)
+			}
 		}
 	}
 	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, serviceLocation, providerID, vpnStateCallback)
@@ -134,19 +137,7 @@ func (cmd *Command) Wait() error {
 func (cmd *Command) Kill() error {
 	cmd.vpnServer.Stop()
 
-	providerId, err := cmd.identityLoader()
-	if err != nil {
-		return err
-	}
-
-	signer := cmd.createSigner(providerId)
-
-	err = cmd.mysteriumClient.UnregisterProposal(providerId.Address, signer)
-	if err != nil {
-		log.Error("Failed to unregister proposal", err)
-	}
-
-	err = cmd.dialogWaiter.Stop()
+	err := cmd.dialogWaiter.Stop()
 	if err != nil {
 		return err
 	}
