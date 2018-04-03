@@ -35,8 +35,8 @@ type connectionManager struct {
 	newVpnClient    VpnClientCreator
 	statsKeeper     bytescount.SessionStatsKeeper
 	//these are populated by Connect at runtime
-	status      ConnectionStatus
-	closeAction func()
+	status          ConnectionStatus
+	cleanConnection func()
 }
 
 // NewManager creates connection manager with given dependencies
@@ -48,7 +48,7 @@ func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator,
 		newVpnClient:    vpnClientCreator,
 		statsKeeper:     statsKeeper,
 		status:          statusNotConnected(),
-		closeAction:     warnOnClose,
+		cleanConnection: warnOnClean,
 	}
 }
 
@@ -65,7 +65,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	}()
 
 	cancelable := utils.NewCancelable()
-	manager.closeAction = utils.CallOnce(func() {
+	manager.cleanConnection = utils.CallOnce(func() {
 		log.Info(managerLogPrefix, "Canceling connection initiation")
 		manager.status = statusDisconnecting()
 		cancelable.Cancel()
@@ -127,7 +127,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return err
 	}
 
-	manager.closeAction = func() {
+	manager.cleanConnection = func() {
 		log.Info(managerLogPrefix, "Closing active connection")
 		manager.status = statusDisconnecting()
 		if err := openvpnClient.Stop(); err != nil {
@@ -148,11 +148,11 @@ func (manager *connectionManager) Disconnect() error {
 	if manager.status.State == NotConnected {
 		return ErrNoConnection
 	}
-	manager.closeAction()
+	manager.cleanConnection()
 	return nil
 }
 
-func warnOnClose() {
+func warnOnClean() {
 	log.Warn(managerLogPrefix, "Trying to close when there is nothing to close. Possible bug or race condition")
 }
 
