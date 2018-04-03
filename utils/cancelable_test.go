@@ -1,4 +1,4 @@
-package connection
+package utils
 
 import (
 	"errors"
@@ -9,25 +9,25 @@ import (
 )
 
 func TestBlockingFunctionResultIsPropagatedToCaller(t *testing.T) {
-	val, err := newCancelable().
-		request(func() (interface{}, error) {
+	val, err := NewCancelable().
+		Request(func() (interface{}, error) {
 			return 1, errors.New("message")
 		}).
-		call()
+		Call()
 
 	assert.Equal(t, 1, val.(int))
 	assert.Equal(t, errors.New("message"), err)
 }
 
 func TestBlockingFunctionIsCancelledIfCancelWasCalled(t *testing.T) {
-	cancelable := newCancelable().
-		request(func() (interface{}, error) {
+	cancelable := NewCancelable().
+		Request(func() (interface{}, error) {
 			return nil, nil
 		})
-	cancelable.cancel()
-	_, err := cancelable.call()
+	cancelable.Cancel()
+	_, err := cancelable.Call()
 
-	assert.Equal(t, errActionCancelled, err)
+	assert.Equal(t, ErrRequestCancelled, err)
 }
 
 func TestCleanupFunctionIsCalledWithReturnedValueIfCancelWasCalled(t *testing.T) {
@@ -35,69 +35,69 @@ func TestCleanupFunctionIsCalledWithReturnedValueIfCancelWasCalled(t *testing.T)
 	cleanupWaiter := sync.WaitGroup{}
 	cleanupWaiter.Add(1)
 
-	cancelable := newCancelable().
-		request(func() (interface{}, error) {
+	cancelable := NewCancelable().
+		Request(func() (interface{}, error) {
 			return 1, nil
 		}).
-		cleanup(func(val interface{}, err error) {
+		Cleanup(func(val interface{}, err error) {
 			cleanupVal = val.(int)
 			cleanupWaiter.Done()
 		})
 
-	cancelable.cancel()
-	_, err := cancelable.call()
+	cancelable.Cancel()
+	_, err := cancelable.Call()
 	cleanupWaiter.Wait()
 
-	assert.Equal(t, errActionCancelled, err)
+	assert.Equal(t, ErrRequestCancelled, err)
 	assert.Equal(t, 1, cleanupVal)
 }
 
 func TestCleanupFunctionIsNotCalledIfBlockingFunctionReturnsError(t *testing.T) {
 	var cleanupCalled = false
-	cancelable := newCancelable().
-		request(func() (interface{}, error) {
+	cancelable := NewCancelable().
+		Request(func() (interface{}, error) {
 			return 5, errors.New("failed")
 		}).
-		cleanup(func(val interface{}, err error) {
+		Cleanup(func(val interface{}, err error) {
 			cleanupCalled = true
 		})
-	cancelable.cancel()
-	_, err := cancelable.call()
-	assert.Equal(t, errActionCancelled, err)
+	cancelable.Cancel()
+	_, err := cancelable.Call()
+	assert.Equal(t, ErrRequestCancelled, err)
 	assert.False(t, cleanupCalled)
 
 }
 
 func TestRealBlockingFunctionIsCancelled(t *testing.T) {
 	errorChannel := make(chan error, 1)
-	cancelable := newCancelable().
-		request(func() (interface{}, error) {
+	cancelable := NewCancelable().
+		Request(func() (interface{}, error) {
 			select {} //effective infinite loop - blocks forever
 			return 1, nil
 		})
 
 	go func() {
-		_, err := cancelable.call()
+		_, err := cancelable.Call()
 		errorChannel <- err
 	}()
 
-	cancelable.cancel()
+	cancelable.Cancel()
 	select {
 	case err := <-errorChannel:
-		assert.Equal(t, errActionCancelled, err)
+		assert.Equal(t, ErrRequestCancelled, err)
 	case <-time.After(300 * time.Millisecond):
-		assert.Fail(t, "Timed out while waiting for cancelableAction to produce error")
+		assert.Fail(t, "Timed out while waiting for CancelableAction to produce error")
 	}
 }
 
 func TestUnspecifiedActionMethodProducesError(t *testing.T) {
-	_, err := newCancelable().call()
-	assert.Equal(t, errUndefinedRequest, err)
+	_, err := NewCancelable().Call()
+	assert.Equal(t, ErrUndefinedRequest, err)
 }
 
 func TestSkipOnErrorProvidesFunctionWhichIsCalledOnlyWhenErrorParameterIsNil(t *testing.T) {
 	called := false
-	testFunction := skipOnError(func(interface{}) {
+	testFunction := SkipOnError(func(interface{}) {
 		called = true
 	})
 	testFunction(1, nil)

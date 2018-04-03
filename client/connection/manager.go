@@ -10,6 +10,7 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
+	"github.com/mysterium/node/utils"
 )
 
 const managerLogPrefix = "[connection-manager] "
@@ -67,41 +68,41 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}
 	}()
 
-	cancelable := newCancelable()
-	manager.closeAction = callOnce(func() {
+	cancelable := utils.NewCancelable()
+	manager.closeAction = utils.CallOnce(func() {
 		log.Info(managerLogPrefix, "Closing active connection")
 		manager.status = statusDisconnecting()
-		cancelable.cancel()
+		cancelable.Cancel()
 	})
 
 	val, err := cancelable.
-		request(func() (interface{}, error) {
+		Request(func() (interface{}, error) {
 			return manager.findProposalByProviderID(providerID)
 		}).
-		call()
+		Call()
 	if err != nil {
 		return err
 	}
 	proposal := val.(*dto.ServiceProposal)
 
 	val, err = cancelable.
-		request(func() (interface{}, error) {
+		Request(func() (interface{}, error) {
 			return manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
 		}).
-		cleanup(skipOnError(func(val interface{}) {
+		Cleanup(utils.SkipOnError(func(val interface{}) {
 			val.(communication.Dialog).Close()
 		})).
-		call()
+		Call()
 	if err != nil {
 		return err
 	}
 	dialog := val.(communication.Dialog)
 
 	val, err = cancelable.
-		request(func() (interface{}, error) {
+		Request(func() (interface{}, error) {
 			return session.RequestSessionCreate(dialog, proposal.ID)
 		}).
-		call()
+		Call()
 	if err != nil {
 		dialog.Close()
 		return err
@@ -110,27 +111,27 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 
 	stateChannel := make(chan openvpn.State, 10)
 	val, err = cancelable.
-		request(func() (interface{}, error) {
+		Request(func() (interface{}, error) {
 			return manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel)
 		}).
-		cleanup(skipOnError(func(val interface{}) {
+		Cleanup(utils.SkipOnError(func(val interface{}) {
 			val.(openvpn.Client).Stop()
 		})).
-		call()
+		Call()
 	if err != nil {
 		dialog.Close()
 		return err
 	}
 	openvpnClient := val.(openvpn.Client)
 
-	err = manager.waitForConnectedState(stateChannel, vpnSession.ID, cancelable.cancelled)
+	err = manager.waitForConnectedState(stateChannel, vpnSession.ID, cancelable.Cancelled)
 	if err != nil {
 		dialog.Close()
 		openvpnClient.Stop()
 		return err
 	}
 
-	go openvpnClientStopper(openvpnClient, cancelable.cancelled)
+	go openvpnClientStopper(openvpnClient, cancelable.Cancelled)
 	go openvpnClientWaiter(openvpnClient, dialog)
 	go manager.consumeOpenvpnStates(stateChannel, vpnSession.ID)
 	return nil
@@ -161,7 +162,7 @@ func (manager *connectionManager) findProposalByProviderID(providerID identity.I
 	return &proposals[0], nil
 }
 
-func openvpnClientStopper(openvpnClient openvpn.Client, cancelRequest cancelChannel) {
+func openvpnClientStopper(openvpnClient openvpn.Client, cancelRequest utils.CancelChannel) {
 	<-cancelRequest
 	log.Debug(managerLogPrefix, "Stopping openvpn client")
 	err := openvpnClient.Stop()
@@ -198,7 +199,7 @@ func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionD
 	return openvpnClient, nil
 }
 
-func (manager *connectionManager) waitForConnectedState(stateChannel <-chan openvpn.State, sessionID session.SessionID, cancelRequest cancelChannel) error {
+func (manager *connectionManager) waitForConnectedState(stateChannel <-chan openvpn.State, sessionID session.SessionID, cancelRequest utils.CancelChannel) error {
 
 	for {
 		select {

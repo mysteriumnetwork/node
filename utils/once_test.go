@@ -1,4 +1,4 @@
-package connection
+package utils
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -8,7 +8,7 @@ import (
 func TestProviderFunctionIsCalledOnce(t *testing.T) {
 	val := 1
 
-	incOnce := callOnce(func() {
+	incOnce := CallOnce(func() {
 		val = val + 1
 	})
 	incOnce()
