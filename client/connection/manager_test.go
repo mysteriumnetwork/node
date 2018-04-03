@@ -116,19 +116,15 @@ func (tc *testContext) TestWhenManagerMadeConnectionSessionStartIsMarked() {
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.fakeOpenVpn.onStartReportStates = []openvpn.State{}
-	errorChannel := make(chan error, 1)
 
 	go func() {
-		errorChannel <- tc.connManager.Connect(myID, activeProviderID)
+		tc.connManager.Connect(myID, activeProviderID)
+		assert.Fail(tc.T(), "This should never return")
 	}()
 
 	waitABit()
-	select {
-	case err := <-errorChannel:
-		assert.Fail(tc.T(), "Connect error not expected: ", err)
-	default:
-		assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
-	}
+
+	assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
@@ -197,42 +193,38 @@ func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutErro
 
 func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
 	tc.fakeOpenVpn.onStartReportStates = []openvpn.State{}
-	errorChannel := make(chan error, 1)
 	connectWaiter := &sync.WaitGroup{}
 	connectWaiter.Add(1)
+	var err error
 	go func() {
 		defer connectWaiter.Done()
-		errorChannel <- tc.connManager.Connect(myID, activeProviderID)
+		err = tc.connManager.Connect(myID, activeProviderID)
 	}()
+
 	waitABit()
 	assert.Equal(tc.T(), statusConnecting(), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
+
 	connectWaiter.Wait()
-	select {
-	case err := <-errorChannel:
-		assert.Equal(tc.T(), ErrConnectionCancelled, err)
-	default:
-		assert.Fail(tc.T(), "Expected error returned by connect")
-	}
+
+	assert.Equal(tc.T(), ErrConnectionCancelled, err)
 }
 
 func (tc *testContext) TestConnectMethodReturnsErrorIfOpenvpnClientExitsDuringConnect() {
 	tc.fakeOpenVpn.onStartReportStates = []openvpn.State{}
 	tc.fakeOpenVpn.onStopReportStates = []openvpn.State{}
-	errorChannel := make(chan error, 1)
+	connectWaiter := sync.WaitGroup{}
+	connectWaiter.Add(1)
 
+	var err error
 	go func() {
-		errorChannel <- tc.connManager.Connect(myID, activeProviderID)
+		defer connectWaiter.Done()
+		err = tc.connManager.Connect(myID, activeProviderID)
 	}()
 	waitABit()
 	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
-	waitABit()
-	select {
-	case err := <-errorChannel:
-		assert.Equal(tc.T(), ErrOpenvpnProcessDied, err)
-	default:
-		assert.Fail(tc.T(), "Expected error returned by connect")
-	}
+	connectWaiter.Wait()
+	assert.Equal(tc.T(), ErrOpenvpnProcessDied, err)
 }
 
 func TestConnectionManagerSuite(t *testing.T) {
