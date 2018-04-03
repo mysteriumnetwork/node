@@ -39,10 +39,6 @@ type connectionManager struct {
 	closeAction func()
 }
 
-func warnOnClose() {
-	log.Warn(managerLogPrefix, "WARNING! Trying to close when there is nothing to close. Possible bug or race condition")
-}
-
 // NewManager creates connection manager with given dependencies
 func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator,
 	vpnClientCreator VpnClientCreator, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
@@ -70,13 +66,13 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 
 	cancelable := utils.NewCancelable()
 	manager.closeAction = utils.CallOnce(func() {
-		log.Info(managerLogPrefix, "Closing active connection")
+		log.Info(managerLogPrefix, "Canceling connection initiation")
 		manager.status = statusDisconnecting()
 		cancelable.Cancel()
 	})
 
 	val, err := cancelable.
-		Request(func() (interface{}, error) {
+		NewRequest(func() (interface{}, error) {
 			return manager.findProposalByProviderID(providerID)
 		}).
 		Call()
@@ -86,10 +82,10 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	proposal := val.(*dto.ServiceProposal)
 
 	val, err = cancelable.
-		Request(func() (interface{}, error) {
+		NewRequest(func() (interface{}, error) {
 			return manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
 		}).
-		Cleanup(utils.SkipOnError(func(val interface{}) {
+		Cleanup(utils.InvokeOnSuccess(func(val interface{}) {
 			val.(communication.Dialog).Close()
 		})).
 		Call()
@@ -99,7 +95,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	dialog := val.(communication.Dialog)
 
 	val, err = cancelable.
-		Request(func() (interface{}, error) {
+		NewRequest(func() (interface{}, error) {
 			return session.RequestSessionCreate(dialog, proposal.ID)
 		}).
 		Call()
@@ -111,10 +107,10 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 
 	stateChannel := make(chan openvpn.State, 10)
 	val, err = cancelable.
-		Request(func() (interface{}, error) {
+		NewRequest(func() (interface{}, error) {
 			return manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel)
 		}).
-		Cleanup(utils.SkipOnError(func(val interface{}) {
+		Cleanup(utils.InvokeOnSuccess(func(val interface{}) {
 			val.(openvpn.Client).Stop()
 		})).
 		Call()
@@ -131,7 +127,14 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return err
 	}
 
-	go openvpnClientStopper(openvpnClient, cancelable.Cancelled)
+	manager.closeAction = func() {
+		log.Info(managerLogPrefix, "Closing active connection")
+		manager.status = statusDisconnecting()
+		if err := openvpnClient.Stop(); err != nil {
+			log.Warn(managerLogPrefix, "Openvpn process stopped with error: ", err)
+		}
+	}
+
 	go openvpnClientWaiter(openvpnClient, dialog)
 	go manager.consumeOpenvpnStates(stateChannel, vpnSession.ID)
 	return nil
@@ -149,6 +152,10 @@ func (manager *connectionManager) Disconnect() error {
 	return nil
 }
 
+func warnOnClose() {
+	log.Warn(managerLogPrefix, "Trying to close when there is nothing to close. Possible bug or race condition")
+}
+
 // TODO this can be extraced as depencency later when node selection criteria will be clear
 func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity) (*dto.ServiceProposal, error) {
 	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
@@ -162,23 +169,14 @@ func (manager *connectionManager) findProposalByProviderID(providerID identity.I
 	return &proposals[0], nil
 }
 
-func openvpnClientStopper(openvpnClient openvpn.Client, cancelRequest utils.CancelChannel) {
-	<-cancelRequest
-	log.Debug(managerLogPrefix, "Stopping openvpn client")
-	err := openvpnClient.Stop()
-	if err != nil {
-		log.Error(managerLogPrefix, "Failed to stop openvpn client: ", err)
-	}
-}
-
 func openvpnClientWaiter(openvpnClient openvpn.Client, dialog communication.Dialog) {
-	defer dialog.Close()
 	err := openvpnClient.Wait()
 	if err != nil {
 		log.Warn(managerLogPrefix, "Openvpn client exited with error: ", err)
 	} else {
 		log.Info(managerLogPrefix, "Openvpn client exited")
 	}
+	dialog.Close()
 }
 
 func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity, stateChannel chan openvpn.State) (openvpn.Client, error) {
@@ -220,14 +218,11 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan open
 }
 
 func (manager *connectionManager) consumeOpenvpnStates(stateChannel <-chan openvpn.State, sessionID session.SessionID) {
-	func() {
-		for state := range stateChannel {
-			manager.onStateChanged(state, sessionID)
-		}
-		manager.status = statusNotConnected()
-		log.Debug(managerLogPrefix, "State updater stopped")
-	}()
-
+	for state := range stateChannel {
+		manager.onStateChanged(state, sessionID)
+	}
+	manager.status = statusNotConnected()
+	log.Debug(managerLogPrefix, "State updater stopped")
 }
 
 func (manager *connectionManager) onStateChanged(state openvpn.State, sessionID session.SessionID) {
