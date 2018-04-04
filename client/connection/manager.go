@@ -132,6 +132,8 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		manager.status = statusDisconnecting()
 		if err := openvpnClient.Stop(); err != nil {
 			log.Warn(managerLogPrefix, "Openvpn process stopped with error: ", err)
+		} else {
+			log.Info(managerLogPrefix, "Openvpn client stopped")
 		}
 	}
 
