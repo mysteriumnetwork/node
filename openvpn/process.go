@@ -20,7 +20,7 @@ func NewProcess(openvpnBinary, logPrefix string) *Process {
 	}
 }
 
-// Process struct define process wrapper which handles clean shutdown, tracks executable exit errors, etc.
+// Process struct defines process wrapper which handles clean shutdown, tracks executable exit errors, etc.
 type Process struct {
 	logPrefix          string
 	openvpnBinary      string

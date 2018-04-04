@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
 echo "Starting"
-sleep 0.2
+sleep 0.1
 echo "Exiting"
 exit 1
