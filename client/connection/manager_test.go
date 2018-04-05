@@ -154,6 +154,7 @@ func (tc *testContext) TestDisconnectReturnsErrorWhenNoConnectionExists() {
 func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconnectingState() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID))
 	tc.fakeOpenVpn.reportState(openvpn.ReconnectingState)
+	waitABit()
 	assert.Equal(tc.T(), statusReconnecting(), tc.connManager.Status())
 }
 
@@ -266,7 +267,6 @@ func (foc *fakeOpenvpnClient) Stop() error {
 
 func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
 	foc.stateCallback(state)
-	waitABit()
 }
 
 type fakeDialog struct {
