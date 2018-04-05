@@ -15,8 +15,6 @@ import (
 
 const managerLogPrefix = "[connection-manager] "
 
-const channelClosed = openvpn.State("")
-
 var (
 	// ErrNoConnection error indicates that action applied to manager expects active connection (i.e. disconnect)
 	ErrNoConnection = errors.New("no connection exists")
@@ -203,13 +201,15 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan open
 
 	for {
 		select {
-		case state := <-stateChannel:
+		case state, more := <-stateChannel:
+			if !more {
+				return ErrOpenvpnProcessDied
+			}
+
 			switch state {
 			case openvpn.ConnectedState:
 				manager.onStateChanged(state, sessionID)
 				return nil
-			case channelClosed:
-				return ErrOpenvpnProcessDied
 			default:
 				manager.onStateChanged(state, sessionID)
 			}
