@@ -19,17 +19,6 @@ func TestBlockingFunctionResultIsPropagatedToCaller(t *testing.T) {
 	assert.Equal(t, errors.New("message"), err)
 }
 
-func TestBlockingFunctionIsCancelledIfCancelWasCalled(t *testing.T) {
-	cancelable := NewCancelable()
-	cancelable.Cancel()
-
-	_, err := cancelable.NewRequest(func() (interface{}, error) {
-		return nil, nil
-	}).Call()
-
-	assert.Equal(t, ErrRequestCancelled, err)
-}
-
 func TestCleanupFunctionIsCalledWithReturnedValueIfCancelWasCalled(t *testing.T) {
 	var cleanupVal int
 	cleanupWaiter := sync.WaitGroup{}
@@ -54,25 +43,7 @@ func TestCleanupFunctionIsCalledWithReturnedValueIfCancelWasCalled(t *testing.T)
 	assert.Equal(t, 1, cleanupVal)
 }
 
-func TestCleanupFunctionIsNotCalledIfBlockingFunctionReturnsError(t *testing.T) {
-	var cleanupCalled = false
-	cancelable := NewCancelable()
-	cancelable.Cancel()
-
-	_, err := cancelable.
-		NewRequest(func() (interface{}, error) {
-			return 5, errors.New("failed")
-		}).
-		Cleanup(func(val interface{}, err error) {
-			cleanupCalled = true
-		}).
-		Call()
-	assert.Equal(t, ErrRequestCancelled, err)
-	assert.False(t, cleanupCalled)
-
-}
-
-func TestRealBlockingFunctionIsCancelled(t *testing.T) {
+func TestBlockingFunctionIsCancelled(t *testing.T) {
 	errorChannel := make(chan error, 1)
 	cancelable := NewCancelable()
 
