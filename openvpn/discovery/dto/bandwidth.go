@@ -11,13 +11,13 @@ type Bandwidth datasize.BitSize
 
 func (value Bandwidth) MarshalJSON() ([]byte, error) {
 	valueBits := datasize.BitSize(value).Bits()
-	valueJson := strconv.FormatUint(valueBits, 10)
+	valueJSON := strconv.FormatUint(valueBits, 10)
 
-	return []byte(valueJson), nil
+	return []byte(valueJSON), nil
 }
 
-func (value *Bandwidth) UnmarshalJSON(valueJson []byte) error {
-	valueBits, err := strconv.ParseUint(string(valueJson), 10, 64)
+func (value *Bandwidth) UnmarshalJSON(valueJSON []byte) error {
+	valueBits, err := strconv.ParseUint(string(valueJSON), 10, 64)
 	*value = Bandwidth(valueBits)
 
 	return err

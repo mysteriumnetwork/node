@@ -9,7 +9,7 @@ import (
 func TestContactSerialize(t *testing.T) {
 	var tests = []struct {
 		model        ContactNATSV1
-		expectedJson string
+		expectedJSON string
 	}{
 		{
 			ContactNATSV1{
@@ -37,7 +37,7 @@ func TestContactSerialize(t *testing.T) {
 		jsonBytes, err := json.Marshal(test.model)
 
 		assert.Nil(t, err)
-		assert.JSONEq(t, test.expectedJson, string(jsonBytes))
+		assert.JSONEq(t, test.expectedJSON, string(jsonBytes))
 	}
 }
 

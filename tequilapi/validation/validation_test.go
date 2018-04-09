@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestErrorsListRenderedInJson(t *testing.T) {
+func TestErrorsListRenderedInJSON(t *testing.T) {
 	errorMap := NewErrorMap()
 	errorMap.ForField("email").AddError("required", "field required")
 	errorMap.ForField("email").AddError("another", "error")

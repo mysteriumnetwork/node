@@ -147,5 +147,5 @@ func (mApi *mysteriumAPI) doRequestAndParseResponse(req *http.Request, responseV
 		return err
 	}
 
-	return parseResponseJson(resp, responseValue)
+	return parseResponseJSON(resp, responseValue)
 }
