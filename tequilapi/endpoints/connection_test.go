@@ -411,3 +411,30 @@ func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 		resp.Body.String(),
 	)
 }
+
+func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncountered(t *testing.T) {
+	manager := fakeManager{}
+	manager.onConnectReturn = connection.ErrConnectionCancelled
+
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/irrelevant",
+		strings.NewReader(
+			`{
+				"consumerId" : "my-identity",
+				"providerId" : "required-node"
+			}`))
+	resp := httptest.NewRecorder()
+
+	connectionEndpoint.Create(resp, req, nil)
+
+	assert.Equal(t, statusConnectCancelled, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message" : "connection was cancelled"
+		}`,
+		resp.Body.String(),
+	)
+}
