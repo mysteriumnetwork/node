@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestWriteAsJsonReturnsExpectedResponse(t *testing.T) {
+func TestWriteAsJSONReturnsExpectedResponse(t *testing.T) {
 
 	respRecorder := httptest.NewRecorder()
 

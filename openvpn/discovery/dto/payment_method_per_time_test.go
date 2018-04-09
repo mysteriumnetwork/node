@@ -13,7 +13,7 @@ func TestPaymentMethodPerTimeSerialize(t *testing.T) {
 
 	var tests = []struct {
 		model        PaymentPerTime
-		expectedJson string
+		expectedJSON string
 	}{
 		{
 			PaymentPerTime{
@@ -41,7 +41,7 @@ func TestPaymentMethodPerTimeSerialize(t *testing.T) {
 		jsonBytes, err := json.Marshal(test.model)
 
 		assert.Nil(t, err)
-		assert.JSONEq(t, test.expectedJson, string(jsonBytes))
+		assert.JSONEq(t, test.expectedJSON, string(jsonBytes))
 	}
 }
 

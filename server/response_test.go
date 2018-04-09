@@ -41,7 +41,7 @@ func TestHttpResponseBodyIsParsedCorrectly(t *testing.T) {
 			}`)),
 	}
 	var testDto testResponse
-	err = parseResponseJson(response, &testDto)
+	err = parseResponseJSON(response, &testDto)
 	assert.NoError(t, err)
 	assert.Equal(t, testResponse{"abc"}, testDto)
 

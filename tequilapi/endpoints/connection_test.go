@@ -196,7 +196,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 
 }
 
-func TestPutReturns400ErrorIfRequestBodyIsNotJson(t *testing.T) {
+func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	fakeManager := fakeManager{}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil)

@@ -12,10 +12,6 @@ type keyStoreFake struct {
 	LastHash     []byte
 }
 
-func NewKeystoreFake() *keyStoreFake {
-	return &keyStoreFake{}
-}
-
 func (keyStore *keyStoreFake) Accounts() []accounts.Account {
 	return keyStore.AccountsMock
 }
