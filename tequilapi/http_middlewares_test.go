@@ -61,6 +61,28 @@ func TestDeleteCorsPreflightCheckIsHandledCorrectly(t *testing.T) {
 
 }
 
+func TestCacheControlHeadersAreAddedToResponse(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "/not-important", nil)
+	assert.NoError(t, err)
+	respRecorder := httptest.NewRecorder()
+
+	mock := &mockedHttpHandler{}
+
+	DisableCaching(mock).ServeHTTP(respRecorder, req)
+
+	assert.Equal(
+		t,
+		[]string{
+			"no-cache",
+			"no-store",
+			"must-revalidate",
+		},
+		respRecorder.HeaderMap["Cache-Control"],
+	)
+	assert.True(t, mock.wasCalled)
+
+}
+
 type mockedHttpHandler struct {
 	wasCalled bool
 }
