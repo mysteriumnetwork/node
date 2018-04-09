@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func TestHealthCheckReturnsExpectedJsonObject(t *testing.T) {
+func TestHealthCheckReturnsExpectedJSONObject(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()

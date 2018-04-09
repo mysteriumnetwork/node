@@ -85,16 +85,16 @@ func (client *clientRest) doRequest(request *http.Request, responseDto interface
 		return err
 	}
 
-	return parseResponseJson(response, &responseDto)
+	return parseResponseJSON(response, &responseDto)
 }
 
-func parseResponseJson(response *http.Response, dto interface{}) error {
-	responseJson, err := ioutil.ReadAll(response.Body)
+func parseResponseJSON(response *http.Response, dto interface{}) error {
+	responseJSON, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(responseJson, dto)
+	err = json.Unmarshal(responseJSON, dto)
 	if err != nil {
 		return err
 	}

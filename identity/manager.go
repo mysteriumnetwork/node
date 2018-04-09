@@ -13,6 +13,7 @@ type identityManager struct {
 	keystoreManager keystoreInterface
 }
 
+// NewIdentityManager creates and returns new identityManager
 func NewIdentityManager(keystore keystoreInterface) *identityManager {
 	return &identityManager{
 		keystoreManager: keystore,

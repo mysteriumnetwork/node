@@ -24,10 +24,10 @@ func (testSuite *tequilapiTestSuite) SetupSuite() {
 func (testSuite *tequilapiTestSuite) TestHealthCheckReturnsExpectedResponse() {
 	resp := testSuite.client.Get("/healthcheck")
 
-	expectJsonStatus200(testSuite.T(), resp, 200)
+	expectJSONStatus200(testSuite.T(), resp, 200)
 
 	var jsonMap map[string]interface{}
-	parseResponseAsJson(testSuite.T(), resp, &jsonMap)
+	parseResponseAsJSON(testSuite.T(), resp, &jsonMap)
 	assert.NotEmpty(testSuite.T(), jsonMap["uptime"])
 }
 

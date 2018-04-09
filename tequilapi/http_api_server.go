@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// APIServer represents tequilapi server
 type APIServer interface {
 	Port() (int, error)
 	Wait() error
@@ -23,6 +24,7 @@ type apiServer struct {
 	listener      net.Listener
 }
 
+// NewServer creates and returns new api server
 func NewServer(address string, port int, handler http.Handler) APIServer {
 	server := apiServer{
 		make(chan error, 1),

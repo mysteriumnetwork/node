@@ -31,7 +31,7 @@ func (client *Client) GetIdentities() (ids []IdentityDTO, err error) {
 	defer response.Body.Close()
 
 	var list IdentityList
-	err = parseResponseJson(response, &list)
+	err = parseResponseJSON(response, &list)
 
 	return list.Identities, err
 }
@@ -49,7 +49,7 @@ func (client *Client) NewIdentity(passphrase string) (id IdentityDTO, err error)
 	}
 	defer response.Body.Close()
 
-	err = parseResponseJson(response, &id)
+	err = parseResponseJSON(response, &id)
 	return id, err
 }
 
@@ -85,13 +85,13 @@ func (client *Client) Connect(consumerID, providerID string) (status StatusDTO, 
 	}
 
 	if err != nil {
-		parseResponseJson(response, &errorMessage)
+		parseResponseJSON(response, &errorMessage)
 		err = errors.New(errorMessage.Message)
 		return
 	}
 	defer response.Body.Close()
 
-	err = parseResponseJson(response, &status)
+	err = parseResponseJSON(response, &status)
 	return status, err
 }
 
@@ -115,7 +115,7 @@ func (client *Client) ConnectionStatistics() (StatisticsDTO, error) {
 	defer response.Body.Close()
 
 	var statistics StatisticsDTO
-	err = parseResponseJson(response, &statistics)
+	err = parseResponseJSON(response, &statistics)
 	return statistics, err
 }
 
@@ -128,7 +128,7 @@ func (client *Client) Status() (StatusDTO, error) {
 	defer response.Body.Close()
 
 	var status StatusDTO
-	err = parseResponseJson(response, &status)
+	err = parseResponseJSON(response, &status)
 	return status, err
 }
 
@@ -141,7 +141,7 @@ func (client *Client) Proposals() ([]ProposalDTO, error) {
 	defer response.Body.Close()
 
 	var proposals ProposalList
-	err = parseResponseJson(response, &proposals)
+	err = parseResponseJSON(response, &proposals)
 	return proposals.Proposals, err
 }
 
@@ -156,7 +156,7 @@ func (client *Client) GetIP() (string, error) {
 	var ipData struct {
 		IP string `json:"ip"`
 	}
-	err = parseResponseJson(response, &ipData)
+	err = parseResponseJSON(response, &ipData)
 	return ipData.IP, nil
 }
 

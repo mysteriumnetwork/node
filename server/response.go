@@ -14,24 +14,24 @@ type errorResponse struct {
 func parseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		var error errorResponse
-		parseResponseJson(response, &error)
+		parseResponseJSON(response, &error)
 		return fmt.Errorf("server response invalid: %s (%s) error message: %s",
 			response.Status, response.Request.URL, error)
 	}
 	return nil
 }
 
-func parseResponseJson(response *http.Response, dto interface{}) error {
+func parseResponseJSON(response *http.Response, dto interface{}) error {
 	if response.Body == nil {
 		return nil
 	}
 
-	responseJson, err := ioutil.ReadAll(response.Body)
+	responseJSON, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(responseJson, dto)
+	err = json.Unmarshal(responseJSON, dto)
 	if err != nil {
 		return err
 	}

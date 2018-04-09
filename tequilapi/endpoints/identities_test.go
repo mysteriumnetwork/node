@@ -83,7 +83,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 	assert.Equal(t, "mypassphrase", mockIdm.LastUnlockPassphrase)
 }
 
-func TestUnlockIdentityWithInvalidJson(t *testing.T) {
+func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
