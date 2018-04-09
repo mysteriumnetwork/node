@@ -18,11 +18,11 @@ func newStopHandler(stop ApplicationStopper) httprouter.Handle {
 	return func(response http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		log.Info("Application stop requested")
 
-		go doWhenNotified(req.Context().Done(), stop)
+		go callStopWhenNotified(req.Context().Done(), stop)
 		response.WriteHeader(http.StatusAccepted)
 	}
 }
-func doWhenNotified(notify <-chan struct{}, stopApplication ApplicationStopper) {
+func callStopWhenNotified(notify <-chan struct{}, stopApplication ApplicationStopper) {
 	<-notify
 	stopApplication()
 }
