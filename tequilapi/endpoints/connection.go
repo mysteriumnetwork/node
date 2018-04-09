@@ -23,7 +23,8 @@ type statusResponse struct {
 	SessionID string `json:"sessionId,omitempty"`
 }
 
-type connectionEndpoint struct {
+// ConnectionEndpoint struct represents /connection resource and it's subresources
+type ConnectionEndpoint struct {
 	manager     connection.Manager
 	ipResolver  ip.Resolver
 	statsKeeper bytescount.SessionStatsKeeper
@@ -32,8 +33,8 @@ type connectionEndpoint struct {
 const connectionLogPrefix = "[Connection] "
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *connectionEndpoint {
-	return &connectionEndpoint{
+func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *ConnectionEndpoint {
+	return &ConnectionEndpoint{
 		manager:     manager,
 		ipResolver:  ipResolver,
 		statsKeeper: statsKeeper,
@@ -41,13 +42,13 @@ func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, s
 }
 
 // Status returns status of connection
-func (ce *connectionEndpoint) Status(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	statusResponse := toStatusResponse(ce.manager.Status())
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
 // Create starts connection
-func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	cr, err := toConnectionRequest(req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
@@ -77,7 +78,7 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 }
 
 // Kill stops connection
-func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	err := ce.manager.Disconnect()
 	if err != nil {
 		switch err {
@@ -92,7 +93,7 @@ func (ce *connectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 }
 
 // GetIP responds with current ip, using its ip resolver
-func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (ce *ConnectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	ip, err := ce.ipResolver.GetPublicIP()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
@@ -107,7 +108,7 @@ func (ce *connectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 }
 
 // GetStatistics returns statistics about current connection
-func (ce *connectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	stats := ce.statsKeeper.Retrieve()
 
 	duration := ce.statsKeeper.GetSessionDuration()

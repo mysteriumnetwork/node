@@ -13,7 +13,7 @@ func TestCorsHeadersAreAppliedToResponse(t *testing.T) {
 
 	respRecorder := httptest.NewRecorder()
 
-	mock := &mockedHttpHandler{}
+	mock := &mockedHTTPHandler{}
 
 	ApplyCors(mock).ServeHTTP(respRecorder, req)
 
@@ -31,7 +31,7 @@ func TestPreflightCorsCheckIsHandled(t *testing.T) {
 
 	respRecorder := httptest.NewRecorder()
 
-	mock := &mockedHttpHandler{}
+	mock := &mockedHTTPHandler{}
 
 	ApplyCors(mock).ServeHTTP(respRecorder, req)
 
@@ -50,7 +50,7 @@ func TestDeleteCorsPreflightCheckIsHandledCorrectly(t *testing.T) {
 
 	respRecorder := httptest.NewRecorder()
 
-	mock := &mockedHttpHandler{}
+	mock := &mockedHTTPHandler{}
 
 	ApplyCors(mock).ServeHTTP(respRecorder, req)
 
@@ -66,7 +66,7 @@ func TestCacheControlHeadersAreAddedToResponse(t *testing.T) {
 	assert.NoError(t, err)
 	respRecorder := httptest.NewRecorder()
 
-	mock := &mockedHttpHandler{}
+	mock := &mockedHTTPHandler{}
 
 	DisableCaching(mock).ServeHTTP(respRecorder, req)
 
@@ -83,10 +83,10 @@ func TestCacheControlHeadersAreAddedToResponse(t *testing.T) {
 
 }
 
-type mockedHttpHandler struct {
+type mockedHTTPHandler struct {
 	wasCalled bool
 }
 
-func (mock *mockedHttpHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (mock *mockedHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	mock.wasCalled = true
 }

@@ -59,7 +59,7 @@ func (cc cacheControl) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.Header().Add(cacheControlHeader, mustRevalidate)
 }
 
-// DisableCache middleware adds cache disabling headers to http response
+// DisableCaching middleware adds cache disabling headers to http response
 func DisableCaching(original http.Handler) http.Handler {
 	return &cacheControl{
 		original,
