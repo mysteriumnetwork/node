@@ -13,6 +13,10 @@ import (
 	"net/http"
 )
 
+// statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST
+// operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
+const statusConnectCancelled = 499
+
 type connectionRequest struct {
 	ConsumerID string `json:"consumerId"`
 	ProviderID string `json:"providerId"`
@@ -66,6 +70,8 @@ func (ce *connectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		switch err {
 		case connection.ErrAlreadyExists:
 			utils.SendError(resp, err, http.StatusConflict)
+		case connection.ErrConnectionCancelled:
+			utils.SendError(resp, err, statusConnectCancelled)
 		default:
 			log.Error(connectionLogPrefix, err)
 			utils.SendError(resp, err, http.StatusInternalServerError)
