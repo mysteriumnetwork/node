@@ -31,6 +31,13 @@ setup () {
         exit 1
     fi
 
+    echo "Waiting for db to become up"
+    while ! ${dockerComposeCmd} exec db mysqladmin ping --protocol=TCP --silent; do
+        echo -n "."
+        sleep 1
+    done
+    echo "Database is up"
+
     ${dockerComposeCmd} run --entrypoint bin/db-upgrade discovery
     if [ ! $? -eq 0 ]; then
         print_error "Db migration failed"
