@@ -10,6 +10,7 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
+	node_utils "github.com/mysterium/node/utils"
 	"net/http"
 )
 
@@ -73,6 +74,8 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 			utils.SendError(resp, err, http.StatusConflict)
 		case connection.ErrConnectionCancelled:
 			utils.SendError(resp, err, statusConnectCancelled)
+		case node_utils.ErrRequestCancelled:
+			utils.SendError(resp, connection.ErrConnectionCancelled, statusConnectCancelled)
 		default:
 			log.Error(connectionLogPrefix, err)
 			utils.SendError(resp, err, http.StatusInternalServerError)

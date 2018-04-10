@@ -64,7 +64,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 
 	cancelable := utils.NewCancelable()
 	manager.cleanConnection = utils.CallOnce(func() {
-		log.Info(managerLogPrefix, "Canceling connection initiation")
+		log.Info(managerLogPrefix, "Cancelling connection initiation")
 		manager.status = statusDisconnecting()
 		cancelable.Cancel()
 	})
