@@ -37,7 +37,7 @@ func (fm *fakeManager) Status() connection.ConnectionStatus {
 }
 
 func (fm *fakeManager) Disconnect() error {
-	fm.disconnectCount += 1
+	fm.disconnectCount++
 	return fm.onDisconnectReturn
 }
 
