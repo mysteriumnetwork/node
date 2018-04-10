@@ -1,6 +1,7 @@
 package endpoints
 
 import (
+	"context"
 	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -26,19 +27,22 @@ func (fs *fakeStopper) Stop() {
 
 func TestAddRouteForStop(t *testing.T) {
 	stopper := fakeStopper{
-		stopAllowed: make(chan struct{}),
-		stopped:     make(chan struct{}),
+		stopAllowed: make(chan struct{}, 1),
+		stopped:     make(chan struct{}, 1),
 	}
 	router := httprouter.New()
-	AddRouteForStop(router, stopper.Stop, 0)
+	AddRouteForStop(router, stopper.Stop)
 
 	resp := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/stop", strings.NewReader(""))
+
+	cancelCtx, finishRequestHandling := context.WithCancel(context.Background())
+	req := httptest.NewRequest("POST", "/stop", strings.NewReader("")).WithContext(cancelCtx)
 	router.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusAccepted, resp.Code)
 	assert.Equal(t, 0, len(stopper.stopped))
 
 	stopper.AllowStop()
+	finishRequestHandling()
 
 	select {
 	case <-stopper.stopped:
