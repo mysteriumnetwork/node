@@ -6,7 +6,6 @@ import (
 	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	nats_lib "github.com/nats-io/go-nats"
-	"strconv"
 )
 
 // NewAddress creates NATS address to known host or cluster of hosts
@@ -19,7 +18,8 @@ func NewAddress(topic string, addresses ...string) *AddressNATS {
 
 // NewAddressGenerate generates NATS address for current node
 func NewAddressGenerate(brokerIP string, myID identity.Identity) *AddressNATS {
-	address := "nats://" + brokerIP + ":" + strconv.Itoa(BrokerPort)
+	address := fmt.Sprintf("nats://%s:%d", brokerIP, BrokerPort)
+
 	return NewAddress(myID.Address, address)
 }
 
