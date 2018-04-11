@@ -62,6 +62,14 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}
 	}()
 
+	err = manager.startConnection(consumerID, providerID)
+	if err == utils.ErrRequestCancelled {
+		return ErrConnectionCancelled
+	}
+	return err
+}
+
+func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity) (err error) {
 	cancelable := utils.NewCancelable()
 	manager.cleanConnection = utils.CallOnce(func() {
 		log.Info(managerLogPrefix, "Cancelling connection initiation")
@@ -214,7 +222,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan open
 				manager.onStateChanged(state, sessionID)
 			}
 		case <-cancelRequest:
-			return ErrConnectionCancelled
+			return utils.ErrRequestCancelled
 		}
 	}
 }
