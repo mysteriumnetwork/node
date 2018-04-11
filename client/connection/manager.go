@@ -20,8 +20,6 @@ var (
 	ErrNoConnection = errors.New("no connection exists")
 	// ErrAlreadyExists error indicates that aciton applieto to manager expects no active connection (i.e. connect)
 	ErrAlreadyExists = errors.New("connection already exists")
-	// ErrConnectionCancelled indicates that connection in progress was cancelled by request of api user
-	ErrConnectionCancelled = errors.New("connection was cancelled")
 	// ErrOpenvpnProcessDied indicates that Connect method didn't reach "Connected" phase due to openvpn error
 	ErrOpenvpnProcessDied = errors.New("openvpn process died")
 )
@@ -62,11 +60,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}
 	}()
 
-	err = manager.startConnection(consumerID, providerID)
-	if err == utils.ErrRequestCancelled {
-		return ErrConnectionCancelled
-	}
-	return err
+	return manager.startConnection(consumerID, providerID)
 }
 
 func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity) (err error) {
