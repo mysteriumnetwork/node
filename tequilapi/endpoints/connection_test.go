@@ -37,7 +37,7 @@ func (fm *fakeManager) Status() connection.ConnectionStatus {
 }
 
 func (fm *fakeManager) Disconnect() error {
-	fm.disconnectCount += 1
+	fm.disconnectCount++
 	return fm.onDisconnectReturn
 }
 
@@ -414,7 +414,7 @@ func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 
 func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncountered(t *testing.T) {
 	manager := fakeManager{}
-	manager.onConnectReturn = connection.ErrConnectionCancelled
+	manager.onConnectReturn = utils.ErrRequestCancelled
 
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
 	req := httptest.NewRequest(

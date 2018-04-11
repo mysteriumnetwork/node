@@ -20,8 +20,6 @@ var (
 	ErrNoConnection = errors.New("no connection exists")
 	// ErrAlreadyExists error indicates that aciton applieto to manager expects no active connection (i.e. connect)
 	ErrAlreadyExists = errors.New("connection already exists")
-	// ErrConnectionCancelled indicates that connection in progress was cancelled by request of api user
-	ErrConnectionCancelled = errors.New("connection was cancelled")
 	// ErrOpenvpnProcessDied indicates that Connect method didn't reach "Connected" phase due to openvpn error
 	ErrOpenvpnProcessDied = errors.New("openvpn process died")
 )
@@ -62,9 +60,13 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}
 	}()
 
+	return manager.startConnection(consumerID, providerID)
+}
+
+func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity) (err error) {
 	cancelable := utils.NewCancelable()
 	manager.cleanConnection = utils.CallOnce(func() {
-		log.Info(managerLogPrefix, "Canceling connection initiation")
+		log.Info(managerLogPrefix, "Cancelling connection initiation")
 		manager.status = statusDisconnecting()
 		cancelable.Cancel()
 	})
@@ -214,7 +216,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan open
 				manager.onStateChanged(state, sessionID)
 			}
 		case <-cancelRequest:
-			return ErrConnectionCancelled
+			return utils.ErrRequestCancelled
 		}
 	}
 }
