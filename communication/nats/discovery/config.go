@@ -2,6 +2,7 @@ package discovery
 
 import "time"
 
+// Broker Constants
 const (
 	BrokerPort             = 4222
 	BrokerMaxReconnect     = -1
