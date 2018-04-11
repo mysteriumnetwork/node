@@ -18,7 +18,8 @@ func NewAddress(topic string, addresses ...string) *AddressNATS {
 
 // NewAddressGenerate generates NATS address for current node
 func NewAddressGenerate(brokerIP string, myID identity.Identity) *AddressNATS {
-	address := "nats://" + brokerIP + ":4222"
+	address := fmt.Sprintf("nats://%s:%d", brokerIP, BrokerPort)
+
 	return NewAddress(myID.Address, address)
 }
 
@@ -55,10 +56,13 @@ type AddressNATS struct {
 	connection nats.Connection
 }
 
-// Connect establishes connection
+// Connect establishes connection to broker
 func (address *AddressNATS) Connect() (err error) {
 	options := nats_lib.GetDefaultOptions()
 	options.Servers = address.servers
+	options.MaxReconnect = BrokerMaxReconnect
+	options.ReconnectWait = BrokerReconnectWait
+	options.Timeout = BrokerTimeout
 
 	address.connection, err = options.Connect()
 	return
