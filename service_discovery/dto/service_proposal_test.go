@@ -33,7 +33,7 @@ func TestServiceProposalSerialize(t *testing.T) {
 
 	jsonBytes, err := json.Marshal(sp)
 
-	expectedJson := `{
+	expectedJSON := `{
 	  "id": 1,
 	  "format": "service-proposal/v1",
 	  "service_type": "openvpn",
@@ -45,7 +45,7 @@ func TestServiceProposalSerialize(t *testing.T) {
 	}`
 
 	assert.Nil(t, err)
-	assert.JSONEq(t, expectedJson, string(jsonBytes))
+	assert.JSONEq(t, expectedJSON, string(jsonBytes))
 }
 
 func TestRegisterPaymentMethodUnserializer(t *testing.T) {

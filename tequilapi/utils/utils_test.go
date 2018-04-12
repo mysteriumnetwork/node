@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestWriteAsJsonReturnsExpectedResponse(t *testing.T) {
+func TestWriteAsJSONReturnsExpectedResponse(t *testing.T) {
 
 	respRecorder := httptest.NewRecorder()
 
@@ -49,7 +49,7 @@ func TestSendErrorRendersErrorMessage(t *testing.T) {
 func TestSendErrorMessageRendersErrorMessage(t *testing.T) {
 	resp := httptest.NewRecorder()
 
-	SendErrorMessage(resp, errorMessage{"error_message"}, http.StatusInternalServerError)
+	SendErrorBody(resp, errorMessage{"error_message"}, http.StatusInternalServerError)
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
 	assert.JSONEq(

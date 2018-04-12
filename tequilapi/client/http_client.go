@@ -65,17 +65,17 @@ func (client *httpClient) Delete(path string, payload interface{}) (*http.Respon
 }
 
 func (client httpClient) doPayloadRequest(method, path string, payload interface{}) (*http.Response, error) {
-	payloadJson, err := json.Marshal(payload)
+	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		log.Critical(client.logPrefix, err)
 		return nil, err
 	}
 
-	return client.executeRequest(method, client.baseUrl+"/"+path, payloadJson)
+	return client.executeRequest(method, client.baseUrl+"/"+path, payloadJSON)
 }
 
-func (client *httpClient) executeRequest(method, fullPath string, payloadJson []byte) (*http.Response, error) {
-	request, err := http.NewRequest(method, fullPath, bytes.NewBuffer(payloadJson))
+func (client *httpClient) executeRequest(method, fullPath string, payloadJSON []byte) (*http.Response, error) {
+	request, err := http.NewRequest(method, fullPath, bytes.NewBuffer(payloadJSON))
 	request.Header.Set("User-Agent", client.ua)
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json")
@@ -108,13 +108,13 @@ func parseResponseError(response *http.Response) error {
 	return nil
 }
 
-func parseResponseJson(response *http.Response, dto interface{}) error {
-	responseJson, err := ioutil.ReadAll(response.Body)
+func parseResponseJSON(response *http.Response, dto interface{}) error {
+	responseJSON, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return err
 	}
 
-	err = json.Unmarshal(responseJson, dto)
+	err = json.Unmarshal(responseJSON, dto)
 	if err != nil {
 		return err
 	}

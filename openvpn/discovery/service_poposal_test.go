@@ -95,7 +95,7 @@ func TestServiceProposalUnserializeUnknownPaymentMethod(t *testing.T) {
 }
 
 func TestServiceProposalSerialize(t *testing.T) {
-	expectedJson := `{
+	expectedJSON := `{
 		"id": 1,
 		"format": "service-proposal/v1",
 		"service_type": "openvpn",
@@ -123,7 +123,7 @@ func TestServiceProposalSerialize(t *testing.T) {
 		ProviderContacts:  []dto_discovery.Contact{},
 	}
 
-	actualJson, err := json.Marshal(sp)
+	actualJSON, err := json.Marshal(sp)
 	assert.NoError(t, err)
-	assert.JSONEq(t, expectedJson, string(actualJson))
+	assert.JSONEq(t, expectedJSON, string(actualJSON))
 }

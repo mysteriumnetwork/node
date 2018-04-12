@@ -39,12 +39,11 @@ func (establisher *dialogEstablisher) EstablishDialog(
 	peerID identity.Identity,
 	peerContact dto_discovery.Contact,
 ) (communication.Dialog, error) {
-	var dialog *dialog
 
 	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", peerContact))
 	peerAddress, err := establisher.peerAddressFactory(peerContact)
 	if err != nil {
-		return dialog, fmt.Errorf("failed to connect to: %#v. %s", peerContact, err)
+		return nil, fmt.Errorf("failed to connect to: %#v. %s", peerContact, err)
 	}
 
 	peerCodec := establisher.newCodecForPeer(peerID)
@@ -52,10 +51,10 @@ func (establisher *dialogEstablisher) EstablishDialog(
 	peerSender := establisher.newSenderToPeer(peerAddress, peerCodec)
 	err = establisher.negotiateDialog(peerSender)
 	if err != nil {
-		return dialog, err
+		return nil, err
 	}
 
-	dialog = establisher.newDialogToPeer(peerID, peerAddress, peerCodec)
+	dialog := establisher.newDialogToPeer(peerID, peerAddress, peerCodec)
 	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", peerContact))
 
 	return dialog, nil

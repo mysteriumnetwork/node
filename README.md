@@ -1,5 +1,4 @@
----
-# Decentralized VPN built on blockchain
+# Mysterium Node - decentralized VPN built on blockchain
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/MysteriumNetwork/node)](https://goreportcard.com/report/github.com/MysteriumNetwork/node)
 [![Build Status](https://travis-ci.org/MysteriumNetwork/node.svg?branch=master)](https://travis-ci.org/MysteriumNetwork/node)
@@ -8,7 +7,7 @@ VPN server and client for Mysterium Network
 
 - Homepage https://mysterium.network/
 - [Whitepaper](https://mysterium.network/whitepaper.pdf)
-- Release [latest](https://github.com/MysteriumNetwork/node/releases/latest)
+- [Latest](https://github.com/MysteriumNetwork/node/releases/latest) release
 - [Installation guides](./INSTALL.md)
 
 ## Mysterium VPN node (Any OS with Docker)
@@ -27,3 +26,7 @@ sudo docker stop mysterium-node
 ```bash
 sudo docker logs -f mysterium-node
 ```
+
+# License
+
+This project is licensed under the terms of the GNU General Public License v3.0 (see [details](./LICENSE)).

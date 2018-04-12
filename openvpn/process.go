@@ -9,16 +9,18 @@ import (
 	"syscall"
 )
 
+// NewProcess returns process wrapper for given executable
 func NewProcess(openvpnBinary, logPrefix string) *Process {
 	return &Process{
 		logPrefix:          logPrefix,
 		openvpnBinary:      openvpnBinary,
-		cmdExitError:       make(chan error),
+		cmdExitError:       make(chan error, 1), //channel should have capacity to hold single process exit error
 		cmdShutdownStarted: make(chan bool),
 		cmdShutdownWaiter:  sync.WaitGroup{},
 	}
 }
 
+// Process struct defines process wrapper which handles clean shutdown, tracks executable exit errors, etc.
 type Process struct {
 	logPrefix          string
 	openvpnBinary      string
@@ -28,6 +30,7 @@ type Process struct {
 	closesOnce         sync.Once
 }
 
+// Start underlying binary defined by process wrapper with given arguments
 func (process *Process) Start(arguments []string) (err error) {
 	// Create the command
 	log.Info(process.logPrefix, "Starting process with arguments: ", arguments)
@@ -50,10 +53,12 @@ func (process *Process) Start(arguments []string) (err error) {
 	return
 }
 
+// Wait function wait until executable exits and then returns exit error reported by executable
 func (process *Process) Wait() error {
 	return <-process.cmdExitError
 }
 
+// Stop function stops (or sends request to stop) underlying executable and waits until stdout/stderr and shutdown monitors are finished
 func (process *Process) Stop() {
 	process.closesOnce.Do(func() {
 		close(process.cmdShutdownStarted)
@@ -96,29 +101,19 @@ func (process *Process) stderrMonitor(cmd *exec.Cmd) {
 }
 
 func (process *Process) waitForExit(cmd *exec.Cmd) {
-	process.cmdExitError <- cmd.Wait()
+	err := cmd.Wait()
+	log.Info(process.logPrefix, "Process exited with error: ", err)
+	process.cmdExitError <- err
 }
 
 func (process *Process) waitForShutdown(cmd *exec.Cmd) {
 	process.cmdShutdownWaiter.Add(1)
 	defer process.cmdShutdownWaiter.Done()
 
-	select {
-	// Wait for shutdown
-	case <-process.cmdShutdownStarted:
-		//First - shutdown gracefully
-		//TODO - add timer and send SIGKILL after timeout?
-		if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			log.Error(process.logPrefix, "Error killing process = ", err)
-		}
-
-		// Allow goroutine to exit
-		err := <-process.cmdExitError
-		log.Error(process.logPrefix, "Process killed with error = ", err)
-
-	// Wait for exit
-	case err := <-process.cmdExitError:
-		log.Error(process.logPrefix, "Process cmdExitError with error = ", err)
-		return
+	<-process.cmdShutdownStarted
+	//First - shutdown gracefully
+	//TODO - add timer and send SIGKILL after timeout?
+	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+		log.Error(process.logPrefix, "Error killing process = ", err)
 	}
 }

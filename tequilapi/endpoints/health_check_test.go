@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func TestHealthCheckReturnsExpectedJsonObject(t *testing.T) {
+func TestHealthCheckReturnsExpectedJSONObject(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
@@ -56,6 +56,6 @@ func newMockTimer(values []time.Time) *mockTimer {
 
 func (mockTimer *mockTimer) Now() time.Time {
 	value := mockTimer.values[mockTimer.current%len(mockTimer.values)]
-	mockTimer.current += 1
+	mockTimer.current++
 	return value
 }

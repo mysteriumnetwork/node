@@ -11,7 +11,7 @@ import (
 func TestBandwidthSerialize(t *testing.T) {
 	var tests = []struct {
 		model        Bandwidth
-		expectedJson string
+		expectedJSON string
 	}{
 		{Bandwidth(1 * datasize.Bit), "1"},
 		{Bandwidth(1 * datasize.Byte), "8"},
@@ -26,7 +26,7 @@ func TestBandwidthSerialize(t *testing.T) {
 		jsonBytes, err := json.Marshal(test.model)
 
 		assert.Nil(t, err)
-		assert.Equal(t, test.expectedJson, string(jsonBytes))
+		assert.Equal(t, test.expectedJSON, string(jsonBytes))
 	}
 }
 

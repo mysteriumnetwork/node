@@ -5,11 +5,12 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/state"
+	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 )
 
-// DialogEstablisherCreator creates new dialog establisher by given identity
-type DialogEstablisherCreator func(identity.Identity) communication.DialogEstablisher
+// DialogCreator creates new dialog between consumer and provider, using given contact information
+type DialogCreator func(consumerID, providerID identity.Identity, contact dto.Contact) (communication.Dialog, error)
 
 // VpnClientCreator creates new vpn client by given session,
 // consumer identity, provider identity and uses state callback to report state changes
