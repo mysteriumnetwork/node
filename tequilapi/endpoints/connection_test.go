@@ -414,7 +414,7 @@ func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 
 func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncountered(t *testing.T) {
 	manager := fakeManager{}
-	manager.onConnectReturn = utils.ErrRequestCancelled
+	manager.onConnectReturn = connection.ErrConnectionCancelled
 
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
 	req := httptest.NewRequest(

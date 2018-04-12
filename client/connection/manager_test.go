@@ -10,7 +10,6 @@ import (
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
-	"github.com/mysterium/node/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"sync"
@@ -209,7 +208,7 @@ func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
 
 	connectWaiter.Wait()
 
-	assert.Equal(tc.T(), utils.ErrRequestCancelled, err)
+	assert.Equal(tc.T(), ErrConnectionCancelled, err)
 }
 
 func (tc *testContext) TestConnectMethodReturnsErrorIfOpenvpnClientExitsDuringConnect() {
