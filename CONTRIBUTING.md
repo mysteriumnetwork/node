@@ -28,12 +28,16 @@ cp .env_example .env
 vim .env
 ```
 
-For example if your [api](https://github.com/MysteriumNetwork/api) is listening on `your.hostname.com:8001`, then the content of the `.env` file should look like this
+For example if your [api](https://github.com/MysteriumNetwork/api) is listening
+on `your.hostname.com:8001`, then the content of the `.env` file should look like this
 
 ```
 MYSTERIUM_API_URL=http://your.hostname.com:8001/v1
 NATS_SERVER_IP=your.hostname.com
 ```
+
+If your broker container (NATS) is started in local, the `NATS_SERVER_IP` should be
+`127.0.0.1`
 
 Running
 ------------
@@ -101,7 +105,7 @@ glide get github.com/ccding/go-stun
 * Update package in project
 ```bash
 vim glide.yaml
-glide update 
+glide update
 ```
 
 
