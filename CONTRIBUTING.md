@@ -21,11 +21,18 @@ go build github.com/mysterium/node
 
 * **Step 3.** Prepare configuration
 
-Enter `MYSTERIUM_API_URL` value of running [api](https://github.com/MysteriumNetwork/api) instance
+Enter `MYSTERIUM_API_URL` and value of running [api](https://github.com/MysteriumNetwork/api) instance
 
 ```bash
 cp .env_example .env
 vim .env
+```
+
+For example if your [api](https://github.com/MysteriumNetwork/api) is listening on `your.hostname.com:8001`, then the content of the `.env` file should look like this
+
+```
+MYSTERIUM_API_URL=http://your.hostname.com:8001/v1
+NATS_SERVER_IP=your.hostname.com
 ```
 
 Running
@@ -59,7 +66,7 @@ glide get github.com/ccding/go-stun
 * Update package in project
 ```bash
 vim glide.yaml
-glide update 
+glide update
 ```
 
 
