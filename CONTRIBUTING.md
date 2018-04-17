@@ -21,7 +21,7 @@ go build github.com/mysterium/node
 
 * **Step 3.** Prepare configuration
 
-Enter `MYSTERIUM_API_URL` and value of running [api](https://github.com/MysteriumNetwork/api) instance
+Enter `MYSTERIUM_API_URL` value of running [api](https://github.com/MysteriumNetwork/api) instance
 
 ```bash
 cp .env_example .env
@@ -101,7 +101,7 @@ glide get github.com/ccding/go-stun
 * Update package in project
 ```bash
 vim glide.yaml
-glide update
+glide update 
 ```
 
 
