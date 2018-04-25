@@ -85,8 +85,6 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	signer := cmd.createSigner(providerID)
-
 	stopPinger := make(chan int)
 	vpnStateCallback := func(state openvpn.State) {
 		switch state {
@@ -102,8 +100,16 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	if err := cmd.mysteriumClient.RegisterProposal(proposal, signer); err != nil {
-		return err
+	signer := cmd.createSigner(providerID)
+
+	for {
+		err := cmd.mysteriumClient.RegisterProposal(proposal, signer)
+		if err != nil {
+			log.Errorf("Failed to register proposal: %v, retrying after 1 min.", err)
+			time.Sleep(1 * time.Minute)
+		} else {
+			break
+		}
 	}
 
 	go PingProposalLoop(proposal, cmd.mysteriumClient, signer, stopPinger)
