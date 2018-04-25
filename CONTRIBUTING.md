@@ -43,6 +43,41 @@ bin/client_build
 bin/client_run
 ```
 
+Running client in interative cli
+------------
+```bash
+# Start client with --cli
+bin/client_run_cli
+
+# Show commands
+» help
+[INFO] Mysterium CLI tequilapi commands:
+  connect
+  identities
+  ├── new
+  ├── list
+  status
+  proposals
+  ip
+  disconnect
+  help
+  quit
+  stop
+  unlock
+
+# Create a customer identity
+» identities new
+
+# Unlock a customer identity
+» unlock <identity>
+
+# Show provider identities
+» proposals
+
+# Connect to a server
+» connect <consumer-identity> <provider-identity>
+```
+
 Dependency management
 ------------
 * Install project's frozen packages
@@ -59,7 +94,7 @@ glide get github.com/ccding/go-stun
 * Update package in project
 ```bash
 vim glide.yaml
-glide update 
+glide update
 ```
 
 
