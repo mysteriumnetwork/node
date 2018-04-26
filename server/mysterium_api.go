@@ -10,6 +10,7 @@ import (
 	"github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"net/url"
+	"time"
 )
 
 const (
@@ -21,6 +22,16 @@ type HttpTransport interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
+func newHttpTransport(responseTimeout time.Duration) HttpTransport {
+	return &http.Client{
+		Transport: &http.Transport{
+			//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
+			DisableKeepAlives:     true,
+			ResponseHeaderTimeout: responseTimeout,
+		},
+	}
+}
+
 type mysteriumAPI struct {
 	http                HttpTransport
 	discoveryAPIAddress string
@@ -29,12 +40,7 @@ type mysteriumAPI struct {
 // NewClient creates Mysterium centralized api instance with real communication
 func NewClient(discoveryAPIAddress string) Client {
 	return &mysteriumAPI{
-		&http.Client{
-			Transport: &http.Transport{
-				//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
-				DisableKeepAlives: true,
-			},
-		},
+		newHttpTransport(1 * time.Minute),
 		discoveryAPIAddress,
 	}
 }
