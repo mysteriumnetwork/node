@@ -143,14 +143,14 @@ func pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient  s
 		case <-time.After(1 * time.Minute):
 			err := mysteriumClient.PingProposal(proposal, signer)
 			if err != nil {
-				log.Error("Failed to ping proposal", err)
+				log.Error("Failed to ping proposal: ", err)
 				// do not stop server on missing ping to discovery. More on this in MYST-362 and MYST-370
 			}
 		case <-stopPinger:
 			log.Info("Stopping proposal pinger")
 			err := mysteriumClient.UnregisterProposal(proposal, signer)
 			if err != nil {
-				log.Error("Failed to unregister proposal", err)
+				log.Error("Failed to unregister proposal: ", err)
 			}
 			return
 		}
