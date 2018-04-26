@@ -10,7 +10,7 @@ import (
 func TestLocationSerialize(t *testing.T) {
 	var tests = []struct {
 		model        Location
-		expectedJson string
+		expectedJSON string
 	}{
 		{
 			Location{"XX", "YY", "AS123"},
@@ -36,7 +36,7 @@ func TestLocationSerialize(t *testing.T) {
 		jsonBytes, err := json.Marshal(test.model)
 
 		assert.Nil(t, err)
-		assert.JSONEq(t, test.expectedJson, string(jsonBytes))
+		assert.JSONEq(t, test.expectedJSON, string(jsonBytes))
 	}
 }
 

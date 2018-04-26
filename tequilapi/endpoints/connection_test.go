@@ -37,7 +37,7 @@ func (fm *fakeManager) Status() connection.ConnectionStatus {
 }
 
 func (fm *fakeManager) Disconnect() error {
-	fm.disconnectCount += 1
+	fm.disconnectCount++
 	return fm.onDisconnectReturn
 }
 
@@ -196,7 +196,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 
 }
 
-func TestPutReturns400ErrorIfRequestBodyIsNotJson(t *testing.T) {
+func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	fakeManager := fakeManager{}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil)
@@ -407,6 +407,33 @@ func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 		t,
 		`{
 			"message" : "no connection exists"
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncountered(t *testing.T) {
+	manager := fakeManager{}
+	manager.onConnectReturn = utils.ErrRequestCancelled
+
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil)
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/irrelevant",
+		strings.NewReader(
+			`{
+				"consumerId" : "my-identity",
+				"providerId" : "required-node"
+			}`))
+	resp := httptest.NewRecorder()
+
+	connectionEndpoint.Create(resp, req, nil)
+
+	assert.Equal(t, statusConnectCancelled, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message" : "connection was cancelled"
 		}`,
 		resp.Body.String(),
 	)

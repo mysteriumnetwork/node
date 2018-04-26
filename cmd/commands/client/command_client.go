@@ -10,15 +10,16 @@ import (
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
+	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/server"
+	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
 	"github.com/mysterium/node/version"
 	"path/filepath"
 	"time"
-	"github.com/mysterium/node/location"
 )
 
 // NewCommand function creates new client command by given options
@@ -42,8 +43,9 @@ func NewCommandWith(
 
 	identityManager := identity.NewIdentityManager(keystoreInstance)
 
-	dialogEstablisherFactory := func(myID identity.Identity) communication.DialogEstablisher {
-		return nats_dialog.NewDialogEstablisher(myID, identity.NewSigner(keystoreInstance, myID))
+	dialogFactory := func(consumerID, providerID identity.Identity, contact dto.Contact) (communication.Dialog, error) {
+		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, identity.NewSigner(keystoreInstance, consumerID))
+		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
 	signerFactory := func(id identity.Identity) identity.Signer {
@@ -68,7 +70,7 @@ func NewCommandWith(
 		statsKeeper,
 		locationDetector,
 	)
-	connectionManager := connection.NewManager(mysteriumClient, dialogEstablisherFactory, vpnClientFactory, statsKeeper)
+	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 
@@ -85,7 +87,7 @@ func NewCommandWith(
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
-	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill), time.Second)
+	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill))
 
 	return command
 }

@@ -58,10 +58,12 @@ type proposalsEndpoint struct {
 	mysteriumClient server.Client
 }
 
+// NewProposalsEndpoint creates and returns proposal creation endpoint
 func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
 	return &proposalsEndpoint{mc}
 }
 
+// List returns list of proposals
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 
 	providerID := req.URL.Query().Get("providerId")
@@ -74,6 +76,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 	utils.WriteAsJSON(proposalsRes, resp)
 }
 
+// AddRoutesForProposals attaches proposals endpoints to router
 func AddRoutesForProposals(router *httprouter.Router, mc server.Client) {
 	pe := NewProposalsEndpoint(mc)
 	router.GET("/proposals", pe.List)

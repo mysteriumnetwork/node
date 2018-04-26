@@ -17,6 +17,7 @@ type testClient struct {
 	baseUrl string
 }
 
+// NewTestClient returns client for making test requests
 func NewTestClient(t *testing.T, port int) TestClient {
 	return &testClient{
 		t,
@@ -32,12 +33,12 @@ func (tc *testClient) Get(path string) *http.Response {
 	return resp
 }
 
-func expectJsonStatus200(t *testing.T, resp *http.Response, httpStatus int) {
+func expectJSONStatus200(t *testing.T, resp *http.Response, httpStatus int) {
 	assert.Equal(t, "application/json", resp.Header.Get("Content-type"))
 	assert.Equal(t, httpStatus, resp.StatusCode)
 }
 
-func parseResponseAsJson(t *testing.T, resp *http.Response, v interface{}) {
+func parseResponseAsJSON(t *testing.T, resp *http.Response, v interface{}) {
 	err := json.NewDecoder(resp.Body).Decode(v)
 	assert.Nil(t, err)
 }

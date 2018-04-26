@@ -32,7 +32,7 @@ func TestBytesRequest(t *testing.T) {
 	sender := &senderNATS{
 		connection:     connection,
 		codec:          communication.NewCodecBytes(),
-		timeoutRequest: time.Millisecond,
+		timeoutRequest: 100 * time.Millisecond,
 	}
 
 	response, err := sender.Request(&bytesRequestProducer{

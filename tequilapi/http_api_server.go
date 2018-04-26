@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// APIServer interface represents control methods for underlying http api server
 type APIServer interface {
 	Port() (int, error)
 	Wait() error
@@ -23,15 +24,17 @@ type apiServer struct {
 	listener      net.Listener
 }
 
+// NewServer creates http api server for given addres port and http handler
 func NewServer(address string, port int, handler http.Handler) APIServer {
 	server := apiServer{
 		make(chan error, 1),
-		ApplyCors(handler),
+		DisableCaching(ApplyCors(handler)),
 		fmt.Sprintf("%s:%d", address, port),
 		nil}
 	return &server
 }
 
+// Stop method stops underlying http server
 func (server *apiServer) Stop() {
 	if server.listener == nil {
 		return
@@ -39,10 +42,12 @@ func (server *apiServer) Stop() {
 	server.listener.Close()
 }
 
+// Wait method waits for http server to finish handling requets (i.e. when Stop() was called)
 func (server *apiServer) Wait() error {
 	return <-server.errorChannel
 }
 
+// Port method returns bind port for given http server (useful when random port is used)
 func (server *apiServer) Port() (int, error) {
 	if server.listener == nil {
 		return 0, errors.New("not bound")
@@ -50,6 +55,7 @@ func (server *apiServer) Port() (int, error) {
 	return extractBoundPort(server.listener)
 }
 
+// StartServing starts http request serving
 func (server *apiServer) StartServing() error {
 	var err error
 	server.listener, err = net.Listen("tcp", server.listenAddress)
