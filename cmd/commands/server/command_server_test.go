@@ -1,38 +1,42 @@
 package server
 
 import (
-	"github.com/stretchr/testify/suite"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
 )
-
-type testContext struct {
-	suite.Suite
-}
 
 var (
 	myID                  = identity.FromAddress("identity-1")
 	activeProviderID      = identity.FromAddress("vpn-node-1")
 	activeProviderContact = dto_discovery.Contact{}
-	activeProposal        = dto_discovery.ServiceProposal{
-		ProviderID:       activeProviderID.Address,
-		ProviderContacts: []dto_discovery.Contact{activeProviderContact},
-	}
+	activeProposal        = dto_discovery.ServiceProposal{}
 )
 
-func (tc *testContext) TestProposalUnregisteredWhenPingerClosed() {
+func TestProposalUnregisteredWhenPingerClosed(t *testing.T) {
 	stopPinger := make(chan int)
 	fakeDiscoveryClient := server.NewClientFake()
 	fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
 
-	go PingProposalLoop(activeProposal, fakeDiscoveryClient, nil, stopPinger)
+	finished := make(chan bool)
+
+	go func() {
+		pingProposalLoop(activeProposal, fakeDiscoveryClient, nil, stopPinger)
+		finished <- true
+	}()
 
 	close(stopPinger) //causes proposal to be unregistered
 
-	proposals, err := fakeDiscoveryClient.FindProposals(activeProposal.ProviderID)
+	select {
+		case _ = <-finished:
+			proposals, err := fakeDiscoveryClient.FindProposals(activeProposal.ProviderID)
 
-	assert.NoError(tc.T(), err)
-	assert.Empty(tc.T(), proposals)
+			assert.NoError(t, err)
+			assert.Len(t, proposals, 0)
+		case <-time.After(500 * time.Millisecond):
+			assert.Fail(t, "failed to stop pinger")
+	}
 }

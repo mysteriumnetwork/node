@@ -112,7 +112,7 @@ func (cmd *Command) Start() (err error) {
 		}
 	}
 
-	go PingProposalLoop(proposal, cmd.mysteriumClient, signer, stopPinger)
+	go pingProposalLoop(proposal, cmd.mysteriumClient, signer, stopPinger)
 
 	return nil
 }
@@ -137,7 +137,7 @@ func (cmd *Command) Kill() error {
 }
 
 // Ping proposal until stopped, then unregister proposal
-func PingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient  server.Client, signer identity.Signer, stopPinger <- chan int) {
+func pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient  server.Client, signer identity.Signer, stopPinger <- chan int) {
 	for {
 		select {
 		case <-time.After(1 * time.Minute):
@@ -148,7 +148,7 @@ func PingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient  s
 			}
 		case <-stopPinger:
 			log.Info("Stopping proposal pinger")
-			err := mysteriumClient.UnregisterProposal(proposal.ProviderID, signer)
+			err := mysteriumClient.UnregisterProposal(proposal, signer)
 			if err != nil {
 				log.Error("Failed to unregister proposal", err)
 			}
