@@ -2,7 +2,6 @@ package server
 
 import (
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -10,9 +9,6 @@ import (
 )
 
 var (
-	myID                  = identity.FromAddress("identity-1")
-	activeProviderID      = identity.FromAddress("vpn-node-1")
-	activeProviderContact = dto_discovery.Contact{}
 	activeProposal        = dto_discovery.ServiceProposal{}
 )
 

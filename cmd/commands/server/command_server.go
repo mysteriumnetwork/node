@@ -102,17 +102,7 @@ func (cmd *Command) Start() (err error) {
 
 	signer := cmd.createSigner(providerID)
 
-	for {
-		err := cmd.mysteriumClient.RegisterProposal(proposal, signer)
-		if err != nil {
-			log.Errorf("Failed to register proposal: %v, retrying after 1 min.", err)
-			time.Sleep(1 * time.Minute)
-		} else {
-			break
-		}
-	}
-
-	go pingProposalLoop(proposal, cmd.mysteriumClient, signer, stopPinger)
+	go discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopPinger)
 
 	return nil
 }
@@ -136,8 +126,21 @@ func (cmd *Command) Kill() error {
 	return err
 }
 
-// Ping proposal until stopped, then unregister proposal
-func pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient  server.Client, signer identity.Signer, stopPinger <- chan int) {
+func discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <- chan int) {
+	for {
+		err := mysteriumClient.RegisterProposal(proposal, signer)
+		if err != nil {
+			log.Errorf("Failed to register proposal: %v, retrying after 1 min.", err)
+			time.Sleep(1 * time.Minute)
+		} else {
+			break
+		}
+	}
+	pingProposalLoop(proposal, mysteriumClient, signer, stopPinger)
+
+}
+
+func pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <- chan int)  {
 	for {
 		select {
 		case <-time.After(1 * time.Minute):
