@@ -102,9 +102,16 @@ func (cmd *Command) Start() (err error) {
 
 	signer := cmd.createSigner(providerID)
 
-	if err := cmd.mysteriumClient.RegisterProposal(proposal, signer); err != nil {
-		return err
+	for {
+		err := cmd.mysteriumClient.RegisterProposal(proposal, signer)
+		if err != nil {
+			log.Errorf("Failed to register proposal: %v, retrying after 1 min.", err)
+			time.Sleep(1 * time.Minute)
+		} else {
+			break
+		}
 	}
+
 	go func() {
 		for {
 			select {
