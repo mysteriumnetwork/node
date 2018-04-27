@@ -29,7 +29,7 @@ func (client *ClientFake) RegisterProposal(proposal dto_discovery.ServiceProposa
 	return nil
 }
 
-//UnregisterProposal unregisters a service proposal when client disconnects
+// UnregisterProposal unregisters a service proposal when client disconnects
 func (client *ClientFake) UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	remainingProposals := make([]dto_discovery.ServiceProposal, 0)
 

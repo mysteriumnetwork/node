@@ -45,6 +45,7 @@ func NewClient(discoveryAPIAddress string) Client {
 	}
 }
 
+// RegisterIdentity registers given identity to discovery service
 func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "identities", dto.CreateIdentityRequest{
 		Identity: id.Address,
@@ -60,6 +61,7 @@ func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 	return err
 }
 
+// RegisterProposal registers service proposal to discovery service
 func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
@@ -76,6 +78,7 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 	return err
 }
 
+// UnregisterProposal unregisters a service proposal when client disconnects
 func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "unregister_proposal", dto.ProposalUnregisterRequest{
 		ProviderID: proposal.ProviderID,
@@ -84,8 +87,6 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 		return err
 	}
 
-	//var response string
-	//err = mApi.doRequestAndParseResponse(req, &response)
 	err = mApi.doRequest(req)
 
 	if err == nil {
@@ -95,6 +96,7 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 	return err
 }
 
+// PingProposal pings service proposal as being alive
 func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
 		NodeKey: proposal.ProviderID,
@@ -110,6 +112,7 @@ func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, s
 	return err
 }
 
+// FindProposals fetches currently active service proposals from discovery
 func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.ServiceProposal, error) {
 	values := url.Values{}
 	if providerID != "" {
@@ -132,6 +135,7 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 	return proposalsResponse.Proposals, nil
 }
 
+// SendSessionStats sends session statistics
 func (mApi *mysteriumAPI) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionId)
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
