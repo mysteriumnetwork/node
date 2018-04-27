@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
 	_ "github.com/mysterium/node/logconfig"
 	"os"
+	"github.com/mysterium/node/cmd"
 )
 
 func main() {
@@ -22,7 +22,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd.StopOnInterrupts(cmd.NewApplicationStopper(serverCommand.Kill))
+	cmd.StopOnInterruptsConditional(cmd.NewApplicationStopper(serverCommand.Kill), serverCommand.WaitUnregister)
 
 	if err = serverCommand.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
