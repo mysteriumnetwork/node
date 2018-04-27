@@ -84,9 +84,12 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 		return err
 	}
 
+	//var response string
+	//err = mApi.doRequestAndParseResponse(req, &response)
 	err = mApi.doRequest(req)
+
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Proposal unregistered for node: ", proposal)
+		log.Info(mysteriumAPILogPrefix, "Proposal unregistered for node: ", err)
 	}
 
 	return err

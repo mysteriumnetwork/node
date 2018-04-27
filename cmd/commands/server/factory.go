@@ -18,6 +18,7 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"path/filepath"
+	"sync"
 )
 
 // NewCommand function creates new server command by given options
@@ -105,5 +106,6 @@ func NewCommandWith(
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
 		protocol: options.Protocol,
+		WaitUnregister: &sync.WaitGroup{},
 	}
 }

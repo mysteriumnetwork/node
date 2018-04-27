@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+	"sync"
 )
 
 var (
@@ -18,9 +19,11 @@ func TestProposalUnregisteredWhenPingerClosed(t *testing.T) {
 	fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
 
 	finished := make(chan bool)
+	fakeCmd := Command{WaitUnregister: &sync.WaitGroup{}}
+	fakeCmd.WaitUnregister.Add(1)
 
 	go func() {
-		pingProposalLoop(activeProposal, fakeDiscoveryClient, nil, stopPinger)
+		fakeCmd.pingProposalLoop(activeProposal, fakeDiscoveryClient, nil, stopPinger)
 		finished <- true
 	}()
 

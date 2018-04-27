@@ -15,6 +15,7 @@ import (
 	"github.com/mysterium/node/session"
 	"github.com/mysterium/node/version"
 	"time"
+	"sync"
 )
 
 // Command represent entrypoint for Mysterium server with top level components
@@ -34,9 +35,10 @@ type Command struct {
 	vpnServerFactory func(sessionManager session.Manager, serviceLocation dto_discovery.Location,
 		providerID identity.Identity, callback state.Callback) *openvpn.Server
 
-	vpnServer    *openvpn.Server
-	checkOpenvpn func() error
-	protocol	string
+	vpnServer      *openvpn.Server
+	checkOpenvpn   func() error
+	protocol       string
+	WaitUnregister *sync.WaitGroup
 }
 
 // Start starts server - does not block
@@ -85,14 +87,14 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	stopPinger := make(chan int)
+	stopDiscoveryAnnouncement := make(chan int)
 	vpnStateCallback := func(state openvpn.State) {
 		switch state {
 		case openvpn.ConnectedState:
 			log.Info("Open vpn service started")
 		case openvpn.ExitingState:
 			log.Info("Open vpn service exiting")
-			close(stopPinger)
+			close(stopDiscoveryAnnouncement)
 		}
 	}
 	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, serviceLocation, providerID, vpnStateCallback)
@@ -102,13 +104,16 @@ func (cmd *Command) Start() (err error) {
 
 	signer := cmd.createSigner(providerID)
 
-	go discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopPinger)
+	cmd.WaitUnregister.Add(1)
+	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 
 	return nil
 }
 
 // Wait blocks until server is stopped
 func (cmd *Command) Wait() error {
+	cmd.WaitUnregister.Wait()
+
 	return cmd.vpnServer.Wait()
 }
 
@@ -126,7 +131,7 @@ func (cmd *Command) Kill() error {
 	return err
 }
 
-func discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <- chan int) {
+func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <- chan int) {
 	for {
 		err := mysteriumClient.RegisterProposal(proposal, signer)
 		if err != nil {
@@ -136,11 +141,11 @@ func discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysterium
 			break
 		}
 	}
-	pingProposalLoop(proposal, mysteriumClient, signer, stopPinger)
+	cmd.pingProposalLoop(proposal, mysteriumClient, signer, stopPinger)
 
 }
 
-func pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <- chan int)  {
+func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <- chan int)  {
 	for {
 		select {
 		case <-time.After(1 * time.Minute):
@@ -150,11 +155,13 @@ func pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient se
 				// do not stop server on missing ping to discovery. More on this in MYST-362 and MYST-370
 			}
 		case <-stopPinger:
-			log.Info("Stopping proposal pinger")
+			log.Info("Stopping discovery announcement")
 			err := mysteriumClient.UnregisterProposal(proposal, signer)
 			if err != nil {
 				log.Error("Failed to unregister proposal: ", err)
 			}
+			time.Sleep(200 * time.Millisecond) // sleep for prints to be printed out
+			cmd.WaitUnregister.Done()
 			return
 		}
 	}
