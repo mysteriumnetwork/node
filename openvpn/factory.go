@@ -30,6 +30,7 @@ func NewServerConfig(
 	config.SetPingTimerRemote()
 	config.SetPersistTun()
 	config.SetPersistKey()
+	config.setFlag("explicit-exit-notify")
 
 	return &config
 }
@@ -60,6 +61,7 @@ func NewClientConfig(
 	config.setParam("redirect-gateway", "def1 bypass-dhcp")
 	config.setParam("dhcp-option", "DNS 208.67.222.222")
 	config.setParam("dhcp-option", "DNS 208.67.220.220")
+	config.setFlag("explicit-exit-notify")
 
 	return &config
 }
