@@ -18,5 +18,7 @@ func (c *ServerConfig) SetTLSServer() {
 func (c *ServerConfig) SetProtocol(protocol string) {
 	if protocol == "tcp" {
 		c.setParam("proto", "tcp-server")
+	} else if protocol == "udp" {
+		c.setFlag("explicit-exit-notify")
 	}
 }
