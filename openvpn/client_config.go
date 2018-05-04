@@ -19,5 +19,7 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort int) {
 func (c *ClientConfig) SetProtocol(protocol string) {
 	if protocol == "tcp" {
 		c.setParam("proto", "tcp-client")
+	} else if protocol == "udp" {
+		c.setFlag("explicit-exit-notify")
 	}
 }
