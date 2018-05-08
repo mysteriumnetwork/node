@@ -23,16 +23,6 @@ func NewDetectorWithLocationResolver(ipResolver ip.Resolver, locationResolver Re
 }
 
 // Maps current ip to country
-func (d *detector) DetectCountry() (string, error) {
-	location, err := d.DetectLocation()
-	if err != nil {
-		return "", err
-	}
-
-	return location.Country, nil
-}
-
-// Maps current ip to country
 func (d *detector) DetectLocation() (Location, error) {
 	ip, err := d.ipResolver.GetPublicIP()
 	if err != nil {

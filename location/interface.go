@@ -7,6 +7,5 @@ type Resolver interface {
 
 // Detector allows detecting location by current ip
 type Detector interface {
-	DetectCountry() (string, error)
 	DetectLocation() (Location, error)
 }
