@@ -10,6 +10,7 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/tequilapi/utils"
 	"github.com/mysterium/node/tequilapi/validation"
+	"github.com/mysterium/node/location"
 	"net/http"
 )
 
@@ -31,17 +32,22 @@ type statusResponse struct {
 type ConnectionEndpoint struct {
 	manager     connection.Manager
 	ipResolver  ip.Resolver
+	locationDetector location.Detector
 	statsKeeper bytescount.SessionStatsKeeper
+	originalLocation location.Location
 }
 
 const connectionLogPrefix = "[Connection] "
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper,
+	locationDetector location.Detector, originalLocation location.Location) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:     manager,
 		ipResolver:  ipResolver,
 		statsKeeper: statsKeeper,
+		locationDetector: locationDetector,
+		originalLocation: originalLocation,
 	}
 }
 
@@ -113,6 +119,24 @@ func (ce *ConnectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 	utils.WriteAsJSON(response, writer)
 }
 
+// GetLocation responds with original and current countries
+func (ce *ConnectionEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	currentLocation, err := ce.locationDetector.DetectLocation()
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
+	}
+
+	response := struct {
+		Original location.Location `json:"original"`
+		Current location.Location `json:"current"`
+	}{
+		Original: ce.originalLocation,
+		Current: currentLocation,
+	}
+	utils.WriteAsJSON(response, writer)
+}
+
 // GetStatistics returns statistics about current connection
 func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	stats := ce.statsKeeper.Retrieve()
@@ -133,13 +157,14 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager, ipResolver ip.Resolver,
-	statsKeeper bytescount.SessionStatsKeeper) {
-	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper)
+	statsKeeper bytescount.SessionStatsKeeper, locationDetector location.Detector, originalLocation location.Location) {
+	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper, locationDetector, originalLocation)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)
 	router.DELETE("/connection", connectionEndpoint.Kill)
 	router.GET("/connection/ip", connectionEndpoint.GetIP)
 	router.GET("/connection/statistics", connectionEndpoint.GetStatistics)
+	router.GET("/connection/location", connectionEndpoint.GetLocation)
 }
 
 func toConnectionRequest(req *http.Request) (*connectionRequest, error) {

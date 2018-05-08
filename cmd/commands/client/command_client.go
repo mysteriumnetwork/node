@@ -61,6 +61,14 @@ func NewCommandWith(
 		filepath.Join(options.DirectoryConfig, options.LocationDatabase),
 	)
 
+	originalLocation, err := locationDetector.DetectLocation()
+
+	if err != nil {
+		log.Warn("Failed to detect country", err)
+	} else {
+		log.Info("Country detected: ", originalLocation.Country)
+	}
+
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
 		options.OpenvpnBinary,
@@ -68,7 +76,7 @@ func NewCommandWith(
 		options.DirectoryRuntime,
 		signerFactory,
 		statsKeeper,
-		locationDetector,
+		originalLocation,
 	)
 	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, vpnClientFactory, statsKeeper)
 
@@ -85,7 +93,7 @@ func NewCommandWith(
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper, locationDetector, originalLocation)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill))
 

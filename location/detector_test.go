@@ -10,8 +10,9 @@ import (
 func TestNewDetector(t *testing.T) {
 	ipResolver := ip.NewFakeResolver("8.8.8.8")
 	detector := NewDetector(ipResolver, "../bin/client_package/config/GeoLite2-Country.mmdb")
-	country, err := detector.DetectCountry()
-	assert.Equal(t, "US", country)
+	location, err := detector.DetectLocation()
+	assert.Equal(t, "US", location.Country)
+	assert.Equal(t, "8.8.8.8", location.IP)
 	assert.NoError(t, err)
 }
 
@@ -19,9 +20,9 @@ func TestWithIpResolverFailing(t *testing.T) {
 	ipErr := errors.New("ip resolver error")
 	ipResolver := ip.NewFailingFakeResolver(ipErr)
 	detector := NewDetectorWithLocationResolver(ipResolver, NewResolverFake(""))
-	country, err := detector.DetectCountry()
+	location, err := detector.DetectLocation()
 	assert.EqualError(t, ipErr, err.Error())
-	assert.Equal(t, "", country)
+	assert.Equal(t, Location{}, location)
 }
 
 func TestWithLocationResolverFailing(t *testing.T) {
@@ -29,7 +30,7 @@ func TestWithLocationResolverFailing(t *testing.T) {
 	locationErr := errors.New("location resolver error")
 	locationResolver := NewFailingResolverFake(locationErr)
 	detector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
-	country, err := detector.DetectCountry()
+	location, err := detector.DetectLocation()
 	assert.EqualError(t, locationErr, err.Error())
-	assert.Equal(t, "", country)
+	assert.Equal(t, Location{}, location)
 }

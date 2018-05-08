@@ -24,15 +24,26 @@ func NewDetectorWithLocationResolver(ipResolver ip.Resolver, locationResolver Re
 
 // Maps current ip to country
 func (d *detector) DetectCountry() (string, error) {
-	ip, err := d.ipResolver.GetPublicIP()
+	location, err := d.DetectLocation()
 	if err != nil {
 		return "", err
+	}
+
+	return location.Country, nil
+}
+
+// Maps current ip to country
+func (d *detector) DetectLocation() (Location, error) {
+	ip, err := d.ipResolver.GetPublicIP()
+	if err != nil {
+		return Location{}, err
 	}
 
 	country, err := d.locationResolver.ResolveCountry(ip)
 	if err != nil {
-		return "", err
+		return Location{}, err
 	}
 
-	return country, nil
+	location := Location{Country: country, IP: ip}
+	return location, nil
 }
