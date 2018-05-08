@@ -1,6 +1,7 @@
 package connection
 
 import (
+	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/openvpn"
@@ -20,7 +21,7 @@ func ConfigureVpnClientFactory(
 	openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	statsKeeper bytescount.SessionStatsKeeper,
-	originalLocation location.Location,
+	locationCache location.Cache,
 ) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback) (openvpn.Client, error) {
 		vpnClientConfig, err := openvpn.NewClientConfigFromString(
@@ -36,6 +37,13 @@ func ConfigureVpnClientFactory(
 		signer := signerFactory(consumerID)
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
+
+		originalLocation, err := locationCache.RefreshAndGet()
+		if err != nil {
+			log.Warn("Failed to detect country", err)
+		} else {
+			log.Info("Country detected: ", originalLocation.Country)
+		}
 
 		statsSender := bytescount.NewSessionStatsSender(
 			mysteriumAPIClient,

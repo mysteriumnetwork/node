@@ -50,20 +50,24 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
 	settableClock := utils.SettableClock{}
-	ipResolver := ip.NewFakeResolver("123.123.123.123")
 	statsKeeper := bytescount.NewSessionStatsKeeper(settableClock.GetTime)
-	locationResolver := location.NewResolverFake("current country")
-	locationDetector := location.NewDetectorWithLocationResolver(ipResolver, locationResolver)
-	originalLocation := location.Location{IP: "100.100.100.100", Country :"original country"}
+
+	currentIpResolver := ip.NewFakeResolver("123.123.123.123")
+	currentLocationResolver := location.NewResolverFake("current country")
+	currentLocationDetector := location.NewDetectorWithLocationResolver(currentIpResolver, currentLocationResolver)
+
+	originalIpResolver := ip.NewFakeResolver("100.100.100.100")
+	originalLocationResolver := location.NewResolverFake("original country")
+	originalLocationDetector := location.NewDetectorWithLocationResolver(originalIpResolver, originalLocationResolver)
+	originalLocationCache := location.NewLocationCache(originalLocationDetector)
+	originalLocationCache.RefreshAndGet()
 
 	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
 	settableClock.SetTime(sessionStart)
 	statsKeeper.MarkSessionStart()
 	settableClock.SetTime(sessionStart.Add(time.Minute))
 
-
-
-	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper, locationDetector, originalLocation)
+	AddRoutesForConnection(router, &fakeManager, currentIpResolver, statsKeeper, currentLocationDetector, originalLocationCache)
 
 	tests := []struct {
 		method         string
@@ -126,7 +130,7 @@ func TestDisconnectingState(t *testing.T) {
 		SessionID: "",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -148,7 +152,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 		SessionID: "",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -170,7 +174,7 @@ func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 		State: connection.Connecting,
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -193,7 +197,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 		SessionID: "My-super-session",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -213,7 +217,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
 
@@ -232,7 +236,7 @@ func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
 
@@ -254,7 +258,7 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, nil)
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -277,7 +281,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 func TestDeleteCallsDisconnect(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodDelete, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -291,7 +295,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 func TestGetIPEndpointSucceeds(t *testing.T) {
 	manager := fakeManager{}
 	ipResolver := ip.NewFakeResolver("123.123.123.123")
-	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, nil, nil)
 	resp := httptest.NewRecorder()
 
 	connEndpoint.GetIP(resp, nil, nil)
@@ -309,7 +313,7 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	manager := fakeManager{}
 	ipResolver := ip.NewFailingFakeResolver(errors.New("fake error"))
-	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, nil, nil)
 	resp := httptest.NewRecorder()
 
 	connEndpoint.GetIP(resp, nil, nil)
@@ -326,11 +330,18 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 
 func TestGetLocationSucceeds(t *testing.T) {
 	manager := fakeManager{}
-	ipResolver := ip.NewFakeResolver("123.123.123.123")
-	locationResolver := location.NewResolverFake("current country")
-	locationDetector := location.NewDetectorWithLocationResolver(ipResolver, locationResolver)
-	originalLocation := location.Location{IP: "100.100.100.100", Country :"original country"}
-	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, locationDetector, originalLocation)
+
+	currentIpResolver := ip.NewFakeResolver("123.123.123.123")
+	currentLocationResolver := location.NewResolverFake("current country")
+	currentLocationDetector := location.NewDetectorWithLocationResolver(currentIpResolver, currentLocationResolver)
+
+	originalIpResolver := ip.NewFakeResolver("100.100.100.100")
+	originalLocationResolver := location.NewResolverFake("original country")
+	originalLocationDetector := location.NewDetectorWithLocationResolver(originalIpResolver, originalLocationResolver)
+	originalLocationCache := location.NewLocationCache(originalLocationDetector)
+	originalLocationCache.RefreshAndGet()
+
+	connEndpoint := NewConnectionEndpoint(&manager, currentIpResolver, nil, currentLocationDetector, originalLocationCache)
 	resp := httptest.NewRecorder()
 
 	connEndpoint.GetLocation(resp, nil, nil)
@@ -358,7 +369,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	settableClock.SetTime(sessionStart.Add(time.Minute))
 
 	manager := fakeManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, nil, nil)
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)
@@ -380,7 +391,7 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 	statsKeeper.Save(stats)
 
 	manager := fakeManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, nil, location.Location{})
+	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, nil, nil)
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)
@@ -399,7 +410,7 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrAlreadyExists
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, nil, location.Location{})
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(
 		http.MethodPut,
@@ -427,7 +438,7 @@ func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 	manager := fakeManager{}
 	manager.onDisconnectReturn = connection.ErrNoConnection
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, nil, location.Location{})
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, nil, nil)
 
 	req := httptest.NewRequest(
 		http.MethodDelete,
@@ -452,7 +463,7 @@ func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncount
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, nil, location.Location{})
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, nil, nil)
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",

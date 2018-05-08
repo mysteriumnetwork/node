@@ -9,3 +9,9 @@ type Resolver interface {
 type Detector interface {
 	DetectLocation() (Location, error)
 }
+
+// Cache allows caching location
+type Cache interface {
+	Get() (Location, error)
+	RefreshAndGet() (Location, error)
+}
