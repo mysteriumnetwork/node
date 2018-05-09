@@ -3,6 +3,8 @@ package openvpn
 import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -17,15 +19,16 @@ func TestFile_GetName(t *testing.T) {
 }
 
 func TestFile_ToCli(t *testing.T) {
-	filePath := "testdataoutput/file.txt"
+	filename := filepath.Join("testdataoutput", "file.txt")
+	os.Remove(filename)
 	fileContent := "file-content"
 
-	option := OptionFile("special-file", fileContent, filePath)
+	option := OptionFile("special-file", fileContent, filename)
 
 	optionValue, err := option.toCli()
 	assert.NoError(t, err)
-	assert.Equal(t, "--special-file testdataoutput/file.txt", optionValue)
-	readedContent, err := ioutil.ReadFile(filePath)
+	assert.Equal(t, "--special-file "+filename, optionValue)
+	readedContent, err := ioutil.ReadFile(filename)
 	assert.NoError(t, err)
 	assert.Equal(t, fileContent, string(readedContent))
 }
