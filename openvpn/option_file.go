@@ -1,6 +1,8 @@
 package openvpn
 
 import (
+	"bytes"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 )
@@ -28,9 +30,18 @@ func (option optionFile) toCli() (string, error) {
 }
 
 func (option optionFile) toFile() (string, error) {
-	return fmt.Sprintf("<%s>\n%s\n</%s>", option.name, escapeXmlTags(option.content), option.name), nil
+	escaped, err := escapeXmlTags(option.content)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("<%s>\n%s\n</%s>", option.name, escaped, option.name), nil
 }
 
-func escapeXmlTags(content string) string {
-	return content
+func escapeXmlTags(content string) (string, error) {
+	var escaped bytes.Buffer
+	err := xml.EscapeText(&escaped, []byte(content))
+	if err != nil {
+		return "", err
+	}
+	return escaped.String(), nil
 }

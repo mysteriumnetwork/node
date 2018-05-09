@@ -43,9 +43,23 @@ func TestFile_ToCliNotExistingDir(t *testing.T) {
 }
 
 func TestFile_ToFile(t *testing.T) {
-	option := OptionFile("special-file", "[filedata]", "testdata/file.txt")
+	option := OptionFile("special-file", "[filedata]", "not-important")
 
 	optionValue, err := option.toFile()
 	assert.NoError(t, err)
 	assert.Equal(t, "<special-file>\n[filedata]\n</special-file>", optionValue)
+}
+
+func TestFile_ToFileXmlTagsAreEscaped(t *testing.T) {
+	option := OptionFile("file-name", "</file-name>This param is injected!", "not-important")
+
+	optionValue, err := option.toFile()
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		`<file-name>
+&lt;/file-name&gt;This param is injected!
+</file-name>`,
+		optionValue,
+	)
 }
