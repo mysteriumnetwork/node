@@ -32,6 +32,7 @@ func NewServerConfigGenerator(directoryRuntime string, serviceLocation dto.Locat
 			return nil, err
 		}
 		vpnServerConfig := NewServerConfig(
+			directoryRuntime,
 			"10.8.0.0", "255.255.255.0",
 			openVPNPrimitives,
 			port,

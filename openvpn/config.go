@@ -1,17 +1,20 @@
 package openvpn
 
 import (
+	"path/filepath"
 	"strconv"
 )
 
-func NewConfig() *Config {
+func NewConfig(configdir string) *Config {
 	return &Config{
-		options: make([]configOption, 0),
+		configDir: configdir,
+		options:   make([]configOption, 0),
 	}
 }
 
 type Config struct {
-	options []configOption
+	configDir string
+	options   []configOption
 }
 
 type configOption interface {
@@ -48,16 +51,16 @@ func (c *Config) SetDevice(deviceName string) {
 }
 
 func (c *Config) SetTLSCACertificate(caFile string) {
-	c.AddOptions(OptionFile("ca", caFile, "ca.crt"))
+	c.AddOptions(OptionFile("ca", caFile, filepath.Join(c.configDir, "ca.crt")))
 }
 
 func (c *Config) SetTLSPrivatePubKeys(certFile string, certKeyFile string) {
-	c.AddOptions(OptionFile("cert", certFile, "server.crt"))
-	c.AddOptions(OptionFile("key", certKeyFile, "server.key"))
+	c.AddOptions(OptionFile("cert", certFile, filepath.Join(c.configDir, "server.crt")))
+	c.AddOptions(OptionFile("key", certKeyFile, filepath.Join(c.configDir, "server.key")))
 }
 
 func (c *Config) SetTLSCrypt(cryptFile string) {
-	c.AddOptions(OptionFile("tls-crypt", cryptFile, "ta.key"))
+	c.AddOptions(OptionFile("tls-crypt", cryptFile, filepath.Join(c.configDir, "ta.key")))
 }
 
 // RestrictReconnects describes conditions which enforces client to close a session in case of failed authentication

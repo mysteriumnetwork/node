@@ -7,12 +7,13 @@ import (
 )
 
 func NewServerConfig(
+	configDir string,
 	network, netmask string,
 	secPrimitives *primitives.SecurityPrimitives,
 	port int,
 	protocol string,
 ) *ServerConfig {
-	config := ServerConfig{NewConfig()}
+	config := ServerConfig{NewConfig(configDir)}
 	config.SetServerMode(port, network, netmask)
 	config.SetTLSServer()
 	config.SetProtocol(protocol)
@@ -36,12 +37,9 @@ func NewServerConfig(
 	return &config
 }
 
-func newClientConfig(vpnConfig session.VPNConfig) *ClientConfig {
-	config := ClientConfig{NewConfig()}
-	config.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
-	config.SetProtocol(vpnConfig.RemoteProtocol)
-	config.SetTLSCACertificate(vpnConfig.CACertificate)
-	config.SetTLSCrypt(vpnConfig.TLSPresharedKey)
+func newClientConfig(configDir string) *ClientConfig {
+	config := ClientConfig{NewConfig(configDir)}
+
 	config.RestrictReconnects()
 
 	config.SetDevice("tun")
@@ -62,14 +60,19 @@ func newClientConfig(vpnConfig session.VPNConfig) *ClientConfig {
 	return &config
 }
 
-func NewClientConfigFromSession(vpnConfig session.VPNConfig, configFile string) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig session.VPNConfig, configDir string, configFile string) (*ClientConfig, error) {
 
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	clientConfig := newClientConfig(vpnConfig)
+	clientConfig := newClientConfig(configDir)
+	clientConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
+	clientConfig.SetProtocol(vpnConfig.RemoteProtocol)
+	clientConfig.SetTLSCACertificate(vpnConfig.CACertificate)
+	clientConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
+
 	configAsString, err := ConfigToString(*clientConfig.Config)
 	if err != nil {
 		return nil, err
@@ -80,8 +83,8 @@ func NewClientConfigFromSession(vpnConfig session.VPNConfig, configFile string) 
 		return nil, err
 	}
 
-	config := ClientConfig{NewConfig()}
-	config.AddOptions(OptionParam("config", configFile))
+	config := ClientConfig{NewConfig(configDir)}
+	config.AddOptions(OptionFile("config", configAsString, configFile))
 
 	config.setParam("up", "update-resolv-conf")
 	config.setParam("down", "update-resolv-conf")
