@@ -53,7 +53,7 @@ func TestUnknownProtocolIsNotAllowed(t *testing.T) {
 }
 
 func TestPortOutOfRangeIsNotAllowed(t *testing.T) {
-	vpnConfig := session.VPNConfig{RemotePort: 111}
+	vpnConfig := session.VPNConfig{RemotePort: -1}
 	assert.Error(t, validPort(vpnConfig))
 }
 

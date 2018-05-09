@@ -24,8 +24,8 @@ type CommandOptions struct {
 
 	IpifyUrl string
 
-	Protocol string
-	VpnPort  int
+	Protocol    string
+	OpenvpnPort int
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
@@ -69,7 +69,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	)
 
 	flags.IntVar(
-		&options.VpnPort,
+		&options.OpenvpnPort,
 		"openvpn.port",
 		1194,
 		"Openvpn port to use. Default 1194",

@@ -49,7 +49,7 @@ func validProtocol(config session.VPNConfig) error {
 }
 
 func validPort(config session.VPNConfig) error {
-	if config.RemotePort > 11000 || config.RemotePort < 9000 {
+	if config.RemotePort > 65535 || config.RemotePort < 1 {
 		return errors.New("invalid port range")
 	}
 	return nil
