@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func ConfigToArguments(config Config) ([]string, error) {
+func (config *Config) ConfigToArguments() ([]string, error) {
 	arguments := make([]string, 0)
 
 	for _, item := range config.options {

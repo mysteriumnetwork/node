@@ -48,16 +48,16 @@ func (c *Config) SetDevice(deviceName string) {
 }
 
 func (c *Config) SetTLSCACertificate(caFile string) {
-	c.AddOptions(OptionFile("ca", caFile))
+	c.AddOptions(OptionFile("ca", caFile, "ca.crt"))
 }
 
 func (c *Config) SetTLSPrivatePubKeys(certFile string, certKeyFile string) {
-	c.AddOptions(OptionFile("cert", certFile))
-	c.AddOptions(OptionFile("key", certKeyFile))
+	c.AddOptions(OptionFile("cert", certFile, "server.crt"))
+	c.AddOptions(OptionFile("key", certKeyFile, "server.key"))
 }
 
 func (c *Config) SetTLSCrypt(cryptFile string) {
-	c.AddOptions(OptionFile("tls-crypt", cryptFile))
+	c.AddOptions(OptionFile("tls-crypt", cryptFile, "ta.key"))
 }
 
 // RestrictReconnects describes conditions which enforces client to close a session in case of failed authentication

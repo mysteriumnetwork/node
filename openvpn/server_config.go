@@ -12,7 +12,7 @@ func (c *ServerConfig) SetServerMode(port int, network, netmask string) {
 
 func (c *ServerConfig) SetTLSServer() {
 	c.setFlag("tls-server")
-	c.AddOptions(OptionFile("dh", "none"))
+	c.AddOptions(OptionFile("dh", "none", "none"))
 }
 
 func (c *ServerConfig) SetProtocol(protocol string) {

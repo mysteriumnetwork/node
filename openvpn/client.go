@@ -59,7 +59,7 @@ func (client *openVpnClient) Start() error {
 	}
 
 	// Fetch the current arguments
-	arguments, err := ConfigToArguments(*client.config.Config)
+	arguments, err := (*client.config).ConfigToArguments()
 	if err != nil {
 		return err
 	}
