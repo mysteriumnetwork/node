@@ -2,31 +2,34 @@ package session
 
 import (
 	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func NewFakeClientConfigGenerator(port int) openvpn.ClientConfigGenerator {
-	return func() *openvpn.ClientConfig {
-		vpnClientConfig := &openvpn.ClientConfig{&openvpn.Config{}}
-		vpnClientConfig.SetPort(port)
-		return vpnClientConfig
-	}
+var mockedVPNConfig = session.VPNConfig{
+	RemoteIP: "1.2.3.4",
+}
+
+var expectedSession = session.Session{
+	ID:         session.SessionID("mocked-id"),
+	Config:     mockedVPNConfig,
+	ConsumerID: identity.FromAddress("deadbeef"),
+}
+
+type mockedConfigProvider func() session.VPNConfig
+
+func (mcp mockedConfigProvider) ProvideServiceConfig() (session.VPNConfig, error) {
+	return mcp(), nil
+}
+
+func provideMockedVPNConfig() session.VPNConfig {
+	return mockedVPNConfig
 }
 
 func TestManagerCreatesNewSession(t *testing.T) {
-	expectedSession := session.Session{
-		ID:         session.SessionID("mocked-id"),
-		Config:     "port 1000\n",
-		ConsumerID: identity.FromAddress("deadbeef"),
-	}
-
-	clientConfigGenerator := NewFakeClientConfigGenerator(1000)
-
 	manager := NewManager(
-		clientConfigGenerator,
+		mockedConfigProvider(provideMockedVPNConfig),
 		&session.GeneratorFake{
 			SessionIdMock: session.SessionID("mocked-id"),
 		},
@@ -46,11 +49,6 @@ func TestManagerCreatesNewSession(t *testing.T) {
 }
 
 func TestManagerLookupsExistingSession(t *testing.T) {
-	expectedSession := session.Session{
-		ID:     session.SessionID("mocked-id"),
-		Config: "port 1000\n",
-	}
-
 	sessionMap := make(map[session.SessionID]session.Session)
 	sessionMap[expectedSession.ID] = expectedSession
 

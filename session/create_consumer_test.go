@@ -38,7 +38,7 @@ func TestConsumer_Success(t *testing.T) {
 			Success: true,
 			Session: SessionDto{
 				ID:     "new-id",
-				Config: "new-config",
+				Config: fakeVpnConfig,
 			},
 		},
 		sessionResponse,

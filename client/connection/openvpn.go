@@ -23,12 +23,8 @@ func ConfigureVpnClientFactory(
 	originalLocationCache location.Cache,
 ) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback) (openvpn.Client, error) {
-		vpnClientConfig, err := openvpn.NewClientConfigFromString(
-			vpnSession.Config,
-			filepath.Join(runtimeDirectory, "client.ovpn"),
-			filepath.Join(configDirectory, "update-resolv-conf"),
-			filepath.Join(configDirectory, "update-resolv-conf"),
-		)
+
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(vpnSession.Config, filepath.Join(runtimeDirectory, "client.ovpn"))
 		if err != nil {
 			return nil, err
 		}

@@ -2,16 +2,18 @@ package openvpn
 
 import (
 	"github.com/mysterium/node/openvpn/primitives"
+	"github.com/mysterium/node/session"
 	"io/ioutil"
 )
 
 func NewServerConfig(
 	network, netmask string,
 	secPrimitives *primitives.SecurityPrimitives,
+	port int,
 	protocol string,
 ) *ServerConfig {
 	config := ServerConfig{NewConfig()}
-	config.SetServerMode(1194, network, netmask)
+	config.SetServerMode(port, network, netmask)
 	config.SetTLSServer()
 	config.SetProtocol(protocol)
 	config.SetTLSCACertificate(secPrimitives.CACertPath)
@@ -34,16 +36,12 @@ func NewServerConfig(
 	return &config
 }
 
-func NewClientConfig(
-	remote string,
-	caCertPath, tlsCryptKeyPath string,
-	protocol string,
-) *ClientConfig {
+func newClientConfig(vpnConfig session.VPNConfig) *ClientConfig {
 	config := ClientConfig{NewConfig()}
-	config.SetClientMode(remote, 1194)
-	config.SetProtocol(protocol)
-	config.SetTLSCACertificate(caCertPath)
-	config.SetTLSCrypt(tlsCryptKeyPath)
+	config.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
+	config.SetProtocol(vpnConfig.RemoteProtocol)
+	config.SetTLSCACertificate(vpnConfig.CACertificate)
+	config.SetTLSCrypt(vpnConfig.TLSPresharedKey)
 	config.RestrictReconnects()
 
 	config.SetDevice("tun")
@@ -64,11 +62,20 @@ func NewClientConfig(
 	return &config
 }
 
-func NewClientConfigFromString(
-	configString, configFile string,
-	scriptUp, scriptDown string,
-) (*ClientConfig, error) {
-	err := ioutil.WriteFile(configFile, []byte(configString), 0600)
+func NewClientConfigFromSession(vpnConfig session.VPNConfig, configFile string) (*ClientConfig, error) {
+
+	err := NewDefaultValidator().IsValid(vpnConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	clientConfig := newClientConfig(vpnConfig)
+	configAsString, err := ConfigToString(*clientConfig.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ioutil.WriteFile(configFile, []byte(configAsString), 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +83,8 @@ func NewClientConfigFromString(
 	config := ClientConfig{NewConfig()}
 	config.AddOptions(OptionParam("config", configFile))
 
-	config.setParam("up", scriptUp)
-	config.setParam("down", scriptDown)
+	config.setParam("up", "update-resolv-conf")
+	config.setParam("down", "update-resolv-conf")
 
 	return &config, nil
 }

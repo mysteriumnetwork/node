@@ -24,7 +24,7 @@ func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, direc
 type ServerConfigGenerator func() (*ServerConfig, error)
 
 // NewServerConfigGenerator returns function generating server config and generates required security primitives
-func NewServerConfigGenerator(directoryRuntime string, serviceLocation dto.Location, providerID identity.Identity, protocol string) ServerConfigGenerator {
+func NewServerConfigGenerator(directoryRuntime string, serviceLocation dto.Location, providerID identity.Identity, port int, protocol string) ServerConfigGenerator {
 	return func() (*ServerConfig, error) {
 		// (Re)generate required security primitives before openvpn start
 		openVPNPrimitives, err := primitives.GenerateOpenVPNSecPrimitives(directoryRuntime, serviceLocation, providerID)
@@ -34,6 +34,7 @@ func NewServerConfigGenerator(directoryRuntime string, serviceLocation dto.Locat
 		vpnServerConfig := NewServerConfig(
 			"10.8.0.0", "255.255.255.0",
 			openVPNPrimitives,
+			port,
 			protocol,
 		)
 		return vpnServerConfig, err

@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+var mockConfig = session.VPNConfig{}
+
 func TestAuthenticatorReturnsFalseWhenNoSessionFound(t *testing.T) {
 	mockManager := &mockSessionManager{}
 	mockExtractor := &mockExtractor{}
@@ -21,7 +23,7 @@ func TestAuthenticatorReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
 	mockManager := mockSessionManager{
 		session.Session{
 			ID:         session.SessionID("fake-id"),
-			Config:     "vpn-session-configuration-string",
+			Config:     mockConfig,
 			ConsumerID: identity.FromAddress("deadbeef"),
 		},
 		true,
@@ -41,7 +43,7 @@ func TestAuthenticatorReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing
 	mockManager := mockSessionManager{
 		session.Session{
 			ID:         session.SessionID("fake-id"),
-			Config:     "vpn-session-configuration-string",
+			Config:     mockConfig,
 			ConsumerID: identity.FromAddress("deadbeef"),
 		},
 		true,

@@ -1,8 +1,10 @@
 package openvpn
 
 import "sync"
-import "github.com/mysterium/node/openvpn/primitives"
-import "github.com/mysterium/node/openvpn/management"
+import (
+	"github.com/mysterium/node/openvpn/management"
+	"github.com/mysterium/node/session"
+)
 
 type Client interface {
 	Start() error
@@ -29,19 +31,23 @@ func NewClient(openvpnBinary string, config *ClientConfig, directoryRuntime stri
 }
 
 // ConfigGenerator callback returns generated server config
-type ClientConfigGenerator func() *ClientConfig
+type ClientConfigGenerator func() session.VPNConfig
+
+func (generator ClientConfigGenerator) ProvideServiceConfig() (session.VPNConfig, error) {
+	return generator(), nil
+}
 
 // NewServerConfigGenerator returns function generating server config and generates required security primitives
-func NewClientConfigGenerator(directoryRuntime, vpnServerIP string, protocol string) ClientConfigGenerator {
-	return func() *ClientConfig {
+func NewClientConfigGenerator(vpnServerIP string, port int, protocol string) ClientConfigGenerator {
+	return func() session.VPNConfig {
 		// (Re)generate required security primitives before openvpn start
-		vpnClientConfig := NewClientConfig(
+		return session.VPNConfig{
 			vpnServerIP,
-			primitives.CACertPath(directoryRuntime),
-			primitives.TLSCryptKeyPath(directoryRuntime),
+			port,
 			protocol,
-		)
-		return vpnClientConfig
+			"preshared_key_FIXME",
+			"preshared_cert_FIXME",
+		}
 	}
 }
 

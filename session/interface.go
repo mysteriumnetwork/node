@@ -8,7 +8,7 @@ type SessionID string
 // Session structure holds all required information about current session between service consumer and provider
 type Session struct {
 	ID         SessionID
-	Config     string
+	Config     VPNConfig
 	ConsumerID identity.Identity
 }
 

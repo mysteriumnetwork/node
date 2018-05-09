@@ -300,7 +300,7 @@ func (fd *fakeDialog) Request(producer communication.RequestProducer) (responseP
 			Message: "Everything is great!",
 			Session: session.SessionDto{
 				ID:     "vpn-connection-id",
-				Config: "vpn-connection-config",
+				Config: session.VPNConfig{},
 			},
 		},
 		nil
