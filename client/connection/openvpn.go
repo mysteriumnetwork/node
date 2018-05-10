@@ -37,7 +37,7 @@ func ConfigureVpnClientFactory(
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 
-		originalLocation, _ := originalLocationCache.Get()
+		originalLocation := originalLocationCache.Get()
 
 		statsSender := bytescount.NewSessionStatsSender(
 			mysteriumAPIClient,

@@ -12,9 +12,8 @@ func TestLocationCacheFirstCall(t *testing.T) {
 	locationResolver := NewResolverFake("country")
 	locationDetector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
 	locationCache := NewLocationCache(locationDetector)
-	location, err := locationCache.Get()
+	location := locationCache.Get()
 	assert.Equal(t, Location{}, location)
-	assert.NoError(t, err)
 }
 
 func TestLocationCacheFirstSecondCalls(t *testing.T) {
@@ -27,9 +26,8 @@ func TestLocationCacheFirstSecondCalls(t *testing.T) {
 	assert.Equal(t, "100.100.100.100", location.IP)
 	assert.NoError(t, err)
 
-	locationSecondCall, err := locationCache.Get()
+	locationSecondCall := locationCache.Get()
 	assert.Equal(t, location, locationSecondCall)
-	assert.NoError(t, err)
 }
 
 func TestLocationCacheWithError(t *testing.T) {
@@ -38,8 +36,7 @@ func TestLocationCacheWithError(t *testing.T) {
 	locationResolver := NewFailingResolverFake(locationErr)
 	locationDetector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
 	locationCache := NewLocationCache(locationDetector)
-	locationCache.RefreshAndGet()
-	location, err := locationCache.Get()
+	location, err := locationCache.RefreshAndGet()
 	assert.EqualError(t, locationErr, err.Error())
 	assert.Equal(t, Location{}, location)
 }

@@ -26,17 +26,13 @@ func NewLocationEndpoint(manager connection.Manager, locationDetector location.D
 }
 
 // GetLocation responds with original and current countries
-func (ce *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	originalLocation, err := ce.originalLocationCache.Get()
-	if err != nil {
-		utils.SendError(writer, err, http.StatusServiceUnavailable)
-		return
-	}
+func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	originalLocation := le.originalLocationCache.Get()
 
 	var currentLocation location.Location
 
-	if ce.manager.Status().State == connection.Connected {
-		_currentLocation, err := ce.locationDetector.DetectLocation()
+	if le.manager.Status().State == connection.Connected {
+		_currentLocation, err := le.locationDetector.DetectLocation()
 		currentLocation = _currentLocation
 		if err != nil {
 			utils.SendError(writer, err, http.StatusServiceUnavailable)
