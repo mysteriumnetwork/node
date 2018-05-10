@@ -3,6 +3,7 @@ package openvpn
 import "sync"
 import (
 	"github.com/mysterium/node/openvpn/management"
+	"github.com/mysterium/node/openvpn/tls"
 	"github.com/mysterium/node/session"
 )
 
@@ -30,23 +31,22 @@ func NewClient(openvpnBinary string, config *ClientConfig, directoryRuntime stri
 	}
 }
 
-// ConfigGenerator callback returns generated server config
+// ClientConfigGenerator callback returns generated server config
 type ClientConfigGenerator func() session.VPNConfig
 
 func (generator ClientConfigGenerator) ProvideServiceConfig() (session.VPNConfig, error) {
 	return generator(), nil
 }
 
-// NewServerConfigGenerator returns function generating server config and generates required security primitives
-func NewClientConfigGenerator(vpnServerIP string, port int, protocol string) ClientConfigGenerator {
+// NewClientConfigGenerator returns function generating config params for remote client
+func NewClientConfigGenerator(primitives *tls.Primitives, vpnServerIP string, port int, protocol string) ClientConfigGenerator {
 	return func() session.VPNConfig {
-		// (Re)generate required security primitives before openvpn start
 		return session.VPNConfig{
 			vpnServerIP,
 			port,
 			protocol,
-			"preshared_key_FIXME",
-			"preshared_cert_FIXME",
+			primitives.PresharedKey.ToPEMFormat(),
+			primitives.CertificateAuthority.ToPEMFormat(),
 		}
 	}
 }

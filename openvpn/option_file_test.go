@@ -51,7 +51,7 @@ func TestFile_ToFile(t *testing.T) {
 }
 
 func TestFile_ToFileXmlTagsAreEscaped(t *testing.T) {
-	option := OptionFile("file-name", "</file-name>This param is injected!", "not-important")
+	option := OptionFile("file-name", "</file-name>This param is injected!\nNew line", "not-important")
 
 	optionValue, err := option.toFile()
 	assert.NoError(t, err)
@@ -59,6 +59,7 @@ func TestFile_ToFileXmlTagsAreEscaped(t *testing.T) {
 		t,
 		`<file-name>
 &lt;/file-name&gt;This param is injected!
+New line
 </file-name>`,
 		optionValue,
 	)

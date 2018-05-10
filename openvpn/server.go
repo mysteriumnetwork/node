@@ -3,9 +3,7 @@ package openvpn
 import (
 	"github.com/mysterium/node/openvpn/management"
 
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/openvpn/primitives"
-	"github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/openvpn/tls"
 	"sync"
 )
 
@@ -21,28 +19,23 @@ func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, direc
 }
 
 // ConfigGenerator callback returns generated server config
-type ServerConfigGenerator func() (*ServerConfig, error)
+type ServerConfigGenerator func() *ServerConfig
 
 // NewServerConfigGenerator returns function generating server config and generates required security primitives
-func NewServerConfigGenerator(directoryRuntime string, serviceLocation dto.Location, providerID identity.Identity, port int, protocol string) ServerConfigGenerator {
-	return func() (*ServerConfig, error) {
-		// (Re)generate required security primitives before openvpn start
-		openVPNPrimitives, err := primitives.GenerateOpenVPNSecPrimitives(directoryRuntime, serviceLocation, providerID)
-		if err != nil {
-			return nil, err
-		}
+func NewServerConfigGenerator(directoryRuntime string, primitives *tls.Primitives, port int, protocol string) ServerConfigGenerator {
+	return func() *ServerConfig {
 		vpnServerConfig := NewServerConfig(
 			directoryRuntime,
 			"10.8.0.0", "255.255.255.0",
-			openVPNPrimitives,
+			primitives,
 			port,
 			protocol,
 		)
-		return vpnServerConfig, err
+		return vpnServerConfig
 	}
 }
 
-// Server structure describes openvpn server
+// ServerCertificate structure describes openvpn server
 type Server struct {
 	generateConfig ServerConfigGenerator
 	management     *management.Management
@@ -51,10 +44,7 @@ type Server struct {
 
 // Start starts openvpn server generating required config and starting management interface on the way
 func (server *Server) Start() error {
-	config, err := server.generateConfig()
-	if err != nil {
-		return err
-	}
+	config := server.generateConfig()
 
 	config.SetManagementSocket(server.management.SocketAddress())
 

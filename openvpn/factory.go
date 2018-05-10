@@ -1,15 +1,16 @@
 package openvpn
 
 import (
-	"github.com/mysterium/node/openvpn/primitives"
+	"github.com/mysterium/node/openvpn/tls"
 	"github.com/mysterium/node/session"
 	"io/ioutil"
+	"path/filepath"
 )
 
 func NewServerConfig(
 	configDir string,
 	network, netmask string,
-	secPrimitives *primitives.SecurityPrimitives,
+	secPrimitives *tls.Primitives,
 	port int,
 	protocol string,
 ) *ServerConfig {
@@ -17,9 +18,12 @@ func NewServerConfig(
 	config.SetServerMode(port, network, netmask)
 	config.SetTLSServer()
 	config.SetProtocol(protocol)
-	config.SetTLSCACertificate(secPrimitives.CACertPath)
-	config.SetTLSPrivatePubKeys(secPrimitives.ServerCertPath, secPrimitives.ServerKeyPath)
-	config.SetTLSCrypt(secPrimitives.TLSCryptKeyPath)
+	config.SetTLSCACertificate(secPrimitives.CertificateAuthority.ToPEMFormat())
+	config.SetTLSPrivatePubKeys(
+		secPrimitives.ServerCertificate.ToPEMFormat(),
+		secPrimitives.ServerCertificate.KeyToPEMFormat(),
+	)
+	config.SetTLSCrypt(secPrimitives.PresharedKey.ToPEMFormat())
 
 	config.SetDevice("tun")
 	config.setParam("cipher", "AES-256-GCM")
@@ -86,8 +90,8 @@ func NewClientConfigFromSession(vpnConfig session.VPNConfig, configDir string, c
 	config := ClientConfig{NewConfig(configDir)}
 	config.AddOptions(OptionFile("config", configAsString, configFile))
 
-	config.setParam("up", "update-resolv-conf")
-	config.setParam("down", "update-resolv-conf")
+	config.setParam("up", filepath.Join(configDir, "update-resolv-conf"))
+	config.setParam("down", filepath.Join(configDir, "update-resolv-conf"))
 
 	return &config, nil
 }

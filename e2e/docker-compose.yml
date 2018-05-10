@@ -24,6 +24,7 @@ services:
       --broker-address=broker
       --discovery-address=http://discovery/v1
       --location.country=e2e-land
+      --openvpn.port=3000
 
   client:
     build:

@@ -1,4 +1,4 @@
-package primitives
+package tls
 
 import (
 	"crypto/x509"

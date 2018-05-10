@@ -10,6 +10,7 @@ import (
 	openvpnSession "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
+	"path/filepath"
 	"time"
 )
 
@@ -23,7 +24,7 @@ func ConfigureVpnClientFactory(
 ) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback) (openvpn.Client, error) {
 
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(vpnSession.Config, configDirectory, "client.ovpn")
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(vpnSession.Config, configDirectory, filepath.Join(runtimeDirectory, "client.ovpn"))
 		if err != nil {
 			return nil, err
 		}

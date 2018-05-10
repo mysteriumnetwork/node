@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
+	"strings"
 )
 
 func OptionFile(name, content string, filePath string) optionFile {
@@ -38,10 +39,14 @@ func (option optionFile) toFile() (string, error) {
 }
 
 func escapeXmlTags(content string) (string, error) {
-	var escaped bytes.Buffer
-	err := xml.EscapeText(&escaped, []byte(content))
+	var buff bytes.Buffer
+	//escapes xml tags...
+	err := xml.EscapeText(&buff, []byte(content))
 	if err != nil {
 		return "", err
 	}
-	return escaped.String(), nil
+	//...but does too much - also escapes new lines and breaks PEM format - undo that
+	escaped := strings.Replace(buff.String(), "&#xA;", "\n", -1)
+
+	return escaped, nil
 }

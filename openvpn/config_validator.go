@@ -11,12 +11,15 @@ import (
 	"strings"
 )
 
+// ValidateConfig is function which takes VPNConfig as argument, checks it and returns error if validation fails
 type ValidateConfig func(config session.VPNConfig) error
 
+// ConfigValidator represents structure which contains list of validating functions
 type ConfigValidator struct {
 	validators []ValidateConfig
 }
 
+// NewDefaultValidator returns ConfigValidator with predefined list of validating functions
 func NewDefaultValidator() *ConfigValidator {
 	return &ConfigValidator{
 		validators: []ValidateConfig{
@@ -29,6 +32,7 @@ func NewDefaultValidator() *ConfigValidator {
 	}
 }
 
+// IsValid function checks if provided config is valid against given config validator and returns first encountered error
 func (v *ConfigValidator) IsValid(config session.VPNConfig) error {
 	for _, validator := range v.validators {
 		if err := validator(config); err != nil {

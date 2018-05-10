@@ -10,12 +10,13 @@ import (
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/discovery"
 	"github.com/mysterium/node/openvpn/middlewares/state"
+	"github.com/mysterium/node/openvpn/tls"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"github.com/mysterium/node/version"
-	"time"
 	"sync"
+	"time"
 )
 
 // Command represent entrypoint for Mysterium server with top level components
@@ -30,10 +31,9 @@ type Command struct {
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
-	sessionManagerFactory func(serverIP string) session.Manager
+	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
 
-	vpnServerFactory func(sessionManager session.Manager, serviceLocation dto_discovery.Location,
-		providerID identity.Identity, callback state.Callback) *openvpn.Server
+	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, callback state.Callback) *openvpn.Server
 
 	vpnServer      *openvpn.Server
 	checkOpenvpn   func() error
@@ -80,7 +80,12 @@ func (cmd *Command) Start() (err error) {
 
 	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
 
-	sessionManager := cmd.sessionManagerFactory(vpnServerIP)
+	primitives, err := tls.NewTLSPrimitives(serviceLocation, providerID)
+	if err != nil {
+		return err
+	}
+
+	sessionManager := cmd.sessionManagerFactory(primitives, vpnServerIP)
 
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
@@ -97,7 +102,7 @@ func (cmd *Command) Start() (err error) {
 			close(stopDiscoveryAnnouncement)
 		}
 	}
-	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, serviceLocation, providerID, vpnStateCallback)
+	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
 	if err := cmd.vpnServer.Start(); err != nil {
 		return err
 	}
@@ -131,7 +136,7 @@ func (cmd *Command) Kill() error {
 	return err
 }
 
-func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <- chan int) {
+func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
 	for {
 		err := mysteriumClient.RegisterProposal(proposal, signer)
 		if err != nil {
@@ -145,7 +150,7 @@ func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProp
 
 }
 
-func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <- chan int)  {
+func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
 	for {
 		select {
 		case <-time.After(1 * time.Minute):
