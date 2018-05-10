@@ -112,6 +112,13 @@ func (cmd *Command) Start() error {
 		return err
 	}
 
+	originalLocation, err := cmd.originalLocationCache.RefreshAndGet()
+	if err != nil {
+		log.Warn("Failed to detect country", err)
+	} else {
+		log.Info("Country detected: ", originalLocation.Country)
+	}
+
 	err = cmd.httpAPIServer.StartServing()
 	if err != nil {
 		return err
@@ -121,14 +128,8 @@ func (cmd *Command) Start() error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Api started on: %d", port)
 
-	originalLocation, err := cmd.originalLocationCache.RefreshAndGet()
-	if err != nil {
-		log.Warn("Failed to detect country", err)
-	} else {
-		log.Info("Country detected: ", originalLocation.Country)
-	}
+	log.Infof("Api started on: %d", port)
 
 	return nil
 }

@@ -111,7 +111,7 @@ func TestGetLocationWhenConnected(t *testing.T) {
 	)
 }
 
-func TestGetLocationWhenConnected2(t *testing.T) {
+func TestGetLocationWhenNotConnected(t *testing.T) {
 	originalIpResolver := ip.NewFakeResolver("100.100.100.100")
 	originalLocationResolver := location.NewResolverFake("original country")
 	originalLocationDetector := location.NewDetectorWithLocationResolver(originalIpResolver, originalLocationResolver)
@@ -142,7 +142,7 @@ func TestGetLocationWhenConnected2(t *testing.T) {
 			t,
 			`{
 			"original": {"ip": "100.100.100.100", "country": "original country"},
-			"current":  {"ip": "", "country": ""}
+			"current":  {"ip": "100.100.100.100", "country": "original country"}
 		}`,
 			resp.Body.String(),
 		)

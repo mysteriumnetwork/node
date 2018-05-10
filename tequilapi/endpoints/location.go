@@ -30,14 +30,15 @@ func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 	originalLocation := le.originalLocationCache.Get()
 
 	var currentLocation location.Location
-
+	var err error
 	if le.manager.Status().State == connection.Connected {
-		_currentLocation, err := le.locationDetector.DetectLocation()
-		currentLocation = _currentLocation
+		currentLocation, err = le.locationDetector.DetectLocation()
 		if err != nil {
 			utils.SendError(writer, err, http.StatusServiceUnavailable)
 			return
 		}
+	} else {
+		currentLocation = originalLocation
 	}
 
 	response := struct {
