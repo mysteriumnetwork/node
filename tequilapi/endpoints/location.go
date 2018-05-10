@@ -5,34 +5,43 @@ import (
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/tequilapi/utils"
 	"net/http"
+	"github.com/mysterium/node/client/connection"
 )
 
 // LocationEndpoint struct represents /location resource and it's subresources
 type LocationEndpoint struct {
+	manager connection.Manager
 	locationDetector location.Detector
-	locationCache location.Cache
+	originalLocationCache location.Cache
 }
 
 // NewLocationEndpoint creates and returns location endpoint
-func NewLocationEndpoint(locationDetector location.Detector, locationCache location.Cache) *LocationEndpoint {
+func NewLocationEndpoint(manager connection.Manager, locationDetector location.Detector,
+	originalLocationCache location.Cache) *LocationEndpoint {
 	return &LocationEndpoint{
+		manager: manager,
 		locationDetector: locationDetector,
-		locationCache: locationCache,
+		originalLocationCache: originalLocationCache,
 	}
 }
 
 // GetLocation responds with original and current countries
 func (ce *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	originalLocation, err := ce.locationCache.Get()
+	originalLocation, err := ce.originalLocationCache.Get()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return
 	}
 
-	currentLocation, err := ce.locationDetector.DetectLocation()
-	if err != nil {
-		utils.SendError(writer, err, http.StatusServiceUnavailable)
-		return
+	var currentLocation location.Location
+
+	if ce.manager.Status().State == connection.Connected {
+		_currentLocation, err := ce.locationDetector.DetectLocation()
+		currentLocation = _currentLocation
+		if err != nil {
+			utils.SendError(writer, err, http.StatusServiceUnavailable)
+			return
+		}
 	}
 
 	response := struct {
@@ -46,7 +55,9 @@ func (ce *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 }
 
 // AddRoutesForLocation adds location routes to given router
-func AddRoutesForLocation(router *httprouter.Router, locationDetector location.Detector, locationCache location.Cache) {
-	locationEndpoint := NewLocationEndpoint(locationDetector, locationCache)
+func AddRoutesForLocation(router *httprouter.Router, manager connection.Manager,
+	locationDetector location.Detector, locationCache location.Cache) {
+
+	locationEndpoint := NewLocationEndpoint(manager, locationDetector, locationCache)
 	router.GET("/location", locationEndpoint.GetLocation)
 }

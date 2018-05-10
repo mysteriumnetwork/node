@@ -61,7 +61,7 @@ func NewCommandWith(
 		filepath.Join(options.DirectoryConfig, options.LocationDatabase),
 	)
 
-	locationCache := location.NewLocationCache(locationDetector)
+	originalLocationCache := location.NewLocationCache(locationDetector)
 
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
@@ -70,7 +70,7 @@ func NewCommandWith(
 		options.DirectoryRuntime,
 		signerFactory,
 		statsKeeper,
-		locationCache,
+		originalLocationCache,
 	)
 	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, vpnClientFactory, statsKeeper)
 
@@ -84,12 +84,12 @@ func NewCommandWith(
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
-		locationCache: locationCache,
+		originalLocationCache: originalLocationCache,
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
-	tequilapi_endpoints.AddRoutesForLocation(router, locationDetector, locationCache)
+	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill))
 
@@ -101,7 +101,7 @@ type Command struct {
 	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
 	checkOpenvpn      func() error
-	locationCache     location.Cache
+	originalLocationCache     location.Cache
 }
 
 // Start starts Tequilapi service, fetches location
@@ -123,7 +123,7 @@ func (cmd *Command) Start() error {
 	}
 	log.Infof("Api started on: %d", port)
 
-	originalLocation, err := cmd.locationCache.RefreshAndGet()
+	originalLocation, err := cmd.originalLocationCache.RefreshAndGet()
 	if err != nil {
 		log.Warn("Failed to detect country", err)
 	} else {
