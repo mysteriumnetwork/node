@@ -10,11 +10,11 @@ import (
 
 func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testing.T) {
 
-	address, err := createHttpServer(func(writer http.ResponseWriter, request *http.Request) {
+	address, err := createHTTPServer(func(writer http.ResponseWriter, request *http.Request) {
 		select {} //infinite loop with no response to client
 	})
 
-	transport := newHttpTransport(50 * time.Millisecond)
+	transport := newHTTPTransport(50 * time.Millisecond)
 	req, err := http.NewRequest(http.MethodGet, "http://"+address+"/", nil)
 	assert.NoError(t, err)
 
@@ -35,7 +35,7 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 	}
 }
 
-func createHttpServer(handlerFunc http.HandlerFunc) (address string, err error) {
+func createHTTPServer(handlerFunc http.HandlerFunc) (address string, err error) {
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return
