@@ -71,12 +71,12 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	serviceCountry, err := cmd.locationDetector.DetectCountry()
+	location, err := cmd.locationDetector.DetectLocation()
 	if err != nil {
 		return err
 	}
-	log.Info("Country detected: ", serviceCountry)
-	serviceLocation := dto_discovery.Location{Country: serviceCountry}
+	log.Info("Country detected: ", location.Country)
+	serviceLocation := dto_discovery.Location{Country: location.Country}
 
 	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
 
