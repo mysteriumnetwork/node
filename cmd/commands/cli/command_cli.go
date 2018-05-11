@@ -66,8 +66,6 @@ func (c *Command) Run() (err error) {
 
 		c.handleActions(line)
 	}
-
-	return nil
 }
 
 // Kill stops cli

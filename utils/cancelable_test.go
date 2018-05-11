@@ -51,7 +51,6 @@ func TestBlockingFunctionIsCancelled(t *testing.T) {
 		_, err := cancelable.
 			NewRequest(func() (interface{}, error) {
 				select {} //effective infinite loop - blocks forever
-				return 1, nil
 			}).Call()
 		errorChannel <- err
 	}()
