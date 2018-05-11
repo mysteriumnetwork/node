@@ -1,0 +1,1 @@
+bin/test && bin/vet && bin/lint_git
