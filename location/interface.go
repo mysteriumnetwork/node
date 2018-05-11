@@ -7,5 +7,11 @@ type Resolver interface {
 
 // Detector allows detecting location by current ip
 type Detector interface {
-	DetectCountry() (string, error)
+	DetectLocation() (Location, error)
+}
+
+// Cache allows caching location
+type Cache interface {
+	Get() (Location)
+	RefreshAndGet() (Location, error)
 }

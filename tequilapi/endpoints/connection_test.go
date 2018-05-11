@@ -49,9 +49,8 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
 	settableClock := utils.SettableClock{}
-	ipResolver := ip.NewFakeResolver("123.123.123.123")
 	statsKeeper := bytescount.NewSessionStatsKeeper(settableClock.GetTime)
-
+	ipResolver := ip.NewFakeResolver("123.123.123.123")
 	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
 	settableClock.SetTime(sessionStart)
 	statsKeeper.MarkSessionStart()
