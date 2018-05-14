@@ -80,6 +80,7 @@ func NewCommandWith(
 		},
 
 		sessionManagerFactory: func(primitives *tls.Primitives, vpnServerIP string) session.Manager {
+			//TODO move this outside session manager factory - as external dependency
 			clientConfigGenerator := openvpn.NewClientConfigGenerator(
 				primitives,
 				vpnServerIP,
