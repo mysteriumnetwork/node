@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ARGUMENTS=`go list ./... | sed '/e2e/d'`
 
 go vet -unreachable ${ARGUMENTS}
