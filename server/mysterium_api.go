@@ -17,12 +17,12 @@ const (
 	mysteriumAPILogPrefix = "[Mysterium.api] "
 )
 
-//HttpTransport interface with single method do is extracted from net/transport.Client structure
-type HttpTransport interface {
+// HTTPTransport interface with single method do is extracted from net/transport.Client structure
+type HTTPTransport interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-func newHttpTransport(responseTimeout time.Duration) HttpTransport {
+func newHTTPTransport(responseTimeout time.Duration) HTTPTransport {
 	return &http.Client{
 		Transport: &http.Transport{
 			//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
@@ -33,14 +33,14 @@ func newHttpTransport(responseTimeout time.Duration) HttpTransport {
 }
 
 type mysteriumAPI struct {
-	http                HttpTransport
+	http                HTTPTransport
 	discoveryAPIAddress string
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
 func NewClient(discoveryAPIAddress string) Client {
 	return &mysteriumAPI{
-		newHttpTransport(1 * time.Minute),
+		newHTTPTransport(1 * time.Minute),
 		discoveryAPIAddress,
 	}
 }
@@ -90,7 +90,7 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 	err = mApi.doRequest(req)
 
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Proposal unregistered for node: ", err)
+		log.Info(mysteriumAPILogPrefix, "Proposal unregistered for node: ", proposal.ProviderID)
 	}
 
 	return err
@@ -136,8 +136,8 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 }
 
 // SendSessionStats sends session statistics
-func (mApi *mysteriumAPI) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) error {
-	path := fmt.Sprintf("sessions/%s/stats", sessionId)
+func (mApi *mysteriumAPI) SendSessionStats(sessionID string, sessionStats dto.SessionStats, signer identity.Signer) error {
+	path := fmt.Sprintf("sessions/%s/stats", sessionID)
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
 	if err != nil {
 		return err
@@ -145,7 +145,7 @@ func (mApi *mysteriumAPI) SendSessionStats(sessionId string, sessionStats dto.Se
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Session stats sent: ", sessionId)
+		log.Info(mysteriumAPILogPrefix, "Session stats sent: ", sessionID)
 	}
 
 	return nil
