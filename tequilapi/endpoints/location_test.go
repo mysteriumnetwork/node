@@ -2,19 +2,19 @@ package endpoints
 
 import (
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysterium/node/client/connection"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
+	"github.com/mysterium/node/location"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"github.com/mysterium/node/location"
-	"github.com/mysterium/node/client/connection"
-	"github.com/mysterium/node/identity"
 )
 
 type fakeManagerForLocation struct {
-	onStatusReturn     connection.ConnectionStatus
+	onStatusReturn connection.ConnectionStatus
 }
 
 func (fm *fakeManagerForLocation) Connect(consumerID identity.Identity, providerID identity.Identity) error {
@@ -37,15 +37,12 @@ func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 
 	router := httprouter.New()
 
-	currentIpResolver := ip.NewFakeResolver("123.123.123.123")
+	currentIPResolver := ip.NewFakeResolver("123.123.123.123")
 	currentLocationResolver := location.NewResolverFake("current country")
-	currentLocationDetector := location.NewDetectorWithLocationResolver(currentIpResolver, currentLocationResolver)
+	currentLocationDetector := location.NewDetectorWithLocationResolver(currentIPResolver, currentLocationResolver)
 
-	originalIpResolver := ip.NewFakeResolver("100.100.100.100")
-	originalLocationResolver := location.NewResolverFake("original country")
-	originalLocationDetector := location.NewDetectorWithLocationResolver(originalIpResolver, originalLocationResolver)
-	originalLocationCache := location.NewLocationCache(originalLocationDetector)
-	originalLocationCache.RefreshAndGet()
+	originalLocationCache := location.NewLocationCache()
+	originalLocationCache.Set(location.Location{"100.100.100.100", "original country"})
 
 	AddRoutesForLocation(router, &fakeManager, currentLocationDetector, originalLocationCache)
 
@@ -85,15 +82,12 @@ func TestGetLocationWhenConnected(t *testing.T) {
 		State: connection.Connected,
 	}
 
-	currentIpResolver := ip.NewFakeResolver("123.123.123.123")
+	currentIPResolver := ip.NewFakeResolver("123.123.123.123")
 	currentLocationResolver := location.NewResolverFake("current country")
-	currentLocationDetector := location.NewDetectorWithLocationResolver(currentIpResolver, currentLocationResolver)
+	currentLocationDetector := location.NewDetectorWithLocationResolver(currentIPResolver, currentLocationResolver)
 
-	originalIpResolver := ip.NewFakeResolver("100.100.100.100")
-	originalLocationResolver := location.NewResolverFake("original country")
-	originalLocationDetector := location.NewDetectorWithLocationResolver(originalIpResolver, originalLocationResolver)
-	originalLocationCache := location.NewLocationCache(originalLocationDetector)
-	originalLocationCache.RefreshAndGet()
+	originalLocationCache := location.NewLocationCache()
+	originalLocationCache.Set(location.Location{"100.100.100.100", "original country"})
 
 	connEndpoint := NewLocationEndpoint(&fakeManager, currentLocationDetector, originalLocationCache)
 	resp := httptest.NewRecorder()
@@ -112,11 +106,8 @@ func TestGetLocationWhenConnected(t *testing.T) {
 }
 
 func TestGetLocationWhenNotConnected(t *testing.T) {
-	originalIpResolver := ip.NewFakeResolver("100.100.100.100")
-	originalLocationResolver := location.NewResolverFake("original country")
-	originalLocationDetector := location.NewDetectorWithLocationResolver(originalIpResolver, originalLocationResolver)
-	originalLocationCache := location.NewLocationCache(originalLocationDetector)
-	originalLocationCache.RefreshAndGet()
+	originalLocationCache := location.NewLocationCache()
+	originalLocationCache.Set(location.Location{"100.100.100.100", "original country"})
 
 	states := []connection.State{
 		connection.NotConnected,

@@ -55,13 +55,11 @@ func NewCommandWith(
 	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
 
 	ipResolver := ip.NewResolver(options.IpifyUrl)
-
 	locationDetector := location.NewDetector(
 		ipResolver,
 		filepath.Join(options.DirectoryConfig, options.LocationDatabase),
 	)
-
-	originalLocationCache := location.NewLocationCache(locationDetector)
+	originalLocationCache := location.NewLocationCache()
 
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
@@ -84,7 +82,6 @@ func NewCommandWith(
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
-		originalLocationCache: originalLocationCache,
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
@@ -101,7 +98,6 @@ type Command struct {
 	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
 	checkOpenvpn      func() error
-	originalLocationCache     location.Cache
 }
 
 // Start starts Tequilapi service, fetches location
@@ -110,13 +106,6 @@ func (cmd *Command) Start() error {
 	err := cmd.checkOpenvpn()
 	if err != nil {
 		return err
-	}
-
-	originalLocation, err := cmd.originalLocationCache.RefreshAndGet()
-	if err != nil {
-		log.Warn("Failed to detect original country", err)
-	} else {
-		log.Info("Original country detected: ", originalLocation.Country)
 	}
 
 	err = cmd.httpAPIServer.StartServing()

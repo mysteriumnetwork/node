@@ -12,6 +12,6 @@ type Detector interface {
 
 // Cache allows caching location
 type Cache interface {
-	Get() (Location)
-	RefreshAndGet() (Location, error)
+	Get() Location
+	Set(Location)
 }

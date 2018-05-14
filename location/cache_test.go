@@ -1,42 +1,26 @@
 package location
 
 import (
-	"testing"
-	"errors"
-	"github.com/mysterium/node/ip"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-func TestLocationCacheFirstCall(t *testing.T) {
-	ipResolver := ip.NewFakeResolver("100.100.100.100")
-	locationResolver := NewResolverFake("country")
-	locationDetector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
-	locationCache := NewLocationCache(locationDetector)
-	location := locationCache.Get()
-	assert.Equal(t, Location{}, location)
+func TestLocationCacheGetLocationWithoutCache(t *testing.T) {
+	cache := cache{}
+	assert.Equal(t, Location{}, cache.Get())
 }
 
-func TestLocationCacheFirstSecondCalls(t *testing.T) {
-	ipResolver := ip.NewFakeResolver("100.100.100.100")
-	locationResolver := NewResolverFake("country")
-	locationDetector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
-	locationCache := NewLocationCache(locationDetector)
-	location, err := locationCache.RefreshAndGet()
-	assert.Equal(t, "country", location.Country)
-	assert.Equal(t, "100.100.100.100", location.IP)
-	assert.NoError(t, err)
+func TestLocationCacheGetsCachedLocation(t *testing.T) {
+	locationExpected := Location{"100.100.100.100", "country"}
 
-	locationSecondCall := locationCache.Get()
-	assert.Equal(t, location, locationSecondCall)
+	cache := cache{locationExpected}
+	assert.Equal(t, locationExpected, cache.Get())
 }
 
-func TestLocationCacheWithError(t *testing.T) {
-	ipResolver := ip.NewFakeResolver("")
-	locationErr := errors.New("location resolver error")
-	locationResolver := NewFailingResolverFake(locationErr)
-	locationDetector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
-	locationCache := NewLocationCache(locationDetector)
-	location, err := locationCache.RefreshAndGet()
-	assert.EqualError(t, locationErr, err.Error())
-	assert.Equal(t, Location{}, location)
+func TestLocationCacheSetsLocation(t *testing.T) {
+	locationExpected := Location{"100.100.100.100", "country"}
+
+	cache := cache{}
+	cache.Set(locationExpected)
+	assert.Equal(t, locationExpected, cache.location)
 }
