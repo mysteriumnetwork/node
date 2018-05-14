@@ -5,6 +5,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/server"
@@ -27,24 +28,37 @@ var (
 )
 
 type connectionManager struct {
-	//these are passed on creation
+	// These are passed on creation
 	mysteriumClient server.Client
 	newDialog       DialogCreator
 	newVpnClient    VpnClientCreator
 	statsKeeper     bytescount.SessionStatsKeeper
-	//these are populated by Connect at runtime
+
+	locationDetector location.Detector
+	locationOriginal location.Cache
+
+	// These are populated by Connect at runtime
 	status          ConnectionStatus
 	cleanConnection func()
 }
 
 // NewManager creates connection manager with given dependencies
-func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator,
-	vpnClientCreator VpnClientCreator, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
+func NewManager(
+	mysteriumClient server.Client,
+	dialogCreator DialogCreator,
+	vpnClientCreator VpnClientCreator,
+	statsKeeper bytescount.SessionStatsKeeper,
+	locationDetector location.Detector,
+	locationOriginal location.Cache,
+) *connectionManager {
 	return &connectionManager{
-		mysteriumClient: mysteriumClient,
-		newDialog:       dialogCreator,
-		newVpnClient:    vpnClientCreator,
-		statsKeeper:     statsKeeper,
+		mysteriumClient:  mysteriumClient,
+		newDialog:        dialogCreator,
+		newVpnClient:     vpnClientCreator,
+		statsKeeper:      statsKeeper,
+		locationDetector: locationDetector,
+		locationOriginal: locationOriginal,
+
 		status:          statusNotConnected(),
 		cleanConnection: warnOnClean,
 	}
@@ -76,6 +90,13 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		manager.status = statusDisconnecting()
 		cancelable.Cancel()
 	})
+
+	cancelable.
+		NewRequest(func() (interface{}, error) {
+			manager.detectOriginalLocation()
+			return nil, nil
+		}).
+		Call()
 
 	val, err := cancelable.
 		NewRequest(func() (interface{}, error) {
@@ -162,6 +183,16 @@ func (manager *connectionManager) Disconnect() error {
 
 func warnOnClean() {
 	log.Warn(managerLogPrefix, "Trying to close when there is nothing to close. Possible bug or race condition")
+}
+
+func (manager *connectionManager) detectOriginalLocation() {
+	myLocation, err := manager.locationDetector.DetectLocation()
+	if err != nil {
+		log.Warn(managerLogPrefix, "Failed to detect original country: ", err)
+	}
+
+	log.Info(managerLogPrefix, "Original country detected: ", myLocation.Country)
+	manager.locationOriginal.Set(myLocation)
 }
 
 // TODO this can be extraced as depencency later when node selection criteria will be clear

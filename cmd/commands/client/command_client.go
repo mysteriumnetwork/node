@@ -70,7 +70,14 @@ func NewCommandWith(
 		statsKeeper,
 		originalLocationCache,
 	)
-	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, vpnClientFactory, statsKeeper)
+	connectionManager := connection.NewManager(
+		mysteriumClient,
+		dialogFactory,
+		vpnClientFactory,
+		statsKeeper,
+		locationDetector,
+		originalLocationCache,
+	)
 
 	router := tequilapi.NewAPIRouter()
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/openvpn/middlewares/state"
@@ -25,10 +26,15 @@ type testContext struct {
 	fakeStatsKeeper      *fakeSessionStatsKeeper
 	fakeDialog           *fakeDialog
 	openvpnCreationError error
+	locationDetector     *fakeLocationDetector
+	locationOriginal     location.Cache
 }
 
 var (
 	myID                  = identity.FromAddress("identity-1")
+	myLocationUnknown     = location.Location{}
+	myLocationLT          = location.Location{"8.8.8.1", "LT"}
+	myLocationLV          = location.Location{"8.8.8.2", "LV"}
 	activeProviderID      = identity.FromAddress("vpn-node-1")
 	activeProviderContact = dto.Contact{}
 	activeProposal        = dto.ServiceProposal{
@@ -74,12 +80,43 @@ func (tc *testContext) SetupTest() {
 		return tc.fakeOpenVpn, nil
 	}
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
+	tc.locationDetector = &fakeLocationDetector{}
+	tc.locationOriginal = location.NewLocationCache()
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, fakeVpnClientFactory, tc.fakeStatsKeeper)
+	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, fakeVpnClientFactory, tc.fakeStatsKeeper, tc.locationDetector, tc.locationOriginal)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
 	assert.Exactly(tc.T(), statusNotConnected(), tc.connManager.Status())
+}
+
+func (tc *testContext) TestConnectDetectsOriginalLocation() {
+	tc.locationOriginal.Set(myLocationUnknown)
+	tc.locationDetector.location = myLocationLT
+
+	err := tc.connManager.Connect(myID, activeProviderID)
+	assert.NoError(tc.T(), err)
+
+	assert.Equal(tc.T(), myLocationLT, tc.locationOriginal.Get())
+}
+
+func (tc *testContext) TestWhenArrivingToLatviaConnectDetectsNewLocation() {
+	tc.locationOriginal.Set(myLocationLT)
+	tc.locationDetector.location = myLocationLV
+
+	err := tc.connManager.Connect(myID, activeProviderID)
+	assert.NoError(tc.T(), err)
+	assert.Equal(tc.T(), myLocationLV, tc.locationOriginal.Get())
+}
+
+func (tc *testContext) TestConnectsSucceedsWhenDetectsOriginalLocationFails() {
+	tc.locationOriginal.Set(myLocationLT)
+	tc.locationDetector.error = errors.New("failed to detect location")
+
+	err := tc.connManager.Connect(myID, activeProviderID)
+	assert.NoError(tc.T(), err)
+
+	assert.Equal(tc.T(), myLocationUnknown, tc.locationOriginal.Get())
 }
 
 func (tc *testContext) TestWithUnknownProviderConnectionIsNotMade() {
@@ -333,4 +370,14 @@ func waitABit() {
 	//usually time.Sleep call gives a chance for other goroutines to kick in
 	//important when testing async code
 	time.Sleep(10 * time.Millisecond)
+}
+
+type fakeLocationDetector struct {
+	location location.Location
+	error    error
+}
+
+// Maps current ip to country
+func (d *fakeLocationDetector) DetectLocation() (location.Location, error) {
+	return d.location, d.error
 }
