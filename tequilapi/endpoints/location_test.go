@@ -39,7 +39,7 @@ func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 
 	currentIPResolver := ip.NewFakeResolver("123.123.123.123")
 	currentLocationResolver := location.NewResolverFake("current country")
-	currentLocationDetector := location.NewDetectorWithLocationResolver(currentIPResolver, currentLocationResolver)
+	currentLocationDetector := location.NewDetector(currentIPResolver, currentLocationResolver)
 
 	originalLocationCache := location.NewLocationCache()
 	originalLocationCache.Set(location.Location{"100.100.100.100", "original country"})
@@ -84,7 +84,7 @@ func TestGetLocationWhenConnected(t *testing.T) {
 
 	currentIPResolver := ip.NewFakeResolver("123.123.123.123")
 	currentLocationResolver := location.NewResolverFake("current country")
-	currentLocationDetector := location.NewDetectorWithLocationResolver(currentIPResolver, currentLocationResolver)
+	currentLocationDetector := location.NewDetector(currentIPResolver, currentLocationResolver)
 
 	originalLocationCache := location.NewLocationCache()
 	originalLocationCache.Set(location.Location{"100.100.100.100", "original country"})

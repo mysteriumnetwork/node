@@ -61,7 +61,7 @@ func NewCommandWith(
 		locationResolver = location.NewResolver(filepath.Join(options.DirectoryConfig, defaultLocationDatabase))
 	}
 
-	locationDetector := location.NewDetectorWithLocationResolver(ipResolver, locationResolver)
+	locationDetector := location.NewDetector(ipResolver, locationResolver)
 
 	return &Command{
 		identityLoader: func() (identity.Identity, error) {
