@@ -2,36 +2,33 @@ package session
 
 import (
 	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-var mockedVPNConfig = session.VPNConfig{
-	RemoteIP: "1.2.3.4",
-}
+var mockedVPNConfig = "config_string"
 
-var expectedSession = session.Session{
-	ID:         session.SessionID("mocked-id"),
+var expectedSession = Session{
+	ID:         SessionID("mocked-id"),
 	Config:     mockedVPNConfig,
 	ConsumerID: identity.FromAddress("deadbeef"),
 }
 
-type mockedConfigProvider func() session.VPNConfig
+type mockedConfigProvider func() string
 
-func (mcp mockedConfigProvider) ProvideServiceConfig() (session.VPNConfig, error) {
+func (mcp mockedConfigProvider) ProvideServiceConfig() (ServiceConfiguration, error) {
 	return mcp(), nil
 }
 
-func provideMockedVPNConfig() session.VPNConfig {
+func provideMockedVPNConfig() string {
 	return mockedVPNConfig
 }
 
 func TestManagerCreatesNewSession(t *testing.T) {
 	manager := NewManager(
 		mockedConfigProvider(provideMockedVPNConfig),
-		&session.GeneratorFake{
-			SessionIdMock: session.SessionID("mocked-id"),
+		&GeneratorFake{
+			SessionIdMock: SessionID("mocked-id"),
 		},
 	)
 
@@ -39,7 +36,7 @@ func TestManagerCreatesNewSession(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedSession, sessionInstance)
 
-	expectedSessionMap := make(map[session.SessionID]session.Session)
+	expectedSessionMap := make(map[SessionID]Session)
 	expectedSessionMap[expectedSession.ID] = expectedSession
 	assert.Exactly(
 		t,
@@ -49,14 +46,14 @@ func TestManagerCreatesNewSession(t *testing.T) {
 }
 
 func TestManagerLookupsExistingSession(t *testing.T) {
-	sessionMap := make(map[session.SessionID]session.Session)
+	sessionMap := make(map[SessionID]Session)
 	sessionMap[expectedSession.ID] = expectedSession
 
 	manager := manager{
 		sessionMap: sessionMap,
 	}
 
-	session, found := manager.FindSession(session.SessionID("mocked-id"))
+	session, found := manager.FindSession(SessionID("mocked-id"))
 	assert.True(t, found)
 	assert.Exactly(t, expectedSession, session)
 }

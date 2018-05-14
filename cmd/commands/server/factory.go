@@ -80,15 +80,25 @@ func NewCommandWith(
 		},
 
 		sessionManagerFactory: func(primitives *tls.Primitives, vpnServerIP string) session.Manager {
-			clientConfigGenerator := openvpn.NewClientConfigGenerator(primitives, vpnServerIP, options.OpenvpnPort, options.Protocol)
+			clientConfigGenerator := openvpn.NewClientConfigGenerator(
+				primitives,
+				vpnServerIP,
+				options.OpenvpnPort,
+				options.Protocol,
+			)
 
-			return openvpn_session.NewManager(
-				openvpn_session.ServiceConfigProvider(clientConfigGenerator),
+			return session.NewManager(
+				session.ServiceConfigProvider(clientConfigGenerator),
 				&session.UUIDGenerator{},
 			)
 		},
 		vpnServerFactory: func(manager session.Manager, primitives *tls.Primitives, callback state.Callback) *openvpn.Server {
-			serverConfigGenerator := openvpn.NewServerConfigGenerator(options.DirectoryRuntime, primitives, options.OpenvpnPort, options.Protocol)
+			serverConfigGenerator := openvpn.NewServerConfigGenerator(
+				options.DirectoryRuntime,
+				primitives,
+				options.OpenvpnPort,
+				options.Protocol,
+			)
 			sessionValidator := openvpn_session.NewSessionValidator(
 				manager.FindSession,
 				identity.NewExtractor(),

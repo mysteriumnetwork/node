@@ -1,6 +1,7 @@
 package session
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -40,11 +41,19 @@ func (consumer *SessionCreateConsumer) Consume(requestPtr interface{}) (response
 		return
 	}
 
+	serializedConfig, err := json.Marshal(clientSession.Config)
+	if err != nil {
+		response = &SessionCreateResponse{
+			Success: false,
+			Message: "Failed to serialize config.",
+		}
+	}
+
 	response = &SessionCreateResponse{
 		Success: true,
 		Session: SessionDto{
 			ID:     clientSession.ID,
-			Config: clientSession.Config,
+			Config: serializedConfig,
 		},
 	}
 	return

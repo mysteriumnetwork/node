@@ -2,7 +2,6 @@ package openvpn
 
 import (
 	"github.com/mysterium/node/openvpn/tls"
-	"github.com/mysterium/node/session"
 	"io/ioutil"
 	"path/filepath"
 )
@@ -64,7 +63,7 @@ func newClientConfig(configDir string) *ClientConfig {
 	return &config
 }
 
-func NewClientConfigFromSession(vpnConfig session.VPNConfig, configDir string, configFile string) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFile string) (*ClientConfig, error) {
 
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {

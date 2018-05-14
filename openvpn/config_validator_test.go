@@ -1,7 +1,6 @@
 package openvpn
 
 import (
-	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -32,7 +31,7 @@ YFcPCscvdnZ1U8hTUaREZmDB2w9eaGyCM4YXAg==
 `
 
 func TestValidatorReturnsNilErrorOnValidVPNConfig(t *testing.T) {
-	vpnConfig := session.VPNConfig{
+	vpnConfig := &VPNConfig{
 		"1.2.3.4",
 		10999,
 		"tcp",
@@ -43,26 +42,26 @@ func TestValidatorReturnsNilErrorOnValidVPNConfig(t *testing.T) {
 }
 
 func TestIPv6AreNotAllowed(t *testing.T) {
-	vpnConfig := session.VPNConfig{RemoteIP: "2001:db8:85a3::8a2e:370:7334"}
-	assert.Error(t, validIPFormat(vpnConfig))
+	vpnConfig := VPNConfig{RemoteIP: "2001:db8:85a3::8a2e:370:7334"}
+	assert.Error(t, validIPFormat(&vpnConfig))
 }
 
 func TestUnknownProtocolIsNotAllowed(t *testing.T) {
-	vpnConfig := session.VPNConfig{RemoteProtocol: "fake_protocol"}
-	assert.Error(t, validProtocol(vpnConfig))
+	vpnConfig := VPNConfig{RemoteProtocol: "fake_protocol"}
+	assert.Error(t, validProtocol(&vpnConfig))
 }
 
 func TestPortOutOfRangeIsNotAllowed(t *testing.T) {
-	vpnConfig := session.VPNConfig{RemotePort: -1}
-	assert.Error(t, validPort(vpnConfig))
+	vpnConfig := VPNConfig{RemotePort: -1}
+	assert.Error(t, validPort(&vpnConfig))
 }
 
 func TestTLSPresharedKeyIsValid(t *testing.T) {
-	vpnConfig := session.VPNConfig{TLSPresharedKey: tlsTestKey}
-	assert.NoError(t, validTLSPresharedKey(vpnConfig))
+	vpnConfig := VPNConfig{TLSPresharedKey: tlsTestKey}
+	assert.NoError(t, validTLSPresharedKey(&vpnConfig))
 }
 
 func TestCACertificateIsValid(t *testing.T) {
-	vpnConfig := session.VPNConfig{CACertificate: caCertificate}
-	assert.NoError(t, validCACertificate(vpnConfig))
+	vpnConfig := VPNConfig{CACertificate: caCertificate}
+	assert.NoError(t, validCACertificate(&vpnConfig))
 }

@@ -18,7 +18,7 @@ func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, direc
 	}
 }
 
-// ConfigGenerator callback returns generated server config
+// ServerConfigGenerator callback returns generated server config
 type ServerConfigGenerator func() *ServerConfig
 
 // NewServerConfigGenerator returns function generating server config and generates required security primitives
@@ -35,7 +35,7 @@ func NewServerConfigGenerator(directoryRuntime string, primitives *tls.Primitive
 	}
 }
 
-// ServerCertificate structure describes openvpn server
+// Server structure describes openvpn server
 type Server struct {
 	generateConfig ServerConfigGenerator
 	management     *management.Management

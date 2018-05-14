@@ -33,7 +33,7 @@ type Command struct {
 
 	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
 
-	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, callback state.Callback) *openvpn.Server
+	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) *openvpn.Server
 
 	vpnServer      *openvpn.Server
 	checkOpenvpn   func() error

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var mockConfig = session.VPNConfig{}
+var mockConfig = ""
 
 func TestAuthenticatorReturnsFalseWhenNoSessionFound(t *testing.T) {
 	mockManager := &mockSessionManager{}

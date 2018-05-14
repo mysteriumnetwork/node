@@ -38,7 +38,7 @@ func TestConsumer_Success(t *testing.T) {
 			Success: true,
 			Session: SessionDto{
 				ID:     "new-id",
-				Config: fakeVpnConfig,
+				Config: []byte("{\"Param1\":\"string-param\",\"Param2\":123}"),
 			},
 		},
 		sessionResponse,

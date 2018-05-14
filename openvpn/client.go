@@ -7,6 +7,7 @@ import (
 	"github.com/mysterium/node/session"
 )
 
+// Client defines client process interfaces with basic commands
 type Client interface {
 	Start() error
 	Wait() error
@@ -19,6 +20,7 @@ type openVpnClient struct {
 	process    *Process
 }
 
+// NewClient creates openvpn client with given config params
 func NewClient(openvpnBinary string, config *ClientConfig, directoryRuntime string, middlewares ...management.Middleware) *openVpnClient {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
@@ -31,17 +33,26 @@ func NewClient(openvpnBinary string, config *ClientConfig, directoryRuntime stri
 	}
 }
 
-// ClientConfigGenerator callback returns generated server config
-type ClientConfigGenerator func() session.VPNConfig
+//VPNConfig structure represents VPN configuration options for given session
+type VPNConfig struct {
+	RemoteIP        string `json:"remote"`
+	RemotePort      int    `json:"port"`
+	RemoteProtocol  string `json:"protocol"`
+	TLSPresharedKey string `json:"TLSPresharedKey"`
+	CACertificate   string `json:"CACertificate"`
+}
 
-func (generator ClientConfigGenerator) ProvideServiceConfig() (session.VPNConfig, error) {
+// ClientConfigGenerator callback returns generated server config
+type ClientConfigGenerator func() *VPNConfig
+
+func (generator ClientConfigGenerator) ProvideServiceConfig() (session.ServiceConfiguration, error) {
 	return generator(), nil
 }
 
 // NewClientConfigGenerator returns function generating config params for remote client
 func NewClientConfigGenerator(primitives *tls.Primitives, vpnServerIP string, port int, protocol string) ClientConfigGenerator {
-	return func() session.VPNConfig {
-		return session.VPNConfig{
+	return func() *VPNConfig {
+		return &VPNConfig{
 			vpnServerIP,
 			port,
 			protocol,

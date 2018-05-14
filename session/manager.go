@@ -2,34 +2,33 @@ package session
 
 import (
 	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/session"
 	"sync"
 )
 
 //ServiceConfigProvider interface defines configuration providing dependency
 type ServiceConfigProvider interface {
-	// ProvideServiceConfig function is expected to return service configuration which should be passed to service consumer
-	ProvideServiceConfig() (session.VPNConfig, error)
+	// ProvideServiceConfig is expected to provide serializable service configuration params from underlying service to remote party
+	ProvideServiceConfig() (ServiceConfiguration, error)
 }
 
 // NewManager returns session manager which maintains a map of session id -> session
-func NewManager(serviceConfigProvider ServiceConfigProvider, idGenerator session.Generator) *manager {
+func NewManager(serviceConfigProvider ServiceConfigProvider, idGenerator Generator) *manager {
 	return &manager{
 		idGenerator:    idGenerator,
 		configProvider: serviceConfigProvider,
-		sessionMap:     make(map[session.SessionID]session.Session),
+		sessionMap:     make(map[SessionID]Session),
 		creationLock:   sync.Mutex{},
 	}
 }
 
 type manager struct {
-	idGenerator    session.Generator
+	idGenerator    Generator
 	configProvider ServiceConfigProvider
-	sessionMap     map[session.SessionID]session.Session
+	sessionMap     map[SessionID]Session
 	creationLock   sync.Mutex
 }
 
-func (manager *manager) Create(peerID identity.Identity) (sessionInstance session.Session, err error) {
+func (manager *manager) Create(peerID identity.Identity) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 	sessionInstance.ID = manager.idGenerator.Generate()
@@ -43,7 +42,7 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance sessio
 	return sessionInstance, nil
 }
 
-func (manager *manager) FindSession(id session.SessionID) (session.Session, bool) {
+func (manager *manager) FindSession(id SessionID) (Session, bool) {
 	sessionInstance, found := manager.sessionMap[id]
 	return sessionInstance, found
 }

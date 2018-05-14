@@ -6,13 +6,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"github.com/mysterium/node/session"
 	"net"
 	"strings"
 )
 
 // ValidateConfig is function which takes VPNConfig as argument, checks it and returns error if validation fails
-type ValidateConfig func(config session.VPNConfig) error
+type ValidateConfig func(config *VPNConfig) error
 
 // ConfigValidator represents structure which contains list of validating functions
 type ConfigValidator struct {
@@ -33,7 +32,7 @@ func NewDefaultValidator() *ConfigValidator {
 }
 
 // IsValid function checks if provided config is valid against given config validator and returns first encountered error
-func (v *ConfigValidator) IsValid(config session.VPNConfig) error {
+func (v *ConfigValidator) IsValid(config *VPNConfig) error {
 	for _, validator := range v.validators {
 		if err := validator(config); err != nil {
 			return err
@@ -42,7 +41,7 @@ func (v *ConfigValidator) IsValid(config session.VPNConfig) error {
 	return nil
 }
 
-func validProtocol(config session.VPNConfig) error {
+func validProtocol(config *VPNConfig) error {
 	switch config.RemoteProtocol {
 	case
 		"udp",
@@ -52,17 +51,17 @@ func validProtocol(config session.VPNConfig) error {
 	return errors.New("invalid protocol: " + config.RemoteProtocol)
 }
 
-func validPort(config session.VPNConfig) error {
-	if config.RemotePort > 65535 || config.RemotePort < 1 {
-		return errors.New("invalid port range")
+func validPort(config *VPNConfig) error {
+	if config.RemotePort > 65535 || config.RemotePort < 1024 {
+		return errors.New("invalid port range, should fall within 1024 .. 65535 range")
 	}
 	return nil
 }
 
-func validIPFormat(config session.VPNConfig) error {
+func validIPFormat(config *VPNConfig) error {
 	parsed := net.ParseIP(config.RemoteIP)
 	if parsed == nil {
-		return errors.New("unable to parse ip address" + config.RemoteIP)
+		return errors.New("unable to parse ip address " + config.RemoteIP)
 	}
 	if parsed.To4() == nil {
 		return errors.New("IPv4 address is expected")
@@ -72,7 +71,7 @@ func validIPFormat(config session.VPNConfig) error {
 
 // preshared key format (PEM blocks with data encoded to hex) are taken from
 // openvpn --genkey --secret static.key, which is openvpn specific
-func validTLSPresharedKey(config session.VPNConfig) error {
+func validTLSPresharedKey(config *VPNConfig) error {
 	contentScanner := bufio.NewScanner(bytes.NewBufferString(config.TLSPresharedKey))
 	for contentScanner.Scan() {
 		line := contentScanner.Text()
@@ -108,10 +107,10 @@ func validTLSPresharedKey(config session.VPNConfig) error {
 	return nil
 }
 
-func validCACertificate(config session.VPNConfig) error {
+func validCACertificate(config *VPNConfig) error {
 	pemBlock, _ := pem.Decode([]byte(config.CACertificate))
 	if pemBlock.Type != "CERTIFICATE" {
-		return errors.New("invalid ca. Certificate block expected")
+		return errors.New("invalid CA certificate. Certificate block expected")
 	}
 	//if we parse it correctly - at least structure is right
 	_, err := x509.ParseCertificate(pemBlock.Bytes)

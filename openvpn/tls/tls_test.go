@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-const fakeRunDir = "testdataoutput"
-
 func TestCertificatesAreGenerated(t *testing.T) {
 	_, err := NewTLSPrimitives(dto.Location{}, identity.FromAddress("0xdeadbeef"))
 	assert.NoError(t, err)
