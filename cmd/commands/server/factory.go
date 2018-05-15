@@ -14,8 +14,8 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/server/auth"
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
+	"github.com/mysterium/node/openvpn/tls"
 	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
 	"path/filepath"
 	"sync"
@@ -79,16 +79,27 @@ func NewCommandWith(
 			)
 		},
 
-		sessionManagerFactory: func(vpnServerIP string) session.Manager {
-			clientConfigGenerator := openvpn.NewClientConfigGenerator(options.DirectoryRuntime, vpnServerIP, options.Protocol)
+		sessionManagerFactory: func(primitives *tls.Primitives, vpnServerIP string) session.Manager {
+			//TODO move this outside session manager factory - as external dependency
+			clientConfigGenerator := openvpn.NewClientConfigGenerator(
+				primitives,
+				vpnServerIP,
+				options.OpenvpnPort,
+				options.Protocol,
+			)
 
-			return openvpn_session.NewManager(
-				clientConfigGenerator,
+			return session.NewManager(
+				session.ServiceConfigProvider(clientConfigGenerator),
 				&session.UUIDGenerator{},
 			)
 		},
-		vpnServerFactory: func(manager session.Manager, serviceLocation dto.Location, providerID identity.Identity, callback state.Callback) *openvpn.Server {
-			serverConfigGenerator := openvpn.NewServerConfigGenerator(options.DirectoryRuntime, serviceLocation, providerID, options.Protocol)
+		vpnServerFactory: func(manager session.Manager, primitives *tls.Primitives, callback state.Callback) *openvpn.Server {
+			serverConfigGenerator := openvpn.NewServerConfigGenerator(
+				options.DirectoryRuntime,
+				primitives,
+				options.OpenvpnPort,
+				options.Protocol,
+			)
 			sessionValidator := openvpn_session.NewSessionValidator(
 				manager.FindSession,
 				identity.NewExtractor(),
@@ -105,7 +116,7 @@ func NewCommandWith(
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
-		protocol: options.Protocol,
+		protocol:       options.Protocol,
 		WaitUnregister: &sync.WaitGroup{},
 	}
 }

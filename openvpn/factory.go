@@ -1,22 +1,28 @@
 package openvpn
 
 import (
-	"github.com/mysterium/node/openvpn/primitives"
+	"github.com/mysterium/node/openvpn/tls"
 	"io/ioutil"
+	"path/filepath"
 )
 
 func NewServerConfig(
+	configDir string,
 	network, netmask string,
-	secPrimitives *primitives.SecurityPrimitives,
+	secPrimitives *tls.Primitives,
+	port int,
 	protocol string,
 ) *ServerConfig {
-	config := ServerConfig{NewConfig()}
-	config.SetServerMode(1194, network, netmask)
+	config := ServerConfig{NewConfig(configDir)}
+	config.SetServerMode(port, network, netmask)
 	config.SetTLSServer()
 	config.SetProtocol(protocol)
-	config.SetTLSCACertificate(secPrimitives.CACertPath)
-	config.SetTLSPrivatePubKeys(secPrimitives.ServerCertPath, secPrimitives.ServerKeyPath)
-	config.SetTLSCrypt(secPrimitives.TLSCryptKeyPath)
+	config.SetTLSCACertificate(secPrimitives.CertificateAuthority.ToPEMFormat())
+	config.SetTLSPrivatePubKeys(
+		secPrimitives.ServerCertificate.ToPEMFormat(),
+		secPrimitives.ServerCertificate.KeyToPEMFormat(),
+	)
+	config.SetTLSCrypt(secPrimitives.PresharedKey.ToPEMFormat())
 
 	config.SetDevice("tun")
 	config.setParam("cipher", "AES-256-GCM")
@@ -34,16 +40,9 @@ func NewServerConfig(
 	return &config
 }
 
-func NewClientConfig(
-	remote string,
-	caCertPath, tlsCryptKeyPath string,
-	protocol string,
-) *ClientConfig {
-	config := ClientConfig{NewConfig()}
-	config.SetClientMode(remote, 1194)
-	config.SetProtocol(protocol)
-	config.SetTLSCACertificate(caCertPath)
-	config.SetTLSCrypt(tlsCryptKeyPath)
+func newClientConfig(configDir string) *ClientConfig {
+	config := ClientConfig{NewConfig(configDir)}
+
 	config.RestrictReconnects()
 
 	config.SetDevice("tun")
@@ -64,20 +63,34 @@ func NewClientConfig(
 	return &config
 }
 
-func NewClientConfigFromString(
-	configString, configFile string,
-	scriptUp, scriptDown string,
-) (*ClientConfig, error) {
-	err := ioutil.WriteFile(configFile, []byte(configString), 0600)
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFile string) (*ClientConfig, error) {
+
+	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	config := ClientConfig{NewConfig()}
-	config.AddOptions(OptionParam("config", configFile))
+	clientConfig := newClientConfig(configDir)
+	clientConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
+	clientConfig.SetProtocol(vpnConfig.RemoteProtocol)
+	clientConfig.SetTLSCACertificate(vpnConfig.CACertificate)
+	clientConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
 
-	config.setParam("up", scriptUp)
-	config.setParam("down", scriptDown)
+	configAsString, err := ConfigToString(*clientConfig.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ioutil.WriteFile(configFile, []byte(configAsString), 0600)
+	if err != nil {
+		return nil, err
+	}
+
+	config := ClientConfig{NewConfig(configDir)}
+	config.AddOptions(OptionFile("config", configAsString, configFile))
+
+	config.setParam("up", filepath.Join(configDir, "update-resolv-conf"))
+	config.setParam("down", filepath.Join(configDir, "update-resolv-conf"))
 
 	return &config, nil
 }

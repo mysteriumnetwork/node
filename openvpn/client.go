@@ -1,9 +1,13 @@
 package openvpn
 
 import "sync"
-import "github.com/mysterium/node/openvpn/primitives"
-import "github.com/mysterium/node/openvpn/management"
+import (
+	"github.com/mysterium/node/openvpn/management"
+	"github.com/mysterium/node/openvpn/tls"
+	"github.com/mysterium/node/session"
+)
 
+// Client defines client process interfaces with basic commands
 type Client interface {
 	Start() error
 	Wait() error
@@ -16,6 +20,7 @@ type openVpnClient struct {
 	process    *Process
 }
 
+// NewClient creates openvpn client with given config params
 func NewClient(openvpnBinary string, config *ClientConfig, directoryRuntime string, middlewares ...management.Middleware) *openVpnClient {
 	// Add the management interface socketAddress to the config
 	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
@@ -28,20 +33,32 @@ func NewClient(openvpnBinary string, config *ClientConfig, directoryRuntime stri
 	}
 }
 
-// ConfigGenerator callback returns generated server config
-type ClientConfigGenerator func() *ClientConfig
+//VPNConfig structure represents VPN configuration options for given session
+type VPNConfig struct {
+	RemoteIP        string `json:"remote"`
+	RemotePort      int    `json:"port"`
+	RemoteProtocol  string `json:"protocol"`
+	TLSPresharedKey string `json:"TLSPresharedKey"`
+	CACertificate   string `json:"CACertificate"`
+}
 
-// NewServerConfigGenerator returns function generating server config and generates required security primitives
-func NewClientConfigGenerator(directoryRuntime, vpnServerIP string, protocol string) ClientConfigGenerator {
-	return func() *ClientConfig {
-		// (Re)generate required security primitives before openvpn start
-		vpnClientConfig := NewClientConfig(
+// ClientConfigGenerator callback returns generated server config
+type ClientConfigGenerator func() *VPNConfig
+
+func (generator ClientConfigGenerator) ProvideServiceConfig() (session.ServiceConfiguration, error) {
+	return generator(), nil
+}
+
+// NewClientConfigGenerator returns function generating config params for remote client
+func NewClientConfigGenerator(primitives *tls.Primitives, vpnServerIP string, port int, protocol string) ClientConfigGenerator {
+	return func() *VPNConfig {
+		return &VPNConfig{
 			vpnServerIP,
-			primitives.CACertPath(directoryRuntime),
-			primitives.TLSCryptKeyPath(directoryRuntime),
+			port,
 			protocol,
-		)
-		return vpnClientConfig
+			primitives.PresharedKey.ToPEMFormat(),
+			primitives.CertificateAuthority.ToPEMFormat(),
+		}
 	}
 }
 
@@ -53,7 +70,7 @@ func (client *openVpnClient) Start() error {
 	}
 
 	// Fetch the current arguments
-	arguments, err := ConfigToArguments(*client.config.Config)
+	arguments, err := (*client.config).ConfigToArguments()
 	if err != nil {
 		return err
 	}
