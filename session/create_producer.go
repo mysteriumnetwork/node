@@ -31,8 +31,7 @@ func (producer *SessionCreateProducer) GetRequestEndpoint() communication.Reques
 }
 
 func (producer *SessionCreateProducer) NewResponse() (responsePtr interface{}) {
-	var response SessionCreateResponse
-	return &response
+	return &SessionCreateResponse{}
 }
 
 func (producer *SessionCreateProducer) Produce() (requestPtr interface{}) {

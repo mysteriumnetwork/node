@@ -21,19 +21,17 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn/management"
 	"strings"
+	"github.com/mysterium/node/openvpn/session/server"
 )
 
-// CredentialsChecker callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
-type CredentialsChecker func(username, password string) (bool, error)
-
 type middleware struct {
-	checkCredentials CredentialsChecker
+	checkCredentials server.CredentialsChecker
 	commandWriter    management.Connection
 	currentEvent     clientEvent
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
+func NewMiddleware(credentialsChecker server.CredentialsChecker) *middleware {
 	return &middleware{
 		checkCredentials: credentialsChecker,
 		commandWriter:    nil,
