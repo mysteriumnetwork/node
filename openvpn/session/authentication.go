@@ -3,8 +3,8 @@ package session
 import (
 	"github.com/mysterium/node/identity"
 	client_auth "github.com/mysterium/node/openvpn/middlewares/client/auth"
-	server_auth "github.com/mysterium/node/openvpn/middlewares/server/auth"
 	"github.com/mysterium/node/session"
+	"github.com/mysterium/node/openvpn/session/server"
 )
 
 const sessionSignaturePrefix = "MystVpnSessionId:"
@@ -21,7 +21,7 @@ type sessionFinder func(session session.SessionID) (session.Session, bool)
 
 // NewSessionValidator provides glue code for openvpn management interface to validate incoming client login request,
 // it expects session id as username, and session signature signed by client as password
-func NewSessionValidator(findSession sessionFinder, extractor identity.Extractor) server_auth.CredentialsChecker {
+func NewSessionValidator(findSession sessionFinder, extractor identity.Extractor) server.CredentialsChecker {
 	return func(sessionString, signatureString string) (bool, error) {
 		sessionId := session.SessionID(sessionString)
 		currentSession, found := findSession(sessionId)
