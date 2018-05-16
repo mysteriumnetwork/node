@@ -20,9 +20,9 @@ func TestAuthenticate_WhenSignatureIsCorrect(t *testing.T) {
 	assert.Exactly(t, originalSignerID, signerID, "Original signer should be extracted")
 }
 
-func TestAuthenticate_WhenPrefixedMessageSignatureIsCorrect(t *testing.T) {
+func TestAuthenticate_WhenBase64MessageSignatureIsCorrect(t *testing.T) {
 	message := []byte("MystVpnSessionId:Boop!")
-	signature := SignatureBase64("57a89f9af2ee013fa16ed2c15ffd319b70b469fcb0c5321dc351ea2e6038a27a709a26c76f1561979d06af769151932ac355b191f48855d8696c296e1c604ab201")
+	signature := SignatureBase64("V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=")
 
 	extractor := &extractor{}
 	signerID, err := extractor.Extract(message, signature)

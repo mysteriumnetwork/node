@@ -47,7 +47,7 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 		return false, nil
 	}
 	username, password, err := m.fetchCredentials()
-	log.Info("authenticating user ", username, " with pass: ", password)
+	log.Info("authenticating user ", username)
 
 	_, err = m.connection.SingleLineCommand("password 'Auth' %s", password)
 	if err != nil {
