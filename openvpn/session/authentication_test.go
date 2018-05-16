@@ -57,7 +57,6 @@ func TestAuthenticatorReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing
 	authenticated, err := validateCredentials("not important", "not important")
 	assert.NoError(t, err)
 	assert.True(t, authenticated)
-
 }
 
 type mockSessionManager struct {
