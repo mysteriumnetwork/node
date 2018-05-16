@@ -24,7 +24,6 @@ import (
 	"github.com/mysterium/node/session"
 	ovpnsession "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/identity"
-	log "github.com/cihub/seelog"
 )
 
 type fakeAuthenticatorStub struct {
@@ -32,9 +31,10 @@ type fakeAuthenticatorStub struct {
 	password      string
 	called        bool
 	authenticated bool
+	manager 	  session.Manager
 }
 
-func (f *fakeAuthenticatorStub) fakeAuthenticator(username, password string) (bool, error) {
+func (f *fakeAuthenticatorStub) fakeAuthenticator(clientID int, username, password string) (bool, error) {
 	f.called = true
 	f.username = username
 	f.password = password
@@ -51,31 +51,24 @@ func newFakeAuthenticatorStub() fakeAuthenticatorStub {
 	return fakeAuthenticatorStub{}
 }
 
-func (f *fakeAuthenticatorStub) newFakeSessionValidator(username, password string) (bool, error) {
-	manager := session.NewManager(
-		mockedConfigProvider(provideMockedVPNConfig),
-		&session.GeneratorFake{
-			SessionIdMock: session.SessionID("Boop!"),
-		},
-	)
-
+func (f *fakeAuthenticatorStub) newFakeSessionValidator(clientID int, username, password string) (bool, error) {
 	f.called = true
 	f.username = username
 	f.password = password
 
 	// create session before validating its exists
-	manager.Create(identity.FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"))
+	f.manager.Create(identity.FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"))
 
-	log.Info("authenticating user: ", username, " password: ", password)
+	// log.Info("authenticating user: ", username, " password: ", password)
 
-	sessionValidator := ovpnsession.NewSessionValidator(
-		manager.FindSession,
+	sessionValidator := ovpnsession.NewSessionValidatorWithClientID(
+		f.manager.FindUpdateSessionWithClientID,
 		identity.NewExtractor(),
 	)
 
 	f.authenticated = true
 
-	return sessionValidator(username, password)
+	return sessionValidator(clientID, username, password)
 }
 
 
@@ -316,6 +309,12 @@ func TestSecondClientWithTheSameCredentialsIsDisconnected(t *testing.T) {
 	}
 
 	fas := newFakeAuthenticatorStub()
+	fas.manager = ovpnsession.NewManager(
+		mockedConfigProvider(provideMockedVPNConfig),
+		&session.GeneratorFake{
+			SessionIdMock: session.SessionID("Boop!"),
+		},
+	)
 
 	middleware := NewMiddleware(fas.newFakeSessionValidator)
 
@@ -336,7 +335,8 @@ func TestSecondClientWithTheSameCredentialsIsDisconnected(t *testing.T) {
 	assert.True(t, fas.called)
 	assert.Equal(t, "Boop!", fas.username)
 	assert.Equal(t, "V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=", fas.password)
-	assert.Equal(t, "client-auth-nt 2 4", mockMangement.LastLine)
+	// second authentication with the same credentials but with different clientID should fail
+	assert.Equal(t, "client-deny 2 4 wrong username or password", mockMangement.LastLine)
 }
 
 func feedLinesToMiddleware(middleware management.Middleware, lines []string) {

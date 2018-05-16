@@ -54,3 +54,24 @@ func NewSessionValidator(findSession sessionFinder, extractor identity.Extractor
 		return currentSession.ConsumerID == extractedIdentity, nil
 	}
 }
+
+type sessionFinderWithClientID func(clientID int, session session.SessionID) (session.Session, bool)
+
+// NewSessionValidator provides glue code for openvpn management interface to validate incoming client login request,
+// it expects session id as username, and session signature signed by client as password
+func NewSessionValidatorWithClientID(findSession sessionFinderWithClientID, extractor identity.Extractor) server.CredentialsCheckerWithClientID {
+	return func(clientID int, sessionString, signatureString string) (bool, error) {
+		sessionId := session.SessionID(sessionString)
+		currentSession, found := findSession(clientID, sessionId)
+		if !found {
+			return false, nil
+		}
+
+		signature := identity.SignatureBase64(signatureString)
+		extractedIdentity, err := extractor.Extract([]byte(sessionSignaturePrefix+sessionString), signature)
+		if err != nil {
+			return false, err
+		}
+		return currentSession.ConsumerID == extractedIdentity, nil
+	}
+}

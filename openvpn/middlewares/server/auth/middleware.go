@@ -25,13 +25,13 @@ import (
 )
 
 type middleware struct {
-	checkCredentials server.CredentialsChecker
+	checkCredentials server.CredentialsCheckerWithClientID
 	commandWriter    management.Connection
 	currentEvent     clientEvent
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(credentialsChecker server.CredentialsChecker) *middleware {
+func NewMiddleware(credentialsChecker server.CredentialsCheckerWithClientID) *middleware {
 	return &middleware{
 		checkCredentials: credentialsChecker,
 		commandWriter:    nil,
@@ -163,7 +163,7 @@ func (m *middleware) authenticateClient(clientID, clientKey int, username, passw
 
 	log.Info("authenticating user: ", username, " clientID: ", clientID, " clientKey: ", clientKey)
 
-	authenticated, err := m.checkCredentials(username, password)
+	authenticated, err := m.checkCredentials(clientID, username, password)
 	if err != nil {
 		log.Error("Authentication error: ", err)
 		return denyClientAuthWithMessage(m.commandWriter, clientID, clientKey, "internal error")
