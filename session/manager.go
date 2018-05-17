@@ -47,9 +47,3 @@ func (manager *manager) FindSession(id SessionID) (Session, bool) {
 	sessionInstance, found := manager.sessionMap[id]
 	return sessionInstance, found
 }
-
-// FIXME: how to get rid of it?
-func (manager *manager) FindUpdateSessionWithClientID(clientID int, id SessionID) (Session, bool) {
-	sessionInstance, found := manager.sessionMap[id]
-	return sessionInstance, found
-}
