@@ -10,13 +10,13 @@ const sessionSignaturePrefix = "MystVpnSessionId:"
 
 
 type Validator struct {
-	sessionManager *manager
+	sessionManager *Manager
 	identityExtractor identity.Extractor
 }
 
-func NewValidator(m session.Manager, extractor identity.Extractor) (*Validator) {
+func NewValidator(m *Manager, extractor identity.Extractor) (*Validator) {
 	return &Validator{
-				sessionManager: NewManager(m),
+				sessionManager: m,
 				identityExtractor: extractor,
 			}
 }

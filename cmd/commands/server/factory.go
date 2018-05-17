@@ -102,13 +102,14 @@ func NewCommandWith(
 				options.Protocol,
 			)
 
-			sessionValidator := openvpn_session.NewValidator(manager, identity.NewExtractor())
+			ovpnSessionManager := openvpn_session.NewManager(manager)
+			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
 
 			return openvpn.NewServer(
 				options.OpenvpnBinary,
 				serverConfigGenerator,
 				options.DirectoryRuntime,
-				auth.NewMiddleware(sessionValidator),
+				auth.NewMiddleware(sessionValidator.Validate),
 				state.NewMiddleware(callback),
 			)
 		},
