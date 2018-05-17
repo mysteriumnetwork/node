@@ -26,6 +26,26 @@ import (
 	"github.com/mysterium/node/identity"
 )
 
+var mockedVPNConfig = "config_string"
+
+var mockManager = &ovpnsession.MockSessionManager{
+	session.Session{
+		ID:         session.SessionID("fake-id"),
+		Config:     mockedVPNConfig,
+		ConsumerID: identity.FromAddress("deadbeef"),
+	},
+	true,
+}
+
+var mockExtractor = &ovpnsession.MockIdentityExtractor{
+	identity.FromAddress("deadbeef"),
+	nil,
+}
+
+var fakeManager = ovpnsession.NewManager(mockManager)
+
+var mockValidator = ovpnsession.NewValidator(fakeManager, mockExtractor)
+
 type fakeAuthenticatorStub struct {
 	username      string
 	password      string
@@ -56,24 +76,10 @@ func (f *fakeAuthenticatorStub) newFakeSessionValidator(clientID int, username, 
 	f.username = username
 	f.password = password
 
-	// create session before validating its exists
-	f.manager.Create(identity.FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"))
-
-	// log.Info("authenticating user: ", username, " password: ", password)
-
-	sessionValidator := ovpnsession.NewSessionValidatorWithClientID(
-		f.manager.FindUpdateSessionWithClientID,
-		identity.NewExtractor(),
-	)
-
-	f.authenticated = true
-
-	return sessionValidator(clientID, username, password)
+	return mockValidator.Validate(clientID, username, password)
 }
 
-
 func Test_Factory(t *testing.T) {
-
 	fas := newFakeAuthenticatorStub()
 	middleware := NewMiddleware(fas.fakeAuthenticator)
 	assert.NotNil(t, middleware)
@@ -281,18 +287,6 @@ func TestSecondClientIsNotDisconnectedWhenFirstClientDisconnects(t *testing.T) {
 
 }
 
-var mockedVPNConfig = "config_string"
-
-type mockedConfigProvider func() string
-
-func (mcp mockedConfigProvider) ProvideServiceConfig() (session.ServiceConfiguration, error) {
-	return mcp(), nil
-}
-
-func provideMockedVPNConfig() string {
-	return mockedVPNConfig
-}
-
 func TestSecondClientWithTheSameCredentialsIsDisconnected(t *testing.T) {
 	var firstClientConnected = []string{
 		">CLIENT:CONNECT,1,4",
@@ -309,13 +303,6 @@ func TestSecondClientWithTheSameCredentialsIsDisconnected(t *testing.T) {
 	}
 
 	fas := newFakeAuthenticatorStub()
-	fas.manager = ovpnsession.NewManager(
-		mockedConfigProvider(provideMockedVPNConfig),
-		&session.GeneratorFake{
-			SessionIdMock: session.SessionID("Boop!"),
-		},
-	)
-
 	middleware := NewMiddleware(fas.newFakeSessionValidator)
 
 	mockMangement := &management.MockConnection{

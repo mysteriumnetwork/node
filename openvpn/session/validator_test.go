@@ -8,41 +8,7 @@ import (
 	"sync"
 )
 
-type mockSessionManager struct {
-	onFindReturnSession session.Session
-	onFindReturnSuccess bool
-}
-
-func (manager *mockSessionManager) Create(peerID identity.Identity) (sessionInstance session.Session, err error) {
-	return session.Session{}, nil
-}
-
-func (manager *mockSessionManager) FindSession(sessionId session.SessionID) (session.Session, bool) {
-	return manager.onFindReturnSession, manager.onFindReturnSuccess
-}
-
-type mockIdentityExtractor struct {
-	onExtractReturnIdentity identity.Identity
-	onExtractReturnError    error
-}
-
-func (extractor *mockIdentityExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
-	return extractor.onExtractReturnIdentity, extractor.onExtractReturnError
-}
-
-var mockedVPNConfig = "config_string"
-
-type mockedConfigProvider func() string
-
-func (mcp mockedConfigProvider) ProvideServiceConfig() (session.ServiceConfiguration, error) {
-	return mcp(), nil
-}
-
-func provideMockedVPNConfig() string {
-	return mockedVPNConfig
-}
-
-var mockManager = &mockSessionManager{
+var mockManager = &MockSessionManager{
 	session.Session{
 		ID:         session.SessionID("fake-id"),
 		Config:     mockedVPNConfig,
@@ -51,24 +17,17 @@ var mockManager = &mockSessionManager{
 	true,
 }
 
-var mockExtractor = &mockIdentityExtractor{
+var mockExtractor = &MockIdentityExtractor{
 	identity.FromAddress("deadbeef"),
 	nil,
 }
 
-var fakeManager = &manager{
-	mockManager,
-	make(map[session.SessionID]int),
-	sync.Mutex{},
-}
+var fakeManager = NewManager(mockManager)
 
-var mockValidator = &Validator{
-	fakeManager,
-	mockExtractor,
-}
+var mockValidator = NewValidator(fakeManager, mockExtractor)
 
 func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
-	mockExtractor := &mockIdentityExtractor{}
+	mockExtractor := &MockIdentityExtractor{}
 
 	sessionManager := session.NewManager(
 		mockedConfigProvider(provideMockedVPNConfig),
@@ -77,7 +36,7 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 		},
 	)
 
-	manager := &manager{sessionManager, make(map[session.SessionID]int), sync.Mutex{}}
+	manager := &Manager{sessionManager, make(map[session.SessionID]int), sync.Mutex{}}
 	mockValidator := &Validator{manager, mockExtractor}
 	authenticated, err := mockValidator.Validate(1, "not important", "not important")
 
@@ -86,11 +45,10 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 }
 
 func TestValidateReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
-	mockExtractor := &mockIdentityExtractor{
+	mockExtractor := &MockIdentityExtractor{
 		identity.FromAddress("wrongsignature"),
 		nil,
 	}
-
 
 	mockValidator := &Validator{fakeManager, mockExtractor}
 
