@@ -2,16 +2,16 @@ package endpoints
 
 import (
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysterium/node/client/connection"
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/tequilapi/utils"
 	"net/http"
-	"github.com/mysterium/node/client/connection"
 )
 
 // LocationEndpoint struct represents /location resource and it's subresources
 type LocationEndpoint struct {
-	manager connection.Manager
-	locationDetector location.Detector
+	manager               connection.Manager
+	locationDetector      location.Detector
 	originalLocationCache location.Cache
 }
 
@@ -19,8 +19,8 @@ type LocationEndpoint struct {
 func NewLocationEndpoint(manager connection.Manager, locationDetector location.Detector,
 	originalLocationCache location.Cache) *LocationEndpoint {
 	return &LocationEndpoint{
-		manager: manager,
-		locationDetector: locationDetector,
+		manager:               manager,
+		locationDetector:      locationDetector,
 		originalLocationCache: originalLocationCache,
 	}
 }
@@ -43,10 +43,10 @@ func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 
 	response := struct {
 		Original location.Location `json:"original"`
-		Current location.Location `json:"current"`
+		Current  location.Location `json:"current"`
 	}{
 		Original: originalLocation,
-		Current: currentLocation,
+		Current:  currentLocation,
 	}
 	utils.WriteAsJSON(response, writer)
 }

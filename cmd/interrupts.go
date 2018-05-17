@@ -3,8 +3,8 @@ package cmd
 import (
 	"os"
 	"os/signal"
-	"syscall"
 	"sync"
+	"syscall"
 )
 
 // ApplicationStopper stops application and performs required cleanup tasks

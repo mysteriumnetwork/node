@@ -17,9 +17,9 @@ func NewSessionStatsSender(mysteriumClient server.Client, sessionID session.Sess
 		return mysteriumClient.SendSessionStats(
 			sessionIDString,
 			dto.SessionStats{
-				BytesSent:     sessionStats.BytesSent,
-				BytesReceived: sessionStats.BytesReceived,
-				ProviderID:    providerID.Address,
+				BytesSent:       sessionStats.BytesSent,
+				BytesReceived:   sessionStats.BytesReceived,
+				ProviderID:      providerID.Address,
 				ConsumerCountry: ConsumerCountry,
 			},
 			signer,

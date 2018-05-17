@@ -5,7 +5,7 @@ import (
 )
 
 type detector struct {
-	ipResolver ip.Resolver
+	ipResolver       ip.Resolver
 	locationResolver Resolver
 }
 
@@ -17,7 +17,7 @@ func NewDetector(ipResolver ip.Resolver, databasePath string) Detector {
 // NewDetectorWithLocationResolver constructs Detector
 func NewDetectorWithLocationResolver(ipResolver ip.Resolver, locationResolver Resolver) Detector {
 	return &detector{
-		ipResolver: ipResolver,
+		ipResolver:       ipResolver,
 		locationResolver: locationResolver,
 	}
 }

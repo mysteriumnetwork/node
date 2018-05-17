@@ -16,7 +16,7 @@ var (
 		Type: "type1",
 	}
 	locationLTTelia = dto_discovery.Location{"LT", "Vilnius", "AS8764"}
-	protocol		= "tcp"
+	protocol        = "tcp"
 )
 
 func Test_NewServiceProposalWithLocation(t *testing.T) {
@@ -32,7 +32,7 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 			Location:          locationLTTelia,
 			LocationOriginate: locationLTTelia,
 			SessionBandwidth:  83886080,
-			Protocol:		   "tcp",
+			Protocol:          "tcp",
 		},
 		proposal.ServiceDefinition,
 	)

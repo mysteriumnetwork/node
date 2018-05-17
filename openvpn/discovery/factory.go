@@ -23,7 +23,7 @@ func NewServiceProposalWithLocation(
 			Location:          serviceLocation,
 			LocationOriginate: serviceLocation,
 			SessionBandwidth:  dto.Bandwidth(10 * datasize.MB),
-			Protocol:		   protocol,
+			Protocol:          protocol,
 		},
 		PaymentMethodType: dto.PaymentMethodPerTime,
 		PaymentMethod: dto.PaymentPerTime{

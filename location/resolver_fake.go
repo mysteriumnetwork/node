@@ -2,22 +2,22 @@ package location
 
 type resolverFake struct {
 	country string
-	error error
+	error   error
 }
 
 // NewResolverFake returns resolverFake which uses statically entered value
 func NewResolverFake(country string) *resolverFake {
 	return &resolverFake{
 		country: country,
-		error: nil,
+		error:   nil,
 	}
 }
 
 // NewFailingResolverFake returns resolverFake with entered error
 func NewFailingResolverFake(err error) *resolverFake {
 	return &resolverFake{
-		country:  "",
-		error:    err,
+		country: "",
+		error:   err,
 	}
 }
 

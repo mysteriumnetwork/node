@@ -98,10 +98,10 @@ func NewCommandWith(
 
 //Command represent entrypoint for Mysterium client with top level components
 type Command struct {
-	connectionManager connection.Manager
-	httpAPIServer     tequilapi.APIServer
-	checkOpenvpn      func() error
-	originalLocationCache     location.Cache
+	connectionManager     connection.Manager
+	httpAPIServer         tequilapi.APIServer
+	checkOpenvpn          func() error
+	originalLocationCache location.Cache
 }
 
 // Start starts Tequilapi service, fetches location
