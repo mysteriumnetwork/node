@@ -105,7 +105,7 @@ func NewCommandWith(
 				options.Protocol,
 			)
 
-			return openvpn_session.NewManager(
+			return session.NewManager(
 				session.ServiceConfigProvider(clientConfigGenerator),
 				&session.UUIDGenerator{},
 			)
@@ -118,10 +118,8 @@ func NewCommandWith(
 				options.OpenvpnPort,
 				options.Protocol,
 			)
-			sessionValidator := openvpn_session.NewSessionValidatorWithClientID(
-				manager.FindUpdateSessionWithClientID,
-				identity.NewExtractor(),
-			)
+
+			sessionValidator := openvpn_session.NewValidator(manager, identity.NewExtractor())
 
 			return openvpn.NewServer(
 				options.OpenvpnBinary,

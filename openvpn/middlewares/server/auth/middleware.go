@@ -21,21 +21,21 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn/management"
 	"strings"
-	"github.com/mysterium/node/openvpn/session/server"
+	"github.com/mysterium/node/openvpn/session"
 )
 
 type middleware struct {
-	checkCredentials server.CredentialsCheckerWithClientID
-	commandWriter    management.Connection
-	currentEvent     clientEvent
+	credentialsValidator *session.Validator
+	commandWriter        management.Connection
+	currentEvent         clientEvent
 }
 
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(credentialsChecker server.CredentialsCheckerWithClientID) *middleware {
+func NewMiddleware(credentialsChecker *session.Validator) *middleware {
 	return &middleware{
-		checkCredentials: credentialsChecker,
-		commandWriter:    nil,
-		currentEvent:     undefinedEvent,
+		credentialsValidator: credentialsChecker,
+		commandWriter:        nil,
+		currentEvent:         undefinedEvent,
 	}
 }
 
@@ -163,7 +163,7 @@ func (m *middleware) authenticateClient(clientID, clientKey int, username, passw
 
 	log.Info("authenticating user: ", username, " clientID: ", clientID, " clientKey: ", clientKey)
 
-	authenticated, err := m.checkCredentials(clientID, username, password)
+	authenticated, err := m.credentialsValidator.Validate(clientID, username, password)
 	if err != nil {
 		log.Error("Authentication error: ", err)
 		return denyClientAuthWithMessage(m.commandWriter, clientID, clientKey, "internal error")

@@ -39,8 +39,3 @@ func (manager *ManagerFake) Create(peerID identity.Identity) (Session, error) {
 func (manager *ManagerFake) FindSession(id SessionID) (Session, bool) {
 	return Session{}, false
 }
-
-// FindUpdateSessionWithClientID always returns empty session and signals that session is not found
-func (manager *ManagerFake) FindUpdateSessionWithClientID(clientID int, id SessionID) (Session, bool) {
-	return Session{}, false
-}
