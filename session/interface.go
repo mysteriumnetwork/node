@@ -21,5 +21,5 @@ type Generator interface {
 type Manager interface {
 	Create(identity.Identity) (Session, error)
 	FindSession(SessionID) (Session, bool)
-	FindUpdateSessionWithClientID(int, SessionID) (Session, bool)
+	//FindUpdateSessionWithClientID(int, SessionID) (Session, bool)
 }
