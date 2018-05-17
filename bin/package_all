@@ -9,6 +9,9 @@
 # Usage example:
 #> bin/package_all 0.0.1
 
+source bin/helpers/functions.sh
+source bin/helpers/load_environment.sh
+
 VERSION=$1
 if [ -z "$VERSION" ]; then
     printf "\e[0;31m%s\e[0m\n" "Missing version!"
@@ -16,6 +19,9 @@ if [ -z "$VERSION" ]; then
 fi
 
 DIR_BUILD="build/package"
+DOCKER_IMAGE="client_builder"
+DOCKER_LOCAL_DIR="/go/src/github.com/mysterium/node"
+PLATFORMS="darwin-10.11/amd64,windows-10.0/amd64,linux/amd64"
 
 printf "Creating build directory '$DIR_BUILD' ..\n" \
     && rm -rf $DIR_BUILD \
@@ -23,26 +29,49 @@ printf "Creating build directory '$DIR_BUILD' ..\n" \
     && cp INSTALL.md $DIR_BUILD/INSTALL.txt \
     && printf "\n\n"
 
-for ARCH in amd64 i386 armhf
+# build client
+docker run --rm -v $(pwd):$DOCKER_LOCAL_DIR $DOCKER_IMAGE -c "
+    xgo --targets='$PLATFORMS'            \
+        --ldflags='$(get_linker_ldflags)' \
+        --out='mysterium_client'          \
+        $DOCKER_LOCAL_DIR/cmd/mysterium_client/  \
+    && mv /build/* $DOCKER_LOCAL_DIR/$DIR_BUILD/"
+
+# build server
+docker run --rm -v $(pwd):$DOCKER_LOCAL_DIR $DOCKER_IMAGE -c "
+    xgo --targets='$PLATFORMS'            \
+        --ldflags='$(get_linker_ldflags)' \
+        --out='mysterium_server'          \
+        $DOCKER_LOCAL_DIR/cmd/mysterium_server/  \
+    && mv /build/* $DOCKER_LOCAL_DIR/$DIR_BUILD/"
+
+# rename files
+for BINARY in client server
 do
-    bin/builder_run "bin/server_build; bin/server_package_debian $VERSION $ARCH" \
-      && mv build/server/mysterium_server $DIR_BUILD/mysterium_server_linux_$ARCH \
-      && printf "\n\n"
+    mv $DIR_BUILD/mysterium_${BINARY}-windows-10.0-amd64.exe $DIR_BUILD/mysterium_${BINARY}_windows_amd64.exe
+    mv $DIR_BUILD/mysterium_${BINARY}-darwin-10.11-amd64 $DIR_BUILD/mysterium_${BINARY}_osx_amd64
+    mv $DIR_BUILD/mysterium_${BINARY}-linux-amd64 $DIR_BUILD/mysterium_${BINARY}_linux_amd64
 done
 
-for ARCH in amd64 i386 armhf
-do
-    bin/builder_run "bin/client_build; bin/client_package_debian $VERSION $ARCH" \
-      && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_linux_$ARCH \
-      && printf "\n\n"
-done
+ARCH=amd64
 
-GOOS=darwin GOARCH=amd64 bin/client_build \
-    && mv build/client/mysterium_client $DIR_BUILD/mysterium_client_osx_amd64 \
-      && printf "\n\n" \
-    && bin/server_package_docker $VERSION $VERSION-alpine alpine latest \
-    && bin/server_package_docker_ubuntu $VERSION $VERSION-ubuntu ubuntu \
-    && bin/client_package_docker $VERSION $VERSION-alpine alpine latest \
-    && bin/client_package_docker_ubuntu $VERSION $VERSION-ubuntu ubuntu \
-      && printf "\n\n" \
-      && printf "\e[0;32m%s\e[0m\n" "All packages successfully packaged to directory '$DIR_BUILD'!"
+# prepare client .deb
+docker run --rm -v $(pwd):$DOCKER_LOCAL_DIR $DOCKER_IMAGE -c \
+  "cd $DOCKER_LOCAL_DIR; bin/client_package_debian $VERSION $ARCH" \
+  && $DIR_BUILD/mysterium_client_linux_$ARCH \
+  && printf "\n\n"
+
+# prepare server .deb
+docker run --rm -v $(pwd):$DOCKER_LOCAL_DIR $DOCKER_IMAGE -c \
+  "cd $DOCKER_LOCAL_DIR; bin/server_package_debian $VERSION $ARCH" \
+  && $DIR_BUILD/mysterium_server_linux_$ARCH \
+  && printf "\n\n"
+
+#
+#GOOS=darwin GOARCH=amd64 \
+#    && bin/server_package_docker $VERSION $VERSION-alpine alpine latest \
+#    && bin/server_package_docker_ubuntu $VERSION $VERSION-ubuntu ubuntu \
+#    && bin/client_package_docker $VERSION $VERSION-alpine alpine latest \
+#    && bin/client_package_docker_ubuntu $VERSION $VERSION-ubuntu ubuntu \
+#      && printf "\n\n" \
+#      && printf "\e[0;32m%s\e[0m\n" "All packages successfully packaged to directory '$DIR_BUILD'!"
