@@ -36,7 +36,7 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 		},
 	)
 
-	manager := &Manager{sessionManager, make(map[session.SessionID]int), sync.Mutex{}}
+	manager := &manager{sessionManager, make(map[session.SessionID]int), sync.Mutex{}}
 	mockValidator := &Validator{manager, mockExtractor}
 	authenticated, err := mockValidator.Validate(1, "not important", "not important")
 
