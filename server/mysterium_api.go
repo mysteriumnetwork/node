@@ -9,6 +9,7 @@ import (
 	"github.com/mysterium/node/requests"
 	"github.com/mysterium/node/server/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysterium/node/version"
 	"net/url"
 	"time"
 )
@@ -98,9 +99,12 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 
 // PingProposal pings service proposal as being alive
 func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
+	statsDto := dto.NodeStatsRequest{
 		NodeKey: proposal.ProviderID,
-	}, signer)
+		NodeVersion: version.GetInfo().BuildNumber,
+	}
+
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", statsDto, signer)
 	if err != nil {
 		return err
 	}
