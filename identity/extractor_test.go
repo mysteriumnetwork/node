@@ -20,6 +20,16 @@ func TestAuthenticate_WhenSignatureIsCorrect(t *testing.T) {
 	assert.Exactly(t, originalSignerID, signerID, "Original signer should be extracted")
 }
 
+func TestAuthenticate_WhenBase64MessageSignatureIsCorrect(t *testing.T) {
+	message := []byte("MystVpnSessionId:Boop!")
+	signature := SignatureBase64("V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=")
+
+	extractor := &extractor{}
+	signerID, err := extractor.Extract(message, signature)
+	assert.NoError(t, err)
+	assert.Exactly(t, originalSignerID, signerID, "Original signer should be extracted")
+}
+
 func TestAuthenticate_WhenSignatureIsEmpty(t *testing.T) {
 	message := []byte("Boop!")
 	signature := SignatureHex("")

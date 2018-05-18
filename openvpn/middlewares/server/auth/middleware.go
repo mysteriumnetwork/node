@@ -6,21 +6,26 @@ import (
 	"strings"
 )
 
-// CredentialsChecker callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
-type CredentialsChecker func(username, password string) (bool, error)
-
 type middleware struct {
-	checkCredentials CredentialsChecker
-	commandWriter    management.Connection
-	currentEvent     clientEvent
+	credentialsValidator CredentialsChecker
+	sessionCleaner       SessionCleaner
+	commandWriter        management.Connection
+	currentEvent         clientEvent
 }
 
+// CredentialsChecker callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
+type CredentialsChecker func(clientID int, username, password string) (bool, error)
+
+// SessionCleaner callback cleans up session after client disconnects
+type SessionCleaner func(username string) error
+
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
+func NewMiddleware(credentialsChecker CredentialsChecker, cleaner SessionCleaner) *middleware {
 	return &middleware{
-		checkCredentials: credentialsChecker,
-		commandWriter:    nil,
-		currentEvent:     undefinedEvent,
+		credentialsValidator: credentialsChecker,
+ 		sessionCleaner: 	  cleaner,
+		commandWriter:        nil,
+		currentEvent:         undefinedEvent,
 	}
 }
 
@@ -136,6 +141,11 @@ func (m *middleware) handleClientEvent(event clientEvent) {
 	case established:
 		log.Info("Client with ID: ", event.clientID, " connection established successfully")
 	case disconnect:
+		username := event.env["username"]
+		err := m.sessionCleaner(username)
+		if err != nil {
+			log.Error("Unable to cleanup client session. Error: ", err)
+		}
 		log.Info("Client with ID: ", event.clientID, " disconnected")
 	}
 }
@@ -148,7 +158,7 @@ func (m *middleware) authenticateClient(clientID, clientKey int, username, passw
 
 	log.Info("authenticating user: ", username, " clientID: ", clientID, " clientKey: ", clientKey)
 
-	authenticated, err := m.checkCredentials(username, password)
+	authenticated, err := m.credentialsValidator(clientID, username, password)
 	if err != nil {
 		log.Error("Authentication error: ", err)
 		return denyClientAuthWithMessage(m.commandWriter, clientID, clientKey, "internal error")

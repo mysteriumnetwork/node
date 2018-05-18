@@ -28,6 +28,7 @@ type manager struct {
 	creationLock   sync.Mutex
 }
 
+// Create creates session instance. Multiple sessions per peerID is possible in case different services are used
 func (manager *manager) Create(peerID identity.Identity) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
@@ -42,7 +43,13 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance Sessio
 	return sessionInstance, nil
 }
 
+// FindSession returns underlying session instance
 func (manager *manager) FindSession(id SessionID) (Session, bool) {
 	sessionInstance, found := manager.sessionMap[id]
 	return sessionInstance, found
+}
+
+// RemoveSession removes given session from underlying session manager
+func (manager *manager) RemoveSession(id SessionID) {
+	delete(manager.sessionMap, id)
 }

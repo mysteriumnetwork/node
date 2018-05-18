@@ -3,16 +3,25 @@ package identity
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
 func TestSigningMessageWithUnlockedAccount(t *testing.T) {
-	message := []byte("Boop!")
+	ks := keystore.NewKeyStore("test_data", keystore.StandardScryptN, keystore.StandardScryptP)
 
-	keystore := &keyStoreFake{}
-	signer := keystoreSigner{keystore, addressToAccount("0x0000000000000000000000000000000000000000")}
-
-	signature, err := signer.Sign(message)
+	manager := NewIdentityManager(ks)
+	err := manager.Unlock("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68", "")
 	assert.NoError(t, err)
-	assert.Equal(t, messageHash(message), keystore.LastHash)
-	assert.Equal(t, SignatureHex("7369676e6564"), signature)
+
+	signer := NewSigner(ks, FromAddress("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68"))
+	message := []byte("MystVpnSessionId:Boop!")
+	signature, err := signer.Sign([]byte(message))
+	signatureBase64 := signature.Base64()
+	t.Logf("signature in base64: %s", signatureBase64)
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		SignatureBase64("V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE="),
+		signature,
+	)
 }
