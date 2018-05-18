@@ -63,6 +63,7 @@ deploy:
     target-branch: mysterium_$TRAVIS_OS_NAME
     repo: MysteriumNetwork/build-artifacts
     on:
+      tags: false
       branch: master
   - provider: releases
     file_glob: true
