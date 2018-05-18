@@ -6,33 +6,33 @@ import (
 	"github.com/mysterium/node/session"
 )
 
-// NewManager returns session Manager which maintains a map of session id -> session
-func NewManager(m session.Manager) *Manager {
-	return &Manager{
+// NewManager returns session manager which maintains a map of session id -> session
+func NewManager(m session.Manager) *manager {
+	return &manager{
 		sessionManager:     m,
 		sessionClientIDMap: make(map[session.SessionID]int),
 		creationLock:   	sync.Mutex{},
 	}
 }
 
-type Manager struct {
+type manager struct {
 	sessionManager session.Manager
 	sessionClientIDMap     map[session.SessionID]int
 	creationLock   sync.Mutex
 }
 
-// Create delegates session creation to underlying session.Manager
-func (manager *Manager) Create(peerID identity.Identity) (sessionInstance session.Session, err error) {
+// Create delegates session creation to underlying session.manager
+func (manager *manager) Create(peerID identity.Identity) (sessionInstance session.Session, err error) {
 	return manager.sessionManager.Create(peerID)
 }
 
 // FindSession returns session instance by given session id
-func (manager *Manager) FindSession(id session.SessionID) (session.Session, bool) {
+func (manager *manager) FindSession(id session.SessionID) (session.Session, bool) {
 	return manager.sessionManager.FindSession(id)
 }
 
 // FindSession finds session and sets clientID if it is not set yet, returns false on clientID conflict
-func (manager *Manager) FindUpdateSession(clientID int, id session.SessionID) (session.Session, bool) {
+func (manager *manager) FindUpdateSession(clientID int, id session.SessionID) (session.Session, bool) {
 	// start enumerating clients from '1', since non-existing key, might return '0' as clientID value
 	clientID++
 	sessionInstance, found := manager.FindSession(id)
@@ -49,7 +49,7 @@ func (manager *Manager) FindUpdateSession(clientID int, id session.SessionID) (s
 }
 
 // RemoveSession removes given session from underlying session managers
-func (manager *Manager) RemoveSession(id session.SessionID) {
+func (manager *manager) RemoveSession(id session.SessionID) {
 	manager.sessionManager.RemoveSession(id)
 	delete(manager.sessionClientIDMap, id)
 }
