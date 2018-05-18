@@ -26,11 +26,16 @@ func (manager *Manager) Create(peerID identity.Identity) (sessionInstance sessio
 	return manager.sessionManager.Create(peerID)
 }
 
+// FindSession returns session instance by given session id
+func (manager *Manager) FindSession(id session.SessionID) (session.Session, bool) {
+	return manager.sessionManager.FindSession(id)
+}
+
 // FindSession finds session and sets clientID if it is not set yet, returns false on clientID conflict
-func (manager *Manager) FindSession(clientID int, id session.SessionID) (session.Session, bool) {
+func (manager *Manager) FindUpdateSession(clientID int, id session.SessionID) (session.Session, bool) {
 	// start enumerating clients from '1', since non-existing key, might return '0' as clientID value
 	clientID++
-	sessionInstance, found := manager.sessionManager.FindSession(id)
+	sessionInstance, found := manager.FindSession(id)
 	activeClientID := manager.sessionClientIDMap[id]
 	if activeClientID == 0 {
 		manager.sessionClientIDMap[id] = clientID
@@ -41,4 +46,10 @@ func (manager *Manager) FindSession(clientID int, id session.SessionID) (session
 		return session.Session{}, false
 	}
 	return sessionInstance, found
+}
+
+// RemoveSession removes given session from underlying session managers
+func (manager *Manager) RemoveSession(id session.SessionID) {
+	manager.sessionManager.RemoveSession(id)
+	delete(manager.sessionClientIDMap, id)
 }

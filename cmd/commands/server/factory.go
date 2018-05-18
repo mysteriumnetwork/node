@@ -109,7 +109,7 @@ func NewCommandWith(
 				options.OpenvpnBinary,
 				serverConfigGenerator,
 				options.DirectoryRuntime,
-				auth.NewMiddleware(sessionValidator.Validate),
+				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 				state.NewMiddleware(callback),
 			)
 		},

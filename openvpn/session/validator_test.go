@@ -80,3 +80,24 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatch
 	assert.NoError(t, err)
 	assert.True(t, authenticated)
 }
+
+func TestCleanupReturnsNoErrorIfSessionIsCleared(t *testing.T) {
+	mockValidator.Validate(1, "not important", "not important")
+	err := mockValidator.Cleanup("not important")
+
+	assert.NoError(t, err)
+}
+
+func TestCleanupReturnsErrorIfSessionNotExists(t *testing.T) {
+	mockManager := &MockSessionManager{}
+	mockExtractor := &MockIdentityExtractor{
+		identity.FromAddress("deadbeef"),
+		nil,
+	}
+	fakeManager := NewManager(mockManager)
+	mockValidator := NewValidator(fakeManager, mockExtractor)
+
+	err := mockValidator.Cleanup("nonexistent_session")
+
+	assert.Errorf(t, err, "no underlying session exists: nonexistent_session")
+}

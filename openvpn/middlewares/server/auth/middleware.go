@@ -8,6 +8,7 @@ import (
 
 type middleware struct {
 	credentialsValidator CredentialsChecker
+	sessionCleaner       SessionCleaner
 	commandWriter        management.Connection
 	currentEvent         clientEvent
 }
@@ -15,10 +16,14 @@ type middleware struct {
 // CredentialsChecker callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
 type CredentialsChecker func(clientID int, username, password string) (bool, error)
 
+// SessionCleaner callback cleans up session after client disconnects
+type SessionCleaner func(username string) error
+
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
+func NewMiddleware(credentialsChecker CredentialsChecker, cleaner SessionCleaner) *middleware {
 	return &middleware{
 		credentialsValidator: credentialsChecker,
+ 		sessionCleaner: 	  cleaner,
 		commandWriter:        nil,
 		currentEvent:         undefinedEvent,
 	}
@@ -136,6 +141,11 @@ func (m *middleware) handleClientEvent(event clientEvent) {
 	case established:
 		log.Info("Client with ID: ", event.clientID, " connection established successfully")
 	case disconnect:
+		username := event.env["username"]
+		err := m.sessionCleaner(username)
+		if err != nil {
+			log.Error("Unable to cleanup client session. Error: ", err)
+		}
 		log.Info("Client with ID: ", event.clientID, " disconnected")
 	}
 }
