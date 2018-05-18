@@ -40,3 +40,7 @@ func (manager *MockSessionManager) FindSession(sessionId session.SessionID) (ses
 func (extractor *MockIdentityExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
 	return extractor.OnExtractReturnIdentity, extractor.OnExtractReturnError
 }
+
+func (manager *MockSessionManager) RemoveSession(sessionId session.SessionID) {
+	// TODO: implement
+}

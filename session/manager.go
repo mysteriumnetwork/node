@@ -64,3 +64,8 @@ func (manager *manager) FindSession(id SessionID) (Session, bool) {
 	sessionInstance, found := manager.sessionMap[id]
 	return sessionInstance, found
 }
+
+// RemoveSession removes given session from underlying session manager
+func (manager *manager) RemoveSession(id SessionID) {
+	delete(manager.sessionMap, id)
+}
