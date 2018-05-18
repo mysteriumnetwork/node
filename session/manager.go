@@ -43,6 +43,7 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance Sessio
 	return sessionInstance, nil
 }
 
+// FindSession returns underlying session instance
 func (manager *manager) FindSession(id SessionID) (Session, bool) {
 	sessionInstance, found := manager.sessionMap[id]
 	return sessionInstance, found
