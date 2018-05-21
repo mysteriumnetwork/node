@@ -29,14 +29,14 @@ func NewManager(m session.Manager) *manager {
 	return &manager{
 		sessionManager:     m,
 		sessionClientIDMap: make(map[session.SessionID]int),
-		creationLock:       sync.Mutex{},
+		sessionMapLock:     sync.Mutex{},
 	}
 }
 
 type manager struct {
 	sessionManager     session.Manager
 	sessionClientIDMap map[session.SessionID]int
-	creationLock       sync.Mutex
+	sessionMapLock     sync.Mutex
 }
 
 // Create delegates session creation to underlying session.manager
@@ -63,10 +63,11 @@ func (manager *manager) FindSession(clientID int, id session.SessionID) (session
 
 // UpdateSession updates OpenVPN session with clientID, returns false on clientID conflict
 func (manager *manager) UpdateSession(clientID int, id session.SessionID) bool {
+	manager.sessionMapLock.Lock()
+	defer manager.sessionMapLock.Unlock()
+
 	_, foundClientID := manager.sessionClientIDMap[id]
 	if !foundClientID {
-		manager.creationLock.Lock()
-		defer manager.creationLock.Unlock()
 		manager.sessionClientIDMap[id] = clientID
 	}
 
@@ -75,8 +76,8 @@ func (manager *manager) UpdateSession(clientID int, id session.SessionID) bool {
 
 // RemoveSession removes given session from underlying session managers
 func (manager *manager) RemoveSession(id session.SessionID) {
+	manager.sessionMapLock.Lock()
+	defer manager.sessionMapLock.Unlock()
 	manager.sessionManager.RemoveSession(id)
-	manager.creationLock.Lock()
-	defer manager.creationLock.Unlock()
 	delete(manager.sessionClientIDMap, id)
 }

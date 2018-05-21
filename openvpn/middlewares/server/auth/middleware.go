@@ -24,6 +24,7 @@ import (
 )
 
 type middleware struct {
+	// TODO: consider implementing event channel to communicate required callbacks
 	credentialsValidator CredentialsValidator
 	sessionCleaner       SessionCleaner
 	commandWriter        management.Connection
@@ -159,10 +160,7 @@ func (m *middleware) handleClientEvent(event clientEvent) {
 		log.Info("Client with ID: ", event.clientID, " connection established successfully")
 	case disconnect:
 		username := event.env["username"]
-		err := m.sessionCleaner(username)
-		if err != nil {
-			log.Error("Unable to cleanup client session. Error: ", err)
-		}
+		m.sessionCleaner(username)
 		log.Info("Client with ID: ", event.clientID, " disconnected")
 	}
 }

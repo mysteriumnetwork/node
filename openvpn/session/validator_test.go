@@ -101,7 +101,8 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatch
 func TestCleanupReturnsNoErrorIfSessionIsCleared(t *testing.T) {
 	mockValidator.Validate(1, "not important", "not important")
 	err := mockValidator.Cleanup("not important")
-
+	_, found, _ := fakeManager.FindSession(1,"not important")
+	assert.False(t, found)
 	assert.NoError(t, err)
 }
 
