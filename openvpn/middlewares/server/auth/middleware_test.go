@@ -26,7 +26,7 @@ import (
 	"github.com/mysterium/node/identity"
 )
 
-var mockedVPNConfig = "config_string"
+const mockedVPNConfig = "config_string"
 
 var mockManager = &ovpnsession.MockSessionManager{
 	session.Session{
@@ -329,7 +329,8 @@ func TestSecondClientWithTheSameCredentialsIsDisconnected(t *testing.T) {
 	assert.Equal(t, "Boop!", fas.username)
 	assert.Equal(t, "V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=", fas.password)
 	// second authentication with the same credentials but with different clientID should fail
-	assert.Equal(t, "client-deny 2 4 wrong username or password", mockMangement.LastLine)
+
+	assert.Equal(t, "client-deny 2 4 internal error", mockMangement.LastLine)
 }
 
 func feedLinesToMiddleware(middleware management.Middleware, lines []string) {

@@ -44,7 +44,7 @@ func TestAuthenticate_WhenBase64MessageSignatureIsCorrect(t *testing.T) {
 	extractor := &extractor{}
 	signerID, err := extractor.Extract(message, signature)
 	assert.NoError(t, err)
-	assert.Exactly(t, originalSignerID, signerID, "Original signer should be extracted")
+	assert.Exactly(t, originalSignerID, signerID, "Extracted signer should match original signer")
 }
 
 func TestAuthenticate_WhenSignatureIsEmpty(t *testing.T) {

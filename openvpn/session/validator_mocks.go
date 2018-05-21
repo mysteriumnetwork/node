@@ -23,7 +23,7 @@ import (
 )
 
 
-var mockedVPNConfig = "config_string"
+const mockedVPNConfig = "config_string"
 
 type mockedConfigProvider func() string
 

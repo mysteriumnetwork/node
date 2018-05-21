@@ -18,24 +18,25 @@
 package session
 
 import (
+	"errors"
 	"github.com/mysterium/node/identity"
-	"sync"
 	"github.com/mysterium/node/session"
+	"sync"
 )
 
-// NewManager returns session manager which maintains a map of session id -> session
+// NewManager returns session manager which maintains a map of session id -> OpenVPN clientID
 func NewManager(m session.Manager) *manager {
 	return &manager{
 		sessionManager:     m,
 		sessionClientIDMap: make(map[session.SessionID]int),
-		creationLock:   	sync.Mutex{},
+		creationLock:       sync.Mutex{},
 	}
 }
 
 type manager struct {
-	sessionManager session.Manager
-	sessionClientIDMap     map[session.SessionID]int
-	creationLock   sync.Mutex
+	sessionManager     session.Manager
+	sessionClientIDMap map[session.SessionID]int
+	creationLock       sync.Mutex
 }
 
 // Create delegates session creation to underlying session.manager
@@ -43,30 +44,39 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance sessio
 	return manager.sessionManager.Create(peerID)
 }
 
-// FindSession returns session instance by given session id
-func (manager *manager) FindSession(id session.SessionID) (session.Session, bool) {
-	return manager.sessionManager.FindSession(id)
+// FindSession returns OpenVPN session instance by given session id
+func (manager *manager) FindSession(clientID int, id session.SessionID) (session.Session, bool, error) {
+	sessionInstance, foundSession := manager.sessionManager.FindSession(id)
+
+	if !foundSession {
+		return session.Session{}, false, errors.New("no underlying session exists, possible break-in attempt")
+	}
+
+	activeClientID, foundClientID := manager.sessionClientIDMap[id]
+
+	if foundClientID && clientID != activeClientID {
+		return sessionInstance, false, errors.New("provided clientID does not mach active clientID")
+	}
+
+	return sessionInstance, foundClientID, nil
 }
 
-// FindSession finds session and sets clientID if it is not set yet, returns false on clientID conflict
-func (manager *manager) FindUpdateSession(clientID int, id session.SessionID) (session.Session, bool) {
-	// start enumerating clients from '1', since non-existing key, might return '0' as clientID value
-	clientID++
-	sessionInstance, found := manager.FindSession(id)
-	activeClientID := manager.sessionClientIDMap[id]
-	if activeClientID == 0 {
+// UpdateSession updates OpenVPN session with clientID, returns false on clientID conflict
+func (manager *manager) UpdateSession(clientID int, id session.SessionID) bool {
+	_, foundClientID := manager.sessionClientIDMap[id]
+	if !foundClientID {
+		manager.creationLock.Lock()
+		defer manager.creationLock.Unlock()
 		manager.sessionClientIDMap[id] = clientID
-		return sessionInstance, found
 	}
 
-	if activeClientID != clientID {
-		return session.Session{}, false
-	}
-	return sessionInstance, found
+	return manager.sessionClientIDMap[id] == clientID
 }
 
 // RemoveSession removes given session from underlying session managers
 func (manager *manager) RemoveSession(id session.SessionID) {
 	manager.sessionManager.RemoveSession(id)
+	manager.creationLock.Lock()
+	defer manager.creationLock.Unlock()
 	delete(manager.sessionClientIDMap, id)
 }

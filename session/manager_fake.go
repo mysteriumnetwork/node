@@ -40,7 +40,6 @@ func (manager *ManagerFake) FindSession(id SessionID) (Session, bool) {
 	return Session{}, false
 }
 
-// RemoveSession removes given session from underlying session manager
+// RemoveSession does nothing, just a stub
 func (manager *ManagerFake) RemoveSession(id SessionID) {
-	// just stub
 }

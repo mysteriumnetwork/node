@@ -57,7 +57,7 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 	mockValidator := &Validator{manager, mockExtractor}
 	authenticated, err := mockValidator.Validate(1, "not important", "not important")
 
-	assert.NoError(t, err)
+	assert.Errorf(t, err, "no underlying session exists, possible break-in attempt")
 	assert.False(t, authenticated)
 }
 
@@ -86,7 +86,7 @@ func TestValidateReturnsFalseWhenSessionExistsAndSignatureIsValidAndClientIDDiff
 	mockValidator.Validate(1, "not important", "not important")
 	authenticated, err := mockValidator.Validate(2, "not important", "not important")
 
-	assert.NoError(t, err)
+	assert.Errorf(t, err, "provided clientID does not mach active clientID")
 	assert.False(t, authenticated)
 }
 

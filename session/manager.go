@@ -68,5 +68,7 @@ func (manager *manager) FindSession(id SessionID) (Session, bool) {
 
 // RemoveSession removes given session from underlying session manager
 func (manager *manager) RemoveSession(id SessionID) {
+	manager.creationLock.Lock()
+	defer manager.creationLock.Unlock()
 	delete(manager.sessionMap, id)
 }
