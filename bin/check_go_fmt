@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Checks if all project files are formatted using go fmt
+#
+# Usage example:
+#> bin/check_gofmt
+
+SUCCESS_COLOR='\033[0;32m' # green
+FAILURE_COLOR="\033[0;31m" # red
+
+unformatted=`find . -type d -name "vendor" -prune -o -type f -iregex '.*\.go' -exec gofmt -l '{}' \;`
+if [ ! -z "$unformatted" ]; then
+    echo -e $FAILURE_COLOR"Following files are not formatted using go fmt:"
+    echo "$unformatted"
+    exit 1
+fi
+echo -e $SUCCESS_COLOR"All files are formatted using go fmt."
