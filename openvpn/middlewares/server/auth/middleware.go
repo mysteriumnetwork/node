@@ -24,20 +24,20 @@ import (
 )
 
 type middleware struct {
-	credentialsValidator CredentialsChecker
+	credentialsValidator CredentialsValidator
 	sessionCleaner       SessionCleaner
 	commandWriter        management.Connection
 	currentEvent         clientEvent
 }
 
-// CredentialsChecker callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
-type CredentialsChecker func(clientID int, username, password string) (bool, error)
+// CredentialsValidator callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
+type CredentialsValidator func(clientID int, username, password string) (bool, error)
 
 // SessionCleaner callback cleans up session after client disconnects
 type SessionCleaner func(username string) error
 
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(credentialsChecker CredentialsChecker, cleaner SessionCleaner) *middleware {
+func NewMiddleware(credentialsChecker CredentialsValidator, cleaner SessionCleaner) *middleware {
 	return &middleware{
 		credentialsValidator: credentialsChecker,
  		sessionCleaner: 	  cleaner,
