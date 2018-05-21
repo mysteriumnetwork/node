@@ -3,7 +3,7 @@
 # Checks if all project files are formatted using go fmt
 #
 # Usage example:
-#> bin/check_gofmt
+#> bin/check_go_fmt
 
 SUCCESS_COLOR='\033[0;32m' # green
 FAILURE_COLOR="\033[0;31m" # red
