@@ -27,7 +27,7 @@ type middleware struct {
 	// TODO: consider implementing event channel to communicate required callbacks
 	credentialsValidator CredentialsValidator
 	sessionCleaner       SessionCleaner
-	commandWriter        management.Connection
+	commandWriter        management.CommandWriter
 	currentEvent         clientEvent
 }
 
@@ -38,9 +38,9 @@ type CredentialsValidator func(clientID int, username, password string) (bool, e
 type SessionCleaner func(username string) error
 
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(credentialsChecker CredentialsValidator, cleaner SessionCleaner) *middleware {
+func NewMiddleware(credentialsValidator CredentialsValidator, cleaner SessionCleaner) *middleware {
 	return &middleware{
-		credentialsValidator: credentialsChecker,
+		credentialsValidator: credentialsValidator,
 		sessionCleaner:       cleaner,
 		commandWriter:        nil,
 		currentEvent:         undefinedEvent,
@@ -74,12 +74,12 @@ var undefinedEvent = clientEvent{
 	env:       make(map[string]string),
 }
 
-func (m *middleware) Start(commandWriter management.Connection) error {
+func (m *middleware) Start(commandWriter management.CommandWriter) error {
 	m.commandWriter = commandWriter
 	return nil
 }
 
-func (m *middleware) Stop(commandWriter management.Connection) error {
+func (m *middleware) Stop(commandWriter management.CommandWriter) error {
 	return nil
 }
 
@@ -185,12 +185,12 @@ func (m *middleware) authenticateClient(clientID, clientKey int, username, passw
 	return denyClientAuthWithMessage(m.commandWriter, clientID, clientKey, "wrong username or password")
 }
 
-func approveClient(commandWriter management.Connection, clientID, keyID int) error {
+func approveClient(commandWriter management.CommandWriter, clientID, keyID int) error {
 	_, err := commandWriter.SingleLineCommand("client-auth-nt %d %d", clientID, keyID)
 	return err
 }
 
-func denyClientAuthWithMessage(commandWriter management.Connection, clientID, keyID int, message string) error {
+func denyClientAuthWithMessage(commandWriter management.CommandWriter, clientID, keyID int, message string) error {
 	_, err := commandWriter.SingleLineCommand("client-deny %d %d %s", clientID, keyID, message)
 	return err
 }

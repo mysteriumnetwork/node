@@ -26,7 +26,7 @@ import (
 
 // SignatureCredentialsProvider returns session id as username and id signed with given signer as password
 func SignatureCredentialsProvider(id session.SessionID, signer identity.Signer) auth.CredentialsProvider {
-	return func() (string, string, error) {
+	return func() (username string, password string, err error) {
 		signature, err := signer.Sign([]byte(ovpnsession.SignaturePrefix + id))
 		return string(id), signature.Base64(), err
 	}

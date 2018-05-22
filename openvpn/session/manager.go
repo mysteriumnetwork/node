@@ -27,20 +27,20 @@ import (
 // NewManager returns session manager which maintains a map of session id -> OpenVPN clientID
 func NewManager(m session.Manager) *manager {
 	return &manager{
-		sessionManager:     m,
-		sessionClientIDMap: make(map[session.SessionID]int),
-		sessionMapLock:     sync.Mutex{},
+		sessionManager:   m,
+		sessionClientIDs: make(map[session.SessionID]int),
+		sessionMapLock:   sync.Mutex{},
 	}
 }
 
 type manager struct {
-	sessionManager     session.Manager
-	sessionClientIDMap map[session.SessionID]int
-	sessionMapLock     sync.Mutex
+	sessionManager   session.Manager
+	sessionClientIDs map[session.SessionID]int
+	sessionMapLock   sync.Mutex
 }
 
 // Create delegates session creation to underlying session.manager
-func (manager *manager) Create(peerID identity.Identity) (sessionInstance session.Session, err error) {
+func (manager *manager) Create(peerID identity.Identity) (session.Session, error) {
 	return manager.sessionManager.Create(peerID)
 }
 
@@ -52,13 +52,13 @@ func (manager *manager) FindSession(clientID int, id session.SessionID) (session
 		return session.Session{}, false, errors.New("no underlying session exists, possible break-in attempt")
 	}
 
-	activeClientID, foundClientID := manager.sessionClientIDMap[id]
+	sessionClientID, clientIDFound := manager.sessionClientIDs[id]
 
-	if foundClientID && clientID != activeClientID {
+	if clientIDFound && clientID != sessionClientID {
 		return sessionInstance, false, errors.New("provided clientID does not mach active clientID")
 	}
 
-	return sessionInstance, foundClientID, nil
+	return sessionInstance, clientIDFound, nil
 }
 
 // UpdateSession updates OpenVPN session with clientID, returns false on clientID conflict
@@ -66,12 +66,12 @@ func (manager *manager) UpdateSession(clientID int, id session.SessionID) bool {
 	manager.sessionMapLock.Lock()
 	defer manager.sessionMapLock.Unlock()
 
-	_, foundClientID := manager.sessionClientIDMap[id]
+	_, foundClientID := manager.sessionClientIDs[id]
 	if !foundClientID {
-		manager.sessionClientIDMap[id] = clientID
+		manager.sessionClientIDs[id] = clientID
 	}
 
-	return manager.sessionClientIDMap[id] == clientID
+	return manager.sessionClientIDs[id] == clientID
 }
 
 // RemoveSession removes given session from underlying session managers
@@ -79,5 +79,5 @@ func (manager *manager) RemoveSession(id session.SessionID) {
 	manager.sessionMapLock.Lock()
 	defer manager.sessionMapLock.Unlock()
 	manager.sessionManager.RemoveSession(id)
-	delete(manager.sessionClientIDMap, id)
+	delete(manager.sessionClientIDs, id)
 }

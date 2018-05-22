@@ -41,7 +41,7 @@ func NewMiddleware(listeners ...Callback) management.Middleware {
 	}
 }
 
-func (middleware *middleware) Start(commandWriter management.Connection) error {
+func (middleware *middleware) Start(commandWriter management.CommandWriter) error {
 	_, lines, err := commandWriter.MultiLineCommand("state on all")
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ func (middleware *middleware) Start(commandWriter management.Connection) error {
 	return nil
 }
 
-func (middleware *middleware) Stop(commandWriter management.Connection) error {
+func (middleware *middleware) Stop(commandWriter management.CommandWriter) error {
 	_, err := commandWriter.SingleLineCommand("state off")
 	return err
 }
