@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-var mockedVPNConfig = "config_string"
+const mockedVPNConfig = "config_string"
 
 var expectedSession = Session{
 	ID:         SessionID("mocked-id"),

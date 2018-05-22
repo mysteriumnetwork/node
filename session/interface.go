@@ -38,4 +38,5 @@ type Generator interface {
 type Manager interface {
 	Create(identity.Identity) (Session, error)
 	FindSession(SessionID) (Session, bool)
+	RemoveSession(SessionID)
 }

@@ -29,7 +29,7 @@ type CredentialsProvider func() (username string, password string, err error)
 
 type middleware struct {
 	fetchCredentials CredentialsProvider
-	connection       management.Connection
+	commandWriter    management.CommandWriter
 	lastUsername     string
 	lastPassword     string
 	state            openvpn.State
@@ -39,17 +39,17 @@ type middleware struct {
 func NewMiddleware(credentials CredentialsProvider) *middleware {
 	return &middleware{
 		fetchCredentials: credentials,
-		connection:       nil,
+		commandWriter:    nil,
 	}
 }
 
-func (m *middleware) Start(connection management.Connection) error {
-	m.connection = connection
+func (m *middleware) Start(commandWriter management.CommandWriter) error {
+	m.commandWriter = commandWriter
 	log.Info("starting client user-pass provider middleware")
 	return nil
 }
 
-func (m *middleware) Stop(connection management.Connection) error {
+func (m *middleware) Stop(connection management.CommandWriter) error {
 	return nil
 }
 
@@ -64,14 +64,14 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 		return false, nil
 	}
 	username, password, err := m.fetchCredentials()
-	log.Info("authenticating user ", username, " with pass: ", password)
+	log.Info("authenticating user ", username)
 
-	_, err = m.connection.SingleLineCommand("password 'Auth' %s", password)
+	_, err = m.commandWriter.SingleLineCommand("password 'Auth' %s", password)
 	if err != nil {
 		return true, err
 	}
 
-	_, err = m.connection.SingleLineCommand("username 'Auth' %s", username)
+	_, err = m.commandWriter.SingleLineCommand("username 'Auth' %s", username)
 	if err != nil {
 		return true, err
 	}

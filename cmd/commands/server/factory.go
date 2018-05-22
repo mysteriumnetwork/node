@@ -97,7 +97,7 @@ func NewCommandWith(
 		},
 
 		sessionManagerFactory: func(primitives *tls.Primitives, vpnServerIP string) session.Manager {
-			//TODO move this outside session manager factory - as external dependency
+			// TODO: check options for --openvpn-transport option
 			clientConfigGenerator := openvpn.NewClientConfigGenerator(
 				primitives,
 				vpnServerIP,
@@ -111,22 +111,22 @@ func NewCommandWith(
 			)
 		},
 		vpnServerFactory: func(manager session.Manager, primitives *tls.Primitives, callback state.Callback) *openvpn.Server {
+			// TODO: check options for --openvpn-transport option
 			serverConfigGenerator := openvpn.NewServerConfigGenerator(
 				options.DirectoryRuntime,
 				primitives,
 				options.OpenvpnPort,
 				options.Protocol,
 			)
-			sessionValidator := openvpn_session.NewSessionValidator(
-				manager.FindSession,
-				identity.NewExtractor(),
-			)
+
+			ovpnSessionManager := openvpn_session.NewManager(manager)
+			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
 
 			return openvpn.NewServer(
 				options.OpenvpnBinary,
 				serverConfigGenerator,
 				options.DirectoryRuntime,
-				auth.NewMiddleware(sessionValidator),
+				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 				state.NewMiddleware(callback),
 			)
 		},

@@ -42,12 +42,12 @@ func NewMiddleware(sessionStatsHandler SessionStatsHandler, interval time.Durati
 	}
 }
 
-func (middleware *middleware) Start(commandWriter management.Connection) error {
+func (middleware *middleware) Start(commandWriter management.CommandWriter) error {
 	_, err := commandWriter.SingleLineCommand(byteCountCommandTemplate, int(middleware.interval.Seconds()))
 	return err
 }
 
-func (middleware *middleware) Stop(commandWriter management.Connection) error {
+func (middleware *middleware) Stop(commandWriter management.CommandWriter) error {
 	_, err := commandWriter.SingleLineCommand(byteCountCommandTemplate, 0)
 	return err
 }

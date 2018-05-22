@@ -39,3 +39,7 @@ func (manager *ManagerFake) Create(peerID identity.Identity) (Session, error) {
 func (manager *ManagerFake) FindSession(id SessionID) (Session, bool) {
 	return Session{}, false
 }
+
+// RemoveSession does nothing, just a stub
+func (manager *ManagerFake) RemoveSession(id SessionID) {
+}

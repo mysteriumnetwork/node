@@ -22,28 +22,28 @@ import (
 	"github.com/mysterium/node/communication"
 )
 
-type SessionCreateProducer struct {
-	ProposalId int
+type createProducer struct {
+	ProposalID int
 }
 
-func (producer *SessionCreateProducer) GetRequestEndpoint() communication.RequestEndpoint {
+func (producer *createProducer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpointSessionCreate
 }
 
-func (producer *SessionCreateProducer) NewResponse() (responsePtr interface{}) {
-	var response SessionCreateResponse
-	return &response
+func (producer *createProducer) NewResponse() (responsePtr interface{}) {
+	return &SessionCreateResponse{}
 }
 
-func (producer *SessionCreateProducer) Produce() (requestPtr interface{}) {
+func (producer *createProducer) Produce() (requestPtr interface{}) {
 	return &SessionCreateRequest{
-		ProposalId: producer.ProposalId,
+		ProposalId: producer.ProposalID,
 	}
 }
 
-func RequestSessionCreate(sender communication.Sender, proposalId int) (*SessionDto, error) {
-	responsePtr, err := sender.Request(&SessionCreateProducer{
-		ProposalId: proposalId,
+// RequestSessionCreate requests session creation and returns session DTO
+func RequestSessionCreate(sender communication.Sender, proposalID int) (*SessionDto, error) {
+	responsePtr, err := sender.Request(&createProducer{
+		ProposalID: proposalID,
 	})
 	response := responsePtr.(*SessionCreateResponse)
 

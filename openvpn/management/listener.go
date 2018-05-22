@@ -134,7 +134,7 @@ func (management *Management) serveNewConnection(netConn net.Conn) {
 	outputConsuming.Wait()
 }
 
-func (management *Management) startMiddlewares(connection Connection) {
+func (management *Management) startMiddlewares(connection CommandWriter) {
 	for _, middleware := range management.middlewares {
 		err := middleware.Start(connection)
 		if err != nil {
@@ -145,7 +145,7 @@ func (management *Management) startMiddlewares(connection Connection) {
 	}
 }
 
-func (management *Management) stopMiddlewares(connection Connection) {
+func (management *Management) stopMiddlewares(connection CommandWriter) {
 	for _, middleware := range management.middlewares {
 		err := middleware.Stop(connection)
 		if err != nil {
