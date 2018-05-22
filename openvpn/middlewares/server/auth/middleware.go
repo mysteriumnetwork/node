@@ -41,7 +41,7 @@ type SessionCleaner func(username string) error
 func NewMiddleware(credentialsChecker CredentialsValidator, cleaner SessionCleaner) *middleware {
 	return &middleware{
 		credentialsValidator: credentialsChecker,
- 		sessionCleaner: 	  cleaner,
+		sessionCleaner:       cleaner,
 		commandWriter:        nil,
 		currentEvent:         undefinedEvent,
 	}

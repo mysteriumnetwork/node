@@ -22,7 +22,6 @@ import (
 	"github.com/mysterium/node/session"
 )
 
-
 const mockedVPNConfig = "config_string"
 
 type mockedConfigProvider func() string

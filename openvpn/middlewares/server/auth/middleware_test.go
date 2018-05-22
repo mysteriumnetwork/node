@@ -18,12 +18,12 @@
 package auth
 
 import (
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn/management"
+	ovpnsession "github.com/mysterium/node/openvpn/session"
+	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/mysterium/node/session"
-	ovpnsession "github.com/mysterium/node/openvpn/session"
-	"github.com/mysterium/node/identity"
 )
 
 const mockedVPNConfig = "config_string"
@@ -51,7 +51,7 @@ type fakeAuthenticatorStub struct {
 	password      string
 	called        bool
 	authenticated bool
-	manager 	  session.Manager
+	manager       session.Manager
 }
 
 func (f *fakeAuthenticatorStub) fakeAuthenticator(clientID int, username, password string) (bool, error) {

@@ -18,9 +18,9 @@
 package session
 
 import (
+	"errors"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/session"
-	"errors"
 )
 
 // SignaturePrefix is used to prefix with each session string before calculating signature or extracting identity
@@ -28,16 +28,16 @@ const SignaturePrefix = "MystVpnSessionId:"
 
 // Validator structure that keeps attributes needed Validator operations
 type Validator struct {
-	sessionManager *manager
+	sessionManager    *manager
 	identityExtractor identity.Extractor
 }
 
 // NewValidator return Validator instance
-func NewValidator(m *manager, extractor identity.Extractor) (*Validator) {
+func NewValidator(m *manager, extractor identity.Extractor) *Validator {
 	return &Validator{
-				sessionManager: m,
-				identityExtractor: extractor,
-			}
+		sessionManager:    m,
+		identityExtractor: extractor,
+	}
 }
 
 // Validate provides glue code for openvpn management interface to validate incoming client login request,

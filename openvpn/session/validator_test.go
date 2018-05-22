@@ -18,11 +18,11 @@
 package session
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
-	"github.com/mysterium/node/session"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/session"
+	"github.com/stretchr/testify/assert"
 	"sync"
+	"testing"
 )
 
 var mockManager = &MockSessionManager{
@@ -101,7 +101,7 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatch
 func TestCleanupReturnsNoErrorIfSessionIsCleared(t *testing.T) {
 	mockValidator.Validate(1, "not important", "not important")
 	err := mockValidator.Cleanup("not important")
-	_, found, _ := fakeManager.FindSession(1,"not important")
+	_, found, _ := fakeManager.FindSession(1, "not important")
 	assert.False(t, found)
 	assert.NoError(t, err)
 }

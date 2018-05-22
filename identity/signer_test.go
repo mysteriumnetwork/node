@@ -18,9 +18,9 @@
 package identity
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
 func TestSigningMessageWithUnlockedAccount(t *testing.T) {
