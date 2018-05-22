@@ -40,7 +40,7 @@ type openVpnClient struct {
 // NewClient creates openvpn client with given config params
 func NewClient(openvpnBinary string, config *ClientConfig, managementAddress *management.Address, middlewares ...management.Middleware) *openVpnClient {
 	// Add the management interface socketAddress to the config
-	config.SetManagementSocket(managementAddress.IP, managementAddress.Port)
+	config.SetManagementAddress(managementAddress.IP, managementAddress.Port)
 
 	return &openVpnClient{
 		config:     config,

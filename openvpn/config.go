@@ -58,8 +58,8 @@ func (c *Config) setFlag(name string) {
 	)
 }
 
-// SetManagementSocket creates unix socket style socket option for communication with openvpn process
-func (c *Config) SetManagementSocket(address string, port int) {
+// SetManagementAddress creates a TCP socket option for communication with openvpn process
+func (c *Config) SetManagementAddress(address string, port int) {
 	socketAddress := fmt.Sprintf("%s:%d", address, port)
 
 	c.setParam("management", socketAddress)

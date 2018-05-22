@@ -71,7 +71,7 @@ func (server *Server) Start() error {
 		return err
 	}
 
-	config.SetManagementSocket(address.IP, address.Port)
+	config.SetManagementAddress(address.IP, address.Port)
 
 	// Start the management interface (if it isnt already started)
 	if err := server.management.Start(); err != nil {
