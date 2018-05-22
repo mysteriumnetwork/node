@@ -39,13 +39,13 @@ type HTTPTransport interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-func newHTTPTransport(responseTimeout time.Duration) HTTPTransport {
+func newHTTPTransport(requestTimeout time.Duration) HTTPTransport {
 	return &http.Client{
 		Transport: &http.Transport{
 			//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
-			DisableKeepAlives:     true,
-			ResponseHeaderTimeout: responseTimeout,
+			DisableKeepAlives: true,
 		},
+		Timeout: requestTimeout,
 	}
 }
 
