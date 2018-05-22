@@ -66,7 +66,11 @@ type Server struct {
 func (server *Server) Start() error {
 	config := server.generateConfig()
 
-	address := management.GetAddressFromString(server.management.SocketAddress())
+	address, err := management.GetPortAndAddressFromString(server.management.SocketAddress())
+	if err != nil {
+		return err
+	}
+
 	config.SetManagementSocket(address.IP, address.Port)
 
 	// Start the management interface (if it isnt already started)
