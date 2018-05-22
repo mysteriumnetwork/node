@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"strconv"
-	"github.com/kataras/iris/core/errors"
+	"errors"
 )
 
 /**
@@ -29,7 +29,7 @@ func (ma *Address) String() string {
 func GetAvailableAddress() (*Address, error) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Failed to open a connection for port discovery.")
 	}
 
 	defer l.Close()

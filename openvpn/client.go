@@ -38,12 +38,7 @@ type openVpnClient struct {
 }
 
 // NewClient creates openvpn client with given config params
-func NewClient(openvpnBinary string, config *ClientConfig, directoryRuntime string, middlewares ...management.Middleware) *openVpnClient {
-	managementAddress, err := management.GetAvailableAddress()
-	if err != nil {
-		return nil
-	}
-
+func NewClient(openvpnBinary string, config *ClientConfig, managementAddress *management.Address, middlewares ...management.Middleware) *openVpnClient {
 	// Add the management interface socketAddress to the config
 	config.SetManagementSocket(managementAddress.IP, managementAddress.Port)
 

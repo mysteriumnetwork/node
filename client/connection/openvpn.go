@@ -25,6 +25,7 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/client/auth"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/openvpn/middlewares/state"
+	"github.com/mysterium/node/openvpn/management"
 	"github.com/mysterium/node/openvpn/session/credentials"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
@@ -77,10 +78,15 @@ func ConfigureVpnClientFactory(
 
 		credentialsProvider := credentials.SignatureCredentialsProvider(vpnSession.ID, signer)
 
+		managementAddress, err := management.GetAvailableAddress()
+		if err != nil {
+			return nil, err
+		}
+
 		return openvpn.NewClient(
 			openvpnBinary,
 			vpnClientConfig,
-			runtimeDirectory,
+			managementAddress,
 			state.NewMiddleware(stateCallback),
 			bytescount.NewMiddleware(statsHandler, 1*time.Second),
 			auth.NewMiddleware(credentialsProvider),
