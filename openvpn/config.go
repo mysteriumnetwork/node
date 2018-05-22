@@ -20,6 +20,7 @@ package openvpn
 import (
 	"path/filepath"
 	"strconv"
+	"fmt"
 )
 
 // NewConfig creates new openvpn configuration structure and takes configuration directory as parameter for file param serialization
@@ -58,8 +59,10 @@ func (c *Config) setFlag(name string) {
 }
 
 // SetManagementSocket creates unix socket style socket option for communication with openvpn process
-func (c *Config) SetManagementSocket(socketAddress string) {
-	c.setParam("management", socketAddress+" unix")
+func (c *Config) SetManagementSocket(address string, port int) {
+	socketAddress := fmt.Sprintf("%s:%d", address, port)
+
+	c.setParam("management", socketAddress)
 	c.setFlag("management-client")
 }
 

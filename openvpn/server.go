@@ -19,7 +19,6 @@ package openvpn
 
 import (
 	"github.com/mysterium/node/openvpn/management"
-
 	"github.com/mysterium/node/openvpn/tls"
 	"sync"
 )
@@ -27,10 +26,14 @@ import (
 // NewServer constructs new openvpn server instance
 func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, directoryRuntime string, middlewares ...management.Middleware) *Server {
 	// Add the management interface socketAddress to the config
-	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
+	managementAddress, err := management.GetAvailableAddress()
+	if err != nil {
+		return nil
+	}
+
 	return &Server{
 		generateConfig: generateConfig,
-		management:     management.NewManagement(socketAddress, "[server-management] ", middlewares...),
+		management:     management.NewManagement(managementAddress.String(), "[server-management] ", middlewares...),
 		process:        NewProcess(openvpnBinary, "[server-openvpn] "),
 	}
 }
@@ -63,7 +66,8 @@ type Server struct {
 func (server *Server) Start() error {
 	config := server.generateConfig()
 
-	config.SetManagementSocket(server.management.SocketAddress())
+	address := management.GetAddressFromString(server.management.SocketAddress())
+	config.SetManagementSocket(address.IP, address.Port)
 
 	// Start the management interface (if it isnt already started)
 	if err := server.management.Start(); err != nil {
