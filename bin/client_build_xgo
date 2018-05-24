@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Usage example:
+#> bin/client_build_xgo <os>/<arch>..
+#
+# Cross compile (Unix):
+#> bin/client_build_xgo linux/amd64
+#
+# Cross compile (OSX + Windows):
+#> bin/client_build_xgo darwin/amd64 windows/amd64
+#
+# Check if program has dynamic libraries:
+#> brew install readelf
+#> readelf -d build/client/mysterium_client
+
+XGO_TARGETS=`IFS=','; echo "$*"`
+if [ -z "$XGO_TARGETS" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing targets!"
+    exit 1
+fi
+
+source bin/helpers/functions.sh
+source bin/helpers/load_environment.sh
+DIR_BUILD="build/package"
+DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
+
+xgo --go=1.9.2 \
+    --targets="$XGO_TARGETS" \
+    --dest=${DIR_TEMP} \
+    --out=mysterium_client \
+    --ldflags="$(get_linker_ldflags)" \
+    $(pwd)/cmd/mysterium_client
+
+# Remove version from filenames
+for BINARY in `ls ${DIR_TEMP}`; do
+    BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/.*-([a-z]*)(-[0-9.]*)?-([a-z]*)/mysterium_client_\1_\3/p'`
+    mv ${DIR_TEMP}/${BINARY} ${DIR_BUILD}/${BINARY_RENAMED}
+done
+rm -rf ${DIR_TEMP}
