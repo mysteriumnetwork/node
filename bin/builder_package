@@ -3,32 +3,34 @@
 ###########################################################################
 # Creates builder Docker image and uploads it to DockerHub https://hub.docker.com/r/mysteriumnetwork/mysterium-node-builder/
 #
-# To create a builder image, simply execute:
-#> bin/builder_package [latest]
-
-# Usage - build local image:
+# Usage example:
+#> bin/builder_package [tag..]
+#
+# Build local image:
 #> bin/builder_package
-
-# Usage - build image and push to docker hub:
+#
+# Build image and push to docker hub:
 #> bin/builder_package latest
 
 DOCKER_IMAGE="mysteriumnetwork/mysterium-node-builder"
 
 printf "Building Docker image '$DOCKER_IMAGE' ..\n" \
     && docker build \
-        --file bin/util_docker/builder/Dockerfile \
-        --tag $DOCKER_IMAGE:latest \
+        --file bin/builder_docker/Dockerfile \
+        --tag $DOCKER_IMAGE \
         .
-
-if [ $# -ge 1 ] && [ $1 == "latest" ]; then
-    docker push $DOCKER_IMAGE:latest
-fi
-
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Failed to build Docker image!"
     exit 1
 fi
 
-printf "\e[0;32m%s\e[0m\n" "Docker image building process complete!"
+while test $# -gt 0; do
+    DOCKER_TAG=$1
+    printf "Publishing version '$DOCKER_TAG' image..\n" \
+        && docker tag $DOCKER_IMAGE $DOCKER_IMAGE:$DOCKER_TAG \
+        && docker push $DOCKER_IMAGE:$DOCKER_TAG
+    shift
+done
 
+printf "\e[0;32m%s\e[0m\n" "Docker image building process complete!"
 exit 0
