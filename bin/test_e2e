@@ -4,7 +4,7 @@ PROJECT_NAME="node_e2e_test"
 PROJECT_FILE="e2e/docker-compose.yml"
 SUCCESS_COLOR='\033[0;32m' # green
 FAILURE_COLOR="\033[0;31m" # red
-DEFAULT_COLOR="\033[0;0m"
+DEFAULT_COLOR="\033[0m"
 
 dockerComposeCmd="docker-compose -f $PROJECT_FILE -p $PROJECT_NAME"
 
