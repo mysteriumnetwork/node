@@ -20,6 +20,7 @@
 OS_DIR_BIN="/usr/bin"
 OS_DIR_CONFIG="/etc/mysterium-node"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-client/installation"
+BINARY=${BINARY:="build/client/mysterium_client"}
 
 VERSION=$1
 if [ -z "$VERSION" ]; then
@@ -61,7 +62,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --after-install bin/client_package/installation/post-install.sh \
         --after-remove bin/client_package/installation/post-uninstall.sh \
         -s dir -t deb \
-        build/client/mysterium_client=${OS_DIR_BIN}/ \
+        ${BINARY}=${OS_DIR_BIN}/ \
         bin/client_package/config/=${OS_DIR_CONFIG}/ \
         bin/client_package/installation/=${OS_DIR_INSTALLATION}/
 if [ $? -ne 0 ] ; then
