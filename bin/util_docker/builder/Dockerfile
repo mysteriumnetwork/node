@@ -1,4 +1,4 @@
-FROM golang:1.9.2 AS builder
+FROM karalabe/xgo-1.9.2 AS builder
 
 # Install FPM
 RUN apt-get update \
@@ -9,7 +9,8 @@ RUN apt-get update \
 
 # Install Debber
 RUN go get github.com/debber/debber-v0.3/cmd/debber
+RUN go get github.com/oschwald/geoip2-golang
 
-WORKDIR /go/src/github.com/mysterium/node
+WORKDIR /
 
 ENTRYPOINT ["/bin/bash"]
