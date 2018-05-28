@@ -1,11 +1,35 @@
 ---
 ## Mysterium VPN node (Any OS with Docker)
+
+Most convenient way requiring least configuration is to run a node using docker. 
+All node versions are available through docker hub: 
+ 
 https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
 ### Installation
+
+Read on how to setup docker repository for Debian [here](https://docs.docker.com/install/linux/docker-ce/debian/) 
+and for Ubuntu [here](https://docs.docker.com/install/linux/docker-ee/ubuntu/).
+
+##### Debian / Ubuntu
 ```bash
-sudo apt-get install docker.io
-sudo docker run --cap-add NET_ADMIN --net host --publish "1194:1194" -e "NODE=123456" --name mysterium-node -d mysteriumnetwork/mysterium-node:{VERSION}
+sudo apt-get install docker-ce
 ```
+
+##### CentOS / RedHat
+
+Read on how to setup docker repository for CentOS [here](https://docs.docker.com/install/linux/docker-ce/centos/)
+and for RedHat [here](https://docs.docker.com/install/linux/docker-ee/rhel/).
+
+```bash
+sudo yum install docker-ce
+```
+
+##### Fetching and running docker image
+```bash
+sudo docker run --cap-add NET_ADMIN --net host --publish "1194:1194" --name mysterium-node -d mysteriumnetwork/mysterium-node:{VERSION}
+```
+You can skip `{VERSION}` to fetch latest image. 
+
 ### Running
 ```bash
 sudo docker start mysterium-node
@@ -17,10 +41,9 @@ sudo docker logs -f mysterium-node
 ```
 
 
-## Mysterium VPN node (Debian && Ubuntu) - tested on Ubuntu 14.04
+## Mysterium VPN node (Debian && Ubuntu) - tested on Ubuntu 16.04
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_i386.deb
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_armhf.deb
 ### Installation
 ```bash
@@ -38,15 +61,14 @@ sudo service mysterium-node status
 sudo tail -f /var/log/mysterium-node/*
 ```
 ### Debugging standalone
-```
+```bash
 sudo mysterium_server --data-dir=/var/lib/mysterium-node --config-dir=/etc/mysterium-node --runtime-dir=/tmp --identity=0x123456..
 ```
 
 
-## Mysterium VPN client (Debian && Ubuntu) - tested on Ubuntu 14.04
+## Mysterium VPN client (Debian && Ubuntu) - tested on Ubuntu 16.04
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_i386.deb
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_armhf.deb
 
 ### Installation
@@ -65,7 +87,7 @@ sudo service mysterium-client status
 sudo tail -f /var/log/mysterium-client/*
 ```
 ### Debugging standalone
-```
+```bash
 sudo mysterium_client --data-dir=/var/lib/mysterium-client --config-dir=/etc/mysterium-client --runtime-dir=/tmp
 ```
 
@@ -73,7 +95,6 @@ sudo mysterium_client --data-dir=/var/lib/mysterium-client --config-dir=/etc/mys
 ## Mysterium VPN node (standalone Linux binaries)
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_amd64
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_i386
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_armhf
 ### Running
 ```bash
@@ -85,7 +106,6 @@ sudo mysterium_server --config-dir=/etc/mysterium-node --identity=0x123456..
 ## Mysterium VPN client (standalone Linux binaries)
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_amd64
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_i386
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_armhf
 ### Running
 ```bash
