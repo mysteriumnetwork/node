@@ -1,20 +1,11 @@
 #!/usr/bin/env bash
 
+source bin/helpers/output.sh
+
 PROJECT_NAME="node_e2e_test"
 PROJECT_FILE="e2e/docker-compose.yml"
-SUCCESS_COLOR='\033[0;32m' # green
-FAILURE_COLOR="\033[0;31m" # red
-DEFAULT_COLOR="\033[0m"
 
 dockerComposeCmd="docker-compose -f $PROJECT_FILE -p $PROJECT_NAME"
-
-print_success () {
-    echo -e $SUCCESS_COLOR$1$DEFAULT_COLOR
-}
-
-print_error () {
-    echo -e $FAILURE_COLOR$1$DEFAULT_COLOR
-}
 
 setup () {
     ${dockerComposeCmd} up -d db # start database first - it takes about 10 sec untils db startsup, and otherwise db migration fails
