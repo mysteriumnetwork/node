@@ -51,8 +51,15 @@ const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
+const license = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+This program comes with ABSOLUTELY NO WARRANTY; for details type ` + "`show w" + `'.
+This is free software, and you are welcome to redistribute it
+under certain conditions; type ` + "`show c'" + ` for details.
+`
+
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
+	fmt.Print(license + "\n")
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
 
