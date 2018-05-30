@@ -39,6 +39,9 @@ type CommandOptions struct {
 	DiscoveryAPIAddress string
 	BrokerAddress       string
 
+	Warranty   bool
+	Conditions bool
+
 	IpifyUrl string
 
 	Protocol    string
@@ -129,6 +132,20 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"broker-address",
 		natsServerIP,
 		"Address (IP or domain name) of message broker",
+	)
+
+	flags.BoolVar(
+		&options.Warranty,
+		"warranty",
+		false,
+		"Show warranty",
+	)
+
+	flags.BoolVar(
+		&options.Conditions,
+		"conditions",
+		false,
+		"Show conditions",
 	)
 
 	flags.StringVar(
