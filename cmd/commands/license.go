@@ -1,12 +1,12 @@
-package cli
+package commands
 
-const startupLicense = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+const StartupLicense = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
 This program comes with ABSOLUTELY NO WARRANTY; for details type ` + "`warranty`" + `.
 This is free software, and you are welcome to redistribute it
 under certain conditions; type ` + "`conditions`" + ` for details.
 `
 
-const warranty = `
+const Warranty = `
   THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
 APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
 HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
@@ -18,7 +18,7 @@ ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 
 `
 
-const conditions = `
+const Conditions = `
                        TERMS AND CONDITIONS
 
   0. Definitions.
