@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package commands
+package cmd
 
 import (
 	"github.com/stretchr/testify/assert"
