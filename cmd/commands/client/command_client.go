@@ -154,8 +154,8 @@ func (cmd *Command) Start() error {
 
 func printLicense() {
 	license := node_cmd.GetStartupLicense(
-		"run program with '--warranty' option",
-		"run program with '--conditions' option",
+		"run program with '-warranty' option",
+		"run program with '-conditions' option",
 	)
 	log.Info("\n" + license)
 }
