@@ -1,9 +1,16 @@
 package commands
 
-const StartupLicense = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
-This program comes with ABSOLUTELY NO WARRANTY; for details type ` + "`warranty`" + `.
+import "fmt"
+
+// GetStartupLicense returns startup license string with custom commands
+func GetStartupLicense(warrantyCommand, conditionsCommand string) string {
+	return fmt.Sprintf(licenseFormat, warrantyCommand, conditionsCommand)
+}
+
+const licenseFormat = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+This program comes with ABSOLUTELY NO WARRANTY; for details %v.
 This is free software, and you are welcome to redistribute it
-under certain conditions; type ` + "`conditions`" + ` for details.
+under certain conditions; %v for details.
 `
 
 const Warranty = `
