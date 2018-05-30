@@ -54,7 +54,8 @@ const statusConnected = "Connected"
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
-	fmt.Print(commands.StartupLicense + "\n")
+	license := commands.GetStartupLicense("type `show w'", "type `show c'")
+	fmt.Print(license + "\n")
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
 
