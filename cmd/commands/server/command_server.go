@@ -19,6 +19,7 @@ package server
 
 import (
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/cmd/commands"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
@@ -60,6 +61,7 @@ type Command struct {
 
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
+	printLicense()
 	log.Info("[Server version]", version.AsString())
 	err = cmd.checkOpenvpn()
 	if err != nil {
@@ -130,6 +132,14 @@ func (cmd *Command) Start() (err error) {
 	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 
 	return nil
+}
+
+func printLicense() {
+	license := commands.GetStartupLicense(
+		"run program with '--warranty' option",
+		"run program with '--conditions' option",
+	)
+	log.Info("\n" + license)
 }
 
 // Wait blocks until server is stopped
