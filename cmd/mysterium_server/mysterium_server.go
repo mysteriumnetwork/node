@@ -32,6 +32,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if options.Warranty {
+		fmt.Print(cmd.Warranty)
+	} else if options.Conditions {
+		fmt.Print(cmd.Conditions)
+	} else {
+		runCMD(options)
+	}
+}
+
+func runCMD(options server.CommandOptions) {
 	serverCommand := server.NewCommand(options)
 
 	if err := serverCommand.Start(); err != nil {
@@ -41,7 +51,7 @@ func main() {
 
 	cmd.StopOnInterruptsConditional(cmd.NewApplicationStopper(serverCommand.Kill), serverCommand.WaitUnregister)
 
-	if err = serverCommand.Wait(); err != nil {
+	if err := serverCommand.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
