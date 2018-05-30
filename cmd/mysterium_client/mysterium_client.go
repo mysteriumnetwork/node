@@ -37,6 +37,10 @@ func main() {
 
 	if options.CLI {
 		runCLI(options)
+	} else if options.Warranty {
+		fmt.Print(cmd.Warranty)
+	} else if options.Conditions {
+		fmt.Print(cmd.Conditions)
 	} else {
 		runCMD(options)
 	}
