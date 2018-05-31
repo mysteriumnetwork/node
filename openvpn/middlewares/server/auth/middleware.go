@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package auth
 
 import (
@@ -6,21 +23,27 @@ import (
 	"strings"
 )
 
-// CredentialsChecker callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
-type CredentialsChecker func(username, password string) (bool, error)
-
 type middleware struct {
-	checkCredentials CredentialsChecker
-	commandWriter    management.Connection
-	currentEvent     clientEvent
+	// TODO: consider implementing event channel to communicate required callbacks
+	credentialsValidator CredentialsValidator
+	sessionCleaner       SessionCleaner
+	commandWriter        management.CommandWriter
+	currentEvent         clientEvent
 }
 
+// CredentialsValidator callback checks given auth primitives (i.e. customer identity signature / node's sessionId)
+type CredentialsValidator func(clientID int, username, password string) (bool, error)
+
+// SessionCleaner callback cleans up session after client disconnects
+type SessionCleaner func(username string) error
+
 // NewMiddleware creates server user_auth challenge authentication middleware
-func NewMiddleware(credentialsChecker CredentialsChecker) *middleware {
+func NewMiddleware(credentialsValidator CredentialsValidator, cleaner SessionCleaner) *middleware {
 	return &middleware{
-		checkCredentials: credentialsChecker,
-		commandWriter:    nil,
-		currentEvent:     undefinedEvent,
+		credentialsValidator: credentialsValidator,
+		sessionCleaner:       cleaner,
+		commandWriter:        nil,
+		currentEvent:         undefinedEvent,
 	}
 }
 
@@ -51,12 +74,12 @@ var undefinedEvent = clientEvent{
 	env:       make(map[string]string),
 }
 
-func (m *middleware) Start(commandWriter management.Connection) error {
+func (m *middleware) Start(commandWriter management.CommandWriter) error {
 	m.commandWriter = commandWriter
 	return nil
 }
 
-func (m *middleware) Stop(commandWriter management.Connection) error {
+func (m *middleware) Stop(commandWriter management.CommandWriter) error {
 	return nil
 }
 
@@ -136,6 +159,8 @@ func (m *middleware) handleClientEvent(event clientEvent) {
 	case established:
 		log.Info("Client with ID: ", event.clientID, " connection established successfully")
 	case disconnect:
+		username := event.env["username"]
+		m.sessionCleaner(username)
 		log.Info("Client with ID: ", event.clientID, " disconnected")
 	}
 }
@@ -148,7 +173,7 @@ func (m *middleware) authenticateClient(clientID, clientKey int, username, passw
 
 	log.Info("authenticating user: ", username, " clientID: ", clientID, " clientKey: ", clientKey)
 
-	authenticated, err := m.checkCredentials(username, password)
+	authenticated, err := m.credentialsValidator(clientID, username, password)
 	if err != nil {
 		log.Error("Authentication error: ", err)
 		return denyClientAuthWithMessage(m.commandWriter, clientID, clientKey, "internal error")
@@ -160,12 +185,12 @@ func (m *middleware) authenticateClient(clientID, clientKey int, username, passw
 	return denyClientAuthWithMessage(m.commandWriter, clientID, clientKey, "wrong username or password")
 }
 
-func approveClient(commandWriter management.Connection, clientID, keyID int) error {
+func approveClient(commandWriter management.CommandWriter, clientID, keyID int) error {
 	_, err := commandWriter.SingleLineCommand("client-auth-nt %d %d", clientID, keyID)
 	return err
 }
 
-func denyClientAuthWithMessage(commandWriter management.Connection, clientID, keyID int, message string) error {
+func denyClientAuthWithMessage(commandWriter management.CommandWriter, clientID, keyID int, message string) error {
 	_, err := commandWriter.SingleLineCommand("client-deny %d %d %s", clientID, keyID, message)
 	return err
 }

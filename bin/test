@@ -9,18 +9,17 @@
 #> bin/test ./communication
 #> bin/test ./communication/...
 
+source bin/helpers/output.sh
+
 ARGUMENTS=$@
 if [ -z "$ARGUMENTS" ]; then
     ARGUMENTS=`go list ./... | sed '/e2e/d'` #skip e2e package - integration tests by default
 fi
 
-SUCCESS_COLOR='\033[0;32m' # green
-FAILURE_COLOR="\033[0;31m" # red
-
 if go test -cover ${ARGUMENTS} ; then
-    echo -e $SUCCESS_COLOR"All tests passed."
+    print_success "All tests passed."
     exit 0
 else
-    echo -e $FAILURE_COLOR"Some tests failed!"
+    print_error "Some tests failed!"
     exit -1
 fi

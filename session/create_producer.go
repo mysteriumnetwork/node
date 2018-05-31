@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package session
 
 import (
@@ -5,28 +22,28 @@ import (
 	"github.com/mysterium/node/communication"
 )
 
-type SessionCreateProducer struct {
-	ProposalId int
+type createProducer struct {
+	ProposalID int
 }
 
-func (producer *SessionCreateProducer) GetRequestEndpoint() communication.RequestEndpoint {
+func (producer *createProducer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpointSessionCreate
 }
 
-func (producer *SessionCreateProducer) NewResponse() (responsePtr interface{}) {
-	var response SessionCreateResponse
-	return &response
+func (producer *createProducer) NewResponse() (responsePtr interface{}) {
+	return &SessionCreateResponse{}
 }
 
-func (producer *SessionCreateProducer) Produce() (requestPtr interface{}) {
+func (producer *createProducer) Produce() (requestPtr interface{}) {
 	return &SessionCreateRequest{
-		ProposalId: producer.ProposalId,
+		ProposalId: producer.ProposalID,
 	}
 }
 
-func RequestSessionCreate(sender communication.Sender, proposalId int) (*SessionDto, error) {
-	responsePtr, err := sender.Request(&SessionCreateProducer{
-		ProposalId: proposalId,
+// RequestSessionCreate requests session creation and returns session DTO
+func RequestSessionCreate(sender communication.Sender, proposalID int) (*SessionDto, error) {
+	responsePtr, err := sender.Request(&createProducer{
+		ProposalID: proposalID,
 	})
 	response := responsePtr.(*SessionCreateResponse)
 

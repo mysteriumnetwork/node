@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package auth
 
 import (
@@ -12,7 +29,7 @@ type CredentialsProvider func() (username string, password string, err error)
 
 type middleware struct {
 	fetchCredentials CredentialsProvider
-	connection       management.Connection
+	commandWriter    management.CommandWriter
 	lastUsername     string
 	lastPassword     string
 	state            openvpn.State
@@ -22,17 +39,17 @@ type middleware struct {
 func NewMiddleware(credentials CredentialsProvider) *middleware {
 	return &middleware{
 		fetchCredentials: credentials,
-		connection:       nil,
+		commandWriter:    nil,
 	}
 }
 
-func (m *middleware) Start(connection management.Connection) error {
-	m.connection = connection
+func (m *middleware) Start(commandWriter management.CommandWriter) error {
+	m.commandWriter = commandWriter
 	log.Info("starting client user-pass provider middleware")
 	return nil
 }
 
-func (m *middleware) Stop(connection management.Connection) error {
+func (m *middleware) Stop(connection management.CommandWriter) error {
 	return nil
 }
 
@@ -47,14 +64,14 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 		return false, nil
 	}
 	username, password, err := m.fetchCredentials()
-	log.Info("authenticating user ", username, " with pass: ", password)
+	log.Info("authenticating user ", username)
 
-	_, err = m.connection.SingleLineCommand("password 'Auth' %s", password)
+	_, err = m.commandWriter.SingleLineCommand("password 'Auth' %s", password)
 	if err != nil {
 		return true, err
 	}
 
-	_, err = m.connection.SingleLineCommand("username 'Auth' %s", username)
+	_, err = m.commandWriter.SingleLineCommand("username 'Auth' %s", username)
 	if err != nil {
 		return true, err
 	}

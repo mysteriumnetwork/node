@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package server
 
 import (
@@ -80,7 +97,7 @@ func NewCommandWith(
 		},
 
 		sessionManagerFactory: func(primitives *tls.Primitives, vpnServerIP string) session.Manager {
-			//TODO move this outside session manager factory - as external dependency
+			// TODO: check options for --openvpn-transport option
 			clientConfigGenerator := openvpn.NewClientConfigGenerator(
 				primitives,
 				vpnServerIP,
@@ -94,22 +111,22 @@ func NewCommandWith(
 			)
 		},
 		vpnServerFactory: func(manager session.Manager, primitives *tls.Primitives, callback state.Callback) *openvpn.Server {
+			// TODO: check options for --openvpn-transport option
 			serverConfigGenerator := openvpn.NewServerConfigGenerator(
 				options.DirectoryRuntime,
 				primitives,
 				options.OpenvpnPort,
 				options.Protocol,
 			)
-			sessionValidator := openvpn_session.NewSessionValidator(
-				manager.FindSession,
-				identity.NewExtractor(),
-			)
+
+			ovpnSessionManager := openvpn_session.NewManager(manager)
+			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
 
 			return openvpn.NewServer(
 				options.OpenvpnBinary,
 				serverConfigGenerator,
 				options.DirectoryRuntime,
-				auth.NewMiddleware(sessionValidator),
+				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 				state.NewMiddleware(callback),
 			)
 		},

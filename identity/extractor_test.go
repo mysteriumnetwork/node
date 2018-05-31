@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package identity
 
 import (
@@ -18,6 +35,16 @@ func TestAuthenticate_WhenSignatureIsCorrect(t *testing.T) {
 	signerID, err := extractor.Extract(message, signature)
 	assert.NoError(t, err)
 	assert.Exactly(t, originalSignerID, signerID, "Original signer should be extracted")
+}
+
+func TestAuthenticate_WhenBase64MessageSignatureIsCorrect(t *testing.T) {
+	message := []byte("MystVpnSessionId:Boop!")
+	signature := SignatureBase64("V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=")
+
+	extractor := &extractor{}
+	signerID, err := extractor.Extract(message, signature)
+	assert.NoError(t, err)
+	assert.Exactly(t, originalSignerID, signerID, "Extracted signer should match original signer")
 }
 
 func TestAuthenticate_WhenSignatureIsEmpty(t *testing.T) {
