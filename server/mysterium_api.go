@@ -116,9 +116,10 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 
 // PingProposal pings service proposal as being alive
 func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+	versionInfo := version.GetInfo()
 	statsDto := dto.NodeStatsRequest{
 		NodeKey: proposal.ProviderID,
-		NodeVersion: version.GetInfo().BuildNumber,
+		NodeVersion: fmt.Sprintf("%s(%s)", versionInfo.Branch, versionInfo.BuildNumber),
 	}
 
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", statsDto, signer)
