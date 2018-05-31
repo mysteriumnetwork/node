@@ -118,7 +118,7 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	versionInfo := version.GetInfo()
 	statsDto := dto.NodeStatsRequest{
-		NodeKey: proposal.ProviderID,
+		NodeKey:     proposal.ProviderID,
 		NodeVersion: fmt.Sprintf("%s(%s)", versionInfo.Branch, versionInfo.BuildNumber),
 	}
 
