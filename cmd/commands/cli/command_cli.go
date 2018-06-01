@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/chzyer/readline"
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/cmd/license"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"io"
 	"log"
@@ -53,8 +54,8 @@ const statusConnected = "Connected"
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
-	license := cmd.GetStartupLicense("type `show w'", "type `show c'")
-	fmt.Print(license + "\n")
+	startupLicense := license.GetStartupLicense("type `show w'", "type `show c'")
+	fmt.Print(startupLicense + "\n")
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
 
@@ -342,11 +343,11 @@ func (c *Command) stopClient() {
 }
 
 func (c *Command) warranty() {
-	fmt.Print(cmd.Warranty)
+	fmt.Print(license.Warranty)
 }
 
 func (c *Command) conditions() {
-	fmt.Print(cmd.Conditions)
+	fmt.Print(license.Conditions)
 }
 
 func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []string {
