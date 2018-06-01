@@ -136,14 +136,14 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 
 	flags.BoolVar(
 		&options.Warranty,
-		"warranty",
+		"license.warranty",
 		false,
 		"Show warranty",
 	)
 
 	flags.BoolVar(
 		&options.Conditions,
-		"conditions",
+		"license.conditions",
 		false,
 		"Show conditions",
 	)
