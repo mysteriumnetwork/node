@@ -22,6 +22,7 @@ import (
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/cli"
 	"github.com/mysterium/node/cmd/commands/client"
+	"github.com/mysterium/node/cmd/license"
 	_ "github.com/mysterium/node/logconfig"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"os"
@@ -38,9 +39,9 @@ func main() {
 	if options.CLI {
 		runCLI(options)
 	} else if options.Warranty {
-		fmt.Print(cmd.Warranty)
+		fmt.Print(license.Warranty)
 	} else if options.Conditions {
-		fmt.Print(cmd.Conditions)
+		fmt.Print(license.Conditions)
 	} else {
 		runCMD(options)
 	}

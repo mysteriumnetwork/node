@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
+	"github.com/mysterium/node/cmd/license"
 	_ "github.com/mysterium/node/logconfig"
 	"os"
 )
@@ -33,9 +34,9 @@ func main() {
 	}
 
 	if options.Warranty {
-		fmt.Print(cmd.Warranty)
+		fmt.Print(license.Warranty)
 	} else if options.Conditions {
-		fmt.Print(cmd.Conditions)
+		fmt.Print(license.Conditions)
 	} else {
 		runCMD(options)
 	}

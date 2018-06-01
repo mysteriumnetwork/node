@@ -22,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client/connection"
 	node_cmd "github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/cmd/license"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -153,11 +154,11 @@ func (cmd *Command) Start() error {
 }
 
 func printLicense() {
-	license := node_cmd.GetStartupLicense(
+	startupLicense := license.GetStartupLicense(
 		"run program with '-warranty' option",
 		"run program with '-conditions' option",
 	)
-	log.Info("\n" + license)
+	log.Info("\n" + startupLicense)
 }
 
 // Wait blocks until tequilapi service is stopped
