@@ -19,7 +19,6 @@ package openvpn
 
 import (
 	"github.com/mysterium/node/openvpn/management"
-
 	"github.com/mysterium/node/openvpn/tls"
 )
 

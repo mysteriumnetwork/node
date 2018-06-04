@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os/exec"
 
+	"bytes"
 	log "github.com/cihub/seelog"
 	"strings"
 )
@@ -86,7 +87,11 @@ func (service *serviceIPTables) enableIPForwarding() (err error) {
 		return nil
 	}
 
-	cmd := exec.Command("sysctl", "-w", "net.ipv4.ip_forward=1")
+	cmd := exec.Command(
+		"bash",
+		"-c",
+		"sudo sysctl -w net.ipv4.ip_forward=1",
+	)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Failed to enable IP forwarding: %s", err)
 	}
@@ -100,7 +105,11 @@ func (service *serviceIPTables) disableIPForwarding() (err error) {
 		return nil
 	}
 
-	cmd := exec.Command("sysctl", "-w", "net.ipv4.ip_forward=0")
+	cmd := exec.Command(
+		"bash",
+		"-c",
+		"sudo sysctl -w net.ipv4.ip_forward=0",
+	)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Failed to disable IP forwarding. %s", err)
 	}
@@ -110,37 +119,45 @@ func (service *serviceIPTables) disableIPForwarding() (err error) {
 }
 
 func (service *serviceIPTables) enableRules() error {
+	var stderr bytes.Buffer
+
 	for _, rule := range service.rules {
 		cmd := exec.Command(
-			"iptables",
-			"--table", "nat",
-			"--append", "POSTROUTING",
-			"--source", rule.SourceAddress,
-			"!", "--destination", rule.SourceAddress,
-			"--jump", "SNAT",
-			"--to", rule.TargetIP,
+			"bash",
+			"-c",
+			"sudo iptables --table nat --append POSTROUTING --source "+
+				rule.SourceAddress+" ! --destination "+
+				rule.SourceAddress+" --jump SNAT --to "+
+				rule.TargetIP,
 		)
+		cmd.Stderr = &stderr
+
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("Failed to create ip forwarding rule: %s. %s", cmd.Args, err.Error())
+			return fmt.Errorf("Failed to create ip forwarding rule: %s. %s, cause: %s", cmd.Args, err.Error(), stderr.String())
 		}
+
 		log.Info(NatLogPrefix, "Forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
+
 	}
 	return nil
 }
 
 func (service *serviceIPTables) disableRules() error {
+	var stderr bytes.Buffer
+
 	for _, rule := range service.rules {
 		cmd := exec.Command(
-			"iptables",
-			"--table", "nat",
-			"--delete", "POSTROUTING",
-			"--source", rule.SourceAddress,
-			"!", "--destination", rule.SourceAddress,
-			"--jump", "SNAT",
-			"--to", rule.TargetIP,
+			"bash",
+			"-c",
+			"sudo iptables --table nat --delete POSTROUTING --source "+
+				rule.SourceAddress+" ! --destination "+
+				rule.SourceAddress+" --jump SNAT --to "+
+				rule.TargetIP,
 		)
+		cmd.Stderr = &stderr
+
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("Failed to delete ip forwarding rule: %s. %s", cmd.Args, err.Error())
+			return fmt.Errorf("Failed to delete ip forwarding rule: %s. %s, cause: %s", cmd.Args, err.Error(), stderr.String())
 		}
 		log.Info(NatLogPrefix, "Stopped forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
 	}

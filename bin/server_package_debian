@@ -20,6 +20,7 @@
 OS_DIR_BIN="/usr/bin"
 OS_DIR_CONFIG="/etc/mysterium-node"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-node/installation"
+OS_DIR_SUDOERS="/etc/sudoers.d/"
 BINARY=${BINARY:="build/server/mysterium_server"}
 
 VERSION=$1
@@ -59,11 +60,14 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --depends "openvpn (>= 2.4.0)" \
         --depends "ca-certificates" \
         --depends "iptables" \
+        --depends "iproute2" \
+        --depends "sudo" \
         --after-install bin/server_package/installation/post-install.sh \
         --after-remove bin/server_package/installation/post-uninstall.sh \
         -s dir -t deb \
         ${BINARY}=${OS_DIR_BIN}/ \
         bin/server_package/config/=${OS_DIR_CONFIG}/ \
+        bin/server_package/sudoers/=${OS_DIR_SUDOERS}/ \
         bin/server_package/installation/=${OS_DIR_INSTALLATION}/
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Failed to build Debian package!"
