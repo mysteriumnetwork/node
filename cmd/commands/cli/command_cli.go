@@ -54,7 +54,7 @@ const statusConnected = "Connected"
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
-	startupLicense := license.GetStartupLicense("type 'warranty'", "type 'conditions'")
+	startupLicense := license.GetStartupLicense("type 'license warranty'", "type 'license conditions'")
 	fmt.Print(startupLicense + "\n")
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
@@ -109,8 +109,6 @@ func (c *Command) handleActions(line string) {
 		{"ip", c.ip},
 		{"disconnect", c.disconnect},
 		{"stop", c.stopClient},
-		{"warranty", c.warranty},
-		{"conditions", c.conditions},
 	}
 
 	argCmds := []struct {
@@ -120,6 +118,7 @@ func (c *Command) handleActions(line string) {
 		{command: "connect", handler: c.connect},
 		{command: "unlock", handler: c.unlock},
 		{command: "identities", handler: c.identities},
+		{command: "license", handler: c.license},
 	}
 
 	for _, cmd := range staticCmds {
@@ -342,12 +341,14 @@ func (c *Command) stopClient() {
 	success("Client stopped")
 }
 
-func (c *Command) warranty() {
-	fmt.Print(license.Warranty)
-}
-
-func (c *Command) conditions() {
-	fmt.Print(license.Conditions)
+func (c *Command) license(argsString string) {
+	if argsString == "warranty" {
+		fmt.Print(license.Warranty)
+	} else if argsString == "conditions" {
+		fmt.Print(license.Conditions)
+	} else {
+		info("identities command:\n    warranty\n    conditions")
+	}
 }
 
 func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []string {
@@ -405,7 +406,10 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 				getIdentityOptionList(tequilapi),
 			),
 		),
-		readline.PcItem("warranty"),
-		readline.PcItem("conditions"),
+		readline.PcItem(
+			"license",
+			readline.PcItem("warranty"),
+			readline.PcItem("conditions"),
+		),
 	)
 }
