@@ -37,7 +37,7 @@ func TestFlag_ToCli(t *testing.T) {
 
 	optionValue, err := option.toCli()
 	assert.NoError(t, err)
-	assert.Equal(t, "--enable-something", optionValue)
+	assert.Equal(t, []string{"--enable-something"}, optionValue)
 }
 
 func TestFlag_ToFile(t *testing.T) {

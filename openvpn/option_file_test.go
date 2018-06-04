@@ -44,7 +44,7 @@ func TestFile_ToCli(t *testing.T) {
 
 	optionValue, err := option.toCli()
 	assert.NoError(t, err)
-	assert.Equal(t, "--special-file "+filename, optionValue)
+	assert.Equal(t, []string{"--special-file", filename}, optionValue)
 	readedContent, err := ioutil.ReadFile(filename)
 	assert.NoError(t, err)
 	assert.Equal(t, fileContent, string(readedContent))

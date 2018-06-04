@@ -19,6 +19,7 @@ package openvpn
 
 import (
 	"github.com/stretchr/testify/assert"
+	"path/filepath"
 	"testing"
 )
 
@@ -28,20 +29,38 @@ func TestConfigToArguments(t *testing.T) {
 		OptionFlag("flag"),
 		OptionFlag("spacy flag"),
 		OptionParam("value", "1234"),
-		OptionParam("very-value", "1234 5678"),
-		OptionParam("spacy value", "1234 5678"),
+		OptionParam("very-value", "1234", "5678"),
+		OptionParam("spacy value", "1234", "5678"),
 	)
 
 	arguments, err := config.ConfigToArguments()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t,
 		[]string{
 			"--flag",
-			"--spacy", "flag",
+			"--spacy flag",
 			"--value", "1234",
 			"--very-value", "1234", "5678",
-			"--spacy", "value", "1234", "5678",
+			"--spacy value", "1234", "5678",
 		},
 		arguments,
+	)
+}
+
+func TestSpacedValuesArePassedAsSingleArg(t *testing.T) {
+	config := Config{}
+	config.AddOptions(
+		OptionParam("value1", "with spaces"),
+		OptionFile("value2", "file content", filepath.Join("testdataoutput", "name with spaces.txt")),
+	)
+	args, err := config.ConfigToArguments()
+	assert.NoError(t, err)
+	assert.Equal(
+		t,
+		[]string{
+			"--value1", "with spaces",
+			"--value2", "testdataoutput/name with spaces.txt",
+		},
+		args,
 	)
 }

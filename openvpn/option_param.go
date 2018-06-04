@@ -17,23 +17,25 @@
 
 package openvpn
 
-func OptionParam(name, value string) optionParam {
-	return optionParam{name, value}
+import "strings"
+
+func OptionParam(name string, values ...string) optionParam {
+	return optionParam{name, values}
 }
 
 type optionParam struct {
-	name  string
-	value string
+	name   string
+	values []string
 }
 
 func (option optionParam) getName() string {
 	return option.name
 }
 
-func (option optionParam) toCli() (string, error) {
-	return "--" + option.name + " " + option.value, nil
+func (option optionParam) toCli() ([]string, error) {
+	return append([]string{"--" + option.name}, option.values...), nil
 }
 
 func (option optionParam) toFile() (string, error) {
-	return option.name + " " + option.value, nil
+	return option.name + " " + strings.Join(option.values, " "), nil
 }
