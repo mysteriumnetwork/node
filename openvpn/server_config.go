@@ -23,7 +23,7 @@ type ServerConfig struct {
 
 func (c *ServerConfig) SetServerMode(port int, network, netmask string) {
 	c.SetPort(port)
-	c.setParam("server", network+" "+netmask)
+	c.setParam("server", network, netmask)
 	c.setParam("topology", "subnet")
 }
 

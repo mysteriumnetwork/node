@@ -39,12 +39,12 @@ func (option optionFile) getName() string {
 	return option.name
 }
 
-func (option optionFile) toCli() (string, error) {
+func (option optionFile) toCli() ([]string, error) {
 	err := ioutil.WriteFile(option.filePath, []byte(option.content), 0600)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return "--" + option.name + " " + option.filePath, nil
+	return []string{"--" + option.name, option.filePath}, nil
 }
 
 func (option optionFile) toFile() (string, error) {

@@ -29,8 +29,8 @@ func (option optionFlag) getName() string {
 	return option.name
 }
 
-func (option optionFlag) toCli() (string, error) {
-	return "--" + option.name, nil
+func (option optionFlag) toCli() ([]string, error) {
+	return []string{"--" + option.name}, nil
 }
 
 func (option optionFlag) toFile() (string, error) {

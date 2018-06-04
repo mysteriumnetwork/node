@@ -37,7 +37,7 @@ func TestParam_ToCli(t *testing.T) {
 
 	optionValue, err := option.toCli()
 	assert.NoError(t, err)
-	assert.Equal(t, "--very-value 1234", optionValue)
+	assert.Equal(t, []string{"--very-value", "1234"}, optionValue)
 }
 
 func TestParam_ToFile(t *testing.T) {
