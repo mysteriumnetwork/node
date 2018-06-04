@@ -18,6 +18,7 @@
 package openvpn
 
 import (
+	"fmt"
 	"github.com/mysterium/node/openvpn/tls"
 	"io/ioutil"
 	"path/filepath"
@@ -106,8 +107,8 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFi
 	config := ClientConfig{NewConfig(configDir)}
 	config.AddOptions(OptionFile("config", configAsString, configFile))
 
-	config.setParam("up", filepath.Join(configDir, "update-resolv-conf"))
-	config.setParam("down", filepath.Join(configDir, "update-resolv-conf"))
+	config.setParam("up", fmt.Sprintf("\"%s\"", filepath.Join(configDir, "update-resolv-conf")))
+	config.setParam("down", fmt.Sprintf("\"%s\"", filepath.Join(configDir, "update-resolv-conf")))
 
 	return &config, nil
 }
