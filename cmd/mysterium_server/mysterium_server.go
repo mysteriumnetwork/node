@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
+	"github.com/mysterium/node/cmd/license"
 	_ "github.com/mysterium/node/logconfig"
 	"os"
 )
@@ -32,6 +33,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if options.LicenseWarranty {
+		fmt.Print(license.Warranty)
+	} else if options.LicenseConditions {
+		fmt.Print(license.Conditions)
+	} else {
+		runCMD(options)
+	}
+}
+
+func runCMD(options server.CommandOptions) {
 	serverCommand := server.NewCommand(options)
 
 	if err := serverCommand.Start(); err != nil {
@@ -41,7 +52,7 @@ func main() {
 
 	cmd.StopOnInterruptsConditional(cmd.NewApplicationStopper(serverCommand.Kill), serverCommand.WaitUnregister)
 
-	if err = serverCommand.Wait(); err != nil {
+	if err := serverCommand.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

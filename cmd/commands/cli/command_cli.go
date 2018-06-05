@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/chzyer/readline"
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/cmd/license"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"io"
 	"log"
@@ -53,6 +54,8 @@ const statusConnected = "Connected"
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
+	startupLicense := license.GetStartupLicense("type 'license warranty'", "type 'license conditions'")
+	fmt.Print(startupLicense + "\n")
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
 
@@ -115,6 +118,7 @@ func (c *Command) handleActions(line string) {
 		{command: "connect", handler: c.connect},
 		{command: "unlock", handler: c.unlock},
 		{command: "identities", handler: c.identities},
+		{command: "license", handler: c.license},
 	}
 
 	for _, cmd := range staticCmds {
@@ -337,6 +341,16 @@ func (c *Command) stopClient() {
 	success("Client stopped")
 }
 
+func (c *Command) license(argsString string) {
+	if argsString == "warranty" {
+		fmt.Print(license.Warranty)
+	} else if argsString == "conditions" {
+		fmt.Print(license.Conditions)
+	} else {
+		info("identities command:\n    warranty\n    conditions")
+	}
+}
+
 func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []string {
 	return func(line string) []string {
 		identities := []string{"new"}
@@ -391,6 +405,11 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			readline.PcItemDynamic(
 				getIdentityOptionList(tequilapi),
 			),
+		),
+		readline.PcItem(
+			"license",
+			readline.PcItem("warranty"),
+			readline.PcItem("conditions"),
 		),
 	)
 }
