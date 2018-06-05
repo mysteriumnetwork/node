@@ -29,10 +29,16 @@ import (
 	"strings"
 )
 
+type Addr struct {
+	IP   string
+	Port int
+}
+
 // Management structure represents connection and interface to openvpn management
 type Management struct {
-	socketAddress string
-	logPrefix     string
+	socketAddress       string
+	activeSocketAddress *Addr
+	logPrefix           string
 
 	middlewares []Middleware
 
@@ -55,13 +61,23 @@ func NewManagement(socketAddress, logPrefix string, middlewares ...Middleware) *
 }
 
 func (management *Management) Start() error {
-	log.Info(management.logPrefix, "Connecting to socket:", management.socketAddress)
+	log.Info(management.logPrefix, "Connecting to socket: ", management.socketAddress)
 
-	listener, err := net.Listen("unix", management.socketAddress)
+	listener, err := net.Listen("tcp", management.socketAddress)
 	if err != nil {
 		log.Error(management.logPrefix, err)
 		return err
 	}
+
+	management.setActiveSocketAddress(listener.Addr())
+
+	log.Info(
+		management.logPrefix,
+		"Connected to socket: ",
+		management.activeSocketAddress.IP,
+		":",
+		management.activeSocketAddress.Port,
+	)
 
 	go management.waitForShutdown(listener)
 	go management.waitForConnections(listener)
@@ -76,12 +92,21 @@ func (management *Management) Stop() {
 	})
 
 	management.listenerShutdownWaiter.Wait()
+
 	log.Info(management.logPrefix, "Shutdown finished")
 }
 
-// SocketAddress returns management socket address
-func (management *Management) SocketAddress() string {
-	return management.socketAddress
+// ActiveSocketAddress returns management socket address
+func (management *Management) ActiveSocketAddress() *Addr {
+	return management.activeSocketAddress
+}
+
+func (management *Management) setActiveSocketAddress(addr net.Addr) {
+	address := addr.(*net.TCPAddr)
+	management.activeSocketAddress = &Addr{
+		address.IP.String(),
+		address.Port,
+	}
 }
 
 func (management *Management) waitForShutdown(listener net.Listener) {
