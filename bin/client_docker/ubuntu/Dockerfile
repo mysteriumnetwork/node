@@ -9,7 +9,6 @@ RUN GOOS=linux GOARCH=amd64 bin/client_build \
 
 
 FROM ubuntu:16.04
-MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
 # Install packages
 RUN apt-get update \
