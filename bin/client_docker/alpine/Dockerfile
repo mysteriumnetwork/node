@@ -12,7 +12,6 @@ RUN bin/client_build
 
 
 FROM alpine:3.6
-MAINTAINER Valdas Petrulis <petrulis.valdas@gmail.com>
 
 # Install packages
 RUN apk add --update --no-cache iptables ca-certificates openvpn bash \

@@ -53,7 +53,6 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --url="https://mysterium.network/" \
         --vendor="MysteriumNetwork" \
         --license="GPL-3.0" \
-        --maintainer="Valdas Petrulis (petrulis.valdas@gmail.com)" \
         --version "$VERSION" \
         --architecture="$ARCH" \
         --package="$PACKAGE_FILE" \
