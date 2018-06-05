@@ -5,4 +5,4 @@
 # Usage:
 #> bin/test_commit
 
-bin/test && bin/vet && bin/lint && bin/fmt
+bin/test && bin/vet && bin/lint && bin/fmt && bin/license
