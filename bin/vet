@@ -1,5 +1,20 @@
 #!/bin/bash
 
-ARGUMENTS=`go list ./... | sed '/e2e/d'`
+# Run Go vet command for project packages
+#
+# Usage:
+#> bin/vet [packages ...]
+#
+# Examples:
+#> bin/vet
+#> bin/vet .
+#> bin/vet ./...
+#> bin/vet ./communication
+#> bin/vet ./communication/...
 
-go vet -unreachable ${ARGUMENTS}
+ARGUMENTS=$@
+if [ -z "$ARGUMENTS" ]; then
+    ARGUMENTS=`go list ./...`
+fi
+
+go vet -composites=false ${ARGUMENTS}
