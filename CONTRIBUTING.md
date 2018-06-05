@@ -89,7 +89,7 @@ glide install --force
 
 * Add new package to project
 ```bash
-glide get github.com/ccding/go-stun
+glide get --quick github.com/ccding/go-stun
 ```
 
 * Update package in project

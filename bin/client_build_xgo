@@ -24,7 +24,8 @@ source bin/helpers/load_environment.sh
 DIR_BUILD="build/package"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
-xgo --go=1.9.2 \
+go run vendor/github.com/karalabe/xgo/xgo.go \
+    --go=1.9.2 \
     --targets="$XGO_TARGETS" \
     --dest=${DIR_TEMP} \
     --out=mysterium_client \
