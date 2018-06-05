@@ -3,7 +3,11 @@
 # Run code Linter for project packages
 #
 # Usage:
+#> bin/lint [packages ...]
+#
+# Examples:
 #> bin/lint
+#> bin/lint .
 #> bin/lint ./...
 #> bin/lint ./communication
 #> bin/lint ./communication/...

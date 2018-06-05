@@ -3,6 +3,9 @@
 # Run tests for project packages
 #
 # Usage:
+#> bin/test [packages ...]
+#
+# Examples:
 #> bin/test
 #> bin/test .
 #> bin/test ./...
