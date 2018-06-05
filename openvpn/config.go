@@ -18,7 +18,6 @@
 package openvpn
 
 import (
-	"fmt"
 	"path/filepath"
 	"strconv"
 )
@@ -46,9 +45,9 @@ func (c *Config) AddOptions(options ...configOption) {
 	c.options = append(c.options, options...)
 }
 
-func (c *Config) setParam(name, value string) {
+func (c *Config) setParam(name string, values ...string) {
 	c.AddOptions(
-		OptionParam(name, value),
+		OptionParam(name, values...),
 	)
 }
 
@@ -60,9 +59,7 @@ func (c *Config) setFlag(name string) {
 
 // SetManagementAddress creates TCP socket option for communication with openvpn process
 func (c *Config) SetManagementAddress(ip string, port int) {
-	address := fmt.Sprintf("%s %d", ip, port)
-
-	c.setParam("management", address)
+	c.setParam("management", ip, strconv.Itoa(port))
 	c.setFlag("management-client")
 }
 
@@ -102,7 +99,7 @@ func (c *Config) RestrictReconnects() {
 
 // SetKeepAlive setups keepalive interval and timeout values
 func (c *Config) SetKeepAlive(interval, timeout int) {
-	c.setParam("keepalive", strconv.Itoa(interval)+" "+strconv.Itoa(timeout))
+	c.setParam("keepalive", strconv.Itoa(interval), strconv.Itoa(timeout))
 }
 
 // SetPingTimerRemote sets "ping from remote required" option

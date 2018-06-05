@@ -18,6 +18,7 @@
 package openvpn
 
 import (
+	"fmt"
 	"github.com/mysterium/node/openvpn/tls"
 	"io/ioutil"
 	"path/filepath"
@@ -73,9 +74,9 @@ func newClientConfig(configDir string) *ClientConfig {
 
 	config.setParam("reneg-sec", "60")
 	config.setParam("resolv-retry", "infinite")
-	config.setParam("redirect-gateway", "def1 bypass-dhcp")
-	config.setParam("dhcp-option", "DNS 208.67.222.222")
-	config.setParam("dhcp-option", "DNS 208.67.220.220")
+	config.setParam("redirect-gateway", "def1", "bypass-dhcp")
+	config.setParam("dhcp-option", "DNS", "208.67.222.222")
+	config.setParam("dhcp-option", "DNS", "208.67.220.220")
 
 	return &config
 }
@@ -106,8 +107,15 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFi
 	config := ClientConfig{NewConfig(configDir)}
 	config.AddOptions(OptionFile("config", configAsString, configFile))
 
-	config.setParam("up", filepath.Join(configDir, "update-resolv-conf"))
-	config.setParam("down", filepath.Join(configDir, "update-resolv-conf"))
+	//because of special case how openvpn handles executable/scripts paths, we need to surround values with double quotes
+	updateResolvConfScriptPath := wrapWithDoubleQuotes(filepath.Join(configDir, "update-resolv-conf"))
+
+	config.setParam("up", updateResolvConfScriptPath)
+	config.setParam("down", updateResolvConfScriptPath)
 
 	return &config, nil
+}
+
+func wrapWithDoubleQuotes(val string) string {
+	return fmt.Sprintf(`"%s"`, val)
 }
