@@ -132,7 +132,7 @@ Before creating PR be sure to:
 * **Step 1.** Make sure that no linter errors remain in **your** code
 
 ```bash
-bin/lint_git
+bin/lint
 ```
 
 * **Step 2.** Ensure that all unit tests passes, no vet errors remain and code formatted.

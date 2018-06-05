@@ -31,6 +31,7 @@ install:
 script:
   - bin/test
   - bin/vet
+  - bin/lint
   - bin/check_go_fmt
   # Run e2e tests on Pull Requests only
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
