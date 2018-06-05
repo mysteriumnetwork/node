@@ -5,4 +5,4 @@
 # Usage example:
 #> bin/test_commit
 
-bin/test && bin/vet && bin/lint_git
+bin/test && bin/vet && bin/check_go_fmt

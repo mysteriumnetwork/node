@@ -1,7 +1,7 @@
 # Contributing guide
 
 
-##Development environment
+## Development environment
 
 * **Step 1.** Get Golang
 ```bash
@@ -29,7 +29,7 @@ cp .env_example .env
 vim .env
 ```
 
-##Running
+## Running
 
 ```bash
 # Start communication broker
@@ -44,7 +44,7 @@ bin/client_build
 bin/client_run
 ```
 
-##Running client in interactive cli
+## Running client in interactive cli
 
 ```bash
 # Start client with --cli
@@ -79,7 +79,7 @@ bin/client_run_cli
 » connect <consumer-identity> <provider-identity>
 ```
 
-##Dependency management
+## Dependency management
 
 * Install project's frozen packages
 ```bash
@@ -99,7 +99,7 @@ glide update
 ```
 
 
-##Debian packaging
+## Debian packaging
 
 * **Step 1.** Get FPM tool
 See http://fpm.readthedocs.io/en/latest/installing.html
@@ -122,20 +122,20 @@ bin/server_package_debian 0.0.6 amd64
 bin/client_package_debian 0.0.6 amd64
 ```
 
-##Creating pull request
+## Creating pull request
 
 To contribute a code, fist You must create a pull request (PR). If Your changes will be accepted
 this PR will be merged into main branch.
 
 Before creating PR be sure to: 
 
-* **Step 1.** Check if all files were formatted with `go fmt`
+* **Step 1.** Make sure that no linter errors remain in **Your** code
 
 ```bash
-bin/check_go_fmt
+bin/lint_git
 ```
 
-* **Step 2.** Check if all unit tests passes; no vet and linter errors remain.
+* **Step 2.** Ensure that all unit tests passes, no vet errors remain and code formatted.
 
 ```bash
 bin/test_commit
