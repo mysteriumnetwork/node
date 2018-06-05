@@ -20,7 +20,7 @@
 OS_DIR_BIN="/usr/bin"
 OS_DIR_CONFIG="/etc/mysterium-node"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-node/installation"
-BINARY=${BINARY:="build/client/mysterium_server"}
+BINARY=${BINARY:="build/server/mysterium_server"}
 
 VERSION=$1
 if [ -z "$VERSION" ]; then
