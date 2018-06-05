@@ -14,7 +14,7 @@
 # To package a build, simple execute:
 #> bin/client_package_debian <version> <architecture>
 
-# Usage example:
+# Usage:
 #> bin/client_package_debian 0.0.1 amd64
 
 OS_DIR_BIN="/usr/bin"

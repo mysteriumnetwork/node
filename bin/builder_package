@@ -3,7 +3,7 @@
 ###########################################################################
 # Creates builder Docker image and uploads it to DockerHub https://hub.docker.com/r/mysteriumnetwork/mysterium-node-builder/
 #
-# Usage example:
+# Usage:
 #> bin/builder_package [tag..]
 #
 # Build local image:

@@ -6,7 +6,7 @@
 # To create a release, simply execute:
 #> bin/server_package_docker version [tag..]
 
-# Usage example:
+# Usage:
 #> bin/server_package_docker 0.0.1
 #> bin/server_package_docker 0.0.1 0.0.1-alpine alpine latest
 

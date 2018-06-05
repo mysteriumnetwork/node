@@ -2,7 +2,7 @@
 
 # Runs tests and code quality checks
 #
-# Usage example:
+# Usage:
 #> bin/test_commit
 
 bin/test && bin/vet && bin/check_go_fmt

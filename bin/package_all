@@ -6,7 +6,7 @@
 # To package a build, simple execute:
 #> bin/package_all <version>
 
-# Usage example:
+# Usage:
 #> bin/package_all <version>
 
 VERSION=$1
