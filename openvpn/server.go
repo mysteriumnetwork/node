@@ -25,9 +25,9 @@ import (
 )
 
 // NewServer constructs new openvpn server instance
-func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, directoryRuntime string, middlewares ...management.Middleware) *Server {
+func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) *Server {
 	// Add the management interface socketAddress to the config
-	socketAddress := tempFilename(directoryRuntime, "openvpn-management-", ".sock")
+	socketAddress := "127.0.0.1:0"
 	return &Server{
 		generateConfig: generateConfig,
 		management:     management.NewManagement(socketAddress, "[server-management] ", middlewares...),
@@ -63,12 +63,13 @@ type Server struct {
 func (server *Server) Start() error {
 	config := server.generateConfig()
 
-	config.SetManagementSocket(server.management.SocketAddress())
-
 	// Start the management interface (if it isnt already started)
 	if err := server.management.Start(); err != nil {
 		return err
 	}
+
+	addr := server.management.ActiveSocketAddress()
+	config.SetManagementAddress(addr.IP, addr.Port)
 
 	// Fetch the current params
 	arguments, err := (*config).ConfigToArguments()
