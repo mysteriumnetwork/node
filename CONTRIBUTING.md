@@ -129,16 +129,22 @@ this PR will be merged into main branch.
 
 Before creating PR be sure to: 
 
-* **Step 1.** Make sure that no linter errors remain in **your** code
+* **Step 1.** Ensure sure that **your** code quality is passing
 
 ```bash
-bin/lint
+bin/check
 ```
 
-* **Step 2.** Ensure that all unit tests passes, no vet errors remain and code formatted.
+* **Step 2.** Ensure that all unit tests passes
 
 ```bash
-bin/test_commit
+bin/test
+```
+
+* **Step 3.** Ensure that all end-to-end tests passes
+
+```bash
+bin/test_e2e
 ```
 
 After you forked a project, modified sources and run tests, you can create a pull request using this procedure:

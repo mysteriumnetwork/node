@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Runs tests and code quality checks
+#
+# Usage:
+#> bin/check
+
+bin/check_vet
+bin/check_lint
+bin/check_fmt
+bin/check_license
