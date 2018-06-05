@@ -155,8 +155,8 @@ func (cmd *Command) Start() error {
 
 func printLicense() {
 	startupLicense := license.GetStartupLicense(
-		"run program with '-warranty' option",
-		"run program with '-conditions' option",
+		"run program with '-license.warranty' option",
+		"run program with '-license.conditions' option",
 	)
 	log.Info("\n" + startupLicense)
 }
