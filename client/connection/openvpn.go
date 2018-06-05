@@ -80,7 +80,6 @@ func ConfigureVpnClientFactory(
 		return openvpn.NewClient(
 			openvpnBinary,
 			vpnClientConfig,
-			runtimeDirectory,
 			state.NewMiddleware(stateCallback),
 			bytescount.NewMiddleware(statsHandler, 1*time.Second),
 			auth.NewMiddleware(credentialsProvider),
