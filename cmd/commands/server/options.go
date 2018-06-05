@@ -39,8 +39,8 @@ type CommandOptions struct {
 	DiscoveryAPIAddress string
 	BrokerAddress       string
 
-	Warranty   bool
-	Conditions bool
+	LicenseWarranty   bool
+	LicenseConditions bool
 
 	IpifyUrl string
 
@@ -135,14 +135,14 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	)
 
 	flags.BoolVar(
-		&options.Warranty,
+		&options.LicenseWarranty,
 		"license.warranty",
 		false,
 		"Show warranty",
 	)
 
 	flags.BoolVar(
-		&options.Conditions,
+		&options.LicenseConditions,
 		"license.conditions",
 		false,
 		"Show conditions",

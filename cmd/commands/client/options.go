@@ -33,9 +33,9 @@ type CommandOptions struct {
 	TequilapiAddress string
 	TequilapiPort    int
 
-	CLI        bool
-	Warranty   bool
-	Conditions bool
+	CLI               bool
+	LicenseWarranty   bool
+	LicenseConditions bool
 
 	DiscoveryAPIAddress string
 	BrokerAddress       string
@@ -94,14 +94,14 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	)
 
 	flags.BoolVar(
-		&options.Warranty,
+		&options.LicenseWarranty,
 		"license.warranty",
 		false,
 		"Show warranty",
 	)
 
 	flags.BoolVar(
-		&options.Conditions,
+		&options.LicenseConditions,
 		"license.conditions",
 		false,
 		"Show conditions",

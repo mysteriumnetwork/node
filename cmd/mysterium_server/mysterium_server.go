@@ -33,9 +33,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if options.Warranty {
+	if options.LicenseWarranty {
 		fmt.Print(license.Warranty)
-	} else if options.Conditions {
+	} else if options.LicenseConditions {
 		fmt.Print(license.Conditions)
 	} else {
 		runCMD(options)
