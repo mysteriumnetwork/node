@@ -11,7 +11,7 @@
 # To execute :
 #> bin/builder_run some_command_to_execute
 
-# Usage example:
+# Usage:
 #> bin/builder_run pwd
 #> bin/builder_run bin/package_all <version>
 #> bin/builder_run bin/server_build; bin/server_package_debian 0.0.1 amd64

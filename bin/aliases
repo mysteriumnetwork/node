@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Usage example:
+# Usage:
 #> echo "source `pwd`/bin/aliases" >> ~/.bashrc && source ~/.bashrc
 #
 #> ln -s `pwd`/bin/aliases ~/.zsh.after/mysterium.zsh && source ~/.zshrc
