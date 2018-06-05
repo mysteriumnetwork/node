@@ -124,12 +124,12 @@ bin/client_package_debian 0.0.6 amd64
 
 ## Creating pull request
 
-To contribute a code, fist You must create a pull request (PR). If Your changes will be accepted
+To contribute a code, fist you must create a pull request (PR). If your changes will be accepted
 this PR will be merged into main branch.
 
 Before creating PR be sure to: 
 
-* **Step 1.** Make sure that no linter errors remain in **Your** code
+* **Step 1.** Make sure that no linter errors remain in **your** code
 
 ```bash
 bin/lint_git
@@ -141,6 +141,6 @@ bin/lint_git
 bin/test_commit
 ```
 
-After You forked a project, modified sources and run tests, You can create a pull request using this procedure: 
+After you forked a project, modified sources and run tests, you can create a pull request using this procedure:
  
  https://help.github.com/articles/creating-a-pull-request-from-a-fork/
