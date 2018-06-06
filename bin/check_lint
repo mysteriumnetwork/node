@@ -30,4 +30,4 @@ if [ -z "$ARGUMENTS" ]; then
     `
 fi
 
-go run vendor/github.com/golang/lint/golint/*.go --set_exit_status --min_confidence=1 ${ARGUMENTS}
+golint --set_exit_status --min_confidence=1 ${ARGUMENTS}
