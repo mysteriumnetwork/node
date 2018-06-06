@@ -1,5 +1,5 @@
-hash: 5e43fcf0414f763bf225c903dbb2a4b5617f8e5bd447c619e9373ff65a966f84
-updated: 2018-02-08T13:26:40.406076+02:00
+hash: c05c442ebc2d4500420458b9302aa74d4f201c23a72d138367b236ed7b48ab4a
+updated: 2018-06-06T22:04:03.290655+03:00
 imports:
 - name: github.com/aristanetworks/goarista
   version: d1195528dcb23ba20b6b77f38596720af652a572
@@ -88,7 +88,5 @@ imports:
   subpackages:
   - collections/prque
 testImports:
-- name: github.com/golang/lint
-  version: f635bddafc7154957bd70209ee858a4b97e64a9b
-  subpackages:
-  - golint
+- name: github.com/karalabe/xgo
+  version: d164e4e53dfdc4e25de90a762d213f8d397e24a1

@@ -30,7 +30,7 @@ install:
 
 script:
   - bin/check_vet
-  - bin/check_lint
+  - bin/builder_run bin/check_lint
   - bin/check_fmt
   - bin/check_license
   - bin/test

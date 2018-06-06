@@ -10,6 +10,7 @@ RUN apt-get update \
 # Install Debber
 RUN go get \
     github.com/debber/debber-v0.3/cmd/debber \
+    github.com/golang/lint/golint \
     github.com/go-swagger/go-swagger/cmd/swagger
 
 WORKDIR /go/src/github.com/mysterium/node
