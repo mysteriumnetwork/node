@@ -1,4 +1,6 @@
 package: github.com/mysterium/node
+homepage: https://mysterium.network
+license: GPL-3.0
 import:
 - package: github.com/cihub/seelog
   version: ^2.6.0
