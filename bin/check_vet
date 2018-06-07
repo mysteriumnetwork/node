@@ -3,14 +3,14 @@
 # Run Go vet command for project packages
 #
 # Usage:
-#> bin/vet [packages ...]
+#> bin/check_vet [packages ...]
 #
 # Examples:
-#> bin/vet
-#> bin/vet .
-#> bin/vet ./...
-#> bin/vet ./communication
-#> bin/vet ./communication/...
+#> bin/check_vet
+#> bin/check_vet .
+#> bin/check_vet ./...
+#> bin/check_vet ./communication
+#> bin/check_vet ./communication/...
 
 ARGUMENTS=$@
 if [ -z "$ARGUMENTS" ]; then

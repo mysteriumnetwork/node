@@ -3,7 +3,7 @@
 # Checks if all project files are formatted using go fmt
 #
 # Usage:
-#> bin/fmt
+#> bin/check_fmt
 
 source bin/helpers/output.sh
 

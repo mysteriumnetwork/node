@@ -3,17 +3,18 @@
 # Run code Linter for project packages
 #
 # Usage:
-#> bin/lint [packages ...]
+#> bin/check_lint [packages ...]
 #
 # Examples:
-#> bin/lint
-#> bin/lint .
-#> bin/lint ./...
-#> bin/lint ./communication
-#> bin/lint ./communication/...
+#> bin/check_lint
+#> bin/check_lint .
+#> bin/check_lint ./...
+#> bin/check_lint ./communication
+#> bin/check_lint ./communication/...
 
 ARGUMENTS=$@
 if [ -z "$ARGUMENTS" ]; then
+    # By default, disable checks packages that are declared as not-cleared
     ARGUMENTS=`
         go list ./... \
         | grep -v "github.com/mysterium/node/cmd" \

@@ -30,6 +30,7 @@ install:
 
 script:
   - bin/check_vet
+  # This check requires development dependency
   - bin/builder_run bin/check_lint
   - bin/check_fmt
   - bin/check_license

@@ -129,19 +129,19 @@ this PR will be merged into main branch.
 
 Before creating PR be sure to: 
 
-* **Step 1.** Ensure sure that **your** code quality is passing
+* **Step 1.** Ensure that **your** code quality is passing
 
 ```bash
 bin/check
 ```
 
-* **Step 2.** Ensure that all unit tests passes
+* **Step 2.** Ensure that all unit tests pass
 
 ```bash
 bin/test
 ```
 
-* **Step 3.** Ensure that all end-to-end tests passes
+* **Step 3.** Ensure that all end-to-end tests pass
 
 ```bash
 bin/test_e2e
