@@ -25,21 +25,17 @@ import (
 
 func TestListenerShouldAcceptIncomingManagementConnection(t *testing.T) {
 	mockedMiddleware := &mockMiddleware{}
-	startCompleted := make(chan bool, 1)
-	mockedMiddleware.OnStart = func(cmdWriter CommandWriter) error {
-		startCompleted <- true
-		return nil
-	}
 
-	mngmnt := NewManagement("127.0.0.1:0", "[management interface]", mockedMiddleware)
-	err := mngmnt.Start()
+	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
+	addr, connChan, err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
-	_, err = connectTo(mngmnt.ActiveSocketAddress())
+	_, err = connectTo(addr)
 	assert.NoError(t, err)
 
 	select {
-	case <-startCompleted:
+	case connected := <-connChan:
+		assert.True(t, connected)
 	case <-time.After(100 * time.Millisecond):
 		assert.Fail(t, "Middleware start method expected to be called in 100 milliseconds")
 	}
@@ -53,11 +49,11 @@ func TestMiddlewareReceivesEventFromManagementInterface(t *testing.T) {
 		return true, nil
 	}
 
-	mngmnt := NewManagement("127.0.0.1:0", "[management interface]", mockedMiddleware)
-	err := mngmnt.Start()
+	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
+	addr, _, err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
-	mockedOpenvpn, err := connectTo(mngmnt.ActiveSocketAddress())
+	mockedOpenvpn, err := connectTo(addr)
 	assert.NoError(t, err)
 
 	err = mockedOpenvpn.Send(">sampleevent\n")
@@ -80,11 +76,11 @@ func TestMiddlewareCanSendCommandsToManagementInterface(t *testing.T) {
 		return nil
 	}
 
-	mngmnt := NewManagement("127.0.0.1:0", "[management interface]", mockedMiddleware)
-	err := mngmnt.Start()
+	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
+	addr, _, err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
-	mockedOpenvpn, err := connectTo(mngmnt.ActiveSocketAddress())
+	mockedOpenvpn, err := connectTo(addr)
 	assert.NoError(t, err)
 
 	select {
@@ -103,6 +99,28 @@ func TestMiddlewareCanSendCommandsToManagementInterface(t *testing.T) {
 	}
 }
 
+func TestMiddlewareStartIsCalledOnOpenvpnProcessDisconnect(t *testing.T) {
+	mockedMiddleware := &mockMiddleware{}
+	startCalled := make(chan bool, 1)
+	mockedMiddleware.OnStart = func(writer CommandWriter) error {
+		startCalled <- true
+		return nil
+	}
+
+	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
+	addr, _, err := mngmnt.WaitForConnection()
+	assert.NoError(t, err)
+
+	_, err = connectTo(addr)
+	assert.NoError(t, err)
+
+	select {
+	case <-startCalled:
+	case <-time.After(100 * time.Millisecond):
+		assert.Fail(t, "Middleware start method expected to be called in 100 milliseconds")
+	}
+}
+
 func TestMiddlewareStopIsCalledOnOpenvpnProcessDisconnect(t *testing.T) {
 	mockedMiddleware := &mockMiddleware{}
 	stopCalled := make(chan bool, 1)
@@ -111,11 +129,11 @@ func TestMiddlewareStopIsCalledOnOpenvpnProcessDisconnect(t *testing.T) {
 		return nil
 	}
 
-	mngmnt := NewManagement("127.0.0.1:0", "[management interface]", mockedMiddleware)
-	err := mngmnt.Start()
+	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
+	addr, _, err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
-	mockedOpenvpn, err := connectTo(mngmnt.ActiveSocketAddress())
+	mockedOpenvpn, err := connectTo(addr)
 	assert.NoError(t, err)
 
 	mockedOpenvpn.Send(">STATE: EXITING")
@@ -128,4 +146,19 @@ func TestMiddlewareStopIsCalledOnOpenvpnProcessDisconnect(t *testing.T) {
 		assert.Fail(t, "Middleware stop method expected to be called in 100 milliseconds")
 	}
 
+}
+
+func TestConnectionChannelReportsFalseWhenListenerIsClosedWithoutConnection(t *testing.T) {
+	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", &mockMiddleware{})
+	_, connectedChan, err := mngmnt.WaitForConnection()
+	assert.NoError(t, err)
+
+	mngmnt.Stop()
+
+	select {
+	case connected := <-connectedChan:
+		assert.False(t, connected)
+	case <-time.After(100 * time.Millisecond):
+		assert.Fail(t, "Expected to receive false on connected channel in 100 milliseconds")
+	}
 }

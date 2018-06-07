@@ -65,7 +65,7 @@ func (mop *mockOpenvpnProcess) Disconnect() error {
 	return mop.conn.Close()
 }
 
-func connectTo(addr *Addr) (*mockOpenvpnProcess, error) {
+func connectTo(addr Addr) (*mockOpenvpnProcess, error) {
 	conn, err := net.Dial("tcp", addr.String())
 	if err != nil {
 		return nil, err
