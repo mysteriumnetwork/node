@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
 	log "github.com/cihub/seelog"
 	"io"
 	"strings"
@@ -32,6 +33,10 @@ import (
 type Addr struct {
 	IP   string
 	Port int
+}
+
+func (addr *Addr) String() string {
+	return fmt.Sprintf("%s:%d", addr.IP, addr.Port)
 }
 
 // Management structure represents connection and interface to openvpn management
@@ -61,7 +66,7 @@ func NewManagement(socketAddress, logPrefix string, middlewares ...Middleware) *
 }
 
 func (management *Management) Start() error {
-	log.Info(management.logPrefix, "Connecting to socket: ", management.socketAddress)
+	log.Info(management.logPrefix, "Binding to socket: ", management.socketAddress)
 
 	listener, err := net.Listen("tcp", management.socketAddress)
 	if err != nil {
@@ -73,7 +78,7 @@ func (management *Management) Start() error {
 
 	log.Info(
 		management.logPrefix,
-		"Connected to socket: ",
+		"Waiting for incoming connection on: ",
 		management.activeSocketAddress.IP,
 		":",
 		management.activeSocketAddress.Port,
