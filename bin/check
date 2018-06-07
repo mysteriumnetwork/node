@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Runs tests and code quality checks
+# Runs code quality checks
 #
 # Usage:
 #> bin/check
