@@ -24,6 +24,9 @@ import (
 	"path/filepath"
 )
 
+// AgreedTermsAndConditionsFlagName is name of flag for agreeing with terms and conditions
+const AgreedTermsAndConditionsFlagName = "agreed-terms-and-conditions"
+
 // CommandOptions describes options which are required to start Command
 type CommandOptions struct {
 	DirectoryConfig  string
@@ -48,6 +51,8 @@ type CommandOptions struct {
 
 	Protocol    string
 	OpenvpnPort int
+
+	AgreedTermsConditions string
 	Localnet    bool
 }
 
@@ -74,20 +79,19 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		filepath.Join(cmd.GetDataDirectory(), "run"),
 		"Runtime writable directory for temp files",
 	)
+
 	flags.StringVar(
 		&options.OpenvpnBinary,
 		"openvpn.binary",
 		"openvpn", //search in $PATH by default,
 		"openvpn binary to use for Open VPN connections",
 	)
-
 	flags.StringVar(
 		&options.Protocol,
 		"openvpn.proto",
 		"udp",
 		"Protocol to use. Options: { udp, tcp }",
 	)
-
 	flags.IntVar(
 		&options.OpenvpnPort,
 		"openvpn.port",
@@ -127,12 +131,18 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		metadata.DefaultNetwork.DiscoveryAPIAddress,
 		"Address (URL form) of discovery service",
 	)
-
 	flags.StringVar(
 		&options.BrokerAddress,
 		"broker-address",
 		metadata.DefaultNetwork.BrokerAddress,
 		"Address (IP or domain name) of message broker",
+	)
+
+	flags.StringVar(
+		&options.AgreedTermsConditions,
+		AgreedTermsAndConditionsFlagName,
+		"",
+		"Date of terms and conditions you are agreeing with",
 	)
 
 	flags.BoolVar(
@@ -141,12 +151,14 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		false,
 		"Show version",
 	)
+
 	flags.BoolVar(
 		&options.LicenseWarranty,
 		"license.warranty",
 		false,
 		"Show warranty",
 	)
+
 	flags.BoolVar(
 		&options.LicenseConditions,
 		"license.conditions",
