@@ -19,8 +19,10 @@ package main
 
 import (
 	"fmt"
+	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
+	"github.com/mysterium/node/cmd/commands/server/terms_and_conditions"
 	"github.com/mysterium/node/cmd/license"
 	_ "github.com/mysterium/node/logconfig"
 	"os"
@@ -33,13 +35,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	startWithOptions(options)
+}
+
+func startWithOptions(options server.CommandOptions) {
+	if !terms_and_conditions.UserAgreed(options.AgreedTermsConditions) {
+		fmt.Print(terms_and_conditions.Text + "\n")
+		return
+	}
+	log.Infof("User agreed with terms and conditions: %v", options.AgreedTermsConditions)
+
 	if options.LicenseWarranty {
 		fmt.Print(license.Warranty)
-	} else if options.LicenseConditions {
-		fmt.Print(license.Conditions)
-	} else {
-		runCMD(options)
+		return
 	}
+	if options.LicenseConditions {
+		fmt.Print(license.Conditions)
+		return
+	}
+
+	runCMD(options)
 }
 
 func runCMD(options server.CommandOptions) {
