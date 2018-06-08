@@ -15,32 +15,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
 import (
-	"fmt"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-func (config Config) ToArguments() ([]string, error) {
-	arguments := make([]string, 0)
-
-	for _, item := range config.options {
-		option, ok := item.(optionCliSerializable)
-		if !ok {
-			return nil, fmt.Errorf("unserializable option '%s': %#v", item.getName(), item)
-		}
-
-		optionValues, err := option.toCli()
-		if err != nil {
-			return nil, err
-		}
-
-		arguments = append(arguments, optionValues...)
-	}
-
-	return arguments, nil
+func TestFlag_Factory(t *testing.T) {
+	option := OptionFlag("enable-something")
+	assert.NotNil(t, option)
 }
 
-type optionCliSerializable interface {
-	toCli() ([]string, error)
+func TestFlag_GetName(t *testing.T) {
+	option := OptionFlag("enable-something")
+	assert.Equal(t, "enable-something", option.getName())
+}
+
+func TestFlag_ToCli(t *testing.T) {
+	option := OptionFlag("enable-something")
+
+	optionValue, err := option.toCli()
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"--enable-something"}, optionValue)
+}
+
+func TestFlag_ToFile(t *testing.T) {
+	option := OptionFlag("enable-something")
+
+	optionValue, err := option.toFile()
+	assert.NoError(t, err)
+	assert.Equal(t, "enable-something", optionValue)
 }

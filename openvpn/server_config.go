@@ -17,25 +17,27 @@
 
 package openvpn
 
+import "github.com/mysterium/node/openvpn/config"
+
 type ServerConfig struct {
-	*Config
+	*config.GenericConfig
 }
 
 func (c *ServerConfig) SetServerMode(port int, network, netmask string) {
 	c.SetPort(port)
-	c.setParam("server", network, netmask)
-	c.setParam("topology", "subnet")
+	c.SetParam("server", network, netmask)
+	c.SetParam("topology", "subnet")
 }
 
 func (c *ServerConfig) SetTLSServer() {
-	c.setFlag("tls-server")
-	c.AddOptions(OptionParam("dh", "none"))
+	c.SetFlag("tls-server")
+	c.AddOptions(config.OptionParam("dh", "none"))
 }
 
 func (c *ServerConfig) SetProtocol(protocol string) {
 	if protocol == "tcp" {
-		c.setParam("proto", "tcp-server")
+		c.SetParam("proto", "tcp-server")
 	} else if protocol == "udp" {
-		c.setFlag("explicit-exit-notify")
+		c.SetFlag("explicit-exit-notify")
 	}
 }

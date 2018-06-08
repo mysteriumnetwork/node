@@ -15,21 +15,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestConfigToString(t *testing.T) {
-	config := Config{}
-	config.AddOptions(
-		OptionFlag("enable-something"),
-		OptionParam("very-value", "1234"),
-	)
+func TestParam_Factory(t *testing.T) {
+	option := OptionParam("very-value", "1234")
+	assert.NotNil(t, option)
+}
 
-	output, err := config.ToConfigFileContent()
-	assert.Nil(t, err)
-	assert.Equal(t, "enable-something\nvery-value 1234\n", output)
+func TestParam_GetName(t *testing.T) {
+	option := OptionParam("very-value", "1234")
+	assert.Equal(t, "very-value", option.getName())
+}
+
+func TestParam_ToCli(t *testing.T) {
+	option := OptionParam("very-value", "1234")
+
+	optionValue, err := option.toCli()
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"--very-value", "1234"}, optionValue)
+}
+
+func TestParam_ToFile(t *testing.T) {
+	option := OptionParam("very-value", "1234")
+
+	optionValue, err := option.toFile()
+	assert.NoError(t, err)
+	assert.Equal(t, "very-value 1234", optionValue)
 }

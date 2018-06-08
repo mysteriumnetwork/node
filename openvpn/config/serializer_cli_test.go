@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -24,7 +24,7 @@ import (
 )
 
 func TestConfigToArguments(t *testing.T) {
-	config := Config{}
+	config := GenericConfig{}
 	config.AddOptions(
 		OptionFlag("flag"),
 		OptionFlag("spacy flag"),
@@ -48,7 +48,7 @@ func TestConfigToArguments(t *testing.T) {
 }
 
 func TestSpacedValuesArePassedAsSingleArg(t *testing.T) {
-	config := Config{}
+	config := GenericConfig{}
 	config.AddOptions(
 		OptionParam("value1", "with spaces"),
 		OptionFile("value2", "file content", filepath.Join("testdataoutput", "name with spaces.txt")),

@@ -15,35 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
 import (
-	"github.com/stretchr/testify/assert"
-	"testing"
+	"fmt"
 )
 
-func TestParam_Factory(t *testing.T) {
-	option := OptionParam("very-value", "1234")
-	assert.NotNil(t, option)
+func (config GenericConfig) ToArguments() ([]string, error) {
+	arguments := make([]string, 0)
+
+	for _, item := range config.options {
+		option, ok := item.(optionCliSerializable)
+		if !ok {
+			return nil, fmt.Errorf("unserializable option '%s': %#v", item.getName(), item)
+		}
+
+		optionValues, err := option.toCli()
+		if err != nil {
+			return nil, err
+		}
+
+		arguments = append(arguments, optionValues...)
+	}
+
+	return arguments, nil
 }
 
-func TestParam_GetName(t *testing.T) {
-	option := OptionParam("very-value", "1234")
-	assert.Equal(t, "very-value", option.getName())
-}
-
-func TestParam_ToCli(t *testing.T) {
-	option := OptionParam("very-value", "1234")
-
-	optionValue, err := option.toCli()
-	assert.NoError(t, err)
-	assert.Equal(t, []string{"--very-value", "1234"}, optionValue)
-}
-
-func TestParam_ToFile(t *testing.T) {
-	option := OptionParam("very-value", "1234")
-
-	optionValue, err := option.toFile()
-	assert.NoError(t, err)
-	assert.Equal(t, "very-value 1234", optionValue)
+type optionCliSerializable interface {
+	toCli() ([]string, error)
 }

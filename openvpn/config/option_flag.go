@@ -15,32 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
-import (
-	"bytes"
-	"fmt"
-)
-
-type optionStringSerializable interface {
-	toFile() (string, error)
+func OptionFlag(name string) optionFlag {
+	return optionFlag{name}
 }
 
-func (config Config) ToConfigFileContent() (string, error) {
-	var output bytes.Buffer
+type optionFlag struct {
+	name string
+}
 
-	for _, item := range config.options {
-		option, ok := item.(optionStringSerializable)
-		if !ok {
-			return "", fmt.Errorf("unserializable option '%s': %#v", item.getName(), item)
-		}
+func (option optionFlag) getName() string {
+	return option.name
+}
 
-		optionValue, err := option.toFile()
-		if err != nil {
-			return "", err
-		}
-		fmt.Fprintln(&output, optionValue)
-	}
+func (option optionFlag) toCli() ([]string, error) {
+	return []string{"--" + option.name}, nil
+}
 
-	return string(output.Bytes()), nil
+func (option optionFlag) toFile() (string, error) {
+	return option.name, nil
 }

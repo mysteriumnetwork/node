@@ -19,6 +19,7 @@ package openvpn
 
 import (
 	"fmt"
+	"github.com/mysterium/node/openvpn/config"
 	"github.com/mysterium/node/openvpn/tls"
 	"io/ioutil"
 	"path/filepath"
@@ -31,7 +32,7 @@ func NewServerConfig(
 	port int,
 	protocol string,
 ) *ServerConfig {
-	config := ServerConfig{NewConfig(configDir)}
+	config := ServerConfig{config.NewConfig(configDir)}
 	config.SetServerMode(port, network, netmask)
 	config.SetTLSServer()
 	config.SetProtocol(protocol)
@@ -43,13 +44,13 @@ func NewServerConfig(
 	config.SetTLSCrypt(secPrimitives.PresharedKey.ToPEMFormat())
 
 	config.SetDevice("tun")
-	config.setParam("cipher", "AES-256-GCM")
-	config.setParam("verb", "3")
-	config.setParam("tls-version-min", "1.2")
-	config.setFlag("management-client-auth")
-	config.setParam("verify-client-cert", "none")
-	config.setParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
-	config.setParam("reneg-sec", "60")
+	config.SetParam("cipher", "AES-256-GCM")
+	config.SetParam("verb", "3")
+	config.SetParam("tls-version-min", "1.2")
+	config.SetFlag("management-client-auth")
+	config.SetParam("verify-client-cert", "none")
+	config.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
+	config.SetParam("reneg-sec", "60")
 	config.SetKeepAlive(10, 60)
 	config.SetPingTimerRemote()
 	config.SetPersistTun()
@@ -59,26 +60,26 @@ func NewServerConfig(
 }
 
 func newClientConfig(configDir string) *ClientConfig {
-	config := ClientConfig{NewConfig(configDir)}
+	clientConfig := ClientConfig{config.NewConfig(configDir)}
 
-	config.RestrictReconnects()
+	clientConfig.RestrictReconnects()
 
-	config.SetDevice("tun")
-	config.setParam("cipher", "AES-256-GCM")
-	config.setParam("verb", "3")
-	config.setParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
-	config.SetKeepAlive(10, 60)
-	config.SetPingTimerRemote()
-	config.SetPersistTun()
-	config.SetPersistKey()
+	clientConfig.SetDevice("tun")
+	clientConfig.SetParam("cipher", "AES-256-GCM")
+	clientConfig.SetParam("verb", "3")
+	clientConfig.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
+	clientConfig.SetKeepAlive(10, 60)
+	clientConfig.SetPingTimerRemote()
+	clientConfig.SetPersistTun()
+	clientConfig.SetPersistKey()
 
-	config.setParam("reneg-sec", "60")
-	config.setParam("resolv-retry", "infinite")
-	config.setParam("redirect-gateway", "def1", "bypass-dhcp")
-	config.setParam("dhcp-option", "DNS", "208.67.222.222")
-	config.setParam("dhcp-option", "DNS", "208.67.220.220")
+	clientConfig.SetParam("reneg-sec", "60")
+	clientConfig.SetParam("resolv-retry", "infinite")
+	clientConfig.SetParam("redirect-gateway", "def1", "bypass-dhcp")
+	clientConfig.SetParam("dhcp-option", "DNS", "208.67.222.222")
+	clientConfig.SetParam("dhcp-option", "DNS", "208.67.220.220")
 
-	return &config
+	return &clientConfig
 }
 
 func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFile string) (*ClientConfig, error) {
@@ -88,13 +89,13 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFi
 		return nil, err
 	}
 
-	clientConfig := newClientConfig(configDir)
-	clientConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
-	clientConfig.SetProtocol(vpnConfig.RemoteProtocol)
-	clientConfig.SetTLSCACertificate(vpnConfig.CACertificate)
-	clientConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
+	clientFileConfig := newClientConfig(configDir)
+	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
+	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
+	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)
+	clientFileConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
 
-	configAsString, err := clientConfig.ToConfigFileContent()
+	configAsString, err := clientFileConfig.ToConfigFileContent()
 	if err != nil {
 		return nil, err
 	}
@@ -104,16 +105,16 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFi
 		return nil, err
 	}
 
-	config := ClientConfig{NewConfig(configDir)}
-	config.AddOptions(OptionFile("config", configAsString, configFile))
+	clientConfig := ClientConfig{config.NewConfig(configDir)}
+	clientConfig.AddOptions(config.OptionFile("config", configAsString, configFile))
 
 	//because of special case how openvpn handles executable/scripts paths, we need to surround values with double quotes
 	updateResolvConfScriptPath := wrapWithDoubleQuotes(filepath.Join(configDir, "update-resolv-conf"))
 
-	config.setParam("up", updateResolvConfScriptPath)
-	config.setParam("down", updateResolvConfScriptPath)
+	clientConfig.SetParam("up", updateResolvConfScriptPath)
+	clientConfig.SetParam("down", updateResolvConfScriptPath)
 
-	return &config, nil
+	return &clientConfig, nil
 }
 
 func wrapWithDoubleQuotes(val string) string {
