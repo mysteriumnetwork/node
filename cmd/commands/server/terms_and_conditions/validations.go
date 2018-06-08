@@ -24,5 +24,5 @@ func UserAgreed(agreementString string) bool {
 	return agreementString == optionAgreeValue
 }
 
-// Text  returns terms and conditions with explanation on how to agree with them
+// Text returns terms and conditions with explanation on how to agree with them
 var Text = termsAndConditions + "\n\n" + explanationString

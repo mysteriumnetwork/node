@@ -19,6 +19,8 @@ services:
       --discovery-address=http://discovery/v1
       --location.country=e2e-land
       --openvpn.port=3000
+    environment:
+      - AGREED_TERMS_AND_CONDITIONS=04-06-2018
 
   client:
     build:

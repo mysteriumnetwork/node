@@ -138,4 +138,10 @@ For any questions you may contact us:team@netsys.technology
 
 Last update: ` + lastUpdateDate
 
-var explanationString = fmt.Sprintf("If you agree with these Terms & Conditions, run program again with '-%v=%v' flag.", server.AgreedTermsAndConditionsFlagName, lastUpdateDate)
+var explanationString = fmt.Sprintf(
+	"If you agree with these Terms & Conditions, run program again with '-%v=%v' flag.\n"+
+		"You can also pass '%v=%v' as ENV variable if you are running using Docker.",
+	server.AgreedTermsAndConditionsFlagName,
+	lastUpdateDate,
+	"AGREED_TERMS_AND_CONDITIONS",
+	lastUpdateDate)

@@ -79,6 +79,20 @@ bin/client_run_cli
 » connect <consumer-identity> <provider-identity>
 ```
 
+## Running multiple nodes and clients at once
+
+```bash
+To run small network of nodes and clients in docker, you can use:
+AGREED_TERMS_AND_CONDITIONS=<date of terms> docker-compose up
+```
+
+Be sure to replace `<date of terms>` with date of latest terms.
+Date of terms will be shown when running without `AGREED_TERMS_AND_CONDITIONS` variable:
+
+```bash
+docker-compose up
+```
+
 ## Generate Tequila API documentation from client source code
 
 * **Step 1.** Install go-swagger
