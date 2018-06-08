@@ -48,8 +48,8 @@ before_deploy:
   - bin/client_build
   - bin/server_build
   - mkdir binaries
-  - bin/travis_scripts/package_tar_gz.sh client binaries/mysterium_client.tar.gz
-  - bin/travis_scripts/package_tar_gz.sh server binaries/mysterium_server.tar.gz
+  - bin/travis_scripts/client_package_tar_gz.sh binaries/mysterium_client.tar.gz
+  - bin/travis_scripts/server_package_tar_gz.sh binaries/mysterium_server.tar.gz
 
 deploy:
   - provider: pages
