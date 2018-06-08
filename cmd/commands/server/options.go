@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 )
 
-// AgreedTermsAndConditionsFlagName is name of flag for agreeing with terms and conditions
+// AgreedTermsAndConditionsFlagName is name of flag for agreeing with terms & conditions
 const AgreedTermsAndConditionsFlagName = "agreed-terms-and-conditions"
 
 // CommandOptions describes options which are required to start Command
@@ -142,7 +142,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		&options.AgreedTermsConditions,
 		AgreedTermsAndConditionsFlagName,
 		"",
-		"Date of terms and conditions you are agreeing with",
+		"Date of terms & conditions you are agreeing with",
 	)
 
 	flags.BoolVar(

@@ -62,7 +62,7 @@ func startWithOptions(options server.CommandOptions) {
 		fmt.Print(terms_and_conditions.Text + "\n")
 		return
 	}
-	log.Infof("User agreed with terms and conditions: %v", options.AgreedTermsConditions)
+	log.Infof("User agreed with terms & conditions: %v", options.AgreedTermsConditions)
 
 	if options.LicenseWarranty {
 		fmt.Print(license.Warranty)

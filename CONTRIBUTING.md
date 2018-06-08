@@ -37,12 +37,15 @@ docker-compose up broker
 
 # Start node
 bin/server_build
-bin/server_run
+bin/server_run -agreed-terms-and-conditions=$AGREED_TERMS_AND_CONDITIONS
 
 # Client connects to node
 bin/client_build
 bin/client_run
 ```
+
+Note: to run server, you will have to accept terms & conditions.
+For more info about that, please read *Accepting terms & conditions* in [README.md](./README.md).
 
 ## Running client in interactive cli
 
@@ -83,13 +86,6 @@ bin/client_run_cli
 
 ```bash
 To run small network of nodes and clients in docker, you can use:
-AGREED_TERMS_AND_CONDITIONS=<date of terms> docker-compose up
-```
-
-Be sure to replace `<date of terms>` with date of latest terms.
-Date of terms will be shown when running without `AGREED_TERMS_AND_CONDITIONS` variable:
-
-```bash
 docker-compose up
 ```
 

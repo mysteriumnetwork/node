@@ -138,10 +138,16 @@ For any questions you may contact us:team@netsys.technology
 
 Last update: ` + lastUpdateDate
 
+const envCommand = "AGREED_TERMS_AND_CONDITIONS"
+
 var explanationString = fmt.Sprintf(
 	"If you agree with these Terms & Conditions, run program again with '-%v=%v' flag.\n"+
-		"You can also pass '%v=%v' as ENV variable if you are running using Docker.",
+		"You can also use '%v=%v' as ENV variable if you are running using Docker, i.e.:\n"+
+		"export %v=%v",
 	server.AgreedTermsAndConditionsFlagName,
 	lastUpdateDate,
-	"AGREED_TERMS_AND_CONDITIONS",
-	lastUpdateDate)
+	envCommand,
+	lastUpdateDate,
+	envCommand,
+	lastUpdateDate,
+)

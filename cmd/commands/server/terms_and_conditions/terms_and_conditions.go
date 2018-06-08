@@ -19,10 +19,10 @@ package terms_and_conditions
 
 const optionAgreeValue = "04-06-2018"
 
-// UserAgreed returns whether user provided agreement string means user agreed with terms and conditions
+// UserAgreed returns whether user provided agreement string means user agreed with terms & conditions
 func UserAgreed(agreementString string) bool {
 	return agreementString == optionAgreeValue
 }
 
-// Text returns terms and conditions with explanation on how to agree with them
+// Text returns terms & conditions with explanation on how to agree with them
 var Text = termsAndConditions + "\n\n" + explanationString
