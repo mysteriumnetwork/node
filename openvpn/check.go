@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"errors"
 	log "github.com/cihub/seelog"
+	"io"
 	"net/textproto"
 	"os/exec"
 	"strconv"
@@ -48,19 +49,16 @@ func CheckOpenvpnBinary(openvpnBinary string) error {
 		if err != nil {
 			return err
 		}
-		if str == "" {
-			return errors.New("expected more output")
-		}
 		log.Info("[Openvpn check] ", str)
 	}
 
 	//optional custom tag
 	str, err := stringReader.ReadLine()
-	if err != nil {
+	if err == nil {
+		log.Info("[Openvpn check] ", "Custom tag: ", str)
+	} else if err != io.EOF {
+		//EOF is expected and doesn't fail check
 		return err
-	}
-	if str != "" {
-		log.Info("[Openvpn check] ", "Custom build: ", str)
 	}
 	log.Flush()
 	return nil
