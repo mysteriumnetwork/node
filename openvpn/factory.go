@@ -94,7 +94,7 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFi
 	clientConfig.SetTLSCACertificate(vpnConfig.CACertificate)
 	clientConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
 
-	configAsString, err := ConfigToString(*clientConfig.Config)
+	configAsString, err := clientConfig.ToConfigFileContent()
 	if err != nil {
 		return nil, err
 	}

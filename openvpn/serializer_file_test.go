@@ -29,7 +29,7 @@ func TestConfigToString(t *testing.T) {
 		OptionParam("very-value", "1234"),
 	)
 
-	output, err := ConfigToString(config)
+	output, err := config.ToConfigFileContent()
 	assert.Nil(t, err)
 	assert.Equal(t, "enable-something\nvery-value 1234\n", output)
 }

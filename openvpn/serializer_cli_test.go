@@ -33,7 +33,7 @@ func TestConfigToArguments(t *testing.T) {
 		OptionParam("spacy value", "1234", "5678"),
 	)
 
-	arguments, err := config.ConfigToArguments()
+	arguments, err := config.ToArguments()
 	assert.NoError(t, err)
 	assert.Equal(t,
 		[]string{
@@ -53,7 +53,7 @@ func TestSpacedValuesArePassedAsSingleArg(t *testing.T) {
 		OptionParam("value1", "with spaces"),
 		OptionFile("value2", "file content", filepath.Join("testdataoutput", "name with spaces.txt")),
 	)
-	args, err := config.ConfigToArguments()
+	args, err := config.ToArguments()
 	assert.NoError(t, err)
 	assert.Equal(
 		t,

@@ -26,13 +26,13 @@ type optionStringSerializable interface {
 	toFile() (string, error)
 }
 
-func ConfigToString(config Config) (string, error) {
+func (config Config) ToConfigFileContent() (string, error) {
 	var output bytes.Buffer
 
 	for _, item := range config.options {
 		option, ok := item.(optionStringSerializable)
 		if !ok {
-			return "", fmt.Errorf("Unserializable option '%s': %#v", item.getName(), item)
+			return "", fmt.Errorf("unserializable option '%s': %#v", item.getName(), item)
 		}
 
 		optionValue, err := option.toFile()

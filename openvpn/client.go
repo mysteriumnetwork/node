@@ -88,7 +88,7 @@ func (client *openVpnClient) Start() error {
 	client.config.SetManagementAddress(addr.IP, addr.Port)
 
 	// Fetch the current arguments
-	arguments, err := (*client.config).ConfigToArguments()
+	arguments, err := (*client.config).ToArguments()
 	if err != nil {
 		return err
 	}

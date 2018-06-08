@@ -71,7 +71,7 @@ func (server *Server) Start() error {
 	config.SetManagementAddress(addr.IP, addr.Port)
 
 	// Fetch the current params
-	arguments, err := (*config).ConfigToArguments()
+	arguments, err := (*config).ToArguments()
 	if err != nil {
 		return err
 	}

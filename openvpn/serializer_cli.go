@@ -21,7 +21,7 @@ import (
 	"fmt"
 )
 
-func (config *Config) ConfigToArguments() ([]string, error) {
+func (config *Config) ToArguments() ([]string, error) {
 	arguments := make([]string, 0)
 
 	for _, item := range config.options {
