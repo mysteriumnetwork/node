@@ -21,13 +21,13 @@ import (
 	"fmt"
 )
 
-func (config *Config) ToArguments() ([]string, error) {
+func (config Config) ToArguments() ([]string, error) {
 	arguments := make([]string, 0)
 
 	for _, item := range config.options {
 		option, ok := item.(optionCliSerializable)
 		if !ok {
-			return nil, fmt.Errorf("Unserializable option '%s': %#v", item.getName(), item)
+			return nil, fmt.Errorf("unserializable option '%s': %#v", item.getName(), item)
 		}
 
 		optionValues, err := option.toCli()
