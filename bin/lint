@@ -2,7 +2,7 @@
 
 # Run code Linter for project packages
 #
-# Usage example:
+# Usage:
 #> bin/lint
 #> bin/lint ./...
 #> bin/lint ./communication

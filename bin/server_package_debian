@@ -14,12 +14,13 @@
 # To package a build, simple execute:
 #> bin/server_package_debian <version> <architecture>
 
-# Usage example:
+# Usage:
 #> bin/server_package_debian 0.0.1 amd64
 
 OS_DIR_BIN="/usr/bin"
 OS_DIR_CONFIG="/etc/mysterium-node"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-node/installation"
+BINARY=${BINARY:="build/server/mysterium_server"}
 
 VERSION=$1
 if [ -z "$VERSION" ]; then
@@ -51,8 +52,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --description="Server for decentralised VPN built on blockchain" \
         --url="https://mysterium.network/" \
         --vendor="MysteriumNetwork" \
-        --license="MIT" \
-        --maintainer="Valdas Petrulis (petrulis.valdas@gmail.com)" \
+        --license="GPL-3.0" \
         --version "$VERSION" \
         --architecture="$ARCH" \
         --package="$PACKAGE_FILE" \
@@ -62,7 +62,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --after-install bin/server_package/installation/post-install.sh \
         --after-remove bin/server_package/installation/post-uninstall.sh \
         -s dir -t deb \
-        build/server/mysterium_server=${OS_DIR_BIN}/ \
+        ${BINARY}=${OS_DIR_BIN}/ \
         bin/server_package/config/=${OS_DIR_CONFIG}/ \
         bin/server_package/installation/=${OS_DIR_INSTALLATION}/
 if [ $? -ne 0 ] ; then

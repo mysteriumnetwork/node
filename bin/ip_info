@@ -2,7 +2,7 @@
 
 # Automate retrieval of IP information
 #
-# Usage example:
+# Usage:
 # Lookup info of current IP:
 #> bin/ip2info
 #

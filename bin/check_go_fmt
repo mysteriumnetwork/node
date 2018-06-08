@@ -2,7 +2,7 @@
 
 # Checks if all project files are formatted using go fmt
 #
-# Usage example:
+# Usage:
 #> bin/check_go_fmt
 
 source bin/helpers/output.sh

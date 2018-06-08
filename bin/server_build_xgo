@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Usage:
+#> bin/server_build_xgo <os>/<arch>..
+#
+# Cross compile (Unix):
+#> bin/server_build_xgo linux/amd64
+#
+# Cross compile (OSX + Windows):
+#> bin/server_build_xgo darwin/amd64 windows/amd64
+#
+# Check if program has dynamic libraries:
+#> brew install readelf
+#> readelf -d build/server/mysterium_server
+
+XGO_TARGETS=`IFS=','; echo "$*"`
+if [ -z "$XGO_TARGETS" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing targets!"
+    exit 1
+fi
+
+source bin/helpers/functions.sh
+source bin/helpers/load_environment.sh
+DIR_BUILD="build/package"
+DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
+
+go run vendor/github.com/karalabe/xgo/xgo.go \
+    --go=1.9.2 \
+    --targets="$XGO_TARGETS" \
+    --dest=${DIR_TEMP} \
+    --out=mysterium_server \
+    --ldflags="$(get_linker_ldflags)" \
+    $(pwd)/cmd/mysterium_server
+
+# Remove version from binary name:
+#  - mysterium_server-darwin-10.6-amd64 -> mysterium_server-darwin-amd64
+#  - mysterium_server-linux-amd64       -> mysterium_server-linux-amd64
+for BINARY in `ls ${DIR_TEMP}`; do
+    BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/.*-([a-z]*)(-[0-9.]*)?-([a-z]*)/mysterium_server_\1_\3/p'`
+    mv ${DIR_TEMP}/${BINARY} ${DIR_BUILD}/${BINARY_RENAMED}
+done
+rm -rf ${DIR_TEMP}

@@ -6,7 +6,7 @@
 # To create a release, simply execute:
 #> bin/client_package_docker version [tag..]
 
-# Usage example:
+# Usage:
 #> bin/client_package_docker_ubuntu 0.0.1
 #> bin/client_package_docker_ubuntu 0.0.1 0.0.1-ubuntu ubuntu
 

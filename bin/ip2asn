@@ -2,7 +2,7 @@
 
 # Automate retrieval of ASN (Autonomous System Number)
 #
-# Usage example:
+# Usage:
 # Lookup ASN of current IP:
 #> bin/ip2asn
 #
