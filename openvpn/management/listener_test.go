@@ -27,14 +27,14 @@ func TestListenerShouldAcceptIncomingManagementConnection(t *testing.T) {
 	mockedMiddleware := &mockMiddleware{}
 
 	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
-	addr, connChan, err := mngmnt.WaitForConnection()
+	err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
-	_, err = connectTo(addr)
+	_, err = connectTo(mngmnt.BoundAddress)
 	assert.NoError(t, err)
 
 	select {
-	case connected := <-connChan:
+	case connected := <-mngmnt.Connected:
 		assert.True(t, connected)
 	case <-time.After(100 * time.Millisecond):
 		assert.Fail(t, "Middleware start method expected to be called in 100 milliseconds")
@@ -50,10 +50,10 @@ func TestMiddlewareReceivesEventFromManagementInterface(t *testing.T) {
 	}
 
 	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
-	addr, _, err := mngmnt.WaitForConnection()
+	err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
-	mockedOpenvpn, err := connectTo(addr)
+	mockedOpenvpn, err := connectTo(mngmnt.BoundAddress)
 	assert.NoError(t, err)
 
 	err = mockedOpenvpn.Send(">sampleevent\n")
@@ -77,10 +77,10 @@ func TestMiddlewareCanSendCommandsToManagementInterface(t *testing.T) {
 	}
 
 	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
-	addr, _, err := mngmnt.WaitForConnection()
+	err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
-	mockedOpenvpn, err := connectTo(addr)
+	mockedOpenvpn, err := connectTo(mngmnt.BoundAddress)
 	assert.NoError(t, err)
 
 	select {
@@ -108,10 +108,10 @@ func TestMiddlewareStartIsCalledOnOpenvpnProcessDisconnect(t *testing.T) {
 	}
 
 	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
-	addr, _, err := mngmnt.WaitForConnection()
+	err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
-	_, err = connectTo(addr)
+	_, err = connectTo(mngmnt.BoundAddress)
 	assert.NoError(t, err)
 
 	select {
@@ -130,10 +130,10 @@ func TestMiddlewareStopIsCalledOnOpenvpnProcessDisconnect(t *testing.T) {
 	}
 
 	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", mockedMiddleware)
-	addr, _, err := mngmnt.WaitForConnection()
+	err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
-	mockedOpenvpn, err := connectTo(addr)
+	mockedOpenvpn, err := connectTo(mngmnt.BoundAddress)
 	assert.NoError(t, err)
 
 	mockedOpenvpn.Send(">STATE: EXITING")
@@ -150,15 +150,38 @@ func TestMiddlewareStopIsCalledOnOpenvpnProcessDisconnect(t *testing.T) {
 
 func TestConnectionChannelReportsFalseWhenListenerIsClosedWithoutConnection(t *testing.T) {
 	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", &mockMiddleware{})
-	_, connectedChan, err := mngmnt.WaitForConnection()
+	err := mngmnt.WaitForConnection()
 	assert.NoError(t, err)
 
 	mngmnt.Stop()
 
 	select {
-	case connected := <-connectedChan:
+	case connected := <-mngmnt.Connected:
 		assert.False(t, connected)
 	case <-time.After(100 * time.Millisecond):
 		assert.Fail(t, "Expected to receive false on connected channel in 100 milliseconds")
 	}
+}
+
+func TestListenerShutdownsWhenStopIsCalledAfterConnectionIsEstablished(t *testing.T) {
+	mngmnt := NewManagement(LocalhostOnRandomPort, "[management interface]", &mockMiddleware{})
+	err := mngmnt.WaitForConnection()
+	assert.NoError(t, err)
+
+	_, err = connectTo(mngmnt.BoundAddress)
+	assert.NoError(t, err)
+
+	stopFinished := make(chan bool, 1)
+	go func() {
+		mngmnt.Stop()
+		stopFinished <- true
+	}()
+
+	select {
+	case <-stopFinished:
+
+	case <-time.After(100 * time.Millisecond):
+		assert.Fail(t, "Management interface expected to stop in 100 milliseconds")
+	}
+
 }

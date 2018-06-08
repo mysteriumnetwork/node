@@ -48,8 +48,9 @@ func (addr *Addr) String() string {
 
 // Management structure represents connection and interface to openvpn management
 type Management struct {
-	bindAddress Addr
-	logPrefix   string
+	BoundAddress Addr
+	Connected    chan bool
+	logPrefix    string
 
 	middlewares []Middleware
 
@@ -61,8 +62,9 @@ type Management struct {
 // NewManagement creates new manager for given sock address, uses given log prefix for logging and takes a list of middlewares
 func NewManagement(socketAddress Addr, logPrefix string, middlewares ...Middleware) *Management {
 	return &Management{
-		bindAddress: socketAddress,
-		logPrefix:   logPrefix,
+		BoundAddress: socketAddress,
+		Connected:    make(chan bool, 1),
+		logPrefix:    logPrefix,
 
 		middlewares: middlewares,
 
@@ -74,17 +76,17 @@ func NewManagement(socketAddress Addr, logPrefix string, middlewares ...Middlewa
 // WaitForConnection method starts listener on bind address and returns "real" bound address (with port not zero) and
 // channel which receives true when connection is accepted or false overwise (i.e. listener stop requested). It returns non nil
 // error on any error condition
-func (management *Management) WaitForConnection() (Addr, <-chan bool, error) {
-	log.Info(management.logPrefix, "Binding to socket: ", management.bindAddress.String())
+func (management *Management) WaitForConnection() error {
+	log.Info(management.logPrefix, "Binding to socket: ", management.BoundAddress.String())
 
-	listener, err := net.Listen("tcp", management.bindAddress.String())
+	listener, err := net.Listen("tcp", management.BoundAddress.String())
 	if err != nil {
 		log.Error(management.logPrefix, err)
-		return Addr{}, nil, err
+		return err
 	}
 
 	netAddress := listener.Addr().(*net.TCPAddr)
-	addr := Addr{
+	management.BoundAddress = Addr{
 		netAddress.IP.String(),
 		netAddress.Port,
 	}
@@ -92,15 +94,13 @@ func (management *Management) WaitForConnection() (Addr, <-chan bool, error) {
 	log.Info(
 		management.logPrefix,
 		"Waiting for incoming connection on: ",
-		addr.String(),
+		management.BoundAddress.String(),
 	)
 
-	connAccepted := make(chan bool, 1)
-
 	management.shutdownWaiter.Add(1)
-	go management.listenForConnection(listener, connAccepted)
+	go management.listenForConnection(listener)
 
-	return addr, connAccepted, nil
+	return nil
 }
 
 func (management *Management) Stop() {
@@ -114,30 +114,29 @@ func (management *Management) Stop() {
 	log.Info(management.logPrefix, "Shutdown finished")
 }
 
-func (management *Management) listenForConnection(listener net.Listener, connected chan<- bool) {
+func (management *Management) listenForConnection(listener net.Listener) {
+	defer management.shutdownWaiter.Done()
+	defer listener.Close()
 
 	connChannel := make(chan net.Conn, 1)
 	go func() {
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Critical(management.logPrefix, "Connection accept error: ", err)
-			management.shutdownWaiter.Done()
 			close(connChannel)
 			return
 		}
 		connChannel <- conn
-		listener.Close() //openvpn connects only once without retries - no need to listen for more connections
 	}()
 
 	select {
 	case conn := <-connChannel:
 		if conn != nil {
-			connected <- true
-			management.serveNewConnection(conn)
+			management.Connected <- true
+			go management.serveNewConnection(conn)
 		}
 	case <-management.shutdownStarted:
-		listener.Close()
-		connected <- false
+		management.Connected <- false
 	}
 }
 

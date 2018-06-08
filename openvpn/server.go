@@ -63,10 +63,11 @@ type Server struct {
 // Start starts openvpn server generating required config and starting management interface on the way
 func (server *Server) Start() error {
 	config := server.generateConfig()
-	addr, connected, err := server.management.WaitForConnection()
+	err := server.management.WaitForConnection()
 	if err != nil {
 		return err
 	}
+	addr := server.management.BoundAddress
 	config.SetManagementAddress(addr.IP, addr.Port)
 
 	// Fetch the current params
@@ -84,7 +85,7 @@ func (server *Server) Start() error {
 	}
 
 	select {
-	case connAccepted := <-connected:
+	case connAccepted := <-server.management.Connected:
 		if connAccepted {
 			return nil
 		}

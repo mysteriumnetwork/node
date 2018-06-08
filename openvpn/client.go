@@ -79,11 +79,12 @@ func NewClientConfigGenerator(primitives *tls.Primitives, vpnServerIP string, po
 }
 
 func (client *openVpnClient) Start() error {
-	addr, connected, err := client.management.WaitForConnection()
+	err := client.management.WaitForConnection()
 	if err != nil {
 		return err
 	}
 
+	addr := client.management.BoundAddress
 	client.config.SetManagementAddress(addr.IP, addr.Port)
 
 	// Fetch the current arguments
@@ -101,7 +102,7 @@ func (client *openVpnClient) Start() error {
 	}
 
 	select {
-	case connAccepted := <-connected:
+	case connAccepted := <-client.management.Connected:
 		if connAccepted {
 			return nil
 		}
