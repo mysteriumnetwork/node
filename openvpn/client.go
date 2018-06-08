@@ -19,9 +19,11 @@ package openvpn
 
 import "sync"
 import (
+	"errors"
 	"github.com/mysterium/node/openvpn/management"
 	"github.com/mysterium/node/openvpn/tls"
 	"github.com/mysterium/node/session"
+	"time"
 )
 
 // Client defines client process interfaces with basic commands
@@ -39,12 +41,10 @@ type openVpnClient struct {
 
 // NewClient creates openvpn client with given config params
 func NewClient(openvpnBinary string, config *ClientConfig, middlewares ...management.Middleware) *openVpnClient {
-	// Add the management interface socketAddress to the config
-	socketAddress := "127.0.0.1:0"
 
 	return &openVpnClient{
 		config:     config,
-		management: management.NewManagement(socketAddress, "[client-management] ", middlewares...),
+		management: management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
 		process:    NewProcess(openvpnBinary, "[client-openvpn] "),
 	}
 }
@@ -79,13 +79,11 @@ func NewClientConfigGenerator(primitives *tls.Primitives, vpnServerIP string, po
 }
 
 func (client *openVpnClient) Start() error {
-	// Start the management interface (if it isnt already started)
-	err := client.management.Start()
+	addr, connected, err := client.management.WaitForConnection()
 	if err != nil {
 		return err
 	}
 
-	addr := client.management.ActiveSocketAddress()
 	client.config.SetManagementAddress(addr.IP, addr.Port)
 
 	// Fetch the current arguments
@@ -94,7 +92,23 @@ func (client *openVpnClient) Start() error {
 		return err
 	}
 
-	return client.process.Start(arguments)
+	//nil returned from process.Start doesn't guarantee that openvpn itself initialized correctly and accepted all arguments
+	//it simply means that OS started process with specified args
+	err = client.process.Start(arguments)
+	if err != nil {
+		client.management.Stop()
+		return err
+	}
+
+	select {
+	case connAccepted := <-connected:
+		if connAccepted {
+			return nil
+		}
+		return errors.New("management failed to accept connection")
+	case <-time.After(2 * time.Second):
+		return errors.New("management connection wait timeout")
+	}
 }
 
 func (client *openVpnClient) Wait() error {
@@ -103,7 +117,9 @@ func (client *openVpnClient) Wait() error {
 
 func (client *openVpnClient) Stop() error {
 	waiter := sync.WaitGroup{}
-
+	//TODO which to signal for close first ?
+	//if we stop process before management, managemnt won't have a chance to send any commands from middlewares on stop
+	//if we stop management first - it will miss important EXITING state from process
 	waiter.Add(1)
 	go func() {
 		defer waiter.Done()

@@ -31,5 +31,5 @@ func TestErrorIsReturnedOnExitCodeZero(t *testing.T) {
 }
 
 func TestNoErrorIsReturnedOnExitCodeOne(t *testing.T) {
-	assert.NoError(t, CheckOpenvpnBinary("testdata/exit-with-one.sh"))
+	assert.NoError(t, CheckOpenvpnBinary("testdata/openvpn-version.sh"))
 }

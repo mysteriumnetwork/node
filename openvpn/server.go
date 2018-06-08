@@ -20,17 +20,18 @@ package openvpn
 import (
 	"github.com/mysterium/node/openvpn/management"
 
+	"errors"
 	"github.com/mysterium/node/openvpn/tls"
 	"sync"
+	"time"
 )
 
 // NewServer constructs new openvpn server instance
 func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) *Server {
-	// Add the management interface socketAddress to the config
-	socketAddress := "127.0.0.1:0"
+
 	return &Server{
 		generateConfig: generateConfig,
-		management:     management.NewManagement(socketAddress, "[server-management] ", middlewares...),
+		management:     management.NewManagement(management.LocalhostOnRandomPort, "[server-management] ", middlewares...),
 		process:        NewProcess(openvpnBinary, "[server-openvpn] "),
 	}
 }
@@ -62,13 +63,10 @@ type Server struct {
 // Start starts openvpn server generating required config and starting management interface on the way
 func (server *Server) Start() error {
 	config := server.generateConfig()
-
-	// Start the management interface (if it isnt already started)
-	if err := server.management.Start(); err != nil {
+	addr, connected, err := server.management.WaitForConnection()
+	if err != nil {
 		return err
 	}
-
-	addr := server.management.ActiveSocketAddress()
 	config.SetManagementAddress(addr.IP, addr.Port)
 
 	// Fetch the current params
@@ -77,7 +75,24 @@ func (server *Server) Start() error {
 		return err
 	}
 
-	return server.process.Start(arguments)
+	//nil returned from process.Start doesn't guarantee that openvpn itself initialized correctly and accepted all arguments
+	//it simply means that OS started process with specified args
+	err = server.process.Start(arguments)
+	if err != nil {
+		server.management.Stop()
+		return err
+	}
+
+	select {
+	case connAccepted := <-connected:
+		if connAccepted {
+			return nil
+		}
+		return errors.New("management failed to accept connection")
+	case <-time.After(2 * time.Second):
+		return errors.New("management connection wait timeout")
+	}
+
 }
 
 // Wait waits for openvpn server to exit

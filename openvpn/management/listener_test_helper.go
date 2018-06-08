@@ -73,6 +73,7 @@ func connectTo(addr Addr) (*mockOpenvpnProcess, error) {
 
 	commandChannel := make(chan string, 100)
 	go sendStringsToChannel(conn, commandChannel)
+
 	return &mockOpenvpnProcess{
 		conn:    conn,
 		CmdChan: commandChannel,
