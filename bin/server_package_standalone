@@ -8,7 +8,7 @@
 
 set -e
 
-BINARY="build/server/mysterium_server"
+BINARY=${BINARY:="build/server/mysterium_server"}
 DIR_BUILD="build/package"
 PACKAGE_FILE="${DIR_BUILD}/`basename -s .exe ${BINARY}`.tar.gz"
 
