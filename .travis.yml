@@ -1,13 +1,7 @@
 sudo: true
+os: linux
 language: go
-
-os:
-  - linux
-  - osx
-
-go:
-  - 1.9.2
-
+go: [1.9.2]
 go_import_path: github.com/mysterium/node
 
 env:
@@ -18,6 +12,7 @@ env:
     - COMMIT=$TRAVIS_COMMIT
     - BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
+    - BUILD_DIR=build/package
 
 cache:
   directories:
@@ -37,33 +32,38 @@ script:
   - bin/test
   - bin/vet
   - bin/check_go_fmt
-  #run e2e on Pull Requests and linux env only - travis OSX VM doesnt support docker (yet?)
-  - if [ "$TRAVIS_OS_NAME" == 'linux' ] && [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
+  # Run e2e tests on Pull Requests only
+  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       bin/travis_scripts/check_docker.sh;
       bin/travis_scripts/check_docker_compose.sh;
       bin/test_e2e;
     fi
 
 before_deploy:
-  - bin/client_build
-  - bin/client_package_standalone
-  - bin/server_build
-  - bin/server_package_standalone
+  - mkdir -p $BUILD_DIR
+  - bin/server_build_xgo darwin/amd64 windows/amd64 linux/amd64
+  - BINARY=$BUILD_DIR/mysterium_server_darwin_amd64 bin/server_package_standalone
+  - BINARY=$BUILD_DIR/mysterium_server_windows_amd64.exe bin/server_package_standalone
+  - BINARY=$BUILD_DIR/mysterium_server_linux_amd64 bin/server_package_standalone
+  - bin/client_build_xgo darwin/amd64 windows/amd64 linux/amd64
+  - BINARY=$BUILD_DIR/mysterium_client_darwin_amd64 bin/client_package_standalone
+  - BINARY=$BUILD_DIR/mysterium_client_windows_amd64.exe bin/client_package_standalone
+  - BINARY=$BUILD_DIR/mysterium_client_linux_amd64 bin/client_package_standalone
 
 deploy:
   - provider: pages
-    local-dir: binaries
+    local-dir: $BUILD_DIR
     skip-cleanup: true
     github-token: "$GIT_RELEASES_API_KEY"
     keep-history: false
-    target-branch: mysterium_$TRAVIS_OS_NAME
+    target-branch: mysterium-node
     repo: MysteriumNetwork/build-artifacts
     on:
       tags: false
       branch: master
   - provider: releases
     file_glob: true
-    file: binaries/*
+    file: $BUILD_DIR/*
     skip_cleanup: true
     api_key: "$GIT_RELEASES_API_KEY"
     on:
