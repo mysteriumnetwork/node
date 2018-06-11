@@ -1,0 +1,202 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/identities": {
+      "post": {
+        "description": "Create responds with new identity",
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "createIdentity",
+        "responses": {
+          "200": {
+            "description": "identityDto",
+            "schema": {
+              "$ref": "#/definitions/identityDto"
+            }
+          },
+          "400": {
+            "description": "errorMessage",
+            "schema": {
+              "$ref": "#/definitions/errorMessage"
+            }
+          },
+          "422": {
+            "$ref": "#/responses/validationErrorMessage"
+          },
+          "500": {
+            "description": "errorMessage",
+            "schema": {
+              "$ref": "#/definitions/errorMessage"
+            }
+          }
+        }
+      }
+    },
+    "/identities/:id/registration": {
+      "put": {
+        "description": "Registers provided identity",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "registerIdentity",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Id",
+            "description": "Identity to pass",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "202": {},
+          "400": {
+            "description": "errorMessage",
+            "schema": {
+              "$ref": "#/definitions/errorMessage"
+            }
+          },
+          "500": {
+            "description": "errorMessage",
+            "schema": {
+              "$ref": "#/definitions/errorMessage"
+            }
+          },
+          "501": {
+            "description": "errorMessage",
+            "schema": {
+              "$ref": "#/definitions/errorMessage"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "FieldErrorMap": {
+      "type": "object",
+      "x-go-package": "github.com/mysterium/node/tequilapi/validation"
+    },
+    "IdentityURLParams": {
+      "description": "Used for operations that want identity in the path",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "Identity to pass\n\nin: path",
+          "type": "string",
+          "x-go-name": "Id"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
+    },
+    "errorMessage": {
+      "description": "Error Message",
+      "type": "object",
+      "properties": {
+        "message": {
+          "description": "Error message",
+          "type": "string",
+          "x-go-name": "Message"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/utils"
+    },
+    "identitiesAPI": {
+      "type": "object",
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
+    },
+    "identityCreationDto": {
+      "type": "object",
+      "properties": {
+        "passphrase": {
+          "type": "string",
+          "x-go-name": "Passphrase"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
+    },
+    "identityDto": {
+      "description": "Some info",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
+    },
+    "identityList": {
+      "type": "object",
+      "properties": {
+        "identities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/identityDto"
+          },
+          "x-go-name": "Identities"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
+    },
+    "identityRegistrationDto": {
+      "type": "object",
+      "properties": {
+        "registered": {
+          "type": "boolean",
+          "x-go-name": "Registered"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
+    },
+    "identityUnlockingDto": {
+      "type": "object",
+      "properties": {
+        "passphrase": {
+          "type": "string",
+          "x-go-name": "Passphrase"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
+    },
+    "validationErrorMessage": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "$ref": "#/definitions/FieldErrorMap"
+        },
+        "message": {
+          "description": "Error message",
+          "type": "string",
+          "x-go-name": "Message"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/utils"
+    }
+  },
+  "responses": {
+    "validationErrorMessage": {
+      "schema": {
+        "$ref": "#/definitions/FieldErrorMap"
+      },
+      "headers": {
+        "errors": {},
+        "message": {
+          "type": "string",
+          "description": "Error message"
+        }
+      }
+    }
+  }
+}

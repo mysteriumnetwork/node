@@ -29,10 +29,23 @@ import (
 	"github.com/mysterium/node/tequilapi/validation"
 )
 
+// Used for operations that want identity in the path
+// swagger:parameters registerIdentity
+type IdentityURLParams struct {
+	// Identity to pass
+	//
+	// in: path
+	// required: true
+	Id string `json:"id"`
+}
+
+// Some info
+// swagger:model
 type identityDto struct {
 	ID string `json:"id"`
 }
 
+// swagger:model
 type identityList struct {
 	Identities []identityDto `json:"identities"`
 }
@@ -79,6 +92,15 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 	utils.WriteAsJSON(idsSerializable, resp)
 }
 
+// swagger:route POST /identities Identity createIdentity
+//
+// Create responds with new identity
+//
+// Responses:
+//  200: identityDto
+//  400: errorMessage
+//  422: validationErrorMessage
+//  500: errorMessage
 func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	createReq, err := toCreateRequest(request)
 	if err != nil {
@@ -100,6 +122,20 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 	utils.WriteAsJSON(idDto, resp)
 }
 
+// swagger:route PUT /identities/:id/registration Identity registerIdentity
+//
+// Registers provided identity
+//
+// Produces:
+// - application/json
+//
+// Schemes: http
+//
+// Responses:
+//  202:
+//  400: errorMessage
+//  500: errorMessage
+//  501: errorMessage
 func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)
