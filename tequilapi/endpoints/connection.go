@@ -34,8 +34,16 @@ import (
 // operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
 const statusConnectCancelled = 499
 
+// swagger:model
 type connectionRequest struct {
+	// consumer identity
+	// required: true
+	// example: 0x0000000000000000000000000000000000000001
 	ConsumerID string `json:"consumerId"`
+
+	// provider identity
+	// required: true
+	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"providerId"`
 }
 
@@ -68,7 +76,27 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
-// Create starts connection
+// swagger:operation PUT /connection Connection createConnection
+// ---
+// summary: Starts new connection
+// description: Inner description
+// parameters:
+//   - in: body
+//     name: body
+//     description: Parameters of new connection
+//     schema:
+//       $ref: "#/definitions/connectionRequest"
+// responses:
+//   "201":
+//     "description": "Created. Empty body"
+//   "400":
+//     "$ref": "#/responses/badRequest"
+//   "409":
+//     "$ref": "#/responses/conflict"
+//   "499":
+//     "$ref": "#/responses/connectCancelled"
+//   "500":
+//     "$ref": "#/responses/internalServerError"
 func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	cr, err := toConnectionRequest(req)
 	if err != nil {
