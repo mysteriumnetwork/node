@@ -38,13 +38,26 @@ func WriteAsJSON(v interface{}, writer http.ResponseWriter) {
 	}
 }
 
-// Error Message
-//
 // swagger:model
 type errorMessage struct {
 	// Error message
 	Message string `json:"message"`
 }
+
+// Bad Request
+//
+// swagger:response
+type badRequest errorMessage
+
+// Internal Server Error
+//
+// swagger:response
+type internalServerError errorMessage
+
+// Not Implemented
+//
+// swagger:response
+type notImplemented errorMessage
 
 // SendError generates error response for error
 func SendError(writer http.ResponseWriter, err error, httpCode int) {
@@ -62,7 +75,9 @@ func SendErrorBody(writer http.ResponseWriter, message interface{}, httpCode int
 	WriteAsJSON(message, writer)
 }
 
-// swagger:response
+// Validation Error
+//
+// swagger:model
 type validationErrorMessage struct {
 	errorMessage
 	ValidationErrors *validation.FieldErrorMap `json:"errors"`

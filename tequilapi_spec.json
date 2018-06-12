@@ -14,10 +14,11 @@
   "paths": {
     "/identities": {
       "post": {
-        "description": "Create responds with new identity",
+        "description": "Inner description",
         "tags": [
           "Identity"
         ],
+        "summary": "Create new identity",
         "operationId": "createIdentity",
         "responses": {
           "200": {
@@ -27,29 +28,27 @@
             }
           },
           "400": {
-            "description": "errorMessage",
-            "schema": {
-              "$ref": "#/definitions/errorMessage"
-            }
+            "$ref": "#/responses/badRequest"
           },
           "422": {
-            "$ref": "#/responses/validationErrorMessage"
+            "description": "validationErrorMessage",
+            "schema": {
+              "$ref": "#/definitions/validationErrorMessage"
+            }
           },
           "500": {
-            "description": "errorMessage",
-            "schema": {
-              "$ref": "#/definitions/errorMessage"
-            }
+            "$ref": "#/responses/internalServerError"
           }
         }
       }
     },
     "/identities/:id/registration": {
       "put": {
-        "description": "Registers provided identity",
+        "description": "Inner description",
         "tags": [
           "Identity"
         ],
+        "summary": "Registers provided identity",
         "operationId": "registerIdentity",
         "parameters": [
           {
@@ -64,22 +63,13 @@
         "responses": {
           "202": {},
           "400": {
-            "description": "errorMessage",
-            "schema": {
-              "$ref": "#/definitions/errorMessage"
-            }
+            "$ref": "#/responses/badRequest"
           },
           "500": {
-            "description": "errorMessage",
-            "schema": {
-              "$ref": "#/definitions/errorMessage"
-            }
+            "$ref": "#/responses/internalServerError"
           },
           "501": {
-            "description": "errorMessage",
-            "schema": {
-              "$ref": "#/definitions/errorMessage"
-            }
+            "$ref": "#/responses/notImplemented"
           }
         }
       }
@@ -105,8 +95,11 @@
       },
       "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
     },
+    "badRequest": {
+      "description": "Bad Request",
+      "$ref": "#/definitions/errorMessage"
+    },
     "errorMessage": {
-      "description": "Error Message",
       "type": "object",
       "properties": {
         "message": {
@@ -175,7 +168,16 @@
       },
       "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
     },
+    "internalServerError": {
+      "description": "Internal Server Error",
+      "$ref": "#/definitions/errorMessage"
+    },
+    "notImplemented": {
+      "description": "Not Implemented",
+      "$ref": "#/definitions/errorMessage"
+    },
     "validationErrorMessage": {
+      "description": "Validation Error",
       "type": "object",
       "properties": {
         "errors": {
@@ -191,17 +193,14 @@
     }
   },
   "responses": {
-    "validationErrorMessage": {
-      "schema": {
-        "$ref": "#/definitions/FieldErrorMap"
-      },
-      "headers": {
-        "errors": {},
-        "message": {
-          "type": "string",
-          "description": "Error message"
-        }
-      }
+    "badRequest": {
+      "description": "Bad Request"
+    },
+    "internalServerError": {
+      "description": "Internal Server Error"
+    },
+    "notImplemented": {
+      "description": "Not Implemented"
     }
   }
 }
