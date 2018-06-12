@@ -36,7 +36,7 @@ type IdentityURLParams struct {
 	//
 	// in: path
 	// required: true
-	Id string `json:"id"`
+	ID string `json:"id"`
 }
 
 // Some info
@@ -125,11 +125,6 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 // swagger:route PUT /identities/:id/registration Identity registerIdentity
 //
 // Registers provided identity
-//
-// Produces:
-// - application/json
-//
-// Schemes: http
 //
 // Responses:
 //  202:

@@ -1,5 +1,16 @@
 {
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
   "swagger": "2.0",
+  "info": {
+    "description": "API description.",
+    "title": "Tequila API.",
+    "version": "0.0.1"
+  },
   "paths": {
     "/identities": {
       "post": {
@@ -36,12 +47,6 @@
     "/identities/:id/registration": {
       "put": {
         "description": "Registers provided identity",
-        "produces": [
-          "application/json"
-        ],
-        "schemes": [
-          "http"
-        ],
         "tags": [
           "Identity"
         ],
@@ -49,7 +54,7 @@
         "parameters": [
           {
             "type": "string",
-            "x-go-name": "Id",
+            "x-go-name": "ID",
             "description": "Identity to pass",
             "name": "id",
             "in": "path",
@@ -95,7 +100,7 @@
         "id": {
           "description": "Identity to pass\n\nin: path",
           "type": "string",
-          "x-go-name": "Id"
+          "x-go-name": "ID"
         }
       },
       "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
