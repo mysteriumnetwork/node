@@ -29,17 +29,6 @@ import (
 	"github.com/mysterium/node/tequilapi/validation"
 )
 
-// Used for operations that want identity in the path
-// swagger:parameters registerIdentity
-type IdentityURLParams struct {
-	// Identity to pass
-	//
-	// in: path
-	// required: true
-	ID string `json:"id"`
-}
-
-// Some info
 // swagger:model
 type identityDto struct {
 	ID string `json:"id"`
@@ -92,17 +81,21 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 	utils.WriteAsJSON(idsSerializable, resp)
 }
 
-// swagger:route POST /identities Identity createIdentity
-//
-// Create new identity
-//
-// Inner description
-//
-// Responses:
-//  200: identityDto
-//  400: badRequest
-//  422: validationErrorMessage
-//  500: internalServerError
+// swagger:operation POST /identities Identity createIdentity
+// ---
+// summary: Create new identity
+// description: Inner description
+// responses:
+//   "200":
+//     "description": "Success"
+//     "schema":
+//       "$ref": "#/definitions/identityDto"
+//   "400":
+//     "$ref": "#/responses/badRequest"
+//   "422":
+//     "$ref": "#/definitions/validationErrorMessage"
+//   "500":
+//     "$ref": "#/responses/internalServerError"
 func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	createReq, err := toCreateRequest(request)
 	if err != nil {
@@ -124,17 +117,25 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 	utils.WriteAsJSON(idDto, resp)
 }
 
-// swagger:route PUT /identities/:id/registration Identity registerIdentity
-//
-// Registers provided identity
-//
-// Inner description
-//
-// Responses:
-//  202:
-//  400: badRequest
-//  500: internalServerError
-//  501: notImplemented
+// swagger:operation PUT /identities/{id}/registration Identity registerIdentity
+// ---
+// summary: Registers provided identity
+// description: Inner description
+// parameters:
+// - name: id
+//   in: path
+//   description: identity to pass
+//   type: string
+//   required: true
+// responses:
+//   "202":
+//     "description": "Accepted. Empty body"
+//   "400":
+//     "$ref": "#/responses/badRequest"
+//   "500":
+//     "$ref": "#/responses/internalServerError"
+//   "501":
+//     "$ref": "#/responses/notImplemented"
 func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)

@@ -22,7 +22,7 @@
         "operationId": "createIdentity",
         "responses": {
           "200": {
-            "description": "identityDto",
+            "description": "Success",
             "schema": {
               "$ref": "#/definitions/identityDto"
             }
@@ -31,10 +31,7 @@
             "$ref": "#/responses/badRequest"
           },
           "422": {
-            "description": "validationErrorMessage",
-            "schema": {
-              "$ref": "#/definitions/validationErrorMessage"
-            }
+            "$ref": "#/definitions/validationErrorMessage"
           },
           "500": {
             "$ref": "#/responses/internalServerError"
@@ -42,7 +39,7 @@
         }
       }
     },
-    "/identities/:id/registration": {
+    "/identities/{id}/registration": {
       "put": {
         "description": "Inner description",
         "tags": [
@@ -53,15 +50,16 @@
         "parameters": [
           {
             "type": "string",
-            "x-go-name": "ID",
-            "description": "Identity to pass",
+            "description": "identity to pass",
             "name": "id",
             "in": "path",
             "required": true
           }
         ],
         "responses": {
-          "202": {},
+          "202": {
+            "description": "Accepted. Empty body"
+          },
           "400": {
             "$ref": "#/responses/badRequest"
           },
@@ -79,21 +77,6 @@
     "FieldErrorMap": {
       "type": "object",
       "x-go-package": "github.com/mysterium/node/tequilapi/validation"
-    },
-    "IdentityURLParams": {
-      "description": "Used for operations that want identity in the path",
-      "type": "object",
-      "required": [
-        "id"
-      ],
-      "properties": {
-        "id": {
-          "description": "Identity to pass\n\nin: path",
-          "type": "string",
-          "x-go-name": "ID"
-        }
-      },
-      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
     },
     "badRequest": {
       "description": "Bad Request",
@@ -125,7 +108,6 @@
       "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
     },
     "identityDto": {
-      "description": "Some info",
       "type": "object",
       "properties": {
         "id": {
