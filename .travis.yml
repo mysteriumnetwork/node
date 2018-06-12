@@ -40,6 +40,7 @@ script:
     fi
 
 before_deploy:
+  - bin/travis_scripts/ensure_xgo.sh
   - mkdir -p $BUILD_DIR
   - bin/server_build_xgo darwin/amd64 windows/amd64 linux/amd64
   - BINARY=$BUILD_DIR/mysterium_server_darwin_amd64 bin/server_package_standalone
