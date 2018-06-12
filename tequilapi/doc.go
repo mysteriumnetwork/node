@@ -19,13 +19,16 @@
 //
 // API description.
 //
-//     Version: 0.0.1
+//   Version: 0.0.1
 //
-//     Consumes:
-//     - application/json
+//   Host: localhost:4050
+//   BasePath: /
 //
-//     Produces:
-//     - application/json
+//   Consumes:
+//   - application/json
+//
+//   Produces:
+//   - application/json
 //
 // swagger:meta
 package tequilapi

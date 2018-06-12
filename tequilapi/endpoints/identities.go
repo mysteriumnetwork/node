@@ -124,7 +124,7 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 // parameters:
 // - name: id
 //   in: path
-//   description: identity to pass
+//   description: Ethereum Address, example: 0x0000000000000000000000000000000000000001
 //   type: string
 //   required: true
 // responses:
