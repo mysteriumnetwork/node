@@ -11,6 +11,8 @@
     "title": "Tequila API.",
     "version": "0.0.1"
   },
+  "host": "localhost:4050",
+  "basePath": "/",
   "paths": {
     "/identities": {
       "post": {
@@ -50,7 +52,7 @@
         "parameters": [
           {
             "type": "string",
-            "description": "identity to pass",
+            "description": "Ethereum Address like 0x0000000000000000000000000000000000000001",
             "name": "id",
             "in": "path",
             "required": true
