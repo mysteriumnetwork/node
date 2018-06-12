@@ -24,7 +24,7 @@ source bin/helpers/load_environment.sh
 DIR_BUILD="build/package"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
-go run vendor/github.com/karalabe/xgo/xgo.go \
+xgo \
     --go=1.9.2 \
     --targets="$XGO_TARGETS" \
     --dest=${DIR_TEMP} \
