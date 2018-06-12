@@ -119,12 +119,13 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 
 // swagger:operation PUT /identities/{id}/registration Identity registerIdentity
 // ---
-// summary: Registers provided identity
+// summary: Register existing identity
 // description: Inner description
 // parameters:
 // - name: id
 //   in: path
-//   description: Ethereum Address, example: 0x0000000000000000000000000000000000000001
+//   description: Ethereum Address, example 0x0000000000000000000000000000000000000001
+//   example: "0x0000000000000000000000000000000000000001"
 //   type: string
 //   required: true
 // responses:

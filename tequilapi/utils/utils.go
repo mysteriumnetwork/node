@@ -59,6 +59,16 @@ type internalServerError errorMessage
 // swagger:response
 type notImplemented errorMessage
 
+// Conflict
+//
+// swagger:response
+type conflict errorMessage
+
+// Connect Cancelled
+//
+// swagger:response
+type connectCancelled errorMessage
+
 // SendError generates error response for error
 func SendError(writer http.ResponseWriter, err error, httpCode int) {
 	SendErrorMessage(writer, fmt.Sprint(err), httpCode)

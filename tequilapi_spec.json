@@ -14,6 +14,43 @@
   "host": "localhost:4050",
   "basePath": "/",
   "paths": {
+    "/connection": {
+      "put": {
+        "description": "Inner description",
+        "tags": [
+          "Connection"
+        ],
+        "summary": "Starts new connection",
+        "operationId": "createConnection",
+        "parameters": [
+          {
+            "description": "Parameters of new connection",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/connectionRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created. Empty body"
+          },
+          "400": {
+            "$ref": "#/responses/badRequest"
+          },
+          "409": {
+            "$ref": "#/responses/conflict"
+          },
+          "499": {
+            "$ref": "#/responses/connectCancelled"
+          },
+          "500": {
+            "$ref": "#/responses/internalServerError"
+          }
+        }
+      }
+    },
     "/identities": {
       "post": {
         "description": "Inner description",
@@ -47,12 +84,13 @@
         "tags": [
           "Identity"
         ],
-        "summary": "Registers provided identity",
+        "summary": "Register existing identity",
         "operationId": "registerIdentity",
         "parameters": [
           {
             "type": "string",
-            "description": "Ethereum Address like 0x0000000000000000000000000000000000000001",
+            "example": "0x0000000000000000000000000000000000000001",
+            "description": "Ethereum Address, example 0x0000000000000000000000000000000000000001",
             "name": "id",
             "in": "path",
             "required": true
@@ -76,6 +114,11 @@
     }
   },
   "definitions": {
+    "ConnectionEndpoint": {
+      "description": "ConnectionEndpoint struct represents /connection resource and it's subresources",
+      "type": "object",
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
+    },
     "FieldErrorMap": {
       "type": "object",
       "x-go-package": "github.com/mysterium/node/tequilapi/validation"
@@ -83,6 +126,36 @@
     "badRequest": {
       "description": "Bad Request",
       "$ref": "#/definitions/errorMessage"
+    },
+    "conflict": {
+      "description": "Conflict",
+      "$ref": "#/definitions/errorMessage"
+    },
+    "connectCancelled": {
+      "description": "Connect Cancelled",
+      "$ref": "#/definitions/errorMessage"
+    },
+    "connectionRequest": {
+      "type": "object",
+      "required": [
+        "consumerId",
+        "providerId"
+      ],
+      "properties": {
+        "consumerId": {
+          "description": "consumer identity",
+          "type": "string",
+          "x-go-name": "ConsumerID",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "providerId": {
+          "description": "provider identity",
+          "type": "string",
+          "x-go-name": "ProviderID",
+          "example": "0x0000000000000000000000000000000000000002"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
     },
     "errorMessage": {
       "type": "object",
@@ -160,6 +233,20 @@
       "description": "Not Implemented",
       "$ref": "#/definitions/errorMessage"
     },
+    "statusResponse": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "x-go-name": "SessionID"
+        },
+        "status": {
+          "type": "string",
+          "x-go-name": "Status"
+        }
+      },
+      "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
+    },
     "validationErrorMessage": {
       "description": "Validation Error",
       "type": "object",
@@ -179,6 +266,12 @@
   "responses": {
     "badRequest": {
       "description": "Bad Request"
+    },
+    "conflict": {
+      "description": "Conflict"
+    },
+    "connectCancelled": {
+      "description": "Connect Cancelled"
     },
     "internalServerError": {
       "description": "Internal Server Error"
