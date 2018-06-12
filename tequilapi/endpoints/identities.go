@@ -94,13 +94,15 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 
 // swagger:route POST /identities Identity createIdentity
 //
-// Create responds with new identity
+// Create new identity
+//
+// Inner description
 //
 // Responses:
 //  200: identityDto
-//  400: errorMessage
+//  400: badRequest
 //  422: validationErrorMessage
-//  500: errorMessage
+//  500: internalServerError
 func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	createReq, err := toCreateRequest(request)
 	if err != nil {
@@ -126,11 +128,13 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 //
 // Registers provided identity
 //
+// Inner description
+//
 // Responses:
 //  202:
-//  400: errorMessage
-//  500: errorMessage
-//  501: errorMessage
+//  400: badRequest
+//  500: internalServerError
+//  501: notImplemented
 func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)
