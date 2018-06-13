@@ -7,8 +7,10 @@ RUN apt-get update \
     && gem install ffi -v 1.9.18 \
     && gem install fpm -v 1.9.3
 
-# Install Debber
-RUN go get github.com/debber/debber-v0.3/cmd/debber
+# Install development dependencies
+RUN go get \
+    github.com/debber/debber-v0.3/cmd/debber \
+    github.com/golang/lint/golint
 
 WORKDIR /go/src/github.com/mysterium/node
 

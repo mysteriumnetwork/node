@@ -4,7 +4,7 @@
 
 source bin/helpers/output.sh
 
-COPYRIGHT="Copyright (C) \d\{4\} The \"MysteriumNetwork/node\" Authors."
+COPYRIGHT='Copyright \(C\) [[:digit:]]{4} The "MysteriumNetwork/node" Authors\.'
 
 # Checking for license
 
@@ -12,7 +12,7 @@ all_files=`find . -path ./vendor -prune -o -name '*.go' -print`
 
 bad_files=""
 for file in $all_files; do
-    if ! grep -q "$COPYRIGHT" $file
+    if ! grep -q -E "$COPYRIGHT" $file
     then
         bad_files+="- $file\n"
     fi

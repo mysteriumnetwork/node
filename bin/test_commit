@@ -1,8 +1,0 @@
-#!/bin/bash
-
-# Runs tests and code quality checks
-#
-# Usage:
-#> bin/test_commit
-
-bin/test && bin/vet && bin/check_go_fmt

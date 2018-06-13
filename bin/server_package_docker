@@ -4,7 +4,7 @@
 # Creates Docker image and uploads it to DockerHub https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
 #
 # To create a release, simply execute:
-#> bin/server_package_docker version [tag..]
+#> bin/server_package_docker version [tag ...]
 
 # Usage:
 #> bin/server_package_docker 0.0.1
