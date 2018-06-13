@@ -184,10 +184,15 @@
     },
     "identityDto": {
       "type": "object",
+      "required": [
+        "id"
+      ],
       "properties": {
         "id": {
+          "description": "identity in Ethereum address format",
           "type": "string",
-          "x-go-name": "ID"
+          "x-go-name": "ID",
+          "example": "0x0000000000000000000000000000000000000001"
         }
       },
       "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
