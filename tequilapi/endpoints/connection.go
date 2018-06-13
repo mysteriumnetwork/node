@@ -47,8 +47,12 @@ type connectionRequest struct {
 	ProviderID string `json:"providerId"`
 }
 
+// swagger:model
 type statusResponse struct {
-	Status    string `json:"status"`
+	// example: Connected
+	Status string `json:"status"`
+
+	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	SessionID string `json:"sessionId,omitempty"`
 }
 
@@ -79,24 +83,34 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 // swagger:operation PUT /connection Connection createConnection
 // ---
 // summary: Starts new connection
-// description: Inner description
+// description: Consumer opens connection to provider
 // parameters:
 //   - in: body
 //     name: body
-//     description: Parameters of new connection
+//     description: Parameters for creating new connection
 //     schema:
 //       $ref: "#/definitions/connectionRequest"
 // responses:
-//   "201":
-//     "description": "Created. Empty body"
-//   "400":
-//     "$ref": "#/responses/badRequest"
-//   "409":
-//     "$ref": "#/responses/conflict"
-//   "499":
-//     "$ref": "#/responses/connectCancelled"
-//   "500":
-//     "$ref": "#/responses/internalServerError"
+//   201:
+//     description: Connection started
+//     schema:
+//       "$ref": "#/definitions/statusResponse"
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/responses/errorMessage"
+//   409:
+//     description: Conflict. Connection already exists
+//     schema:
+//       "$ref": "#/responses/errorMessage"
+//   499:
+//     description: Connection was cancelled
+//     schema:
+//       "$ref": "#/responses/errorMessage"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/responses/errorMessage"
 func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	cr, err := toConnectionRequest(req)
 	if err != nil {

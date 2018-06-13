@@ -42,6 +42,7 @@ type identityList struct {
 	Identities []identityDto `json:"identities"`
 }
 
+// swagger:model
 type identityCreationDto struct {
 	Passphrase *string `json:"passphrase"`
 }
@@ -87,18 +88,30 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 // swagger:operation POST /identities Identity createIdentity
 // ---
 // summary: Create new identity
-// description: Inner description
+// description: Creates identity and stores in keystore encrypted with passphrase
+// parameters:
+//   - in: body
+//     name: body
+//     description: Parameters for creating new identity
+//     schema:
+//       $ref: "#/definitions/identityCreationDto"
 // responses:
-//   "200":
-//     "description": "Success"
-//     "schema":
+//   200:
+//     description: Successfully created identity
+//     schema:
 //       "$ref": "#/definitions/identityDto"
-//   "400":
-//     "$ref": "#/responses/badRequest"
-//   "422":
-//     "$ref": "#/definitions/validationErrorMessage"
-//   "500":
-//     "$ref": "#/responses/internalServerError"
+//   400:
+//     description: Bad Request
+//     schema:
+//       "$ref": "#/responses/errorMessage"
+//   422:
+//     description: Parameters validation error
+//     schema:
+//       "$ref": "#/definitions/validationError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/responses/errorMessage"
 func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	createReq, err := toCreateRequest(request)
 	if err != nil {
@@ -122,8 +135,8 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 
 // swagger:operation PUT /identities/{id}/registration Identity registerIdentity
 // ---
-// summary: Register existing identity
-// description: Inner description
+// summary: Register identity
+// description: Registers existing identity to Discovery API
 // parameters:
 // - name: id
 //   in: path
@@ -132,14 +145,20 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 //   type: string
 //   required: true
 // responses:
-//   "202":
-//     "description": "Accepted. Empty body"
-//   "400":
-//     "$ref": "#/responses/badRequest"
-//   "500":
-//     "$ref": "#/responses/internalServerError"
-//   "501":
-//     "$ref": "#/responses/notImplemented"
+//   202:
+//     description: Accepted. Empty body
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/responses/errorMessage"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/responses/errorMessage"
+//   501:
+//     description: Not implemented
+//     schema:
+//       "$ref": "#/responses/errorMessage"
 func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)
