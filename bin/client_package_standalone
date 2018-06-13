@@ -1,0 +1,22 @@
+#!/bin/bash
+
+###########################################################################
+# Packaging script which creates standalone package.
+#
+# Usage:
+#> bin/client_package_standalone
+
+set -e
+
+BINARY=${BINARY:="build/client/mysterium_client"}
+DIR_BUILD="build/package"
+PACKAGE_FILE="${DIR_BUILD}/`basename -s .exe ${BINARY}`.tar.gz"
+
+# Put all files to package directory (to avoid preserving directory structure)
+DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
+cp ${BINARY} ${DIR_TEMP}/
+cp -r "bin/client_package/config" ${DIR_TEMP}/
+
+# Tarball package directory
+tar -zcv -f ${PACKAGE_FILE} -C ${DIR_TEMP} .
+rm -rf ${DIR_TEMP}
