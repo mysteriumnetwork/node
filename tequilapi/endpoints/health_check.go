@@ -19,8 +19,8 @@ package endpoints
 
 import (
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysterium/node/params"
 	"github.com/mysterium/node/tequilapi/utils"
-	"github.com/mysterium/node/version"
 	"net/http"
 	"time"
 )
@@ -41,14 +41,14 @@ type healthCheckEndpoint struct {
 	startTime       time.Time
 	currentTimeFunc func() time.Time
 	processNumber   int
-	versionInfo     *version.Info
+	versionInfo     *params.Info
 }
 
 /*
 HealthCheckEndpointFactory creates a structure with single HealthCheck method for healthcheck serving as http,
 currentTimeFunc is injected for easier testing
 */
-func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() int, versionInfo *version.Info) *healthCheckEndpoint {
+func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() int, versionInfo *params.Info) *healthCheckEndpoint {
 	startTime := currentTimeFunc()
 	return &healthCheckEndpoint{
 		startTime,

@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Package version contains build information of executable usually provided by
+// Package params contains build information of executable usually provided by
 // automated build systems like Travis. Default values are populated if not overriden by build system
-package version
+package params
 
 import "fmt"
 

@@ -31,11 +31,11 @@ import (
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
+	"github.com/mysterium/node/params"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
-	"github.com/mysterium/node/version"
 	"path/filepath"
 	"time"
 )
@@ -125,7 +125,7 @@ type Command struct {
 // Start starts Tequilapi service, fetches location
 func (cmd *Command) Start() error {
 	printLicense()
-	log.Info("[Client version]", version.AsString())
+	log.Info("[Client version]", params.AsString())
 	err := cmd.checkOpenvpn()
 	if err != nil {
 		return err

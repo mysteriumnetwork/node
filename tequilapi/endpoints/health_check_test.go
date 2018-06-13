@@ -19,7 +19,7 @@ package endpoints
 
 import (
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/version"
+	"github.com/mysterium/node/params"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
@@ -37,7 +37,7 @@ func TestHealthCheckReturnsExpectedJSONObject(t *testing.T) {
 	handlerFunc := HealthCheckEndpointFactory(
 		newMockTimer([]time.Time{tick1, tick2}).Now,
 		func() int { return 1 },
-		&version.Info{
+		&params.Info{
 			Branch:      "some",
 			Commit:      "abc123",
 			BuildNumber: "travis build #",

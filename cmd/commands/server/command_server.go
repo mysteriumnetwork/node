@@ -29,10 +29,10 @@ import (
 	"github.com/mysterium/node/openvpn/discovery"
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/openvpn/tls"
+	"github.com/mysterium/node/params"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
-	"github.com/mysterium/node/version"
 	"sync"
 	"time"
 )
@@ -62,7 +62,7 @@ type Command struct {
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
 	printLicense()
-	log.Info("[Server version]", version.AsString())
+	log.Info("[Server version]", params.AsString())
 	err = cmd.checkOpenvpn()
 	if err != nil {
 		return err
@@ -90,12 +90,12 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	location, err := cmd.locationDetector.DetectLocation()
+	currentLocation, err := cmd.locationDetector.DetectLocation()
 	if err != nil {
 		return err
 	}
-	log.Info("Country detected: ", location.Country)
-	serviceLocation := dto_discovery.Location{Country: location.Country}
+	log.Info("Country detected: ", currentLocation.Country)
+	serviceLocation := dto_discovery.Location{Country: currentLocation.Country}
 
 	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
 
