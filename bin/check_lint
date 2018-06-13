@@ -40,7 +40,6 @@ fi
 MESSAGES_ERROR=`golint --set_exit_status --min_confidence=1 ${ARGUMENTS} 2>/dev/null`
 MESSAGES_RECONFIGURE=()
 
-check_uncleaned_package "github.com/mysterium/node/cmd" 3
 check_uncleaned_package "github.com/mysterium/node/identity" 9
 check_uncleaned_package "github.com/mysterium/node/tequilapi" 12
 check_uncleaned_package "github.com/mysterium/node/session" 6
@@ -54,7 +53,7 @@ check_uncleaned_package "github.com/mysterium/node/location" 1
 
 MESSAGES_ERROR_COUNT=`echo -n "${MESSAGES_ERROR}" | grep -c '^'`
 if [ ${MESSAGES_ERROR_COUNT} -gt 0 ]; then
-    print_error "[error] ${MESSAGES_COUNT} messages: ${MESSAGES_ERROR}"
+    print_error "[error] ${MESSAGES_ERROR_COUNT} messages: ${MESSAGES_ERROR}"
     exit 1
 fi
 

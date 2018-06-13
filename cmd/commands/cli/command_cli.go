@@ -20,8 +20,8 @@ package cli
 import (
 	"fmt"
 	"github.com/chzyer/readline"
-	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/cmd/license"
+	node_cmd "github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/params"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"io"
 	"log"
@@ -54,7 +54,7 @@ const statusConnected = "Connected"
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
-	startupLicense := license.GetStartupLicense("type 'license warranty'", "type 'license conditions'")
+	startupLicense := params.GetStartupLicense("type 'license warranty'", "type 'license conditions'")
 	fmt.Print(startupLicense + "\n")
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
@@ -278,7 +278,7 @@ func (c *Command) help() {
 
 // quit stops cli and client commands and exits application
 func (c *Command) quit() {
-	stop := cmd.NewApplicationStopper(c.Kill)
+	stop := node_cmd.NewApplicationStopper(c.Kill)
 	stop()
 }
 
@@ -343,9 +343,9 @@ func (c *Command) stopClient() {
 
 func (c *Command) license(argsString string) {
 	if argsString == "warranty" {
-		fmt.Print(license.Warranty)
+		fmt.Print(params.Warranty)
 	} else if argsString == "conditions" {
-		fmt.Print(license.Conditions)
+		fmt.Print(params.Conditions)
 	} else {
 		info("identities command:\n    warranty\n    conditions")
 	}

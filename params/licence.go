@@ -15,8 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package license
+package params
 
+import "fmt"
+
+const licenseFormat = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+This program comes with ABSOLUTELY NO WARRANTY; for details %v.
+This is free software, and you are welcome to redistribute it
+under certain conditions; %v for details.
+`
+
+// GetStartupLicense returns startup license string with custom commands
+func GetStartupLicense(warrantyCommand, conditionsCommand string) string {
+	return fmt.Sprintf(licenseFormat, warrantyCommand, conditionsCommand)
+}
+
+// Warranty of licence
 const Warranty = `
   THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
 APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
@@ -29,6 +43,7 @@ ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 
 `
 
+// Conditions of licence
 const Conditions = `
                        TERMS AND CONDITIONS
 

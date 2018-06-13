@@ -22,7 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client/connection"
 	node_cmd "github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/cmd/license"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -154,7 +153,7 @@ func (cmd *Command) Start() error {
 }
 
 func printLicense() {
-	startupLicense := license.GetStartupLicense(
+	startupLicense := params.GetStartupLicense(
 		"run program with '-license.warranty' option",
 		"run program with '-license.conditions' option",
 	)

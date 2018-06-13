@@ -19,7 +19,6 @@ package server
 
 import (
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/cmd/license"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
@@ -135,7 +134,7 @@ func (cmd *Command) Start() (err error) {
 }
 
 func printLicense() {
-	startupLicense := license.GetStartupLicense(
+	startupLicense := params.GetStartupLicense(
 		"run program with '-warranty' option",
 		"run program with '-conditions' option",
 	)
