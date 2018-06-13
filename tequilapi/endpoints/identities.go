@@ -31,6 +31,9 @@ import (
 
 // swagger:model
 type identityDto struct {
+	// identity in Ethereum address format
+	// required: true
+	// example: 0x0000000000000000000000000000000000000001
 	ID string `json:"id"`
 }
 
