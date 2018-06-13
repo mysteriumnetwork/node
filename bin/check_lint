@@ -12,23 +12,41 @@
 #> bin/check_lint ./communication
 #> bin/check_lint ./communication/...
 
+source bin/helpers/output.sh
+
 ARGUMENTS=$@
 if [ -z "$ARGUMENTS" ]; then
-    # By default, disable checks packages that are declared as not-cleared
-    ARGUMENTS=`
-        go list ./... \
-        | grep -v "github.com/mysterium/node/cmd" \
-        | grep -v "github.com/mysterium/node/identity" \
-        | grep -v "github.com/mysterium/node/tequilapi" \
-        | grep -v "github.com/mysterium/node/session" \
-        | grep -v "github.com/mysterium/node/service_discovery/dto" \
-        | grep -v "github.com/mysterium/node/server/dto" \
-        | grep -v "github.com/mysterium/node/openvpn" \
-        | grep -v "github.com/mysterium/node/nat" \
-        | grep -v "github.com/mysterium/node/money" \
-        | grep -v "github.com/mysterium/node/ip" \
-        | grep -v "github.com/mysterium/node/location"
-    `
+    ARGUMENTS=`go list ./...`
 fi
 
-golint --set_exit_status --min_confidence=1 ${ARGUMENTS}
+MESSAGES=`golint --set_exit_status --min_confidence=1 ${ARGUMENTS} 2>/dev/null`
+
+PACKAGES_IN_CLEANING_MODE=(
+    "github.com/mysterium/node/cmd"
+    "github.com/mysterium/node/identity"
+    "github.com/mysterium/node/tequilapi"
+    "github.com/mysterium/node/session"
+    "github.com/mysterium/node/service_discovery/dto"
+    "github.com/mysterium/node/server/dto"
+    "github.com/mysterium/node/openvpn"
+    "github.com/mysterium/node/nat"
+    "github.com/mysterium/node/money"
+    "github.com/mysterium/node/ip"
+    "github.com/mysterium/node/location"
+)
+for PACKAGE in ${PACKAGES_IN_CLEANING_MODE[*]}; do
+    PACKAGE_MESSAGES=`echo -n "${MESSAGES}" | grep "${PACKAGE}"`
+    PACKAGE_MESSAGES_COUNT=`echo "${PACKAGE_MESSAGES}" | wc -l | awk '{ print $1 }'`
+    print_warning "[warning] ${PACKAGE_MESSAGES_COUNT} messages in '${PACKAGE}': \n${PACKAGE_MESSAGES}\n"
+
+    MESSAGES=`echo -n "${MESSAGES}" | grep -v "${PACKAGE}"`
+done
+
+MESSAGES_COUNT=`echo -n "${MESSAGES}" | wc -l | awk '{ print $1 }'`
+if [ ${MESSAGES_COUNT} -gt 0 ]; then
+    print_error "[error] ${MESSAGES_COUNT} messages: ${MESSAGES}"
+    exit 1
+fi
+
+print_success "All packages are clean"
+exit 0
