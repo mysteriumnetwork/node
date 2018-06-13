@@ -7,16 +7,14 @@
   ],
   "swagger": "2.0",
   "info": {
-    "description": "API description.",
-    "title": "Tequila API.",
-    "version": "0.0.1"
+    "description": "The purpose of this documentation is to provide developers an insight of how to\ninteract with Mysterium Node via Tequila API.\nThis should demonstrate all the possible API calls with described parameters and responses.",
+    "title": "Tequila API"
   },
   "host": "localhost:4050",
-  "basePath": "/",
   "paths": {
     "/connection": {
       "put": {
-        "description": "Inner description",
+        "description": "Consumer opens connection to provider",
         "tags": [
           "Connection"
         ],
@@ -24,7 +22,7 @@
         "operationId": "createConnection",
         "parameters": [
           {
-            "description": "Parameters of new connection",
+            "description": "Parameters for creating new connection",
             "name": "body",
             "in": "body",
             "schema": {
@@ -34,57 +32,91 @@
         ],
         "responses": {
           "201": {
-            "description": "Created. Empty body"
+            "description": "Connection started",
+            "schema": {
+              "$ref": "#/definitions/statusResponse"
+            }
           },
           "400": {
-            "$ref": "#/responses/badRequest"
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/responses/errorMessage"
+            }
           },
           "409": {
-            "$ref": "#/responses/conflict"
+            "description": "Conflict. Connection already exists",
+            "schema": {
+              "$ref": "#/responses/errorMessage"
+            }
           },
           "499": {
-            "$ref": "#/responses/connectCancelled"
+            "description": "Connection was cancelled",
+            "schema": {
+              "$ref": "#/responses/errorMessage"
+            }
           },
           "500": {
-            "$ref": "#/responses/internalServerError"
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/responses/errorMessage"
+            }
           }
         }
       }
     },
     "/identities": {
       "post": {
-        "description": "Inner description",
+        "description": "Creates identity and stores in keystore encrypted with passphrase",
         "tags": [
           "Identity"
         ],
         "summary": "Create new identity",
         "operationId": "createIdentity",
+        "parameters": [
+          {
+            "description": "Parameters for creating new identity",
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/identityCreationDto"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Successfully created identity",
             "schema": {
               "$ref": "#/definitions/identityDto"
             }
           },
           "400": {
-            "$ref": "#/responses/badRequest"
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/responses/errorMessage"
+            }
           },
           "422": {
-            "$ref": "#/definitions/validationErrorMessage"
+            "description": "Parameters validation error",
+            "schema": {
+              "$ref": "#/definitions/validationError"
+            }
           },
           "500": {
-            "$ref": "#/responses/internalServerError"
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/responses/errorMessage"
+            }
           }
         }
       }
     },
     "/identities/{id}/registration": {
       "put": {
-        "description": "Inner description",
+        "description": "Registers existing identity to Discovery API",
         "tags": [
           "Identity"
         ],
-        "summary": "Register existing identity",
+        "summary": "Register identity",
         "operationId": "registerIdentity",
         "parameters": [
           {
@@ -101,13 +133,22 @@
             "description": "Accepted. Empty body"
           },
           "400": {
-            "$ref": "#/responses/badRequest"
+            "description": "Bad request",
+            "schema": {
+              "$ref": "#/responses/errorMessage"
+            }
           },
           "500": {
-            "$ref": "#/responses/internalServerError"
+            "description": "Internal server error",
+            "schema": {
+              "$ref": "#/responses/errorMessage"
+            }
           },
           "501": {
-            "$ref": "#/responses/notImplemented"
+            "description": "Not implemented",
+            "schema": {
+              "$ref": "#/responses/errorMessage"
+            }
           }
         }
       }
@@ -122,18 +163,6 @@
     "FieldErrorMap": {
       "type": "object",
       "x-go-package": "github.com/mysterium/node/tequilapi/validation"
-    },
-    "badRequest": {
-      "description": "Bad Request",
-      "$ref": "#/definitions/errorMessage"
-    },
-    "conflict": {
-      "description": "Conflict",
-      "$ref": "#/definitions/errorMessage"
-    },
-    "connectCancelled": {
-      "description": "Connect Cancelled",
-      "$ref": "#/definitions/errorMessage"
     },
     "connectionRequest": {
       "type": "object",
@@ -161,7 +190,6 @@
       "type": "object",
       "properties": {
         "message": {
-          "description": "Error message",
           "type": "string",
           "x-go-name": "Message"
         }
@@ -230,59 +258,44 @@
       },
       "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
     },
-    "internalServerError": {
-      "description": "Internal Server Error",
-      "$ref": "#/definitions/errorMessage"
-    },
-    "notImplemented": {
-      "description": "Not Implemented",
-      "$ref": "#/definitions/errorMessage"
-    },
     "statusResponse": {
       "type": "object",
       "properties": {
         "sessionId": {
           "type": "string",
-          "x-go-name": "SessionID"
+          "x-go-name": "SessionID",
+          "example": "4cfb0324-daf6-4ad8-448b-e61fe0a1f918"
         },
         "status": {
           "type": "string",
-          "x-go-name": "Status"
+          "x-go-name": "Status",
+          "example": "Connected"
         }
       },
       "x-go-package": "github.com/mysterium/node/tequilapi/endpoints"
     },
-    "validationErrorMessage": {
-      "description": "Validation Error",
+    "validationError": {
       "type": "object",
       "properties": {
         "errors": {
           "$ref": "#/definitions/FieldErrorMap"
         },
         "message": {
-          "description": "Error message",
           "type": "string",
           "x-go-name": "Message"
         }
       },
+      "x-go-name": "validationErrorMessage",
       "x-go-package": "github.com/mysterium/node/tequilapi/utils"
     }
   },
   "responses": {
-    "badRequest": {
-      "description": "Bad Request"
-    },
-    "conflict": {
-      "description": "Conflict"
-    },
-    "connectCancelled": {
-      "description": "Connect Cancelled"
-    },
-    "internalServerError": {
-      "description": "Internal Server Error"
-    },
-    "notImplemented": {
-      "description": "Not Implemented"
+    "errorMessage": {
+      "headers": {
+        "message": {
+          "type": "string"
+        }
+      }
     }
   }
 }
