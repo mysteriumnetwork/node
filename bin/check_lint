@@ -42,7 +42,7 @@ MESSAGES_RECONFIGURE=()
 
 check_uncleaned_package "github.com/mysterium/node/cmd" 3
 check_uncleaned_package "github.com/mysterium/node/identity" 9
-check_uncleaned_package "github.com/mysterium/node/tequilapi" 10
+check_uncleaned_package "github.com/mysterium/node/tequilapi" 12
 check_uncleaned_package "github.com/mysterium/node/session" 6
 check_uncleaned_package "github.com/mysterium/node/service_discovery/dto" 13
 check_uncleaned_package "github.com/mysterium/node/server/dto" 6
