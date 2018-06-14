@@ -79,6 +79,19 @@ bin/client_run_cli
 » connect <consumer-identity> <provider-identity>
 ```
 
+## Generate Tequila API documentation from client source code
+
+* **Step 1.** Install go-swagger
+```bash
+brew tap go-swagger/go-swagger
+brew install go-swagger
+```
+
+* **Step 2.** Generate specification and serve serve it locally:
+```bash
+bin/swagger_serve_doc
+```
+
 ## Dependency management
 
 * Install project's frozen packages
