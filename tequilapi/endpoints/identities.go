@@ -103,7 +103,7 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 //   400:
 //     description: Bad Request
 //     schema:
-//       "$ref": "#/responses/errorMessage"
+//       "$ref": "#/definitions/errorMessage"
 //   422:
 //     description: Parameters validation error
 //     schema:
@@ -111,7 +111,7 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/responses/errorMessage"
+//       "$ref": "#/definitions/errorMessage"
 func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	createReq, err := toCreateRequest(request)
 	if err != nil {
@@ -150,15 +150,15 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 //   400:
 //     description: Bad request
 //     schema:
-//       "$ref": "#/responses/errorMessage"
+//       "$ref": "#/definitions/errorMessage"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/responses/errorMessage"
+//       "$ref": "#/definitions/errorMessage"
 //   501:
 //     description: Not implemented
 //     schema:
-//       "$ref": "#/responses/errorMessage"
+//       "$ref": "#/definitions/errorMessage"
 func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)

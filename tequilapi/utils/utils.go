@@ -38,8 +38,9 @@ func WriteAsJSON(v interface{}, writer http.ResponseWriter) {
 	}
 }
 
-// swagger:response errorMessage
+// swagger:model errorMessage
 type errorMessage struct {
+	// example: error message
 	Message string `json:"message"`
 }
 
