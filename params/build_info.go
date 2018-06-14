@@ -21,32 +21,16 @@ package params
 
 import "fmt"
 
-// Info stores build details
-type Info struct {
-	Commit      string
-	Branch      string
-	BuildNumber string
-}
+var (
+	// BuildCommit comes from COMMIT env variable
+	BuildCommit = "<unknown>"
+	// BuildBranch comes from BRANCH env variable - if it's github release, this variable will contain release tag name
+	BuildBranch = "<unknown>"
+	// BuildNumber comes from TRAVIS_JOB_NUMBER env variable
+	BuildNumber = "dev-build"
+)
 
-// gitCommit comes from COMMIT env variable
-var gitCommit = "<unknown>"
-
-// gitBranch comes from BRANCH env variable - if it's github release, this variable will contain release tag name
-var gitBranch = "<unknown>"
-
-// buildNumber comes from TRAVIS_JOB_NUMBER env variable
-var buildNumber = "dev-build"
-
-// AsString returns all defined build constants as single string
-func AsString() string {
-	return fmt.Sprintf("Branch: %s. Build id: %s. Commit: %s", gitBranch, buildNumber, gitCommit)
-}
-
-// GetInfo returns build details.
-func GetInfo() *Info {
-	return &Info{
-		Commit:      gitCommit,
-		Branch:      gitBranch,
-		BuildNumber: buildNumber,
-	}
+// BuildAsString returns all defined build constants as single string
+func BuildAsString() string {
+	return fmt.Sprintf("Branch: %s. Build id: %s. Commit: %s", BuildBranch, BuildNumber, BuildCommit)
 }

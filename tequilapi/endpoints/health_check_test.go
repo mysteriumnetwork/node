@@ -34,14 +34,13 @@ func TestHealthCheckReturnsExpectedJSONObject(t *testing.T) {
 	tick1 := time.Unix(0, 0)
 	tick2 := tick1.Add(time.Minute)
 
+	params.BuildBranch = "some"
+	params.BuildCommit = "abc123"
+	params.BuildNumber = "travis build #"
+
 	handlerFunc := HealthCheckEndpointFactory(
 		newMockTimer([]time.Time{tick1, tick2}).Now,
 		func() int { return 1 },
-		&params.Info{
-			Branch:      "some",
-			Commit:      "abc123",
-			BuildNumber: "travis build #",
-		},
 	).HealthCheck
 	handlerFunc(resp, req, httprouter.Params{})
 

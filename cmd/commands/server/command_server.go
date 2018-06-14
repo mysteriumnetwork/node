@@ -61,7 +61,7 @@ type Command struct {
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
 	printLicense()
-	log.Info("[Server version]", params.AsString())
+	log.Info("[Server version]", params.BuildAsString())
 	err = cmd.checkOpenvpn()
 	if err != nil {
 		return err

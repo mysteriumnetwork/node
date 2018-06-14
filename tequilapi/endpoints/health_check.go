@@ -41,31 +41,29 @@ type healthCheckEndpoint struct {
 	startTime       time.Time
 	currentTimeFunc func() time.Time
 	processNumber   int
-	versionInfo     *params.Info
 }
 
 /*
 HealthCheckEndpointFactory creates a structure with single HealthCheck method for healthcheck serving as http,
 currentTimeFunc is injected for easier testing
 */
-func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() int, versionInfo *params.Info) *healthCheckEndpoint {
+func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() int) *healthCheckEndpoint {
 	startTime := currentTimeFunc()
 	return &healthCheckEndpoint{
 		startTime,
 		currentTimeFunc,
 		procID(),
-		versionInfo,
 	}
 }
 
-func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request *http.Request, routeParams httprouter.Params) {
 	status := healthCheckData{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),
 		Process: hce.processNumber,
 		Version: buildInfo{
-			hce.versionInfo.Commit,
-			hce.versionInfo.Branch,
-			hce.versionInfo.BuildNumber,
+			params.BuildCommit,
+			params.BuildBranch,
+			params.BuildNumber,
 		},
 	}
 	utils.WriteAsJSON(status, writer)

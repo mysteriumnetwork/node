@@ -124,7 +124,7 @@ type Command struct {
 // Start starts Tequilapi service, fetches location
 func (cmd *Command) Start() error {
 	printLicense()
-	log.Info("[Client version]", params.AsString())
+	log.Info("[Client version]", params.BuildAsString())
 	err := cmd.checkOpenvpn()
 	if err != nil {
 		return err
