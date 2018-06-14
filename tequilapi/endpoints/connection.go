@@ -98,19 +98,19 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 //   400:
 //     description: Bad request
 //     schema:
-//       "$ref": "#/responses/errorMessage"
+//       "$ref": "#/definitions/errorMessage"
 //   409:
 //     description: Conflict. Connection already exists
 //     schema:
-//       "$ref": "#/responses/errorMessage"
+//       "$ref": "#/definitions/errorMessage"
 //   499:
 //     description: Connection was cancelled
 //     schema:
-//       "$ref": "#/responses/errorMessage"
+//       "$ref": "#/definitions/errorMessage"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/responses/errorMessage"
+//       "$ref": "#/definitions/errorMessage"
 func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	cr, err := toConnectionRequest(req)
 	if err != nil {
