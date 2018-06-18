@@ -42,6 +42,7 @@ var LocalhostOnRandomPort = Addr{
 	Port: 0,
 }
 
+// String returns address string representation
 func (addr *Addr) String() string {
 	return fmt.Sprintf("%s:%d", addr.IP, addr.Port)
 }
@@ -103,6 +104,7 @@ func (management *Management) WaitForConnection() error {
 	return nil
 }
 
+// Stop initiates managemnt shutdown
 func (management *Management) Stop() {
 	log.Info(management.logPrefix, "Shutdown")
 	management.closesOnce.Do(func() {

@@ -24,10 +24,12 @@ import (
 	"path/filepath"
 )
 
+// ClientConfig represents specific "openvpn as client" configuration
 type ClientConfig struct {
 	*config.GenericConfig
 }
 
+// SetClientMode adds config arguments for openvpn behave as client
 func (c *ClientConfig) SetClientMode(serverIP string, serverPort int) {
 	c.SetFlag("client")
 	c.SetParam("script-security", "2")
@@ -40,6 +42,7 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort int) {
 	c.SetFlag("management-query-passwords")
 }
 
+// SetProtocol specifies openvpn connection protocol type (tcp or udp)
 func (c *ClientConfig) SetProtocol(protocol string) {
 	if protocol == "tcp" {
 		c.SetParam("proto", "tcp-client")
@@ -71,6 +74,8 @@ func newClientConfig(configDir string) *ClientConfig {
 	return &clientConfig
 }
 
+// NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
+// configuration filename to store other args
 func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFile string) (*ClientConfig, error) {
 
 	err := NewDefaultValidator().IsValid(vpnConfig)

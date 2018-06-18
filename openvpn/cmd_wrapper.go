@@ -38,7 +38,7 @@ func NewCmdWrapper(executablePath, logPrefix string) *CmdWrapper {
 	}
 }
 
-// CmdWrapper struct defines process wrapper which handles clean shutdown, tracks executable exit errors, etc.
+// CmdWrapper struct defines process wrapper which handles clean shutdown, tracks executable exit errors, logs stdout and stderr to logger
 type CmdWrapper struct {
 	logPrefix          string
 	executablePath     string

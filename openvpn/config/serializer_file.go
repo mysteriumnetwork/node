@@ -26,6 +26,7 @@ type optionStringSerializable interface {
 	toFile() (string, error)
 }
 
+// ToConfigFileContent serializes openvpn options to a string which can be written as valid configuration file content
 func (config GenericConfig) ToConfigFileContent() (string, error) {
 	var output bytes.Buffer
 

@@ -21,6 +21,8 @@ import (
 	"fmt"
 )
 
+// ToArguments serializes openvpn configuration structure to a list of command line arguments which can be passed to openvpn process
+// it also serialize file style options to appropriate files inside given config directory
 func (config GenericConfig) ToArguments() ([]string, error) {
 	arguments := make([]string, 0)
 

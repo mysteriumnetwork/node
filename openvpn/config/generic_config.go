@@ -30,7 +30,7 @@ func NewConfig(configDir string) *GenericConfig {
 	}
 }
 
-// GenericConfig represents openvpn configuration structure
+// GenericConfig represents openvpn configuration structure common for both client and server modes
 type GenericConfig struct {
 	configDir string
 	options   []configOption
@@ -45,12 +45,14 @@ func (c *GenericConfig) AddOptions(options ...configOption) {
 	c.options = append(c.options, options...)
 }
 
+// SetParam add a named parameter to configuration with given value(s)
 func (c *GenericConfig) SetParam(name string, values ...string) {
 	c.AddOptions(
 		OptionParam(name, values...),
 	)
 }
 
+// SetFlag adds named "flag style" param (no values)
 func (c *GenericConfig) SetFlag(name string) {
 	c.AddOptions(
 		OptionFlag(name),

@@ -22,21 +22,25 @@ import (
 	"github.com/mysterium/node/openvpn/tls"
 )
 
+// ServerConfig defines openvpn in server mode configuration structure
 type ServerConfig struct {
 	*config.GenericConfig
 }
 
+// SetServerMode sets a set of options for openvpn to act as server
 func (c *ServerConfig) SetServerMode(port int, network, netmask string) {
 	c.SetPort(port)
 	c.SetParam("server", network, netmask)
 	c.SetParam("topology", "subnet")
 }
 
+// SetTLSServer add tls-server option to config, also sets dh to none
 func (c *ServerConfig) SetTLSServer() {
 	c.SetFlag("tls-server")
 	c.AddOptions(config.OptionParam("dh", "none"))
 }
 
+// SetProtocol adds protocol option (tcp or udp)
 func (c *ServerConfig) SetProtocol(protocol string) {
 	if protocol == "tcp" {
 		c.SetParam("proto", "tcp-server")
@@ -45,6 +49,7 @@ func (c *ServerConfig) SetProtocol(protocol string) {
 	}
 }
 
+// NewServerConfig creates server configuration structure from given basic parameters
 func NewServerConfig(
 	configDir string,
 	network, netmask string,
