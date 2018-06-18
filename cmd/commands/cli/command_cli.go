@@ -128,6 +128,7 @@ func (c *Command) handleActions(line string) {
 		{command: "connect", handler: c.connect},
 		{command: "unlock", handler: c.unlock},
 		{command: "identities", handler: c.identities},
+		{command: "version", handler: c.version},
 		{command: "license", handler: c.license},
 	}
 
@@ -349,6 +350,10 @@ func (c *Command) stopClient() {
 		warn("Cannot stop client:", err)
 	}
 	success("Client stopped")
+}
+
+func (c *Command) version(argsString string) {
+	fmt.Println(params.VersionAsString())
 }
 
 func (c *Command) license(argsString string) {

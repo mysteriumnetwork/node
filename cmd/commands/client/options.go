@@ -34,13 +34,13 @@ type CommandOptions struct {
 	TequilapiPort    int
 
 	CLI               bool
+	Version           bool
 	LicenseWarranty   bool
 	LicenseConditions bool
 
 	DiscoveryAPIAddress string
 	BrokerAddress       string
-
-	IpifyUrl string
+	IpifyUrl            string
 
 	LocationDatabase string
 }
@@ -92,14 +92,18 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		false,
 		"Run an interactive CLI based Mysterium UI",
 	)
-
+	flags.BoolVar(
+		&options.Version,
+		"version",
+		false,
+		"Show version",
+	)
 	flags.BoolVar(
 		&options.LicenseWarranty,
 		"license.warranty",
 		false,
 		"Show warranty",
 	)
-
 	flags.BoolVar(
 		&options.LicenseConditions,
 		"license.conditions",

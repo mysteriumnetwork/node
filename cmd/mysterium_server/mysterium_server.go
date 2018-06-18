@@ -33,7 +33,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if options.LicenseWarranty {
+	if options.Version {
+		fmt.Println(params.VersionAsString())
+	} else if options.LicenseWarranty {
 		fmt.Print(params.Warranty)
 	} else if options.LicenseConditions {
 		fmt.Print(params.Conditions)
