@@ -81,7 +81,7 @@ func (tc *testContext) SetupTest() {
 	}
 
 	tc.openvpnCreationError = nil
-	fakeVpnClientFactory := func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, callback state.Callback) (openvpn.Client, error) {
+	fakeVpnClientFactory := func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, callback state.Callback) (openvpn.Process, error) {
 		//each test can set this value to simulate openvpn creation error, this flag is reset BEFORE each test
 		if tc.openvpnCreationError != nil {
 			return nil, tc.openvpnCreationError

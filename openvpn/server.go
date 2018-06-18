@@ -32,7 +32,7 @@ func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middl
 	return &Server{
 		generateConfig: generateConfig,
 		management:     management.NewManagement(management.LocalhostOnRandomPort, "[server-management] ", middlewares...),
-		process:        NewProcess(openvpnBinary, "[server-openvpn] "),
+		process:        NewCmdWrapper(openvpnBinary, "[server-openvpn] "),
 	}
 }
 
@@ -57,7 +57,7 @@ func NewServerConfigGenerator(directoryRuntime string, primitives *tls.Primitive
 type Server struct {
 	generateConfig ServerConfigGenerator
 	management     *management.Management
-	process        *Process
+	process        *CmdWrapper
 }
 
 // Start starts openvpn server generating required config and starting management interface on the way
@@ -91,7 +91,8 @@ func (server *Server) Start() error {
 		}
 		return errors.New("management failed to accept connection")
 	case <-time.After(2 * time.Second):
-		return errors.New("management connection wait timeout")
+		server.management.Stop()
+		return errors.New("management connection wait timeout - this is BAD")
 	}
 
 }

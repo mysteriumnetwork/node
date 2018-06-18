@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"io"
 	"syscall"
 )
 
@@ -31,7 +32,7 @@ func NewCmdWrapper(executablePath, logPrefix string) *CmdWrapper {
 	return &CmdWrapper{
 		logPrefix:          logPrefix,
 		executablePath:     executablePath,
-		cmdExitError:       make(chan error, 1), //channel should have capacity to hold single process exit error
+		CmdExitError:       make(chan error, 1), //channel should have capacity to hold single process exit error
 		cmdShutdownStarted: make(chan bool),
 		cmdShutdownWaiter:  sync.WaitGroup{},
 	}
@@ -41,7 +42,7 @@ func NewCmdWrapper(executablePath, logPrefix string) *CmdWrapper {
 type CmdWrapper struct {
 	logPrefix          string
 	executablePath     string
-	cmdExitError       chan error
+	CmdExitError       chan error
 	cmdShutdownStarted chan bool
 	cmdShutdownWaiter  sync.WaitGroup
 	closesOnce         sync.Once
@@ -50,20 +51,28 @@ type CmdWrapper struct {
 // Start underlying binary defined by process wrapper with given arguments
 func (cw *CmdWrapper) Start(arguments []string) (err error) {
 	// Create the command
-	log.Info(cw.logPrefix, "Starting cw: ", cw.executablePath, " with arguments: ", arguments)
+	log.Info(cw.logPrefix, "Starting cmd: ", cw.executablePath, " with arguments: ", arguments)
 	cmd := exec.Command(cw.executablePath, arguments...)
 
-	// Attach monitors for stdout, stderr and exit
-	cw.stdoutMonitor(cmd)
-	cw.stderrMonitor(cmd)
+	// Attach logger for stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	go cw.outputToLog(stdout, "Stdout: ")
+	go cw.outputToLog(stderr, "Stderr: ")
 
-	// Try to start the cw
+	// Try to start the cmd
 	err = cmd.Start()
 	if err != nil {
 		return err
 	}
 
-	// Watch if the cw exits
+	// Watch if the cmd exits
 	go cw.waitForExit(cmd)
 	go cw.waitForShutdown(cmd)
 
@@ -72,7 +81,7 @@ func (cw *CmdWrapper) Start(arguments []string) (err error) {
 
 // Wait function wait until executable exits and then returns exit error reported by executable
 func (cw *CmdWrapper) Wait() error {
-	return <-cw.cmdExitError
+	return <-cw.CmdExitError
 }
 
 // Stop function stops (or sends request to stop) underlying executable and waits until stdout/stderr and shutdown monitors are finished
@@ -83,44 +92,21 @@ func (cw *CmdWrapper) Stop() {
 	cw.cmdShutdownWaiter.Wait()
 }
 
-func (cw *CmdWrapper) stdoutMonitor(cmd *exec.Cmd) {
-	stdout, _ := cmd.StdoutPipe()
-	go func() {
-		cw.cmdShutdownWaiter.Add(1)
-		defer cw.cmdShutdownWaiter.Done()
-
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			log.Trace(cw.logPrefix, "Stdout: ", scanner.Text())
-		}
-		if err := scanner.Err(); err != nil {
-			log.Warn(cw.logPrefix, "Stdout: (failed to read: ", err, ")")
-			return
-		}
-	}()
-}
-
-func (cw *CmdWrapper) stderrMonitor(cmd *exec.Cmd) {
-	stderr, _ := cmd.StderrPipe()
-	go func() {
-		cw.cmdShutdownWaiter.Add(1)
-		defer cw.cmdShutdownWaiter.Done()
-
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			log.Warn(cw.logPrefix, "Stderr: ", scanner.Text())
-		}
-		if err := scanner.Err(); err != nil {
-			log.Warn(cw.logPrefix, "Stderr: (failed to read ", err, ")")
-			return
-		}
-	}()
+func (cw *CmdWrapper) outputToLog(output io.ReadCloser, streamPrefix string) {
+	scanner := bufio.NewScanner(output)
+	for scanner.Scan() {
+		log.Trace(cw.logPrefix, streamPrefix, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		log.Warn(cw.logPrefix, streamPrefix, "(failed to read: ", err, ")")
+	} else {
+		log.Info(cw.logPrefix, streamPrefix, "stream ended")
+	}
 }
 
 func (cw *CmdWrapper) waitForExit(cmd *exec.Cmd) {
 	err := cmd.Wait()
-	log.Info(cw.logPrefix, "CmdWrapper exited with error: ", err)
-	cw.cmdExitError <- err
+	cw.CmdExitError <- err
 }
 
 func (cw *CmdWrapper) waitForShutdown(cmd *exec.Cmd) {

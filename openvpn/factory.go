@@ -32,31 +32,31 @@ func NewServerConfig(
 	port int,
 	protocol string,
 ) *ServerConfig {
-	config := ServerConfig{config.NewConfig(configDir)}
-	config.SetServerMode(port, network, netmask)
-	config.SetTLSServer()
-	config.SetProtocol(protocol)
-	config.SetTLSCACertificate(secPrimitives.CertificateAuthority.ToPEMFormat())
-	config.SetTLSPrivatePubKeys(
+	serverConfig := ServerConfig{config.NewConfig(configDir)}
+	serverConfig.SetServerMode(port, network, netmask)
+	serverConfig.SetTLSServer()
+	serverConfig.SetProtocol(protocol)
+	serverConfig.SetTLSCACertificate(secPrimitives.CertificateAuthority.ToPEMFormat())
+	serverConfig.SetTLSPrivatePubKeys(
 		secPrimitives.ServerCertificate.ToPEMFormat(),
 		secPrimitives.ServerCertificate.KeyToPEMFormat(),
 	)
-	config.SetTLSCrypt(secPrimitives.PresharedKey.ToPEMFormat())
+	serverConfig.SetTLSCrypt(secPrimitives.PresharedKey.ToPEMFormat())
 
-	config.SetDevice("tun")
-	config.SetParam("cipher", "AES-256-GCM")
-	config.SetParam("verb", "3")
-	config.SetParam("tls-version-min", "1.2")
-	config.SetFlag("management-client-auth")
-	config.SetParam("verify-client-cert", "none")
-	config.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
-	config.SetParam("reneg-sec", "60")
-	config.SetKeepAlive(10, 60)
-	config.SetPingTimerRemote()
-	config.SetPersistTun()
-	config.SetPersistKey()
+	serverConfig.SetDevice("tun")
+	serverConfig.SetParam("cipher", "AES-256-GCM")
+	serverConfig.SetParam("verb", "3")
+	serverConfig.SetParam("tls-version-min", "1.2")
+	serverConfig.SetFlag("management-client-auth")
+	serverConfig.SetParam("verify-client-cert", "none")
+	serverConfig.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
+	serverConfig.SetParam("reneg-sec", "60")
+	serverConfig.SetKeepAlive(10, 60)
+	serverConfig.SetPingTimerRemote()
+	serverConfig.SetPersistTun()
+	serverConfig.SetPersistKey()
 
-	return &config
+	return &serverConfig
 }
 
 func newClientConfig(configDir string) *ClientConfig {
