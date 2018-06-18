@@ -15,6 +15,8 @@ func TestOpenvpnProcessStartsAndStopsSuccessfully(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 	err = process.Stop()
 	assert.NoError(t, err)
+	err = process.Wait()
+	assert.NoError(t, err)
 }
 
 func TestOpenvpnProcessStartReportsErrorIfCmdWrapperDiesTooEarly(t *testing.T) {
