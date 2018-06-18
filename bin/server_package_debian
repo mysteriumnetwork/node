@@ -20,7 +20,8 @@
 OS_DIR_BIN="/usr/bin"
 OS_DIR_CONFIG="/etc/mysterium-node"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-node/installation"
-OS_DIR_SUDOERS="/etc/sudoers.d/"
+OS_DIR_SUDOERS="/etc/sudoers.d"
+OS_DIR_TOOLS="/usr/sbin"
 BINARY=${BINARY:="build/server/mysterium_server"}
 
 VERSION=$1
@@ -68,6 +69,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         ${BINARY}=${OS_DIR_BIN}/ \
         bin/server_package/config/=${OS_DIR_CONFIG}/ \
         bin/server_package/sudoers/=${OS_DIR_SUDOERS}/ \
+        bin/server_package/tools/=${OS_DIR_TOOLS}/ \
         bin/server_package/installation/=${OS_DIR_INSTALLATION}/
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Failed to build Debian package!"

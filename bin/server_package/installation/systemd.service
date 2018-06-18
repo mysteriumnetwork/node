@@ -8,8 +8,13 @@ After=network-online.target
 [Service]
 User=mysterium-node
 Group=mysterium-node
+
+RuntimeDirectory=mysterium-node
+RuntimeDirectoryMode=0750
+LogsDirectory=mysterium-client
+
 EnvironmentFile=-/etc/default/mysterium-node
-ExecStart=/usr/bin/mysterium_server ${DAEMON_OPTS}
+ExecStart=/usr/bin/mysterium_server $CONF_DIR $RUN_DIR $DISCOVERY $BROKER $PROTO
 KillMode=control-group
 Restart=on-failure
 

@@ -1,0 +1,3 @@
+# username host=(user:group) tag:commands
+# let mysterium-node run any command just as root without password
+mysterium-client    ALL=NOPASSWD: /sbin/ip

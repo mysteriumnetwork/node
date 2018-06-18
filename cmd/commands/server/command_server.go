@@ -29,6 +29,7 @@ import (
 	"github.com/mysterium/node/openvpn/discovery"
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/openvpn/tls"
+	"github.com/mysterium/node/openvpn/tun"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
@@ -43,6 +44,7 @@ type Command struct {
 	ipResolver       ip.Resolver
 	mysteriumClient  server.Client
 	natService       nat.NATService
+	tunService       tun.TUNService
 	locationDetector location.Detector
 
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
@@ -86,6 +88,11 @@ func (cmd *Command) Start() (err error) {
 		TargetIP:      vpnServerIP,
 	})
 	if err = cmd.natService.Start(); err != nil {
+		return err
+	}
+
+	cmd.tunService.Add(tun.TunDevice{"tun0"})
+	if err = cmd.tunService.Start(); err != nil {
 		return err
 	}
 
@@ -144,7 +151,12 @@ func (cmd *Command) Wait() error {
 func (cmd *Command) Kill() error {
 	cmd.vpnServer.Stop()
 
-	err := cmd.dialogWaiter.Stop()
+	err := cmd.tunService.Stop()
+	if err != nil {
+		return err
+	}
+
+	err = cmd.dialogWaiter.Stop()
 	if err != nil {
 		return err
 	}

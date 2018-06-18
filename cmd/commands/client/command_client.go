@@ -31,6 +31,7 @@ import (
 	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
+	"github.com/mysterium/node/openvpn/tun"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
@@ -45,6 +46,7 @@ func NewCommand(options CommandOptions) *Command {
 	return NewCommandWith(
 		options,
 		server.NewClient(networkDefinition.DiscoveryAPIAddress),
+		tun.NewService(),
 	)
 }
 
@@ -52,6 +54,7 @@ func NewCommand(options CommandOptions) *Command {
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
+	tunService tun.TUNService,
 ) *Command {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
@@ -103,6 +106,7 @@ func NewCommandWith(
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
 		originalLocationCache: originalLocationCache,
+		tunService:            tunService,
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
@@ -120,6 +124,7 @@ type Command struct {
 	httpAPIServer         tequilapi.APIServer
 	checkOpenvpn          func() error
 	originalLocationCache location.Cache
+	tunService            tun.TUNService
 }
 
 // Start starts Tequilapi service, fetches location
@@ -128,6 +133,11 @@ func (cmd *Command) Start() error {
 
 	err := cmd.checkOpenvpn()
 	if err != nil {
+		return err
+	}
+
+	cmd.tunService.Add(tun.TunDevice{"tun0"})
+	if err = cmd.tunService.Start(); err != nil {
 		return err
 	}
 
@@ -160,7 +170,12 @@ func (cmd *Command) Wait() error {
 
 // Kill stops tequilapi service
 func (cmd *Command) Kill() error {
-	err := cmd.connectionManager.Disconnect()
+	err := cmd.tunService.Stop()
+	if err != nil {
+		return err
+	}
+
+	err = cmd.connectionManager.Disconnect()
 	if err != nil {
 		switch err {
 		case connection.ErrNoConnection:

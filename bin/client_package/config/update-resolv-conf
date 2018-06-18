@@ -1,85 +1,57 @@
 #!/bin/bash
-
-# Mac name-resolution updater based on @cl's script here:
-# https://blog.netnerds.net/2011/10/openvpn-update-client-dns-on-mac-os-x-using-from-the-command-line/
-# Openvpn envar parsing taken from the script in debian's openvpn package.
-# Smushed together and improved by @andrewgdotcom.
-
+#
 # Parses DHCP options from openvpn to update resolv.conf
 # To use set as 'up' and 'down' script in your openvpn *.conf:
 # up /etc/openvpn/update-resolv-conf
 # down /etc/openvpn/update-resolv-conf
+#
+# Used snippets of resolvconf script by Thomas Hood and Chris Hanson.
+# Licensed under the GNU GPL.  See /usr/share/common-licenses/GPL.
+#
+# Example envs set from openvpn:
+#
+#     foreign_option_1='dhcp-option DNS 193.43.27.132'
+#     foreign_option_2='dhcp-option DNS 193.43.27.133'
+#     foreign_option_3='dhcp-option DOMAIN be.bnc.ch'
+#
 
-#This check helps to avoid running this script in linux (win :)) based environments
-[[ $OSTYPE = "darwin"* ]] || exit 0
-
+[ -x /sbin/resolvconf ] || exit 0
 [ "$script_type" ] || exit 0
 [ "$dev" ] || exit 0
 
-NMSRVRS=()
-SRCHS=()
-adapters=()
-
-NETWORKSETUP=/usr/sbin/networksetup
-
-# Set bash delimeter to be line break (temporarily)
-IFSSAVE=$IFS
-IFS=$'\n'
-# Get adapter list
-for i in `$NETWORKSETUP -listallnetworkservices |grep -v denotes`; do
-        adapters=(${adapters[@]} "$i")
-done
-IFS=$IFSSAVE
-
 split_into_parts()
 {
-        part1="$1"
-        part2="$2"
-        part3="$3"
-}
-
-update_all_dns()
-{
-        for adapter in "${adapters[@]}"
-        do
-        echo updating dns for $adapter
-        # set dns server to the vpn dns server
-        if [[ "${SRCHS[@]}" ]]; then
-			$NETWORKSETUP -setsearchdomains "$adapter" "${SRCHS[@]}"
-        fi
-        if [[ "${NMSRVRS[@]}" ]]; then
-			$NETWORKSETUP -setdnsservers "$adapter" "${NMSRVRS[@]}"
-		fi
-        done
-}
-
-clear_all_dns()
-{
-        for adapter in "${adapters[@]}"
-        do
-        echo updating dns for $adapter
-        $NETWORKSETUP -setdnsservers "$adapter" empty
-        $NETWORKSETUP -setsearchdomains "$adapter" empty
-        done
+	part1="$1"
+	part2="$2"
+	part3="$3"
 }
 
 case "$script_type" in
   up)
-        for optionvarname in ${!foreign_option_*} ; do
-                option="${!optionvarname}"
-                echo "$option"
-                split_into_parts $option
-                if [ "$part1" = "dhcp-option" ] ; then
-                        if [ "$part2" = "DNS" ] ; then
-                                NMSRVRS=(${NMSRVRS[@]} $part3)
-                        elif [ "$part2" = "DOMAIN" ] ; then
-                                SRCHS=(${SRCHS[@]} $part3)
-                        fi
-                fi
-        done
-        update_all_dns
-        ;;
+	NMSRVRS=""
+	SRCHS=""
+	for optionvarname in ${!foreign_option_*} ; do
+		option="${!optionvarname}"
+		echo "$option"
+		split_into_parts $option
+		if [ "$part1" = "dhcp-option" ] ; then
+			if [ "$part2" = "DNS" ] ; then
+				NMSRVRS="${NMSRVRS:+$NMSRVRS }$part3"
+			elif [ "$part2" = "DOMAIN" ] ; then
+				SRCHS="${SRCHS:+$SRCHS }$part3"
+			fi
+		fi
+	done
+	R=""
+	[ "$SRCHS" ] && R="search $SRCHS
+"
+	for NS in $NMSRVRS ; do
+        	R="${R}nameserver $NS
+"
+	done
+	echo -n "$R" | /sbin/resolvconf -a "${dev}.openvpn"
+	;;
   down)
-        clear_all_dns
-        ;;
+	/sbin/resolvconf -d "${dev}.openvpn"
+	;;
 esac

@@ -33,6 +33,7 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/openvpn/tls"
+	"github.com/mysterium/node/openvpn/tun"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
 	"path/filepath"
@@ -48,6 +49,7 @@ func NewCommand(options CommandOptions) *Command {
 		server.NewClient(networkDefinition.DiscoveryAPIAddress),
 		ip.NewResolver(options.IpifyUrl),
 		nat.NewService(),
+		tun.NewService(),
 	)
 }
 
@@ -58,6 +60,7 @@ func NewCommandWith(
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	natService nat.NATService,
+	tunService tun.TUNService,
 ) *Command {
 
 	keystoreDirectory := filepath.Join(options.DirectoryData, "keystore")
@@ -93,6 +96,7 @@ func NewCommandWith(
 		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,
+		tunService:       tunService,
 		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
 				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
