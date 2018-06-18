@@ -18,6 +18,7 @@
 package server
 
 import (
+	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -60,8 +61,8 @@ type Command struct {
 
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
-	printLicense()
-	log.Info("[Server version]", params.BuildAsString())
+	printHeader()
+
 	err = cmd.checkOpenvpn()
 	if err != nil {
 		return err
@@ -133,12 +134,14 @@ func (cmd *Command) Start() (err error) {
 	return nil
 }
 
-func printLicense() {
-	startupLicense := params.GetStartupLicense(
+func printHeader() {
+	fmt.Println("Mysterium server")
+	fmt.Println("Version:", params.VersionAsString())
+	fmt.Println("Build info:", params.BuildAsString())
+	fmt.Println("Copyright:", params.GetStartupLicense(
 		"run program with '-warranty' option",
 		"run program with '-conditions' option",
-	)
-	log.Info("\n" + startupLicense)
+	))
 }
 
 // Wait blocks until server is stopped

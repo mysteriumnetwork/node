@@ -30,6 +30,7 @@ const (
 	VersionPatch = 6
 )
 
+// VersionAsString returns all defined version constants as single string
 func VersionAsString() string {
 	return fmt.Sprintf("%d.%d.%d", VersionMajor, VersionMinor, VersionPatch)
 }

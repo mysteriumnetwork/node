@@ -18,6 +18,7 @@
 package client
 
 import (
+	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client/connection"
@@ -123,8 +124,8 @@ type Command struct {
 
 // Start starts Tequilapi service, fetches location
 func (cmd *Command) Start() error {
-	printLicense()
-	log.Info("[Client version]", params.BuildAsString())
+	printHeader()
+
 	err := cmd.checkOpenvpn()
 	if err != nil {
 		return err
@@ -152,12 +153,14 @@ func (cmd *Command) Start() error {
 	return nil
 }
 
-func printLicense() {
-	startupLicense := params.GetStartupLicense(
+func printHeader() {
+	fmt.Println("Mysterium client")
+	fmt.Println("Version:", params.VersionAsString())
+	fmt.Println("Build info:", params.BuildAsString())
+	fmt.Println("Copyright:", params.GetStartupLicense(
 		"run program with '-license.warranty' option",
 		"run program with '-license.conditions' option",
-	)
-	log.Info("\n" + startupLicense)
+	))
 }
 
 // Wait blocks until tequilapi service is stopped

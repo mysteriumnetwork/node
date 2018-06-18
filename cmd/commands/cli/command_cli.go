@@ -54,8 +54,8 @@ const statusConnected = "Connected"
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
-	startupLicense := params.GetStartupLicense("type 'license warranty'", "type 'license conditions'")
-	fmt.Print(startupLicense + "\n")
+	printHeader()
+
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
 
@@ -86,6 +86,16 @@ func (c *Command) Run() (err error) {
 
 		c.handleActions(line)
 	}
+}
+
+func printHeader() {
+	fmt.Println("Mysterium CLI")
+	fmt.Println("Version:", params.VersionAsString())
+	fmt.Println("Build info:", params.BuildAsString())
+	fmt.Println("Copyright:", params.GetStartupLicense(
+		"type 'license warranty'",
+		"type 'license conditions'",
+	))
 }
 
 // Kill stops cli
