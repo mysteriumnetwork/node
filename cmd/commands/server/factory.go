@@ -60,7 +60,7 @@ func NewCommandWith(
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	natService nat.NATService,
-	tunService tun.TUNService,
+	tunService tun.Service,
 ) *Command {
 
 	keystoreDirectory := filepath.Join(options.DirectoryData, "keystore")

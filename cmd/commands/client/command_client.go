@@ -54,7 +54,7 @@ func NewCommand(options CommandOptions) *Command {
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
-	tunService tun.TUNService,
+	tunService tun.Service,
 ) *Command {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
@@ -124,7 +124,7 @@ type Command struct {
 	httpAPIServer         tequilapi.APIServer
 	checkOpenvpn          func() error
 	originalLocationCache location.Cache
-	tunService            tun.TUNService
+	tunService            tun.Service
 }
 
 // Start starts Tequilapi service, fetches location
@@ -136,7 +136,7 @@ func (cmd *Command) Start() error {
 		return err
 	}
 
-	cmd.tunService.Add(tun.TunDevice{"tun0"})
+	cmd.tunService.Add(tun.Device{"tun0"})
 	if err = cmd.tunService.Start(); err != nil {
 		return err
 	}

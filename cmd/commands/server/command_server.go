@@ -44,7 +44,7 @@ type Command struct {
 	ipResolver       ip.Resolver
 	mysteriumClient  server.Client
 	natService       nat.NATService
-	tunService       tun.TUNService
+	tunService       tun.Service
 	locationDetector location.Detector
 
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
@@ -91,7 +91,7 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	cmd.tunService.Add(tun.TunDevice{"tun0"})
+	cmd.tunService.Add(tun.Device{"tun0"})
 	if err = cmd.tunService.Start(); err != nil {
 		return err
 	}

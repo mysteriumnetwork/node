@@ -17,6 +17,8 @@
 
 package tun
 
-func NewService() TUNService {
+// NewService creates tun service for osx
+// TODO: implement
+func NewService() Service {
 	return &serviceFake{}
 }

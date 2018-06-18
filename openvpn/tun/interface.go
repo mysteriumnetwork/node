@@ -17,12 +17,14 @@
 
 package tun
 
-type TUNService interface {
-	Add(tun TunDevice)
+// Service defines interface to manage tun device
+type Service interface {
+	Add(tun Device)
 	Start() error
 	Stop() error
 }
 
-type TunDevice struct {
+// Device represents tun device structure
+type Device struct {
 	Name string
 }

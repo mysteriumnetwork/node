@@ -17,6 +17,6 @@
 
 package tun
 
-func NewService() TUNService {
+func NewService() Service {
 	return &serviceLinuxTun{}
 }

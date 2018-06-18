@@ -26,7 +26,7 @@ import (
 	"strings"
 )
 
-const NatLogPrefix = "[nat] "
+const natLogPrefix = "[nat] "
 
 type serviceIPTables struct {
 	rules   []RuleForwarding
@@ -55,11 +55,8 @@ func (service *serviceIPTables) Stop() error {
 	if err := service.disableRules(); err != nil {
 		return err
 	}
-	if err := service.disableIPForwarding(); err != nil {
-		return err
-	}
 
-	return nil
+	return service.disableIPForwarding()
 }
 
 func (service *serviceIPTables) isIPForwardingEnabled() (enabled bool, err error) {
@@ -69,7 +66,7 @@ func (service *serviceIPTables) isIPForwardingEnabled() (enabled bool, err error
 	}
 
 	if strings.TrimSpace(string(out)) == "1" {
-		log.Info(NatLogPrefix, "IP forwarding already enabled")
+		log.Info(natLogPrefix, "IP forwarding already enabled")
 		return true, nil
 	}
 	return false, nil
@@ -96,7 +93,7 @@ func (service *serviceIPTables) enableIPForwarding() (err error) {
 		return fmt.Errorf("Failed to enable IP forwarding: %s", err)
 	}
 
-	log.Info(NatLogPrefix, "IP forwarding enabled")
+	log.Info(natLogPrefix, "IP forwarding enabled")
 	return nil
 }
 
@@ -114,7 +111,7 @@ func (service *serviceIPTables) disableIPForwarding() (err error) {
 		return fmt.Errorf("Failed to disable IP forwarding. %s", err)
 	}
 
-	log.Info(NatLogPrefix, "IP forwarding disabled")
+	log.Info(natLogPrefix, "IP forwarding disabled")
 	return nil
 }
 
@@ -136,7 +133,7 @@ func (service *serviceIPTables) enableRules() error {
 			return fmt.Errorf("Failed to create ip forwarding rule: %s. %s, cause: %s", cmd.Args, err.Error(), stderr.String())
 		}
 
-		log.Info(NatLogPrefix, "Forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
+		log.Info(natLogPrefix, "Forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
 
 	}
 	return nil
@@ -159,7 +156,7 @@ func (service *serviceIPTables) disableRules() error {
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("Failed to delete ip forwarding rule: %s. %s, cause: %s", cmd.Args, err.Error(), stderr.String())
 		}
-		log.Info(NatLogPrefix, "Stopped forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
+		log.Info(natLogPrefix, "Stopped forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
 	}
 	return nil
 }

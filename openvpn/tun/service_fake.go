@@ -20,7 +20,7 @@ package tun
 type serviceFake struct {
 }
 
-func (service *serviceFake) Add(tun TunDevice) {
+func (service *serviceFake) Add(tun Device) {
 
 }
 

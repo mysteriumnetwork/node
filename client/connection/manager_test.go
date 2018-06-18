@@ -286,12 +286,12 @@ func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
 }
 
 type fakeDialog struct {
-	peerId identity.Identity
+	peerID identity.Identity
 	closed bool
 }
 
 func (fd *fakeDialog) PeerID() identity.Identity {
-	return fd.peerId
+	return fd.peerID
 }
 
 func (fd *fakeDialog) Close() error {

@@ -45,6 +45,7 @@ type VPNConfig struct {
 // ClientConfigGenerator callback returns generated server config
 type ClientConfigGenerator func() *VPNConfig
 
+// ProvideServiceConfig callback providing service configuration for a session
 func (generator ClientConfigGenerator) ProvideServiceConfig() (session.ServiceConfiguration, error) {
 	return generator(), nil
 }

@@ -26,21 +26,18 @@ import (
 	"os"
 )
 
-const TunLogPrefix = "[tun] "
+const tunLogPrefix = "[tun] "
 
 type serviceLinuxTun struct {
-	device TunDevice
+	device Device
 }
 
-func (service *serviceLinuxTun) Add(device TunDevice) {
+func (service *serviceLinuxTun) Add(device Device) {
 	service.device = device
 }
 
 func (service *serviceLinuxTun) Start() error {
-	if err := service.createTunDevice(); err != nil {
-		return err
-	}
-	return nil
+	return service.createTunDevice()
 }
 
 func (service *serviceLinuxTun) Stop() (err error) {
@@ -54,17 +51,13 @@ func (service *serviceLinuxTun) Stop() (err error) {
 		return nil
 	}
 
-	if err := service.deleteDevice(); err != nil {
-		return err
-	}
-
-	return nil
+	return service.deleteDevice()
 }
 
 func (service *serviceLinuxTun) createTunDevice() (err error) {
 
 	if exists, err := service.deviceExists(); exists {
-		log.Info(TunLogPrefix, service.device.Name+" device already exists, attempting to use it")
+		log.Info(tunLogPrefix, service.device.Name+" device already exists, attempting to use it")
 		return err
 	}
 
@@ -79,7 +72,7 @@ func (service *serviceLinuxTun) createTunDevice() (err error) {
 		return fmt.Errorf("Failed to add tun device: %s: %s", err, stderr.String())
 	}
 
-	log.Info(TunLogPrefix, service.device.Name+" device created")
+	log.Info(tunLogPrefix, service.device.Name+" device created")
 	return nil
 }
 
@@ -103,6 +96,6 @@ func (service *serviceLinuxTun) deleteDevice() (err error) {
 		return fmt.Errorf("Failed to remove tun device: %s: %s", err, stderr.String())
 	}
 
-	log.Info(TunLogPrefix, service.device.Name+" device removed")
+	log.Info(tunLogPrefix, service.device.Name+" device removed")
 	return nil
 }
