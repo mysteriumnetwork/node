@@ -17,7 +17,10 @@
 
 package openvpn
 
-import "github.com/mysterium/node/openvpn/config"
+import (
+	"github.com/mysterium/node/openvpn/config"
+	"github.com/mysterium/node/openvpn/tls"
+)
 
 type ServerConfig struct {
 	*config.GenericConfig
@@ -40,4 +43,38 @@ func (c *ServerConfig) SetProtocol(protocol string) {
 	} else if protocol == "udp" {
 		c.SetFlag("explicit-exit-notify")
 	}
+}
+
+func NewServerConfig(
+	configDir string,
+	network, netmask string,
+	secPrimitives *tls.Primitives,
+	port int,
+	protocol string,
+) *ServerConfig {
+	serverConfig := ServerConfig{config.NewConfig(configDir)}
+	serverConfig.SetServerMode(port, network, netmask)
+	serverConfig.SetTLSServer()
+	serverConfig.SetProtocol(protocol)
+	serverConfig.SetTLSCACertificate(secPrimitives.CertificateAuthority.ToPEMFormat())
+	serverConfig.SetTLSPrivatePubKeys(
+		secPrimitives.ServerCertificate.ToPEMFormat(),
+		secPrimitives.ServerCertificate.KeyToPEMFormat(),
+	)
+	serverConfig.SetTLSCrypt(secPrimitives.PresharedKey.ToPEMFormat())
+
+	serverConfig.SetDevice("tun")
+	serverConfig.SetParam("cipher", "AES-256-GCM")
+	serverConfig.SetParam("verb", "3")
+	serverConfig.SetParam("tls-version-min", "1.2")
+	serverConfig.SetFlag("management-client-auth")
+	serverConfig.SetParam("verify-client-cert", "none")
+	serverConfig.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
+	serverConfig.SetParam("reneg-sec", "60")
+	serverConfig.SetKeepAlive(10, 60)
+	serverConfig.SetPingTimerRemote()
+	serverConfig.SetPersistTun()
+	serverConfig.SetPersistKey()
+
+	return &serverConfig
 }

@@ -17,7 +17,12 @@
 
 package openvpn
 
-import "github.com/mysterium/node/openvpn/config"
+import (
+	"fmt"
+	"github.com/mysterium/node/openvpn/config"
+	"io/ioutil"
+	"path/filepath"
+)
 
 type ClientConfig struct {
 	*config.GenericConfig
@@ -41,4 +46,66 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 	} else if protocol == "udp" {
 		c.SetFlag("explicit-exit-notify")
 	}
+}
+
+func newClientConfig(configDir string) *ClientConfig {
+	clientConfig := ClientConfig{config.NewConfig(configDir)}
+
+	clientConfig.RestrictReconnects()
+
+	clientConfig.SetDevice("tun")
+	clientConfig.SetParam("cipher", "AES-256-GCM")
+	clientConfig.SetParam("verb", "3")
+	clientConfig.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
+	clientConfig.SetKeepAlive(10, 60)
+	clientConfig.SetPingTimerRemote()
+	clientConfig.SetPersistTun()
+	clientConfig.SetPersistKey()
+
+	clientConfig.SetParam("reneg-sec", "60")
+	clientConfig.SetParam("resolv-retry", "infinite")
+	clientConfig.SetParam("redirect-gateway", "def1", "bypass-dhcp")
+	clientConfig.SetParam("dhcp-option", "DNS", "208.67.222.222")
+	clientConfig.SetParam("dhcp-option", "DNS", "208.67.220.220")
+
+	return &clientConfig
+}
+
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFile string) (*ClientConfig, error) {
+
+	err := NewDefaultValidator().IsValid(vpnConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	clientFileConfig := newClientConfig(configDir)
+	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
+	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
+	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)
+	clientFileConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
+
+	configAsString, err := clientFileConfig.ToConfigFileContent()
+	if err != nil {
+		return nil, err
+	}
+
+	err = ioutil.WriteFile(configFile, []byte(configAsString), 0600)
+	if err != nil {
+		return nil, err
+	}
+
+	clientConfig := ClientConfig{config.NewConfig(configDir)}
+	clientConfig.AddOptions(config.OptionFile("config", configAsString, configFile))
+
+	//because of special case how openvpn handles executable/scripts paths, we need to surround values with double quotes
+	updateResolvConfScriptPath := wrapWithDoubleQuotes(filepath.Join(configDir, "update-resolv-conf"))
+
+	clientConfig.SetParam("up", updateResolvConfScriptPath)
+	clientConfig.SetParam("down", updateResolvConfScriptPath)
+
+	return &clientConfig, nil
+}
+
+func wrapWithDoubleQuotes(val string) string {
+	return fmt.Sprintf(`"%s"`, val)
 }
