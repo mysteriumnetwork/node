@@ -39,11 +39,13 @@ func CheckOpenvpnBinary(openvpnBinary string) error {
 	}
 	//openvpn returns exit code 1 in case of --version parameter, if anything else is returned - treat as error
 	if exitCode != 1 {
-		return errors.New("unexpected openvpn code: " + strconv.Itoa(exitCode))
+		log.Error("[Openvpn check] ", "Check failed. Output of executed command: ", string(outputBuffer))
+		return errors.New("unexpected openvpn exit code: " + strconv.Itoa(exitCode))
 	}
 
 	stringReader := textproto.NewReader(bufio.NewReader(bytes.NewReader(outputBuffer)))
 	//openvpn --version produces 5 (and optional 6th) strings as output
+	//see testdata/openvpn-version-custom-tag.sh for output example
 	for i := 0; i < 5; i++ {
 		str, err := stringReader.ReadLine()
 		if err != nil {
@@ -60,7 +62,6 @@ func CheckOpenvpnBinary(openvpnBinary string) error {
 		//EOF is expected and doesn't fail check
 		return err
 	}
-	log.Flush()
 	return nil
 }
 
