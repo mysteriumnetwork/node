@@ -20,19 +20,16 @@ package openvpn
 import (
 	"github.com/mysterium/node/openvpn/management"
 
-	"errors"
 	"github.com/mysterium/node/openvpn/tls"
-	"sync"
-	"time"
 )
 
 // NewServer constructs new openvpn server instance
-func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) *Server {
-
-	return &Server{
-		generateConfig: generateConfig,
-		management:     management.NewManagement(management.LocalhostOnRandomPort, "[server-management] ", middlewares...),
-		process:        NewCmdWrapper(openvpnBinary, "[server-openvpn] "),
+func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) Process {
+	serverConfig := generateConfig()
+	return &openvpnProcess{
+		config:     serverConfig.GenericConfig,
+		management: management.NewManagement(management.LocalhostOnRandomPort, "[server-management] ", middlewares...),
+		cmd:        NewCmdWrapper(openvpnBinary, "[server-openvpn] "),
 	}
 }
 
@@ -51,72 +48,4 @@ func NewServerConfigGenerator(directoryRuntime string, primitives *tls.Primitive
 		)
 		return vpnServerConfig
 	}
-}
-
-// Server structure describes openvpn server
-type Server struct {
-	generateConfig ServerConfigGenerator
-	management     *management.Management
-	process        *CmdWrapper
-}
-
-// Start starts openvpn server generating required config and starting management interface on the way
-func (server *Server) Start() error {
-	config := server.generateConfig()
-	err := server.management.WaitForConnection()
-	if err != nil {
-		return err
-	}
-	addr := server.management.BoundAddress
-	config.SetManagementAddress(addr.IP, addr.Port)
-
-	// Fetch the current params
-	arguments, err := (*config).ToArguments()
-	if err != nil {
-		return err
-	}
-
-	//nil returned from process.Start doesn't guarantee that openvpn itself initialized correctly and accepted all arguments
-	//it simply means that OS started process with specified args
-	err = server.process.Start(arguments)
-	if err != nil {
-		server.management.Stop()
-		return err
-	}
-
-	select {
-	case connAccepted := <-server.management.Connected:
-		if connAccepted {
-			return nil
-		}
-		return errors.New("management failed to accept connection")
-	case <-time.After(2 * time.Second):
-		server.management.Stop()
-		return errors.New("management connection wait timeout - this is BAD")
-	}
-
-}
-
-// Wait waits for openvpn server to exit
-func (server *Server) Wait() error {
-	return server.process.Wait()
-}
-
-// Stop instructs openvpn server to stop
-func (server *Server) Stop() {
-	waiter := sync.WaitGroup{}
-
-	waiter.Add(1)
-	go func() {
-		defer waiter.Done()
-		server.process.Stop()
-	}()
-
-	waiter.Add(1)
-	go func() {
-		defer waiter.Done()
-		server.management.Stop()
-	}()
-
-	waiter.Wait()
 }
