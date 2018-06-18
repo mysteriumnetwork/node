@@ -50,6 +50,7 @@ func TestHealthCheckReturnsExpectedJSONObject(t *testing.T) {
             "uptime" : "1m0s",
             "process" : 1,
             "version" : {
+                "version": "`+params.VersionAsString()+`",
                 "branch": "some",
                 "commit": "abc123",
                 "buildNumber": "travis build #"
