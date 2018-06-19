@@ -39,7 +39,7 @@ func TestWriteAsJSONReturnsExpectedResponse(t *testing.T) {
 
 	result := respRecorder.Result()
 
-	assert.Equal(t, "application/json", result.Header.Get("Content-type"))
+	assert.Equal(t, "application/json; charset=utf-8", result.Header.Get("Content-type"))
 	assert.JSONEq(
 		t,
 		`{

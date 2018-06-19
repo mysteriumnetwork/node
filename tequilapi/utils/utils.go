@@ -30,8 +30,7 @@ also enforces application/json and charset response headers
 */
 func WriteAsJSON(v interface{}, writer http.ResponseWriter) {
 
-	writer.Header().Add("Content-type", "application/json")
-	writer.Header().Add("Content-type", "charset=utf-8")
+	writer.Header().Set("Content-type", "application/json; charset=utf-8")
 
 	writeErr := json.NewEncoder(writer).Encode(v)
 	if writeErr != nil {
