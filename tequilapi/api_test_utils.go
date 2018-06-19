@@ -51,7 +51,7 @@ func (tc *testClient) Get(path string) *http.Response {
 }
 
 func expectJSONStatus200(t *testing.T, resp *http.Response, httpStatus int) {
-	assert.Equal(t, "application/json", resp.Header.Get("Content-type"))
+	assert.Equal(t, "application/json; charset=utf-8", resp.Header.Get("Content-type"))
 	assert.Equal(t, httpStatus, resp.StatusCode)
 }
 

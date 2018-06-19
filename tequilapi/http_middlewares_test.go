@@ -89,12 +89,8 @@ func TestCacheControlHeadersAreAddedToResponse(t *testing.T) {
 
 	assert.Equal(
 		t,
-		[]string{
-			"no-cache",
-			"no-store",
-			"must-revalidate",
-		},
-		respRecorder.HeaderMap["Cache-Control"],
+		"no-cache, no-store, must-revalidate",
+		respRecorder.Header().Get("Cache-Control"),
 	)
 	assert.True(t, mock.wasCalled)
 

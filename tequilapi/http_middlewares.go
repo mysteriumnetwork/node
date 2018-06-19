@@ -19,6 +19,7 @@ package tequilapi
 
 import (
 	"net/http"
+	"strings"
 )
 
 type corsHandler struct {
@@ -70,10 +71,8 @@ type cacheControl struct {
 }
 
 func (cc cacheControl) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	resp.Header().Set(cacheControlHeader, strings.Join([]string{noCache, noStore, mustRevalidate}, ", "))
 	cc.originalHandler.ServeHTTP(resp, req)
-	resp.Header().Add(cacheControlHeader, noCache)
-	resp.Header().Add(cacheControlHeader, noStore)
-	resp.Header().Add(cacheControlHeader, mustRevalidate)
 }
 
 // DisableCaching middleware adds cache disabling headers to http response
