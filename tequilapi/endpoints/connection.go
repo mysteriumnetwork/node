@@ -56,6 +56,26 @@ type statusResponse struct {
 	SessionID string `json:"sessionId,omitempty"`
 }
 
+// swagger:model
+type ipResponse struct {
+	// public IP address
+	// example: 127.0.0.1
+	IP string `json:"ip"`
+}
+
+// swagger:model
+type statisticsResponse struct {
+	// example: 1024
+	BytesSent     int `json:"bytesSent"`
+
+	// example: 1024
+	BytesReceived int `json:"bytesReceived"`
+
+	// connection duration in seconds
+	// example: 60
+	Duration      int `json:"duration"`
+}
+
 // ConnectionEndpoint struct represents /connection resource and it's subresources
 type ConnectionEndpoint struct {
 	manager     connection.Manager
@@ -75,11 +95,25 @@ func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, s
 }
 
 // Status returns status of connection
+// swagger:operation GET /connection Connection connectionStatus
+// ---
+// summary: Returns connection status
+// description: Returns status of current connection
+// responses:
+//   200:
+//     description: Status
+//     schema:
+//       "$ref": "#/definitions/statusResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	statusResponse := toStatusResponse(ce.manager.Status())
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
+// Creates starts new connection
 // swagger:operation PUT /connection Connection createConnection
 // ---
 // summary: Starts new connection
@@ -87,7 +121,7 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 // parameters:
 //   - in: body
 //     name: body
-//     description: Parameters for creating new connection
+//     description: Parameters in body (consumerId, providerId) required for creating new connection
 //     schema:
 //       $ref: "#/definitions/connectionRequest"
 // responses:
@@ -103,6 +137,10 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 //     description: Conflict. Connection already exists
 //     schema:
 //       "$ref": "#/definitions/errorMessage"
+//   422:
+//     description: Parameters validation error
+//     schema:
+//       "$ref": "#/definitions/validationError"
 //   499:
 //     description: Connection was cancelled
 //     schema:
@@ -143,6 +181,21 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 }
 
 // Kill stops connection
+// swagger:operation DELETE /connection Connection killConnection
+// ---
+// summary: Stops connection
+// description: Stops current connection
+// responses:
+//   202:
+//     description: Connection Stopped
+//   409:
+//     description: Conflict. No connection exists
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	err := ce.manager.Disconnect()
 	if err != nil {
@@ -158,35 +211,62 @@ func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 }
 
 // GetIP responds with current ip, using its ip resolver
+// swagger:operation GET /connection/ip Location getIP
+// ---
+// summary: Returns IP address
+// description: Returns current public IP address
+// responses:
+//   200:
+//     description: Public IP address
+//     schema:
+//       "$ref": "#/definitions/ipResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
+//   503:
+//     description: Service unavailable
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (ce *ConnectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	ip, err := ce.ipResolver.GetPublicIP()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return
 	}
-	response := struct {
-		IP string `json:"ip"`
-	}{
+
+	response := ipResponse{
 		IP: ip,
 	}
+
 	utils.WriteAsJSON(response, writer)
 }
 
 // GetStatistics returns statistics about current connection
+// swagger:operation GET /connection/statistics Connection getStatistics
+// ---
+// summary: Returns connection statistics
+// description: Returns statistics about current connection
+// responses:
+//   200:
+//     description: Connection statistics
+//     schema:
+//       "$ref": "#/definitions/statisticsResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	stats := ce.statsKeeper.Retrieve()
 
 	duration := ce.statsKeeper.GetSessionDuration()
 
-	response := struct {
-		BytesSent     int `json:"bytesSent"`
-		BytesReceived int `json:"bytesReceived"`
-		Duration      int `json:"duration"`
-	}{
+	response := statisticsResponse{
 		BytesSent:     stats.BytesSent,
 		BytesReceived: stats.BytesReceived,
 		Duration:      int(duration.Seconds()),
 	}
+
 	utils.WriteAsJSON(response, writer)
 }
 

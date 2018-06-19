@@ -47,10 +47,13 @@ type identityCreationDto struct {
 	Passphrase *string `json:"passphrase"`
 }
 
+// swagger:model
 type identityRegistrationDto struct {
+	// value true means register, false - unregister which in not implemented yet
 	Registered bool `json:"registered"`
 }
 
+// swagger:model
 type identityUnlockingDto struct {
 	Passphrase string `json:"passphrase"`
 }
@@ -78,6 +81,19 @@ func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient ser
 	return &identitiesAPI{idm, mystClient, signerFactory}
 }
 
+// swagger:operation GET /identities Identity listIdentities
+// ---
+// summary: Returns identities
+// description: Returns list of identities
+// responses:
+//   200:
+//     description: List of identities
+//     schema:
+//       "$ref": "#/definitions/identityList"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	idArry := endpoint.idm.GetIdentities()
 	idsSerializable := identityList{mapIdentities(idArry, idToDto)}
@@ -87,17 +103,17 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 
 // swagger:operation POST /identities Identity createIdentity
 // ---
-// summary: Create new identity
+// summary: Creates new identity
 // description: Creates identity and stores in keystore encrypted with passphrase
 // parameters:
 //   - in: body
 //     name: body
-//     description: Parameters for creating new identity
+//     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
 //       $ref: "#/definitions/identityCreationDto"
 // responses:
 //   200:
-//     description: Successfully created identity
+//     description: Identity created
 //     schema:
 //       "$ref": "#/definitions/identityDto"
 //   400:
@@ -135,18 +151,23 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 
 // swagger:operation PUT /identities/{id}/registration Identity registerIdentity
 // ---
-// summary: Register identity
-// description: Registers existing identity to Discovery API
+// summary: Registers identity
+// description: Registers existing identity with Discovery API
 // parameters:
 // - name: id
 //   in: path
-//   description: Ethereum Address, example 0x0000000000000000000000000000000000000001
+//   description: Identity stored in keystore
 //   example: "0x0000000000000000000000000000000000000001"
 //   type: string
 //   required: true
+// - in: body
+//   name: body
+//   description: Parameter in body (registered) required for registering identity
+//   schema:
+//     $ref: "#/definitions/identityRegistrationDto"
 // responses:
 //   202:
-//     description: Accepted. Empty body
+//     description: Identity registered
 //   400:
 //     description: Bad request
 //     schema:
@@ -181,6 +202,37 @@ func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+// swagger:operation PUT /identities/{id}/unlock Identity unlockIdentity
+// ---
+// summary: Unlocks identity
+// description: Uses passphrase to decrypt identity stored in keystore
+// parameters:
+// - in: path
+//   name: id
+//   description: Identity stored in keystore
+//   example: "0x0000000000000000000000000000000000000001"
+//   type: string
+//   required: true
+// - in: body
+//   name: body
+//   description: Parameter in body (passphrase) required for unlocking identity
+//   schema:
+//     $ref: "#/definitions/identityUnlockingDto"
+// responses:
+//   202:
+//     description: Identity unlocked
+//   400:
+//     description: Body parsing error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
+//   403:
+//     description: Forbidden
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 	unlockReq, err := toUnlockRequest(request)

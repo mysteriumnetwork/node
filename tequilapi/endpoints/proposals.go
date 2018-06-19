@@ -25,23 +25,40 @@ import (
 	"net/http"
 )
 
+// swagger:model
 type proposalsRes struct {
 	Proposals []proposalRes `json:"proposals"`
 }
 
 type locationRes struct {
-	ASN     string `json:"asn"`
+	// Autonomous System Number
+	// example: AS00001
+	ASN string `json:"asn"`
+
+	// example: NL
 	Country string `json:"country,omitempty"`
-	City    string `json:"city,omitempty"`
+
+	// example: Amsterdam
+	City string `json:"city,omitempty"`
 }
 type serviceDefinitionRes struct {
 	LocationOriginate locationRes `json:"locationOriginate"`
 }
 
 type proposalRes struct {
-	ID                int                  `json:"id"`
-	ProviderID        string               `json:"providerId"`
-	ServiceType       string               `json:"serviceType"`
+	// per provider unique serial number of service description provided
+	// example: 5
+	ID int `json:"id"`
+
+	// provider who offers service
+	// example: 0x0000000000000000000000000000000000000001
+	ProviderID string `json:"providerId"`
+
+	// type of service provider offers
+	// example: openvpn
+	ServiceType string `json:"serviceType"`
+
+	// qualitative service definition
 	ServiceDefinition serviceDefinitionRes `json:"serviceDefinition"`
 }
 
@@ -80,9 +97,26 @@ func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
 	return &proposalsEndpoint{mc}
 }
 
-// List returns list of proposals
+// swagger:operation GET /proposals Proposal listProposals
+// ---
+// summary: Returns proposals
+// description: Returns list of proposals filtered by provider id
+// parameters:
+//   - in: query
+//     name: providerId
+//     description: id of provider proposals
+//     example: "0x0000000000000000000000000000000000000001"
+//     type: string
+// responses:
+//   200:
+//     description: List of proposals
+//     schema:
+//       "$ref": "#/definitions/proposalsRes"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-
 	providerID := req.URL.Query().Get("providerId")
 	proposals, err := pe.mysteriumClient.FindProposals(providerID)
 	if err != nil {

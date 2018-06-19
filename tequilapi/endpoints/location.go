@@ -25,6 +25,12 @@ import (
 	"net/http"
 )
 
+// swagger:model
+type locationResponse struct {
+	Original location.Location `json:"original"`
+	Current  location.Location `json:"current"`
+}
+
 // LocationEndpoint struct represents /location resource and it's subresources
 type LocationEndpoint struct {
 	manager               connection.Manager
@@ -42,7 +48,24 @@ func NewLocationEndpoint(manager connection.Manager, locationDetector location.D
 	}
 }
 
-// GetLocation responds with original and current countries
+// GetLocation responds with original and current locations
+// swagger:operation GET /location Location getLocation
+// ---
+// summary: Returns location
+// description: Returns original and current locations
+// responses:
+//   200:
+//     description: Original and current locations
+//     schema:
+//       "$ref": "#/definitions/locationResponse"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
+//   503:
+//     description: Service unavailable
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	originalLocation := le.originalLocationCache.Get()
 
@@ -58,13 +81,11 @@ func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 		currentLocation = originalLocation
 	}
 
-	response := struct {
-		Original location.Location `json:"original"`
-		Current  location.Location `json:"current"`
-	}{
+	response := locationResponse{
 		Original: originalLocation,
 		Current:  currentLocation,
 	}
+
 	utils.WriteAsJSON(response, writer)
 }
 

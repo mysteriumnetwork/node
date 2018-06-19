@@ -21,7 +21,7 @@
 // interact with Mysterium Node via Tequila API.
 // This should demonstrate all the possible API calls with described parameters and responses.
 //
-//   Host: localhost:4050
+//   Host: 127.0.0.1:4050
 //
 //   Consumes:
 //   - application/json
