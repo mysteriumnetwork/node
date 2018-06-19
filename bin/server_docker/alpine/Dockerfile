@@ -22,7 +22,7 @@ COPY bin/server_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 COPY bin/server_package/config /etc/mysterium-node
-COPY bin/server_package/tools /usr/sbin
+
 COPY --from=builder /go/src/github.com/mysterium/node/build/server/mysterium_server /usr/bin/mysterium_server
 
 WORKDIR /var/run/mysterium-node

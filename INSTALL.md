@@ -46,13 +46,13 @@ sudo docker logs -f mysterium-node
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_armhf.deb
 
-### Install latest OpenVPN
+### Install latest OpenVPN and dependencies
 
 ```bash
 apt-get update && apt-get install -y curl
 curl -s https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 apt-get update
-apt-get install openvpn
+apt-get install openvpn ca-certificates iproute2 sudo
 ```
 
 ### Installation
@@ -81,13 +81,13 @@ sudo mysterium_server --data-dir=/var/lib/mysterium-node --config-dir=/etc/myste
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_armhf.deb
 
-### Install latest OpenVPN
+### Install latest OpenVPN and dependencies
 
 ```bash
 apt-get update && apt-get install -y curl
 curl -s https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 apt-get update
-apt-get install openvpn
+apt-get install openvpn resolvconf ca-certificates iproute2 sudo
 ```
 
 ### Installation

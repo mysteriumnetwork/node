@@ -36,10 +36,11 @@ func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middl
 type ServerConfigGenerator func() *ServerConfig
 
 // NewServerConfigGenerator returns function generating server config and generates required security primitives
-func NewServerConfigGenerator(directoryRuntime string, primitives *tls.Primitives, port int, protocol string) ServerConfigGenerator {
+func NewServerConfigGenerator(directoryRuntime string, directoryConfig string, primitives *tls.Primitives, port int, protocol string) ServerConfigGenerator {
 	return func() *ServerConfig {
 		vpnServerConfig := NewServerConfig(
 			directoryRuntime,
+			directoryConfig,
 			"10.8.0.0", "255.255.255.0",
 			primitives,
 			port,

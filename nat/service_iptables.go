@@ -60,7 +60,7 @@ func (service *serviceIPTables) Stop() error {
 }
 
 func (service *serviceIPTables) isIPForwardingEnabled() (enabled bool, err error) {
-	out, err := exec.Command("sysctl", "-n", "net.ipv4.ip_forward").CombinedOutput()
+	out, err := exec.Command("/sbin/sysctl", "-n", "net.ipv4.ip_forward").CombinedOutput()
 	if err != nil {
 		return false, fmt.Errorf("Failed to check IP forwarding status: %s", err)
 	}
@@ -85,9 +85,9 @@ func (service *serviceIPTables) enableIPForwarding() (err error) {
 	}
 
 	cmd := exec.Command(
-		"bash",
+		"sh",
 		"-c",
-		"sudo sysctl -w net.ipv4.ip_forward=1",
+		"sudo /sbin/sysctl -w net.ipv4.ip_forward=1",
 	)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Failed to enable IP forwarding: %s", err)
@@ -103,9 +103,9 @@ func (service *serviceIPTables) disableIPForwarding() (err error) {
 	}
 
 	cmd := exec.Command(
-		"bash",
+		"sh",
 		"-c",
-		"sudo sysctl -w net.ipv4.ip_forward=0",
+		"sudo /sbin/sysctl -w net.ipv4.ip_forward=0",
 	)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("Failed to disable IP forwarding. %s", err)
@@ -120,9 +120,9 @@ func (service *serviceIPTables) enableRules() error {
 
 	for _, rule := range service.rules {
 		cmd := exec.Command(
-			"bash",
+			"sh",
 			"-c",
-			"sudo iptables --table nat --append POSTROUTING --source "+
+			"sudo /sbin/iptables --table nat --append POSTROUTING --source "+
 				rule.SourceAddress+" ! --destination "+
 				rule.SourceAddress+" --jump SNAT --to "+
 				rule.TargetIP,
@@ -144,9 +144,9 @@ func (service *serviceIPTables) disableRules() error {
 
 	for _, rule := range service.rules {
 		cmd := exec.Command(
-			"bash",
+			"sh",
 			"-c",
-			"sudo iptables --table nat --delete POSTROUTING --source "+
+			"sudo /sbin/iptables --table nat --delete POSTROUTING --source "+
 				rule.SourceAddress+" ! --destination "+
 				rule.SourceAddress+" --jump SNAT --to "+
 				rule.TargetIP,

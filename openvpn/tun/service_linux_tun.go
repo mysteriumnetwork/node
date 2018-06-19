@@ -55,15 +55,19 @@ func (service *serviceLinuxTun) Stop() (err error) {
 }
 
 func (service *serviceLinuxTun) createTunDevice() (err error) {
-
-	if exists, err := service.deviceExists(); exists {
-		log.Info(tunLogPrefix, service.device.Name+" device already exists, attempting to use it")
+	exists, err := service.deviceExists()
+	if err != nil {
 		return err
+	}
+
+	if exists {
+		log.Info(tunLogPrefix, service.device.Name+" device already exists, attempting to use it")
+		return nil
 	}
 
 	var stderr bytes.Buffer
 	cmd := exec.Command(
-		"bash",
+		"sh",
 		"-c",
 		"sudo ip tuntap add dev "+service.device.Name+" mode tun",
 	)
@@ -87,7 +91,7 @@ func (service *serviceLinuxTun) deviceExists() (exists bool, err error) {
 func (service *serviceLinuxTun) deleteDevice() (err error) {
 	var stderr bytes.Buffer
 	cmd := exec.Command(
-		"bash",
+		"sh",
 		"-c",
 		"sudo ip tuntap delete dev "+service.device.Name+" mode tun",
 	)

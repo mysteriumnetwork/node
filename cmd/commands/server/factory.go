@@ -122,6 +122,7 @@ func NewCommandWith(
 			// TODO: check options for --openvpn-transport option
 			serverConfigGenerator := openvpn.NewServerConfigGenerator(
 				options.DirectoryRuntime,
+				options.DirectoryConfig,
 				primitives,
 				options.OpenvpnPort,
 				options.Protocol,
