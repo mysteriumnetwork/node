@@ -21,37 +21,11 @@ import (
 	log "github.com/cihub/seelog"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 )
 
 // ApplicationStopper stops application and performs required cleanup tasks
 type ApplicationStopper func()
-
-// StopOnInterruptsConditional invokes given stopper on SIGTERM and SIGHUP interrupts with additional wait condition
-func StopOnInterruptsConditional(stop ApplicationStopper, stopWaiter *sync.WaitGroup) {
-	sigterm := make(chan os.Signal, 2)
-	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
-
-	go waitTerminationSignalConditional(sigterm, stop, stopWaiter)
-}
-
-func waitTerminationSignalConditional(termination chan os.Signal, stop ApplicationStopper, stopWaiter *sync.WaitGroup) {
-	log.Info("interrupts, waiting for lock")
-	log.Flush()
-	stopWaiter.Wait()
-	log.Info("interrupts, waiting for signal")
-	log.Flush()
-
-	//select {
-	//case sig := <-termination:
-	//	fmt.Printf("Got %s signal. Aborting...\n", sig)
-	//}
-	<-termination
-	log.Info("interrupts, received signal")
-	log.Flush()
-	stop()
-}
 
 // StopOnInterrupts invokes given stopper on SIGTERM and SIGHUP interrupts
 func StopOnInterrupts(stop ApplicationStopper) {

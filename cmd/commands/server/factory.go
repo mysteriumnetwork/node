@@ -49,7 +49,6 @@ func NewCommand(options CommandOptions) *Command {
 		server.NewClient(networkDefinition.DiscoveryAPIAddress),
 		ip.NewResolver(options.IpifyUrl),
 		nat.NewService(),
-		tun.NewService(),
 	)
 }
 
@@ -60,7 +59,6 @@ func NewCommandWith(
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	natService nat.NATService,
-	tunService tun.Service,
 ) *Command {
 
 	keystoreDirectory := filepath.Join(options.DirectoryData, "keystore")

@@ -52,10 +52,10 @@ type Command struct {
 
 	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
 
-	vpnServer      openvpn.Process
-	checkOpenvpn   func() error
-	protocol       string
-	WaitUnregister *sync.WaitGroup
+	vpnServer                   openvpn.Process
+	checkOpenvpn                func() error
+	protocol                    string
+	proposalAnnouncementStopped *sync.WaitGroup
 }
 
 // Start starts server - does not block
@@ -128,7 +128,7 @@ func (cmd *Command) Start() (err error) {
 
 	signer := cmd.createSigner(providerID)
 
-	cmd.WaitUnregister.Add(1)
+	cmd.proposalAnnouncementStopped.Add(1)
 	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 
 	return nil
@@ -136,7 +136,7 @@ func (cmd *Command) Start() (err error) {
 
 // Wait blocks until server is stopped
 func (cmd *Command) Wait() error {
-	cmd.WaitUnregister.Wait()
+	cmd.proposalAnnouncementStopped.Wait()
 
 	return cmd.vpnServer.Wait()
 }
@@ -170,7 +170,7 @@ func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProp
 }
 
 func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
-	defer cmd.WaitUnregister.Done()
+	defer cmd.proposalAnnouncementStopped.Done()
 	for {
 		select {
 		case <-time.After(1 * time.Minute):
