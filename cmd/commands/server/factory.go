@@ -33,7 +33,6 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	openvpn_session "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/openvpn/tls"
-	"github.com/mysterium/node/openvpn/tun"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
 	"path/filepath"
@@ -138,8 +137,8 @@ func NewCommandWith(
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
-		protocol:       options.Protocol,
-		WaitUnregister: &sync.WaitGroup{},
+		protocol:                    options.Protocol,
+		proposalAnnouncementStopped: &sync.WaitGroup{},
 	}
 }
 
