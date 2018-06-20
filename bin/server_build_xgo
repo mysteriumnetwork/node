@@ -13,14 +13,15 @@
 #> brew install readelf
 #> readelf -d build/server/mysterium_server
 
+source bin/helpers/functions.sh
+
 XGO_TARGETS=`IFS=','; echo "$*"`
 if [ -z "$XGO_TARGETS" ]; then
     printf "\e[0;31m%s\e[0m\n" "Missing targets!"
     exit 1
 fi
 
-source bin/helpers/functions.sh
-DIR_BUILD="build/package"
+DIR_BUILD="build/server"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
 xgo \
@@ -32,8 +33,8 @@ xgo \
     $(pwd)/cmd/mysterium_server
 
 # Remove version from binary name:
-#  - mysterium_server-darwin-10.6-amd64 -> mysterium_server-darwin-amd64
-#  - mysterium_server-linux-amd64       -> mysterium_server-linux-amd64
+#  - mysterium_server-darwin-10.6-amd64 -> mysterium_server_darwin_amd64
+#  - mysterium_server-linux-amd64       -> mysterium_server_linux_amd64
 for BINARY in `ls ${DIR_TEMP}`; do
     BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/.*-([a-z]*)(-[0-9.]*)?-([a-z]*)/mysterium_server_\1_\3/p'`
     mv ${DIR_TEMP}/${BINARY} ${DIR_BUILD}/${BINARY_RENAMED}
