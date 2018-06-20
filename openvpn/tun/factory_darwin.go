@@ -17,8 +17,7 @@
 
 package tun
 
-// NewService creates tun service for osx
-// TODO: implement
+// NewService creates fake tun service for osx
 func NewService() Service {
 	return &serviceFake{}
 }

@@ -60,6 +60,7 @@ func runCMD(options server.CommandOptions) {
 		os.Exit(1)
 	}
 
+	// cmd.StopOnInterrupts(cmd.NewApplicationStopper(serverCommand.Kill))
 	cmd.StopOnInterruptsConditional(cmd.NewApplicationStopper(serverCommand.Kill), serverCommand.WaitUnregister)
 
 	if err := serverCommand.Wait(); err != nil {

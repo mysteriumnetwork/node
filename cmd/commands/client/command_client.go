@@ -170,12 +170,9 @@ func (cmd *Command) Wait() error {
 
 // Kill stops tequilapi service
 func (cmd *Command) Kill() error {
-	err := cmd.tunService.Stop()
-	if err != nil {
-		return err
-	}
+	cmd.tunService.Stop()
 
-	err = cmd.connectionManager.Disconnect()
+	err := cmd.connectionManager.Disconnect()
 	if err != nil {
 		switch err {
 		case connection.ErrNoConnection:

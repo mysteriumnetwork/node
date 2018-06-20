@@ -96,7 +96,6 @@ func NewCommandWith(
 		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,
-		tunService:       tunService,
 		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
 				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),

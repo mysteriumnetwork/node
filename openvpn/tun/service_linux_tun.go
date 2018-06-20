@@ -40,18 +40,30 @@ func (service *serviceLinuxTun) Start() error {
 	return service.createTunDevice()
 }
 
-func (service *serviceLinuxTun) Stop() (err error) {
+func (service *serviceLinuxTun) Stop() {
+	var err error
 	var exists bool
 
+	log.Info(tunLogPrefix, "checking device exists")
+	log.Flush()
+
 	if exists, err = service.deviceExists(); err != nil {
-		return err
+		log.Info(tunLogPrefix, err)
+		log.Flush()
 	}
 
 	if !exists {
-		return nil
+		return
 	}
 
-	return service.deleteDevice()
+	log.Info(tunLogPrefix, "deleting device")
+	if err = service.deleteDevice(); err != nil {
+		log.Info(tunLogPrefix, err)
+		log.Flush()
+	}
+
+	log.Info(tunLogPrefix, "device deleted")
+	log.Flush()
 }
 
 func (service *serviceLinuxTun) createTunDevice() (err error) {
@@ -97,9 +109,12 @@ func (service *serviceLinuxTun) deleteDevice() (err error) {
 	)
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Failed to remove tun device: %s: %s", err, stderr.String())
+		log.Info(tunLogPrefix, service.device.Name, stderr.String())
+		log.Flush()
+		return fmt.Errorf("Failed to remove tun device: %s", err)
 	}
 
-	log.Info(tunLogPrefix, service.device.Name+" device removed")
+	log.Info(tunLogPrefix, service.device.Name, " device removed")
+	log.Flush()
 	return nil
 }

@@ -29,7 +29,6 @@ import (
 	"github.com/mysterium/node/openvpn/discovery"
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/openvpn/tls"
-	"github.com/mysterium/node/openvpn/tun"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
@@ -44,7 +43,6 @@ type Command struct {
 	ipResolver       ip.Resolver
 	mysteriumClient  server.Client
 	natService       nat.NATService
-	tunService       tun.Service
 	locationDetector location.Detector
 
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
@@ -91,11 +89,6 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	cmd.tunService.Add(tun.Device{"tun0"})
-	if err = cmd.tunService.Start(); err != nil {
-		return err
-	}
-
 	currentLocation, err := cmd.locationDetector.DetectLocation()
 	if err != nil {
 		return err
@@ -125,6 +118,7 @@ func (cmd *Command) Start() (err error) {
 		case openvpn.ExitingState:
 			log.Info("Open vpn service exiting")
 			close(stopDiscoveryAnnouncement)
+			// signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 		}
 	}
 	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
@@ -151,12 +145,7 @@ func (cmd *Command) Wait() error {
 func (cmd *Command) Kill() error {
 	cmd.vpnServer.Stop()
 
-	err := cmd.tunService.Stop()
-	if err != nil {
-		return err
-	}
-
-	err = cmd.dialogWaiter.Stop()
+	err := cmd.dialogWaiter.Stop()
 	if err != nil {
 		return err
 	}
@@ -181,6 +170,7 @@ func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProp
 }
 
 func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
+	defer cmd.WaitUnregister.Done()
 	for {
 		select {
 		case <-time.After(1 * time.Minute):
@@ -195,8 +185,13 @@ func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mys
 			if err != nil {
 				log.Error("Failed to unregister proposal: ", err)
 			}
-			time.Sleep(200 * time.Millisecond) // sleep for prints to be printed out
-			cmd.WaitUnregister.Done()
+			log.Flush()
+			//syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+			//os.FindProcess()
+			// os.Signal(syscall.SIGTERM).Signal()
+			//time.Sleep(200 * time.Millisecond) // sleep for prints to be printed out
+			//c := make(chan os.Signal)
+			//signal.Notify(c, os.Interrupt)
 			return
 		}
 	}

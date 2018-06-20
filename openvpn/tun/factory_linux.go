@@ -17,6 +17,7 @@
 
 package tun
 
+// NewService creates tun service for linux
 func NewService() Service {
 	return &serviceLinuxTun{}
 }

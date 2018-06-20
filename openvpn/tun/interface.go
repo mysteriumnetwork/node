@@ -21,7 +21,7 @@ package tun
 type Service interface {
 	Add(tun Device)
 	Start() error
-	Stop() error
+	Stop()
 }
 
 // Device represents tun device structure
