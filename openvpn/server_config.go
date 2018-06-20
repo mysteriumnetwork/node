@@ -51,6 +51,7 @@ func (c *ServerConfig) SetProtocol(protocol string) {
 
 // NewServerConfig creates server configuration structure from given basic parameters
 func NewServerConfig(
+	runtimeDir string,
 	configDir string,
 	network, netmask string,
 	secPrimitives *tls.Primitives,
