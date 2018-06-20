@@ -19,5 +19,5 @@ package tun
 
 // NewService creates fake tun service for osx
 func NewService() Service {
-	return &serviceFake{}
+	return &serviceDarwinTun{}
 }
