@@ -25,8 +25,8 @@ printf "Creating build directory '$DIR_BUILD' ..\n" \
     && bin/client_build_xgo darwin/amd64 windows/amd64 linux/amd64 \
     && bin/builder_run BINARY=${DIR_BUILD}/mysterium_server_linux_amd64 bin/server_package_debian ${VERSION} amd64 \
     && bin/builder_run BINARY=${DIR_BUILD}/mysterium_client_linux_amd64 bin/client_package_debian ${VERSION} amd64 \
-    && bin/server_package_docker ${VERSION} ${VERSION}-alpine alpine latest \
+    && bin/server_package_docker ${VERSION}-alpine alpine latest \
     && bin/server_package_docker_ubuntu ${VERSION} ${VERSION}-ubuntu ubuntu \
-    && bin/client_package_docker ${VERSION} ${VERSION}-alpine alpine latest \
+    && bin/client_package_docker ${VERSION}-alpine alpine latest \
     && bin/client_package_docker_ubuntu ${VERSION} ${VERSION}-ubuntu ubuntu \
     && printf "\e[0;32m%s\e[0m\n" "All packages successfully packaged to directory '$DIR_BUILD'!"
