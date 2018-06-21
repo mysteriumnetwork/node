@@ -32,6 +32,7 @@ type serviceLinuxTun struct {
 	device Device
 }
 
+// NewLinuxTunnelService creates linux specific tunnel manager for interface creation and removal
 func NewLinuxTunnelService() Service {
 	return &serviceLinuxTun{}
 }

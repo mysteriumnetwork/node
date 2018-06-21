@@ -121,6 +121,7 @@ func (c *GenericConfig) SetPersistKey() {
 	c.SetFlag("persist-key")
 }
 
+// Setup iproute parameter with custom script to execute
 func (c *GenericConfig) SetIpRouteScript(name string) {
 	c.SetParam("iproute", filepath.Join(c.scriptSearchPath, name))
 }

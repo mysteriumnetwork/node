@@ -30,6 +30,7 @@ type linuxOpenvpnServer struct {
 	tunService tun.Service
 }
 
+// CreateNewServer function creates openvpn process as server with specific configuration for linux os
 func CreateNewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) Process {
 	config := generateConfig()
 	config.SetPersistTun()

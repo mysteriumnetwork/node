@@ -21,6 +21,7 @@ package openvpn
 
 import "github.com/mysterium/node/openvpn/management"
 
+// CreateNewServer function creates new openvpn process in default way
 func CreateNewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) Process {
 	serverConfig := generateConfig()
 	serverConfig.SetDevice("tun")

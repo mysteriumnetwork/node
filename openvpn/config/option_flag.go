@@ -17,6 +17,7 @@
 
 package config
 
+// OptionFlag creates flag style option
 func OptionFlag(name string) optionFlag {
 	return optionFlag{name}
 }
