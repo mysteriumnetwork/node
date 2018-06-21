@@ -29,14 +29,20 @@ import (
 	"github.com/mysterium/node/tequilapi/validation"
 )
 
+// swagger:model
 type identityDto struct {
+	// identity in Ethereum address format
+	// required: true
+	// example: 0x0000000000000000000000000000000000000001
 	ID string `json:"id"`
 }
 
+// swagger:model
 type identityList struct {
 	Identities []identityDto `json:"identities"`
 }
 
+// swagger:model
 type identityCreationDto struct {
 	Passphrase *string `json:"passphrase"`
 }
@@ -79,6 +85,33 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 	utils.WriteAsJSON(idsSerializable, resp)
 }
 
+// swagger:operation POST /identities Identity createIdentity
+// ---
+// summary: Create new identity
+// description: Creates identity and stores in keystore encrypted with passphrase
+// parameters:
+//   - in: body
+//     name: body
+//     description: Parameters for creating new identity
+//     schema:
+//       $ref: "#/definitions/identityCreationDto"
+// responses:
+//   200:
+//     description: Successfully created identity
+//     schema:
+//       "$ref": "#/definitions/identityDto"
+//   400:
+//     description: Bad Request
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
+//   422:
+//     description: Parameters validation error
+//     schema:
+//       "$ref": "#/definitions/validationError"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	createReq, err := toCreateRequest(request)
 	if err != nil {
@@ -100,6 +133,32 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 	utils.WriteAsJSON(idDto, resp)
 }
 
+// swagger:operation PUT /identities/{id}/registration Identity registerIdentity
+// ---
+// summary: Register identity
+// description: Registers existing identity to Discovery API
+// parameters:
+// - name: id
+//   in: path
+//   description: Ethereum Address, example 0x0000000000000000000000000000000000000001
+//   example: "0x0000000000000000000000000000000000000001"
+//   type: string
+//   required: true
+// responses:
+//   202:
+//     description: Accepted. Empty body
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
+//   501:
+//     description: Not implemented
+//     schema:
+//       "$ref": "#/definitions/errorMessage"
 func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)

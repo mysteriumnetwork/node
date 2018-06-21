@@ -4,3 +4,4 @@
 /.env
 testdataoutput
 e2e_tests.log
+tequilapi_spec.json
