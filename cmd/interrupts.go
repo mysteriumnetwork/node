@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	log "github.com/cihub/seelog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -37,7 +36,5 @@ func StopOnInterrupts(stop ApplicationStopper) {
 
 func waitTerminationSignal(termination chan os.Signal, stop ApplicationStopper) {
 	<-termination
-	log.Info("interrupts, received signal")
-	log.Flush()
 	stop()
 }

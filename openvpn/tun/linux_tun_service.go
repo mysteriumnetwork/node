@@ -49,9 +49,6 @@ func (service *serviceLinuxTun) Stop() {
 	var err error
 	var exists bool
 
-	log.Info(tunLogPrefix, "checking device exists")
-	log.Flush()
-
 	if exists, err = service.deviceExists(); err != nil {
 		log.Info(tunLogPrefix, err)
 		log.Flush()
@@ -61,14 +58,10 @@ func (service *serviceLinuxTun) Stop() {
 		return
 	}
 
-	log.Info(tunLogPrefix, "deleting device")
 	if err = service.deleteDevice(); err != nil {
 		log.Info(tunLogPrefix, err)
 		log.Flush()
 	}
-
-	log.Info(tunLogPrefix, "device deleted")
-	log.Flush()
 }
 
 func (service *serviceLinuxTun) createTunDevice() (err error) {

@@ -2,6 +2,3 @@
 # Define additional args for mysterium_server (see help for full list)
 CONF_DIR="--config-dir=/etc/mysterium-node"
 RUN_DIR="--runtime-dir=/var/run/mysterium-node"
-#DISCOVERY="--discovery-address=https://testnet-api.mysterium.network/v1"
-#BROKER="--broker-address=testnet-broker.mysterium.network"
-#PROTO-"--openvpn.proto=tcp"

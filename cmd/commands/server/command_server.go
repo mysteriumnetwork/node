@@ -118,7 +118,6 @@ func (cmd *Command) Start() (err error) {
 		case openvpn.ExitingState:
 			log.Info("Open vpn service exiting")
 			close(stopDiscoveryAnnouncement)
-			// signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 		}
 	}
 	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
@@ -186,12 +185,6 @@ func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mys
 				log.Error("Failed to unregister proposal: ", err)
 			}
 			log.Flush()
-			//syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-			//os.FindProcess()
-			// os.Signal(syscall.SIGTERM).Signal()
-			//time.Sleep(200 * time.Millisecond) // sleep for prints to be printed out
-			//c := make(chan os.Signal)
-			//signal.Notify(c, os.Interrupt)
 			return
 		}
 	}
