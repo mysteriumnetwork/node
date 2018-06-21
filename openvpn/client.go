@@ -17,35 +17,19 @@
 
 package openvpn
 
-import "sync"
 import (
 	"github.com/mysterium/node/openvpn/management"
 	"github.com/mysterium/node/openvpn/tls"
 	"github.com/mysterium/node/session"
 )
 
-// Client defines client process interfaces with basic commands
-type Client interface {
-	Start() error
-	Wait() error
-	Stop() error
-}
-
-type openVpnClient struct {
-	config     *ClientConfig
-	management *management.Management
-	process    *Process
-}
-
 // NewClient creates openvpn client with given config params
-func NewClient(openvpnBinary string, config *ClientConfig, middlewares ...management.Middleware) *openVpnClient {
-	// Add the management interface socketAddress to the config
-	socketAddress := "127.0.0.1:0"
+func NewClient(openvpnBinary string, config *ClientConfig, middlewares ...management.Middleware) Process {
 
-	return &openVpnClient{
-		config:     config,
-		management: management.NewManagement(socketAddress, "[client-management] ", middlewares...),
-		process:    NewProcess(openvpnBinary, "[client-openvpn] "),
+	return &openvpnProcess{
+		config:     config.GenericConfig,
+		management: management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
+		cmd:        NewCmdWrapper(openvpnBinary, "[client-openvpn] "),
 	}
 }
 
@@ -76,46 +60,4 @@ func NewClientConfigGenerator(primitives *tls.Primitives, vpnServerIP string, po
 			primitives.CertificateAuthority.ToPEMFormat(),
 		}
 	}
-}
-
-func (client *openVpnClient) Start() error {
-	// Start the management interface (if it isnt already started)
-	err := client.management.Start()
-	if err != nil {
-		return err
-	}
-
-	addr := client.management.ActiveSocketAddress()
-	client.config.SetManagementAddress(addr.IP, addr.Port)
-
-	// Fetch the current arguments
-	arguments, err := (*client.config).ConfigToArguments()
-	if err != nil {
-		return err
-	}
-
-	return client.process.Start(arguments)
-}
-
-func (client *openVpnClient) Wait() error {
-	return client.process.Wait()
-}
-
-func (client *openVpnClient) Stop() error {
-	waiter := sync.WaitGroup{}
-
-	waiter.Add(1)
-	go func() {
-		defer waiter.Done()
-		client.process.Stop()
-	}()
-
-	waiter.Add(1)
-	go func() {
-		defer waiter.Done()
-		client.management.Stop()
-	}()
-
-	waiter.Wait()
-	return nil
 }

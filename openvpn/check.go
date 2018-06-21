@@ -18,31 +18,52 @@
 package openvpn
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
+	log "github.com/cihub/seelog"
+	"io"
+	"net/textproto"
 	"os/exec"
 	"strconv"
 	"syscall"
 )
 
+const logPrefix = "[Openvpn check] "
+
 // CheckOpenvpnBinary function checks that openvpn is available, given path to openvpn binary
 func CheckOpenvpnBinary(openvpnBinary string) error {
-
-	process := NewProcess(openvpnBinary, "[openvpn binary check] ")
-	if err := process.Start([]string{"--version"}); err != nil {
-		return err
-	}
-	cmdResult := process.Wait()
-
+	command := exec.Command(openvpnBinary, "--version")
+	outputBuffer, cmdResult := command.Output()
 	exitCode, err := extractExitCodeFromCmdResult(cmdResult)
 	if err != nil {
 		return err
 	}
-
 	//openvpn returns exit code 1 in case of --version parameter, if anything else is returned - treat as error
 	if exitCode != 1 {
-		return errors.New("unexpected openvpn code: " + strconv.Itoa(exitCode))
+		log.Error(logPrefix, "Check failed. Output of executed command: ", string(outputBuffer))
+		return errors.New("unexpected openvpn exit code: " + strconv.Itoa(exitCode))
 	}
 
+	stringReader := textproto.NewReader(bufio.NewReader(bytes.NewReader(outputBuffer)))
+	//openvpn --version produces 5 (and optional 6th) strings as output
+	//see testdata/openvpn-version-custom-tag.sh for output example
+	for i := 0; i < 5; i++ {
+		str, err := stringReader.ReadLine()
+		if err != nil {
+			return err
+		}
+		log.Info(logPrefix, str)
+	}
+
+	//optional custom tag
+	str, err := stringReader.ReadLine()
+	if err == nil {
+		log.Info(logPrefix, "Custom tag: ", str)
+	} else if err != io.EOF {
+		//EOF is expected here and it doesn't fail openvpn check
+		return err
+	}
 	return nil
 }
 

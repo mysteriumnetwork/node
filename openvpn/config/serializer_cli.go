@@ -15,36 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
 import (
-	"math/rand"
-	"os"
-	"time"
+	"fmt"
 )
 
-var seededRand *rand.Rand = rand.New(
-	rand.NewSource(time.Now().UnixNano()),
-)
+// ToArguments serializes openvpn configuration structure to a list of command line arguments which can be passed to openvpn process
+// it also serialize file style options to appropriate files inside given config directory
+func (config GenericConfig) ToArguments() ([]string, error) {
+	arguments := make([]string, 0)
 
-const finenameCharset = "1234567890abcdefghijklmnopqrstuvwxyz"
-
-func tempFilename(directory, filePrefix, fileExtension string) (filePath string) {
-	for i := 0; i < 10000; i++ {
-		filePath = directory + "/" + filePrefix + randomString(10, finenameCharset) + fileExtension
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			break
+	for _, item := range config.options {
+		option, ok := item.(optionCliSerializable)
+		if !ok {
+			return nil, fmt.Errorf("unserializable option '%s': %#v", item.getName(), item)
 		}
+
+		optionValues, err := option.toCli()
+		if err != nil {
+			return nil, err
+		}
+
+		arguments = append(arguments, optionValues...)
 	}
-	return
+
+	return arguments, nil
 }
 
-func randomString(size int, charset string) string {
-	filename := make([]byte, size)
-	for i := range filename {
-		charsetIndex := seededRand.Intn(len(charset))
-		filename[i] = charset[charsetIndex]
-	}
-
-	return string(filename)
+type optionCliSerializable interface {
+	toCli() ([]string, error)
 }

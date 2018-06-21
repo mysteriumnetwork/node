@@ -15,24 +15,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
-func OptionFlag(name string) optionFlag {
-	return optionFlag{name}
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func TestParam_Factory(t *testing.T) {
+	option := OptionParam("very-value", "1234")
+	assert.NotNil(t, option)
 }
 
-type optionFlag struct {
-	name string
+func TestParam_GetName(t *testing.T) {
+	option := OptionParam("very-value", "1234")
+	assert.Equal(t, "very-value", option.getName())
 }
 
-func (option optionFlag) getName() string {
-	return option.name
+func TestParam_ToCli(t *testing.T) {
+	option := OptionParam("very-value", "1234")
+
+	optionValue, err := option.toCli()
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"--very-value", "1234"}, optionValue)
 }
 
-func (option optionFlag) toCli() ([]string, error) {
-	return []string{"--" + option.name}, nil
-}
+func TestParam_ToFile(t *testing.T) {
+	option := OptionParam("very-value", "1234")
 
-func (option optionFlag) toFile() (string, error) {
-	return option.name, nil
+	optionValue, err := option.toFile()
+	assert.NoError(t, err)
+	assert.Equal(t, "very-value 1234", optionValue)
 }

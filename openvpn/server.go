@@ -21,17 +21,15 @@ import (
 	"github.com/mysterium/node/openvpn/management"
 
 	"github.com/mysterium/node/openvpn/tls"
-	"sync"
 )
 
 // NewServer constructs new openvpn server instance
-func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) *Server {
-	// Add the management interface socketAddress to the config
-	socketAddress := "127.0.0.1:0"
-	return &Server{
-		generateConfig: generateConfig,
-		management:     management.NewManagement(socketAddress, "[server-management] ", middlewares...),
-		process:        NewProcess(openvpnBinary, "[server-openvpn] "),
+func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) Process {
+	serverConfig := generateConfig()
+	return &openvpnProcess{
+		config:     serverConfig.GenericConfig,
+		management: management.NewManagement(management.LocalhostOnRandomPort, "[server-management] ", middlewares...),
+		cmd:        NewCmdWrapper(openvpnBinary, "[server-openvpn] "),
 	}
 }
 
@@ -50,56 +48,4 @@ func NewServerConfigGenerator(directoryRuntime string, primitives *tls.Primitive
 		)
 		return vpnServerConfig
 	}
-}
-
-// Server structure describes openvpn server
-type Server struct {
-	generateConfig ServerConfigGenerator
-	management     *management.Management
-	process        *Process
-}
-
-// Start starts openvpn server generating required config and starting management interface on the way
-func (server *Server) Start() error {
-	config := server.generateConfig()
-
-	// Start the management interface (if it isnt already started)
-	if err := server.management.Start(); err != nil {
-		return err
-	}
-
-	addr := server.management.ActiveSocketAddress()
-	config.SetManagementAddress(addr.IP, addr.Port)
-
-	// Fetch the current params
-	arguments, err := (*config).ConfigToArguments()
-	if err != nil {
-		return err
-	}
-
-	return server.process.Start(arguments)
-}
-
-// Wait waits for openvpn server to exit
-func (server *Server) Wait() error {
-	return server.process.Wait()
-}
-
-// Stop instructs openvpn server to stop
-func (server *Server) Stop() {
-	waiter := sync.WaitGroup{}
-
-	waiter.Add(1)
-	go func() {
-		defer waiter.Done()
-		server.process.Stop()
-	}()
-
-	waiter.Add(1)
-	go func() {
-		defer waiter.Done()
-		server.management.Stop()
-	}()
-
-	waiter.Wait()
 }

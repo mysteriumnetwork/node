@@ -15,32 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
 import (
-	"bytes"
-	"fmt"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-type optionStringSerializable interface {
-	toFile() (string, error)
-}
+func TestConfigToString(t *testing.T) {
+	config := GenericConfig{}
+	config.AddOptions(
+		OptionFlag("enable-something"),
+		OptionParam("very-value", "1234"),
+	)
 
-func ConfigToString(config Config) (string, error) {
-	var output bytes.Buffer
-
-	for _, item := range config.options {
-		option, ok := item.(optionStringSerializable)
-		if !ok {
-			return "", fmt.Errorf("Unserializable option '%s': %#v", item.getName(), item)
-		}
-
-		optionValue, err := option.toFile()
-		if err != nil {
-			return "", err
-		}
-		fmt.Fprintln(&output, optionValue)
-	}
-
-	return string(output.Bytes()), nil
+	output, err := config.ToConfigFileContent()
+	assert.Nil(t, err)
+	assert.Equal(t, "enable-something\nvery-value 1234\n", output)
 }

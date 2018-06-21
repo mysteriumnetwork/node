@@ -15,35 +15,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestParam_Factory(t *testing.T) {
-	option := OptionParam("very-value", "1234")
+func TestFlag_Factory(t *testing.T) {
+	option := OptionFlag("enable-something")
 	assert.NotNil(t, option)
 }
 
-func TestParam_GetName(t *testing.T) {
-	option := OptionParam("very-value", "1234")
-	assert.Equal(t, "very-value", option.getName())
+func TestFlag_GetName(t *testing.T) {
+	option := OptionFlag("enable-something")
+	assert.Equal(t, "enable-something", option.getName())
 }
 
-func TestParam_ToCli(t *testing.T) {
-	option := OptionParam("very-value", "1234")
+func TestFlag_ToCli(t *testing.T) {
+	option := OptionFlag("enable-something")
 
 	optionValue, err := option.toCli()
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"--very-value", "1234"}, optionValue)
+	assert.Equal(t, []string{"--enable-something"}, optionValue)
 }
 
-func TestParam_ToFile(t *testing.T) {
-	option := OptionParam("very-value", "1234")
+func TestFlag_ToFile(t *testing.T) {
+	option := OptionFlag("enable-something")
 
 	optionValue, err := option.toFile()
 	assert.NoError(t, err)
-	assert.Equal(t, "very-value 1234", optionValue)
+	assert.Equal(t, "enable-something", optionValue)
 }

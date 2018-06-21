@@ -15,27 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package config
 
-import "strings"
-
-func OptionParam(name string, values ...string) optionParam {
-	return optionParam{name, values}
+func OptionFlag(name string) optionFlag {
+	return optionFlag{name}
 }
 
-type optionParam struct {
-	name   string
-	values []string
+type optionFlag struct {
+	name string
 }
 
-func (option optionParam) getName() string {
+func (option optionFlag) getName() string {
 	return option.name
 }
 
-func (option optionParam) toCli() ([]string, error) {
-	return append([]string{"--" + option.name}, option.values...), nil
+func (option optionFlag) toCli() ([]string, error) {
+	return []string{"--" + option.name}, nil
 }
 
-func (option optionParam) toFile() (string, error) {
-	return option.name + " " + strings.Join(option.values, " "), nil
+func (option optionFlag) toFile() (string, error) {
+	return option.name, nil
 }

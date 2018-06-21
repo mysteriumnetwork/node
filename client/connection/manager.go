@@ -134,14 +134,14 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 			return manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel)
 		}).
 		Cleanup(utils.InvokeOnSuccess(func(val interface{}) {
-			val.(openvpn.Client).Stop()
+			val.(openvpn.Process).Stop()
 		})).
 		Call()
 	if err != nil {
 		dialog.Close()
 		return err
 	}
-	openvpnClient := val.(openvpn.Client)
+	openvpnClient := val.(openvpn.Process)
 
 	err = manager.waitForConnectedState(stateChannel, vpnSession.ID, cancelable.Cancelled)
 	if err != nil {
@@ -153,11 +153,8 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	manager.cleanConnection = func() {
 		log.Info(managerLogPrefix, "Closing active connection")
 		manager.status = statusDisconnecting()
-		if err := openvpnClient.Stop(); err != nil {
-			log.Warn(managerLogPrefix, "Openvpn client stopped with error: ", err)
-		} else {
-			log.Info(managerLogPrefix, "Openvpn client stopped")
-		}
+		openvpnClient.Stop()
+		log.Info(managerLogPrefix, "Openvpn client stop requested")
 	}
 
 	go openvpnClientWaiter(openvpnClient, dialog)
@@ -194,7 +191,7 @@ func (manager *connectionManager) findProposalByProviderID(providerID identity.I
 	return &proposals[0], nil
 }
 
-func openvpnClientWaiter(openvpnClient openvpn.Client, dialog communication.Dialog) {
+func openvpnClientWaiter(openvpnClient openvpn.Process, dialog communication.Dialog) {
 	err := openvpnClient.Wait()
 	if err != nil {
 		log.Warn(managerLogPrefix, "Openvpn client exited with error: ", err)
@@ -204,7 +201,7 @@ func openvpnClientWaiter(openvpnClient openvpn.Client, dialog communication.Dial
 	dialog.Close()
 }
 
-func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity, stateChannel chan openvpn.State) (openvpn.Client, error) {
+func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity, stateChannel chan openvpn.State) (openvpn.Process, error) {
 	openvpnClient, err := manager.newVpnClient(
 		vpnSession,
 		consumerID,

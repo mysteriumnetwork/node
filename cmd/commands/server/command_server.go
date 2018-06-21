@@ -51,9 +51,9 @@ type Command struct {
 
 	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
 
-	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) *openvpn.Server
+	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
 
-	vpnServer      *openvpn.Server
+	vpnServer      openvpn.Process
 	checkOpenvpn   func() error
 	protocol       string
 	WaitUnregister *sync.WaitGroup

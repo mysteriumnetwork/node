@@ -81,7 +81,7 @@ func (tc *testContext) SetupTest() {
 	}
 
 	tc.openvpnCreationError = nil
-	fakeVpnClientFactory := func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, callback state.Callback) (openvpn.Client, error) {
+	fakeVpnClientFactory := func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, callback state.Callback) (openvpn.Process, error) {
 		//each test can set this value to simulate openvpn creation error, this flag is reset BEFORE each test
 		if tc.openvpnCreationError != nil {
 			return nil, tc.openvpnCreationError
@@ -274,12 +274,11 @@ func (foc *fakeOpenvpnClient) Wait() error {
 	return nil
 }
 
-func (foc *fakeOpenvpnClient) Stop() error {
+func (foc *fakeOpenvpnClient) Stop() {
 	for _, openvpnState := range foc.onStopReportStates {
 		foc.reportState(openvpnState)
 	}
 	foc.fakeProcess.Done()
-	return nil
 }
 
 func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
