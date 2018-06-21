@@ -66,14 +66,14 @@ type ipResponse struct {
 // swagger:model
 type statisticsResponse struct {
 	// example: 1024
-	BytesSent     int `json:"bytesSent"`
+	BytesSent int `json:"bytesSent"`
 
 	// example: 1024
 	BytesReceived int `json:"bytesReceived"`
 
 	// connection duration in seconds
 	// example: 60
-	Duration      int `json:"duration"`
+	Duration int `json:"duration"`
 }
 
 // ConnectionEndpoint struct represents /connection resource and it's subresources

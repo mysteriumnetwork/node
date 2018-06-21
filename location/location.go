@@ -20,7 +20,7 @@ package location
 type Location struct {
 	// IP address
 	// example: 127.0.0.1
-	IP      string `json:"ip"`
+	IP string `json:"ip"`
 
 	// example: NL
 	Country string `json:"country"`
