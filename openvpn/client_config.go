@@ -62,7 +62,6 @@ func newClientConfig(configDir string, scriptSearchPath string) *ClientConfig {
 	clientConfig.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
 	clientConfig.SetKeepAlive(10, 60)
 	clientConfig.SetPingTimerRemote()
-	clientConfig.SetPersistTun()
 	clientConfig.SetPersistKey()
 
 	clientConfig.SetParam("reneg-sec", "60")

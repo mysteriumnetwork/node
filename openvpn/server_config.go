@@ -69,7 +69,6 @@ func NewServerConfig(
 	)
 	serverConfig.SetTLSCrypt(secPrimitives.PresharedKey.ToPEMFormat())
 
-	serverConfig.SetDevice("tun")
 	serverConfig.SetParam("cipher", "AES-256-GCM")
 	serverConfig.SetParam("verb", "3")
 	serverConfig.SetParam("tls-version-min", "1.2")
@@ -79,7 +78,6 @@ func NewServerConfig(
 	serverConfig.SetParam("reneg-sec", "60")
 	serverConfig.SetKeepAlive(10, 60)
 	serverConfig.SetPingTimerRemote()
-	serverConfig.SetPersistTun()
 	serverConfig.SetPersistKey()
 
 	return &serverConfig
