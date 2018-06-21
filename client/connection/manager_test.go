@@ -274,12 +274,11 @@ func (foc *fakeOpenvpnClient) Wait() error {
 	return nil
 }
 
-func (foc *fakeOpenvpnClient) Stop() error {
+func (foc *fakeOpenvpnClient) Stop() {
 	for _, openvpnState := range foc.onStopReportStates {
 		foc.reportState(openvpnState)
 	}
 	foc.fakeProcess.Done()
-	return nil
 }
 
 func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {

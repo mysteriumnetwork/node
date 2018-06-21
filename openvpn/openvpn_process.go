@@ -29,7 +29,7 @@ import (
 type Process interface {
 	Start() error
 	Wait() error
-	Stop() error
+	Stop()
 }
 
 type openvpnProcess struct {
@@ -82,7 +82,7 @@ func (openvpn *openvpnProcess) Wait() error {
 	return openvpn.cmd.Wait()
 }
 
-func (openvpn *openvpnProcess) Stop() error {
+func (openvpn *openvpnProcess) Stop() {
 	waiter := sync.WaitGroup{}
 	//TODO which to signal for close first ?
 	//if we stop process before management, managemnt won't have a chance to send any commands from middlewares on stop
@@ -100,5 +100,4 @@ func (openvpn *openvpnProcess) Stop() error {
 	}()
 
 	waiter.Wait()
-	return nil
 }

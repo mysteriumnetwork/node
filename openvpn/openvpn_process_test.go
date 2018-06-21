@@ -27,17 +27,21 @@ import (
 
 func TestOpenvpnProcessStartsAndStopsSuccessfully(t *testing.T) {
 	process := newOpenvpnProcess("testdata/openvpn-mock-client.sh")
+
 	err := process.Start()
 	assert.NoError(t, err)
+
 	time.Sleep(200 * time.Millisecond)
-	err = process.Stop()
-	assert.NoError(t, err)
+
+	process.Stop()
+
 	err = process.Wait()
 	assert.NoError(t, err)
 }
 
 func TestOpenvpnProcessStartReportsErrorIfCmdWrapperDiesTooEarly(t *testing.T) {
 	process := newOpenvpnProcess("testdata/failing-openvpn-mock-client.sh")
+
 	err := process.Start()
 	assert.Error(t, err)
 }
