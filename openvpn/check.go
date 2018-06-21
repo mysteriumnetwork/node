@@ -29,6 +29,8 @@ import (
 	"syscall"
 )
 
+const logPrefix = "[Openvpn check] "
+
 // CheckOpenvpnBinary function checks that openvpn is available, given path to openvpn binary
 func CheckOpenvpnBinary(openvpnBinary string) error {
 	command := exec.Command(openvpnBinary, "--version")
@@ -39,7 +41,7 @@ func CheckOpenvpnBinary(openvpnBinary string) error {
 	}
 	//openvpn returns exit code 1 in case of --version parameter, if anything else is returned - treat as error
 	if exitCode != 1 {
-		log.Error("[Openvpn check] ", "Check failed. Output of executed command: ", string(outputBuffer))
+		log.Error(logPrefix, "Check failed. Output of executed command: ", string(outputBuffer))
 		return errors.New("unexpected openvpn exit code: " + strconv.Itoa(exitCode))
 	}
 
@@ -51,15 +53,15 @@ func CheckOpenvpnBinary(openvpnBinary string) error {
 		if err != nil {
 			return err
 		}
-		log.Info("[Openvpn check] ", str)
+		log.Info(logPrefix, str)
 	}
 
 	//optional custom tag
 	str, err := stringReader.ReadLine()
 	if err == nil {
-		log.Info("[Openvpn check] ", "Custom tag: ", str)
+		log.Info(logPrefix, "Custom tag: ", str)
 	} else if err != io.EOF {
-		//EOF is expected and doesn't fail check
+		//EOF is expected here and it doesn't fail openvpn check
 		return err
 	}
 	return nil
