@@ -31,7 +31,6 @@ import (
 	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/openvpn/tun"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
@@ -121,7 +120,6 @@ type Command struct {
 	httpAPIServer         tequilapi.APIServer
 	checkOpenvpn          func() error
 	originalLocationCache location.Cache
-	tunService            tun.Service
 }
 
 // Start starts Tequilapi service, fetches location
@@ -130,11 +128,6 @@ func (cmd *Command) Start() error {
 
 	err := cmd.checkOpenvpn()
 	if err != nil {
-		return err
-	}
-
-	cmd.tunService.Add(tun.Device{"tun0"})
-	if err = cmd.tunService.Start(); err != nil {
 		return err
 	}
 
@@ -167,7 +160,6 @@ func (cmd *Command) Wait() error {
 
 // Kill stops tequilapi service
 func (cmd *Command) Kill() error {
-	cmd.tunService.Stop()
 
 	err := cmd.connectionManager.Disconnect()
 	if err != nil {
