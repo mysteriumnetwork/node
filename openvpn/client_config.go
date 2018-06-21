@@ -51,8 +51,8 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 	}
 }
 
-func newClientConfig(configDir string) *ClientConfig {
-	clientConfig := ClientConfig{config.NewConfig(configDir)}
+func newClientConfig(configDir string, scriptSearchPath string) *ClientConfig {
+	clientConfig := ClientConfig{config.NewConfig(configDir, scriptSearchPath)}
 
 	clientConfig.RestrictReconnects()
 
@@ -83,7 +83,7 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFi
 		return nil, err
 	}
 
-	clientFileConfig := newClientConfig(configDir)
+	clientFileConfig := newClientConfig(configDir, "")
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
 	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
 	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)
@@ -99,7 +99,7 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFi
 		return nil, err
 	}
 
-	clientConfig := ClientConfig{config.NewConfig(configDir)}
+	clientConfig := ClientConfig{config.NewConfig(configDir, "")}
 	clientConfig.AddOptions(config.OptionFile("config", configAsString, configFile))
 
 	//because of special case how openvpn handles executable/scripts paths, we need to surround values with double quotes

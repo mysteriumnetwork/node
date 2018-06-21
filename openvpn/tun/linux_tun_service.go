@@ -26,19 +26,25 @@ import (
 	"os"
 )
 
-type serviceDarwinTun struct {
+const tunLogPrefix = "[tun] "
+
+type serviceLinuxTun struct {
 	device Device
 }
 
-func (service *serviceDarwinTun) Add(device Device) {
+func NewLinuxTunnelService() Service {
+	return &serviceLinuxTun{}
+}
+
+func (service *serviceLinuxTun) Add(device Device) {
 	service.device = device
 }
 
-func (service *serviceDarwinTun) Start() error {
+func (service *serviceLinuxTun) Start() error {
 	return service.createTunDevice()
 }
 
-func (service *serviceDarwinTun) Stop() {
+func (service *serviceLinuxTun) Stop() {
 	var err error
 	var exists bool
 
@@ -64,7 +70,7 @@ func (service *serviceDarwinTun) Stop() {
 	log.Flush()
 }
 
-func (service *serviceDarwinTun) createTunDevice() (err error) {
+func (service *serviceLinuxTun) createTunDevice() (err error) {
 	exists, err := service.deviceExists()
 	if err != nil {
 		return err
@@ -90,7 +96,7 @@ func (service *serviceDarwinTun) createTunDevice() (err error) {
 	return nil
 }
 
-func (service *serviceDarwinTun) deviceExists() (exists bool, err error) {
+func (service *serviceLinuxTun) deviceExists() (exists bool, err error) {
 	if _, err := os.Stat("/sys/class/net/" + service.device.Name); err == nil {
 		return true, nil
 	}
@@ -98,12 +104,12 @@ func (service *serviceDarwinTun) deviceExists() (exists bool, err error) {
 	return false, err
 }
 
-func (service *serviceDarwinTun) deleteDevice() (err error) {
+func (service *serviceLinuxTun) deleteDevice() (err error) {
 	var stderr bytes.Buffer
 	cmd := exec.Command(
 		"sh",
 		"-c",
-		"sudo openvpn --rmtun --dev "+service.device.Name,
+		"sudo ip tuntap delete dev "+service.device.Name+" mode tun",
 	)
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

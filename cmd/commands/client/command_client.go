@@ -46,7 +46,6 @@ func NewCommand(options CommandOptions) *Command {
 	return NewCommandWith(
 		options,
 		server.NewClient(networkDefinition.DiscoveryAPIAddress),
-		tun.NewService(),
 	)
 }
 
@@ -54,7 +53,6 @@ func NewCommand(options CommandOptions) *Command {
 func NewCommandWith(
 	options CommandOptions,
 	mysteriumClient server.Client,
-	tunService tun.Service,
 ) *Command {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
@@ -106,7 +104,6 @@ func NewCommandWith(
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
 		originalLocationCache: originalLocationCache,
-		tunService:            tunService,
 	}
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)

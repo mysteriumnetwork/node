@@ -58,7 +58,7 @@ func NewServerConfig(
 	port int,
 	protocol string,
 ) *ServerConfig {
-	serverConfig := ServerConfig{config.NewConfig(configDir)}
+	serverConfig := ServerConfig{config.NewConfig(runtimeDir, configDir)}
 	serverConfig.SetServerMode(port, network, netmask)
 	serverConfig.SetTLSServer()
 	serverConfig.SetProtocol(protocol)

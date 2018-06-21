@@ -23,17 +23,19 @@ import (
 )
 
 // NewConfig creates new openvpn configuration structure and takes configuration directory as parameter for file param serialization
-func NewConfig(configDir string) *GenericConfig {
+func NewConfig(configDir string, scriptSearchPath string) *GenericConfig {
 	return &GenericConfig{
-		configDir: configDir,
-		options:   make([]configOption, 0),
+		configDir:        configDir,
+		scriptSearchPath: scriptSearchPath,
+		options:          make([]configOption, 0),
 	}
 }
 
 // GenericConfig represents openvpn configuration structure common for both client and server modes
 type GenericConfig struct {
-	configDir string
-	options   []configOption
+	configDir        string
+	scriptSearchPath string
+	options          []configOption
 }
 
 type configOption interface {
@@ -117,4 +119,8 @@ func (c *GenericConfig) SetPersistTun() {
 // SetPersistKey setups persted key option for openvpn
 func (c *GenericConfig) SetPersistKey() {
 	c.SetFlag("persist-key")
+}
+
+func (c *GenericConfig) SetIpRouteScript(name string) {
+	c.SetParam("iproute", filepath.Join(c.scriptSearchPath, name))
 }

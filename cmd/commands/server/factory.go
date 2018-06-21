@@ -127,7 +127,7 @@ func NewCommandWith(
 			ovpnSessionManager := openvpn_session.NewManager(manager)
 			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
 
-			return openvpn.NewServer(
+			return openvpn.CreateNewServer(
 				options.OpenvpnBinary,
 				serverConfigGenerator,
 				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
