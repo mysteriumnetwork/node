@@ -30,7 +30,7 @@ func GetStartupLicense(warrantyCommand, conditionsCommand string) string {
 	return fmt.Sprintf(licenseFormat, warrantyCommand, conditionsCommand)
 }
 
-// Warranty of licence
+// Warranty of license
 const Warranty = `
   THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
 APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
@@ -43,7 +43,7 @@ ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 
 `
 
-// Conditions of licence
+// Conditions of license
 const Conditions = `
                        TERMS AND CONDITIONS
 
