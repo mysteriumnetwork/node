@@ -25,11 +25,7 @@ import (
 // NewServer constructs new openvpn server instance
 func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) Process {
 	serverConfig := generateConfig()
-	return &openvpnProcess{
-		config:     serverConfig.GenericConfig,
-		management: management.NewManagement(management.LocalhostOnRandomPort, "[server-management] ", middlewares...),
-		cmd:        NewCmdWrapper(openvpnBinary, "[server-openvpn] "),
-	}
+	return CreateNewProcess(openvpnBinary, serverConfig.GenericConfig, middlewares...)
 }
 
 // ServerConfigGenerator callback returns generated server config

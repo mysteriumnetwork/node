@@ -23,18 +23,18 @@ import (
 	"syscall"
 )
 
-// ApplicationStopper stops application and performs required cleanup tasks
-type ApplicationStopper func()
+// SignalCallback is invoked when process receives signals defined below
+type SignalCallback func()
 
-// StopOnInterrupts invokes given stopper on SIGTERM and SIGHUP interrupts
-func StopOnInterrupts(stop ApplicationStopper) {
-	sigterm := make(chan os.Signal)
+// RegisterSignalCallback registers given callback to call on SIGTERM and SIGHUP interrupts
+func RegisterSignalCallback(callback SignalCallback) {
+	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 
-	go waitTerminationSignal(sigterm, stop)
+	go waitTerminationSignal(sigterm, callback)
 }
 
-func waitTerminationSignal(termination chan os.Signal, stop ApplicationStopper) {
+func waitTerminationSignal(termination chan os.Signal, callback SignalCallback) {
 	<-termination
-	stop()
+	callback()
 }

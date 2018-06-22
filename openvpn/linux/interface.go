@@ -15,16 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package tun
+package linux
 
-// Service defines interface to manage tun device
-type Service interface {
-	Add(tun Device)
+// TunnelService defines interface to manage tun device
+type TunnelService interface {
+	Add(tun TunnelDevice)
 	Start() error
 	Stop()
 }
 
 // Device represents tun device structure
-type Device struct {
+type TunnelDevice struct {
 	Name string
 }

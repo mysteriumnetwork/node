@@ -135,8 +135,9 @@ func (cmd *Command) Start() (err error) {
 
 // Wait blocks until server is stopped
 func (cmd *Command) Wait() error {
+	log.Info("Waiting for proposal announcements to finish")
 	cmd.proposalAnnouncementStopped.Wait()
-
+	log.Info("Waiting for vpn service to finish")
 	return cmd.vpnServer.Wait()
 }
 

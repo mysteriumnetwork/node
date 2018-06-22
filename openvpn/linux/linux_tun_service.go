@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package tun
+package linux
 
 import (
 	"fmt"
@@ -26,18 +26,18 @@ import (
 	"os"
 )
 
-const tunLogPrefix = "[tun] "
+const tunLogPrefix = "[linux tun service] "
 
 type serviceLinuxTun struct {
-	device Device
+	device TunnelDevice
 }
 
 // NewLinuxTunnelService creates linux specific tunnel manager for interface creation and removal
-func NewLinuxTunnelService() Service {
+func NewLinuxTunnelService() TunnelService {
 	return &serviceLinuxTun{}
 }
 
-func (service *serviceLinuxTun) Add(device Device) {
+func (service *serviceLinuxTun) Add(device TunnelDevice) {
 	service.device = device
 }
 
@@ -60,7 +60,6 @@ func (service *serviceLinuxTun) Stop() {
 
 	if err = service.deleteDevice(); err != nil {
 		log.Info(tunLogPrefix, err)
-		log.Flush()
 	}
 }
 
@@ -108,11 +107,9 @@ func (service *serviceLinuxTun) deleteDevice() (err error) {
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		log.Info(tunLogPrefix, service.device.Name, stderr.String())
-		log.Flush()
 		return fmt.Errorf("Failed to remove tun device: %s", err)
 	}
 
 	log.Info(tunLogPrefix, service.device.Name, " device removed")
-	log.Flush()
 	return nil
 }

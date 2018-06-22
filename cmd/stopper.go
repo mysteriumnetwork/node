@@ -25,12 +25,21 @@ import (
 // Killer kills some resource and performs cleanup
 type Killer func() error
 
-// NewApplicationStopper invokes killer and stops application
-func NewApplicationStopper(kill Killer) func() {
+// SoftKiller invokes killer and gives a chance for process to cleanup itself
+func SoftKiller(kill Killer) func() {
+	return newStopper(kill, doNothingAfterKill)
+}
+
+// HardKiller invokes provided kill method and forces process to exit
+func HardKiller(kill Killer) func() {
 	return newStopper(kill, os.Exit)
 }
 
 type exitter func(code int)
+
+func doNothingAfterKill(_ int) {
+
+}
 
 func newStopper(kill Killer, exit exitter) func() {
 	return func() {
@@ -43,7 +52,6 @@ func stop(kill Killer, exit exitter) {
 		msg := fmt.Sprintf("Error while killing process: %v\n", err.Error())
 		fmt.Fprintln(os.Stderr, msg)
 		exit(1)
-		return
 	}
 
 	fmt.Println("Good bye")

@@ -25,12 +25,7 @@ import (
 
 // NewClient creates openvpn client with given config params
 func NewClient(openvpnBinary string, config *ClientConfig, middlewares ...management.Middleware) Process {
-
-	return &openvpnProcess{
-		config:     config.GenericConfig,
-		management: management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
-		cmd:        NewCmdWrapper(openvpnBinary, "[client-openvpn] "),
-	}
+	return CreateNewProcess(openvpnBinary, config.GenericConfig, middlewares...)
 }
 
 //VPNConfig structure represents VPN configuration options for given session

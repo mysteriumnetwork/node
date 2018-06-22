@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/cli"
 	"github.com/mysterium/node/cmd/commands/client"
@@ -30,6 +31,7 @@ import (
 )
 
 func main() {
+	defer seelog.Flush()
 	options, err := client.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -62,8 +64,8 @@ func runCLI(options client.CommandOptions) {
 		filepath.Join(options.DirectoryData, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 	)
-	stop := cmd.NewApplicationStopper(cmdCli.Kill)
-	cmd.StopOnInterrupts(stop)
+	stop := cmd.HardKiller(cmdCli.Kill)
+	cmd.RegisterSignalCallback(stop)
 	if err := cmdCli.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -72,8 +74,8 @@ func runCLI(options client.CommandOptions) {
 
 func runCMD(options client.CommandOptions) {
 	cmdRun := client.NewCommand(options)
-	stop := cmd.NewApplicationStopper(cmdRun.Kill)
-	cmd.StopOnInterrupts(stop)
+	stop := cmd.SoftKiller(cmdRun.Kill)
+	cmd.RegisterSignalCallback(stop)
 
 	if err := cmdRun.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

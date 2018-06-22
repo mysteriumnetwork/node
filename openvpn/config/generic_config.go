@@ -18,6 +18,7 @@
 package config
 
 import (
+	"fmt"
 	"path/filepath"
 	"strconv"
 )
@@ -122,6 +123,14 @@ func (c *GenericConfig) SetPersistKey() {
 }
 
 // Setup iproute parameter with custom script to execute
-func (c *GenericConfig) SetIpRouteScript(name string) {
-	c.SetParam("iproute", filepath.Join(c.scriptSearchPath, name))
+func (c *GenericConfig) SetScriptParam(paramName, scriptName string, needDoubleQuotes bool) {
+	fullPath := filepath.Join(c.scriptSearchPath, scriptName)
+	if needDoubleQuotes {
+		fullPath = wrapWithDoubleQuotes(fullPath)
+	}
+	c.SetParam(paramName, fullPath)
+}
+
+func wrapWithDoubleQuotes(val string) string {
+	return fmt.Sprintf(`"%s"`, val)
 }
