@@ -32,7 +32,7 @@ type healthCheckData struct {
 }
 
 type versionData struct {
-	Version     string `json:"version"`
+	ID          string `json:"id"`
 	Commit      string `json:"commit"`
 	Branch      string `json:"branch"`
 	BuildNumber string `json:"buildNumber"`
