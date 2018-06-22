@@ -26,13 +26,13 @@ import (
 )
 
 type healthCheckData struct {
-	Uptime  string      `json:"uptime"`
-	Process int         `json:"process"`
-	Version versionData `json:"version"`
+	Uptime    string    `json:"uptime"`
+	Process   int       `json:"process"`
+	Version   string    `json:"version"`
+	BuildInfo buildInfo `json:"buildInfo"`
 }
 
-type versionData struct {
-	ID          string `json:"id"`
+type buildInfo struct {
 	Commit      string `json:"commit"`
 	Branch      string `json:"branch"`
 	BuildNumber string `json:"buildNumber"`
@@ -61,8 +61,8 @@ func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request 
 	status := healthCheckData{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),
 		Process: hce.processNumber,
-		Version: versionData{
-			params.VersionAsString(),
+		Version: params.VersionAsString(),
+		BuildInfo: buildInfo{
 			params.BuildCommit,
 			params.BuildBranch,
 			params.BuildNumber,
