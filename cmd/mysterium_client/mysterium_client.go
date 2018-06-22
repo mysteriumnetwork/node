@@ -36,17 +36,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	if options.CLI {
-		runCLI(options)
-	} else if options.Version {
-		fmt.Println(params.VersionAsString())
+	if options.Version {
+		printVersion()
 	} else if options.LicenseWarranty {
 		fmt.Print(params.Warranty)
 	} else if options.LicenseConditions {
 		fmt.Print(params.Conditions)
+	} else if options.CLI {
+		runCLI(options)
 	} else {
+		printVersion()
 		runCMD(options)
 	}
+}
+
+func printVersion() {
+	fmt.Println("Mysterium client")
+	fmt.Println("Version:", params.VersionAsString())
+	fmt.Println("Build info:", params.BuildAsString())
+	fmt.Println("Copyright:", params.GetStartupLicense(
+		"run program with '-license.warranty' option",
+		"run program with '-license.conditions' option",
+	))
 }
 
 func runCLI(options client.CommandOptions) {

@@ -18,7 +18,6 @@
 package server
 
 import (
-	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -29,7 +28,6 @@ import (
 	"github.com/mysterium/node/openvpn/discovery"
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/openvpn/tls"
-	"github.com/mysterium/node/params"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
@@ -61,8 +59,6 @@ type Command struct {
 
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
-	printHeader()
-
 	err = cmd.checkOpenvpn()
 	if err != nil {
 		return err
@@ -132,16 +128,6 @@ func (cmd *Command) Start() (err error) {
 	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 
 	return nil
-}
-
-func printHeader() {
-	fmt.Println("Mysterium server")
-	fmt.Println("Version:", params.VersionAsString())
-	fmt.Println("Build info:", params.BuildAsString())
-	fmt.Println("Copyright:", params.GetStartupLicense(
-		"run program with '-warranty' option",
-		"run program with '-conditions' option",
-	))
 }
 
 // Wait blocks until server is stopped

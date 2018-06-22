@@ -34,14 +34,25 @@ func main() {
 	}
 
 	if options.Version {
-		fmt.Println(params.VersionAsString())
+		printVersion()
 	} else if options.LicenseWarranty {
 		fmt.Print(params.Warranty)
 	} else if options.LicenseConditions {
 		fmt.Print(params.Conditions)
 	} else {
+		printVersion()
 		runCMD(options)
 	}
+}
+
+func printVersion() {
+	fmt.Println("Mysterium server")
+	fmt.Println("Version:", params.VersionAsString())
+	fmt.Println("Build info:", params.BuildAsString())
+	fmt.Println("Copyright:", params.GetStartupLicense(
+		"run program with '-warranty' option",
+		"run program with '-conditions' option",
+	))
 }
 
 func runCMD(options server.CommandOptions) {
