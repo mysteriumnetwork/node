@@ -19,7 +19,7 @@ package endpoints
 
 import (
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/params"
+	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/tequilapi/utils"
 	"net/http"
 	"time"
@@ -57,15 +57,15 @@ func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() 
 	}
 }
 
-func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request *http.Request, routeParams httprouter.Params) {
+func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	status := healthCheckData{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),
 		Process: hce.processNumber,
-		Version: params.VersionAsString(),
+		Version: metadata.VersionAsString(),
 		BuildInfo: buildInfo{
-			params.BuildCommit,
-			params.BuildBranch,
-			params.BuildNumber,
+			metadata.BuildCommit,
+			metadata.BuildBranch,
+			metadata.BuildNumber,
 		},
 	}
 	utils.WriteAsJSON(status, writer)

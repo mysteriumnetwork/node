@@ -22,7 +22,7 @@ import (
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
 	_ "github.com/mysterium/node/logconfig"
-	"github.com/mysterium/node/params"
+	"github.com/mysterium/node/metadata"
 	"os"
 )
 
@@ -36,9 +36,9 @@ func main() {
 	if options.Version {
 		printVersion()
 	} else if options.LicenseWarranty {
-		fmt.Print(params.Warranty)
+		fmt.Print(metadata.Warranty)
 	} else if options.LicenseConditions {
-		fmt.Print(params.Conditions)
+		fmt.Print(metadata.Conditions)
 	} else {
 		printVersion()
 		runCMD(options)
@@ -47,9 +47,9 @@ func main() {
 
 func printVersion() {
 	fmt.Println("Mysterium server")
-	fmt.Println("Version:", params.VersionAsString())
-	fmt.Println("Build info:", params.BuildAsString())
-	fmt.Println("Copyright:", params.GetStartupLicense(
+	fmt.Println("Version:", metadata.VersionAsString())
+	fmt.Println("Build info:", metadata.BuildAsString())
+	fmt.Println("Copyright:", metadata.GetStartupLicense(
 		"run program with '-warranty' option",
 		"run program with '-conditions' option",
 	))

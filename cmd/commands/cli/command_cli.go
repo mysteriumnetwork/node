@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"github.com/chzyer/readline"
 	node_cmd "github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/params"
+	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"io"
 	"log"
@@ -90,9 +90,9 @@ func (c *Command) Run() (err error) {
 
 func printVersion() {
 	fmt.Println("Mysterium CLI")
-	fmt.Println("Version:", params.VersionAsString())
-	fmt.Println("Build info:", params.BuildAsString())
-	fmt.Println("Copyright:", params.GetStartupLicense(
+	fmt.Println("Version:", metadata.VersionAsString())
+	fmt.Println("Build info:", metadata.BuildAsString())
+	fmt.Println("Copyright:", metadata.GetStartupLicense(
 		"type 'license warranty'",
 		"type 'license conditions'",
 	))
@@ -358,9 +358,9 @@ func (c *Command) version(argsString string) {
 
 func (c *Command) license(argsString string) {
 	if argsString == "warranty" {
-		fmt.Print(params.Warranty)
+		fmt.Print(metadata.Warranty)
 	} else if argsString == "conditions" {
-		fmt.Print(params.Conditions)
+		fmt.Print(metadata.Conditions)
 	} else {
 		info("identities command:\n    warranty\n    conditions")
 	}

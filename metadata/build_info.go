@@ -15,16 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package params
+// Package metadata contains build information of executable usually provided by
+// automated build systems like Travis. Default values are populated if not overriden by build system
+package metadata
 
-import (
-	"github.com/stretchr/testify/assert"
-	"testing"
+import "fmt"
+
+var (
+	// BuildCommit comes from COMMIT env variable
+	BuildCommit = "<unknown>"
+	// BuildBranch comes from BRANCH env variable - if it's github release, this variable will contain release tag name
+	BuildBranch = "<unknown>"
+	// BuildNumber comes from TRAVIS_JOB_NUMBER env variable
+	BuildNumber = "dev-build"
 )
 
-func TestGetStartupLicense(t *testing.T) {
-	license := GetStartupLicense("ask me", "beg others")
-	assert.Contains(t, license, "Mysterium Node Copyright (C)")
-	assert.Contains(t, license, "ask me")
-	assert.Contains(t, license, "beg others")
+// BuildAsString returns all defined build constants as single string
+func BuildAsString() string {
+	return fmt.Sprintf("Branch: %s. Build id: %s. Commit: %s", BuildBranch, BuildNumber, BuildCommit)
 }
