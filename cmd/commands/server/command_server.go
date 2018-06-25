@@ -28,6 +28,7 @@ import (
 	"github.com/mysterium/node/openvpn/discovery"
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/openvpn/tls"
+	"github.com/mysterium/node/params"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
@@ -59,6 +60,8 @@ type Command struct {
 
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
+	log.Infof("Starting Mysterium Server (%s)", params.VersionAsString())
+
 	err = cmd.checkOpenvpn()
 	if err != nil {
 		return err

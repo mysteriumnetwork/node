@@ -30,6 +30,7 @@ import (
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
+	"github.com/mysterium/node/params"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
@@ -122,6 +123,8 @@ type Command struct {
 
 // Start starts Tequilapi service, fetches location
 func (cmd *Command) Start() error {
+	log.Infof("Starting Mysterium Client (%s)", params.VersionAsString())
+
 	err := cmd.checkOpenvpn()
 	if err != nil {
 		return err
