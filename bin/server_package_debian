@@ -63,6 +63,9 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --depends "iptables" \
         --depends "iproute2" \
         --depends "sudo" \
+        --depends "debconf" \
+        --deb-templates bin/server_package/installation/templates \
+        --before-install bin/server_package/installation/pre-install.sh \
         --after-install bin/server_package/installation/post-install.sh \
         --after-remove bin/server_package/installation/post-uninstall.sh \
         -s dir -t deb \

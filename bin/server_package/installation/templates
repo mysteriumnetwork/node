@@ -1,0 +1,9 @@
+Template: mysterium/terms
+Type: note
+Description: You have to accept terms and conditions to install this software
+ https://github.com/MysteriumNetwork/node/blob/master/TERMS.md
+
+Template: mysterium/accept_terms
+Type: boolean
+Description: Do you accept Terms and Conditions?
+ In order to install this package you have to accept its terms and conditions

@@ -11,6 +11,7 @@ Group=mysterium-node
 
 RuntimeDirectory=mysterium-node
 RuntimeDirectoryMode=0750
+LogsDirectory=mysterium-node
 
 EnvironmentFile=-/etc/default/mysterium-node
 ExecStart=/usr/bin/mysterium_server $CONF_DIR $RUN_DIR $DISCOVERY $BROKER $PROTO --agreed-terms-and-conditions
