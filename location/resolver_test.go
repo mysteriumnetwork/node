@@ -37,7 +37,7 @@ func TestResolverResolveCountry(t *testing.T) {
 		{"asd", "", "failed to parse IP"},
 	}
 
-	resolver := NewResolver("../bin/server_package/config/GeoLite2-Country.mmdb")
+	resolver := NewResolver("../bin/common_package/GeoLite2-Country.mmdb")
 	for _, tt := range tests {
 		got, err := resolver.ResolveCountry(tt.ip)
 

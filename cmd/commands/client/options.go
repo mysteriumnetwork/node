@@ -129,7 +129,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.LocationDatabase,
 		"location.database",
-		"common/GeoLite2-Country.mmdb",
+		"GeoLite2-Country.mmdb",
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 

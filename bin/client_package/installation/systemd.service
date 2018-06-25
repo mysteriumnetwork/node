@@ -11,7 +11,6 @@ Group=mysterium-client
 
 RuntimeDirectory=mysterium-client
 RuntimeDirectoryMode=0750
-LogsDirectory=mysterium-client
 
 EnvironmentFile=-/etc/default/mysterium-client
 ExecStart=/usr/bin/mysterium_client $CONF_DIR $RUN_DIR $DISCOVERY

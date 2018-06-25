@@ -68,6 +68,7 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         -s dir -t deb \
         ${BINARY}=${OS_DIR_BIN}/ \
         bin/server_package/config/=${OS_DIR_CONFIG}/ \
+        bin/common_package/=${OS_DIR_CONFIG}/ \
         bin/server_package/sudoers/=${OS_DIR_SUDOERS}/ \
         bin/server_package/installation/=${OS_DIR_INSTALLATION}/ \
         README.md=${OS_DIR_DOC}/ \

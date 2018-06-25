@@ -26,7 +26,7 @@ import (
 
 func TestNewDetector(t *testing.T) {
 	ipResolver := ip.NewFakeResolver("8.8.8.8")
-	detector := NewDetector(ipResolver, "../bin/client_package/config/common/GeoLite2-Country.mmdb")
+	detector := NewDetector(ipResolver, "../bin/common_package/GeoLite2-Country.mmdb")
 	location, err := detector.DetectLocation()
 	assert.Equal(t, "US", location.Country)
 	assert.Equal(t, "8.8.8.8", location.IP)

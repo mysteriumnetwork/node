@@ -29,4 +29,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+cp -v bin/server_package/config/* $GOBIN/config
+cp -v bin/common_package/* $GOBIN/config
+
 exit 0
