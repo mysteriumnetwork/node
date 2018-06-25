@@ -143,14 +143,17 @@ func (cmd *Command) Wait() error {
 
 // Kill stops server
 func (cmd *Command) Kill() error {
+	err := cmd.natService.Stop()
+	if err != nil {
+		log.Warn("Nat server stop error: ", err)
+	}
+
 	cmd.vpnServer.Stop()
 
-	err := cmd.dialogWaiter.Stop()
+	err = cmd.dialogWaiter.Stop()
 	if err != nil {
 		return err
 	}
-
-	err = cmd.natService.Stop()
 
 	return err
 }
