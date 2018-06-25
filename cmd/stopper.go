@@ -52,6 +52,7 @@ func stop(kill Killer, exit exitter) {
 		msg := fmt.Sprintf("Error while killing process: %v\n", err.Error())
 		fmt.Fprintln(os.Stderr, msg)
 		exit(1)
+		return
 	}
 
 	fmt.Println("Good bye")

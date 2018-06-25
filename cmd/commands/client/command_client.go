@@ -133,7 +133,7 @@ func (cmd *Command) Start() error {
 
 	originalLocation, err := cmd.originalLocationCache.RefreshAndGet()
 	if err != nil {
-		log.Warn("Failed to detect original country", err)
+		log.Warn("Failed to detect original country: ", err)
 	} else {
 		log.Info("Original country detected: ", originalLocation.Country)
 	}
