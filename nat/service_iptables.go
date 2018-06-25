@@ -140,21 +140,19 @@ func (service *serviceIPTables) enableRules() error {
 }
 
 func (service *serviceIPTables) disableRules() error {
-	var stderr bytes.Buffer
 
 	for _, rule := range service.rules {
 		cmd := exec.Command(
-			"sh",
-			"-c",
-			"sudo /sbin/iptables --table nat --delete POSTROUTING --source "+
-				rule.SourceAddress+" ! --destination "+
-				rule.SourceAddress+" --jump SNAT --to "+
-				rule.TargetIP,
+			"sudo",
+			"/sbin/iptables",
+			"--table", "nat",
+			"--delete", "POSTROUTING", "--source",
+			rule.SourceAddress, "!", "--destination",
+			rule.SourceAddress, "--jump", "SNAT", "--to",
+			rule.TargetIP,
 		)
-		cmd.Stderr = &stderr
-
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("Failed to delete ip forwarding rule: %s. %s, cause: %s", cmd.Args, err.Error(), stderr.String())
+		if output, err := cmd.CombinedOutput(); err != nil {
+			log.Warn("Failed to delete ip forwarding rule: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 		}
 		log.Info(natLogPrefix, "Stopped forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
 	}
