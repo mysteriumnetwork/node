@@ -122,7 +122,8 @@ func (c *GenericConfig) SetPersistKey() {
 	c.SetFlag("persist-key")
 }
 
-// Setup iproute parameter with custom script to execute
+// SetScriptParam adds parameter with special handling of the value - it's treated as script name inside script search directory
+// additional needDoubleQuotes param indicates if scriptName should be surounded by double quotes ( example --up --down scripts)
 func (c *GenericConfig) SetScriptParam(paramName, scriptName string, needDoubleQuotes bool) {
 	fullPath := filepath.Join(c.scriptSearchPath, scriptName)
 	if needDoubleQuotes {

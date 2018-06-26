@@ -26,6 +26,7 @@ import (
 	"time"
 )
 
+// NewServiceProposalWithLocation creates service proposal description for openvpn service
 func NewServiceProposalWithLocation(
 	providerID identity.Identity,
 	providerContact dto_discovery.Contact,

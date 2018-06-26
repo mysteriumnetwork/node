@@ -24,7 +24,7 @@ type TunnelService interface {
 	Stop()
 }
 
-// Device represents tun device structure
+// TunnelDevice represents tun device structure
 type TunnelDevice struct {
 	Name string
 }

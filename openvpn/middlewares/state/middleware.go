@@ -35,6 +35,7 @@ type middleware struct {
 	listeners []Callback
 }
 
+// NewMiddleware creates state middleware for given list of callback listeners
 func NewMiddleware(listeners ...Callback) management.Middleware {
 	return &middleware{
 		listeners: listeners,

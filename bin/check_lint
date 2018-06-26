@@ -45,7 +45,6 @@ check_uncleaned_package "github.com/mysterium/node/tequilapi" 12
 check_uncleaned_package "github.com/mysterium/node/session" 6
 check_uncleaned_package "github.com/mysterium/node/service_discovery/dto" 13
 check_uncleaned_package "github.com/mysterium/node/server/dto" 6
-check_uncleaned_package "github.com/mysterium/node/openvpn" 30
 check_uncleaned_package "github.com/mysterium/node/nat" 4
 check_uncleaned_package "github.com/mysterium/node/money" 4
 check_uncleaned_package "github.com/mysterium/node/ip" 4
