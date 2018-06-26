@@ -22,8 +22,8 @@ import (
 	"testing"
 )
 
-func TestGetStartupLicense(t *testing.T) {
-	license := GetStartupLicense("ask me", "beg others")
+func TestLicenseCopyright(t *testing.T) {
+	license := LicenseCopyright("ask me", "beg others")
 	assert.Contains(t, license, "Mysterium Node Copyright (C)")
 	assert.Contains(t, license, "ask me")
 	assert.Contains(t, license, "beg others")

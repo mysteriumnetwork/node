@@ -34,3 +34,18 @@ const (
 func VersionAsString() string {
 	return fmt.Sprintf("%d.%d.%d", VersionMajor, VersionMinor, VersionPatch)
 }
+
+const versionSummaryFormat = `Mysterium Node
+  Version: %s
+  Build info: %s
+%s`
+
+// VersionAsSummary returns overview of current program's version
+func VersionAsSummary(licenseCopyright string) string {
+	return fmt.Sprintf(
+		versionSummaryFormat,
+		VersionAsString(),
+		BuildAsString(),
+		licenseCopyright,
+	)
+}

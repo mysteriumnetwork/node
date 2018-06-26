@@ -52,9 +52,14 @@ const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
+var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
+	"type 'license warranty'",
+	"type 'license conditions'",
+))
+
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
-	printVersion()
+	fmt.Println(versionSummary)
 
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
@@ -86,16 +91,6 @@ func (c *Command) Run() (err error) {
 
 		c.handleActions(line)
 	}
-}
-
-func printVersion() {
-	fmt.Println("Mysterium CLI")
-	fmt.Println("Version:", metadata.VersionAsString())
-	fmt.Println("Build info:", metadata.BuildAsString())
-	fmt.Println("Copyright:", metadata.GetStartupLicense(
-		"type 'license warranty'",
-		"type 'license conditions'",
-	))
 }
 
 // Kill stops cli
@@ -353,14 +348,14 @@ func (c *Command) stopClient() {
 }
 
 func (c *Command) version(argsString string) {
-	printVersion()
+	fmt.Println(versionSummary)
 }
 
 func (c *Command) license(argsString string) {
 	if argsString == "warranty" {
-		fmt.Print(metadata.Warranty)
+		fmt.Print(metadata.LicenseWarranty)
 	} else if argsString == "conditions" {
-		fmt.Print(metadata.Conditions)
+		fmt.Print(metadata.LicenseConditions)
 	} else {
 		info("identities command:\n    warranty\n    conditions")
 	}

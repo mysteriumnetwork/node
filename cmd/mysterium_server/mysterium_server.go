@@ -33,26 +33,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	versionSummary := metadata.VersionAsSummary(metadata.LicenseCopyright(
+		"run program with '--license.warranty' option",
+		"run program with '--license.conditions' option",
+	))
+
 	if options.Version {
-		printVersion()
+		fmt.Println(versionSummary)
 	} else if options.LicenseWarranty {
-		fmt.Print(metadata.Warranty)
+		fmt.Println(metadata.LicenseWarranty)
 	} else if options.LicenseConditions {
-		fmt.Print(metadata.Conditions)
+		fmt.Println(metadata.LicenseConditions)
 	} else {
-		printVersion()
+		fmt.Println(versionSummary)
+		fmt.Println()
+
 		runCMD(options)
 	}
-}
-
-func printVersion() {
-	fmt.Println("Mysterium server")
-	fmt.Println("Version:", metadata.VersionAsString())
-	fmt.Println("Build info:", metadata.BuildAsString())
-	fmt.Println("Copyright:", metadata.GetStartupLicense(
-		"run program with '-warranty' option",
-		"run program with '-conditions' option",
-	))
 }
 
 func runCMD(options server.CommandOptions) {

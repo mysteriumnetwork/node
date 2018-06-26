@@ -19,19 +19,18 @@ package metadata
 
 import "fmt"
 
-const licenseFormat = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+const licenseCopyrightFormat = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
 This program comes with ABSOLUTELY NO WARRANTY; for details %v.
 This is free software, and you are welcome to redistribute it
-under certain conditions; %v for details.
-`
+under certain conditions; %v for details.`
 
-// GetStartupLicense returns startup license string with custom commands
-func GetStartupLicense(warrantyCommand, conditionsCommand string) string {
-	return fmt.Sprintf(licenseFormat, warrantyCommand, conditionsCommand)
+// LicenseCopyright returns copyright text string with custom commands
+func LicenseCopyright(warrantyCommand, conditionsCommand string) string {
+	return fmt.Sprintf(licenseCopyrightFormat, warrantyCommand, conditionsCommand)
 }
 
-// Warranty of license
-const Warranty = `
+// LicenseWarranty of license
+const LicenseWarranty = `
   THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
 APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
 HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
@@ -39,12 +38,10 @@ OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,
 THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
 PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
 IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
-ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
+ALL NECESSARY SERVICING, REPAIR OR CORRECTION.`
 
-`
-
-// Conditions of license
-const Conditions = `
+// LicenseConditions of license
+const LicenseConditions = `
                        TERMS AND CONDITIONS
 
   0. Definitions.
@@ -595,6 +592,4 @@ an absolute waiver of all civil liability in connection with the
 Program, unless a warranty or assumption of liability accompanies a
 copy of the Program in return for a fee.
 
-                     END OF TERMS AND CONDITIONS
-
-`
+                     END OF TERMS AND CONDITIONS`
