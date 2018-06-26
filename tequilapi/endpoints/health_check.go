@@ -19,16 +19,17 @@ package endpoints
 
 import (
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/tequilapi/utils"
-	"github.com/mysterium/node/version"
 	"net/http"
 	"time"
 )
 
 type healthCheckData struct {
-	Uptime  string    `json:"uptime"`
-	Process int       `json:"process"`
-	Version buildInfo `json:"version"`
+	Uptime    string    `json:"uptime"`
+	Process   int       `json:"process"`
+	Version   string    `json:"version"`
+	BuildInfo buildInfo `json:"buildInfo"`
 }
 
 type buildInfo struct {
@@ -41,20 +42,18 @@ type healthCheckEndpoint struct {
 	startTime       time.Time
 	currentTimeFunc func() time.Time
 	processNumber   int
-	versionInfo     *version.Info
 }
 
 /*
 HealthCheckEndpointFactory creates a structure with single HealthCheck method for healthcheck serving as http,
 currentTimeFunc is injected for easier testing
 */
-func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() int, versionInfo *version.Info) *healthCheckEndpoint {
+func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() int) *healthCheckEndpoint {
 	startTime := currentTimeFunc()
 	return &healthCheckEndpoint{
 		startTime,
 		currentTimeFunc,
 		procID(),
-		versionInfo,
 	}
 }
 
@@ -62,10 +61,11 @@ func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request 
 	status := healthCheckData{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),
 		Process: hce.processNumber,
-		Version: buildInfo{
-			hce.versionInfo.Commit,
-			hce.versionInfo.Branch,
-			hce.versionInfo.BuildNumber,
+		Version: metadata.VersionAsString(),
+		BuildInfo: buildInfo{
+			metadata.BuildCommit,
+			metadata.BuildBranch,
+			metadata.BuildNumber,
 		},
 	}
 	utils.WriteAsJSON(status, writer)

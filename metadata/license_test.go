@@ -15,17 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package license
+package metadata
 
-import "fmt"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
-// GetStartupLicense returns startup license string with custom commands
-func GetStartupLicense(warrantyCommand, conditionsCommand string) string {
-	return fmt.Sprintf(licenseFormat, warrantyCommand, conditionsCommand)
+func TestLicenseCopyright(t *testing.T) {
+	license := LicenseCopyright("ask me", "beg others")
+	assert.Contains(t, license, "Mysterium Node Copyright (C)")
+	assert.Contains(t, license, "ask me")
+	assert.Contains(t, license, "beg others")
 }
-
-const licenseFormat = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
-This program comes with ABSOLUTELY NO WARRANTY; for details %v.
-This is free software, and you are welcome to redistribute it
-under certain conditions; %v for details.
-`

@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
-	"github.com/mysterium/node/cmd/license"
 	_ "github.com/mysterium/node/logconfig"
+	"github.com/mysterium/node/metadata"
 	"os"
 )
 
@@ -33,11 +33,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	if options.LicenseWarranty {
-		fmt.Print(license.Warranty)
+	versionSummary := metadata.VersionAsSummary(metadata.LicenseCopyright(
+		"run program with '--license.warranty' option",
+		"run program with '--license.conditions' option",
+	))
+
+	if options.Version {
+		fmt.Println(versionSummary)
+	} else if options.LicenseWarranty {
+		fmt.Println(metadata.LicenseWarranty)
 	} else if options.LicenseConditions {
-		fmt.Print(license.Conditions)
+		fmt.Println(metadata.LicenseConditions)
 	} else {
+		fmt.Println(versionSummary)
+		fmt.Println()
+
 		runCMD(options)
 	}
 }

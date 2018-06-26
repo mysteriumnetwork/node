@@ -22,8 +22,8 @@ import (
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/cli"
 	"github.com/mysterium/node/cmd/commands/client"
-	"github.com/mysterium/node/cmd/license"
 	_ "github.com/mysterium/node/logconfig"
+	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"os"
 	"path/filepath"
@@ -36,13 +36,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	if options.CLI {
-		runCLI(options)
+	versionSummary := metadata.VersionAsSummary(metadata.LicenseCopyright(
+		"run program with '--license.warranty' option",
+		"run program with '--license.conditions' option",
+	))
+
+	if options.Version {
+		fmt.Println(versionSummary)
 	} else if options.LicenseWarranty {
-		fmt.Print(license.Warranty)
+		fmt.Println(metadata.LicenseWarranty)
 	} else if options.LicenseConditions {
-		fmt.Print(license.Conditions)
+		fmt.Println(metadata.LicenseConditions)
+	} else if options.CLI {
+		runCLI(options)
 	} else {
+		fmt.Println(versionSummary)
+		fmt.Println()
+
 		runCMD(options)
 	}
 }

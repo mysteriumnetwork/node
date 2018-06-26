@@ -27,7 +27,7 @@ import (
 // ApplicationStopper stops application and performs required cleanup tasks
 type ApplicationStopper func()
 
-// StopOnInterrupts invokes given stopper on SIGTERM and SIGHUP interrupts with additional wait condition
+// StopOnInterruptsConditional invokes given stopper on SIGTERM and SIGHUP interrupts with additional wait condition
 func StopOnInterruptsConditional(stop ApplicationStopper, stopWaiter *sync.WaitGroup) {
 	sigterm := make(chan os.Signal)
 	signal.Notify(sigterm, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)

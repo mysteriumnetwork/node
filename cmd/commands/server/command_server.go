@@ -19,11 +19,11 @@ package server
 
 import (
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/cmd/license"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
+	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/discovery"
@@ -32,7 +32,6 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
-	"github.com/mysterium/node/version"
 	"sync"
 	"time"
 )
@@ -61,8 +60,8 @@ type Command struct {
 
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
-	printLicense()
-	log.Info("[Server version]", version.AsString())
+	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
+
 	err = cmd.checkOpenvpn()
 	if err != nil {
 		return err
@@ -90,12 +89,12 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	location, err := cmd.locationDetector.DetectLocation()
+	currentLocation, err := cmd.locationDetector.DetectLocation()
 	if err != nil {
 		return err
 	}
-	log.Info("Country detected: ", location.Country)
-	serviceLocation := dto_discovery.Location{Country: location.Country}
+	log.Info("Country detected: ", currentLocation.Country)
+	serviceLocation := dto_discovery.Location{Country: currentLocation.Country}
 
 	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
 
@@ -132,14 +131,6 @@ func (cmd *Command) Start() (err error) {
 	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 
 	return nil
-}
-
-func printLicense() {
-	startupLicense := license.GetStartupLicense(
-		"run program with '-warranty' option",
-		"run program with '-conditions' option",
-	)
-	log.Info("\n" + startupLicense)
 }
 
 // Wait blocks until server is stopped

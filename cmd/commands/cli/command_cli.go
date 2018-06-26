@@ -20,8 +20,8 @@ package cli
 import (
 	"fmt"
 	"github.com/chzyer/readline"
-	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/cmd/license"
+	node_cmd "github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"io"
 	"log"
@@ -52,10 +52,15 @@ const redColor = "\033[31m%s\033[0m"
 const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
+var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
+	"type 'license warranty'",
+	"type 'license conditions'",
+))
+
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *Command) Run() (err error) {
-	startupLicense := license.GetStartupLicense("type 'license warranty'", "type 'license conditions'")
-	fmt.Print(startupLicense + "\n")
+	fmt.Println(versionSummary)
+
 	c.fetchedProposals = c.fetchProposals()
 	c.completer = newAutocompleter(c.tequilapi, c.fetchedProposals)
 
@@ -118,6 +123,7 @@ func (c *Command) handleActions(line string) {
 		{command: "connect", handler: c.connect},
 		{command: "unlock", handler: c.unlock},
 		{command: "identities", handler: c.identities},
+		{command: "version", handler: c.version},
 		{command: "license", handler: c.license},
 	}
 
@@ -278,7 +284,7 @@ func (c *Command) help() {
 
 // quit stops cli and client commands and exits application
 func (c *Command) quit() {
-	stop := cmd.NewApplicationStopper(c.Kill)
+	stop := node_cmd.NewApplicationStopper(c.Kill)
 	stop()
 }
 
@@ -341,11 +347,15 @@ func (c *Command) stopClient() {
 	success("Client stopped")
 }
 
+func (c *Command) version(argsString string) {
+	fmt.Println(versionSummary)
+}
+
 func (c *Command) license(argsString string) {
 	if argsString == "warranty" {
-		fmt.Print(license.Warranty)
+		fmt.Print(metadata.LicenseWarranty)
 	} else if argsString == "conditions" {
-		fmt.Print(license.Conditions)
+		fmt.Print(metadata.LicenseConditions)
 	} else {
 		info("identities command:\n    warranty\n    conditions")
 	}

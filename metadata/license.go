@@ -15,9 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package license
+package metadata
 
-const Warranty = `
+import "fmt"
+
+const licenseCopyrightFormat = `Mysterium Node Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+This program comes with ABSOLUTELY NO WARRANTY; for details %v.
+This is free software, and you are welcome to redistribute it
+under certain conditions; %v for details.`
+
+// LicenseCopyright returns copyright text string with custom commands
+func LicenseCopyright(warrantyCommand, conditionsCommand string) string {
+	return fmt.Sprintf(licenseCopyrightFormat, warrantyCommand, conditionsCommand)
+}
+
+// LicenseWarranty of license
+const LicenseWarranty = `
   THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
 APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
 HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
@@ -25,11 +38,10 @@ OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,
 THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
 PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
 IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
-ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
+ALL NECESSARY SERVICING, REPAIR OR CORRECTION.`
 
-`
-
-const Conditions = `
+// LicenseConditions of license
+const LicenseConditions = `
                        TERMS AND CONDITIONS
 
   0. Definitions.
@@ -580,6 +592,4 @@ an absolute waiver of all civil liability in connection with the
 Program, unless a warranty or assumption of liability accompanies a
 copy of the Program in return for a fee.
 
-                     END OF TERMS AND CONDITIONS
-
-`
+                     END OF TERMS AND CONDITIONS`

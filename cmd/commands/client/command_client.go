@@ -22,20 +22,19 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/client/connection"
 	node_cmd "github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/cmd/license"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
+	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
-	"github.com/mysterium/node/version"
 	"path/filepath"
 	"time"
 )
@@ -124,8 +123,8 @@ type Command struct {
 
 // Start starts Tequilapi service, fetches location
 func (cmd *Command) Start() error {
-	printLicense()
-	log.Info("[Client version]", version.AsString())
+	log.Infof("Starting Mysterium Client (%s)", metadata.VersionAsString())
+
 	err := cmd.checkOpenvpn()
 	if err != nil {
 		return err
@@ -151,14 +150,6 @@ func (cmd *Command) Start() error {
 	log.Infof("Api started on: %d", port)
 
 	return nil
-}
-
-func printLicense() {
-	startupLicense := license.GetStartupLicense(
-		"run program with '-license.warranty' option",
-		"run program with '-license.conditions' option",
-	)
-	log.Info("\n" + startupLicense)
 }
 
 // Wait blocks until tequilapi service is stopped

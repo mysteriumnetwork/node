@@ -19,7 +19,7 @@ package endpoints
 
 import (
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/version"
+	"github.com/mysterium/node/metadata"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
@@ -34,14 +34,13 @@ func TestHealthCheckReturnsExpectedJSONObject(t *testing.T) {
 	tick1 := time.Unix(0, 0)
 	tick2 := tick1.Add(time.Minute)
 
+	metadata.BuildBranch = "some"
+	metadata.BuildCommit = "abc123"
+	metadata.BuildNumber = "travis build #"
+
 	handlerFunc := HealthCheckEndpointFactory(
 		newMockTimer([]time.Time{tick1, tick2}).Now,
 		func() int { return 1 },
-		&version.Info{
-			Branch:      "some",
-			Commit:      "abc123",
-			BuildNumber: "travis build #",
-		},
 	).HealthCheck
 	handlerFunc(resp, req, httprouter.Params{})
 
@@ -50,7 +49,8 @@ func TestHealthCheckReturnsExpectedJSONObject(t *testing.T) {
 		`{
             "uptime" : "1m0s",
             "process" : 1,
-            "version" : {
+			"version": "`+metadata.VersionAsString()+`",
+            "buildInfo" : {
                 "branch": "some",
                 "commit": "abc123",
                 "buildNumber": "travis build #"
