@@ -14,7 +14,9 @@ RuntimeDirectoryMode=0750
 
 EnvironmentFile=-/etc/default/mysterium-client
 ExecStart=/usr/bin/mysterium_client $CONF_DIR $RUN_DIR $DISCOVERY
-KillMode=control-group
+KillMode=process
+TimeoutStopSec=10
+SendSIGKILL=yes
 Restart=on-failure
 
 [Install]
