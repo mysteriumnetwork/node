@@ -48,14 +48,11 @@ func (service *serviceLinuxTun) Stop() {
 
 	if exists, err = service.deviceExists(); err != nil {
 		log.Info(tunLogPrefix, err)
-		log.Flush()
 	}
 
-	if !exists {
-		return
+	if exists {
+		service.deleteDevice()
 	}
-
-	service.deleteDevice()
 }
 
 func (service *serviceLinuxTun) createTunDevice() (err error) {
@@ -72,10 +69,11 @@ func (service *serviceLinuxTun) createTunDevice() (err error) {
 	cmd := utils.SplitCommand("sudo", "ip tuntap add dev "+service.device.Name+" mode tun")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Warn("Failed to add tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		// we should not proceed without tun device
 		return err
-	} else {
-		log.Info(tunLogPrefix, service.device.Name+" device created")
 	}
+
+	log.Info(tunLogPrefix, service.device.Name+" device created")
 	return nil
 }
 

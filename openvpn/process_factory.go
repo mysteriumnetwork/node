@@ -24,6 +24,7 @@ import (
 	"github.com/mysterium/node/openvpn/management"
 )
 
+// CreateNewProcess creates new openvpn process with given config params
 func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) Process {
 	config.SetDevice("tun")
 	return newProcess(openvpnBinary, config, middlewares...)
