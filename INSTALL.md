@@ -96,6 +96,15 @@ wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/myster
 sudo dpkg --install --force-depends mysterium-client_linux_amd64.deb
 sudo apt-get install --fix-broken
 ```
+
+In order for mysterium client to change system DNS servers to ones provided by VPN node
+ it needs to modify /etc/resolv.conf
+This change is performed by resolvconf utility. After resolvconf utility is installed, you need:
+```bash
+dpkg-reconfigure resolvconf
+```
+in order to be able to alter /etc/resolv.conf dinamically.
+
 ### Running service
 ```bash
 sudo service mysterium-client start
