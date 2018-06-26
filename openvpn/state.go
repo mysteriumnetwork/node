@@ -19,7 +19,6 @@ package openvpn
 
 type State string
 
-const UndefinedState = State("UNDEFINED")
 const ConnectingState = State("CONNECTING")
 const WaitState = State("WAIT")
 const AuthenticatingState = State("AUTH")
@@ -29,3 +28,16 @@ const AddRoutesState = State("ADD_ROUTES")
 const ConnectedState = State("CONNECTED")
 const ReconnectingState = State("RECONNECTING")
 const ExitingState = State("EXITING")
+
+// two "fake" states which has no description in openvpn management interface documentation
+// ProcessStarted state is reported by state middleware when middleware start method itself is called
+// it means that process successfully connected to management interface
+const ProcessStarted = State("PROCESS_STARTED")
+
+// ProcessExited state is reported on state middleware stop method to indicate that process disconnected from
+// interface and this is LAST state to report
+const ProcessExited = State("PROCESS_EXITED")
+
+// UnknownState is reported when state middleware cannot parse state from string (i.e. it's undefined in list above),
+// usually that means that newer openvpn version reports something extra
+const UnknownState = State("UNKNOWN")

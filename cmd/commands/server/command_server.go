@@ -113,10 +113,12 @@ func (cmd *Command) Start() (err error) {
 	stopDiscoveryAnnouncement := make(chan int)
 	vpnStateCallback := func(state openvpn.State) {
 		switch state {
+		case openvpn.ProcessStarted:
+			log.Info("Openvpn service booting up")
 		case openvpn.ConnectedState:
-			log.Info("Open vpn service started")
-		case openvpn.ExitingState:
-			log.Info("Open vpn service exiting")
+			log.Info("Openvpn service started successfully")
+		case openvpn.ProcessExited:
+			log.Info("Openvpn service exited")
 			close(stopDiscoveryAnnouncement)
 		}
 	}
