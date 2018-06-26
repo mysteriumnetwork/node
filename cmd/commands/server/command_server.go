@@ -85,9 +85,7 @@ func (cmd *Command) Start() (err error) {
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      vpnServerIP,
 	})
-	if err = cmd.natService.Start(); err != nil {
-		return err
-	}
+	cmd.natService.Start()
 
 	currentLocation, err := cmd.locationDetector.DetectLocation()
 	if err != nil {
@@ -145,14 +143,10 @@ func (cmd *Command) Wait() error {
 
 // Kill stops server
 func (cmd *Command) Kill() error {
-	err := cmd.natService.Stop()
-	if err != nil {
-		log.Warn("Nat server stop error: ", err)
-	}
-
+	cmd.natService.Stop()
 	cmd.vpnServer.Stop()
 
-	err = cmd.dialogWaiter.Stop()
+	err := cmd.dialogWaiter.Stop()
 	if err != nil {
 		return err
 	}
@@ -190,7 +184,6 @@ func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mys
 			if err != nil {
 				log.Error("Failed to unregister proposal: ", err)
 			}
-			log.Flush()
 			return
 		}
 	}

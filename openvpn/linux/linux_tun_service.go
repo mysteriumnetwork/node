@@ -18,11 +18,8 @@
 package linux
 
 import (
-	"fmt"
-	"os/exec"
-
-	"bytes"
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/utils"
 	"os"
 )
 
@@ -58,9 +55,7 @@ func (service *serviceLinuxTun) Stop() {
 		return
 	}
 
-	if err = service.deleteDevice(); err != nil {
-		log.Info(tunLogPrefix, err)
-	}
+	service.deleteDevice()
 }
 
 func (service *serviceLinuxTun) createTunDevice() (err error) {
@@ -71,21 +66,16 @@ func (service *serviceLinuxTun) createTunDevice() (err error) {
 
 	if exists {
 		log.Info(tunLogPrefix, service.device.Name+" device already exists, attempting to use it")
-		return nil
+		return
 	}
 
-	var stderr bytes.Buffer
-	cmd := exec.Command(
-		"sh",
-		"-c",
-		"sudo ip tuntap add dev "+service.device.Name+" mode tun",
-	)
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("Failed to add tun device: %s: %s", err, stderr.String())
+	cmd := utils.SplitCommand("sudo", "ip tuntap add dev "+service.device.Name+" mode tun")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		log.Warn("Failed to add tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		return err
+	} else {
+		log.Info(tunLogPrefix, service.device.Name+" device created")
 	}
-
-	log.Info(tunLogPrefix, service.device.Name+" device created")
 	return nil
 }
 
@@ -97,19 +87,11 @@ func (service *serviceLinuxTun) deviceExists() (exists bool, err error) {
 	return false, err
 }
 
-func (service *serviceLinuxTun) deleteDevice() (err error) {
-	var stderr bytes.Buffer
-	cmd := exec.Command(
-		"sh",
-		"-c",
-		"sudo ip tuntap delete dev "+service.device.Name+" mode tun",
-	)
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		log.Info(tunLogPrefix, service.device.Name, stderr.String())
-		return fmt.Errorf("Failed to remove tun device: %s", err)
+func (service *serviceLinuxTun) deleteDevice() {
+	cmd := utils.SplitCommand("sudo", "ip tuntap delete dev "+service.device.Name+" mode tun")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		log.Warn("Failed to remove tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+	} else {
+		log.Info(tunLogPrefix, service.device.Name, " device removed")
 	}
-
-	log.Info(tunLogPrefix, service.device.Name, " device removed")
-	return nil
 }

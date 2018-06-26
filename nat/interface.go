@@ -19,8 +19,8 @@ package nat
 
 type NATService interface {
 	Add(rule RuleForwarding)
-	Start() error
-	Stop() error
+	Start()
+	Stop()
 }
 
 type RuleForwarding struct {

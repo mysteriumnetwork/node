@@ -29,7 +29,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-cp -v bin/client_package/$GOOS/* $GOBIN/config
+mkdir -p $GOBIN/config
+
+cp -v bin/client_package/config/$GOOS/* $GOBIN/config
 cp -v bin/common_package/* $GOBIN/config
 
 exit 0
