@@ -15,7 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package metadata
 
-// MysteriumAPIURL stores MYSTERIUM_API_URL env variable that is complied in
-var MysteriumAPIURL string
+// NetworkDefinition structure holds all parameters which describe particular network
+type NetworkDefinition struct {
+	DiscoveryAPIAddress string
+	BrokerAddress       string
+}
+
+// TestNetworkDefinition defines parameters for test network (currently default network)
+var TestNetworkDefinition = NetworkDefinition{
+	"https://testnet-api.mysterium.network/v1",
+	"testnet-broker.mysterium.network",
+}

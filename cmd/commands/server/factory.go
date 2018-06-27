@@ -26,6 +26,7 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
+	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/server/auth"
@@ -40,9 +41,11 @@ import (
 
 // NewCommand function creates new server command by given options
 func NewCommand(options CommandOptions) *Command {
+	networkDefinition := getNetworkDefinition(options)
 	return NewCommandWith(
 		options,
-		server.NewClient(options.DiscoveryAPIAddress),
+		networkDefinition,
+		server.NewClient(networkDefinition.DiscoveryAPIAddress),
 		ip.NewResolver(options.IpifyUrl),
 		nat.NewService(),
 	)
@@ -51,6 +54,7 @@ func NewCommand(options CommandOptions) *Command {
 // NewCommandWith function creates new client command by given options + injects given dependencies
 func NewCommandWith(
 	options CommandOptions,
+	networkDefintion metadata.NetworkDefinition,
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	natService nat.NATService,
@@ -91,7 +95,7 @@ func NewCommandWith(
 		natService:       natService,
 		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
-				nats_discovery.NewAddressGenerate(options.BrokerAddress, myID),
+				nats_discovery.NewAddressGenerate(networkDefintion.BrokerAddress, myID),
 				identity.NewSigner(keystoreInstance, myID),
 			)
 		},
@@ -135,4 +139,19 @@ func NewCommandWith(
 		protocol:       options.Protocol,
 		WaitUnregister: &sync.WaitGroup{},
 	}
+}
+
+// TODO this function can be aligned with client function when client and server options will merge into
+func getNetworkDefinition(options CommandOptions) metadata.NetworkDefinition {
+	network := metadata.TestNetworkDefinition
+
+	//override defined values one by one from options
+	if options.DiscoveryAPIAddress != "" {
+		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
+	}
+
+	if options.BrokerAddress != "" {
+		network.BrokerAddress = options.BrokerAddress
+	}
+	return network
 }

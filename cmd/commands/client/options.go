@@ -39,7 +39,6 @@ type CommandOptions struct {
 	LicenseConditions bool
 
 	DiscoveryAPIAddress string
-	BrokerAddress       string
 	IpifyUrl            string
 
 	LocationDatabase string
@@ -114,7 +113,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.DiscoveryAPIAddress,
 		"discovery-address",
-		cmd.MysteriumAPIURL,
+		"",
 		"Address (URL form) of discovery service",
 	)
 
