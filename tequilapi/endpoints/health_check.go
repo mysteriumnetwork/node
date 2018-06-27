@@ -28,20 +28,22 @@ import (
 // swagger:model
 type healthCheckData struct {
 	// example: 25h53m33.540493171s
-	Uptime    string    `json:"uptime"`
+	Uptime string `json:"uptime"`
 
 	// example: 10449
-	Process   int       `json:"process"`
+	Process int `json:"process"`
+
+	// example: 0.0.6
 	Version   string    `json:"version"`
 	BuildInfo buildInfo `json:"buildInfo"`
 }
 
 type buildInfo struct {
-	// example: unknown
-	Commit      string `json:"commit"`
+	// example: <unknown>
+	Commit string `json:"commit"`
 
-	// example: unknown
-	Branch      string `json:"branch"`
+	// example: <unknown>
+	Branch string `json:"branch"`
 
 	// example: dev-build
 	BuildNumber string `json:"buildNumber"`
