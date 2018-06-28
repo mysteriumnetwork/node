@@ -114,9 +114,9 @@ func (cw *CmdWrapper) waitForShutdown(cmd *exec.Cmd) {
 	defer cw.cmdShutdownWaiter.Done()
 
 	<-cw.cmdShutdownStarted
-	//First - shutdown gracefully
+	//First - shutdown gracefully by sending SIGINT (the only two signals guaranteed to be present in all OS'es SIGINT and SIGKILL)
 	//TODO - add timer and send SIGKILL after timeout?
-	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
 		log.Error(cw.logPrefix, "Error killing cw = ", err)
 	}
 }
