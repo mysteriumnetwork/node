@@ -50,8 +50,8 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 	}
 }
 
-func newClientConfig(configDir string, scriptSearchPath string) *ClientConfig {
-	clientConfig := ClientConfig{config.NewConfig(configDir, scriptSearchPath)}
+func newClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
+	clientConfig := ClientConfig{config.NewConfig(runtimeDir, scriptSearchPath)}
 
 	clientConfig.RestrictReconnects()
 
@@ -101,8 +101,8 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	clientConfig := ClientConfig{config.NewConfig(runtimeDir, configDir)}
 	clientConfig.AddOptions(config.OptionFile("config", configAsString, configFile))
 
-	clientConfig.SetScriptParam("up", "update-resolv-conf", true)
-	clientConfig.SetScriptParam("down", "update-resolv-conf", true)
+	clientConfig.SetScriptParam("up", config.QuotedPath("update-resolv-conf"))
+	clientConfig.SetScriptParam("down", config.QuotedPath("update-resolv-conf"))
 
 	return &clientConfig, nil
 }

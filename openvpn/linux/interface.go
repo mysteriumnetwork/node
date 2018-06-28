@@ -19,7 +19,6 @@ package linux
 
 // TunnelService defines interface to manage tun device
 type TunnelService interface {
-	Add(tun TunnelDevice)
 	Start() error
 	Stop()
 }

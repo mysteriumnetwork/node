@@ -36,10 +36,6 @@ type linuxOpenvpnProcess struct {
 }
 
 func (ls *linuxOpenvpnProcess) Start() error {
-	//TODO - can we avoid hardcoding device name?
-	//i.e. search for first available which is down (loop from 0 to x for fixed iteration count)
-	ls.tunService.Add(linux.TunnelDevice{"tun0"})
-
 	if err := ls.tunService.Start(); err != nil {
 		return err
 	}
@@ -71,14 +67,35 @@ func (ls *linuxOpenvpnProcess) Stop() {
 }
 
 // NewLinuxProcess creates linux OS customized openvpn process
-func NewLinuxProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) Process {
-	config.SetPersistTun()
-	config.SetDevice("tun0")
-	config.SetScriptParam("iproute", "nonpriv-ip", false)
+func NewLinuxProcess(openvpnBinary string, configuration *config.GenericConfig, middlewares ...management.Middleware) Process {
+	tunDevice, err := linux.FindFreeTunDevice()
+	if err != nil {
+		return failedOnStartProcess{err}
+	}
+
+	configuration.SetPersistTun()
+	configuration.SetDevice(tunDevice.Name)
+	configuration.SetScriptParam("iproute", config.SimplePath("nonpriv-ip"))
 
 	return &linuxOpenvpnProcess{
-		Process:    newProcess(openvpnBinary, config, middlewares...),
-		tunService: linux.NewLinuxTunnelService(),
+		Process:    newProcess(openvpnBinary, configuration, middlewares...),
+		tunService: linux.NewLinuxTunnelService(tunDevice),
 		finished:   &sync.WaitGroup{},
 	}
+}
+
+type failedOnStartProcess struct {
+	err error
+}
+
+func (f failedOnStartProcess) Start() error {
+	return f.err
+}
+
+func (f failedOnStartProcess) Wait() error {
+	return nil
+}
+
+func (f failedOnStartProcess) Stop() {
+
 }

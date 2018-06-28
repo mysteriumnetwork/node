@@ -46,20 +46,19 @@ sudo docker logs -f mysterium-node
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_armhf.deb
 
-### Install latest OpenVPN and dependencies
+###  Add latest OpenVPN repository
 
 ```bash
 apt-get update && apt-get install -y curl
 curl -s https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 apt-get update
-apt-get install openvpn ca-certificates iproute2 sudo
 ```
 
 ### Installation
 ```bash
 wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
 sudo dpkg --install --force-depends mysterium-node_linux_amd64.deb
-sudo apt-get install --fix-broken
+sudo apt-get install -y --fix-broken
 ```
 ### Running service
 ```bash
@@ -81,20 +80,19 @@ sudo mysterium_server --data-dir=/var/lib/mysterium-node --config-dir=/etc/myste
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_armhf.deb
 
-### Install latest OpenVPN and dependencies
+### Add latest OpenVPN repository
 
 ```bash
 apt-get update && apt-get install -y curl
 curl -s https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 apt-get update
-apt-get install openvpn resolvconf ca-certificates iproute2 sudo
 ```
 
 ### Installation
 ```bash
 wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
 sudo dpkg --install --force-depends mysterium-client_linux_amd64.deb
-sudo apt-get install --fix-broken
+sudo apt-get install -y --fix-broken
 ```
 
 In order for mysterium client to change system DNS servers to ones provided by VPN node

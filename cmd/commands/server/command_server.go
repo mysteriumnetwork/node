@@ -85,7 +85,11 @@ func (cmd *Command) Start() (err error) {
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      vpnServerIP,
 	})
-	cmd.natService.Start()
+
+	err = cmd.natService.Start()
+	if err != nil {
+		log.Warn("received nat service error: ", err, " trying to proceed.")
+	}
 
 	currentLocation, err := cmd.locationDetector.DetectLocation()
 	if err != nil {

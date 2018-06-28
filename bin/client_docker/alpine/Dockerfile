@@ -22,7 +22,6 @@ COPY bin/client_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 COPY bin/client_package/config/linux /etc/mysterium-client
-#COPY bin/client_package/config/common /etc/mysterium-client
 
 COPY --from=builder /go/src/github.com/mysterium/node/build/client/mysterium_client /usr/bin/mysterium_client
 

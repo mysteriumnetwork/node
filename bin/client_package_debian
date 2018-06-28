@@ -72,7 +72,6 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         bin/common_package/=${OS_DIR_CONFIG}/ \
         bin/client_package/sudoers/=${OS_DIR_SUDOERS}/ \
         bin/client_package/installation/=${OS_DIR_INSTALLATION}/ \
-        README.md=${OS_DIR_DOC}/ \
         INSTALL.md=${OS_DIR_DOC}/
 
 if [ $? -ne 0 ] ; then

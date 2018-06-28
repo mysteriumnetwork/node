@@ -18,15 +18,14 @@
 package config
 
 import (
-	"fmt"
 	"path/filepath"
 	"strconv"
 )
 
 // NewConfig creates new openvpn configuration structure and takes configuration directory as parameter for file param serialization
-func NewConfig(configDir string, scriptSearchPath string) *GenericConfig {
+func NewConfig(runtimeDir string, scriptSearchPath string) *GenericConfig {
 	return &GenericConfig{
-		configDir:        configDir,
+		runtimeDir:       runtimeDir,
 		scriptSearchPath: scriptSearchPath,
 		options:          make([]configOption, 0),
 	}
@@ -34,7 +33,7 @@ func NewConfig(configDir string, scriptSearchPath string) *GenericConfig {
 
 // GenericConfig represents openvpn configuration structure common for both client and server modes
 type GenericConfig struct {
-	configDir        string
+	runtimeDir       string
 	scriptSearchPath string
 	options          []configOption
 }
@@ -80,18 +79,18 @@ func (c *GenericConfig) SetDevice(deviceName string) {
 
 // SetTLSCACertificate setups Certificate Authority parameter (in PEM format) for server certificate validation
 func (c *GenericConfig) SetTLSCACertificate(caFile string) {
-	c.AddOptions(OptionFile("ca", caFile, filepath.Join(c.configDir, "ca.crt")))
+	c.AddOptions(OptionFile("ca", caFile, filepath.Join(c.runtimeDir, "ca.crt")))
 }
 
 // SetTLSPrivatePubKeys sets certificate and private key for TLS communication on server side
 func (c *GenericConfig) SetTLSPrivatePubKeys(certFile string, certKeyFile string) {
-	c.AddOptions(OptionFile("cert", certFile, filepath.Join(c.configDir, "server.crt")))
-	c.AddOptions(OptionFile("key", certKeyFile, filepath.Join(c.configDir, "server.key")))
+	c.AddOptions(OptionFile("cert", certFile, filepath.Join(c.runtimeDir, "server.crt")))
+	c.AddOptions(OptionFile("key", certKeyFile, filepath.Join(c.runtimeDir, "server.key")))
 }
 
 // SetTLSCrypt sets preshared TLS key on both client and server side
 func (c *GenericConfig) SetTLSCrypt(cryptFile string) {
-	c.AddOptions(OptionFile("tls-crypt", cryptFile, filepath.Join(c.configDir, "ta.key")))
+	c.AddOptions(OptionFile("tls-crypt", cryptFile, filepath.Join(c.runtimeDir, "ta.key")))
 }
 
 // RestrictReconnects describes conditions which enforces client to close a session in case of failed authentication
@@ -122,16 +121,8 @@ func (c *GenericConfig) SetPersistKey() {
 	c.SetFlag("persist-key")
 }
 
-// SetScriptParam adds parameter with special handling of the value - it's treated as script name inside script search directory
-// additional needDoubleQuotes param indicates if scriptName should be surounded by double quotes ( example --up --down scripts)
-func (c *GenericConfig) SetScriptParam(paramName, scriptName string, needDoubleQuotes bool) {
-	fullPath := filepath.Join(c.scriptSearchPath, scriptName)
-	if needDoubleQuotes {
-		fullPath = wrapWithDoubleQuotes(fullPath)
-	}
+// SetScriptParam adds parameter with name and value which represents script path against script search directory
+func (c *GenericConfig) SetScriptParam(paramName string, script Script) {
+	fullPath := script.FullPath(c.scriptSearchPath)
 	c.SetParam(paramName, fullPath)
-}
-
-func wrapWithDoubleQuotes(val string) string {
-	return fmt.Sprintf(`"%s"`, val)
 }

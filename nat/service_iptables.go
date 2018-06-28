@@ -34,10 +34,17 @@ func (service *serviceIPTables) Add(rule RuleForwarding) {
 	service.rules = append(service.rules, rule)
 }
 
-func (service *serviceIPTables) Start() {
+func (service *serviceIPTables) Start() error {
 	service.clearStaleRules()
-	service.enableIPForwarding()
-	service.enableRules()
+	err := service.enableIPForwarding()
+	if err != nil {
+		return err
+	}
+	err = service.enableRules()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (service *serviceIPTables) Stop() {
@@ -59,19 +66,21 @@ func (service *serviceIPTables) isIPForwardingEnabled() (enabled bool) {
 	return false
 }
 
-func (service *serviceIPTables) enableIPForwarding() {
+func (service *serviceIPTables) enableIPForwarding() error {
 	enabled := service.isIPForwardingEnabled()
 
 	if enabled {
 		service.forward = true
-		return
+		return nil
 	}
 	cmd := utils.SplitCommand("sudo", "/sbin/sysctl -w net.ipv4.ip_forward=1")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Warn("Failed to enable IP forwarding: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-	} else {
-		log.Info(natLogPrefix, "IP forwarding enabled")
+		return err
 	}
+
+	log.Info(natLogPrefix, "IP forwarding enabled")
+	return nil
 }
 
 func (service *serviceIPTables) disableIPForwarding() {
@@ -87,7 +96,7 @@ func (service *serviceIPTables) disableIPForwarding() {
 	}
 }
 
-func (service *serviceIPTables) enableRules() {
+func (service *serviceIPTables) enableRules() error {
 	for _, rule := range service.rules {
 		arguments := "/sbin/iptables --table nat --append POSTROUTING --source " +
 			rule.SourceAddress + " ! --destination " +
@@ -96,10 +105,12 @@ func (service *serviceIPTables) enableRules() {
 		cmd := utils.SplitCommand("sudo", arguments)
 		if output, err := cmd.CombinedOutput(); err != nil {
 			log.Warn("Failed to create ip forwarding rule: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-		} else {
-			log.Info(natLogPrefix, "Forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
+			return err
 		}
+
+		log.Info(natLogPrefix, "Forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
 	}
+	return nil
 }
 
 func (service *serviceIPTables) disableRules() {

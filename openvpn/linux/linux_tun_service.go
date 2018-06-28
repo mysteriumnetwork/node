@@ -18,24 +18,25 @@
 package linux
 
 import (
+	"errors"
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/utils"
 	"os"
+	"strconv"
 )
 
 const tunLogPrefix = "[linux tun service] "
 
+// ErrNoFreeTunDevice is thrown when no free tun device is available on system
+var ErrNoFreeTunDevice = errors.New("no free tun device found")
+
 type serviceLinuxTun struct {
-	device TunnelDevice
+	device *TunnelDevice
 }
 
 // NewLinuxTunnelService creates linux specific tunnel manager for interface creation and removal
-func NewLinuxTunnelService() TunnelService {
-	return &serviceLinuxTun{}
-}
-
-func (service *serviceLinuxTun) Add(device TunnelDevice) {
-	service.device = device
+func NewLinuxTunnelService(tun *TunnelDevice) TunnelService {
+	return &serviceLinuxTun{tun}
 }
 
 func (service *serviceLinuxTun) Start() error {
@@ -92,4 +93,18 @@ func (service *serviceLinuxTun) deleteDevice() {
 	} else {
 		log.Info(tunLogPrefix, service.device.Name, " device removed")
 	}
+}
+
+// FindFreeTunDevice returns first free tun device on system
+func FindFreeTunDevice() (tun *TunnelDevice, err error) {
+	// search only among first 10 tun devices
+	for i := 0; i <= 10; i++ {
+		tunName := "tun" + strconv.Itoa(i)
+		tunFile := "/sys/class/net/tun" + tunName
+		if _, err := os.Stat(tunFile); os.IsNotExist(err) {
+			return &TunnelDevice{tunName}, nil
+		}
+	}
+
+	return nil, ErrNoFreeTunDevice
 }

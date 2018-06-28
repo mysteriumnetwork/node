@@ -15,17 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package config
 
-type serviceFake struct {
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
+func TestSimpleScriptPathIsUnquoted(t *testing.T) {
+	assert.Equal(
+		t,
+		"testpath/testname",
+		SimplePath("testname").FullPath("testpath"),
+	)
 }
 
-func (service *serviceFake) Add(rule RuleForwarding) {
-}
-
-func (service *serviceFake) Start() error {
-	return nil
-}
-
-func (service *serviceFake) Stop() {
+func TestQuotedScriptPathIsQuoted(t *testing.T) {
+	assert.Equal(
+		t,
+		`"testpath/testname"`,
+		QuotedPath("testname").FullPath("testpath"),
+	)
 }
