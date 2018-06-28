@@ -59,7 +59,7 @@ echo ">STATE:1522855904,ASSIGN_IP,,10.8.0.133,,,," >&3
 echo ">STATE:1522855905,CONNECTED,SUCCESS,10.8.0.133,$serverIp,$serverPort,," >&3
 
 killed=0
-trap 'killed=1' SIGTERM
+trap 'killed=1' SIGTERM SIGINT
 
 while (( killed != 1))
 do
