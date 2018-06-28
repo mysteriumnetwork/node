@@ -54,7 +54,7 @@ func NewCommand(options CommandOptions) *Command {
 // NewCommandWith function creates new client command by given options + injects given dependencies
 func NewCommandWith(
 	options CommandOptions,
-	networkDefintion metadata.NetworkDefinition,
+	networkDefinition metadata.NetworkDefinition,
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	natService nat.NATService,
@@ -95,7 +95,7 @@ func NewCommandWith(
 		natService:       natService,
 		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
-				nats_discovery.NewAddressGenerate(networkDefintion.BrokerAddress, myID),
+				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
 				identity.NewSigner(keystoreInstance, myID),
 			)
 		},
@@ -143,7 +143,7 @@ func NewCommandWith(
 
 // TODO this function can be aligned with client function when client and server options will merge into
 func getNetworkDefinition(options CommandOptions) metadata.NetworkDefinition {
-	network := metadata.TestNetworkDefinition
+	network := metadata.TestNetDefinition
 
 	//override defined values one by one from options
 	if options.DiscoveryAPIAddress != "" {

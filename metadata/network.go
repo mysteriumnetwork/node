@@ -23,8 +23,8 @@ type NetworkDefinition struct {
 	BrokerAddress       string
 }
 
-// TestNetworkDefinition defines parameters for test network (currently default network)
-var TestNetworkDefinition = NetworkDefinition{
+// TestNetDefinition defines parameters for test network (currently default network)
+var TestNetDefinition = NetworkDefinition{
 	"https://testnet-api.mysterium.network/v1",
 	"testnet-broker.mysterium.network",
 }
