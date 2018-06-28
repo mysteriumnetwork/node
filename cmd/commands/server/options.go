@@ -47,6 +47,7 @@ type CommandOptions struct {
 
 	Protocol    string
 	OpenvpnPort int
+	LocalNet    bool
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
@@ -157,6 +158,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"ipify-url",
 		"https://api.ipify.org/",
 		"Address (URL form) of ipify service",
+	)
+
+	flags.BoolVar(
+		&options.LocalNet,
+		"localnet",
+		false,
+		"Defines network configuration which expects localy deployed broker and discovery services",
 	)
 
 	err = flags.Parse(args[1:])

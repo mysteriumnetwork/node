@@ -42,6 +42,7 @@ type CommandOptions struct {
 	IpifyUrl            string
 
 	LocationDatabase string
+	LocalNet         bool
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
@@ -129,6 +130,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"location.database",
 		"GeoLite2-Country.mmdb",
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
+	)
+
+	flags.BoolVar(
+		&options.LocalNet,
+		"localnet",
+		false,
+		"Defines network configuration which expects localy deployed broker and discovery services",
 	)
 
 	err = flags.Parse(args[1:])

@@ -145,6 +145,11 @@ func NewCommandWith(
 func getNetworkDefinition(options CommandOptions) metadata.NetworkDefinition {
 	network := metadata.TestNetDefinition
 
+	switch {
+	case options.LocalNet:
+		network = metadata.LocalNetDefinition
+	}
+
 	//override defined values one by one from options
 	if options.DiscoveryAPIAddress != "" {
 		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress

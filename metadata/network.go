@@ -28,3 +28,9 @@ var TestNetDefinition = NetworkDefinition{
 	"https://testnet-api.mysterium.network/v1",
 	"testnet-broker.mysterium.network",
 }
+
+// LocalNetDefinition defines parameters for local network (expects discovery and broker services on localhost)
+var LocalNetDefinition = NetworkDefinition{
+	"http://localhost/v1",
+	"localhost",
+}
