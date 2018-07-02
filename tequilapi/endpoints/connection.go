@@ -113,7 +113,7 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
-// Creates starts new connection
+// Create starts new connection
 // swagger:operation PUT /connection Connection createConnection
 // ---
 // summary: Starts new connection

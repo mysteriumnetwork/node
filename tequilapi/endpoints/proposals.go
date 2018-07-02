@@ -30,6 +30,7 @@ type proposalsRes struct {
 	Proposals []proposalRes `json:"proposals"`
 }
 
+// swagger:model
 type locationRes struct {
 	// Autonomous System Number
 	// example: AS00001
@@ -41,10 +42,13 @@ type locationRes struct {
 	// example: Amsterdam
 	City string `json:"city,omitempty"`
 }
+
+// swagger:model
 type serviceDefinitionRes struct {
 	LocationOriginate locationRes `json:"locationOriginate"`
 }
 
+// swagger:model
 type proposalRes struct {
 	// per provider unique serial number of service description provided
 	// example: 5

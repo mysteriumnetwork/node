@@ -38,6 +38,7 @@ type healthCheckData struct {
 	BuildInfo buildInfo `json:"buildInfo"`
 }
 
+// swagger:model
 type buildInfo struct {
 	// example: <unknown>
 	Commit string `json:"commit"`
