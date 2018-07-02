@@ -20,6 +20,7 @@ package client
 import (
 	"flag"
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/metadata"
 	"path/filepath"
 )
 
@@ -42,7 +43,7 @@ type CommandOptions struct {
 	IpifyUrl            string
 
 	LocationDatabase string
-	LocalNet         bool
+	Localnet         bool
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
@@ -114,7 +115,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.DiscoveryAPIAddress,
 		"discovery-address",
-		"",
+		metadata.DefaultNetwork.DiscoveryAPIAddress,
 		"Address (URL form) of discovery service",
 	)
 
@@ -133,7 +134,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	)
 
 	flags.BoolVar(
-		&options.LocalNet,
+		&options.Localnet,
 		"localnet",
 		false,
 		"Defines network configuration which expects localy deployed broker and discovery services",

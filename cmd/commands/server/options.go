@@ -20,6 +20,7 @@ package server
 import (
 	"flag"
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/metadata"
 	"path/filepath"
 )
 
@@ -47,7 +48,7 @@ type CommandOptions struct {
 
 	Protocol    string
 	OpenvpnPort int
-	LocalNet    bool
+	Localnet    bool
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
@@ -123,14 +124,14 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.DiscoveryAPIAddress,
 		"discovery-address",
-		"",
+		metadata.DefaultNetwork.DiscoveryAPIAddress,
 		"Address (URL form) of discovery service",
 	)
 
 	flags.StringVar(
 		&options.BrokerAddress,
 		"broker-address",
-		"",
+		metadata.DefaultNetwork.BrokerAddress,
 		"Address (IP or domain name) of message broker",
 	)
 
@@ -161,7 +162,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	)
 
 	flags.BoolVar(
-		&options.LocalNet,
+		&options.Localnet,
 		"localnet",
 		false,
 		"Defines network configuration which expects localy deployed broker and discovery services",

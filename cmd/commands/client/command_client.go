@@ -180,15 +180,15 @@ func (cmd *Command) Kill() error {
 
 // TODO this function can be aligned with server function when client and server options will merge into
 func getNetworkDefinition(options CommandOptions) metadata.NetworkDefinition {
-	network := metadata.TestNetDefinition
+	network := metadata.DefaultNetwork
 
 	switch {
-	case options.LocalNet:
-		network = metadata.LocalNetDefinition
+	case options.Localnet:
+		network = metadata.LocalnetDefinition
 	}
 
 	//override defined values one by one from options
-	if options.DiscoveryAPIAddress != "" {
+	if options.DiscoveryAPIAddress != metadata.DefaultNetwork.DiscoveryAPIAddress {
 		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
 	}
 

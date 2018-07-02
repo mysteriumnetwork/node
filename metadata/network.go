@@ -23,14 +23,17 @@ type NetworkDefinition struct {
 	BrokerAddress       string
 }
 
-// TestNetDefinition defines parameters for test network (currently default network)
-var TestNetDefinition = NetworkDefinition{
+// TestnetDefinition defines parameters for test network (currently default network)
+var TestnetDefinition = NetworkDefinition{
 	"https://testnet-api.mysterium.network/v1",
 	"testnet-broker.mysterium.network",
 }
 
-// LocalNetDefinition defines parameters for local network (expects discovery and broker services on localhost)
-var LocalNetDefinition = NetworkDefinition{
+// LocalnetDefinition defines parameters for local network (expects discovery and broker services on localhost)
+var LocalnetDefinition = NetworkDefinition{
 	"http://localhost/v1",
 	"localhost",
 }
+
+// DefaultNetwork defines default network values when no runtime parameters are given
+var DefaultNetwork = TestnetDefinition

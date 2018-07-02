@@ -3,5 +3,5 @@
 sudo ./build/client/mysterium_client \
    --config-dir=bin/client_package/config \
    --runtime-dir=build/client \
-   --localnet
+   --localnet \
    $@

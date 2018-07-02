@@ -3,5 +3,5 @@
 sudo ./build/server/mysterium_server \
    --config-dir=bin/server_package/config \
    --runtime-dir=build/server \
-   --localnet
+   --localnet \
    $@
