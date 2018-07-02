@@ -1,0 +1,11 @@
+version: '3'
+services:
+
+  broker:
+    ports:
+      - 4222:4222
+      - 8222:4222
+
+  discovery:
+    ports:
+    - 80:80
