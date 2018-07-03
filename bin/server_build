@@ -17,7 +17,6 @@
 #> readelf -d build/server/mysterium_server
 
 source bin/helpers/functions.sh
-source bin/helpers/load_environment.sh
 
 export GOOS=${GOOS:=`go env GOHOSTOS`}
 export GOARCH=${GOARCH:=`go env GOHOSTARCH`}
