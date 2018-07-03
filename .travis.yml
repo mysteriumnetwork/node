@@ -18,11 +18,6 @@ cache:
   directories:
     - "$CACHE_ROOT_DIR"
 
-before_install:
-  - rm -f .env
-  - echo "MYSTERIUM_API_URL=$MYSTERIUM_API_URL" >> .env
-  - echo "NATS_SERVER_IP=$NATS_SERVER_IP" >> .env
-
 install:
   - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
   - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"

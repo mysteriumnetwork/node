@@ -1,21 +1,21 @@
 #!/bin/bash
 
 function disable_systemd {
-    printf  "Disabling systemd script '/lib/systemd/system/mysterium-client.service'..\n" \
-        && systemctl disable mysterium-client \
-        && rm -f /lib/systemd/system/mysterium-client.service
+    printf  "Disabling systemd script '/lib/systemd/system/mysterium-client.service'..\n"
+    systemctl disable mysterium-client
+    rm -f /lib/systemd/system/mysterium-client.service
 }
 
 function disable_update_rcd {
-    printf  "Disabling initd script '/lib/systemd/system/mysterium-client.service'..\n" \
-        && update-rc.d -f mysterium-client remove \
-        && rm -f /etc/init.d/mysterium-client
+    printf  "Disabling initd script '/lib/systemd/system/mysterium-client.service'..\n"
+    update-rc.d -f mysterium-client remove
+    rm -f /etc/init.d/mysterium-client
 }
 
 function disable_chkconfig {
-    printf  "Disabling chkconfig..\n" \
-        && chkconfig --del mysterium-client \
-        && rm -f /etc/init.d/mysterium-client
+    printf  "Disabling chkconfig..\n"
+    chkconfig --del mysterium-client
+    rm -f /etc/init.d/mysterium-client
 }
 
 if [[ -f /etc/redhat-release ]]; then

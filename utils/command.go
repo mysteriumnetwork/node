@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package utils
 
-// MysteriumAPIURL stores MYSTERIUM_API_URL env variable that is complied in
-var MysteriumAPIURL string
+import (
+	"os/exec"
+	"strings"
+)
+
+// SplitCommand parses command arguments from string and returns command with split arguments
+func SplitCommand(command string, commandArguments string) *exec.Cmd {
+	args := strings.Split(commandArguments, " ")
+	var trimmedArgs []string
+	for _, arg := range args {
+		trimmedArgs = append(trimmedArgs, strings.TrimSpace(arg))
+	}
+	return exec.Command(command, trimmedArgs...)
+}

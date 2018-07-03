@@ -35,6 +35,7 @@ type middleware struct {
 	listeners []Callback
 }
 
+// NewMiddleware creates state middleware for given list of callback listeners
 func NewMiddleware(listeners ...Callback) management.Middleware {
 	return &middleware{
 		listeners: listeners,
@@ -42,6 +43,7 @@ func NewMiddleware(listeners ...Callback) management.Middleware {
 }
 
 func (middleware *middleware) Start(commandWriter management.CommandWriter) error {
+	middleware.callListeners(openvpn.ProcessStarted)
 	_, lines, err := commandWriter.MultiLineCommand("state on all")
 	if err != nil {
 		return err
@@ -57,6 +59,7 @@ func (middleware *middleware) Start(commandWriter management.CommandWriter) erro
 }
 
 func (middleware *middleware) Stop(commandWriter management.CommandWriter) error {
+	middleware.callListeners(openvpn.ProcessExited)
 	_, err := commandWriter.SingleLineCommand("state off")
 	return err
 }
@@ -89,12 +92,12 @@ func (middleware *middleware) callListeners(state openvpn.State) {
 func extractOpenvpnState(line string) (openvpn.State, error) {
 	rule, err := regexp.Compile(stateOutputMatcher)
 	if err != nil {
-		return openvpn.UndefinedState, err
+		return openvpn.UnknownState, err
 	}
 
 	matches := rule.FindStringSubmatch(line)
 	if len(matches) < 2 {
-		return openvpn.UndefinedState, errors.New("Line mismatch: " + line)
+		return openvpn.UnknownState, errors.New("Line mismatch: " + line)
 	}
 
 	return openvpn.State(matches[1]), nil

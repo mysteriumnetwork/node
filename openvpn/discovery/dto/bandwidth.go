@@ -22,10 +22,12 @@ import (
 	"strconv"
 )
 
+// Bandwidth represents connection bandwidth data type
 // Speed in b/s (bits per second)
 // 64 b/s = 8 B/s (since there are 8 bits in a byte)
 type Bandwidth datasize.BitSize
 
+// MarshalJSON serializes Bandwidth value to JSON compatible value
 func (value Bandwidth) MarshalJSON() ([]byte, error) {
 	valueBits := datasize.BitSize(value).Bits()
 	valueJSON := strconv.FormatUint(valueBits, 10)
@@ -33,6 +35,7 @@ func (value Bandwidth) MarshalJSON() ([]byte, error) {
 	return []byte(valueJSON), nil
 }
 
+// UnmarshalJSON restores Bandwidth value from JSON compatible value
 func (value *Bandwidth) UnmarshalJSON(valueJSON []byte) error {
 	valueBits, err := strconv.ParseUint(string(valueJSON), 10, 64)
 	*value = Bandwidth(valueBits)

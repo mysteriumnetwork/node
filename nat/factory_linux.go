@@ -17,6 +17,7 @@
 
 package nat
 
+// NewService returns linux os specific nat service based on ip tables
 func NewService() NATService {
 	return &serviceIPTables{}
 }

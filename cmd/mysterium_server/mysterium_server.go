@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
 	_ "github.com/mysterium/node/logconfig"
@@ -27,6 +28,7 @@ import (
 )
 
 func main() {
+	defer seelog.Flush()
 	options, err := server.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -60,7 +62,7 @@ func runCMD(options server.CommandOptions) {
 		os.Exit(1)
 	}
 
-	cmd.StopOnInterruptsConditional(cmd.NewApplicationStopper(serverCommand.Kill), serverCommand.WaitUnregister)
+	cmd.RegisterSignalCallback(cmd.SoftKiller(serverCommand.Kill))
 
 	if err := serverCommand.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

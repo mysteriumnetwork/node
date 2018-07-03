@@ -22,8 +22,10 @@ import (
 	"time"
 )
 
+// PaymentMethodPerTime defines payment method for used amount of time of service
 const PaymentMethodPerTime = "PER_TIME"
 
+// PaymentPerTime structure defines price and amount of time used of service
 type PaymentPerTime struct {
 	Price money.Money `json:"price"`
 
@@ -31,6 +33,7 @@ type PaymentPerTime struct {
 	Duration time.Duration `json:"duration"`
 }
 
+// GetPrice returns price of payment per time
 func (method PaymentPerTime) GetPrice() money.Money {
 	return method.Price
 }

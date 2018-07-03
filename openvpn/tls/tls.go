@@ -23,12 +23,14 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 )
 
+// Primitives structure holds TLS primitives required to setup basic cryptographics for openvpn server/client
 type Primitives struct {
 	CertificateAuthority *CertificateAuthority
 	ServerCertificate    *CertificateKeyPair
 	PresharedKey         *TLSPresharedKey
 }
 
+// NewTLSPrimitives function creates TLS primitives for given service location and provider id
 func NewTLSPrimitives(serviceLocation dto.Location, serviceProviderID identity.Identity) (*Primitives, error) {
 
 	key, err := createTLSCryptKey()

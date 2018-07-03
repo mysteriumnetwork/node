@@ -36,8 +36,8 @@ func TestProposalUnregisteredWhenPingerClosed(t *testing.T) {
 	fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
 
 	finished := make(chan bool)
-	fakeCmd := Command{WaitUnregister: &sync.WaitGroup{}}
-	fakeCmd.WaitUnregister.Add(1)
+	fakeCmd := Command{proposalAnnouncementStopped: &sync.WaitGroup{}}
+	fakeCmd.proposalAnnouncementStopped.Add(1)
 
 	go func() {
 		fakeCmd.pingProposalLoop(activeProposal, fakeDiscoveryClient, nil, stopPinger)

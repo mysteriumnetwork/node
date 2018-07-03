@@ -152,7 +152,7 @@ func (management *Management) serveNewConnection(netConn net.Conn) {
 	connection := newChannelConnection(netConn, cmdOutputChannel)
 
 	outputConsuming := sync.WaitGroup{}
-	outputConsuming.Add(1)
+	outputConsuming.Add(2)
 	go func() {
 		defer outputConsuming.Done()
 		management.consumeOpenvpnConnectionOutput(netConn, cmdOutputChannel, eventChannel)
@@ -162,7 +162,10 @@ func (management *Management) serveNewConnection(netConn net.Conn) {
 	defer management.stopMiddlewares(connection)
 
 	//start delivering events to middlewares
-	go management.deliverOpenvpnManagementEvents(eventChannel)
+	go func() {
+		defer outputConsuming.Done()
+		management.deliverOpenvpnManagementEvents(eventChannel)
+	}()
 	//block until output consumption is done - usually when connection is closed by openvpn process
 	outputConsuming.Wait()
 }
@@ -194,6 +197,8 @@ func (management *Management) consumeOpenvpnConnectionOutput(input io.Reader, ou
 		line, err := reader.ReadLine()
 		if err != nil {
 			log.Warn(management.logPrefix, "Connection failed to read. ", err)
+			close(outputChannel)
+			close(eventChannel)
 			return
 		}
 		log.Debug(management.logPrefix, "Line received: ", line)
@@ -214,7 +219,11 @@ func (management *Management) consumeOpenvpnConnectionOutput(input io.Reader, ou
 
 func (management *Management) deliverOpenvpnManagementEvents(eventChannel chan string) {
 	for {
-		event := <-eventChannel
+		event, more := <-eventChannel
+		if !more {
+			log.Info(management.logPrefix, "Event consumer is done")
+			return
+		}
 		log.Trace(management.logPrefix, "Line delivering: ", event)
 
 		lineConsumed := false

@@ -21,6 +21,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
+// ServiceDefinition structure represents various service parameters
 type ServiceDefinition struct {
 	// Approximate information on location where the service is provided from
 	Location dto_discovery.Location `json:"location"`
@@ -35,6 +36,7 @@ type ServiceDefinition struct {
 	Protocol string `json:"protocol,omitempty"`
 }
 
+// GetLocation returns geographic location of service definition provider
 func (service ServiceDefinition) GetLocation() dto_discovery.Location {
 	return service.Location
 }

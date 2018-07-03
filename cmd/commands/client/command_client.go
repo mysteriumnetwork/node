@@ -41,9 +41,10 @@ import (
 
 // NewCommand function creates new client command by given options
 func NewCommand(options CommandOptions) *Command {
+	networkDefinition := getNetworkDefinition(options)
 	return NewCommandWith(
 		options,
-		server.NewClient(options.DiscoveryAPIAddress),
+		server.NewClient(networkDefinition.DiscoveryAPIAddress),
 	)
 }
 
@@ -108,7 +109,7 @@ func NewCommandWith(
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
-	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill))
+	tequilapi_endpoints.AddRouteForStop(router, node_cmd.SoftKiller(command.Kill))
 
 	return command
 }
@@ -132,7 +133,7 @@ func (cmd *Command) Start() error {
 
 	originalLocation, err := cmd.originalLocationCache.RefreshAndGet()
 	if err != nil {
-		log.Warn("Failed to detect original country", err)
+		log.Warn("Failed to detect original country: ", err)
 	} else {
 		log.Info("Original country detected: ", originalLocation.Country)
 	}
@@ -159,6 +160,7 @@ func (cmd *Command) Wait() error {
 
 // Kill stops tequilapi service
 func (cmd *Command) Kill() error {
+
 	err := cmd.connectionManager.Disconnect()
 	if err != nil {
 		switch err {
@@ -175,4 +177,21 @@ func (cmd *Command) Kill() error {
 	log.Info("Api stopped")
 
 	return nil
+}
+
+// TODO this function can be aligned with server function when client and server options will merge into
+func getNetworkDefinition(options CommandOptions) metadata.NetworkDefinition {
+	network := metadata.DefaultNetwork
+
+	switch {
+	case options.Localnet:
+		network = metadata.LocalnetDefinition
+	}
+
+	//override defined values one by one from options
+	if options.DiscoveryAPIAddress != metadata.DefaultNetwork.DiscoveryAPIAddress {
+		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
+	}
+
+	return network
 }

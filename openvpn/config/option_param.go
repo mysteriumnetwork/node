@@ -19,6 +19,7 @@ package config
 
 import "strings"
 
+// OptionParam creates --name value1 value2 style config parameter
 func OptionParam(name string, values ...string) optionParam {
 	return optionParam{name, values}
 }

@@ -17,12 +17,14 @@
 
 package nat
 
+// NATService describes fake nat service for darwin
 type NATService interface {
 	Add(rule RuleForwarding)
 	Start() error
-	Stop() error
+	Stop()
 }
 
+// RuleForwarding describes fake nat rule
 type RuleForwarding struct {
 	SourceAddress string
 	TargetIP      string

@@ -24,8 +24,10 @@ import (
 	"fmt"
 )
 
+// TLSPresharedKey defines TLS preshared key type
 type TLSPresharedKey []byte
 
+// ToPEMFormat renders TLS preshared key to PEM compatible string which can be written to PEM file
 func (key TLSPresharedKey) ToPEMFormat() string {
 	buffer := bytes.Buffer{}
 

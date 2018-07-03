@@ -20,6 +20,7 @@ package server
 import (
 	"flag"
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/metadata"
 	"path/filepath"
 )
 
@@ -47,12 +48,10 @@ type CommandOptions struct {
 
 	Protocol    string
 	OpenvpnPort int
+	Localnet    bool
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
-
-// TODO: rename to brokerAddress
-var natsServerIP string
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
@@ -125,13 +124,14 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.DiscoveryAPIAddress,
 		"discovery-address",
-		cmd.MysteriumAPIURL,
+		metadata.DefaultNetwork.DiscoveryAPIAddress,
 		"Address (URL form) of discovery service",
 	)
+
 	flags.StringVar(
 		&options.BrokerAddress,
 		"broker-address",
-		natsServerIP,
+		metadata.DefaultNetwork.BrokerAddress,
 		"Address (IP or domain name) of message broker",
 	)
 
@@ -159,6 +159,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"ipify-url",
 		"https://api.ipify.org/",
 		"Address (URL form) of ipify service",
+	)
+
+	flags.BoolVar(
+		&options.Localnet,
+		"localnet",
+		false,
+		"Defines network configuration which expects localy deployed broker and discovery services",
 	)
 
 	err = flags.Parse(args[1:])

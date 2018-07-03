@@ -1,15 +1,9 @@
 version: '3'
 services:
 
-  broker:
-    image: nats
-    expose:
-      - 4222
-      - 8222
-
   node:
     build:
-      context: ..
+      context: ../..
       dockerfile: bin/server_docker/alpine/Dockerfile
     depends_on:
       - broker
@@ -28,7 +22,7 @@ services:
 
   client:
     build:
-      context: ..
+      context: ../..
       dockerfile: bin/client_docker/alpine/Dockerfile
     depends_on:
       - broker
@@ -41,30 +35,6 @@ services:
       - 4052:4050
     command: "--ipify-url=http://ipify:3000 --discovery-address=http://discovery/v1"
 
-  #infrastructure - centralized api and db
-  db:
-    image: percona:5.7
-    restart: always
-    expose:
-      - 3306
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: myst_api
-      MYSQL_USER: myst_api
-      MYSQL_PASSWORD: myst_api
-
-  discovery:
-    image: mysteriumnetwork/mysterium-api:0.1.12
-    expose:
-    - 80
-    environment:
-      APP_PORT: 80
-      DB_HOST: db
-      DB_NAME: myst_api
-      DB_USER: myst_api
-      DB_PASSWORD: myst_api
-    depends_on:
-    - db
   #'external' IP detection
   ipify:
     image: owlab/ipify

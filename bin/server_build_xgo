@@ -20,7 +20,6 @@ if [ -z "$XGO_TARGETS" ]; then
 fi
 
 source bin/helpers/functions.sh
-source bin/helpers/load_environment.sh
 DIR_BUILD="build/package"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
