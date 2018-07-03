@@ -1,14 +1,14 @@
 #!/bin/bash
 
 ###########################################################################
-# Release creates all supported packages and uploads them to release pages
+# Release creates tag and upload all supported packages to tag in Github release pages
 #
-# To create a release, simple execute:
-#> bin/release <version>
-
 # Usage:
+#> bin/release_github <version>
+
+# Release version (with personal Github account):
 #> git config --global github.token "verysecrettoken"
-#> ./bin/release 0.0.1
+#> bin/release_github 0.0.1
 
 GHR_BIN=`which ghr`
 if [ ! -x "$GHR_BIN" ]; then

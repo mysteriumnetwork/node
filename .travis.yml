@@ -70,6 +70,10 @@ deploy:
     api_key: "$GIT_RELEASES_API_KEY"
     on:
       tags: true
+  - provider: script
+    script: bin/release_docker ${VERSION}
+    on:
+      tags: true
 notifications:
   slack:
     rooms:

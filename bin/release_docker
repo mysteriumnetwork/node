@@ -1,0 +1,32 @@
+#!/bin/bash
+
+###########################################################################
+# Release creates all supported Docker images and uploads them to Docker Hub
+# - https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
+# - https://hub.docker.com/r/mysteriumnetwork/mysterium-client/
+#
+# Usage:
+#> bin/release_docker <version>
+#
+# Release specific version with personal Docker Hub account:
+#> docker login john.developer ****
+#> bin/release_docker 0.0.1
+#
+# Tag several versions at the same time
+#> bin/release_docker 0.0.1 0.0.1-alpine alpine latest
+
+set -e
+
+VERSION=$1
+if [ -z "$VERSION" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing version!"
+    exit 1
+fi
+
+bin/server_package_docker ${VERSION}-alpine alpine latest
+bin/server_package_docker_ubuntu ${VERSION} ${VERSION}-ubuntu ubuntu
+
+bin/client_package_docker ${VERSION}-alpine alpine latest
+bin/client_package_docker_ubuntu ${VERSION} ${VERSION}-ubuntu ubuntu
+
+exit 0
