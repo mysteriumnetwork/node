@@ -25,9 +25,9 @@ const (
 	// VersionMajor is version component of the current release
 	VersionMajor = 0
 	// VersionMinor is version component of the current release
-	VersionMinor = 0
+	VersionMinor = 1
 	// VersionPatch is version component of the current release
-	VersionPatch = 6
+	VersionPatch = 0
 )
 
 // VersionAsString returns all defined version constants as single string
