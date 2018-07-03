@@ -70,7 +70,6 @@ deploy:
     api_key: "$GIT_RELEASES_API_KEY"
     on:
       tags: true
-      branch: master
 notifications:
   slack:
     rooms:

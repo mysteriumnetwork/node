@@ -13,6 +13,8 @@
 #> brew install readelf
 #> readelf -d build/client/mysterium_client
 
+set -e
+
 source bin/helpers/functions.sh
 
 XGO_TARGETS=`IFS=','; echo "$*"`
@@ -22,6 +24,7 @@ if [ -z "$XGO_TARGETS" ]; then
 fi
 
 DIR_BUILD="build/client"
+mkdir -p ${DIR_BUILD}
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
 xgo \

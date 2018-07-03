@@ -22,6 +22,7 @@ if [ -z "$XGO_TARGETS" ]; then
 fi
 
 DIR_BUILD="build/server"
+mkdir -p ${DIR_BUILD}
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
 xgo \
