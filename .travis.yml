@@ -13,7 +13,6 @@ env:
     - BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
     - VERSION=$TRAVIS_TAG
-    - BUILD_DIR=build/package
 
 cache:
   directories:
@@ -40,24 +39,10 @@ script:
 
 before_deploy:
   - bin/travis_scripts/ensure_xgo.sh
-  - mkdir -p $BUILD_DIR
-  - bin/server_build_xgo darwin/amd64 windows/amd64 linux/amd64
-  - BINARY=build/server/mysterium_server_darwin_amd64 bin/server_package_standalone
-  - BINARY=build/server/mysterium_server_windows_amd64.exe bin/server_package_standalone
-  - BINARY=build/server/mysterium_server_linux_amd64 bin/server_package_standalone
-  - bin/builder_run BINARY=build/server/mysterium_server_linux_amd64 bin/server_package_debian ${VERSION} amd64
-  - bin/server_package_docker
-  - bin/server_package_docker_ubuntu ${VERSION}
-  - bin/client_build_xgo darwin/amd64 windows/amd64 linux/amd64
-  - BINARY=build/client/mysterium_client_darwin_amd64 bin/client_package_standalone
-  - BINARY=build/client/mysterium_client_windows_amd64.exe bin/client_package_standalone
-  - BINARY=build/client/mysterium_client_linux_amd64 bin/client_package_standalone
-  - bin/builder_run BINARY=build/client/mysterium_client_linux_amd64 bin/client_package_debian ${VERSION} amd64
-  - bin/client_package_docker
-  - bib/client_package_docker_ubuntu ${VERSION}
+  - bin/package_all $VERSION
 deploy:
   - provider: pages
-    local-dir: $BUILD_DIR
+    local-dir: build/package
     skip-cleanup: true
     github-token: "$GIT_RELEASES_API_KEY"
     keep-history: false
@@ -68,13 +53,13 @@ deploy:
       branch: master
   - provider: releases
     file_glob: true
-    file: $BUILD_DIR/*
+    file: build/package/*
     skip_cleanup: true
     api_key: "$GIT_RELEASES_API_KEY"
     on:
       tags: true
   - provider: script
-    script: bin/release_docker ${VERSION}
+    script: bin/release_docker $VERSION
     on:
       tags: true
 notifications:
