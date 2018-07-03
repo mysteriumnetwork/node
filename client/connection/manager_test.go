@@ -66,6 +66,7 @@ func (tc *testContext) SetupTest() {
 	tc.fakeOpenVpn = &fakeOpenvpnClient{
 		nil,
 		[]openvpn.State{
+			openvpn.ProcessStarted,
 			openvpn.ConnectingState,
 			openvpn.WaitState,
 			openvpn.AuthenticatingState,
@@ -75,6 +76,7 @@ func (tc *testContext) SetupTest() {
 		},
 		[]openvpn.State{
 			openvpn.ExitingState,
+			openvpn.ProcessExited,
 		},
 		nil,
 		sync.WaitGroup{},
@@ -153,6 +155,7 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	assert.Equal(tc.T(), statusDisconnecting(), tc.connManager.Status())
 	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
+	tc.fakeOpenVpn.reportState(openvpn.ProcessExited)
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
@@ -240,7 +243,7 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfOpenvpnClientExitsDuringCo
 		err = tc.connManager.Connect(myID, activeProviderID)
 	}()
 	waitABit()
-	tc.fakeOpenVpn.reportState(openvpn.ExitingState)
+	tc.fakeOpenVpn.reportState(openvpn.ProcessExited)
 	connectWaiter.Wait()
 	assert.Equal(tc.T(), ErrOpenvpnProcessDied, err)
 }
@@ -286,12 +289,12 @@ func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
 }
 
 type fakeDialog struct {
-	peerId identity.Identity
+	peerID identity.Identity
 	closed bool
 }
 
 func (fd *fakeDialog) PeerID() identity.Identity {
-	return fd.peerId
+	return fd.peerID
 }
 
 func (fd *fakeDialog) Close() error {

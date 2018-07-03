@@ -52,10 +52,10 @@ type Command struct {
 
 	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
 
-	vpnServer      openvpn.Process
-	checkOpenvpn   func() error
-	protocol       string
-	WaitUnregister *sync.WaitGroup
+	vpnServer                   openvpn.Process
+	checkOpenvpn                func() error
+	protocol                    string
+	proposalAnnouncementStopped *sync.WaitGroup
 }
 
 // Start starts server - does not block
@@ -85,8 +85,10 @@ func (cmd *Command) Start() (err error) {
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      vpnServerIP,
 	})
-	if err = cmd.natService.Start(); err != nil {
-		return err
+
+	err = cmd.natService.Start()
+	if err != nil {
+		log.Warn("received nat service error: ", err, " trying to proceed.")
 	}
 
 	currentLocation, err := cmd.locationDetector.DetectLocation()
@@ -113,10 +115,12 @@ func (cmd *Command) Start() (err error) {
 	stopDiscoveryAnnouncement := make(chan int)
 	vpnStateCallback := func(state openvpn.State) {
 		switch state {
+		case openvpn.ProcessStarted:
+			log.Info("Openvpn service booting up")
 		case openvpn.ConnectedState:
-			log.Info("Open vpn service started")
-		case openvpn.ExitingState:
-			log.Info("Open vpn service exiting")
+			log.Info("Openvpn service started successfully")
+		case openvpn.ProcessExited:
+			log.Info("Openvpn service exited")
 			close(stopDiscoveryAnnouncement)
 		}
 	}
@@ -127,7 +131,7 @@ func (cmd *Command) Start() (err error) {
 
 	signer := cmd.createSigner(providerID)
 
-	cmd.WaitUnregister.Add(1)
+	cmd.proposalAnnouncementStopped.Add(1)
 	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 
 	return nil
@@ -135,21 +139,21 @@ func (cmd *Command) Start() (err error) {
 
 // Wait blocks until server is stopped
 func (cmd *Command) Wait() error {
-	cmd.WaitUnregister.Wait()
-
+	log.Info("Waiting for proposal announcements to finish")
+	cmd.proposalAnnouncementStopped.Wait()
+	log.Info("Waiting for vpn service to finish")
 	return cmd.vpnServer.Wait()
 }
 
 // Kill stops server
 func (cmd *Command) Kill() error {
+	cmd.natService.Stop()
 	cmd.vpnServer.Stop()
 
 	err := cmd.dialogWaiter.Stop()
 	if err != nil {
 		return err
 	}
-
-	err = cmd.natService.Stop()
 
 	return err
 }
@@ -169,6 +173,7 @@ func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProp
 }
 
 func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
+	defer cmd.proposalAnnouncementStopped.Done()
 	for {
 		select {
 		case <-time.After(1 * time.Minute):
@@ -183,8 +188,6 @@ func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mys
 			if err != nil {
 				log.Error("Failed to unregister proposal: ", err)
 			}
-			time.Sleep(200 * time.Millisecond) // sleep for prints to be printed out
-			cmd.WaitUnregister.Done()
 			return
 		}
 	}

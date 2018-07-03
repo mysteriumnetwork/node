@@ -118,6 +118,7 @@ func NewCommandWith(
 			// TODO: check options for --openvpn-transport option
 			serverConfigGenerator := openvpn.NewServerConfigGenerator(
 				options.DirectoryRuntime,
+				options.DirectoryConfig,
 				primitives,
 				options.OpenvpnPort,
 				options.Protocol,
@@ -136,8 +137,8 @@ func NewCommandWith(
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
-		protocol:       options.Protocol,
-		WaitUnregister: &sync.WaitGroup{},
+		protocol:                    options.Protocol,
+		proposalAnnouncementStopped: &sync.WaitGroup{},
 	}
 }
 

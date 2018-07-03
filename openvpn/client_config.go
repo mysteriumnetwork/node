@@ -18,7 +18,6 @@
 package openvpn
 
 import (
-	"fmt"
 	"github.com/mysterium/node/openvpn/config"
 	"io/ioutil"
 	"path/filepath"
@@ -51,8 +50,8 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 	}
 }
 
-func newClientConfig(configDir string) *ClientConfig {
-	clientConfig := ClientConfig{config.NewConfig(configDir)}
+func newClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
+	clientConfig := ClientConfig{config.NewConfig(runtimeDir, scriptSearchPath)}
 
 	clientConfig.RestrictReconnects()
 
@@ -62,7 +61,6 @@ func newClientConfig(configDir string) *ClientConfig {
 	clientConfig.SetParam("tls-cipher", "TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384")
 	clientConfig.SetKeepAlive(10, 60)
 	clientConfig.SetPingTimerRemote()
-	clientConfig.SetPersistTun()
 	clientConfig.SetPersistKey()
 
 	clientConfig.SetParam("reneg-sec", "60")
@@ -76,14 +74,14 @@ func newClientConfig(configDir string) *ClientConfig {
 
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
-func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFile string) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string) (*ClientConfig, error) {
 
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	clientFileConfig := newClientConfig(configDir)
+	clientFileConfig := newClientConfig(runtimeDir, configDir)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
 	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
 	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)
@@ -94,23 +92,17 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, configFi
 		return nil, err
 	}
 
+	configFile := filepath.Join(runtimeDir, "client.ovpn")
 	err = ioutil.WriteFile(configFile, []byte(configAsString), 0600)
 	if err != nil {
 		return nil, err
 	}
 
-	clientConfig := ClientConfig{config.NewConfig(configDir)}
+	clientConfig := ClientConfig{config.NewConfig(runtimeDir, configDir)}
 	clientConfig.AddOptions(config.OptionFile("config", configAsString, configFile))
 
-	//because of special case how openvpn handles executable/scripts paths, we need to surround values with double quotes
-	updateResolvConfScriptPath := wrapWithDoubleQuotes(filepath.Join(configDir, "update-resolv-conf"))
-
-	clientConfig.SetParam("up", updateResolvConfScriptPath)
-	clientConfig.SetParam("down", updateResolvConfScriptPath)
+	clientConfig.SetScriptParam("up", config.QuotedPath("update-resolv-conf"))
+	clientConfig.SetScriptParam("down", config.QuotedPath("update-resolv-conf"))
 
 	return &clientConfig, nil
-}
-
-func wrapWithDoubleQuotes(val string) string {
-	return fmt.Sprintf(`"%s"`, val)
 }

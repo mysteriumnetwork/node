@@ -19,28 +19,24 @@ package openvpn
 
 import (
 	"github.com/mysterium/node/openvpn/management"
-
 	"github.com/mysterium/node/openvpn/tls"
 )
 
 // NewServer constructs new openvpn server instance
 func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) Process {
 	serverConfig := generateConfig()
-	return &openvpnProcess{
-		config:     serverConfig.GenericConfig,
-		management: management.NewManagement(management.LocalhostOnRandomPort, "[server-management] ", middlewares...),
-		cmd:        NewCmdWrapper(openvpnBinary, "[server-openvpn] "),
-	}
+	return CreateNewProcess(openvpnBinary, serverConfig.GenericConfig, middlewares...)
 }
 
 // ServerConfigGenerator callback returns generated server config
 type ServerConfigGenerator func() *ServerConfig
 
 // NewServerConfigGenerator returns function generating server config and generates required security primitives
-func NewServerConfigGenerator(directoryRuntime string, primitives *tls.Primitives, port int, protocol string) ServerConfigGenerator {
+func NewServerConfigGenerator(directoryRuntime string, directoryConfig string, primitives *tls.Primitives, port int, protocol string) ServerConfigGenerator {
 	return func() *ServerConfig {
 		vpnServerConfig := NewServerConfig(
 			directoryRuntime,
+			directoryConfig,
 			"10.8.0.0", "255.255.255.0",
 			primitives,
 			port,

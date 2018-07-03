@@ -284,7 +284,7 @@ func (c *Command) help() {
 
 // quit stops cli and client commands and exits application
 func (c *Command) quit() {
-	stop := node_cmd.NewApplicationStopper(c.Kill)
+	stop := node_cmd.HardKiller(c.Kill)
 	stop()
 }
 

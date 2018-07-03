@@ -85,6 +85,7 @@ func Test_StartCommandWritesExpectedStringToConnection(t *testing.T) {
 	assert.Equal(t, "state on all", mockConnection.LastLine)
 	assert.Equal(t,
 		[]openvpn.State{
+			openvpn.ProcessStarted,
 			openvpn.ConnectingState,
 			openvpn.AssignIpState,
 			openvpn.ConnectedState,

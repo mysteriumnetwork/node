@@ -18,8 +18,10 @@
 #> bin/client_package_debian 0.0.1 amd64
 
 OS_DIR_BIN="/usr/bin"
-OS_DIR_CONFIG="/etc/mysterium-node"
+OS_DIR_CONFIG="/etc/mysterium-client"
+OS_DIR_DOC="/usr/share/doc/mysterium-client"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-client/installation"
+OS_DIR_SUDOERS="/etc/sudoers.d"
 BINARY=${BINARY:="build/client/mysterium_client"}
 
 VERSION=$1
@@ -57,13 +59,20 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --architecture="$ARCH" \
         --package="$PACKAGE_FILE" \
         --depends "openvpn (>= 2.4.0)" \
+        --depends "resolvconf" \
         --depends "ca-certificates" \
+        --depends "iproute2" \
+        --depends "sudo" \
         --after-install bin/client_package/installation/post-install.sh \
         --after-remove bin/client_package/installation/post-uninstall.sh \
         -s dir -t deb \
         ${BINARY}=${OS_DIR_BIN}/ \
-        bin/client_package/config/=${OS_DIR_CONFIG}/ \
-        bin/client_package/installation/=${OS_DIR_INSTALLATION}/
+        bin/client_package/config/linux/=${OS_DIR_CONFIG}/ \
+        bin/common_package/=${OS_DIR_CONFIG}/ \
+        bin/client_package/sudoers/=${OS_DIR_SUDOERS}/ \
+        bin/client_package/installation/=${OS_DIR_INSTALLATION}/ \
+        INSTALL.md=${OS_DIR_DOC}/
+
 if [ $? -ne 0 ] ; then
     printf "\e[0;31m%s\e[0m\n" "Failed to build Debian package!"
     exit 1

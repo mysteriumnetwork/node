@@ -8,9 +8,15 @@ After=network-online.target
 [Service]
 User=mysterium-client
 Group=mysterium-client
+
+RuntimeDirectory=mysterium-client
+RuntimeDirectoryMode=0750
+
 EnvironmentFile=-/etc/default/mysterium-client
-ExecStart=/usr/bin/mysterium_client ${DAEMON_OPTS}
-KillMode=control-group
+ExecStart=/usr/bin/mysterium_client $CONF_DIR $RUN_DIR $DISCOVERY
+KillMode=process
+TimeoutStopSec=10
+SendSIGKILL=yes
 Restart=on-failure
 
 [Install]

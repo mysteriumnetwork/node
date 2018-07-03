@@ -22,8 +22,10 @@ import (
 	"github.com/mysterium/node/money"
 )
 
+// PaymentMethodPerBytes indicates payment method for data amount transfered
 const PaymentMethodPerBytes = "PER_BYTES"
 
+// PaymentPerBytes structure describes price per unit and how much bytes were transfered
 type PaymentPerBytes struct {
 	Price money.Money `json:"price"`
 
@@ -31,6 +33,7 @@ type PaymentPerBytes struct {
 	Bytes datasize.BitSize `json:"bytes,omitempty"`
 }
 
+// GetPrice returns payment price
 func (method PaymentPerBytes) GetPrice() money.Money {
 	return method.Price
 }

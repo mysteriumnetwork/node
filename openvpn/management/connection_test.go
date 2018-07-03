@@ -85,6 +85,15 @@ func TestMultipleOutputCommandHandlesResults(t *testing.T) {
 
 }
 
+func TestClosedOutputChannelCausesCommandSendToFail(t *testing.T) {
+	mockWriter := &mockWriter{}
+	outputChannel := make(chan string, 1)
+	conn := newChannelConnection(mockWriter, outputChannel)
+	close(outputChannel)
+	_, err := conn.SingleLineCommand("irrelevant")
+	assert.Error(t, err)
+}
+
 type mockWriter struct {
 	receivedCommand string
 }

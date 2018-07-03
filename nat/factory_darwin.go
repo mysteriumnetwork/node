@@ -17,6 +17,7 @@
 
 package nat
 
+// NewService returns fake nat service since there are no iptables on darwin
 func NewService() NATService {
 	return &serviceFake{}
 }

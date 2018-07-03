@@ -51,13 +51,14 @@ func (c *ServerConfig) SetProtocol(protocol string) {
 
 // NewServerConfig creates server configuration structure from given basic parameters
 func NewServerConfig(
+	runtimeDir string,
 	configDir string,
 	network, netmask string,
 	secPrimitives *tls.Primitives,
 	port int,
 	protocol string,
 ) *ServerConfig {
-	serverConfig := ServerConfig{config.NewConfig(configDir)}
+	serverConfig := ServerConfig{config.NewConfig(runtimeDir, configDir)}
 	serverConfig.SetServerMode(port, network, netmask)
 	serverConfig.SetTLSServer()
 	serverConfig.SetProtocol(protocol)
@@ -68,7 +69,6 @@ func NewServerConfig(
 	)
 	serverConfig.SetTLSCrypt(secPrimitives.PresharedKey.ToPEMFormat())
 
-	serverConfig.SetDevice("tun")
 	serverConfig.SetParam("cipher", "AES-256-GCM")
 	serverConfig.SetParam("verb", "3")
 	serverConfig.SetParam("tls-version-min", "1.2")
@@ -78,7 +78,6 @@ func NewServerConfig(
 	serverConfig.SetParam("reneg-sec", "60")
 	serverConfig.SetKeepAlive(10, 60)
 	serverConfig.SetPingTimerRemote()
-	serverConfig.SetPersistTun()
 	serverConfig.SetPersistKey()
 
 	return &serverConfig

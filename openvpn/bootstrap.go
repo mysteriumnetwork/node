@@ -23,6 +23,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
+// Bootstrap is called on program initialization time and registers various deserializers related to opepnvpn service
 func Bootstrap() {
 	dto_discovery.RegisterServiceDefinitionUnserializer(
 		"openvpn",

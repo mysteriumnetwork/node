@@ -38,6 +38,14 @@ type openvpnProcess struct {
 	cmd        *CmdWrapper
 }
 
+func newProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) Process {
+	return &openvpnProcess{
+		config:     config,
+		management: management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
+		cmd:        NewCmdWrapper(openvpnBinary, "[openvpn-process] "),
+	}
+}
+
 func (openvpn *openvpnProcess) Start() error {
 	err := openvpn.management.WaitForConnection()
 	if err != nil {

@@ -49,7 +49,10 @@ func (sc *channelConnection) SingleLineCommand(template string, args ...interfac
 		return "", err
 	}
 
-	cmdOutput := <-sc.cmdOutput
+	cmdOutput, more := <-sc.cmdOutput
+	if !more {
+		return "", errors.New("connection is gone")
+	}
 	outputParts := strings.Split(cmdOutput, ":")
 	messageType := textproto.TrimString(outputParts[0])
 	messageText := ""

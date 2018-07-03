@@ -25,6 +25,7 @@ import (
 	"strings"
 )
 
+// OptionFile creates File option parameter for given param name, content for file, and file path where content will be stored
 func OptionFile(name, content string, filePath string) optionFile {
 	return optionFile{name, content, filePath}
 }

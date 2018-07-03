@@ -109,7 +109,7 @@ func NewCommandWith(
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
-	tequilapi_endpoints.AddRouteForStop(router, node_cmd.NewApplicationStopper(command.Kill))
+	tequilapi_endpoints.AddRouteForStop(router, node_cmd.SoftKiller(command.Kill))
 
 	return command
 }
@@ -133,7 +133,7 @@ func (cmd *Command) Start() error {
 
 	originalLocation, err := cmd.originalLocationCache.RefreshAndGet()
 	if err != nil {
-		log.Warn("Failed to detect original country", err)
+		log.Warn("Failed to detect original country: ", err)
 	} else {
 		log.Info("Original country detected: ", originalLocation.Country)
 	}
@@ -160,6 +160,7 @@ func (cmd *Command) Wait() error {
 
 // Kill stops tequilapi service
 func (cmd *Command) Kill() error {
+
 	err := cmd.connectionManager.Disconnect()
 	if err != nil {
 		switch err {
