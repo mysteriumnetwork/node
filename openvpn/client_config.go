@@ -19,8 +19,6 @@ package openvpn
 
 import (
 	"github.com/mysterium/node/openvpn/config"
-	"io/ioutil"
-	"path/filepath"
 )
 
 // ClientConfig represents specific "openvpn as client" configuration
@@ -50,7 +48,7 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 	}
 }
 
-func newClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
+func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
 	clientConfig := ClientConfig{config.NewConfig(runtimeDir, scriptSearchPath)}
 
 	clientConfig.RestrictReconnects()
@@ -74,6 +72,7 @@ func newClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
 
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
+// TODO this will become the part of openvpn service consumer separate package
 func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string) (*ClientConfig, error) {
 
 	err := NewDefaultValidator().IsValid(vpnConfig)
@@ -87,22 +86,5 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)
 	clientFileConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
 
-	configAsString, err := clientFileConfig.ToConfigFileContent()
-	if err != nil {
-		return nil, err
-	}
-
-	configFile := filepath.Join(runtimeDir, "client.ovpn")
-	err = ioutil.WriteFile(configFile, []byte(configAsString), 0600)
-	if err != nil {
-		return nil, err
-	}
-
-	clientConfig := ClientConfig{config.NewConfig(runtimeDir, configDir)}
-	clientConfig.AddOptions(config.OptionFile("config", configAsString, configFile))
-
-	clientConfig.SetScriptParam("up", config.QuotedPath("update-resolv-conf"))
-	clientConfig.SetScriptParam("down", config.QuotedPath("update-resolv-conf"))
-
-	return &clientConfig, nil
+	return clientFileConfig, nil
 }
