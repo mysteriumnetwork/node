@@ -19,7 +19,7 @@ if [ -z "$ARGUMENTS" ]; then
     ARGUMENTS=`go list ./... | sed '/e2e/d'` #skip e2e package - integration tests by default
 fi
 
-if go test -cover ${ARGUMENTS} ; then
+if go test -timeout 3m -cover ${ARGUMENTS} ; then
     print_success "All tests passed."
     exit 0
 else
