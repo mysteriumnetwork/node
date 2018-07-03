@@ -17,16 +17,20 @@
 
 set -e
 
+source bin/helpers/output.sh
+source bin/helpers/docker.sh
+
 VERSION=$1
 if [ -z "$VERSION" ]; then
-    printf "\e[0;31m%s\e[0m\n" "Missing version!"
+    print_error "Missing version!"
     exit 1
 fi
 
-bin/server_package_docker ${VERSION}-alpine alpine latest
-bin/server_package_docker_ubuntu ${VERSION} ${VERSION}-ubuntu ubuntu
+docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION} ${VERSION}-alpine alpine latest
+docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION} ${VERSION}-ubuntu ubuntu
 
-bin/client_package_docker ${VERSION}-alpine alpine latest
-bin/client_package_docker_ubuntu ${VERSION} ${VERSION}-ubuntu ubuntu
+docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION} ${VERSION}-alpine alpine latest
+docker_release_image mysteriumnetwork/mysterium-client ubuntu ${VERSION}-ubuntu ubuntu
 
+print_success "Docker Hub release '$VERSION' created!"
 exit 0
