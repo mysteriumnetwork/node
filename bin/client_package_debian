@@ -22,7 +22,6 @@ OS_DIR_CONFIG="/etc/mysterium-client"
 OS_DIR_DOC="/usr/share/doc/mysterium-client"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-client/installation"
 OS_DIR_SUDOERS="/etc/sudoers.d"
-OS_DIR_TOOLS="/usr/sbin"
 BINARY=${BINARY:="build/client/mysterium_client"}
 
 VERSION=$1

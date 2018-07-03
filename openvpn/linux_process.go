@@ -79,7 +79,7 @@ func NewLinuxProcess(openvpnBinary string, configuration *config.GenericConfig, 
 
 	return &linuxOpenvpnProcess{
 		Process:    newProcess(openvpnBinary, configuration, middlewares...),
-		tunService: linux.NewLinuxTunnelService(tunDevice),
+		tunService: linux.NewLinuxTunnelService(tunDevice, configuration.GetFullScriptPath(config.SimplePath("prepare-env.sh"))),
 		finished:   &sync.WaitGroup{},
 	}
 }

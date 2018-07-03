@@ -40,15 +40,6 @@ printf "Creating user '$DAEMON_USER:$DAEMON_GROUP'...\n" \
     && usermod -a -G root $DAEMON_USER \
     && chown -R -L $DAEMON_USER:$DAEMON_GROUP $OS_DIR_DATA
 
-if [ ! -d /dev/net ]; then
-    printf "Creating /dev/net directory ..\n" \
-    && mkdir -p /dev/net
-fi
-if [ ! -c /dev/net/tun ]; then
-    printf "Creating /dev/net/tun device ..\n" \
-    && mknod /dev/net/tun c 10 200
-fi
-
 # Remove legacy symlink, if it exists
 if [[ -L $OS_DIR_INITD/mysterium-node ]]; then
     rm -f $OS_DIR_INITD/mysterium-node

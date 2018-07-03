@@ -49,9 +49,9 @@ case "$script_type" in
             R="${R}nameserver $NS
 "
     done
-    echo -n "$R" | /sbin/resolvconf -a "${dev}.openvpn"
+    echo -n "$R" | sudo /sbin/resolvconf -a "${dev}.openvpn"
     ;;
   down)
-    /sbin/resolvconf -d "${dev}.openvpn"
+    sudo /sbin/resolvconf -d "${dev}.openvpn"
     ;;
 esac

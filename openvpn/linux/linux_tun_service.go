@@ -31,12 +31,13 @@ const tunLogPrefix = "[linux tun service] "
 var ErrNoFreeTunDevice = errors.New("no free tun device found")
 
 type serviceLinuxTun struct {
-	device *TunnelDevice
+	device     *TunnelDevice
+	scriptPath string
 }
 
 // NewLinuxTunnelService creates linux specific tunnel manager for interface creation and removal
-func NewLinuxTunnelService(tun *TunnelDevice) TunnelService {
-	return &serviceLinuxTun{tun}
+func NewLinuxTunnelService(tun *TunnelDevice, configScriptPath string) TunnelService {
+	return &serviceLinuxTun{tun, configScriptPath}
 }
 
 func (service *serviceLinuxTun) Start() error {
@@ -57,6 +58,11 @@ func (service *serviceLinuxTun) Stop() {
 }
 
 func (service *serviceLinuxTun) createTunDevice() (err error) {
+	err = service.createDeviceNode()
+	if err != nil {
+		return err
+	}
+
 	exists, err := service.deviceExists()
 	if err != nil {
 		return err
@@ -107,4 +113,20 @@ func FindFreeTunDevice() (tun *TunnelDevice, err error) {
 	}
 
 	return nil, ErrNoFreeTunDevice
+}
+
+func (service *serviceLinuxTun) createDeviceNode() error {
+	if _, err := os.Stat("/dev/net/tun"); err == nil {
+		// device node already exists
+		return nil
+	}
+
+	cmd := utils.SplitCommand("sudo", service.scriptPath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		log.Warn("Failed to execute prepare-env.sh script: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		return err
+	}
+
+	log.Info(tunLogPrefix, "/dev/net/tun device node created")
+	return nil
 }

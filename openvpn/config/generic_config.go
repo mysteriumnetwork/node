@@ -126,3 +126,8 @@ func (c *GenericConfig) SetScriptParam(paramName string, script Script) {
 	fullPath := script.FullPath(c.scriptSearchPath)
 	c.SetParam(paramName, fullPath)
 }
+
+// GetFullScriptPath returns full script path
+func (c *GenericConfig) GetFullScriptPath(script Script) string {
+	return script.FullPath(c.scriptSearchPath)
+}
