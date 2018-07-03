@@ -17,6 +17,13 @@ RUN apt-get update \
     && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
 
+# Make resolvconf skip the post install (see https://github.com/moby/moby/issues/1297)
+RUN apt-get update \
+    && apt-get -y install debconf-utils \
+    && echo resolvconf resolvconf/linkify-resolvconf boolean false | debconf-set-selections \
+    && apt-get -y install resolvconf \
+    && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
+
 COPY bin/helpers/prepare-run-env.sh /usr/local/bin/prepare-run-env.sh
 COPY bin/client_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
