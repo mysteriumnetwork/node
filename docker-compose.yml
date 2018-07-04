@@ -19,6 +19,7 @@ services:
       - 11941:1194
     environment:
       - AGREED_TERMS_AND_CONDITIONS
+    command: -agreed-terms-and-conditions=04-06-2018
 
   server-ubuntu:
     build:
@@ -32,6 +33,9 @@ services:
       - NET_ADMIN
     ports:
       - 11942:1194
+    environment:
+      - AGREED_TERMS_AND_CONDITIONS
+    command: -agreed-terms-and-conditions=04-06-2018
 
   client-alpine:
     build:
