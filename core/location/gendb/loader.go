@@ -15,14 +15,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package location
+package gendb
 
-// Location structure represents location information (ip and country)
-type Location struct {
-	// IP address
-	// example: 127.0.0.1
-	IP string `json:"ip"`
+import (
+	"compress/gzip"
+	"encoding/base64"
+	"errors"
+	"io/ioutil"
+	"strings"
+)
 
-	// example: NL
-	Country string `json:"country"`
+// EncodedDataLoader returns emmbeded database as byte array
+func EncodedDataLoader(data string, originalSize int, compressed bool) (decompressed []byte, err error) {
+	reader := base64.NewDecoder(base64.RawStdEncoding, strings.NewReader(data))
+
+	if compressed {
+		reader, err = gzip.NewReader(reader)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	decompressed, err = ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	if len(decompressed) != originalSize {
+		return nil, errors.New("original and decompressed data size mismatch")
+	}
+	return decompressed, nil
 }

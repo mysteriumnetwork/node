@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,11 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package location
 
-// OptionsLocation describes possible parameters of location detection configuration
-type OptionsLocation struct {
-	IpifyUrl   string
-	ExternalDb string
-	Country    string
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestBuiltInResolverWorks(t *testing.T) {
+	country, err := NewBuiltInResolver().ResolveCountry("46.111.111.99")
+	assert.NoError(t, err)
+	assert.Equal(t, "RU", country)
 }

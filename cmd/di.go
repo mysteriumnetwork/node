@@ -248,8 +248,10 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 
 	switch {
 	case options.Country != "":
-		di.LocationResolver = location.NewResolverFake(options.Country)
+		di.LocationResolver = location.NewStaticResolver(options.Country)
+	case options.ExternalDb != "":
+		di.LocationResolver = location.NewExternalDbResolver(filepath.Join(configDirectory, options.ExternalDb))
 	default:
-		di.LocationResolver = location.NewResolver(filepath.Join(configDirectory, options.Database))
+		di.LocationResolver = location.NewBuiltInResolver()
 	}
 }

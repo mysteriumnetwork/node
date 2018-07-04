@@ -18,48 +18,22 @@
 package location
 
 import (
-	"errors"
-	"net"
-
+	"github.com/mysteriumnetwork/node/core/location/gendb"
 	"github.com/oschwald/geoip2-golang"
 )
 
-type resolver struct {
-	databasePath string
-}
+//go:generate go run generator/generator.go --dbname db/GeoLite2-Country.mmdb --output gendb --compress
 
-// NewResolver returns Resolver which uses country database
-func NewResolver(databasePath string) Resolver {
-	return &resolver{
-		databasePath: databasePath,
-	}
-}
-
-// ResolveCountry maps given ip to country
-func (r *resolver) ResolveCountry(ip string) (string, error) {
-	db, err := geoip2.Open(r.databasePath)
+// NewBuiltInResolver returns new db resolver initialized from built in data
+func NewBuiltInResolver() Resolver {
+	dbBytes, err := gendb.LoadData()
 	if err != nil {
-		return "", err
-	}
-	defer db.Close()
-
-	ipObject := net.ParseIP(ip)
-	if ipObject == nil {
-		return "", errors.New("failed to parse IP")
+		return NewFailingResolver(err)
 	}
 
-	countryRecord, err := db.Country(ipObject)
+	dbReader, err := geoip2.FromBytes(dbBytes)
 	if err != nil {
-		return "", err
+		return NewFailingResolver(err)
 	}
-
-	country := countryRecord.Country.IsoCode
-	if country == "" {
-		country = countryRecord.RegisteredCountry.IsoCode
-		if country == "" {
-			return "", errors.New("failed to resolve country")
-		}
-	}
-
-	return country, nil
+	return &DbResolver{dbReader: dbReader}
 }
