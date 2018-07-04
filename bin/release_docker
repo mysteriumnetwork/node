@@ -26,6 +26,8 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
+echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
+
 docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION} ${VERSION}-alpine alpine latest
 docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION} ${VERSION}-ubuntu ubuntu
 
