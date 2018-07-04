@@ -14,7 +14,7 @@ PACKAGE_FILE="${DIR_BUILD}/`basename -s .exe ${BINARY}`.tar.gz"
 
 # Put all files to package directory (to avoid preserving directory structure)
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
-cp ${BINARY} ${DIR_TEMP}/
+cp ${BINARY} ${DIR_TEMP}/mysterium_server
 cp -r "bin/server_package/config" ${DIR_TEMP}/
 
 # Tarball package directory
