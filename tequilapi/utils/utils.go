@@ -38,7 +38,7 @@ func WriteAsJSON(v interface{}, writer http.ResponseWriter) {
 	}
 }
 
-// swagger:model errorMessage
+// swagger:model ErrorMessageDTO
 type errorMessage struct {
 	// example: error message
 	Message string `json:"message"`
@@ -60,7 +60,7 @@ func SendErrorBody(writer http.ResponseWriter, message interface{}, httpCode int
 	WriteAsJSON(message, writer)
 }
 
-// swagger:model validationError
+// swagger:model ValidationErrorDTO
 type validationErrorMessage struct {
 	errorMessage
 	ValidationErrors *validation.FieldErrorMap `json:"errors"`

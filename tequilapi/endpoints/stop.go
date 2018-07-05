@@ -31,6 +31,13 @@ func AddRouteForStop(router *httprouter.Router, stop ApplicationStopper) {
 	router.POST("/stop", newStopHandler(stop))
 }
 
+// swagger:operation POST /stop Client applicationStop
+// ---
+// summary: Stops client
+// description: Initiates client termination
+// responses:
+//   202:
+//     description: Request accepted, stopping
 func newStopHandler(stop ApplicationStopper) httprouter.Handle {
 	return func(response http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		log.Info("Application stop requested")

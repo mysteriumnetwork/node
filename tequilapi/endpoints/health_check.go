@@ -25,16 +25,28 @@ import (
 	"time"
 )
 
+// swagger:model HealthCheckDTO
 type healthCheckData struct {
-	Uptime    string    `json:"uptime"`
-	Process   int       `json:"process"`
+	// example: 25h53m33.540493171s
+	Uptime string `json:"uptime"`
+
+	// example: 10449
+	Process int `json:"process"`
+
+	// example: 0.0.6
 	Version   string    `json:"version"`
 	BuildInfo buildInfo `json:"buildInfo"`
 }
 
+// swagger:model BuildInfoDTO
 type buildInfo struct {
-	Commit      string `json:"commit"`
-	Branch      string `json:"branch"`
+	// example: <unknown>
+	Commit string `json:"commit"`
+
+	// example: <unknown>
+	Branch string `json:"branch"`
+
+	// example: dev-build
 	BuildNumber string `json:"buildNumber"`
 }
 
@@ -57,6 +69,19 @@ func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() 
 	}
 }
 
+// swagger:operation GET /healthcheck Client healthCheck
+// ---
+// summary: Returns information about client
+// description: Returns health check information about client
+// responses:
+//   200:
+//     description: Health check information
+//     schema:
+//       "$ref": "#/definitions/HealthCheckDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	status := healthCheckData{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),
