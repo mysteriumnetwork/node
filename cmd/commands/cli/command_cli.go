@@ -111,6 +111,7 @@ func (c *Command) handleActions(line string) {
 		{"help", c.help},
 		{"status", c.status},
 		{"proposals", c.proposals},
+		{"healthcheck", c.healthcheck},
 		{"ip", c.ip},
 		{"disconnect", c.disconnect},
 		{"stop", c.stopClient},
@@ -241,6 +242,22 @@ func (c *Command) status() {
 			info("Bytes received:", statistics.BytesReceived)
 		}
 	}
+}
+
+func (c *Command) healthcheck() {
+	healthcheck, err := c.tequilapi.Healthcheck()
+	if err != nil {
+		warn(err)
+		return
+	}
+
+	info(fmt.Sprintf("Uptime: %v", healthcheck.Uptime))
+	info(fmt.Sprintf("Process: %v", healthcheck.Process))
+	info(fmt.Sprintf("Version: %v", healthcheck.Version))
+	info("Build info:")
+	info(fmt.Sprintf("  Commit: %v", healthcheck.BuildInfo.Commit))
+	info(fmt.Sprintf("  Branch: %v", healthcheck.BuildInfo.Branch))
+	info(fmt.Sprintf("  Build number: %v", healthcheck.BuildInfo.Branch))
 }
 
 func (c *Command) proposals() {
@@ -404,6 +421,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			readline.PcItem("list"),
 		),
 		readline.PcItem("status"),
+		readline.PcItem("healthcheck"),
 		readline.PcItem("proposals"),
 		readline.PcItem("ip"),
 		readline.PcItem("disconnect"),
