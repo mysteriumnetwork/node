@@ -4,9 +4,27 @@
 # Packaging script which creates standalone package.
 #
 # Usage:
-#> bin/server_package_standalone
+#> bin/server_package_standalone <os>
+#
+# Package (specific OS: linux, darwin, windows):
+#> bin/client_package_standalone linux
+#
+# Package (specific binary):
+#> BINARY=build/client/mysterium_client_darwin_amd64 bin/client_package_standalone darwin
 
 set -e
+
+source bin/helpers/output.sh
+
+OS=$1
+if [ -z "$OS" ]; then
+    print_error "Missing OS!"
+    exit 1
+fi
+if [ "$OS" != "linux" ] && [ "$OS" != "darwin" ] && [ "$OS" != "windows" ]; then
+    print_error "OS should be: linux, darwin, windows!"
+    exit 1
+fi
 
 BINARY=${BINARY:="build/server/mysterium_server"}
 DIR_BUILD="build/package"
@@ -14,8 +32,9 @@ PACKAGE_FILE="${DIR_BUILD}/`basename -s .exe ${BINARY}`.tar.gz"
 
 # Put all files to package directory (to avoid preserving directory structure)
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
-cp ${BINARY} ${DIR_TEMP}/mysterium_server
-cp -r "bin/server_package/config" ${DIR_TEMP}/
+cp -p ${BINARY} ${DIR_TEMP}/mysterium_server
+cp -rp "bin/common_package/" ${DIR_TEMP}/config
+cp -rp "bin/server_package/config/${OS}/" ${DIR_TEMP}/config 2>/dev/null || true
 
 # Tarball package directory
 tar -zcv -f ${PACKAGE_FILE} -C ${DIR_TEMP} .
