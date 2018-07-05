@@ -19,7 +19,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/cihub/seelog"
+	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
 	_ "github.com/mysterium/node/logconfig"
@@ -28,7 +28,7 @@ import (
 )
 
 func main() {
-	defer seelog.Flush()
+	defer log.Flush()
 	options, err := server.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -46,10 +46,17 @@ func main() {
 		fmt.Println(metadata.LicenseWarranty)
 	} else if options.LicenseConditions {
 		fmt.Println(metadata.LicenseConditions)
+	} else if !options.AgreedTermsConditions {
+		fmt.Println(versionSummary)
+		fmt.Println()
+
+		fmt.Println("If you agree with these Terms & Conditions, run program again with '--agreed-terms-and-conditions' flag.")
+		os.Exit(2)
 	} else {
 		fmt.Println(versionSummary)
 		fmt.Println()
 
+		log.Infof("User agreed with terms & conditions: %v", options.AgreedTermsConditions)
 		runCMD(options)
 	}
 }

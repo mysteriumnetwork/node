@@ -26,15 +26,18 @@ sudo yum install docker-ce
 
 ##### Fetching and running docker image
 ```bash
-sudo docker run --cap-add NET_ADMIN --net host --publish "1194:1194" --name mysterium-node -d mysteriumnetwork/mysterium-node:{VERSION}
+sudo docker run --cap-add NET_ADMIN --net host --publish "1194:1194" --name mysterium-node -d mysteriumnetwork/mysterium-node:{VERSION} --agreed-terms-and-conditions
 ```
-You can skip `{VERSION}` to fetch latest image. 
+You can skip `{VERSION}` to fetch latest image.
+
+Note: to run server, you will have to accept terms & conditions by adding '--agreed-terms-and-conditions' command line option.
 
 ### Running
 ```bash
 sudo docker start mysterium-node
 sudo docker stop mysterium-node
 ```
+
 ### Debugging
 ```bash
 sudo docker logs -f mysterium-node
