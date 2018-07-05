@@ -11,15 +11,11 @@
 # Uploads several versions
 # > docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION}-ubuntu ubuntu
 docker_release_image () {
-    DOCKER_IMAGE=$1
+    DOCKER_IMAGE=$1; shift;
+    DOCKER_BUILD_TAG=$2; shift;
 
-    DOCKER_BUILD_TAG=$2
-
-    shift
-    shift
     while test $# -gt 0; do
-        DOCKER_TAG=$1
-        shift
+        DOCKER_TAG=$1; shift;
 
         printf "Publishing '${DOCKER_TAG}' image..\n"
         docker tag ${DOCKER_IMAGE}:${DOCKER_BUILD_TAG} ${DOCKER_IMAGE}:${DOCKER_TAG}
