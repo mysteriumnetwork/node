@@ -37,15 +37,12 @@ docker-compose up broker
 
 # Start node
 bin/server_build
-bin/server_run -agreed-terms-and-conditions
+bin/server_run
 
 # Client connects to node
 bin/client_build
 bin/client_run
 ```
-
-Note: to run server, you will have to accept terms & conditions.
-For more info about that, please read *Accepting terms & conditions* in [README.md](./README.md).
 
 ## Running client in interactive cli
 
