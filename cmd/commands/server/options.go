@@ -48,7 +48,9 @@ type CommandOptions struct {
 
 	Protocol    string
 	OpenvpnPort int
-	Localnet    bool
+
+	AgreedTermsConditions bool
+	Localnet              bool
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
@@ -74,20 +76,19 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		filepath.Join(cmd.GetDataDirectory(), "run"),
 		"Runtime writable directory for temp files",
 	)
+
 	flags.StringVar(
 		&options.OpenvpnBinary,
 		"openvpn.binary",
 		"openvpn", //search in $PATH by default,
 		"openvpn binary to use for Open VPN connections",
 	)
-
 	flags.StringVar(
 		&options.Protocol,
 		"openvpn.proto",
 		"udp",
 		"Protocol to use. Options: { udp, tcp }",
 	)
-
 	flags.IntVar(
 		&options.OpenvpnPort,
 		"openvpn.port",
@@ -127,12 +128,18 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		metadata.DefaultNetwork.DiscoveryAPIAddress,
 		"Address (URL form) of discovery service",
 	)
-
 	flags.StringVar(
 		&options.BrokerAddress,
 		"broker-address",
 		metadata.DefaultNetwork.BrokerAddress,
 		"Address (IP or domain name) of message broker",
+	)
+
+	flags.BoolVar(
+		&options.AgreedTermsConditions,
+		"agreed-terms-and-conditions",
+		false,
+		"agree with terms & conditions",
 	)
 
 	flags.BoolVar(

@@ -13,7 +13,7 @@ RuntimeDirectory=mysterium-node
 RuntimeDirectoryMode=0750
 
 EnvironmentFile=-/etc/default/mysterium-node
-ExecStart=/usr/bin/mysterium_server $CONF_DIR $RUN_DIR $DISCOVERY $BROKER $PROTO
+ExecStart=/usr/bin/mysterium_server $CONF_DIR $RUN_DIR $DISCOVERY $BROKER $PROTO --agreed-terms-and-conditions
 KillMode=process
 TimeoutStopSec=10
 SendSIGKILL=yes

@@ -38,6 +38,8 @@ func VersionAsString() string {
 const versionSummaryFormat = `Mysterium Node
   Version: %s
   Build info: %s
+
+%s
 %s`
 
 // VersionAsSummary returns overview of current program's version
@@ -47,5 +49,6 @@ func VersionAsSummary(licenseCopyright string) string {
 		VersionAsString(),
 		BuildAsString(),
 		licenseCopyright,
+		termsAndConditions,
 	)
 }

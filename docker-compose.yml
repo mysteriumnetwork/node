@@ -17,6 +17,7 @@ services:
       - NET_ADMIN
     ports:
       - 11941:1194
+    command: --agreed-terms-and-conditions
 
   server-ubuntu:
     build:
@@ -30,6 +31,7 @@ services:
       - NET_ADMIN
     ports:
       - 11942:1194
+    command: --agreed-terms-and-conditions
 
   client-alpine:
     build:
