@@ -46,21 +46,19 @@ func main() {
 		fmt.Println(metadata.LicenseWarranty)
 	} else if options.LicenseConditions {
 		fmt.Println(metadata.LicenseConditions)
+	} else if !options.AgreedTermsConditions {
+		fmt.Println(versionSummary)
+		fmt.Println()
+
+		fmt.Println("If you agree with these Terms & Conditions, run program again with '--agreed-terms-and-conditions' flag.")
+		os.Exit(2)
 	} else {
 		fmt.Println(versionSummary)
 		fmt.Println()
-	}
-	startWithOptions(options)
-}
 
-func startWithOptions(options server.CommandOptions) {
-	if !options.AgreedTermsConditions {
-		fmt.Println(metadata.TermsNotice)
-		return
+		log.Infof("User agreed with terms & conditions: %v", options.AgreedTermsConditions)
+		runCMD(options)
 	}
-	log.Infof("User agreed with terms & conditions: %v", options.AgreedTermsConditions)
-
-	runCMD(options)
 }
 
 func runCMD(options server.CommandOptions) {

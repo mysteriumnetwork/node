@@ -137,7 +137,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 
 	flags.BoolVar(
 		&options.AgreedTermsConditions,
-		metadata.AgreedTermsAndConditionsFlagName,
+		"agreed-terms-and-conditions",
 		false,
 		"agree with terms & conditions",
 	)

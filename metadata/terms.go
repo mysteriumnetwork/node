@@ -17,45 +17,25 @@
 
 package metadata
 
-import (
-	"fmt"
-)
-
 const termsAndConditions = `
-MYSTERIUM NETWORK OPEN ALPHA
-
-TERMS OF USE
-
-FOR MYSTERIUM NODES
+                       MYSTERIUM NETWORK OPEN ALPHA
+                               TERMS OF USE
+                           FOR MYSTERIUM NODES
 
 SHORT VERSION IN HUMAN LANGUAGE:
-
-Mysterium Platform and Mysterion Software is still in its development (alpha) stage. We will do our best to develop it further, but we cannot guarantee this.
-
-You will join our network and act as an exit node for others.
-
-No compensation will be paid to you for your participation in the Program.
-
-We strive to protect you from any legal liability and believe that you should not be liable for running an exit node, but we cannot guarantee that you might not face it.
-
-You cannot monitor or log any data which passes through your equipment and must treat all data equally.
-
-Your use of the platform and software is at your own risk. We provide it to you "as is" without any warranties.
-
-In no event will we be liable for any damages which you may incur.
-
-We recommend you read the full version to get acquainted with all of the terms and conditions available here:
-
-https://github.com/MysteriumNetwork/node/TERMS.md
-`
-
-// AgreedTermsAndConditionsFlagName is name of flag for agreeing with terms & conditions
-const AgreedTermsAndConditionsFlagName = "agreed-terms-and-conditions"
-
-// TermsNotice returns terms & conditions with explanation on how to agree with them
-var TermsNotice = termsAndConditions + "\n\n" + explanationString
-
-var explanationString = fmt.Sprintf(
-	"If you agree with these Terms & Conditions, run program again with '--%v' flag.\n",
-	AgreedTermsAndConditionsFlagName,
-)
+- Mysterium Platform and Mysterion Software is still in its development 
+  (alpha) stage. We will do our best to develop it further, but we cannot 
+  guarantee this.
+- You will join our network and act as an exit node for others.
+- No compensation will be paid to you for your participation in the Program.
+- We strive to protect you from any legal liability and believe that you 
+  should not be liable for running an exit node, but we cannot guarantee that 
+  you might not face it.
+- You cannot monitor or log any data which passes through your equipment and 
+  must treat all data equally.
+- Your use of the platform and software is at your own risk. We provide it to 
+  you "as is" without any warranties.
+- In no event will we be liable for any damages which you may incur.
+- We recommend you read the full version to get acquainted with all of the 
+  terms and conditions available here: 
+       https://github.com/MysteriumNetwork/node/TERMS.md`
