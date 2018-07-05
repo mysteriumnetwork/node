@@ -25,12 +25,12 @@ import (
 	"net/http"
 )
 
-// swagger:model
+// swagger:model ProposalsList
 type proposalsRes struct {
 	Proposals []proposalRes `json:"proposals"`
 }
 
-// swagger:model
+// swagger:model ServiceLocationDTO
 type locationRes struct {
 	// Autonomous System Number
 	// example: AS00001
@@ -43,12 +43,12 @@ type locationRes struct {
 	City string `json:"city,omitempty"`
 }
 
-// swagger:model
+// swagger:model ServiceDefinitionDTO
 type serviceDefinitionRes struct {
 	LocationOriginate locationRes `json:"locationOriginate"`
 }
 
-// swagger:model
+// swagger:model ProposalDTO
 type proposalRes struct {
 	// per provider unique serial number of service description provided
 	// example: 5
@@ -115,11 +115,11 @@ func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
 //   200:
 //     description: List of proposals
 //     schema:
-//       "$ref": "#/definitions/proposalsRes"
+//       "$ref": "#/definitions/ProposalsList"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	providerID := req.URL.Query().Get("providerId")
 	proposals, err := pe.mysteriumClient.FindProposals(providerID)

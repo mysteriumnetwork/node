@@ -34,7 +34,7 @@ import (
 // operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
 const statusConnectCancelled = 499
 
-// swagger:model
+// swagger:model ConnectionRequestDTO
 type connectionRequest struct {
 	// consumer identity
 	// required: true
@@ -47,7 +47,7 @@ type connectionRequest struct {
 	ProviderID string `json:"providerId"`
 }
 
-// swagger:model
+// swagger:model ConnectionStatusDTO
 type statusResponse struct {
 	// example: Connected
 	Status string `json:"status"`
@@ -56,14 +56,14 @@ type statusResponse struct {
 	SessionID string `json:"sessionId,omitempty"`
 }
 
-// swagger:model
+// swagger:model IPDTO
 type ipResponse struct {
 	// public IP address
 	// example: 127.0.0.1
 	IP string `json:"ip"`
 }
 
-// swagger:model
+// swagger:model ConnectionStatisticsDTO
 type statisticsResponse struct {
 	// example: 1024
 	BytesSent int `json:"bytesSent"`
@@ -103,11 +103,11 @@ func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, s
 //   200:
 //     description: Status
 //     schema:
-//       "$ref": "#/definitions/statusResponse"
+//       "$ref": "#/definitions/ConnectionStatusDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	statusResponse := toStatusResponse(ce.manager.Status())
 	utils.WriteAsJSON(statusResponse, resp)
@@ -123,32 +123,32 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 //     name: body
 //     description: Parameters in body (consumerId, providerId) required for creating new connection
 //     schema:
-//       $ref: "#/definitions/connectionRequest"
+//       $ref: "#/definitions/ConnectionRequestDTO"
 // responses:
 //   201:
 //     description: Connection started
 //     schema:
-//       "$ref": "#/definitions/statusResponse"
+//       "$ref": "#/definitions/ConnectionStatusDTO"
 //   400:
 //     description: Bad request
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   409:
 //     description: Conflict. Connection already exists
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   422:
 //     description: Parameters validation error
 //     schema:
-//       "$ref": "#/definitions/validationError"
+//       "$ref": "#/definitions/ValidationErrorDTO"
 //   499:
 //     description: Connection was cancelled
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	cr, err := toConnectionRequest(req)
 	if err != nil {
@@ -191,11 +191,11 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 //   409:
 //     description: Conflict. No connection exists
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	err := ce.manager.Disconnect()
 	if err != nil {
@@ -219,15 +219,15 @@ func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 //   200:
 //     description: Public IP address
 //     schema:
-//       "$ref": "#/definitions/ipResponse"
+//       "$ref": "#/definitions/IPDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   503:
 //     description: Service unavailable
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	ip, err := ce.ipResolver.GetPublicIP()
 	if err != nil {
@@ -251,11 +251,11 @@ func (ce *ConnectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 //   200:
 //     description: Connection statistics
 //     schema:
-//       "$ref": "#/definitions/statisticsResponse"
+//       "$ref": "#/definitions/ConnectionStatisticsDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	stats := ce.statsKeeper.Retrieve()
 

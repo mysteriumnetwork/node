@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-// swagger:model
+// swagger:model HealthCheckDTO
 type healthCheckData struct {
 	// example: 25h53m33.540493171s
 	Uptime string `json:"uptime"`
@@ -38,7 +38,7 @@ type healthCheckData struct {
 	BuildInfo buildInfo `json:"buildInfo"`
 }
 
-// swagger:model
+// swagger:model BuildInfoDTO
 type buildInfo struct {
 	// example: <unknown>
 	Commit string `json:"commit"`
@@ -77,11 +77,11 @@ func HealthCheckEndpointFactory(currentTimeFunc func() time.Time, procID func() 
 //   200:
 //     description: Health check information
 //     schema:
-//       "$ref": "#/definitions/healthCheckData"
+//       "$ref": "#/definitions/HealthCheckDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (hce *healthCheckEndpoint) HealthCheck(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	status := healthCheckData{
 		Uptime:  hce.currentTimeFunc().Sub(hce.startTime).String(),

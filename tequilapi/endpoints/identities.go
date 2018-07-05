@@ -29,7 +29,7 @@ import (
 	"github.com/mysterium/node/tequilapi/validation"
 )
 
-// swagger:model
+// swagger:model IdentityDTO
 type identityDto struct {
 	// identity in Ethereum address format
 	// required: true
@@ -37,23 +37,23 @@ type identityDto struct {
 	ID string `json:"id"`
 }
 
-// swagger:model
+// swagger:model IdentityList
 type identityList struct {
 	Identities []identityDto `json:"identities"`
 }
 
-// swagger:model
+// swagger:model IdentityCreationDTO
 type identityCreationDto struct {
 	Passphrase *string `json:"passphrase"`
 }
 
-// swagger:model
+// swagger:model IdentityRegistrationDTO
 type identityRegistrationDto struct {
 	// value true means register, false - unregister which in not implemented yet
 	Registered bool `json:"registered"`
 }
 
-// swagger:model
+// swagger:model IdentityUnlockingDTO
 type identityUnlockingDto struct {
 	Passphrase string `json:"passphrase"`
 }
@@ -89,11 +89,11 @@ func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient ser
 //   200:
 //     description: List of identities
 //     schema:
-//       "$ref": "#/definitions/identityList"
+//       "$ref": "#/definitions/IdentityList"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	idArry := endpoint.idm.GetIdentities()
 	idsSerializable := identityList{mapIdentities(idArry, idToDto)}
@@ -110,24 +110,24 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 //     name: body
 //     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
-//       $ref: "#/definitions/identityCreationDto"
+//       $ref: "#/definitions/IdentityCreationDTO"
 // responses:
 //   200:
 //     description: Identity created
 //     schema:
-//       "$ref": "#/definitions/identityDto"
+//       "$ref": "#/definitions/IdentityDTO"
 //   400:
 //     description: Bad Request
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   422:
 //     description: Parameters validation error
 //     schema:
-//       "$ref": "#/definitions/validationError"
+//       "$ref": "#/definitions/ValidationErrorDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	createReq, err := toCreateRequest(request)
 	if err != nil {
@@ -164,22 +164,22 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 //   name: body
 //   description: Parameter in body (registered) required for registering identity
 //   schema:
-//     $ref: "#/definitions/identityRegistrationDto"
+//     $ref: "#/definitions/IdentityRegistrationDTO"
 // responses:
 //   202:
 //     description: Identity registered
 //   400:
 //     description: Bad request
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   501:
 //     description: Not implemented
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 	registerReq, err := toRegisterRequest(request)
@@ -217,22 +217,22 @@ func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.
 //   name: body
 //   description: Parameter in body (passphrase) required for unlocking identity
 //   schema:
-//     $ref: "#/definitions/identityUnlockingDto"
+//     $ref: "#/definitions/IdentityUnlockingDTO"
 // responses:
 //   202:
 //     description: Identity unlocked
 //   400:
 //     description: Body parsing error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   403:
 //     description: Forbidden
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
 	unlockReq, err := toUnlockRequest(request)

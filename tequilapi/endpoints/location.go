@@ -25,7 +25,7 @@ import (
 	"net/http"
 )
 
-// swagger:model
+// swagger:model LocationDTO
 type locationResponse struct {
 	Original location.Location `json:"original"`
 	Current  location.Location `json:"current"`
@@ -57,15 +57,15 @@ func NewLocationEndpoint(manager connection.Manager, locationDetector location.D
 //   200:
 //     description: Original and current locations
 //     schema:
-//       "$ref": "#/definitions/locationResponse"
+//       "$ref": "#/definitions/LocationDTO"
 //   500:
 //     description: Internal server error
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 //   503:
 //     description: Service unavailable
 //     schema:
-//       "$ref": "#/definitions/errorMessage"
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	originalLocation := le.originalLocationCache.Get()
 
