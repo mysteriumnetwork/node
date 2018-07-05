@@ -28,28 +28,10 @@ You can check latest docker node versions here: https://hub.docker.com/r/mysteri
 ### Installation
 
 Go to [docker](https://www.docker.com/) on how to get a recent docker version for Your OS.
-
+You will have to agree to the terms and conditions by appending flag '--agreed-terms-and-conditions'.
 ```bash
 sudo apt-get install docker-ce
-sudo docker run --cap-add NET_ADMIN --net host --publish "1194:1194" --name mysterium-node -d mysteriumnetwork/mysterium-node:latest
-```
-
-### Accepting terms & conditions
-
-Running the previous command for the first time, you will be given terms & conditions.
-You need to accept these before you can start program.
-To accept terms & conditions:
-
-```bash
-export AGREED_TERMS_AND_CONDITIONS={DATE OF TERMS}
-```
-
-Replace `{DATE OF TERMS}` with date of latest terms.
-This date can be found at the end of terms & conditions.
-For example, to accept `01-01-2000` terms & conditions, use:
-
-```bash
-export AGREED_TERMS_AND_CONDITIONS=01-01-2000
+sudo docker run --cap-add NET_ADMIN --net host --publish "1194:1194" --name mysterium-node -d mysteriumnetwork/mysterium-node:latest --agreed-terms-and-conditions
 ```
 
 ### Running

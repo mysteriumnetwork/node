@@ -11,6 +11,5 @@ exec /usr/bin/mysterium_server \
   --config-dir=$OS_DIR_CONFIG \
   --data-dir=$OS_DIR_DATA \
   --runtime-dir=$OS_DIR_RUN \
-  -agreed-terms-and-conditions=$AGREED_TERMS_AND_CONDITIONS \
   $@
 

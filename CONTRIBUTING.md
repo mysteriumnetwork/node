@@ -37,7 +37,7 @@ docker-compose up broker
 
 # Start node
 bin/server_build
-bin/server_run -agreed-terms-and-conditions=$AGREED_TERMS_AND_CONDITIONS
+bin/server_run -agreed-terms-and-conditions
 
 # Client connects to node
 bin/client_build
@@ -80,13 +80,6 @@ bin/client_run_cli
 
 # Connect to a server
 » connect <consumer-identity> <provider-identity>
-```
-
-## Running multiple nodes and clients at once
-
-```bash
-To run small network of nodes and clients in docker, you can use:
-docker-compose up
 ```
 
 ## Generate Tequila API documentation from client source code

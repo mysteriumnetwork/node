@@ -22,8 +22,6 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
-	"github.com/mysterium/node/cmd/commands/server/terms_and_conditions"
-	"github.com/mysterium/node/cmd/license"
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	"os"
@@ -51,27 +49,16 @@ func main() {
 	} else {
 		fmt.Println(versionSummary)
 		fmt.Println()
-
-		runCMD(options)
 	}
 	startWithOptions(options)
 }
 
 func startWithOptions(options server.CommandOptions) {
-	if !terms_and_conditions.UserAgreed(options.AgreedTermsConditions) {
-		fmt.Print(terms_and_conditions.Text + "\n")
+	if !options.AgreedTermsConditions {
+		fmt.Println(metadata.TermsNotice)
 		return
 	}
 	log.Infof("User agreed with terms & conditions: %v", options.AgreedTermsConditions)
-
-	if options.LicenseWarranty {
-		fmt.Print(license.Warranty)
-		return
-	}
-	if options.LicenseConditions {
-		fmt.Print(license.Conditions)
-		return
-	}
 
 	runCMD(options)
 }

@@ -24,9 +24,6 @@ import (
 	"path/filepath"
 )
 
-// AgreedTermsAndConditionsFlagName is name of flag for agreeing with terms & conditions
-const AgreedTermsAndConditionsFlagName = "agreed-terms-and-conditions"
-
 // CommandOptions describes options which are required to start Command
 type CommandOptions struct {
 	DirectoryConfig  string
@@ -52,8 +49,8 @@ type CommandOptions struct {
 	Protocol    string
 	OpenvpnPort int
 
-	AgreedTermsConditions string
-	Localnet    bool
+	AgreedTermsConditions bool
+	Localnet              bool
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
@@ -138,11 +135,11 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"Address (IP or domain name) of message broker",
 	)
 
-	flags.StringVar(
+	flags.BoolVar(
 		&options.AgreedTermsConditions,
-		AgreedTermsAndConditionsFlagName,
-		"",
-		"Date of terms & conditions you are agreeing with",
+		metadata.AgreedTermsAndConditionsFlagName,
+		false,
+		"agree with terms & conditions",
 	)
 
 	flags.BoolVar(
@@ -151,14 +148,12 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		false,
 		"Show version",
 	)
-
 	flags.BoolVar(
 		&options.LicenseWarranty,
 		"license.warranty",
 		false,
 		"Show warranty",
 	)
-
 	flags.BoolVar(
 		&options.LicenseConditions,
 		"license.conditions",
