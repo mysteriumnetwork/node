@@ -30,7 +30,7 @@ script:
   - bin/check_fmt
   - bin/check_license
   - bin/test
-  # Run e2e tests on Pull Requests only
+  # Run e2e tests (on Pull Requests only)
   - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
       bin/travis_scripts/check_docker.sh;
       bin/travis_scripts/check_docker_compose.sh;
@@ -41,6 +41,7 @@ before_deploy:
   - bin/travis_scripts/ensure_xgo.sh
   - bin/package_all $VERSION
 deploy:
+  # Bleeding edge release (on master commits only)
   - provider: pages
     local-dir: build/package
     skip-cleanup: true
@@ -51,6 +52,12 @@ deploy:
     on:
       tags: false
       branch: master
+  - provider: script
+    script: bin/release_docker working
+    on:
+      tags: false
+      branch: master
+  # Official release (on tags only)
   - provider: releases
     file_glob: true
     file: build/package/*

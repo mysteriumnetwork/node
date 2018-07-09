@@ -6,10 +6,11 @@
 # - https://hub.docker.com/r/mysteriumnetwork/mysterium-client/
 #
 # Usage:
-#> bin/release_docker <version>
+#> bin/release_docker <tag>
 #
-# Release specific version with personal Docker Hub account:
+# Release specific tag with personal Docker Hub account:
 #> docker login john.developer ****
+#> bin/release_docker working
 #> bin/release_docker 0.0.1
 
 set -e
@@ -17,19 +18,21 @@ set -e
 source bin/helpers/output.sh
 source bin/helpers/docker.sh
 
-VERSION=$1
-if [ -z "$VERSION" ]; then
-    print_error "Missing version!"
+VERSION_TAG=$1
+if [ -z "$VERSION_TAG" ]; then
+    print_error "Missing version tag!"
     exit 1
 fi
 
 echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
 
-docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION}-alpine ${VERSION}
-docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION}-ubuntu
+docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION_TAG}
+docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION_TAG}-alpine
+docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION_TAG}-ubuntu
 
-docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION}-alpine ${VERSION}
-docker_release_image mysteriumnetwork/mysterium-client ubuntu ${VERSION}-ubuntu
+docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION_TAG}
+docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION_TAG}-alpine
+docker_release_image mysteriumnetwork/mysterium-client ubuntu ${VERSION_TAG}-ubuntu
 
-print_success "Docker Hub release '$VERSION' created!"
+print_success "Docker Hub release '$VERSION_TAG' created!"
 exit 0
