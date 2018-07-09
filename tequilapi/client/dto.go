@@ -67,3 +67,18 @@ type IdentityDTO struct {
 type IdentityList struct {
 	Identities []IdentityDTO `json:"identities"`
 }
+
+// HealthcheckDTO holds returned healthcheck response
+type HealthcheckDTO struct {
+	Uptime    string       `json:"uptime"`
+	Process   int          `json:"process"`
+	Version   string       `json:"version"`
+	BuildInfo BuildInfoDTO `json:"buildInfo"`
+}
+
+// BuildInfoDTO holds info about build
+type BuildInfoDTO struct {
+	Commit      string `json:"commit"`
+	Branch      string `json:"branch"`
+	BuildNumber string `json:"buildNumber"`
+}

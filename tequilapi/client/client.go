@@ -149,6 +149,18 @@ func (client *Client) Status() (StatusDTO, error) {
 	return status, err
 }
 
+// Healthcheck returns a healthcheck info
+func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
+	response, err := client.http.Get("healthcheck", url.Values{})
+	if err != nil {
+		return
+	}
+
+	defer response.Body.Close()
+	err = parseResponseJSON(response, &healthcheck)
+	return healthcheck, err
+}
+
 // Proposals returns all available proposals for services
 func (client *Client) Proposals() ([]ProposalDTO, error) {
 	response, err := client.http.Get("proposals", url.Values{})
