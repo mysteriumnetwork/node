@@ -62,6 +62,10 @@ deploy:
     script: bin/release_docker $VERSION
     on:
       tags: true
+  - provider: script
+    script: bin/release_docker latest
+    on:
+      tags: true
 notifications:
   slack:
     rooms:

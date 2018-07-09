@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###########################################################################
-# Release creates all supported Docker images and uploads them to Docker Hub
+# Uploads all supported Docker images to Docker Hub
 # - https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
 # - https://hub.docker.com/r/mysteriumnetwork/mysterium-client/
 #
@@ -11,9 +11,6 @@
 # Release specific version with personal Docker Hub account:
 #> docker login john.developer ****
 #> bin/release_docker 0.0.1
-#
-# Tag several versions at the same time
-#> bin/release_docker 0.0.1 0.0.1-alpine alpine latest
 
 set -e
 
@@ -28,11 +25,11 @@ fi
 
 echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
 
-docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION} ${VERSION}-alpine alpine latest
-docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION} ${VERSION}-ubuntu ubuntu
+docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION}-alpine ${VERSION}
+docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION}-ubuntu
 
-docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION} ${VERSION}-alpine alpine latest
-docker_release_image mysteriumnetwork/mysterium-client ubuntu ${VERSION}-ubuntu ubuntu
+docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION}-alpine ${VERSION}
+docker_release_image mysteriumnetwork/mysterium-client ubuntu ${VERSION}-ubuntu
 
 print_success "Docker Hub release '$VERSION' created!"
 exit 0
