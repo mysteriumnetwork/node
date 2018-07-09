@@ -31,6 +31,7 @@ DIR_BUILD="build/package"
 PACKAGE_FILE="${DIR_BUILD}/`basename -s .exe ${BINARY}`.tar.gz"
 
 # Put all files to package directory (to avoid preserving directory structure)
+printf "Building Standalone package '$PACKAGE_FILE' for OS '$OS' ..\n"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 cp -p ${BINARY} ${DIR_TEMP}/mysterium_client
 cp -rp "bin/common_package/" ${DIR_TEMP}/config
@@ -39,3 +40,6 @@ cp -rp "bin/client_package/config/${OS}/" ${DIR_TEMP}/config 2>/dev/null || true
 # Tarball package directory
 tar -zcv -f ${PACKAGE_FILE} -C ${DIR_TEMP} .
 rm -rf ${DIR_TEMP}
+
+print_success "Standalone packaging process for OS '$OS' complete!"
+exit 0
