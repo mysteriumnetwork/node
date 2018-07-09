@@ -31,12 +31,14 @@ func GetDataDirectory() string {
 	return filepath.Join(dir, ".mysterium")
 }
 
+// DirectoryOptions describes data structure holding directories as parameters
 type DirectoryOptions struct {
 	RuntimeDir string
 	ConfigDir  string
 	DataDir    string
 }
 
+// ParseFromCmdArgs function takes directory options and fills in values from FlagSet structure
 func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 
 	workingDir, err := os.Getwd()
@@ -65,29 +67,30 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 	return nil
 }
 
+// Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)
 func (options *DirectoryOptions) Check() error {
-	err := EnsureDir(options.ConfigDir)
+	err := ensureDirExists(options.ConfigDir)
 	if err != nil {
 		return err
 	}
 
-	err = EnsureOrCreateDir(options.RuntimeDir)
+	err = ensureOrCreateDir(options.RuntimeDir)
 	if err != nil {
 		return err
 	}
 
-	return EnsureOrCreateDir(options.DataDir)
+	return ensureOrCreateDir(options.DataDir)
 }
 
-func EnsureOrCreateDir(dir string) error {
-	err := EnsureDir(dir)
+func ensureOrCreateDir(dir string) error {
+	err := ensureDirExists(dir)
 	if os.IsNotExist(err) {
 		return os.MkdirAll(dir, 0600)
 	}
 	return err
 }
 
-func EnsureDir(dir string) error {
+func ensureDirExists(dir string) error {
 	fileStat, err := os.Stat(dir)
 	if err != nil {
 		return err
