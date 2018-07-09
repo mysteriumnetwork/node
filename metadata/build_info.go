@@ -35,6 +35,7 @@ func BuildAsString() string {
 	return FormatString(BuildCommit, BuildBranch, BuildNumber)
 }
 
+// FormatString formats build info to string with given build data
 func FormatString(commit, branch, buildNumber string) string {
 	return fmt.Sprintf("Branch: %s. Build id: %s. Commit: %s", branch, buildNumber, commit)
 }
