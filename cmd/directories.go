@@ -33,9 +33,12 @@ func GetDataDirectory() string {
 
 // DirectoryOptions describes data structure holding directories as parameters
 type DirectoryOptions struct {
-	RuntimeDir string
-	ConfigDir  string
-	DataDir    string
+	// Runtime directory for various temp file - usually current working dir
+	Runtime string
+	// Config directory stores all data needed for runtime (db scripts etc.)
+	Config string
+	// Data directory stores persistent data like keystore, cli history, etc.
+	Data string
 }
 
 // ParseFromCmdArgs function takes directory options and fills in values from FlagSet structure
@@ -47,19 +50,19 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 	}
 
 	flags.StringVar(
-		&options.DataDir,
+		&options.Data,
 		"data-dir",
 		filepath.Join(workingDir, ".mysterium"),
 		"Data directory containing keystore & other persistent files",
 	)
 	flags.StringVar(
-		&options.ConfigDir,
+		&options.Config,
 		"config-dir",
 		filepath.Join(workingDir, "config"),
 		"Configs directory containing all configuration, script and helper files",
 	)
 	flags.StringVar(
-		&options.RuntimeDir,
+		&options.Runtime,
 		"runtime-dir",
 		workingDir,
 		"Runtime writable directory for temp files",
@@ -69,17 +72,17 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 
 // Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)
 func (options *DirectoryOptions) Check() error {
-	err := ensureDirExists(options.ConfigDir)
+	err := ensureDirExists(options.Config)
 	if err != nil {
 		return err
 	}
 
-	err = ensureOrCreateDir(options.RuntimeDir)
+	err = ensureOrCreateDir(options.Runtime)
 	if err != nil {
 		return err
 	}
 
-	return ensureOrCreateDir(options.DataDir)
+	return ensureOrCreateDir(options.Data)
 }
 
 func ensureOrCreateDir(dir string) error {

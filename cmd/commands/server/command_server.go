@@ -55,6 +55,7 @@ type Command struct {
 
 	vpnServer                   openvpn.Process
 	checkOpenvpn                func() error
+	checkDirectories            func() error
 	openvpnServiceAddress       func(string, string) string
 	protocol                    string
 	proposalAnnouncementStopped *sync.WaitGroup
@@ -63,6 +64,11 @@ type Command struct {
 // Start starts server - does not block
 func (cmd *Command) Start() (err error) {
 	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
+
+	err = cmd.checkDirectories()
+	if err != nil {
+		return err
+	}
 
 	err = cmd.checkOpenvpn()
 	if err != nil {
