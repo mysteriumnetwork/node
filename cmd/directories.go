@@ -39,7 +39,7 @@ type DirectoryOptions struct {
 
 func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 
-	rootDir, err := os.Getwd()
+	workingDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -47,19 +47,19 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 	flags.StringVar(
 		&options.DataDir,
 		"data-dir",
-		filepath.Join(rootDir, ".mysterium"),
+		filepath.Join(workingDir, ".mysterium"),
 		"Data directory containing keystore & other persistent files",
 	)
 	flags.StringVar(
 		&options.ConfigDir,
 		"config-dir",
-		filepath.Join(rootDir, "config"),
+		filepath.Join(workingDir, "config"),
 		"Configs directory containing all configuration, script and helper files",
 	)
 	flags.StringVar(
 		&options.RuntimeDir,
 		"runtime-dir",
-		rootDir,
+		workingDir,
 		"Runtime writable directory for temp files",
 	)
 	return nil
