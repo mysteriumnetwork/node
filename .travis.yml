@@ -12,7 +12,7 @@ env:
     - COMMIT=$TRAVIS_COMMIT
     - BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
-    - VERSION=$TRAVIS_TAG
+    - VERSION=$(cat ./VERSION)
 
 cache:
   directories:
@@ -66,7 +66,7 @@ deploy:
     on:
       tags: true
   - provider: script
-    script: bin/release_docker $VERSION
+    script: bin/release_docker $TRAVIS_TAG
     on:
       tags: true
   - provider: script
