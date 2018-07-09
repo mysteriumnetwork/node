@@ -254,10 +254,8 @@ func (c *Command) healthcheck() {
 	info(fmt.Sprintf("Uptime: %v", healthcheck.Uptime))
 	info(fmt.Sprintf("Process: %v", healthcheck.Process))
 	info(fmt.Sprintf("Version: %v", healthcheck.Version))
-	info("Build info:")
-	info(fmt.Sprintf("  Commit: %v", healthcheck.BuildInfo.Commit))
-	info(fmt.Sprintf("  Branch: %v", healthcheck.BuildInfo.Branch))
-	info(fmt.Sprintf("  Build number: %v", healthcheck.BuildInfo.Branch))
+	buildString := metadata.FormatString(healthcheck.BuildInfo.Commit, healthcheck.BuildInfo.Branch, healthcheck.BuildInfo.BuildNumber)
+	info(buildString)
 }
 
 func (c *Command) proposals() {

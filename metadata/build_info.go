@@ -32,5 +32,9 @@ var (
 
 // BuildAsString returns all defined build constants as single string
 func BuildAsString() string {
-	return fmt.Sprintf("Branch: %s. Build id: %s. Commit: %s", BuildBranch, BuildNumber, BuildCommit)
+	return FormatString(BuildCommit, BuildBranch, BuildNumber)
+}
+
+func FormatString(commit, branch, buildNumber string) string {
+	return fmt.Sprintf("Branch: %s. Build id: %s. Commit: %s", branch, buildNumber, commit)
 }
