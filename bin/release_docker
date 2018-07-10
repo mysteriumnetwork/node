@@ -1,38 +1,46 @@
 #!/bin/bash
 
 ###########################################################################
-# Uploads all supported Docker images to Docker Hub
+# Uploads all created Docker images to Docker Hub
 # - https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
 # - https://hub.docker.com/r/mysteriumnetwork/mysterium-client/
 #
 # Usage:
-#> bin/release_docker <tag>
+#> bin/release_docker <version>..
 #
-# Release specific tag with personal Docker Hub account:
-#> docker login john.developer ****
-#> bin/release_docker working
+# Release image (specific version):
 #> bin/release_docker 0.0.1
+#
+# Release image (several versions):
+#> bin/release_docker 0.0.1 latest
+#
+# Create image (with personal Docker Hub account):
+#> DOCKER_USERNAME=john.developer DOCKER_PASSWORD=**** bin/release_docker 0.0.1
 
 set -e
 
 source bin/helpers/output.sh
 source bin/helpers/docker.sh
 
-VERSION_TAG=$1
-if [ -z "$VERSION_TAG" ]; then
-    print_error "Missing version tag!"
+if [ -z "$1" ]; then
+    print_error "Missing version!"
     exit 1
 fi
 
 echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin
 
-docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION_TAG}
-docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION_TAG}-alpine
-docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION_TAG}-ubuntu
+while test $# -gt 0; do
+    VERSION_TAG=$1; shift;
+    printf "Creating Docker Hub release '$VERSION_TAG' ..\n" \
 
-docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION_TAG}
-docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION_TAG}-alpine
-docker_release_image mysteriumnetwork/mysterium-client ubuntu ${VERSION_TAG}-ubuntu
+    docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION_TAG}
+    docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION_TAG}-alpine
+    docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION_TAG}-ubuntu
 
-print_success "Docker Hub release '$VERSION_TAG' created!"
+    docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION_TAG}
+    docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION_TAG}-alpine
+    docker_release_image mysteriumnetwork/mysterium-client ubuntu ${VERSION_TAG}-ubuntu
+done
+
+print_success "Docker Hub releases created!"
 exit 0

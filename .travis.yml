@@ -65,11 +65,7 @@ deploy:
     on:
       tags: true
   - provider: script
-    script: bin/release_docker $TRAVIS_TAG
-    on:
-      tags: true
-  - provider: script
-    script: bin/release_docker latest
+    script: bin/release_docker $TRAVIS_TAG latest
     on:
       tags: true
 notifications:
