@@ -25,12 +25,6 @@ import (
 	"path/filepath"
 )
 
-// GetDataDirectory makes full path to application's data
-func GetDataDirectory() string {
-	dir, _ := homedir.Dir()
-	return filepath.Join(dir, ".mysterium")
-}
-
 // DirectoryOptions describes data structure holding directories as parameters
 type DirectoryOptions struct {
 	// Runtime directory for various temp file - usually current working dir
@@ -44,7 +38,12 @@ type DirectoryOptions struct {
 // ParseFromCmdArgs function takes directory options and fills in values from FlagSet structure
 func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 
-	workingDir, err := os.Getwd()
+	userHomeDir, err := homedir.Dir()
+	if err != nil {
+		return err
+	}
+
+	currentDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -52,19 +51,19 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 	flags.StringVar(
 		&options.Data,
 		"data-dir",
-		filepath.Join(workingDir, ".mysterium"),
+		filepath.Join(userHomeDir, ".mysterium"),
 		"Data directory containing keystore & other persistent files",
 	)
 	flags.StringVar(
 		&options.Config,
 		"config-dir",
-		filepath.Join(workingDir, "config"),
+		filepath.Join(currentDir, "config"),
 		"Configs directory containing all configuration, script and helper files",
 	)
 	flags.StringVar(
 		&options.Runtime,
 		"runtime-dir",
-		workingDir,
+		currentDir,
 		"Runtime writable directory for temp files",
 	)
 	return nil
