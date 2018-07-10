@@ -38,4 +38,4 @@ SHORT VERSION IN HUMAN LANGUAGE:
 - In no event will we be liable for any damages which you may incur.
 - We recommend you read the full version to get acquainted with all of the 
   terms and conditions available here: 
-       https://github.com/MysteriumNetwork/node/TERMS.md`
+      https://github.com/MysteriumNetwork/node/blob/master/TERMS.md`

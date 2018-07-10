@@ -9,7 +9,8 @@ db_go
 # to reset accepted terms:
 # echo RESET mysterium/accept_terms | debconf-communicate mysterium-node
 # or:
-db_fset mysterium/accept_terms seen false
+# NOTE: uncomment below if you need to ask user to accepted updated terms again
+# db_fset mysterium/accept_terms seen false
 
 db_input critical mysterium/accept_terms || true
 db_go
