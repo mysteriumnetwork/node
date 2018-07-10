@@ -58,7 +58,7 @@ You will get no remuneration or compensation of any kind for the participation i
 
 You shall be responsible for obtaining and maintaining all necessary hardware, software and other equipment and resources needed for access to and use of the Mysterium Platform Open Alpha and all charges related thereto. 
 
-7. **OUR ROLE **
+7. **OUR ROLE**
 
 We do not encourage, support and contribute to illegal activities and we are resolved to keep the Mysterium Platform Open Alpha operating legally and to protect you. To this end, we enter into binding agreements with the Users by which they undertake to use the Mysterium Platform Open Alpha only for legal purposes; however, we have no technical possibility or intent to monitor their activities on the Network and cannot guarantee that the Users will comply. 
 
@@ -66,7 +66,7 @@ Although we strongly believe that you should not be liable for the traffic which
 
 If you need our help or advice, please contact us immediately at **team@netsys.technology **.
 
-8. **RESTRICTED**** CONDUCT**
+8. **RESTRICTED** **CONDUCT**
 
 You may not use the Mysterium Platform Open Alpha in any manner that could damage, disable, overburden, or impair the servers and other resources of Network or other Nodes, or interfere with any third party's use of the Mysterium Platform Open Alpha. You may not attempt to gain unauthorized access to any aspect of the Mysterium Platform Open Alpha or to information for which you have not been granted access.
 
