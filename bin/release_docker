@@ -33,13 +33,13 @@ while test $# -gt 0; do
     VERSION_TAG=$1; shift;
     printf "Creating Docker Hub release '$VERSION_TAG' ..\n" \
 
-    docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION_TAG}
-    docker_release_image mysteriumnetwork/mysterium-node alpine ${VERSION_TAG}-alpine
-    docker_release_image mysteriumnetwork/mysterium-node ubuntu ${VERSION_TAG}-ubuntu
+    docker_release_image mysterium-node:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}
+    docker_release_image mysterium-node:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}-alpine
+    docker_release_image mysterium-node:ubuntu mysteriumnetwork/mysterium-node:${VERSION_TAG}-ubuntu
 
-    docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION_TAG}
-    docker_release_image mysteriumnetwork/mysterium-client alpine ${VERSION_TAG}-alpine
-    docker_release_image mysteriumnetwork/mysterium-client ubuntu ${VERSION_TAG}-ubuntu
+    docker_release_image mysterium-client:alpine mysteriumnetwork/mysterium-client:${VERSION_TAG}
+    docker_release_image mysterium-client:alpine mysteriumnetwork/mysterium-client:${VERSION_TAG}-alpine
+    docker_release_image mysterium-client:ubuntu mysteriumnetwork/mysterium-client:${VERSION_TAG}-ubuntu
 done
 
 print_success "Docker Hub releases created!"
