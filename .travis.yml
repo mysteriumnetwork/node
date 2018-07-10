@@ -21,6 +21,7 @@ cache:
 install:
   - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
   - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
+  - bin/travis_scripts/ensure_xgo.sh
   - glide "-home" $GLIDE_HOME install
 
 script:
@@ -36,10 +37,8 @@ script:
       bin/travis_scripts/check_docker_compose.sh;
       bin/test_e2e;
     fi
-
-before_deploy:
-  - bin/travis_scripts/ensure_xgo.sh
   - bin/package_all $VERSION
+
 deploy:
   # Bleeding edge release (on master commits only)
   - provider: pages
