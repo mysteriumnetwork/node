@@ -8,10 +8,11 @@ https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
 
 ### Fetching and running docker image
 ```bash
-sudo docker run --cap-add NET_ADMIN --publish "1194:1194" --name mysterium-node -d mysteriumnetwork/mysterium-node --agreed-terms-and-conditions
+sudo docker run --cap-add NET_ADMIN --net host --name mysterium-node -d mysteriumnetwork/mysterium-node --agreed-terms-and-conditions
 ```
 
 Note: to run server, you will have to accept terms & conditions by adding '--agreed-terms-and-conditions' command line option.
+Note 2: it's mandatory to run docker container with --net host to correctly detect VPN service ip which needs to be published to clients, assuming that host on which node is running has external interface with public ip
 
 ### Debugging
 ```bash
