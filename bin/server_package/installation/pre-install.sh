@@ -19,7 +19,7 @@ db_go
 db_get mysterium/accept_terms
 if [ "$RET" = "false" ]; then
     # terminate installation
-    db_purge || true
     echo "You did not accept our terms and conditions. Installation cancelled.\n" >&2
+    db_purge || true
     exit 2
 fi

@@ -1,10 +1,14 @@
 #!/bin/bash
 
-if [ "$1" = "purge" -a -e /usr/share/debconf/confmodule ]; then
-    # Source debconf library.
-    . /usr/share/debconf/confmodule
-    # Remove my changes to the db.
-    db_purge || true
+if [ "$1" = "purge" ]; then
+    if [[ -e /usr/share/debconf/confmodule ]]; then
+        # Source debconf library.
+        . /usr/share/debconf/confmodule
+        # Remove my changes to the db.
+        db_purge
+    else
+        printf  "confmodule is missing, debconf db data was not purged..\n"
+    fi
 fi
 
 function disable_systemd {
