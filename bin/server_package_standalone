@@ -22,7 +22,7 @@ if [[ ! "$OS" =~ ^(linux|darwin|windows)$ ]]; then
     exit 1
 fi
 
-BINARY=${BINARY:="build/server/mysterium_server"}
+BINARY=${BINARY:-"build/server/mysterium_server"}
 DIR_BUILD="build/package"
 
 # Put all files to package directory (to avoid preserving directory structure)

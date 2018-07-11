@@ -18,8 +18,8 @@
 
 source bin/helpers/functions.sh
 
-export GOOS=${GOOS:=`go env GOHOSTOS`}
-export GOARCH=${GOARCH:=`go env GOHOSTARCH`}
+export GOOS=${GOOS:-`go env GOHOSTOS`}
+export GOARCH=${GOARCH:-`go env GOHOSTARCH`}
 export GOBIN=`pwd`/build/server
 echo "Compiling 'mysterium_server' for '$GOOS/$GOARCH'.."
 
