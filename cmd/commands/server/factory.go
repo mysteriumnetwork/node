@@ -50,7 +50,7 @@ func NewCommand(options CommandOptions) *Command {
 	ipResolver := ip.NewResolver(options.IpifyUrl)
 	natService := nat.NewService()
 
-	keystoreDirectory := filepath.Join(options.Directories.DataDir, "keystore")
+	keystoreDirectory := filepath.Join(options.Directories.Data, "keystore")
 	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
 	createSigner := func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(keystoreInstance, id)
@@ -98,8 +98,8 @@ func NewCommand(options CommandOptions) *Command {
 		vpnServerFactory: func(manager session.Manager, primitives *tls.Primitives, callback state.Callback) openvpn.Process {
 			// TODO: check options for --openvpn-transport option
 			serverConfigGenerator := openvpn.NewServerConfigGenerator(
-				options.Directories.RuntimeDir,
-				options.Directories.ConfigDir,
+				options.Directories.Runtime,
+				options.Directories.Config,
 				primitives,
 				options.OpenvpnPort,
 				options.Protocol,
@@ -118,7 +118,7 @@ func NewCommand(options CommandOptions) *Command {
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
-		checkDirectories:            options.Directories.Check,
+		checkDirectories: options.Directories.Check,
 		openvpnServiceAddress: func(outboundIP, publicIP string) string {
 			//TODO public ip could be overriden by arg options if needed
 			if publicIP != outboundIP {
@@ -145,6 +145,6 @@ func locationResolver(options CommandOptions) location.Resolver {
 	case options.LocationCountry != "":
 		return location.NewResolverFake(options.LocationCountry)
 	default:
-		return location.NewResolver(filepath.Join(options.Directories.ConfigDir, options.LocationDatabase))
+		return location.NewResolver(filepath.Join(options.Directories.Config, options.LocationDatabase))
 	}
 }

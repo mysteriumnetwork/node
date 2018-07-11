@@ -13,10 +13,9 @@ git clone git@github.com:MysteriumNetwork/node.git $GOPATH/src/github.com/myster
 cd $GOPATH/src/github.com/mysterium/node
 ```
 
-* **Step 2.** Compile code
+* **Step 2.** Fetch dependencies
 ```bash
 glide install
-go build github.com/mysterium/node
 ```
 
 * **Step 3.** Start localnet infrastructure
