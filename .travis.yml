@@ -27,15 +27,20 @@ install:
 jobs:
   include:
     - stage: test
+      install: skip
       script: bin/check_vet
     - script: bin/builder_run bin/check_lint
+      install: skip
     - script: bin/check_fmt
+      install: skip
     - script: bin/check_license
+      install: skip
     - script: bin/test
     - stage: e2e-test
       script: bin/travis_scripts/check_docker.sh && bin/travis_scripts/check_docker_compose.sh && bin/test_e2e
       if: type = pull_request
     - stage: deploy
+      install: skip
       script: echo "I will do deployment!!!"
 
 stages:
