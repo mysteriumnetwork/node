@@ -37,7 +37,7 @@ if [ "$OS" == "windows" ]; then
     PACKAGE_FILE="${DIR_BUILD}/`basename -s .exe ${BINARY}`.zip"
     (cd ${DIR_TEMP} && zip -r - .) > ${PACKAGE_FILE}
 else
-    PACKAGE_FILE="${DIR_BUILD}/`basename -s .exe ${BINARY}`.tar.gz"
+    PACKAGE_FILE="${DIR_BUILD}/`basename ${BINARY}`.tar.gz"
     tar -zcv -f ${PACKAGE_FILE} -C ${DIR_TEMP} .
 fi
 rm -rf ${DIR_TEMP}
