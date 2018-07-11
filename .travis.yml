@@ -9,10 +9,11 @@ env:
     - CACHE_ROOT_DIR=$HOME/cache
     - BUILD_TOOLS_PATH=$CACHE_ROOT_DIR/build_tools
     - GLIDE_HOME=$HOME/glide-home
-    - COMMIT=$TRAVIS_COMMIT
-    - BRANCH=$TRAVIS_BRANCH
+    - BUILD_COMMIT=$TRAVIS_COMMIT
+    - BUILD_BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
-    - VERSION=$(cat ./VERSION)
+    - BUILD_VERSION=$TRAVIS_TAG
+    - if [ -z "$BUILD_VERSION" ]; then BUILD_VERSION="dev-$TRAVIS_BUILD_NUMBER"; fi
 
 cache:
   directories:
@@ -37,10 +38,10 @@ script:
       bin/travis_scripts/check_docker_compose.sh;
       bin/test_e2e;
     fi
-  - bin/package_all $VERSION
+  - bin/package_all $BUILD_VERSION
 
 deploy:
-  # Bleeding edge release (on master commits only)
+  # Development bleeding-edge release (on master commits only)
   - provider: pages
     local-dir: build/package
     skip-cleanup: true
@@ -52,7 +53,7 @@ deploy:
       tags: false
       branch: master
   - provider: script
-    script: bin/release_docker working
+    script: bin/release_docker dev
     on:
       tags: false
       branch: master
@@ -65,7 +66,7 @@ deploy:
     on:
       tags: true
   - provider: script
-    script: bin/release_docker $TRAVIS_TAG latest
+    script: bin/release_docker $BUILD_VERSION latest
     on:
       tags: true
 notifications:
