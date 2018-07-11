@@ -31,7 +31,7 @@ fi
 
 mkdir -p $GOBIN/config
 
-cp -v bin/client_package/config/$GOOS/* $GOBIN/config
-cp -v bin/common_package/* $GOBIN/config
+cp -vp bin/client_package/config/$GOOS/* $GOBIN/config
+cp -vp bin/common_package/* $GOBIN/config
 
 exit 0
