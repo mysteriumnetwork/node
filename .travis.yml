@@ -13,10 +13,6 @@ env:
     - BUILD_BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
     - BUILD_VERSION_MAJOR=0
-    - BUILD_VERSION=$TRAVIS_TAG
-    - if [ -z "$BUILD_VERSION" ]; then
-        BUILD_VERSION="$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER";
-      fi
 
 cache:
   directories:
@@ -29,6 +25,7 @@ install:
   - glide "-home" $GLIDE_HOME install
 
 script:
+  - BUILD_VERSION=${TRAVIS_TAG:="$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"}
   - bin/check_vet
   # This check requires development dependency
   - bin/builder_run bin/check_lint
@@ -69,7 +66,7 @@ deploy:
     on:
       tags: true
   - provider: script
-    script: bin/release_docker $BUILD_VERSION latest
+    script: bin/release_docker $TRAVIS_TAG latest
     on:
       tags: true
 notifications:
