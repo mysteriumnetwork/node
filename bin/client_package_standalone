@@ -17,12 +17,8 @@ set -e
 source bin/helpers/output.sh
 
 OS=$1
-if [ -z "$OS" ]; then
-    print_error "Missing OS!"
-    exit 1
-fi
-if [ "$OS" != "linux" ] && [ "$OS" != "darwin" ] && [ "$OS" != "windows" ]; then
-    print_error "OS should be: linux, darwin, windows!"
+if [[ ! "$OS" =~ ^(linux|darwin|windows)$ ]]; then
+    print_error "Missing OS! Should be: linux, darwin or windows"
     exit 1
 fi
 
