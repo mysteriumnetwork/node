@@ -19,37 +19,31 @@ cache:
     - "$CACHE_ROOT_DIR"
     - vendor
 
-install:
-  - rm -rf vendor
-  - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
-  - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
-  - bin/travis_scripts/ensure_xgo.sh
-  - glide "-home" $GLIDE_HOME install
+install: skip
+
+script: echo "I haz to be overriden!"
 
 jobs:
   include:
     #deps cache stage
     - stage: dep-cache
-      script: echo "Vendor folder should be cached"
+      script:
+        - rm -rf vendor
+        - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
+        - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
+        - glide "-home" $GLIDE_HOME install
     #test stage
     - stage: test
-      install: skip
       script: bin/check_vet
     - script: bin/builder_run bin/check_lint
-      install: skip
     - script: bin/check_fmt
-      install: skip
     - script: bin/check_license
-      install: skip
     - script: bin/test
-      install: skip
     #e2e stage
     - stage: e2e-test
-      install: skip
       script: bin/travis_scripts/check_docker.sh && bin/travis_scripts/check_docker_compose.sh && bin/test_e2e
     #deploy stage
     - stage: deploy
-      install: skip
       script: echo "I will do deployment!!!"
 
 stages:
