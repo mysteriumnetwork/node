@@ -8,14 +8,13 @@
 
 set -e
 
-DOCKER_IMAGE="mysteriumnetwork/mysterium-node"
-DOCKER_BUILD_TAG="alpine"
+source bin/helpers/output.sh
 
-printf "Building Alpine image..\n" \
+printf "Building Alpine image..\n"
 docker build \
     --file bin/server_docker/alpine/Dockerfile \
-    --tag ${DOCKER_IMAGE}:${DOCKER_BUILD_TAG} \
+    --tag mysterium-node:alpine \
     .
 
-printf "\e[0;32m%s\e[0m\n" "Docker image building process complete!"
+print_success "Docker image building process complete!"
 exit 0

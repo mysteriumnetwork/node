@@ -21,20 +21,20 @@ fi
 
 DIR_BUILD="build/package"
 
-printf "Creating build directory '$DIR_BUILD' ..\n"
+printf "Building version '$VERSION' packages to directory '$DIR_BUILD' ..\n"
 rm -rf ${DIR_BUILD}
 mkdir -p ${DIR_BUILD}
 
 bin/server_build_xgo darwin/amd64 windows/amd64 linux/amd64
 bin/client_build_xgo darwin/amd64 windows/amd64 linux/amd64
 
-BINARY=build/server/mysterium_server_darwin_amd64 bin/server_package_standalone
-BINARY=build/server/mysterium_server_windows_amd64.exe bin/server_package_standalone
-BINARY=build/server/mysterium_server_linux_amd64 bin/server_package_standalone
+BINARY=build/server/mysterium_server_darwin_amd64 bin/server_package_standalone darwin
+BINARY=build/server/mysterium_server_windows_amd64.exe bin/server_package_standalone windows
+BINARY=build/server/mysterium_server_linux_amd64 bin/server_package_standalone linux
 
-BINARY=build/client/mysterium_client_darwin_amd64 bin/client_package_standalone
-BINARY=build/client/mysterium_client_windows_amd64.exe bin/client_package_standalone
-BINARY=build/client/mysterium_client_linux_amd64 bin/client_package_standalone
+BINARY=build/client/mysterium_client_darwin_amd64 bin/client_package_standalone darwin
+BINARY=build/client/mysterium_client_windows_amd64.exe bin/client_package_standalone windows
+BINARY=build/client/mysterium_client_linux_amd64 bin/client_package_standalone linux
 
 bin/builder_run BINARY=build/server/mysterium_server_linux_amd64 bin/server_package_debian ${VERSION} amd64
 bin/builder_run BINARY=build/client/mysterium_client_linux_amd64 bin/client_package_debian ${VERSION} amd64

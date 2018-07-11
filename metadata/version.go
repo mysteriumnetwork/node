@@ -17,23 +17,10 @@
 
 package metadata
 
-import (
-	"fmt"
-)
+import "fmt"
 
-const (
-	// VersionMajor is version component of the current release
-	VersionMajor = 0
-	// VersionMinor is version component of the current release
-	VersionMinor = 0
-	// VersionPatch is version component of the current release
-	VersionPatch = 6
-)
-
-// VersionAsString returns all defined version constants as single string
-func VersionAsString() string {
-	return fmt.Sprintf("%d.%d.%d", VersionMajor, VersionMinor, VersionPatch)
-}
+// Version comes from BUILD_VERSION env variable (set via linker flags)
+var Version = ""
 
 const versionSummaryFormat = `Mysterium Node
   Version: %s
@@ -41,6 +28,21 @@ const versionSummaryFormat = `Mysterium Node
 
 %s
 %s`
+
+// VersionAsString returns all defined version constants as single string
+func VersionAsString() string {
+	if Version != "" {
+		return Version
+	}
+
+	version := "source"
+	if len(BuildCommit) >= 8 {
+		version += "." + BuildCommit[:8]
+	} else if BuildNumber != "" {
+		version += "." + BuildNumber
+	}
+	return version
+}
 
 // VersionAsSummary returns overview of current program's version
 func VersionAsSummary(licenseCopyright string) string {

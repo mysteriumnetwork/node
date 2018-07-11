@@ -22,11 +22,11 @@ package metadata
 import "fmt"
 
 var (
-	// BuildCommit comes from COMMIT env variable
-	BuildCommit = "<unknown>"
-	// BuildBranch comes from BRANCH env variable - if it's github release, this variable will contain release tag name
+	// BuildCommit comes from BUILD_COMMIT env variable (set via linker flags)
+	BuildCommit = ""
+	// BuildBranch comes from BUILD_BRANCH env variable (set via linker flags)
 	BuildBranch = "<unknown>"
-	// BuildNumber comes from TRAVIS_JOB_NUMBER env variable
+	// BuildNumber comes from BUILD_NUMBER env variable (set via linker flags)
 	BuildNumber = "dev-build"
 )
 

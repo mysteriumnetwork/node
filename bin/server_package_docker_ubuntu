@@ -11,21 +11,20 @@
 
 set -e
 
+source bin/helpers/output.sh
+
 VERSION=$1
 if [ -z "$VERSION" ]; then
-    printf "\e[0;31m%s\e[0m\n" "Missing version!"
+    print_error "Missing version!"
     exit 1
 fi
 
-DOCKER_IMAGE="mysteriumnetwork/mysterium-node"
-DOCKER_BUILD_TAG="ubuntu"
-
-printf "Building Ubuntu image..\n" \
+printf "Building Ubuntu image..\n"
 docker build \
     --file bin/server_docker/ubuntu/Dockerfile \
     --build-arg PACKAGE_VERSION=${VERSION} \
-    --tag ${DOCKER_IMAGE}:${DOCKER_BUILD_TAG} \
+    --tag mysterium-node:ubuntu \
     .
 
-printf "\e[0;32m%s\e[0m\n" "Docker image building process complete!"
+print_success "Docker image building process complete!"
 exit 0
