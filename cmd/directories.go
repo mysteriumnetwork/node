@@ -20,6 +20,7 @@ package cmd
 import (
 	"errors"
 	"flag"
+	log "github.com/cihub/seelog"
 	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
@@ -87,6 +88,7 @@ func (options *DirectoryOptions) Check() error {
 func ensureOrCreateDir(dir string) error {
 	err := ensureDirExists(dir)
 	if os.IsNotExist(err) {
+		log.Info("[Directory config checker] ", "Directory: ", dir, " does not exit. Creating new one")
 		return os.MkdirAll(dir, 0600)
 	}
 	return err
