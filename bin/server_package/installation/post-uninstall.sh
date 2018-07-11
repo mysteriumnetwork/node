@@ -1,15 +1,31 @@
 #!/bin/bash
 
+if [ "$1" = "purge" ]; then
+    if [[ -e /usr/share/debconf/confmodule ]]; then
+        # Source debconf library.
+        . /usr/share/debconf/confmodule
+        # Remove my changes to the db.
+        db_purge
+    else
+        printf  "confmodule is missing, debconf db data was not purged..\n"
+    fi
+fi
+
 function disable_systemd {
-    printf  "Disabling systemd script '/lib/systemd/system/mysterium-node.service'..\n"
+    system_service=/lib/systemd/system/mysterium-node.service
+    if [ ! -e $system_service ]; then
+        return
+    fi
+    printf  "Disabling systemd script '$system_service'..\n"
     systemctl disable mysterium-node
-    rm -f /lib/systemd/system/mysterium-node.service
+    rm -f $system_service
 }
 
 function disable_update_rcd {
-    printf  "Disabling initd script '/lib/systemd/system/mysterium-node.service'..\n"
+    initd=/etc/init.d/mysterium-node
+    printf  "Disabling initd script '$initd'..\n"
     update-rc.d -f mysterium-node remove
-    rm -f /etc/init.d/mysterium-node
+    rm -f $initd
 }
 
 function disable_chkconfig {

@@ -1,15 +1,20 @@
 #!/bin/bash
 
 function disable_systemd {
-    printf  "Disabling systemd script '/lib/systemd/system/mysterium-client.service'..\n"
+    system_service=/lib/systemd/system/mysterium-client.service
+    if [ ! -e $system_service ]; then
+        return
+    fi
+    printf  "Disabling systemd script '$system_service'..\n"
     systemctl disable mysterium-client
-    rm -f /lib/systemd/system/mysterium-client.service
+    rm -f $system_service
 }
 
 function disable_update_rcd {
-    printf  "Disabling initd script '/lib/systemd/system/mysterium-client.service'..\n"
+    initd=/etc/init.d/mysterium-client
+    printf  "Disabling initd script '$initd'..\n"
     update-rc.d -f mysterium-client remove
-    rm -f /etc/init.d/mysterium-client
+    rm -f $initd
 }
 
 function disable_chkconfig {

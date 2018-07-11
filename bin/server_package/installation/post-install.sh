@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. /usr/share/debconf/confmodule
+
 OS_DIR_BIN="/usr/bin"
 OS_DIR_CONFIG="/etc/mysterium-node"
 OS_DIR_LOG="/var/log/mysterium-node"
