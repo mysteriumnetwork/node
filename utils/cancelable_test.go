@@ -20,7 +20,6 @@ package utils
 import (
 	"errors"
 	"github.com/stretchr/testify/assert"
-	"sync"
 	"testing"
 	"time"
 )
@@ -37,27 +36,43 @@ func TestBlockingFunctionResultIsPropagatedToCaller(t *testing.T) {
 }
 
 func TestCleanupFunctionIsCalledWithReturnedValueIfCancelWasCalled(t *testing.T) {
-	var cleanupVal int
-	cleanupWaiter := sync.WaitGroup{}
-	cleanupWaiter.Add(1)
+	callErrorChan := make(chan error, 1)
+	cleanupVal := make(chan int, 1)
+	completeRequest := make(chan bool, 1)
 
 	cancelable := NewCancelable()
-	cancelable.Cancel()
 
-	_, err := cancelable.
+	cancelableRequest := cancelable.
 		NewRequest(func() (interface{}, error) {
+			<-completeRequest
 			return 1, nil
 		}).
 		Cleanup(func(val interface{}, err error) {
-			cleanupVal = val.(int)
-			cleanupWaiter.Done()
-		}).
-		Call()
+			cleanupVal <- val.(int)
+		})
 
-	cleanupWaiter.Wait()
+	go func() {
+		_, err := cancelableRequest.Call()
+		callErrorChan <- err
+	}()
 
-	assert.Equal(t, ErrRequestCancelled, err)
-	assert.Equal(t, 1, cleanupVal)
+	cancelable.Cancel()
+
+	select {
+	case err := <-callErrorChan:
+		assert.Equal(t, ErrRequestCancelled, err)
+	case <-time.After(100 * time.Millisecond):
+		assert.Fail(t, "cancelable Call expected to return in 100 milliseconds")
+	}
+
+	completeRequest <- true
+
+	select {
+	case val := <-cleanupVal:
+		assert.Equal(t, 1, val)
+	case <-time.After(100 * time.Millisecond):
+		assert.Fail(t, "cancelable cleanup expected to be called in 100 milliseconds")
+	}
 }
 
 func TestBlockingFunctionIsCancelled(t *testing.T) {
