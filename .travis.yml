@@ -24,28 +24,25 @@ install:
   - bin/travis_scripts/ensure_xgo.sh
   - glide "-home" $GLIDE_HOME install
 
-script:
-  - export BUILD_VERSION=${TRAVIS_TAG:-"$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"}
-  - bin/check_vet
-  # This check requires development dependency
-  - bin/builder_run bin/check_lint
-  - bin/check_fmt
-  - bin/check_license
-  - bin/test
-  # Run e2e tests (on Pull Requests only)
-  - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
-      bin/travis_scripts/check_docker.sh;
-      bin/travis_scripts/check_docker_compose.sh;
-      bin/test_e2e;
-    fi
-  #ugly hack - will be removed when stages will be introduced
-  #we need to package everything on master and tags too. This covers:
-  #PRs, as in this case TRAVIS_BRANCH equals master
-  #commits on master for obvious reason
-  #tags - according documentation, on tag TRAVIS_BRANCH = TRAVIS_TAG
-  - if [ "$TRAVIS_BRANCH" == "master" ] || [ "$TRAVIS_BRANCH" == "$TRAVIS_TAG" ]; then
-      bin/package_all $BUILD_VERSION;
-    fi
+jobs:
+  include:
+    - stage: test
+      script: bin/check_vet
+    - script: bin/builder_run bin/check_lint
+    - script: bin/check_fmt
+    - script: bin/check_license
+    - script: bin/test
+    - stage: e2e-test
+      script: bin/travis_scripts/check_docker.sh && bin/travis_scripts/check_docker_compose.sh && bin/test_e2e
+      if: type = pull_request
+    - stage: deploy
+      script: echo "I will do deployment!!!"
+
+stages:
+  - test
+  - e2e-test
+  - deploy
+
 
 deploy:
   # Development bleeding-edge release (on master commits only)
