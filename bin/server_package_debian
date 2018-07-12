@@ -22,7 +22,7 @@ OS_DIR_CONFIG="/etc/mysterium-node"
 OS_DIR_DOC="/usr/share/doc/mysterium-node"
 OS_DIR_INSTALLATION="/usr/lib/mysterium-node/installation"
 OS_DIR_SUDOERS="/etc/sudoers.d"
-BINARY=${BINARY:="build/server/mysterium_server"}
+BINARY=${BINARY:-"build/server/mysterium_server"}
 
 VERSION=$1
 if [ -z "$VERSION" ]; then

@@ -25,7 +25,7 @@ install:
   - glide "-home" $GLIDE_HOME install
 
 script:
-  - BUILD_VERSION=${TRAVIS_TAG:="$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"}
+  - BUILD_VERSION=${TRAVIS_TAG:-"$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"}
   - bin/check_vet
   # This check requires development dependency
   - bin/builder_run bin/check_lint
