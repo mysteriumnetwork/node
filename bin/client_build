@@ -16,7 +16,7 @@
 #> brew install readelf
 #> readelf -d build/client/mysterium_client
 
-source bin/helpers/functions.sh
+. ./bin/helpers/functions.sh
 
 export GOOS=${GOOS:-`go env GOHOSTOS`}
 export GOARCH=${GOARCH:-`go env GOHOSTARCH`}
@@ -31,7 +31,6 @@ fi
 
 mkdir -p $GOBIN/config
 
-cp -vp bin/client_package/config/$GOOS/* $GOBIN/config
-cp -vp bin/common_package/* $GOBIN/config
+copy_client_config $GOOS $GOBIN
 
 exit 0
