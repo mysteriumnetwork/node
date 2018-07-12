@@ -75,15 +75,20 @@ func (cmd *Command) Start() (err error) {
 	cmd.dialogWaiter = cmd.dialogWaiterFactory(providerID)
 	providerContact, err := cmd.dialogWaiter.Start()
 
+	publicIP, err := cmd.ipResolver.GetPublicIP()
+	if err != nil {
+		return err
+	}
+
 	// if for some reason we will need truly external IP, use GetPublicIP()
-	vpnServerIP, err := cmd.ipResolver.GetOutboundIP()
+	outboundIP, err := cmd.ipResolver.GetOutboundIP()
 	if err != nil {
 		return err
 	}
 
 	cmd.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
-		TargetIP:      vpnServerIP,
+		TargetIP:      outboundIP,
 	})
 
 	err = cmd.natService.Start()
@@ -105,7 +110,16 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	sessionManager := cmd.sessionManagerFactory(primitives, vpnServerIP)
+	if outboundIP != publicIP {
+		log.Infof(
+			`It seems that publicaly visible ip: [%s] does not match your local machines ip: [%s]. 
+You should probaly need to do port forwarding on your router.`,
+			publicIP,
+			outboundIP,
+		)
+	}
+
+	sessionManager := cmd.sessionManagerFactory(primitives, publicIP)
 
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
