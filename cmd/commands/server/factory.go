@@ -18,6 +18,8 @@
 package server
 
 import (
+	"fmt"
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	identity_handler "github.com/mysterium/node/cmd/commands/server/identity"
 	"github.com/mysterium/node/communication"
@@ -73,23 +75,14 @@ func NewCommandWith(
 		createSigner,
 	)
 
-	var locationResolver location.Resolver
-	if options.LocationCountry != "" {
-		locationResolver = location.NewResolverFake(options.LocationCountry)
-	} else if options.LocationDatabase != "" {
-		locationResolver = location.NewResolver(filepath.Join(options.DirectoryConfig, options.LocationDatabase))
-	} else {
-		locationResolver = location.NewResolver(filepath.Join(options.DirectoryConfig, defaultLocationDatabase))
-	}
-
-	locationDetector := location.NewDetectorWithLocationResolver(ipResolver, locationResolver)
+	locationResolver := locationResolver(options)
 
 	return &Command{
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, options.Identity, options.Passphrase)
 		},
 		createSigner:     createSigner,
-		locationDetector: locationDetector,
+		locationResolver: locationResolver,
 		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,
@@ -137,8 +130,33 @@ func NewCommandWith(
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
+		openvpnServiceAddress: func(outboundIP, publicIP string) string {
+			//TODO public ip could be overriden by arg options if needed
+			if publicIP != outboundIP {
+				forwardInfo := fmt.Sprintf("%s:%v -> %s:%v", publicIP, options.OpenvpnPort, outboundIP, options.OpenvpnPort)
+				log.Warnf(
+					`WARNING: It seems that publicaly visible ip: [%s] does not match your local machines ip: [%s]. 
+You should probaly need to do port forwarding on your router: %s.`,
+					publicIP,
+					outboundIP,
+					forwardInfo,
+				)
+
+			}
+
+			return publicIP
+		},
 		protocol:                    options.Protocol,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
+	}
+}
+
+func locationResolver(options CommandOptions) location.Resolver {
+	switch {
+	case options.LocationCountry != "":
+		return location.NewResolverFake(options.LocationCountry)
+	default:
+		return location.NewResolver(filepath.Join(options.DirectoryConfig, options.LocationDatabase))
 	}
 }
 
