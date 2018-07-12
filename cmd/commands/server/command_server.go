@@ -55,6 +55,7 @@ type Command struct {
 
 	vpnServer                   openvpn.Process
 	checkOpenvpn                func() error
+	openvpnServiceAddress       func() (string, error)
 	protocol                    string
 	proposalAnnouncementStopped *sync.WaitGroup
 }
@@ -75,11 +76,6 @@ func (cmd *Command) Start() (err error) {
 
 	cmd.dialogWaiter = cmd.dialogWaiterFactory(providerID)
 	providerContact, err := cmd.dialogWaiter.Start()
-	if err != nil {
-		return err
-	}
-
-	publicIP, err := cmd.ipResolver.GetPublicIP()
 	if err != nil {
 		return err
 	}
@@ -114,16 +110,12 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	if outboundIP != publicIP {
-		log.Infof(
-			`It seems that publicaly visible ip: [%s] does not match your local machines ip: [%s]. 
-You should probaly need to do port forwarding on your router.`,
-			publicIP,
-			outboundIP,
-		)
+	openvpnServiceAddress, err := cmd.openvpnServiceAddress()
+	if err != nil {
+		return err
 	}
 
-	sessionManager := cmd.sessionManagerFactory(primitives, publicIP)
+	sessionManager := cmd.sessionManagerFactory(primitives, openvpnServiceAddress)
 
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {

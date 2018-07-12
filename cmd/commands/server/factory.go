@@ -18,6 +18,8 @@
 package server
 
 import (
+	"fmt"
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/cmd"
 	identity_handler "github.com/mysterium/node/cmd/commands/server/identity"
@@ -124,6 +126,31 @@ func NewCommand(options CommandOptions) *Command {
 		},
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
+		},
+		openvpnServiceAddress: func() (string, error) {
+			publicIP, err := ipResolver.GetPublicIP()
+			if err != nil {
+				return "", err
+			}
+
+			outboundIP, err := ipResolver.GetOutboundIP()
+			if err != nil {
+				return "", err
+			}
+
+			if publicIP != outboundIP {
+				forwardInfo := fmt.Sprintf("%s:%v -> %s:%v", publicIP, options.OpenvpnPort, outboundIP, options.OpenvpnPort)
+				log.Warnf(
+					`WARNING: It seems that publicaly visible ip: [%s] does not match your local machines ip: [%s]. 
+You should probaly need to do port forwarding on your router: %s.`,
+					publicIP,
+					outboundIP,
+					forwardInfo,
+				)
+
+			}
+
+			return publicIP, nil
 		},
 		protocol:                    options.Protocol,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
