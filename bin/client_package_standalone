@@ -30,6 +30,7 @@ DIR_BUILD="build/package"
 printf "Building Standalone package for OS '$OS' ..\n"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 cp -vp ${BINARY} ${DIR_TEMP}/mysterium_client
+
 copy_client_config $OS $DIR_TEMP
 
 # Tarball package directory
