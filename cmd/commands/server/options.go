@@ -53,8 +53,6 @@ type CommandOptions struct {
 	Localnet              bool
 }
 
-const defaultLocationDatabase = "GeoLite2-Country.mmdb"
-
 // ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
@@ -112,7 +110,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags.StringVar(
 		&options.LocationDatabase,
 		"location.database",
-		defaultLocationDatabase,
+		"GeoLite2-Country.mmdb",
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 	flags.StringVar(
