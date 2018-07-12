@@ -30,7 +30,7 @@ printf "Building Standalone package for OS '$OS' ..\n"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 cp -p ${BINARY} ${DIR_TEMP}/mysterium_server
 cp -rp "bin/common_package/" ${DIR_TEMP}/config
-cp -p "bin/server_package/config/" ${DIR_TEMP}/config 2>/dev/null || true
+cp -p "bin/server_package/config/*" ${DIR_TEMP}/config 2>/dev/null || true
 
 # Tarball package directory
 if [ "$OS" == "windows" ]; then
