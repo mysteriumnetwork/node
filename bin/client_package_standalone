@@ -15,6 +15,7 @@
 set -e
 
 source bin/helpers/output.sh
+. ./bin/helpers/functions.sh
 
 OS=$1
 if [[ ! "$OS" =~ ^(linux|darwin|windows)$ ]]; then
@@ -28,9 +29,8 @@ DIR_BUILD="build/package"
 # Put all files to package directory (to avoid preserving directory structure)
 printf "Building Standalone package for OS '$OS' ..\n"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
-cp -p ${BINARY} ${DIR_TEMP}/mysterium_client
-cp -rp "bin/common_package/" ${DIR_TEMP}/config
-cp -rp "bin/client_package/config/${OS}/" ${DIR_TEMP}/config 2>/dev/null || true
+cp -vp ${BINARY} ${DIR_TEMP}/mysterium_client
+copy_client_config $OS $DIR_TEMP
 
 # Tarball package directory
 if [ "$OS" == "windows" ]; then
