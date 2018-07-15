@@ -16,7 +16,6 @@ cd $GOPATH/src/github.com/mysterium/node
 * **Step 2.** Compile code
 ```bash
 glide install
-go build github.com/mysterium/node
 ```
 
 * **Step 3.** Prepare configuration
@@ -27,6 +26,7 @@ Enter `NATS_SERVER_IP` address of running [communication broker](https://github.
 ```bash
 cp .env_example .env
 vim .env
+go build github.com/mysterium/node/...
 ```
 
 ## Running
