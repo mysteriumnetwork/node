@@ -16,17 +16,7 @@ cd $GOPATH/src/github.com/mysterium/node
 * **Step 2.** Compile code
 ```bash
 glide install
-go build github.com/mysterium/node
-```
-
-* **Step 3.** Prepare configuration
-
-Enter `MYSTERIUM_API_URL` address of running [api](https://github.com/MysteriumNetwork/api) instance<br/>
-Enter `NATS_SERVER_IP` address of running [communication broker](https://github.com/nats-io/gnatsd) instance
-
-```bash
-cp .env_example .env
-vim .env
+go build github.com/mysterium/node/...
 ```
 
 ## Running
@@ -140,7 +130,7 @@ bin/client_package_debian 0.0.6 amd64
 To contribute a code, fist you must create a pull request (PR). If your changes will be accepted
 this PR will be merged into main branch.
 
-Before creating PR be sure to: 
+Before creating PR be sure to:
 
 * **Step 1.** Ensure that **your** code quality is passing
 
@@ -161,5 +151,5 @@ bin/test_e2e
 ```
 
 After you forked a project, modified sources and run tests, you can create a pull request using this procedure:
- 
+
  https://help.github.com/articles/creating-a-pull-request-from-a-fork/
