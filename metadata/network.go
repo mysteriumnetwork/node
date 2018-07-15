@@ -31,7 +31,7 @@ var TestnetDefinition = NetworkDefinition{
 
 // LocalnetDefinition defines parameters for local network (expects discovery and broker services on localhost)
 var LocalnetDefinition = NetworkDefinition{
-	"http://localhost/v1",
+	"http://localhost:8001/v1",
 	"localhost",
 }
 
