@@ -1,5 +1,5 @@
-hash: f8f7acdeb4263280e14dc6741a141801c6cf150428ad8e0db64412bebcde2fb0
-updated: 2018-08-08T14:21:15.199621+03:00
+hash: 8b376d590b92e0f1d8d2ae0083a6d84b835e357d1e6b039bad65b4e67af9b3ff
+updated: 2018-08-08T15:36:44.307497+03:00
 imports:
 - name: github.com/aristanetworks/goarista
   version: b2d71c282dc706f4b4f6c15b65810e1202ecd53f
@@ -18,9 +18,11 @@ imports:
   subpackages:
   - spew
 - name: github.com/ethereum/go-ethereum
-  version: 4bb3c89d44e372e6a9ab85a8be0c9345265c763a
+  version: 329ac18ef617d0238f71637bffe78f028b0f13f7
   subpackages:
   - accounts
+  - accounts/abi
+  - accounts/abi/bind
   - accounts/keystore
   - common
   - common/hexutil
@@ -31,8 +33,10 @@ imports:
   - crypto/randentropy
   - crypto/secp256k1
   - crypto/sha3
+  - ethdb
   - event
   - log
+  - metrics
   - params
   - rlp
   - trie
@@ -40,10 +44,18 @@ imports:
   version: 2c768e3c5489976167bfc42b5c7c92ca783f4389
 - name: github.com/go-stack/stack
   version: 259ab82a6cad3992b4e21ff5cac294ccb06474bc
+- name: github.com/golang/snappy
+  version: 2e65f85255dbc3072edf28d6b5b8efc472979f5a
 - name: github.com/julienschmidt/httprouter
   version: 8c199fb6259ffc1af525cc3ad52ee60ba8359669
 - name: github.com/mitchellh/go-homedir
   version: b8bc1bf767474819792c23f32d8286a45736f1c6
+- name: github.com/MysteriumNetwork/payments
+  version: 6fd859db4476d7a7630b88210b3b3ffc874dcf4d
+  subpackages:
+  - identity
+  - registry
+  - registry/generated
 - name: github.com/nats-io/go-nats
   version: d66cb54e6b7bdd93f0b28afc8450d84c780dfb68
   subpackages:
@@ -61,8 +73,6 @@ imports:
   version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
-- name: github.com/rcrowley/go-metrics
-  version: e2704e165165ec55d062f5919b4b29494e9fa790
 - name: github.com/rjeczalik/notify
   version: 73af26f04f4c947f6aad53f7ae0dd72fb14f824b
 - name: github.com/satori/go.uuid
@@ -73,6 +83,21 @@ imports:
   - assert
   - require
   - suite
+- name: github.com/syndtr/goleveldb
+  version: c4c61651e9e37fa117f53c5a906d3b63090d8445
+  subpackages:
+  - leveldb
+  - leveldb/cache
+  - leveldb/comparer
+  - leveldb/errors
+  - leveldb/filter
+  - leveldb/iterator
+  - leveldb/journal
+  - leveldb/memdb
+  - leveldb/opt
+  - leveldb/storage
+  - leveldb/table
+  - leveldb/util
 - name: golang.org/x/crypto
   version: f027049dab0ad238e394a753dba2d14753473a04
   subpackages:
@@ -83,6 +108,12 @@ imports:
   subpackages:
   - unix
   - windows
+- name: golang.org/x/tools
+  version: ca6481ae56504398949d597084558e50ad07117a
+  subpackages:
+  - go/ast/astutil
+  - imports
+  - internal/fastwalk
 - name: gopkg.in/fatih/set.v0
   version: 2c768e3c5489976167bfc42b5c7c92ca783f4389
 - name: gopkg.in/karalabe/cookiejar.v2

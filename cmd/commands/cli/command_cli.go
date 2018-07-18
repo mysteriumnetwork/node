@@ -126,6 +126,7 @@ func (c *Command) handleActions(line string) {
 		{command: "identities", handler: c.identities},
 		{command: "version", handler: c.version},
 		{command: "license", handler: c.license},
+		{command: "registration", handler: c.registration},
 	}
 
 	for _, cmd := range staticCmds {
@@ -354,6 +355,17 @@ func (c *Command) identities(argsString string) {
 	}
 }
 
+func (c *Command) registration(argsString string) {
+	status, err := c.tequilapi.RegistrationStatus(argsString)
+	if err != nil {
+		warn("Something went wrong: ", err)
+		return
+	}
+	for key, val := range status {
+		info(fmt.Sprintf("%v -> %v", key, val))
+	}
+}
+
 func (c *Command) stopClient() {
 	err := c.tequilapi.Stop()
 	if err != nil {
@@ -436,6 +448,12 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			"license",
 			readline.PcItem("warranty"),
 			readline.PcItem("conditions"),
+		),
+		readline.PcItem(
+			"registration",
+			readline.PcItemDynamic(
+				getIdentityOptionList(tequilapi),
+			),
 		),
 	)
 }

@@ -82,3 +82,5 @@ type BuildInfoDTO struct {
 	Branch      string `json:"branch"`
 	BuildNumber string `json:"buildNumber"`
 }
+
+type RegistrationStatusDTO map[string]interface{}

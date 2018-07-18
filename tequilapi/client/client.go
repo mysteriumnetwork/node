@@ -86,6 +86,21 @@ func (client *Client) RegisterIdentity(address string) (err error) {
 	return nil
 }
 
+// Registration status returns information of identity needed to register it on blockchain
+func (client *Client) RegistrationStatus(address string) (RegistrationStatusDTO, error) {
+	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	status := make(RegistrationStatusDTO)
+	err = parseResponseJSON(response, &status)
+	//responseJSON, err := ioutil.ReadAll(response.Body)
+	//status["test"] = string(responseJSON)
+	return status, err
+}
+
 // Connect initiates a new connection to a host identified by providerID
 func (client *Client) Connect(consumerID, providerID string) (status StatusDTO, err error) {
 	payload := struct {

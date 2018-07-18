@@ -9,7 +9,7 @@ import:
 - package: github.com/satori/go.uuid
   version: 1.2.0
 - package: github.com/ethereum/go-ethereum
-  version: 1.7.3
+  version: 1.8.3
   subpackages:
   - accounts
 - package: github.com/julienschmidt/httprouter
