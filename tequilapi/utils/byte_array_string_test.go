@@ -18,5 +18,5 @@ func TestByteArrayStringMarshalsToHexString(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "{\"TestString\":\"\\\\x00\\\\x01\\\\x02\\\\x03\"}", string(stringBytes))
+	assert.Equal(t, "{\"TestString\":\"0x00010203\"}", string(stringBytes))
 }
