@@ -22,7 +22,9 @@ import (
 
 	"encoding/json"
 	"errors"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysterium/node/blockchain/registration"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/tequilapi/utils"
@@ -62,6 +64,7 @@ type identitiesAPI struct {
 	idm             identity.IdentityManagerInterface
 	mysteriumClient server.Client
 	signerFactory   identity.SignerFactory
+	proofGenerator  registration.ProofGenerator
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -77,8 +80,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient server.Client, signerFactory identity.SignerFactory) *identitiesAPI {
-	return &identitiesAPI{idm, mystClient, signerFactory}
+func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient server.Client, signerFactory identity.SignerFactory, generator registration.ProofGenerator) *identitiesAPI {
+	return &identitiesAPI{idm, mystClient, signerFactory, generator}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -249,6 +252,33 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+func (endpoint *identitiesAPI) RegistrationStatus(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := params.ByName("id")
+
+	proof, err := endpoint.proofGenerator.GenerateProofForIdentity(common.HexToAddress(id))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	utils.WriteAsJSON(
+		struct {
+			PublicKeyPart1 *utils.ByteArrayString
+			PublicKeyPart2 *utils.ByteArrayString
+			Signature_S    *utils.ByteArrayString
+			Signature_R    *utils.ByteArrayString
+			V              uint8
+		}{
+			PublicKeyPart1: utils.ToByteArrayString(proof.Data[0:32]),
+			PublicKeyPart2: utils.ToByteArrayString(proof.Data[32:64]),
+			Signature_S:    utils.ToByteArrayString(proof.Signature.S[:]),
+			Signature_R:    utils.ToByteArrayString(proof.Signature.R[:]),
+			V:              proof.Signature.V,
+		},
+		resp,
+	)
+}
+
 func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 	var identityCreationReq = &identityCreationDto{}
 	err := json.NewDecoder(req.Body).Decode(&identityCreationReq)
@@ -291,10 +321,12 @@ func AddRoutesForIdentities(
 	idm identity.IdentityManagerInterface,
 	mystClient server.Client,
 	signerFactory identity.SignerFactory,
+	generator registration.ProofGenerator,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, mystClient, signerFactory)
+	idmEnd := NewIdentitiesEndpoint(idm, mystClient, signerFactory, generator)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
+	router.GET("/identities/:id/registration", idmEnd.RegistrationStatus)
 	router.PUT("/identities/:id/registration", idmEnd.Register)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 }
