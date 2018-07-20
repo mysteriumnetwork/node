@@ -31,7 +31,12 @@ type errorResponse struct {
 func parseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		var error errorResponse
-		parseResponseJSON(response, &error)
+
+		err := parseResponseJSON(response, &error)
+		if err != nil {
+			return err
+		}
+
 		return fmt.Errorf("server response invalid: %s (%s) error message: %s",
 			response.Status, response.Request.URL, error)
 	}

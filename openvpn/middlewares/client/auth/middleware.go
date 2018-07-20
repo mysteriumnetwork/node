@@ -18,10 +18,11 @@
 package auth
 
 import (
+	"regexp"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/management"
-	"regexp"
 )
 
 // CredentialsProvider returns client's current auth primitives (i.e. customer identity signature / node's sessionId)
@@ -63,7 +64,12 @@ func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
 	if len(match) == 0 {
 		return false, nil
 	}
+
 	username, password, err := m.fetchCredentials()
+	if err != nil {
+		return false, err
+	}
+
 	log.Info("authenticating user ", username)
 
 	_, err = m.commandWriter.SingleLineCommand("password 'Auth' %s", password)

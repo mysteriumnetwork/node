@@ -18,11 +18,12 @@
 package server
 
 import (
-	"github.com/stretchr/testify/assert"
 	"net"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testing.T) {
@@ -30,6 +31,7 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 	address, err := createHTTPServer(func(writer http.ResponseWriter, request *http.Request) {
 		select {} //infinite loop with no response to client
 	})
+	assert.NoError(t, err)
 
 	transport := newHTTPTransport(50 * time.Millisecond)
 	req, err := http.NewRequest(http.MethodGet, "http://"+address+"/", nil)
