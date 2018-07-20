@@ -137,7 +137,7 @@ bin/client_package_debian 0.0.6 amd64
 
 ## Creating pull request
 
-To contribute a code, fist you must create a pull request (PR). If your changes will be accepted
+To contribute a code, first you must create a pull request (PR). If your changes will be accepted
 this PR will be merged into main branch.
 
 Before creating PR be sure to: 
