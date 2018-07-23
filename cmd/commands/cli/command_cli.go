@@ -361,9 +361,16 @@ func (c *Command) registration(argsString string) {
 		warn("Something went wrong: ", err)
 		return
 	}
-	for key, val := range status {
-		info(fmt.Sprintf("%v -> %v", key, val))
+	if status.Registered {
+		info("Already registered")
+		return
 	}
+	info("Identity is not registered yet. In order to do that - please call payments contract with the following data")
+	info("Public key: part1 ->", status.PublicKey.Part1)
+	info("            part2 ->", status.PublicKey.Part2)
+	info("Signature: S ->", status.Signature.S)
+	info("           R ->", status.Signature.R)
+	info("           V ->", status.Signature.V)
 }
 
 func (c *Command) stopClient() {

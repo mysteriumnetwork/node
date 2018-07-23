@@ -19,20 +19,23 @@ package metadata
 
 // NetworkDefinition structure holds all parameters which describe particular network
 type NetworkDefinition struct {
-	DiscoveryAPIAddress string
-	BrokerAddress       string
+	DiscoveryAPIAddress     string
+	BrokerAddress           string
+	PaymentsContractAddress string
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
 var TestnetDefinition = NetworkDefinition{
 	"https://testnet-api.mysterium.network/v1",
 	"testnet-broker.mysterium.network",
+	"0x617ad5e514e8117Bb6F18E68FA65cc479483df88",
 }
 
 // LocalnetDefinition defines parameters for local network (expects discovery and broker services on localhost)
 var LocalnetDefinition = NetworkDefinition{
 	"http://localhost/v1",
 	"localhost",
+	"<undefined yet>",
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given

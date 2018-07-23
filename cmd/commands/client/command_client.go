@@ -18,9 +18,12 @@
 package client
 
 import (
+	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/mysterium/node/blockchain/registration"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysterium/node/blockchain"
+	"github.com/mysterium/node/blockchain/registry"
 	"github.com/mysterium/node/client/connection"
 	node_cmd "github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/communication"
@@ -98,11 +101,22 @@ func NewCommand(options CommandOptions) *Command {
 		originalLocationCache: originalLocationCache,
 	}
 
-	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory, registration.NewProofGenerator(keystoreInstance))
+	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	tequilapi_endpoints.AddRouteForStop(router, node_cmd.SoftKiller(command.Kill))
+
+	client, err := blockchain.NewClient("https://ropsten.infura.io/LWGVMbMdBj9ykHIjZmsw")
+	if err != nil {
+		fmt.Println("Error: ", err.Error())
+	}
+	statusProvider, err := registry.NewRegistrationStatusProvider(client, common.HexToAddress(networkDefinition.PaymentsContractAddress))
+	if err != nil {
+		fmt.Println("Error2: ", err.Error())
+	}
+
+	registry.AddRegistrationEndpoint(router, registry.NewRegistrationDataProvider(keystoreInstance), statusProvider)
 
 	return command
 }

@@ -83,4 +83,22 @@ type BuildInfoDTO struct {
 	BuildNumber string `json:"buildNumber"`
 }
 
-type RegistrationStatusDTO map[string]interface{}
+// RegistrationDataDTO holds input data required to register new myst identity on blockchain smart contract
+type RegistrationStatusDTO struct {
+	Registered bool
+	PublicKey  PublicKeyPartsDTO
+	Signature  SignatureDTO
+}
+
+// PublicKeyPartsDTO holds public key parts in hex, split into 32 byte blocks
+type PublicKeyPartsDTO struct {
+	Part1 string
+	Part2 string
+}
+
+// SignatureDTO holds decomposed ECDSA signature values R, S and V
+type SignatureDTO struct {
+	R string
+	S string
+	V uint8
+}

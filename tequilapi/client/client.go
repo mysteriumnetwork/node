@@ -90,14 +90,12 @@ func (client *Client) RegisterIdentity(address string) (err error) {
 func (client *Client) RegistrationStatus(address string) (RegistrationStatusDTO, error) {
 	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})
 	if err != nil {
-		return nil, err
+		return RegistrationStatusDTO{}, err
 	}
 	defer response.Body.Close()
 
-	status := make(RegistrationStatusDTO)
+	status := RegistrationStatusDTO{}
 	err = parseResponseJSON(response, &status)
-	//responseJSON, err := ioutil.ReadAll(response.Body)
-	//status["test"] = string(responseJSON)
 	return status, err
 }
 

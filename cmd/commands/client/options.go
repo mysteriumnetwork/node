@@ -112,6 +112,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 
 	cmd.ParseNetworkOptions(flags, &options.NetworkOptions)
 
+	flags.StringVar(
+		&options.EthereumEndpoint,
+		"ethereum.endpoint",
+		"",
+		"Url or IPC socket to connect to ethereum node, anything what accepts ethereum client - works",
+	)
+
 	err = flags.Parse(args[1:])
 	if err != nil {
 		return
