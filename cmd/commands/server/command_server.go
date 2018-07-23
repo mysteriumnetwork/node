@@ -18,6 +18,9 @@
 package server
 
 import (
+	"sync"
+	"time"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -32,8 +35,6 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
-	"sync"
-	"time"
 )
 
 // Command represent entrypoint for Mysterium server with top level components
@@ -74,6 +75,9 @@ func (cmd *Command) Start() (err error) {
 
 	cmd.dialogWaiter = cmd.dialogWaiterFactory(providerID)
 	providerContact, err := cmd.dialogWaiter.Start()
+	if err != nil {
+		return err
+	}
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
 	vpnServerIP, err := cmd.ipResolver.GetOutboundIP()

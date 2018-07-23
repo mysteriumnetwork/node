@@ -102,7 +102,11 @@ func (client *Client) Connect(consumerID, providerID string) (status StatusDTO, 
 	}
 
 	if err != nil {
-		parseResponseJSON(response, &errorMessage)
+		err = parseResponseJSON(response, &errorMessage)
+		if err != nil {
+			return
+		}
+
 		err = errors.New(errorMessage.Message)
 		return
 	}
@@ -186,7 +190,7 @@ func (client *Client) GetIP() (string, error) {
 		IP string `json:"ip"`
 	}
 	err = parseResponseJSON(response, &ipData)
-	return ipData.IP, nil
+	return ipData.IP, err
 }
 
 // Unlock allows using identity in following commands
