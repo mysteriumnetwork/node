@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"github.com/MysteriumNetwork/payments/identity"
 	"github.com/MysteriumNetwork/payments/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
@@ -10,15 +11,20 @@ import (
 	"testing"
 )
 
-const testPublicKey = "0xFA001122334455667788990011223344556677889900112233445566778899AF" +
-	"DE001122334455667788990011223344556677889900112233445566778899AD"
+const (
+	testPublicKeyPart1 = "0xFA001122334455667788990011223344556677889900112233445566778899AF"
+	testPublicKeyPart2 = "0xDE001122334455667788990011223344556677889900112233445566778899AD"
+)
 
 func TestRegistrationEndpointReturnsRegistrationData(t *testing.T) {
 
 	mockedDataProvider := &mockRegistrationDataProvider{}
-	mockedDataProvider.RegistrationData = &registry.ProofOfIdentity{
-		Data: common.FromHex(testPublicKey),
-		Signature: &registry.DecomposedSignature{
+	mockedDataProvider.RegistrationData = &registry.RegistrationData{
+		PublicKey: registry.PublicKeyParts{
+			Part1: common.FromHex(testPublicKeyPart1),
+			Part2: common.FromHex(testPublicKeyPart2),
+		},
+		Signature: &identity.DecomposedSignature{
 			R: [32]byte{1},
 			S: [32]byte{2},
 			V: 27,
@@ -120,11 +126,11 @@ func (m *mockRegistrationStatus) IsRegistered(identity common.Address) (bool, er
 }
 
 type mockRegistrationDataProvider struct {
-	RegistrationData *registry.ProofOfIdentity
+	RegistrationData *registry.RegistrationData
 	RecordedIdentity common.Address
 }
 
-func (m *mockRegistrationDataProvider) ProvideRegistrationData(identity common.Address) (*registry.ProofOfIdentity, error) {
+func (m *mockRegistrationDataProvider) ProvideRegistrationData(identity common.Address) (*registry.RegistrationData, error) {
 	m.RecordedIdentity = identity
 	return m.RegistrationData, nil
 }

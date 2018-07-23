@@ -13,17 +13,17 @@ type RegistrationStatusProvider interface {
 }
 
 type RegistrationDataProvider interface {
-	ProvideRegistrationData(identity common.Address) (*registry.ProofOfIdentity, error)
+	ProvideRegistrationData(identity common.Address) (*registry.RegistrationData, error)
 }
 
 type keystoreRegistrationDataProvider struct {
 	ks *keystore.KeyStore
 }
 
-func (kpg *keystoreRegistrationDataProvider) ProvideRegistrationData(identity common.Address) (*registry.ProofOfIdentity, error) {
-	identityHolder := registry.FromKeystoreIdentity(kpg.ks, identity)
+func (kpg *keystoreRegistrationDataProvider) ProvideRegistrationData(identity common.Address) (*registry.RegistrationData, error) {
+	identityHolder := registry.FromKeystore(kpg.ks, identity)
 
-	return registry.CreateProofOfIdentity(identityHolder)
+	return registry.CreateRegistrationData(identityHolder)
 }
 
 func NewRegistrationDataProvider(ks *keystore.KeyStore) RegistrationDataProvider {

@@ -63,8 +63,8 @@ func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter,
 	}
 
 	registrationResponse.PublicKey = &PublicKeyPartsDTO{
-		Part1: common.ToHex(registrationData.Data[0:32]),
-		Part2: common.ToHex(registrationData.Data[32:64]),
+		Part1: common.ToHex(registrationData.PublicKey.Part1),
+		Part2: common.ToHex(registrationData.PublicKey.Part2),
 	}
 
 	registrationResponse.Signature = &SignatureDTO{
