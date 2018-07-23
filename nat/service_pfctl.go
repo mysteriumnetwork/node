@@ -28,8 +28,8 @@ import (
 )
 
 type servicePFCtl struct {
-	rules   []RuleForwarding
-	forward bool
+	rules     []RuleForwarding
+	ipForward serviceIPForward
 }
 
 func (service *servicePFCtl) Add(rule RuleForwarding) {
@@ -37,11 +37,12 @@ func (service *servicePFCtl) Add(rule RuleForwarding) {
 }
 
 func (service *servicePFCtl) Start() error {
-	service.clearStaleRules()
-	err := service.enableIPForwarding()
+	err := service.ipForward.Enable()
 	if err != nil {
 		return err
 	}
+
+	service.clearStaleRules()
 	err = service.enableRules()
 	if err != nil {
 		return err
@@ -51,52 +52,7 @@ func (service *servicePFCtl) Start() error {
 
 func (service *servicePFCtl) Stop() {
 	service.disableRules()
-	service.disableIPForwarding()
-}
-
-func (service *servicePFCtl) isIPForwardingEnabled() (enabled bool) {
-	cmd := utils.SplitCommand("/usr/sbin/sysctl", "-n net.inet.ip.forwarding")
-	output, err := cmd.Output()
-	if err != nil {
-		log.Warn("Failed to check IP forwarding status: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-	}
-
-	if strings.TrimSpace(string(output)) == "1" {
-		log.Info(natLogPrefix, "IP forwarding already enabled")
-		return true
-	}
-	return false
-}
-
-func (service *servicePFCtl) enableIPForwarding() error {
-	enabled := service.isIPForwardingEnabled()
-
-	if enabled {
-		service.forward = true
-		return nil
-	}
-	cmd := utils.SplitCommand("/usr/sbin/sysctl", "-w net.inet.ip.forwarding=1")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn("Failed to enable IP forwarding: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-		return err
-	}
-
-	log.Info(natLogPrefix, "IP forwarding enabled")
-	return nil
-}
-
-func (service *servicePFCtl) disableIPForwarding() {
-	if service.forward {
-		return
-	}
-
-	cmd := utils.SplitCommand("/usr/sbin/sysctl", "-w net.inet.ip.forwarding=0")
-
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn("Failed to disable IP forwarding: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-	} else {
-		log.Info(natLogPrefix, "IP forwarding disabled")
-	}
+	service.ipForward.Disable()
 }
 
 func ifaceByAddress(ipAddress string) (string, error) {

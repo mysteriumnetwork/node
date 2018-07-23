@@ -20,14 +20,13 @@ package nat
 import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/utils"
-	"strings"
 )
 
 const natLogPrefix = "[nat] "
 
 type serviceIPTables struct {
-	rules   []RuleForwarding
-	forward bool
+	rules     []RuleForwarding
+	ipForward serviceIPForward
 }
 
 func (service *serviceIPTables) Add(rule RuleForwarding) {
@@ -35,11 +34,12 @@ func (service *serviceIPTables) Add(rule RuleForwarding) {
 }
 
 func (service *serviceIPTables) Start() error {
-	service.clearStaleRules()
-	err := service.enableIPForwarding()
+	err := service.ipForward.Enable()
 	if err != nil {
 		return err
 	}
+
+	service.clearStaleRules()
 	err = service.enableRules()
 	if err != nil {
 		return err
@@ -49,51 +49,7 @@ func (service *serviceIPTables) Start() error {
 
 func (service *serviceIPTables) Stop() {
 	service.disableRules()
-	service.disableIPForwarding()
-}
-
-func (service *serviceIPTables) isIPForwardingEnabled() (enabled bool) {
-	cmd := utils.SplitCommand("/sbin/sysctl", "-n net.ipv4.ip_forward")
-	output, err := cmd.Output()
-	if err != nil {
-		log.Warn("Failed to check IP forwarding status: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-	}
-
-	if strings.TrimSpace(string(output)) == "1" {
-		log.Info(natLogPrefix, "IP forwarding already enabled")
-		return true
-	}
-	return false
-}
-
-func (service *serviceIPTables) enableIPForwarding() error {
-	enabled := service.isIPForwardingEnabled()
-
-	if enabled {
-		service.forward = true
-		return nil
-	}
-	cmd := utils.SplitCommand("sudo", "/sbin/sysctl -w net.ipv4.ip_forward=1")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn("Failed to enable IP forwarding: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-		return err
-	}
-
-	log.Info(natLogPrefix, "IP forwarding enabled")
-	return nil
-}
-
-func (service *serviceIPTables) disableIPForwarding() {
-	if service.forward {
-		return
-	}
-
-	cmd := utils.SplitCommand("sudo", "/sbin/sysctl -w net.ipv4.ip_forward=0")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn("Failed to disable IP forwarding: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-	} else {
-		log.Info(natLogPrefix, "IP forwarding disabled")
-	}
+	service.ipForward.Disable()
 }
 
 func (service *serviceIPTables) enableRules() error {
