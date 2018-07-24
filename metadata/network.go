@@ -28,7 +28,7 @@ type NetworkDefinition struct {
 var TestnetDefinition = NetworkDefinition{
 	"https://testnet-api.mysterium.network/v1",
 	"testnet-broker.mysterium.network",
-	"0x617ad5e514e8117Bb6F18E68FA65cc479483df88",
+	"0xbe5F9CCea12Df756bF4a5Baf4c29A10c3ee7C83B",
 }
 
 // LocalnetDefinition defines parameters for local network (expects discovery and broker services on localhost)

@@ -107,7 +107,7 @@ func NewCommand(options CommandOptions) *Command {
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	tequilapi_endpoints.AddRouteForStop(router, node_cmd.SoftKiller(command.Kill))
 
-	client, err := blockchain.NewClient("https://ropsten.infura.io/LWGVMbMdBj9ykHIjZmsw")
+	client, err := blockchain.NewClient("https://ropsten.infura.io")
 	if err != nil {
 		fmt.Println("Error: ", err.Error())
 	}
