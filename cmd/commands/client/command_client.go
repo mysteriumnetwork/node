@@ -21,7 +21,6 @@ import (
 	"fmt"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/blockchain"
 	"github.com/mysterium/node/blockchain/registry"
 	"github.com/mysterium/node/client/connection"

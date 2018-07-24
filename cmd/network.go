@@ -19,16 +19,18 @@ package cmd
 
 import (
 	"flag"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/metadata"
 )
 
 // NetworkOptions describes possible parameters of network configuration
 type NetworkOptions struct {
-	// DiscoveryAPIAddress defines address of discovery service
-	DiscoveryAPIAddress string
-	BrokerAddress       string
-	Localnet            bool
-	Testnet             bool
+	DiscoveryAPIAddress  string
+	BrokerAddress        string
+	Localnet             bool
+	Testnet              bool
+	EtherClientRPC       string
+	EtherPaymentsAddress string
 }
 
 // GetNetworkDefinition function returns network definition combined from testnet/localnet flags and possible overrides
@@ -49,6 +51,14 @@ func GetNetworkDefinition(options NetworkOptions) metadata.NetworkDefinition {
 
 	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
 		network.BrokerAddress = options.BrokerAddress
+	}
+
+	if common.HexToAddress(options.EtherPaymentsAddress) != metadata.DefaultNetwork.PaymentsContractAddress {
+		network.PaymentsContractAddress = common.HexToAddress(options.EtherPaymentsAddress)
+	}
+
+	if options.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
+		network.EtherClientRPC = options.EtherClientRPC
 	}
 
 	return network
@@ -84,4 +94,17 @@ func ParseNetworkOptions(flags *flag.FlagSet, options *NetworkOptions) {
 		"Defines test network configuration",
 	)
 
+	flags.StringVar(
+		&options.EtherClientRPC,
+		"ether.client.rpc",
+		metadata.DefaultNetwork.EtherClientRPC,
+		"Url or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
+	)
+
+	flags.StringVar(
+		&options.EtherPaymentsAddress,
+		"ether.contract.payments",
+		metadata.DefaultNetwork.PaymentsContractAddress.String(),
+		"Address of payments contract",
+	)
 }

@@ -96,42 +96,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"Show conditions",
 	)
 
-	flags.StringVar(
-		&options.IpifyUrl,
-		"ipify-url",
-		"https://api.ipify.org/",
-		"Address (URL form) of ipify service",
-	)
-
-	flags.StringVar(
-		&options.LocationDatabase,
-		"location.database",
-		"GeoLite2-Country.mmdb",
-		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
-	)
-
 	cmd.ParseNetworkOptions(flags, &options.NetworkOptions)
-
-	flags.BoolVar(
-		&options.Testnet,
-		"testnet",
-		false,
-		"Defines test network configuration",
-	)
-
-	flags.StringVar(
-		&options.EtherClientRPC,
-		"ether.client.rpc",
-		metadata.DefaultNetwork.EtherClientRPC,
-		"Url or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
-	)
-
-	flags.StringVar(
-		&options.EtherPaymentsAddress,
-		"",
-		metadata.DefaultNetwork.PaymentsContractAddress.String(),
-		"Address of payments contract",
-	)
 
 	err = flags.Parse(args[1:])
 	if err != nil {
