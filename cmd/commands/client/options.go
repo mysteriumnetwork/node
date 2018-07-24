@@ -112,11 +112,25 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 
 	cmd.ParseNetworkOptions(flags, &options.NetworkOptions)
 
+	flags.BoolVar(
+		&options.Testnet,
+		"testnet",
+		false,
+		"Defines test network configuration",
+	)
+
 	flags.StringVar(
-		&options.EthereumEndpoint,
-		"ethereum.endpoint",
+		&options.EtherClientRPC,
+		"ether.client.rpc",
+		metadata.DefaultNetwork.EtherClientRPC,
+		"Url or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
+	)
+
+	flags.StringVar(
+		&options.EtherPaymentsAddress,
 		"",
-		"Url or IPC socket to connect to ethereum node, anything what accepts ethereum client - works",
+		metadata.DefaultNetwork.PaymentsContractAddress.String(),
+		"Address of payments contract",
 	)
 
 	err = flags.Parse(args[1:])

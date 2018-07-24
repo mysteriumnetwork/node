@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type RegistrationStatusProvider interface {
+type IdentityRegistry interface {
 	IsRegistered(identity common.Address) (bool, error)
 }
 
@@ -32,7 +32,7 @@ func NewRegistrationDataProvider(ks *keystore.KeyStore) RegistrationDataProvider
 	}
 }
 
-func NewRegistrationStatusProvider(contractCaller bind.ContractCaller, registryAddress common.Address) (RegistrationStatusProvider, error) {
+func NewIdentityRegistry(contractCaller bind.ContractCaller, registryAddress common.Address) (IdentityRegistry, error) {
 	contract, err := generated.NewIdentityRegistryCaller(registryAddress, contractCaller)
 	if err != nil {
 		return nil, err

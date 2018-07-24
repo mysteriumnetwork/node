@@ -107,11 +107,11 @@ func NewCommand(options CommandOptions) *Command {
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	tequilapi_endpoints.AddRouteForStop(router, node_cmd.SoftKiller(command.Kill))
 
-	client, err := blockchain.NewClient("https://ropsten.infura.io")
+	client, err := blockchain.NewClient(networkDefinition.EtherClientRPC)
 	if err != nil {
 		fmt.Println("Error: ", err.Error())
 	}
-	statusProvider, err := registry.NewRegistrationStatusProvider(client, common.HexToAddress(networkDefinition.PaymentsContractAddress))
+	statusProvider, err := registry.NewIdentityRegistry(client, networkDefinition.PaymentsContractAddress)
 	if err != nil {
 		fmt.Println("Error2: ", err.Error())
 	}

@@ -26,10 +26,10 @@ type RegistrationDataDTO struct {
 
 type registrationEndpoint struct {
 	dataProvider   RegistrationDataProvider
-	statusProvider RegistrationStatusProvider
+	statusProvider IdentityRegistry
 }
 
-func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvider RegistrationStatusProvider) *registrationEndpoint {
+func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) *registrationEndpoint {
 	return &registrationEndpoint{
 		dataProvider:   dataProvider,
 		statusProvider: statusProvider,
@@ -76,7 +76,7 @@ func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter,
 	utils.WriteAsJSON(registrationResponse, resp)
 }
 
-func AddRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider RegistrationStatusProvider) {
+func AddRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) {
 
 	registrationEndpoint := newRegistrationEndpoint(
 		dataProvider,
