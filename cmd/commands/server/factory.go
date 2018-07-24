@@ -19,6 +19,7 @@ package server
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/mysterium/node/cmd"
 	identity_handler "github.com/mysterium/node/cmd/commands/server/identity"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
@@ -26,7 +27,6 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
-	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/server/auth"
@@ -41,24 +41,12 @@ import (
 
 // NewCommand function creates new server command by given options
 func NewCommand(options CommandOptions) *Command {
-	networkDefinition := getNetworkDefinition(options)
-	return NewCommandWith(
-		options,
-		networkDefinition,
-		server.NewClient(networkDefinition.DiscoveryAPIAddress),
-		ip.NewResolver(options.IpifyUrl),
-		nat.NewService(),
-	)
-}
 
-// NewCommandWith function creates new client command by given options + injects given dependencies
-func NewCommandWith(
-	options CommandOptions,
-	networkDefinition metadata.NetworkDefinition,
-	mysteriumClient server.Client,
-	ipResolver ip.Resolver,
-	natService nat.NATService,
-) *Command {
+	networkDefinition := cmd.GetNetworkDefinition(options.NetworkOptions)
+
+	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
+	ipResolver := ip.NewResolver(options.IpifyUrl)
+	natService := nat.NewService()
 
 	keystoreDirectory := filepath.Join(options.DirectoryData, "keystore")
 	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
@@ -140,24 +128,4 @@ func NewCommandWith(
 		protocol:                    options.Protocol,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
 	}
-}
-
-// TODO this function can be aligned with client function when client and server options will merge into
-func getNetworkDefinition(options CommandOptions) metadata.NetworkDefinition {
-	network := metadata.DefaultNetwork
-
-	switch {
-	case options.Localnet:
-		network = metadata.LocalnetDefinition
-	}
-
-	//override defined values one by one from options
-	if options.DiscoveryAPIAddress != metadata.DefaultNetwork.DiscoveryAPIAddress {
-		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
-	}
-
-	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
-		network.BrokerAddress = options.BrokerAddress
-	}
-	return network
 }

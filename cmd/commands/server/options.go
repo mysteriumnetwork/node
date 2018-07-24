@@ -20,7 +20,6 @@ package server
 import (
 	"flag"
 	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/metadata"
 	"path/filepath"
 )
 
@@ -37,9 +36,6 @@ type CommandOptions struct {
 	LocationCountry  string
 	LocationDatabase string
 
-	DiscoveryAPIAddress string
-	BrokerAddress       string
-
 	Version           bool
 	LicenseWarranty   bool
 	LicenseConditions bool
@@ -50,7 +46,7 @@ type CommandOptions struct {
 	OpenvpnPort int
 
 	AgreedTermsConditions bool
-	Localnet              bool
+	cmd.NetworkOptions
 }
 
 const defaultLocationDatabase = "GeoLite2-Country.mmdb"
@@ -122,19 +118,6 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"Service location country. If not given country is autodetected",
 	)
 
-	flags.StringVar(
-		&options.DiscoveryAPIAddress,
-		"discovery-address",
-		metadata.DefaultNetwork.DiscoveryAPIAddress,
-		"Address (URL form) of discovery service",
-	)
-	flags.StringVar(
-		&options.BrokerAddress,
-		"broker-address",
-		metadata.DefaultNetwork.BrokerAddress,
-		"Address (IP or domain name) of message broker",
-	)
-
 	flags.BoolVar(
 		&options.AgreedTermsConditions,
 		"agreed-terms-and-conditions",
@@ -168,12 +151,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"Address (URL form) of ipify service",
 	)
 
-	flags.BoolVar(
-		&options.Localnet,
-		"localnet",
-		false,
-		"Defines network configuration which expects localy deployed broker and discovery services",
-	)
+	cmd.ParseNetworkOptions(flags, &options.NetworkOptions)
 
 	err = flags.Parse(args[1:])
 	if err != nil {

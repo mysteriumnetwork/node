@@ -20,7 +20,6 @@ package client
 import (
 	"flag"
 	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/metadata"
 	"path/filepath"
 )
 
@@ -39,11 +38,10 @@ type CommandOptions struct {
 	LicenseWarranty   bool
 	LicenseConditions bool
 
-	DiscoveryAPIAddress string
-	IpifyUrl            string
-
+	IpifyUrl         string
 	LocationDatabase string
-	Localnet         bool
+
+	cmd.NetworkOptions
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
@@ -113,13 +111,6 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	)
 
 	flags.StringVar(
-		&options.DiscoveryAPIAddress,
-		"discovery-address",
-		metadata.DefaultNetwork.DiscoveryAPIAddress,
-		"Address (URL form) of discovery service",
-	)
-
-	flags.StringVar(
 		&options.IpifyUrl,
 		"ipify-url",
 		"https://api.ipify.org/",
@@ -133,12 +124,7 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 
-	flags.BoolVar(
-		&options.Localnet,
-		"localnet",
-		false,
-		"Defines network configuration which expects localy deployed broker and discovery services",
-	)
+	cmd.ParseNetworkOptions(flags, &options.NetworkOptions)
 
 	err = flags.Parse(args[1:])
 	if err != nil {
