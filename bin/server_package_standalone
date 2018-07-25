@@ -7,10 +7,10 @@
 #> bin/server_package_standalone <os>
 #
 # Package (specific OS: linux, darwin, windows):
-#> bin/client_package_standalone linux
+#> bin/server_package_standalone linux
 #
 # Package (specific binary):
-#> BINARY=build/client/mysterium_client_darwin_amd64 bin/client_package_standalone darwin
+#> BINARY=build/server/mysterium_server_darwin_amd64 bin/server_package_standalone darwin
 
 set -e
 
@@ -28,7 +28,13 @@ DIR_BUILD="build/package"
 # Put all files to package directory (to avoid preserving directory structure)
 printf "Building Standalone package for OS '$OS' ..\n"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
-cp -vp ${BINARY} ${DIR_TEMP}/mysterium_server
+
+if [ "$OS" == "windows" ]; then
+    cp -vp ${BINARY} ${DIR_TEMP}/mysterium_server.exe
+else
+    cp -vp ${BINARY} ${DIR_TEMP}/mysterium_server
+fi
+
 cp -vrp "bin/common_package/" ${DIR_TEMP}/config
 cp -vrp "bin/server_package/config/." ${DIR_TEMP}/config
 
