@@ -44,7 +44,7 @@ type Command struct {
 	ipResolver       ip.Resolver
 	mysteriumClient  server.Client
 	natService       nat.NATService
-	locationDetector location.Detector
+	locationResolver location.Resolver
 
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
@@ -55,6 +55,7 @@ type Command struct {
 
 	vpnServer                   openvpn.Process
 	checkOpenvpn                func() error
+	openvpnServiceAddress       func(string, string) string
 	protocol                    string
 	proposalAnnouncementStopped *sync.WaitGroup
 }
@@ -79,15 +80,20 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
+	publicIP, err := cmd.ipResolver.GetPublicIP()
+	if err != nil {
+		return err
+	}
+
 	// if for some reason we will need truly external IP, use GetPublicIP()
-	vpnServerIP, err := cmd.ipResolver.GetOutboundIP()
+	outboundIP, err := cmd.ipResolver.GetOutboundIP()
 	if err != nil {
 		return err
 	}
 
 	cmd.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
-		TargetIP:      vpnServerIP,
+		TargetIP:      outboundIP,
 	})
 
 	err = cmd.natService.Start()
@@ -95,12 +101,12 @@ func (cmd *Command) Start() (err error) {
 		log.Warn("received nat service error: ", err, " trying to proceed.")
 	}
 
-	currentLocation, err := cmd.locationDetector.DetectLocation()
+	currentCountry, err := cmd.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
 		return err
 	}
-	log.Info("Country detected: ", currentLocation.Country)
-	serviceLocation := dto_discovery.Location{Country: currentLocation.Country}
+	log.Info("Country detected: ", currentCountry)
+	serviceLocation := dto_discovery.Location{Country: currentCountry}
 
 	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
 
@@ -109,7 +115,7 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	sessionManager := cmd.sessionManagerFactory(primitives, vpnServerIP)
+	sessionManager := cmd.sessionManagerFactory(primitives, cmd.openvpnServiceAddress(outboundIP, publicIP))
 
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
