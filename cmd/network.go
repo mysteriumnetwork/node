@@ -80,7 +80,7 @@ func ParseNetworkOptions(flags *flag.FlagSet, options *NetworkOptions) {
 	flags.BoolVar(
 		&options.Testnet,
 		"testnet",
-		false,
+		true,
 		"Defines test network configuration",
 	)
 
