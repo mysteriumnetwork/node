@@ -29,7 +29,13 @@ DIR_BUILD="build/package"
 # Put all files to package directory (to avoid preserving directory structure)
 printf "Building Standalone package for OS '$OS' ..\n"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
-cp -vp ${BINARY} ${DIR_TEMP}/mysterium_client
+
+if [ "$OS" == "windows" ]; then
+    cp -vp ${BINARY} ${DIR_TEMP}/mysterium_client.exe
+else
+    cp -vp ${BINARY} ${DIR_TEMP}/mysterium_client
+fi
+
 copy_client_config $OS $DIR_TEMP
 
 # Tarball package directory
