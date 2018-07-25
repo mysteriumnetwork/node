@@ -41,18 +41,9 @@ import (
 
 // NewCommand function creates new client command by given options
 func NewCommand(options CommandOptions) *Command {
-	networkDefinition := getNetworkDefinition(options)
-	return NewCommandWith(
-		options,
-		server.NewClient(networkDefinition.DiscoveryAPIAddress),
-	)
-}
+	networkDefinition := node_cmd.GetNetworkDefinition(options.NetworkOptions)
+	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
-// NewCommandWith does the same as NewCommand with possibility to override mysterium api client for external communication
-func NewCommandWith(
-	options CommandOptions,
-	mysteriumClient server.Client,
-) *Command {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 
@@ -177,21 +168,4 @@ func (cmd *Command) Kill() error {
 	log.Info("Api stopped")
 
 	return nil
-}
-
-// TODO this function can be aligned with server function when client and server options will merge into
-func getNetworkDefinition(options CommandOptions) metadata.NetworkDefinition {
-	network := metadata.DefaultNetwork
-
-	switch {
-	case options.Localnet:
-		network = metadata.LocalnetDefinition
-	}
-
-	//override defined values one by one from options
-	if options.DiscoveryAPIAddress != metadata.DefaultNetwork.DiscoveryAPIAddress {
-		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
-	}
-
-	return network
 }
