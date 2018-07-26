@@ -39,8 +39,8 @@ var TestnetDefinition = NetworkDefinition{
 var LocalnetDefinition = NetworkDefinition{
 	"http://localhost/v1",
 	"localhost",
-	"<undefined rpc>",
-	common.Address{},
+	"http://localhost:8545",
+	common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea"),
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given

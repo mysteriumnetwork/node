@@ -96,6 +96,20 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"Show conditions",
 	)
 
+	flags.StringVar(
+		&options.IpifyUrl,
+		"ipify-url",
+		"https://api.ipify.org/",
+		"Address (URL form) of ipify service",
+	)
+
+	flags.StringVar(
+		&options.LocationDatabase,
+		"location.database",
+		"GeoLite2-Country.mmdb",
+		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
+	)
+
 	cmd.ParseNetworkOptions(flags, &options.NetworkOptions)
 
 	err = flags.Parse(args[1:])
