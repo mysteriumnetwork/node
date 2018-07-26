@@ -31,3 +31,28 @@ services:
       DB_PASSWORD: myst_api
     depends_on:
     - db
+
+  local-node:
+    image: docker-geth:1.8.12
+    expose:
+      - 8545
+    volumes:
+      - geth-runtime:/ethereum/geth-runtime
+      - ./devnet_genesis.json:/ethereum/genesis.json
+      - ./node:/ethereum/keystore
+      - ./node_acc_password.txt:/ethereum/node_acc_password.txt
+    command: >
+      --syncmode 'full'
+      --port 30311
+      --rpc
+      --rpcaddr 'localhost'
+      --rpcport 8545
+      --rpcapi 'personal,db,eth,net,web3,txpool,miner'
+      --networkid 69
+      --gasprice '1'
+      --unlock '0xd9786b6ee6caf5cd0ef88301fc40de83bfac5594'
+      --password node_acc_password.txt
+      --mine
+
+volumes:
+  geth-runtime:

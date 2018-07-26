@@ -9,3 +9,7 @@ services:
   discovery:
     ports:
     - 80:80
+
+  local-node:
+    ports:
+      - 8545:8545

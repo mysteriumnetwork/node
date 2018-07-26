@@ -44,9 +44,17 @@ setup () {
         exit 1
     fi
 
-    ${dockerComposeCmd} up -d broker discovery
+    ${dockerComposeCmd} run local-node init genesis.json
     if [ ! $? -eq 0 ]; then
-        print_error "Starting built docker images failed"
+        print_error "Geth node initialization failed"
+        cleanup "$@"
+        exit 1
+    fi
+
+
+    ${dockerComposeCmd} up -d broker discovery local-node
+    if [ ! $? -eq 0 ]; then
+        print_error "Error starting other services"
         cleanup "$@"
         exit 1
     fi
@@ -56,5 +64,5 @@ cleanup () {
     setupDockerComposeCmd "$@"
 
     echo "Cleaning up: $projectName"
-    ${dockerComposeCmd} down --remove-orphans
+    ${dockerComposeCmd} down --remove-orphans --volumes
 }
