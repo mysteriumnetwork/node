@@ -58,6 +58,20 @@ setup () {
         cleanup "$@"
         exit 1
     fi
+
+    #deploy MystToken and Payment contracts
+    echo "Deplying contracts..."
+    go run bin/localnet/deployer/*.go \
+        --keystore.directory=bin/localnet/account \
+        --ether.address=0xa754f0d31411d88e46aed455fa79b9fced122497 \
+        --keystore.passphrase `cat bin/localnet/local_acc_password.txt` \
+        --geth.url=http://localhost:8545
+    if [ ! $? -eq 0 ]; then
+        print_error "Error deploying contracts"
+        cleanup "$@"
+        exit 1
+    fi
+
 }
 
 cleanup () {
