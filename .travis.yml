@@ -37,8 +37,8 @@ script:
       bin/travis_scripts/check_docker.sh;
       bin/travis_scripts/check_docker_compose.sh;
       bin/test_e2e;
+      bin/package_all $BUILD_VERSION;
     fi
-  - bin/package_all $BUILD_VERSION
 
 deploy:
   # Development bleeding-edge release (on master commits only)
