@@ -39,7 +39,7 @@ var TestnetDefinition = NetworkDefinition{
 var LocalnetDefinition = NetworkDefinition{
 	"http://localhost/v1",
 	"localhost",
-	"http://localhost:8545",
+	"http://localhost:8600",
 	common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea"),
 }
 

@@ -106,10 +106,12 @@ func NewCommand(options CommandOptions) *Command {
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	tequilapi_endpoints.AddRouteForStop(router, node_cmd.SoftKiller(command.Kill))
 
+	fmt.Println("Using Eth endopoint:", networkDefinition.EtherClientRPC)
 	client, err := blockchain.NewClient(networkDefinition.EtherClientRPC)
 	if err != nil {
 		fmt.Println("Error: ", err.Error())
 	}
+	fmt.Println("Using Contract at address:", networkDefinition.PaymentsContractAddress.String())
 	statusProvider, err := registry.NewIdentityRegistry(client, networkDefinition.PaymentsContractAddress)
 	if err != nil {
 		fmt.Println("Error2: ", err.Error())

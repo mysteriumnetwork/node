@@ -17,7 +17,11 @@ fi
 
 $dockerComposeCmd logs -f > e2e_tests.log &
 
-go test -v ./e2e/... -args --tequila.host=localhost --tequila.port=4052
+go test -v ./e2e/... -args \
+    --tequila.host=localhost \
+    --tequila.port=4052 \
+    --keystore.directory=../bin/localnet/account \
+    --geth.url=http://localhost:8600
 if [ ! $? -eq 0 ]
 then
     print_error "Tests failed"

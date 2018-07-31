@@ -34,8 +34,8 @@ services:
 
   local-node:
     image: mysteriumnetwork/geth:1.8.12
-    expose:
-      - 8545
+    ports:
+      - "8600:8545"
     volumes:
       - geth-runtime:/ethereum/geth-runtime
       - ./devnet_genesis.json:/ethereum/genesis.json

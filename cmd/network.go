@@ -53,7 +53,8 @@ func GetNetworkDefinition(options NetworkOptions) metadata.NetworkDefinition {
 		network.BrokerAddress = options.BrokerAddress
 	}
 
-	if common.HexToAddress(options.EtherPaymentsAddress) != metadata.DefaultNetwork.PaymentsContractAddress {
+	normalizedAddress := common.HexToAddress(options.EtherPaymentsAddress)
+	if normalizedAddress.String() != metadata.DefaultNetwork.PaymentsContractAddress.String() {
 		network.PaymentsContractAddress = common.HexToAddress(options.EtherPaymentsAddress)
 	}
 

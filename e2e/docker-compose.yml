@@ -37,6 +37,8 @@ services:
     command: >
       --ipify-url=http://ipify:3000
       --discovery-address=http://discovery/v1
+      --localnet
+      --ether.client.rpc=http://local-node:8545
 
   #'external' IP detection
   ipify:
