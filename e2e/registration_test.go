@@ -26,7 +26,7 @@ import (
 )
 
 func TestIdentityRegistrationFlow(t *testing.T) {
-	os.RemoveAll("testdataoutput")
+	defer os.RemoveAll("testdataoutput")
 
 	tequilapi := newTequilaClient()
 
