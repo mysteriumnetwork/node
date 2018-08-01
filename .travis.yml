@@ -37,6 +37,13 @@ script:
       bin/travis_scripts/check_docker.sh;
       bin/travis_scripts/check_docker_compose.sh;
       bin/test_e2e;
+    fi
+  #ugly hack - will be removed when stages will be introduced
+  #we need to package everything on master and tags too. This covers:
+  #PRs, as in this case TRAVIS_BRANCH equals master
+  #commits on master for obvious reason
+  #tags - according documentation, on tag TRAVIS_BRANCH = TRAVIS_TAG
+  - if [ "$TRAVIS_BRANCH" == "master" ] || [ "$TRAVIS_BRANCH" == "$TRAVIS_TAG" ]; then
       bin/package_all $BUILD_VERSION;
     fi
 
