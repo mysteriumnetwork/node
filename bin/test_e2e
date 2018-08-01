@@ -21,7 +21,6 @@ $dockerComposeCmd run go-runner \
     go test -v ./e2e/... -args \
     --tequila.host=client \
     --tequila.port=4050 \
-    --keystore.directory=../bin/localnet/account \
     --geth.url=http://local-node:8545
 if [ ! $? -eq 0 ]
 then

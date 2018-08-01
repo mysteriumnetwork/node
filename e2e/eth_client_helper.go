@@ -46,7 +46,6 @@ var mainEtherAccPass = "localaccount"
 // CliWallet represents operations which can be done with user controlled account
 type CliWallet struct {
 	txOpts           *bind.TransactOpts
-	ks               *keystore.KeyStore
 	Owner            common.Address
 	backend          *ethclient.Client
 	identityRegistry generated.IdentityRegistryTransactorSession
@@ -140,15 +139,15 @@ func (wallet *CliWallet) checkTxResult(tx *types.Transaction) error {
 }
 
 // NewMainAccWallet initializes wallet with main localnet account private key (owner of ERC20, payments and lots of ether)
-func NewMainAccWallet() (*CliWallet, error) {
-	ks := helpers.GetKeystore()
+func NewMainAccWallet(keystoreDir string) (*CliWallet, error) {
+	ks := initKeyStore(keystoreDir)
 
 	return newCliWallet(mainEtherAcc, mainEtherAccPass, ks)
 }
 
 // NewUserWallet initializes wallet with generated account with specified keystore
 func NewUserWallet(keystoreDir string) (*CliWallet, error) {
-	ks := keystore.NewKeyStore(keystoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
+	ks := initKeyStore(keystoreDir)
 	acc, err := ks.NewAccount("")
 	if err != nil {
 		return nil, err
@@ -181,7 +180,6 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 
 	return &CliWallet{
 		txOpts:  transactor,
-		ks:      ks,
 		Owner:   owner,
 		backend: client,
 		tokens: generated2.MystTokenTransactorSession{
@@ -193,4 +191,8 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 			TransactOpts: *transactor,
 		},
 	}, nil
+}
+
+func initKeyStore(path string) *keystore.KeyStore {
+	return keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
 }

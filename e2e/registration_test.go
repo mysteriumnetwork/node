@@ -41,7 +41,7 @@ func TestIdentityRegistrationFlow(t *testing.T) {
 	assert.False(t, registrationStatus.Registered)
 
 	//mystIdentity is not registered - register it, emulating interaction with wallet
-	masterAccWallet, err := NewMainAccWallet()
+	masterAccWallet, err := NewMainAccWallet("../bin/localnet/account")
 	assert.NoError(t, err)
 
 	userWallet, err := NewUserWallet("testdataoutput")
