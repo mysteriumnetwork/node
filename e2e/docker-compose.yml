@@ -32,8 +32,8 @@ services:
       - ipify
     cap_add:
       - NET_ADMIN
-    ports:
-      - 4052:4050
+    expose:
+      - 4050
     command: >
       --ipify-url=http://ipify:3000
       --discovery-address=http://discovery/v1

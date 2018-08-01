@@ -32,10 +32,11 @@ services:
     depends_on:
     - db
 
+  #private blockchain with single miner and single node
   local-node:
     image: mysteriumnetwork/geth:1.8.12
-    ports:
-      - "8600:8545"
+    expose:
+      - 8545
     volumes:
       - geth-runtime:/ethereum/geth-runtime
       - ./devnet_genesis.json:/ethereum/genesis.json
@@ -54,6 +55,13 @@ services:
       --password node_acc_password.txt
       --rpcvhosts *
       --mine
+
+  #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
+  go-runner:
+    image: golang:1.10
+    volumes:
+      - $GOPATH:/go
+    working_dir: /go/src/github.com/mysterium/node
 
 volumes:
   geth-runtime:

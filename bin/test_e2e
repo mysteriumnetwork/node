@@ -6,7 +6,7 @@ projectName="node_e2e_test"
 
 setup $projectName "e2e/docker-compose.yml"
 
-$dockerComposeCmd build && $dockerComposeCmd up -d
+$dockerComposeCmd build && $dockerComposeCmd up -d node client ipify
 if [ ! $? -eq 0 ]
 then
     print_error "Image building failed"
@@ -17,11 +17,12 @@ fi
 
 $dockerComposeCmd logs -f > e2e_tests.log &
 
-go test -v ./e2e/... -args \
-    --tequila.host=localhost \
-    --tequila.port=4052 \
+$dockerComposeCmd run go-runner \
+    go test -v ./e2e/... -args \
+    --tequila.host=client \
+    --tequila.port=4050 \
     --keystore.directory=../bin/localnet/account \
-    --geth.url=http://localhost:8600
+    --geth.url=http://local-node:8545
 if [ ! $? -eq 0 ]
 then
     print_error "Tests failed"
