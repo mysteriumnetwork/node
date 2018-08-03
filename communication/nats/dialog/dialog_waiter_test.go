@@ -19,10 +19,12 @@ package dialog
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/identity/registry"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -36,7 +38,7 @@ func TestDialogWaiter_Factory(t *testing.T) {
 	address := discovery.NewAddress("custom", "nats://far-server:4222")
 	signer := &identity.SignerFake{}
 
-	waiter := NewDialogWaiter(address, signer)
+	waiter := NewDialogWaiter(address, signer, &mockedIdentityRegistry{})
 	assert.NotNil(t, waiter)
 	assert.Equal(t, address, waiter.myAddress)
 	assert.Equal(t, signer, waiter.mySigner)
@@ -94,11 +96,52 @@ func TestDialogWaiter_ServeDialogsRejectInvalidSignature(t *testing.T) {
 	assert.Nil(t, dialogInstance)
 }
 
+func TestDialogWaiter_ServeDialogsRejectUnregisteredConsumers(t *testing.T) {
+	connection := nats.StartConnectionFake()
+	defer connection.Close()
+
+	signer := &identity.SignerFake{}
+
+	mockedRegistry := &mockedIdentityRegistry{
+		anyIdentityRegistered: false,
+	}
+
+	mockeDialogHandler := &dialogHandler{
+		dialogReceived: make(chan communication.Dialog),
+	}
+
+	waiter := NewDialogWaiter(discovery.NewAddressWithConnection(connection, "test-topic"), signer, mockedRegistry)
+
+	err := waiter.ServeDialogs(mockeDialogHandler)
+	assert.NoError(t, err)
+
+	msg, err := connection.Request("test-topic.dialog-create", []byte(`{
+		"payload": {"peer_id":"0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea"},
+		"signature": "tl+WbYkJdXD5foaIP3bqVGFHfr6kdd5FzmJAmu1GdpINEnNR3bTto6wgEoke/Fpy4zsWOjrulDVfrc32f5ArTgA="
+	}`), 100*time.Millisecond)
+	assert.NoError(t, err)
+
+	assert.JSONEq(
+		t,
+		`{
+			"payload":	{
+				"reason":400,
+				"reasonMessage":"Invalid identity"
+			},
+			"signature":"c2lnbmVkeyJyZWFzb24iOjQwMCwicmVhc29uTWVzc2FnZSI6IkludmFsaWQgaWRlbnRpdHkifQ=="
+		}`,
+		string(msg.Data),
+	)
+}
+
 func dialogServe(connection nats.Connection, mySigner identity.Signer) (waiter *dialogWaiter, handler *dialogHandler) {
 	myTopic := "my-topic"
 	waiter = &dialogWaiter{
 		myAddress: discovery.NewAddressWithConnection(connection, myTopic),
 		mySigner:  mySigner,
+		identityRegistry: &mockedIdentityRegistry{
+			anyIdentityRegistered: true,
+		},
 	}
 	handler = &dialogHandler{
 		dialogReceived: make(chan communication.Dialog),
@@ -137,3 +180,14 @@ func (handler *dialogHandler) Handle(dialog communication.Dialog) error {
 	handler.dialogReceived <- dialog
 	return nil
 }
+
+type mockedIdentityRegistry struct {
+	anyIdentityRegistered bool
+}
+
+func (mir *mockedIdentityRegistry) IsRegistered(address common.Address) (bool, error) {
+	return mir.anyIdentityRegistered, nil
+}
+
+//check that we implemented mocked registry correctly
+var _ registry.IdentityRegistry = &mockedIdentityRegistry{}
