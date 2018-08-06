@@ -79,15 +79,15 @@ func TestRegistrationEndpointReturnsRegistrationData(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"Registered" : false,
-            "PublicKey": {
-				"Part1" : "0xfa001122334455667788990011223344556677889900112233445566778899af",
-				"Part2" : "0xde001122334455667788990011223344556677889900112233445566778899ad"
+			"registered" : false,
+            "publicKey": {
+				"part1" : "0xfa001122334455667788990011223344556677889900112233445566778899af",
+				"part2" : "0xde001122334455667788990011223344556677889900112233445566778899ad"
 			},
-			"Signature": {
-				"R": "0x0100000000000000000000000000000000000000000000000000000000000000",
-				"S": "0x0200000000000000000000000000000000000000000000000000000000000000",
-				"V": 27
+			"signature": {
+				"r": "0x0100000000000000000000000000000000000000000000000000000000000000",
+				"s": "0x0200000000000000000000000000000000000000000000000000000000000000",
+				"v": 27
 			}
         }`,
 		resp.Body.String(),
@@ -127,7 +127,7 @@ func TestRegistrationEndpointReturnsOnlyRegistrationStatusForRegisteredIdentity(
 	assert.JSONEq(
 		t,
 		`{
-			"Registered" : true
+			"registered" : true
         }`,
 		resp.Body.String(),
 	)

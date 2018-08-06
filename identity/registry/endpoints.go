@@ -30,13 +30,13 @@ import (
 type SignatureDTO struct {
 	// S part of signature
 	// example: "0x1321313212312..."
-	R string
+	R string `json:"r"`
 	// R part of signature
 	// example: "0x1234563564354..."
-	S string
+	S string `json:"s"`
 	// Sign - 27 or 28 as expected by ethereum ecrecover function
 	// example: 27
-	V uint8
+	V uint8 `json:"v"`
 }
 
 // PublicKeyPartsDTO represents ECDSA public key with first byte stripped (0x04) and splitted into two 32 bytes size arrays
@@ -45,10 +45,10 @@ type SignatureDTO struct {
 type PublicKeyPartsDTO struct {
 	// First 32 bytes of public key in hex representation
 	// example: "0x1321313212312..."
-	Part1 string
+	Part1 string `json:"part1"`
 	// Last 32 bytes of public key inx hex representation
 	// example: "0x1321313212312..."
-	Part2 string
+	Part2 string `json:"part2"`
 }
 
 // RegistrationDataDTO represents registration status and needed data for registering of given identity
@@ -56,11 +56,11 @@ type PublicKeyPartsDTO struct {
 // swagger:model RegistrationDataDTO
 type RegistrationDataDTO struct {
 	// Returns true if identity is registered in payments smart contract
-	Registered bool
+	Registered bool `json:"registered"`
 
-	PublicKey *PublicKeyPartsDTO `json:"PublicKey,omitempty"`
+	PublicKey *PublicKeyPartsDTO `json:"publicKey,omitempty"`
 
-	Signature *SignatureDTO `json:"Signature,omitempty"`
+	Signature *SignatureDTO `json:"signature,omitempty"`
 }
 
 type registrationEndpoint struct {
