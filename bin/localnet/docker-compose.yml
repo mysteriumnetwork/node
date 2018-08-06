@@ -54,6 +54,7 @@ services:
       --unlock '0xd9786b6ee6caf5cd0ef88301fc40de83bfac5594'
       --password node_acc_password.txt
       --rpcvhosts *
+      --rpccorsdomain *
       --mine
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
