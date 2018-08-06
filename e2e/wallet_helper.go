@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/mysterium/node/tequilapi/client"
 	"math/big"
+	"os"
 	"time"
 )
 
@@ -196,4 +197,42 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 
 func initKeyStore(path string) *keystore.KeyStore {
 	return keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
+}
+
+func registerIdentity(registrationData client.RegistrationStatusDTO) error {
+	defer os.RemoveAll("testdataoutput")
+
+	//master account - owner of conctracts, and can issue tokens
+	masterAccWallet, err := NewMainAccWallet("../bin/localnet/account")
+	if err != nil {
+		return err
+	}
+
+	//random user
+	userWallet, err := NewUserWallet("testdataoutput")
+	if err != nil {
+		return err
+	}
+
+	//user gets some ethers from master acc
+	err = masterAccWallet.GiveEther(userWallet.Owner, 1, params.Ether)
+	if err != nil {
+		return err
+	}
+
+	//user buys some tokens in exchange
+	err = masterAccWallet.GiveTokens(userWallet.Owner, 1000)
+	if err != nil {
+		return err
+	}
+
+	//user allows payments to take some tokens
+	err = userWallet.ApproveForPayments(1000)
+	if err != nil {
+		return err
+	}
+
+	//user registers identity
+	err = userWallet.RegisterIdentity(registrationData)
+	return err
 }

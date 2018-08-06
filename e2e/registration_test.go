@@ -18,19 +18,19 @@
 package e2e
 
 import (
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/cihub/seelog"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
 
 func TestIdentityRegistrationFlow(t *testing.T) {
-	defer os.RemoveAll("testdataoutput")
 
 	tequilapi := newTequilaClient()
 
 	mystIdentity, err := tequilapi.NewIdentity("")
 	assert.NoError(t, err)
+	seelog.Info("Created new identity: ", mystIdentity.Address)
 
 	err = tequilapi.Unlock(mystIdentity.Address, "")
 	assert.NoError(t, err)
@@ -39,27 +39,7 @@ func TestIdentityRegistrationFlow(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, registrationStatus.Registered)
 
-	//mystIdentity is not registered - register it, emulating interaction with wallet
-	masterAccWallet, err := NewMainAccWallet("../bin/localnet/account")
-	assert.NoError(t, err)
-
-	userWallet, err := NewUserWallet("testdataoutput")
-	assert.NoError(t, err)
-
-	//user gets some ethers
-	err = masterAccWallet.GiveEther(userWallet.Owner, 1, params.Ether)
-	assert.NoError(t, err)
-
-	//user buys some tokens
-	err = masterAccWallet.GiveTokens(userWallet.Owner, 1000)
-	assert.NoError(t, err)
-
-	//user allows payments to take some tokens
-	err = userWallet.ApproveForPayments(1000)
-	assert.NoError(t, err)
-
-	//user registers identity
-	err = userWallet.RegisterIdentity(registrationStatus)
+	err = registerIdentity(registrationStatus)
 	assert.NoError(t, err)
 
 	//now we check identity again

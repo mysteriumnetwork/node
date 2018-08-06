@@ -20,6 +20,8 @@ services:
       --location.country=e2e-land
       --openvpn.port=3000
       --agreed-terms-and-conditions
+      --localnet
+      --ether.client.rpc=http://local-node:8545
 
   client:
     build:
