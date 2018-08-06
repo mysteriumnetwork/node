@@ -22,8 +22,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/MysteriumNetwork/payments/cli/helpers"
-	"github.com/MysteriumNetwork/payments/mysttoken/generated"
-	generated2 "github.com/MysteriumNetwork/payments/promises/generated"
+	mysttoken "github.com/MysteriumNetwork/payments/mysttoken/generated"
+	promises "github.com/MysteriumNetwork/payments/promises/generated"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"math/big"
@@ -45,13 +45,13 @@ func main() {
 	checkError("Backend lookup", err)
 	<-synced
 
-	mystTokenAddress, tx, _, err := generated.DeployMystToken(transactor, client)
+	mystTokenAddress, tx, _, err := mysttoken.DeployMystToken(transactor, client)
 	checkError("Deploy token", err)
 	checkTxStatus(client, tx)
 	fmt.Println("Token: ", mystTokenAddress.String())
 
 	transactor.Nonce = big.NewInt(int64(tx.Nonce() + 1))
-	paymentsAddress, tx, _, err := generated2.DeployIdentityPromises(transactor, client, mystTokenAddress, big.NewInt(100))
+	paymentsAddress, tx, _, err := promises.DeployIdentityPromises(transactor, client, mystTokenAddress, big.NewInt(100))
 	checkError("Deploy payments", err)
 	checkTxStatus(client, tx)
 
