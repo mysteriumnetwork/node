@@ -20,7 +20,6 @@ package e2e
 import (
 	"github.com/cihub/seelog"
 	"github.com/stretchr/testify/assert"
-	"os"
 	"testing"
 )
 
