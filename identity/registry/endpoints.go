@@ -58,9 +58,9 @@ type RegistrationDataDTO struct {
 	// Returns true if identity is registered in payments smart contract
 	Registered bool `json:"registered"`
 
-	PublicKey *PublicKeyPartsDTO `json:"publicKey,omitempty"`
+	PublicKey PublicKeyPartsDTO `json:"publicKey"`
 
-	Signature *SignatureDTO `json:"signature,omitempty"`
+	Signature SignatureDTO `json:"signature"`
 }
 
 type registrationEndpoint struct {
@@ -105,30 +105,23 @@ func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter,
 		return
 	}
 
-	registrationResponse := RegistrationDataDTO{
-		Registered: isRegistered,
-	}
-
-	if isRegistered {
-		utils.WriteAsJSON(registrationResponse, resp)
-		return
-	}
-
 	registrationData, err := endpoint.dataProvider.ProvideRegistrationData(identity)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	registrationResponse.PublicKey = &PublicKeyPartsDTO{
-		Part1: common.ToHex(registrationData.PublicKey.Part1),
-		Part2: common.ToHex(registrationData.PublicKey.Part2),
-	}
-
-	registrationResponse.Signature = &SignatureDTO{
-		R: common.ToHex(registrationData.Signature.R[:]),
-		S: common.ToHex(registrationData.Signature.S[:]),
-		V: registrationData.Signature.V,
+	registrationResponse := RegistrationDataDTO{
+		Registered: isRegistered,
+		PublicKey: PublicKeyPartsDTO{
+			Part1: common.ToHex(registrationData.PublicKey.Part1),
+			Part2: common.ToHex(registrationData.PublicKey.Part2),
+		},
+		Signature: SignatureDTO{
+			R: common.ToHex(registrationData.Signature.R[:]),
+			S: common.ToHex(registrationData.Signature.S[:]),
+			V: registrationData.Signature.V,
+		},
 	}
 
 	utils.WriteAsJSON(registrationResponse, resp)

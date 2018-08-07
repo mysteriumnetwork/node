@@ -95,45 +95,6 @@ func TestRegistrationEndpointReturnsRegistrationData(t *testing.T) {
 
 }
 
-func TestRegistrationEndpointReturnsOnlyRegistrationStatusForRegisteredIdentity(t *testing.T) {
-	mockedRegistrationStatus := &mockRegistrationStatus{
-		Registered: true,
-	}
-
-	mockedRegistrationDataProvider := &mockRegistrationDataProvider{}
-
-	endpoint := newRegistrationEndpoint(mockedRegistrationDataProvider, mockedRegistrationStatus)
-
-	req, err := http.NewRequest(
-		http.MethodGet,
-		"/notimportant",
-		nil,
-	)
-	assert.NoError(t, err)
-
-	resp := httptest.NewRecorder()
-
-	endpoint.RegistrationData(
-		resp,
-		req,
-		httprouter.Params{
-			httprouter.Param{
-				Key:   "id",
-				Value: "0x1231323131",
-			},
-		},
-	)
-
-	assert.JSONEq(
-		t,
-		`{
-			"registered" : true
-        }`,
-		resp.Body.String(),
-	)
-
-}
-
 type mockRegistrationStatus struct {
 	Registered bool
 }
