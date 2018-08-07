@@ -21,8 +21,8 @@ import (
 	"context"
 	"errors"
 	"github.com/MysteriumNetwork/payments/cli/helpers"
-	generated2 "github.com/MysteriumNetwork/payments/mysttoken/generated"
-	"github.com/MysteriumNetwork/payments/registry/generated"
+	mysttoken "github.com/MysteriumNetwork/payments/mysttoken/generated"
+	registry "github.com/MysteriumNetwork/payments/registry/generated"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -48,8 +48,8 @@ type CliWallet struct {
 	txOpts           *bind.TransactOpts
 	Owner            common.Address
 	backend          *ethclient.Client
-	identityRegistry generated.IdentityRegistryTransactorSession
-	tokens           generated2.MystTokenTransactorSession
+	identityRegistry registry.IdentityRegistryTransactorSession
+	tokens           mysttoken.MystTokenTransactorSession
 }
 
 // RegisterIdentity registers identity with given data on behalf of user
@@ -170,9 +170,9 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 
 	transactor := helpers.CreateNewKeystoreTransactor(ks, &ownerAcc)
 
-	tokensContract, err := generated2.NewMystTokenTransactor(tokenAddress, client)
+	tokensContract, err := mysttoken.NewMystTokenTransactor(tokenAddress, client)
 
-	paymentsContract, err := generated.NewIdentityRegistryTransactor(paymentsAddress, client)
+	paymentsContract, err := registry.NewIdentityRegistryTransactor(paymentsAddress, client)
 	if err != nil {
 		return nil, err
 	}
@@ -181,11 +181,11 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 		txOpts:  transactor,
 		Owner:   owner,
 		backend: client,
-		tokens: generated2.MystTokenTransactorSession{
+		tokens: mysttoken.MystTokenTransactorSession{
 			Contract:     tokensContract,
 			TransactOpts: *transactor,
 		},
-		identityRegistry: generated.IdentityRegistryTransactorSession{
+		identityRegistry: registry.IdentityRegistryTransactorSession{
 			Contract:     paymentsContract,
 			TransactOpts: *transactor,
 		},
