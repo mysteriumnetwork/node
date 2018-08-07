@@ -32,16 +32,22 @@ import (
 )
 
 func main() {
+
+	keyStoreDir := flag.String("keystore.directory", "", "Directory of keystore")
+	etherAddress := flag.String("ether.address", "", "Account inside keystore to use for deployment")
+	etherPassphrase := flag.String("ether.passphrase", "", "Passphrase for account unlocking")
+	ethRPC := flag.String("geth.url", "", "RPC url of ethereum client")
+
 	flag.Parse()
 
-	ks := helpers.GetKeystore()
+	ks := helpers.GetKeystore(*keyStoreDir)
 
-	acc, err := helpers.GetUnlockedAcc(ks)
+	acc, err := helpers.GetUnlockedAcc(*etherAddress, *etherPassphrase, ks)
 	checkError("Unlock acc", err)
 
 	transactor := helpers.CreateNewKeystoreTransactor(ks, acc)
 
-	client, synced, err := helpers.LookupBackend()
+	client, synced, err := helpers.LookupBackend(*ethRPC)
 	checkError("Backend lookup", err)
 	<-synced
 

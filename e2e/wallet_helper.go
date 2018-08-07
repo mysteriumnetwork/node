@@ -156,11 +156,10 @@ func NewUserWallet(keystoreDir string) (*CliWallet, error) {
 }
 
 func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore) (*CliWallet, error) {
-	client, synced, err := helpers.LookupBackend()
+	client, err := newEthClient()
 	if err != nil {
 		return nil, err
 	}
-	<-synced //wait for sync to finish if any
 
 	ownerAcc := accounts.Account{Address: owner}
 

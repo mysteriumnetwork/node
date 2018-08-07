@@ -19,12 +19,24 @@ package e2e
 
 import (
 	"flag"
+	"github.com/MysteriumNetwork/payments/cli/helpers"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysterium/node/tequilapi/client"
 )
 
-var host = flag.String("tequila.host", "localhost", "Specify tequila host for e2e tests")
-var port = flag.Int("tequila.port", 4050, "Specify tequila port for e2e tests")
+var tequilaHost = flag.String("tequila.host", "localhost", "Specify tequila host for e2e tests")
+var tequilaPort = flag.Int("tequila.port", 4050, "Specify tequila port for e2e tests")
+var ethRPC = flag.String("geth.url", "", "Eth node RPC")
 
 func newTequilaClient() *client.Client {
-	return client.NewClient(*host, *port)
+	return client.NewClient(*tequilaHost, *tequilaPort)
+}
+
+func newEthClient() (*ethclient.Client, error) {
+	client, synced, err := helpers.LookupBackend(*ethRPC)
+	if err != nil {
+		return nil, err
+	}
+	<-synced //wait for sync to finish if any
+	return client, nil
 }

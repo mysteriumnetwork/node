@@ -23,7 +23,7 @@ import:
 - package: github.com/oschwald/maxminddb-golang
   version: 1.2.1
 - package: github.com/MysteriumNetwork/payments
-  version: ~0.0.3-beta
+  version: ~0.0.4-beta
 - package: github.com/cheggaaa/pb
   version: 2.0.6
 - package: github.com/fatih/set
