@@ -39,7 +39,7 @@ services:
       - 8545
     volumes:
       - geth-runtime:/ethereum/geth-runtime
-      - ./devnet_genesis.json:/ethereum/genesis.json
+      - ./genesis.json:/ethereum/genesis.json
       - ./node:/ethereum/keystore
       - ./node_acc_password.txt:/ethereum/node_acc_password.txt
     command: >
