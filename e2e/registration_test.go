@@ -20,7 +20,6 @@ package e2e
 import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
-	"math/big"
 	"os"
 	"testing"
 )
@@ -48,15 +47,15 @@ func TestIdentityRegistrationFlow(t *testing.T) {
 	assert.NoError(t, err)
 
 	//user gets some ethers
-	err = masterAccWallet.GiveEther(userWallet.Owner, new(big.Int).Mul(big.NewInt(1), big.NewInt(params.Ether)))
+	err = masterAccWallet.GiveEther(userWallet.Owner, 1, params.Ether)
 	assert.NoError(t, err)
 
 	//user buys some tokens
-	err = masterAccWallet.GiveTokens(userWallet.Owner, big.NewInt(1000))
+	err = masterAccWallet.GiveTokens(userWallet.Owner, 1000)
 	assert.NoError(t, err)
 
 	//user allows payments to take some tokens
-	err = userWallet.ApproveForPayments(big.NewInt(1000))
+	err = userWallet.ApproveForPayments(1000)
 	assert.NoError(t, err)
 
 	//user registers identity

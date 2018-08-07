@@ -72,7 +72,9 @@ func (wallet *CliWallet) RegisterIdentity(dto client.RegistrationStatusDTO) erro
 }
 
 // GiveEther transfers ether to given address
-func (wallet *CliWallet) GiveEther(address common.Address, amountInWei *big.Int) error {
+func (wallet *CliWallet) GiveEther(address common.Address, amount, units int64) error {
+
+	amountInWei := new(big.Int).Mul(big.NewInt(amount), big.NewInt(units))
 
 	nonce, err := wallet.backend.PendingNonceAt(context.Background(), wallet.Owner)
 	if err != nil {
@@ -98,8 +100,8 @@ func (wallet *CliWallet) GiveEther(address common.Address, amountInWei *big.Int)
 }
 
 // GiveTokens gives myst tokens to specified address
-func (wallet *CliWallet) GiveTokens(address common.Address, amount *big.Int) error {
-	tx, err := wallet.tokens.Mint(address, amount)
+func (wallet *CliWallet) GiveTokens(address common.Address, amount int64) error {
+	tx, err := wallet.tokens.Mint(address, big.NewInt(amount))
 	if err != nil {
 		return err
 	}
@@ -107,8 +109,8 @@ func (wallet *CliWallet) GiveTokens(address common.Address, amount *big.Int) err
 }
 
 // ApproveForPayments allows specified amount of ERC20 tokens to be spend by payments contract
-func (wallet *CliWallet) ApproveForPayments(amount *big.Int) error {
-	tx, err := wallet.tokens.Approve(paymentsAddress, amount)
+func (wallet *CliWallet) ApproveForPayments(amount int64) error {
+	tx, err := wallet.tokens.Approve(paymentsAddress, big.NewInt(amount))
 	if err != nil {
 		return err
 	}
