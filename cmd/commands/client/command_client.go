@@ -47,7 +47,7 @@ func NewCommand(options CommandOptions) *Command {
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 
-	keystoreDirectory := filepath.Join(options.DirectoryData, "keystore")
+	keystoreDirectory := filepath.Join(options.Directories.Data, "keystore")
 	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
 
 	identityManager := identity.NewIdentityManager(keystoreInstance)
@@ -67,7 +67,7 @@ func NewCommand(options CommandOptions) *Command {
 
 	locationDetector := location.NewDetector(
 		ipResolver,
-		filepath.Join(options.DirectoryConfig, options.LocationDatabase),
+		filepath.Join(options.Directories.Config, options.LocationDatabase),
 	)
 
 	originalLocationCache := location.NewLocationCache(locationDetector)
@@ -75,8 +75,8 @@ func NewCommand(options CommandOptions) *Command {
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
 		options.OpenvpnBinary,
-		options.DirectoryConfig,
-		options.DirectoryRuntime,
+		options.Directories.Config,
+		options.Directories.Runtime,
 		signerFactory,
 		statsKeeper,
 		originalLocationCache,
@@ -93,6 +93,7 @@ func NewCommand(options CommandOptions) *Command {
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
 		},
+		checkDirectories:      options.Directories.Check,
 		originalLocationCache: originalLocationCache,
 	}
 
@@ -110,6 +111,7 @@ type Command struct {
 	connectionManager     connection.Manager
 	httpAPIServer         tequilapi.APIServer
 	checkOpenvpn          func() error
+	checkDirectories      func() error
 	originalLocationCache location.Cache
 }
 
@@ -117,7 +119,12 @@ type Command struct {
 func (cmd *Command) Start() error {
 	log.Infof("Starting Mysterium Client (%s)", metadata.VersionAsString())
 
-	err := cmd.checkOpenvpn()
+	err := cmd.checkDirectories()
+	if err != nil {
+		return err
+	}
+
+	err = cmd.checkOpenvpn()
 	if err != nil {
 		return err
 	}

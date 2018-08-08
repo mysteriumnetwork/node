@@ -13,35 +13,30 @@ git clone git@github.com:MysteriumNetwork/node.git $GOPATH/src/github.com/myster
 cd $GOPATH/src/github.com/mysterium/node
 ```
 
-* **Step 2.** Compile code
+* **Step 2.** Fetch dependencies
 ```bash
 glide install
-go build github.com/mysterium/node
 ```
 
-* **Step 3.** Prepare configuration
-
-Enter `MYSTERIUM_API_URL` address of running [api](https://github.com/MysteriumNetwork/api) instance<br/>
-Enter `NATS_SERVER_IP` address of running [communication broker](https://github.com/nats-io/gnatsd) instance
-
+* **Step 3.** Start localnet infrastructure
 ```bash
-cp .env_example .env
-vim .env
+bin/localnet/setup.sh
+```
+
+* **Step 4. (optional)** Tear down localnet infrastructure when it's not needed
+```bash
+bin/localnet/teardown.sh
 ```
 
 ## Running
 
 ```bash
-# Start communication broker
-docker-compose up broker
 
 # Start node
-bin/server_build
-bin/server_run
+bin/server_build && bin/server_run
 
 # Client connects to node
-bin/client_build
-bin/client_run
+bin/client_build && bin/client_run
 ```
 
 ## Running client in interactive cli
@@ -109,30 +104,6 @@ glide get --quick github.com/ccding/go-stun
 ```bash
 vim glide.yaml
 glide update
-```
-
-
-## Debian packaging
-
-* **Step 1.** Get FPM tool
-See http://fpm.readthedocs.io/en/latest/installing.html
-
-```bash
-brew install gnu-tar
-gem install --no-ri --no-rdoc fpm
-```
-
-* **Step 2.** Get Debber tool
-See https://github.com/debber/debber-v0.3
-
-```bash
-go get github.com/debber/debber-v0.3/cmd/...
-```
-
-* **Step 3.** Build .deb package
-```bash
-bin/server_package_debian 0.0.6 amd64
-bin/client_package_debian 0.0.6 amd64
 ```
 
 ## Creating pull request

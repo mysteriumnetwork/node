@@ -61,7 +61,7 @@ func main() {
 
 func runCLI(options client.CommandOptions) {
 	cmdCli := cli.NewCommand(
-		filepath.Join(options.DirectoryData, ".cli_history"),
+		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 	)
 	stop := cmd.HardKiller(cmdCli.Kill)

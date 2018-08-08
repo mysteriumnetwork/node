@@ -1,42 +1,18 @@
 ---
 ## Mysterium VPN node (Any OS with Docker)
 
-Most convenient way requiring least configuration is to run a node using docker. 
+Most convenient way requiring least configuration is to run a node using [Docker](https://docs.docker.com/install/). 
 All node versions are available through docker hub: 
  
 https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
-### Installation
 
-Read on how to setup docker repository for Debian [here](https://docs.docker.com/install/linux/docker-ce/debian/) 
-and for Ubuntu [here](https://docs.docker.com/install/linux/docker-ee/ubuntu/).
-
-##### Debian / Ubuntu
+### Fetching and running docker image
 ```bash
-sudo apt-get install docker-ce
+sudo docker run --cap-add NET_ADMIN --net host --name mysterium-node -d mysteriumnetwork/mysterium-node --agreed-terms-and-conditions
 ```
-
-##### CentOS / RedHat
-
-Read on how to setup docker repository for CentOS [here](https://docs.docker.com/install/linux/docker-ce/centos/)
-and for RedHat [here](https://docs.docker.com/install/linux/docker-ee/rhel/).
-
-```bash
-sudo yum install docker-ce
-```
-
-##### Fetching and running docker image
-```bash
-sudo docker run --cap-add NET_ADMIN --net host --publish "1194:1194" --name mysterium-node -d mysteriumnetwork/mysterium-node:{VERSION} --agreed-terms-and-conditions
-```
-You can skip `{VERSION}` to fetch latest image.
 
 Note: to run server, you will have to accept terms & conditions by adding '--agreed-terms-and-conditions' command line option.
-
-### Running
-```bash
-sudo docker start mysterium-node
-sudo docker stop mysterium-node
-```
+Note 2: it's mandatory to run docker container with --net host to correctly detect VPN service ip which needs to be published to clients, assuming that host on which node is running has external interface with public ip
 
 ### Debugging
 ```bash
@@ -45,9 +21,9 @@ sudo docker logs -f mysterium-node
 
 
 ## Mysterium VPN node (Debian && Ubuntu) - tested on Ubuntu 16.04
+Note: you need to replace {version} with specific version number from [releases](https://github.com/MysteriumNetwork/node/releases/)
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_armhf.deb
 
 ###  Add latest OpenVPN repository
 
@@ -81,7 +57,6 @@ sudo mysterium_server --data-dir=/var/lib/mysterium-node --config-dir=/etc/myste
 ## Mysterium VPN client (Debian && Ubuntu) - tested on Ubuntu 16.04
 ### Download
  * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_armhf.deb
 
 ### Add latest OpenVPN repository
 
@@ -121,32 +96,30 @@ sudo mysterium_client --data-dir=/var/lib/mysterium-client --config-dir=/etc/mys
 ```
 
 
-## Mysterium VPN node (standalone Linux binaries)
-### Download
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_amd64
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_linux_armhf
-### Running
+## Mysterium VPN node and client standalone binaries (.tar.gz)
+### Client
+#### Download
+ * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_{OS}_{ARCH}.tar.gz
+#### Extract
 ```bash
-mysterium_server --help
-sudo mysterium_server --config-dir=/etc/mysterium-node --identity=0x123456..
+tar -xvzf mysterium_client_{OS}_{ARCH}.tar.gz
+```
+#### Running
+```bash
+cd mysterium_client_{OS}_{ARCH}
+sudo ./mysterium_client
 ```
 
-
-## Mysterium VPN client (standalone Linux binaries)
-### Download
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_amd64
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_linux_armhf
-### Running
+### Node
+#### Download
+ * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_{OS}_{ARCH}.tar.gz
+#### Extract
 ```bash
-mysterium_client --help
-sudo mysterium_client && mysterium_client --cli
+tar -xvzf mysterium_server_{OS}_{ARCH}.tar.gz
 ```
-
-
-## Mysterium VPN client (standalone Apple Mac/OSX/Darwin binaries)
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_osx_amd64
-
-
-## Build from source code
- * https://github.com/MysteriumNetwork/node/archive/{VERSION}.tar.gz
- * https://github.com/MysteriumNetwork/node/archive/{VERSION}.zip
+#### Running
+```bash
+cd mysterium_server_{OS}_{ARCH}
+sudo ./mysterium_server
+```
+Note: to run server, you will have to accept terms & conditions by adding '--agreed-terms-and-conditions' command line option.
