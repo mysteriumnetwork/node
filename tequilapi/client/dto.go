@@ -82,3 +82,23 @@ type BuildInfoDTO struct {
 	Branch      string `json:"branch"`
 	BuildNumber string `json:"buildNumber"`
 }
+
+// RegistrationStatusDTO holds input data required to register new myst identity on blockchain smart contract
+type RegistrationStatusDTO struct {
+	Registered bool              `json:"registered"`
+	PublicKey  PublicKeyPartsDTO `json:"publicKey"`
+	Signature  SignatureDTO      `json:"signature"`
+}
+
+// PublicKeyPartsDTO holds public key parts in hex, split into 32 byte blocks
+type PublicKeyPartsDTO struct {
+	Part1 string `json:"part1"`
+	Part2 string `json:"part2"`
+}
+
+// SignatureDTO holds decomposed ECDSA signature values R, S and V
+type SignatureDTO struct {
+	R string `json:"r"`
+	S string `json:"s"`
+	V uint8  `json:"v"`
+}

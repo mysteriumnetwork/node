@@ -32,9 +32,13 @@ services:
       - ipify
     cap_add:
       - NET_ADMIN
-    ports:
-      - 4052:4050
-    command: "--ipify-url=http://ipify:3000 --discovery-address=http://discovery/v1"
+    expose:
+      - 4050
+    command: >
+      --ipify-url=http://ipify:3000
+      --discovery-address=http://discovery/v1
+      --localnet
+      --ether.client.rpc=http://local-node:8545
 
   #'external' IP detection
   ipify:

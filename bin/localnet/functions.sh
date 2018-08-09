@@ -44,17 +44,40 @@ setup () {
         exit 1
     fi
 
-    ${dockerComposeCmd} up -d broker discovery
+    ${dockerComposeCmd} run local-node init genesis.json
     if [ ! $? -eq 0 ]; then
-        print_error "Starting built docker images failed"
+        print_error "Geth node initialization failed"
         cleanup "$@"
         exit 1
     fi
+
+
+    ${dockerComposeCmd} up -d broker discovery local-node
+    if [ ! $? -eq 0 ]; then
+        print_error "Error starting other services"
+        cleanup "$@"
+        exit 1
+    fi
+
+    #deploy MystToken and Payment contracts
+    echo "Deploying contracts..."
+    ${dockerComposeCmd} run go-runner \
+        go run bin/localnet/deployer/*.go \
+        --keystore.directory=bin/localnet/account \
+        --ether.address=0xa754f0d31411d88e46aed455fa79b9fced122497 \
+        --ether.passphrase `cat bin/localnet/local_acc_password.txt` \
+        --geth.url=http://local-node:8545
+    if [ ! $? -eq 0 ]; then
+        print_error "Error deploying contracts"
+        cleanup "$@"
+        exit 1
+    fi
+
 }
 
 cleanup () {
     setupDockerComposeCmd "$@"
 
     echo "Cleaning up: $projectName"
-    ${dockerComposeCmd} down --remove-orphans
+    ${dockerComposeCmd} down --remove-orphans --volumes
 }
