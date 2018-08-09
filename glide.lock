@@ -1,5 +1,5 @@
-hash: 3ea570ac2ccdb1094ce921eaa235022e4c94ad50439af00c7cc0978df568a8cc
-updated: 2018-08-13T10:53:12.577394+03:00
+hash: 47ad4023fef30b1530a180cb3751f54fc909765b9a87232a932df91c33cd29d4
+updated: 2018-08-09T11:27:40.740197+03:00
 imports:
 - name: github.com/aristanetworks/goarista
   version: b2d71c282dc706f4b4f6c15b65810e1202ecd53f
@@ -57,7 +57,7 @@ imports:
 - name: github.com/mattn/go-isatty
   version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
 - name: github.com/mitchellh/go-homedir
-  version: 58046073cbffe2f25d425fe1331102f55cf719de
+  version: b8bc1bf767474819792c23f32d8286a45736f1c6
 - name: github.com/MysteriumNetwork/payments
   version: 6fd859db4476d7a7630b88210b3b3ffc874dcf4d
   subpackages:
@@ -85,7 +85,7 @@ imports:
   subpackages:
   - difflib
 - name: github.com/rjeczalik/notify
-  version: 73af26f04f4c947f6aad53f7ae0dd72fb14f824b
+  version: 4e54e7fd043e865c50bda93359fb78813a8d165b
 - name: github.com/rs/cors
   version: 15587285ef6b6e7a3f657e2e00f9f271883bcf22
 - name: github.com/satori/go.uuid
@@ -112,7 +112,7 @@ imports:
   - leveldb/table
   - leveldb/util
 - name: golang.org/x/crypto
-  version: f027049dab0ad238e394a753dba2d14753473a04
+  version: de0752318171da717af4ce24d0a2e8626afaeb11
   subpackages:
   - pbkdf2
   - scrypt
@@ -121,12 +121,12 @@ imports:
   subpackages:
   - websocket
 - name: golang.org/x/sys
-  version: acbc56fc7007d2a01796d5bde54f39e3b3e95945
+  version: 904bdc257025c7b3f43c19360ad3ab85783fad78
   subpackages:
   - unix
   - windows
 - name: golang.org/x/tools
-  version: ca6481ae56504398949d597084558e50ad07117a
+  version: ad8705d9f66de7461d0035a9b184c5bc66c7ae64
   subpackages:
   - go/ast/astutil
   - imports
