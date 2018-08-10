@@ -53,7 +53,6 @@ services:
       --gasprice '1'
       --unlock '0xd9786b6ee6caf5cd0ef88301fc40de83bfac5594'
       --password node_acc_password.txt
-      --rpccorsdomain *
       --rpcvhosts *
       --rpccorsdomain *
       --mine
