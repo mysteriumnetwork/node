@@ -15,7 +15,7 @@ import:
 - package: github.com/julienschmidt/httprouter
   version: 1.1.0
 - package: github.com/mitchellh/go-homedir
-  version: b8bc1bf767474819792c23f32d8286a45736f1c6
+  version: 58046073cbffe2f25d425fe1331102f55cf719de
 - package: github.com/chzyer/readline
   version: 1.4.0
 - package: github.com/oschwald/geoip2-golang
