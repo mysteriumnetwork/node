@@ -19,10 +19,8 @@ package e2e
 
 import (
 	"github.com/cihub/seelog"
-	"github.com/mysterium/node/tequilapi/client"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"time"
 )
 
 func TestClientConnectsToNode(t *testing.T) {
@@ -33,19 +31,23 @@ func TestClientConnectsToNode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", status.Status)
 
-	identities, err := tequilApi.GetIdentities()
+	identity, err := tequilApi.NewIdentity("")
 	assert.NoError(t, err)
-
-	var identity client.IdentityDTO
-	if len(identities) < 1 {
-		identity, err = tequilApi.NewIdentity("")
-		assert.NoError(t, err)
-	} else {
-		identity = identities[0]
-	}
 	seelog.Info("Client identity is: ", identity.Address)
 
 	err = tequilApi.Unlock(identity.Address, "")
+	assert.NoError(t, err)
+
+	registrationData, err := tequilApi.RegistrationStatus(identity.Address)
+	assert.NoError(t, err)
+
+	err = registerIdentity(registrationData)
+	assert.NoError(t, err)
+
+	err = waitForCondition(func() (bool, error) {
+		regStatus, err := tequilApi.RegistrationStatus(identity.Address)
+		return regStatus.Registered, err
+	})
 	assert.NoError(t, err)
 
 	nonVpnIp, err := tequilApi.GetIP()
@@ -69,10 +71,11 @@ func TestClientConnectsToNode(t *testing.T) {
 	_, err = tequilApi.Connect(identity.Address, proposal.ProviderID)
 	assert.NoError(t, err)
 
-	time.Sleep(10 * time.Second)
-	status, err = tequilApi.Status()
+	err = waitForCondition(func() (bool, error) {
+		status, err := tequilApi.Status()
+		return status.Status == "Connected", err
+	})
 	assert.NoError(t, err)
-	assert.Equal(t, "Connected", status.Status)
 
 	vpnIp, err := tequilApi.GetIP()
 	assert.NoError(t, err)
@@ -81,9 +84,10 @@ func TestClientConnectsToNode(t *testing.T) {
 	err = tequilApi.Disconnect()
 	assert.NoError(t, err)
 
-	time.Sleep(10 * time.Second)
-	status, err = tequilApi.Status()
+	err = waitForCondition(func() (bool, error) {
+		status, err := tequilApi.Status()
+		return status.Status == "NotConnected", err
+	})
 	assert.NoError(t, err)
-	assert.Equal(t, "NotConnected", status.Status)
 
 }

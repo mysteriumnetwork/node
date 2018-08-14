@@ -22,8 +22,10 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/blockchain"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/identity/registry"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/metadata"
@@ -39,14 +41,15 @@ import (
 
 // Command represent entrypoint for Mysterium server with top level components
 type Command struct {
-	identityLoader   func() (identity.Identity, error)
-	createSigner     identity.SignerFactory
-	ipResolver       ip.Resolver
-	mysteriumClient  server.Client
-	natService       nat.NATService
-	locationResolver location.Resolver
+	networkDefinition metadata.NetworkDefinition
+	identityLoader    func() (identity.Identity, error)
+	createSigner      identity.SignerFactory
+	ipResolver        ip.Resolver
+	mysteriumClient   server.Client
+	natService        nat.NATService
+	locationResolver  location.Resolver
 
-	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
+	dialogWaiterFactory func(identity identity.Identity, identityRegistry registry.IdentityRegistry) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
 	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
@@ -80,7 +83,17 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	cmd.dialogWaiter = cmd.dialogWaiterFactory(providerID)
+	ethClient, err := blockchain.NewClient(cmd.networkDefinition.EtherClientRPC)
+	if err != nil {
+		return err
+	}
+
+	identityRegistry, err := registry.NewIdentityRegistry(ethClient, cmd.networkDefinition.PaymentsContractAddress)
+	if err != nil {
+		return err
+	}
+
+	cmd.dialogWaiter = cmd.dialogWaiterFactory(providerID, identityRegistry)
 	providerContact, err := cmd.dialogWaiter.Start()
 	if err != nil {
 		return err

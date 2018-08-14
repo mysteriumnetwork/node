@@ -27,6 +27,7 @@ import (
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/identity/registry"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/nat"
@@ -66,6 +67,7 @@ func NewCommand(options CommandOptions) *Command {
 	locationResolver := locationResolver(options)
 
 	return &Command{
+		networkDefinition: networkDefinition,
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, options.Identity, options.Passphrase)
 		},
@@ -74,10 +76,11 @@ func NewCommand(options CommandOptions) *Command {
 		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,
-		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
+		dialogWaiterFactory: func(myID identity.Identity, identityRegistry registry.IdentityRegistry) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
 				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
 				identity.NewSigner(keystoreInstance, myID),
+				identityRegistry,
 			)
 		},
 

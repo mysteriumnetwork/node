@@ -1,12 +1,12 @@
 hash: 3ea570ac2ccdb1094ce921eaa235022e4c94ad50439af00c7cc0978df568a8cc
-updated: 2018-08-13T10:53:12.577394+03:00
+updated: 2018-08-13T15:04:06.689132+03:00
 imports:
 - name: github.com/aristanetworks/goarista
-  version: b2d71c282dc706f4b4f6c15b65810e1202ecd53f
+  version: 70ad3c3262ada0444973f3f02e4a8339319236b3
   subpackages:
   - monotime
 - name: github.com/btcsuite/btcd
-  version: cf05f92c3f815bbd5091ed6c73eff51f7b1945e8
+  version: f899737d7f2764dc13e4d01ff00108ec58f766a9
   subpackages:
   - btcec
 - name: github.com/cheggaaa/pb
@@ -85,7 +85,7 @@ imports:
   subpackages:
   - difflib
 - name: github.com/rjeczalik/notify
-  version: 73af26f04f4c947f6aad53f7ae0dd72fb14f824b
+  version: 4e54e7fd043e865c50bda93359fb78813a8d165b
 - name: github.com/rs/cors
   version: 15587285ef6b6e7a3f657e2e00f9f271883bcf22
 - name: github.com/satori/go.uuid
@@ -112,21 +112,21 @@ imports:
   - leveldb/table
   - leveldb/util
 - name: golang.org/x/crypto
-  version: f027049dab0ad238e394a753dba2d14753473a04
+  version: de0752318171da717af4ce24d0a2e8626afaeb11
   subpackages:
   - pbkdf2
   - scrypt
 - name: golang.org/x/net
-  version: f9ce57c11b242f0f1599cf25c89d8cb02c45295a
+  version: c39426892332e1bb5ec0a434a079bf82f5d30c54
   subpackages:
   - websocket
 - name: golang.org/x/sys
-  version: acbc56fc7007d2a01796d5bde54f39e3b3e95945
+  version: 98c5dad5d1a0e8a73845ecc8897d0bd56586511d
   subpackages:
   - unix
   - windows
 - name: golang.org/x/tools
-  version: ca6481ae56504398949d597084558e50ad07117a
+  version: 27709f6afec43b6c6d899bd199bf0f39c731216c
   subpackages:
   - go/ast/astutil
   - imports
