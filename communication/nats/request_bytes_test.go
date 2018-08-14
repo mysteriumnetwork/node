@@ -91,7 +91,7 @@ func TestBytesRespond(t *testing.T) {
 	err := receiver.Respond(consumer)
 	assert.NoError(t, err)
 
-	response, err := connection.Request("bytes-response", []byte("REQUEST"), time.Millisecond)
+	response, err := connection.Request("bytes-response", []byte("REQUEST"), 100*time.Millisecond)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("REQUEST"), *consumer.requestReceived.(*[]byte))
 	assert.Equal(t, []byte("RESPONSE"), response.Data)

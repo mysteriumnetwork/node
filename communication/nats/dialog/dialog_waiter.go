@@ -71,17 +71,14 @@ func (waiter *dialogWaiter) Stop() error {
 
 func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-		if request.PeerID == "" {
-			return &responseInvalidIdentity, nil
-		}
-		registered, err := waiter.identityRegistry.IsRegistered(common.HexToAddress(request.PeerID))
+
+		valid, err := waiter.validateDialogRequest(request)
 		if err != nil {
-			log.Error(waiterLogPrefix, "Peer identity registration check failed: ", err.Error())
+			log.Error(waiterLogPrefix, "Validation check failed: ", err.Error())
 			return &responseInternalError, nil
 		}
-
-		if !registered {
-			//TODO should we tell peer that id is not registered (i.e. need to report more specific error?)
+		if !valid {
+			log.Error(waiterLogPrefix, "Rejecting invalid peerID: ", request.PeerID)
 			return &responseInvalidIdentity, nil
 		}
 
@@ -124,4 +121,17 @@ func (waiter *dialogWaiter) newDialogToPeer(peerID identity.Identity, peerCodec 
 		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), peerCodec, subTopic),
 		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), peerCodec, subTopic),
 	}
+}
+
+func (waiter *dialogWaiter) validateDialogRequest(request *dialogCreateRequest) (bool, error) {
+	if request.PeerID == "" {
+		return false, nil
+	}
+	registered, err := waiter.identityRegistry.IsRegistered(common.HexToAddress(request.PeerID))
+	if err != nil {
+		log.Warn(waiterLogPrefix, "Unregistered peerID: ", request.PeerID)
+		return false, err
+	}
+
+	return registered, nil
 }
