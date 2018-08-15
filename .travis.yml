@@ -13,76 +13,140 @@ env:
     - BUILD_BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
     - BUILD_VERSION_MAJOR=0
+    - PATH=$HOME/.local/bin:$PATH
+
+before_install:
+  - export BUILD_VERSION=${TRAVIS_TAG:-"$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"}
 
 cache:
   directories:
     - "$CACHE_ROOT_DIR"
     - vendor
 
-install: skip
-
-script: echo "I haz to be overriden!"
-
-jobs:
-  include:
-    #deps cache stage
-    - stage: dep-cache
-      script:
-        - rm -rf vendor
-        - source bin/travis_scripts/setup_tools_dir.sh $BUILD_TOOLS_PATH
-        - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
-        - glide "-home" $GLIDE_HOME install
-    #test stage
-    - stage: test
-      script: bin/check_vet
-    - script: bin/builder_run bin/check_lint
-    - script: bin/check_fmt
-    - script: bin/check_license
-    - script: bin/test
-    #e2e stage
-    - stage: e2e-test
-      script: bin/travis_scripts/check_docker.sh && bin/travis_scripts/check_docker_compose.sh && bin/test_e2e
-    #deploy stage
-    - stage: deploy
-      script: echo "I will do deployment!!!"
-
 stages:
   - dep-cache
   - test
   - name: e2e-test
     if: type = pull_request
-  - deploy
+  - name: build
+    if: (type != pull_request AND branch = master AND tag IS blank) OR tag IS present
+  - name: deploy-master
+    if: type != pull_request AND branch = master AND tag IS blank
+  - name: release
+    if: tag IS present
 
+jobs:
+  include:
+    #deps cache stage
+    - stage: dep-cache
+      name: "Vendor update"
+      script:
+        - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
+        - glide "-home" $GLIDE_HOME install
 
-deploy:
-  # Development bleeding-edge release (on master commits only)
-  - provider: pages
-    local-dir: build/package
-    skip-cleanup: true
-    github-token: "$GIT_RELEASES_API_KEY"
-    keep-history: false
-    target-branch: mysterium-node
-    repo: MysteriumNetwork/build-artifacts
-    on:
-      tags: false
-      branch: master
-  - provider: script
-    script: bin/release_docker dev
-    on:
-      tags: false
-      branch: master
-  # Official release (on tags only)
-  - provider: releases
-    file_glob: true
-    file: build/package/*
-    skip_cleanup: true
-    api_key: "$GIT_RELEASES_API_KEY"
-    on:
-      tags: true
-  - provider: script
-    script: bin/release_docker $TRAVIS_TAG latest
-    on:
-      tags: true
+    #test stage
+    - stage: test
+      script: bin/check_vet
+      name: "Vet check"
+    
+    - script: bin/builder_run bin/check_lint
+      name: "Linter"
+
+    - script: bin/check_fmt
+      name: "Formating check"
+
+    - script: bin/check_license
+      name: "License check"
+
+    - script: bin/test
+      name: "Unit tests"
+
+    #e2e stage
+    - stage: e2e-test
+      script: bin/test_e2e
+      name: "End-to-end tests"
+
+    #build artifacts
+    - stage: build
+      script:
+      - bin/package_all $BUILD_VERSION linux
+      - bin/s3 cp build/package/mysterium_server_linux_amd64.tar.gz s3://build-artifacts
+      - bin/s3 cp build/package/mysterium_client_linux_amd64.tar.gz s3://build-artifacts
+      - bin/s3 cp build/package/mysterium-client_linux_amd64.deb    s3://build-artifacts
+      - bin/s3 cp build/package/mysterium-node_linux_amd64.deb      s3://build-artifacts
+      name: "Linux packages"
+
+    - script:
+      - bin/package_all $BUILD_VERSION windows
+      - bin/s3 cp build/package/mysterium_server_windows_amd64.zip s3://build-artifacts
+      - bin/s3 cp build/package/mysterium_client_windows_amd64.zip s3://build-artifacts
+      name: "Windows packages"
+
+    - script:
+      - bin/package_all $BUILD_VERSION darwin
+      - bin/s3 cp build/package/mysterium_server_darwin_amd64.tar.gz s3://build-artifacts
+      - bin/s3 cp build/package/mysterium_client_darwin_amd64.tar.gz s3://build-artifacts
+      name: "OSX packages"
+      
+    - script:
+      - bin/server_package_docker
+      - docker save mysterium-node:alpine | gzip > mysterium-node_alpine.tgz
+      - bin/s3 cp mysterium-node_alpine.tgz s3://docker-images
+      name: "Alpine docker image for node"
+
+    - script:
+      - bin/client_package_docker
+      - docker save mysterium-client:alpine | gzip > mysterium-client_alpine.tgz
+      - bin/s3 cp mysterium-client_alpine.tgz s3://docker-images
+      name: "Alpine docker image for client"
+
+    - script:
+      - bin/server_package_docker_ubuntu $BUILD_VERSION
+      - docker save mysterium-node:ubuntu | gzip > mysterium-node_ubuntu.tgz
+      - bin/s3 cp mysterium-node_ubuntu.tgz s3://docker-images
+      name: "Ubuntu docker image for node"
+
+    - script:
+      - bin/client_package_docker_ubuntu $BUILD_VERSION
+      - docker save mysterium-client:ubuntu | gzip > mysterium-client_ubuntu.tgz
+      - bin/s3 cp mysterium-client_ubuntu.tgz s3://docker-images
+      name: "Ubuntu docker image for client"
+
+    #deploy artifacts from master
+    - stage: deploy-master
+      script: bin/s3 sync s3://build-artifacts build/package
+      name: "Update for build-artifacts"
+      deploy:
+        provider: pages
+        local-dir: build/package
+        skip-cleanup: true
+        github-token: "$GIT_RELEASES_API_KEY"
+        keep-history: false
+        target-branch: mysterium-node
+        repo: MysteriumNetwork/build-artifacts
+
+    - script:
+      - bin/s3 sync s3://docker-images build/docker
+      - docker load -i build/docker/mysterium-node_alpine.tgz
+      - docker load -i build/docker/mysterium-client_alpine.tgz
+      - docker load -i build/docker/mysterium-node_ubuntu.tgz
+      - docker load -i build/docker/mysterium-client_ubuntu.tgz
+      - bin/release_docker dev
+      name: "Pushing dev docker images"
+
+    #deploy stage
+    - stage: release
+      script: bin/s3 sync s3://build-artifacts build/package
+      name: "Official release (on tags only)"
+      deploy:
+        provider: releases
+        file_glob: true
+        file: build/package/*
+        skip_cleanup: true
+        api_key: "$GIT_RELEASES_API_KEY"
+    - script: bin/release_docker $TRAVIS_TAG latest
+      name: "Pushing release to hub.docker.com"
+
 notifications:
   slack:
     rooms:
