@@ -26,6 +26,9 @@ fi
 BINARY=${BINARY:-"build/client/mysterium_client"}
 DIR_BUILD="build/package"
 
+mkdir -p $DIR_BUILD
+bin/client_build_xgo $OS/amd64
+
 # Put all files to package directory (to avoid preserving directory structure)
 printf "Building Standalone package for OS '$OS' ..\n"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`

@@ -13,7 +13,6 @@ env:
     - BUILD_BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
     - BUILD_VERSION_MAJOR=0
-    - PATH=$HOME/.local/bin:$PATH
 
 before_install:
   - export BUILD_VERSION=${TRAVIS_TAG:-"$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"}
@@ -30,25 +29,25 @@ stages:
     if: type = pull_request
   - name: build
     if: (type != pull_request AND branch = master AND tag IS blank) OR tag IS present
-  - name: deploy-master
+  - name: release-dev
     if: type != pull_request AND branch = master AND tag IS blank
   - name: release
     if: tag IS present
 
 jobs:
   include:
-    #deps cache stage
+    # Dependencies cache stage
     - stage: dep-cache
       name: "Vendor update"
       script:
         - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
         - glide "-home" $GLIDE_HOME install
 
-    #test stage
+    # Test stage
     - stage: test
       script: bin/check_vet
       name: "Vet check"
-    
+
     - script: bin/builder_run bin/check_lint
       name: "Linter"
 
@@ -61,33 +60,37 @@ jobs:
     - script: bin/test
       name: "Unit tests"
 
-    #e2e stage
+    # E2E stage
     - stage: e2e-test
       script: bin/test_e2e
       name: "End-to-end tests"
 
-    #build artifacts
+    # Build artifacts
     - stage: build
       script:
-      - bin/package_all $BUILD_VERSION linux
-      - bin/s3 cp build/package/mysterium_server_linux_amd64.tar.gz s3://build-artifacts
-      - bin/s3 cp build/package/mysterium_client_linux_amd64.tar.gz s3://build-artifacts
-      - bin/s3 cp build/package/mysterium-client_linux_amd64.deb    s3://build-artifacts
-      - bin/s3 cp build/package/mysterium-node_linux_amd64.deb      s3://build-artifacts
+      - BINARY=build/server/mysterium_server_linux_amd64 bin/server_package_standalone linux
+      - BINARY=build/client/mysterium_client_linux_amd64 bin/client_package_standalone linux
+      - bin/s3 sync build/package s3://build-artifacts
       name: "Linux packages"
 
     - script:
-      - bin/package_all $BUILD_VERSION windows
-      - bin/s3 cp build/package/mysterium_server_windows_amd64.zip s3://build-artifacts
-      - bin/s3 cp build/package/mysterium_client_windows_amd64.zip s3://build-artifacts
-      name: "Windows packages"
+      - bin/builder_run BINARY=build/server/mysterium_server bin/server_package_debian $BUILD_VERSION amd64
+      - bin/builder_run BINARY=build/client/mysterium_client bin/client_package_debian $BUILD_VERSION amd64
+      - bin/s3 sync build/package s3://build-artifacts
+      name: "DEB packages"
 
     - script:
-      - bin/package_all $BUILD_VERSION darwin
-      - bin/s3 cp build/package/mysterium_server_darwin_amd64.tar.gz s3://build-artifacts
-      - bin/s3 cp build/package/mysterium_client_darwin_amd64.tar.gz s3://build-artifacts
+      - BINARY=build/server/mysterium_server_darwin_amd64 bin/server_package_standalone darwin
+      - BINARY=build/client/mysterium_client_darwin_amd64 bin/client_package_standalone darwin
+      - bin/s3 sync build/package s3://build-artifacts
       name: "OSX packages"
-      
+
+    - script:
+      - BINARY=build/server/mysterium_server_windows_amd64.exe bin/server_package_standalone windows
+      - BINARY=build/client/mysterium_client_windows_amd64.exe bin/client_package_standalone windows
+      - bin/s3 sync build/package s3://build-artifacts
+      name: "Windows packages"
+
     - script:
       - bin/server_package_docker
       - docker save mysterium-node:alpine | gzip > mysterium-node_alpine.tgz
@@ -112,8 +115,8 @@ jobs:
       - bin/s3 cp mysterium-client_ubuntu.tgz s3://docker-images
       name: "Ubuntu docker image for client"
 
-    #deploy artifacts from master
-    - stage: deploy-master
+    # Development bleeding-edge release (on master commits only)
+    - stage: release-dev
       script: bin/s3 sync s3://build-artifacts build/package
       name: "Update for build-artifacts"
       deploy:
@@ -134,7 +137,7 @@ jobs:
       - bin/release_docker dev
       name: "Pushing dev docker images"
 
-    #deploy stage
+    # Official release (on tags only)
     - stage: release
       script: bin/s3 sync s3://build-artifacts build/package
       name: "Official release (on tags only)"
