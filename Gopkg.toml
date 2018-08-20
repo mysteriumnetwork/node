@@ -68,3 +68,7 @@
   [[prune.project]]
     name = "github.com/ethereum/go-ethereum"
     unused-packages = false
+
+[[constraint]]
+  name = "github.com/urfave/cli"
+  version = "1.20.0"
