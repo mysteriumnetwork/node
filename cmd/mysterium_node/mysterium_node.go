@@ -19,20 +19,21 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/cli"
-	"github.com/mysterium/node/cmd/commands/client"
+	"github.com/mysterium/node/cmd/commands/run"
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
-	"os"
-	"path/filepath"
 )
 
 func main() {
 	defer seelog.Flush()
-	options, err := client.ParseArguments(os.Args)
+	options, err := run.ParseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -59,7 +60,7 @@ func main() {
 	}
 }
 
-func runCLI(options client.CommandOptions) {
+func runCLI(options run.CommandOptions) {
 	cmdCli := cli.NewCommand(
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
@@ -72,8 +73,8 @@ func runCLI(options client.CommandOptions) {
 	}
 }
 
-func runCMD(options client.CommandOptions) {
-	cmdRun := client.NewCommand(options)
+func runCMD(options run.CommandOptions) {
+	cmdRun := run.NewCommand(options)
 	stop := cmd.SoftKiller(cmdRun.Kill)
 	cmd.RegisterSignalCallback(stop)
 

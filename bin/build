@@ -1,29 +1,29 @@
 #!/bin/bash
 
 # Usage:
-#> bin/client_build
+#> bin/build
 #
 # Cross compile (Unix):
-#> GOOS=linux GOARCH=amd64 bin/client_build
+#> GOOS=linux GOARCH=amd64 bin/build
 #
 # Cross compile (OSX):
-#> GOOS=darwin GOARCH=amd64 bin/client_build
+#> GOOS=darwin GOARCH=amd64 bin/build
 #
 # Cross compile (Windows):
-#> GOOS=windows GOARCH=amd64 bin/client_build
+#> GOOS=windows GOARCH=amd64 bin/build
 #
 # Check if program has dynamic libraries:
 #> brew install readelf
-#> readelf -d build/client/mysterium_client
+#> readelf -d build/node/mysterium_node
 
 . ./bin/helpers/functions.sh
 
 export GOOS=${GOOS:-`go env GOHOSTOS`}
 export GOARCH=${GOARCH:-`go env GOHOSTARCH`}
-export GOBIN=`pwd`/build/client
-echo "Compiling 'mysterium_client' for '$GOOS/$GOARCH'.."
+export GOBIN=`pwd`/build/node
+echo "Compiling 'mysterium_node' for '$GOOS/$GOARCH'.."
 
-go install -ldflags="$(get_linker_ldflags)" cmd/mysterium_client/mysterium_client.go
+go install -ldflags="$(get_linker_ldflags)" cmd/mysterium_node/mysterium_node.go
 if [ $? -ne 0 ]; then
     printf "\e[0;31m%s\e[0m\n" "Compile failed!"
     exit 1
