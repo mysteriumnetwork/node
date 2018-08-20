@@ -20,10 +20,11 @@ package cmd
 import (
 	"errors"
 	"flag"
-	log "github.com/cihub/seelog"
-	"github.com/mitchellh/go-homedir"
 	"os"
 	"path/filepath"
+
+	log "github.com/cihub/seelog"
+	"github.com/mitchellh/go-homedir"
 )
 
 // DirectoryOptions describes data structure holding directories as parameters
@@ -44,7 +45,7 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 		return err
 	}
 
-	currentDir, err := os.Getwd()
+	currentDir, err := getExecutableDir()
 	if err != nil {
 		return err
 	}
@@ -83,6 +84,15 @@ func (options *DirectoryOptions) Check() error {
 	}
 
 	return ensureOrCreateDir(options.Data)
+}
+
+func getExecutableDir() (string, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Dir(executable), nil
 }
 
 func ensureOrCreateDir(dir string) error {

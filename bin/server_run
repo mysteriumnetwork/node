@@ -1,8 +1,6 @@
 #!/bin/bash
 
 sudo ./build/server/mysterium_server \
-   --config-dir=build/server/config \
-   --runtime-dir=build/server \
    --localnet \
    --agreed-terms-and-conditions \
    $@

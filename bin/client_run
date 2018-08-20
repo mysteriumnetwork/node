@@ -1,7 +1,5 @@
 #!/bin/bash
 
 sudo ./build/client/mysterium_client \
-   --config-dir=build/client/config \
-   --runtime-dir=build/client \
    --localnet \
    $@
