@@ -42,9 +42,10 @@ if [ ! -x "$FPM_BIN" ]; then
     exit 1
 fi
 
-
 DIR_BUILD="build/package"
 PACKAGE_FILE="${DIR_BUILD}/mysterium-node_linux_${ARCH}.deb"
+
+bin/server_build
 
 printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
     && mkdir -p ${DIR_BUILD} \

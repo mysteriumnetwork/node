@@ -3,6 +3,9 @@
 TOOLS_PATH=$1
 GLIDE_VERSION=$2
 
+echo "Ensuring $TOOLS_PATH exists and is added to PATH"
+mkdir -p $TOOLS_PATH
+export PATH="$TOOLS_PATH:$PATH"
 
 OS_ARCH="linux-amd64"
 if [ "$TRAVIS_OS_NAME" == "osx" ]; then

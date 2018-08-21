@@ -21,6 +21,10 @@ if [ -z "$XGO_TARGETS" ]; then
     exit 1
 fi
 
+if ! [ -x "$(command -v xgo)" ]; then
+    go get github.com/karalabe/xgo
+fi
+
 DIR_BUILD="build/server"
 mkdir -p ${DIR_BUILD}
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`

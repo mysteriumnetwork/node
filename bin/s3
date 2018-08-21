@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+PATH=$HOME/.local/bin:$PATH
+
+if ! [ -x "$(command -v aws)" ]; then
+    pip install --user awscli
+fi
+
+aws --endpoint-url http://s3.mysterium.network:9000 s3 "$@"
