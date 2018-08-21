@@ -1,5 +1,5 @@
 #!/bin/bash
 
-sudo ./build/client/mysterium_client \
+sudo ./build/node/mysterium_node \
    --localnet \
    $@
