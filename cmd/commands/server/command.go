@@ -160,6 +160,10 @@ func (cmd *Command) Start() (err error) {
 
 	signer := cmd.createSigner(providerID)
 
+	// check if node's identity is registered
+	identityRegistry.IsRegistered(providerID.Address)
+	// if not registered - wait indefinitely for registration transaction event
+
 	cmd.proposalAnnouncementStopped.Add(1)
 	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 
