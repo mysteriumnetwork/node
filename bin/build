@@ -17,6 +17,7 @@
 #> readelf -d build/node/mysterium_node
 
 . ./bin/helpers/functions.sh
+. ./bin/helpers/output.sh
 
 export GOOS=${GOOS:-`go env GOHOSTOS`}
 export GOARCH=${GOARCH:-`go env GOHOSTARCH`}
@@ -25,12 +26,11 @@ echo "Compiling 'mysterium_node' for '$GOOS/$GOARCH'.."
 
 go install -ldflags="$(get_linker_ldflags)" cmd/mysterium_node/mysterium_node.go
 if [ $? -ne 0 ]; then
-    printf "\e[0;31m%s\e[0m\n" "Compile failed!"
+    print_error "Compile failed!"
     exit 1
 fi
 
 mkdir -p $GOBIN/config
-
 copy_client_config $GOOS $GOBIN
 
 exit 0
