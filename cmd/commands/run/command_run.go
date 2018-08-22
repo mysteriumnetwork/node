@@ -15,9 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package client
+package run
 
 import (
+	"path/filepath"
+	"time"
+
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/julienschmidt/httprouter"
@@ -38,8 +41,6 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
-	"path/filepath"
-	"time"
 )
 
 // NewCommand function creates new client command by given options

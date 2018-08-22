@@ -3,10 +3,11 @@
 
 ## Development environment
 
-* **Step 1.** Get Golang
+* **Step 1.** Get project dependencies
 ```bash
 brew install go
 brew install glide
+brew install openvpn
 
 export GOPATH=~/workspace/go
 git clone git@github.com:MysteriumNetwork/node.git $GOPATH/src/github.com/mysterium/node
