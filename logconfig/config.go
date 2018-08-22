@@ -30,7 +30,8 @@ const seewayLogXmlConfig = `
 </seelog>
 `
 
-func init() {
+// Bootstrap loads seelog package into the overall system
+func Bootstrap() {
 	newLogger, err := seelog.LoggerFromConfigAsString(seewayLogXmlConfig)
 	if err != nil {
 		seelog.Warn("Error parsing seelog configuration", err)

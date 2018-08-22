@@ -22,13 +22,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
 	command_cli "github.com/mysterium/node/cmd/commands/cli"
-	command_run "github.com/mysterium/node/cmd/commands/run"
+	"github.com/mysterium/node/cmd/commands/run"
 	"github.com/mysterium/node/cmd/commands/version"
 	"github.com/mysterium/node/core/node"
-	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
 	"github.com/mysterium/node/utils"
@@ -43,7 +41,7 @@ func main() {
 	}
 }
 
-// NewCommand function creates new node command
+// NewCommand function creates application master command
 func NewCommand() *cli.App {
 	app := cli.NewApp()
 	app.Usage = "VPN server and client for Mysterium Network https://mysterium.network/"
@@ -75,9 +73,7 @@ func NewCommand() *cli.App {
 	return app
 }
 
-func runMain(_ *cli.Context) error {
-	defer seelog.Flush()
-
+func runMain(ctx *cli.Context) error {
 	if options.LicenseWarranty {
 		fmt.Println(metadata.LicenseWarranty)
 		return nil
@@ -90,7 +86,7 @@ func runMain(_ *cli.Context) error {
 		fmt.Println(versionSummary)
 		fmt.Println()
 
-		return runCMD(options.NodeOptions)
+		return run.NewCommand(options.NodeOptions).Run(ctx)
 	}
 }
 
@@ -102,17 +98,6 @@ func runCLI(options node.NodeOptions) error {
 	cmd.RegisterSignalCallback(utils.HardKiller(cmdCli.Kill))
 
 	return cmdCli.Run()
-}
-
-func runCMD(options node.NodeOptions) error {
-	cmdRun := command_run.NewCommand(options)
-	cmd.RegisterSignalCallback(utils.SoftKiller(cmdRun.Kill))
-
-	if err := cmdRun.Start(); err != nil {
-		return err
-	}
-
-	return cmdRun.Wait()
 }
 
 type commandOptions struct {
