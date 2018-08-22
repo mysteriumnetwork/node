@@ -17,6 +17,11 @@
 
 package node
 
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysterium/node/metadata"
+)
+
 // NetworkOptions describes possible parameters of network configuration
 type NetworkOptions struct {
 	DiscoveryAPIAddress  string
@@ -25,4 +30,36 @@ type NetworkOptions struct {
 	Testnet              bool
 	EtherClientRPC       string
 	EtherPaymentsAddress string
+}
+
+// GetNetworkDefinition function returns network definition combined from testnet/localnet flags and possible overrides
+func GetNetworkDefinition(options NetworkOptions) metadata.NetworkDefinition {
+	network := metadata.DefaultNetwork
+
+	switch {
+	case options.Testnet:
+		network = metadata.TestnetDefinition
+	case options.Localnet:
+		network = metadata.LocalnetDefinition
+	}
+
+	//override defined values one by one from options
+	if options.DiscoveryAPIAddress != metadata.DefaultNetwork.DiscoveryAPIAddress {
+		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
+	}
+
+	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
+		network.BrokerAddress = options.BrokerAddress
+	}
+
+	normalizedAddress := common.HexToAddress(options.EtherPaymentsAddress)
+	if normalizedAddress.String() != metadata.DefaultNetwork.PaymentsContractAddress.String() {
+		network.PaymentsContractAddress = common.HexToAddress(options.EtherPaymentsAddress)
+	}
+
+	if options.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
+		network.EtherClientRPC = options.EtherClientRPC
+	}
+
+	return network
 }

@@ -46,7 +46,7 @@ import (
 
 // NewCommand function creates new client command by given options
 func NewCommand(options node.NodeOptions) *Command {
-	networkDefinition := node_cmd.GetNetworkDefinition(options.NetworkOptions)
+	networkDefinition := node.GetNetworkDefinition(options.NetworkOptions)
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
 	nats_discovery.Bootstrap()

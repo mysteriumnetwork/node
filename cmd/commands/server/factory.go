@@ -24,11 +24,11 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/mysterium/node/cmd"
 	identity_handler "github.com/mysterium/node/cmd/commands/server/identity"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
+	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/identity/registry"
 	"github.com/mysterium/node/ip"
@@ -46,7 +46,7 @@ import (
 // NewCommand function creates new server command by given options
 func NewCommand(options CommandOptions) *Command {
 
-	networkDefinition := cmd.GetNetworkDefinition(options.NetworkOptions)
+	networkDefinition := node.GetNetworkDefinition(options.NetworkOptions)
 
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 	ipResolver := ip.NewResolver(options.IpifyUrl)
