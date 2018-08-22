@@ -26,7 +26,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/blockchain"
 	"github.com/mysterium/node/client/connection"
-	node_cmd "github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -42,6 +41,7 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
+	"github.com/mysterium/node/utils"
 )
 
 // NewCommand function creates new client command by given options
@@ -140,7 +140,7 @@ func (cmd *Command) Start() error {
 		log.Info("Original country detected: ", originalLocation.Country)
 	}
 
-	tequilapi_endpoints.AddRouteForStop(cmd.router, node_cmd.SoftKiller(cmd.Kill))
+	tequilapi_endpoints.AddRouteForStop(cmd.router, utils.SoftKiller(cmd.Kill))
 
 	log.Info("Using Eth endpoint: ", cmd.network.EtherClientRPC)
 	client, err := blockchain.NewClient(cmd.network.EtherClientRPC)

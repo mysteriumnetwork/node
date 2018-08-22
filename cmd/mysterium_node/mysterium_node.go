@@ -31,6 +31,7 @@ import (
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
+	"github.com/mysterium/node/utils"
 	"github.com/urfave/cli"
 )
 
@@ -98,16 +99,14 @@ func runCLI(options node.NodeOptions) error {
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 	)
-	stop := cmd.HardKiller(cmdCli.Kill)
-	cmd.RegisterSignalCallback(stop)
+	cmd.RegisterSignalCallback(utils.HardKiller(cmdCli.Kill))
 
 	return cmdCli.Run()
 }
 
 func runCMD(options node.NodeOptions) error {
 	cmdRun := command_run.NewCommand(options)
-	stop := cmd.SoftKiller(cmdRun.Kill)
-	cmd.RegisterSignalCallback(stop)
+	cmd.RegisterSignalCallback(utils.SoftKiller(cmdRun.Kill))
 
 	if err := cmdRun.Start(); err != nil {
 		return err

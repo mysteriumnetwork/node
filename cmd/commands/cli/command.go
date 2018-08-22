@@ -24,9 +24,9 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
-	node_cmd "github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
+	"github.com/mysterium/node/utils"
 )
 
 // NewCommand constructs CLI based with possibility to control quiting
@@ -301,7 +301,7 @@ func (c *Command) help() {
 
 // quit stops cli and client commands and exits application
 func (c *Command) quit() {
-	stop := node_cmd.HardKiller(c.Kill)
+	stop := utils.HardKiller(c.Kill)
 	stop()
 }
 

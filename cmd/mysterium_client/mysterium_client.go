@@ -30,6 +30,7 @@ import (
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
+	"github.com/mysterium/node/utils"
 )
 
 func main() {
@@ -66,8 +67,8 @@ func runCLI(options node.NodeOptions) {
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 	)
-	stop := cmd.HardKiller(cmdCli.Kill)
-	cmd.RegisterSignalCallback(stop)
+	cmd.RegisterSignalCallback(utils.HardKiller(cmdCli.Kill))
+
 	if err := cmdCli.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -76,8 +77,7 @@ func runCLI(options node.NodeOptions) {
 
 func runCMD(options node.NodeOptions) {
 	cmdRun := run.NewCommand(options)
-	stop := cmd.SoftKiller(cmdRun.Kill)
-	cmd.RegisterSignalCallback(stop)
+	cmd.RegisterSignalCallback(utils.SoftKiller(cmdRun.Kill))
 
 	if err := cmdRun.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
