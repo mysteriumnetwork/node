@@ -17,11 +17,13 @@
 
 package node
 
-import "github.com/mysterium/node/cmd"
+import (
+	"github.com/mysterium/node/cmd"
+)
 
 // NodeOptions describes options which are required to start Node
 type NodeOptions struct {
-	Directories cmd.DirectoryOptions
+	Directories DirectoryOptions
 
 	TequilapiAddress string
 	TequilapiPort    int

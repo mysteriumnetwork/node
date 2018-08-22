@@ -21,11 +21,12 @@ import (
 	"flag"
 
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/core/node"
 )
 
 // CommandOptions describes options which are required to start Command
 type CommandOptions struct {
-	Directories   cmd.DirectoryOptions
+	Directories   node.DirectoryOptions
 	OpenvpnBinary string
 
 	Identity   string
