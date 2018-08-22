@@ -17,16 +17,12 @@
 
 package node
 
-// NodeOptions describes options which are required to start Node
-type NodeOptions struct {
-	Directories DirectoryOptions
-
-	TequilapiAddress string
-	TequilapiPort    int
-
-	OpenvpnBinary    string
-	IpifyUrl         string
-	LocationDatabase string
-
-	NetworkOptions
+// NetworkOptions describes possible parameters of network configuration
+type NetworkOptions struct {
+	DiscoveryAPIAddress  string
+	BrokerAddress        string
+	Localnet             bool
+	Testnet              bool
+	EtherClientRPC       string
+	EtherPaymentsAddress string
 }

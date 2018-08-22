@@ -21,21 +21,12 @@ import (
 	"flag"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/metadata"
 )
 
-// NetworkOptions describes possible parameters of network configuration
-type NetworkOptions struct {
-	DiscoveryAPIAddress  string
-	BrokerAddress        string
-	Localnet             bool
-	Testnet              bool
-	EtherClientRPC       string
-	EtherPaymentsAddress string
-}
-
 // GetNetworkDefinition function returns network definition combined from testnet/localnet flags and possible overrides
-func GetNetworkDefinition(options NetworkOptions) metadata.NetworkDefinition {
+func GetNetworkDefinition(options node.NetworkOptions) metadata.NetworkDefinition {
 	network := metadata.DefaultNetwork
 
 	switch {
@@ -67,7 +58,7 @@ func GetNetworkDefinition(options NetworkOptions) metadata.NetworkDefinition {
 }
 
 // ParseNetworkOptions function parses (or registers) network options from flag library
-func ParseNetworkOptions(flags *flag.FlagSet, options *NetworkOptions) {
+func ParseNetworkOptions(flags *flag.FlagSet, options *node.NetworkOptions) {
 	flags.StringVar(
 		&options.DiscoveryAPIAddress,
 		"discovery-address",

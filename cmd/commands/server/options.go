@@ -45,7 +45,7 @@ type CommandOptions struct {
 	OpenvpnPort int
 
 	AgreedTermsConditions bool
-	cmd.NetworkOptions
+	node.NetworkOptions
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
