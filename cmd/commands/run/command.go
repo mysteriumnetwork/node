@@ -30,6 +30,7 @@ import (
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
+	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/identity/registry"
 	"github.com/mysterium/node/ip"
@@ -44,7 +45,7 @@ import (
 )
 
 // NewCommand function creates new client command by given options
-func NewCommand(options CommandOptions) *Command {
+func NewCommand(options node.NodeOptions) *Command {
 	networkDefinition := node_cmd.GetNetworkDefinition(options.NetworkOptions)
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
@@ -109,7 +110,7 @@ func NewCommand(options CommandOptions) *Command {
 
 //Command represent entrypoint for Mysterium client with top level components
 type Command struct {
-	options               CommandOptions
+	options               node.NodeOptions
 	network               metadata.NetworkDefinition
 	keystore              *keystore.KeyStore
 	connectionManager     connection.Manager

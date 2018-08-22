@@ -21,52 +21,43 @@ import (
 	"flag"
 
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/core/node"
 )
 
 // CommandOptions describes options which are required to start Command
 type CommandOptions struct {
-	Directories cmd.DirectoryOptions
-
-	OpenvpnBinary string
-
-	TequilapiAddress string
-	TequilapiPort    int
-
 	CLI               bool
 	Version           bool
 	LicenseWarranty   bool
 	LicenseConditions bool
 
-	IpifyUrl         string
-	LocationDatabase string
-
-	cmd.NetworkOptions
+	NodeOptions node.NodeOptions
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
-	err = cmd.ParseFromCmdArgs(flags, &options.Directories)
+	err = cmd.ParseFromCmdArgs(flags, &options.NodeOptions.Directories)
 	if err != nil {
 		return
 	}
 
 	flags.StringVar(
-		&options.OpenvpnBinary,
+		&options.NodeOptions.OpenvpnBinary,
 		"openvpn.binary",
 		"openvpn", //search in $PATH by default,
 		"openvpn binary to use for Open VPN connections",
 	)
 
 	flags.StringVar(
-		&options.TequilapiAddress,
+		&options.NodeOptions.TequilapiAddress,
 		"tequilapi.address",
 		"127.0.0.1",
 		"IP address of interface to listen for incoming connections",
 	)
 	flags.IntVar(
-		&options.TequilapiPort,
+		&options.NodeOptions.TequilapiPort,
 		"tequilapi.port",
 		4050,
 		"Port for listening incoming api requests",
@@ -98,20 +89,20 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	)
 
 	flags.StringVar(
-		&options.IpifyUrl,
+		&options.NodeOptions.IpifyUrl,
 		"ipify-url",
 		"https://api.ipify.org/",
 		"Address (URL form) of ipify service",
 	)
 
 	flags.StringVar(
-		&options.LocationDatabase,
+		&options.NodeOptions.LocationDatabase,
 		"location.database",
 		"GeoLite2-Country.mmdb",
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 
-	cmd.ParseNetworkOptions(flags, &options.NetworkOptions)
+	cmd.ParseNetworkOptions(flags, &options.NodeOptions.NetworkOptions)
 
 	err = flags.Parse(args[1:])
 	if err != nil {

@@ -27,6 +27,7 @@ import (
 	command_cli "github.com/mysterium/node/cmd/commands/cli"
 	command_run "github.com/mysterium/node/cmd/commands/run"
 	"github.com/mysterium/node/cmd/commands/version"
+	"github.com/mysterium/node/core/node"
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
@@ -83,16 +84,16 @@ func runMain(_ *cli.Context) error {
 		fmt.Println(metadata.LicenseConditions)
 		return nil
 	} else if options.CLI {
-		return runCLI(options)
+		return runCLI(options.NodeOptions)
 	} else {
 		fmt.Println(versionSummary)
 		fmt.Println()
 
-		return runCMD(options)
+		return runCMD(options.NodeOptions)
 	}
 }
 
-func runCLI(options command_run.CommandOptions) error {
+func runCLI(options node.NodeOptions) error {
 	cmdCli := command_cli.NewCommand(
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
@@ -103,7 +104,7 @@ func runCLI(options command_run.CommandOptions) error {
 	return cmdCli.Run()
 }
 
-func runCMD(options command_run.CommandOptions) error {
+func runCMD(options node.NodeOptions) error {
 	cmdRun := command_run.NewCommand(options)
 	stop := cmd.SoftKiller(cmdRun.Kill)
 	cmd.RegisterSignalCallback(stop)
@@ -115,8 +116,16 @@ func runCMD(options command_run.CommandOptions) error {
 	return cmdRun.Wait()
 }
 
+type commandOptions struct {
+	CLI               bool
+	LicenseWarranty   bool
+	LicenseConditions bool
+
+	NodeOptions node.NodeOptions
+}
+
 var (
-	options command_run.CommandOptions
+	options commandOptions
 
 	versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 		"command_run program with '--license.warranty' option",
@@ -127,13 +136,13 @@ var (
 	tequilapiAddressFlag = cli.StringFlag{
 		Name:        "tequilapi.address",
 		Usage:       "IP address of interface to listen for incoming connections",
-		Destination: &options.TequilapiAddress,
+		Destination: &options.NodeOptions.TequilapiAddress,
 		Value:       "127.0.0.1",
 	}
 	tequilapiPortFlag = cli.IntFlag{
 		Name:        "tequilapi.port",
 		Usage:       "Port for listening incoming api requests",
-		Destination: &options.TequilapiPort,
+		Destination: &options.NodeOptions.TequilapiPort,
 		Value:       4050,
 	}
 
@@ -151,19 +160,19 @@ var (
 	openvpnBinaryFlag = cli.StringFlag{
 		Name:        "openvpn.binary",
 		Usage:       "openvpn binary to use for Open VPN connections",
-		Destination: &options.OpenvpnBinary,
+		Destination: &options.NodeOptions.OpenvpnBinary,
 		Value:       "openvpn",
 	}
 	ipifyUrlFlag = cli.StringFlag{
 		Name:        "ipify-url",
 		Usage:       "Address (URL form) of ipify service",
-		Destination: &options.IpifyUrl,
+		Destination: &options.NodeOptions.IpifyUrl,
 		Value:       "https://api.ipify.org/",
 	}
 	locationDatabaseFlag = cli.StringFlag{
 		Name:        "location.database",
 		Usage:       "Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
-		Destination: &options.LocationDatabase,
+		Destination: &options.NodeOptions.LocationDatabase,
 		Value:       "GeoLite2-Country.mmdb",
 	}
 	cliFlag = cli.BoolFlag{

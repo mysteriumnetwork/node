@@ -26,6 +26,7 @@ import (
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/cli"
 	"github.com/mysterium/node/cmd/commands/run"
+	"github.com/mysterium/node/core/node"
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
@@ -51,16 +52,16 @@ func main() {
 	} else if options.LicenseConditions {
 		fmt.Println(metadata.LicenseConditions)
 	} else if options.CLI {
-		runCLI(options)
+		runCLI(options.NodeOptions)
 	} else {
 		fmt.Println(versionSummary)
 		fmt.Println()
 
-		runCMD(options)
+		runCMD(options.NodeOptions)
 	}
 }
 
-func runCLI(options run.CommandOptions) {
+func runCLI(options node.NodeOptions) {
 	cmdCli := cli.NewCommand(
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
@@ -73,7 +74,7 @@ func runCLI(options run.CommandOptions) {
 	}
 }
 
-func runCMD(options run.CommandOptions) {
+func runCMD(options node.NodeOptions) {
 	cmdRun := run.NewCommand(options)
 	stop := cmd.SoftKiller(cmdRun.Kill)
 	cmd.RegisterSignalCallback(stop)
