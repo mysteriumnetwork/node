@@ -19,13 +19,14 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"strings"
+
 	"github.com/chzyer/readline"
 	node_cmd "github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
-	"io"
-	"log"
-	"strings"
 )
 
 // NewCommand constructs CLI based with possibility to control quiting
