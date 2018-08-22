@@ -26,6 +26,7 @@ import (
 	"github.com/mysterium/node/cmd"
 	command_cli "github.com/mysterium/node/cmd/commands/cli"
 	command_run "github.com/mysterium/node/cmd/commands/run"
+	"github.com/mysterium/node/cmd/commands/version"
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
@@ -48,11 +49,13 @@ func NewCommand() *cli.App {
 		{`The "MysteriumNetwork/node" Authors`, "mysterium-dev@mysterium.network"},
 	}
 	app.Version = metadata.VersionAsString()
+	app.Commands = []cli.Command{
+		*versionCommand,
+	}
 	app.Flags = []cli.Flag{
 		tequilapiAddressFlag,
 		tequilapiPortFlag,
 
-		versionFlag,
 		licenseWarrantyFlag,
 		licenseConditionsFlag,
 
@@ -61,37 +64,31 @@ func NewCommand() *cli.App {
 		locationDatabaseFlag,
 		cliFlag,
 	}
-	app.Action = runMain(options)
+	app.Action = runMain
+
+	cli.VersionPrinter = func(ctx *cli.Context) {
+		versionCommand.Run(ctx)
+	}
 
 	return app
 }
 
-func runMain(options command_run.CommandOptions) cli.ActionFunc {
-	return func(ctx *cli.Context) error {
-		defer seelog.Flush()
+func runMain(_ *cli.Context) error {
+	defer seelog.Flush()
 
-		versionSummary := metadata.VersionAsSummary(metadata.LicenseCopyright(
-			"command_run program with '--license.warranty' option",
-			"command_run program with '--license.conditions' option",
-		))
+	if options.LicenseWarranty {
+		fmt.Println(metadata.LicenseWarranty)
+		return nil
+	} else if options.LicenseConditions {
+		fmt.Println(metadata.LicenseConditions)
+		return nil
+	} else if options.CLI {
+		return runCLI(options)
+	} else {
+		fmt.Println(versionSummary)
+		fmt.Println()
 
-		if options.Version {
-			fmt.Println(versionSummary)
-			return nil
-		} else if options.LicenseWarranty {
-			fmt.Println(metadata.LicenseWarranty)
-			return nil
-		} else if options.LicenseConditions {
-			fmt.Println(metadata.LicenseConditions)
-			return nil
-		} else if options.CLI {
-			return runCLI(options)
-		} else {
-			fmt.Println(versionSummary)
-			fmt.Println()
-
-			return runCMD(options)
-		}
+		return runCMD(options)
 	}
 }
 
@@ -121,6 +118,12 @@ func runCMD(options command_run.CommandOptions) error {
 var (
 	options command_run.CommandOptions
 
+	versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
+		"command_run program with '--license.warranty' option",
+		"command_run program with '--license.conditions' option",
+	))
+	versionCommand = version.NewCommand(versionSummary)
+
 	tequilapiAddressFlag = cli.StringFlag{
 		Name:        "tequilapi.address",
 		Usage:       "IP address of interface to listen for incoming connections",
@@ -134,11 +137,6 @@ var (
 		Value:       4050,
 	}
 
-	versionFlag = cli.BoolFlag{
-		Name:        "version",
-		Usage:       "Show version",
-		Destination: &options.Version,
-	}
 	licenseWarrantyFlag = cli.BoolFlag{
 		Name:        "license.warranty",
 		Usage:       "Show warranty",
