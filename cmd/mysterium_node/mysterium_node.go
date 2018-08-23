@@ -19,11 +19,13 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
+
+	"os"
 
 	"github.com/mysterium/node/cmd"
 	command_cli "github.com/mysterium/node/cmd/commands/cli"
+	"github.com/mysterium/node/cmd/commands/license"
 	"github.com/mysterium/node/cmd/commands/run"
 	"github.com/mysterium/node/cmd/commands/version"
 	"github.com/mysterium/node/core/node"
@@ -59,6 +61,7 @@ func NewCommand() (*cli.App, error) {
 		{`The "MysteriumNetwork/node" Authors`, "mysterium-dev@mysterium.network"},
 	}
 	app.Version = metadata.VersionAsString()
+	app.Copyright = licenseCopyright
 
 	if err := cmd.RegisterDirectoryFlags(&app.Flags, &options.NodeOptions); err != nil {
 		return app, err
@@ -67,12 +70,12 @@ func NewCommand() (*cli.App, error) {
 	if err := cmd.RegisterNetworkFlags(&app.Flags, &options.NodeOptions); err != nil {
 		return app, err
 	}
-	app.Flags = append(app.Flags, licenseWarrantyFlag, licenseConditionsFlag)
 	app.Flags = append(app.Flags, openvpnBinaryFlag, ipifyUrlFlag, locationDatabaseFlag)
 	app.Flags = append(app.Flags, cliFlag)
 
 	app.Commands = []cli.Command{
 		*versionCommand,
+		*license.NewCommand(licenseCopyright),
 	}
 	app.Action = runMain
 
@@ -80,20 +83,14 @@ func NewCommand() (*cli.App, error) {
 }
 
 func runMain(ctx *cli.Context) error {
-	if options.LicenseWarranty {
-		fmt.Println(metadata.LicenseWarranty)
-		return nil
-	} else if options.LicenseConditions {
-		fmt.Println(metadata.LicenseConditions)
-		return nil
-	} else if options.CLI {
+	if options.CLI {
 		return runCLI(options.NodeOptions)
-	} else {
-		fmt.Println(versionSummary)
-		fmt.Println()
-
-		return run.NewCommand(options.NodeOptions).Run(ctx)
 	}
+
+	fmt.Println(versionSummary)
+	fmt.Println()
+
+	return run.NewCommand(options.NodeOptions).Run(ctx)
 }
 
 func runCLI(options node.NodeOptions) error {
@@ -107,20 +104,19 @@ func runCLI(options node.NodeOptions) error {
 }
 
 type commandOptions struct {
-	CLI               bool
-	LicenseWarranty   bool
-	LicenseConditions bool
-
+	CLI         bool
 	NodeOptions node.NodeOptions
 }
 
 var (
 	options commandOptions
 
-	versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
-		"command_run program with '--license.warranty' option",
-		"command_run program with '--license.conditions' option",
-	))
+	licenseCopyright = metadata.LicenseCopyright(
+		"run command 'license --warranty'",
+		"run command 'license --conditions'",
+	)
+
+	versionSummary = metadata.VersionAsSummary(licenseCopyright)
 	versionCommand = version.NewCommand(versionSummary)
 
 	tequilapiAddressFlag = cli.StringFlag{
@@ -134,17 +130,6 @@ var (
 		Usage:       "Port for listening incoming api requests",
 		Destination: &options.NodeOptions.TequilapiPort,
 		Value:       4050,
-	}
-
-	licenseWarrantyFlag = cli.BoolFlag{
-		Name:        "license.warranty",
-		Usage:       "Show warranty",
-		Destination: &options.LicenseWarranty,
-	}
-	licenseConditionsFlag = cli.BoolFlag{
-		Name:        "license.conditions",
-		Usage:       "Show conditions",
-		Destination: &options.LicenseConditions,
 	}
 
 	openvpnBinaryFlag = cli.StringFlag{
