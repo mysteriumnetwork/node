@@ -25,3 +25,4 @@ if [ ! -z "$bad_files" ]; then
 fi
 
 print_success "All files have copyright headers."
+exit 0

@@ -12,9 +12,14 @@
 #> bin/check_vet ./communication
 #> bin/check_vet ./communication/...
 
+source bin/helpers/output.sh
+
 ARGUMENTS=$@
 if [ -z "$ARGUMENTS" ]; then
     ARGUMENTS=`go list ./...`
 fi
 
 go vet -composites=false ${ARGUMENTS}
+
+print_success "All files are compliant to go vet."
+exit 0
