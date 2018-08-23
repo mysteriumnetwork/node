@@ -19,5 +19,5 @@ if [ ! -z "$unformatted" ]; then
     exit 1
 fi
 
-print_success "All files are are compliant to goimports."
+print_success "All files are compliant to goimports."
 exit 0

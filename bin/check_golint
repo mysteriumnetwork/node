@@ -60,5 +60,5 @@ if [ ${#MESSAGES_RECONFIGURE[@]} -gt 0 ]; then
     exit 1
 fi
 
-print_success "All packages are are compliant to golint"
+print_success "All packages are compliant to golint"
 exit 0
