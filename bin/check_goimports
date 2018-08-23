@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Checks if all project files are formatted using goimports
+#
+# Usage:
+#> bin/check_goimports
+
+source bin/helpers/output.sh
+
+unformatted=`find . \
+    ! -path "\./vendor/*" \
+    -type f \
+    -iregex '.*\.go' \
+    -exec goimports -e -l '{}' \;
+`
+if [ ! -z "$unformatted" ]; then
+    print_error "Following files are not formatted using goimports:"
+    echo "$unformatted"
+    exit 1
+fi
+
+print_success "All files are are compliant to goimports."
+exit 0

@@ -52,6 +52,9 @@ jobs:
     - script: bin/check_fmt
       name: "Formating check"
 
+    - script: bin/check_goimports
+      name: "Imports check"
+
     - script: bin/check_license
       name: "License check"
 

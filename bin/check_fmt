@@ -7,7 +7,12 @@
 
 source bin/helpers/output.sh
 
-unformatted=`find . -type d -name "vendor" -prune -o -type f -iregex '.*\.go' -exec gofmt -l '{}' \;`
+unformatted=`find . \
+    ! -path "\./vendor/*" \
+    -type f \
+    -iregex '.*\.go' \
+    -exec gofmt -l '{}' \;
+`
 if [ ! -z "$unformatted" ]; then
     print_error "Following files are not formatted using gofmt:"
     echo "$unformatted"

@@ -8,4 +8,5 @@
 bin/check_vet
 bin/check_lint
 bin/check_fmt
+bin/check_goimports
 bin/check_license
