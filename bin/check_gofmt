@@ -3,7 +3,7 @@
 # Checks if all project files are formatted using gofmt
 #
 # Usage:
-#> bin/check_fmt
+#> bin/check_gofmt
 
 source bin/helpers/output.sh
 

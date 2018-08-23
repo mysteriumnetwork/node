@@ -3,14 +3,14 @@
 # Run Go vet command for project packages
 #
 # Usage:
-#> bin/check_vet [packages ...]
+#> bin/check_govet [packages ...]
 #
 # Examples:
-#> bin/check_vet
-#> bin/check_vet .
-#> bin/check_vet ./...
-#> bin/check_vet ./communication
-#> bin/check_vet ./communication/...
+#> bin/check_govet
+#> bin/check_govet .
+#> bin/check_govet ./...
+#> bin/check_govet ./communication
+#> bin/check_govet ./communication/...
 
 source bin/helpers/output.sh
 
