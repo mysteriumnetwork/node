@@ -61,7 +61,7 @@ func NewCommand() (*cli.App, error) {
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright
-	if err := registerFlags(app.Flags); err != nil {
+	if err := registerFlags(&app.Flags); err != nil {
 		return nil, err
 	}
 	app.Commands = []cli.Command{
@@ -73,17 +73,17 @@ func NewCommand() (*cli.App, error) {
 	return app, nil
 }
 
-func registerFlags(flags []cli.Flag) error {
+func registerFlags(flags *[]cli.Flag) error {
 	if err := cmd.RegisterDirectoryFlags(flags, &options.NodeOptions); err != nil {
 		return err
 	}
 
-	flags = append(flags, tequilapiAddressFlag, tequilapiPortFlag)
+	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag)
 
 	cmd.RegisterNetworkFlags(flags, &options.NodeOptions)
 
-	flags = append(flags, openvpnBinaryFlag, ipifyUrlFlag, locationDatabaseFlag)
-	flags = append(flags, cliFlag)
+	*flags = append(*flags, openvpnBinaryFlag, ipifyUrlFlag, locationDatabaseFlag)
+	*flags = append(*flags, cliFlag)
 
 	return nil
 }

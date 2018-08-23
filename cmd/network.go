@@ -45,7 +45,7 @@ func ParseNetworkOptions(flags *flag.FlagSet, options *node.NetworkOptions) {
 		&options.Localnet,
 		"localnet",
 		false,
-		"Defines network configuration which expects localy deployed broker and discovery services",
+		"Defines network configuration which expects locally deployed broker and discovery services",
 	)
 
 	flags.BoolVar(
@@ -71,9 +71,9 @@ func ParseNetworkOptions(flags *flag.FlagSet, options *node.NetworkOptions) {
 }
 
 // RegisterNetworkFlags function register directory options to flag set
-func RegisterNetworkFlags(flags []cli.Flag, options *node.NodeOptions) {
-	flags = append(
-		flags,
+func RegisterNetworkFlags(flags *[]cli.Flag, options *node.NodeOptions) {
+	*flags = append(
+		*flags,
 		cli.BoolFlag{
 			Name:        "testnet",
 			Usage:       "Defines test network configuration",
@@ -81,7 +81,7 @@ func RegisterNetworkFlags(flags []cli.Flag, options *node.NodeOptions) {
 		},
 		cli.BoolFlag{
 			Name:        "localnet",
-			Usage:       "Defines network configuration which expects localy deployed broker and discovery services",
+			Usage:       "Defines network configuration which expects locally deployed broker and discovery services",
 			Destination: &options.Localnet,
 		},
 

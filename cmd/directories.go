@@ -62,7 +62,7 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *node.DirectoryOptions) error
 }
 
 // RegisterDirectoryFlags function register directory options to flag set
-func RegisterDirectoryFlags(flags []cli.Flag, options *node.NodeOptions) error {
+func RegisterDirectoryFlags(flags *[]cli.Flag, options *node.NodeOptions) error {
 	userHomeDir, err := homedir.Dir()
 	if err != nil {
 		return err
@@ -73,7 +73,8 @@ func RegisterDirectoryFlags(flags []cli.Flag, options *node.NodeOptions) error {
 		return err
 	}
 
-	flags = append(flags,
+	*flags = append(
+		*flags,
 		cli.StringFlag{
 			Name:        "data-dir",
 			Usage:       "Data directory containing keystore & other persistent files",

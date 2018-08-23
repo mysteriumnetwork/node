@@ -18,11 +18,9 @@
 package license
 
 import (
-	"testing"
-
 	"bytes"
-
 	"flag"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli"
