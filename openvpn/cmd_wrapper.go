@@ -22,8 +22,9 @@ import (
 	"os/exec"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"io"
+
+	log "github.com/cihub/seelog"
 )
 
 // NewCmdWrapper returns process wrapper for given executable

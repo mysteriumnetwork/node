@@ -20,11 +20,12 @@ package nat
 import (
 	"errors"
 	"fmt"
-	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/utils"
 	"net"
 	"os/exec"
 	"strings"
+
+	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/utils"
 )
 
 type servicePFCtl struct {

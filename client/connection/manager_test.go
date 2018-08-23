@@ -19,6 +19,10 @@ package connection
 
 import (
 	"errors"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn"
@@ -29,9 +33,6 @@ import (
 	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"sync"
-	"testing"
-	"time"
 )
 
 type testContext struct {

@@ -19,11 +19,12 @@ package requests
 
 import (
 	"bytes"
-	"github.com/mysterium/node/identity"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/url"
 	"testing"
+
+	"github.com/mysterium/node/identity"
+	"github.com/stretchr/testify/assert"
 )
 
 type testPayload struct {

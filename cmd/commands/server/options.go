@@ -19,6 +19,7 @@ package server
 
 import (
 	"flag"
+
 	"github.com/mysterium/node/cmd"
 )
 

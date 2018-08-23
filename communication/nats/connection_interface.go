@@ -18,8 +18,9 @@
 package nats
 
 import (
-	"github.com/nats-io/go-nats"
 	"time"
+
+	"github.com/nats-io/go-nats"
 )
 
 // Connection represents is publish-subscriber instance which can deliver messages

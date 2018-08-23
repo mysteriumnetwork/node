@@ -18,9 +18,10 @@
 package session
 
 import (
+	"testing"
+
 	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const mockedVPNConfig = "config_string"

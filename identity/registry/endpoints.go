@@ -18,10 +18,11 @@
 package registry
 
 import (
+	"net/http"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/tequilapi/utils"
-	"net/http"
 )
 
 // SignatureDTO represents Elliptic Curve signature parts

@@ -18,10 +18,11 @@
 package state
 
 import (
+	"testing"
+
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/management"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func Test_Factory(t *testing.T) {

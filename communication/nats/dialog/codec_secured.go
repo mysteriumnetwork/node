@@ -20,6 +20,7 @@ package dialog
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 )

@@ -21,10 +21,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	log "github.com/cihub/seelog"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	log "github.com/cihub/seelog"
 )
 
 type httpClientInterface interface {

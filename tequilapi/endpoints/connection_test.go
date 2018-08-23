@@ -19,6 +19,12 @@ package endpoints
 
 import (
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client/connection"
 	"github.com/mysterium/node/identity"
@@ -26,11 +32,6 @@ import (
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysterium/node/utils"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
-	"time"
 )
 
 type fakeManager struct {

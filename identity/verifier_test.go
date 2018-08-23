@@ -18,8 +18,9 @@
 package identity
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestVerifierIdentity_Verify(t *testing.T) {

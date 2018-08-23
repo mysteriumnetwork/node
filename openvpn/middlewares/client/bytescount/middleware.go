@@ -18,10 +18,11 @@
 package bytescount
 
 import (
-	"github.com/mysterium/node/openvpn/management"
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/mysterium/node/openvpn/management"
 )
 
 // SessionStatsHandler is invoked when middleware receives statistics

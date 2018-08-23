@@ -19,11 +19,12 @@ package server
 
 import (
 	"bytes"
-	"github.com/mysterium/node/requests"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"testing"
+
+	"github.com/mysterium/node/requests"
+	"github.com/stretchr/testify/assert"
 )
 
 var testRequestAPIURL = "http://testUrl"

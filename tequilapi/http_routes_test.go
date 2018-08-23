@@ -18,11 +18,12 @@
 package tequilapi
 
 import (
-	"github.com/julienschmidt/httprouter"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/julienschmidt/httprouter"
+	"github.com/stretchr/testify/assert"
 )
 
 type handleFunctionTestStruct struct {

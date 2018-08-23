@@ -20,9 +20,10 @@ package dto
 import (
 	"encoding/json"
 	"errors"
+	"testing"
+
 	"github.com/mysterium/node/datasize"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestBandwidthSerialize(t *testing.T) {

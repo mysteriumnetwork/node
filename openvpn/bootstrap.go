@@ -19,6 +19,7 @@ package openvpn
 
 import (
 	"encoding/json"
+
 	dto_openvpn "github.com/mysterium/node/openvpn/discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )

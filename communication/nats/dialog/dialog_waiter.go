@@ -19,6 +19,7 @@ package dialog
 
 import (
 	"fmt"
+
 	"github.com/mysterium/node/communication"
 
 	log "github.com/cihub/seelog"

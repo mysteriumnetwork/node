@@ -19,10 +19,11 @@ package dto
 
 import (
 	"encoding/json"
-	"github.com/mysterium/node/money"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/mysterium/node/money"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPaymentMethodPerTimeSerialize(t *testing.T) {

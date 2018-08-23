@@ -19,10 +19,11 @@ package state
 
 import (
 	"errors"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/management"
 	"regexp"
 	"strings"
+
+	"github.com/mysterium/node/openvpn"
+	"github.com/mysterium/node/openvpn/management"
 )
 
 // Callback is called when openvpn process state changes

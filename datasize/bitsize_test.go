@@ -18,8 +18,9 @@
 package datasize
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConstants(t *testing.T) {

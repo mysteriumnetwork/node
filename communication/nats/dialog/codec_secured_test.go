@@ -19,10 +19,11 @@ package dialog
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 type customPayload struct {

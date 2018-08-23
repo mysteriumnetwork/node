@@ -19,6 +19,7 @@ package connection
 
 import (
 	"errors"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"

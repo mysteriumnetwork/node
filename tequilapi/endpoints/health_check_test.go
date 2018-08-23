@@ -18,12 +18,13 @@
 package endpoints
 
 import (
-	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/metadata"
-	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/julienschmidt/httprouter"
+	"github.com/mysterium/node/metadata"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHealthCheckReturnsExpectedJSONObject(t *testing.T) {

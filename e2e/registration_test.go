@@ -18,9 +18,10 @@
 package e2e
 
 import (
+	"testing"
+
 	"github.com/cihub/seelog"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestIdentityRegistrationFlow(t *testing.T) {

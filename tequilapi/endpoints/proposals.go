@@ -18,11 +18,12 @@
 package endpoints
 
 import (
+	"net/http"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi/utils"
-	"net/http"
 )
 
 // swagger:model ProposalsList

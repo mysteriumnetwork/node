@@ -21,12 +21,13 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	log "github.com/cihub/seelog"
 	"io"
 	"net/textproto"
 	"os/exec"
 	"strconv"
 	"syscall"
+
+	log "github.com/cihub/seelog"
 )
 
 const logPrefix = "[Openvpn check] "

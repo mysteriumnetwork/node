@@ -18,9 +18,10 @@
 package auth
 
 import (
+	"strings"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn/management"
-	"strings"
 )
 
 type middleware struct {

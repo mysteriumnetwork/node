@@ -18,12 +18,13 @@
 package server
 
 import (
-	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/mysterium/node/server"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/stretchr/testify/assert"
 )
 
 var (

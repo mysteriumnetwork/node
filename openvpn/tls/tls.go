@@ -19,6 +19,7 @@ package tls
 
 import (
 	"crypto/x509"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/service_discovery/dto"
 )

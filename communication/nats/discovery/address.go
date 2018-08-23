@@ -19,6 +19,7 @@ package discovery
 
 import (
 	"fmt"
+
 	"github.com/mysterium/node/communication/nats"
 	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"

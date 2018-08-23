@@ -18,16 +18,17 @@
 package endpoints
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client/connection"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"testing"
 )
 
 type fakeManagerForLocation struct {

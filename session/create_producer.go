@@ -19,6 +19,7 @@ package session
 
 import (
 	"errors"
+
 	"github.com/mysterium/node/communication"
 )
 

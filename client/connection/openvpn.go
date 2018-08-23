@@ -19,6 +19,8 @@ package connection
 
 import (
 	"encoding/json"
+	"time"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/openvpn"
@@ -28,7 +30,6 @@ import (
 	"github.com/mysterium/node/openvpn/session/credentials"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
-	"time"
 )
 
 // ConfigureVpnClientFactory creates openvpn construction function by given vpn session, consumer id and state callbacks

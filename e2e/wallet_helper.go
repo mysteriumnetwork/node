@@ -20,6 +20,10 @@ package e2e
 import (
 	"context"
 	"errors"
+	"math/big"
+	"os"
+	"time"
+
 	"github.com/MysteriumNetwork/payments/cli/helpers"
 	mysttoken "github.com/MysteriumNetwork/payments/mysttoken/generated"
 	registry "github.com/MysteriumNetwork/payments/registry/generated"
@@ -31,9 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/mysterium/node/tequilapi/client"
-	"math/big"
-	"os"
-	"time"
 )
 
 //addresses should match those deployed in e2e test environment

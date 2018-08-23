@@ -18,9 +18,10 @@
 package auth
 
 import (
+	"testing"
+
 	"github.com/mysterium/node/openvpn/management"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func auth() (string, string, error) {

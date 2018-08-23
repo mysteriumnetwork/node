@@ -20,8 +20,9 @@ package nats
 import (
 	"errors"
 	"fmt"
-	"github.com/nats-io/go-nats"
 	"time"
+
+	"github.com/nats-io/go-nats"
 )
 
 // NewConnectionFake constructs new NATS connection

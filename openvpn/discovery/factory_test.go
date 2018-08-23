@@ -18,13 +18,14 @@
 package discovery
 
 import (
+	"testing"
+	"time"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/money"
 	"github.com/mysterium/node/openvpn/discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 var (

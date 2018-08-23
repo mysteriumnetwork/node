@@ -19,10 +19,11 @@ package tls
 
 import (
 	"crypto/x509"
+	"testing"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var fakeServiceLocation = dto.Location{"GB", "", ""}

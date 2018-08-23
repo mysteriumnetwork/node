@@ -18,11 +18,12 @@
 package discovery
 
 import (
+	"testing"
+
 	"github.com/mysterium/node/identity"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNewAddress(t *testing.T) {

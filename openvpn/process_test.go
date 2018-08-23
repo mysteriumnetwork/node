@@ -18,10 +18,11 @@
 package openvpn
 
 import (
-	"github.com/mysterium/node/openvpn/config"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/mysterium/node/openvpn/config"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestOpenvpnProcessStartsAndStopsSuccessfully(t *testing.T) {
