@@ -18,206 +18,74 @@
 package server
 
 import (
-	"sync"
-	"time"
-
-	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/blockchain"
-	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/identity/registry"
-	"github.com/mysterium/node/ip"
-	"github.com/mysterium/node/location"
-	"github.com/mysterium/node/metadata"
-	"github.com/mysterium/node/nat"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/discovery"
-	"github.com/mysterium/node/openvpn/middlewares/state"
-	"github.com/mysterium/node/openvpn/tls"
-	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"github.com/mysterium/node/session"
+	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/core/node"
+	"github.com/mysterium/node/core/service"
+	"github.com/mysterium/node/utils"
+	"github.com/urfave/cli"
 )
 
-// Command represent entrypoint for Mysterium server with top level components
-type Command struct {
-	networkDefinition metadata.NetworkDefinition
-	identityLoader    func() (identity.Identity, error)
-	createSigner      identity.SignerFactory
-	ipResolver        ip.Resolver
-	mysteriumClient   server.Client
-	natService        nat.NATService
-	locationResolver  location.Resolver
-
-	dialogWaiterFactory func(identity identity.Identity, identityRegistry registry.IdentityRegistry) communication.DialogWaiter
-	dialogWaiter        communication.DialogWaiter
-
-	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
-
-	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
-
-	vpnServer                   openvpn.Process
-	checkOpenvpn                func() error
-	checkDirectories            func() error
-	openvpnServiceAddress       func(string, string) string
-	protocol                    string
-	proposalAnnouncementStopped *sync.WaitGroup
-}
-
-// Start starts server - does not block
-func (cmd *Command) Start() (err error) {
-	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
-
-	err = cmd.checkDirectories()
-	if err != nil {
-		return err
+var (
+	identityFlag = cli.StringFlag{
+		Name:  "identity",
+		Usage: "Keystore's identity used to provide service. If not given identity will be created automatically",
+		Value: "",
+	}
+	identityPassphraseFlag = cli.StringFlag{
+		Name:  "identity.passphrase",
+		Usage: "Used to unlock keystore's identity",
+		Value: "",
 	}
 
-	err = cmd.checkOpenvpn()
-	if err != nil {
-		return err
+	openvpnProtocolFlag = cli.StringFlag{
+		Name:  "openvpn.proto",
+		Usage: "Protocol to use. Options: { udp, tcp }",
+		Value: "udp",
+	}
+	openvpnPortFlag = cli.IntFlag{
+		Name:  "openvpn.port",
+		Usage: "Openvpn port to use. Default 1194",
+		Value: 1194,
 	}
 
-	providerID, err := cmd.identityLoader()
-	if err != nil {
-		return err
+	locationCountryFlag = cli.StringFlag{
+		Name:  "location.country",
+		Usage: "Service location country. If not given country is autodetected",
+		Value: "",
 	}
+)
 
-	ethClient, err := blockchain.NewClient(cmd.networkDefinition.EtherClientRPC)
-	if err != nil {
-		return err
-	}
+// NewCommand function creates service command
+func NewCommand(nodeOptions node.Options) *cli.Command {
 
-	identityRegistry, err := registry.NewIdentityRegistry(ethClient, cmd.networkDefinition.PaymentsContractAddress)
-	if err != nil {
-		return err
-	}
+	return &cli.Command{
+		Name:      "service",
+		Usage:     "Starts and publishes service on Mysterium Network",
+		ArgsUsage: " ",
+		Flags: []cli.Flag{
+			identityFlag, identityPassphraseFlag,
+			openvpnProtocolFlag, openvpnPortFlag,
+			locationCountryFlag,
+		},
+		Action: func(ctx *cli.Context) error {
+			serviceOptions := service.Options{
+				ctx.String("identity"),
+				ctx.String("identity.passphrase"),
 
-	cmd.dialogWaiter = cmd.dialogWaiterFactory(providerID, identityRegistry)
-	providerContact, err := cmd.dialogWaiter.Start()
-	if err != nil {
-		return err
-	}
+				ctx.String("openvpn.proto"),
+				ctx.Int("openvpn.port"),
 
-	publicIP, err := cmd.ipResolver.GetPublicIP()
-	if err != nil {
-		return err
-	}
-
-	// if for some reason we will need truly external IP, use GetPublicIP()
-	outboundIP, err := cmd.ipResolver.GetOutboundIP()
-	if err != nil {
-		return err
-	}
-
-	cmd.natService.Add(nat.RuleForwarding{
-		SourceAddress: "10.8.0.0/24",
-		TargetIP:      outboundIP,
-	})
-
-	err = cmd.natService.Start()
-	if err != nil {
-		log.Warn("received nat service error: ", err, " trying to proceed.")
-	}
-
-	currentCountry, err := cmd.locationResolver.ResolveCountry(publicIP)
-	if err != nil {
-		return err
-	}
-	log.Info("Country detected: ", currentCountry)
-	serviceLocation := dto_discovery.Location{Country: currentCountry}
-
-	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
-
-	primitives, err := tls.NewTLSPrimitives(serviceLocation, providerID)
-	if err != nil {
-		return err
-	}
-
-	sessionManager := cmd.sessionManagerFactory(primitives, cmd.openvpnServiceAddress(outboundIP, publicIP))
-
-	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
-	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
-		return err
-	}
-
-	stopDiscoveryAnnouncement := make(chan int)
-	vpnStateCallback := func(state openvpn.State) {
-		switch state {
-		case openvpn.ProcessStarted:
-			log.Info("Openvpn service booting up")
-		case openvpn.ConnectedState:
-			log.Info("Openvpn service started successfully")
-		case openvpn.ProcessExited:
-			log.Info("Openvpn service exited")
-			close(stopDiscoveryAnnouncement)
-		}
-	}
-	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
-	if err := cmd.vpnServer.Start(); err != nil {
-		return err
-	}
-
-	signer := cmd.createSigner(providerID)
-
-	cmd.proposalAnnouncementStopped.Add(1)
-	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
-
-	return nil
-}
-
-// Wait blocks until server is stopped
-func (cmd *Command) Wait() error {
-	log.Info("Waiting for proposal announcements to finish")
-	cmd.proposalAnnouncementStopped.Wait()
-	log.Info("Waiting for vpn service to finish")
-	return cmd.vpnServer.Wait()
-}
-
-// Kill stops server
-func (cmd *Command) Kill() error {
-	cmd.natService.Stop()
-	cmd.vpnServer.Stop()
-
-	err := cmd.dialogWaiter.Stop()
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
-func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
-	for {
-		err := mysteriumClient.RegisterProposal(proposal, signer)
-		if err != nil {
-			log.Errorf("Failed to register proposal: %v, retrying after 1 min.", err)
-			time.Sleep(1 * time.Minute)
-		} else {
-			break
-		}
-	}
-	cmd.pingProposalLoop(proposal, mysteriumClient, signer, stopPinger)
-
-}
-
-func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
-	defer cmd.proposalAnnouncementStopped.Done()
-	for {
-		select {
-		case <-time.After(1 * time.Minute):
-			err := mysteriumClient.PingProposal(proposal, signer)
-			if err != nil {
-				log.Error("Failed to ping proposal: ", err)
-				// do not stop server on missing ping to discovery. More on this in MYST-362 and MYST-370
+				ctx.String("location.country"),
 			}
-		case <-stopPinger:
-			log.Info("Stopping discovery announcement")
-			err := mysteriumClient.UnregisterProposal(proposal, signer)
-			if err != nil {
-				log.Error("Failed to unregister proposal: ", err)
+
+			manager := service.NewManager(nodeOptions, serviceOptions)
+			cmd.RegisterSignalCallback(utils.SoftKiller(manager.Kill))
+
+			if err := manager.Start(); err != nil {
+				return err
 			}
-			return
-		}
+
+			return manager.Wait()
+		},
 	}
 }

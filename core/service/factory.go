@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package server
+package service
 
 import (
 	"path/filepath"
@@ -28,11 +28,11 @@ import (
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/core/node"
-	"github.com/mysterium/node/core/service"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/identity/registry"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
+	"github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/server/auth"
@@ -43,12 +43,14 @@ import (
 	"github.com/mysterium/node/session"
 )
 
-// NewCommand function creates new server command by given options
-func NewCommand(nodeOptions node.Options, serviceOptions service.Options) *Command {
+// NewManager function creates new service manager by given options
+func NewManager(nodeOptions node.Options, serviceOptions Options) *serviceManager {
 
 	networkDefinition := node.GetNetworkDefinition(nodeOptions.NetworkOptions)
-
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
+
+	logconfig.Bootstrap()
+
 	ipResolver := ip.NewResolver(nodeOptions.IpifyUrl)
 	natService := nat.NewService()
 
@@ -73,7 +75,7 @@ func NewCommand(nodeOptions node.Options, serviceOptions service.Options) *Comma
 		locationResolver = location.NewResolver(filepath.Join(nodeOptions.Directories.Config, nodeOptions.LocationDatabase))
 	}
 
-	return &Command{
+	return &serviceManager{
 		networkDefinition: networkDefinition,
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)

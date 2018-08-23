@@ -26,6 +26,7 @@ import (
 	command_cli "github.com/mysterium/node/cmd/commands/cli"
 	"github.com/mysterium/node/cmd/commands/license"
 	"github.com/mysterium/node/cmd/commands/run"
+	"github.com/mysterium/node/cmd/commands/server"
 	"github.com/mysterium/node/cmd/commands/version"
 	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/metadata"
@@ -67,6 +68,7 @@ func NewCommand() (*cli.App, error) {
 	app.Commands = []cli.Command{
 		*versionCommand,
 		*license.NewCommand(licenseCopyright),
+		*server.NewCommand(options.NodeOptions),
 	}
 	app.Action = runMain
 
