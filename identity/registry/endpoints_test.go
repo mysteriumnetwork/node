@@ -104,6 +104,9 @@ func (m *mockRegistrationStatus) IsRegistered(identity common.Address) (bool, er
 	return m.Registered, nil
 }
 
+func (m *mockRegistrationStatus) WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan bool) {
+}
+
 type mockRegistrationDataProvider struct {
 	RegistrationData *registry.RegistrationData
 	RecordedIdentity common.Address

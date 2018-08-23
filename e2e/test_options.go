@@ -27,7 +27,7 @@ import (
 
 var tequilaHost = flag.String("tequila.host", "localhost", "Specify tequila host for e2e tests")
 var tequilaPort = flag.Int("tequila.port", 4050, "Specify tequila port for e2e tests")
-var ethRPC = flag.String("geth.url", "", "Eth node RPC")
+var ethRPC = flag.String("geth.url", "http://localhost:8545", "Eth node RPC")
 
 func newTequilaClient() *client.Client {
 	return client.NewClient(*tequilaHost, *tequilaPort)

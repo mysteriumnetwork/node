@@ -18,16 +18,29 @@
 package registry
 
 import (
+	"context"
+	"errors"
+	"time"
+
 	"github.com/MysteriumNetwork/payments/registry"
 	"github.com/MysteriumNetwork/payments/registry/generated"
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// IdentityRegistry checks whenever given identity is registered
+var ErrNoIdentityRegisteredTimeout = errors.New("no identity registration for long time, exiting")
+
+type Register struct {
+	callerSession *generated.IdentityRegistryCallerSession
+	filterer      *generated.IdentityRegistryFilterer
+}
+
+// IdentityRegistry enables identity registration actions
 type IdentityRegistry interface {
 	IsRegistered(identity common.Address) (bool, error)
+	WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan bool)
 }
 
 // RegistrationDataProvider provides registration information for given identity required to register it on blockchain
@@ -53,16 +66,60 @@ func NewRegistrationDataProvider(ks *keystore.KeyStore) RegistrationDataProvider
 }
 
 // NewIdentityRegistry creates identity registry service which uses blockchain for information
-func NewIdentityRegistry(contractCaller bind.ContractCaller, registryAddress common.Address) (IdentityRegistry, error) {
-	contract, err := generated.NewIdentityRegistryCaller(registryAddress, contractCaller)
+func NewIdentityRegistry(contractBackend bind.ContractBackend, registryAddress common.Address) (IdentityRegistry, error) {
+	contract, err := generated.NewIdentityRegistryCaller(registryAddress, contractBackend)
 	if err != nil {
 		return nil, err
 	}
 
-	return &generated.IdentityRegistryCallerSession{
-		Contract: contract,
-		CallOpts: bind.CallOpts{
-			Pending: false, //we want to find out true registration status - not pending transactions
+	filterer, err := generated.NewIdentityRegistryFilterer(registryAddress, contractBackend)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Register{
+		&generated.IdentityRegistryCallerSession{
+			Contract: contract,
+			CallOpts: bind.CallOpts{
+				Pending: false, //we want to find out true registration status - not pending transactions
+			},
 		},
+		filterer,
 	}, nil
+}
+
+func (register *Register) IsRegistered(identity common.Address) (bool, error) {
+	return register.callerSession.IsRegistered(identity)
+}
+
+func (register *Register) WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan bool) {
+	identities := []common.Address{providerAddress}
+
+	filterOps := &bind.FilterOpts{
+		Start:   0,
+		End:     nil,
+		Context: context.Background(),
+	}
+
+	for {
+		logIterator, err := register.filterer.FilterRegistered(filterOps, identities)
+		if err != nil {
+			log.Error(err)
+		}
+
+		for {
+			next := logIterator.Next()
+			if !next {
+				err = logIterator.Error()
+				if err != nil {
+					log.Error(err)
+				}
+				break
+			}
+			log.Info("got identity registration event")
+			registeredEvent <- true
+		}
+		time.Sleep(100 * time.Millisecond)
+		log.Info("no identity registration, sleeping for 100ms: ")
+	}
 }

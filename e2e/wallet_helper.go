@@ -26,6 +26,7 @@ import (
 
 	"github.com/MysteriumNetwork/payments/cli/helpers"
 	mysttoken "github.com/MysteriumNetwork/payments/mysttoken/generated"
+	paymentsRegistry "github.com/MysteriumNetwork/payments/registry"
 	registry "github.com/MysteriumNetwork/payments/registry/generated"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -49,9 +50,10 @@ var mainEtherAccPass = "localaccount"
 type CliWallet struct {
 	txOpts           *bind.TransactOpts
 	Owner            common.Address
-	backend          *ethclient.Client
+	Backend          *ethclient.Client
 	identityRegistry registry.IdentityRegistryTransactorSession
 	tokens           mysttoken.MystTokenTransactorSession
+	KS               *keystore.KeyStore
 }
 
 // RegisterIdentity registers identity with given data on behalf of user
@@ -73,16 +75,31 @@ func (wallet *CliWallet) RegisterIdentity(dto client.RegistrationStatusDTO) erro
 	return wallet.checkTxResult(tx)
 }
 
+// RegisterIdentity registers identity with given data on behalf of user
+func (wallet *CliWallet) RegisterIdentityPlainData(data *paymentsRegistry.RegistrationData) error {
+	signature := data.Signature
+	var pubKeyPart1 [32]byte
+	var pubKeyPart2 [32]byte
+	copy(pubKeyPart1[:], data.PublicKey.Part1)
+	copy(pubKeyPart2[:], data.PublicKey.Part2)
+
+	tx, err := wallet.identityRegistry.RegisterIdentity(pubKeyPart1, pubKeyPart2, signature.V, signature.R, signature.S)
+	if err != nil {
+		return err
+	}
+	return wallet.checkTxResult(tx)
+}
+
 // GiveEther transfers ether to given address
 func (wallet *CliWallet) GiveEther(address common.Address, amount, units int64) error {
 
 	amountInWei := new(big.Int).Mul(big.NewInt(amount), big.NewInt(units))
 
-	nonce, err := wallet.backend.PendingNonceAt(context.Background(), wallet.Owner)
+	nonce, err := wallet.Backend.PendingNonceAt(context.Background(), wallet.Owner)
 	if err != nil {
 		return err
 	}
-	gasPrice, err := wallet.backend.SuggestGasPrice(context.Background())
+	gasPrice, err := wallet.Backend.SuggestGasPrice(context.Background())
 	if err != nil {
 		return err
 	}
@@ -94,7 +111,7 @@ func (wallet *CliWallet) GiveEther(address common.Address, amount, units int64) 
 		return err
 	}
 
-	err = wallet.backend.SendTransaction(context.Background(), signedTx)
+	err = wallet.Backend.SendTransaction(context.Background(), signedTx)
 	if err != nil {
 		return err
 	}
@@ -121,7 +138,7 @@ func (wallet *CliWallet) ApproveForPayments(amount int64) error {
 
 func (wallet *CliWallet) checkTxResult(tx *types.Transaction) error {
 	for i := 0; i < 10; i++ {
-		_, pending, err := wallet.backend.TransactionByHash(context.Background(), tx.Hash())
+		_, pending, err := wallet.Backend.TransactionByHash(context.Background(), tx.Hash())
 		switch {
 		case err != nil:
 			return err
@@ -132,7 +149,7 @@ func (wallet *CliWallet) checkTxResult(tx *types.Transaction) error {
 		}
 	}
 
-	receipt, err := wallet.backend.TransactionReceipt(context.Background(), tx.Hash())
+	receipt, err := wallet.Backend.TransactionReceipt(context.Background(), tx.Hash())
 	if err != nil {
 		return err
 	}
@@ -184,7 +201,7 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 	return &CliWallet{
 		txOpts:  transactor,
 		Owner:   owner,
-		backend: client,
+		Backend: client,
 		tokens: mysttoken.MystTokenTransactorSession{
 			Contract:     tokensContract,
 			TransactOpts: *transactor,
@@ -193,6 +210,7 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 			Contract:     paymentsContract,
 			TransactOpts: *transactor,
 		},
+		KS: ks,
 	}, nil
 }
 

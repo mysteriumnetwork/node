@@ -22,6 +22,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/blockchain"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -161,8 +162,27 @@ func (cmd *Command) Start() (err error) {
 	signer := cmd.createSigner(providerID)
 
 	// check if node's identity is registered
-	identityRegistry.IsRegistered(providerID.Address)
+	registered, err := identityRegistry.IsRegistered(common.HexToAddress(providerID.Address))
+	if err != nil {
+		return err
+	}
+
 	// if not registered - wait indefinitely for registration transaction event
+	if !registered {
+		log.Infof("identity %s not registered, waiting for identity registration", providerID.Address)
+		registerEventChan := make(chan bool)
+
+		go identityRegistry.WaitForRegistrationEvent(common.HexToAddress(providerID.Address), registerEventChan)
+
+		select {
+		case <-registerEventChan:
+			log.Info("identity registered, proceeding with service startup")
+			break
+		case <-time.After(100 * time.Minute):
+			log.Error(registry.ErrNoIdentityRegisteredTimeout)
+			return registry.ErrNoIdentityRegisteredTimeout
+		}
+	}
 
 	cmd.proposalAnnouncementStopped.Add(1)
 	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
