@@ -99,7 +99,7 @@ func runMain(ctx *cli.Context) error {
 	return run.NewCommand(options.NodeOptions).Run(ctx)
 }
 
-func runCLI(options node.NodeOptions) error {
+func runCLI(options node.Options) error {
 	cmdCli := command_cli.NewCommand(
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
@@ -111,7 +111,7 @@ func runCLI(options node.NodeOptions) error {
 
 type commandOptions struct {
 	CLI         bool
-	NodeOptions node.NodeOptions
+	NodeOptions node.Options
 }
 
 var (

@@ -17,8 +17,8 @@
 
 package node
 
-// NodeOptions describes options which are required to start Node
-type NodeOptions struct {
+// Options describes options which are required to start Node
+type Options struct {
 	Directories DirectoryOptions
 
 	TequilapiAddress string

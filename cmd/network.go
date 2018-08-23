@@ -71,7 +71,7 @@ func ParseNetworkOptions(flags *flag.FlagSet, options *node.NetworkOptions) {
 }
 
 // RegisterNetworkFlags function register directory options to flag set
-func RegisterNetworkFlags(flags *[]cli.Flag, options *node.NodeOptions) {
+func RegisterNetworkFlags(flags *[]cli.Flag, options *node.Options) {
 	*flags = append(
 		*flags,
 		cli.BoolFlag{

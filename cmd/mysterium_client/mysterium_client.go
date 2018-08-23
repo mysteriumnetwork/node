@@ -66,7 +66,7 @@ type commandOptions struct {
 	LicenseWarranty   bool
 	LicenseConditions bool
 
-	NodeOptions node.NodeOptions
+	NodeOptions node.Options
 }
 
 func parseArguments(args []string) (options commandOptions, err error) {
@@ -146,7 +146,7 @@ func parseArguments(args []string) (options commandOptions, err error) {
 	return options, err
 }
 
-func runCLI(options node.NodeOptions) {
+func runCLI(options node.Options) {
 	cmdCli := cli.NewCommand(
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
@@ -159,7 +159,7 @@ func runCLI(options node.NodeOptions) {
 	}
 }
 
-func runCMD(options node.NodeOptions) {
+func runCMD(options node.Options) {
 	nodeInstance := node.NewNode(options)
 	cmd.RegisterSignalCallback(utils.SoftKiller(nodeInstance.Kill))
 

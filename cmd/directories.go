@@ -62,7 +62,7 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *node.DirectoryOptions) error
 }
 
 // RegisterDirectoryFlags function register directory options to flag set
-func RegisterDirectoryFlags(flags *[]cli.Flag, options *node.NodeOptions) error {
+func RegisterDirectoryFlags(flags *[]cli.Flag, options *node.Options) error {
 	userHomeDir, err := homedir.Dir()
 	if err != nil {
 		return err

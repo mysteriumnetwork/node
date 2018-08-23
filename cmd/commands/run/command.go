@@ -25,7 +25,7 @@ import (
 )
 
 // NewCommand function creates run command
-func NewCommand(options node.NodeOptions) *cli.Command {
+func NewCommand(options node.Options) *cli.Command {
 	return &cli.Command{
 		Name:      "run",
 		Usage:     "Runs Mysterium node",

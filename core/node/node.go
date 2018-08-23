@@ -45,7 +45,7 @@ import (
 )
 
 // NewNode function creates new Mysterium node by given options
-func NewNode(options NodeOptions) *Node {
+func NewNode(options Options) *Node {
 	networkDefinition := GetNetworkDefinition(options.NetworkOptions)
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
@@ -110,7 +110,7 @@ func NewNode(options NodeOptions) *Node {
 
 // Node represent entrypoint for Mysterium node with top level components
 type Node struct {
-	options               NodeOptions
+	options               Options
 	network               metadata.NetworkDefinition
 	keystore              *keystore.KeyStore
 	connectionManager     connection.Manager
