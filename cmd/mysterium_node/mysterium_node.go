@@ -49,39 +49,32 @@ func main() {
 
 // NewCommand function creates application master command
 func NewCommand() (*cli.App, error) {
+	cli.VersionPrinter = func(ctx *cli.Context) {
+		versionCommand.Run(ctx)
+	}
+
 	app := cli.NewApp()
 	app.Usage = "VPN server and client for Mysterium Network https://mysterium.network/"
 	app.Authors = []cli.Author{
 		{`The "MysteriumNetwork/node" Authors`, "mysterium-dev@mysterium.network"},
 	}
 	app.Version = metadata.VersionAsString()
+
+	if err := cmd.RegisterDirectoryFlags(&app.Flags, &options.NodeOptions); err != nil {
+		return app, err
+	}
+	app.Flags = append(app.Flags, tequilapiAddressFlag, tequilapiPortFlag)
+	if err := cmd.RegisterNetworkFlags(&app.Flags, &options.NodeOptions); err != nil {
+		return app, err
+	}
+	app.Flags = append(app.Flags, licenseWarrantyFlag, licenseConditionsFlag)
+	app.Flags = append(app.Flags, openvpnBinaryFlag, ipifyUrlFlag, locationDatabaseFlag)
+	app.Flags = append(app.Flags, cliFlag)
+
 	app.Commands = []cli.Command{
 		*versionCommand,
 	}
-
-	err := cmd.RegisterDirectoryFlags(&app.Flags, &options)
-	if err != nil {
-		return app, err
-	}
-	app.Flags = append(
-		app.Flags,
-
-		tequilapiAddressFlag,
-		tequilapiPortFlag,
-
-		licenseWarrantyFlag,
-		licenseConditionsFlag,
-
-		openvpnBinaryFlag,
-		ipifyUrlFlag,
-		locationDatabaseFlag,
-		cliFlag,
-	)
 	app.Action = runMain
-
-	cli.VersionPrinter = func(ctx *cli.Context) {
-		versionCommand.Run(ctx)
-	}
 
 	return app, nil
 }

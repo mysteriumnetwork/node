@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/metadata"
+	"github.com/urfave/cli"
 )
 
 // ParseNetworkOptions function parses (or registers) network options from flag library
@@ -67,4 +68,47 @@ func ParseNetworkOptions(flags *flag.FlagSet, options *node.NetworkOptions) {
 		metadata.DefaultNetwork.PaymentsContractAddress.String(),
 		"Address of payments contract",
 	)
+}
+
+// RegisterNetworkFlags function register directory options to flag set
+func RegisterNetworkFlags(flags *[]cli.Flag, options *node.NodeOptions) error {
+	*flags = append(*flags,
+		cli.BoolFlag{
+			Name:        "testnet",
+			Usage:       "Defines test network configuration",
+			Destination: &options.Testnet,
+		},
+		cli.BoolFlag{
+			Name:        "localnet",
+			Usage:       "Defines network configuration which expects localy deployed broker and discovery services",
+			Destination: &options.Localnet,
+		},
+
+		cli.StringFlag{
+			Name:        "discovery-address",
+			Usage:       "Address (URL form) of discovery service",
+			Destination: &options.NetworkOptions.DiscoveryAPIAddress,
+			Value:       metadata.DefaultNetwork.DiscoveryAPIAddress,
+		},
+		cli.StringFlag{
+			Name:        "broker-address",
+			Usage:       "Address (IP or domain name) of message broker",
+			Destination: &options.BrokerAddress,
+			Value:       metadata.DefaultNetwork.BrokerAddress,
+		},
+
+		cli.StringFlag{
+			Name:        "ether.client.rpc",
+			Usage:       "Url or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
+			Destination: &options.EtherClientRPC,
+			Value:       metadata.DefaultNetwork.EtherClientRPC,
+		},
+		cli.StringFlag{
+			Name:        "ether.contract.payments",
+			Usage:       "Address of payments contract",
+			Destination: &options.EtherPaymentsAddress,
+			Value:       metadata.DefaultNetwork.PaymentsContractAddress.String(),
+		},
+	)
+	return nil
 }
