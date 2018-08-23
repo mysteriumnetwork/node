@@ -71,8 +71,9 @@ func ParseNetworkOptions(flags *flag.FlagSet, options *node.NetworkOptions) {
 }
 
 // RegisterNetworkFlags function register directory options to flag set
-func RegisterNetworkFlags(flags *[]cli.Flag, options *node.NodeOptions) error {
-	*flags = append(*flags,
+func RegisterNetworkFlags(flags []cli.Flag, options *node.NodeOptions) {
+	flags = append(
+		flags,
 		cli.BoolFlag{
 			Name:        "testnet",
 			Usage:       "Defines test network configuration",
@@ -110,5 +111,4 @@ func RegisterNetworkFlags(flags *[]cli.Flag, options *node.NodeOptions) error {
 			Value:       metadata.DefaultNetwork.PaymentsContractAddress.String(),
 		},
 	)
-	return nil
 }

@@ -19,9 +19,8 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
-
 	"os"
+	"path/filepath"
 
 	"github.com/mysterium/node/cmd"
 	command_cli "github.com/mysterium/node/cmd/commands/cli"
@@ -62,17 +61,9 @@ func NewCommand() (*cli.App, error) {
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright
-
-	if err := cmd.RegisterDirectoryFlags(&app.Flags, &options.NodeOptions); err != nil {
-		return app, err
+	if err := registerFlags(app.Flags); err != nil {
+		return nil, err
 	}
-	app.Flags = append(app.Flags, tequilapiAddressFlag, tequilapiPortFlag)
-	if err := cmd.RegisterNetworkFlags(&app.Flags, &options.NodeOptions); err != nil {
-		return app, err
-	}
-	app.Flags = append(app.Flags, openvpnBinaryFlag, ipifyUrlFlag, locationDatabaseFlag)
-	app.Flags = append(app.Flags, cliFlag)
-
 	app.Commands = []cli.Command{
 		*versionCommand,
 		*license.NewCommand(licenseCopyright),
@@ -80,6 +71,21 @@ func NewCommand() (*cli.App, error) {
 	app.Action = runMain
 
 	return app, nil
+}
+
+func registerFlags(flags []cli.Flag) error {
+	if err := cmd.RegisterDirectoryFlags(flags, &options.NodeOptions); err != nil {
+		return err
+	}
+
+	flags = append(flags, tequilapiAddressFlag, tequilapiPortFlag)
+
+	cmd.RegisterNetworkFlags(flags, &options.NodeOptions)
+
+	flags = append(flags, openvpnBinaryFlag, ipifyUrlFlag, locationDatabaseFlag)
+	flags = append(flags, cliFlag)
+
+	return nil
 }
 
 func runMain(ctx *cli.Context) error {
