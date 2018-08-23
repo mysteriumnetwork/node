@@ -34,7 +34,13 @@ import (
 )
 
 func main() {
-	err := NewCommand().Run(os.Args)
+	app, err := NewCommand()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	err = app.Run(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -42,7 +48,7 @@ func main() {
 }
 
 // NewCommand function creates application master command
-func NewCommand() *cli.App {
+func NewCommand() (*cli.App, error) {
 	app := cli.NewApp()
 	app.Usage = "VPN server and client for Mysterium Network https://mysterium.network/"
 	app.Authors = []cli.Author{
@@ -52,7 +58,14 @@ func NewCommand() *cli.App {
 	app.Commands = []cli.Command{
 		*versionCommand,
 	}
-	app.Flags = []cli.Flag{
+
+	err := cmd.RegisterDirectoryFlags(&app.Flags, &options)
+	if err != nil {
+		return app, err
+	}
+	app.Flags = append(
+		app.Flags,
+
 		tequilapiAddressFlag,
 		tequilapiPortFlag,
 
@@ -63,14 +76,14 @@ func NewCommand() *cli.App {
 		ipifyUrlFlag,
 		locationDatabaseFlag,
 		cliFlag,
-	}
+	)
 	app.Action = runMain
 
 	cli.VersionPrinter = func(ctx *cli.Context) {
 		versionCommand.Run(ctx)
 	}
 
-	return app
+	return app, nil
 }
 
 func runMain(ctx *cli.Context) error {

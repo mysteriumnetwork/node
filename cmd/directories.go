@@ -24,6 +24,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/mysterium/node/core/node"
+	"github.com/urfave/cli"
 )
 
 // ParseFromCmdArgs function takes directory options and fills in values from FlagSet structure
@@ -56,6 +57,41 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *node.DirectoryOptions) error
 		"runtime-dir",
 		currentDir,
 		"Runtime writable directory for temp files",
+	)
+	return nil
+}
+
+// RegisterDirectoryFlags function register directory options to flag set
+func RegisterDirectoryFlags(flags *[]cli.Flag, options *node.NodeOptions) error {
+	userHomeDir, err := homedir.Dir()
+	if err != nil {
+		return err
+	}
+
+	currentDir, err := getExecutableDir()
+	if err != nil {
+		return err
+	}
+
+	*flags = append(*flags,
+		cli.StringFlag{
+			Name:        "data-dir",
+			Usage:       "Data directory containing keystore & other persistent files",
+			Destination: &options.Directories.Data,
+			Value:       filepath.Join(userHomeDir, ".mysterium"),
+		},
+		cli.StringFlag{
+			Name:        "config-dir",
+			Usage:       "Configs directory containing all configuration, script and helper files",
+			Destination: &options.Directories.Config,
+			Value:       filepath.Join(currentDir, "config"),
+		},
+		cli.StringFlag{
+			Name:        "runtime-dir",
+			Usage:       "Runtime writable directory for temp files",
+			Destination: &options.Directories.Runtime,
+			Value:       currentDir,
+		},
 	)
 	return nil
 }
