@@ -7,6 +7,5 @@
 
 bin/check_govet
 bin/check_golint
-bin/check_gofmt
 bin/check_goimports
 bin/check_license
