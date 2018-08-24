@@ -20,7 +20,7 @@ help:
 	@echo "\nSee README.md for more."
 
 dep:
-	if [ "$(CMD_GODEP)" == "" ] ; then curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh ; fi
+	if [ "$(CMD_DEP)" == "" ] ; then curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh ; fi
 
 dep-ensure:
 	dep ensure
