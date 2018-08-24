@@ -3,16 +3,24 @@
 # Checks if all project files are formatted using goimports
 #
 # Usage:
+#> bin/check_goimports [packages ...]
+#
+# Examples:
 #> bin/check_goimports
+#> bin/check_goimports .
+#> bin/check_goimports ./...
+#> bin/check_goimports ./communication
+#> bin/check_goimports ./communication/...
 
 source bin/helpers/output.sh
 
-unformatted=`find . \
-    ! -path "\./vendor/*" \
-    -type f \
-    -iregex '.*\.go' \
-    -exec goimports -e -l '{}' \;
-`
+ARGUMENTS=$@
+if [ -z "$ARGUMENTS" ]; then
+    ARGUMENTS="./..."
+fi
+DIRECTORIES=`go list -f '{{.Dir}}' $ARGUMENTS`
+
+unformatted=`goimports -e -l $DIRECTORIES`
 if [ ! -z "$unformatted" ]; then
     print_error "Following files are not formatted using goimports:"
     echo "$unformatted"
