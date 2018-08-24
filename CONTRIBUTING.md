@@ -97,7 +97,7 @@ dep ensure
 
 * Add new package to project
 ```bash
-dep add github.com/ccding/go-stun
+dep ensure -add github.com/ccding/go-stun
 ```
 
 * Update package in project
