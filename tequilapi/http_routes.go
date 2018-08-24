@@ -18,10 +18,11 @@
 package tequilapi
 
 import (
-	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/tequilapi/endpoints"
 	"os"
 	"time"
+
+	"github.com/julienschmidt/httprouter"
+	"github.com/mysterium/node/tequilapi/endpoints"
 )
 
 // NewAPIRouter returns new api router with status endpoints

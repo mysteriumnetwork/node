@@ -19,6 +19,9 @@ package dialog
 
 import (
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/communication/nats"
@@ -26,8 +29,6 @@ import (
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/identity/registry"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestDialogWaiter_Interface(t *testing.T) {

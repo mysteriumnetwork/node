@@ -19,11 +19,12 @@ package utils
 
 import (
 	"errors"
-	"github.com/mysterium/node/tequilapi/validation"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/mysterium/node/tequilapi/validation"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWriteAsJSONReturnsExpectedResponse(t *testing.T) {

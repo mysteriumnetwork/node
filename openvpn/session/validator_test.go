@@ -18,11 +18,12 @@
 package session
 
 import (
+	"sync"
+	"testing"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
-	"sync"
-	"testing"
 )
 
 var mockManager = &MockSessionManager{

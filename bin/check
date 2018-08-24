@@ -5,7 +5,7 @@
 # Usage:
 #> bin/check
 
-bin/check_vet
-bin/check_lint
-bin/check_fmt
+bin/check_govet
+bin/check_golint
+bin/check_goimports
 bin/check_license

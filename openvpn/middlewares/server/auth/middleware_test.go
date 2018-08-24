@@ -18,12 +18,13 @@
 package auth
 
 import (
+	"testing"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/openvpn/management"
 	ovpnsession "github.com/mysterium/node/openvpn/session"
 	"github.com/mysterium/node/session"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const mockedVPNConfig = "config_string"

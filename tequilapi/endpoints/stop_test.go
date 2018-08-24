@@ -19,13 +19,14 @@ package endpoints
 
 import (
 	"context"
-	"github.com/julienschmidt/httprouter"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/julienschmidt/httprouter"
+	"github.com/stretchr/testify/assert"
 )
 
 type fakeStopper struct {

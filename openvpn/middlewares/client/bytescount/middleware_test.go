@@ -19,10 +19,11 @@ package bytescount
 
 import (
 	"errors"
-	"github.com/mysterium/node/openvpn/management"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/mysterium/node/openvpn/management"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Factory(t *testing.T) {

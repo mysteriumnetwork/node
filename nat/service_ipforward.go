@@ -18,9 +18,10 @@
 package nat
 
 import (
-	log "github.com/cihub/seelog"
 	"os/exec"
 	"strings"
+
+	log "github.com/cihub/seelog"
 )
 
 type serviceIPForward struct {

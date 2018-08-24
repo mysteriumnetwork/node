@@ -18,10 +18,11 @@
 package nats
 
 import (
-	"github.com/mysterium/node/communication"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/mysterium/node/communication"
+	"github.com/stretchr/testify/assert"
 )
 
 type customRequest struct {

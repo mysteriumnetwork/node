@@ -18,10 +18,11 @@
 package promise
 
 import (
+	"testing"
+
 	dto "github.com/mysterium/node/client/promise/dto"
 	"github.com/mysterium/node/money"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const CurrencyToken = money.Currency("Token")

@@ -19,9 +19,10 @@ package session
 
 import (
 	"errors"
+	"sync"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/session"
-	"sync"
 )
 
 // NewManager returns session manager which maintains a map of session id -> OpenVPN clientID

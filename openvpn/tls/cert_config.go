@@ -20,10 +20,11 @@ package tls
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/service_discovery/dto"
 	"math/big"
 	"time"
+
+	"github.com/mysterium/node/identity"
+	"github.com/mysterium/node/service_discovery/dto"
 )
 
 func newCACert(serviceLocation dto.Location) *x509.Certificate {

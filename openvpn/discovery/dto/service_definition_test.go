@@ -19,10 +19,11 @@ package dto
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/mysterium/node/datasize"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var (

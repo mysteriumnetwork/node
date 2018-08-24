@@ -18,12 +18,13 @@
 package discovery
 
 import (
+	"time"
+
 	"github.com/mysterium/node/datasize"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/money"
 	"github.com/mysterium/node/openvpn/discovery/dto"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"time"
 )
 
 // NewServiceProposalWithLocation creates service proposal description for openvpn service

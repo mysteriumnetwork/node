@@ -19,12 +19,13 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
-	"os"
 )
 
 func main() {

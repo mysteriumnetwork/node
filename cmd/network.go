@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"flag"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/metadata"
 )

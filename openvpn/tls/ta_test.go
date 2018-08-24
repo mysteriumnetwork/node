@@ -18,8 +18,9 @@
 package tls
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const expectedKey = `-----BEGIN OpenVPN Static key V1-----

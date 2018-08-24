@@ -18,11 +18,12 @@
 package openvpn
 
 import (
+	"sync"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/openvpn/config"
 	"github.com/mysterium/node/openvpn/linux"
 	"github.com/mysterium/node/openvpn/management"
-	"sync"
 )
 
 const linuxProcess = "[Linux openvpn process] "

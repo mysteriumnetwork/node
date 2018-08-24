@@ -21,9 +21,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/mysterium/node/identity"
 	"net/http"
 	"net/url"
+
+	"github.com/mysterium/node/identity"
 )
 
 const (

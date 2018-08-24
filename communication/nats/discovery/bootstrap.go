@@ -19,6 +19,7 @@ package discovery
 
 import (
 	"encoding/json"
+
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 

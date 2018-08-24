@@ -18,10 +18,11 @@
 package tls
 
 import (
+	"testing"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestCertificatesAreGenerated(t *testing.T) {

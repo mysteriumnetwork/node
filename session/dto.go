@@ -19,6 +19,7 @@ package session
 
 import (
 	"encoding/json"
+
 	"github.com/mysterium/node/communication"
 )
 

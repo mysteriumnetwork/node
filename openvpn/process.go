@@ -19,10 +19,11 @@ package openvpn
 
 import (
 	"errors"
-	"github.com/mysterium/node/openvpn/config"
-	"github.com/mysterium/node/openvpn/management"
 	"sync"
 	"time"
+
+	"github.com/mysterium/node/openvpn/config"
+	"github.com/mysterium/node/openvpn/management"
 )
 
 // Process defines openvpn process interface with basic controls

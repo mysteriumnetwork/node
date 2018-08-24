@@ -18,10 +18,11 @@
 package bytescount
 
 import (
-	"github.com/mysterium/node/utils"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/mysterium/node/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSelectiveStatsHandlerEach(t *testing.T) {

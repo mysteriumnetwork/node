@@ -20,8 +20,9 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mysterium/node/tequilapi/validation"
 	"net/http"
+
+	"github.com/mysterium/node/tequilapi/validation"
 )
 
 /*

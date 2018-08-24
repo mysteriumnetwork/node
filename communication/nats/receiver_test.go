@@ -18,9 +18,10 @@
 package nats
 
 import (
+	"testing"
+
 	"github.com/mysterium/node/communication"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestReceiverInterface(t *testing.T) {

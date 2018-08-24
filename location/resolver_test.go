@@ -18,8 +18,9 @@
 package location
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestResolverResolveCountry(t *testing.T) {

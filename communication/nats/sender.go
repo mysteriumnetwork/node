@@ -18,11 +18,11 @@
 package nats
 
 import (
-	"github.com/mysterium/node/communication"
+	"fmt"
 	"time"
 
-	"fmt"
 	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/communication"
 )
 
 const senderLogPrefix = "[NATS.Sender] "

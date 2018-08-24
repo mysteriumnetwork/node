@@ -19,10 +19,11 @@ package linux
 
 import (
 	"errors"
-	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/utils"
 	"os"
 	"strconv"
+
+	log "github.com/cihub/seelog"
+	"github.com/mysterium/node/utils"
 )
 
 const tunLogPrefix = "[linux tun service] "

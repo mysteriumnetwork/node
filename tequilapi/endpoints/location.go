@@ -18,11 +18,12 @@
 package endpoints
 
 import (
+	"net/http"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/client/connection"
 	"github.com/mysterium/node/location"
 	"github.com/mysterium/node/tequilapi/utils"
-	"net/http"
 )
 
 // swagger:model LocationDTO

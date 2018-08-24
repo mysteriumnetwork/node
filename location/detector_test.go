@@ -19,9 +19,10 @@ package location
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/mysterium/node/ip"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestNewDetector(t *testing.T) {

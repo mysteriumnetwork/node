@@ -18,11 +18,12 @@
 package endpoints
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/tequilapi/utils"
-	"net/http"
-	"time"
 )
 
 // swagger:model HealthCheckDTO

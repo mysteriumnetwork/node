@@ -18,9 +18,10 @@
 package config
 
 import (
-	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConfigToArguments(t *testing.T) {

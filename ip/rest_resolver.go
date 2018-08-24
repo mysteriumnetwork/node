@@ -23,9 +23,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	log "github.com/cihub/seelog"
 	"net"
 	"time"
+
+	log "github.com/cihub/seelog"
 )
 
 const ipifyAPIClient = "goclient-v0.1"

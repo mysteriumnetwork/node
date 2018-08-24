@@ -19,6 +19,9 @@ package server
 
 import (
 	"fmt"
+	"path/filepath"
+	"sync"
+
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/cmd"
@@ -38,8 +41,6 @@ import (
 	"github.com/mysterium/node/openvpn/tls"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
-	"path/filepath"
-	"sync"
 )
 
 // NewCommand function creates new server command by given options

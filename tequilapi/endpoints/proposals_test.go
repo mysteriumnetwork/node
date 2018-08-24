@@ -18,12 +18,13 @@
 package endpoints
 
 import (
-	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/mysterium/node/server"
+	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/stretchr/testify/assert"
 )
 
 type TestServiceDefinition struct{}

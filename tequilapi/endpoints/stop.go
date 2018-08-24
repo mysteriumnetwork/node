@@ -18,9 +18,10 @@
 package endpoints
 
 import (
+	"net/http"
+
 	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
-	"net/http"
 )
 
 // ApplicationStopper stops application and performs required cleanup tasks

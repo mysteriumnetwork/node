@@ -19,8 +19,9 @@ package location
 
 import (
 	"errors"
-	"github.com/oschwald/geoip2-golang"
 	"net"
+
+	"github.com/oschwald/geoip2-golang"
 )
 
 type resolver struct {

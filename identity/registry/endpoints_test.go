@@ -18,14 +18,15 @@
 package registry
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/MysteriumNetwork/payments/identity"
 	"github.com/MysteriumNetwork/payments/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 const (

@@ -18,11 +18,11 @@
 package endpoints
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"bytes"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/server"

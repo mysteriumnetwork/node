@@ -18,10 +18,11 @@
 package openvpn
 
 import (
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWaitAndStopProcessDoesNotDeadLocks(t *testing.T) {

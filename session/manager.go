@@ -18,8 +18,9 @@
 package session
 
 import (
-	"github.com/mysterium/node/identity"
 	"sync"
+
+	"github.com/mysterium/node/identity"
 )
 
 //ServiceConfigProvider interface defines configuration providing dependency

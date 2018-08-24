@@ -3,14 +3,14 @@
 # Run code Linter for project packages
 #
 # Usage:
-#> bin/check_lint [packages ...]
+#> bin/check_golint [packages ...]
 #
 # Examples:
-#> bin/check_lint
-#> bin/check_lint .
-#> bin/check_lint ./...
-#> bin/check_lint ./communication
-#> bin/check_lint ./communication/...
+#> bin/check_golint
+#> bin/check_golint .
+#> bin/check_golint ./...
+#> bin/check_golint ./communication
+#> bin/check_golint ./communication/...
 
 source bin/helpers/output.sh
 
@@ -60,5 +60,5 @@ if [ ${#MESSAGES_RECONFIGURE[@]} -gt 0 ]; then
     exit 1
 fi
 
-print_success "All packages are clean"
+print_success "All packages are compliant to golint"
 exit 0

@@ -19,6 +19,7 @@ package identity
 
 import (
 	"errors"
+
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/server"
 )
