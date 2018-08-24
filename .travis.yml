@@ -8,7 +8,6 @@ env:
   global:
     - CACHE_ROOT_DIR=$HOME/cache
     - BUILD_TOOLS_PATH=$CACHE_ROOT_DIR/build_tools
-    - GLIDE_HOME=$HOME/glide-home
     - BUILD_COMMIT=$TRAVIS_COMMIT
     - BUILD_BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
@@ -38,8 +37,8 @@ jobs:
     - stage: dep-cache
       name: "Vendor update"
       script:
-        - source bin/travis_scripts/ensure_glide.sh $BUILD_TOOLS_PATH "v0.13.1"
-        - glide "-home" $GLIDE_HOME install
+        - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+        - dep ensure
 
     # Test stage
     - stage: test
