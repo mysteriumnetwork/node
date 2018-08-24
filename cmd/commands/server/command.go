@@ -142,6 +142,7 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
+	stopRegistrationWaitLoop := make(chan int)
 	stopDiscoveryAnnouncement := make(chan int)
 	vpnStateCallback := func(state openvpn.State) {
 		switch state {
@@ -151,6 +152,7 @@ func (cmd *Command) Start() (err error) {
 			log.Info("Openvpn service started successfully")
 		case openvpn.ProcessExited:
 			log.Info("Openvpn service exited")
+			close(stopRegistrationWaitLoop)
 			close(stopDiscoveryAnnouncement)
 		}
 	}
@@ -167,27 +169,45 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	// if not registered - wait indefinitely for registration transaction event
+	cmd.proposalAnnouncementStopped.Add(1)
+
+	// if not registered - wait indefinitely for identity registration event
 	if !registered {
-		log.Infof("identity %s not registered, waiting for identity registration", providerID.Address)
-		registerEventChan := make(chan bool)
-
-		go identityRegistry.WaitForRegistrationEvent(common.HexToAddress(providerID.Address), registerEventChan)
-
-		select {
-		case <-registerEventChan:
-			log.Info("identity registered, proceeding with service startup")
-			break
-		case <-time.After(100 * time.Minute):
-			log.Error(registry.ErrNoIdentityRegisteredTimeout)
-			return registry.ErrNoIdentityRegisteredTimeout
-		}
+		go func() {
+			killed := cmd.identityRegistrationWaitLoop(providerID, identityRegistry, stopRegistrationWaitLoop)
+			if killed {
+				cmd.proposalAnnouncementStopped.Done()
+				return
+			}
+			cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
+		}()
+	} else {
+		go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 	}
 
-	cmd.proposalAnnouncementStopped.Add(1)
-	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
-
 	return nil
+}
+
+func (cmd *Command) identityRegistrationWaitLoop(providerID identity.Identity, identityRegistry registry.IdentityRegistry, stopLoop chan int) bool {
+	log.Infof("identity %s not registered, delaying proposal registration until identity is registered", providerID.Address)
+	registerEventChan := make(chan int)
+
+	go identityRegistry.WaitForRegistrationEvent(common.HexToAddress(providerID.Address), registerEventChan, stopLoop)
+
+	for {
+		select {
+		case val := <-registerEventChan:
+			if val == 1 {
+				log.Info("identity registered, proceeding with proposal registration")
+				return false
+			}
+			log.Info("registration wait loop stopped")
+			return true
+		case <-time.After(60 * time.Minute):
+			log.Error(registry.ErrNoIdentityRegisteredTimeout)
+		}
+	}
+	return true
 }
 
 // Wait blocks until server is stopped

@@ -30,7 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var ErrNoIdentityRegisteredTimeout = errors.New("no identity registration for long time, exiting")
+var ErrNoIdentityRegisteredTimeout = errors.New("no identity registration, waiting for registration")
 
 type Register struct {
 	callerSession *generated.IdentityRegistryCallerSession
@@ -40,7 +40,7 @@ type Register struct {
 // IdentityRegistry enables identity registration actions
 type IdentityRegistry interface {
 	IsRegistered(identity common.Address) (bool, error)
-	WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan bool)
+	WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan int, stopLoop chan int)
 }
 
 // RegistrationDataProvider provides registration information for given identity required to register it on blockchain
@@ -92,7 +92,7 @@ func (register *Register) IsRegistered(identity common.Address) (bool, error) {
 	return register.callerSession.IsRegistered(identity)
 }
 
-func (register *Register) WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan bool) {
+func (register *Register) WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan int, stopLoop chan int) {
 	identities := []common.Address{providerAddress}
 
 	filterOps := &bind.FilterOpts{
@@ -102,24 +102,31 @@ func (register *Register) WaitForRegistrationEvent(providerAddress common.Addres
 	}
 
 	for {
-		logIterator, err := register.filterer.FilterRegistered(filterOps, identities)
-		if err != nil {
-			log.Error(err)
-		}
-
-		for {
-			next := logIterator.Next()
-			if !next {
-				err = logIterator.Error()
-				if err != nil {
-					log.Error(err)
-				}
-				break
+		select {
+		case <-stopLoop:
+			registeredEvent <- -1
+			return
+		case <-time.After(500 * time.Millisecond):
+			logIterator, err := register.filterer.FilterRegistered(filterOps, identities)
+			if err != nil {
+				log.Error(err)
 			}
-			log.Info("got identity registration event")
-			registeredEvent <- true
+
+			for {
+				next := logIterator.Next()
+				if next {
+					log.Info("got identity registration event")
+					registeredEvent <- 1
+					return
+				} else {
+					err = logIterator.Error()
+					if err != nil {
+						log.Error(err)
+					}
+					break
+				}
+			}
+			log.Info("no identity registration, sleeping for 500ms: ")
 		}
-		time.Sleep(100 * time.Millisecond)
-		log.Info("no identity registration, sleeping for 100ms: ")
 	}
 }
