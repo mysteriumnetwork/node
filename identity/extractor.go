@@ -19,6 +19,7 @@ package identity
 
 import (
 	"errors"
+
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -45,7 +46,13 @@ func (extractor *extractor) Extract(message []byte, signature Signature) (Identi
 	if err != nil {
 		return Identity{}, err
 	}
-	recoveredAddress := crypto.PubkeyToAddress(*crypto.ToECDSAPub(recoveredKey)).Hex()
+
+	key, err := crypto.UnmarshalPubkey(recoveredKey)
+	if err != nil {
+		return Identity{}, err
+	}
+
+	recoveredAddress := crypto.PubkeyToAddress(*key).Hex()
 
 	return FromAddress(recoveredAddress), nil
 }

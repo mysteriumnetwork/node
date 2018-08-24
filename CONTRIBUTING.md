@@ -6,7 +6,7 @@
 * **Step 1.** Get project dependencies
 ```bash
 brew install go
-brew install glide
+brew install godep
 brew install openvpn
 
 export GOPATH=~/workspace/go
@@ -16,7 +16,7 @@ cd $GOPATH/src/github.com/mysterium/node
 
 * **Step 2.** Fetch dependencies
 ```bash
-glide install
+dep ensure
 ```
 
 * **Step 3.** Start localnet infrastructure
@@ -92,19 +92,18 @@ bin/swagger_serve_doc
 
 * Install project's frozen packages
 ```bash
-glide install
-glide install --force
+dep ensure
 ```
 
 * Add new package to project
 ```bash
-glide get --quick github.com/ccding/go-stun
+dep ensure -add github.com/ccding/go-stun
 ```
 
 * Update package in project
 ```bash
-vim glide.yaml
-glide update
+vim Gopkg.toml
+dep ensure
 ```
 
 ## Creating pull request
