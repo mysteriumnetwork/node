@@ -22,81 +22,69 @@ import (
 
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/core/node"
+	"github.com/mysterium/node/core/service"
 )
 
 // CommandOptions describes options which are required to start Command
 type CommandOptions struct {
-	Directories   node.DirectoryOptions
-	OpenvpnBinary string
-
-	Identity   string
-	Passphrase string
-
-	LocationCountry  string
-	LocationDatabase string
-
-	Version           bool
-	LicenseWarranty   bool
-	LicenseConditions bool
-
-	IpifyUrl string
-
-	Protocol    string
-	OpenvpnPort int
-
+	Version               bool
+	LicenseWarranty       bool
+	LicenseConditions     bool
 	AgreedTermsConditions bool
-	node.NetworkOptions
+
+	NodeOptions    node.Options
+	ServiceOptions service.Options
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure
 func ParseArguments(args []string) (options CommandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
-	err = cmd.ParseFromCmdArgs(flags, &options.Directories)
+	err = cmd.ParseFromCmdArgs(flags, &options.NodeOptions.Directories)
 	if err != nil {
 		return
 	}
 
 	flags.StringVar(
-		&options.OpenvpnBinary,
+		&options.NodeOptions.OpenvpnBinary,
 		"openvpn.binary",
 		"openvpn", //search in $PATH by default,
 		"openvpn binary to use for Open VPN connections",
 	)
 	flags.StringVar(
-		&options.Protocol,
+		&options.ServiceOptions.Protocol,
 		"openvpn.proto",
 		"udp",
 		"Protocol to use. Options: { udp, tcp }",
 	)
 	flags.IntVar(
-		&options.OpenvpnPort,
+		&options.ServiceOptions.OpenvpnPort,
 		"openvpn.port",
 		1194,
 		"Openvpn port to use. Default 1194",
 	)
 
 	flags.StringVar(
-		&options.Identity,
+		&options.ServiceOptions.Identity,
 		"identity",
 		"",
 		"Keystore's identity used to provide service. If not given identity will be created automatically",
 	)
 	flags.StringVar(
-		&options.Passphrase,
+		&options.ServiceOptions.Passphrase,
 		"identity.passphrase",
 		"",
 		"Used to unlock keystore's identity",
 	)
 
 	flags.StringVar(
-		&options.LocationDatabase,
+		&options.NodeOptions.LocationDatabase,
 		"location.database",
 		"GeoLite2-Country.mmdb",
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 	flags.StringVar(
-		&options.LocationCountry,
+		&options.ServiceOptions.LocationCountry,
 		"location.country",
 		"",
 		"Service location country. If not given country is autodetected",
@@ -129,13 +117,13 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 	)
 
 	flags.StringVar(
-		&options.IpifyUrl,
+		&options.NodeOptions.IpifyUrl,
 		"ipify-url",
 		"https://api.ipify.org/",
 		"Address (URL form) of ipify service",
 	)
 
-	cmd.ParseNetworkOptions(flags, &options.NetworkOptions)
+	cmd.ParseNetworkOptions(flags, &options.NodeOptions.NetworkOptions)
 
 	err = flags.Parse(args[1:])
 	if err != nil {

@@ -24,6 +24,8 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/server"
+	"github.com/mysterium/node/core/node"
+	"github.com/mysterium/node/core/service"
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/utils"
@@ -59,12 +61,12 @@ func main() {
 		fmt.Println()
 
 		log.Infof("User agreed with terms & conditions: %v", options.AgreedTermsConditions)
-		runCMD(options)
+		runCMD(options.NodeOptions, options.ServiceOptions)
 	}
 }
 
-func runCMD(options server.CommandOptions) {
-	serverCommand := server.NewCommand(options)
+func runCMD(nodeOptions node.Options, serviceOptions service.Options) {
+	serverCommand := server.NewCommand(nodeOptions, serviceOptions)
 
 	if err := serverCommand.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

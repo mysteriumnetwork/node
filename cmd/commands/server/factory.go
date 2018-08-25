@@ -18,7 +18,6 @@
 package server
 
 import (
-	"fmt"
 	"path/filepath"
 	"sync"
 
@@ -29,6 +28,7 @@ import (
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
 	"github.com/mysterium/node/core/node"
+	"github.com/mysterium/node/core/service"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/identity/registry"
 	"github.com/mysterium/node/ip"
@@ -44,15 +44,15 @@ import (
 )
 
 // NewCommand function creates new server command by given options
-func NewCommand(options CommandOptions) *Command {
+func NewCommand(nodeOptions node.Options, serviceOptions service.Options) *Command {
 
-	networkDefinition := node.GetNetworkDefinition(options.NetworkOptions)
+	networkDefinition := node.GetNetworkDefinition(nodeOptions.NetworkOptions)
 
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
-	ipResolver := ip.NewResolver(options.IpifyUrl)
+	ipResolver := ip.NewResolver(nodeOptions.IpifyUrl)
 	natService := nat.NewService()
 
-	keystoreDirectory := filepath.Join(options.Directories.Data, "keystore")
+	keystoreDirectory := filepath.Join(nodeOptions.Directories.Data, "keystore")
 	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
 	createSigner := func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(keystoreInstance, id)
@@ -65,12 +65,18 @@ func NewCommand(options CommandOptions) *Command {
 		createSigner,
 	)
 
-	locationResolver := locationResolver(options)
+	var locationResolver location.Resolver
+	switch {
+	case serviceOptions.LocationCountry != "":
+		locationResolver = location.NewResolverFake(serviceOptions.LocationCountry)
+	default:
+		locationResolver = location.NewResolver(filepath.Join(nodeOptions.Directories.Config, nodeOptions.LocationDatabase))
+	}
 
 	return &Command{
 		networkDefinition: networkDefinition,
 		identityLoader: func() (identity.Identity, error) {
-			return identity_handler.LoadIdentity(identityHandler, options.Identity, options.Passphrase)
+			return identity_handler.LoadIdentity(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)
 		},
 		createSigner:     createSigner,
 		locationResolver: locationResolver,
@@ -86,12 +92,12 @@ func NewCommand(options CommandOptions) *Command {
 		},
 
 		sessionManagerFactory: func(primitives *tls.Primitives, vpnServerIP string) session.Manager {
-			// TODO: check options for --openvpn-transport option
+			// TODO: check nodeOptions for --openvpn-transport option
 			clientConfigGenerator := openvpn.NewClientConfigGenerator(
 				primitives,
 				vpnServerIP,
-				options.OpenvpnPort,
-				options.Protocol,
+				serviceOptions.OpenvpnPort,
+				serviceOptions.Protocol,
 			)
 
 			return session.NewManager(
@@ -100,55 +106,48 @@ func NewCommand(options CommandOptions) *Command {
 			)
 		},
 		vpnServerFactory: func(manager session.Manager, primitives *tls.Primitives, callback state.Callback) openvpn.Process {
-			// TODO: check options for --openvpn-transport option
+			// TODO: check nodeOptions for --openvpn-transport option
 			serverConfigGenerator := openvpn.NewServerConfigGenerator(
-				options.Directories.Runtime,
-				options.Directories.Config,
+				nodeOptions.Directories.Runtime,
+				nodeOptions.Directories.Config,
 				primitives,
-				options.OpenvpnPort,
-				options.Protocol,
+				serviceOptions.OpenvpnPort,
+				serviceOptions.Protocol,
 			)
 
 			ovpnSessionManager := openvpn_session.NewManager(manager)
 			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
 
 			return openvpn.NewServer(
-				options.OpenvpnBinary,
+				nodeOptions.OpenvpnBinary,
 				serverConfigGenerator,
 				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 				state.NewMiddleware(callback),
 			)
 		},
 		checkOpenvpn: func() error {
-			return openvpn.CheckOpenvpnBinary(options.OpenvpnBinary)
+			return openvpn.CheckOpenvpnBinary(nodeOptions.OpenvpnBinary)
 		},
-		checkDirectories: options.Directories.Check,
+		checkDirectories: nodeOptions.Directories.Check,
 		openvpnServiceAddress: func(outboundIP, publicIP string) string {
-			//TODO public ip could be overriden by arg options if needed
+			//TODO public ip could be overriden by arg nodeOptions if needed
 			if publicIP != outboundIP {
-				forwardInfo := fmt.Sprintf("%s:%v -> %s:%v", publicIP, options.OpenvpnPort, outboundIP, options.OpenvpnPort)
 				log.Warnf(
 					`WARNING: It seems that publicaly visible ip: [%s] does not match your local machines ip: [%s]. 
-You should probaly need to do port forwarding on your router: %s.`,
+You should probaly need to do port forwarding on your router: %s:%v -> %s:%v.`,
 					publicIP,
 					outboundIP,
-					forwardInfo,
+					publicIP,
+					serviceOptions.OpenvpnPort,
+					outboundIP,
+					serviceOptions.OpenvpnPort,
 				)
 
 			}
 
 			return publicIP
 		},
-		protocol:                    options.Protocol,
+		protocol:                    serviceOptions.Protocol,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
-	}
-}
-
-func locationResolver(options CommandOptions) location.Resolver {
-	switch {
-	case options.LocationCountry != "":
-		return location.NewResolverFake(options.LocationCountry)
-	default:
-		return location.NewResolver(filepath.Join(options.Directories.Config, options.LocationDatabase))
 	}
 }
