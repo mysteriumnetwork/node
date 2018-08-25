@@ -22,8 +22,8 @@ type Options struct {
 	Identity   string
 	Passphrase string
 
-	Protocol    string
-	OpenvpnPort int
+	OpenvpnProtocol string
+	OpenvpnPort     int
 
 	LocationCountry string
 }

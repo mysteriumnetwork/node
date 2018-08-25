@@ -99,7 +99,7 @@ func NewManager(nodeOptions node.Options, serviceOptions Options) *serviceManage
 				primitives,
 				vpnServerIP,
 				serviceOptions.OpenvpnPort,
-				serviceOptions.Protocol,
+				serviceOptions.OpenvpnProtocol,
 			)
 
 			return session.NewManager(
@@ -114,7 +114,7 @@ func NewManager(nodeOptions node.Options, serviceOptions Options) *serviceManage
 				nodeOptions.Directories.Config,
 				primitives,
 				serviceOptions.OpenvpnPort,
-				serviceOptions.Protocol,
+				serviceOptions.OpenvpnProtocol,
 			)
 
 			ovpnSessionManager := openvpn_session.NewManager(manager)
@@ -149,7 +149,7 @@ You should probaly need to do port forwarding on your router: %s:%v -> %s:%v.`,
 
 			return publicIP
 		},
-		protocol:                    serviceOptions.Protocol,
+		protocol:                    serviceOptions.OpenvpnProtocol,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
 	}
 }

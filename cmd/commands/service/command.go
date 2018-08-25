@@ -38,8 +38,8 @@ var (
 	}
 
 	openvpnProtocolFlag = cli.StringFlag{
-		Name:  "openvpn.proto",
-		Usage: "Protocol to use. Options: { udp, tcp }",
+		Name:  "openvpn.protocol",
+		Usage: "Openvpn protocol to use. Options: { udp, tcp }",
 		Value: "udp",
 	}
 	openvpnPortFlag = cli.IntFlag{

@@ -87,10 +87,10 @@ func parseArguments(args []string) (options commandOptions, err error) {
 		"openvpn binary to use for Open VPN connections",
 	)
 	flags.StringVar(
-		&options.ServiceOptions.Protocol,
+		&options.ServiceOptions.OpenvpnProtocol,
 		"openvpn.proto",
 		"udp",
-		"Protocol to use. Options: { udp, tcp }",
+		"Openvpn protocol to use. Options: { udp, tcp }",
 	)
 	flags.IntVar(
 		&options.ServiceOptions.OpenvpnPort,
