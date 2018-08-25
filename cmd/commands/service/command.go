@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package server
+package service
 
 import (
 	"github.com/mysterium/node/cmd"
@@ -57,7 +57,6 @@ var (
 
 // NewCommand function creates service command
 func NewCommand(nodeOptions node.Options) *cli.Command {
-
 	return &cli.Command{
 		Name:      "service",
 		Usage:     "Starts and publishes service on Mysterium Network",

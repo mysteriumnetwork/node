@@ -39,7 +39,7 @@ import (
 	"github.com/mysterium/node/session"
 )
 
-// serviceManager represent entrypoint for Mysterium server with top level components
+// serviceManager represent entrypoint for Mysterium service with top level components
 type serviceManager struct {
 	networkDefinition metadata.NetworkDefinition
 	identityLoader    func() (identity.Identity, error)
@@ -64,7 +64,7 @@ type serviceManager struct {
 	proposalAnnouncementStopped *sync.WaitGroup
 }
 
-// Start starts server - does not block
+// Start starts service - does not block
 func (manager *serviceManager) Start() (err error) {
 	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
 
@@ -166,7 +166,7 @@ func (manager *serviceManager) Start() (err error) {
 	return nil
 }
 
-// Wait blocks until server is stopped
+// Wait blocks until service is stopped
 func (manager *serviceManager) Wait() error {
 	log.Info("Waiting for proposal announcements to finish")
 	manager.proposalAnnouncementStopped.Wait()
@@ -174,7 +174,7 @@ func (manager *serviceManager) Wait() error {
 	return manager.vpnServer.Wait()
 }
 
-// Kill stops server
+// Kill stops service
 func (manager *serviceManager) Kill() error {
 	manager.natService.Stop()
 	manager.vpnServer.Stop()
