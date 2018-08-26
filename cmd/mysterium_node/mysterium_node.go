@@ -89,7 +89,7 @@ func runMain(ctx *cli.Context) error {
 	fmt.Println(versionSummary)
 	fmt.Println()
 
-	return run.NewCommand(options.NodeOptions).Run(ctx)
+	return run.NewCommand().Run(ctx)
 }
 
 func runCLI(options node.Options) error {

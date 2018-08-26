@@ -71,12 +71,12 @@ func ParseNodeFlags(ctx *cli.Context) node.Options {
 	return node.Options{
 		ParseDirectoryFlags(ctx),
 
-		ctx.String(tequilapiAddressFlag.Name),
-		ctx.Int(tequilapiPortFlag.Name),
+		ctx.GlobalString(tequilapiAddressFlag.Name),
+		ctx.GlobalInt(tequilapiPortFlag.Name),
 
-		ctx.String(openvpnBinaryFlag.Name),
-		ctx.String(ipifyUrlFlag.Name),
-		ctx.String(locationDatabaseFlag.Name),
+		ctx.GlobalString(openvpnBinaryFlag.Name),
+		ctx.GlobalString(ipifyUrlFlag.Name),
+		ctx.GlobalString(locationDatabaseFlag.Name),
 
 		ParseNetworkFlags(ctx),
 	}

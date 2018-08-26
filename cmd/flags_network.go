@@ -116,13 +116,13 @@ func RegisterNetworkFlags(flags *[]cli.Flag) {
 // ParseNetworkFlags function fills in directory options from CLI context
 func ParseNetworkFlags(ctx *cli.Context) node.NetworkOptions {
 	return node.NetworkOptions{
-		ctx.Bool(testFlag.Name),
-		ctx.Bool(localnetFlag.Name),
+		ctx.GlobalBool(testFlag.Name),
+		ctx.GlobalBool(localnetFlag.Name),
 
-		ctx.String(discoveryAddressFlag.Name),
-		ctx.String(brokerAddressFlag.Name),
+		ctx.GlobalString(discoveryAddressFlag.Name),
+		ctx.GlobalString(brokerAddressFlag.Name),
 
-		ctx.String(etherRpcFlag.Name),
-		ctx.String(etherContractPaymentsFlag.Name),
+		ctx.GlobalString(etherRpcFlag.Name),
+		ctx.GlobalString(etherContractPaymentsFlag.Name),
 	}
 }

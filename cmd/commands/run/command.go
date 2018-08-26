@@ -25,13 +25,14 @@ import (
 )
 
 // NewCommand function creates run command
-func NewCommand(options node.Options) *cli.Command {
+func NewCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "run",
 		Usage:     "Runs Mysterium node",
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
-			nodeInstance := node.NewNode(options)
+			nodeOptions := cmd.ParseNodeFlags(ctx)
+			nodeInstance := node.NewNode(nodeOptions)
 			cmd.RegisterSignalCallback(utils.SoftKiller(nodeInstance.Kill))
 
 			if err := nodeInstance.Start(); err != nil {

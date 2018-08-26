@@ -103,9 +103,9 @@ func RegisterDirectoryFlags(flags *[]cli.Flag) error {
 // ParseDirectoryFlags function fills in directory options from CLI context
 func ParseDirectoryFlags(ctx *cli.Context) node.DirectoryOptions {
 	return node.DirectoryOptions{
-		ctx.String(dataDirFlag),
-		ctx.String(dataDirFlag),
-		ctx.String(dataDirFlag),
+		ctx.GlobalString(dataDirFlag),
+		ctx.GlobalString(configDirFlag),
+		ctx.GlobalString(runtimeDirFlag),
 	}
 }
 
