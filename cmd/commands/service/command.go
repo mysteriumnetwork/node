@@ -19,7 +19,6 @@ package service
 
 import (
 	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/core/service"
 	"github.com/mysterium/node/utils"
 	"github.com/urfave/cli"
@@ -56,7 +55,7 @@ var (
 )
 
 // NewCommand function creates service command
-func NewCommand(nodeOptions node.Options) *cli.Command {
+func NewCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "service",
 		Usage:     "Starts and publishes service on Mysterium Network",
@@ -67,6 +66,7 @@ func NewCommand(nodeOptions node.Options) *cli.Command {
 			locationCountryFlag,
 		},
 		Action: func(ctx *cli.Context) error {
+			nodeOptions := cmd.ParseNodeFlags(ctx)
 			serviceOptions := service.Options{
 				ctx.String("identity"),
 				ctx.String("identity.passphrase"),

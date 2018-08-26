@@ -75,7 +75,7 @@ type commandOptions struct {
 func parseArguments(args []string) (options commandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
-	err = cmd.ParseFromCmdArgs(flags, &options.NodeOptions.Directories)
+	err = cmd.ParseDirectoryArguments(flags, &options.NodeOptions.Directories)
 	if err != nil {
 		return
 	}
@@ -158,7 +158,7 @@ func parseArguments(args []string) (options commandOptions, err error) {
 		"Address (URL form) of ipify service",
 	)
 
-	cmd.ParseNetworkOptions(flags, &options.NodeOptions.NetworkOptions)
+	cmd.ParseNetworkArguments(flags, &options.NodeOptions.NetworkOptions)
 
 	err = flags.Parse(args[1:])
 	if err != nil {
