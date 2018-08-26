@@ -19,6 +19,7 @@ package service
 
 import (
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/core/service"
 	"github.com/mysterium/node/utils"
 	"github.com/urfave/cli"
@@ -56,6 +57,17 @@ var (
 
 // NewCommand function creates service command
 func NewCommand() *cli.Command {
+	var nodeInstance *node.Node
+	var serviceManager *service.Manager
+
+	stopCommand := func() error {
+		if err := serviceManager.Kill(); err != nil {
+			return err
+		}
+
+		return nodeInstance.Kill()
+	}
+
 	return &cli.Command{
 		Name:      "service",
 		Usage:     "Starts and publishes service on Mysterium Network",
@@ -67,6 +79,8 @@ func NewCommand() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			nodeOptions := cmd.ParseNodeFlags(ctx)
+			nodeInstance = node.NewNode(nodeOptions)
+
 			serviceOptions := service.Options{
 				ctx.String("identity"),
 				ctx.String("identity.passphrase"),
@@ -76,15 +90,19 @@ func NewCommand() *cli.Command {
 
 				ctx.String("location.country"),
 			}
+			serviceManager = service.NewManager(nodeOptions, serviceOptions)
 
-			manager := service.NewManager(nodeOptions, serviceOptions)
-			cmd.RegisterSignalCallback(utils.SoftKiller(manager.Kill))
+			cmd.RegisterSignalCallback(utils.SoftKiller(stopCommand))
 
-			if err := manager.Start(); err != nil {
+			go nodeInstance.Start()
+			if err := serviceManager.Start(); err != nil {
 				return err
 			}
 
-			return manager.Wait()
+			return serviceManager.Wait()
+		},
+		After: func(ctx *cli.Context) error {
+			return stopCommand()
 		},
 	}
 }

@@ -151,6 +151,7 @@ func runCLI(options node.Options) {
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 	)
+
 	cmd.RegisterSignalCallback(utils.HardKiller(cmdCli.Kill))
 
 	if err := cmdCli.Run(); err != nil {
@@ -161,6 +162,7 @@ func runCLI(options node.Options) {
 
 func runCMD(options node.Options) {
 	nodeInstance := node.NewNode(options)
+
 	cmd.RegisterSignalCallback(utils.SoftKiller(nodeInstance.Kill))
 
 	if err := nodeInstance.Start(); err != nil {
