@@ -37,7 +37,7 @@ func TestProposalUnregisteredWhenPingerClosed(t *testing.T) {
 	fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
 
 	finished := make(chan bool)
-	fakeCmd := serviceManager{proposalAnnouncementStopped: &sync.WaitGroup{}}
+	fakeCmd := Manager{proposalAnnouncementStopped: &sync.WaitGroup{}}
 	fakeCmd.proposalAnnouncementStopped.Add(1)
 
 	go func() {

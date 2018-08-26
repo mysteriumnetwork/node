@@ -44,7 +44,7 @@ import (
 )
 
 // NewManager function creates new service manager by given options
-func NewManager(nodeOptions node.Options, serviceOptions Options) *serviceManager {
+func NewManager(nodeOptions node.Options, serviceOptions Options) *Manager {
 
 	networkDefinition := node.GetNetworkDefinition(nodeOptions.NetworkOptions)
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
@@ -75,7 +75,7 @@ func NewManager(nodeOptions node.Options, serviceOptions Options) *serviceManage
 		locationResolver = location.NewResolver(filepath.Join(nodeOptions.Directories.Config, nodeOptions.LocationDatabase))
 	}
 
-	return &serviceManager{
+	return &Manager{
 		networkDefinition: networkDefinition,
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)

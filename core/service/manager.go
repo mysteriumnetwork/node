@@ -39,8 +39,8 @@ import (
 	"github.com/mysterium/node/session"
 )
 
-// serviceManager represent entrypoint for Mysterium service with top level components
-type serviceManager struct {
+// Manager represent entrypoint for Mysterium service with top level components
+type Manager struct {
 	networkDefinition metadata.NetworkDefinition
 	identityLoader    func() (identity.Identity, error)
 	createSigner      identity.SignerFactory
@@ -65,7 +65,7 @@ type serviceManager struct {
 }
 
 // Start starts service - does not block
-func (manager *serviceManager) Start() (err error) {
+func (manager *Manager) Start() (err error) {
 	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
 
 	err = manager.checkDirectories()
@@ -167,7 +167,7 @@ func (manager *serviceManager) Start() (err error) {
 }
 
 // Wait blocks until service is stopped
-func (manager *serviceManager) Wait() error {
+func (manager *Manager) Wait() error {
 	log.Info("Waiting for proposal announcements to finish")
 	manager.proposalAnnouncementStopped.Wait()
 	log.Info("Waiting for vpn service to finish")
@@ -175,7 +175,7 @@ func (manager *serviceManager) Wait() error {
 }
 
 // Kill stops service
-func (manager *serviceManager) Kill() error {
+func (manager *Manager) Kill() error {
 	manager.natService.Stop()
 	manager.vpnServer.Stop()
 
@@ -187,7 +187,7 @@ func (manager *serviceManager) Kill() error {
 	return err
 }
 
-func (manager *serviceManager) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
+func (manager *Manager) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
 	for {
 		err := mysteriumClient.RegisterProposal(proposal, signer)
 		if err != nil {
@@ -201,7 +201,7 @@ func (manager *serviceManager) discoveryAnnouncementLoop(proposal dto_discovery.
 
 }
 
-func (manager *serviceManager) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
+func (manager *Manager) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
 	defer manager.proposalAnnouncementStopped.Done()
 	for {
 		select {
