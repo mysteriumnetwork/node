@@ -43,6 +43,8 @@ type testContext struct {
 	fakeStatsKeeper      *fakeSessionStatsKeeper
 	fakeDialog           *fakeDialog
 	openvpnCreationError error
+
+	sync.RWMutex
 }
 
 var (
@@ -56,11 +58,16 @@ var (
 )
 
 func (tc *testContext) SetupTest() {
+	tc.Lock()
+	defer tc.Unlock()
+
 	tc.fakeDiscoveryClient = server.NewClientFake()
 	tc.fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
 	tc.fakeDialog = &fakeDialog{}
 
 	dialogCreator := func(consumer, provider identity.Identity, contact dto.Contact) (communication.Dialog, error) {
+		tc.RLock()
+		defer tc.RUnlock()
 		return tc.fakeDialog, nil
 	}
 
@@ -81,16 +88,19 @@ func (tc *testContext) SetupTest() {
 		},
 		nil,
 		sync.WaitGroup{},
+		sync.RWMutex{},
 	}
 
 	tc.openvpnCreationError = nil
 	fakeVpnClientFactory := func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, callback state.Callback) (openvpn.Process, error) {
+		tc.RLock()
+		defer tc.RUnlock()
 		//each test can set this value to simulate openvpn creation error, this flag is reset BEFORE each test
 		if tc.openvpnCreationError != nil {
 			return nil, tc.openvpnCreationError
 		}
 
-		tc.fakeOpenVpn.stateCallback = callback
+		tc.fakeOpenVpn.StateCallback(callback)
 		return tc.fakeOpenVpn, nil
 	}
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
@@ -204,7 +214,7 @@ func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 }
 
 func (tc *testContext) TestConnectFailsIfOpenvpnFactoryReturnsError() {
-	tc.openvpnCreationError = errors.New("failed to create vpn instanse")
+	tc.openvpnCreationError = errors.New("failed to create vpn instance")
 	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID))
 }
 
@@ -259,9 +269,14 @@ type fakeOpenvpnClient struct {
 	onStopReportStates  []openvpn.State
 	stateCallback       state.Callback
 	fakeProcess         sync.WaitGroup
+
+	sync.RWMutex
 }
 
 func (foc *fakeOpenvpnClient) Start() error {
+	foc.RLock()
+	defer foc.RUnlock()
+
 	if foc.onStartReturnError != nil {
 		return foc.onStartReturnError
 	}
@@ -286,19 +301,37 @@ func (foc *fakeOpenvpnClient) Stop() {
 }
 
 func (foc *fakeOpenvpnClient) reportState(state openvpn.State) {
+	foc.RLock()
+	defer foc.RUnlock()
+
 	foc.stateCallback(state)
+}
+
+func (foc *fakeOpenvpnClient) StateCallback(callback state.Callback) {
+	foc.Lock()
+	defer foc.Unlock()
+
+	foc.stateCallback = callback
 }
 
 type fakeDialog struct {
 	peerID identity.Identity
 	closed bool
+
+	sync.RWMutex
 }
 
 func (fd *fakeDialog) PeerID() identity.Identity {
+	fd.RLock()
+	defer fd.RUnlock()
+
 	return fd.peerID
 }
 
 func (fd *fakeDialog) Close() error {
+	fd.Lock()
+	defer fd.Unlock()
+
 	fd.closed = true
 	return nil
 }
