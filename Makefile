@@ -20,7 +20,7 @@ help:
 	@echo "\nSee README.md for more."
 
 glide:
-	if [ "$(CMD_GLIDE)" == "" ] ; then curl https://glide.sh/get | sh ; fi
+	if [ "$(CMD_GLIDE)" = "" ] ; then curl https://glide.sh/get | sh ; fi
 
 dep:
 	glide install
