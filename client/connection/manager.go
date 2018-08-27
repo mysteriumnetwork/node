@@ -19,6 +19,7 @@ package connection
 
 import (
 	"errors"
+	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/communication"
@@ -53,6 +54,8 @@ type connectionManager struct {
 	//these are populated by Connect at runtime
 	status          ConnectionStatus
 	cleanConnection func()
+
+	mutex sync.RWMutex
 }
 
 // NewManager creates connection manager with given dependencies
@@ -73,10 +76,14 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		return ErrAlreadyExists
 	}
 
+	manager.mutex.Lock()
 	manager.status = statusConnecting()
+	manager.mutex.Unlock()
 	defer func() {
 		if err != nil {
+			manager.mutex.Lock()
 			manager.status = statusNotConnected()
+			manager.mutex.Unlock()
 		}
 	}()
 
@@ -89,11 +96,14 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 
 func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity) (err error) {
 	cancelable := utils.NewCancelable()
+
+	manager.mutex.Lock()
 	manager.cleanConnection = utils.CallOnce(func() {
 		log.Info(managerLogPrefix, "Cancelling connection initiation")
 		manager.status = statusDisconnecting()
 		cancelable.Cancel()
 	})
+	manager.mutex.Unlock()
 
 	val, err := cancelable.
 		NewRequest(func() (interface{}, error) {
@@ -151,12 +161,14 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		return err
 	}
 
+	manager.mutex.Lock()
 	manager.cleanConnection = func() {
 		log.Info(managerLogPrefix, "Closing active connection")
 		manager.status = statusDisconnecting()
 		openvpnClient.Stop()
 		log.Info(managerLogPrefix, "Openvpn client stop requested")
 	}
+	manager.mutex.Unlock()
 
 	go openvpnClientWaiter(openvpnClient, dialog)
 	go manager.consumeOpenvpnStates(stateChannel, vpnSession.ID)
@@ -164,10 +176,16 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 }
 
 func (manager *connectionManager) Status() ConnectionStatus {
+	manager.mutex.RLock()
+	defer manager.mutex.RUnlock()
+
 	return manager.status
 }
 
 func (manager *connectionManager) Disconnect() error {
+	manager.mutex.RLock()
+	defer manager.mutex.RUnlock()
+
 	if manager.status.State == NotConnected {
 		return ErrNoConnection
 	}
@@ -179,7 +197,7 @@ func warnOnClean() {
 	log.Warn(managerLogPrefix, "Trying to close when there is nothing to close. Possible bug or race condition")
 }
 
-// TODO this can be extraced as depencency later when node selection criteria will be clear
+// TODO this can be extracted as dependency later when node selection criteria will be clear
 func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity) (*dto.ServiceProposal, error) {
 	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
 	if err != nil {
@@ -246,11 +264,18 @@ func (manager *connectionManager) consumeOpenvpnStates(stateChannel <-chan openv
 	for state := range stateChannel {
 		manager.onStateChanged(state, sessionID)
 	}
+
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
+
 	manager.status = statusNotConnected()
 	log.Debug(managerLogPrefix, "State updater stopped")
 }
 
 func (manager *connectionManager) onStateChanged(state openvpn.State, sessionID session.SessionID) {
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
+
 	switch state {
 	case openvpn.ConnectedState:
 		manager.statsKeeper.MarkSessionStart()
