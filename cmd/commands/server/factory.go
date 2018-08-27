@@ -41,6 +41,7 @@ import (
 	"github.com/mysterium/node/openvpn/tls"
 	"github.com/mysterium/node/server"
 	"github.com/mysterium/node/session"
+	"github.com/mysterium/node/tequilapi"
 )
 
 // NewCommand function creates new server command by given options
@@ -67,8 +68,12 @@ func NewCommand(options CommandOptions) *Command {
 
 	locationResolver := locationResolver(options)
 
+	router := tequilapi.NewAPIRouter()
+	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
+
 	return &Command{
 		networkDefinition: networkDefinition,
+		keystore:          keystoreInstance,
 		identityLoader: func() (identity.Identity, error) {
 			return identity_handler.LoadIdentity(identityHandler, options.Identity, options.Passphrase)
 		},
@@ -141,6 +146,8 @@ You should probaly need to do port forwarding on your router: %s.`,
 		},
 		protocol:                    options.Protocol,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
+		httpAPIServer:               httpAPIServer,
+		router:                      router,
 	}
 }
 

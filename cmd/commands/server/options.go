@@ -29,6 +29,9 @@ type CommandOptions struct {
 	Directories   node.DirectoryOptions
 	OpenvpnBinary string
 
+	TequilapiAddress string
+	TequilapiPort    int
+
 	Identity   string
 	Passphrase string
 
@@ -74,6 +77,19 @@ func ParseArguments(args []string) (options CommandOptions, err error) {
 		"openvpn.port",
 		1194,
 		"Openvpn port to use. Default 1194",
+	)
+
+	flags.StringVar(
+		&options.TequilapiAddress,
+		"tequilapi.address",
+		"127.0.0.1",
+		"IP address of interface to listen for incoming connections",
+	)
+	flags.IntVar(
+		&options.TequilapiPort,
+		"tequilapi.port",
+		4050,
+		"Port for listening incoming api requests",
 	)
 
 	flags.StringVar(

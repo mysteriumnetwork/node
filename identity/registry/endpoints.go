@@ -22,6 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/tequilapi/utils"
 )
 
@@ -67,12 +68,14 @@ type RegistrationDataDTO struct {
 type registrationEndpoint struct {
 	dataProvider   RegistrationDataProvider
 	statusProvider IdentityRegistry
+	ownIdentity    *identity.Identity
 }
 
-func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) *registrationEndpoint {
+func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvider IdentityRegistry, identity *identity.Identity) *registrationEndpoint {
 	return &registrationEndpoint{
 		dataProvider:   dataProvider,
 		statusProvider: statusProvider,
+		ownIdentity:    identity,
 	}
 }
 
@@ -95,9 +98,30 @@ func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvid
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *registrationEndpoint) IdentityRegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := params.ByName("id")
+	endpoint.identityRegistrationData(id, resp)
+}
 
+// swagger:operation GET /identity/registration Identity identityRegistration
+// ---
+// summary: Provide identity registration status
+// description: Provides registration status for own identity, if identity is not registered - provides additional data required for identity registration
+// responses:
+//   200:
+//     description: Registration status and data
+//     schema:
+//       "$ref": "#/definitions/RegistrationDataDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *registrationEndpoint) OwnRegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := endpoint.ownIdentity.Address
+	endpoint.identityRegistrationData(id, resp)
+}
+
+func (endpoint *registrationEndpoint) identityRegistrationData(id string, resp http.ResponseWriter) {
 	identity := common.HexToAddress(id)
 
 	isRegistered, err := endpoint.statusProvider.IsRegistered(identity)
@@ -112,7 +136,7 @@ func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter,
 		return
 	}
 
-	registrationResponse := RegistrationDataDTO{
+	registrationDataDTO := &RegistrationDataDTO{
 		Registered: isRegistered,
 		PublicKey: PublicKeyPartsDTO{
 			Part1: common.ToHex(registrationData.PublicKey.Part1),
@@ -124,18 +148,29 @@ func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter,
 			V: registrationData.Signature.V,
 		},
 	}
-
-	utils.WriteAsJSON(registrationResponse, resp)
+	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
 // AddRegistrationEndpoint adds identity registration data endpoint to given http router
-func AddRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) {
+func AddRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider IdentityRegistry, identity *identity.Identity) {
 
 	registrationEndpoint := newRegistrationEndpoint(
 		dataProvider,
 		statusProvider,
+		identity,
 	)
 
-	router.GET("/identities/:id/registration", registrationEndpoint.RegistrationData)
+	router.GET("/identity/registration", registrationEndpoint.OwnRegistrationData)
+}
 
+// AddRegistrationEndpoint adds identity registration data endpoint to given http router
+func AddIdentityRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) {
+
+	registrationEndpoint := newRegistrationEndpoint(
+		dataProvider,
+		statusProvider,
+		nil,
+	)
+
+	router.GET("/identities/:id/registration", registrationEndpoint.IdentityRegistrationData)
 }

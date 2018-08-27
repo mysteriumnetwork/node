@@ -154,7 +154,7 @@ func (node *Node) Start() error {
 		return err
 	}
 
-	registry.AddRegistrationEndpoint(node.router, registry.NewRegistrationDataProvider(node.keystore), statusProvider)
+	registry.AddIdentityRegistrationEndpoint(node.router, registry.NewRegistrationDataProvider(node.keystore), statusProvider)
 
 	err = node.httpAPIServer.StartServing()
 	if err != nil {

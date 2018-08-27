@@ -22,7 +22,9 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/blockchain"
 	"github.com/mysterium/node/communication"
 	"github.com/mysterium/node/identity"
@@ -38,11 +40,13 @@ import (
 	"github.com/mysterium/node/server"
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/session"
+	"github.com/mysterium/node/tequilapi"
 )
 
 // Command represent entrypoint for Mysterium server with top level components
 type Command struct {
 	networkDefinition metadata.NetworkDefinition
+	keystore          *keystore.KeyStore
 	identityLoader    func() (identity.Identity, error)
 	createSigner      identity.SignerFactory
 	ipResolver        ip.Resolver
@@ -63,6 +67,8 @@ type Command struct {
 	openvpnServiceAddress       func(string, string) string
 	protocol                    string
 	proposalAnnouncementStopped *sync.WaitGroup
+	httpAPIServer               tequilapi.APIServer
+	router                      *httprouter.Router
 }
 
 // Start starts server - does not block
@@ -185,6 +191,28 @@ func (cmd *Command) Start() (err error) {
 		go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 	}
 
+	err = cmd.registerTequilAPI(identityRegistry, providerID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cmd *Command) registerTequilAPI(statusProvider registry.IdentityRegistry, providerID identity.Identity) error {
+	registry.AddRegistrationEndpoint(cmd.router, registry.NewRegistrationDataProvider(cmd.keystore), statusProvider, &providerID)
+
+	err := cmd.httpAPIServer.StartServing()
+	if err != nil {
+		return err
+	}
+
+	port, err := cmd.httpAPIServer.Port()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Api started on: %d", port)
 	return nil
 }
 
