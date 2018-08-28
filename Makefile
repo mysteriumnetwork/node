@@ -2,7 +2,7 @@
 
 default: help
 
-CMD_GLIDE := $(shell which glide)
+CMD_DEP := $(shell which dep)
 SERVER_DOCKERFILE = bin/server_docker/ubuntu/Dockerfile
 SERVER_IMAGE_NAME = mysteriumnetwork/mysterium-node:latest
 CLIENT_DOCKERFILE = bin/client_docker/ubuntu/Dockerfile
@@ -10,8 +10,8 @@ CLIENT_IMAGE_NAME = mysteriumnetwork/mysterium-client:latest
 
 help:
 	@echo "Select a sub command \n"
-	@echo "glide:\t Install package manager 'glide'"
-	@echo "dep:\t Get dependencies"
+	@echo "dep:\t Install package manager 'dep'"
+	@echo "dep-ensure:\t Get dependencies"
 	@echo "server:\t Build Mysterium server"
 	@echo "client:\t Build Mysterium client"
 	@echo "server-image:\t Build Mysterium server Docker image"
@@ -19,11 +19,11 @@ help:
 	@echo "help:\t Display this help"
 	@echo "\nSee README.md for more."
 
-glide:
-	if [ "$(CMD_GLIDE)" == "" ] ; then curl https://glide.sh/get | sh ; fi
-
 dep:
-	glide install
+	if [ "$(CMD_DEP)" == "" ] ; then curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh ; fi
+
+dep-ensure:
+	dep ensure
 
 server:
 	./bin/server_build
