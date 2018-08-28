@@ -21,11 +21,12 @@ import (
 	"flag"
 
 	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/core/node"
 )
 
 // CommandOptions describes options which are required to start Command
 type CommandOptions struct {
-	Directories   cmd.DirectoryOptions
+	Directories   node.DirectoryOptions
 	OpenvpnBinary string
 
 	Identity   string
@@ -44,7 +45,7 @@ type CommandOptions struct {
 	OpenvpnPort int
 
 	AgreedTermsConditions bool
-	cmd.NetworkOptions
+	node.NetworkOptions
 }
 
 // ParseArguments parses CLI flags and adds to CommandOptions structure

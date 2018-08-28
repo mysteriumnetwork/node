@@ -20,54 +20,13 @@ package cmd
 import (
 	"flag"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/metadata"
+	"github.com/urfave/cli"
 )
 
-// NetworkOptions describes possible parameters of network configuration
-type NetworkOptions struct {
-	DiscoveryAPIAddress  string
-	BrokerAddress        string
-	Localnet             bool
-	Testnet              bool
-	EtherClientRPC       string
-	EtherPaymentsAddress string
-}
-
-// GetNetworkDefinition function returns network definition combined from testnet/localnet flags and possible overrides
-func GetNetworkDefinition(options NetworkOptions) metadata.NetworkDefinition {
-	network := metadata.DefaultNetwork
-
-	switch {
-	case options.Testnet:
-		network = metadata.TestnetDefinition
-	case options.Localnet:
-		network = metadata.LocalnetDefinition
-	}
-
-	//override defined values one by one from options
-	if options.DiscoveryAPIAddress != metadata.DefaultNetwork.DiscoveryAPIAddress {
-		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
-	}
-
-	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
-		network.BrokerAddress = options.BrokerAddress
-	}
-
-	normalizedAddress := common.HexToAddress(options.EtherPaymentsAddress)
-	if normalizedAddress.String() != metadata.DefaultNetwork.PaymentsContractAddress.String() {
-		network.PaymentsContractAddress = common.HexToAddress(options.EtherPaymentsAddress)
-	}
-
-	if options.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
-		network.EtherClientRPC = options.EtherClientRPC
-	}
-
-	return network
-}
-
 // ParseNetworkOptions function parses (or registers) network options from flag library
-func ParseNetworkOptions(flags *flag.FlagSet, options *NetworkOptions) {
+func ParseNetworkOptions(flags *flag.FlagSet, options *node.NetworkOptions) {
 	flags.StringVar(
 		&options.DiscoveryAPIAddress,
 		"discovery-address",
@@ -86,7 +45,7 @@ func ParseNetworkOptions(flags *flag.FlagSet, options *NetworkOptions) {
 		&options.Localnet,
 		"localnet",
 		false,
-		"Defines network configuration which expects localy deployed broker and discovery services",
+		"Defines network configuration which expects locally deployed broker and discovery services",
 	)
 
 	flags.BoolVar(
@@ -108,5 +67,48 @@ func ParseNetworkOptions(flags *flag.FlagSet, options *NetworkOptions) {
 		"ether.contract.payments",
 		metadata.DefaultNetwork.PaymentsContractAddress.String(),
 		"Address of payments contract",
+	)
+}
+
+// RegisterNetworkFlags function register directory options to flag set
+func RegisterNetworkFlags(flags *[]cli.Flag, options *node.Options) {
+	*flags = append(
+		*flags,
+		cli.BoolFlag{
+			Name:        "testnet",
+			Usage:       "Defines test network configuration",
+			Destination: &options.Testnet,
+		},
+		cli.BoolFlag{
+			Name:        "localnet",
+			Usage:       "Defines network configuration which expects locally deployed broker and discovery services",
+			Destination: &options.Localnet,
+		},
+
+		cli.StringFlag{
+			Name:        "discovery-address",
+			Usage:       "Address (URL form) of discovery service",
+			Destination: &options.NetworkOptions.DiscoveryAPIAddress,
+			Value:       metadata.DefaultNetwork.DiscoveryAPIAddress,
+		},
+		cli.StringFlag{
+			Name:        "broker-address",
+			Usage:       "Address (IP or domain name) of message broker",
+			Destination: &options.BrokerAddress,
+			Value:       metadata.DefaultNetwork.BrokerAddress,
+		},
+
+		cli.StringFlag{
+			Name:        "ether.client.rpc",
+			Usage:       "Url or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
+			Destination: &options.EtherClientRPC,
+			Value:       metadata.DefaultNetwork.EtherClientRPC,
+		},
+		cli.StringFlag{
+			Name:        "ether.contract.payments",
+			Usage:       "Address of payments contract",
+			Destination: &options.EtherPaymentsAddress,
+			Value:       metadata.DefaultNetwork.PaymentsContractAddress.String(),
+		},
 	)
 }

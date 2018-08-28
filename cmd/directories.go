@@ -18,27 +18,17 @@
 package cmd
 
 import (
-	"errors"
 	"flag"
 	"os"
 	"path/filepath"
 
-	log "github.com/cihub/seelog"
 	"github.com/mitchellh/go-homedir"
+	"github.com/mysterium/node/core/node"
+	"github.com/urfave/cli"
 )
 
-// DirectoryOptions describes data structure holding directories as parameters
-type DirectoryOptions struct {
-	// Runtime directory for various temp file - usually current working dir
-	Runtime string
-	// Config directory stores all data needed for runtime (db scripts etc.)
-	Config string
-	// Data directory stores persistent data like keystore, cli history, etc.
-	Data string
-}
-
 // ParseFromCmdArgs function takes directory options and fills in values from FlagSet structure
-func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
+func ParseFromCmdArgs(flags *flag.FlagSet, options *node.DirectoryOptions) error {
 
 	userHomeDir, err := homedir.Dir()
 	if err != nil {
@@ -71,19 +61,40 @@ func ParseFromCmdArgs(flags *flag.FlagSet, options *DirectoryOptions) error {
 	return nil
 }
 
-// Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)
-func (options *DirectoryOptions) Check() error {
-	err := ensureDirExists(options.Config)
+// RegisterDirectoryFlags function register directory options to flag set
+func RegisterDirectoryFlags(flags *[]cli.Flag, options *node.Options) error {
+	userHomeDir, err := homedir.Dir()
 	if err != nil {
 		return err
 	}
 
-	err = ensureOrCreateDir(options.Runtime)
+	currentDir, err := getExecutableDir()
 	if err != nil {
 		return err
 	}
 
-	return ensureOrCreateDir(options.Data)
+	*flags = append(
+		*flags,
+		cli.StringFlag{
+			Name:        "data-dir",
+			Usage:       "Data directory containing keystore & other persistent files",
+			Destination: &options.Directories.Data,
+			Value:       filepath.Join(userHomeDir, ".mysterium"),
+		},
+		cli.StringFlag{
+			Name:        "config-dir",
+			Usage:       "Configs directory containing all configuration, script and helper files",
+			Destination: &options.Directories.Config,
+			Value:       filepath.Join(currentDir, "config"),
+		},
+		cli.StringFlag{
+			Name:        "runtime-dir",
+			Usage:       "Runtime writable directory for temp files",
+			Destination: &options.Directories.Runtime,
+			Value:       currentDir,
+		},
+	)
+	return nil
 }
 
 func getExecutableDir() (string, error) {
@@ -93,24 +104,4 @@ func getExecutableDir() (string, error) {
 	}
 
 	return filepath.Dir(executable), nil
-}
-
-func ensureOrCreateDir(dir string) error {
-	err := ensureDirExists(dir)
-	if os.IsNotExist(err) {
-		log.Info("[Directory config checker] ", "Directory: ", dir, " does not exit. Creating new one")
-		return os.MkdirAll(dir, 0600)
-	}
-	return err
-}
-
-func ensureDirExists(dir string) error {
-	fileStat, err := os.Stat(dir)
-	if err != nil {
-		return err
-	}
-	if isDir := fileStat.IsDir(); !isDir {
-		return errors.New("directory expected")
-	}
-	return nil
 }

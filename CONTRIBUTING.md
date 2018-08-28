@@ -98,12 +98,13 @@ dep ensure
 * Add new package to project
 ```bash
 dep ensure -add github.com/ccding/go-stun
+dep ensure -add github.com/ccding/go-stun@^0.1.0
 ```
 
 * Update package in project
 ```bash
 vim Gopkg.toml
-dep ensure
+dep ensure -update
 ```
 
 ## Creating pull request

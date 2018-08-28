@@ -15,30 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package logconfig
+package version
 
-import "github.com/cihub/seelog"
+import (
+	"bytes"
+	"flag"
+	"testing"
 
-const seewayLogXmlConfig = `
-<seelog>
-	<outputs formatid="main">
-		<console/>
-	</outputs>
-	<formats>
-		<format id="main" format="%UTCDate(2006-01-02T15:04:05.999999999) [%Level] %Msg%n"/>
-	</formats>
-</seelog>
-`
+	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli"
+)
 
-// Bootstrap loads seelog package into the overall system
-func Bootstrap() {
-	newLogger, err := seelog.LoggerFromConfigAsString(seewayLogXmlConfig)
-	if err != nil {
-		seelog.Warn("Error parsing seelog configuration", err)
-		return
-	}
-	err = seelog.UseLogger(newLogger)
-	if err != nil {
-		seelog.Warn("Error setting new logger for seelog", err)
-	}
+func TestCommandRun(t *testing.T) {
+	output := bytes.NewBufferString("")
+
+	command := NewCommand("0.0.1-alpha-male")
+	command.Run(cli.NewContext(
+		&cli.App{Writer: output},
+		flag.NewFlagSet("test", 0),
+		nil,
+	))
+
+	assert.Equal(t, "0.0.1-alpha-male\n", output.String())
 }

@@ -15,30 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package logconfig
+package run
 
-import "github.com/cihub/seelog"
+import (
+	"github.com/mysterium/node/cmd"
+	"github.com/mysterium/node/core/node"
+	"github.com/mysterium/node/utils"
+	"github.com/urfave/cli"
+)
 
-const seewayLogXmlConfig = `
-<seelog>
-	<outputs formatid="main">
-		<console/>
-	</outputs>
-	<formats>
-		<format id="main" format="%UTCDate(2006-01-02T15:04:05.999999999) [%Level] %Msg%n"/>
-	</formats>
-</seelog>
-`
+// NewCommand function creates run command
+func NewCommand(options node.Options) *cli.Command {
+	return &cli.Command{
+		Name:      "run",
+		Usage:     "Runs Mysterium node",
+		ArgsUsage: " ",
+		Action: func(ctx *cli.Context) error {
+			nodeInstance := node.NewNode(options)
+			cmd.RegisterSignalCallback(utils.SoftKiller(nodeInstance.Kill))
 
-// Bootstrap loads seelog package into the overall system
-func Bootstrap() {
-	newLogger, err := seelog.LoggerFromConfigAsString(seewayLogXmlConfig)
-	if err != nil {
-		seelog.Warn("Error parsing seelog configuration", err)
-		return
-	}
-	err = seelog.UseLogger(newLogger)
-	if err != nil {
-		seelog.Warn("Error setting new logger for seelog", err)
+			if err := nodeInstance.Start(); err != nil {
+				return err
+			}
+
+			return nodeInstance.Wait()
+		},
 	}
 }

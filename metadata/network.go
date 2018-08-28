@@ -17,7 +17,9 @@
 
 package metadata
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+)
 
 // NetworkDefinition structure holds all parameters which describe particular network
 type NetworkDefinition struct {

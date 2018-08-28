@@ -22,18 +22,18 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cihub/seelog"
+	"flag"
+
 	"github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/cmd/commands/cli"
-	"github.com/mysterium/node/cmd/commands/run"
-	_ "github.com/mysterium/node/logconfig"
+	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/metadata"
 	tequilapi_client "github.com/mysterium/node/tequilapi/client"
+	"github.com/mysterium/node/utils"
 )
 
 func main() {
-	defer seelog.Flush()
-	options, err := run.ParseArguments(os.Args)
+	options, err := parseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -51,39 +51,124 @@ func main() {
 	} else if options.LicenseConditions {
 		fmt.Println(metadata.LicenseConditions)
 	} else if options.CLI {
-		runCLI(options)
+		runCLI(options.NodeOptions)
 	} else {
 		fmt.Println(versionSummary)
 		fmt.Println()
 
-		runCMD(options)
+		runCMD(options.NodeOptions)
 	}
 }
 
-func runCLI(options run.CommandOptions) {
+type commandOptions struct {
+	CLI               bool
+	Version           bool
+	LicenseWarranty   bool
+	LicenseConditions bool
+
+	NodeOptions node.Options
+}
+
+func parseArguments(args []string) (options commandOptions, err error) {
+	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
+
+	err = cmd.ParseFromCmdArgs(flags, &options.NodeOptions.Directories)
+	if err != nil {
+		return
+	}
+
+	flags.StringVar(
+		&options.NodeOptions.OpenvpnBinary,
+		"openvpn.binary",
+		"openvpn", //search in $PATH by default,
+		"openvpn binary to use for Open VPN connections",
+	)
+
+	flags.StringVar(
+		&options.NodeOptions.TequilapiAddress,
+		"tequilapi.address",
+		"127.0.0.1",
+		"IP address of interface to listen for incoming connections",
+	)
+	flags.IntVar(
+		&options.NodeOptions.TequilapiPort,
+		"tequilapi.port",
+		4050,
+		"Port for listening incoming api requests",
+	)
+
+	flags.BoolVar(
+		&options.CLI,
+		"cli",
+		false,
+		"Run an interactive CLI based Mysterium UI",
+	)
+	flags.BoolVar(
+		&options.Version,
+		"version",
+		false,
+		"Show version",
+	)
+	flags.BoolVar(
+		&options.LicenseWarranty,
+		"license.warranty",
+		false,
+		"Show warranty",
+	)
+	flags.BoolVar(
+		&options.LicenseConditions,
+		"license.conditions",
+		false,
+		"Show conditions",
+	)
+
+	flags.StringVar(
+		&options.NodeOptions.IpifyUrl,
+		"ipify-url",
+		"https://api.ipify.org/",
+		"Address (URL form) of ipify service",
+	)
+
+	flags.StringVar(
+		&options.NodeOptions.LocationDatabase,
+		"location.database",
+		"GeoLite2-Country.mmdb",
+		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
+	)
+
+	cmd.ParseNetworkOptions(flags, &options.NodeOptions.NetworkOptions)
+
+	err = flags.Parse(args[1:])
+	if err != nil {
+		return
+	}
+
+	return options, err
+}
+
+func runCLI(options node.Options) {
 	cmdCli := cli.NewCommand(
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 	)
-	stop := cmd.HardKiller(cmdCli.Kill)
-	cmd.RegisterSignalCallback(stop)
+	cmd.RegisterSignalCallback(utils.HardKiller(cmdCli.Kill))
+
 	if err := cmdCli.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func runCMD(options run.CommandOptions) {
-	cmdRun := run.NewCommand(options)
-	stop := cmd.SoftKiller(cmdRun.Kill)
-	cmd.RegisterSignalCallback(stop)
+func runCMD(options node.Options) {
+	nodeInstance := node.NewNode(options)
+	cmd.RegisterSignalCallback(utils.SoftKiller(nodeInstance.Kill))
 
-	if err := cmdRun.Start(); err != nil {
+	if err := nodeInstance.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	if err := cmdRun.Wait(); err != nil {
+	if err := nodeInstance.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

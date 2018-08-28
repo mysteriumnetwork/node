@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:0626d6801a7c1020d4586c9aa950638eab7b71fb7e4d8a18514f18b3dddf51be"
+  digest = "1:b4577772bd3b54569d18fb2c3d7fa120cc30d6707638a137a7582019fc89c456"
   name = "github.com/MysteriumNetwork/payments"
   packages = [
     "cli/helpers",
@@ -13,8 +13,8 @@
     "registry/generated",
   ]
   pruneopts = "UT"
-  revision = "6fd859db4476d7a7630b88210b3b3ffc874dcf4d"
-  version = "v0.0.4-beta"
+  revision = "0aaddad6b08e57d0d110ddf5d9a977965fe79b66"
+  version = "0.0.5-beta"
 
 [[projects]]
   digest = "1:7d191fd0c54ff370eaf6116a14dafe2a328df487baea280699f597aae858d00d"
@@ -258,6 +258,14 @@
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
 
 [[projects]]
+  digest = "1:b24d38b282bacf9791408a080f606370efa3d364e4b5fd9ba0f7b87786d3b679"
+  name = "github.com/urfave/cli"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
+
+[[projects]]
   digest = "1:29672ea8ec3ef342d345f668d47666e45366b7691080ee4c07bf4851f4fa8864"
   name = "golang.org/x/crypto"
   packages = [
@@ -388,6 +396,7 @@
     "github.com/satori/go.uuid",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/suite",
+    "github.com/urfave/cli",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

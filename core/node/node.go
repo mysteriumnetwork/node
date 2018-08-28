@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package run
+package node
 
 import (
 	"path/filepath"
@@ -26,7 +26,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/blockchain"
 	"github.com/mysterium/node/client/connection"
-	node_cmd "github.com/mysterium/node/cmd"
 	"github.com/mysterium/node/communication"
 	nats_dialog "github.com/mysterium/node/communication/nats/dialog"
 	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
@@ -34,6 +33,7 @@ import (
 	"github.com/mysterium/node/identity/registry"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/location"
+	"github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/openvpn"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
@@ -41,13 +41,15 @@ import (
 	"github.com/mysterium/node/service_discovery/dto"
 	"github.com/mysterium/node/tequilapi"
 	tequilapi_endpoints "github.com/mysterium/node/tequilapi/endpoints"
+	"github.com/mysterium/node/utils"
 )
 
-// NewCommand function creates new client command by given options
-func NewCommand(options CommandOptions) *Command {
-	networkDefinition := node_cmd.GetNetworkDefinition(options.NetworkOptions)
+// NewNode function creates new Mysterium node by given options
+func NewNode(options Options) *Node {
+	networkDefinition := GetNetworkDefinition(options.NetworkOptions)
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
+	logconfig.Bootstrap()
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 
@@ -88,7 +90,6 @@ func NewCommand(options CommandOptions) *Command {
 	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
-
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
 	tequilapi_endpoints.AddRoutesForIdentities(router, identityManager, mysteriumClient, signerFactory)
@@ -96,7 +97,7 @@ func NewCommand(options CommandOptions) *Command {
 	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 
-	return &Command{
+	return &Node{
 		options:               options,
 		network:               networkDefinition,
 		keystore:              keystoreInstance,
@@ -107,9 +108,9 @@ func NewCommand(options CommandOptions) *Command {
 	}
 }
 
-//Command represent entrypoint for Mysterium client with top level components
-type Command struct {
-	options               CommandOptions
+// Node represent entrypoint for Mysterium node with top level components
+type Node struct {
+	options               Options
 	network               metadata.NetworkDefinition
 	keystore              *keystore.KeyStore
 	connectionManager     connection.Manager
@@ -118,49 +119,49 @@ type Command struct {
 	originalLocationCache location.Cache
 }
 
-// Start starts Tequilapi service, fetches location
-func (cmd *Command) Start() error {
+// Start starts Mysterium node (Tequilapi service, fetches location)
+func (node *Node) Start() error {
 	log.Infof("Starting Mysterium Client (%s)", metadata.VersionAsString())
 
-	err := openvpn.CheckOpenvpnBinary(cmd.options.OpenvpnBinary)
+	err := openvpn.CheckOpenvpnBinary(node.options.OpenvpnBinary)
 	if err != nil {
 		return err
 	}
 
-	err = cmd.options.Directories.Check()
+	err = node.options.Directories.Check()
 	if err != nil {
 		return err
 	}
 
-	originalLocation, err := cmd.originalLocationCache.RefreshAndGet()
+	originalLocation, err := node.originalLocationCache.RefreshAndGet()
 	if err != nil {
 		log.Warn("Failed to detect original country: ", err)
 	} else {
 		log.Info("Original country detected: ", originalLocation.Country)
 	}
 
-	tequilapi_endpoints.AddRouteForStop(cmd.router, node_cmd.SoftKiller(cmd.Kill))
+	tequilapi_endpoints.AddRouteForStop(node.router, utils.SoftKiller(node.Kill))
 
-	log.Info("Using Eth endpoint: ", cmd.network.EtherClientRPC)
-	client, err := blockchain.NewClient(cmd.network.EtherClientRPC)
+	log.Info("Using Eth endpoint: ", node.network.EtherClientRPC)
+	client, err := blockchain.NewClient(node.network.EtherClientRPC)
 	if err != nil {
 		return err
 	}
 
-	log.Info("Using Contract at address:", cmd.network.PaymentsContractAddress.String())
-	statusProvider, err := registry.NewIdentityRegistry(client, cmd.network.PaymentsContractAddress)
+	log.Info("Using Contract at address:", node.network.PaymentsContractAddress.String())
+	statusProvider, err := registry.NewIdentityRegistry(client, node.network.PaymentsContractAddress)
 	if err != nil {
 		return err
 	}
 
-	registry.AddRegistrationEndpoint(cmd.router, registry.NewRegistrationDataProvider(cmd.keystore), statusProvider)
+	registry.AddRegistrationEndpoint(node.router, registry.NewRegistrationDataProvider(node.keystore), statusProvider)
 
-	err = cmd.httpAPIServer.StartServing()
+	err = node.httpAPIServer.StartServing()
 	if err != nil {
 		return err
 	}
 
-	port, err := cmd.httpAPIServer.Port()
+	port, err := node.httpAPIServer.Port()
 	if err != nil {
 		return err
 	}
@@ -170,15 +171,14 @@ func (cmd *Command) Start() error {
 	return nil
 }
 
-// Wait blocks until tequilapi service is stopped
-func (cmd *Command) Wait() error {
-	return cmd.httpAPIServer.Wait()
+// Wait blocks until Mysterium node is stopped
+func (node *Node) Wait() error {
+	return node.httpAPIServer.Wait()
 }
 
-// Kill stops tequilapi service
-func (cmd *Command) Kill() error {
-
-	err := cmd.connectionManager.Disconnect()
+// Kill stops Mysterium node
+func (node *Node) Kill() error {
+	err := node.connectionManager.Disconnect()
 	if err != nil {
 		switch err {
 		case connection.ErrNoConnection:
@@ -190,8 +190,10 @@ func (cmd *Command) Kill() error {
 		log.Info("Connection closed")
 	}
 
-	cmd.httpAPIServer.Stop()
+	node.httpAPIServer.Stop()
 	log.Info("Api stopped")
+
+	log.Flush()
 
 	return nil
 }

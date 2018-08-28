@@ -26,6 +26,7 @@ import (
 	"github.com/mysterium/node/cmd/commands/server"
 	_ "github.com/mysterium/node/logconfig"
 	"github.com/mysterium/node/metadata"
+	"github.com/mysterium/node/utils"
 )
 
 func main() {
@@ -70,7 +71,7 @@ func runCMD(options server.CommandOptions) {
 		os.Exit(1)
 	}
 
-	cmd.RegisterSignalCallback(cmd.SoftKiller(serverCommand.Kill))
+	cmd.RegisterSignalCallback(utils.SoftKiller(serverCommand.Kill))
 
 	if err := serverCommand.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
