@@ -19,6 +19,7 @@ package dialog
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/mysterium/node/communication"
 
@@ -48,6 +49,8 @@ type dialogWaiter struct {
 	mySigner         identity.Signer
 	dialogs          []communication.Dialog
 	identityRegistry registry.IdentityRegistry
+
+	sync.RWMutex
 }
 
 func (waiter *dialogWaiter) Start() (dto_discovery.Contact, error) {
@@ -62,6 +65,9 @@ func (waiter *dialogWaiter) Start() (dto_discovery.Contact, error) {
 }
 
 func (waiter *dialogWaiter) Stop() error {
+	waiter.RLock()
+	defer waiter.RUnlock()
+
 	for _, dialog := range waiter.dialogs {
 		dialog.Close()
 	}
@@ -92,7 +98,9 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 			return &responseInternalError, nil
 		}
 
+		waiter.Lock()
 		waiter.dialogs = append(waiter.dialogs, dialog)
+		waiter.Unlock()
 
 		log.Info(waiterLogPrefix, fmt.Sprintf("Accepted dialog from: '%s'", request.PeerID))
 		return &responseOK, nil

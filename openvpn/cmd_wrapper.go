@@ -74,7 +74,12 @@ func (cw *CmdWrapper) Start(arguments []string) (err error) {
 
 	// Watch if the cmd exits
 	go cw.waitForExit(cmd)
-	go cw.waitForShutdown(cmd)
+
+	cw.cmdShutdownWaiter.Add(1)
+	go func() {
+		cw.waitForShutdown(cmd)
+		defer cw.cmdShutdownWaiter.Done()
+	}()
 
 	return
 }
@@ -110,9 +115,6 @@ func (cw *CmdWrapper) waitForExit(cmd *exec.Cmd) {
 }
 
 func (cw *CmdWrapper) waitForShutdown(cmd *exec.Cmd) {
-	cw.cmdShutdownWaiter.Add(1)
-	defer cw.cmdShutdownWaiter.Done()
-
 	<-cw.cmdShutdownStarted
 	//First - shutdown gracefully by sending SIGINT (the only two signals guaranteed to be present in all OS'es SIGINT and SIGKILL)
 	//TODO - add timer and send SIGKILL after timeout?
