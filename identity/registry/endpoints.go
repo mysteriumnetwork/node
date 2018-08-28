@@ -166,7 +166,7 @@ func AddRegistrationEndpoint(router *httprouter.Router, dataProvider Registratio
 	router.GET("/identity/registration", registrationEndpoint.OwnRegistrationData)
 }
 
-// AddRegistrationEndpoint adds identity registration data endpoint to given http router
+// AddIdentityRegistrationEndpoint adds identity registration data endpoint to given http router
 func AddIdentityRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) {
 
 	registrationEndpoint := newRegistrationEndpoint(

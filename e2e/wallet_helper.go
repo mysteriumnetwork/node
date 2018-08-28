@@ -26,7 +26,6 @@ import (
 
 	"github.com/MysteriumNetwork/payments/cli/helpers"
 	mysttoken "github.com/MysteriumNetwork/payments/mysttoken/generated"
-	paymentsRegistry "github.com/MysteriumNetwork/payments/registry"
 	registry "github.com/MysteriumNetwork/payments/registry/generated"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -69,21 +68,6 @@ func (wallet *CliWallet) RegisterIdentity(dto client.RegistrationStatusDTO) erro
 	copy(S[:], common.FromHex(dto.Signature.S))
 
 	tx, err := wallet.identityRegistry.RegisterIdentity(Pub1, Pub2, dto.Signature.V, R, S)
-	if err != nil {
-		return err
-	}
-	return wallet.checkTxResult(tx)
-}
-
-// RegisterIdentity registers identity with given data on behalf of user
-func (wallet *CliWallet) RegisterIdentityPlainData(data *paymentsRegistry.RegistrationData) error {
-	signature := data.Signature
-	var pubKeyPart1 [32]byte
-	var pubKeyPart2 [32]byte
-	copy(pubKeyPart1[:], data.PublicKey.Part1)
-	copy(pubKeyPart2[:], data.PublicKey.Part2)
-
-	tx, err := wallet.identityRegistry.RegisterIdentity(pubKeyPart1, pubKeyPart2, signature.V, signature.R, signature.S)
 	if err != nil {
 		return err
 	}

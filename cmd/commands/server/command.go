@@ -167,18 +167,26 @@ func (cmd *Command) Start() (err error) {
 		return err
 	}
 
-	signer := cmd.createSigner(providerID)
-
+	providerAddress := common.HexToAddress(providerID.Address)
 	// check if node's identity is registered
-	registered, err := identityRegistry.IsRegistered(common.HexToAddress(providerID.Address))
+	registered, err := identityRegistry.IsRegistered(providerAddress)
 	if err != nil {
 		return err
 	}
 
+	registrationDataProvider := registry.NewRegistrationDataProvider(cmd.keystore)
+	signer := cmd.createSigner(providerID)
 	cmd.proposalAnnouncementStopped.Add(1)
 
 	// if not registered - wait indefinitely for identity registration event
 	if !registered {
+		registrationData, err := registrationDataProvider.ProvideRegistrationData(providerAddress)
+		if err != nil {
+			return err
+		}
+
+		registry.PrintRegistrationData(registrationData)
+
 		go func() {
 			killed := cmd.identityRegistrationWaitLoop(providerID, identityRegistry, stopRegistrationWaitLoop)
 			if killed {
@@ -191,7 +199,7 @@ func (cmd *Command) Start() (err error) {
 		go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 	}
 
-	err = cmd.registerTequilAPI(identityRegistry, providerID)
+	err = cmd.registerTequilAPI(identityRegistry, providerID, registrationDataProvider)
 	if err != nil {
 		return err
 	}
@@ -199,8 +207,8 @@ func (cmd *Command) Start() (err error) {
 	return nil
 }
 
-func (cmd *Command) registerTequilAPI(statusProvider registry.IdentityRegistry, providerID identity.Identity) error {
-	registry.AddRegistrationEndpoint(cmd.router, registry.NewRegistrationDataProvider(cmd.keystore), statusProvider, &providerID)
+func (cmd *Command) registerTequilAPI(statusProvider registry.IdentityRegistry, providerID identity.Identity, registrationDataProvider registry.RegistrationDataProvider) error {
+	registry.AddRegistrationEndpoint(cmd.router, registrationDataProvider, statusProvider, &providerID)
 
 	err := cmd.httpAPIServer.StartServing()
 	if err != nil {
@@ -236,11 +244,8 @@ func (cmd *Command) identityRegistrationWaitLoop(providerID identity.Identity, i
 			}
 			log.Info("registration wait loop stopped")
 			return true
-		case <-time.After(60 * time.Minute):
-			log.Error(registry.ErrNoIdentityRegisteredTimeout)
 		}
 	}
-	return true
 }
 
 // Wait blocks until server is stopped

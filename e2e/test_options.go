@@ -25,8 +25,10 @@ import (
 	"github.com/mysterium/node/tequilapi/client"
 )
 
+// Domain defines domain in which tequilAPI client will be executed
 type Domain int
 
+// Possible domain constants
 const (
 	Client Domain = 0
 	Server Domain = 1

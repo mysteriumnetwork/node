@@ -19,7 +19,6 @@ package registry
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/MysteriumNetwork/payments/registry"
@@ -30,8 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var ErrNoIdentityRegisteredTimeout = errors.New("no identity registration, waiting for registration")
-
+// Register type combines different IdentityRegistry interfaces under single type
 type Register struct {
 	callerSession *generated.IdentityRegistryCallerSession
 	filterer      *generated.IdentityRegistryFilterer
@@ -52,6 +50,7 @@ type keystoreRegistrationDataProvider struct {
 	ks *keystore.KeyStore
 }
 
+// ProvideRegistrationData returns registration data needed to register given identity with payments contract
 func (kpg *keystoreRegistrationDataProvider) ProvideRegistrationData(identity common.Address) (*registry.RegistrationData, error) {
 	identityHolder := registry.FromKeystore(kpg.ks, identity)
 
@@ -88,10 +87,12 @@ func NewIdentityRegistry(contractBackend bind.ContractBackend, registryAddress c
 	}, nil
 }
 
+// IsRegistered returns identity registration status within payments contract
 func (register *Register) IsRegistered(identity common.Address) (bool, error) {
 	return register.callerSession.IsRegistered(identity)
 }
 
+// WaitForRegistrationEvent returns registeredEvent if given providerAddress was registered within payments contract
 func (register *Register) WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan int, stopLoop chan int) {
 	identities := []common.Address{providerAddress}
 
@@ -106,7 +107,7 @@ func (register *Register) WaitForRegistrationEvent(providerAddress common.Addres
 		case <-stopLoop:
 			registeredEvent <- -1
 			return
-		case <-time.After(500 * time.Millisecond):
+		case <-time.After(1 * time.Second):
 			logIterator, err := register.filterer.FilterRegistered(filterOps, identities)
 			if err != nil {
 				log.Error(err)
@@ -119,7 +120,6 @@ func (register *Register) WaitForRegistrationEvent(providerAddress common.Addres
 				if next {
 					log.Info("got identity registration event")
 					registeredEvent <- 1
-					return
 				} else {
 					err = logIterator.Error()
 					if err != nil {
@@ -128,7 +128,20 @@ func (register *Register) WaitForRegistrationEvent(providerAddress common.Addres
 					break
 				}
 			}
-			log.Info("no identity registration, sleeping for 500ms: ")
+			log.Trace("no identity registration, sleeping for 1s")
 		}
 	}
+}
+
+// PrintRegistrationData prints identity registration data needed to register identity with payments contract
+func PrintRegistrationData(data *registry.RegistrationData) {
+	infoColor := "\033[93m"
+	stopColor := "\033[0m"
+	log.Info(infoColor)
+	log.Info("Identity is not registered yet. In order to do that - please call payments contract with the following data")
+	log.Infof("Public key: part1 -> 0x%X", data.PublicKey.Part1)
+	log.Infof("            part2 -> 0x%X", data.PublicKey.Part2)
+	log.Infof("Signature: S -> 0x%X", data.Signature.S)
+	log.Infof("           R -> 0x%X", data.Signature.R)
+	log.Infof("           V -> 0x%X%v", data.Signature.V, stopColor)
 }

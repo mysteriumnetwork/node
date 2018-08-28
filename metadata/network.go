@@ -45,13 +45,5 @@ var LocalnetDefinition = NetworkDefinition{
 	common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea"),
 }
 
-// E2EDefinition defines parameters for e2e docker test network (expects discovery and broker services on docker nodes)
-var E2EDefinition = NetworkDefinition{
-	"http://discovery/v1",
-	"broker",
-	"http://local-node:8545",
-	common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea"),
-}
-
 // DefaultNetwork defines default network values when no runtime parameters are given
 var DefaultNetwork = TestnetDefinition
