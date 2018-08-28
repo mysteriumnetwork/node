@@ -207,12 +207,17 @@ func (cmd *Command) registerTequilAPI(statusProvider registry.IdentityRegistry, 
 		return err
 	}
 
+	address, err := cmd.httpAPIServer.Address()
+	if err != nil {
+		return err
+	}
+
 	port, err := cmd.httpAPIServer.Port()
 	if err != nil {
 		return err
 	}
 
-	log.Infof("Api started on: %d", port)
+	log.Infof("Api started on: %s:%d", address, port)
 	return nil
 }
 

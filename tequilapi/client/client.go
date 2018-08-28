@@ -86,9 +86,22 @@ func (client *Client) RegisterIdentity(address string) (err error) {
 	return nil
 }
 
-// RegistrationStatus returns information of identity needed to register it on blockchain
-func (client *Client) RegistrationStatus(address string) (RegistrationStatusDTO, error) {
+// IdentityRegistrationStatus returns information of identity needed to register it on blockchain
+func (client *Client) IdentityRegistrationStatus(address string) (RegistrationStatusDTO, error) {
 	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})
+	if err != nil {
+		return RegistrationStatusDTO{}, err
+	}
+	defer response.Body.Close()
+
+	status := RegistrationStatusDTO{}
+	err = parseResponseJSON(response, &status)
+	return status, err
+}
+
+// OwnRegistrationStatus returns information of identity needed to register it on blockchain
+func (client *Client) OwnRegistrationStatus() (RegistrationStatusDTO, error) {
+	response, err := client.http.Get("identity/registration", url.Values{})
 	if err != nil {
 		return RegistrationStatusDTO{}, err
 	}

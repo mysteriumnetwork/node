@@ -25,12 +25,26 @@ import (
 	"github.com/mysterium/node/tequilapi/client"
 )
 
-var tequilaHost = flag.String("tequila.host", "localhost", "Specify tequila host for e2e tests")
+type Domain int
+
+const (
+	Client Domain = 0
+	Server Domain = 1
+)
+
+var tequilaClientHost = flag.String("tequila.client-host", "localhost", "Specify tequila client host for e2e tests")
+var tequilaServiceHost = flag.String("tequila.service-host", "localhost", "Specify tequila service host for e2e tests")
 var tequilaPort = flag.Int("tequila.port", 4050, "Specify tequila port for e2e tests")
 var ethRPC = flag.String("geth.url", "http://localhost:8545", "Eth node RPC")
 
-func newTequilaClient() *client.Client {
-	return client.NewClient(*tequilaHost, *tequilaPort)
+func newTequilaClient(domain Domain) *client.Client {
+	switch domain {
+	case Client:
+		return client.NewClient(*tequilaClientHost, *tequilaPort)
+	case Server:
+		return client.NewClient(*tequilaServiceHost, *tequilaPort)
+	}
+	return nil
 }
 
 func newEthClient() (*ethclient.Client, error) {

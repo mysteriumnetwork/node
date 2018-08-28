@@ -357,7 +357,7 @@ func (c *Command) identities(argsString string) {
 }
 
 func (c *Command) registration(argsString string) {
-	status, err := c.tequilapi.RegistrationStatus(argsString)
+	status, err := c.tequilapi.IdentityRegistrationStatus(argsString)
 	if err != nil {
 		warn("Something went wrong: ", err)
 		return

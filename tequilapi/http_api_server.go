@@ -32,6 +32,7 @@ type APIServer interface {
 	Wait() error
 	StartServing() error
 	Stop()
+	Address() (string, error)
 }
 
 type apiServer struct {
@@ -65,6 +66,14 @@ func (server *apiServer) Wait() error {
 }
 
 // Port method returns bind port for given http server (useful when random port is used)
+func (server *apiServer) Address() (string, error) {
+	if server.listener == nil {
+		return "", errors.New("not bound")
+	}
+	return extractBoundAddress(server.listener)
+}
+
+// Port method returns bind port for given http server (useful when random port is used)
 func (server *apiServer) Port() (int, error) {
 	if server.listener == nil {
 		return 0, errors.New("not bound")
@@ -85,6 +94,16 @@ func (server *apiServer) StartServing() error {
 
 func (server *apiServer) serve(handler http.Handler) {
 	server.errorChannel <- http.Serve(server.listener, handler)
+}
+
+func extractBoundAddress(listener net.Listener) (string, error) {
+	addr := listener.Addr()
+	parts := strings.Split(addr.String(), ":")
+	if len(parts) < 2 {
+		return "", errors.New("Unable to locate address: " + addr.String())
+	}
+	addressAsString := parts[len(parts)-2]
+	return addressAsString, nil
 }
 
 func extractBoundPort(listener net.Listener) (int, error) {

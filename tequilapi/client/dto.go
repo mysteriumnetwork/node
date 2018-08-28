@@ -86,6 +86,7 @@ type BuildInfoDTO struct {
 // RegistrationStatusDTO holds input data required to register new myst identity on blockchain smart contract
 type RegistrationStatusDTO struct {
 	Registered bool              `json:"registered"`
+	Address    string            `json:"address"`
 	PublicKey  PublicKeyPartsDTO `json:"publicKey"`
 	Signature  SignatureDTO      `json:"signature"`
 }

@@ -19,8 +19,9 @@ $dockerComposeCmd logs -f > e2e_tests.log &
 
 $dockerComposeCmd run go-runner \
     go test -v ./e2e/... -args \
-    --tequila.host=client \
+    --tequila.client-host=client \
     --tequila.port=4050 \
+    --tequila.service-host=node \
     --geth.url=http://local-node:8545
 if [ ! $? -eq 0 ]
 then

@@ -24,9 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestClientConnectsToNode(t *testing.T) {
+// This test can be invoked only after node registers its identity, thus it is called from TestOwnIdentityRegistrationFlow
+func clientConnectsToNodeTest(t *testing.T) {
 
-	tequilApi := newTequilaClient()
+	tequilApi := newTequilaClient(Client)
 
 	status, err := tequilApi.Status()
 	assert.NoError(t, err)
@@ -39,14 +40,14 @@ func TestClientConnectsToNode(t *testing.T) {
 	err = tequilApi.Unlock(identity.Address, "")
 	assert.NoError(t, err)
 
-	registrationData, err := tequilApi.RegistrationStatus(identity.Address)
+	registrationData, err := tequilApi.IdentityRegistrationStatus(identity.Address)
 	assert.NoError(t, err)
 
 	err = registerIdentity(registrationData)
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {
-		regStatus, err := tequilApi.RegistrationStatus(identity.Address)
+		regStatus, err := tequilApi.IdentityRegistrationStatus(identity.Address)
 		return regStatus.Registered, err
 	})
 	assert.NoError(t, err)

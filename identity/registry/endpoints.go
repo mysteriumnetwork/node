@@ -60,6 +60,8 @@ type RegistrationDataDTO struct {
 	// Returns true if identity is registered in payments smart contract
 	Registered bool `json:"registered"`
 
+	Address string `json:"address"`
+
 	PublicKey PublicKeyPartsDTO `json:"publicKey"`
 
 	Signature SignatureDTO `json:"signature"`
@@ -138,6 +140,7 @@ func (endpoint *registrationEndpoint) identityRegistrationData(id string, resp h
 
 	registrationDataDTO := &RegistrationDataDTO{
 		Registered: isRegistered,
+		Address:    id,
 		PublicKey: PublicKeyPartsDTO{
 			Part1: common.ToHex(registrationData.PublicKey.Part1),
 			Part2: common.ToHex(registrationData.PublicKey.Part2),

@@ -161,12 +161,17 @@ func (node *Node) Start() error {
 		return err
 	}
 
-	port, err := node.httpAPIServer.Port()
+	address, err := node.httpAPIServer.Address()
 	if err != nil {
 		return err
 	}
 
-	log.Infof("Api started on: %d", port)
+	port, err := cmd.httpAPIServer.Port()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("Api started on: %s:%d", address, port)
 
 	return nil
 }

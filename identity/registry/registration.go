@@ -111,7 +111,9 @@ func (register *Register) WaitForRegistrationEvent(providerAddress common.Addres
 			if err != nil {
 				log.Error(err)
 			}
-
+			if logIterator == nil {
+				break
+			}
 			for {
 				next := logIterator.Next()
 				if next {

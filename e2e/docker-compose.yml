@@ -13,6 +13,7 @@ services:
       - NET_ADMIN
     expose:
       - 1194
+      - 4050
     command: >
       --ipify-url=http://ipify:3000
       --broker-address=broker

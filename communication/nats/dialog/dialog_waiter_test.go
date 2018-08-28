@@ -186,8 +186,14 @@ type mockedIdentityRegistry struct {
 	anyIdentityRegistered bool
 }
 
+// IsRegistered mock
 func (mir *mockedIdentityRegistry) IsRegistered(address common.Address) (bool, error) {
 	return mir.anyIdentityRegistered, nil
+}
+
+// WaitForRegistrationEvent mock
+func (mir *mockedIdentityRegistry) WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan int, stopLoop chan int) {
+
 }
 
 //check that we implemented mocked registry correctly
