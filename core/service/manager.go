@@ -177,7 +177,10 @@ func (manager *Manager) Wait() error {
 // Kill stops service
 func (manager *Manager) Kill() error {
 	manager.natService.Stop()
-	manager.vpnServer.Stop()
+
+	if manager.vpnServer != nil {
+		manager.vpnServer.Stop()
+	}
 
 	err := manager.dialogWaiter.Stop()
 	if err != nil {

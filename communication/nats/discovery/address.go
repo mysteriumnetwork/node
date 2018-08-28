@@ -83,12 +83,18 @@ func (address *AddressNATS) Connect() (err error) {
 	options.Timeout = BrokerTimeout
 
 	address.connection, err = options.Connect()
+	if err != nil {
+		address.connection = nil
+	}
+
 	return
 }
 
 // Disconnect stops currently established connection
 func (address *AddressNATS) Disconnect() {
-	address.connection.Close()
+	if address.connection != nil {
+		address.connection.Close()
+	}
 }
 
 // GetConnection returns currently established connection
