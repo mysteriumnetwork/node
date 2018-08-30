@@ -132,11 +132,11 @@ func NewManager(nodeOptions node.Options, serviceOptions Options) *Manager {
 		},
 		checkDirectories: nodeOptions.Directories.Check,
 		openvpnServiceAddress: func(outboundIP, publicIP string) string {
-			//TODO public ip could be overriden by arg nodeOptions if needed
+			//TODO public ip could be overridden by arg nodeOptions if needed
 			if publicIP != outboundIP {
 				log.Warnf(
-					`WARNING: It seems that publicaly visible ip: [%s] does not match your local machines ip: [%s]. 
-You should probaly need to do port forwarding on your router: %s:%v -> %s:%v.`,
+					`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s]. 
+You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 					publicIP,
 					outboundIP,
 					publicIP,
