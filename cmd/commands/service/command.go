@@ -78,8 +78,17 @@ func NewCommand() *cli.Command {
 			locationCountryFlag,
 		},
 		Action: func(ctx *cli.Context) error {
+			errorChannel := make(chan error, 1)
+
 			nodeOptions := cmd.ParseNodeFlags(ctx)
 			nodeInstance = node.NewNode(nodeOptions)
+			go func() {
+				if err := nodeInstance.Start(); err != nil {
+					errorChannel <- err
+					return
+				}
+				errorChannel <- nodeInstance.Wait()
+			}()
 
 			serviceOptions := service.Options{
 				ctx.String("identity"),
@@ -91,15 +100,17 @@ func NewCommand() *cli.Command {
 				ctx.String("location.country"),
 			}
 			serviceManager = service.NewManager(nodeOptions, serviceOptions)
+			go func() {
+				if err := serviceManager.Start(); err != nil {
+					errorChannel <- err
+					return
+				}
+				errorChannel <- serviceManager.Wait()
+			}()
 
 			cmd.RegisterSignalCallback(utils.SoftKiller(stopCommand))
 
-			go nodeInstance.Start()
-			if err := serviceManager.Start(); err != nil {
-				return err
-			}
-
-			return serviceManager.Wait()
+			return <-errorChannel
 		},
 		After: func(ctx *cli.Context) error {
 			return stopCommand()

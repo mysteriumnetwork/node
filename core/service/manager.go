@@ -182,12 +182,11 @@ func (manager *Manager) Kill() error {
 		manager.vpnServer.Stop()
 	}
 
-	err := manager.dialogWaiter.Stop()
-	if err != nil {
-		return err
+	if manager.dialogWaiter != nil {
+		return manager.dialogWaiter.Stop()
 	}
 
-	return err
+	return nil
 }
 
 func (manager *Manager) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
