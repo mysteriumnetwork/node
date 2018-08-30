@@ -61,11 +61,13 @@ func NewCommand() *cli.Command {
 	var serviceManager *service.Manager
 
 	stopCommand := func() error {
-		if err := serviceManager.Kill(); err != nil {
-			return err
-		}
+		errorServiceManager := serviceManager.Kill()
+		errorNode := nodeInstance.Kill()
 
-		return nodeInstance.Kill()
+		if errorServiceManager != nil {
+			return errorServiceManager
+		}
+		return errorNode
 	}
 
 	return &cli.Command{
