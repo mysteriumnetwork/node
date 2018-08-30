@@ -26,6 +26,7 @@ import (
 	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 )
 
+// Discovery structure holds discovery service state
 type Discovery struct {
 	identityRegistry         registry.IdentityRegistry
 	ownIdentity              common.Address

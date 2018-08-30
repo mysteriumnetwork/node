@@ -36,15 +36,16 @@ const (
 
 var tequilaClientHost = flag.String("tequila.client-host", "localhost", "Specify tequila client host for e2e tests")
 var tequilaServiceHost = flag.String("tequila.service-host", "localhost", "Specify tequila service host for e2e tests")
-var tequilaPort = flag.Int("tequila.port", 4050, "Specify tequila port for e2e tests")
+var tequilaClientPort = flag.Int("tequila.client-port", 4050, "Specify tequila client port for e2e tests")
+var tequilaServicePort = flag.Int("tequila.service-port", 4050, "Specify tequila service port for e2e tests")
 var ethRPC = flag.String("geth.url", "http://localhost:8545", "Eth node RPC")
 
 func newTequilaClient(domain Domain) *client.Client {
 	switch domain {
 	case Client:
-		return client.NewClient(*tequilaClientHost, *tequilaPort)
+		return client.NewClient(*tequilaClientHost, *tequilaClientPort)
 	case Server:
-		return client.NewClient(*tequilaServiceHost, *tequilaPort)
+		return client.NewClient(*tequilaServiceHost, *tequilaServicePort)
 	}
 	return nil
 }

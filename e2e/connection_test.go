@@ -41,6 +41,8 @@ func clientConnectsToNodeTest(t *testing.T) {
 	assert.NoError(t, err)
 
 	registrationData, err := tequilApi.IdentityRegistrationStatus(identity.Address)
+	assert.NotNil(t, registrationData)
+	assert.False(t, registrationData.Registered)
 	assert.NoError(t, err)
 
 	err = registerIdentity(registrationData)

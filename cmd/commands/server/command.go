@@ -178,7 +178,8 @@ func (cmd *Command) Start() (err error) {
 }
 
 func (cmd *Command) registerTequilAPI(statusProvider registry.IdentityRegistry, providerID identity.Identity, registrationDataProvider registry.RegistrationDataProvider) error {
-	registry.AddRegistrationEndpoint(cmd.router, registrationDataProvider, statusProvider, &providerID)
+	registry.AddCurrentIdentityEndpoint(cmd.router, &providerID)
+	registry.AddIdentityRegistrationEndpoint(cmd.router, registrationDataProvider, statusProvider)
 
 	err := cmd.httpAPIServer.StartServing()
 	if err != nil {
@@ -190,12 +191,7 @@ func (cmd *Command) registerTequilAPI(statusProvider registry.IdentityRegistry, 
 		return err
 	}
 
-	port, err := cmd.httpAPIServer.Port()
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Api started on: %s:%d", address, port)
+	log.Infof("Api started on: %v", address)
 	return nil
 }
 

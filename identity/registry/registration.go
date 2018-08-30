@@ -98,8 +98,10 @@ func (register *Register) IsRegistered(identity common.Address) (bool, error) {
 type RegistrationEvent int
 
 // Possible registration events
-const Registered RegistrationEvent = 0
-const Cancelled RegistrationEvent = 1
+const (
+	Registered RegistrationEvent = 0
+	Cancelled  RegistrationEvent = 1
+)
 
 // SubscribeToRegistrationEvent returns registration event if given providerAddress was registered within payments contract
 func (register *Register) SubscribeToRegistrationEvent(providerAddress common.Address) (registrationEvent chan RegistrationEvent, unsubscribe func()) {

@@ -22,8 +22,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// SignerFactory callback returning Signer
 type SignerFactory func(id Identity) Signer
 
+// Signer interface signifies an ability ti sign a message
 type Signer interface {
 	Sign(message []byte) (Signature, error)
 }
@@ -33,6 +35,7 @@ type keystoreSigner struct {
 	account  accounts.Account
 }
 
+// NewSigner returns new instance of Signer
 func NewSigner(keystore keystoreInterface, identity Identity) Signer {
 	account := identityToAccount(identity)
 
@@ -42,6 +45,7 @@ func NewSigner(keystore keystoreInterface, identity Identity) Signer {
 	}
 }
 
+// Sign signs given message and returns signature
 func (ksSigner *keystoreSigner) Sign(message []byte) (Signature, error) {
 	signature, err := ksSigner.keystore.SignHash(ksSigner.account, messageHash(message))
 	if err != nil {

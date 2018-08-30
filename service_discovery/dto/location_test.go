@@ -19,6 +19,7 @@ package dto
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -97,4 +98,14 @@ func TestLocationUnserialize(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}
+}
+
+func TestLocationUnserializeError(t *testing.T) {
+	var model Location
+	jsonLocation := `{
+				"country": 1
+			}`
+	err := json.Unmarshal([]byte(jsonLocation), &model)
+	unmarshalError := strings.HasPrefix(err.Error(), "json: ")
+	assert.True(t, unmarshalError)
 }

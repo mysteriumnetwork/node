@@ -60,8 +60,6 @@ type RegistrationDataDTO struct {
 	// Returns true if identity is registered in payments smart contract
 	Registered bool `json:"registered"`
 
-	Address string `json:"address"`
-
 	PublicKey PublicKeyPartsDTO `json:"publicKey"`
 
 	Signature SignatureDTO `json:"signature"`
@@ -70,14 +68,22 @@ type RegistrationDataDTO struct {
 type registrationEndpoint struct {
 	dataProvider   RegistrationDataProvider
 	statusProvider IdentityRegistry
-	ownIdentity    *identity.Identity
 }
 
-func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvider IdentityRegistry, identity *identity.Identity) *registrationEndpoint {
+func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) *registrationEndpoint {
 	return &registrationEndpoint{
 		dataProvider:   dataProvider,
 		statusProvider: statusProvider,
-		ownIdentity:    identity,
+	}
+}
+
+type currentIdentityEndpoint struct {
+	ownIdentity *identity.Identity
+}
+
+func newCurrentIdentityEndpoint(identity *identity.Identity) *currentIdentityEndpoint {
+	return &currentIdentityEndpoint{
+		ownIdentity: identity,
 	}
 }
 
@@ -105,7 +111,7 @@ func (endpoint *registrationEndpoint) IdentityRegistrationData(resp http.Respons
 	endpoint.identityRegistrationData(id, resp)
 }
 
-// swagger:operation GET /identity/registration Identity identityRegistration
+// swagger:operation GET /identity/current Identity identityRegistration
 // ---
 // summary: Provide identity registration status
 // description: Provides registration status for own identity, if identity is not registered - provides additional data required for identity registration
@@ -118,9 +124,8 @@ func (endpoint *registrationEndpoint) IdentityRegistrationData(resp http.Respons
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *registrationEndpoint) OwnRegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	id := endpoint.ownIdentity.Address
-	endpoint.identityRegistrationData(id, resp)
+func (endpoint *currentIdentityEndpoint) OwnRegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	utils.WriteAsJSON(endpoint.ownIdentity, resp)
 }
 
 func (endpoint *registrationEndpoint) identityRegistrationData(id string, resp http.ResponseWriter) {
@@ -140,7 +145,6 @@ func (endpoint *registrationEndpoint) identityRegistrationData(id string, resp h
 
 	registrationDataDTO := &RegistrationDataDTO{
 		Registered: isRegistered,
-		Address:    id,
 		PublicKey: PublicKeyPartsDTO{
 			Part1: common.ToHex(registrationData.PublicKey.Part1),
 			Part2: common.ToHex(registrationData.PublicKey.Part2),
@@ -154,16 +158,14 @@ func (endpoint *registrationEndpoint) identityRegistrationData(id string, resp h
 	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
-// AddRegistrationEndpoint adds identity registration data endpoint to given http router
-func AddRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider IdentityRegistry, identity *identity.Identity) {
+// AddCurrentIdentityEndpoint adds identity registration data endpoint to given http router
+func AddCurrentIdentityEndpoint(router *httprouter.Router, identity *identity.Identity) {
 
-	registrationEndpoint := newRegistrationEndpoint(
-		dataProvider,
-		statusProvider,
+	currentIdentityEndpoint := newCurrentIdentityEndpoint(
 		identity,
 	)
 
-	router.GET("/identity/registration", registrationEndpoint.OwnRegistrationData)
+	router.GET("/identity/current", currentIdentityEndpoint.OwnRegistrationData)
 }
 
 // AddIdentityRegistrationEndpoint adds identity registration data endpoint to given http router
@@ -172,7 +174,6 @@ func AddIdentityRegistrationEndpoint(router *httprouter.Router, dataProvider Reg
 	registrationEndpoint := newRegistrationEndpoint(
 		dataProvider,
 		statusProvider,
-		nil,
 	)
 
 	router.GET("/identities/:id/registration", registrationEndpoint.IdentityRegistrationData)

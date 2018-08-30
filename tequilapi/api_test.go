@@ -34,9 +34,9 @@ func (testSuite *tequilapiTestSuite) SetupSuite() {
 	testSuite.server = NewServer("localhost", 0, NewAPIRouter())
 
 	assert.NoError(testSuite.T(), testSuite.server.StartServing())
-	port, err := testSuite.server.Port()
+	address, err := testSuite.server.Address()
 	assert.NoError(testSuite.T(), err)
-	testSuite.client = NewTestClient(testSuite.T(), port)
+	testSuite.client = NewTestClient(testSuite.T(), address)
 }
 
 func (testSuite *tequilapiTestSuite) TestHealthCheckReturnsExpectedResponse() {

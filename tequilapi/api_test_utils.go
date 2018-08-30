@@ -36,10 +36,10 @@ type testClient struct {
 }
 
 // NewTestClient returns client for making test requests
-func NewTestClient(t *testing.T, port int) TestClient {
+func NewTestClient(t *testing.T, address string) TestClient {
 	return &testClient{
 		t,
-		fmt.Sprintf("http://127.0.0.1:%d", port),
+		fmt.Sprintf("http://%s", address),
 	}
 }
 

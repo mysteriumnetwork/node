@@ -59,7 +59,7 @@ func (waiter *dialogWaiter) Start() (dto_discovery.Contact, error) {
 
 	err := waiter.myAddress.Connect()
 	if err != nil {
-		return dto_discovery.Contact{}, log.Error(waiterLogPrefix, "failed to start my connection with: ", waiter.myAddress.GetContact())
+		return dto_discovery.Contact{}, fmt.Errorf("failed to start my connection with: %v", waiter.myAddress.GetContact())
 	}
 
 	return waiter.myAddress.GetContact(), nil

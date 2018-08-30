@@ -53,7 +53,7 @@ func TestIdentityRegistrationEndpointReturnsRegistrationData(t *testing.T) {
 		Registered: false,
 	}
 
-	endpoint := newRegistrationEndpoint(mockedDataProvider, mockedStatusProvider, nil)
+	endpoint := newRegistrationEndpoint(mockedDataProvider, mockedStatusProvider)
 
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -81,7 +81,6 @@ func TestIdentityRegistrationEndpointReturnsRegistrationData(t *testing.T) {
 		t,
 		`{
 			"registered" : false,
-			"address":"0x1231323131",
             "publicKey": {
 				"part1" : "0xfa001122334455667788990011223344556677889900112233445566778899af",
 				"part2" : "0xde001122334455667788990011223344556677889900112233445566778899ad"

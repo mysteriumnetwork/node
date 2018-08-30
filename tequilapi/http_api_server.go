@@ -22,13 +22,11 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
 // APIServer interface represents control methods for underlying http api server
 type APIServer interface {
-	Port() (int, error)
 	Wait() error
 	StartServing() error
 	Stop()
@@ -74,13 +72,6 @@ func (server *apiServer) Address() (string, error) {
 }
 
 // Port method returns bind port for given http server (useful when random port is used)
-func (server *apiServer) Port() (int, error) {
-	if server.listener == nil {
-		return 0, errors.New("not bound")
-	}
-	return extractBoundPort(server.listener)
-}
-
 // StartServing starts http request serving
 func (server *apiServer) StartServing() error {
 	var err error
@@ -102,19 +93,5 @@ func extractBoundAddress(listener net.Listener) (string, error) {
 	if len(parts) < 2 {
 		return "", errors.New("Unable to locate address: " + addr.String())
 	}
-	addressAsString := parts[len(parts)-2]
-	return addressAsString, nil
-}
-
-func extractBoundPort(listener net.Listener) (int, error) {
-	addr := listener.Addr()
-	//it is possible that address could be x.x.x.x:y (IPv4) or [x:x:..:x]:y (IPv6) format
-	//split by : and take the last one
-	parts := strings.Split(addr.String(), ":")
-	if len(parts) < 2 {
-		return 0, errors.New("Unable to locate port of the following address: " + addr.String())
-	}
-	portAsString := parts[len(parts)-1]
-	port, err := strconv.Atoi(portAsString)
-	return port, err
+	return addr.String(), nil
 }
