@@ -326,7 +326,7 @@ func (c *Command) identities(argsString string) {
 		}
 		ids, err := c.tequilapi.GetIdentities()
 		if err != nil {
-			fmt.Println("Error occured:", err)
+			fmt.Println("Error occurred:", err)
 			return
 		}
 
