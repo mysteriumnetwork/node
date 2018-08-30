@@ -49,7 +49,7 @@ func main() {
 	transactor := helpers.CreateNewKeystoreTransactor(ks, acc)
 
 	client, synced, err := helpers.LookupBackend(*ethRPC)
-	checkError("Backend lookup", err)
+	checkError("backend lookup", err)
 	<-synced
 
 	mystTokenAddress, tx, _, err := mysttoken.DeployMystToken(transactor, client)

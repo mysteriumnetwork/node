@@ -49,10 +49,10 @@ var mainEtherAccPass = "localaccount"
 type CliWallet struct {
 	txOpts           *bind.TransactOpts
 	Owner            common.Address
-	Backend          *ethclient.Client
+	backend          *ethclient.Client
 	identityRegistry registry.IdentityRegistryTransactorSession
 	tokens           mysttoken.MystTokenTransactorSession
-	KS               *keystore.KeyStore
+	ks               *keystore.KeyStore
 }
 
 // RegisterIdentity registers identity with given data on behalf of user
@@ -79,11 +79,11 @@ func (wallet *CliWallet) GiveEther(address common.Address, amount, units int64) 
 
 	amountInWei := new(big.Int).Mul(big.NewInt(amount), big.NewInt(units))
 
-	nonce, err := wallet.Backend.PendingNonceAt(context.Background(), wallet.Owner)
+	nonce, err := wallet.backend.PendingNonceAt(context.Background(), wallet.Owner)
 	if err != nil {
 		return err
 	}
-	gasPrice, err := wallet.Backend.SuggestGasPrice(context.Background())
+	gasPrice, err := wallet.backend.SuggestGasPrice(context.Background())
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (wallet *CliWallet) GiveEther(address common.Address, amount, units int64) 
 		return err
 	}
 
-	err = wallet.Backend.SendTransaction(context.Background(), signedTx)
+	err = wallet.backend.SendTransaction(context.Background(), signedTx)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (wallet *CliWallet) ApproveForPayments(amount int64) error {
 
 func (wallet *CliWallet) checkTxResult(tx *types.Transaction) error {
 	for i := 0; i < 10; i++ {
-		_, pending, err := wallet.Backend.TransactionByHash(context.Background(), tx.Hash())
+		_, pending, err := wallet.backend.TransactionByHash(context.Background(), tx.Hash())
 		switch {
 		case err != nil:
 			return err
@@ -133,7 +133,7 @@ func (wallet *CliWallet) checkTxResult(tx *types.Transaction) error {
 		}
 	}
 
-	receipt, err := wallet.Backend.TransactionReceipt(context.Background(), tx.Hash())
+	receipt, err := wallet.backend.TransactionReceipt(context.Background(), tx.Hash())
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 	return &CliWallet{
 		txOpts:  transactor,
 		Owner:   owner,
-		Backend: client,
+		backend: client,
 		tokens: mysttoken.MystTokenTransactorSession{
 			Contract:     tokensContract,
 			TransactOpts: *transactor,
@@ -194,7 +194,7 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 			Contract:     paymentsContract,
 			TransactOpts: *transactor,
 		},
-		KS: ks,
+		ks: ks,
 	}, nil
 }
 

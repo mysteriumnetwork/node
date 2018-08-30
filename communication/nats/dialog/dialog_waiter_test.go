@@ -191,9 +191,9 @@ func (mir *mockedIdentityRegistry) IsRegistered(address common.Address) (bool, e
 	return mir.anyIdentityRegistered, nil
 }
 
-// WaitForRegistrationEvent mock
-func (mir *mockedIdentityRegistry) WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan int, stopLoop chan int) {
-
+// SubscribeToRegistrationEvent mock
+func (mir *mockedIdentityRegistry) SubscribeToRegistrationEvent(providerAddress common.Address) (registeredEvent chan registry.RegistrationEvent, unsubscribe func()) {
+	return nil, nil
 }
 
 //check that we implemented mocked registry correctly

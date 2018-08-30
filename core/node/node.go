@@ -166,7 +166,7 @@ func (node *Node) Start() error {
 		return err
 	}
 
-	port, err := cmd.httpAPIServer.Port()
+	port, err := node.httpAPIServer.Port()
 	if err != nil {
 		return err
 	}

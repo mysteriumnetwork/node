@@ -19,14 +19,13 @@ package server
 
 import (
 	"sync"
-	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysterium/node/blockchain"
 	"github.com/mysterium/node/communication"
+	"github.com/mysterium/node/discovery"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/identity/registry"
 	"github.com/mysterium/node/ip"
@@ -34,7 +33,6 @@ import (
 	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/nat"
 	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/discovery"
 	"github.com/mysterium/node/openvpn/middlewares/state"
 	"github.com/mysterium/node/openvpn/tls"
 	"github.com/mysterium/node/server"
@@ -134,22 +132,27 @@ func (cmd *Command) Start() (err error) {
 	log.Info("Country detected: ", currentCountry)
 	serviceLocation := dto_discovery.Location{Country: currentCountry}
 
-	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
-
 	primitives, err := tls.NewTLSPrimitives(serviceLocation, providerID)
+	if err != nil {
+		return err
+	}
+
+	registrationDataProvider := registry.NewRegistrationDataProvider(cmd.keystore)
+
+	discoveryService := discovery.NewService(identityRegistry, providerID, registrationDataProvider, cmd.mysteriumClient, cmd.createSigner)
+	stopDiscovery, err := discoveryService.Start(cmd.proposalAnnouncementStopped)
 	if err != nil {
 		return err
 	}
 
 	sessionManager := cmd.sessionManagerFactory(primitives, cmd.openvpnServiceAddress(outboundIP, publicIP))
 
+	proposal := discoveryService.GenertateServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}
 
-	stopRegistrationWaitLoop := make(chan int)
-	stopDiscoveryAnnouncement := make(chan int)
 	vpnStateCallback := func(state openvpn.State) {
 		switch state {
 		case openvpn.ProcessStarted:
@@ -158,45 +161,12 @@ func (cmd *Command) Start() (err error) {
 			log.Info("Openvpn service started successfully")
 		case openvpn.ProcessExited:
 			log.Info("Openvpn service exited")
-			close(stopRegistrationWaitLoop)
-			close(stopDiscoveryAnnouncement)
+			stopDiscovery()
 		}
 	}
 	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
 	if err := cmd.vpnServer.Start(); err != nil {
 		return err
-	}
-
-	providerAddress := common.HexToAddress(providerID.Address)
-	// check if node's identity is registered
-	registered, err := identityRegistry.IsRegistered(providerAddress)
-	if err != nil {
-		return err
-	}
-
-	registrationDataProvider := registry.NewRegistrationDataProvider(cmd.keystore)
-	signer := cmd.createSigner(providerID)
-	cmd.proposalAnnouncementStopped.Add(1)
-
-	// if not registered - wait indefinitely for identity registration event
-	if !registered {
-		registrationData, err := registrationDataProvider.ProvideRegistrationData(providerAddress)
-		if err != nil {
-			return err
-		}
-
-		registry.PrintRegistrationData(registrationData)
-
-		go func() {
-			killed := cmd.identityRegistrationWaitLoop(providerID, identityRegistry, stopRegistrationWaitLoop)
-			if killed {
-				cmd.proposalAnnouncementStopped.Done()
-				return
-			}
-			cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
-		}()
-	} else {
-		go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
 	}
 
 	err = cmd.registerTequilAPI(identityRegistry, providerID, registrationDataProvider)
@@ -229,25 +199,6 @@ func (cmd *Command) registerTequilAPI(statusProvider registry.IdentityRegistry, 
 	return nil
 }
 
-func (cmd *Command) identityRegistrationWaitLoop(providerID identity.Identity, identityRegistry registry.IdentityRegistry, stopLoop chan int) bool {
-	log.Infof("identity %s not registered, delaying proposal registration until identity is registered", providerID.Address)
-	registerEventChan := make(chan int)
-
-	go identityRegistry.WaitForRegistrationEvent(common.HexToAddress(providerID.Address), registerEventChan, stopLoop)
-
-	for {
-		select {
-		case val := <-registerEventChan:
-			if val == 1 {
-				log.Info("identity registered, proceeding with proposal registration")
-				return false
-			}
-			log.Info("registration wait loop stopped")
-			return true
-		}
-	}
-}
-
 // Wait blocks until server is stopped
 func (cmd *Command) Wait() error {
 	log.Info("Waiting for proposal announcements to finish")
@@ -267,39 +218,4 @@ func (cmd *Command) Kill() error {
 	}
 
 	return err
-}
-
-func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
-	for {
-		err := mysteriumClient.RegisterProposal(proposal, signer)
-		if err != nil {
-			log.Errorf("Failed to register proposal: %v, retrying after 1 min.", err)
-			time.Sleep(1 * time.Minute)
-		} else {
-			break
-		}
-	}
-	cmd.pingProposalLoop(proposal, mysteriumClient, signer, stopPinger)
-
-}
-
-func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
-	defer cmd.proposalAnnouncementStopped.Done()
-	for {
-		select {
-		case <-time.After(1 * time.Minute):
-			err := mysteriumClient.PingProposal(proposal, signer)
-			if err != nil {
-				log.Error("Failed to ping proposal: ", err)
-				// do not stop server on missing ping to discovery. More on this in MYST-362 and MYST-370
-			}
-		case <-stopPinger:
-			log.Info("Stopping discovery announcement")
-			err := mysteriumClient.UnregisterProposal(proposal, signer)
-			if err != nil {
-				log.Error("Failed to unregister proposal: ", err)
-			}
-			return
-		}
-	}
 }

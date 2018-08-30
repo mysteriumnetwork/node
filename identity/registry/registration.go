@@ -29,6 +29,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+const logPrefix = "[registry] "
+
 // Register type combines different IdentityRegistry interfaces under single type
 type Register struct {
 	callerSession *generated.IdentityRegistryCallerSession
@@ -38,7 +40,7 @@ type Register struct {
 // IdentityRegistry enables identity registration actions
 type IdentityRegistry interface {
 	IsRegistered(identity common.Address) (bool, error)
-	WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan int, stopLoop chan int)
+	SubscribeToRegistrationEvent(providerAddress common.Address) (registeredEvent chan RegistrationEvent, unsubscribe func())
 }
 
 // RegistrationDataProvider provides registration information for given identity required to register it on blockchain
@@ -92,8 +94,23 @@ func (register *Register) IsRegistered(identity common.Address) (bool, error) {
 	return register.callerSession.IsRegistered(identity)
 }
 
-// WaitForRegistrationEvent returns registeredEvent if given providerAddress was registered within payments contract
-func (register *Register) WaitForRegistrationEvent(providerAddress common.Address, registeredEvent chan int, stopLoop chan int) {
+// RegistrationEvent describes registration events
+type RegistrationEvent int
+
+// Possible registration events
+const Registered RegistrationEvent = 0
+const Cancelled RegistrationEvent = 1
+
+// SubscribeToRegistrationEvent returns registration event if given providerAddress was registered within payments contract
+func (register *Register) SubscribeToRegistrationEvent(providerAddress common.Address) (registrationEvent chan RegistrationEvent, unsubscribe func()) {
+	registrationEvent = make(chan RegistrationEvent)
+
+	stopLoop := make(chan bool)
+	unsubscribe = func() {
+		// cancel (stop) identity registration loop
+		stopLoop <- true
+	}
+
 	identities := []common.Address{providerAddress}
 
 	filterOps := &bind.FilterOpts{
@@ -102,35 +119,40 @@ func (register *Register) WaitForRegistrationEvent(providerAddress common.Addres
 		Context: context.Background(),
 	}
 
-	for {
-		select {
-		case <-stopLoop:
-			registeredEvent <- -1
-			return
-		case <-time.After(1 * time.Second):
-			logIterator, err := register.filterer.FilterRegistered(filterOps, identities)
-			if err != nil {
-				log.Error(err)
-			}
-			if logIterator == nil {
-				break
-			}
-			for {
-				next := logIterator.Next()
-				if next {
-					log.Info("got identity registration event")
-					registeredEvent <- 1
-				} else {
-					err = logIterator.Error()
-					if err != nil {
-						log.Error(err)
-					}
-					break
+	go func() {
+		for {
+			select {
+			case <-stopLoop:
+				registrationEvent <- Cancelled
+				return
+			case <-time.After(1 * time.Second):
+				logIterator, err := register.filterer.FilterRegistered(filterOps, identities)
+				if err != nil {
+					registrationEvent <- Cancelled
+					log.Error(err)
+					return
 				}
+				if logIterator == nil {
+					registrationEvent <- Cancelled
+					return
+				}
+				for {
+					next := logIterator.Next()
+					if next {
+						registrationEvent <- Registered
+					} else {
+						err = logIterator.Error()
+						if err != nil {
+							log.Error(err)
+						}
+						break
+					}
+				}
+				log.Trace(logPrefix, "no identity registration, sleeping for 1s")
 			}
-			log.Trace("no identity registration, sleeping for 1s")
 		}
-	}
+	}()
+	return
 }
 
 // PrintRegistrationData prints identity registration data needed to register identity with payments contract
