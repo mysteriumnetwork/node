@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/client/connection"
+	"github.com/mysterium/node/core/connection"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/ip"
 	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"

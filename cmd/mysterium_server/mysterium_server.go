@@ -18,20 +18,19 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/cmd/commands/server"
-	_ "github.com/mysterium/node/logconfig"
+	"github.com/mysterium/node/core/node"
+	"github.com/mysterium/node/core/service"
 	"github.com/mysterium/node/metadata"
 	"github.com/mysterium/node/utils"
 )
 
 func main() {
-	defer log.Flush()
-	options, err := server.ParseArguments(os.Args)
+	options, err := parseArguments(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -58,22 +57,128 @@ func main() {
 		fmt.Println(versionSummary)
 		fmt.Println()
 
-		log.Infof("User agreed with terms & conditions: %v", options.AgreedTermsConditions)
-		runCMD(options)
+		fmt.Printf("User agreed with terms & conditions: %v\n", options.AgreedTermsConditions)
+		runCMD(options.NodeOptions, options.ServiceOptions)
 	}
 }
 
-func runCMD(options server.CommandOptions) {
-	serverCommand := server.NewCommand(options)
+type commandOptions struct {
+	Version               bool
+	LicenseWarranty       bool
+	LicenseConditions     bool
+	AgreedTermsConditions bool
 
-	if err := serverCommand.Start(); err != nil {
+	NodeOptions    node.Options
+	ServiceOptions service.Options
+}
+
+func parseArguments(args []string) (options commandOptions, err error) {
+	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
+
+	err = cmd.ParseDirectoryArguments(flags, &options.NodeOptions.Directories)
+	if err != nil {
+		return
+	}
+
+	flags.StringVar(
+		&options.NodeOptions.OpenvpnBinary,
+		"openvpn.binary",
+		"openvpn", //search in $PATH by default,
+		"openvpn binary to use for Open VPN connections",
+	)
+	flags.StringVar(
+		&options.ServiceOptions.OpenvpnProtocol,
+		"openvpn.proto",
+		"udp",
+		"Openvpn protocol to use. Options: { udp, tcp }",
+	)
+	flags.IntVar(
+		&options.ServiceOptions.OpenvpnPort,
+		"openvpn.port",
+		1194,
+		"Openvpn port to use. Default 1194",
+	)
+
+	flags.StringVar(
+		&options.ServiceOptions.Identity,
+		"identity",
+		"",
+		"Keystore's identity used to provide service. If not given identity will be created automatically",
+	)
+	flags.StringVar(
+		&options.ServiceOptions.Passphrase,
+		"identity.passphrase",
+		"",
+		"Used to unlock keystore's identity",
+	)
+
+	flags.StringVar(
+		&options.NodeOptions.LocationDatabase,
+		"location.database",
+		"GeoLite2-Country.mmdb",
+		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
+	)
+	flags.StringVar(
+		&options.ServiceOptions.LocationCountry,
+		"location.country",
+		"",
+		"Service location country. If not given country is autodetected",
+	)
+
+	flags.BoolVar(
+		&options.AgreedTermsConditions,
+		"agreed-terms-and-conditions",
+		false,
+		"agree with terms & conditions",
+	)
+
+	flags.BoolVar(
+		&options.Version,
+		"version",
+		false,
+		"Show version",
+	)
+	flags.BoolVar(
+		&options.LicenseWarranty,
+		"license.warranty",
+		false,
+		"Show warranty",
+	)
+	flags.BoolVar(
+		&options.LicenseConditions,
+		"license.conditions",
+		false,
+		"Show conditions",
+	)
+
+	flags.StringVar(
+		&options.NodeOptions.IpifyUrl,
+		"ipify-url",
+		"https://api.ipify.org/",
+		"Address (URL form) of ipify service",
+	)
+
+	cmd.ParseNetworkArguments(flags, &options.NodeOptions.NetworkOptions)
+
+	err = flags.Parse(args[1:])
+	if err != nil {
+		return
+	}
+
+	return options, err
+}
+
+func runCMD(nodeOptions node.Options, serviceOptions service.Options) {
+	serviceManager := service.NewManager(nodeOptions, serviceOptions)
+
+	if err := serviceManager.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	cmd.RegisterSignalCallback(utils.SoftKiller(serverCommand.Kill))
+	cmd.RegisterSignalCallback(utils.SoftKiller(serviceManager.Kill))
 
-	if err := serverCommand.Wait(); err != nil {
+	if err := serviceManager.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

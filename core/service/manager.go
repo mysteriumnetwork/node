@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package server
+package service
 
 import (
 	"sync"
@@ -39,8 +39,8 @@ import (
 	"github.com/mysterium/node/session"
 )
 
-// Command represent entrypoint for Mysterium server with top level components
-type Command struct {
+// Manager represent entrypoint for Mysterium service with top level components
+type Manager struct {
 	networkDefinition metadata.NetworkDefinition
 	identityLoader    func() (identity.Identity, error)
 	createSigner      identity.SignerFactory
@@ -64,80 +64,80 @@ type Command struct {
 	proposalAnnouncementStopped *sync.WaitGroup
 }
 
-// Start starts server - does not block
-func (cmd *Command) Start() (err error) {
+// Start starts service - does not block
+func (manager *Manager) Start() (err error) {
 	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
 
-	err = cmd.checkDirectories()
+	err = manager.checkDirectories()
 	if err != nil {
 		return err
 	}
 
-	err = cmd.checkOpenvpn()
+	err = manager.checkOpenvpn()
 	if err != nil {
 		return err
 	}
 
-	providerID, err := cmd.identityLoader()
+	providerID, err := manager.identityLoader()
 	if err != nil {
 		return err
 	}
 
-	ethClient, err := blockchain.NewClient(cmd.networkDefinition.EtherClientRPC)
+	ethClient, err := blockchain.NewClient(manager.networkDefinition.EtherClientRPC)
 	if err != nil {
 		return err
 	}
 
-	identityRegistry, err := registry.NewIdentityRegistry(ethClient, cmd.networkDefinition.PaymentsContractAddress)
+	identityRegistry, err := registry.NewIdentityRegistry(ethClient, manager.networkDefinition.PaymentsContractAddress)
 	if err != nil {
 		return err
 	}
 
-	cmd.dialogWaiter = cmd.dialogWaiterFactory(providerID, identityRegistry)
-	providerContact, err := cmd.dialogWaiter.Start()
+	manager.dialogWaiter = manager.dialogWaiterFactory(providerID, identityRegistry)
+	providerContact, err := manager.dialogWaiter.Start()
 	if err != nil {
 		return err
 	}
 
-	publicIP, err := cmd.ipResolver.GetPublicIP()
+	publicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
 		return err
 	}
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
-	outboundIP, err := cmd.ipResolver.GetOutboundIP()
+	outboundIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
 		return err
 	}
 
-	cmd.natService.Add(nat.RuleForwarding{
+	manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      outboundIP,
 	})
 
-	err = cmd.natService.Start()
+	err = manager.natService.Start()
 	if err != nil {
 		log.Warn("received nat service error: ", err, " trying to proceed.")
 	}
 
-	currentCountry, err := cmd.locationResolver.ResolveCountry(publicIP)
+	currentCountry, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
 		return err
 	}
 	log.Info("Country detected: ", currentCountry)
 	serviceLocation := dto_discovery.Location{Country: currentCountry}
 
-	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, cmd.protocol)
+	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, manager.protocol)
 
 	primitives, err := tls.NewTLSPrimitives(serviceLocation, providerID)
 	if err != nil {
 		return err
 	}
 
-	sessionManager := cmd.sessionManagerFactory(primitives, cmd.openvpnServiceAddress(outboundIP, publicIP))
+	sessionManager := manager.sessionManagerFactory(primitives, manager.openvpnServiceAddress(outboundIP, publicIP))
 
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
-	if err := cmd.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
+	if err := manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}
 
@@ -153,41 +153,43 @@ func (cmd *Command) Start() (err error) {
 			close(stopDiscoveryAnnouncement)
 		}
 	}
-	cmd.vpnServer = cmd.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
-	if err := cmd.vpnServer.Start(); err != nil {
+	manager.vpnServer = manager.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
+	if err := manager.vpnServer.Start(); err != nil {
 		return err
 	}
 
-	signer := cmd.createSigner(providerID)
+	signer := manager.createSigner(providerID)
 
-	cmd.proposalAnnouncementStopped.Add(1)
-	go cmd.discoveryAnnouncementLoop(proposal, cmd.mysteriumClient, signer, stopDiscoveryAnnouncement)
+	manager.proposalAnnouncementStopped.Add(1)
+	go manager.discoveryAnnouncementLoop(proposal, manager.mysteriumClient, signer, stopDiscoveryAnnouncement)
 
 	return nil
 }
 
-// Wait blocks until server is stopped
-func (cmd *Command) Wait() error {
+// Wait blocks until service is stopped
+func (manager *Manager) Wait() error {
 	log.Info("Waiting for proposal announcements to finish")
-	cmd.proposalAnnouncementStopped.Wait()
+	manager.proposalAnnouncementStopped.Wait()
 	log.Info("Waiting for vpn service to finish")
-	return cmd.vpnServer.Wait()
+	return manager.vpnServer.Wait()
 }
 
-// Kill stops server
-func (cmd *Command) Kill() error {
-	cmd.natService.Stop()
-	cmd.vpnServer.Stop()
+// Kill stops service
+func (manager *Manager) Kill() error {
+	manager.natService.Stop()
 
-	err := cmd.dialogWaiter.Stop()
-	if err != nil {
-		return err
+	if manager.vpnServer != nil {
+		manager.vpnServer.Stop()
 	}
 
-	return err
+	if manager.dialogWaiter != nil {
+		return manager.dialogWaiter.Stop()
+	}
+
+	return nil
 }
 
-func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
+func (manager *Manager) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
 	for {
 		err := mysteriumClient.RegisterProposal(proposal, signer)
 		if err != nil {
@@ -197,12 +199,12 @@ func (cmd *Command) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProp
 			break
 		}
 	}
-	cmd.pingProposalLoop(proposal, mysteriumClient, signer, stopPinger)
+	manager.pingProposalLoop(proposal, mysteriumClient, signer, stopPinger)
 
 }
 
-func (cmd *Command) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
-	defer cmd.proposalAnnouncementStopped.Done()
+func (manager *Manager) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
+	defer manager.proposalAnnouncementStopped.Done()
 	for {
 		select {
 		case <-time.After(1 * time.Minute):

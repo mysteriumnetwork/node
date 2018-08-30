@@ -16,7 +16,7 @@
  */
 
 // Package metadata contains build information of executable usually provided by
-// automated build systems like Travis. Default values are populated if not overriden by build system
+// automated build systems like Travis. Default values are populated if not overridden by build system
 package metadata
 
 import "fmt"

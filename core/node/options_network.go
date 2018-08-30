@@ -24,10 +24,12 @@ import (
 
 // NetworkOptions describes possible parameters of network configuration
 type NetworkOptions struct {
-	DiscoveryAPIAddress  string
-	BrokerAddress        string
-	Localnet             bool
-	Testnet              bool
+	Testnet  bool
+	Localnet bool
+
+	DiscoveryAPIAddress string
+	BrokerAddress       string
+
 	EtherClientRPC       string
 	EtherPaymentsAddress string
 }

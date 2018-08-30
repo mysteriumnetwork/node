@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package server
+package service
 
 import (
 	"sync"
@@ -37,7 +37,7 @@ func TestProposalUnregisteredWhenPingerClosed(t *testing.T) {
 	fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
 
 	finished := make(chan bool)
-	fakeCmd := Command{proposalAnnouncementStopped: &sync.WaitGroup{}}
+	fakeCmd := Manager{proposalAnnouncementStopped: &sync.WaitGroup{}}
 	fakeCmd.proposalAnnouncementStopped.Add(1)
 
 	go func() {
