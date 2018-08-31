@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Usage:
+#> bin/build_xgo <os>/<arch>..
+#
+# Cross compile (Unix):
+#> bin/build_xgo linux/amd64
+#
+# Cross compile (OSX + Windows):
+#> bin/build_xgo darwin/amd64 windows/amd64
+#
+# Check if program has dynamic libraries:
+#> brew install readelf
+#> readelf -d build/node/mysterium_node
+
+set -e
+source bin/helpers/functions.sh
+source bin/helpers/output.sh
+
+XGO_TARGETS=`IFS=','; echo "$*"`
+if [ -z "$XGO_TARGETS" ]; then
+    print_error "Missing targets!"
+    exit 1
+fi
+
+if ! [ -x "$(command -v xgo)" ]; then
+    go get github.com/karalabe/xgo
+fi
+
+DIR_BUILD="build/myst"
+mkdir -p ${DIR_BUILD}
+DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
+
+xgo \
+    --go=1.9.2 \
+    --targets="$XGO_TARGETS" \
+    --dest=${DIR_TEMP} \
+    --out=myst \
+    --ldflags="$(get_linker_ldflags)" \
+    $(pwd)/cmd/mysterium_node
+
+# Remove version from binary name:
+#  - myst-darwin-10.6-amd64 -> myst_darwin_amd64
+#  - myst-linux-amd64       -> myst_linux_amd64
+for BINARY in `ls ${DIR_TEMP}`; do
+    BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/.*-([a-z]*)(-[0-9.]*)?-([a-z]*)/myst_\1_\3/p'`
+    mv ${DIR_TEMP}/${BINARY} ${DIR_BUILD}/${BINARY_RENAMED}
+done
+rm -rf ${DIR_TEMP}

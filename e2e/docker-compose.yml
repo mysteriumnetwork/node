@@ -4,7 +4,7 @@ services:
   node:
     build:
       context: ../..
-      dockerfile: bin/server_docker/alpine/Dockerfile
+      dockerfile: bin/docker/alpine/Dockerfile
     depends_on:
       - broker
       - discovery
@@ -18,16 +18,16 @@ services:
       --ipify-url=http://ipify:3000
       --broker-address=broker
       --discovery-address=http://discovery/v1
-      --location.country=e2e-land
-      --openvpn.port=3000
-      --agreed-terms-and-conditions
       --localnet
       --ether.client.rpc=http://local-node:8545
+      service
+      --location.country=e2e-land
+      --openvpn.port=3000
 
   client:
     build:
       context: ../..
-      dockerfile: bin/client_docker/alpine/Dockerfile
+      dockerfile: bin/docker/alpine/Dockerfile
     depends_on:
       - broker
       - node

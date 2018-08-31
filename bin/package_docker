@@ -1,0 +1,20 @@
+#!/bin/bash
+
+###########################################################################
+# Creates Docker image (Alpine)
+#
+# Usage:
+#> bin/package_docker
+
+set -e
+
+source bin/helpers/output.sh
+
+printf "Building Alpine image..\n"
+docker build \
+    --file bin/docker/alpine/Dockerfile \
+    --tag myst:alpine \
+    .
+
+print_success "Docker image building process complete!"
+exit 0

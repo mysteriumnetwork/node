@@ -68,7 +68,7 @@ func TestServerIdentityRegistrationFlow(t *testing.T) {
 
 	newStatus, err := tequilapi.IdentityRegistrationStatus(mystIdentity.Address)
 	assert.NoError(t, err)
-	assert.False(t, newStatus.Registered)
+	assert.True(t, newStatus.Registered)
 
 	t.Run("TestClientConnectsToNode", func(t *testing.T) {
 		clientConnectsToNodeTest(t)
