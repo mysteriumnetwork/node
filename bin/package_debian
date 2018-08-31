@@ -1,0 +1,89 @@
+#!/bin/bash
+
+###########################################################################
+# Packaging script which creates Debian package.
+#
+# Requirements:
+# - GOPATH must be set
+# - 'fpm' tool must be on the path (https://github.com/jordansissel/fpm)
+#
+# for macOS:
+# - brew install gnu-tar
+# - sudo gem install --no-ri --no-rdoc fpm
+#
+# To package a build, simple execute:
+#> bin/package_debian <version> <architecture>
+
+# Usage:
+#> bin/package_debian 0.0.1 amd64
+
+OS_DIR_BIN="/usr/bin"
+OS_DIR_CONFIG="/etc/mysterium-node"
+OS_DIR_DOC="/usr/share/doc/mysterium-node"
+OS_DIR_INSTALLATION="/usr/lib/mysterium-node/installation"
+OS_DIR_SUDOERS="/etc/sudoers.d"
+BINARY=${BINARY:-"build/myst/myst"}
+
+VERSION=$1
+if [ -z "$VERSION" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing version!"
+    exit 1
+fi
+
+ARCH=$2
+if [ -z "$ARCH" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing architecture!"
+    exit 1
+fi
+
+FPM_BIN=`which fpm`
+if [ ! -x "$FPM_BIN" ]; then
+    printf "\e[0;31m%s\e[0m\n" "Missing tool 'fpm'!"
+    exit 1
+fi
+
+DIR_BUILD="build/package"
+PACKAGE_FILE="${DIR_BUILD}/myst_linux_${ARCH}.deb"
+
+bin/build
+
+printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
+    && mkdir -p ${DIR_BUILD} \
+    && rm -f ${PACKAGE_FILE} \
+    && ${FPM_BIN} \
+        --name="myst" \
+        --description="Mysterium for decentralised VPN built on blockchain" \
+        --url="https://mysterium.network/" \
+        --vendor="MysteriumNetwork" \
+        --license="GPL-3.0" \
+        --version "$VERSION" \
+        --architecture="$ARCH" \
+        --package="$PACKAGE_FILE" \
+        --depends "openvpn (>= 2.4.0)" \
+        --depends "resolvconf" \
+        --depends "ca-certificates" \
+        --depends "iptables" \
+        --depends "iproute2" \
+        --depends "sudo" \
+        --depends "debconf" \
+        --deb-templates bin/package/installation/templates \
+        --before-install bin/package/installation/pre-install.sh \
+        --after-install bin/package/installation/post-install.sh \
+        --after-remove bin/package/installation/post-uninstall.sh \
+        -s dir -t deb \
+        ${BINARY}=${OS_DIR_BIN}/myst \
+        bin/package/config/=${OS_DIR_CONFIG}/ \
+        bin/common_package/=${OS_DIR_CONFIG}/ \
+        bin/package/sudoers/=${OS_DIR_SUDOERS}/ \
+        bin/package/installation/=${OS_DIR_INSTALLATION}/ \
+        INSTALL.md=${OS_DIR_DOC}/
+
+if [ $? -ne 0 ] ; then
+    printf "\e[0;31m%s\e[0m\n" "Failed to build Debian package!"
+    exit 1
+fi
+
+debber deb:contents ${PACKAGE_FILE}
+
+printf "\e[0;32m%s\e[0m\n" "Debian packaging process for architecture '$ARCH' complete!"
+exit 0

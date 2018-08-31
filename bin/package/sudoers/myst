@@ -1,0 +1,7 @@
+# username host=(user:group) tag:commands
+# let myst run any command just as root without password
+myst    ALL=NOPASSWD: /sbin/sysctl
+myst    ALL=NOPASSWD: /sbin/resolvconf
+myst    ALL=NOPASSWD: /sbin/iptables
+myst    ALL=NOPASSWD: /sbin/ip
+myst    ALL=NOPASSWD: /etc/mysterium-node/prepare-env.sh

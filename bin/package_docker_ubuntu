@@ -1,0 +1,30 @@
+#!/bin/bash
+
+###########################################################################
+# Creates Docker image (Ubuntu)
+#
+# Usage:
+#> bin/package_docker_ubuntu <version>
+#
+# Create image (for specific version):
+#> bin/package_docker_ubuntu 0.0.1
+
+set -e
+
+source bin/helpers/output.sh
+
+VERSION=$1
+if [ -z "$VERSION" ]; then
+    print_error "Missing version!"
+    exit 1
+fi
+
+printf "Building Ubuntu image..\n"
+docker build \
+    --file bin/docker/ubuntu/Dockerfile \
+    --build-arg PACKAGE_VERSION=${VERSION} \
+    --tag myst:ubuntu \
+    .
+
+print_success "Docker image building process complete!"
+exit 0
