@@ -2,6 +2,7 @@
 
 ###########################################################################
 # Uploads all created Docker images to Docker Hub
+# - https://hub.docker.com/r/mysteriumnetwork/mysterium/
 # - https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
 # - https://hub.docker.com/r/mysteriumnetwork/mysterium-client/
 #
@@ -32,6 +33,9 @@ echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --passw
 while test $# -gt 0; do
     VERSION_TAG=$1; shift;
     printf "Creating Docker Hub release '$VERSION_TAG' ..\n" \
+
+    docker_release_image myst:alpine mysteriumnetwork/myst:${VERSION_TAG}
+    docker_release_image myst:alpine mysteriumnetwork/myst:${VERSION_TAG}-alpine
 
     docker_release_image mysterium-node:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}
     docker_release_image mysterium-node:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}-alpine
