@@ -90,14 +90,14 @@ jobs:
 
     - script:
       - bin/package_docker
-      - docker save mysterium:alpine | gzip > mysterium_alpine.tgz
-      - bin/s3 cp mysterium_alpine.tgz s3://docker-images
+      - docker save myst:alpine | gzip > myst_alpine.tgz
+      - bin/s3 cp myst_alpine.tgz s3://docker-images
       name: "Alpine docker image"
 
     - script:
       - bin/package_docker_ubuntu $BUILD_VERSION
-      - docker save mysterium:ubuntu | gzip > mysterium_ubuntu.tgz
-      - bin/s3 cp mysterium_ubuntu.tgz s3://docker-images
+      - docker save myst:ubuntu | gzip > myst_ubuntu.tgz
+      - bin/s3 cp myst_ubuntu.tgz s3://docker-images
       name: "Ubuntu docker image"
 
     - script:
