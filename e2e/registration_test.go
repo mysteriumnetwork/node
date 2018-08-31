@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewIdentityRegistrationFlow(t *testing.T) {
+func TestNewClientIdentityRegistrationFlow(t *testing.T) {
 
 	tequilapi := newTequilaClient(Client)
 
@@ -48,21 +48,27 @@ func TestNewIdentityRegistrationFlow(t *testing.T) {
 	assert.True(t, newStatus.Registered)
 }
 
-func TestOwnIdentityRegistrationFlow(t *testing.T) {
+func TestServerIdentityRegistrationFlow(t *testing.T) {
 
 	tequilapi := newTequilaClient(Server)
 
-	registrationStatus, err := tequilapi.OwnRegistrationStatus()
+	mystIdentity, err := tequilapi.NewIdentity("")
+	assert.NoError(t, err)
+	seelog.Info("Created new identity: ", mystIdentity.Address)
+
+	err = tequilapi.Unlock(mystIdentity.Address, "")
+	assert.NoError(t, err)
+
+	registrationStatus, err := tequilapi.IdentityRegistrationStatus(mystIdentity.Address)
 	assert.NoError(t, err)
 	assert.False(t, registrationStatus.Registered)
 
 	err = registerIdentity(registrationStatus)
 	assert.NoError(t, err)
 
-	//now we check identity again
-	newStatus, err := tequilapi.OwnRegistrationStatus()
+	newStatus, err := tequilapi.IdentityRegistrationStatus(mystIdentity.Address)
 	assert.NoError(t, err)
-	assert.True(t, newStatus.Registered)
+	assert.False(t, newStatus.Registered)
 
 	t.Run("TestClientConnectsToNode", func(t *testing.T) {
 		clientConnectsToNodeTest(t)

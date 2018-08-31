@@ -95,6 +95,20 @@ func TestNewAddressForContact_UnknownDefinition(t *testing.T) {
 	assert.Nil(t, address)
 }
 
+func TestAddress_Disconnect_EmptyAddress(t *testing.T) {
+	address := &AddressNATS{}
+	address.Disconnect()
+}
+
+func TestAddress_Disconnect_AfterFailedConnect(t *testing.T) {
+	address := &AddressNATS{
+		servers: []string{"nats://far-server:4222"},
+	}
+
+	assert.EqualError(t, address.Connect(), "nats: no servers available for connection")
+	address.Disconnect()
+}
+
 func TestAddress_GetConnection(t *testing.T) {
 	expectedConnectin := &nats.Conn{}
 	address := &AddressNATS{connection: expectedConnectin}

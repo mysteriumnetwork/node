@@ -26,6 +26,7 @@ import (
 	command_cli "github.com/mysterium/node/cmd/commands/cli"
 	"github.com/mysterium/node/cmd/commands/license"
 	"github.com/mysterium/node/cmd/commands/run"
+	"github.com/mysterium/node/cmd/commands/service"
 	"github.com/mysterium/node/cmd/commands/version"
 	"github.com/mysterium/node/core/node"
 	"github.com/mysterium/node/metadata"
@@ -61,34 +62,26 @@ func NewCommand() (*cli.App, error) {
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright
-	if err := registerFlags(&app.Flags); err != nil {
+	if err := cmd.RegisterNodeFlags(&app.Flags); err != nil {
 		return nil, err
 	}
+	app.Flags = append(app.Flags, cliFlag)
 	app.Commands = []cli.Command{
 		*versionCommand,
 		*license.NewCommand(licenseCopyright),
+		*service.NewCommand(),
 	}
 	app.Action = runMain
 
 	return app, nil
 }
 
-func registerFlags(flags *[]cli.Flag) error {
-	if err := cmd.RegisterDirectoryFlags(flags, &options.NodeOptions); err != nil {
-		return err
+func runMain(ctx *cli.Context) error {
+	options := commandOptions{
+		CLI:         ctx.Bool(cliFlag.Name),
+		NodeOptions: cmd.ParseNodeFlags(ctx),
 	}
 
-	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag)
-
-	cmd.RegisterNetworkFlags(flags, &options.NodeOptions)
-
-	*flags = append(*flags, openvpnBinaryFlag, ipifyUrlFlag, locationDatabaseFlag)
-	*flags = append(*flags, cliFlag)
-
-	return nil
-}
-
-func runMain(ctx *cli.Context) error {
 	if options.CLI {
 		return runCLI(options.NodeOptions)
 	}
@@ -96,7 +89,7 @@ func runMain(ctx *cli.Context) error {
 	fmt.Println(versionSummary)
 	fmt.Println()
 
-	return run.NewCommand(options.NodeOptions).Run(ctx)
+	return run.NewCommand().Run(ctx)
 }
 
 func runCLI(options node.Options) error {
@@ -115,50 +108,15 @@ type commandOptions struct {
 }
 
 var (
-	options commandOptions
-
 	licenseCopyright = metadata.LicenseCopyright(
 		"run command 'license --warranty'",
 		"run command 'license --conditions'",
 	)
-
 	versionSummary = metadata.VersionAsSummary(licenseCopyright)
 	versionCommand = version.NewCommand(versionSummary)
 
-	tequilapiAddressFlag = cli.StringFlag{
-		Name:        "tequilapi.address",
-		Usage:       "IP address of interface to listen for incoming connections",
-		Destination: &options.NodeOptions.TequilapiAddress,
-		Value:       "127.0.0.1",
-	}
-	tequilapiPortFlag = cli.IntFlag{
-		Name:        "tequilapi.port",
-		Usage:       "Port for listening incoming api requests",
-		Destination: &options.NodeOptions.TequilapiPort,
-		Value:       4050,
-	}
-
-	openvpnBinaryFlag = cli.StringFlag{
-		Name:        "openvpn.binary",
-		Usage:       "openvpn binary to use for Open VPN connections",
-		Destination: &options.NodeOptions.OpenvpnBinary,
-		Value:       "openvpn",
-	}
-	ipifyUrlFlag = cli.StringFlag{
-		Name:        "ipify-url",
-		Usage:       "Address (URL form) of ipify service",
-		Destination: &options.NodeOptions.IpifyUrl,
-		Value:       "https://api.ipify.org/",
-	}
-	locationDatabaseFlag = cli.StringFlag{
-		Name:        "location.database",
-		Usage:       "Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
-		Destination: &options.NodeOptions.LocationDatabase,
-		Value:       "GeoLite2-Country.mmdb",
-	}
 	cliFlag = cli.BoolFlag{
-		Name:        "cli",
-		Usage:       "Run an interactive CLI based Mysterium UI",
-		Destination: &options.CLI,
+		Name:  "cli",
+		Usage: "Run an interactive CLI based Mysterium UI",
 	}
 )

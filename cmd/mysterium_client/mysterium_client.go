@@ -72,7 +72,7 @@ type commandOptions struct {
 func parseArguments(args []string) (options commandOptions, err error) {
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
-	err = cmd.ParseFromCmdArgs(flags, &options.NodeOptions.Directories)
+	err = cmd.ParseDirectoryArguments(flags, &options.NodeOptions.Directories)
 	if err != nil {
 		return
 	}
@@ -136,7 +136,7 @@ func parseArguments(args []string) (options commandOptions, err error) {
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 
-	cmd.ParseNetworkOptions(flags, &options.NodeOptions.NetworkOptions)
+	cmd.ParseNetworkArguments(flags, &options.NodeOptions.NetworkOptions)
 
 	err = flags.Parse(args[1:])
 	if err != nil {
@@ -151,6 +151,7 @@ func runCLI(options node.Options) {
 		filepath.Join(options.Directories.Data, ".cli_history"),
 		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
 	)
+
 	cmd.RegisterSignalCallback(utils.HardKiller(cmdCli.Kill))
 
 	if err := cmdCli.Run(); err != nil {
@@ -161,6 +162,7 @@ func runCLI(options node.Options) {
 
 func runCMD(options node.Options) {
 	nodeInstance := node.NewNode(options)
+
 	cmd.RegisterSignalCallback(utils.SoftKiller(nodeInstance.Kill))
 
 	if err := nodeInstance.Start(); err != nil {

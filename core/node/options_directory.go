@@ -26,12 +26,12 @@ import (
 
 // DirectoryOptions describes data structure holding directories as parameters
 type DirectoryOptions struct {
-	// Runtime directory for various temp file - usually current working dir
-	Runtime string
-	// Config directory stores all data needed for runtime (db scripts etc.)
-	Config string
 	// Data directory stores persistent data like keystore, cli history, etc.
 	Data string
+	// Config directory stores all data needed for runtime (db scripts etc.)
+	Config string
+	// Runtime directory for various temp file - usually current working dir
+	Runtime string
 }
 
 // Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)

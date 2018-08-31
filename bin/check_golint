@@ -40,7 +40,7 @@ fi
 MESSAGES_ERROR=`golint --set_exit_status --min_confidence=1 ${ARGUMENTS} 2>/dev/null`
 MESSAGES_RECONFIGURE=()
 
-check_uncleaned_package "github.com/mysterium/node/identity" 9
+check_uncleaned_package "github.com/mysterium/node/identity" 6
 check_uncleaned_package "github.com/mysterium/node/tequilapi" 11
 check_uncleaned_package "github.com/mysterium/node/session" 6
 check_uncleaned_package "github.com/mysterium/node/service_discovery/dto" 13

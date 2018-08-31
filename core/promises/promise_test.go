@@ -15,12 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package promise
+package promises
 
 import (
 	"testing"
 
-	dto "github.com/mysterium/node/client/promise/dto"
+	dto "github.com/mysterium/node/core/promises/dto"
 	"github.com/mysterium/node/money"
 	"github.com/stretchr/testify/assert"
 )
