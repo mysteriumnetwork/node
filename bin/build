@@ -14,17 +14,17 @@
 #
 # Check if program has dynamic libraries:
 #> brew install readelf
-#> readelf -d build/node/mysterium_node
+#> readelf -d build/myst/myst
 
 . ./bin/helpers/functions.sh
 . ./bin/helpers/output.sh
 
 export GOOS=${GOOS:-`go env GOHOSTOS`}
 export GOARCH=${GOARCH:-`go env GOHOSTARCH`}
-export GOBIN=`pwd`/build/node
-echo "Compiling 'mysterium_node' for '$GOOS/$GOARCH'.."
+export GOBIN=`pwd`/build/myst
+echo "Compiling 'myst' for '$GOOS/$GOARCH'.."
 
-go install -ldflags="$(get_linker_ldflags)" cmd/mysterium_node/mysterium_node.go
+go build -ldflags="$(get_linker_ldflags)" -o $GOBIN/myst cmd/mysterium_node/mysterium_node.go 
 if [ $? -ne 0 ]; then
     print_error "Compile failed!"
     exit 1
