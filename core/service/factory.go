@@ -18,11 +18,9 @@
 package service
 
 import (
-	"path/filepath"
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -49,6 +47,8 @@ func NewManager(
 	nodeOptions node.Options,
 	serviceOptions Options,
 	networkDefinition metadata.NetworkDefinition,
+	identityLoader identity_loading.Loader,
+	signerFactory identity.SignerFactory,
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
@@ -57,23 +57,10 @@ func NewManager(
 
 	natService := nat.NewService()
 
-	keystoreDirectory := filepath.Join(nodeOptions.Directories.Data, "keystore")
-	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
-	createSigner := func(id identity.Identity) identity.Signer {
-		return identity.NewSigner(keystoreInstance, id)
-	}
-
-	identityHandler := identity_loading.NewHandler(
-		identity.NewIdentityManager(keystoreInstance),
-		mysteriumClient,
-		identity.NewIdentityCache(keystoreDirectory, "remember.json"),
-		createSigner,
-	)
-
 	return &Manager{
 		networkDefinition: networkDefinition,
-		identityLoader:    identity_loading.NewLoader(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase),
-		createSigner:      createSigner,
+		identityLoader:    identityLoader,
+		createSigner:      signerFactory,
 		locationResolver:  locationResolver,
 		ipResolver:        ipResolver,
 		mysteriumClient:   mysteriumClient,
@@ -81,7 +68,7 @@ func NewManager(
 		dialogWaiterFactory: func(myID identity.Identity, identityRegistry registry.IdentityRegistry) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
 				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
-				identity.NewSigner(keystoreInstance, myID),
+				signerFactory(myID),
 				identityRegistry,
 			)
 		},

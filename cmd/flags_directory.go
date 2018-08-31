@@ -102,8 +102,10 @@ func RegisterDirectoryFlags(flags *[]cli.Flag) error {
 
 // ParseDirectoryFlags function fills in directory options from CLI context
 func ParseDirectoryFlags(ctx *cli.Context) node.DirectoryOptions {
+	dataDir := ctx.GlobalString(dataDirFlag)
 	return node.DirectoryOptions{
-		ctx.GlobalString(dataDirFlag),
+		dataDir,
+		filepath.Join(dataDir, "keystore"),
 		ctx.GlobalString(configDirFlag),
 		ctx.GlobalString(runtimeDirFlag),
 	}

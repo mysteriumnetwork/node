@@ -28,6 +28,8 @@ import (
 type DirectoryOptions struct {
 	// Data directory stores persistent data like keystore, cli history, etc.
 	Data string
+	// Data directory stores identity keys
+	Keystore string
 	// Config directory stores all data needed for runtime (db scripts etc.)
 	Config string
 	// Runtime directory for various temp file - usually current working dir

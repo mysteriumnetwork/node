@@ -20,12 +20,11 @@ package identity
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_UnlockAndSignAndVerify(t *testing.T) {
-	ks := keystore.NewKeyStore("test_data", keystore.StandardScryptN, keystore.StandardScryptP)
+	ks := NewKeystoreFilesystem("test_data")
 
 	manager := NewIdentityManager(ks)
 	err := manager.Unlock("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68", "")

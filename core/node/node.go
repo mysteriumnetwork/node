@@ -18,7 +18,6 @@
 package node
 
 import (
-	"path/filepath"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -49,6 +48,9 @@ import (
 func NewNode(
 	options Options,
 	networkDefinition metadata.NetworkDefinition,
+	keystoreInstance *keystore.KeyStore,
+	identityManager identity.IdentityManagerInterface,
+	signerFactory identity.SignerFactory,
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
@@ -57,18 +59,9 @@ func NewNode(
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 
-	keystoreDirectory := filepath.Join(options.Directories.Data, "keystore")
-	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
-
-	identityManager := identity.NewIdentityManager(keystoreInstance)
-
 	dialogFactory := func(consumerID, providerID identity.Identity, contact dto.Contact) (communication.Dialog, error) {
-		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, identity.NewSigner(keystoreInstance, consumerID))
+		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, signerFactory(consumerID))
 		return dialogEstablisher.EstablishDialog(providerID, contact)
-	}
-
-	signerFactory := func(id identity.Identity) identity.Signer {
-		return identity.NewSigner(keystoreInstance, id)
 	}
 
 	statsKeeper := stats.NewSessionStatsKeeper(time.Now)

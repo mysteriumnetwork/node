@@ -20,11 +20,14 @@ package cmd
 import (
 	"path/filepath"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/identity"
+	identity_loading "github.com/mysteriumnetwork/node/identity/loading"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
 )
@@ -37,6 +40,10 @@ type Dependencies struct {
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumClient   server.Client
 
+	Keystore        *keystore.KeyStore
+	IdentityManager identity.IdentityManagerInterface
+	SignerFactory   identity.SignerFactory
+
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
 
@@ -46,6 +53,7 @@ type Dependencies struct {
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) {
 	di.bootstrapNetworkDefinition(nodeOptions.NetworkOptions)
+	di.bootstrapIdentity(nodeOptions.Directories)
 	di.bootstrapLocation(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNode(nodeOptions)
 }
@@ -55,6 +63,9 @@ func (di *Dependencies) bootstrapNode(nodeOptions node.Options) {
 	di.Node = node.NewNode(
 		nodeOptions,
 		di.NetworkDefinition,
+		di.Keystore,
+		di.IdentityManager,
+		di.SignerFactory,
 		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
@@ -63,10 +74,20 @@ func (di *Dependencies) bootstrapNode(nodeOptions node.Options) {
 
 // BootstrapServiceManager initiates ServiceManager dependency
 func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, serviceOptions service.Options) {
+	identityHandler := identity_loading.NewHandler(
+		di.IdentityManager,
+		di.MysteriumClient,
+		identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
+		di.SignerFactory,
+	)
+	identityLoader := identity_loading.NewLoader(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)
+
 	di.ServiceManager = service.NewManager(
 		nodeOptions,
 		serviceOptions,
 		di.NetworkDefinition,
+		identityLoader,
+		di.SignerFactory,
 		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
@@ -104,6 +125,14 @@ func (di *Dependencies) bootstrapNetworkDefinition(options node.NetworkOptions) 
 
 	di.NetworkDefinition = network
 	di.MysteriumClient = server.NewClient(network.DiscoveryAPIAddress)
+}
+
+func (di *Dependencies) bootstrapIdentity(directories node.DirectoryOptions) {
+	di.Keystore = identity.NewKeystoreFilesystem(filepath.Join(directories.Keystore))
+	di.IdentityManager = identity.NewIdentityManager(di.Keystore)
+	di.SignerFactory = func(id identity.Identity) identity.Signer {
+		return identity.NewSigner(di.Keystore, id)
+	}
 }
 
 func (di *Dependencies) bootstrapLocation(options node.LocationOptions, configDirectory string) {
