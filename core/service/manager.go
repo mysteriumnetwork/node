@@ -56,7 +56,6 @@ type Manager struct {
 
 	vpnServer                   openvpn.Process
 	checkOpenvpn                func() error
-	checkDirectories            func() error
 	openvpnServiceAddress       func(string, string) string
 	protocol                    string
 	proposalAnnouncementStopped *sync.WaitGroup
@@ -65,11 +64,6 @@ type Manager struct {
 // Start starts service - does not block
 func (manager *Manager) Start() (err error) {
 	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
-
-	err = manager.checkDirectories()
-	if err != nil {
-		return err
-	}
 
 	err = manager.checkOpenvpn()
 	if err != nil {

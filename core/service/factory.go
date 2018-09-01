@@ -110,7 +110,6 @@ func NewManager(
 		checkOpenvpn: func() error {
 			return openvpn.CheckOpenvpnBinary(nodeOptions.OpenvpnBinary)
 		},
-		checkDirectories: nodeOptions.Directories.Check,
 		openvpnServiceAddress: func(outboundIP, publicIP string) string {
 			//TODO public ip could be overridden by arg nodeOptions if needed
 			if publicIP != outboundIP {

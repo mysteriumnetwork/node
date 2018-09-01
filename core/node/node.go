@@ -115,11 +115,6 @@ func (node *Node) Start() error {
 		return err
 	}
 
-	err = node.options.Directories.Check()
-	if err != nil {
-		return err
-	}
-
 	originalLocation, err := node.originalLocationCache.RefreshAndGet()
 	if err != nil {
 		log.Warn("Failed to detect original country: ", err)

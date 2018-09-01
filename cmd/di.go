@@ -58,6 +58,10 @@ type Dependencies struct {
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
+	if err := nodeOptions.Directories.Check(); err != nil {
+		return err
+	}
+
 	if err := di.bootstrapNetwork(nodeOptions.NetworkOptions); err != nil {
 		return err
 	}
