@@ -21,7 +21,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/ip"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/stretchr/testify/assert"
 )
 

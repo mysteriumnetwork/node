@@ -18,7 +18,7 @@
 package location
 
 import (
-	"github.com/mysteriumnetwork/node/ip"
+	"github.com/mysteriumnetwork/node/core/ip"
 )
 
 // NewDetector constructs Detector instance

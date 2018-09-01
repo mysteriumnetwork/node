@@ -28,8 +28,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/ip"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/stretchr/testify/assert"
 )

@@ -20,8 +20,9 @@ package connection
 import (
 	"encoding/json"
 	"time"
-	"github.com/mysteriumnetwork/node/core/location"
+
 	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
