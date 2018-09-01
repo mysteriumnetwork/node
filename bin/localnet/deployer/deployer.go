@@ -25,11 +25,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/payments/cli/helpers"
 	mysttoken "github.com/mysteriumnetwork/payments/mysttoken/generated"
 	promises "github.com/mysteriumnetwork/payments/promises/generated"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 func main() {

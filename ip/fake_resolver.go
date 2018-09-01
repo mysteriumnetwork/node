@@ -17,29 +17,31 @@
 
 package ip
 
-func NewFakeResolver(ip string) Resolver {
+// NewResolverFake returns fakeResolver which resolves statically entered IP
+func NewResolverFake(ipAddress string) Resolver {
 	return &fakeResolver{
-		ip:    ip,
-		error: nil,
+		ipAddress: ipAddress,
+		error:     nil,
 	}
 }
 
-func NewFailingFakeResolver(err error) Resolver {
+// NewResolverFakeFailing returns fakeResolver with entered error
+func NewResolverFakeFailing(err error) Resolver {
 	return &fakeResolver{
-		ip:    "",
-		error: err,
+		ipAddress: "",
+		error:     err,
 	}
 }
 
 type fakeResolver struct {
-	ip    string
-	error error
+	ipAddress string
+	error     error
 }
 
 func (client *fakeResolver) GetPublicIP() (string, error) {
-	return client.ip, client.error
+	return client.ipAddress, client.error
 }
 
 func (client *fakeResolver) GetOutboundIP() (string, error) {
-	return client.ip, client.error
+	return client.ipAddress, client.error
 }

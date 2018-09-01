@@ -21,24 +21,21 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/ip"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLocationCacheFirstCall(t *testing.T) {
-	ipResolver := ip.NewFakeResolver("100.100.100.100")
-	locationResolver := NewResolverFake("country")
-	locationDetector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
+	locationDetector := NewDetectorFake("100.100.100.100", "country")
 	locationCache := NewLocationCache(locationDetector)
+
 	location := locationCache.Get()
 	assert.Equal(t, Location{}, location)
 }
 
 func TestLocationCacheFirstSecondCalls(t *testing.T) {
-	ipResolver := ip.NewFakeResolver("100.100.100.100")
-	locationResolver := NewResolverFake("country")
-	locationDetector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
+	locationDetector := NewDetectorFake("100.100.100.100", "country")
 	locationCache := NewLocationCache(locationDetector)
+
 	location, err := locationCache.RefreshAndGet()
 	assert.Equal(t, "country", location.Country)
 	assert.Equal(t, "100.100.100.100", location.IP)
@@ -49,11 +46,10 @@ func TestLocationCacheFirstSecondCalls(t *testing.T) {
 }
 
 func TestLocationCacheWithError(t *testing.T) {
-	ipResolver := ip.NewFakeResolver("")
 	locationErr := errors.New("location resolver error")
-	locationResolver := NewFailingResolverFake(locationErr)
-	locationDetector := NewDetectorWithLocationResolver(ipResolver, locationResolver)
+	locationDetector := NewDetectorFakeFailing(locationErr)
 	locationCache := NewLocationCache(locationDetector)
+
 	location, err := locationCache.RefreshAndGet()
 	assert.EqualError(t, locationErr, err.Error())
 	assert.Equal(t, Location{}, location)

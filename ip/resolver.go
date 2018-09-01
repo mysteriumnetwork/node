@@ -17,6 +17,7 @@
 
 package ip
 
+// Resolver allows resolving current IP
 type Resolver interface {
 	GetPublicIP() (string, error)
 	GetOutboundIP() (string, error)

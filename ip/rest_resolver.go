@@ -52,13 +52,17 @@ func NewResolverWithTimeout(ipifyUrl string, timeout time.Duration) Resolver {
 	}
 }
 
+type ipResponse struct {
+	IP string `json:"IP"`
+}
+
 type clientRest struct {
 	ipifyUrl   string
 	httpClient http.Client
 }
 
 func (client *clientRest) GetPublicIP() (string, error) {
-	var ipResponse IPResponse
+	var ipResponse ipResponse
 
 	request, err := http.NewRequest("GET", client.ipifyUrl+"/?format=json", nil)
 	request.Header.Set("User-Agent", ipifyAPIClient)

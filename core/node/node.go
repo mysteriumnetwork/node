@@ -74,7 +74,7 @@ func NewNode(options Options) *Node {
 
 	locationDetector := location.NewDetector(
 		ipResolver,
-		filepath.Join(options.Directories.Config, options.LocationDatabase),
+		location.NewResolver(filepath.Join(options.Directories.Config, options.LocationDatabase)),
 	)
 
 	originalLocationCache := location.NewLocationCache(locationDetector)

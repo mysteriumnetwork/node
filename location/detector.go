@@ -21,36 +21,47 @@ import (
 	"github.com/mysteriumnetwork/node/ip"
 )
 
-type detector struct {
-	ipResolver       ip.Resolver
-	locationResolver Resolver
-}
-
-// NewDetector constructs Detector
-func NewDetector(ipResolver ip.Resolver, databasePath string) Detector {
-	return NewDetectorWithLocationResolver(ipResolver, NewResolver(databasePath))
-}
-
-// NewDetectorWithLocationResolver constructs Detector
-func NewDetectorWithLocationResolver(ipResolver ip.Resolver, locationResolver Resolver) Detector {
+// NewDetector constructs Detector instance
+func NewDetector(ipResolver ip.Resolver, locationResolver Resolver) Detector {
 	return &detector{
 		ipResolver:       ipResolver,
 		locationResolver: locationResolver,
 	}
 }
 
+// NewDetectorFake constructs Detector instance with faked data
+func NewDetectorFake(ipAddress string, country string) Detector {
+	return &detector{
+		ipResolver:       ip.NewResolverFake(ipAddress),
+		locationResolver: NewResolverFake(country),
+	}
+}
+
+// NewDetectorFakeFailing constructs Detector instance with faked error
+func NewDetectorFakeFailing(err error) Detector {
+	return &detector{
+		ipResolver:       ip.NewResolverFake(""),
+		locationResolver: NewResolverFakeFailing(err),
+	}
+}
+
+type detector struct {
+	ipResolver       ip.Resolver
+	locationResolver Resolver
+}
+
 // Maps current ip to country
 func (d *detector) DetectLocation() (Location, error) {
-	ip, err := d.ipResolver.GetPublicIP()
+	ipAddress, err := d.ipResolver.GetPublicIP()
 	if err != nil {
 		return Location{}, err
 	}
 
-	country, err := d.locationResolver.ResolveCountry(ip)
+	country, err := d.locationResolver.ResolveCountry(ipAddress)
 	if err != nil {
 		return Location{}, err
 	}
 
-	location := Location{Country: country, IP: ip}
+	location := Location{Country: country, IP: ipAddress}
 	return location, nil
 }

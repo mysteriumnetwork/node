@@ -68,7 +68,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	fakeManager := fakeManager{}
 	settableClock := utils.SettableClock{}
 	statsKeeper := stats.NewSessionStatsKeeper(settableClock.GetTime)
-	ipResolver := ip.NewFakeResolver("123.123.123.123")
+	ipResolver := ip.NewResolverFake("123.123.123.123")
 	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
 	settableClock.SetTime(sessionStart)
 	statsKeeper.MarkSessionStart()
@@ -293,7 +293,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 
 func TestGetIPEndpointSucceeds(t *testing.T) {
 	manager := fakeManager{}
-	ipResolver := ip.NewFakeResolver("123.123.123.123")
+	ipResolver := ip.NewResolverFake("123.123.123.123")
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil)
 	resp := httptest.NewRecorder()
 
@@ -311,7 +311,7 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	manager := fakeManager{}
-	ipResolver := ip.NewFailingFakeResolver(errors.New("fake error"))
+	ipResolver := ip.NewResolverFakeFailing(errors.New("fake error"))
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil)
 	resp := httptest.NewRecorder()
 

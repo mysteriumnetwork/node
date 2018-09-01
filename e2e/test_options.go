@@ -20,9 +20,9 @@ package e2e
 import (
 	"flag"
 
-	"github.com/mysteriumnetwork/payments/cli/helpers"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/payments/cli/helpers"
 )
 
 var tequilaHost = flag.String("tequila.host", "localhost", "Specify tequila host for e2e tests")
