@@ -55,7 +55,6 @@ type Manager struct {
 	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
 
 	vpnServer                   openvpn.Process
-	checkOpenvpn                func() error
 	openvpnServiceAddress       func(string, string) string
 	protocol                    string
 	proposalAnnouncementStopped *sync.WaitGroup
@@ -64,11 +63,6 @@ type Manager struct {
 // Start starts service - does not block
 func (manager *Manager) Start() (err error) {
 	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
-
-	err = manager.checkOpenvpn()
-	if err != nil {
-		return err
-	}
 
 	providerID, err := manager.identityLoader()
 	if err != nil {

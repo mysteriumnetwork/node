@@ -107,9 +107,6 @@ func NewManager(
 				state.NewMiddleware(callback),
 			)
 		},
-		checkOpenvpn: func() error {
-			return openvpn.CheckOpenvpnBinary(nodeOptions.Openvpn.Binary)
-		},
 		openvpnServiceAddress: func(outboundIP, publicIP string) string {
 			//TODO public ip could be overridden by arg nodeOptions if needed
 			if publicIP != outboundIP {

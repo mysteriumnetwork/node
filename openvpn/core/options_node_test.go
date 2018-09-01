@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package core
 
 import (
 	"testing"
@@ -24,17 +24,21 @@ import (
 )
 
 func TestErrorIsReturnedOnBadBinaryPath(t *testing.T) {
-	assert.Error(t, CheckOpenvpnBinary("non-existent-binary"))
+	options := NodeOptions{"non-existent-binary"}
+	assert.Error(t, options.Check())
 }
 
 func TestErrorIsReturnedOnExitCodeZero(t *testing.T) {
-	assert.Error(t, CheckOpenvpnBinary("testdata/exit-with-zero.sh"))
+	options := NodeOptions{"testdata/exit-with-zero.sh"}
+	assert.Error(t, options.Check())
 }
 
 func TestNoErrorIsReturnedOnExitCodeOne(t *testing.T) {
-	assert.NoError(t, CheckOpenvpnBinary("testdata/openvpn-version.sh"))
+	options := NodeOptions{"testdata/openvpn-version.sh"}
+	assert.NoError(t, options.Check())
 }
 
 func TestNoErrorIsReturnedOnOpenvpnWithCustomBuild(t *testing.T) {
-	assert.NoError(t, CheckOpenvpnBinary("testdata/openvpn-version-custom-tag.sh"))
+	options := NodeOptions{"testdata/openvpn-version-custom-tag.sh"}
+	assert.NoError(t, options.Check())
 }

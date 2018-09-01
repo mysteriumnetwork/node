@@ -62,6 +62,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	if err := nodeOptions.Openvpn.Check(); err != nil {
+		return err
+	}
+
 	if err := di.bootstrapNetwork(nodeOptions.NetworkOptions); err != nil {
 		return err
 	}

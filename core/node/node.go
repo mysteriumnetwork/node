@@ -89,7 +89,6 @@ func NewNode(
 	identity_registry.AddRegistrationEndpoint(router, identity_registry.NewRegistrationDataProvider(keystoreInstance), identityRegistry)
 
 	return &Node{
-		options:               options,
 		router:                router,
 		connectionManager:     connectionManager,
 		httpAPIServer:         httpAPIServer,
@@ -99,7 +98,6 @@ func NewNode(
 
 // Node represent entrypoint for Mysterium node with top level components
 type Node struct {
-	options               Options
 	connectionManager     connection.Manager
 	router                *httprouter.Router
 	httpAPIServer         tequilapi.APIServer
@@ -109,11 +107,6 @@ type Node struct {
 // Start starts Mysterium node (Tequilapi service, fetches location)
 func (node *Node) Start() error {
 	log.Infof("Starting Mysterium Client (%s)", metadata.VersionAsString())
-
-	err := openvpn.CheckOpenvpnBinary(node.options.Openvpn.Binary)
-	if err != nil {
-		return err
-	}
 
 	originalLocation, err := node.originalLocationCache.RefreshAndGet()
 	if err != nil {
