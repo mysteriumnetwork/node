@@ -18,7 +18,7 @@
 package cmd
 
 import (
-	"github.com/mysterium/node/core/node"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/urfave/cli"
 )
 
