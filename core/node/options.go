@@ -24,9 +24,9 @@ type Options struct {
 	TequilapiAddress string
 	TequilapiPort    int
 
-	OpenvpnBinary    string
-	IpifyUrl         string
-	LocationDatabase string
+	OpenvpnBinary string
+	IpifyUrl      string
 
+	Location LocationOptions
 	NetworkOptions
 }

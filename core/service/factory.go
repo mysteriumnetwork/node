@@ -69,10 +69,10 @@ func NewManager(nodeOptions node.Options, serviceOptions Options) *Manager {
 
 	var locationResolver location.Resolver
 	switch {
-	case serviceOptions.LocationCountry != "":
-		locationResolver = location.NewResolverFake(serviceOptions.LocationCountry)
+	case nodeOptions.Location.Country != "":
+		locationResolver = location.NewResolverFake(nodeOptions.Location.Country)
 	default:
-		locationResolver = location.NewResolver(filepath.Join(nodeOptions.Directories.Config, nodeOptions.LocationDatabase))
+		locationResolver = location.NewResolver(filepath.Join(nodeOptions.Directories.Config, nodeOptions.Location.Database))
 	}
 
 	return &Manager{

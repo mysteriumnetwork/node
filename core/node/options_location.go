@@ -15,13 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package node
 
-// Options describes options which are required to start a service
-type Options struct {
-	Identity   string
-	Passphrase string
-
-	OpenvpnProtocol string
-	OpenvpnPort     int
+// LocationOptions describes possible parameters of location detection configuration
+type LocationOptions struct {
+	Database string
+	Country  string
 }

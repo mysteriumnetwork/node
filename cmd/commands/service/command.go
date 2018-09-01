@@ -47,12 +47,6 @@ var (
 		Usage: "Openvpn port to use. Default 1194",
 		Value: 1194,
 	}
-
-	locationCountryFlag = cli.StringFlag{
-		Name:  "location.country",
-		Usage: "Service location country. If not given country is autodetected",
-		Value: "",
-	}
 )
 
 // NewCommand function creates service command
@@ -77,7 +71,6 @@ func NewCommand() *cli.Command {
 		Flags: []cli.Flag{
 			identityFlag, identityPassphraseFlag,
 			openvpnProtocolFlag, openvpnPortFlag,
-			locationCountryFlag,
 		},
 		Action: func(ctx *cli.Context) error {
 			errorChannel := make(chan error, 1)
@@ -93,13 +86,11 @@ func NewCommand() *cli.Command {
 			}()
 
 			serviceOptions := service.Options{
-				ctx.String("identity"),
-				ctx.String("identity.passphrase"),
+				ctx.String(identityFlag.Name),
+				ctx.String(identityPassphraseFlag.Name),
 
-				ctx.String("openvpn.proto"),
-				ctx.Int("openvpn.port"),
-
-				ctx.String("location.country"),
+				ctx.String(openvpnProtocolFlag.Name),
+				ctx.Int(openvpnPortFlag.Name),
 			}
 			serviceManager = service.NewManager(nodeOptions, serviceOptions)
 			go func() {

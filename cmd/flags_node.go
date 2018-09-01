@@ -44,11 +44,6 @@ var (
 		Usage: "Address (URL form) of ipify service",
 		Value: "https://api.ipify.org/",
 	}
-	locationDatabaseFlag = cli.StringFlag{
-		Name:  "location.database",
-		Usage: "Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
-		Value: "GeoLite2-Country.mmdb",
-	}
 )
 
 // RegisterNodeFlags function register node flags to flag list
@@ -61,7 +56,9 @@ func RegisterNodeFlags(flags *[]cli.Flag) error {
 
 	RegisterNetworkFlags(flags)
 
-	*flags = append(*flags, openvpnBinaryFlag, ipifyUrlFlag, locationDatabaseFlag)
+	*flags = append(*flags, openvpnBinaryFlag, ipifyUrlFlag)
+
+	RegisterLocationFlags(flags)
 
 	return nil
 }
@@ -76,8 +73,8 @@ func ParseNodeFlags(ctx *cli.Context) node.Options {
 
 		ctx.GlobalString(openvpnBinaryFlag.Name),
 		ctx.GlobalString(ipifyUrlFlag.Name),
-		ctx.GlobalString(locationDatabaseFlag.Name),
 
+		ParseLocationFlags(ctx),
 		ParseNetworkFlags(ctx),
 	}
 }
