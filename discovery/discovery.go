@@ -41,7 +41,7 @@ const (
 const logPrefix = "[discovery] "
 
 // Start launches discovery service
-func (d *Discovery) Start() error {
+func (d *Discovery) Start() {
 	stopLoop := make(chan bool)
 	d.stop = func() {
 		// cancel (stop) discovery loop
@@ -53,8 +53,6 @@ func (d *Discovery) Start() error {
 	go d.checkRegistration()
 
 	go d.mainDiscoveryLoop(stopLoop)
-
-	return nil
 }
 
 // Wait wait for proposal announcements to stop / unregister

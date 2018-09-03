@@ -156,16 +156,3 @@ func (register *Register) SubscribeToRegistrationEvent(providerAddress common.Ad
 	}()
 	return
 }
-
-// PrintRegistrationData prints identity registration data needed to register identity with payments contract
-func PrintRegistrationData(data *registry.RegistrationData) {
-	infoColor := "\033[93m"
-	stopColor := "\033[0m"
-	log.Info(infoColor)
-	log.Info("Identity is not registered yet. In order to do that - please call payments contract with the following data")
-	log.Infof("Public key: part1 -> 0x%X", data.PublicKey.Part1)
-	log.Infof("            part2 -> 0x%X", data.PublicKey.Part2)
-	log.Infof("Signature: S -> 0x%X", data.Signature.S)
-	log.Infof("           R -> 0x%X", data.Signature.R)
-	log.Infof("           V -> 0x%X%v", data.Signature.V, stopColor)
-}

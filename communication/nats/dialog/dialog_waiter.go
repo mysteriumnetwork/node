@@ -74,7 +74,6 @@ func (waiter *dialogWaiter) Stop() error {
 		dialog.Close()
 	}
 	waiter.myAddress.Disconnect()
-
 	return nil
 }
 
