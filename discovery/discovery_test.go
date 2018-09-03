@@ -46,8 +46,8 @@ func TestRegisterIdentityCancelled(t *testing.T) {
 	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false}
 	d.ownIdentity = common.Address{}
 
-	cancel := d.registerIdentity()
-	cancel()
+	d.registerIdentity()
+	d.unsubscribe()
 
 	event := <-d.proposalStatusChan
 	assert.Equal(t, event, IdentityRegisterFailed)

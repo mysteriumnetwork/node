@@ -18,7 +18,6 @@
 package discovery
 
 import (
-	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -42,33 +41,42 @@ const (
 const logPrefix = "[discovery] "
 
 // Start launches discovery service
-func (d *Discovery) Start(proposalAnnouncementStopped *sync.WaitGroup) (func(), error) {
+func (d *Discovery) Start() error {
 	stopLoop := make(chan bool)
-	stopDiscovery := func() {
+	d.stop = func() {
 		// cancel (stop) discovery loop
 		stopLoop <- true
 	}
 
-	proposalAnnouncementStopped.Add(1)
+	d.proposalAnnouncementStopped.Add(1)
 
 	go d.checkRegistration()
 
-	go d.mainDiscoveryLoop(stopLoop, proposalAnnouncementStopped)
+	go d.mainDiscoveryLoop(stopLoop)
 
-	return stopDiscovery, nil
+	return nil
 }
 
-func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool, proposalAnnouncementStopped *sync.WaitGroup) {
-	unsubscribe := func() {}
+// Wait wait for proposal announcements to stop / unregister
+func (d *Discovery) Wait() {
+	d.proposalAnnouncementStopped.Wait()
+}
+
+// Stop stops discovery loop
+func (d *Discovery) Stop() {
+	d.stop()
+}
+
+func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool) {
 
 	for {
 		select {
 		case <-stopLoop:
-			d.stopLoop(unsubscribe)
+			d.stopLoop()
 		case event := <-d.proposalStatusChan:
 			switch event {
 			case IdentityUnregistered:
-				unsubscribe = d.registerIdentity()
+				d.registerIdentity()
 			case RegisterProposal:
 				go d.registerProposal()
 			case PingProposal:
@@ -76,23 +84,24 @@ func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool, proposalAnnouncementSt
 			case UnregisterProposal:
 				go d.unregisterProposal()
 			case IdentityRegisterFailed, ProposalUnregistered, UnregisterProposalFailed:
-				proposalAnnouncementStopped.Done()
+				d.proposalAnnouncementStopped.Done()
 				return
 			}
 		}
 	}
 }
 
-func (d *Discovery) stopLoop(unsubscribe func()) {
+func (d *Discovery) stopLoop() {
 	log.Info(logPrefix, "stopping discovery loop..")
-	unsubscribe()
+	d.unsubscribe()
 	if d.status == RegisterProposal || d.status == PingProposal {
 		d.sendEvent(UnregisterProposal)
 	}
 }
 
-func (d *Discovery) registerIdentity() func() {
+func (d *Discovery) registerIdentity() {
 	registerEventChan, unsubscribe := d.identityRegistry.SubscribeToRegistrationEvent(d.ownIdentity)
+	d.unsubscribe = unsubscribe
 
 	go func() {
 		registerEvent := <-registerEventChan
@@ -105,8 +114,6 @@ func (d *Discovery) registerIdentity() func() {
 			d.sendEvent(IdentityRegisterFailed)
 		}
 	}()
-
-	return unsubscribe
 }
 
 func (d *Discovery) registerProposal() {
@@ -143,18 +150,22 @@ func (d *Discovery) checkRegistration() {
 	registered, err := d.identityRegistry.IsRegistered(d.ownIdentity)
 	if err != nil {
 		d.sendEvent(IdentityRegisterFailed)
+		return
 	}
 
-	// if not registered - wait indefinitely for identity registration event
 	if !registered {
+		// if not registered - wait indefinitely for identity registration event
 		registrationData, err := d.registrationDataProvider.ProvideRegistrationData(d.ownIdentity)
 		if err != nil {
 			d.sendEvent(IdentityRegisterFailed)
+			return
 		}
 		registry.PrintRegistrationData(registrationData)
 		log.Infof("%s identity %s not registered, delaying proposal registration until identity is registered", logPrefix, d.ownIdentity.String())
 		d.sendEvent(IdentityUnregistered)
+		return
 	}
+	d.sendEvent(RegisterProposal)
 }
 
 func (d *Discovery) sendEvent(event ProposalStatus) {

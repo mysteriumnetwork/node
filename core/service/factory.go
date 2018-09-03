@@ -19,7 +19,6 @@ package service
 
 import (
 	"path/filepath"
-	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -150,7 +149,6 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 
 			return publicIP
 		},
-		protocol:                    serviceOptions.OpenvpnProtocol,
-		proposalAnnouncementStopped: &sync.WaitGroup{},
+		protocol: serviceOptions.OpenvpnProtocol,
 	}
 }

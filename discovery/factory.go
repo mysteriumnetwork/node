@@ -18,6 +18,8 @@
 package discovery
 
 import (
+	"sync"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/identity/registry"
@@ -28,14 +30,17 @@ import (
 
 // Discovery structure holds discovery service state
 type Discovery struct {
-	identityRegistry         registry.IdentityRegistry
-	ownIdentity              common.Address
-	registrationDataProvider registry.RegistrationDataProvider
-	mysteriumClient          server.Client
-	signer                   identity.Signer
-	proposal                 dto_discovery.ServiceProposal
-	proposalStatusChan       chan ProposalStatus
-	status                   ProposalStatus
+	identityRegistry            registry.IdentityRegistry
+	ownIdentity                 common.Address
+	registrationDataProvider    registry.RegistrationDataProvider
+	mysteriumClient             server.Client
+	signer                      identity.Signer
+	proposal                    dto_discovery.ServiceProposal
+	proposalStatusChan          chan ProposalStatus
+	status                      ProposalStatus
+	proposalAnnouncementStopped *sync.WaitGroup
+	unsubscribe                 func()
+	stop                        func()
 }
 
 // NewService creates new discovery service
@@ -57,6 +62,9 @@ func NewService(
 		dto_discovery.ServiceProposal{},
 		make(chan ProposalStatus),
 		IdentityUnregistered,
+		&sync.WaitGroup{},
+		func() {},
+		func() {},
 	}
 }
 
@@ -67,7 +75,6 @@ func (d *Discovery) GenertateServiceProposalWithLocation(
 	serviceLocation dto_discovery.Location,
 	protocol string,
 ) dto_discovery.ServiceProposal {
-	p := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, protocol)
-	d.proposal = p
+	d.proposal = discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, protocol)
 	return d.proposal
 }

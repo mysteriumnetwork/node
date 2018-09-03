@@ -18,8 +18,6 @@
 package service
 
 import (
-	"sync"
-
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysterium/node/blockchain"
@@ -57,17 +55,19 @@ type Manager struct {
 
 	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
 
-	vpnServer                   openvpn.Process
-	checkOpenvpn                func() error
-	checkDirectories            func() error
-	openvpnServiceAddress       func(string, string) string
-	protocol                    string
-	proposalAnnouncementStopped *sync.WaitGroup
+	vpnServer             openvpn.Process
+	checkOpenvpn          func() error
+	checkDirectories      func() error
+	openvpnServiceAddress func(string, string) string
+	protocol              string
+	discoveryService      *discovery.Discovery
 }
+
+const logPrefix = "[manager] "
 
 // Start starts service - does not block
 func (manager *Manager) Start() (err error) {
-	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
+	log.Infof(logPrefix, "Starting Mysterium Server (%s)", metadata.VersionAsString())
 
 	err = manager.checkDirectories()
 	if err != nil {
@@ -118,14 +118,14 @@ func (manager *Manager) Start() (err error) {
 
 	err = manager.natService.Start()
 	if err != nil {
-		log.Warn("received nat service error: ", err, " trying to proceed.")
+		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
 	}
 
 	currentCountry, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
 		return err
 	}
-	log.Info("Country detected: ", currentCountry)
+	log.Info(logPrefix, "Country detected: ", currentCountry)
 	serviceLocation := dto_discovery.Location{Country: currentCountry}
 
 	primitives, err := tls.NewTLSPrimitives(serviceLocation, providerID)
@@ -135,15 +135,12 @@ func (manager *Manager) Start() (err error) {
 
 	registrationDataProvider := registry.NewRegistrationDataProvider(manager.keystore)
 
-	discoveryService := discovery.NewService(identityRegistry, providerID, registrationDataProvider, manager.mysteriumClient, manager.createSigner)
-	stopDiscovery, err := discoveryService.Start(manager.proposalAnnouncementStopped)
-	if err != nil {
-		return err
-	}
+	manager.discoveryService = discovery.NewService(identityRegistry, providerID, registrationDataProvider, manager.mysteriumClient, manager.createSigner)
+	manager.discoveryService.Start()
 
 	sessionManager := manager.sessionManagerFactory(primitives, manager.openvpnServiceAddress(outboundIP, publicIP))
 
-	proposal := discoveryService.GenertateServiceProposalWithLocation(providerID, providerContact, serviceLocation, manager.protocol)
+	proposal := manager.discoveryService.GenertateServiceProposalWithLocation(providerID, providerContact, serviceLocation, manager.protocol)
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err := manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
@@ -157,7 +154,6 @@ func (manager *Manager) Start() (err error) {
 			log.Info("Openvpn service started successfully")
 		case openvpn.ProcessExited:
 			log.Info("Openvpn service exited")
-			stopDiscovery()
 		}
 	}
 	manager.vpnServer = manager.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
@@ -170,23 +166,30 @@ func (manager *Manager) Start() (err error) {
 
 // Wait blocks until service is stopped
 func (manager *Manager) Wait() error {
-	log.Info("Waiting for proposal announcements to finish")
-	manager.proposalAnnouncementStopped.Wait()
-	log.Info("Waiting for vpn service to finish")
+	log.Info(logPrefix, "Waiting for discovery service to finish")
+	manager.discoveryService.Wait()
+	log.Info(logPrefix, "Waiting for vpn service to finish")
 	return manager.vpnServer.Wait()
 }
 
 // Kill stops service
 func (manager *Manager) Kill() error {
-	manager.natService.Stop()
+	if manager.discoveryService != nil {
+		manager.discoveryService.Stop()
+	}
+
+	var err error
+	if manager.dialogWaiter != nil {
+		err = manager.dialogWaiter.Stop()
+	}
+
+	if manager.natService != nil {
+		manager.natService.Stop()
+	}
 
 	if manager.vpnServer != nil {
 		manager.vpnServer.Stop()
 	}
 
-	if manager.dialogWaiter != nil {
-		return manager.dialogWaiter.Stop()
-	}
-
-	return nil
+	return err
 }
