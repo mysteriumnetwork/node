@@ -51,7 +51,7 @@ func NewManager(nodeOptions node.Options, serviceOptions Options) *Manager {
 
 	logconfig.Bootstrap()
 
-	ipResolver := ip.NewResolver(nodeOptions.IpifyUrl)
+	ipResolver := ip.NewResolver(nodeOptions.Location.IpifyUrl)
 	natService := nat.NewService()
 
 	keystoreDirectory := filepath.Join(nodeOptions.Directories.Data, "keystore")

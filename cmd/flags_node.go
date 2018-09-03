@@ -39,11 +39,6 @@ var (
 		Usage: "openvpn binary to use for Open VPN connections",
 		Value: "openvpn",
 	}
-	ipifyUrlFlag = cli.StringFlag{
-		Name:  "ipify-url",
-		Usage: "Address (URL form) of ipify service",
-		Value: "https://api.ipify.org/",
-	}
 )
 
 // RegisterNodeFlags function register node flags to flag list
@@ -56,7 +51,7 @@ func RegisterNodeFlags(flags *[]cli.Flag) error {
 
 	RegisterNetworkFlags(flags)
 
-	*flags = append(*flags, openvpnBinaryFlag, ipifyUrlFlag)
+	*flags = append(*flags, openvpnBinaryFlag)
 
 	RegisterLocationFlags(flags)
 
@@ -72,7 +67,6 @@ func ParseNodeFlags(ctx *cli.Context) node.Options {
 		ctx.GlobalInt(tequilapiPortFlag.Name),
 
 		ctx.GlobalString(openvpnBinaryFlag.Name),
-		ctx.GlobalString(ipifyUrlFlag.Name),
 
 		ParseLocationFlags(ctx),
 		ParseNetworkFlags(ctx),

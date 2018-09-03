@@ -123,12 +123,11 @@ func parseArguments(args []string) (options commandOptions, err error) {
 	)
 
 	flags.StringVar(
-		&options.NodeOptions.IpifyUrl,
+		&options.NodeOptions.Location.IpifyUrl,
 		"ipify-url",
 		"https://api.ipify.org/",
 		"Address (URL form) of ipify service",
 	)
-
 	flags.StringVar(
 		&options.NodeOptions.Location.Database,
 		"location.database",

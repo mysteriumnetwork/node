@@ -70,7 +70,7 @@ func NewNode(options Options) *Node {
 
 	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
 
-	ipResolver := ip.NewResolver(options.IpifyUrl)
+	ipResolver := ip.NewResolver(options.Location.IpifyUrl)
 
 	locationDetector := location.NewDetector(
 		ipResolver,
