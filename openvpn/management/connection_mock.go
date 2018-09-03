@@ -36,7 +36,7 @@ func (conn *MockConnection) SingleLineCommand(format string, args ...interface{}
 	return conn.CommandResult, nil
 }
 
-// MultiLineCommand sends command to mocked connection and expectes multiple line command response with END marker
+// MultiLineCommand sends command to mocked connection and expects multiple line command response with END marker
 func (conn *MockConnection) MultiLineCommand(format string, args ...interface{}) (string, []string, error) {
 	_, _ = conn.SingleLineCommand(format, args...)
 	return conn.CommandResult, conn.MultilineResponse, nil
