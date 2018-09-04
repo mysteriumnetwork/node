@@ -169,16 +169,18 @@ func parseArguments(args []string) (options commandOptions, err error) {
 }
 
 func runCMD(nodeOptions node.Options, serviceOptions service.Options) {
-	serviceManager := service.NewManager(nodeOptions, serviceOptions)
+	var di cmd.Dependencies
+	di.BootstrapNode(nodeOptions)
+	di.BootstrapServiceManager(nodeOptions, serviceOptions)
 
-	if err := serviceManager.Start(); err != nil {
+	if err := di.ServiceManager.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	cmd.RegisterSignalCallback(utils.SoftKiller(serviceManager.Kill))
+	cmd.RegisterSignalCallback(utils.SoftKiller(di.ServiceManager.Kill))
 
-	if err := serviceManager.Wait(); err != nil {
+	if err := di.ServiceManager.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

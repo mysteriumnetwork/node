@@ -160,16 +160,17 @@ func runCLI(options node.Options) {
 }
 
 func runCMD(options node.Options) {
-	nodeInstance := node.NewNode(options)
+	var di cmd.Dependencies
+	di.BootstrapNode(options)
 
-	cmd.RegisterSignalCallback(utils.SoftKiller(nodeInstance.Kill))
+	cmd.RegisterSignalCallback(utils.SoftKiller(di.Node.Kill))
 
-	if err := nodeInstance.Start(); err != nil {
+	if err := di.Node.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	if err := nodeInstance.Wait(); err != nil {
+	if err := di.Node.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

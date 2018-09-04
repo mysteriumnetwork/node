@@ -19,33 +19,31 @@ package run
 
 import (
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
 )
 
 // NewCommand function creates run command
 func NewCommand() *cli.Command {
-	var nodeInstance *node.Node
+	var di cmd.Dependencies
 
 	return &cli.Command{
 		Name:      "run",
 		Usage:     "Runs Mysterium node",
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
-			nodeOptions := cmd.ParseNodeFlags(ctx)
-			nodeInstance = node.NewNode(nodeOptions)
+			di.Bootstrap(cmd.ParseNodeFlags(ctx))
 
-			cmd.RegisterSignalCallback(utils.SoftKiller(nodeInstance.Kill))
+			cmd.RegisterSignalCallback(utils.SoftKiller(di.Node.Kill))
 
-			if err := nodeInstance.Start(); err != nil {
+			if err := di.Node.Start(); err != nil {
 				return err
 			}
 
-			return nodeInstance.Wait()
+			return di.Node.Wait()
 		},
 		After: func(ctx *cli.Context) error {
-			return nodeInstance.Kill()
+			return di.Node.Kill()
 		},
 	}
 }

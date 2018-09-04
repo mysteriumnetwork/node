@@ -19,7 +19,6 @@ package service
 
 import (
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
@@ -51,12 +50,11 @@ var (
 
 // NewCommand function creates service command
 func NewCommand() *cli.Command {
-	var nodeInstance *node.Node
-	var serviceManager *service.Manager
+	var di cmd.Dependencies
 
 	stopCommand := func() error {
-		errorServiceManager := serviceManager.Kill()
-		errorNode := nodeInstance.Kill()
+		errorServiceManager := di.ServiceManager.Kill()
+		errorNode := di.Node.Kill()
 
 		if errorServiceManager != nil {
 			return errorServiceManager
@@ -73,32 +71,31 @@ func NewCommand() *cli.Command {
 			openvpnProtocolFlag, openvpnPortFlag,
 		},
 		Action: func(ctx *cli.Context) error {
-			errorChannel := make(chan error, 1)
-
-			nodeOptions := cmd.ParseNodeFlags(ctx)
-			nodeInstance = node.NewNode(nodeOptions)
-			go func() {
-				if err := nodeInstance.Start(); err != nil {
-					errorChannel <- err
-					return
-				}
-				errorChannel <- nodeInstance.Wait()
-			}()
-
-			serviceOptions := service.Options{
+			di.Bootstrap(cmd.ParseNodeFlags(ctx))
+			di.BootstrapServiceManager(di.NodeOptions, service.Options{
 				ctx.String(identityFlag.Name),
 				ctx.String(identityPassphraseFlag.Name),
 
 				ctx.String(openvpnProtocolFlag.Name),
 				ctx.Int(openvpnPortFlag.Name),
-			}
-			serviceManager = service.NewManager(nodeOptions, serviceOptions)
+			})
+
+			errorChannel := make(chan error, 1)
+
 			go func() {
-				if err := serviceManager.Start(); err != nil {
+				if err := di.Node.Start(); err != nil {
 					errorChannel <- err
 					return
 				}
-				errorChannel <- serviceManager.Wait()
+				errorChannel <- di.Node.Wait()
+			}()
+
+			go func() {
+				if err := di.ServiceManager.Start(); err != nil {
+					errorChannel <- err
+					return
+				}
+				errorChannel <- di.ServiceManager.Wait()
 			}()
 
 			cmd.RegisterSignalCallback(utils.SoftKiller(stopCommand))
