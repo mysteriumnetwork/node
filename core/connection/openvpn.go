@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/location"
 	"github.com/mysteriumnetwork/node/openvpn"
@@ -56,32 +57,23 @@ func ConfigureVpnClientFactory(
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 
-		originalLocation := originalLocationCache.Get()
-
-		statsSender := bytescount.NewSessionStatsSender(
+		statsSender := stats.NewRemoteStatsSender(
+			statsKeeper,
 			mysteriumAPIClient,
 			vpnSession.ID,
 			providerID,
 			signer,
-			originalLocation.Country,
+			originalLocationCache.Get().Country,
+			time.Minute,
 		)
-		asyncStatsSender := func(stats bytescount.SessionStats) error {
-			go statsSender(stats)
-			return nil
-		}
-		intervalStatsSender, err := bytescount.NewIntervalStatsHandler(asyncStatsSender, time.Now, time.Minute)
-		if err != nil {
-			return nil, err
-		}
-		statsHandler := bytescount.NewCompositeStatsHandler(statsSaver, intervalStatsSender)
 
 		credentialsProvider := credentials.SignatureCredentialsProvider(vpnSession.ID, signer)
 
 		return openvpn.NewClient(
 			openvpnBinary,
 			vpnClientConfig,
-			state.NewMiddleware(stateCallback),
-			bytescount.NewMiddleware(statsHandler, 1*time.Second),
+			state.NewMiddleware(stateCallback, statsSender.StateHandler),
+			bytescount.NewMiddleware(statsSaver, 1*time.Second),
 			auth.NewMiddleware(credentialsProvider),
 		), nil
 	}
