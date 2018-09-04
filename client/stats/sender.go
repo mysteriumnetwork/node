@@ -31,6 +31,8 @@ import (
 
 const statsSenderLogPrefix = "[session-stats-sender] "
 
+// RemoteStatsSender sends session stats to remote API server with a fixed sendInterval.
+// Extra one send will be done on session disconnect.
 type RemoteStatsSender struct {
 	sessionID       session.SessionID
 	providerID      identity.Identity
@@ -44,6 +46,7 @@ type RemoteStatsSender struct {
 	done         chan struct{}
 }
 
+// NewRemoteStatsSender function creates new session stats sender by given options
 func NewRemoteStatsSender(statsKeeper bytescount.SessionStatsKeeper, mysteriumClient server.Client, sessionID session.SessionID, providerID identity.Identity, signer identity.Signer, consumerCountry string, interval time.Duration) *RemoteStatsSender {
 	return &RemoteStatsSender{
 		sessionID:       sessionID,
@@ -59,6 +62,7 @@ func NewRemoteStatsSender(statsKeeper bytescount.SessionStatsKeeper, mysteriumCl
 	}
 }
 
+// StateHandler expects connect and disconnect events from the OpenVPN client to start or stop actual sending stats.
 func (rss *RemoteStatsSender) StateHandler(state openvpn.State) {
 	switch state {
 	case openvpn.ConnectedState:

@@ -45,10 +45,10 @@ func TestRemoteStatsSenderOnDisconnect(t *testing.T) {
 	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, signer, "KG", time.Minute)
 
 	sender.StateHandler(openvpn.ConnectedState)
-	assert.NoError(t, waitForValue(&counter, 0))
+	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 0 }))
 
 	sender.StateHandler(openvpn.ExitingState)
-	assert.NoError(t, waitForValue(&counter, 1))
+	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 1 }))
 }
 
 func TestRemoteStatsSenderInterval(t *testing.T) {
@@ -64,17 +64,17 @@ func TestRemoteStatsSenderInterval(t *testing.T) {
 	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, signer, "KG", time.Nanosecond)
 
 	sender.StateHandler(openvpn.ConnectedState)
-	assert.NoError(t, waitForValue(&counter, 3))
+	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) > 3 }))
 
 	sender.StateHandler(openvpn.ExitingState)
 }
 
-func waitForValue(counter *int64, value int64) error {
+func waitFor(f func() bool) error {
 	timeout := time.Now().Add(time.Second)
 	for time.Now().Before(timeout) {
-		if atomic.LoadInt64(counter) == value {
+		if f() {
 			return nil
 		}
 	}
-	return fmt.Errorf("Failed to wait for a counter value: %v", value)
+	return fmt.Errorf("Failed to wait for expected result")
 }
