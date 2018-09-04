@@ -49,12 +49,11 @@ func NewManager(
 	nodeOptions node.Options,
 	serviceOptions Options,
 	networkDefinition metadata.NetworkDefinition,
+	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 ) *Manager {
 	logconfig.Bootstrap()
-
-	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
 	natService := nat.NewService()
 

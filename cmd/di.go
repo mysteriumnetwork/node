@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/server"
 )
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -34,6 +35,7 @@ type Dependencies struct {
 	Node        *node.Node
 
 	NetworkDefinition metadata.NetworkDefinition
+	MysteriumClient   server.Client
 
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
@@ -53,6 +55,7 @@ func (di *Dependencies) bootstrapNode(nodeOptions node.Options) {
 	di.Node = node.NewNode(
 		nodeOptions,
 		di.NetworkDefinition,
+		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
 	)
@@ -64,6 +67,7 @@ func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, servic
 		nodeOptions,
 		serviceOptions,
 		di.NetworkDefinition,
+		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
 	)
@@ -99,6 +103,7 @@ func (di *Dependencies) bootstrapNetworkDefinition(options node.NetworkOptions) 
 	}
 
 	di.NetworkDefinition = network
+	di.MysteriumClient = server.NewClient(network.DiscoveryAPIAddress)
 }
 
 func (di *Dependencies) bootstrapLocation(options node.LocationOptions, configDirectory string) {

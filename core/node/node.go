@@ -49,14 +49,13 @@ import (
 func NewNode(
 	options Options,
 	networkDefinition metadata.NetworkDefinition,
+	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 ) *Node {
 	logconfig.Bootstrap()
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
-
-	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
 	keystoreDirectory := filepath.Join(options.Directories.Data, "keystore")
 	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
