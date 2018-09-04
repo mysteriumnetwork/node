@@ -37,7 +37,7 @@ const managerLogPrefix = "[connection-manager] "
 var (
 	// ErrNoConnection error indicates that action applied to manager expects active connection (i.e. disconnect)
 	ErrNoConnection = errors.New("no connection exists")
-	// ErrAlreadyExists error indicates that aciton applieto to manager expects no active connection (i.e. connect)
+	// ErrAlreadyExists error indicates that action applied to manager expects no active connection (i.e. connect)
 	ErrAlreadyExists = errors.New("connection already exists")
 	// ErrConnectionCancelled indicates that connection in progress was cancelled by request of api user
 	ErrConnectionCancelled = errors.New("connection was cancelled")

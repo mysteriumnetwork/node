@@ -32,6 +32,8 @@ type Callback func(state openvpn.State)
 const stateEventPrefix = ">STATE:"
 const stateOutputMatcher = "^\\d+,([a-zA-Z_]+),.*$"
 
+var rule = regexp.MustCompile(stateOutputMatcher)
+
 type middleware struct {
 	listeners []Callback
 }
@@ -91,11 +93,6 @@ func (middleware *middleware) callListeners(state openvpn.State) {
 }
 
 func extractOpenvpnState(line string) (openvpn.State, error) {
-	rule, err := regexp.Compile(stateOutputMatcher)
-	if err != nil {
-		return openvpn.UnknownState, err
-	}
-
 	matches := rule.FindStringSubmatch(line)
 	if len(matches) < 2 {
 		return openvpn.UnknownState, errors.New("Line mismatch: " + line)

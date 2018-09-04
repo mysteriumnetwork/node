@@ -40,6 +40,14 @@ func Test_Start(t *testing.T) {
 	assert.Equal(t, "bytecount 1", mockConnection.LastLine)
 }
 
+func Test_Stop(t *testing.T) {
+	statsRecorder := fakeStatsRecorder{}
+	middleware := NewMiddleware(statsRecorder.record, 1*time.Second)
+	mockConnection := &management.MockConnection{}
+	middleware.Stop(mockConnection)
+	assert.Equal(t, "bytecount 0", mockConnection.LastLine)
+}
+
 func Test_ConsumeLine(t *testing.T) {
 	var tests = []struct {
 		line                  string

@@ -30,9 +30,12 @@ type SessionStatsHandler func(SessionStats) error
 
 const byteCountCommandTemplate = "bytecount %d"
 
+var rule = regexp.MustCompile("^>BYTECOUNT:(.*),(.*)$")
+
 type middleware struct {
 	sessionStatsHandler SessionStatsHandler
 	interval            time.Duration
+	postStop            []func()
 }
 
 // NewMiddleware returns new bytescount middleware
@@ -54,14 +57,8 @@ func (middleware *middleware) Stop(commandWriter management.CommandWriter) error
 }
 
 func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error) {
-	rule, err := regexp.Compile("^>BYTECOUNT:(.*),(.*)$")
-	if err != nil {
-		return
-	}
-
 	match := rule.FindStringSubmatch(line)
-	consumed = len(match) > 0
-	if !consumed {
+	if consumed = len(match) > 2; !consumed {
 		return
 	}
 

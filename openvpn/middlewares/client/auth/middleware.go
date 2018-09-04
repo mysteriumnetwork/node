@@ -36,6 +36,8 @@ type middleware struct {
 	state            openvpn.State
 }
 
+var rule = regexp.MustCompile("^>PASSWORD:Need 'Auth' username/password$")
+
 // NewMiddleware creates client user_auth challenge authentication middleware
 func NewMiddleware(credentials CredentialsProvider) *middleware {
 	return &middleware{
@@ -55,11 +57,6 @@ func (m *middleware) Stop(connection management.CommandWriter) error {
 }
 
 func (m *middleware) ConsumeLine(line string) (consumed bool, err error) {
-	rule, err := regexp.Compile("^>PASSWORD:Need 'Auth' username/password$")
-	if err != nil {
-		return false, err
-	}
-
 	match := rule.FindStringSubmatch(line)
 	if len(match) == 0 {
 		return false, nil
