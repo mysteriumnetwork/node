@@ -48,15 +48,15 @@ import (
 // NewNode function creates new Mysterium node by given options
 func NewNode(
 	options Options,
+	networkDefinition metadata.NetworkDefinition,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 ) *Node {
-	networkDefinition := GetNetworkDefinition(options.NetworkOptions)
-	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
-
 	logconfig.Bootstrap()
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
+
+	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
 	keystoreDirectory := filepath.Join(options.Directories.Data, "keystore")
 	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)

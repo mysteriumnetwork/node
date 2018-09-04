@@ -20,16 +20,20 @@ package cmd
 import (
 	"path/filepath"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 // Dependencies is DI container for top level components which is reusedin several places
 type Dependencies struct {
 	NodeOptions node.Options
 	Node        *node.Node
+
+	NetworkDefinition metadata.NetworkDefinition
 
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
@@ -39,6 +43,7 @@ type Dependencies struct {
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) {
+	di.bootstrapNetworkDefinition(nodeOptions.NetworkOptions)
 	di.bootstrapLocation(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNode(nodeOptions)
 }
@@ -47,6 +52,7 @@ func (di *Dependencies) bootstrapNode(nodeOptions node.Options) {
 	di.NodeOptions = nodeOptions
 	di.Node = node.NewNode(
 		nodeOptions,
+		di.NetworkDefinition,
 		di.IPResolver,
 		di.LocationResolver,
 	)
@@ -57,9 +63,42 @@ func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, servic
 	di.ServiceManager = service.NewManager(
 		nodeOptions,
 		serviceOptions,
+		di.NetworkDefinition,
 		di.IPResolver,
 		di.LocationResolver,
 	)
+}
+
+// function decides on etwork definition combined from testnet/localnet flags and possible overrides
+func (di *Dependencies) bootstrapNetworkDefinition(options node.NetworkOptions) {
+	network := metadata.DefaultNetwork
+
+	switch {
+	case options.Testnet:
+		network = metadata.TestnetDefinition
+	case options.Localnet:
+		network = metadata.LocalnetDefinition
+	}
+
+	//override defined values one by one from options
+	if options.DiscoveryAPIAddress != metadata.DefaultNetwork.DiscoveryAPIAddress {
+		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
+	}
+
+	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
+		network.BrokerAddress = options.BrokerAddress
+	}
+
+	normalizedAddress := common.HexToAddress(options.EtherPaymentsAddress)
+	if normalizedAddress.String() != metadata.DefaultNetwork.PaymentsContractAddress.String() {
+		network.PaymentsContractAddress = common.HexToAddress(options.EtherPaymentsAddress)
+	}
+
+	if options.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
+		network.EtherClientRPC = options.EtherClientRPC
+	}
+
+	di.NetworkDefinition = network
 }
 
 func (di *Dependencies) bootstrapLocation(options node.LocationOptions, configDirectory string) {

@@ -33,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/server/auth"
@@ -47,14 +48,13 @@ import (
 func NewManager(
 	nodeOptions node.Options,
 	serviceOptions Options,
+	networkDefinition metadata.NetworkDefinition,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 ) *Manager {
-
-	networkDefinition := node.GetNetworkDefinition(nodeOptions.NetworkOptions)
-	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
-
 	logconfig.Bootstrap()
+
+	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
 	natService := nat.NewService()
 
