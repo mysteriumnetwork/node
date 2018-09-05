@@ -170,7 +170,10 @@ func parseArguments(args []string) (options commandOptions, err error) {
 
 func runCMD(nodeOptions node.Options, serviceOptions service.Options) {
 	var di cmd.Dependencies
-	di.Bootstrap(nodeOptions)
+	if err := di.Bootstrap(nodeOptions); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	di.BootstrapServiceManager(nodeOptions, serviceOptions)
 
 	if err := di.ServiceManager.Start(); err != nil {

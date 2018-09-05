@@ -20,14 +20,18 @@ package cmd
 import (
 	"path/filepath"
 
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/mysteriumnetwork/node/blockchain"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_loading "github.com/mysteriumnetwork/node/identity/loading"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
 )
@@ -39,10 +43,12 @@ type Dependencies struct {
 
 	NetworkDefinition metadata.NetworkDefinition
 	MysteriumClient   server.Client
+	EtherClient       *ethclient.Client
 
-	Keystore        *keystore.KeyStore
-	IdentityManager identity.Manager
-	SignerFactory   identity.SignerFactory
+	Keystore         *keystore.KeyStore
+	IdentityManager  identity.Manager
+	SignerFactory    identity.SignerFactory
+	IdentityRegistry identity_registry.IdentityRegistry
 
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
@@ -51,21 +57,26 @@ type Dependencies struct {
 }
 
 // Bootstrap initiates all container dependencies
-func (di *Dependencies) Bootstrap(nodeOptions node.Options) {
-	di.bootstrapNetworkDefinition(nodeOptions.NetworkOptions)
+func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
+	if err := di.bootstrapNetwork(nodeOptions.NetworkOptions); err != nil {
+		return err
+	}
+
 	di.bootstrapIdentity(nodeOptions.Directories)
 	di.bootstrapLocation(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNode(nodeOptions)
+
+	return nil
 }
 
 func (di *Dependencies) bootstrapNode(nodeOptions node.Options) {
 	di.NodeOptions = nodeOptions
 	di.Node = node.NewNode(
 		nodeOptions,
-		di.NetworkDefinition,
 		di.Keystore,
 		di.IdentityManager,
 		di.SignerFactory,
+		di.IdentityRegistry,
 		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
@@ -88,6 +99,7 @@ func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, servic
 		di.NetworkDefinition,
 		identityLoader,
 		di.SignerFactory,
+		di.IdentityRegistry,
 		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
@@ -95,7 +107,7 @@ func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, servic
 }
 
 // function decides on etwork definition combined from testnet/localnet flags and possible overrides
-func (di *Dependencies) bootstrapNetworkDefinition(options node.NetworkOptions) {
+func (di *Dependencies) bootstrapNetwork(options node.NetworkOptions) (err error) {
 	network := metadata.DefaultNetwork
 
 	switch {
@@ -125,6 +137,18 @@ func (di *Dependencies) bootstrapNetworkDefinition(options node.NetworkOptions) 
 
 	di.NetworkDefinition = network
 	di.MysteriumClient = server.NewClient(network.DiscoveryAPIAddress)
+
+	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
+	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
+		return err
+	}
+
+	log.Info("Using Contract at address:", network.PaymentsContractAddress.String())
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistry(di.EtherClient, network.PaymentsContractAddress); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (di *Dependencies) bootstrapIdentity(directories node.DirectoryOptions) {

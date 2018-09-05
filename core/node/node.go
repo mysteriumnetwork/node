@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/mysteriumnetwork/node/blockchain"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -33,7 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/openvpn"
@@ -47,10 +46,10 @@ import (
 // NewNode function creates new Mysterium node by given options
 func NewNode(
 	options Options,
-	networkDefinition metadata.NetworkDefinition,
 	keystoreInstance *keystore.KeyStore,
 	identityManager identity.Manager,
 	signerFactory identity.SignerFactory,
+	identityRegistry identity_registry.IdentityRegistry,
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
@@ -87,11 +86,10 @@ func NewNode(
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
+	identity_registry.AddRegistrationEndpoint(router, identity_registry.NewRegistrationDataProvider(keystoreInstance), identityRegistry)
 
 	return &Node{
 		options:               options,
-		network:               networkDefinition,
-		keystore:              keystoreInstance,
 		router:                router,
 		connectionManager:     connectionManager,
 		httpAPIServer:         httpAPIServer,
@@ -102,8 +100,6 @@ func NewNode(
 // Node represent entrypoint for Mysterium node with top level components
 type Node struct {
 	options               Options
-	network               metadata.NetworkDefinition
-	keystore              *keystore.KeyStore
 	connectionManager     connection.Manager
 	router                *httprouter.Router
 	httpAPIServer         tequilapi.APIServer
@@ -132,20 +128,6 @@ func (node *Node) Start() error {
 	}
 
 	tequilapi_endpoints.AddRouteForStop(node.router, utils.SoftKiller(node.Kill))
-
-	log.Info("Using Eth endpoint: ", node.network.EtherClientRPC)
-	client, err := blockchain.NewClient(node.network.EtherClientRPC)
-	if err != nil {
-		return err
-	}
-
-	log.Info("Using Contract at address:", node.network.PaymentsContractAddress.String())
-	statusProvider, err := registry.NewIdentityRegistry(client, node.network.PaymentsContractAddress)
-	if err != nil {
-		return err
-	}
-
-	registry.AddRegistrationEndpoint(node.router, registry.NewRegistrationDataProvider(node.keystore), statusProvider)
 
 	err = node.httpAPIServer.StartServing()
 	if err != nil {

@@ -22,13 +22,11 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/blockchain"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_loading "github.com/mysteriumnetwork/node/identity/loading"
-	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/openvpn"
@@ -42,15 +40,14 @@ import (
 
 // Manager represent entrypoint for Mysterium service with top level components
 type Manager struct {
-	networkDefinition metadata.NetworkDefinition
-	identityLoader    identity_loading.Loader
-	createSigner      identity.SignerFactory
-	ipResolver        ip.Resolver
-	mysteriumClient   server.Client
-	natService        nat.NATService
-	locationResolver  location.Resolver
+	identityLoader   identity_loading.Loader
+	createSigner     identity.SignerFactory
+	ipResolver       ip.Resolver
+	mysteriumClient  server.Client
+	natService       nat.NATService
+	locationResolver location.Resolver
 
-	dialogWaiterFactory func(identity identity.Identity, identityRegistry registry.IdentityRegistry) communication.DialogWaiter
+	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
 	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
@@ -84,17 +81,7 @@ func (manager *Manager) Start() (err error) {
 		return err
 	}
 
-	ethClient, err := blockchain.NewClient(manager.networkDefinition.EtherClientRPC)
-	if err != nil {
-		return err
-	}
-
-	identityRegistry, err := registry.NewIdentityRegistry(ethClient, manager.networkDefinition.PaymentsContractAddress)
-	if err != nil {
-		return err
-	}
-
-	manager.dialogWaiter = manager.dialogWaiterFactory(providerID, identityRegistry)
+	manager.dialogWaiter = manager.dialogWaiterFactory(providerID)
 	providerContact, err := manager.dialogWaiter.Start()
 	if err != nil {
 		return err

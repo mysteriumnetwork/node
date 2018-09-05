@@ -29,7 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_loading "github.com/mysteriumnetwork/node/identity/loading"
-	"github.com/mysteriumnetwork/node/identity/registry"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
@@ -49,6 +49,7 @@ func NewManager(
 	networkDefinition metadata.NetworkDefinition,
 	identityLoader identity_loading.Loader,
 	signerFactory identity.SignerFactory,
+	identityRegistry identity_registry.IdentityRegistry,
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
@@ -58,14 +59,13 @@ func NewManager(
 	natService := nat.NewService()
 
 	return &Manager{
-		networkDefinition: networkDefinition,
-		identityLoader:    identityLoader,
-		createSigner:      signerFactory,
-		locationResolver:  locationResolver,
-		ipResolver:        ipResolver,
-		mysteriumClient:   mysteriumClient,
-		natService:        natService,
-		dialogWaiterFactory: func(myID identity.Identity, identityRegistry registry.IdentityRegistry) communication.DialogWaiter {
+		identityLoader:   identityLoader,
+		createSigner:     signerFactory,
+		locationResolver: locationResolver,
+		ipResolver:       ipResolver,
+		mysteriumClient:  mysteriumClient,
+		natService:       natService,
+		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
 				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
 				signerFactory(myID),

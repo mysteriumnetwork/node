@@ -32,7 +32,9 @@ func NewCommand() *cli.Command {
 		Usage:     "Runs Mysterium node",
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
-			di.Bootstrap(cmd.ParseNodeFlags(ctx))
+			if err := di.Bootstrap(cmd.ParseNodeFlags(ctx)); err != nil {
+				return err
+			}
 
 			cmd.RegisterSignalCallback(utils.SoftKiller(di.Node.Kill))
 

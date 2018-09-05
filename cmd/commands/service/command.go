@@ -72,7 +72,9 @@ func NewCommand() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			nodeOptions := cmd.ParseNodeFlags(ctx)
-			di.Bootstrap(nodeOptions)
+			if err := di.Bootstrap(cmd.ParseNodeFlags(ctx)); err != nil {
+				return err
+			}
 			di.BootstrapServiceManager(nodeOptions, service.Options{
 				ctx.String(identityFlag.Name),
 				ctx.String(identityPassphraseFlag.Name),

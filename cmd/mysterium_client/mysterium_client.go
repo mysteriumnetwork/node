@@ -161,7 +161,10 @@ func runCLI(options node.Options) {
 
 func runCMD(options node.Options) {
 	var di cmd.Dependencies
-	di.Bootstrap(options)
+	if err := di.Bootstrap(options); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
 	cmd.RegisterSignalCallback(utils.SoftKiller(di.Node.Kill))
 
