@@ -45,3 +45,8 @@ func info(items ...interface{}) {
 	fmt.Printf(infoColor + "[INFO] \033[0m")
 	fmt.Println(items...)
 }
+
+func infof(format string, items ...interface{}) {
+	fmt.Printf(infoColor + "[INFO] \033[0m")
+	fmt.Printf(format, items...)
+}
