@@ -15,13 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package identity
+package loading
 
-import "github.com/mysteriumnetwork/node/identity"
+import (
+	"testing"
 
-// HandlerInterface allows selecting identity to be used
-type HandlerInterface interface {
-	UseExisting(address, passphrase string) (identity.Identity, error)
-	UseLast(passphrase string) (identity.Identity, error)
-	UseNew(passphrase string) (identity.Identity, error)
+	"github.com/stretchr/testify/assert"
+)
+
+func Test_LoadIdentityExisting(t *testing.T) {
+	loadIdentity := NewLoader(&handlerFake{}, "existing", "")
+
+	id, err := loadIdentity()
+	assert.Equal(t, "existing", id.Address)
+	assert.Nil(t, err)
+}
+
+func Test_LoadIdentityLast(t *testing.T) {
+	loadIdentity := NewLoader(&handlerFake{LastAddress: "last"}, "", "")
+
+	id, err := loadIdentity()
+	assert.Equal(t, "last", id.Address)
+	assert.Nil(t, err)
+}
+
+func Test_LoadIdentityNew(t *testing.T) {
+	loadIdentity := NewLoader(&handlerFake{}, "", "")
+
+	id, err := loadIdentity()
+	assert.Equal(t, "new", id.Address)
+	assert.Nil(t, err)
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
+	identity_loading "github.com/mysteriumnetwork/node/identity/loading"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
@@ -42,7 +43,7 @@ import (
 // Manager represent entrypoint for Mysterium service with top level components
 type Manager struct {
 	networkDefinition metadata.NetworkDefinition
-	identityLoader    func() (identity.Identity, error)
+	identityLoader    identity_loading.Loader
 	createSigner      identity.SignerFactory
 	ipResolver        ip.Resolver
 	mysteriumClient   server.Client

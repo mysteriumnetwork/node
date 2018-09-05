@@ -15,22 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package identity
+package loading
 
-import "github.com/mysteriumnetwork/node/identity"
+import (
+	"errors"
 
-// Selector selects the identity
-type Selector func() (identity.Identity, error)
+	"github.com/mysteriumnetwork/node/identity"
+)
 
-// LoadIdentity chooses which identity to use and invokes it using identityHandler
-func LoadIdentity(identityHandler HandlerInterface, identityOption, passphrase string) (identity.Identity, error) {
-	if len(identityOption) > 0 {
-		return identityHandler.UseExisting(identityOption, passphrase)
+type handlerFake struct {
+	LastAddress string
+}
+
+func (hf *handlerFake) UseExisting(address, passphrase string) (identity.Identity, error) {
+	return identity.Identity{Address: address}, nil
+}
+
+func (hf *handlerFake) UseLast(passphrase string) (id identity.Identity, err error) {
+	if hf.LastAddress != "" {
+		id = identity.Identity{Address: hf.LastAddress}
+	} else {
+		err = errors.New("no last identity")
 	}
+	return
+}
 
-	if id, err := identityHandler.UseLast(passphrase); err == nil {
-		return id, err
-	}
-
-	return identityHandler.UseNew(passphrase)
+func (hf *handlerFake) UseNew(passphrase string) (identity.Identity, error) {
+	return identity.Identity{Address: "new"}, nil
 }

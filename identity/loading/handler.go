@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package identity
+package loading
 
 import (
 	"errors"
@@ -37,7 +37,7 @@ func NewHandler(
 	identityAPI server.Client,
 	cache identity.IdentityCacheInterface,
 	signerFactory identity.SignerFactory,
-) HandlerInterface {
+) Handler {
 	return &handler{
 		manager:       manager,
 		identityAPI:   identityAPI,

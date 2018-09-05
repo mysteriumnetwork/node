@@ -23,7 +23,6 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	identity_handler "github.com/mysteriumnetwork/node/cmd/commands/service/identity"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -31,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
+	identity_loading "github.com/mysteriumnetwork/node/identity/loading"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -63,7 +63,7 @@ func NewManager(
 		return identity.NewSigner(keystoreInstance, id)
 	}
 
-	identityHandler := identity_handler.NewHandler(
+	identityHandler := identity_loading.NewHandler(
 		identity.NewIdentityManager(keystoreInstance),
 		mysteriumClient,
 		identity.NewIdentityCache(keystoreDirectory, "remember.json"),
@@ -72,14 +72,12 @@ func NewManager(
 
 	return &Manager{
 		networkDefinition: networkDefinition,
-		identityLoader: func() (identity.Identity, error) {
-			return identity_handler.LoadIdentity(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)
-		},
-		createSigner:     createSigner,
-		locationResolver: locationResolver,
-		ipResolver:       ipResolver,
-		mysteriumClient:  mysteriumClient,
-		natService:       natService,
+		identityLoader:    identity_loading.NewLoader(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase),
+		createSigner:      createSigner,
+		locationResolver:  locationResolver,
+		ipResolver:        ipResolver,
+		mysteriumClient:   mysteriumClient,
+		natService:        natService,
 		dialogWaiterFactory: func(myID identity.Identity, identityRegistry registry.IdentityRegistry) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
 				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
