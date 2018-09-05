@@ -17,7 +17,7 @@
 
 package session
 
-import "github.com/mysterium/node/identity"
+import "github.com/mysteriumnetwork/node/identity"
 
 // SessionID represents session id type
 type SessionID string

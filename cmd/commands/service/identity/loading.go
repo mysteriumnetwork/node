@@ -17,7 +17,7 @@
 
 package identity
 
-import "github.com/mysterium/node/identity"
+import "github.com/mysteriumnetwork/node/identity"
 
 // Selector selects the identity
 type Selector func() (identity.Identity, error)

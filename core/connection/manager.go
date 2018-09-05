@@ -22,14 +22,14 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/service_discovery/dto"
-	"github.com/mysterium/node/session"
-	"github.com/mysterium/node/utils"
+	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/openvpn"
+	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
+	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 const managerLogPrefix = "[connection-manager] "

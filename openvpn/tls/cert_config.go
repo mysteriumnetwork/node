@@ -23,8 +23,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 func newCACert(serviceLocation dto.Location) *x509.Certificate {

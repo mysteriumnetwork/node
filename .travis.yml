@@ -2,7 +2,7 @@ sudo: true
 os: linux
 language: go
 go: [1.9.2]
-go_import_path: github.com/mysterium/node
+go_import_path: github.com/mysteriumnetwork/node
 
 env:
   global:

@@ -21,10 +21,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	nats_discovery "github.com/mysterium/node/communication/nats/discovery"
-	"github.com/mysterium/node/openvpn"
-	dto_openvpn "github.com/mysterium/node/openvpn/discovery/dto"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/openvpn"
+	dto_openvpn "github.com/mysteriumnetwork/node/openvpn/discovery/dto"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 

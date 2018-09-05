@@ -62,7 +62,7 @@ services:
     image: golang:1.10
     volumes:
       - $GOPATH:/go
-    working_dir: /go/src/github.com/mysterium/node
+    working_dir: /go/src/github.com/mysteriumnetwork/node
 
 volumes:
   geth-runtime:

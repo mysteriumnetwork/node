@@ -21,15 +21,15 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/mysterium/node/communication"
+	"github.com/mysteriumnetwork/node/communication"
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysterium/node/communication/nats"
-	"github.com/mysterium/node/communication/nats/discovery"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/identity/registry"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/communication/nats"
+	"github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // NewDialogWaiter constructs new DialogWaiter which works thru NATS connection.

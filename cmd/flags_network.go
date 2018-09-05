@@ -20,8 +20,8 @@ package cmd
 import (
 	"flag"
 
-	"github.com/mysterium/node/core/node"
-	"github.com/mysterium/node/metadata"
+	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli"
 )
 

@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/utils"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 type servicePFCtl struct {

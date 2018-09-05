@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/mysterium/node/tequilapi/validation"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 /*

@@ -18,7 +18,7 @@
 package openvpn
 
 import (
-	"github.com/mysterium/node/openvpn/config"
+	"github.com/mysteriumnetwork/node/openvpn/config"
 )
 
 // ClientConfig represents specific "openvpn as client" configuration

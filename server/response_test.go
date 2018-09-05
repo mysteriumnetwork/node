@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/mysterium/node/requests"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
 

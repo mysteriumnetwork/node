@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/communication"
+	"github.com/mysteriumnetwork/node/communication"
 	"github.com/nats-io/go-nats"
 )
 

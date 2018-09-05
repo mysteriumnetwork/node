@@ -18,7 +18,7 @@
 package dialog
 
 import (
-	"github.com/mysterium/node/communication"
+	"github.com/mysteriumnetwork/node/communication"
 )
 
 // Consume is trying to establish new dialog with Provider

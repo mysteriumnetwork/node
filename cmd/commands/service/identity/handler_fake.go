@@ -20,7 +20,7 @@ package identity
 import (
 	"errors"
 
-	"github.com/mysterium/node/identity"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 type handlerFake struct {

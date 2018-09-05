@@ -20,8 +20,8 @@ package session
 import (
 	"errors"
 
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/session"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // SignaturePrefix is used to prefix with each session string before calculating signature or extracting identity

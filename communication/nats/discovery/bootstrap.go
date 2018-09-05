@@ -20,7 +20,7 @@ package discovery
 import (
 	"encoding/json"
 
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // Bootstrap loads NATS discovery package into the overall system

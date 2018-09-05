@@ -14,6 +14,6 @@ RUN go get \
     golang.org/x/tools/cmd/goimports \
     github.com/go-swagger/go-swagger/cmd/swagger
 
-WORKDIR /go/src/github.com/mysterium/node
+WORKDIR /go/src/github.com/mysteriumnetwork/node
 
 ENTRYPOINT ["/bin/bash"]

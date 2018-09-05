@@ -18,9 +18,9 @@
 package server
 
 import (
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/server/dto"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/server/dto"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // Client is interface how to access Mysterium API

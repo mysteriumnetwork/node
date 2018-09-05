@@ -20,7 +20,7 @@ package session
 import (
 	"errors"
 
-	"github.com/mysterium/node/communication"
+	"github.com/mysteriumnetwork/node/communication"
 )
 
 type createProducer struct {

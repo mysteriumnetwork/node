@@ -24,9 +24,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/MysteriumNetwork/payments/cli/helpers"
-	mysttoken "github.com/MysteriumNetwork/payments/mysttoken/generated"
-	registry "github.com/MysteriumNetwork/payments/registry/generated"
+	"github.com/mysteriumnetwork/payments/cli/helpers"
+	mysttoken "github.com/mysteriumnetwork/payments/mysttoken/generated"
+	registry "github.com/mysteriumnetwork/payments/registry/generated"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -34,7 +34,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/mysterium/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/client"
 )
 
 //addresses should match those deployed in e2e test environment

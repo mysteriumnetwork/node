@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/mysterium/node/identity"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 const (

@@ -20,8 +20,8 @@ package promises
 import (
 	"testing"
 
-	dto "github.com/mysterium/node/core/promises/dto"
-	"github.com/mysterium/node/money"
+	dto "github.com/mysteriumnetwork/node/core/promises/dto"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 

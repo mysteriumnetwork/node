@@ -20,8 +20,8 @@ package tls
 import (
 	"testing"
 
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 

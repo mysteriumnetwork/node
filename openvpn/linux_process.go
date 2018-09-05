@@ -21,9 +21,9 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/openvpn/config"
-	"github.com/mysterium/node/openvpn/linux"
-	"github.com/mysterium/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/config"
+	"github.com/mysteriumnetwork/node/openvpn/linux"
+	"github.com/mysteriumnetwork/node/openvpn/management"
 )
 
 const linuxProcess = "[Linux openvpn process] "

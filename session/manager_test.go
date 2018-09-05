@@ -20,7 +20,7 @@ package session
 import (
 	"testing"
 
-	"github.com/mysterium/node/identity"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 

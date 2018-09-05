@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/server"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 

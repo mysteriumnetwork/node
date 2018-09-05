@@ -18,11 +18,11 @@
 package server
 
 import (
-	"github.com/mysterium/node/server/dto"
+	"github.com/mysteriumnetwork/node/server/dto"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/identity"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/identity"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // NewClientFake constructs fake API client

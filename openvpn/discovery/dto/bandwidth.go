@@ -20,7 +20,7 @@ package dto
 import (
 	"strconv"
 
-	"github.com/mysterium/node/datasize"
+	"github.com/mysteriumnetwork/node/datasize"
 )
 
 // Bandwidth represents connection bandwidth data type

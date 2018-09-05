@@ -18,7 +18,7 @@
 package location
 
 import (
-	"github.com/mysterium/node/ip"
+	"github.com/mysteriumnetwork/node/ip"
 )
 
 type detector struct {

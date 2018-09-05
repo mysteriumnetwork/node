@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysterium/node/openvpn/config"
-	"github.com/mysterium/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/config"
+	"github.com/mysteriumnetwork/node/openvpn/management"
 )
 
 // Process defines openvpn process interface with basic controls

@@ -5,7 +5,7 @@
 #
 #> ln -s `pwd`/bin/aliases ~/.zsh.after/mysterium.zsh && source ~/.zshrc
 
-alias myst-home="cd $GOPATH/src/github.com/mysterium/node"
+alias myst-home="cd $GOPATH/src/github.com/mysteriumnetwork/node"
 alias myst="myst-home"
 
 alias myst-broker="myst-home && docker-compose up broker"

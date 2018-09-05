@@ -18,8 +18,8 @@
 package openvpn
 
 import (
-	"github.com/mysterium/node/openvpn/management"
-	"github.com/mysterium/node/openvpn/tls"
+	"github.com/mysteriumnetwork/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/tls"
 )
 
 // NewServer constructs new openvpn server instance

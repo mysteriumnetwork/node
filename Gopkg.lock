@@ -3,7 +3,7 @@
 
 [[projects]]
   digest = "1:b4577772bd3b54569d18fb2c3d7fa120cc30d6707638a137a7582019fc89c456"
-  name = "github.com/MysteriumNetwork/payments"
+  name = "github.com/mysteriumnetwork/payments"
   packages = [
     "cli/helpers",
     "identity",
@@ -373,12 +373,12 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/MysteriumNetwork/payments/cli/helpers",
-    "github.com/MysteriumNetwork/payments/identity",
-    "github.com/MysteriumNetwork/payments/mysttoken/generated",
-    "github.com/MysteriumNetwork/payments/promises/generated",
-    "github.com/MysteriumNetwork/payments/registry",
-    "github.com/MysteriumNetwork/payments/registry/generated",
+    "github.com/mysteriumnetwork/payments/cli/helpers",
+    "github.com/mysteriumnetwork/payments/identity",
+    "github.com/mysteriumnetwork/payments/mysttoken/generated",
+    "github.com/mysteriumnetwork/payments/promises/generated",
+    "github.com/mysteriumnetwork/payments/registry",
+    "github.com/mysteriumnetwork/payments/registry/generated",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
     "github.com/ethereum/go-ethereum/accounts",

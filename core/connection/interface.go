@@ -18,12 +18,12 @@
 package connection
 
 import (
-	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/state"
-	"github.com/mysterium/node/service_discovery/dto"
-	"github.com/mysterium/node/session"
+	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/openvpn"
+	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // DialogCreator creates new dialog between consumer and provider, using given contact information

@@ -21,9 +21,9 @@ sudo docker logs -f mysterium-node
 
 
 ## Mysterium VPN node (Debian && Ubuntu) - tested on Ubuntu 16.04
-Note: you need to replace {version} with specific version number from [releases](https://github.com/MysteriumNetwork/node/releases/)
+Note: you need to replace {version} with specific version number from [releases](https://github.com/mysteriumnetwork/node/releases/)
 ### Download
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
+ * https://github.com/mysteriumnetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
 
 ###  Add latest OpenVPN repository
 
@@ -35,7 +35,7 @@ apt-get update
 
 ### Installation
 ```bash
-wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
+wget https://github.com/mysteriumnetwork/node/releases/download/{VERSION}/mysterium-node_linux_amd64.deb
 sudo dpkg --install --force-depends mysterium-node_linux_amd64.deb
 sudo apt-get install -y --fix-broken
 ```
@@ -56,7 +56,7 @@ sudo mysterium_server --data-dir=/var/lib/mysterium-node --config-dir=/etc/myste
 
 ## Mysterium VPN client (Debian && Ubuntu) - tested on Ubuntu 16.04
 ### Download
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
+ * https://github.com/mysteriumnetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
 
 ### Add latest OpenVPN repository
 
@@ -68,7 +68,7 @@ apt-get update
 
 ### Installation
 ```bash
-wget https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
+wget https://github.com/mysteriumnetwork/node/releases/download/{VERSION}/mysterium-client_linux_amd64.deb
 sudo dpkg --install --force-depends mysterium-client_linux_amd64.deb
 sudo apt-get install -y --fix-broken
 ```
@@ -99,7 +99,7 @@ sudo mysterium_client --data-dir=/var/lib/mysterium-client --config-dir=/etc/mys
 ## Mysterium VPN node and client standalone binaries (.tar.gz)
 ### Client
 #### Download
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_client_{OS}_{ARCH}.tar.gz
+ * https://github.com/mysteriumnetwork/node/releases/download/{VERSION}/mysterium_client_{OS}_{ARCH}.tar.gz
 #### Extract
 ```bash
 tar -xvzf mysterium_client_{OS}_{ARCH}.tar.gz
@@ -112,7 +112,7 @@ sudo ./mysterium_client
 
 ### Node
 #### Download
- * https://github.com/MysteriumNetwork/node/releases/download/{VERSION}/mysterium_server_{OS}_{ARCH}.tar.gz
+ * https://github.com/mysteriumnetwork/node/releases/download/{VERSION}/mysterium_server_{OS}_{ARCH}.tar.gz
 #### Extract
 ```bash
 tar -xvzf mysterium_server_{OS}_{ARCH}.tar.gz
