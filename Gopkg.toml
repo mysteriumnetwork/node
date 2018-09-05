@@ -26,8 +26,8 @@
 
 
 [[constraint]]
-  name = "github.com/MysteriumNetwork/payments"
-  version = "0.0.5-beta"
+  name = "github.com/mysteriumnetwork/payments"
+  version = "0.0.6-beta"
 
 [[constraint]]
   name = "github.com/chzyer/readline"
