@@ -1,6 +1,7 @@
 FROM mysteriumnetwork/mysterium-node-builder AS builder
 
 # Compile application
+WORKDIR /go/src/github.com/mysteriumnetwork/node
 ADD . .
 ARG PACKAGE_VERSION
 RUN GOOS=linux GOARCH=amd64 bin/client_build \
