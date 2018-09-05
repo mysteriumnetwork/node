@@ -25,10 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/server"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/openvpn"
+	"github.com/mysteriumnetwork/node/server"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +38,7 @@ func TestRemoteStatsSenderOnDisconnect(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
+	statsKeeper := NewSessionStatsKeeper(time.Now)
 	mysteriumClient := server.NewClient(ts.URL)
 	signer := &identity.SignerFake{}
 	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, signer, "KG", time.Minute)
@@ -60,7 +59,7 @@ func TestRemoteStatsSenderInterval(t *testing.T) {
 
 	signer := &identity.SignerFake{}
 	mysteriumClient := server.NewClient(ts.URL)
-	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
+	statsKeeper := NewSessionStatsKeeper(time.Now)
 	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, signer, "KG", time.Nanosecond)
 
 	sender.StateHandler(openvpn.ConnectedState)

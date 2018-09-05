@@ -17,11 +17,13 @@
 
 package bytescount
 
+import "github.com/mysteriumnetwork/node/client/stats"
+
 type fakeStatsRecorder struct {
-	LastSessionStats SessionStats
+	LastSessionStats stats.SessionStats
 }
 
-func (sender *fakeStatsRecorder) record(sessionStats SessionStats) error {
+func (sender *fakeStatsRecorder) record(sessionStats stats.SessionStats) error {
 	sender.LastSessionStats = sessionStats
 	return nil
 }

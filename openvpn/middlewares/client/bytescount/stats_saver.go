@@ -17,9 +17,11 @@
 
 package bytescount
 
+import "github.com/mysteriumnetwork/node/client/stats"
+
 // NewSessionStatsSaver returns stats handler, which saves stats stats keeper
-func NewSessionStatsSaver(statsKeeper SessionStatsKeeper) SessionStatsHandler {
-	return func(sessionStats SessionStats) error {
+func NewSessionStatsSaver(statsKeeper stats.SessionStatsKeeper) SessionStatsHandler {
+	return func(sessionStats stats.SessionStats) error {
 		statsKeeper.Save(sessionStats)
 		return nil
 	}

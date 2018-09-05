@@ -21,12 +21,11 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/server/dto"
-	"github.com/mysterium/node/session"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/openvpn"
+	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/dto"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 const statsSenderLogPrefix = "[session-stats-sender] "
@@ -38,24 +37,24 @@ type RemoteStatsSender struct {
 	providerID      identity.Identity
 	consumerCountry string
 
-	client      server.Client
-	signer      identity.Signer
-	statsKeeper bytescount.SessionStatsKeeper
+	signer          identity.Signer
+	statsKeeper     SessionStatsKeeper
+	mysteriumClient server.Client
 
 	sendInterval time.Duration
 	done         chan struct{}
 }
 
 // NewRemoteStatsSender function creates new session stats sender by given options
-func NewRemoteStatsSender(statsKeeper bytescount.SessionStatsKeeper, mysteriumClient server.Client, sessionID session.SessionID, providerID identity.Identity, signer identity.Signer, consumerCountry string, interval time.Duration) *RemoteStatsSender {
+func NewRemoteStatsSender(statsKeeper SessionStatsKeeper, mysteriumClient server.Client, sessionID session.SessionID, providerID identity.Identity, signer identity.Signer, consumerCountry string, interval time.Duration) *RemoteStatsSender {
 	return &RemoteStatsSender{
 		sessionID:       sessionID,
 		providerID:      providerID,
 		consumerCountry: consumerCountry,
 
-		client:      mysteriumClient,
-		signer:      signer,
-		statsKeeper: statsKeeper,
+		signer:          signer,
+		statsKeeper:     statsKeeper,
+		mysteriumClient: mysteriumClient,
 
 		sendInterval: interval,
 		done:         make(chan struct{}),
@@ -90,7 +89,7 @@ func (rss *RemoteStatsSender) intervalSend() {
 
 func (rss *RemoteStatsSender) send() error {
 	sessionStats := rss.statsKeeper.Retrieve()
-	return rss.client.SendSessionStats(
+	return rss.mysteriumClient.SendSessionStats(
 		rss.sessionID,
 		dto.SessionStats{
 			BytesSent:       sessionStats.BytesSent,

@@ -38,7 +38,7 @@ func ConfigureVpnClientFactory(
 	mysteriumAPIClient server.Client,
 	openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
-	statsKeeper bytescount.SessionStatsKeeper,
+	statsKeeper stats.SessionStatsKeeper,
 	originalLocationCache location.Cache,
 ) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback) (openvpn.Process, error) {

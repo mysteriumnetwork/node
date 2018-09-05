@@ -24,7 +24,9 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/julienschmidt/httprouter"
+
 	"github.com/mysteriumnetwork/node/blockchain"
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -36,7 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/openvpn"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -67,7 +68,7 @@ func NewNode(options Options) *Node {
 		return identity.NewSigner(keystoreInstance, id)
 	}
 
-	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
+	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
 
 	ipResolver := ip.NewResolver(options.IpifyUrl)
 
