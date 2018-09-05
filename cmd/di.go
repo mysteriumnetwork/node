@@ -18,6 +18,10 @@
 package cmd
 
 import (
+	"path/filepath"
+
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 )
@@ -27,20 +31,44 @@ type Dependencies struct {
 	NodeOptions node.Options
 	Node        *node.Node
 
+	IPResolver       ip.Resolver
+	LocationResolver location.Resolver
+
 	ServiceManager *service.Manager
 }
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) {
+	di.bootstrapLocation(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNode(nodeOptions)
 }
 
 func (di *Dependencies) bootstrapNode(nodeOptions node.Options) {
 	di.NodeOptions = nodeOptions
-	di.Node = node.NewNode(nodeOptions)
+	di.Node = node.NewNode(
+		nodeOptions,
+		di.IPResolver,
+		di.LocationResolver,
+	)
 }
 
 // BootstrapServiceManager initiates ServiceManager dependency
 func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, serviceOptions service.Options) {
-	di.ServiceManager = service.NewManager(nodeOptions, serviceOptions)
+	di.ServiceManager = service.NewManager(
+		nodeOptions,
+		serviceOptions,
+		di.IPResolver,
+		di.LocationResolver,
+	)
+}
+
+func (di *Dependencies) bootstrapLocation(options node.LocationOptions, configDirectory string) {
+	di.IPResolver = ip.NewResolver(options.IpifyUrl)
+
+	switch {
+	case options.Country != "":
+		di.LocationResolver = location.NewResolverFake(options.Country)
+	default:
+		di.LocationResolver = location.NewResolver(filepath.Join(configDirectory, options.Database))
+	}
 }

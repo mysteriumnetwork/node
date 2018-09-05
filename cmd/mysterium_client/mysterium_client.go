@@ -161,7 +161,7 @@ func runCLI(options node.Options) {
 
 func runCMD(options node.Options) {
 	var di cmd.Dependencies
-	di.BootstrapNode(options)
+	di.Bootstrap(options)
 
 	cmd.RegisterSignalCallback(utils.SoftKiller(di.Node.Kill))
 

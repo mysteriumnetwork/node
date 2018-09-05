@@ -71,8 +71,9 @@ func NewCommand() *cli.Command {
 			openvpnProtocolFlag, openvpnPortFlag,
 		},
 		Action: func(ctx *cli.Context) error {
-			di.Bootstrap(cmd.ParseNodeFlags(ctx))
-			di.BootstrapServiceManager(di.NodeOptions, service.Options{
+			nodeOptions := cmd.ParseNodeFlags(ctx)
+			di.Bootstrap(nodeOptions)
+			di.BootstrapServiceManager(nodeOptions, service.Options{
 				ctx.String(identityFlag.Name),
 				ctx.String(identityPassphraseFlag.Name),
 

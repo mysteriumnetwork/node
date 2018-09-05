@@ -46,7 +46,11 @@ import (
 )
 
 // NewNode function creates new Mysterium node by given options
-func NewNode(options Options) *Node {
+func NewNode(
+	options Options,
+	ipResolver ip.Resolver,
+	locationResolver location.Resolver,
+) *Node {
 	networkDefinition := GetNetworkDefinition(options.NetworkOptions)
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
@@ -70,13 +74,7 @@ func NewNode(options Options) *Node {
 
 	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
 
-	ipResolver := ip.NewResolver(options.Location.IpifyUrl)
-
-	locationDetector := location.NewDetector(
-		ipResolver,
-		location.NewResolver(filepath.Join(options.Directories.Config, options.Location.Database)),
-	)
-
+	locationDetector := location.NewDetector(ipResolver, locationResolver)
 	originalLocationCache := location.NewLocationCache(locationDetector)
 
 	vpnClientFactory := connection.ConfigureVpnClientFactory(

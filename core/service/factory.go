@@ -44,14 +44,18 @@ import (
 )
 
 // NewManager function creates new service manager by given options
-func NewManager(nodeOptions node.Options, serviceOptions Options) *Manager {
+func NewManager(
+	nodeOptions node.Options,
+	serviceOptions Options,
+	ipResolver ip.Resolver,
+	locationResolver location.Resolver,
+) *Manager {
 
 	networkDefinition := node.GetNetworkDefinition(nodeOptions.NetworkOptions)
 	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
 
 	logconfig.Bootstrap()
 
-	ipResolver := ip.NewResolver(nodeOptions.Location.IpifyUrl)
 	natService := nat.NewService()
 
 	keystoreDirectory := filepath.Join(nodeOptions.Directories.Data, "keystore")
@@ -66,14 +70,6 @@ func NewManager(nodeOptions node.Options, serviceOptions Options) *Manager {
 		identity.NewIdentityCache(keystoreDirectory, "remember.json"),
 		createSigner,
 	)
-
-	var locationResolver location.Resolver
-	switch {
-	case nodeOptions.Location.Country != "":
-		locationResolver = location.NewResolverFake(nodeOptions.Location.Country)
-	default:
-		locationResolver = location.NewResolver(filepath.Join(nodeOptions.Directories.Config, nodeOptions.Location.Database))
-	}
 
 	return &Manager{
 		networkDefinition: networkDefinition,
