@@ -19,7 +19,8 @@ package identity
 
 import "github.com/ethereum/go-ethereum/accounts"
 
-type keystoreInterface interface {
+// Keystore allows actions with accounts (listing, creating, unlocking, signing)
+type Keystore interface {
 	Accounts() []accounts.Account
 	NewAccount(passphrase string) (accounts.Account, error)
 	Find(a accounts.Account) (accounts.Account, error)

@@ -128,7 +128,7 @@ func (di *Dependencies) bootstrapNetworkDefinition(options node.NetworkOptions) 
 }
 
 func (di *Dependencies) bootstrapIdentity(directories node.DirectoryOptions) {
-	di.Keystore = identity.NewKeystoreFilesystem(filepath.Join(directories.Keystore))
+	di.Keystore = identity.NewKeystoreFilesystem(directories.Keystore)
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore)
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
