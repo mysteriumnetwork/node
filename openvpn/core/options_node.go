@@ -15,18 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package core
 
-import openvpn_core "github.com/mysteriumnetwork/node/openvpn/core"
-
-// Options describes options which are required to start Node
-type Options struct {
-	Directories DirectoryOptions
-
-	TequilapiAddress string
-	TequilapiPort    int
-
-	Openvpn  openvpn_core.NodeOptions
-	Location LocationOptions
-	NetworkOptions
+// NodeOptions describes possible parameters of Openvpn configuration
+type NodeOptions struct {
+	Binary string
 }

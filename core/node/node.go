@@ -70,7 +70,7 @@ func NewNode(
 
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
-		options.OpenvpnBinary,
+		options.Openvpn.Binary,
 		options.Directories.Config,
 		options.Directories.Runtime,
 		signerFactory,
@@ -110,7 +110,7 @@ type Node struct {
 func (node *Node) Start() error {
 	log.Infof("Starting Mysterium Client (%s)", metadata.VersionAsString())
 
-	err := openvpn.CheckOpenvpnBinary(node.options.OpenvpnBinary)
+	err := openvpn.CheckOpenvpnBinary(node.options.Openvpn.Binary)
 	if err != nil {
 		return err
 	}

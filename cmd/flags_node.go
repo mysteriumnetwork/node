@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/core/node"
+	openvpn_core "github.com/mysteriumnetwork/node/openvpn/core"
 	"github.com/urfave/cli"
 )
 
@@ -33,12 +34,6 @@ var (
 		Usage: "Port for listening incoming api requests",
 		Value: 4050,
 	}
-
-	openvpnBinaryFlag = cli.StringFlag{
-		Name:  "openvpn.binary",
-		Usage: "openvpn binary to use for Open VPN connections",
-		Value: "openvpn",
-	}
 )
 
 // RegisterNodeFlags function register node flags to flag list
@@ -50,9 +45,7 @@ func RegisterNodeFlags(flags *[]cli.Flag) error {
 	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag)
 
 	RegisterNetworkFlags(flags)
-
-	*flags = append(*flags, openvpnBinaryFlag)
-
+	openvpn_core.RegisterFlags(flags)
 	RegisterLocationFlags(flags)
 
 	return nil
@@ -66,8 +59,7 @@ func ParseNodeFlags(ctx *cli.Context) node.Options {
 		ctx.GlobalString(tequilapiAddressFlag.Name),
 		ctx.GlobalInt(tequilapiPortFlag.Name),
 
-		ctx.GlobalString(openvpnBinaryFlag.Name),
-
+		openvpn_core.ParseFlags(ctx),
 		ParseLocationFlags(ctx),
 		ParseNetworkFlags(ctx),
 	}

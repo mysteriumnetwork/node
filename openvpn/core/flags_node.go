@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,18 +15,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package core
 
-import openvpn_core "github.com/mysteriumnetwork/node/openvpn/core"
+import (
+	"github.com/urfave/cli"
+)
 
-// Options describes options which are required to start Node
-type Options struct {
-	Directories DirectoryOptions
+var (
+	binaryFlag = cli.StringFlag{
+		Name:  "openvpn.binary",
+		Usage: "openvpn binary to use for Open VPN connections",
+		Value: "openvpn",
+	}
+)
 
-	TequilapiAddress string
-	TequilapiPort    int
+// RegisterFlags function register Openvpn flags to flag list
+func RegisterFlags(flags *[]cli.Flag) {
+	*flags = append(*flags, binaryFlag)
+}
 
-	Openvpn  openvpn_core.NodeOptions
-	Location LocationOptions
-	NetworkOptions
+// ParseFlags function fills in Openvpn options from CLI context
+func ParseFlags(ctx *cli.Context) NodeOptions {
+	return NodeOptions{
+		ctx.GlobalString(binaryFlag.Name),
+	}
 }

@@ -101,14 +101,14 @@ func NewManager(
 			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
 
 			return openvpn.NewServer(
-				nodeOptions.OpenvpnBinary,
+				nodeOptions.Openvpn.Binary,
 				serverConfigGenerator,
 				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 				state.NewMiddleware(callback),
 			)
 		},
 		checkOpenvpn: func() error {
-			return openvpn.CheckOpenvpnBinary(nodeOptions.OpenvpnBinary)
+			return openvpn.CheckOpenvpnBinary(nodeOptions.Openvpn.Binary)
 		},
 		openvpnServiceAddress: func(outboundIP, publicIP string) string {
 			//TODO public ip could be overridden by arg nodeOptions if needed
