@@ -18,8 +18,8 @@
 package registry
 
 import (
-	"github.com/mysteriumnetwork/payments/registry"
-	"github.com/mysteriumnetwork/payments/registry/generated"
+	"github.com/MysteriumNetwork/payments/registry"
+	"github.com/MysteriumNetwork/payments/registry/generated"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"

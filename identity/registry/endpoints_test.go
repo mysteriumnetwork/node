@@ -22,8 +22,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysteriumnetwork/payments/identity"
-	"github.com/mysteriumnetwork/payments/registry"
+	"github.com/MysteriumNetwork/payments/identity"
+	"github.com/MysteriumNetwork/payments/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
