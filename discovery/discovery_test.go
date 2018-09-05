@@ -19,50 +19,70 @@ package discovery
 
 import (
 	"testing"
+	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysterium/node/identity"
 	"github.com/mysterium/node/identity/registry"
-	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRegisterIdentitySuccessful(t *testing.T) {
-	d := &Discovery{}
-	d.proposalStatusChan = make(chan ProposalStatus)
-	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: true}
-	d.ownIdentity = common.Address{}
+func TestStartRegistersProposal(t *testing.T) {
+	d := NewFakeDiscrovery()
+	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false, Registered: true}
 
-	d.registerIdentity()
+	d.Start()
 
-	event := <-d.proposalStatusChan
-	assert.Equal(t, event, RegisterProposal)
+	actualStatus := observeStatus(t, d, PingProposal)
+	assert.Equal(t, PingProposal, actualStatus)
 }
 
-func TestRegisterIdentityCancelled(t *testing.T) {
-	d := &Discovery{}
-	d.proposalStatusChan = make(chan ProposalStatus)
-	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false}
-	d.ownIdentity = common.Address{}
+func TestStartRegistersIdentitySuccessfully(t *testing.T) {
+	d := NewFakeDiscrovery()
+	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: true, Registered: false}
 
-	d.registerIdentity()
-	d.unsubscribe()
+	d.Start()
 
-	event := <-d.proposalStatusChan
-	assert.Equal(t, event, IdentityRegisterFailed)
+	actualStatus := observeStatus(t, d, PingProposal)
+	assert.Equal(t, PingProposal, actualStatus)
 }
 
-func TestUnregisterProposalSuccessful(t *testing.T) {
-	d := &Discovery{}
-	fakeMystClient := server.NewClientFake()
-	d.proposalStatusChan = make(chan ProposalStatus)
-	d.mysteriumClient = fakeMystClient
-	d.proposal = dto_discovery.ServiceProposal{}
-	d.signer = &identity.SignerFake{}
+func TestStartRegisterIdentityCancelled(t *testing.T) {
+	d := NewFakeDiscrovery()
+	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false, Registered: false}
 
-	d.unregisterProposal()
+	d.Start()
 
-	event := <-d.proposalStatusChan
-	assert.Equal(t, event, ProposalUnregistered)
+	actualStatus := observeStatus(t, d, WaitingForRegistration)
+	assert.Equal(t, WaitingForRegistration, actualStatus)
+
+	d.Stop()
+
+	actualStatus = observeStatus(t, d, IdentityRegisterFailed)
+	assert.Equal(t, IdentityRegisterFailed, actualStatus)
+}
+
+func TestStartStopUnregisterProposal(t *testing.T) {
+	d := NewFakeDiscrovery()
+	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false, Registered: true}
+
+	d.Start()
+
+	actualStatus := observeStatus(t, d, PingProposal)
+	assert.Equal(t, PingProposal, actualStatus)
+
+	d.Stop()
+
+	actualStatus = observeStatus(t, d, ProposalUnregistered)
+	assert.Equal(t, ProposalUnregistered, actualStatus)
+}
+
+func observeStatus(t *testing.T, d *Discovery, status ProposalStatus) ProposalStatus {
+	for {
+		d.RLock()
+		if d.status == status {
+			d.RUnlock()
+			return d.status
+		}
+		time.Sleep(10 * time.Millisecond)
+		d.RUnlock()
+	}
 }

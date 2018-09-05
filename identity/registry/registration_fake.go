@@ -18,21 +18,26 @@
 package registry
 
 import (
+	"github.com/MysteriumNetwork/payments/identity"
+	"github.com/MysteriumNetwork/payments/registry"
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // FakeRegister fake register
 type FakeRegister struct {
 	RegistrationEventExists bool
+	Registered              bool
 }
 
 // IsRegistered returns fake identity registration status within payments contract
 func (register *FakeRegister) IsRegistered(identity common.Address) (bool, error) {
-	return true, nil
+	return register.Registered, nil
 }
 
 // SubscribeToRegistrationEvent returns fake registration event if given providerAddress was registered within payments contract
 func (register *FakeRegister) SubscribeToRegistrationEvent(providerAddress common.Address) (registrationEvent chan RegistrationEvent, unsubscribe func()) {
+	log.Info("fake SubscribeToRegistrationEvent called ")
 	registrationEvent = make(chan RegistrationEvent)
 	unsubscribe = func() {
 		registrationEvent <- Cancelled
@@ -43,4 +48,30 @@ func (register *FakeRegister) SubscribeToRegistrationEvent(providerAddress commo
 		}
 	}()
 	return registrationEvent, unsubscribe
+}
+
+// FakeRegistrationDataProvider fake registration data provider
+type FakeRegistrationDataProvider struct {
+}
+
+// Fake public key parts for tests
+const (
+	testPubPart1 = "0xFA001122334455667788990011223344556677889900112233445566778899AF"
+	testPubPart2 = "0xDE001122334455667788990011223344556677889900112233445566778899AD"
+)
+
+// ProvideRegistrationData provides fake registration data
+func (m *FakeRegistrationDataProvider) ProvideRegistrationData(id common.Address) (*registry.RegistrationData, error) {
+	registrationData := &registry.RegistrationData{
+		PublicKey: registry.PublicKeyParts{
+			Part1: common.FromHex(testPubPart1),
+			Part2: common.FromHex(testPubPart2),
+		},
+		Signature: &identity.DecomposedSignature{
+			R: [32]byte{1},
+			S: [32]byte{2},
+			V: 27,
+		},
+	}
+	return registrationData, nil
 }

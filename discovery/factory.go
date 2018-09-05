@@ -41,6 +41,8 @@ type Discovery struct {
 	proposalAnnouncementStopped *sync.WaitGroup
 	unsubscribe                 func()
 	stop                        func()
+
+	sync.RWMutex
 }
 
 // NewService creates new discovery service
@@ -61,10 +63,11 @@ func NewService(
 		signer,
 		dto_discovery.ServiceProposal{},
 		make(chan ProposalStatus),
-		IdentityUnregistered,
+		StatusUndefined,
 		&sync.WaitGroup{},
 		func() {},
 		func() {},
+		sync.RWMutex{},
 	}
 }
 

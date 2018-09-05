@@ -30,18 +30,23 @@ type ProposalStatus int
 // Proposal registration stages
 const (
 	IdentityUnregistered ProposalStatus = iota
+	WaitingForRegistration
 	IdentityRegisterFailed
 	RegisterProposal
 	PingProposal
 	UnregisterProposal
 	UnregisterProposalFailed
 	ProposalUnregistered
+	StatusUndefined
 )
 
 const logPrefix = "[discovery] "
 
 // Start launches discovery service
 func (d *Discovery) Start() {
+	d.RLock()
+	defer d.RUnlock()
+
 	stopLoop := make(chan bool)
 	d.stop = func() {
 		// cancel (stop) discovery loop
@@ -91,16 +96,25 @@ func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool) {
 
 func (d *Discovery) stopLoop() {
 	log.Info(logPrefix, "stopping discovery loop..")
-	d.unsubscribe()
-	if d.status == RegisterProposal || d.status == PingProposal {
-		d.sendEvent(UnregisterProposal)
+	d.RLock()
+	if d.status == WaitingForRegistration {
+		d.unsubscribe()
 	}
+	d.RUnlock()
+
+	d.RLock()
+	if d.status == RegisterProposal || d.status == PingProposal {
+		d.RUnlock()
+		d.sendEvent(UnregisterProposal)
+		return
+	}
+	d.RUnlock()
 }
 
 func (d *Discovery) registerIdentity() {
 	registerEventChan, unsubscribe := d.identityRegistry.SubscribeToRegistrationEvent(d.ownIdentity)
 	d.unsubscribe = unsubscribe
-
+	d.sendEvent(WaitingForRegistration)
 	go func() {
 		registerEvent := <-registerEventChan
 		switch registerEvent {
@@ -167,6 +181,8 @@ func (d *Discovery) checkRegistration() {
 }
 
 func (d *Discovery) sendEvent(event ProposalStatus) {
+	d.Lock()
+	defer d.Unlock()
 	d.status = event
 	go func() {
 		d.proposalStatusChan <- event
