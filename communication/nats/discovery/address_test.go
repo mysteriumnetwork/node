@@ -20,8 +20,8 @@ package discovery
 import (
 	"testing"
 
-	"github.com/mysterium/node/identity"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/identity"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 )

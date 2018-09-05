@@ -23,11 +23,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/communication/nats"
-	"github.com/mysterium/node/communication/nats/discovery"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/identity/registry"
+	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/communication/nats"
+	"github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/stretchr/testify/assert"
 )
 

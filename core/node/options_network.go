@@ -19,7 +19,7 @@ package node
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysterium/node/metadata"
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 // NetworkOptions describes possible parameters of network configuration

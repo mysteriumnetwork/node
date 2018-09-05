@@ -17,7 +17,7 @@
 
 package identity
 
-import "github.com/mysterium/node/identity"
+import "github.com/mysteriumnetwork/node/identity"
 
 // HandlerInterface allows selecting identity to be used
 type HandlerInterface interface {

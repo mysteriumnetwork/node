@@ -18,7 +18,7 @@
 package session
 
 import (
-	"github.com/mysterium/node/communication"
+	"github.com/mysteriumnetwork/node/communication"
 )
 
 // NewDialogHandler constructs handler which gets all incoming dialogs and starts handling them

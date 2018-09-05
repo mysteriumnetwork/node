@@ -18,9 +18,9 @@
 package openvpn
 
 import (
-	"github.com/mysterium/node/openvpn/management"
-	"github.com/mysterium/node/openvpn/tls"
-	"github.com/mysterium/node/session"
+	"github.com/mysteriumnetwork/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/tls"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // NewClient creates openvpn client with given config params

@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/metadata"
-	"github.com/mysterium/node/tequilapi/utils"
+	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // swagger:model HealthCheckDTO

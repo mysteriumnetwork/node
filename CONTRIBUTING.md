@@ -10,8 +10,8 @@ brew install dep
 brew install openvpn
 
 export GOPATH=~/workspace/go
-git clone git@github.com:MysteriumNetwork/node.git $GOPATH/src/github.com/mysterium/node
-cd $GOPATH/src/github.com/mysterium/node
+git clone git@github.com:mysteriumnetwork/node.git $GOPATH/src/github.com/mysteriumnetwork/node
+cd $GOPATH/src/github.com/mysteriumnetwork/node
 ```
 
 * **Step 2.** Fetch dependencies

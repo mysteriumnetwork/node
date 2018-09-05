@@ -22,7 +22,7 @@ COPY bin/server_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Install application
-COPY --from=builder /go/src/github.com/mysterium/node/build/package/mysterium-node_linux_amd64.deb /tmp/mysterium-node.deb
+COPY --from=builder /go/src/github.com/mysteriumnetwork/node/build/package/mysterium-node_linux_amd64.deb /tmp/mysterium-node.deb
 RUN apt-get update \
     && dpkg --install --force-depends /tmp/mysterium-node.deb \
     && apt-get install -y --fix-broken \

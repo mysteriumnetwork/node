@@ -18,8 +18,8 @@
 package dto
 
 import (
-	"github.com/mysterium/node/datasize"
-	"github.com/mysterium/node/money"
+	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/node/money"
 )
 
 // PaymentMethodPerBytes indicates payment method for data amount transferred

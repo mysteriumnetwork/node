@@ -18,7 +18,7 @@
 package dto
 
 import (
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // ServiceDefinition structure represents various service parameters

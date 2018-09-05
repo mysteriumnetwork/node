@@ -21,11 +21,11 @@ import (
 	"fmt"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/communication/nats"
-	"github.com/mysterium/node/communication/nats/discovery"
-	"github.com/mysterium/node/identity"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/communication/nats"
+	"github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/identity"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // NewDialogEstablisher constructs new DialogEstablisher which works thru NATS connection.

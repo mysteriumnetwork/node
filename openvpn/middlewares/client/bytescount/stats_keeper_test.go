@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysterium/node/utils"
+	"github.com/mysteriumnetwork/node/utils"
 	"github.com/stretchr/testify/assert"
 )
 

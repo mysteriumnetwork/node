@@ -21,15 +21,15 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/location"
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/middlewares/client/auth"
-	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/openvpn/middlewares/state"
-	"github.com/mysterium/node/openvpn/session/credentials"
-	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/session"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/location"
+	"github.com/mysteriumnetwork/node/openvpn"
+	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
+	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
+	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
+	"github.com/mysteriumnetwork/node/openvpn/session/credentials"
+	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // ConfigureVpnClientFactory creates openvpn construction function by given vpn session, consumer id and state callbacks

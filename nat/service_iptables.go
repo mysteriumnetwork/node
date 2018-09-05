@@ -19,7 +19,7 @@ package nat
 
 import (
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/utils"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 const natLogPrefix = "[nat] "

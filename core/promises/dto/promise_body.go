@@ -18,7 +18,7 @@
 package dto
 
 import (
-	"github.com/mysterium/node/money"
+	"github.com/mysteriumnetwork/node/money"
 )
 
 // PromiseBody represents payment promise between two parties

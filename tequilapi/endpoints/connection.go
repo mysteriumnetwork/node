@@ -23,12 +23,12 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/core/connection"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/ip"
-	"github.com/mysterium/node/openvpn/middlewares/client/bytescount"
-	"github.com/mysterium/node/tequilapi/utils"
-	"github.com/mysterium/node/tequilapi/validation"
+	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/ip"
+	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
+	"github.com/mysteriumnetwork/node/tequilapi/utils"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
 
 // statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST

@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/tequilapi/endpoints"
+	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 )
 
 // NewAPIRouter returns new api router with status endpoints

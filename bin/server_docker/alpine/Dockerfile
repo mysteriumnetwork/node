@@ -5,7 +5,7 @@ RUN apk add --update --no-cache bash musl-dev gcc make \
     && rm -rf /var/cache/apk/*
 
 # Compile application
-WORKDIR /go/src/github.com/mysterium/node
+WORKDIR /go/src/github.com/mysteriumnetwork/node
 ADD . .
 RUN bin/server_build
 
@@ -24,6 +24,6 @@ ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 COPY bin/server_package/config /etc/mysterium-node
 COPY bin/common_package /etc/mysterium-node
 
-COPY --from=builder /go/src/github.com/mysterium/node/build/server/mysterium_server /usr/bin/mysterium_server
+COPY --from=builder /go/src/github.com/mysteriumnetwork/node/build/server/mysterium_server /usr/bin/mysterium_server
 
 WORKDIR /var/run/mysterium-node

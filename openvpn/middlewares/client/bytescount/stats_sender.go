@@ -18,10 +18,10 @@
 package bytescount
 
 import (
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/server"
-	"github.com/mysterium/node/server/dto"
-	"github.com/mysterium/node/session"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/dto"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // SessionStatsSender sends statistics to server

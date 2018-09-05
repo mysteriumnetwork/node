@@ -21,8 +21,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mysterium/node/datasize"
-	"github.com/mysterium/node/money"
+	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 

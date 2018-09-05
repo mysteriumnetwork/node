@@ -29,7 +29,7 @@ COPY bin/client_docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Install application
-COPY --from=builder /go/src/github.com/mysterium/node/build/package/mysterium-client_linux_amd64.deb /tmp/mysterium-client.deb
+COPY --from=builder /go/src/github.com/mysteriumnetwork/node/build/package/mysterium-client_linux_amd64.deb /tmp/mysterium-client.deb
 RUN apt-get update \
     && dpkg --install --force-depends /tmp/mysterium-client.deb \
     && apt-get install -y --fix-broken \

@@ -18,7 +18,7 @@
 package dialog
 
 import (
-	"github.com/mysterium/node/communication"
+	"github.com/mysteriumnetwork/node/communication"
 )
 
 type dialogCreateProducer struct {

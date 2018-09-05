@@ -28,7 +28,7 @@ Description: You have to accept terms and conditions to install this software
  .
  . We recommend you read the full version to get acquainted with all of the
    terms and conditions available here:
-        https://github.com/MysteriumNetwork/node/blob/master/TERMS.md
+        https://github.com/mysteriumnetwork/node/blob/master/TERMS.md
 
 Template: mysterium/accept_terms
 Type: boolean
