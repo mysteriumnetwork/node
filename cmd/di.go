@@ -41,7 +41,7 @@ type Dependencies struct {
 	MysteriumClient   server.Client
 
 	Keystore        *keystore.KeyStore
-	IdentityManager identity.IdentityManagerInterface
+	IdentityManager identity.Manager
 	SignerFactory   identity.SignerFactory
 
 	IPResolver       ip.Resolver

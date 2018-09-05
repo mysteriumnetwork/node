@@ -17,7 +17,7 @@
 
 package identity
 
-type IdentityManagerInterface interface {
+type Manager interface {
 	CreateNewIdentity(passphrase string) (Identity, error)
 	GetIdentities() []Identity
 	GetIdentity(address string) (Identity, error)

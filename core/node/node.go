@@ -49,7 +49,7 @@ func NewNode(
 	options Options,
 	networkDefinition metadata.NetworkDefinition,
 	keystoreInstance *keystore.KeyStore,
-	identityManager identity.IdentityManagerInterface,
+	identityManager identity.Manager,
 	signerFactory identity.SignerFactory,
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,

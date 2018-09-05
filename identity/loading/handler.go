@@ -25,7 +25,7 @@ import (
 )
 
 type handler struct {
-	manager       identity.IdentityManagerInterface
+	manager       identity.Manager
 	identityAPI   server.Client
 	cache         identity.IdentityCacheInterface
 	signerFactory identity.SignerFactory
@@ -33,7 +33,7 @@ type handler struct {
 
 //NewHandler creates new identity handler used by node
 func NewHandler(
-	manager identity.IdentityManagerInterface,
+	manager identity.Manager,
 	identityAPI server.Client,
 	cache identity.IdentityCacheInterface,
 	signerFactory identity.SignerFactory,

@@ -60,7 +60,7 @@ type identityUnlockingDto struct {
 }
 
 type identitiesAPI struct {
-	idm             identity.IdentityManagerInterface
+	idm             identity.Manager
 	mysteriumClient server.Client
 	signerFactory   identity.SignerFactory
 }
@@ -78,7 +78,7 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.IdentityManagerInterface, mystClient server.Client, signerFactory identity.SignerFactory) *identitiesAPI {
+func NewIdentitiesEndpoint(idm identity.Manager, mystClient server.Client, signerFactory identity.SignerFactory) *identitiesAPI {
 	return &identitiesAPI{idm, mystClient, signerFactory}
 }
 
@@ -289,7 +289,7 @@ func validateCreationRequest(createReq *identityCreationDto) (errors *validation
 //AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
 	router *httprouter.Router,
-	idm identity.IdentityManagerInterface,
+	idm identity.Manager,
 	mystClient server.Client,
 	signerFactory identity.SignerFactory,
 ) {
