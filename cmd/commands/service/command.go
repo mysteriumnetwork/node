@@ -18,10 +18,10 @@
 package service
 
 import (
-	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/core/node"
-	"github.com/mysterium/node/core/service"
-	"github.com/mysterium/node/utils"
+	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
 )
 

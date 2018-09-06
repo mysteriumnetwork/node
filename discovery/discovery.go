@@ -21,7 +21,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/identity/registry"
+	"github.com/mysteriumnetwork/node/identity/registry"
 )
 
 // ProposalStatus describes stage of proposal registration

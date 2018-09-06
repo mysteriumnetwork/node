@@ -1,6 +1,6 @@
 # Mysterium Node - decentralized VPN built on blockchain
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/MysteriumNetwork/node)](https://goreportcard.com/report/github.com/MysteriumNetwork/node)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mysteriumnetwork/node)](https://goreportcard.com/report/github.com/mysteriumnetwork/node)
 [![Build Status](https://travis-ci.org/MysteriumNetwork/node.svg?branch=master)](https://travis-ci.org/MysteriumNetwork/node)
 
 Cross-platform software to run a node in Mysterium Network. It contains Mysterium server (node), 
@@ -12,9 +12,9 @@ Currently node supports OpenVPN as its underlying VPN transport.
 
 - Homepage https://mysterium.network
 - [Whitepaper](https://mysterium.network/whitepaper.pdf)
-- [Latest](https://github.com/MysteriumNetwork/node/releases/latest) release
+- [Latest](https://github.com/mysteriumnetwork/node/releases/latest) release
 - [Installation guide](./INSTALL.md)
-- [Node wiki](https://github.com/MysteriumNetwork/node/wiki/) 
+- [Node wiki](https://github.com/mysteriumnetwork/node/wiki/) 
 
 ### Prerequisites
 
@@ -38,7 +38,7 @@ sudo docker run --cap-add NET_ADMIN --net host --name mysterium-node -d mysteriu
 sudo docker logs -f mysterium-node
 ```
 More detailed installation options described [here](./INSTALL.md).
-For possible issues while running a node refer to our [FAQ](https://github.com/MysteriumNetwork/node/wiki/Node-operation) section.
+For possible issues while running a node refer to our [FAQ](https://github.com/mysteriumnetwork/node/wiki/Node-operation) section.
 
 ## Built With
 
@@ -60,7 +60,7 @@ Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of cond
 * **Ignas Bernotas** - *Full stack developer, lifestyle expert* - [ignasbernotas](https://github.com/ignasbernotas)
 * **Andrej Novikov** - *Senior developer, JS enthusiast, UX jazzman* - [shroomist](https://github.com/shroomist)
 
-See also full list of [contributors](https://github.com/MysteriumNetwork/node/contributors) who participated in this project.
+See also full list of [contributors](https://github.com/mysteriumnetwork/node/contributors) who participated in this project.
 
 ## License
 

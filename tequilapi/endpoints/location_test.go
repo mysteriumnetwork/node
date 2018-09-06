@@ -24,10 +24,10 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/core/connection"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/ip"
-	"github.com/mysterium/node/location"
+	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/ip"
+	"github.com/mysteriumnetwork/node/location"
 	"github.com/stretchr/testify/assert"
 )
 

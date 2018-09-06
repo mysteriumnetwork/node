@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/mysterium/node/identity"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 // NewClient returns a new instance of Client

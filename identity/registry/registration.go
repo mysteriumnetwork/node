@@ -21,12 +21,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/MysteriumNetwork/payments/registry"
-	"github.com/MysteriumNetwork/payments/registry/generated"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/payments/registry"
+	"github.com/mysteriumnetwork/payments/registry/generated"
 )
 
 const logPrefix = "[registry] "

@@ -21,8 +21,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/identity"
+	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 

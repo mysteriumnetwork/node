@@ -23,7 +23,7 @@ import (
 	"strconv"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/utils"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 const tunLogPrefix = "[linux tun service] "

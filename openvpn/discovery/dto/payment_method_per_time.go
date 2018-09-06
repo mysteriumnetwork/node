@@ -20,7 +20,7 @@ package dto
 import (
 	"time"
 
-	"github.com/mysterium/node/money"
+	"github.com/mysteriumnetwork/node/money"
 )
 
 // PaymentMethodPerTime defines payment method for used amount of time of service

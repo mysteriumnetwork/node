@@ -21,8 +21,8 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysterium/node/identity/registry"
-	"github.com/mysterium/node/server"
+	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/server"
 )
 
 // NewFakeDiscrovery creates fake discovery structure

@@ -18,10 +18,10 @@
 package credentials
 
 import (
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/openvpn/middlewares/client/auth"
-	ovpnsession "github.com/mysterium/node/openvpn/session"
-	"github.com/mysterium/node/session"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
+	ovpnsession "github.com/mysteriumnetwork/node/openvpn/session"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // SignatureCredentialsProvider returns session id as username and id signed with given signer as password

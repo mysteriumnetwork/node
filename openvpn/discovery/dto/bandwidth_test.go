@@ -22,7 +22,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mysterium/node/datasize"
+	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -24,12 +24,12 @@ import (
 
 	"flag"
 
-	"github.com/mysterium/node/cmd"
-	"github.com/mysterium/node/cmd/commands/cli"
-	"github.com/mysterium/node/core/node"
-	"github.com/mysterium/node/metadata"
-	tequilapi_client "github.com/mysterium/node/tequilapi/client"
-	"github.com/mysterium/node/utils"
+	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/cmd/commands/cli"
+	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/metadata"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 func main() {

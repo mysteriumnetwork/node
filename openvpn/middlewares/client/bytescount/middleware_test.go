@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysterium/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/management"
 	"github.com/stretchr/testify/assert"
 )
 

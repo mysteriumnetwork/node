@@ -18,8 +18,8 @@
 package session
 
 import (
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/session"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 const mockedVPNConfig = "config_string"

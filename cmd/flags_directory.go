@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/mysterium/node/core/node"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/urfave/cli"
 )
 

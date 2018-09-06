@@ -20,8 +20,8 @@ package state
 import (
 	"testing"
 
-	"github.com/mysterium/node/openvpn"
-	"github.com/mysterium/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn"
+	"github.com/mysteriumnetwork/node/openvpn/management"
 	"github.com/stretchr/testify/assert"
 )
 

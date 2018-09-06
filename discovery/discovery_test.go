@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysterium/node/identity/registry"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/stretchr/testify/assert"
 )
 

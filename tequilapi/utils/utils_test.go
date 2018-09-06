@@ -23,7 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysterium/node/tequilapi/validation"
+	"github.com/mysteriumnetwork/node/tequilapi/validation"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -20,8 +20,8 @@ package tls
 import (
 	"crypto/x509"
 
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // Primitives structure holds TLS primitives required to setup basic cryptographics for openvpn server/client

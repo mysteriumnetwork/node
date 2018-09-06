@@ -20,9 +20,9 @@ package e2e
 import (
 	"flag"
 
-	"github.com/MysteriumNetwork/payments/cli/helpers"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysterium/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/payments/cli/helpers"
 )
 
 // Domain defines domain in which tequilAPI client will be executed

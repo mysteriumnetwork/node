@@ -26,7 +26,7 @@ const ConnectingState = State("CONNECTING")
 // WaitState is reported by client in udp mode indicating that connect request is send and response is waiting
 const WaitState = State("WAIT")
 
-// AuthenticatingState is reported by client indicating that client is trying to authetincate itself to server
+// AuthenticatingState is reported by client indicating that client is trying to authenticate itself to server
 const AuthenticatingState = State("AUTH")
 
 // GetConfigState indicates that client is waiting for config from server (push based options)
@@ -38,11 +38,11 @@ const AssignIpState = State("ASSIGN_IP")
 // AddRoutesState indicates that client is setuping routes on tunnel
 const AddRoutesState = State("ADD_ROUTES")
 
-// ConnectedState is reported by both client and server and means that client is successfuly connected and server is ready
+// ConnectedState is reported by both client and server and means that client is successfully connected and server is ready
 // to server incoming client connect requests
 const ConnectedState = State("CONNECTED")
 
-// ReconnectingState indicates that client lost connection and is trying to recoonect itself
+// ReconnectingState indicates that client lost connection and is trying to reconnect itself
 const ReconnectingState = State("RECONNECTING")
 
 // ExitingState is reported by both client and server and means that openvpn process is exiting by any reasons (normal shutdown

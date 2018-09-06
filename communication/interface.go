@@ -18,8 +18,8 @@
 package communication
 
 import (
-	"github.com/mysterium/node/identity"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/identity"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // DialogWaiter defines server which:

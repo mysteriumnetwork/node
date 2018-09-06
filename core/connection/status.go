@@ -17,7 +17,7 @@
 
 package connection
 
-import "github.com/mysterium/node/session"
+import "github.com/mysteriumnetwork/node/session"
 
 // State represents list of possible connection states
 type State string

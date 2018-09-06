@@ -18,8 +18,8 @@
 package registry
 
 import (
-	"github.com/MysteriumNetwork/payments/registry"
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/payments/registry"
 )
 
 // PrintRegistrationData prints identity registration data needed to register identity with payments contract

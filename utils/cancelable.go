@@ -34,7 +34,7 @@ type CancelChannel chan int
 var ErrRequestCancelled = errors.New("request was cancelled")
 
 // InvokeOnSuccess decorator takes callback function with single val as parameter and returns CleanupCallback function, which calls
-// given callback only if no error was returned by blocking request (i.e. good when cleanup is need only when blocking request succeded but was canceled before)
+// given callback only if no error was returned by blocking request (i.e. good when cleanup is need only when blocking request succeeded but was canceled before)
 func InvokeOnSuccess(callback func(interface{})) CleanupCallback {
 	return func(val interface{}, err error) {
 		if err == nil {
@@ -61,7 +61,7 @@ func NewCancelable() Cancelable {
 	}
 }
 
-// Cancel method signal all created requests to exit immediatelly
+// Cancel method signal all created requests to exit immediately
 func (c Cancelable) Cancel() {
 	c.cancelAction()
 }
@@ -71,7 +71,7 @@ func noCleanup(interface{}, error) {
 
 }
 
-// CancelableRequest represents object which calls blocking action and can be cancelled - i.e. Call returns early with posibility cleanup blocking action
+// CancelableRequest represents object which calls blocking action and can be cancelled - i.e. Call returns early with possibility cleanup blocking action
 // results if needed
 type CancelableRequest struct {
 	canceled CancelChannel

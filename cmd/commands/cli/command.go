@@ -24,9 +24,9 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/mysterium/node/metadata"
-	tequilapi_client "github.com/mysterium/node/tequilapi/client"
-	"github.com/mysterium/node/utils"
+	"github.com/mysteriumnetwork/node/metadata"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 // NewCommand constructs CLI based with possibility to control quiting
@@ -326,7 +326,7 @@ func (c *Command) identities(argsString string) {
 		}
 		ids, err := c.tequilapi.GetIdentities()
 		if err != nil {
-			fmt.Println("Error occured:", err)
+			fmt.Println("Error occurred:", err)
 			return
 		}
 

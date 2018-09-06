@@ -21,8 +21,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mysterium/node/datasize"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/datasize"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 

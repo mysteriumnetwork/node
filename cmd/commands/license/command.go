@@ -20,7 +20,7 @@ package license
 import (
 	"fmt"
 
-	"github.com/mysterium/node/metadata"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli"
 )
 

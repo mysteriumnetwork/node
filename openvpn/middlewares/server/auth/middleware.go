@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysterium/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/management"
 )
 
 type middleware struct {

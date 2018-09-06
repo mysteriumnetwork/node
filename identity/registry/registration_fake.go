@@ -18,10 +18,10 @@
 package registry
 
 import (
-	"github.com/MysteriumNetwork/payments/identity"
-	"github.com/MysteriumNetwork/payments/registry"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/payments/identity"
+	"github.com/mysteriumnetwork/payments/registry"
 )
 
 // FakeRegister fake register

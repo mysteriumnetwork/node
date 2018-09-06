@@ -20,8 +20,8 @@ package identity
 import (
 	"errors"
 
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/server"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/server"
 )
 
 type handler struct {

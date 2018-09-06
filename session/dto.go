@@ -20,7 +20,7 @@ package session
 import (
 	"encoding/json"
 
-	"github.com/mysterium/node/communication"
+	"github.com/mysteriumnetwork/node/communication"
 )
 
 const endpointSessionCreate = communication.RequestEndpoint("session-create")

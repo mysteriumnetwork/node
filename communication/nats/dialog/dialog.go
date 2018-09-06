@@ -18,8 +18,8 @@
 package dialog
 
 import (
-	"github.com/mysterium/node/communication"
-	"github.com/mysterium/node/identity"
+	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 type dialog struct {

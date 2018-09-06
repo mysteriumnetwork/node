@@ -17,7 +17,7 @@
 
 package session
 
-import "github.com/mysterium/node/identity"
+import "github.com/mysteriumnetwork/node/identity"
 
 // ManagerFake represents fake manager usually useful in tests
 type ManagerFake struct{}

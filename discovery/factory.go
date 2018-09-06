@@ -21,11 +21,11 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysterium/node/identity"
-	"github.com/mysterium/node/identity/registry"
-	"github.com/mysterium/node/openvpn/discovery"
-	"github.com/mysterium/node/server"
-	dto_discovery "github.com/mysterium/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/openvpn/discovery"
+	"github.com/mysteriumnetwork/node/server"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // Discovery structure holds discovery service state

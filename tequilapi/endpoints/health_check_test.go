@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysterium/node/metadata"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/stretchr/testify/assert"
 )
 

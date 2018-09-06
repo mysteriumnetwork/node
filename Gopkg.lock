@@ -2,21 +2,6 @@
 
 
 [[projects]]
-  digest = "1:b4577772bd3b54569d18fb2c3d7fa120cc30d6707638a137a7582019fc89c456"
-  name = "github.com/MysteriumNetwork/payments"
-  packages = [
-    "cli/helpers",
-    "identity",
-    "mysttoken/generated",
-    "promises/generated",
-    "registry",
-    "registry/generated",
-  ]
-  pruneopts = "UT"
-  revision = "0aaddad6b08e57d0d110ddf5d9a977965fe79b66"
-  version = "0.0.5-beta"
-
-[[projects]]
   digest = "1:7d191fd0c54ff370eaf6116a14dafe2a328df487baea280699f597aae858d00d"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
@@ -148,6 +133,21 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "58046073cbffe2f25d425fe1331102f55cf719de"
+
+[[projects]]
+  digest = "1:a034b3c95c40d7a083083f4cad8c1a2ad1459c7e9962130477a9d1f4265e7dd9"
+  name = "github.com/mysteriumnetwork/payments"
+  packages = [
+    "cli/helpers",
+    "identity",
+    "mysttoken/generated",
+    "promises/generated",
+    "registry",
+    "registry/generated",
+  ]
+  pruneopts = "UT"
+  revision = "aa5433b55f76b3e4746947a5cfd2c3a45ddc3066"
+  version = "0.0.6-beta"
 
 [[projects]]
   digest = "1:0923946dc9acc1aeb0cdee47c1bf85cb7662562ecb2ddae1f73bbd34c322ecfe"
@@ -373,12 +373,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/MysteriumNetwork/payments/cli/helpers",
-    "github.com/MysteriumNetwork/payments/identity",
-    "github.com/MysteriumNetwork/payments/mysttoken/generated",
-    "github.com/MysteriumNetwork/payments/promises/generated",
-    "github.com/MysteriumNetwork/payments/registry",
-    "github.com/MysteriumNetwork/payments/registry/generated",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
     "github.com/ethereum/go-ethereum/accounts",
@@ -392,6 +386,12 @@
     "github.com/ethereum/go-ethereum/params",
     "github.com/julienschmidt/httprouter",
     "github.com/mitchellh/go-homedir",
+    "github.com/mysteriumnetwork/payments/cli/helpers",
+    "github.com/mysteriumnetwork/payments/identity",
+    "github.com/mysteriumnetwork/payments/mysttoken/generated",
+    "github.com/mysteriumnetwork/payments/promises/generated",
+    "github.com/mysteriumnetwork/payments/registry",
+    "github.com/mysteriumnetwork/payments/registry/generated",
     "github.com/nats-io/go-nats",
     "github.com/oschwald/geoip2-golang",
     "github.com/satori/go.uuid",
