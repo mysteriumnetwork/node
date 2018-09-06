@@ -24,7 +24,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/payments/identity"
+
+	"github.com/mysteriumnetwork/node/identity"
+	payments_identity "github.com/mysteriumnetwork/payments/identity"
 	"github.com/mysteriumnetwork/payments/registry"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,7 +44,7 @@ func TestRegistrationEndpointReturnsRegistrationData(t *testing.T) {
 			Part1: common.FromHex(testPublicKeyPart1),
 			Part2: common.FromHex(testPublicKeyPart2),
 		},
-		Signature: &identity.DecomposedSignature{
+		Signature: &payments_identity.DecomposedSignature{
 			R: [32]byte{1},
 			S: [32]byte{2},
 			V: 27,
@@ -75,7 +77,7 @@ func TestRegistrationEndpointReturnsRegistrationData(t *testing.T) {
 		},
 	)
 
-	assert.Equal(t, common.HexToAddress("0x1231323131"), mockedDataProvider.RecordedIdentity)
+	assert.Equal(t, identity.FromAddress("0x1231323131"), mockedDataProvider.RecordedIdentity)
 
 	assert.JSONEq(
 		t,
@@ -100,16 +102,16 @@ type mockRegistrationStatus struct {
 	Registered bool
 }
 
-func (m *mockRegistrationStatus) IsRegistered(identity common.Address) (bool, error) {
+func (m *mockRegistrationStatus) IsRegistered(id identity.Identity) (bool, error) {
 	return m.Registered, nil
 }
 
 type mockRegistrationDataProvider struct {
 	RegistrationData *registry.RegistrationData
-	RecordedIdentity common.Address
+	RecordedIdentity identity.Identity
 }
 
-func (m *mockRegistrationDataProvider) ProvideRegistrationData(identity common.Address) (*registry.RegistrationData, error) {
-	m.RecordedIdentity = identity
+func (m *mockRegistrationDataProvider) ProvideRegistrationData(id identity.Identity) (*registry.RegistrationData, error) {
+	m.RecordedIdentity = id
 	return m.RegistrationData, nil
 }

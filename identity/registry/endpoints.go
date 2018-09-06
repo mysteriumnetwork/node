@@ -20,8 +20,9 @@ package registry
 import (
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -96,17 +97,15 @@ func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvid
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	id := params.ByName("id")
+	id := identity.FromAddress(params.ByName("id"))
 
-	identity := common.HexToAddress(id)
-
-	isRegistered, err := endpoint.statusProvider.IsRegistered(identity)
+	isRegistered, err := endpoint.statusProvider.IsRegistered(id)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	registrationData, err := endpoint.dataProvider.ProvideRegistrationData(identity)
+	registrationData, err := endpoint.dataProvider.ProvideRegistrationData(id)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -115,12 +114,12 @@ func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter,
 	registrationResponse := RegistrationDataDTO{
 		Registered: isRegistered,
 		PublicKey: PublicKeyPartsDTO{
-			Part1: common.ToHex(registrationData.PublicKey.Part1),
-			Part2: common.ToHex(registrationData.PublicKey.Part2),
+			Part1: hexutil.Encode(registrationData.PublicKey.Part1),
+			Part2: hexutil.Encode(registrationData.PublicKey.Part2),
 		},
 		Signature: SignatureDTO{
-			R: common.ToHex(registrationData.Signature.R[:]),
-			S: common.ToHex(registrationData.Signature.S[:]),
+			R: hexutil.Encode(registrationData.Signature.R[:]),
+			S: hexutil.Encode(registrationData.Signature.S[:]),
 			V: registrationData.Signature.V,
 		},
 	}

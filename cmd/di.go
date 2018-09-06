@@ -152,7 +152,7 @@ func (di *Dependencies) bootstrapNetwork(options node.NetworkOptions) (err error
 	}
 
 	log.Info("Using Contract at address:", network.PaymentsContractAddress.String())
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistry(di.EtherClient, network.PaymentsContractAddress); err != nil {
+	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress); err != nil {
 		return err
 	}
 
