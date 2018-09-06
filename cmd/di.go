@@ -114,7 +114,7 @@ func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, servic
 	)
 }
 
-// function decides on etwork definition combined from testnet/localnet flags and possible overrides
+// function decides on network definition combined from testnet/localnet flags and possible overrides
 func (di *Dependencies) bootstrapNetwork(options node.NetworkOptions) (err error) {
 	network := metadata.DefaultNetwork
 

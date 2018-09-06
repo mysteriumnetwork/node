@@ -27,7 +27,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/cihub/seelog"
 )
 
 // NodeOptions describes possible parameters of Openvpn configuration

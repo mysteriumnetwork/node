@@ -21,7 +21,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/cihub/seelog"
 )
 
 // DirectoryOptions describes data structure holding directories as parameters
