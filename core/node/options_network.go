@@ -17,8 +17,8 @@
 
 package node
 
-// NetworkOptions describes possible parameters of network configuration
-type NetworkOptions struct {
+// OptionsNetwork describes possible parameters of network configuration
+type OptionsNetwork struct {
 	Testnet  bool
 	Localnet bool
 

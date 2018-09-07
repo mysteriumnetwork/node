@@ -36,31 +36,31 @@ var (
 	}
 )
 
-// RegisterNodeFlags function register node flags to flag list
-func RegisterNodeFlags(flags *[]cli.Flag) error {
-	if err := RegisterDirectoryFlags(flags); err != nil {
+// RegisterFlagsNode function register node flags to flag list
+func RegisterFlagsNode(flags *[]cli.Flag) error {
+	if err := RegisterFlagsDirectory(flags); err != nil {
 		return err
 	}
 
 	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag)
 
-	RegisterNetworkFlags(flags)
+	RegisterFlagsNetwork(flags)
 	openvpn_core.RegisterFlags(flags)
-	RegisterLocationFlags(flags)
+	RegisterFlagsLocation(flags)
 
 	return nil
 }
 
-// ParseNodeFlags function fills in node options from CLI context
-func ParseNodeFlags(ctx *cli.Context) node.Options {
+// ParseFlagsNode function fills in node options from CLI context
+func ParseFlagsNode(ctx *cli.Context) node.Options {
 	return node.Options{
-		ParseDirectoryFlags(ctx),
+		ParseFlagsDirectory(ctx),
 
 		ctx.GlobalString(tequilapiAddressFlag.Name),
 		ctx.GlobalInt(tequilapiPortFlag.Name),
 
 		openvpn_core.ParseFlags(ctx),
-		ParseLocationFlags(ctx),
-		ParseNetworkFlags(ctx),
+		ParseFlagsLocation(ctx),
+		ParseFlagsNetwork(ctx),
 	}
 }

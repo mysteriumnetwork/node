@@ -158,7 +158,7 @@ func parseArguments(args []string) (options commandOptions, err error) {
 		"Address (URL form) of ipify service",
 	)
 
-	cmd.ParseNetworkArguments(flags, &options.NodeOptions.NetworkOptions)
+	cmd.ParseArgumentsNetwork(flags, &options.NodeOptions.OptionsNetwork)
 
 	err = flags.Parse(args[1:])
 	if err != nil {

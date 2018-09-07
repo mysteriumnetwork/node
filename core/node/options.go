@@ -21,12 +21,12 @@ import openvpn_core "github.com/mysteriumnetwork/node/openvpn/core"
 
 // Options describes options which are required to start Node
 type Options struct {
-	Directories DirectoryOptions
+	Directories OptionsDirectory
 
 	TequilapiAddress string
 	TequilapiPort    int
 
 	Openvpn  openvpn_core.NodeOptions
-	Location LocationOptions
-	NetworkOptions
+	Location OptionsLocation
+	OptionsNetwork
 }

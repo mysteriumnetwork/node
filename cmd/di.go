@@ -66,7 +66,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetwork(nodeOptions.NetworkOptions); err != nil {
+	if err := di.bootstrapNetwork(nodeOptions.OptionsNetwork); err != nil {
 		return err
 	}
 
@@ -115,7 +115,7 @@ func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, servic
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides
-func (di *Dependencies) bootstrapNetwork(options node.NetworkOptions) (err error) {
+func (di *Dependencies) bootstrapNetwork(options node.OptionsNetwork) (err error) {
 	network := metadata.DefaultNetwork
 
 	switch {
@@ -159,7 +159,7 @@ func (di *Dependencies) bootstrapNetwork(options node.NetworkOptions) (err error
 	return nil
 }
 
-func (di *Dependencies) bootstrapIdentity(directories node.DirectoryOptions) {
+func (di *Dependencies) bootstrapIdentity(directories node.OptionsDirectory) {
 	di.Keystore = identity.NewKeystoreFilesystem(directories.Keystore)
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore)
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
@@ -167,7 +167,7 @@ func (di *Dependencies) bootstrapIdentity(directories node.DirectoryOptions) {
 	}
 }
 
-func (di *Dependencies) bootstrapLocation(options node.LocationOptions, configDirectory string) {
+func (di *Dependencies) bootstrapLocation(options node.OptionsLocation, configDirectory string) {
 	di.IPResolver = ip.NewResolver(options.IpifyUrl)
 
 	switch {

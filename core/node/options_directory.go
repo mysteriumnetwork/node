@@ -24,8 +24,8 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-// DirectoryOptions describes data structure holding directories as parameters
-type DirectoryOptions struct {
+// OptionsDirectory describes data structure holding directories as parameters
+type OptionsDirectory struct {
 	// Data directory stores persistent data like keystore, cli history, etc.
 	Data string
 	// Data directory stores identity keys
@@ -37,7 +37,7 @@ type DirectoryOptions struct {
 }
 
 // Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)
-func (options *DirectoryOptions) Check() error {
+func (options *OptionsDirectory) Check() error {
 	err := ensureDirExists(options.Config)
 	if err != nil {
 		return err

@@ -40,14 +40,14 @@ var (
 	}
 )
 
-// RegisterLocationFlags function register location flags to flag list
-func RegisterLocationFlags(flags *[]cli.Flag) {
+// RegisterFlagsLocation function register location flags to flag list
+func RegisterFlagsLocation(flags *[]cli.Flag) {
 	*flags = append(*flags, ipifyUrlFlag, locationDatabaseFlag, locationCountryFlag)
 }
 
-// ParseLocationFlags function fills in location options from CLI context
-func ParseLocationFlags(ctx *cli.Context) node.LocationOptions {
-	return node.LocationOptions{
+// ParseFlagsLocation function fills in location options from CLI context
+func ParseFlagsLocation(ctx *cli.Context) node.OptionsLocation {
+	return node.OptionsLocation{
 		ctx.GlobalString(ipifyUrlFlag.Name),
 		ctx.GlobalString(locationDatabaseFlag.Name),
 		ctx.GlobalString(locationCountryFlag.Name),

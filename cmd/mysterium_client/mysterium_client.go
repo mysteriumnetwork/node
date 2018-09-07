@@ -135,7 +135,7 @@ func parseArguments(args []string) (options commandOptions, err error) {
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 
-	cmd.ParseNetworkArguments(flags, &options.NodeOptions.NetworkOptions)
+	cmd.ParseArgumentsNetwork(flags, &options.NodeOptions.OptionsNetwork)
 
 	err = flags.Parse(args[1:])
 	if err != nil {
