@@ -32,14 +32,14 @@ import (
 
 // NodeOptions describes possible parameters of Openvpn configuration
 type NodeOptions struct {
-	Binary string
+	BinaryPath string
 }
 
 const logPrefix = "[Openvpn check] "
 
 // Check function checks that openvpn is available, given path to openvpn binary
 func (options *NodeOptions) Check() error {
-	command := exec.Command(options.Binary, "--version")
+	command := exec.Command(options.BinaryPath, "--version")
 	outputBuffer, cmdResult := command.Output()
 	exitCode, err := extractExitCodeFromCmdResult(cmdResult)
 	if err != nil {

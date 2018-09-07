@@ -70,7 +70,7 @@ func NewNode(
 
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
-		options.Openvpn.Binary,
+		options.Openvpn.BinaryPath,
 		options.Directories.Config,
 		options.Directories.Runtime,
 		signerFactory,

@@ -78,7 +78,7 @@ func parseArguments(args []string) (options commandOptions, err error) {
 	}
 
 	flags.StringVar(
-		&options.NodeOptions.Openvpn.Binary,
+		&options.NodeOptions.Openvpn.BinaryPath,
 		"openvpn.binary",
 		"openvpn", //search in $PATH by default,
 		"openvpn binary to use for Open VPN connections",

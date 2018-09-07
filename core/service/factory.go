@@ -101,7 +101,7 @@ func NewManager(
 			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
 
 			return openvpn.NewServer(
-				nodeOptions.Openvpn.Binary,
+				nodeOptions.Openvpn.BinaryPath,
 				serverConfigGenerator,
 				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 				state.NewMiddleware(callback),
