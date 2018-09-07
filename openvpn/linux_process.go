@@ -29,26 +29,31 @@ import (
 const linuxProcess = "[Linux openvpn process] "
 
 type linuxOpenvpnProcess struct {
-	Process
-	tunService linux.TunnelService
+	openvpnProcess *openvpnProcess
+	tunService     linux.TunnelService
 	//runtime variables
 	finished     *sync.WaitGroup
 	processError error
+	initError    error
 }
 
 func (ls *linuxOpenvpnProcess) Start() error {
+	if ls.initError != nil {
+		return ls.initError
+	}
+
 	if err := ls.tunService.Start(); err != nil {
 		return err
 	}
 
-	err := ls.Process.Start()
+	err := ls.openvpnProcess.Start()
 	if err != nil {
 		ls.tunService.Stop()
 		return err
 	}
 	ls.finished.Add(1)
 	go func() {
-		ls.processError = ls.Process.Wait()
+		ls.processError = ls.openvpnProcess.Wait()
 		ls.tunService.Stop()
 		log.Info(linuxProcess, "Process stopped, tun device removed")
 		ls.finished.Done()
@@ -64,14 +69,16 @@ func (ls *linuxOpenvpnProcess) Wait() error {
 
 func (ls *linuxOpenvpnProcess) Stop() {
 	log.Info(linuxProcess, "Stop requested")
-	ls.Process.Stop()
+	ls.openvpnProcess.Stop()
 }
 
 // NewLinuxProcess creates linux OS customized openvpn process
-func NewLinuxProcess(openvpnBinary string, configuration *config.GenericConfig, middlewares ...management.Middleware) Process {
+func NewLinuxProcess(openvpnBinary string, configuration *config.GenericConfig, middlewares ...management.Middleware) *linuxOpenvpnProcess {
 	tunDevice, err := linux.FindFreeTunDevice()
 	if err != nil {
-		return failedOnStartProcess{err}
+		return &linuxOpenvpnProcess{
+			initError: err,
+		}
 	}
 
 	configuration.SetPersistTun()
@@ -79,24 +86,8 @@ func NewLinuxProcess(openvpnBinary string, configuration *config.GenericConfig, 
 	configuration.SetScriptParam("iproute", config.SimplePath("nonpriv-ip"))
 
 	return &linuxOpenvpnProcess{
-		Process:    newProcess(openvpnBinary, configuration, middlewares...),
-		tunService: linux.NewLinuxTunnelService(tunDevice, configuration.GetFullScriptPath(config.SimplePath("prepare-env.sh"))),
-		finished:   &sync.WaitGroup{},
+		openvpnProcess: newProcess(openvpnBinary, configuration, middlewares...),
+		tunService:     linux.NewLinuxTunnelService(tunDevice, configuration.GetFullScriptPath(config.SimplePath("prepare-env.sh"))),
+		finished:       &sync.WaitGroup{},
 	}
-}
-
-type failedOnStartProcess struct {
-	err error
-}
-
-func (f failedOnStartProcess) Start() error {
-	return f.err
-}
-
-func (f failedOnStartProcess) Wait() error {
-	return nil
-}
-
-func (f failedOnStartProcess) Stop() {
-
 }

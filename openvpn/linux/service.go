@@ -20,7 +20,9 @@ package linux
 import (
 	"errors"
 	"os"
+	"os/exec"
 	"strconv"
+	"strings"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/utils"
@@ -37,7 +39,7 @@ type serviceLinuxTun struct {
 }
 
 // NewLinuxTunnelService creates linux specific tunnel manager for interface creation and removal
-func NewLinuxTunnelService(tun *TunnelDevice, configScriptPath string) TunnelService {
+func NewLinuxTunnelService(tun *TunnelDevice, configScriptPath string) *serviceLinuxTun {
 	return &serviceLinuxTun{tun, configScriptPath}
 }
 
@@ -74,7 +76,7 @@ func (service *serviceLinuxTun) createTunDevice() (err error) {
 		return
 	}
 
-	cmd := utils.SplitCommand("sudo", "ip tuntap add dev "+service.device.Name+" mode tun")
+	cmd := splitCommand("sudo", "ip tuntap add dev "+service.device.Name+" mode tun")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Warn("Failed to add tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 		// we should not proceed without tun device
@@ -130,4 +132,13 @@ func (service *serviceLinuxTun) createDeviceNode() error {
 
 	log.Info(tunLogPrefix, "/dev/net/tun device node created")
 	return nil
+}
+
+func splitCommand(command string, commandArguments string) *exec.Cmd {
+	args := strings.Split(commandArguments, " ")
+	var trimmedArgs []string
+	for _, arg := range args {
+		trimmedArgs = append(trimmedArgs, strings.TrimSpace(arg))
+	}
+	return exec.Command(command, trimmedArgs...)
 }

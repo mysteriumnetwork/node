@@ -25,6 +25,6 @@ import (
 )
 
 // CreateNewProcess function creates new linux process and overrides default function in linux environment
-func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) Process {
+func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *linuxOpenvpnProcess {
 	return NewLinuxProcess(openvpnBinary, config, middlewares...)
 }

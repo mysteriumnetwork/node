@@ -24,23 +24,24 @@ import (
 
 	"github.com/mysteriumnetwork/node/openvpn/config"
 	"github.com/mysteriumnetwork/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/tun"
 )
 
-// Process defines openvpn process interface with basic controls
-type Process interface {
-	Start() error
-	Wait() error
-	Stop()
+type tunnelSetup interface {
+	Setup(config *config.GenericConfig) error
+	Teardown()
 }
 
 type openvpnProcess struct {
+	tunSetup   tunnelSetup
 	config     *config.GenericConfig
 	management *management.Management
 	cmd        *CmdWrapper
 }
 
-func newProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) Process {
+func newProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *openvpnProcess {
 	return &openvpnProcess{
+		tunSetup:   tun.NewSetup(),
 		config:     config,
 		management: management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
 		cmd:        NewCmdWrapper(openvpnBinary, "[openvpn-process] "),
@@ -48,6 +49,10 @@ func newProcess(openvpnBinary string, config *config.GenericConfig, middlewares 
 }
 
 func (openvpn *openvpnProcess) Start() error {
+	if err := openvpn.tunSetup.Setup(openvpn.config); err != nil {
+		return err
+	}
+
 	err := openvpn.management.WaitForConnection()
 	if err != nil {
 		return err

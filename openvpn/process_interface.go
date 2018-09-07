@@ -1,7 +1,5 @@
-// +build !linux
-
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,13 +17,10 @@
 
 package openvpn
 
-import (
-	"github.com/mysteriumnetwork/node/openvpn/config"
-	"github.com/mysteriumnetwork/node/openvpn/management"
-)
-
-// CreateNewProcess creates new openvpn process with given config params
-func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *openvpnProcess {
-	config.SetDevice("tun")
-	return newProcess(openvpnBinary, config, middlewares...)
+// Process defines openvpn process interface with basic controls
+// It must die!
+type Process interface {
+	Start() error
+	Wait() error
+	Stop()
 }
