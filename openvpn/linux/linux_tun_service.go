@@ -22,10 +22,8 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/utils"
 )
 
 const tunLogPrefix = "[linux tun service] "
@@ -76,7 +74,7 @@ func (service *serviceLinuxTun) createTunDevice() (err error) {
 		return
 	}
 
-	cmd := splitCommand("sudo", "ip tuntap add dev "+service.device.Name+" mode tun")
+	cmd := exec.Command("sudo", "ip", "tuntap", "add", "dev", service.device.Name, "mode", "tun")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Warn("Failed to add tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 		// we should not proceed without tun device
@@ -96,7 +94,7 @@ func (service *serviceLinuxTun) deviceExists() (exists bool, err error) {
 }
 
 func (service *serviceLinuxTun) deleteDevice() {
-	cmd := utils.SplitCommand("sudo", "ip tuntap delete dev "+service.device.Name+" mode tun")
+	cmd := exec.Command("sudo", "ip", "tuntap", "delete", "dev", service.device.Name, "mode", "tun")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Warn("Failed to remove tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 	} else {
@@ -124,7 +122,7 @@ func (service *serviceLinuxTun) createDeviceNode() error {
 		return nil
 	}
 
-	cmd := utils.SplitCommand("sudo", service.scriptPath)
+	cmd := exec.Command("sudo", service.scriptPath)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Warn("Failed to execute prepare-env.sh script: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 		return err
@@ -132,13 +130,4 @@ func (service *serviceLinuxTun) createDeviceNode() error {
 
 	log.Info(tunLogPrefix, "/dev/net/tun device node created")
 	return nil
-}
-
-func splitCommand(command string, commandArguments string) *exec.Cmd {
-	args := strings.Split(commandArguments, " ")
-	var trimmedArgs []string
-	for _, arg := range args {
-		trimmedArgs = append(trimmedArgs, strings.TrimSpace(arg))
-	}
-	return exec.Command(command, trimmedArgs...)
 }
