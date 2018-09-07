@@ -135,8 +135,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	normalizedAddress := common.HexToAddress(options.EtherPaymentsAddress)
-	if normalizedAddress.String() != metadata.DefaultNetwork.PaymentsContractAddress.String() {
-		network.PaymentsContractAddress = common.HexToAddress(options.EtherPaymentsAddress)
+	if normalizedAddress != metadata.DefaultNetwork.PaymentsContractAddress {
+		network.PaymentsContractAddress = normalizedAddress
 	}
 
 	if options.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
