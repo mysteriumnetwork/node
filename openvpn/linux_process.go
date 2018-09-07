@@ -29,31 +29,40 @@ import (
 const linuxProcess = "[Linux openvpn process] "
 
 type linuxOpenvpnProcess struct {
-	openvpnProcess *openvpnProcess
-	tunService     linux.TunnelService
+	config  *config.GenericConfig
+	process *openvpnProcess
+
 	//runtime variables
+	tunService   linux.TunnelService
 	finished     *sync.WaitGroup
 	processError error
-	initError    error
 }
 
 func (ls *linuxOpenvpnProcess) Start() error {
-	if ls.initError != nil {
-		return ls.initError
-	}
-
-	if err := ls.tunService.Start(); err != nil {
+	tunDevice, err := linux.FindFreeTunDevice()
+	if err != nil {
 		return err
 	}
 
-	err := ls.openvpnProcess.Start()
+	ls.config.SetDevice(tunDevice.Name)
+	ls.tunService = linux.NewLinuxTunnelService(
+		tunDevice,
+		ls.config.GetFullScriptPath(config.SimplePath("prepare-env.sh")),
+	)
+
+	err = ls.tunService.Start()
+	if err != nil {
+		return err
+	}
+
+	err = ls.process.Start()
 	if err != nil {
 		ls.tunService.Stop()
 		return err
 	}
 	ls.finished.Add(1)
 	go func() {
-		ls.processError = ls.openvpnProcess.Wait()
+		ls.processError = ls.process.Wait()
 		ls.tunService.Stop()
 		log.Info(linuxProcess, "Process stopped, tun device removed")
 		ls.finished.Done()
@@ -69,25 +78,26 @@ func (ls *linuxOpenvpnProcess) Wait() error {
 
 func (ls *linuxOpenvpnProcess) Stop() {
 	log.Info(linuxProcess, "Stop requested")
-	ls.openvpnProcess.Stop()
+
+	if ls.tunService != nil {
+		ls.tunService.Stop()
+	}
+
+	ls.process.Stop()
 }
 
 // NewLinuxProcess creates linux OS customized openvpn process
-func NewLinuxProcess(openvpnBinary string, configuration *config.GenericConfig, middlewares ...management.Middleware) *linuxOpenvpnProcess {
-	tunDevice, err := linux.FindFreeTunDevice()
-	if err != nil {
-		return &linuxOpenvpnProcess{
-			initError: err,
-		}
-	}
-
+func NewLinuxProcess(
+	openvpnBinary string,
+	configuration *config.GenericConfig,
+	middlewares ...management.Middleware,
+) *linuxOpenvpnProcess {
 	configuration.SetPersistTun()
-	configuration.SetDevice(tunDevice.Name)
 	configuration.SetScriptParam("iproute", config.SimplePath("nonpriv-ip"))
 
 	return &linuxOpenvpnProcess{
-		openvpnProcess: newProcess(openvpnBinary, configuration, middlewares...),
-		tunService:     linux.NewLinuxTunnelService(tunDevice, configuration.GetFullScriptPath(config.SimplePath("prepare-env.sh"))),
-		finished:       &sync.WaitGroup{},
+		config:   configuration,
+		process:  newProcess(openvpnBinary, configuration, middlewares...),
+		finished: &sync.WaitGroup{},
 	}
 }

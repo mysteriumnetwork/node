@@ -39,7 +39,11 @@ type openvpnProcess struct {
 	cmd        *CmdWrapper
 }
 
-func newProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *openvpnProcess {
+func newProcess(
+	openvpnBinary string,
+	config *config.GenericConfig,
+	middlewares ...management.Middleware,
+) *openvpnProcess {
 	return &openvpnProcess{
 		tunSetup:   tun.NewSetup(),
 		config:     config,

@@ -25,7 +25,11 @@ import (
 )
 
 // CreateNewProcess creates new openvpn process with given config params
-func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *openvpnProcess {
+func CreateNewProcess(
+	openvpnBinary string,
+	config *config.GenericConfig,
+	middlewares ...management.Middleware,
+) *openvpnProcess {
 	config.SetDevice("tun")
 	return newProcess(openvpnBinary, config, middlewares...)
 }
