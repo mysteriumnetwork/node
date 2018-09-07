@@ -62,7 +62,7 @@ func NewCommand() (*cli.App, error) {
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright
-	if err := cmd.RegisterNodeFlags(&app.Flags); err != nil {
+	if err := cmd.RegisterFlagsNode(&app.Flags); err != nil {
 		return nil, err
 	}
 	app.Flags = append(app.Flags, cliFlag)
@@ -79,7 +79,7 @@ func NewCommand() (*cli.App, error) {
 func runMain(ctx *cli.Context) error {
 	options := commandOptions{
 		CLI:         ctx.Bool(cliFlag.Name),
-		NodeOptions: cmd.ParseNodeFlags(ctx),
+		NodeOptions: cmd.ParseFlagsNode(ctx),
 	}
 
 	if options.CLI {

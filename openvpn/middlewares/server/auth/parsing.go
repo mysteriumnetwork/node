@@ -24,12 +24,14 @@ import (
 	"strings"
 )
 
+var (
+	ruleID          = regexp.MustCompile(`^(\d+)$`)
+	ruleIDAndKey    = regexp.MustCompile(`^(\d+),(\d+)$`)
+	ruleClientEvent = regexp.MustCompile(`^(\w+),(.*)$`)
+)
+
 func parseClientEvent(line string) (clientEventType, string, error) {
-	rule, err := regexp.Compile("^(\\w+),(.*)$")
-	if err != nil {
-		return "", "", err
-	}
-	match := rule.FindStringSubmatch(line)
+	match := ruleClientEvent.FindStringSubmatch(line)
 	if len(match) < 3 {
 		return "", "", errors.New("unable to parse event: " + line)
 	}
@@ -48,11 +50,7 @@ func parseEnvVar(data string) (string, string, error) {
 }
 
 func parseIDAndKey(data string) (int, int, error) {
-	rule, err := regexp.Compile("^(\\d+),(\\d+)$")
-	if err != nil {
-		return undefined, undefined, err
-	}
-	match := rule.FindStringSubmatch(data)
+	match := ruleIDAndKey.FindStringSubmatch(data)
 	if len(match) < 3 {
 		return undefined, undefined, errors.New("unable to parse identifiers: " + data)
 	}
@@ -68,11 +66,7 @@ func parseIDAndKey(data string) (int, int, error) {
 }
 
 func parseID(data string) (int, error) {
-	rule, err := regexp.Compile("^(\\d+)$")
-	if err != nil {
-		return undefined, err
-	}
-	match := rule.FindStringSubmatch(data)
+	match := ruleID.FindStringSubmatch(data)
 	if len(match) < 2 {
 		return undefined, errors.New("unable to parse identifier: " + data)
 	}

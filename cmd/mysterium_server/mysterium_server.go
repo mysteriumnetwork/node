@@ -81,7 +81,7 @@ func parseArguments(args []string) (options commandOptions, err error) {
 	}
 
 	flags.StringVar(
-		&options.NodeOptions.OpenvpnBinary,
+		&options.NodeOptions.Openvpn.BinaryPath,
 		"openvpn.binary",
 		"openvpn", //search in $PATH by default,
 		"openvpn binary to use for Open VPN connections",
@@ -113,13 +113,13 @@ func parseArguments(args []string) (options commandOptions, err error) {
 	)
 
 	flags.StringVar(
-		&options.NodeOptions.LocationDatabase,
+		&options.NodeOptions.Location.Database,
 		"location.database",
 		"GeoLite2-Country.mmdb",
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 	flags.StringVar(
-		&options.ServiceOptions.LocationCountry,
+		&options.NodeOptions.Location.Country,
 		"location.country",
 		"",
 		"Service location country. If not given country is autodetected",
@@ -152,13 +152,13 @@ func parseArguments(args []string) (options commandOptions, err error) {
 	)
 
 	flags.StringVar(
-		&options.NodeOptions.IpifyUrl,
+		&options.NodeOptions.Location.IpifyUrl,
 		"ipify-url",
 		"https://api.ipify.org/",
 		"Address (URL form) of ipify service",
 	)
 
-	cmd.ParseNetworkArguments(flags, &options.NodeOptions.NetworkOptions)
+	cmd.ParseArgumentsNetwork(flags, &options.NodeOptions.OptionsNetwork)
 
 	err = flags.Parse(args[1:])
 	if err != nil {
@@ -169,16 +169,21 @@ func parseArguments(args []string) (options commandOptions, err error) {
 }
 
 func runCMD(nodeOptions node.Options, serviceOptions service.Options) {
-	serviceManager := service.NewManager(nodeOptions, serviceOptions)
+	var di cmd.Dependencies
+	if err := di.Bootstrap(nodeOptions); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	di.BootstrapServiceComponents(nodeOptions, serviceOptions)
 
-	if err := serviceManager.Start(); err != nil {
+	if err := di.ServiceManager.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	cmd.RegisterSignalCallback(utils.SoftKiller(serviceManager.Kill))
+	cmd.RegisterSignalCallback(utils.SoftKiller(di.ServiceManager.Kill))
 
-	if err := serviceManager.Wait(); err != nil {
+	if err := di.ServiceManager.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

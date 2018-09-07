@@ -19,8 +19,8 @@ services:
       --discovery-address=http://discovery/v1
       --localnet
       --ether.client.rpc=http://local-node:8545
-      service
       --location.country=e2e-land
+      service
       --openvpn.port=3000
 
   client:

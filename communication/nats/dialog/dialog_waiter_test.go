@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -186,7 +185,7 @@ type mockedIdentityRegistry struct {
 	anyIdentityRegistered bool
 }
 
-func (mir *mockedIdentityRegistry) IsRegistered(address common.Address) (bool, error) {
+func (mir *mockedIdentityRegistry) IsRegistered(id identity.Identity) (bool, error) {
 	return mir.anyIdentityRegistered, nil
 }
 

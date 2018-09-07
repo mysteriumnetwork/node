@@ -18,11 +18,12 @@
 package server
 
 import (
-	"github.com/mysteriumnetwork/node/server/dto"
-
 	log "github.com/cihub/seelog"
+
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/server/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // NewClientFake constructs fake API client
@@ -95,7 +96,7 @@ func (client *ClientFake) FindProposals(providerID string) (proposals []dto_disc
 }
 
 // SendSessionStats heartbeats that session is still active + session upload and download amounts
-func (client *ClientFake) SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
+func (client *ClientFake) SendSessionStats(sessionId session.SessionID, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
 	log.Info(mysteriumAPILogPrefix, "Session stats sent: ", sessionId)
 
 	return nil

@@ -18,25 +18,24 @@
 package node
 
 import (
-	"path/filepath"
 	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/blockchain"
+
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/ip"
-	"github.com/mysteriumnetwork/node/location"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/openvpn"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -45,42 +44,33 @@ import (
 )
 
 // NewNode function creates new Mysterium node by given options
-func NewNode(options Options) *Node {
-	networkDefinition := GetNetworkDefinition(options.NetworkOptions)
-	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
-
+func NewNode(
+	options Options,
+	keystoreInstance *keystore.KeyStore,
+	identityManager identity.Manager,
+	signerFactory identity.SignerFactory,
+	identityRegistry identity_registry.IdentityRegistry,
+	mysteriumClient server.Client,
+	ipResolver ip.Resolver,
+	locationResolver location.Resolver,
+) *Node {
 	logconfig.Bootstrap()
 	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 
-	keystoreDirectory := filepath.Join(options.Directories.Data, "keystore")
-	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
-
-	identityManager := identity.NewIdentityManager(keystoreInstance)
-
 	dialogFactory := func(consumerID, providerID identity.Identity, contact dto.Contact) (communication.Dialog, error) {
-		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, identity.NewSigner(keystoreInstance, consumerID))
+		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, signerFactory(consumerID))
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
-	signerFactory := func(id identity.Identity) identity.Signer {
-		return identity.NewSigner(keystoreInstance, id)
-	}
+	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
 
-	statsKeeper := bytescount.NewSessionStatsKeeper(time.Now)
-
-	ipResolver := ip.NewResolver(options.IpifyUrl)
-
-	locationDetector := location.NewDetector(
-		ipResolver,
-		filepath.Join(options.Directories.Config, options.LocationDatabase),
-	)
-
+	locationDetector := location.NewDetector(ipResolver, locationResolver)
 	originalLocationCache := location.NewLocationCache(locationDetector)
 
 	vpnClientFactory := connection.ConfigureVpnClientFactory(
 		mysteriumClient,
-		options.OpenvpnBinary,
+		options.Openvpn.BinaryPath,
 		options.Directories.Config,
 		options.Directories.Runtime,
 		signerFactory,
@@ -96,11 +86,9 @@ func NewNode(options Options) *Node {
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
+	identity_registry.AddRegistrationEndpoint(router, identity_registry.NewRegistrationDataProvider(keystoreInstance), identityRegistry)
 
 	return &Node{
-		options:               options,
-		network:               networkDefinition,
-		keystore:              keystoreInstance,
 		router:                router,
 		connectionManager:     connectionManager,
 		httpAPIServer:         httpAPIServer,
@@ -110,9 +98,6 @@ func NewNode(options Options) *Node {
 
 // Node represent entrypoint for Mysterium node with top level components
 type Node struct {
-	options               Options
-	network               metadata.NetworkDefinition
-	keystore              *keystore.KeyStore
 	connectionManager     connection.Manager
 	router                *httprouter.Router
 	httpAPIServer         tequilapi.APIServer
@@ -123,16 +108,6 @@ type Node struct {
 func (node *Node) Start() error {
 	log.Infof("Starting Mysterium Client (%s)", metadata.VersionAsString())
 
-	err := openvpn.CheckOpenvpnBinary(node.options.OpenvpnBinary)
-	if err != nil {
-		return err
-	}
-
-	err = node.options.Directories.Check()
-	if err != nil {
-		return err
-	}
-
 	originalLocation, err := node.originalLocationCache.RefreshAndGet()
 	if err != nil {
 		log.Warn("Failed to detect original country: ", err)
@@ -141,20 +116,6 @@ func (node *Node) Start() error {
 	}
 
 	tequilapi_endpoints.AddRouteForStop(node.router, utils.SoftKiller(node.Kill))
-
-	log.Info("Using Eth endpoint: ", node.network.EtherClientRPC)
-	client, err := blockchain.NewClient(node.network.EtherClientRPC)
-	if err != nil {
-		return err
-	}
-
-	log.Info("Using Contract at address:", node.network.PaymentsContractAddress.String())
-	statusProvider, err := registry.NewIdentityRegistry(client, node.network.PaymentsContractAddress)
-	if err != nil {
-		return err
-	}
-
-	registry.AddRegistrationEndpoint(node.router, registry.NewRegistrationDataProvider(node.keystore), statusProvider)
 
 	err = node.httpAPIServer.StartServing()
 	if err != nil {

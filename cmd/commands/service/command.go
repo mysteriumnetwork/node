@@ -19,7 +19,6 @@ package service
 
 import (
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
@@ -47,22 +46,15 @@ var (
 		Usage: "Openvpn port to use. Default 1194",
 		Value: 1194,
 	}
-
-	locationCountryFlag = cli.StringFlag{
-		Name:  "location.country",
-		Usage: "Service location country. If not given country is autodetected",
-		Value: "",
-	}
 )
 
 // NewCommand function creates service command
 func NewCommand() *cli.Command {
-	var nodeInstance *node.Node
-	var serviceManager *service.Manager
+	var di cmd.Dependencies
 
 	stopCommand := func() error {
-		errorServiceManager := serviceManager.Kill()
-		errorNode := nodeInstance.Kill()
+		errorServiceManager := di.ServiceManager.Kill()
+		errorNode := di.Node.Kill()
 
 		if errorServiceManager != nil {
 			return errorServiceManager
@@ -77,37 +69,36 @@ func NewCommand() *cli.Command {
 		Flags: []cli.Flag{
 			identityFlag, identityPassphraseFlag,
 			openvpnProtocolFlag, openvpnPortFlag,
-			locationCountryFlag,
 		},
 		Action: func(ctx *cli.Context) error {
+			nodeOptions := cmd.ParseFlagsNode(ctx)
+			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
+				return err
+			}
+			di.BootstrapServiceComponents(nodeOptions, service.Options{
+				ctx.String(identityFlag.Name),
+				ctx.String(identityPassphraseFlag.Name),
+
+				ctx.String(openvpnProtocolFlag.Name),
+				ctx.Int(openvpnPortFlag.Name),
+			})
+
 			errorChannel := make(chan error, 1)
 
-			nodeOptions := cmd.ParseNodeFlags(ctx)
-			nodeInstance = node.NewNode(nodeOptions)
 			go func() {
-				if err := nodeInstance.Start(); err != nil {
+				if err := di.Node.Start(); err != nil {
 					errorChannel <- err
 					return
 				}
-				errorChannel <- nodeInstance.Wait()
+				errorChannel <- di.Node.Wait()
 			}()
 
-			serviceOptions := service.Options{
-				ctx.String("identity"),
-				ctx.String("identity.passphrase"),
-
-				ctx.String("openvpn.proto"),
-				ctx.Int("openvpn.port"),
-
-				ctx.String("location.country"),
-			}
-			serviceManager = service.NewManager(nodeOptions, serviceOptions)
 			go func() {
-				if err := serviceManager.Start(); err != nil {
+				if err := di.ServiceManager.Start(); err != nil {
 					errorChannel <- err
 					return
 				}
-				errorChannel <- serviceManager.Wait()
+				errorChannel <- di.ServiceManager.Wait()
 			}()
 
 			cmd.RegisterSignalCallback(utils.SoftKiller(stopCommand))

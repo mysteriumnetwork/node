@@ -21,8 +21,9 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/location"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
@@ -37,7 +38,7 @@ func ConfigureVpnClientFactory(
 	mysteriumAPIClient server.Client,
 	openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
-	statsKeeper bytescount.SessionStatsKeeper,
+	statsKeeper stats.SessionStatsKeeper,
 	originalLocationCache location.Cache,
 ) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback) (openvpn.Process, error) {
@@ -56,32 +57,23 @@ func ConfigureVpnClientFactory(
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 
-		originalLocation := originalLocationCache.Get()
-
-		statsSender := bytescount.NewSessionStatsSender(
+		statsSender := stats.NewRemoteStatsSender(
+			statsKeeper,
 			mysteriumAPIClient,
 			vpnSession.ID,
 			providerID,
 			signer,
-			originalLocation.Country,
+			originalLocationCache.Get().Country,
+			time.Minute,
 		)
-		asyncStatsSender := func(stats bytescount.SessionStats) error {
-			go statsSender(stats)
-			return nil
-		}
-		intervalStatsSender, err := bytescount.NewIntervalStatsHandler(asyncStatsSender, time.Now, time.Minute)
-		if err != nil {
-			return nil, err
-		}
-		statsHandler := bytescount.NewCompositeStatsHandler(statsSaver, intervalStatsSender)
 
 		credentialsProvider := credentials.SignatureCredentialsProvider(vpnSession.ID, signer)
 
 		return openvpn.NewClient(
 			openvpnBinary,
 			vpnClientConfig,
-			state.NewMiddleware(stateCallback),
-			bytescount.NewMiddleware(statsHandler, 1*time.Second),
+			state.NewMiddleware(stateCallback, statsSender.StateHandler),
+			bytescount.NewMiddleware(statsSaver, 1*time.Second),
 			auth.NewMiddleware(credentialsProvider),
 		), nil
 	}

@@ -22,13 +22,16 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/openvpn/management"
 )
 
 // SessionStatsHandler is invoked when middleware receives statistics
-type SessionStatsHandler func(SessionStats) error
+type SessionStatsHandler func(stats.SessionStats) error
 
 const byteCountCommandTemplate = "bytecount %d"
+
+var rule = regexp.MustCompile("^>BYTECOUNT:(.*),(.*)$")
 
 type middleware struct {
 	sessionStatsHandler SessionStatsHandler
@@ -54,14 +57,8 @@ func (middleware *middleware) Stop(commandWriter management.CommandWriter) error
 }
 
 func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error) {
-	rule, err := regexp.Compile("^>BYTECOUNT:(.*),(.*)$")
-	if err != nil {
-		return
-	}
-
 	match := rule.FindStringSubmatch(line)
-	consumed = len(match) > 0
-	if !consumed {
+	if consumed = len(match) > 2; !consumed {
 		return
 	}
 
@@ -75,7 +72,7 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	stats := SessionStats{BytesSent: bytesOut, BytesReceived: bytesIn}
+	stats := stats.SessionStats{BytesSent: bytesOut, BytesReceived: bytesIn}
 	err = middleware.sessionStatsHandler(stats)
 
 	return

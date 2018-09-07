@@ -18,21 +18,20 @@
 package service
 
 import (
-	"path/filepath"
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	identity_handler "github.com/mysteriumnetwork/node/cmd/commands/service/identity"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/ip"
-	"github.com/mysteriumnetwork/node/location"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/server/auth"
@@ -44,51 +43,32 @@ import (
 )
 
 // NewManager function creates new service manager by given options
-func NewManager(nodeOptions node.Options, serviceOptions Options) *Manager {
-
-	networkDefinition := node.GetNetworkDefinition(nodeOptions.NetworkOptions)
-	mysteriumClient := server.NewClient(networkDefinition.DiscoveryAPIAddress)
-
+func NewManager(
+	nodeOptions node.Options,
+	serviceOptions Options,
+	networkDefinition metadata.NetworkDefinition,
+	identityLoader identity_selector.Loader,
+	signerFactory identity.SignerFactory,
+	identityRegistry identity_registry.IdentityRegistry,
+	mysteriumClient server.Client,
+	ipResolver ip.Resolver,
+	locationResolver location.Resolver,
+) *Manager {
 	logconfig.Bootstrap()
 
-	ipResolver := ip.NewResolver(nodeOptions.IpifyUrl)
 	natService := nat.NewService()
 
-	keystoreDirectory := filepath.Join(nodeOptions.Directories.Data, "keystore")
-	keystoreInstance := keystore.NewKeyStore(keystoreDirectory, keystore.StandardScryptN, keystore.StandardScryptP)
-	createSigner := func(id identity.Identity) identity.Signer {
-		return identity.NewSigner(keystoreInstance, id)
-	}
-
-	identityHandler := identity_handler.NewHandler(
-		identity.NewIdentityManager(keystoreInstance),
-		mysteriumClient,
-		identity.NewIdentityCache(keystoreDirectory, "remember.json"),
-		createSigner,
-	)
-
-	var locationResolver location.Resolver
-	switch {
-	case serviceOptions.LocationCountry != "":
-		locationResolver = location.NewResolverFake(serviceOptions.LocationCountry)
-	default:
-		locationResolver = location.NewResolver(filepath.Join(nodeOptions.Directories.Config, nodeOptions.LocationDatabase))
-	}
-
 	return &Manager{
-		networkDefinition: networkDefinition,
-		identityLoader: func() (identity.Identity, error) {
-			return identity_handler.LoadIdentity(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)
-		},
-		createSigner:     createSigner,
+		identityLoader:   identityLoader,
+		createSigner:     signerFactory,
 		locationResolver: locationResolver,
 		ipResolver:       ipResolver,
 		mysteriumClient:  mysteriumClient,
 		natService:       natService,
-		dialogWaiterFactory: func(myID identity.Identity, identityRegistry registry.IdentityRegistry) communication.DialogWaiter {
+		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
 				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
-				identity.NewSigner(keystoreInstance, myID),
+				signerFactory(myID),
 				identityRegistry,
 			)
 		},
@@ -121,16 +101,12 @@ func NewManager(nodeOptions node.Options, serviceOptions Options) *Manager {
 			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
 
 			return openvpn.NewServer(
-				nodeOptions.OpenvpnBinary,
+				nodeOptions.Openvpn.BinaryPath,
 				serverConfigGenerator,
 				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 				state.NewMiddleware(callback),
 			)
 		},
-		checkOpenvpn: func() error {
-			return openvpn.CheckOpenvpnBinary(nodeOptions.OpenvpnBinary)
-		},
-		checkDirectories: nodeOptions.Directories.Check,
 		openvpnServiceAddress: func(outboundIP, publicIP string) string {
 			//TODO public ip could be overridden by arg nodeOptions if needed
 			if publicIP != outboundIP {

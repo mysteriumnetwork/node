@@ -28,11 +28,11 @@ import (
 )
 
 type identityManager struct {
-	keystoreManager keystoreInterface
+	keystoreManager Keystore
 }
 
 // NewIdentityManager creates and returns new identityManager
-func NewIdentityManager(keystore keystoreInterface) *identityManager {
+func NewIdentityManager(keystore Keystore) *identityManager {
 	return &identityManager{
 		keystoreManager: keystore,
 	}
