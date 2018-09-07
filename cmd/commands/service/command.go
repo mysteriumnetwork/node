@@ -75,7 +75,7 @@ func NewCommand() *cli.Command {
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
-			di.BootstrapServiceManager(nodeOptions, service.Options{
+			di.BootstrapServiceComponents(nodeOptions, service.Options{
 				ctx.String(identityFlag.Name),
 				ctx.String(identityPassphraseFlag.Name),
 

@@ -174,7 +174,7 @@ func runCMD(nodeOptions node.Options, serviceOptions service.Options) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	di.BootstrapServiceManager(nodeOptions, serviceOptions)
+	di.BootstrapServiceComponents(nodeOptions, serviceOptions)
 
 	if err := di.ServiceManager.Start(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

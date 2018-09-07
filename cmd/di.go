@@ -66,18 +66,18 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetwork(nodeOptions.OptionsNetwork); err != nil {
+	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork); err != nil {
 		return err
 	}
 
-	di.bootstrapIdentity(nodeOptions.Directories)
-	di.bootstrapLocation(nodeOptions.Location, nodeOptions.Directories.Config)
-	di.bootstrapNode(nodeOptions)
+	di.bootstrapIdentityComponents(nodeOptions.Directories)
+	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
+	di.bootstrapNodeComponents(nodeOptions)
 
 	return nil
 }
 
-func (di *Dependencies) bootstrapNode(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.NodeOptions = nodeOptions
 	di.Node = node.NewNode(
 		nodeOptions,
@@ -91,8 +91,8 @@ func (di *Dependencies) bootstrapNode(nodeOptions node.Options) {
 	)
 }
 
-// BootstrapServiceManager initiates ServiceManager dependency
-func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, serviceOptions service.Options) {
+// BootstrapServiceComponents initiates ServiceManager dependency
+func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, serviceOptions service.Options) {
 	identityHandler := identity_selector.NewHandler(
 		di.IdentityManager,
 		di.MysteriumClient,
@@ -115,7 +115,7 @@ func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, servic
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides
-func (di *Dependencies) bootstrapNetwork(options node.OptionsNetwork) (err error) {
+func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) (err error) {
 	network := metadata.DefaultNetwork
 
 	switch {
@@ -159,7 +159,7 @@ func (di *Dependencies) bootstrapNetwork(options node.OptionsNetwork) (err error
 	return nil
 }
 
-func (di *Dependencies) bootstrapIdentity(directories node.OptionsDirectory) {
+func (di *Dependencies) bootstrapIdentityComponents(directories node.OptionsDirectory) {
 	di.Keystore = identity.NewKeystoreFilesystem(directories.Keystore)
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore)
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
@@ -167,7 +167,7 @@ func (di *Dependencies) bootstrapIdentity(directories node.OptionsDirectory) {
 	}
 }
 
-func (di *Dependencies) bootstrapLocation(options node.OptionsLocation, configDirectory string) {
+func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) {
 	di.IPResolver = ip.NewResolver(options.IpifyUrl)
 
 	switch {
