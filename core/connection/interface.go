@@ -19,6 +19,7 @@ package connection
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
+	dto2 "github.com/mysteriumnetwork/node/core/node/dto"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
@@ -31,12 +32,12 @@ type DialogCreator func(consumerID, providerID identity.Identity, contact dto.Co
 
 // VpnClientCreator creates new vpn client by given session,
 // consumer identity, provider identity and uses state callback to report state changes
-type VpnClientCreator func(session.SessionDto, identity.Identity, identity.Identity, state.Callback) (openvpn.Process, error)
+type VpnClientCreator func(session.SessionDto, identity.Identity, identity.Identity, state.Callback, dto2.ConnectOptions) (openvpn.Process, error)
 
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
-	Connect(consumerID identity.Identity, providerID identity.Identity) error
+	Connect(consumerID identity.Identity, providerID identity.Identity, options dto2.ConnectOptions) error
 	// Status queries current status of connection
 	Status() ConnectionStatus
 	// Disconnect closes established connection, reports error if no connection

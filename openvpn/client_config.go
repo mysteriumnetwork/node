@@ -18,12 +18,20 @@
 package openvpn
 
 import (
+	"github.com/mysteriumnetwork/node/core/node/dto"
 	"github.com/mysteriumnetwork/node/openvpn/config"
 )
 
 // ClientConfig represents specific "openvpn as client" configuration
 type ClientConfig struct {
 	*config.GenericConfig
+}
+
+// SetConnectOptions sets connect options provided through endpoint parameters
+func (c *ClientConfig) SetConnectOptions(options dto.ConnectOptions) {
+	if options.DisableKillSwitch {
+		c.RestrictReconnects()
+	}
 }
 
 // SetClientMode adds config arguments for openvpn behave as client
@@ -51,8 +59,6 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
 	clientConfig := ClientConfig{config.NewConfig(runtimeDir, scriptSearchPath)}
 
-	clientConfig.RestrictReconnects()
-
 	clientConfig.SetDevice("tun")
 	clientConfig.SetParam("cipher", "AES-256-GCM")
 	clientConfig.SetParam("verb", "3")
@@ -73,7 +79,7 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string, options dto.ConnectOptions) (*ClientConfig, error) {
 
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
@@ -81,6 +87,7 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
+	clientFileConfig.SetConnectOptions(options)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
 	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
 	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)
