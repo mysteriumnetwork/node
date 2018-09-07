@@ -15,34 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package loading
+package selector
 
-import (
-	"testing"
+import "github.com/mysteriumnetwork/node/identity"
 
-	"github.com/stretchr/testify/assert"
-)
+// Loader selects the identity
+type Loader func() (identity.Identity, error)
 
-func Test_LoadIdentityExisting(t *testing.T) {
-	loadIdentity := NewLoader(&handlerFake{}, "existing", "")
+// NewLoader chooses which identity to use and invokes it using identityHandler
+func NewLoader(identityHandler Handler, identityOption, passphrase string) Loader {
+	return func() (identity.Identity, error) {
+		if len(identityOption) > 0 {
+			return identityHandler.UseExisting(identityOption, passphrase)
+		}
 
-	id, err := loadIdentity()
-	assert.Equal(t, "existing", id.Address)
-	assert.Nil(t, err)
-}
+		if id, err := identityHandler.UseLast(passphrase); err == nil {
+			return id, err
+		}
 
-func Test_LoadIdentityLast(t *testing.T) {
-	loadIdentity := NewLoader(&handlerFake{LastAddress: "last"}, "", "")
-
-	id, err := loadIdentity()
-	assert.Equal(t, "last", id.Address)
-	assert.Nil(t, err)
-}
-
-func Test_LoadIdentityNew(t *testing.T) {
-	loadIdentity := NewLoader(&handlerFake{}, "", "")
-
-	id, err := loadIdentity()
-	assert.Equal(t, "new", id.Address)
-	assert.Nil(t, err)
+		return identityHandler.UseNew(passphrase)
+	}
 }

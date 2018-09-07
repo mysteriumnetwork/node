@@ -30,8 +30,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_loading "github.com/mysteriumnetwork/node/identity/loading"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
 )
@@ -93,13 +93,13 @@ func (di *Dependencies) bootstrapNode(nodeOptions node.Options) {
 
 // BootstrapServiceManager initiates ServiceManager dependency
 func (di *Dependencies) BootstrapServiceManager(nodeOptions node.Options, serviceOptions service.Options) {
-	identityHandler := identity_loading.NewHandler(
+	identityHandler := identity_selector.NewHandler(
 		di.IdentityManager,
 		di.MysteriumClient,
 		identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)
-	identityLoader := identity_loading.NewLoader(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)
+	identityLoader := identity_selector.NewLoader(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)
 
 	di.ServiceManager = service.NewManager(
 		nodeOptions,

@@ -28,8 +28,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_loading "github.com/mysteriumnetwork/node/identity/loading"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
@@ -47,7 +47,7 @@ func NewManager(
 	nodeOptions node.Options,
 	serviceOptions Options,
 	networkDefinition metadata.NetworkDefinition,
-	identityLoader identity_loading.Loader,
+	identityLoader identity_selector.Loader,
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
 	mysteriumClient server.Client,
