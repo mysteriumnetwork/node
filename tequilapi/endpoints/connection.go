@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/node/dto"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
@@ -46,6 +47,10 @@ type connectionRequest struct {
 	// required: true
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"providerId"`
+
+	// connect options
+	// required: false
+	ConnectOptions dto.ConnectOptions `json:"connectOptions,omitempty"`
 }
 
 // swagger:model ConnectionStatusDTO
@@ -163,7 +168,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.ProviderID))
+	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.ProviderID), cr.ConnectOptions)
 
 	if err != nil {
 		switch err {
