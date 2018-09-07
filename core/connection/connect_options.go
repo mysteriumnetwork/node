@@ -15,12 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package connection
 
-// swagger:model ConnectOptionsDTO
+// ConnectOptions holds connect options
 type ConnectOptions struct {
 	// kill switch option restricting communication only through VPN
-	// required: false
-	// example: true
-	DisableKillSwitch bool `json:"killSwitch"`
+	DisableKillSwitch bool
 }

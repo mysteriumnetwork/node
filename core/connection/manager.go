@@ -24,7 +24,6 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
-	dto2 "github.com/mysteriumnetwork/node/core/node/dto"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/server"
@@ -72,7 +71,7 @@ func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator,
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, options dto2.ConnectOptions) (err error) {
+func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -95,7 +94,7 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	return err
 }
 
-func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity, options dto2.ConnectOptions) (err error) {
+func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
 	cancelable := utils.NewCancelable()
 
 	manager.mutex.Lock()
@@ -221,7 +220,7 @@ func openvpnClientWaiter(openvpnClient openvpn.Process, dialog communication.Dia
 	dialog.Close()
 }
 
-func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity, stateChannel chan openvpn.State, options dto2.ConnectOptions) (openvpn.Process, error) {
+func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity, stateChannel chan openvpn.State, options ConnectOptions) (openvpn.Process, error) {
 	openvpnClient, err := manager.newVpnClient(
 		vpnSession,
 		consumerID,

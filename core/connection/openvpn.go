@@ -23,7 +23,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/location"
-	"github.com/mysteriumnetwork/node/core/node/dto"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
@@ -42,16 +41,20 @@ func ConfigureVpnClientFactory(
 	statsKeeper stats.SessionStatsKeeper,
 	originalLocationCache location.Cache,
 ) VpnClientCreator {
-	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback, options dto.ConnectOptions) (openvpn.Process, error) {
+	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback, options ConnectOptions) (openvpn.Process, error) {
 		var receivedConfig openvpn.VPNConfig
 		err := json.Unmarshal(vpnSession.Config, &receivedConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(&receivedConfig, configDirectory, runtimeDirectory, options)
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(&receivedConfig, configDirectory, runtimeDirectory)
 		if err != nil {
 			return nil, err
+		}
+
+		if options.DisableKillSwitch {
+			vpnClientConfig.SetReconnectRetry(2)
 		}
 
 		signer := signerFactory(consumerID)
