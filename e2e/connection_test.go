@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,7 +70,7 @@ func TestClientConnectsToNode(t *testing.T) {
 	proposal := proposals[0]
 	seelog.Info("Selected proposal is: ", proposal)
 
-	_, err = tequilApi.Connect(identity.Address, proposal.ProviderID)
+	_, err = tequilApi.Connect(identity.Address, proposal.ProviderID, endpoints.ConnectOptions{true})
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {

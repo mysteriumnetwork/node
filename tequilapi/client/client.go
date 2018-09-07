@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+
+	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 )
 
 // NewClient returns a new instance of Client
@@ -100,13 +102,15 @@ func (client *Client) RegistrationStatus(address string) (RegistrationStatusDTO,
 }
 
 // Connect initiates a new connection to a host identified by providerID
-func (client *Client) Connect(consumerID, providerID string) (status StatusDTO, err error) {
+func (client *Client) Connect(consumerID, providerID string, options endpoints.ConnectOptions) (status StatusDTO, err error) {
 	payload := struct {
-		Identity   string `json:"consumerId"`
-		ProviderID string `json:"providerId"`
+		Identity   string                   `json:"consumerId"`
+		ProviderID string                   `json:"providerId"`
+		Options    endpoints.ConnectOptions `json:"connectOptions"`
 	}{
 		consumerID,
 		providerID,
+		options,
 	}
 	response, err := client.http.Put("connection", payload)
 
