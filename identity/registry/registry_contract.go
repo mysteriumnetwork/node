@@ -76,7 +76,10 @@ const (
 )
 
 // SubscribeToRegistrationEvent returns registration event if given providerAddress was registered within payments contract
-func (registry *contractRegistry) SubscribeToRegistrationEvent(providerAddress common.Address) (registrationEvent chan RegistrationEvent, unsubscribe func()) {
+func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Identity) (
+	registrationEvent chan RegistrationEvent,
+	unsubscribe func(),
+) {
 	registrationEvent = make(chan RegistrationEvent)
 
 	stopLoop := make(chan bool)
@@ -85,7 +88,9 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(providerAddress c
 		stopLoop <- true
 	}
 
-	identities := []common.Address{providerAddress}
+	identities := []common.Address{
+		common.HexToAddress(id.Address),
+	}
 
 	filterOps := &bind.FilterOpts{
 		Start:   0,

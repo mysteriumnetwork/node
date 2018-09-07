@@ -18,38 +18,11 @@
 package registry
 
 import (
-	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	payments_identity "github.com/mysteriumnetwork/payments/identity"
 	"github.com/mysteriumnetwork/payments/registry"
 )
-
-// FakeRegister fake register
-type FakeRegister struct {
-	RegistrationEventExists bool
-	Registered              bool
-}
-
-// IsRegistered returns fake identity registration status within payments contract
-func (register *FakeRegister) IsRegistered(id identity.Identity) (bool, error) {
-	return register.Registered, nil
-}
-
-// SubscribeToRegistrationEvent returns fake registration event if given providerAddress was registered within payments contract
-func (register *FakeRegister) SubscribeToRegistrationEvent(providerAddress common.Address) (registrationEvent chan RegistrationEvent, unsubscribe func()) {
-	log.Info("fake SubscribeToRegistrationEvent called ")
-	registrationEvent = make(chan RegistrationEvent)
-	unsubscribe = func() {
-		registrationEvent <- Cancelled
-	}
-	go func() {
-		if register.RegistrationEventExists {
-			registrationEvent <- Registered
-		}
-	}()
-	return registrationEvent, unsubscribe
-}
 
 // FakeRegistrationDataProvider fake registration data provider
 type FakeRegistrationDataProvider struct {

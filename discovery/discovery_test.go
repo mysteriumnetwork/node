@@ -28,55 +28,55 @@ import (
 
 func TestStartRegistersProposal(t *testing.T) {
 	d := NewFakeDiscrovery()
-	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false, Registered: true}
+	d.identityRegistry = &registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
 	d.Start(identity.FromAddress("my-identity"))
 
-	actualStatus := observeStatus(t, d, PingProposal)
+	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
 }
 
 func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 	d := NewFakeDiscrovery()
-	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: true, Registered: false}
+	d.identityRegistry = &registry.FakeRegistry{RegistrationEventExists: true, Registered: false}
 
 	d.Start(identity.FromAddress("my-identity"))
 
-	actualStatus := observeStatus(t, d, PingProposal)
+	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
 }
 
 func TestStartRegisterIdentityCancelled(t *testing.T) {
 	d := NewFakeDiscrovery()
-	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false, Registered: false}
+	d.identityRegistry = &registry.FakeRegistry{RegistrationEventExists: false, Registered: false}
 
 	d.Start(identity.FromAddress("my-identity"))
 
-	actualStatus := observeStatus(t, d, WaitingForRegistration)
+	actualStatus := observeStatus(d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
 
 	d.Stop()
 
-	actualStatus = observeStatus(t, d, IdentityRegisterFailed)
+	actualStatus = observeStatus(d, IdentityRegisterFailed)
 	assert.Equal(t, IdentityRegisterFailed, actualStatus)
 }
 
 func TestStartStopUnregisterProposal(t *testing.T) {
 	d := NewFakeDiscrovery()
-	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false, Registered: true}
+	d.identityRegistry = &registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
 	d.Start(identity.FromAddress("my-identity"))
 
-	actualStatus := observeStatus(t, d, PingProposal)
+	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
 
 	d.Stop()
 
-	actualStatus = observeStatus(t, d, ProposalUnregistered)
+	actualStatus = observeStatus(d, ProposalUnregistered)
 	assert.Equal(t, ProposalUnregistered, actualStatus)
 }
 
-func observeStatus(t *testing.T, d *Discovery, status ProposalStatus) ProposalStatus {
+func observeStatus(d *Discovery, status ProposalStatus) ProposalStatus {
 	for {
 		d.RLock()
 		if d.status == status {

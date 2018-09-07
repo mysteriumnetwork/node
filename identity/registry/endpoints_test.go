@@ -105,7 +105,10 @@ func (m *mockRegistrationStatus) IsRegistered(id identity.Identity) (bool, error
 	return m.Registered, nil
 }
 
-func (m *mockRegistrationStatus) SubscribeToRegistrationEvent(providerAddress common.Address) (registeredEvent chan RegistrationEvent, unsubscribe func()) {
+func (m *mockRegistrationStatus) SubscribeToRegistrationEvent(id identity.Identity) (
+	registeredEvent chan RegistrationEvent,
+	unsubscribe func(),
+) {
 	return nil, nil
 }
 

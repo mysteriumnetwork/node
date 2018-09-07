@@ -21,7 +21,6 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 )
@@ -117,7 +116,7 @@ func (d *Discovery) stopLoop() {
 }
 
 func (d *Discovery) registerIdentity() {
-	registerEventChan, unsubscribe := d.identityRegistry.SubscribeToRegistrationEvent(common.HexToAddress(d.ownIdentity.Address))
+	registerEventChan, unsubscribe := d.identityRegistry.SubscribeToRegistrationEvent(d.ownIdentity)
 	d.unsubscribe = unsubscribe
 	d.sendEvent(WaitingForRegistration)
 	go func() {

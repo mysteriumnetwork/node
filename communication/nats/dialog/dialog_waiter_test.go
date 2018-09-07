@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -192,7 +191,10 @@ func (mir *mockedIdentityRegistry) IsRegistered(id identity.Identity) (bool, err
 }
 
 // SubscribeToRegistrationEvent mock
-func (mir *mockedIdentityRegistry) SubscribeToRegistrationEvent(providerAddress common.Address) (registeredEvent chan registry.RegistrationEvent, unsubscribe func()) {
+func (mir *mockedIdentityRegistry) SubscribeToRegistrationEvent(id identity.Identity) (
+	registeredEvent chan registry.RegistrationEvent,
+	unsubscribe func(),
+) {
 	return nil, nil
 }
 

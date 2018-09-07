@@ -18,7 +18,6 @@
 package registry
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/registry"
 )
@@ -26,7 +25,7 @@ import (
 // IdentityRegistry enables identity registration actions
 type IdentityRegistry interface {
 	IsRegistered(identity.Identity) (bool, error)
-	SubscribeToRegistrationEvent(providerAddress common.Address) (registeredEvent chan RegistrationEvent, unsubscribe func())
+	SubscribeToRegistrationEvent(identity.Identity) (registeredEvent chan RegistrationEvent, unsubscribe func())
 }
 
 // RegistrationDataProvider provides registration information for given identity required to register it on blockchain
