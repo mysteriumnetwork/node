@@ -21,10 +21,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/communication"
-
 	log "github.com/cihub/seelog"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
@@ -138,9 +136,9 @@ func (waiter *dialogWaiter) validateDialogRequest(request *dialogCreateRequest) 
 	if request.PeerID == "" {
 		return false, nil
 	}
-	registered, err := waiter.identityRegistry.IsRegistered(common.HexToAddress(request.PeerID))
+
+	registered, err := waiter.identityRegistry.IsRegistered(identity.FromAddress(request.PeerID))
 	if err != nil {
-		log.Warn(waiterLogPrefix, "Unregistered peerID: ", request.PeerID)
 		return false, err
 	}
 

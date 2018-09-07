@@ -218,12 +218,7 @@ func (management *Management) consumeOpenvpnConnectionOutput(input io.Reader, ou
 }
 
 func (management *Management) deliverOpenvpnManagementEvents(eventChannel chan string) {
-	for {
-		event, more := <-eventChannel
-		if !more {
-			log.Info(management.logPrefix, "Event consumer is done")
-			return
-		}
+	for event := range eventChannel {
 		log.Trace(management.logPrefix, "Line delivering: ", event)
 
 		lineConsumed := false
@@ -239,4 +234,5 @@ func (management *Management) deliverOpenvpnManagementEvents(eventChannel chan s
 			log.Trace(management.logPrefix, "Line not delivered: ", event)
 		}
 	}
+	log.Info(management.logPrefix, "Event consumer is done")
 }

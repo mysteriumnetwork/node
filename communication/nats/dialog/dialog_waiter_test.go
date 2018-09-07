@@ -187,7 +187,7 @@ type mockedIdentityRegistry struct {
 }
 
 // IsRegistered mock
-func (mir *mockedIdentityRegistry) IsRegistered(address common.Address) (bool, error) {
+func (mir *mockedIdentityRegistry) IsRegistered(id identity.Identity) (bool, error) {
 	return mir.anyIdentityRegistered, nil
 }
 

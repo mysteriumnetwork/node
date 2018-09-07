@@ -24,6 +24,4 @@ type Options struct {
 
 	OpenvpnProtocol string
 	OpenvpnPort     int
-
-	LocationCountry string
 }

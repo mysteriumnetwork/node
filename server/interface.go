@@ -21,6 +21,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // Client is interface how to access Mysterium API
@@ -32,5 +33,5 @@ type Client interface {
 	UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 	PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 
-	SendSessionStats(sessionId string, sessionStats dto.SessionStats, signer identity.Signer) (err error)
+	SendSessionStats(sessionId session.SessionID, sessionStats dto.SessionStats, signer identity.Signer) (err error)
 }

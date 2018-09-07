@@ -19,14 +19,12 @@ package service
 
 import (
 	log "github.com/cihub/seelog"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/mysteriumnetwork/node/blockchain"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/ip"
-	"github.com/mysteriumnetwork/node/location"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/openvpn"
@@ -39,16 +37,14 @@ import (
 
 // Manager represent entrypoint for Mysterium service with top level components
 type Manager struct {
-	networkDefinition metadata.NetworkDefinition
-	keystore          *keystore.KeyStore
-	identityLoader    func() (identity.Identity, error)
-	createSigner      identity.SignerFactory
-	ipResolver        ip.Resolver
-	mysteriumClient   server.Client
-	natService        nat.NATService
-	locationResolver  location.Resolver
+	identityLoader   identity_selector.Loader
+	createSigner     identity.SignerFactory
+	ipResolver       ip.Resolver
+	mysteriumClient  server.Client
+	natService       nat.NATService
+	locationResolver location.Resolver
 
-	dialogWaiterFactory func(identity identity.Identity, identityRegistry registry.IdentityRegistry) communication.DialogWaiter
+	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
 	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
@@ -56,8 +52,6 @@ type Manager struct {
 	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
 
 	vpnServer             openvpn.Process
-	checkOpenvpn          func() error
-	checkDirectories      func() error
 	openvpnServiceAddress func(string, string) string
 	protocol              string
 	discoveryService      *discovery.Discovery
@@ -69,32 +63,12 @@ const logPrefix = "[manager] "
 func (manager *Manager) Start() (err error) {
 	log.Infof(logPrefix, "Starting Mysterium Server (%s)", metadata.VersionAsString())
 
-	err = manager.checkDirectories()
-	if err != nil {
-		return err
-	}
-
-	err = manager.checkOpenvpn()
-	if err != nil {
-		return err
-	}
-
 	providerID, err := manager.identityLoader()
 	if err != nil {
 		return err
 	}
 
-	ethClient, err := blockchain.NewClient(manager.networkDefinition.EtherClientRPC)
-	if err != nil {
-		return err
-	}
-
-	identityRegistry, err := registry.NewIdentityRegistry(ethClient, manager.networkDefinition.PaymentsContractAddress)
-	if err != nil {
-		return err
-	}
-
-	manager.dialogWaiter = manager.dialogWaiterFactory(providerID, identityRegistry)
+	manager.dialogWaiter = manager.dialogWaiterFactory(providerID)
 	providerContact, err := manager.dialogWaiter.Start()
 	if err != nil {
 		return err
@@ -133,10 +107,7 @@ func (manager *Manager) Start() (err error) {
 		return err
 	}
 
-	registrationDataProvider := registry.NewRegistrationDataProvider(manager.keystore)
-
-	manager.discoveryService = discovery.NewService(identityRegistry, providerID, registrationDataProvider, manager.mysteriumClient, manager.createSigner)
-	manager.discoveryService.Start()
+	manager.discoveryService.Start(providerID)
 
 	sessionManager := manager.sessionManagerFactory(primitives, manager.openvpnServiceAddress(outboundIP, publicIP))
 

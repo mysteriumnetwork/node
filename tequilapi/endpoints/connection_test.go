@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/ip"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -67,8 +67,8 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
 	settableClock := utils.SettableClock{}
-	statsKeeper := bytescount.NewSessionStatsKeeper(settableClock.GetTime)
-	ipResolver := ip.NewFakeResolver("123.123.123.123")
+	statsKeeper := stats.NewSessionStatsKeeper(settableClock.GetTime)
+	ipResolver := ip.NewResolverFake("123.123.123.123")
 	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
 	settableClock.SetTime(sessionStart)
 	statsKeeper.MarkSessionStart()
@@ -293,7 +293,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 
 func TestGetIPEndpointSucceeds(t *testing.T) {
 	manager := fakeManager{}
-	ipResolver := ip.NewFakeResolver("123.123.123.123")
+	ipResolver := ip.NewResolverFake("123.123.123.123")
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil)
 	resp := httptest.NewRecorder()
 
@@ -311,7 +311,7 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	manager := fakeManager{}
-	ipResolver := ip.NewFailingFakeResolver(errors.New("fake error"))
+	ipResolver := ip.NewResolverFakeFailing(errors.New("fake error"))
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil)
 	resp := httptest.NewRecorder()
 
@@ -329,8 +329,8 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	settableClock := utils.SettableClock{}
-	statsKeeper := bytescount.NewSessionStatsKeeper(settableClock.GetTime)
-	stats := bytescount.SessionStats{BytesSent: 1, BytesReceived: 2}
+	statsKeeper := stats.NewSessionStatsKeeper(settableClock.GetTime)
+	stats := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
 	statsKeeper.Save(stats)
 
 	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
@@ -356,8 +356,8 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 
 func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testing.T) {
 	settableClock := utils.SettableClock{}
-	statsKeeper := bytescount.NewSessionStatsKeeper(settableClock.GetTime)
-	stats := bytescount.SessionStats{BytesSent: 1, BytesReceived: 2}
+	statsKeeper := stats.NewSessionStatsKeeper(settableClock.GetTime)
+	stats := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
 	statsKeeper.Save(stats)
 
 	manager := fakeManager{}

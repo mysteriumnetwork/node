@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/server/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 const (
@@ -153,7 +154,7 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 }
 
 // SendSessionStats sends session statistics
-func (mApi *mysteriumAPI) SendSessionStats(sessionID string, sessionStats dto.SessionStats, signer identity.Signer) error {
+func (mApi *mysteriumAPI) SendSessionStats(sessionID session.SessionID, sessionStats dto.SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionID)
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
 	if err != nil {

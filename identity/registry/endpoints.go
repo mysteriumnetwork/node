@@ -20,7 +20,7 @@ package registry
 import (
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -107,7 +107,7 @@ func newCurrentIdentityEndpoint(identity *identity.Identity) *currentIdentityEnd
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *registrationEndpoint) IdentityRegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	id := params.ByName("id")
+	id := identity.FromAddress(params.ByName("id"))
 	endpoint.identityRegistrationData(id, resp)
 }
 
@@ -128,16 +128,14 @@ func (endpoint *currentIdentityEndpoint) OwnRegistrationData(resp http.ResponseW
 	utils.WriteAsJSON(endpoint.ownIdentity, resp)
 }
 
-func (endpoint *registrationEndpoint) identityRegistrationData(id string, resp http.ResponseWriter) {
-	identity := common.HexToAddress(id)
-
-	isRegistered, err := endpoint.statusProvider.IsRegistered(identity)
+func (endpoint *registrationEndpoint) identityRegistrationData(id identity.Identity, resp http.ResponseWriter) {
+	isRegistered, err := endpoint.statusProvider.IsRegistered(id)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 
-	registrationData, err := endpoint.dataProvider.ProvideRegistrationData(identity)
+	registrationData, err := endpoint.dataProvider.ProvideRegistrationData(id)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -146,12 +144,12 @@ func (endpoint *registrationEndpoint) identityRegistrationData(id string, resp h
 	registrationDataDTO := &RegistrationDataDTO{
 		Registered: isRegistered,
 		PublicKey: PublicKeyPartsDTO{
-			Part1: common.ToHex(registrationData.PublicKey.Part1),
-			Part2: common.ToHex(registrationData.PublicKey.Part2),
+			Part1: hexutil.Encode(registrationData.PublicKey.Part1),
+			Part2: hexutil.Encode(registrationData.PublicKey.Part2),
 		},
 		Signature: SignatureDTO{
-			R: common.ToHex(registrationData.Signature.R[:]),
-			S: common.ToHex(registrationData.Signature.S[:]),
+			R: hexutil.Encode(registrationData.Signature.R[:]),
+			S: hexutil.Encode(registrationData.Signature.S[:]),
 			V: registrationData.Signature.V,
 		},
 	}

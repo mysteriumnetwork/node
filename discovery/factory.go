@@ -20,7 +20,6 @@ package discovery
 import (
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/openvpn/discovery"
@@ -31,9 +30,10 @@ import (
 // Discovery structure holds discovery service state
 type Discovery struct {
 	identityRegistry            registry.IdentityRegistry
-	ownIdentity                 common.Address
+	ownIdentity                 identity.Identity
 	registrationDataProvider    registry.RegistrationDataProvider
 	mysteriumClient             server.Client
+	signerCreate                identity.SignerFactory
 	signer                      identity.Signer
 	proposal                    dto_discovery.ServiceProposal
 	proposalStatusChan          chan ProposalStatus
@@ -48,26 +48,22 @@ type Discovery struct {
 // NewService creates new discovery service
 func NewService(
 	identityRegistry registry.IdentityRegistry,
-	ownIdentity identity.Identity,
 	provider registry.RegistrationDataProvider,
 	mysteriumClient server.Client,
-	createSigner identity.SignerFactory,
+	signerCreate identity.SignerFactory,
 ) *Discovery {
-	signer := createSigner(identity.FromAddress(ownIdentity.Address))
-
 	return &Discovery{
-		identityRegistry,
-		common.HexToAddress(ownIdentity.Address),
-		provider,
-		mysteriumClient,
-		signer,
-		dto_discovery.ServiceProposal{},
-		make(chan ProposalStatus),
-		StatusUndefined,
-		&sync.WaitGroup{},
-		func() {},
-		func() {},
-		sync.RWMutex{},
+		identityRegistry:         identityRegistry,
+		registrationDataProvider: provider,
+		mysteriumClient:          mysteriumClient,
+		signerCreate:             signerCreate,
+		proposal:                 dto_discovery.ServiceProposal{},
+		proposalStatusChan:       make(chan ProposalStatus),
+		status:                   StatusUndefined,
+		proposalAnnouncementStopped: &sync.WaitGroup{},
+		unsubscribe:                 func() {},
+		stop:                        func() {},
+		RWMutex:                     sync.RWMutex{},
 	}
 }
 

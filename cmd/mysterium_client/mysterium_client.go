@@ -78,7 +78,7 @@ func parseArguments(args []string) (options commandOptions, err error) {
 	}
 
 	flags.StringVar(
-		&options.NodeOptions.OpenvpnBinary,
+		&options.NodeOptions.Openvpn.BinaryPath,
 		"openvpn.binary",
 		"openvpn", //search in $PATH by default,
 		"openvpn binary to use for Open VPN connections",
@@ -123,20 +123,19 @@ func parseArguments(args []string) (options commandOptions, err error) {
 	)
 
 	flags.StringVar(
-		&options.NodeOptions.IpifyUrl,
+		&options.NodeOptions.Location.IpifyUrl,
 		"ipify-url",
 		"https://api.ipify.org/",
 		"Address (URL form) of ipify service",
 	)
-
 	flags.StringVar(
-		&options.NodeOptions.LocationDatabase,
+		&options.NodeOptions.Location.Database,
 		"location.database",
 		"GeoLite2-Country.mmdb",
 		"Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 	)
 
-	cmd.ParseNetworkArguments(flags, &options.NodeOptions.NetworkOptions)
+	cmd.ParseArgumentsNetwork(flags, &options.NodeOptions.OptionsNetwork)
 
 	err = flags.Parse(args[1:])
 	if err != nil {
@@ -161,16 +160,20 @@ func runCLI(options node.Options) {
 }
 
 func runCMD(options node.Options) {
-	nodeInstance := node.NewNode(options)
-
-	cmd.RegisterSignalCallback(utils.SoftKiller(nodeInstance.Kill))
-
-	if err := nodeInstance.Start(); err != nil {
+	var di cmd.Dependencies
+	if err := di.Bootstrap(options); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
-	if err := nodeInstance.Wait(); err != nil {
+	cmd.RegisterSignalCallback(utils.SoftKiller(di.Node.Kill))
+
+	if err := di.Node.Start(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if err := di.Node.Wait(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

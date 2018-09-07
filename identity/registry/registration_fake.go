@@ -20,7 +20,8 @@ package registry
 import (
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/payments/identity"
+	"github.com/mysteriumnetwork/node/identity"
+	payments_identity "github.com/mysteriumnetwork/payments/identity"
 	"github.com/mysteriumnetwork/payments/registry"
 )
 
@@ -31,7 +32,7 @@ type FakeRegister struct {
 }
 
 // IsRegistered returns fake identity registration status within payments contract
-func (register *FakeRegister) IsRegistered(identity common.Address) (bool, error) {
+func (register *FakeRegister) IsRegistered(id identity.Identity) (bool, error) {
 	return register.Registered, nil
 }
 
@@ -61,13 +62,13 @@ const (
 )
 
 // ProvideRegistrationData provides fake registration data
-func (m *FakeRegistrationDataProvider) ProvideRegistrationData(id common.Address) (*registry.RegistrationData, error) {
+func (m *FakeRegistrationDataProvider) ProvideRegistrationData(id identity.Identity) (*registry.RegistrationData, error) {
 	registrationData := &registry.RegistrationData{
 		PublicKey: registry.PublicKeyParts{
 			Part1: common.FromHex(testPubPart1),
 			Part2: common.FromHex(testPubPart2),
 		},
-		Signature: &identity.DecomposedSignature{
+		Signature: &payments_identity.DecomposedSignature{
 			R: [32]byte{1},
 			S: [32]byte{2},
 			V: 27,

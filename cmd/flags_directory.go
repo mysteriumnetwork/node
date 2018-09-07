@@ -28,7 +28,7 @@ import (
 )
 
 // ParseDirectoryArguments function takes directory options and fills in values from FlagSet structure
-func ParseDirectoryArguments(flags *flag.FlagSet, options *node.DirectoryOptions) error {
+func ParseDirectoryArguments(flags *flag.FlagSet, options *node.OptionsDirectory) error {
 
 	userHomeDir, err := homedir.Dir()
 	if err != nil {
@@ -67,8 +67,8 @@ const (
 	runtimeDirFlag = "runtime-dir"
 )
 
-// RegisterDirectoryFlags function register directory flags to flag list
-func RegisterDirectoryFlags(flags *[]cli.Flag) error {
+// RegisterFlagsDirectory function register directory flags to flag list
+func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 	userHomeDir, err := homedir.Dir()
 	if err != nil {
 		return err
@@ -100,10 +100,12 @@ func RegisterDirectoryFlags(flags *[]cli.Flag) error {
 	return nil
 }
 
-// ParseDirectoryFlags function fills in directory options from CLI context
-func ParseDirectoryFlags(ctx *cli.Context) node.DirectoryOptions {
-	return node.DirectoryOptions{
-		ctx.GlobalString(dataDirFlag),
+// ParseFlagsDirectory function fills in directory options from CLI context
+func ParseFlagsDirectory(ctx *cli.Context) node.OptionsDirectory {
+	dataDir := ctx.GlobalString(dataDirFlag)
+	return node.OptionsDirectory{
+		dataDir,
+		filepath.Join(dataDir, "keystore"),
 		ctx.GlobalString(configDirFlag),
 		ctx.GlobalString(runtimeDirFlag),
 	}

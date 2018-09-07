@@ -21,6 +21,8 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 )
 
@@ -43,9 +45,12 @@ const (
 const logPrefix = "[discovery] "
 
 // Start launches discovery service
-func (d *Discovery) Start() {
+func (d *Discovery) Start(ownIdentity identity.Identity) {
 	d.RLock()
 	defer d.RUnlock()
+
+	d.ownIdentity = ownIdentity
+	d.signer = d.signerCreate(ownIdentity)
 
 	stopLoop := make(chan bool)
 	d.stop = func() {
@@ -112,7 +117,7 @@ func (d *Discovery) stopLoop() {
 }
 
 func (d *Discovery) registerIdentity() {
-	registerEventChan, unsubscribe := d.identityRegistry.SubscribeToRegistrationEvent(d.ownIdentity)
+	registerEventChan, unsubscribe := d.identityRegistry.SubscribeToRegistrationEvent(common.HexToAddress(d.ownIdentity.Address))
 	d.unsubscribe = unsubscribe
 	d.sendEvent(WaitingForRegistration)
 	go func() {
@@ -173,7 +178,7 @@ func (d *Discovery) checkRegistration() {
 			return
 		}
 		registry.PrintRegistrationData(registrationData)
-		log.Infof("%s identity %s not registered, delaying proposal registration until identity is registered", logPrefix, d.ownIdentity.String())
+		log.Infof("%s identity %s not registered, delaying proposal registration until identity is registered", logPrefix, d.ownIdentity.Address)
 		d.sendEvent(IdentityUnregistered)
 		return
 	}

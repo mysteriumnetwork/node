@@ -20,7 +20,7 @@ package discovery
 import (
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/server"
 )
@@ -30,8 +30,10 @@ func NewFakeDiscrovery() *Discovery {
 	return &Discovery{
 		proposalStatusChan:          make(chan ProposalStatus),
 		proposalAnnouncementStopped: &sync.WaitGroup{},
-		ownIdentity:                 common.Address{},
-		registrationDataProvider:    &registry.FakeRegistrationDataProvider{},
-		mysteriumClient:             server.NewClientFake(),
+		signerCreate: func(id identity.Identity) identity.Signer {
+			return &identity.SignerFake{}
+		},
+		registrationDataProvider: &registry.FakeRegistrationDataProvider{},
+		mysteriumClient:          server.NewClientFake(),
 	}
 }

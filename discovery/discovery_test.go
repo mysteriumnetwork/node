@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,7 +30,7 @@ func TestStartRegistersProposal(t *testing.T) {
 	d := NewFakeDiscrovery()
 	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false, Registered: true}
 
-	d.Start()
+	d.Start(identity.FromAddress("my-identity"))
 
 	actualStatus := observeStatus(t, d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
@@ -39,7 +40,7 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 	d := NewFakeDiscrovery()
 	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: true, Registered: false}
 
-	d.Start()
+	d.Start(identity.FromAddress("my-identity"))
 
 	actualStatus := observeStatus(t, d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
@@ -49,7 +50,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 	d := NewFakeDiscrovery()
 	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false, Registered: false}
 
-	d.Start()
+	d.Start(identity.FromAddress("my-identity"))
 
 	actualStatus := observeStatus(t, d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
@@ -64,7 +65,7 @@ func TestStartStopUnregisterProposal(t *testing.T) {
 	d := NewFakeDiscrovery()
 	d.identityRegistry = &registry.FakeRegister{RegistrationEventExists: false, Registered: true}
 
-	d.Start()
+	d.Start(identity.FromAddress("my-identity"))
 
 	actualStatus := observeStatus(t, d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)

@@ -21,14 +21,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSessionStatsSaver(t *testing.T) {
-	statsKeeper := NewSessionStatsKeeper(time.Now)
+	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
 
 	saver := NewSessionStatsSaver(statsKeeper)
-	stats := SessionStats{BytesSent: 1, BytesReceived: 2}
+	stats := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
 	saver(stats)
 	assert.Equal(t, stats, statsKeeper.Retrieve())
 }

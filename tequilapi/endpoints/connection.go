@@ -23,10 +23,10 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/ip"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -81,13 +81,13 @@ type statisticsResponse struct {
 type ConnectionEndpoint struct {
 	manager     connection.Manager
 	ipResolver  ip.Resolver
-	statsKeeper bytescount.SessionStatsKeeper
+	statsKeeper stats.SessionStatsKeeper
 }
 
 const connectionLogPrefix = "[Connection] "
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper bytescount.SessionStatsKeeper) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper stats.SessionStatsKeeper) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:     manager,
 		ipResolver:  ipResolver,
@@ -273,7 +273,7 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager, ipResolver ip.Resolver,
-	statsKeeper bytescount.SessionStatsKeeper) {
+	statsKeeper stats.SessionStatsKeeper) {
 	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)

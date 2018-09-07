@@ -22,10 +22,10 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
@@ -37,7 +37,7 @@ const managerLogPrefix = "[connection-manager] "
 var (
 	// ErrNoConnection error indicates that action applied to manager expects active connection (i.e. disconnect)
 	ErrNoConnection = errors.New("no connection exists")
-	// ErrAlreadyExists error indicates that aciton applieto to manager expects no active connection (i.e. connect)
+	// ErrAlreadyExists error indicates that action applied to manager expects no active connection (i.e. connect)
 	ErrAlreadyExists = errors.New("connection already exists")
 	// ErrConnectionCancelled indicates that connection in progress was cancelled by request of api user
 	ErrConnectionCancelled = errors.New("connection was cancelled")
@@ -50,7 +50,7 @@ type connectionManager struct {
 	mysteriumClient server.Client
 	newDialog       DialogCreator
 	newVpnClient    VpnClientCreator
-	statsKeeper     bytescount.SessionStatsKeeper
+	statsKeeper     stats.SessionStatsKeeper
 	//these are populated by Connect at runtime
 	status          ConnectionStatus
 	cleanConnection func()
@@ -60,7 +60,7 @@ type connectionManager struct {
 
 // NewManager creates connection manager with given dependencies
 func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator,
-	vpnClientCreator VpnClientCreator, statsKeeper bytescount.SessionStatsKeeper) *connectionManager {
+	vpnClientCreator VpnClientCreator, statsKeeper stats.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
 		mysteriumClient: mysteriumClient,
 		newDialog:       dialogCreator,

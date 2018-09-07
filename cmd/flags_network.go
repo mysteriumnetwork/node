@@ -25,8 +25,8 @@ import (
 	"github.com/urfave/cli"
 )
 
-// ParseNetworkArguments function parses (or registers) network options from flag library
-func ParseNetworkArguments(flags *flag.FlagSet, options *node.NetworkOptions) {
+// ParseArgumentsNetwork function parses (or registers) network options from flag library
+func ParseArgumentsNetwork(flags *flag.FlagSet, options *node.OptionsNetwork) {
 	flags.StringVar(
 		&options.DiscoveryAPIAddress,
 		"discovery-address",
@@ -103,8 +103,8 @@ var (
 	}
 )
 
-// RegisterNetworkFlags function register network flags to flag list
-func RegisterNetworkFlags(flags *[]cli.Flag) {
+// RegisterFlagsNetwork function register network flags to flag list
+func RegisterFlagsNetwork(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
 		testFlag, localnetFlag,
@@ -113,9 +113,9 @@ func RegisterNetworkFlags(flags *[]cli.Flag) {
 	)
 }
 
-// ParseNetworkFlags function fills in directory options from CLI context
-func ParseNetworkFlags(ctx *cli.Context) node.NetworkOptions {
-	return node.NetworkOptions{
+// ParseFlagsNetwork function fills in directory options from CLI context
+func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
+	return node.OptionsNetwork{
 		ctx.GlobalBool(testFlag.Name),
 		ctx.GlobalBool(localnetFlag.Name),
 
