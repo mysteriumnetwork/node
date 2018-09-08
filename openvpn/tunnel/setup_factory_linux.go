@@ -15,15 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package linux
+package tunnel
 
-// TunnelService defines interface to manage tun device
-type TunnelService interface {
-	Start() error
-	Stop()
-}
-
-// TunnelDevice represents tun device structure
-type TunnelDevice struct {
-	Name string
+// NewSetup creates TUN tunnel setup in Linux
+func NewSetup() *linuxTunnelSetup {
+	return &linuxTunnelSetup{}
 }

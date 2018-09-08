@@ -22,8 +22,8 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/openvpn/config"
-	"github.com/mysteriumnetwork/node/openvpn/linux"
 	"github.com/mysteriumnetwork/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/tunnel"
 )
 
 const linuxProcess = "[Linux openvpn process] "
@@ -33,19 +33,19 @@ type linuxOpenvpnProcess struct {
 	process *openvpnProcess
 
 	//runtime variables
-	tunService   linux.TunnelService
+	tunService   tunnel.TunnelService
 	finished     *sync.WaitGroup
 	processError error
 }
 
 func (ls *linuxOpenvpnProcess) Start() error {
-	tunDevice, err := linux.FindFreeTunDevice()
+	tunDevice, err := tunnel.FindFreeTunDevice()
 	if err != nil {
 		return err
 	}
 
 	ls.config.SetDevice(tunDevice.Name)
-	ls.tunService = linux.NewLinuxTunnelService(
+	ls.tunService = tunnel.NewLinuxTunnelService(
 		tunDevice,
 		ls.config.GetFullScriptPath(config.SimplePath("prepare-env.sh")),
 	)

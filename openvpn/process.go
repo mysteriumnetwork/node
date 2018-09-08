@@ -24,7 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/openvpn/config"
 	"github.com/mysteriumnetwork/node/openvpn/management"
-	"github.com/mysteriumnetwork/node/openvpn/tun"
+	"github.com/mysteriumnetwork/node/openvpn/tunnel"
 )
 
 type tunnelSetup interface {
@@ -45,7 +45,7 @@ func newProcess(
 	middlewares ...management.Middleware,
 ) *openvpnProcess {
 	return &openvpnProcess{
-		tunSetup:   tun.NewSetup(),
+		tunSetup:   tunnel.NewSetup(),
 		config:     config,
 		management: management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
 		cmd:        NewCmdWrapper(openvpnBinary, "[openvpn-process] "),
