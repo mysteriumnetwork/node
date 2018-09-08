@@ -33,10 +33,10 @@ type tunnelSetup interface {
 }
 
 type openvpnProcess struct {
-	tunSetup   tunnelSetup
-	config     *config.GenericConfig
-	management *management.Management
-	cmd        *CmdWrapper
+	config      *config.GenericConfig
+	tunnelSetup tunnelSetup
+	management  *management.Management
+	cmd         *CmdWrapper
 }
 
 func newProcess(
@@ -45,20 +45,21 @@ func newProcess(
 	middlewares ...management.Middleware,
 ) *openvpnProcess {
 	return &openvpnProcess{
-		tunSetup:   tunnel.NewSetup(),
-		config:     config,
-		management: management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
-		cmd:        NewCmdWrapper(openvpnBinary, "[openvpn-process] "),
+		tunnelSetup: tunnel.NewNoopSetup(),
+		config:      config,
+		management:  management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
+		cmd:         NewCmdWrapper(openvpnBinary, "[openvpn-process] "),
 	}
 }
 
 func (openvpn *openvpnProcess) Start() error {
-	if err := openvpn.tunSetup.Setup(openvpn.config); err != nil {
+	if err := openvpn.tunnelSetup.Setup(openvpn.config); err != nil {
 		return err
 	}
 
 	err := openvpn.management.WaitForConnection()
 	if err != nil {
+		openvpn.tunnelSetup.Teardown()
 		return err
 	}
 
@@ -68,6 +69,8 @@ func (openvpn *openvpnProcess) Start() error {
 	// Fetch the current arguments
 	arguments, err := (*openvpn.config).ToArguments()
 	if err != nil {
+		openvpn.management.Stop()
+		openvpn.tunnelSetup.Teardown()
 		return err
 	}
 
@@ -76,6 +79,7 @@ func (openvpn *openvpnProcess) Start() error {
 	err = openvpn.cmd.Start(arguments)
 	if err != nil {
 		openvpn.management.Stop()
+		openvpn.tunnelSetup.Teardown()
 		return err
 	}
 
@@ -87,6 +91,7 @@ func (openvpn *openvpnProcess) Start() error {
 		return errors.New("management failed to accept connection")
 	case exitError := <-openvpn.cmd.CmdExitError:
 		openvpn.management.Stop()
+		openvpn.tunnelSetup.Teardown()
 		if exitError != nil {
 			return exitError
 		}
@@ -115,6 +120,12 @@ func (openvpn *openvpnProcess) Stop() {
 	go func() {
 		defer waiter.Done()
 		openvpn.management.Stop()
+	}()
+
+	waiter.Add(1)
+	go func() {
+		defer waiter.Done()
+		openvpn.tunnelSetup.Teardown()
 	}()
 
 	waiter.Wait()

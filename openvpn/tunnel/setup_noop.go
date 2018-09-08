@@ -1,5 +1,3 @@
-// +build !linux
-
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
@@ -19,7 +17,20 @@
 
 package tunnel
 
-// NewSetup creates no-op tunnel setup
-func NewSetup() *genericTunnelSetup {
-	return &genericTunnelSetup{}
+import "github.com/mysteriumnetwork/node/openvpn/config"
+
+// NewNoopSetup creates no-op tunnel setup
+func NewNoopSetup() *noopSetup {
+	return &noopSetup{}
+}
+
+type noopSetup struct {
+}
+
+func (gts *noopSetup) Setup(config *config.GenericConfig) error {
+	return nil
+}
+
+func (gts *noopSetup) Teardown() {
+
 }

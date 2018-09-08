@@ -24,6 +24,7 @@ import (
 	"strconv"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/openvpn/config"
 )
 
 const tunLogPrefix = "[linux tun service] "
@@ -32,88 +33,107 @@ const tunLogPrefix = "[linux tun service] "
 var ErrNoFreeTunDevice = errors.New("no free tun device found")
 
 type serviceLinuxTun struct {
-	device     *TunnelDevice
-	scriptPath string
+	scriptSetup string
+
+	// runtime variables
+	device tunDevice
 }
 
-// NewLinuxTunnelService creates linux specific tunnel manager for interface creation and removal
-func NewLinuxTunnelService(tun *TunnelDevice, configScriptPath string) *serviceLinuxTun {
-	return &serviceLinuxTun{tun, configScriptPath}
+// tunDevice represents tun device structure
+type tunDevice struct {
+	Name string
 }
 
-func (service *serviceLinuxTun) Start() error {
-	return service.createTunDevice()
+// NewTunInterfaceSetup creates Linux specific TUN manager for interface creation and removal
+func NewTunInterfaceSetup(scriptSetup string) *serviceLinuxTun {
+	return &serviceLinuxTun{scriptSetup: scriptSetup}
 }
 
-func (service *serviceLinuxTun) Stop() {
+func (service *serviceLinuxTun) Setup(config *config.GenericConfig) error {
+	device, err := findFreeTunDevice()
+	if err != nil {
+		return err
+	}
+
+	if err := service.createTunDevice(device); err != nil {
+		return err
+	}
+
+	service.device = device
+	config.SetPersistTun()
+	config.SetDevice(device.Name)
+	return nil
+}
+
+func (service *serviceLinuxTun) Teardown() {
 	var err error
 	var exists bool
 
-	if exists, err = service.deviceExists(); err != nil {
+	if exists, err = service.deviceExists(service.device); err != nil {
 		log.Info(tunLogPrefix, err)
 	}
 
 	if exists {
-		service.deleteDevice()
+		service.deleteDevice(service.device)
 	}
 }
 
-func (service *serviceLinuxTun) createTunDevice() (err error) {
+func (service *serviceLinuxTun) createTunDevice(device tunDevice) (err error) {
 	err = service.createDeviceNode()
 	if err != nil {
 		return err
 	}
 
-	exists, err := service.deviceExists()
+	exists, err := service.deviceExists(device)
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		log.Info(tunLogPrefix, service.device.Name+" device already exists, attempting to use it")
+		log.Info(tunLogPrefix, device.Name+" device already exists, attempting to use it")
 		return
 	}
 
-	cmd := exec.Command("sudo", "ip", "tuntap", "add", "dev", service.device.Name, "mode", "tun")
+	cmd := exec.Command("sudo", "ip", "tuntap", "add", "dev", device.Name, "mode", "tun")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Warn("Failed to add tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 		// we should not proceed without tun device
 		return err
 	}
 
-	log.Info(tunLogPrefix, service.device.Name+" device created")
+	log.Info(tunLogPrefix, device.Name+" device created")
 	return nil
 }
 
-func (service *serviceLinuxTun) deviceExists() (exists bool, err error) {
-	if _, err := os.Stat("/sys/class/net/" + service.device.Name); err == nil {
+func (service *serviceLinuxTun) deviceExists(device tunDevice) (exists bool, err error) {
+	if _, err := os.Stat("/sys/class/net/" + device.Name); err == nil {
 		return true, nil
 	}
 
 	return false, err
 }
 
-func (service *serviceLinuxTun) deleteDevice() {
-	cmd := exec.Command("sudo", "ip", "tuntap", "delete", "dev", service.device.Name, "mode", "tun")
+func (service *serviceLinuxTun) deleteDevice(device tunDevice) {
+	cmd := exec.Command("sudo", "ip", "tuntap", "delete", "dev", device.Name, "mode", "tun")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Warn("Failed to remove tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 	} else {
-		log.Info(tunLogPrefix, service.device.Name, " device removed")
+		log.Info(tunLogPrefix, device.Name, " device removed")
 	}
 }
 
 // FindFreeTunDevice returns first free tun device on system
-func FindFreeTunDevice() (tun *TunnelDevice, err error) {
+func findFreeTunDevice() (tun tunDevice, err error) {
 	// search only among first 10 tun devices
 	for i := 0; i <= 10; i++ {
 		tunName := "tun" + strconv.Itoa(i)
 		tunFile := "/sys/class/net/tun" + tunName
 		if _, err := os.Stat(tunFile); os.IsNotExist(err) {
-			return &TunnelDevice{tunName}, nil
+			return tunDevice{tunName}, nil
 		}
 	}
 
-	return nil, ErrNoFreeTunDevice
+	return tun, ErrNoFreeTunDevice
 }
 
 func (service *serviceLinuxTun) createDeviceNode() error {
@@ -122,9 +142,9 @@ func (service *serviceLinuxTun) createDeviceNode() error {
 		return nil
 	}
 
-	cmd := exec.Command("sudo", service.scriptPath)
+	cmd := exec.Command("sudo", service.scriptSetup)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn("Failed to execute prepare-env.sh script: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		log.Warn("Failed to execute tun script: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 		return err
 	}
 

@@ -22,9 +22,21 @@ package openvpn
 import (
 	"github.com/mysteriumnetwork/node/openvpn/config"
 	"github.com/mysteriumnetwork/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/tunnel"
 )
 
-// CreateNewProcess function creates new linux process and overrides default function in linux environment
-func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *linuxOpenvpnProcess {
-	return NewLinuxProcess(openvpnBinary, config, middlewares...)
+// CreateNewProcess function creates Linux OS customized openvpn process
+func CreateNewProcess(
+	openvpnBinary string,
+	configuration *config.GenericConfig,
+	middlewares ...management.Middleware,
+) *openvpnProcess {
+	configuration.SetScriptParam("iproute", config.SimplePath("nonpriv-ip"))
+
+	process := newProcess(openvpnBinary, configuration, middlewares...)
+	process.tunnelSetup = tunnel.NewTunInterfaceSetup(
+		configuration.GetFullScriptPath(config.SimplePath("prepare-env.sh")),
+	)
+
+	return process
 }
