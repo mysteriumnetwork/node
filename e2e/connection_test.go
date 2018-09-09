@@ -25,82 +25,110 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	consumerPassphrase = "localconsumer"
+	providerID         = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
+	providerPassphrase = "localprovider"
+)
+
 func TestConsumerConnectsToProvider(t *testing.T) {
+	tequilapiProvider := newTequilapiClient(Provider)
 	tequilapiConsumer := newTequilapiClient(Consumer)
 
-	status, err := tequilapiConsumer.Status()
-	assert.NoError(t, err)
-	assert.Equal(t, "NotConnected", status.Status)
-
-	mystID := identityCreateFlow(t, tequilapiConsumer)
-	identityRegistrationFlow(t, tequilapiConsumer, mystID)
-
-	nonVpnIp, err := tequilapiConsumer.GetIP()
-	assert.NoError(t, err)
-	seelog.Info("Original consumer IP: ", nonVpnIp)
-
-	proposals, err := tequilapiConsumer.Proposals()
-	if err != nil {
-		assert.Error(t, err)
-		assert.FailNow(t, "Proposals returned error - no point to continue")
-	}
-
-	// expect exactly one proposal
-	if len(proposals) != 1 {
-		assert.FailNow(t, "Exactly one proposal is expected - something is not right!")
-	}
-
-	proposal := proposals[0]
-	seelog.Info("Selected proposal is: ", proposal)
-
-	_, err = tequilapiConsumer.Connect(mystID.Address, proposal.ProviderID)
-	assert.NoError(t, err)
-
-	err = waitForCondition(func() (bool, error) {
-		status, err := tequilapiConsumer.Status()
-		return status.Status == "Connected", err
+	t.Run("ProviderRegistersIdentityFlow", func(t *testing.T) {
+		identityRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
 	})
-	assert.NoError(t, err)
 
-	vpnIp, err := tequilapiConsumer.GetIP()
-	assert.NoError(t, err)
-	seelog.Info("Shifted consumer IP: ", vpnIp)
-
-	err = tequilapiConsumer.Disconnect()
-	assert.NoError(t, err)
-
-	err = waitForCondition(func() (bool, error) {
-		status, err := tequilapiConsumer.Status()
-		return status.Status == "NotConnected", err
+	var consumerID string
+	t.Run("ConsumerCreatesAndRegistersIdentityFlow", func(t *testing.T) {
+		consumerID = identityCreateFlow(t, tequilapiConsumer, consumerPassphrase)
+		identityRegistrationFlow(t, tequilapiConsumer, consumerID, consumerPassphrase)
 	})
-	assert.NoError(t, err)
 
+	t.Run("ConsumerConnectFlow", func(t *testing.T) {
+		proposal := consumerPicksProposal(t, tequilapiConsumer)
+		consumerConnectFlow(t, tequilapiConsumer, consumerID, proposal)
+	})
 }
 
-func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client) tequilapi_client.IdentityDTO {
-	id, err := tequilapi.NewIdentity("")
+func identityCreateFlow(t *testing.T, tequilapi *tequilapi_client.Client, idPassphrase string) string {
+	id, err := tequilapi.NewIdentity(idPassphrase)
 	assert.NoError(t, err)
 	seelog.Info("Created new identity: ", id.Address)
 
-	err = tequilapi.Unlock(id.Address, "")
-	assert.NoError(t, err)
-
-	return id
+	return id.Address
 }
 
-func identityRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id tequilapi_client.IdentityDTO) {
-	registrationData, err := tequilapi.IdentityRegistrationStatus(id.Address)
+func identityRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, id, idPassphrase string) {
+	err := tequilapi.Unlock(id, idPassphrase)
+	assert.NoError(t, err)
+
+	registrationData, err := tequilapi.IdentityRegistrationStatus(id)
 	assert.NoError(t, err)
 	assert.False(t, registrationData.Registered)
 
 	err = registerIdentity(registrationData)
 	assert.NoError(t, err)
-	seelog.Info("Registered identity: ", id.Address)
+	seelog.Info("Registered identity: ", id)
 
 	// now we check identity again
 	err = waitForCondition(func() (bool, error) {
-		regStatus, err := tequilapi.IdentityRegistrationStatus(id.Address)
+		regStatus, err := tequilapi.IdentityRegistrationStatus(id)
 		return regStatus.Registered, err
+	})
+	assert.NoError(t, err)
+}
+
+// expect exactly one proposal
+func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client) tequilapi_client.ProposalDTO {
+	var proposals []tequilapi_client.ProposalDTO
+	err := waitForCondition(func() (state bool, stateErr error) {
+		proposals, stateErr = tequilapi.Proposals()
+		return len(proposals) == 1, stateErr
+	})
+	if err != nil {
+		assert.Error(t, err)
+		assert.FailNow(t, "Exactly one proposal is expected - something is not right!")
+	}
+
+	seelog.Info("Selected proposal is: ", proposals[0])
+	return proposals[0]
+}
+
+func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID string, proposal tequilapi_client.ProposalDTO) {
+	status, err := tequilapi.Status()
+	assert.NoError(t, err)
+	assert.Equal(t, "NotConnected", status.Status)
+
+	nonVpnIp, err := tequilapi.GetIP()
+	assert.NoError(t, err)
+	seelog.Info("Original consumer IP: ", nonVpnIp)
+
+	err = waitForCondition(func() (bool, error) {
+		status, err := tequilapi.Status()
+		return status.Status == "NotConnected", err
+	})
+	assert.NoError(t, err)
+
+	_, err = tequilapi.Connect(consumerID, proposal.ProviderID)
+	assert.NoError(t, err)
+
+	err = waitForCondition(func() (bool, error) {
+		status, err := tequilapi.Status()
+		return status.Status == "Connected", err
+	})
+	assert.NoError(t, err)
+
+	vpnIp, err := tequilapi.GetIP()
+	assert.NoError(t, err)
+	seelog.Info("Shifted consumer IP: ", vpnIp)
+
+	err = tequilapi.Disconnect()
+	assert.NoError(t, err)
+
+	err = waitForCondition(func() (bool, error) {
+		status, err := tequilapi.Status()
+		return status.Status == "NotConnected", err
 	})
 	assert.NoError(t, err)
 }

@@ -14,6 +14,8 @@ services:
     expose:
       - 1194
       - 4050
+    volumes:
+      - ../../e2e/myst-provider:/var/lib/mysterium-node
     command: >
       --ipify-url=http://ipify:3000
       --location.country=e2e-land
@@ -22,6 +24,8 @@ services:
       --discovery-address=http://discovery/v1
       --ether.client.rpc=http://geth:8545
       service
+      --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
+      --identity.passphrase=localprovider
       --openvpn.port=3000
 
   myst-consumer:
