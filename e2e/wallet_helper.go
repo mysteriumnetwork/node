@@ -20,6 +20,7 @@ package e2e
 import (
 	"context"
 	"errors"
+	"flag"
 	"math/big"
 	"os"
 	"time"
@@ -37,13 +38,16 @@ import (
 	registry "github.com/mysteriumnetwork/payments/registry/generated"
 )
 
-//addresses should match those deployed in e2e test environment
-var tokenAddress = common.HexToAddress("0x0222eb28e1651E2A8bAF691179eCfB072457f00c")
-var paymentsAddress = common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea")
+var (
+	// addresses should match those deployed in e2e test environment
+	tokenAddress    = common.HexToAddress("0x0222eb28e1651E2A8bAF691179eCfB072457f00c")
+	paymentsAddress = common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea")
 
-//owner of contracts and main acc with ethereum
-var mainEtherAcc = common.HexToAddress("0xa754f0d31411d88e46aed455fa79b9fced122497")
-var mainEtherAccPass = "localaccount"
+	// deployer of contracts and main acc with ethereum
+	deployerKeystoreDir = flag.String("deployer.keystore-directory", "", "Directory of deployer's keystore")
+	deployerAddress     = flag.String("deployer.address", "", "Deployer's account inside keystore")
+	deployerPassphrase  = flag.String("deployer.passphrase", "", "Deployer's passphrase for account unlocking")
+)
 
 // CliWallet represents operations which can be done with user controlled account
 type CliWallet struct {
@@ -143,11 +147,10 @@ func (wallet *CliWallet) checkTxResult(tx *types.Transaction) error {
 	return nil
 }
 
-// NewMainAccWallet initializes wallet with main localnet account private key (owner of ERC20, payments and lots of ether)
-func NewMainAccWallet(keystoreDir string) (*CliWallet, error) {
-	ks := initKeyStore(keystoreDir)
-
-	return newCliWallet(mainEtherAcc, mainEtherAccPass, ks)
+// NewDeployerWallet initializes wallet with main localnet account private key (owner of ERC20, payments and lots of ether)
+func NewDeployerWallet() (*CliWallet, error) {
+	ks := initKeyStore(*deployerKeystoreDir)
+	return newCliWallet(common.HexToAddress(*deployerAddress), *deployerPassphrase, ks)
 }
 
 // NewUserWallet initializes wallet with generated account with specified keystore
@@ -205,8 +208,8 @@ func initKeyStore(path string) *keystore.KeyStore {
 func registerIdentity(registrationData client.RegistrationDataDTO) error {
 	defer os.RemoveAll("testdataoutput")
 
-	//master account - owner of conctracts, and can issue tokens
-	masterAccWallet, err := NewMainAccWallet("../bin/localnet/account")
+	//deployer account - owner of contracts, and can issue tokens
+	masterAccWallet, err := NewDeployerWallet()
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,9 @@ $dockerComposeCmd logs -f > e2e_tests.log &
 
 $dockerComposeCmd run go-runner \
     go test -v ./e2e/... -args \
+    --deployer.keystore-directory=../bin/localnet/deployer/keystore \
+    --deployer.address=0xa754f0d31411d88e46aed455fa79b9fced122497 \
+    --deployer.passphrase `cat bin/localnet/deployer/local_acc_password.txt` \
     --tequila.client-host=client \
     --tequila.client-port=4050 \
     --tequila.service-host=node \
