@@ -21,37 +21,48 @@ import (
 	"flag"
 
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/node/tequilapi/client"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/payments/cli/helpers"
 )
 
-// Domain defines domain in which tequilAPI client will be executed
+// Domain defines domain in which tequilAPI tequilapi_client will be executed
 type Domain int
 
 // Possible domain constants
 const (
-	Client Domain = 0
-	Server Domain = 1
+	Consumer Domain = 0
+	Provider Domain = 1
 )
 
-var tequilaClientHost = flag.String("tequila.client-host", "localhost", "Specify tequila client host for e2e tests")
-var tequilaServiceHost = flag.String("tequila.service-host", "localhost", "Specify tequila service host for e2e tests")
-var tequilaClientPort = flag.Int("tequila.client-port", 4050, "Specify tequila client port for e2e tests")
-var tequilaServicePort = flag.Int("tequila.service-port", 4050, "Specify tequila service port for e2e tests")
-var ethRPC = flag.String("geth.url", "http://localhost:8545", "Eth node RPC")
+// Flags to run a test
+var (
+	ehtRpcUrl = flag.String("geth.url", "http://localhost:8545", "RPC url of ethereum node")
+)
 
-func newTequilapiClient(domain Domain) *client.Client {
+// Provider flags
+var (
+	providerTequilapiHost = flag.String("provider.tequilapi-host", "localhost", "Specify Tequilapi host for provider")
+	providerTequilapiPort = flag.Int("provider.tequilapi-port", 4050, "Specify Tequilapi port for provider")
+)
+
+// Consumer flags
+var (
+	consumerTequilapiHost = flag.String("consumer.tequilapi-host", "localhost", "Specify Tequilapi host for consumer")
+	consumerTequilapiPort = flag.Int("consumer.tequilapi-port", 4050, "Specify Tequilapi port for consumer")
+)
+
+func newTequilapiClient(domain Domain) *tequilapi_client.Client {
 	switch domain {
-	case Client:
-		return client.NewClient(*tequilaClientHost, *tequilaClientPort)
-	case Server:
-		return client.NewClient(*tequilaServiceHost, *tequilaServicePort)
+	case Consumer:
+		return tequilapi_client.NewClient(*consumerTequilapiHost, *consumerTequilapiPort)
+	case Provider:
+		return tequilapi_client.NewClient(*providerTequilapiHost, *providerTequilapiPort)
 	}
 	return nil
 }
 
 func newEthClient() (*ethclient.Client, error) {
-	ethClient, synced, err := helpers.LookupBackend(*ethRPC)
+	ethClient, synced, err := helpers.LookupBackend(*ehtRpcUrl)
 	if err != nil {
 		return nil, err
 	}

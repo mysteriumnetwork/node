@@ -1,7 +1,7 @@
 version: '3'
 services:
 
-  node:
+  myst-provider:
     build:
       context: ../..
       dockerfile: bin/docker/alpine/Dockerfile
@@ -24,13 +24,12 @@ services:
       service
       --openvpn.port=3000
 
-  client:
+  myst-consumer:
     build:
       context: ../..
       dockerfile: bin/docker/alpine/Dockerfile
     depends_on:
       - broker
-      - node
       - discovery
       - ipify
     cap_add:

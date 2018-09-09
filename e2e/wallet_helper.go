@@ -32,7 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/mysteriumnetwork/node/tequilapi/client"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/payments/cli/helpers"
 	mysttoken "github.com/mysteriumnetwork/payments/mysttoken/generated"
 	registry "github.com/mysteriumnetwork/payments/registry/generated"
@@ -60,7 +60,7 @@ type CliWallet struct {
 }
 
 // RegisterIdentity registers identity with given data on behalf of user
-func (wallet *CliWallet) RegisterIdentity(dto client.RegistrationDataDTO) error {
+func (wallet *CliWallet) RegisterIdentity(dto tequilapi_client.RegistrationDataDTO) error {
 	var Pub1 [32]byte
 	var Pub2 [32]byte
 	var S [32]byte
@@ -205,7 +205,7 @@ func initKeyStore(path string) *keystore.KeyStore {
 	return keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
 }
 
-func registerIdentity(registrationData client.RegistrationDataDTO) error {
+func registerIdentity(registrationData tequilapi_client.RegistrationDataDTO) error {
 	defer os.RemoveAll("testdataoutput")
 
 	//deployer account - owner of contracts, and can issue tokens
