@@ -23,6 +23,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // ProposalStatus describes stage of proposal registration
@@ -44,12 +45,13 @@ const (
 const logPrefix = "[discovery] "
 
 // Start launches discovery service
-func (d *Discovery) Start(ownIdentity identity.Identity) {
+func (d *Discovery) Start(ownIdentity identity.Identity, proposal dto_discovery.ServiceProposal) {
 	d.RLock()
 	defer d.RUnlock()
 
 	d.ownIdentity = ownIdentity
 	d.signer = d.signerCreate(ownIdentity)
+	d.proposal = proposal
 
 	stopLoop := make(chan bool)
 	d.stop = func() {

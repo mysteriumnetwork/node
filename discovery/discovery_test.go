@@ -23,14 +23,22 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	providerID = identity.FromAddress("my-identity")
+	proposal   = dto.ServiceProposal{
+		ProviderID: providerID.Address,
+	}
 )
 
 func TestStartRegistersProposal(t *testing.T) {
 	d := NewFakeDiscrovery()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
-	d.Start(identity.FromAddress("my-identity"))
+	d.Start(providerID, proposal)
 
 	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
@@ -40,7 +48,7 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 	d := NewFakeDiscrovery()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: true, Registered: false}
 
-	d.Start(identity.FromAddress("my-identity"))
+	d.Start(providerID, proposal)
 
 	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)
@@ -50,7 +58,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 	d := NewFakeDiscrovery()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: false}
 
-	d.Start(identity.FromAddress("my-identity"))
+	d.Start(providerID, proposal)
 
 	actualStatus := observeStatus(d, WaitingForRegistration)
 	assert.Equal(t, WaitingForRegistration, actualStatus)
@@ -65,7 +73,7 @@ func TestStartStopUnregisterProposal(t *testing.T) {
 	d := NewFakeDiscrovery()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
-	d.Start(identity.FromAddress("my-identity"))
+	d.Start(providerID, proposal)
 
 	actualStatus := observeStatus(d, PingProposal)
 	assert.Equal(t, PingProposal, actualStatus)

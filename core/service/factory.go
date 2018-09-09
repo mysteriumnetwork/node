@@ -125,7 +125,7 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 
 			return publicIP
 		},
-		protocol:         serviceOptions.OpenvpnProtocol,
-		discoveryService: discoveryService,
+		protocol:  serviceOptions.OpenvpnProtocol,
+		discovery: discoveryService,
 	}
 }

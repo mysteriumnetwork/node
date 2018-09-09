@@ -22,7 +22,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/server"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
@@ -57,7 +56,6 @@ func NewService(
 		identityRegistration: identityRegistration,
 		mysteriumClient:      mysteriumClient,
 		signerCreate:         signerCreate,
-		proposal:             dto_discovery.ServiceProposal{},
 		proposalStatusChan:   make(chan ProposalStatus),
 		status:               StatusUndefined,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
@@ -65,15 +63,4 @@ func NewService(
 		stop:                        func() {},
 		RWMutex:                     sync.RWMutex{},
 	}
-}
-
-// GenertateServiceProposalWithLocation service proposal wrapper method for openvpn NewServiceProposalWithLocation method
-func (d *Discovery) GenertateServiceProposalWithLocation(
-	providerID identity.Identity,
-	providerContact dto_discovery.Contact,
-	serviceLocation dto_discovery.Location,
-	protocol string,
-) dto_discovery.ServiceProposal {
-	d.proposal = discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, protocol)
-	return d.proposal
 }

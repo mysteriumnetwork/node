@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/openvpn"
+	openvpn_discovery "github.com/mysteriumnetwork/node/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
 	"github.com/mysteriumnetwork/node/server"
@@ -54,10 +55,10 @@ type Manager struct {
 	vpnServer             openvpn.Process
 	openvpnServiceAddress func(string, string) string
 	protocol              string
-	discoveryService      *discovery.Discovery
+	discovery             *discovery.Discovery
 }
 
-const logPrefix = "[manager] "
+const logPrefix = "[service-manager] "
 
 // Start starts service - does not block
 func (manager *Manager) Start() (err error) {
@@ -100,18 +101,20 @@ func (manager *Manager) Start() (err error) {
 		return err
 	}
 	log.Info(logPrefix, "Country detected: ", currentCountry)
+
 	serviceLocation := dto_discovery.Location{Country: currentCountry}
+
+	proposal := openvpn_discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, manager.protocol)
 
 	primitives, err := tls.NewTLSPrimitives(serviceLocation, providerID)
 	if err != nil {
 		return err
 	}
 
-	manager.discoveryService.Start(providerID)
+	manager.discovery.Start(providerID, proposal)
 
 	sessionManager := manager.sessionManagerFactory(primitives, manager.openvpnServiceAddress(outboundIP, publicIP))
 
-	proposal := manager.discoveryService.GenertateServiceProposalWithLocation(providerID, providerContact, serviceLocation, manager.protocol)
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err := manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
@@ -138,15 +141,16 @@ func (manager *Manager) Start() (err error) {
 // Wait blocks until service is stopped
 func (manager *Manager) Wait() error {
 	log.Info(logPrefix, "Waiting for discovery service to finish")
-	manager.discoveryService.Wait()
+	manager.discovery.Wait()
+
 	log.Info(logPrefix, "Waiting for vpn service to finish")
 	return manager.vpnServer.Wait()
 }
 
 // Kill stops service
 func (manager *Manager) Kill() error {
-	if manager.discoveryService != nil {
-		manager.discoveryService.Stop()
+	if manager.discovery != nil {
+		manager.discovery.Stop()
 	}
 
 	var err error
