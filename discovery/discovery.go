@@ -22,7 +22,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 )
 
 // ProposalStatus describes stage of proposal registration
@@ -122,10 +122,10 @@ func (d *Discovery) registerIdentity() {
 	go func() {
 		registerEvent := <-registerEventChan
 		switch registerEvent {
-		case registry.Registered:
+		case identity_registry.Registered:
 			log.Info(logPrefix, "identity registered, proceeding with proposal registration")
 			d.sendEvent(RegisterProposal)
-		case registry.Cancelled:
+		case identity_registry.Cancelled:
 			log.Info(logPrefix, "cancelled identity registration")
 			d.sendEvent(IdentityRegisterFailed)
 		}
@@ -171,12 +171,12 @@ func (d *Discovery) checkRegistration() {
 
 	if !registered {
 		// if not registered - wait indefinitely for identity registration event
-		registrationData, err := d.registrationDataProvider.ProvideRegistrationData(d.ownIdentity)
+		registrationData, err := d.identityRegistration.ProvideRegistrationData(d.ownIdentity)
 		if err != nil {
 			d.sendEvent(IdentityRegisterFailed)
 			return
 		}
-		registry.PrintRegistrationData(registrationData)
+		identity_registry.PrintRegistrationData(registrationData)
 		log.Infof("%s identity %s not registered, delaying proposal registration until identity is registered", logPrefix, d.ownIdentity.Address)
 		d.sendEvent(IdentityUnregistered)
 		return

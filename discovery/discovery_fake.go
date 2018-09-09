@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/server"
 )
 
@@ -33,7 +33,7 @@ func NewFakeDiscrovery() *Discovery {
 		signerCreate: func(id identity.Identity) identity.Signer {
 			return &identity.SignerFake{}
 		},
-		registrationDataProvider: &registry.FakeRegistrationDataProvider{},
-		mysteriumClient:          server.NewClientFake(),
+		identityRegistration: &identity_registry.FakeRegistrationDataProvider{},
+		mysteriumClient:      server.NewClientFake(),
 	}
 }

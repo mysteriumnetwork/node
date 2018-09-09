@@ -22,13 +22,13 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStartRegistersProposal(t *testing.T) {
 	d := NewFakeDiscrovery()
-	d.identityRegistry = &registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
 	d.Start(identity.FromAddress("my-identity"))
 
@@ -38,7 +38,7 @@ func TestStartRegistersProposal(t *testing.T) {
 
 func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 	d := NewFakeDiscrovery()
-	d.identityRegistry = &registry.FakeRegistry{RegistrationEventExists: true, Registered: false}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: true, Registered: false}
 
 	d.Start(identity.FromAddress("my-identity"))
 
@@ -48,7 +48,7 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 
 func TestStartRegisterIdentityCancelled(t *testing.T) {
 	d := NewFakeDiscrovery()
-	d.identityRegistry = &registry.FakeRegistry{RegistrationEventExists: false, Registered: false}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: false}
 
 	d.Start(identity.FromAddress("my-identity"))
 
@@ -63,7 +63,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 
 func TestStartStopUnregisterProposal(t *testing.T) {
 	d := NewFakeDiscrovery()
-	d.identityRegistry = &registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
+	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
 	d.Start(identity.FromAddress("my-identity"))
 

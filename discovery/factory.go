@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/server"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -29,9 +29,9 @@ import (
 
 // Discovery structure holds discovery service state
 type Discovery struct {
-	identityRegistry            registry.IdentityRegistry
+	identityRegistry            identity_registry.IdentityRegistry
 	ownIdentity                 identity.Identity
-	registrationDataProvider    registry.RegistrationDataProvider
+	identityRegistration        identity_registry.RegistrationDataProvider
 	mysteriumClient             server.Client
 	signerCreate                identity.SignerFactory
 	signer                      identity.Signer
@@ -47,19 +47,19 @@ type Discovery struct {
 
 // NewService creates new discovery service
 func NewService(
-	identityRegistry registry.IdentityRegistry,
-	provider registry.RegistrationDataProvider,
+	identityRegistry identity_registry.IdentityRegistry,
+	identityRegistration identity_registry.RegistrationDataProvider,
 	mysteriumClient server.Client,
 	signerCreate identity.SignerFactory,
 ) *Discovery {
 	return &Discovery{
-		identityRegistry:         identityRegistry,
-		registrationDataProvider: provider,
-		mysteriumClient:          mysteriumClient,
-		signerCreate:             signerCreate,
-		proposal:                 dto_discovery.ServiceProposal{},
-		proposalStatusChan:       make(chan ProposalStatus),
-		status:                   StatusUndefined,
+		identityRegistry:     identityRegistry,
+		identityRegistration: identityRegistration,
+		mysteriumClient:      mysteriumClient,
+		signerCreate:         signerCreate,
+		proposal:             dto_discovery.ServiceProposal{},
+		proposalStatusChan:   make(chan ProposalStatus),
+		status:               StatusUndefined,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
 		unsubscribe:                 func() {},
 		stop:                        func() {},

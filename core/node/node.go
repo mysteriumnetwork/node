@@ -21,9 +21,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/julienschmidt/httprouter"
-
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -46,10 +44,10 @@ import (
 // NewNode function creates new Mysterium node by given options
 func NewNode(
 	options Options,
-	keystoreInstance *keystore.KeyStore,
 	identityManager identity.Manager,
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
+	identityRegistration identity_registry.RegistrationDataProvider,
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
@@ -79,8 +77,6 @@ func NewNode(
 	)
 	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, vpnClientFactory, statsKeeper)
 
-	regisrationData := identity_registry.NewRegistrationDataProvider(keystoreInstance)
-
 	router := tequilapi.NewAPIRouter()
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
 
@@ -88,7 +84,7 @@ func NewNode(
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, ipResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
-	identity_registry.AddIdentityRegistrationEndpoint(router, regisrationData, identityRegistry)
+	identity_registry.AddIdentityRegistrationEndpoint(router, identityRegistration, identityRegistry)
 
 	return &Node{
 		router:                router,
