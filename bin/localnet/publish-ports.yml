@@ -10,6 +10,6 @@ services:
     ports:
     - 80:80
 
-  local-node:
+  geth:
     ports:
     - 8545:8545

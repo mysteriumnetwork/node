@@ -23,7 +23,7 @@ $dockerComposeCmd run go-runner \
     --tequila.client-port=4050 \
     --tequila.service-host=node \
     --tequila.service-port=4050 \
-    --geth.url=http://local-node:8545
+    --geth.url=http://geth:8545
 if [ ! $? -eq 0 ]
 then
     print_error "Tests failed"

@@ -33,7 +33,7 @@ services:
     - db
 
   #private blockchain with single miner and single node
-  local-node:
+  geth:
     image: mysteriumnetwork/geth:1.8.12
     expose:
       - 8545

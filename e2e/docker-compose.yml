@@ -16,11 +16,11 @@ services:
       - 4050
     command: >
       --ipify-url=http://ipify:3000
+      --location.country=e2e-land
+      --localnet
       --broker-address=broker
       --discovery-address=http://discovery/v1
-      --localnet
-      --ether.client.rpc=http://local-node:8545
-      --location.country=e2e-land
+      --ether.client.rpc=http://geth:8545
       service
       --openvpn.port=3000
 
@@ -39,9 +39,9 @@ services:
       - 4050
     command: >
       --ipify-url=http://ipify:3000
-      --discovery-address=http://discovery/v1
       --localnet
-      --ether.client.rpc=http://local-node:8545
+      --discovery-address=http://discovery/v1
+      --ether.client.rpc=http://geth:8545
 
   #'external' IP detection
   ipify:
