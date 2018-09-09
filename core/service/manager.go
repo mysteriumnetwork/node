@@ -31,7 +31,6 @@ import (
 	openvpn_discovery "github.com/mysteriumnetwork/node/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
-	"github.com/mysteriumnetwork/node/server"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -39,9 +38,7 @@ import (
 // Manager represent entrypoint for Mysterium service with top level components
 type Manager struct {
 	identityLoader   identity_selector.Loader
-	createSigner     identity.SignerFactory
 	ipResolver       ip.Resolver
-	mysteriumClient  server.Client
 	natService       nat.NATService
 	locationResolver location.Resolver
 

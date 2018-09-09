@@ -37,7 +37,6 @@ import (
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
 	openvpn_session "github.com/mysteriumnetwork/node/openvpn/session"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -49,7 +48,6 @@ func NewManager(
 	identityLoader identity_selector.Loader,
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
-	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 	discoveryService *discovery.Discovery,
@@ -60,10 +58,8 @@ func NewManager(
 
 	return &Manager{
 		identityLoader:   identityLoader,
-		createSigner:     signerFactory,
 		locationResolver: locationResolver,
 		ipResolver:       ipResolver,
-		mysteriumClient:  mysteriumClient,
 		natService:       natService,
 		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(

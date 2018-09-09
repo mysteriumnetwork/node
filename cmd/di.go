@@ -112,7 +112,6 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		identityLoader,
 		di.SignerFactory,
 		di.IdentityRegistry,
-		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
 		discoveryService,
