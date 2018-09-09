@@ -21,8 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-
-	"github.com/mysteriumnetwork/node/identity"
 )
 
 // NewClient returns a new instance of Client
@@ -89,34 +87,16 @@ func (client *Client) RegisterIdentity(address string) (err error) {
 }
 
 // IdentityRegistrationStatus returns information of identity needed to register it on blockchain
-func (client *Client) IdentityRegistrationStatus(address string) (RegistrationStatusDTO, error) {
+func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDataDTO, error) {
 	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})
 	if err != nil {
-		return RegistrationStatusDTO{}, err
+		return RegistrationDataDTO{}, err
 	}
 	defer response.Body.Close()
 
-	status := RegistrationStatusDTO{}
+	status := RegistrationDataDTO{}
 	err = parseResponseJSON(response, &status)
 	return status, err
-}
-
-// OwnRegistrationStatus returns information of identity needed to register it on blockchain
-func (client *Client) OwnRegistrationStatus() (RegistrationStatusDTO, error) {
-	response, err := client.http.Get("identity/current", url.Values{})
-	if err != nil {
-		return RegistrationStatusDTO{}, err
-	}
-
-	defer response.Body.Close()
-
-	address := identity.Identity{}
-	err = parseResponseJSON(response, &address)
-	if err != nil {
-		return RegistrationStatusDTO{}, err
-	}
-
-	return client.IdentityRegistrationStatus(address.Address)
 }
 
 // Connect initiates a new connection to a host identified by providerID

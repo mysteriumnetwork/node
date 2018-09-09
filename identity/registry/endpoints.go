@@ -77,16 +77,6 @@ func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvid
 	}
 }
 
-type currentIdentityEndpoint struct {
-	ownIdentity *identity.Identity
-}
-
-func newCurrentIdentityEndpoint(identity *identity.Identity) *currentIdentityEndpoint {
-	return &currentIdentityEndpoint{
-		ownIdentity: identity,
-	}
-}
-
 // swagger:operation GET /identities/{id}/registration Identity identityRegistration
 // ---
 // summary: Provide identity registration status
@@ -108,27 +98,7 @@ func newCurrentIdentityEndpoint(identity *identity.Identity) *currentIdentityEnd
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *registrationEndpoint) IdentityRegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
-	endpoint.identityRegistrationData(id, resp)
-}
 
-// swagger:operation GET /identity/current Identity identityRegistration
-// ---
-// summary: Provide identity registration status
-// description: Provides registration status for own identity, if identity is not registered - provides additional data required for identity registration
-// responses:
-//   200:
-//     description: Registration status and data
-//     schema:
-//       "$ref": "#/definitions/RegistrationDataDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *currentIdentityEndpoint) OwnRegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	utils.WriteAsJSON(endpoint.ownIdentity, resp)
-}
-
-func (endpoint *registrationEndpoint) identityRegistrationData(id identity.Identity, resp http.ResponseWriter) {
 	isRegistered, err := endpoint.statusProvider.IsRegistered(id)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -154,16 +124,6 @@ func (endpoint *registrationEndpoint) identityRegistrationData(id identity.Ident
 		},
 	}
 	utils.WriteAsJSON(registrationDataDTO, resp)
-}
-
-// AddCurrentIdentityEndpoint adds identity registration data endpoint to given http router
-func AddCurrentIdentityEndpoint(router *httprouter.Router, identity *identity.Identity) {
-
-	currentIdentityEndpoint := newCurrentIdentityEndpoint(
-		identity,
-	)
-
-	router.GET("/identity/current", currentIdentityEndpoint.OwnRegistrationData)
 }
 
 // AddIdentityRegistrationEndpoint adds identity registration data endpoint to given http router

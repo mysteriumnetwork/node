@@ -56,7 +56,7 @@ type CliWallet struct {
 }
 
 // RegisterIdentity registers identity with given data on behalf of user
-func (wallet *CliWallet) RegisterIdentity(dto client.RegistrationStatusDTO) error {
+func (wallet *CliWallet) RegisterIdentity(dto client.RegistrationDataDTO) error {
 	var Pub1 [32]byte
 	var Pub2 [32]byte
 	var S [32]byte
@@ -161,7 +161,7 @@ func NewUserWallet(keystoreDir string) (*CliWallet, error) {
 }
 
 func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore) (*CliWallet, error) {
-	client, err := newEthClient()
+	ehtClient, err := newEthClient()
 	if err != nil {
 		return nil, err
 	}
@@ -175,9 +175,9 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 
 	transactor := helpers.CreateNewKeystoreTransactor(ks, &ownerAcc)
 
-	tokensContract, err := mysttoken.NewMystTokenTransactor(tokenAddress, client)
+	tokensContract, err := mysttoken.NewMystTokenTransactor(tokenAddress, ehtClient)
 
-	paymentsContract, err := registry.NewIdentityRegistryTransactor(paymentsAddress, client)
+	paymentsContract, err := registry.NewIdentityRegistryTransactor(paymentsAddress, ehtClient)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 	return &CliWallet{
 		txOpts:  transactor,
 		Owner:   owner,
-		backend: client,
+		backend: ehtClient,
 		tokens: mysttoken.MystTokenTransactorSession{
 			Contract:     tokensContract,
 			TransactOpts: *transactor,
@@ -202,7 +202,7 @@ func initKeyStore(path string) *keystore.KeyStore {
 	return keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
 }
 
-func registerIdentity(registrationData client.RegistrationStatusDTO) error {
+func registerIdentity(registrationData client.RegistrationDataDTO) error {
 	defer os.RemoveAll("testdataoutput")
 
 	//master account - owner of conctracts, and can issue tokens
