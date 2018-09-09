@@ -40,7 +40,7 @@ var tequilaClientPort = flag.Int("tequila.client-port", 4050, "Specify tequila c
 var tequilaServicePort = flag.Int("tequila.service-port", 4050, "Specify tequila service port for e2e tests")
 var ethRPC = flag.String("geth.url", "http://localhost:8545", "Eth node RPC")
 
-func newTequilaClient(domain Domain) *client.Client {
+func newTequilapiClient(domain Domain) *client.Client {
 	switch domain {
 	case Client:
 		return client.NewClient(*tequilaClientHost, *tequilaClientPort)
@@ -51,10 +51,10 @@ func newTequilaClient(domain Domain) *client.Client {
 }
 
 func newEthClient() (*ethclient.Client, error) {
-	client, synced, err := helpers.LookupBackend(*ethRPC)
+	ethClient, synced, err := helpers.LookupBackend(*ethRPC)
 	if err != nil {
 		return nil, err
 	}
 	<-synced //wait for sync to finish if any
-	return client, nil
+	return ethClient, nil
 }
