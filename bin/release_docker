@@ -36,10 +36,11 @@ while test $# -gt 0; do
 
     docker_release_image myst:alpine mysteriumnetwork/myst:${VERSION_TAG}
     docker_release_image myst:alpine mysteriumnetwork/myst:${VERSION_TAG}-alpine
+    docker_release_image myst:ubuntu mysteriumnetwork/myst:${VERSION_TAG}-ubuntu
 
-    docker_release_image mysterium-node:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}
-    docker_release_image mysterium-node:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}-alpine
-    docker_release_image mysterium-node:ubuntu mysteriumnetwork/mysterium-node:${VERSION_TAG}-ubuntu
+    docker_release_image myst:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}
+    docker_release_image myst:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}-alpine
+    docker_release_image myst:ubuntu mysteriumnetwork/mysterium-node:${VERSION_TAG}-ubuntu
 
     docker_release_image mysterium-client:alpine mysteriumnetwork/mysterium-client:${VERSION_TAG}
     docker_release_image mysterium-client:alpine mysteriumnetwork/mysterium-client:${VERSION_TAG}-alpine
