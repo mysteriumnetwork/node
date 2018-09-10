@@ -117,6 +117,32 @@ func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
+func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/identities",
+		bytes.NewBufferString(`{}`),
+	)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Unlock
+	handlerFunc(resp, req, nil)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message": "validation_error",
+			"errors" : {
+				"passphrase": [ {"code" : "required" , "message" : "Field is required" } ]
+			}
+		}`,
+		resp.Body.String(),
+	)
+}
+
 func TestUnlockFailure(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()

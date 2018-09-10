@@ -56,7 +56,7 @@ type identityRegistrationDto struct {
 
 // swagger:model IdentityUnlockingDTO
 type identityUnlockingDto struct {
-	Passphrase string `json:"passphrase"`
+	Passphrase *string `json:"passphrase"`
 }
 
 type identitiesAPI struct {
@@ -135,11 +135,13 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
+
 	errorMap := validateCreationRequest(createReq)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
+
 	id, err := endpoint.idm.CreateNewIdentity(*createReq.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -188,6 +190,7 @@ func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
+
 	err = validateRegistrationRequest(registerReq)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusNotImplemented)
@@ -242,7 +245,13 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 		return
 	}
 
-	err = endpoint.idm.Unlock(id, unlockReq.Passphrase)
+	errorMap := validateUnlockRequest(unlockReq)
+	if errorMap.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errorMap)
+		return
+	}
+
+	err = endpoint.idm.Unlock(id, *unlockReq.Passphrase)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusForbidden)
 		return
@@ -274,6 +283,14 @@ func toRegisterRequest(req *http.Request) (isRegisterReq identityRegistrationDto
 func validateRegistrationRequest(regReq identityRegistrationDto) (err error) {
 	if regReq.Registered == false {
 		err = errors.New("Unregister not supported")
+	}
+	return
+}
+
+func validateUnlockRequest(unlockReq identityUnlockingDto) (errors *validation.FieldErrorMap) {
+	errors = validation.NewErrorMap()
+	if unlockReq.Passphrase == nil {
+		errors.ForField("passphrase").AddError("required", "Field is required")
 	}
 	return
 }
