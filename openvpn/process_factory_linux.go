@@ -26,17 +26,13 @@ import (
 )
 
 // CreateNewProcess function creates Linux OS customized openvpn process
-func CreateNewProcess(
-	openvpnBinary string,
-	configuration *config.GenericConfig,
-	middlewares ...management.Middleware,
-) *openvpnProcess {
+func CreateNewProcess(openvpnBinary string, configuration *config.GenericConfig, middlewares ...management.Middleware) *OpenvpnProcess {
 	configuration.SetScriptParam("iproute", config.SimplePath("nonpriv-ip"))
 
-	process := newProcess(openvpnBinary, configuration, middlewares...)
-	process.tunnelSetup = tunnel.NewTunInterfaceSetup(
+	tunnelSetup := tunnel.NewTunInterfaceSetup(
 		configuration.GetFullScriptPath(config.SimplePath("prepare-env.sh")),
 	)
+	process := newProcess(openvpnBinary, tunnelSetup, configuration, middlewares...)
 
 	return process
 }

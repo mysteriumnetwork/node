@@ -19,18 +19,13 @@ package tunnel
 
 import "github.com/mysteriumnetwork/node/openvpn/config"
 
-// NewNoopSetup creates no-op tunnel setup
-func NewNoopSetup() *noopSetup {
-	return &noopSetup{}
+type NoopSetup struct {
 }
 
-type noopSetup struct {
-}
-
-func (gts *noopSetup) Setup(config *config.GenericConfig) error {
+func (gts *NoopSetup) Setup(config *config.GenericConfig) error {
 	return nil
 }
 
-func (gts *noopSetup) Teardown() {
+func (gts *NoopSetup) Teardown() {
 
 }

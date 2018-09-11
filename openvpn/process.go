@@ -24,7 +24,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/openvpn/config"
 	"github.com/mysteriumnetwork/node/openvpn/management"
-	"github.com/mysteriumnetwork/node/openvpn/tunnel"
 )
 
 type tunnelSetup interface {
@@ -32,7 +31,7 @@ type tunnelSetup interface {
 	Teardown()
 }
 
-type openvpnProcess struct {
+type OpenvpnProcess struct {
 	config      *config.GenericConfig
 	tunnelSetup tunnelSetup
 	management  *management.Management
@@ -41,18 +40,19 @@ type openvpnProcess struct {
 
 func newProcess(
 	openvpnBinary string,
+	tunnelSetup tunnelSetup,
 	config *config.GenericConfig,
 	middlewares ...management.Middleware,
-) *openvpnProcess {
-	return &openvpnProcess{
-		tunnelSetup: tunnel.NewNoopSetup(),
+) *OpenvpnProcess {
+	return &OpenvpnProcess{
+		tunnelSetup: tunnelSetup,
 		config:      config,
 		management:  management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
 		cmd:         NewCmdWrapper(openvpnBinary, "[openvpn-process] "),
 	}
 }
 
-func (openvpn *openvpnProcess) Start() error {
+func (openvpn *OpenvpnProcess) Start() error {
 	if err := openvpn.tunnelSetup.Setup(openvpn.config); err != nil {
 		return err
 	}
@@ -101,11 +101,11 @@ func (openvpn *openvpnProcess) Start() error {
 	}
 }
 
-func (openvpn *openvpnProcess) Wait() error {
+func (openvpn *OpenvpnProcess) Wait() error {
 	return openvpn.cmd.Wait()
 }
 
-func (openvpn *openvpnProcess) Stop() {
+func (openvpn *OpenvpnProcess) Stop() {
 	waiter := sync.WaitGroup{}
 	//TODO which to signal for close first ?
 	//if we stop process before management, managemnt won't have a chance to send any commands from middlewares on stop
@@ -121,12 +121,7 @@ func (openvpn *openvpnProcess) Stop() {
 		defer waiter.Done()
 		openvpn.management.Stop()
 	}()
-
-	waiter.Add(1)
-	go func() {
-		defer waiter.Done()
-		openvpn.tunnelSetup.Teardown()
-	}()
-
 	waiter.Wait()
+
+	openvpn.tunnelSetup.Teardown()
 }

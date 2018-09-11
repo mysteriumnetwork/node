@@ -22,14 +22,11 @@ package openvpn
 import (
 	"github.com/mysteriumnetwork/node/openvpn/config"
 	"github.com/mysteriumnetwork/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/tunnel"
 )
 
 // CreateNewProcess creates new openvpn process with given config params
-func CreateNewProcess(
-	openvpnBinary string,
-	config *config.GenericConfig,
-	middlewares ...management.Middleware,
-) *openvpnProcess {
+func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *OpenvpnProcess {
 	config.SetDevice("tun")
-	return newProcess(openvpnBinary, config, middlewares...)
+	return newProcess(openvpnBinary, &tunnel.NoopSetup{}, config, middlewares...)
 }
