@@ -22,6 +22,21 @@ setup () {
     setupDockerComposeCmd "$@"
     echo "Setting up: $projectName"
 
+    ${dockerComposeCmd} run geth init genesis.json
+    if [ ! $? -eq 0 ]; then
+        print_error "Geth node initialization failed"
+        cleanup "$@"
+        exit 1
+    fi
+
+
+    ${dockerComposeCmd} up -d broker geth
+    if [ ! $? -eq 0 ]; then
+        print_error "Error starting other services"
+        cleanup "$@"
+        exit 1
+    fi
+
     ${dockerComposeCmd} up -d db # start database first - it takes about 10 sec untils db startsup, and otherwise db migration fails
     if [ ! $? -eq 0 ]; then
         print_error "Db startup failed"
@@ -44,17 +59,9 @@ setup () {
         exit 1
     fi
 
-    ${dockerComposeCmd} run geth init genesis.json
+    ${dockerComposeCmd} up -d discovery
     if [ ! $? -eq 0 ]; then
-        print_error "Geth node initialization failed"
-        cleanup "$@"
-        exit 1
-    fi
-
-
-    ${dockerComposeCmd} up -d broker discovery geth
-    if [ ! $? -eq 0 ]; then
-        print_error "Error starting other services"
+        print_error "Error starting discovery services"
         cleanup "$@"
         exit 1
     fi

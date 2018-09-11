@@ -155,7 +155,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 		return err
 	}
 
-	log.Info("Using Contract at address:", network.PaymentsContractAddress.String())
+	log.Info("Using Eth contract at address: ", network.PaymentsContractAddress.String())
 	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress); err != nil {
 		return err
 	}
