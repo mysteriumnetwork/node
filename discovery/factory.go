@@ -35,8 +35,8 @@ type Discovery struct {
 	signerCreate                identity.SignerFactory
 	signer                      identity.Signer
 	proposal                    dto_discovery.ServiceProposal
-	proposalStatusChan          chan ProposalStatus
-	status                      ProposalStatus
+	statusChan                  chan Status
+	status                      Status
 	proposalAnnouncementStopped *sync.WaitGroup
 	unsubscribe                 func()
 	stop                        func()
@@ -56,7 +56,7 @@ func NewService(
 		identityRegistration: identityRegistration,
 		mysteriumClient:      mysteriumClient,
 		signerCreate:         signerCreate,
-		proposalStatusChan:   make(chan ProposalStatus),
+		statusChan:           make(chan Status),
 		status:               StatusUndefined,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
 		unsubscribe:                 func() {},

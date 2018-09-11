@@ -28,7 +28,7 @@ import (
 // NewFakeDiscrovery creates fake discovery structure
 func NewFakeDiscrovery() *Discovery {
 	return &Discovery{
-		proposalStatusChan:          make(chan ProposalStatus),
+		statusChan:                  make(chan Status),
 		proposalAnnouncementStopped: &sync.WaitGroup{},
 		signerCreate: func(id identity.Identity) identity.Signer {
 			return &identity.SignerFake{}

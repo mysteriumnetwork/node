@@ -84,7 +84,7 @@ func TestStartStopUnregisterProposal(t *testing.T) {
 	assert.Equal(t, ProposalUnregistered, actualStatus)
 }
 
-func observeStatus(d *Discovery, status ProposalStatus) ProposalStatus {
+func observeStatus(d *Discovery, status Status) Status {
 	for {
 		d.RLock()
 		if d.status == status {
