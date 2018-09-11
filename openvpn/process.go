@@ -53,6 +53,7 @@ func newProcess(
 	}
 }
 
+// Start starts the openvpn process
 func (openvpn *OpenvpnProcess) Start() error {
 	if err := openvpn.tunnelSetup.Setup(openvpn.config); err != nil {
 		return err
@@ -102,10 +103,12 @@ func (openvpn *OpenvpnProcess) Start() error {
 	}
 }
 
+// Wait waits for the openvpn process to complete
 func (openvpn *OpenvpnProcess) Wait() error {
 	return openvpn.cmd.Wait()
 }
 
+// Stop stops the openvpn process
 func (openvpn *OpenvpnProcess) Stop() {
 	waiter := sync.WaitGroup{}
 	//TODO which to signal for close first ?
