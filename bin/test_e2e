@@ -3,9 +3,22 @@
 source bin/localnet/functions.sh
 
 projectName="node_e2e_test"
+projectFiles=("e2e/docker-compose.yml")
 
-setup $projectName "e2e/docker-compose.yml"
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+        --debug)
+        projectFiles+=("e2e/publish-ports.yml")
+        ;;
+        *)    # unknown option
+        # donothing
+        ;;
+    esac
+    shift
+done
 
+setup $projectName ${projectFiles[@]}
 $dockerComposeCmd build && $dockerComposeCmd up -d myst-provider myst-consumer ipify
 if [ ! $? -eq 0 ]
 then
