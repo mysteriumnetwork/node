@@ -25,15 +25,6 @@ import (
 	"github.com/mysteriumnetwork/payments/cli/helpers"
 )
 
-// Domain defines domain in which tequilAPI tequilapi_client will be executed
-type Domain int
-
-// Possible domain constants
-const (
-	Consumer Domain = 0
-	Provider Domain = 1
-)
-
 // Flags to run a test
 var (
 	ehtRpcUrl = flag.String("geth.url", "http://localhost:8545", "RPC url of ethereum node")
@@ -51,14 +42,12 @@ var (
 	consumerTequilapiPort = flag.Int("consumer.tequilapi-port", 4050, "Specify Tequilapi port for consumer")
 )
 
-func newTequilapiClient(domain Domain) *tequilapi_client.Client {
-	switch domain {
-	case Consumer:
-		return tequilapi_client.NewClient(*consumerTequilapiHost, *consumerTequilapiPort)
-	case Provider:
-		return tequilapi_client.NewClient(*providerTequilapiHost, *providerTequilapiPort)
-	}
-	return nil
+func newTequilapiConsumer() *tequilapi_client.Client {
+	return tequilapi_client.NewClient(*consumerTequilapiHost, *consumerTequilapiPort)
+}
+
+func newTequilapiProvider() *tequilapi_client.Client {
+	return tequilapi_client.NewClient(*providerTequilapiHost, *providerTequilapiPort)
 }
 
 func newEthClient() (*ethclient.Client, error) {

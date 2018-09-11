@@ -32,8 +32,8 @@ var (
 )
 
 func TestConsumerConnectsToProvider(t *testing.T) {
-	tequilapiProvider := newTequilapiClient(Provider)
-	tequilapiConsumer := newTequilapiClient(Consumer)
+	tequilapiProvider := newTequilapiProvider()
+	tequilapiConsumer := newTequilapiConsumer()
 
 	t.Run("ProviderRegistersIdentityFlow", func(t *testing.T) {
 		identityRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
