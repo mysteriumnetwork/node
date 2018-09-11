@@ -26,6 +26,6 @@ func (gts *NoopSetup) Setup(config *config.GenericConfig) error {
 	return nil
 }
 
-func (gts *NoopSetup) Teardown() {
+func (gts *NoopSetup) Stop() {
 
 }

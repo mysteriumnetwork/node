@@ -28,9 +28,10 @@ import (
 
 type tunnelSetup interface {
 	Setup(config *config.GenericConfig) error
-	Teardown()
+	Stop()
 }
 
+// OpenvpnProcess represents an openvpn process manager
 type OpenvpnProcess struct {
 	config      *config.GenericConfig
 	tunnelSetup tunnelSetup
@@ -59,7 +60,7 @@ func (openvpn *OpenvpnProcess) Start() error {
 
 	err := openvpn.management.WaitForConnection()
 	if err != nil {
-		openvpn.tunnelSetup.Teardown()
+		openvpn.tunnelSetup.Stop()
 		return err
 	}
 
@@ -70,7 +71,7 @@ func (openvpn *OpenvpnProcess) Start() error {
 	arguments, err := (*openvpn.config).ToArguments()
 	if err != nil {
 		openvpn.management.Stop()
-		openvpn.tunnelSetup.Teardown()
+		openvpn.tunnelSetup.Stop()
 		return err
 	}
 
@@ -79,7 +80,7 @@ func (openvpn *OpenvpnProcess) Start() error {
 	err = openvpn.cmd.Start(arguments)
 	if err != nil {
 		openvpn.management.Stop()
-		openvpn.tunnelSetup.Teardown()
+		openvpn.tunnelSetup.Stop()
 		return err
 	}
 
@@ -91,7 +92,7 @@ func (openvpn *OpenvpnProcess) Start() error {
 		return errors.New("management failed to accept connection")
 	case exitError := <-openvpn.cmd.CmdExitError:
 		openvpn.management.Stop()
-		openvpn.tunnelSetup.Teardown()
+		openvpn.tunnelSetup.Stop()
 		if exitError != nil {
 			return exitError
 		}
@@ -123,5 +124,5 @@ func (openvpn *OpenvpnProcess) Stop() {
 	}()
 	waiter.Wait()
 
-	openvpn.tunnelSetup.Teardown()
+	openvpn.tunnelSetup.Stop()
 }

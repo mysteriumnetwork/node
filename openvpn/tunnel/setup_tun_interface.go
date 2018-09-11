@@ -32,7 +32,7 @@ const tunLogPrefix = "[linux tun service] "
 // ErrNoFreeTunDevice is thrown when no free tun device is available on system
 var ErrNoFreeTunDevice = errors.New("no free tun device found")
 
-type serviceLinuxTun struct {
+type tunDeviceManager struct {
 	scriptSetup string
 
 	// runtime variables
@@ -45,11 +45,11 @@ type tunDevice struct {
 }
 
 // NewTunInterfaceSetup creates Linux specific TUN manager for interface creation and removal
-func NewTunInterfaceSetup(scriptSetup string) *serviceLinuxTun {
-	return &serviceLinuxTun{scriptSetup: scriptSetup}
+func NewTunInterfaceSetup(scriptSetup string) *tunDeviceManager {
+	return &tunDeviceManager{scriptSetup: scriptSetup}
 }
 
-func (service *serviceLinuxTun) Setup(config *config.GenericConfig) error {
+func (service *tunDeviceManager) Setup(config *config.GenericConfig) error {
 	device, err := findFreeTunDevice()
 	if err != nil {
 		return err
@@ -65,7 +65,7 @@ func (service *serviceLinuxTun) Setup(config *config.GenericConfig) error {
 	return nil
 }
 
-func (service *serviceLinuxTun) Teardown() {
+func (service *tunDeviceManager) Stop() {
 	var err error
 	var exists bool
 
@@ -78,7 +78,7 @@ func (service *serviceLinuxTun) Teardown() {
 	}
 }
 
-func (service *serviceLinuxTun) createTunDevice(device tunDevice) (err error) {
+func (service *tunDeviceManager) createTunDevice(device tunDevice) (err error) {
 	err = service.createDeviceNode()
 	if err != nil {
 		return err
@@ -105,7 +105,7 @@ func (service *serviceLinuxTun) createTunDevice(device tunDevice) (err error) {
 	return nil
 }
 
-func (service *serviceLinuxTun) deviceExists(device tunDevice) (exists bool, err error) {
+func (service *tunDeviceManager) deviceExists(device tunDevice) (exists bool, err error) {
 	if _, err := os.Stat("/sys/class/net/" + device.Name); err == nil {
 		return true, nil
 	}
@@ -113,7 +113,7 @@ func (service *serviceLinuxTun) deviceExists(device tunDevice) (exists bool, err
 	return false, err
 }
 
-func (service *serviceLinuxTun) deleteDevice(device tunDevice) {
+func (service *tunDeviceManager) deleteDevice(device tunDevice) {
 	cmd := exec.Command("sudo", "ip", "tuntap", "delete", "dev", device.Name, "mode", "tun")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Warn("Failed to remove tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
@@ -136,7 +136,7 @@ func findFreeTunDevice() (tun tunDevice, err error) {
 	return tun, ErrNoFreeTunDevice
 }
 
-func (service *serviceLinuxTun) createDeviceNode() error {
+func (service *tunDeviceManager) createDeviceNode() error {
 	if _, err := os.Stat("/dev/net/tun"); err == nil {
 		// device node already exists
 		return nil
