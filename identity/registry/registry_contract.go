@@ -103,12 +103,11 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 			select {
 			case <-stopLoop:
 				registrationEvent <- Cancelled
-				return
 			case <-time.After(1 * time.Second):
 				logIterator, err := registry.filterer.FilterRegistered(filterOps, identities)
 				if err != nil {
 					registrationEvent <- Cancelled
-					log.Error(err)
+					log.Error(logPrefix, err)
 					return
 				}
 				if logIterator == nil {
@@ -122,11 +121,12 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 					} else {
 						err = logIterator.Error()
 						if err != nil {
-							log.Error(err)
+							log.Error(logPrefix, err)
 						}
 						break
 					}
 				}
+			case <-time.After(30 * time.Second):
 				log.Trace(logPrefix, "no identity registration, sleeping for 1s")
 			}
 		}

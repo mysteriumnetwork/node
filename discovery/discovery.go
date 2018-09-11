@@ -137,9 +137,10 @@ func (d *Discovery) registerIdentity() {
 func (d *Discovery) registerProposal() {
 	err := d.mysteriumClient.RegisterProposal(d.proposal, d.signer)
 	if err != nil {
-		log.Errorf("%s Failed to register proposal: %v, retrying after 1 min.", logPrefix, err)
+		log.Errorf("%s Failed to register proposal, retrying after 1 min. %s", logPrefix, err.Error())
 		time.Sleep(1 * time.Minute)
 		d.sendEvent(RegisterProposal)
+		return
 	}
 	d.sendEvent(PingProposal)
 }
