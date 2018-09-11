@@ -49,7 +49,7 @@ jobs:
 
     - script: bin/check_license
       name: "license check"
-    
+
     - script: bin/test_e2e
       name: "End-to-end tests"
       if: type = pull_request
