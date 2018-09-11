@@ -22,16 +22,15 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
 // APIServer interface represents control methods for underlying http api server
 type APIServer interface {
-	Port() (int, error)
 	Wait() error
 	StartServing() error
 	Stop()
+	Address() (string, error)
 }
 
 type apiServer struct {
@@ -65,13 +64,14 @@ func (server *apiServer) Wait() error {
 }
 
 // Port method returns bind port for given http server (useful when random port is used)
-func (server *apiServer) Port() (int, error) {
+func (server *apiServer) Address() (string, error) {
 	if server.listener == nil {
-		return 0, errors.New("not bound")
+		return "", errors.New("not bound")
 	}
-	return extractBoundPort(server.listener)
+	return extractBoundAddress(server.listener)
 }
 
+// Port method returns bind port for given http server (useful when random port is used)
 // StartServing starts http request serving
 func (server *apiServer) StartServing() error {
 	var err error
@@ -87,15 +87,11 @@ func (server *apiServer) serve(handler http.Handler) {
 	server.errorChannel <- http.Serve(server.listener, handler)
 }
 
-func extractBoundPort(listener net.Listener) (int, error) {
+func extractBoundAddress(listener net.Listener) (string, error) {
 	addr := listener.Addr()
-	//it is possible that address could be x.x.x.x:y (IPv4) or [x:x:..:x]:y (IPv6) format
-	//split by : and take the last one
 	parts := strings.Split(addr.String(), ":")
 	if len(parts) < 2 {
-		return 0, errors.New("Unable to locate port of the following address: " + addr.String())
+		return "", errors.New("Unable to locate address: " + addr.String())
 	}
-	portAsString := parts[len(parts)-1]
-	port, err := strconv.Atoi(portAsString)
-	return port, err
+	return addr.String(), nil
 }

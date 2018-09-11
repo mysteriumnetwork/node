@@ -15,20 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package registry
+package discovery
 
 import (
+	"sync"
+
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/payments/registry"
+	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
+	"github.com/mysteriumnetwork/node/server"
 )
 
-// IdentityRegistry enables identity registration actions
-type IdentityRegistry interface {
-	IsRegistered(identity.Identity) (bool, error)
-	SubscribeToRegistrationEvent(identity.Identity) (registeredEvent chan RegistrationEvent, unsubscribe func())
-}
-
-// RegistrationDataProvider provides registration information for given identity required to register it on blockchain
-type RegistrationDataProvider interface {
-	ProvideRegistrationData(identity.Identity) (*registry.RegistrationData, error)
+// NewFakeDiscrovery creates fake discovery structure
+func NewFakeDiscrovery() *Discovery {
+	return &Discovery{
+		statusChan:                  make(chan Status),
+		proposalAnnouncementStopped: &sync.WaitGroup{},
+		signerCreate: func(id identity.Identity) identity.Signer {
+			return &identity.SignerFake{}
+		},
+		identityRegistration: &identity_registry.FakeRegistrationDataProvider{},
+		mysteriumClient:      server.NewClientFake(),
+	}
 }

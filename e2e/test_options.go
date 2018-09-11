@@ -21,23 +21,40 @@ import (
 	"flag"
 
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/node/tequilapi/client"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/payments/cli/helpers"
 )
 
-var tequilaHost = flag.String("tequila.host", "localhost", "Specify tequila host for e2e tests")
-var tequilaPort = flag.Int("tequila.port", 4050, "Specify tequila port for e2e tests")
-var ethRPC = flag.String("geth.url", "", "Eth node RPC")
+// Flags to run a test
+var (
+	ehtRpcUrl = flag.String("geth.url", "http://localhost:8545", "RPC url of ethereum node")
+)
 
-func newTequilaClient() *client.Client {
-	return client.NewClient(*tequilaHost, *tequilaPort)
+// Provider flags
+var (
+	providerTequilapiHost = flag.String("provider.tequilapi-host", "localhost", "Specify Tequilapi host for provider")
+	providerTequilapiPort = flag.Int("provider.tequilapi-port", 4050, "Specify Tequilapi port for provider")
+)
+
+// Consumer flags
+var (
+	consumerTequilapiHost = flag.String("consumer.tequilapi-host", "localhost", "Specify Tequilapi host for consumer")
+	consumerTequilapiPort = flag.Int("consumer.tequilapi-port", 4050, "Specify Tequilapi port for consumer")
+)
+
+func newTequilapiConsumer() *tequilapi_client.Client {
+	return tequilapi_client.NewClient(*consumerTequilapiHost, *consumerTequilapiPort)
+}
+
+func newTequilapiProvider() *tequilapi_client.Client {
+	return tequilapi_client.NewClient(*providerTequilapiHost, *providerTequilapiPort)
 }
 
 func newEthClient() (*ethclient.Client, error) {
-	client, synced, err := helpers.LookupBackend(*ethRPC)
+	ethClient, synced, err := helpers.LookupBackend(*ehtRpcUrl)
 	if err != nil {
 		return nil, err
 	}
 	<-synced //wait for sync to finish if any
-	return client, nil
+	return ethClient, nil
 }

@@ -33,15 +33,15 @@ services:
     - db
 
   #private blockchain with single miner and single node
-  local-node:
+  geth:
     image: mysteriumnetwork/geth:1.8.12
     expose:
       - 8545
     volumes:
       - geth-runtime:/ethereum/geth-runtime
-      - ./genesis.json:/ethereum/genesis.json
-      - ./node:/ethereum/keystore
-      - ./node_acc_password.txt:/ethereum/node_acc_password.txt
+      - ./geth/genesis.json:/ethereum/genesis.json
+      - ./geth/keystore:/ethereum/keystore
+      - ./geth/node_acc_password.txt:/ethereum/node_acc_password.txt
     command: >
       --syncmode 'full'
       --port 30311

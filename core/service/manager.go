@@ -18,22 +18,19 @@
 package service
 
 import (
-	"sync"
-	"time"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/openvpn"
-	"github.com/mysteriumnetwork/node/openvpn/discovery"
+	openvpn_discovery "github.com/mysteriumnetwork/node/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
-	"github.com/mysteriumnetwork/node/server"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -41,9 +38,7 @@ import (
 // Manager represent entrypoint for Mysterium service with top level components
 type Manager struct {
 	identityLoader   identity_selector.Loader
-	createSigner     identity.SignerFactory
 	ipResolver       ip.Resolver
-	mysteriumClient  server.Client
 	natService       nat.NATService
 	locationResolver location.Resolver
 
@@ -54,15 +49,17 @@ type Manager struct {
 
 	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
 
-	vpnServer                   openvpn.Process
-	openvpnServiceAddress       func(string, string) string
-	protocol                    string
-	proposalAnnouncementStopped *sync.WaitGroup
+	vpnServer             openvpn.Process
+	openvpnServiceAddress func(string, string) string
+	protocol              string
+	discovery             *discovery.Discovery
 }
+
+const logPrefix = "[service-manager] "
 
 // Start starts service - does not block
 func (manager *Manager) Start() (err error) {
-	log.Infof("Starting Mysterium Server (%s)", metadata.VersionAsString())
+	log.Infof(logPrefix, "Starting Mysterium Server (%s)", metadata.VersionAsString())
 
 	providerID, err := manager.identityLoader()
 	if err != nil {
@@ -93,22 +90,25 @@ func (manager *Manager) Start() (err error) {
 
 	err = manager.natService.Start()
 	if err != nil {
-		log.Warn("received nat service error: ", err, " trying to proceed.")
+		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
 	}
 
 	currentCountry, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
 		return err
 	}
-	log.Info("Country detected: ", currentCountry)
+	log.Info(logPrefix, "Country detected: ", currentCountry)
+
 	serviceLocation := dto_discovery.Location{Country: currentCountry}
 
-	proposal := discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, manager.protocol)
+	proposal := openvpn_discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, manager.protocol)
 
 	primitives, err := tls.NewTLSPrimitives(serviceLocation, providerID)
 	if err != nil {
 		return err
 	}
+
+	manager.discovery.Start(providerID, proposal)
 
 	sessionManager := manager.sessionManagerFactory(primitives, manager.openvpnServiceAddress(outboundIP, publicIP))
 
@@ -117,7 +117,6 @@ func (manager *Manager) Start() (err error) {
 		return err
 	}
 
-	stopDiscoveryAnnouncement := make(chan int)
 	vpnStateCallback := func(state openvpn.State) {
 		switch state {
 		case openvpn.ProcessStarted:
@@ -126,7 +125,6 @@ func (manager *Manager) Start() (err error) {
 			log.Info("Openvpn service started successfully")
 		case openvpn.ProcessExited:
 			log.Info("Openvpn service exited")
-			close(stopDiscoveryAnnouncement)
 		}
 	}
 	manager.vpnServer = manager.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
@@ -134,68 +132,36 @@ func (manager *Manager) Start() (err error) {
 		return err
 	}
 
-	signer := manager.createSigner(providerID)
-
-	manager.proposalAnnouncementStopped.Add(1)
-	go manager.discoveryAnnouncementLoop(proposal, manager.mysteriumClient, signer, stopDiscoveryAnnouncement)
-
 	return nil
 }
 
 // Wait blocks until service is stopped
 func (manager *Manager) Wait() error {
-	log.Info("Waiting for proposal announcements to finish")
-	manager.proposalAnnouncementStopped.Wait()
-	log.Info("Waiting for vpn service to finish")
+	log.Info(logPrefix, "Waiting for discovery service to finish")
+	manager.discovery.Wait()
+
+	log.Info(logPrefix, "Waiting for vpn service to finish")
 	return manager.vpnServer.Wait()
 }
 
 // Kill stops service
 func (manager *Manager) Kill() error {
-	manager.natService.Stop()
+	if manager.discovery != nil {
+		manager.discovery.Stop()
+	}
+
+	var err error
+	if manager.dialogWaiter != nil {
+		err = manager.dialogWaiter.Stop()
+	}
+
+	if manager.natService != nil {
+		manager.natService.Stop()
+	}
 
 	if manager.vpnServer != nil {
 		manager.vpnServer.Stop()
 	}
 
-	if manager.dialogWaiter != nil {
-		return manager.dialogWaiter.Stop()
-	}
-
-	return nil
-}
-
-func (manager *Manager) discoveryAnnouncementLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
-	for {
-		err := mysteriumClient.RegisterProposal(proposal, signer)
-		if err != nil {
-			log.Errorf("Failed to register proposal: %v, retrying after 1 min.", err)
-			time.Sleep(1 * time.Minute)
-		} else {
-			break
-		}
-	}
-	manager.pingProposalLoop(proposal, mysteriumClient, signer, stopPinger)
-
-}
-
-func (manager *Manager) pingProposalLoop(proposal dto_discovery.ServiceProposal, mysteriumClient server.Client, signer identity.Signer, stopPinger <-chan int) {
-	defer manager.proposalAnnouncementStopped.Done()
-	for {
-		select {
-		case <-time.After(1 * time.Minute):
-			err := mysteriumClient.PingProposal(proposal, signer)
-			if err != nil {
-				log.Error("Failed to ping proposal: ", err)
-				// do not stop server on missing ping to discovery. More on this in MYST-362 and MYST-370
-			}
-		case <-stopPinger:
-			log.Info("Stopping discovery announcement")
-			err := mysteriumClient.UnregisterProposal(proposal, signer)
-			if err != nil {
-				log.Error("Failed to unregister proposal: ", err)
-			}
-			return
-		}
-	}
+	return err
 }

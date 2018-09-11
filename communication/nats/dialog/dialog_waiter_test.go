@@ -185,8 +185,17 @@ type mockedIdentityRegistry struct {
 	anyIdentityRegistered bool
 }
 
+// IsRegistered mock
 func (mir *mockedIdentityRegistry) IsRegistered(id identity.Identity) (bool, error) {
 	return mir.anyIdentityRegistered, nil
+}
+
+// SubscribeToRegistrationEvent mock
+func (mir *mockedIdentityRegistry) SubscribeToRegistrationEvent(id identity.Identity) (
+	registeredEvent chan registry.RegistrationEvent,
+	unsubscribe func(),
+) {
+	return nil, nil
 }
 
 //check that we implemented mocked registry correctly

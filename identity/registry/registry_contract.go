@@ -18,15 +18,21 @@
 package registry
 
 import (
+	"context"
+	"time"
+
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/registry/generated"
 )
 
+const logPrefix = "[registry] "
+
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(contractCaller bind.ContractCaller, registryAddress common.Address) (*contractRegistry, error) {
-	contract, err := generated.NewIdentityRegistryCaller(registryAddress, contractCaller)
+func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryAddress common.Address) (*contractRegistry, error) {
+	contract, err := generated.NewIdentityRegistryCaller(registryAddress, contractBackend)
 	if err != nil {
 		return nil, err
 	}
@@ -38,15 +44,92 @@ func NewIdentityRegistryContract(contractCaller bind.ContractCaller, registryAdd
 		},
 	}
 
-	return &contractRegistry{contractSession}, nil
+	filterer, err := generated.NewIdentityRegistryFilterer(registryAddress, contractBackend)
+	if err != nil {
+		return nil, err
+	}
+
+	return &contractRegistry{
+		contractSession,
+		filterer,
+	}, nil
 }
 
 type contractRegistry struct {
 	contractSession *generated.IdentityRegistryCallerSession
+	filterer        *generated.IdentityRegistryFilterer
 }
 
 func (registry *contractRegistry) IsRegistered(id identity.Identity) (bool, error) {
 	return registry.contractSession.IsRegistered(
 		common.HexToAddress(id.Address),
 	)
+}
+
+// RegistrationEvent describes registration events
+type RegistrationEvent int
+
+// Possible registration events
+const (
+	Registered RegistrationEvent = 0
+	Cancelled  RegistrationEvent = 1
+)
+
+// SubscribeToRegistrationEvent returns registration event if given providerAddress was registered within payments contract
+func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Identity) (
+	registrationEvent chan RegistrationEvent,
+	unsubscribe func(),
+) {
+	registrationEvent = make(chan RegistrationEvent)
+
+	stopLoop := make(chan bool)
+	unsubscribe = func() {
+		// cancel (stop) identity registration loop
+		stopLoop <- true
+	}
+
+	identities := []common.Address{
+		common.HexToAddress(id.Address),
+	}
+
+	filterOps := &bind.FilterOpts{
+		Start:   0,
+		End:     nil,
+		Context: context.Background(),
+	}
+
+	go func() {
+		for {
+			select {
+			case <-stopLoop:
+				registrationEvent <- Cancelled
+			case <-time.After(1 * time.Second):
+				logIterator, err := registry.filterer.FilterRegistered(filterOps, identities)
+				if err != nil {
+					registrationEvent <- Cancelled
+					log.Error(logPrefix, err)
+					return
+				}
+				if logIterator == nil {
+					registrationEvent <- Cancelled
+					return
+				}
+				for {
+					next := logIterator.Next()
+					if next {
+						registrationEvent <- Registered
+					} else {
+						err = logIterator.Error()
+						if err != nil {
+							log.Error(logPrefix, err)
+						}
+						break
+					}
+				}
+			case <-time.After(30 * time.Second):
+				log.Trace(logPrefix, "no identity registration, sleeping for 1s")
+			}
+		}
+	}()
+	return
 }

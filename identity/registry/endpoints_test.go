@@ -24,7 +24,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/julienschmidt/httprouter"
-
 	"github.com/mysteriumnetwork/node/identity"
 	payments_identity "github.com/mysteriumnetwork/payments/identity"
 	"github.com/mysteriumnetwork/payments/registry"
@@ -36,7 +35,7 @@ const (
 	testPublicKeyPart2 = "0xDE001122334455667788990011223344556677889900112233445566778899AD"
 )
 
-func TestRegistrationEndpointReturnsRegistrationData(t *testing.T) {
+func TestIdentityRegistrationEndpointReturnsRegistrationData(t *testing.T) {
 
 	mockedDataProvider := &mockRegistrationDataProvider{}
 	mockedDataProvider.RegistrationData = &registry.RegistrationData{
@@ -66,7 +65,7 @@ func TestRegistrationEndpointReturnsRegistrationData(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 
-	endpoint.RegistrationData(
+	endpoint.IdentityRegistrationData(
 		resp,
 		req,
 		httprouter.Params{
@@ -104,6 +103,13 @@ type mockRegistrationStatus struct {
 
 func (m *mockRegistrationStatus) IsRegistered(id identity.Identity) (bool, error) {
 	return m.Registered, nil
+}
+
+func (m *mockRegistrationStatus) SubscribeToRegistrationEvent(id identity.Identity) (
+	registeredEvent chan RegistrationEvent,
+	unsubscribe func(),
+) {
+	return nil, nil
 }
 
 type mockRegistrationDataProvider struct {

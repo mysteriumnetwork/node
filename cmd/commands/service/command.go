@@ -105,8 +105,5 @@ func NewCommand() *cli.Command {
 
 			return <-errorChannel
 		},
-		After: func(ctx *cli.Context) error {
-			return stopCommand()
-		},
 	}
 }

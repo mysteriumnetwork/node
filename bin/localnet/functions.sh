@@ -44,7 +44,7 @@ setup () {
         exit 1
     fi
 
-    ${dockerComposeCmd} run local-node init genesis.json
+    ${dockerComposeCmd} run geth init genesis.json
     if [ ! $? -eq 0 ]; then
         print_error "Geth node initialization failed"
         cleanup "$@"
@@ -52,7 +52,7 @@ setup () {
     fi
 
 
-    ${dockerComposeCmd} up -d broker discovery local-node
+    ${dockerComposeCmd} up -d broker discovery geth
     if [ ! $? -eq 0 ]; then
         print_error "Error starting other services"
         cleanup "$@"
@@ -63,10 +63,10 @@ setup () {
     echo "Deploying contracts..."
     ${dockerComposeCmd} run go-runner \
         go run bin/localnet/deployer/*.go \
-        --keystore.directory=bin/localnet/account \
+        --keystore.directory=bin/localnet/deployer/keystore \
         --ether.address=0xa754f0d31411d88e46aed455fa79b9fced122497 \
-        --ether.passphrase `cat bin/localnet/local_acc_password.txt` \
-        --geth.url=http://local-node:8545
+        --ether.passphrase `cat bin/localnet/deployer/local_acc_password.txt` \
+        --geth.url=http://geth:8545
     if [ ! $? -eq 0 ]; then
         print_error "Error deploying contracts"
         cleanup "$@"

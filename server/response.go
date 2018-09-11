@@ -38,7 +38,7 @@ func parseResponseError(response *http.Response) error {
 		}
 
 		return fmt.Errorf("server response invalid: %s (%s) error message: %s",
-			response.Status, response.Request.URL, error)
+			response.Status, response.Request.URL, error.Error)
 	}
 	return nil
 }

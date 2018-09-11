@@ -18,8 +18,6 @@
 package service
 
 import (
-	"sync"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -27,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -38,7 +37,6 @@ import (
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
 	openvpn_session "github.com/mysteriumnetwork/node/openvpn/session"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -50,9 +48,9 @@ func NewManager(
 	identityLoader identity_selector.Loader,
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
-	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
+	discoveryService *discovery.Discovery,
 ) *Manager {
 	logconfig.Bootstrap()
 
@@ -60,10 +58,8 @@ func NewManager(
 
 	return &Manager{
 		identityLoader:   identityLoader,
-		createSigner:     signerFactory,
 		locationResolver: locationResolver,
 		ipResolver:       ipResolver,
-		mysteriumClient:  mysteriumClient,
 		natService:       natService,
 		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
@@ -125,7 +121,7 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 
 			return publicIP
 		},
-		protocol:                    serviceOptions.OpenvpnProtocol,
-		proposalAnnouncementStopped: &sync.WaitGroup{},
+		protocol:  serviceOptions.OpenvpnProtocol,
+		discovery: discoveryService,
 	}
 }

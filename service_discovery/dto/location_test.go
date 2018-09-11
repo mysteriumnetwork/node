@@ -19,7 +19,7 @@ package dto
 
 import (
 	"encoding/json"
-	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -85,13 +85,6 @@ func TestLocationUnserialize(t *testing.T) {
 			Location{},
 			nil,
 		},
-		{
-			`{
-				"country": 1
-			}`,
-			Location{},
-			errors.New("json: cannot unmarshal number into Go struct field Location.country of type string"),
-		},
 	}
 
 	for _, test := range tests {
@@ -105,4 +98,14 @@ func TestLocationUnserialize(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}
+}
+
+func TestLocationUnserializeError(t *testing.T) {
+	var model Location
+	jsonLocation := `{
+				"country": 1
+			}`
+	err := json.Unmarshal([]byte(jsonLocation), &model)
+	unmarshalError := strings.HasPrefix(err.Error(), "json: ")
+	assert.True(t, unmarshalError)
 }

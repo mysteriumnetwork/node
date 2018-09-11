@@ -357,7 +357,7 @@ func (c *Command) identities(argsString string) {
 }
 
 func (c *Command) registration(argsString string) {
-	status, err := c.tequilapi.RegistrationStatus(argsString)
+	status, err := c.tequilapi.IdentityRegistrationStatus(argsString)
 	if err != nil {
 		warn("Something went wrong: ", err)
 		return
@@ -372,6 +372,13 @@ func (c *Command) registration(argsString string) {
 	info("Signature: S ->", status.Signature.S)
 	info("           R ->", status.Signature.R)
 	info("           V ->", status.Signature.V)
+	info("OR proceed with direct link:")
+	infof(" https://wallet.mysterium.network/?part1=%s&part2=%s&s=%s&r=%s&v=%d\n",
+		status.PublicKey.Part1,
+		status.PublicKey.Part2,
+		status.Signature.S,
+		status.Signature.R,
+		status.Signature.V)
 }
 
 func (c *Command) stopClient() {

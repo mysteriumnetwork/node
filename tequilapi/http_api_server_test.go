@@ -18,6 +18,7 @@
 package tequilapi
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,9 +29,11 @@ func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
 
 	assert.NoError(t, server.StartServing())
 
-	port, err := server.Port()
+	address, err := server.Address()
 	assert.NoError(t, err)
-	assert.Equal(t, 31337, port)
+
+	port := strings.Split(address, ":")[1]
+	assert.Equal(t, "31337", port)
 
 	server.Stop()
 	server.Wait()

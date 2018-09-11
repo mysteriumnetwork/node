@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -45,10 +46,11 @@ type Dependencies struct {
 	MysteriumClient   server.Client
 	EtherClient       *ethclient.Client
 
-	Keystore         *keystore.KeyStore
-	IdentityManager  identity.Manager
-	SignerFactory    identity.SignerFactory
-	IdentityRegistry identity_registry.IdentityRegistry
+	Keystore             *keystore.KeyStore
+	IdentityManager      identity.Manager
+	SignerFactory        identity.SignerFactory
+	IdentityRegistry     identity_registry.IdentityRegistry
+	IdentityRegistration identity_registry.RegistrationDataProvider
 
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
@@ -81,10 +83,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.NodeOptions = nodeOptions
 	di.Node = node.NewNode(
 		nodeOptions,
-		di.Keystore,
 		di.IdentityManager,
 		di.SignerFactory,
 		di.IdentityRegistry,
+		di.IdentityRegistration,
 		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
@@ -101,6 +103,8 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 	)
 	identityLoader := identity_selector.NewLoader(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)
 
+	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
+
 	di.ServiceManager = service.NewManager(
 		nodeOptions,
 		serviceOptions,
@@ -108,9 +112,9 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		identityLoader,
 		di.SignerFactory,
 		di.IdentityRegistry,
-		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
+		discoveryService,
 	)
 }
 
@@ -165,6 +169,7 @@ func (di *Dependencies) bootstrapIdentityComponents(directories node.OptionsDire
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
 	}
+	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) {

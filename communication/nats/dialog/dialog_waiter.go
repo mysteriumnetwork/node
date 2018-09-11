@@ -30,7 +30,7 @@ import (
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
-// NewDialogWaiter constructs new DialogWaiter which works thru NATS connection.
+// NewDialogWaiter constructs new DialogWaiter which works through NATS connection.
 func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer, identityRegistry registry.IdentityRegistry) *dialogWaiter {
 	return &dialogWaiter{
 		myAddress:        address,
@@ -51,17 +51,19 @@ type dialogWaiter struct {
 	sync.RWMutex
 }
 
+// Start registers dialogWaiter with broker (NATS) service
 func (waiter *dialogWaiter) Start() (dto_discovery.Contact, error) {
-	log.Info(waiterLogPrefix, fmt.Sprintf("Connecting to: %#v", waiter.myAddress))
+	log.Info(waiterLogPrefix, "Connecting to: ", waiter.myAddress.GetContact())
 
 	err := waiter.myAddress.Connect()
 	if err != nil {
-		return dto_discovery.Contact{}, fmt.Errorf("failed to start my connection. %s", waiter.myAddress)
+		return dto_discovery.Contact{}, fmt.Errorf("failed to start my connection with: %v", waiter.myAddress.GetContact())
 	}
 
 	return waiter.myAddress.GetContact(), nil
 }
 
+// Stop disconnects dialogWaiter from broker (NATS) service
 func (waiter *dialogWaiter) Stop() error {
 	waiter.RLock()
 	defer waiter.RUnlock()
@@ -70,10 +72,10 @@ func (waiter *dialogWaiter) Stop() error {
 		dialog.Close()
 	}
 	waiter.myAddress.Disconnect()
-
 	return nil
 }
 
+// ServeDialogs starts accepting dialogs initiated by peers
 func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
 

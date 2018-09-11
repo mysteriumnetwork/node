@@ -96,7 +96,7 @@ func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvid
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *registrationEndpoint) IdentityRegistrationData(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 
 	isRegistered, err := endpoint.statusProvider.IsRegistered(id)
@@ -111,7 +111,7 @@ func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter,
 		return
 	}
 
-	registrationResponse := RegistrationDataDTO{
+	registrationDataDTO := &RegistrationDataDTO{
 		Registered: isRegistered,
 		PublicKey: PublicKeyPartsDTO{
 			Part1: hexutil.Encode(registrationData.PublicKey.Part1),
@@ -123,18 +123,16 @@ func (endpoint *registrationEndpoint) RegistrationData(resp http.ResponseWriter,
 			V: registrationData.Signature.V,
 		},
 	}
-
-	utils.WriteAsJSON(registrationResponse, resp)
+	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
-// AddRegistrationEndpoint adds identity registration data endpoint to given http router
-func AddRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) {
+// AddIdentityRegistrationEndpoint adds identity registration data endpoint to given http router
+func AddIdentityRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) {
 
 	registrationEndpoint := newRegistrationEndpoint(
 		dataProvider,
 		statusProvider,
 	)
 
-	router.GET("/identities/:id/registration", registrationEndpoint.RegistrationData)
-
+	router.GET("/identities/:id/registration", registrationEndpoint.IdentityRegistrationData)
 }

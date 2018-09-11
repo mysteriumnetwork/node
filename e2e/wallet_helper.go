@@ -20,6 +20,7 @@ package e2e
 import (
 	"context"
 	"errors"
+	"flag"
 	"math/big"
 	"os"
 	"time"
@@ -31,19 +32,22 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/mysteriumnetwork/node/tequilapi/client"
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/payments/cli/helpers"
 	mysttoken "github.com/mysteriumnetwork/payments/mysttoken/generated"
 	registry "github.com/mysteriumnetwork/payments/registry/generated"
 )
 
-//addresses should match those deployed in e2e test environment
-var tokenAddress = common.HexToAddress("0x0222eb28e1651E2A8bAF691179eCfB072457f00c")
-var paymentsAddress = common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea")
+var (
+	// addresses should match those deployed in e2e test environment
+	tokenAddress    = common.HexToAddress("0x0222eb28e1651E2A8bAF691179eCfB072457f00c")
+	paymentsAddress = common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea")
 
-//owner of contracts and main acc with ethereum
-var mainEtherAcc = common.HexToAddress("0xa754f0d31411d88e46aed455fa79b9fced122497")
-var mainEtherAccPass = "localaccount"
+	// deployer of contracts and main acc with ethereum
+	deployerKeystoreDir = flag.String("deployer.keystore-directory", "", "Directory of deployer's keystore")
+	deployerAddress     = flag.String("deployer.address", "", "Deployer's account inside keystore")
+	deployerPassphrase  = flag.String("deployer.passphrase", "", "Deployer's passphrase for account unlocking")
+)
 
 // CliWallet represents operations which can be done with user controlled account
 type CliWallet struct {
@@ -52,10 +56,11 @@ type CliWallet struct {
 	backend          *ethclient.Client
 	identityRegistry registry.IdentityRegistryTransactorSession
 	tokens           mysttoken.MystTokenTransactorSession
+	ks               *keystore.KeyStore
 }
 
 // RegisterIdentity registers identity with given data on behalf of user
-func (wallet *CliWallet) RegisterIdentity(dto client.RegistrationStatusDTO) error {
+func (wallet *CliWallet) RegisterIdentity(dto tequilapi_client.RegistrationDataDTO) error {
 	var Pub1 [32]byte
 	var Pub2 [32]byte
 	var S [32]byte
@@ -142,11 +147,10 @@ func (wallet *CliWallet) checkTxResult(tx *types.Transaction) error {
 	return nil
 }
 
-// NewMainAccWallet initializes wallet with main localnet account private key (owner of ERC20, payments and lots of ether)
-func NewMainAccWallet(keystoreDir string) (*CliWallet, error) {
-	ks := initKeyStore(keystoreDir)
-
-	return newCliWallet(mainEtherAcc, mainEtherAccPass, ks)
+// NewDeployerWallet initializes wallet with main localnet account private key (owner of ERC20, payments and lots of ether)
+func NewDeployerWallet() (*CliWallet, error) {
+	ks := initKeyStore(*deployerKeystoreDir)
+	return newCliWallet(common.HexToAddress(*deployerAddress), *deployerPassphrase, ks)
 }
 
 // NewUserWallet initializes wallet with generated account with specified keystore
@@ -160,7 +164,7 @@ func NewUserWallet(keystoreDir string) (*CliWallet, error) {
 }
 
 func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore) (*CliWallet, error) {
-	client, err := newEthClient()
+	ehtClient, err := newEthClient()
 	if err != nil {
 		return nil, err
 	}
@@ -174,9 +178,9 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 
 	transactor := helpers.CreateNewKeystoreTransactor(ks, &ownerAcc)
 
-	tokensContract, err := mysttoken.NewMystTokenTransactor(tokenAddress, client)
+	tokensContract, err := mysttoken.NewMystTokenTransactor(tokenAddress, ehtClient)
 
-	paymentsContract, err := registry.NewIdentityRegistryTransactor(paymentsAddress, client)
+	paymentsContract, err := registry.NewIdentityRegistryTransactor(paymentsAddress, ehtClient)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +188,7 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 	return &CliWallet{
 		txOpts:  transactor,
 		Owner:   owner,
-		backend: client,
+		backend: ehtClient,
 		tokens: mysttoken.MystTokenTransactorSession{
 			Contract:     tokensContract,
 			TransactOpts: *transactor,
@@ -193,6 +197,7 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 			Contract:     paymentsContract,
 			TransactOpts: *transactor,
 		},
+		ks: ks,
 	}, nil
 }
 
@@ -200,11 +205,11 @@ func initKeyStore(path string) *keystore.KeyStore {
 	return keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
 }
 
-func registerIdentity(registrationData client.RegistrationStatusDTO) error {
+func registerIdentity(registrationData tequilapi_client.RegistrationDataDTO) error {
 	defer os.RemoveAll("testdataoutput")
 
-	//master account - owner of conctracts, and can issue tokens
-	masterAccWallet, err := NewMainAccWallet("../bin/localnet/account")
+	//deployer account - owner of contracts, and can issue tokens
+	masterAccWallet, err := NewDeployerWallet()
 	if err != nil {
 		return err
 	}
