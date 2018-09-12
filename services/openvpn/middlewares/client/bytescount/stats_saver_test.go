@@ -30,6 +30,6 @@ func TestNewSessionStatsSaver(t *testing.T) {
 
 	saver := NewSessionStatsSaver(statsKeeper)
 	stats := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
-	saver(stats)
+	saver(2, 1)
 	assert.Equal(t, stats, statsKeeper.Retrieve())
 }

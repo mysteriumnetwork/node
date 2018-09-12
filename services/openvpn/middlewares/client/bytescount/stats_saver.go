@@ -17,12 +17,15 @@
 
 package bytescount
 
-import "github.com/mysteriumnetwork/node/client/stats"
+import (
+	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
+)
 
 // NewSessionStatsSaver returns stats handler, which saves stats stats keeper
-func NewSessionStatsSaver(statsKeeper stats.SessionStatsKeeper) SessionStatsHandler {
-	return func(sessionStats stats.SessionStats) error {
-		statsKeeper.Save(sessionStats)
+func NewSessionStatsSaver(statsKeeper stats.SessionStatsKeeper) bytescount.SessionStatsHandler {
+	return func(bytesIn, bytesOut int) error {
+		statsKeeper.Save(stats.SessionStats{BytesSent: bytesOut, BytesReceived: bytesIn})
 		return nil
 	}
 }

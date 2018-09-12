@@ -77,7 +77,7 @@ func Test_ConsumeLine(t *testing.T) {
 			assert.NoError(t, err, test.line)
 		}
 		assert.Equal(t, test.expectedConsumed, consumed, test.line)
-		assert.Equal(t, test.expectedBytesReceived, statsRecorder.LastSessionStats.BytesReceived)
-		assert.Equal(t, test.expectedBytesSent, statsRecorder.LastSessionStats.BytesSent)
+		assert.Equal(t, test.expectedBytesReceived, statsRecorder.BytesIn)
+		assert.Equal(t, test.expectedBytesSent, statsRecorder.BytesOut)
 	}
 }
