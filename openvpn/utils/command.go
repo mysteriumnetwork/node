@@ -15,19 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package credentials
+package utils
 
 import (
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
-	ovpnsession "github.com/mysteriumnetwork/node/services/openvpn/session"
-	"github.com/mysteriumnetwork/node/session"
+	"os/exec"
+	"strings"
 )
 
-// SignatureCredentialsProvider returns session id as username and id signed with given signer as password
-func SignatureCredentialsProvider(id session.SessionID, signer identity.Signer) auth.CredentialsProvider {
-	return func() (username string, password string, err error) {
-		signature, err := signer.Sign([]byte(ovpnsession.SignaturePrefix + id))
-		return string(id), signature.Base64(), err
+// SplitCommand parses command arguments from string and returns command with split arguments
+func SplitCommand(command string, commandArguments string) *exec.Cmd {
+	args := strings.Split(commandArguments, " ")
+	var trimmedArgs []string
+	for _, arg := range args {
+		trimmedArgs = append(trimmedArgs, strings.TrimSpace(arg))
 	}
+	return exec.Command(command, trimmedArgs...)
 }
