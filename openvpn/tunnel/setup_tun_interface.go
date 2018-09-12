@@ -19,11 +19,7 @@ package tunnel
 
 import (
 	"errors"
-	"os"
-	"os/exec"
-	"strconv"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/openvpn/config"
 )
 
@@ -32,122 +28,8 @@ const tunLogPrefix = "[linux tun service] "
 // ErrNoFreeTunDevice is thrown when no free tun device is available on system
 var ErrNoFreeTunDevice = errors.New("no free tun device found")
 
-type tunDeviceManager struct {
-	scriptSetup string
-
-	// runtime variables
-	device tunDevice
-}
-
-// tunDevice represents tun device structure
-type tunDevice struct {
-	Name string
-}
-
-// NewTunInterfaceSetup creates Linux specific TUN manager for interface creation and removal
-func NewTunInterfaceSetup(scriptSetup string) *tunDeviceManager {
-	return &tunDeviceManager{scriptSetup: scriptSetup}
-}
-
-func (service *tunDeviceManager) Setup(config *config.GenericConfig) error {
-	device, err := findFreeTunDevice()
-	if err != nil {
-		return err
-	}
-
-	if err := service.createTunDevice(device); err != nil {
-		return err
-	}
-
-	service.device = device
-	config.SetPersistTun()
-	config.SetDevice(device.Name)
-	return nil
-}
-
-func (service *tunDeviceManager) Stop() {
-	var err error
-	var exists bool
-
-	if exists, err = service.deviceExists(service.device); err != nil {
-		log.Info(tunLogPrefix, err)
-	}
-
-	if exists {
-		service.deleteDevice(service.device)
-	}
-}
-
-func (service *tunDeviceManager) createTunDevice(device tunDevice) (err error) {
-	err = service.createDeviceNode()
-	if err != nil {
-		return err
-	}
-
-	exists, err := service.deviceExists(device)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		log.Info(tunLogPrefix, device.Name+" device already exists, attempting to use it")
-		return
-	}
-
-	cmd := exec.Command("sudo", "ip", "tuntap", "add", "dev", device.Name, "mode", "tun")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn("Failed to add tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-		// we should not proceed without tun device
-		return err
-	}
-
-	log.Info(tunLogPrefix, device.Name+" device created")
-	return nil
-}
-
-func (service *tunDeviceManager) deviceExists(device tunDevice) (exists bool, err error) {
-	if _, err := os.Stat("/sys/class/net/" + device.Name); err == nil {
-		return true, nil
-	}
-
-	return false, err
-}
-
-func (service *tunDeviceManager) deleteDevice(device tunDevice) {
-	cmd := exec.Command("sudo", "ip", "tuntap", "delete", "dev", device.Name, "mode", "tun")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn("Failed to remove tun device: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-	} else {
-		log.Info(tunLogPrefix, device.Name, " device removed")
-	}
-}
-
-// FindFreeTunDevice returns first free tun device on system
-func findFreeTunDevice() (tun tunDevice, err error) {
-	// search only among first 10 tun devices
-	for i := 0; i <= 10; i++ {
-		tunName := "tun" + strconv.Itoa(i)
-		tunFile := "/sys/class/net/tun" + tunName
-		if _, err := os.Stat(tunFile); os.IsNotExist(err) {
-			return tunDevice{tunName}, nil
-		}
-	}
-
-	return tun, ErrNoFreeTunDevice
-}
-
-func (service *tunDeviceManager) createDeviceNode() error {
-	if _, err := os.Stat("/dev/net/tun"); err == nil {
-		// device node already exists
-		return nil
-	}
-
-	cmd := exec.Command("sudo", service.scriptSetup)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Warn("Failed to execute tun script: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-		return err
-	}
-
-	log.Info(tunLogPrefix, "/dev/net/tun device node created")
-	return nil
+// Setup represents the operations required for a tunnel setup
+type Setup interface {
+	Setup(config *config.GenericConfig) error
+	Stop()
 }

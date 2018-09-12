@@ -24,24 +24,20 @@ import (
 
 	"github.com/mysteriumnetwork/node/openvpn/config"
 	"github.com/mysteriumnetwork/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/tunnel"
 )
-
-type tunnelSetup interface {
-	Setup(config *config.GenericConfig) error
-	Stop()
-}
 
 // OpenvpnProcess represents an openvpn process manager
 type OpenvpnProcess struct {
 	config      *config.GenericConfig
-	tunnelSetup tunnelSetup
+	tunnelSetup tunnel.Setup
 	management  *management.Management
 	cmd         *CmdWrapper
 }
 
 func newProcess(
 	openvpnBinary string,
-	tunnelSetup tunnelSetup,
+	tunnelSetup tunnel.Setup,
 	config *config.GenericConfig,
 	middlewares ...management.Middleware,
 ) *OpenvpnProcess {
