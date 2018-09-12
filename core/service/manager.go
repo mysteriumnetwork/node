@@ -28,10 +28,10 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/openvpn"
-	openvpn_discovery "github.com/mysteriumnetwork/node/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/session"
 )
 
