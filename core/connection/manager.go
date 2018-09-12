@@ -24,6 +24,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/server"
@@ -159,6 +160,12 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		dialog.Close()
 		openvpnClient.Stop()
 		return err
+	}
+
+	if !options.DisableKillSwitch {
+		// TODO: Implement fw based kill switch for respective OS
+		// we may need to wait for tun device to bet setup
+		firewall.NewKillSwitch().Enable()
 	}
 
 	manager.mutex.Lock()

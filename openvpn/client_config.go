@@ -78,6 +78,7 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
+	clientFileConfig.SetReconnectRetry(2)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
 	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
 	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)

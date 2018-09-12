@@ -95,10 +95,10 @@ func (c *GenericConfig) SetTLSCrypt(cryptFile string) {
 
 // SetReconnectRetry describes conditions which enforces client to close a session in case of failed authentication
 func (c *GenericConfig) SetReconnectRetry(count int) {
-	c.SetParam("connect-retry-max", strconv.Itoa(count))
-	c.SetParam("remap-usr1", "SIGTERM")
 	c.SetFlag("single-session")
 	c.SetFlag("tls-exit")
+	c.SetParam("connect-retry-max", strconv.Itoa(count))
+	c.SetParam("remap-usr1", "SIGTERM")
 }
 
 // SetKeepAlive setups keepalive interval and timeout values
