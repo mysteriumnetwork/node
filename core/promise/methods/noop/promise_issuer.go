@@ -18,9 +18,15 @@
 package noop
 
 import (
+	"fmt"
+
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
+
+const issuerLogPrefix = "[promise-issuer] "
 
 // PromiseIssuer issues promises in such way, what no actual money is added to promise
 type PromiseIssuer struct {
@@ -33,10 +39,27 @@ type PromiseIssuer struct {
 // Start issuing promises for given service proposal
 func (issuer *PromiseIssuer) Start(proposal dto.ServiceProposal) error {
 	issuer.proposal = proposal
-	return nil
+
+	return issuer.subscribePromiseBalance()
 }
 
 // Stop stops issuing promises
 func (issuer *PromiseIssuer) Stop() error {
+	// TODO Should unregister consumers(subscriptions) here
+	return nil
+}
+
+func (issuer *PromiseIssuer) subscribePromiseBalance() error {
+	return issuer.Dialog.Receive(
+		&promise.BalanceMessageConsumer{issuer.processBalanceMessage},
+	)
+}
+
+func (issuer *PromiseIssuer) processBalanceMessage(message promise.BalanceMessage) error {
+	if !message.Accepted {
+		log.Warn(issuerLogPrefix, fmt.Sprintf("Promise balance rejected: %s", message.Balance.String()))
+	}
+
+	log.Info(issuerLogPrefix, fmt.Sprintf("Promise balance notified: %s", message.Balance.String()))
 	return nil
 }

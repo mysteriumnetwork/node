@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,26 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package money
+package logconfig
 
 import (
-	"fmt"
+	"github.com/cihub/seelog"
 )
 
-type Money struct {
-	Amount   uint64   `json:"amount,omitempty"`
-	Currency Currency `json:"currency,omitempty"`
-}
+// ReplaceLogger replaces by disposing logger that was previously used
+func ReplaceLogger(loggerNew seelog.LoggerInterface) (loggerOld seelog.LoggerInterface) {
+	loggerOld = seelog.Current
+	seelog.ReplaceLogger(loggerNew)
 
-func NewMoney(amount float64, currency Currency) Money {
-	return Money{uint64(amount * 100000000), currency}
-}
-
-// String converts struct to string
-func (value *Money) String() string {
-	return fmt.Sprintf(
-		"%d%s",
-		value.Amount,
-		value.Currency,
-	)
+	return loggerOld
 }
