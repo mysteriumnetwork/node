@@ -53,10 +53,6 @@ func ConfigureVpnClientFactory(
 			return nil, err
 		}
 
-		if options.DisableKillSwitch {
-			vpnClientConfig.SetReconnectRetry(2)
-		}
-
 		signer := signerFactory(consumerID)
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
