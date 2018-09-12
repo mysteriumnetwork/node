@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -70,3 +70,23 @@ func (issuer *PromiseIssuer) processBalanceMessage(message promise.BalanceMessag
 	log.Info(issuerLogPrefix, fmt.Sprintf("Promise balance notified: %s", message.Balance.String()))
 	return nil
 }
+
+func (issuer *PromiseIssuer) subscribePromiseBalance() error {
+	subscribeError := issuer.Dialog.Receive(
+		&promise.BalanceMessageConsumer{issuer.processBalanceMessage},
+	)
+	if subscribeError != nil {
+		return subscribeError
+	}
+
+	return nil
+}
+
+func (issuer *PromiseIssuer) processBalanceMessage(message *promise.BalanceMessage) {
+	balanceString := fmt.Sprintf("%d%s", message.Balance.Amount, message.Balance.Currency)
+	if !message.Accepted {
+		seelog.Warn(issuerLogPrefix, fmt.Sprintf("Promise %d is rejected: %s", message.RequestID, balanceString))
+	}
+
+	seelog.Info(issuerLogPrefix, fmt.Sprintf("Promise %d balance is %s", message.RequestID, balanceString))
+}

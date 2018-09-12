@@ -23,6 +23,7 @@ import (
 
 // BalanceMessageConsumer process balance notification from communication channel.
 type BalanceMessageConsumer struct {
+	Callback func(*BalanceMessage)
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
@@ -38,5 +39,6 @@ func (consumer *BalanceMessageConsumer) NewMessage() (messagePtr interface{}) {
 
 // Consume handles messages from endpoint
 func (consumer *BalanceMessageConsumer) Consume(messagePtr interface{}) error {
+	consumer.Callback(messagePtr.(*BalanceMessage))
 	return nil
 }
