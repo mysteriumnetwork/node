@@ -1,5 +1,3 @@
-// +build !linux
-
 /*
  * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
  *

@@ -27,7 +27,7 @@ import (
 )
 
 // GetTunnelSetup gets the appropriate Setup for tunnel for linux
-func GetTunnelSetup(configuration *config.GenericConfig) Setup {
+func GetTunnelSetup() Setup {
 	return &LinuxTunDeviceManager{}
 }
 
