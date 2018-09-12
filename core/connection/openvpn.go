@@ -28,8 +28,8 @@ import (
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
-	"github.com/mysteriumnetwork/node/openvpn/session/credentials"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/services/openvpn/session/credentials"
 	"github.com/mysteriumnetwork/node/session"
 )
 

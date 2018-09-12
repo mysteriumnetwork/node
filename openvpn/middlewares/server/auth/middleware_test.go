@@ -22,7 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn/management"
-	ovpnsession "github.com/mysteriumnetwork/node/openvpn/session"
+	ovpnsession "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 )

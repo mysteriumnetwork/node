@@ -20,7 +20,7 @@ package credentials
 import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
-	ovpnsession "github.com/mysteriumnetwork/node/openvpn/session"
+	ovpnsession "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 )
 

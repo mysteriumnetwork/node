@@ -35,8 +35,8 @@ import (
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
-	openvpn_session "github.com/mysteriumnetwork/node/openvpn/session"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
+	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 )
 
