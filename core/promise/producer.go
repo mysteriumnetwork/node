@@ -21,7 +21,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
-type producer struct {
+type Producer struct {
 	SignedPromise *SignedPromise
 }
 
@@ -36,15 +36,15 @@ type Response struct {
 	Message string `json:"message"`
 }
 
-func (p *producer) GetRequestEndpoint() communication.RequestEndpoint {
+func (p *Producer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpoint
 }
 
-func (p *producer) NewResponse() (responsePtr interface{}) {
+func (p *Producer) NewResponse() (responsePtr interface{}) {
 	return &Response{}
 }
 
-func (p *producer) Produce() (requestPtr interface{}) {
+func (p *Producer) Produce() (requestPtr interface{}) {
 	return &Request{
 		SignedPromise: p.SignedPromise,
 	}

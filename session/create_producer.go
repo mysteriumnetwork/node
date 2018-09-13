@@ -24,11 +24,11 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
-type createProducer struct {
+type CreateProducer struct {
 	ProposalID int
 }
 
-func (producer *createProducer) GetRequestEndpoint() communication.RequestEndpoint {
+func (producer *CreateProducer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpointSessionCreate
 }
 

@@ -53,7 +53,7 @@ func NewSignedPromise(promise *Promise, signer identity.Signer) (*SignedPromise,
 }
 
 func Send(signedPromise *SignedPromise, sender communication.Sender) (*Response, error) {
-	responsePtr, err := sender.Request(&producer{
+	responsePtr, err := sender.Request(&Producer{
 		SignedPromise: signedPromise,
 	})
 

@@ -19,6 +19,7 @@ package connection
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -376,8 +378,19 @@ func (fd *fakeDialog) Request(producer communication.RequestProducer) (responseP
 				ID:     "vpn-connection-id",
 				Config: []byte("{}"),
 			},
-		},
-		nil
+			nil
+	case *session.CreateProducer:
+		return &session.SessionCreateResponse{
+				Success: true,
+				Message: "Everything is great!",
+				Session: session.SessionDto{
+					ID:     "vpn-connection-id",
+					Config: []byte{},
+				},
+			},
+			nil
+	}
+	return nil, fmt.Errorf("unknown producer type")
 }
 
 type fakePromiseIssuer struct {
