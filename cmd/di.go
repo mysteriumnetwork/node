@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
@@ -132,7 +133,7 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.IdentityRegistry,
 		openvpnServiceManager,
 		func(configProvider session.ConfigProvider) session.Manager {
-			return session.NewManager(session.GenerateUUID, configProvider, sessionStorage.Add)
+			return session.NewManager(session.GenerateUUID, configProvider, sessionStorage.Add, &noop.PromiseProcessor{})
 		},
 		discoveryService,
 	)

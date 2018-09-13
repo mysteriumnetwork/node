@@ -28,33 +28,55 @@ var (
 	expectedID      = ID("mocked-id")
 	expectedSession = Session{
 		ID:         expectedID,
-		Config:     mockedVPNConfig,
+		Config:     expectedSessionConfig,
 		ConsumerID: identity.FromAddress("deadbeef"),
 	}
 	lastSession Session
 )
 
-const mockedVPNConfig = "config_string"
+const expectedSessionConfig = "config_string"
 
 func mockedConfigProvider() (ServiceConfiguration, error) {
-	return mockedVPNConfig, nil
+	return expectedSessionConfig, nil
+}
+
+func generateSessionID() ID {
+	return expectedID
 }
 
 func saveSession(sessionInstance Session) {
 	lastSession = sessionInstance
 }
 
-func TestManager_Create(t *testing.T) {
-	manager := NewManager(
-		func() ID {
-			return expectedID
-		},
-		mockedConfigProvider,
-		saveSession,
-	)
+type fakePromiseProcessor struct {
+	started bool
+}
+
+func (processor *fakePromiseProcessor) Start() error {
+	processor.started = true
+	return nil
+}
+
+func (processor *fakePromiseProcessor) Stop() error {
+	processor.started = false
+	return nil
+}
+
+func TestManager_Create_StoresSession(t *testing.T) {
+	manager := NewManager(generateSessionID, mockedConfigProvider, saveSession, &fakePromiseProcessor{})
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"))
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedSession, sessionInstance)
 	assert.Exactly(t, expectedSession, lastSession)
+}
+
+func TestManager_Create_StartsPromiseProcessor(t *testing.T) {
+	promiseProcessor := &fakePromiseProcessor{}
+	manager := NewManager(generateSessionID, mockedConfigProvider, saveSession, promiseProcessor)
+
+	_, err := manager.Create(identity.FromAddress("deadbeef"))
+	assert.NoError(t, err)
+	assert.True(t, promiseProcessor.started)
+
 }

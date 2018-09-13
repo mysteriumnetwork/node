@@ -32,22 +32,34 @@ type ConfigProvider func() (ServiceConfiguration, error)
 // SaveCallback stores newly started sessions
 type SaveCallback func(Session)
 
+// PromiseProcessor processes promises at provider side.
+// Provider checks promises from consumer and signs them also.
+// Provider clears promises from consumer.
+type PromiseProcessor interface {
+	Start() error
+	Stop() error
+}
+
 // NewManager returns new session manager
-func NewManager(idGenerator IDGenerator, configProvider ConfigProvider, saveCallback SaveCallback) *manager {
+func NewManager(idGenerator IDGenerator, configProvider ConfigProvider, saveCallback SaveCallback, promiseProcessor PromiseProcessor) *manager {
 	return &manager{
-		generateID:    idGenerator,
-		provideConfig: configProvider,
-		saveSession:   saveCallback,
-		creationLock:  sync.Mutex{},
+		generateID:       idGenerator,
+		provideConfig:    configProvider,
+		saveSession:      saveCallback,
+		promiseProcessor: promiseProcessor,
+
+		creationLock: sync.Mutex{},
 	}
 }
 
 // manager knows how to start and provision session
 type manager struct {
-	generateID    IDGenerator
-	provideConfig ConfigProvider
-	saveSession   SaveCallback
-	creationLock  sync.Mutex
+	generateID       IDGenerator
+	provideConfig    ConfigProvider
+	saveSession      SaveCallback
+	promiseProcessor PromiseProcessor
+
+	creationLock sync.Mutex
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
@@ -55,13 +67,23 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance Sessio
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
-	sessionInstance.ID = manager.generateID()
-	sessionInstance.ConsumerID = peerID
-	sessionInstance.Config, err = manager.provideConfig()
+	sessionInstance, err = manager.createSession(peerID)
+	if err != nil {
+		return
+	}
+
+	err = manager.promiseProcessor.Start()
 	if err != nil {
 		return
 	}
 
 	manager.saveSession(sessionInstance)
 	return sessionInstance, nil
+}
+
+func (manager *manager) createSession(consumerID identity.Identity) (sessionInstance Session, err error) {
+	sessionInstance.ID = manager.generateID()
+	sessionInstance.ConsumerID = consumerID
+	sessionInstance.Config, err = manager.provideConfig()
+	return
 }
