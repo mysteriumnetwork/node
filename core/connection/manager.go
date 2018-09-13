@@ -24,6 +24,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/server"
@@ -71,7 +72,7 @@ func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator,
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID, providerID identity.Identity) (err error) {
+func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -87,14 +88,14 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}
 	}()
 
-	err = manager.startConnection(consumerID, providerID)
+	err = manager.startConnection(consumerID, providerID, options)
 	if err == utils.ErrRequestCancelled {
 		return ErrConnectionCancelled
 	}
 	return err
 }
 
-func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity) (err error) {
+func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
 	cancelable := utils.NewCancelable()
 
 	manager.mutex.Lock()
@@ -142,7 +143,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	stateChannel := make(chan openvpn.State, 10)
 	val, err = cancelable.
 		NewRequest(func() (interface{}, error) {
-			return manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel)
+			return manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel, options)
 		}).
 		Cleanup(utils.InvokeOnSuccess(func(val interface{}) {
 			val.(openvpn.Process).Stop()
@@ -159,6 +160,12 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		dialog.Close()
 		openvpnClient.Stop()
 		return err
+	}
+
+	if !options.DisableKillSwitch {
+		// TODO: Implement fw based kill switch for respective OS
+		// we may need to wait for tun device to bet setup
+		firewall.NewKillSwitch().Enable()
 	}
 
 	manager.mutex.Lock()
@@ -220,12 +227,13 @@ func openvpnClientWaiter(openvpnClient openvpn.Process, dialog communication.Dia
 	dialog.Close()
 }
 
-func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity, stateChannel chan openvpn.State) (openvpn.Process, error) {
+func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity, stateChannel chan openvpn.State, options ConnectOptions) (openvpn.Process, error) {
 	openvpnClient, err := manager.newVpnClient(
 		vpnSession,
 		consumerID,
 		providerID,
 		channelToStateCallbackAdapter(stateChannel),
+		options,
 	)
 	if err != nil {
 		return nil, err

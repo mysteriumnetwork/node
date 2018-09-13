@@ -35,6 +35,15 @@ import (
 // operations, custom client error code is defined. Maybe in later times a better idea will come how to handle these situations
 const statusConnectCancelled = 499
 
+// ConnectOptions holds tequilapi connect options
+// swagger:model ConnectOptionsDTO
+type ConnectOptions struct {
+	// kill switch option restricting communication only through VPN
+	// required: false
+	// example: true
+	DisableKillSwitch bool `json:"killSwitch"`
+}
+
 // swagger:model ConnectionRequestDTO
 type connectionRequest struct {
 	// consumer identity
@@ -46,6 +55,10 @@ type connectionRequest struct {
 	// required: true
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"providerId"`
+
+	// connect options
+	// required: false
+	ConnectOptions ConnectOptions `json:"connectOptions,omitempty"`
 }
 
 // swagger:model ConnectionStatusDTO
@@ -163,7 +176,8 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.ProviderID))
+	connectOptions := getConnectOptions(cr)
+	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.ProviderID), connectOptions)
 
 	if err != nil {
 		switch err {
@@ -230,14 +244,14 @@ func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	ip, err := ce.ipResolver.GetPublicIP()
+	ipAddress, err := ce.ipResolver.GetPublicIP()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return
 	}
 
 	response := ipResponse{
-		IP: ip,
+		IP: ipAddress,
 	}
 
 	utils.WriteAsJSON(response, writer)
@@ -258,13 +272,13 @@ func (ce *ConnectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	stats := ce.statsKeeper.Retrieve()
+	st := ce.statsKeeper.Retrieve()
 
 	duration := ce.statsKeeper.GetSessionDuration()
 
 	response := statisticsResponse{
-		BytesSent:     stats.BytesSent,
-		BytesReceived: stats.BytesReceived,
+		BytesSent:     st.BytesSent,
+		BytesReceived: st.BytesReceived,
 		Duration:      int(duration.Seconds()),
 	}
 
@@ -289,6 +303,10 @@ func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
 		return nil, err
 	}
 	return &connectionRequest, nil
+}
+
+func getConnectOptions(cr *connectionRequest) connection.ConnectOptions {
+	return connection.ConnectOptions{DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch}
 }
 
 func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap {

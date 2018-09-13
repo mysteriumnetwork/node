@@ -22,6 +22,7 @@ import (
 
 	"github.com/cihub/seelog"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -110,7 +111,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	_, err = tequilapi.Connect(consumerID, proposal.ProviderID)
+	_, err = tequilapi.Connect(consumerID, proposal.ProviderID, endpoints.ConnectOptions{true})
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {
