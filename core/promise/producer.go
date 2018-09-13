@@ -21,6 +21,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
+// Producer creates requests/responses of the "promise-create" events
 type Producer struct {
 	SignedPromise *SignedPromise
 }
@@ -36,14 +37,17 @@ type Response struct {
 	Message string `json:"message"`
 }
 
+// GetRequestEndpoint returns communication endpoint that will be used for sending promises
 func (p *Producer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpoint
 }
 
+// NewResponse creates a new Response object which will be filled by the external processing
 func (p *Producer) NewResponse() (responsePtr interface{}) {
 	return &Response{}
 }
 
+// Produce return the message-request that will be send to the consumer for the future processing
 func (p *Producer) Produce() (requestPtr interface{}) {
 	return &Request{
 		SignedPromise: p.SignedPromise,

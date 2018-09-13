@@ -23,6 +23,7 @@ import (
 
 type handler struct{}
 
+// NewDialogHandler constructs handler which gets all incoming dialogs and starts handling them
 func NewDialogHandler() *handler {
 	return &handler{}
 }

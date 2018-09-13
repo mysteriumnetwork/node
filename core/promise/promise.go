@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Promise package allows client to issue proposal, that will be sent to the provider.
+// Package promise allows client to issue proposal, that will be sent to the provider.
 // It's provider responsibility to store and process promises.
 package promise
 
@@ -30,6 +30,7 @@ import (
 
 const endpoint = "promise-create"
 
+// NewPromise creates new Promise object filled by the requested arguments
 func NewPromise(consumerID, providerID identity.Identity, amount money.Money) *Promise {
 	return &Promise{
 		SerialNumber: 1,
@@ -39,6 +40,7 @@ func NewPromise(consumerID, providerID identity.Identity, amount money.Money) *P
 	}
 }
 
+// NewSignedPromise creates a signed promise with a passed signer
 func NewSignedPromise(promise *Promise, signer identity.Signer) (*SignedPromise, error) {
 	out, err := json.Marshal(promise)
 	if err != nil {
@@ -52,6 +54,7 @@ func NewSignedPromise(promise *Promise, signer identity.Signer) (*SignedPromise,
 	}, err
 }
 
+// Send sends signed promise via the communication channel
 func Send(signedPromise *SignedPromise, sender communication.Sender) (*Response, error) {
 	responsePtr, err := sender.Request(&Producer{
 		SignedPromise: signedPromise,
