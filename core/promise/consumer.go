@@ -32,7 +32,7 @@ func (c *consumer) NewRequest() (requestPtr interface{}) {
 }
 
 func (c *consumer) Consume(requestPtr interface{}) (response interface{}, err error) {
-	// request := requestPtr.(*CreateRequest)
+	// request := requestPtr.(*Request)
 
 	// TODO there should be some validation of the received proposal and storing it somewhere for the server needs.
 	// TODO signature validation of the promise should be here too.

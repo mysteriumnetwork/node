@@ -18,8 +18,10 @@
 package promise
 
 import (
+	"encoding/base64"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
@@ -40,11 +42,11 @@ func Test_PromiseBody(t *testing.T) {
 		Amount:       amount,
 	}
 
-	assert.Equal(t, promise.SerialNumber, 1)
-	assert.Equal(t, promise.IssuerID, "issuer1")
-	assert.Equal(t, promise.BenefiterID, "benefiter1")
-	assert.Equal(t, promise.Amount.Amount, uint64(5))
-	assert.Equal(t, promise.Amount.Currency, CurrencyToken)
+	assert.Equal(t, 1, promise.SerialNumber)
+	assert.Equal(t, "issuer1", promise.IssuerID)
+	assert.Equal(t, "benefiter1", promise.BenefiterID)
+	assert.Equal(t, uint64(5), promise.Amount.Amount)
+	assert.Equal(t, CurrencyToken, promise.Amount.Currency)
 }
 
 func Test_SignedPromise(t *testing.T) {
@@ -56,6 +58,40 @@ func Test_SignedPromise(t *testing.T) {
 		IssuerSignature: "signature",
 	}
 
-	assert.Equal(t, signedPromise.Promise, promise)
-	assert.Equal(t, signedPromise.IssuerSignature, Signature("signature"))
+	assert.Equal(t, promise, signedPromise.Promise)
+	assert.Equal(t, Signature("signature"), signedPromise.IssuerSignature)
+}
+
+func TestNewPromise(t *testing.T) {
+	promise := NewPromise(
+		identity.Identity{Address: "Consumer"},
+		identity.Identity{Address: "Provider"},
+		money.Money{Amount: 123, Currency: CurrencyToken},
+	)
+
+	assert.Equal(t, 1, promise.SerialNumber)
+	assert.Equal(t, "Consumer", promise.IssuerID)
+	assert.Equal(t, "Provider", promise.BenefiterID)
+	assert.Equal(t, uint64(123), promise.Amount.Amount)
+	assert.Equal(t, CurrencyToken, promise.Amount.Currency)
+}
+
+type fakeSigner struct{}
+
+func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
+	return identity.SignatureBytes([]byte("FakeSignature")), nil
+}
+
+func TestNewSignedPromise(t *testing.T) {
+	promise := NewPromise(
+		identity.Identity{Address: "Consumer"},
+		identity.Identity{Address: "Provider"},
+		money.Money{Amount: 123, Currency: "TEST"},
+	)
+
+	signedPromise, err := NewSignedPromise(promise, &fakeSigner{})
+	assert.NoError(t, err)
+
+	expectedSignature := base64.StdEncoding.EncodeToString([]byte("FakeSignature"))
+	assert.Equal(t, expectedSignature, string(signedPromise.IssuerSignature))
 }
