@@ -20,7 +20,6 @@ package openvpn
 import (
 	"github.com/mysteriumnetwork/node/openvpn/management"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
-	"github.com/mysteriumnetwork/node/session"
 )
 
 // NewClient creates openvpn client with given config params
@@ -39,11 +38,6 @@ type VPNConfig struct {
 
 // ClientConfigGenerator callback returns generated server config
 type ClientConfigGenerator func() *VPNConfig
-
-// ProvideServiceConfig callback providing service configuration for a session
-func (generator ClientConfigGenerator) ProvideServiceConfig() (session.ServiceConfiguration, error) {
-	return generator(), nil
-}
 
 // NewClientConfigGenerator returns function generating config params for remote client
 func NewClientConfigGenerator(primitives *tls.Primitives, vpnServerIP string, port int, protocol string) ClientConfigGenerator {

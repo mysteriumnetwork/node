@@ -77,9 +77,8 @@ func NewManager(
 				serviceOptions.OpenvpnPort,
 				serviceOptions.OpenvpnProtocol,
 			)
-
 			return session.NewManager(
-				session.ServiceConfigProvider(clientConfigGenerator),
+				session.NewOpenVPNServiceConfigProvider(clientConfigGenerator),
 				&session.UUIDGenerator{},
 			)
 		},
