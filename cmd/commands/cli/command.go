@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/metadata"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
 )
 
@@ -151,19 +153,27 @@ func (c *Command) handleActions(line string) {
 }
 
 func (c *Command) connect(argsString string) {
-	if len(argsString) == 0 {
-		info("Press tab to select identity or create a new one. Connect <consumer-identity> <provider-identity>")
+	options := strings.Fields(argsString)
+
+	if len(options) < 2 {
+		info("Please type in the provider identity. Connect <consumer-identity> <provider-identity> [disable-kill-switch]")
 		return
 	}
 
-	identities := strings.Fields(argsString)
+	consumerID, providerID := options[0], options[1]
 
-	if len(identities) != 2 {
-		info("Please type in the provider identity. Connect <consumer-identity> <provider-identity>")
-		return
+	var disableKill bool
+	var err error
+	if len(options) > 2 {
+		disableKillStr := options[2]
+		disableKill, err = strconv.ParseBool(disableKillStr)
+		if err != nil {
+			info("Please use true / false for <disable-kill-switch>")
+			return
+		}
 	}
 
-	consumerID, providerID := identities[0], identities[1]
+	connectOptions := endpoints.ConnectOptions{DisableKillSwitch: disableKill}
 
 	if consumerID == "new" {
 		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)
@@ -177,7 +187,7 @@ func (c *Command) connect(argsString string) {
 
 	status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	_, err := c.tequilapi.Connect(consumerID, providerID)
+	_, err = c.tequilapi.Connect(consumerID, providerID, connectOptions)
 	if err != nil {
 		warn(err)
 		return

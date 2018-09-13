@@ -93,12 +93,12 @@ func (c *GenericConfig) SetTLSCrypt(cryptFile string) {
 	c.AddOptions(OptionFile("tls-crypt", cryptFile, filepath.Join(c.runtimeDir, "ta.key")))
 }
 
-// RestrictReconnects describes conditions which enforces client to close a session in case of failed authentication
-func (c *GenericConfig) RestrictReconnects() {
-	c.SetParam("connect-retry-max", "2")
-	c.SetParam("remap-usr1", "SIGTERM")
+// SetReconnectRetry describes conditions which enforces client to close a session in case of failed authentication
+func (c *GenericConfig) SetReconnectRetry(count int) {
 	c.SetFlag("single-session")
 	c.SetFlag("tls-exit")
+	c.SetParam("connect-retry-max", strconv.Itoa(count))
+	c.SetParam("remap-usr1", "SIGTERM")
 }
 
 // SetKeepAlive setups keepalive interval and timeout values

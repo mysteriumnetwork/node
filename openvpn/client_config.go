@@ -51,8 +51,6 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
 	clientConfig := ClientConfig{config.NewConfig(runtimeDir, scriptSearchPath)}
 
-	clientConfig.RestrictReconnects()
-
 	clientConfig.SetDevice("tun")
 	clientConfig.SetParam("cipher", "AES-256-GCM")
 	clientConfig.SetParam("verb", "3")
@@ -74,13 +72,13 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
 func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string) (*ClientConfig, error) {
-
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
+	clientFileConfig.SetReconnectRetry(2)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
 	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
 	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)

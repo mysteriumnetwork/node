@@ -43,7 +43,7 @@ type fakeManager struct {
 	requestedProvider  identity.Identity
 }
 
-func (fm *fakeManager) Connect(consumerID identity.Identity, providerID identity.Identity) error {
+func (fm *fakeManager) Connect(consumerID identity.Identity, providerID identity.Identity, options connection.ConnectOptions) error {
 	fm.requestedConsumer = consumerID
 	fm.requestedProvider = providerID
 	return fm.onConnectReturn
@@ -330,8 +330,8 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	settableClock := utils.SettableClock{}
 	statsKeeper := stats.NewSessionStatsKeeper(settableClock.GetTime)
-	stats := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
-	statsKeeper.Save(stats)
+	st := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
+	statsKeeper.Save(st)
 
 	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
 	settableClock.SetTime(sessionStart)
@@ -357,8 +357,8 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testing.T) {
 	settableClock := utils.SettableClock{}
 	statsKeeper := stats.NewSessionStatsKeeper(settableClock.GetTime)
-	stats := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
-	statsKeeper.Save(stats)
+	st := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
+	statsKeeper.Save(st)
 
 	manager := fakeManager{}
 	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper)
