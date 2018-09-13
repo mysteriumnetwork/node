@@ -26,8 +26,8 @@ import (
 	"github.com/mysteriumnetwork/node/openvpn/config"
 )
 
-// GetTunnelSetup gets the appropriate Setup for tunnel for linux
-func GetTunnelSetup() Setup {
+// NewTunnelSetup returns a new tunnel setup for linux
+func NewTunnelSetup() Setup {
 	return &LinuxTunDeviceManager{}
 }
 

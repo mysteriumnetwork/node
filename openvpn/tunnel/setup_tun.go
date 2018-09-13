@@ -19,7 +19,7 @@
 
 package tunnel
 
-// GetTunnelSetup sets the required configuration options for the tunnel and returns a Setup for it
-func GetTunnelSetup() Setup {
+// NewTunnelSetup returns a new tunnel setup
+func NewTunnelSetup() Setup {
 	return &DefaultSetup{}
 }
