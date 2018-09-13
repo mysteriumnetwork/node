@@ -15,7 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package promise
+
+import "github.com/mysteriumnetwork/node/money"
+
+// SignedPromise represents payment promise signed by issuer
+type SignedPromise struct {
+	Promise         Promise
+	IssuerSignature Signature
+}
+
+// Promise represents payment promise between two parties
+type Promise struct {
+	SerialNumber int
+	IssuerID     string
+	BenefiterID  string
+	Amount       money.Money
+}
 
 // Signature represents some data signed with a key
 type Signature string

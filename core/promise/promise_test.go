@@ -15,12 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package promises
+package promise
 
 import (
 	"testing"
 
-	dto "github.com/mysteriumnetwork/node/core/promises/dto"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
@@ -34,7 +33,7 @@ func Test_PromiseBody(t *testing.T) {
 		Currency: CurrencyToken,
 	}
 
-	promise := dto.PromiseBody{
+	promise := Promise{
 		SerialNumber: 1,
 		IssuerID:     "issuer1",
 		BenefiterID:  "benefiter1",
@@ -50,13 +49,13 @@ func Test_PromiseBody(t *testing.T) {
 
 func Test_SignedPromise(t *testing.T) {
 
-	promise := dto.PromiseBody{}
+	promise := Promise{}
 
-	signedPromise := dto.SignedPromise{
+	signedPromise := SignedPromise{
 		Promise:         promise,
 		IssuerSignature: "signature",
 	}
 
 	assert.Equal(t, signedPromise.Promise, promise)
-	assert.Equal(t, signedPromise.IssuerSignature, dto.Signature("signature"))
+	assert.Equal(t, signedPromise.IssuerSignature, Signature("signature"))
 }
