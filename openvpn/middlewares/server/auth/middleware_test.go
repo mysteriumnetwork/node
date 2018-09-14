@@ -20,39 +20,15 @@ package auth
 import (
 	"testing"
 
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn/management"
-	ovpnsession "github.com/mysteriumnetwork/node/services/openvpn/session"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 )
 
-const mockedVPNConfig = "config_string"
-
-var mockManager = &ovpnsession.MockSessionManager{
-	session.Session{
-		ID:         session.SessionID("fake-id"),
-		Config:     mockedVPNConfig,
-		ConsumerID: identity.FromAddress("deadbeef"),
-	},
-	true,
-}
-
-var mockExtractor = &ovpnsession.MockIdentityExtractor{
-	identity.FromAddress("deadbeef"),
-	nil,
-}
-
-var fakeManager = ovpnsession.NewManager(mockManager)
-
-var mockValidator = ovpnsession.NewValidator(fakeManager, mockExtractor)
-
 type fakeAuthenticatorStub struct {
+	called        bool
 	username      string
 	password      string
-	called        bool
 	authenticated bool
-	manager       session.Manager
 }
 
 func (f *fakeAuthenticatorStub) fakeAuthenticator(clientID int, username, password string) (bool, error) {
@@ -68,26 +44,8 @@ func (f *fakeAuthenticatorStub) fakeSessionCleanup(username string) error {
 	return nil
 }
 
-func (f *fakeAuthenticatorStub) reset() {
-	f.called = false
-	f.username = ""
-	f.password = ""
-}
-
-func newFakeAuthenticatorStub() fakeAuthenticatorStub {
-	return fakeAuthenticatorStub{}
-}
-
-func (f *fakeAuthenticatorStub) newFakeSessionValidator(clientID int, username, password string) (bool, error) {
-	f.called = true
-	f.username = username
-	f.password = password
-
-	return mockValidator.Validate(clientID, username, password)
-}
-
 func Test_Factory(t *testing.T) {
-	fas := newFakeAuthenticatorStub()
+	fas := fakeAuthenticatorStub{}
 	middleware := NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
 	assert.NotNil(t, middleware)
 }
@@ -101,7 +59,7 @@ func Test_ConsumeLineSkips(t *testing.T) {
 		{">PASSWORD"},
 		{">USERNAME"},
 	}
-	fas := newFakeAuthenticatorStub()
+	fas := fakeAuthenticatorStub{}
 	middleware := NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
 
 	for _, test := range tests {
@@ -121,7 +79,7 @@ func Test_ConsumeLineTakes(t *testing.T) {
 		{">CLIENT:ENV,username=username"},
 	}
 
-	fas := newFakeAuthenticatorStub()
+	fas := fakeAuthenticatorStub{}
 	middleware := NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
 	mockConnection := &management.MockConnection{}
 	middleware.Start(mockConnection)
@@ -142,7 +100,7 @@ func Test_ConsumeLineAuthState(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		fas := newFakeAuthenticatorStub()
+		fas := fakeAuthenticatorStub{}
 		middleware := NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
 		mockConnection := &management.MockConnection{}
 		middleware.Start(mockConnection)
@@ -162,7 +120,7 @@ func Test_ConsumeLineNotAuthState(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		fas := newFakeAuthenticatorStub()
+		fas := fakeAuthenticatorStub{}
 		middleware := NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
 		mockConnection := &management.MockConnection{}
 		middleware.Start(mockConnection)
@@ -183,7 +141,7 @@ func Test_ConsumeLineAuthTrueChecker(t *testing.T) {
 		{">CLIENT:ENV,username=username1"},
 		{">CLIENT:ENV,END"},
 	}
-	fas := newFakeAuthenticatorStub()
+	fas := fakeAuthenticatorStub{}
 	fas.authenticated = true
 	middleware := NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
 	mockConnection := &management.MockConnection{}
@@ -209,7 +167,7 @@ func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
 		{">CLIENT:ENV,password=12341234"},
 		{">CLIENT:ENV,END"},
 	}
-	fas := newFakeAuthenticatorStub()
+	fas := fakeAuthenticatorStub{}
 	fas.authenticated = false
 	middleware := NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
 	mockConnection := &management.MockConnection{}
@@ -221,121 +179,4 @@ func Test_ConsumeLineAuthFalseChecker(t *testing.T) {
 		assert.True(t, consumed, test.line)
 	}
 	assert.Equal(t, "client-deny 3 4 wrong username or password", mockConnection.LastLine)
-}
-
-func TestMiddlewareConsumesClientIdsAntKeysWithSeveralDigits(t *testing.T) {
-	var tests = []string{
-		">CLIENT:CONNECT,115,23",
-		">CLIENT:REAUTH,11,27",
-	}
-
-	fas := newFakeAuthenticatorStub()
-	middleware := NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
-	for _, testLine := range tests {
-		consumed, err := middleware.ConsumeLine(testLine)
-		assert.NoError(t, err, testLine)
-		assert.Equal(t, true, consumed, testLine)
-	}
-}
-
-func TestSecondClientIsNotDisconnectedWhenFirstClientDisconnects(t *testing.T) {
-	var firstClientConnected = []string{
-		">CLIENT:CONNECT,1,4",
-		">CLIENT:ENV,username=client1",
-		">CLIENT:ENV,password=passwd1",
-		">CLIENT:ENV,END",
-	}
-
-	var secondClientConnected = []string{
-		">CLIENT:CONNECT,2,4",
-		">CLIENT:ENV,username=client2",
-		">CLIENT:ENV,password=passwd2",
-		">CLIENT:ENV,END",
-	}
-
-	var firstClientDisconnected = []string{
-		">CLIENT:DISCONNECT,1,4",
-		">CLIENT:ENV,username=client1",
-		">CLIENT:ENV,password=passwd1",
-		">CLIENT:ENV,END",
-	}
-
-	fas := newFakeAuthenticatorStub()
-	fas.authenticated = true
-
-	mockMangement := &management.MockConnection{
-		CommandResult: "SUCCESS",
-	}
-
-	middleware := NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
-	middleware.Start(mockMangement)
-
-	feedLinesToMiddleware(middleware, firstClientConnected)
-
-	assert.True(t, fas.called)
-	assert.Equal(t, "client1", fas.username)
-	assert.Equal(t, "passwd1", fas.password)
-	assert.Equal(t, "client-auth-nt 1 4", mockMangement.LastLine)
-
-	fas.reset()
-	feedLinesToMiddleware(middleware, secondClientConnected)
-	assert.True(t, fas.called)
-	assert.Equal(t, "client2", fas.username)
-	assert.Equal(t, "passwd2", fas.password)
-	assert.Equal(t, "client-auth-nt 2 4", mockMangement.LastLine)
-
-	fas.reset()
-	mockMangement.LastLine = ""
-	feedLinesToMiddleware(middleware, firstClientDisconnected)
-	assert.Empty(t, fas.username)
-	assert.Empty(t, fas.password)
-	assert.False(t, fas.called)
-	assert.Empty(t, mockMangement.LastLine)
-
-}
-
-func TestSecondClientWithTheSameCredentialsIsDisconnected(t *testing.T) {
-	var firstClientConnected = []string{
-		">CLIENT:CONNECT,1,4",
-		">CLIENT:ENV,username=Boop!",
-		">CLIENT:ENV,password=V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=",
-		">CLIENT:ENV,END",
-	}
-
-	var secondClientDisconnected = []string{
-		">CLIENT:CONNECT,2,4",
-		">CLIENT:ENV,username=Boop!",
-		">CLIENT:ENV,password=V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=",
-		">CLIENT:ENV,END",
-	}
-
-	fas := newFakeAuthenticatorStub()
-	middleware := NewMiddleware(fas.newFakeSessionValidator, fas.fakeSessionCleanup)
-
-	mockMangement := &management.MockConnection{
-		CommandResult: "SUCCESS",
-	}
-	middleware.Start(mockMangement)
-
-	feedLinesToMiddleware(middleware, firstClientConnected)
-
-	assert.True(t, fas.called)
-	assert.Equal(t, "Boop!", fas.username)
-	assert.Equal(t, "V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=", fas.password)
-	assert.Equal(t, "client-auth-nt 1 4", mockMangement.LastLine)
-
-	fas.reset()
-	feedLinesToMiddleware(middleware, secondClientDisconnected)
-	assert.True(t, fas.called)
-	assert.Equal(t, "Boop!", fas.username)
-	assert.Equal(t, "V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=", fas.password)
-	// second authentication with the same credentials but with different clientID should fail
-
-	assert.Equal(t, "client-deny 2 4 internal error", mockMangement.LastLine)
-}
-
-func feedLinesToMiddleware(middleware management.Middleware, lines []string) {
-	for _, line := range lines {
-		middleware.ConsumeLine(line)
-	}
 }
