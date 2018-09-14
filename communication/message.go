@@ -20,15 +20,20 @@ package communication
 // MessageEndpoint is special type that describes unique message endpoint
 type MessageEndpoint string
 
-// MessageProducer represents instance which creates messages of specific endpoint
+// MessageProducer represents instance which creates messages to specific endpoint
 type MessageProducer interface {
+	// GetMessageEndpoint returns endpoint where to send messages
 	GetMessageEndpoint() MessageEndpoint
+	// Produce creates message which will be serialized to endpoint
 	Produce() (messagePtr interface{})
 }
 
 // MessageConsumer represents instance which handles messages of specific endpoint
 type MessageConsumer interface {
+	// GetMessageEndpoint returns endpoint where to receive messages
 	GetMessageEndpoint() MessageEndpoint
+	// NewMessage creates struct where message from endpoint will be serialized
 	NewMessage() (messagePtr interface{})
+	// Consume handles messages from endpoint
 	Consume(messagePtr interface{}) error
 }
