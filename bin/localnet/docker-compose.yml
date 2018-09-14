@@ -20,7 +20,7 @@ services:
       MYSQL_PASSWORD: myst_api
 
   discovery:
-    image: mysteriumnetwork/mysterium-api:0.2.1
+    image: mysteriumnetwork/mysterium-api:0.2.2
     expose:
     - 80
     environment:
@@ -29,8 +29,9 @@ services:
       DB_NAME: myst_api
       DB_USER: myst_api
       DB_PASSWORD: myst_api
-      ETHER_PROVIDER_ENDPOINT_URI: "http://geth:8545"
+      ETHER_RPC_URL: "http://geth:8545"
       IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
+      ETHER_MINING_MODE: "poa"
     depends_on:
     - db
     - geth
