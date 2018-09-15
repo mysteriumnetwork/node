@@ -44,6 +44,13 @@ type PromiseIssuer interface {
 // PromiseIssuerCreator creates new PromiseIssuer given context
 type PromiseIssuerCreator func(communication.Dialog) PromiseIssuer
 
+// PromiseIssuer issues promises from consumer to provider.
+// Consumer signs those promises.
+type PromiseIssuer interface {
+	Start(proposal dto.ServiceProposal) error
+	Stop() error
+}
+
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
