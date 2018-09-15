@@ -51,6 +51,9 @@ type PromiseIssuer interface {
 	Stop() error
 }
 
+// PromiseIssuerCreator creates new PromiseIssuer given context
+type PromiseIssuerCreator func(communication.Dialog) PromiseIssuer
+
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
