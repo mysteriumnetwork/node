@@ -49,11 +49,11 @@ var (
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient server.Client
-	newDialog       DialogCreator
-	promiseIssuer   PromiseIssuer
-	newVpnClient    VpnClientCreator
-	statsKeeper     stats.SessionStatsKeeper
+	mysteriumClient  server.Client
+	newDialog        DialogCreator
+	newPromiseIssuer PromiseIssuerCreator
+	newVpnClient     VpnClientCreator
+	statsKeeper      stats.SessionStatsKeeper
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -62,16 +62,16 @@ type connectionManager struct {
 }
 
 // NewManager creates connection manager with given dependencies
-func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator, promiseIssuer PromiseIssuer,
+func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator, promiseIssuerCreator PromiseIssuerCreator,
 	vpnClientCreator VpnClientCreator, statsKeeper stats.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
-		mysteriumClient: mysteriumClient,
-		newDialog:       dialogCreator,
-		newVpnClient:    vpnClientCreator,
-		statsKeeper:     statsKeeper,
-		status:          statusNotConnected(),
-		cleanConnection: warnOnClean,
-		promiseIssuer:   promiseIssuer,
+		mysteriumClient:  mysteriumClient,
+		newDialog:        dialogCreator,
+		newVpnClient:     vpnClientCreator,
+		statsKeeper:      statsKeeper,
+		status:           statusNotConnected(),
+		cleanConnection:  warnOnClean,
+		newPromiseIssuer: promiseIssuerCreator,
 	}
 }
 
@@ -136,11 +136,12 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		return err
 	}
 
-	err = manager.promiseIssuer.Start(*proposal)
+	promiseIssuer := manager.newPromiseIssuer(dialog)
+	err = promiseIssuer.Start(*proposal)
 	if err != nil {
 		return err
 	}
-	cancel = append(cancel, func() { manager.promiseIssuer.Stop() })
+	cancel = append(cancel, func() { promiseIssuer.Stop() })
 
 	stateChannel := make(chan openvpn.State, 10)
 	openvpnClient, err := manager.startOpenvpnClient(vpnSession, consumerID, providerID, stateChannel, options)
@@ -160,7 +161,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		firewall.NewKillSwitch().Enable()
 	}
 
-	go openvpnClientWaiter(openvpnClient, dialog, manager.promiseIssuer)
+	go openvpnClientWaiter(openvpnClient, dialog, promiseIssuer)
 	go manager.consumeOpenvpnStates(stateChannel, vpnSession.ID)
 	return nil
 }

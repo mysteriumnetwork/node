@@ -54,7 +54,9 @@ func NewNode(
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
-	promiseIssuer := &noop.PromiseIssuer{}
+	promiseIssuerFactory := func(dialog communication.Dialog) connection.PromiseIssuer {
+		return &noop.PromiseIssuer{Dialog: dialog}
+	}
 
 	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
 
@@ -70,7 +72,7 @@ func NewNode(
 		statsKeeper,
 		originalLocationCache,
 	)
-	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuer, vpnClientFactory, statsKeeper)
+	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuerFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)

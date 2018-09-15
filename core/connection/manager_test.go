@@ -73,6 +73,9 @@ func (tc *testContext) SetupTest() {
 	}
 
 	tc.fakePromiseIssuer = &fakePromiseIssuer{}
+	promiseIssuerFactory := func(_ communication.Dialog) PromiseIssuer {
+		return tc.fakePromiseIssuer
+	}
 
 	tc.fakeOpenVpn = &fakeOpenvpnClient{
 		nil,
@@ -108,7 +111,7 @@ func (tc *testContext) SetupTest() {
 	}
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, tc.fakePromiseIssuer, fakeVpnClientFactory, tc.fakeStatsKeeper)
+	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, fakeVpnClientFactory, tc.fakeStatsKeeper)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {

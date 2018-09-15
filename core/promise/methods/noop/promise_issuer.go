@@ -17,10 +17,16 @@
 
 package noop
 
-import "github.com/mysteriumnetwork/node/service_discovery/dto"
+import (
+	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
+)
 
 // PromiseIssuer issues promises in such way, what no actual money is added to promise
 type PromiseIssuer struct {
+	Dialog communication.Dialog
+
+	// these are populated by Start at runtime
 	proposal dto.ServiceProposal
 }
 
