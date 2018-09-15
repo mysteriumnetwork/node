@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/server"
@@ -53,6 +54,8 @@ func NewNode(
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
+	promiseIssuer := &noop.PromiseIssuer{}
+
 	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
 
 	locationDetector := location.NewDetector(ipResolver, locationResolver)
@@ -67,7 +70,7 @@ func NewNode(
 		statsKeeper,
 		originalLocationCache,
 	)
-	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, vpnClientFactory, statsKeeper)
+	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuer, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)

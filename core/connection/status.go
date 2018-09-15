@@ -25,7 +25,7 @@ type State string
 const (
 	// NotConnected means no connection exists
 	NotConnected = State("NotConnected")
-	// Connecting means that connection is started but not yet fully established
+	// Connecting means that connection is startCalled but not yet fully established
 	Connecting = State("Connecting")
 	// Connected means that fully established connection exists
 	Connected = State("Connected")
