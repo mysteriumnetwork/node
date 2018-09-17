@@ -18,14 +18,15 @@
 package openvpn
 
 import (
+	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/management"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
 )
 
 // NewServer constructs new openvpn server instance
-func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) Process {
+func NewServer(openvpnBinary string, generateConfig ServerConfigGenerator, middlewares ...management.Middleware) openvpn.Process {
 	serverConfig := generateConfig()
-	return CreateNewProcess(openvpnBinary, serverConfig.GenericConfig, middlewares...)
+	return openvpn.CreateNewProcess(openvpnBinary, serverConfig.GenericConfig, middlewares...)
 }
 
 // ServerConfigGenerator callback returns generated server config

@@ -23,12 +23,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-//ServiceConfigProvider interface defines configuration providing dependency
-type ServiceConfigProvider interface {
-	// ProvideServiceConfig is expected to provide serializable service configuration params from underlying service to remote party
-	ProvideServiceConfig() (ServiceConfiguration, error)
-}
-
 // NewManager returns session manager which maintains a map of session id -> session
 func NewManager(serviceConfigProvider ServiceConfigProvider, idGenerator Generator) *manager {
 	return &manager{

@@ -17,23 +17,27 @@
 
 package session
 
-import (
-	"github.com/mysteriumnetwork/node/openvpn"
-)
+import "github.com/mysteriumnetwork/node/services/openvpn"
+
+// ServiceConfigProvider interface defines configuration providing dependency
+type ServiceConfigProvider interface {
+	// ProvideServiceConfig is expected to provide serializable service configuration params from underlying service to remote party
+	ProvideServiceConfig() (ServiceConfiguration, error)
+}
 
 // OpenVPNServiceConfigProvider is a service config provider for openvpn
 type OpenVPNServiceConfigProvider struct {
-	clientConfigGenerator openvpn.ClientConfigGenerator
+	generator openvpn.ClientConfigGenerator
 }
 
 // NewOpenVPNServiceConfigProvider creates a new instance of OpenVPNServiceConfigProvider
 func NewOpenVPNServiceConfigProvider(generator openvpn.ClientConfigGenerator) ServiceConfigProvider {
 	return OpenVPNServiceConfigProvider{
-		clientConfigGenerator: generator,
+		generator: generator,
 	}
 }
 
 // ProvideServiceConfig callback providing service configuration for a session
 func (provider OpenVPNServiceConfigProvider) ProvideServiceConfig() (ServiceConfiguration, error) {
-	return provider.clientConfigGenerator(), nil
+	return provider.generator(), nil
 }
