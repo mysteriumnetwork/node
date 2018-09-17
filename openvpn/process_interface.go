@@ -15,15 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package linux
+package openvpn
 
-// TunnelService defines interface to manage tun device
-type TunnelService interface {
+// Process defines openvpn process interface with basic controls
+// It must die!
+type Process interface {
 	Start() error
+	Wait() error
 	Stop()
-}
-
-// TunnelDevice represents tun device structure
-type TunnelDevice struct {
-	Name string
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package tunnel
 
-import (
-	"github.com/mysteriumnetwork/node/openvpn/config"
-	"github.com/mysteriumnetwork/node/openvpn/management"
-	"github.com/mysteriumnetwork/node/openvpn/tunnel"
-)
+import "github.com/mysteriumnetwork/node/openvpn/config"
 
-// CreateNewProcess creates new openvpn process with given config params
-func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *OpenvpnProcess {
-	tunnelSetup := tunnel.NewTunnelSetup()
-	return newProcess(openvpnBinary, tunnelSetup, config, middlewares...)
+// DefaultSetup represents a default tunnel setup - aka it sets the tun in configuration
+type DefaultSetup struct {
+}
+
+// Setup implements the setup method for tunnel interface
+func (ds *DefaultSetup) Setup(config *config.GenericConfig) error {
+	config.SetDevice("tun")
+	return nil
+}
+
+// Stop implements the stop method for tunnel interface
+func (ds *DefaultSetup) Stop() {
+
 }

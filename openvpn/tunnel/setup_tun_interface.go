@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package tunnel
 
 import (
+	"errors"
+
 	"github.com/mysteriumnetwork/node/openvpn/config"
-	"github.com/mysteriumnetwork/node/openvpn/management"
-	"github.com/mysteriumnetwork/node/openvpn/tunnel"
 )
 
-// CreateNewProcess creates new openvpn process with given config params
-func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *OpenvpnProcess {
-	tunnelSetup := tunnel.NewTunnelSetup()
-	return newProcess(openvpnBinary, tunnelSetup, config, middlewares...)
+const tunLogPrefix = "[linux tun service] "
+
+// ErrNoFreeTunDevice is thrown when no free tun device is available on system
+var ErrNoFreeTunDevice = errors.New("no free tun device found")
+
+// Setup represents the operations required for a tunnel setup
+type Setup interface {
+	Setup(config *config.GenericConfig) error
+	Stop()
 }

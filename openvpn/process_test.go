@@ -21,12 +21,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/openvpn/tunnel"
+
 	"github.com/mysteriumnetwork/node/openvpn/config"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestOpenvpnProcessStartsAndStopsSuccessfully(t *testing.T) {
-	process := newProcess("testdata/openvpn-mock-client.sh", &config.GenericConfig{})
+	process := newProcess("testdata/openvpn-mock-client.sh", &tunnel.NoopSetup{}, &config.GenericConfig{})
 
 	err := process.Start()
 	assert.NoError(t, err)
@@ -40,7 +42,7 @@ func TestOpenvpnProcessStartsAndStopsSuccessfully(t *testing.T) {
 }
 
 func TestOpenvpnProcessStartReportsErrorIfCmdWrapperDiesTooEarly(t *testing.T) {
-	process := newProcess("testdata/failing-openvpn-mock-client.sh", &config.GenericConfig{})
+	process := newProcess("testdata/failing-openvpn-mock-client.sh", &tunnel.NoopSetup{}, &config.GenericConfig{})
 
 	err := process.Start()
 	assert.Error(t, err)

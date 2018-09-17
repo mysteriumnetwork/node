@@ -1,5 +1,7 @@
+// +build !linux
+
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +17,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package tunnel
 
-import (
-	"github.com/mysteriumnetwork/node/openvpn/config"
-	"github.com/mysteriumnetwork/node/openvpn/management"
-	"github.com/mysteriumnetwork/node/openvpn/tunnel"
-)
-
-// CreateNewProcess creates new openvpn process with given config params
-func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) *OpenvpnProcess {
-	tunnelSetup := tunnel.NewTunnelSetup()
-	return newProcess(openvpnBinary, tunnelSetup, config, middlewares...)
+// NewTunnelSetup returns a new tunnel setup
+func NewTunnelSetup() Setup {
+	return &DefaultSetup{}
 }

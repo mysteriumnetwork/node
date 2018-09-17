@@ -1,7 +1,5 @@
-// +build linux
-
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,14 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package tunnel
 
-import (
-	"github.com/mysteriumnetwork/node/openvpn/config"
-	"github.com/mysteriumnetwork/node/openvpn/management"
-)
+import "github.com/mysteriumnetwork/node/openvpn/config"
 
-// CreateNewProcess function creates new linux process and overrides default function in linux environment
-func CreateNewProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) Process {
-	return NewLinuxProcess(openvpnBinary, config, middlewares...)
+// NoopSetup represents a noop tunnel setup - aka it does nothing
+type NoopSetup struct {
+}
+
+// Setup implements the setup method for tunnel interface
+func (gts *NoopSetup) Setup(config *config.GenericConfig) error {
+	return nil
+}
+
+// Stop implements the stop method for tunnel interface
+func (gts *NoopSetup) Stop() {
+
 }

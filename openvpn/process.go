@@ -24,32 +24,40 @@ import (
 
 	"github.com/mysteriumnetwork/node/openvpn/config"
 	"github.com/mysteriumnetwork/node/openvpn/management"
+	"github.com/mysteriumnetwork/node/openvpn/tunnel"
 )
 
-// Process defines openvpn process interface with basic controls
-type Process interface {
-	Start() error
-	Wait() error
-	Stop()
+// OpenvpnProcess represents an openvpn process manager
+type OpenvpnProcess struct {
+	config      *config.GenericConfig
+	tunnelSetup tunnel.Setup
+	management  *management.Management
+	cmd         *CmdWrapper
 }
 
-type openvpnProcess struct {
-	config     *config.GenericConfig
-	management *management.Management
-	cmd        *CmdWrapper
-}
-
-func newProcess(openvpnBinary string, config *config.GenericConfig, middlewares ...management.Middleware) Process {
-	return &openvpnProcess{
-		config:     config,
-		management: management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
-		cmd:        NewCmdWrapper(openvpnBinary, "[openvpn-process] "),
+func newProcess(
+	openvpnBinary string,
+	tunnelSetup tunnel.Setup,
+	config *config.GenericConfig,
+	middlewares ...management.Middleware,
+) *OpenvpnProcess {
+	return &OpenvpnProcess{
+		tunnelSetup: tunnelSetup,
+		config:      config,
+		management:  management.NewManagement(management.LocalhostOnRandomPort, "[client-management] ", middlewares...),
+		cmd:         NewCmdWrapper(openvpnBinary, "[openvpn-process] "),
 	}
 }
 
-func (openvpn *openvpnProcess) Start() error {
+// Start starts the openvpn process
+func (openvpn *OpenvpnProcess) Start() error {
+	if err := openvpn.tunnelSetup.Setup(openvpn.config); err != nil {
+		return err
+	}
+
 	err := openvpn.management.WaitForConnection()
 	if err != nil {
+		openvpn.tunnelSetup.Stop()
 		return err
 	}
 
@@ -59,6 +67,8 @@ func (openvpn *openvpnProcess) Start() error {
 	// Fetch the current arguments
 	arguments, err := (*openvpn.config).ToArguments()
 	if err != nil {
+		openvpn.management.Stop()
+		openvpn.tunnelSetup.Stop()
 		return err
 	}
 
@@ -67,6 +77,7 @@ func (openvpn *openvpnProcess) Start() error {
 	err = openvpn.cmd.Start(arguments)
 	if err != nil {
 		openvpn.management.Stop()
+		openvpn.tunnelSetup.Stop()
 		return err
 	}
 
@@ -78,6 +89,7 @@ func (openvpn *openvpnProcess) Start() error {
 		return errors.New("management failed to accept connection")
 	case exitError := <-openvpn.cmd.CmdExitError:
 		openvpn.management.Stop()
+		openvpn.tunnelSetup.Stop()
 		if exitError != nil {
 			return exitError
 		}
@@ -87,11 +99,13 @@ func (openvpn *openvpnProcess) Start() error {
 	}
 }
 
-func (openvpn *openvpnProcess) Wait() error {
+// Wait waits for the openvpn process to complete
+func (openvpn *OpenvpnProcess) Wait() error {
 	return openvpn.cmd.Wait()
 }
 
-func (openvpn *openvpnProcess) Stop() {
+// Stop stops the openvpn process
+func (openvpn *OpenvpnProcess) Stop() {
 	waiter := sync.WaitGroup{}
 	//TODO which to signal for close first ?
 	//if we stop process before management, managemnt won't have a chance to send any commands from middlewares on stop
@@ -107,6 +121,7 @@ func (openvpn *openvpnProcess) Stop() {
 		defer waiter.Done()
 		openvpn.management.Stop()
 	}()
-
 	waiter.Wait()
+
+	openvpn.tunnelSetup.Stop()
 }
