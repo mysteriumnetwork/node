@@ -18,7 +18,7 @@
 package session
 
 import (
-	"errors"
+	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
@@ -34,9 +34,13 @@ type Validator struct {
 }
 
 // NewValidator return Validator instance
-func NewValidator(m *clientMap, extractor identity.Extractor) *Validator {
+func NewValidator(sessionManager session.Manager, extractor identity.Extractor) *Validator {
 	return &Validator{
-		clientMap:         m,
+		clientMap: &clientMap{
+			sessionManager:   sessionManager,
+			sessionClientIDs: make(map[session.SessionID]int),
+			sessionMapLock:   sync.Mutex{},
+		},
 		identityExtractor: extractor,
 	}
 }
@@ -45,14 +49,14 @@ func NewValidator(m *clientMap, extractor identity.Extractor) *Validator {
 // it expects session id as username, and session signature signed by client as password
 func (v *Validator) Validate(clientID int, sessionString, signatureString string) (bool, error) {
 	sessionID := session.SessionID(sessionString)
-	currentSession, found, err := v.clientMap.FindSession(clientID, sessionID)
+	currentSession, found, err := v.clientMap.FindClientSession(clientID, sessionID)
 
 	if err != nil {
 		return false, err
 	}
 
 	if !found {
-		v.clientMap.UpdateSession(clientID, sessionID)
+		v.clientMap.UpdateClientSession(clientID, sessionID)
 	}
 
 	signature := identity.SignatureBase64(signatureString)
@@ -66,12 +70,6 @@ func (v *Validator) Validate(clientID int, sessionString, signatureString string
 // Cleanup removes session from underlying session managers
 func (v *Validator) Cleanup(sessionString string) error {
 	sessionID := session.SessionID(sessionString)
-	_, found := v.clientMap.sessionManager.FindSession(sessionID)
 
-	if !found {
-		return errors.New("no underlying session exists: " + sessionString)
-	}
-
-	v.clientMap.RemoveSession(sessionID)
-	return nil
+	return v.clientMap.RemoveSession(sessionID)
 }

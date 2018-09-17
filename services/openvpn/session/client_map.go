@@ -24,30 +24,21 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-// NewClientMap returns struct which maintains a map of session id -> OpenVPN clientID
-func NewClientMap(m session.Manager) *clientMap {
-	return &clientMap{
-		sessionManager:   m,
-		sessionClientIDs: make(map[session.SessionID]int),
-		sessionMapLock:   sync.Mutex{},
-	}
-}
-
 type clientMap struct {
 	sessionManager   session.Manager
 	sessionClientIDs map[session.SessionID]int
 	sessionMapLock   sync.Mutex
 }
 
-// FindSession returns OpenVPN session instance by given session id
-func (manager *clientMap) FindSession(clientID int, id session.SessionID) (session.Session, bool, error) {
-	sessionInstance, foundSession := manager.sessionManager.FindSession(id)
+// FindClientSession returns OpenVPN session instance by given session id
+func (cm *clientMap) FindClientSession(clientID int, id session.SessionID) (session.Session, bool, error) {
+	sessionInstance, foundSession := cm.sessionManager.FindSession(id)
 
 	if !foundSession {
 		return session.Session{}, false, errors.New("no underlying session exists, possible break-in attempt")
 	}
 
-	sessionClientID, clientIDFound := manager.sessionClientIDs[id]
+	sessionClientID, clientIDFound := cm.sessionClientIDs[id]
 
 	if clientIDFound && clientID != sessionClientID {
 		return sessionInstance, false, errors.New("provided clientID does not mach active clientID")
@@ -56,24 +47,30 @@ func (manager *clientMap) FindSession(clientID int, id session.SessionID) (sessi
 	return sessionInstance, clientIDFound, nil
 }
 
-// UpdateSession updates OpenVPN session with clientID, returns false on clientID conflict
-func (manager *clientMap) UpdateSession(clientID int, id session.SessionID) bool {
-	manager.sessionMapLock.Lock()
-	defer manager.sessionMapLock.Unlock()
+// UpdateClientSession updates OpenVPN session with clientID, returns false on clientID conflict
+func (cm *clientMap) UpdateClientSession(clientID int, id session.SessionID) bool {
+	cm.sessionMapLock.Lock()
+	defer cm.sessionMapLock.Unlock()
 
-	_, foundClientID := manager.sessionClientIDs[id]
+	_, foundClientID := cm.sessionClientIDs[id]
 	if !foundClientID {
-		manager.sessionClientIDs[id] = clientID
+		cm.sessionClientIDs[id] = clientID
 	}
 
-	return manager.sessionClientIDs[id] == clientID
+	return cm.sessionClientIDs[id] == clientID
 }
 
 // RemoveSession removes given session from underlying session managers
-func (manager *clientMap) RemoveSession(id session.SessionID) {
-	manager.sessionMapLock.Lock()
-	defer manager.sessionMapLock.Unlock()
+func (cm *clientMap) RemoveSession(id session.SessionID) error {
+	cm.sessionMapLock.Lock()
+	defer cm.sessionMapLock.Unlock()
 
-	manager.sessionManager.RemoveSession(id)
-	delete(manager.sessionClientIDs, id)
+	_, found := cm.sessionManager.FindSession(id)
+	if !found {
+		return errors.New("no underlying session exists: " + string(id))
+	}
+
+	cm.sessionManager.RemoveSession(id)
+	delete(cm.sessionClientIDs, id)
+	return nil
 }
