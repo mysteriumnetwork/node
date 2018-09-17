@@ -23,8 +23,8 @@ import (
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/openvpn/discovery/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 )
 
 // NewServiceProposalWithLocation creates service proposal description for openvpn service

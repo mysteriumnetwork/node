@@ -15,19 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package credentials
+package session
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
-	ovpnsession "github.com/mysteriumnetwork/node/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 // SignatureCredentialsProvider returns session id as username and id signed with given signer as password
-func SignatureCredentialsProvider(id session.SessionID, signer identity.Signer) auth.CredentialsProvider {
+func SignatureCredentialsProvider(sessionID session.SessionID, signer identity.Signer) func() (username string, password string, err error) {
 	return func() (username string, password string, err error) {
-		signature, err := signer.Sign([]byte(ovpnsession.SignaturePrefix + id))
-		return string(id), signature.Base64(), err
+		signature, err := signer.Sign([]byte(SignaturePrefix + sessionID))
+		if err != nil {
+			return
+		}
+		return string(sessionID), signature.Base64(), err
 	}
 }

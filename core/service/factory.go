@@ -35,8 +35,9 @@ import (
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
-	openvpn_session "github.com/mysteriumnetwork/node/openvpn/session"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
+	openvpn_node "github.com/mysteriumnetwork/node/services/openvpn"
+	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -71,21 +72,23 @@ func NewManager(
 
 		sessionManagerFactory: func(primitives *tls.Primitives, vpnServerIP string) session.Manager {
 			// TODO: check nodeOptions for --openvpn-transport option
-			clientConfigGenerator := openvpn.NewClientConfigGenerator(
+			clientConfigGenerator := openvpn_node.NewClientConfigGenerator(
 				primitives,
 				vpnServerIP,
 				serviceOptions.OpenvpnPort,
 				serviceOptions.OpenvpnProtocol,
 			)
-
+			serviceConfigProvider := func() (session.ServiceConfiguration, error) {
+				return clientConfigGenerator(), nil
+			}
 			return session.NewManager(
-				session.ServiceConfigProvider(clientConfigGenerator),
+				serviceConfigProvider,
 				&session.UUIDGenerator{},
 			)
 		},
 		vpnServerFactory: func(manager session.Manager, primitives *tls.Primitives, callback state.Callback) openvpn.Process {
 			// TODO: check nodeOptions for --openvpn-transport option
-			serverConfigGenerator := openvpn.NewServerConfigGenerator(
+			serverConfigGenerator := openvpn_node.NewServerConfigGenerator(
 				nodeOptions.Directories.Runtime,
 				nodeOptions.Directories.Config,
 				primitives,
@@ -96,7 +99,7 @@ func NewManager(
 			ovpnSessionManager := openvpn_session.NewManager(manager)
 			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
 
-			return openvpn.NewServer(
+			return openvpn_node.NewServer(
 				nodeOptions.Openvpn.BinaryPath,
 				serverConfigGenerator,
 				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),

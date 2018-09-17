@@ -21,8 +21,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/openvpn"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/stretchr/testify/assert"
 )
 

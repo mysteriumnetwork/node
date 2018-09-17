@@ -23,11 +23,8 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-//ServiceConfigProvider interface defines configuration providing dependency
-type ServiceConfigProvider interface {
-	// ProvideServiceConfig is expected to provide serializable service configuration params from underlying service to remote party
-	ProvideServiceConfig() (ServiceConfiguration, error)
-}
+// ServiceConfigProvider defines configuration providing dependency
+type ServiceConfigProvider func() (ServiceConfiguration, error)
 
 // NewManager returns session manager which maintains a map of session id -> session
 func NewManager(serviceConfigProvider ServiceConfigProvider, idGenerator Generator) *manager {
@@ -52,7 +49,7 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance Sessio
 	defer manager.creationLock.Unlock()
 	sessionInstance.ID = manager.idGenerator.Generate()
 	sessionInstance.ConsumerID = peerID
-	sessionInstance.Config, err = manager.configProvider.ProvideServiceConfig()
+	sessionInstance.Config, err = manager.configProvider()
 	if err != nil {
 		return
 	}

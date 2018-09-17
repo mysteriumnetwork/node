@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,6 +31,6 @@ func TestNewSessionStatsSaver(t *testing.T) {
 
 	saver := NewSessionStatsSaver(statsKeeper)
 	stats := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
-	saver(stats)
+	saver(bytescount.Bytecount{BytesOut: 1, BytesIn: 2})
 	assert.Equal(t, stats, statsKeeper.Retrieve())
 }

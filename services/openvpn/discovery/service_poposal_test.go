@@ -22,9 +22,9 @@ import (
 	"testing"
 
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
-	"github.com/mysteriumnetwork/node/openvpn"
-	dto_openvpn "github.com/mysteriumnetwork/node/openvpn/discovery/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/services/openvpn"
+	dto_openvpn "github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 

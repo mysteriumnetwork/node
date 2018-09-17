@@ -18,14 +18,22 @@
 package tls
 
 import (
+	"crypto/x509/pkix"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCertificatesAreGenerated(t *testing.T) {
-	_, err := NewTLSPrimitives(dto.Location{}, identity.FromAddress("0xdeadbeef"))
+	_, err := NewTLSPrimitives(pkix.Name{
+		Country:            []string{""},
+		Organization:       []string{""},
+		OrganizationalUnit: []string{""},
+	}, pkix.Name{
+		Country:            []string{""},
+		Organization:       []string{""},
+		OrganizationalUnit: []string{""},
+		CommonName:         "0xdeadbeef",
+	})
 	assert.NoError(t, err)
 }

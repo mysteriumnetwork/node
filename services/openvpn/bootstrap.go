@@ -20,8 +20,8 @@ package openvpn
 import (
 	"encoding/json"
 
-	dto_openvpn "github.com/mysteriumnetwork/node/openvpn/discovery/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	dto_openvpn "github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 )
 
 // Bootstrap is called on program initialization time and registers various deserializers related to opepnvpn service

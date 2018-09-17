@@ -19,9 +19,7 @@ package tls
 
 import (
 	"crypto/x509"
-
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"crypto/x509/pkix"
 )
 
 // Primitives structure holds TLS primitives required to setup basic cryptographics for openvpn server/client
@@ -32,19 +30,19 @@ type Primitives struct {
 }
 
 // NewTLSPrimitives function creates TLS primitives for given service location and provider id
-func NewTLSPrimitives(serviceLocation dto.Location, serviceProviderID identity.Identity) (*Primitives, error) {
+func NewTLSPrimitives(caCertSubject, serverCertSubject pkix.Name) (*Primitives, error) {
 
 	key, err := createTLSCryptKey()
 	if err != nil {
 		return nil, err
 	}
 
-	ca, err := CreateAuthority(newCACert(serviceLocation))
+	ca, err := CreateAuthority(newCACert(caCertSubject))
 	if err != nil {
 		return nil, err
 	}
 
-	server, err := ca.CreateDerived(newServerCert(x509.ExtKeyUsageServerAuth, serviceLocation, serviceProviderID))
+	server, err := ca.CreateDerived(newServerCert(x509.ExtKeyUsageServerAuth, serverCertSubject))
 	if err != nil {
 		return nil, err
 	}

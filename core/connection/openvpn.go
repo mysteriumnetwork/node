@@ -26,10 +26,12 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/auth"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
+	openvpn_bytescount "github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
-	"github.com/mysteriumnetwork/node/openvpn/session/credentials"
 	"github.com/mysteriumnetwork/node/server"
+	openvpn_node "github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
+	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -42,13 +44,13 @@ func ConfigureVpnClientFactory(
 	originalLocationCache location.Cache,
 ) VpnClientCreator {
 	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback, options ConnectOptions) (openvpn.Process, error) {
-		var receivedConfig openvpn.VPNConfig
+		var receivedConfig openvpn_node.VPNConfig
 		err := json.Unmarshal(vpnSession.Config, &receivedConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(&receivedConfig, configDirectory, runtimeDirectory)
+		vpnClientConfig, err := openvpn_node.NewClientConfigFromSession(&receivedConfig, configDirectory, runtimeDirectory)
 		if err != nil {
 			return nil, err
 		}
@@ -67,13 +69,13 @@ func ConfigureVpnClientFactory(
 			time.Minute,
 		)
 
-		credentialsProvider := credentials.SignatureCredentialsProvider(vpnSession.ID, signer)
+		credentialsProvider := openvpn_session.SignatureCredentialsProvider(vpnSession.ID, signer)
 
-		return openvpn.NewClient(
+		return openvpn_node.NewClient(
 			openvpnBinary,
 			vpnClientConfig,
 			state.NewMiddleware(stateCallback, statsSender.StateHandler),
-			bytescount.NewMiddleware(statsSaver, 1*time.Second),
+			openvpn_bytescount.NewMiddleware(statsSaver, 1*time.Second),
 			auth.NewMiddleware(credentialsProvider),
 		), nil
 	}

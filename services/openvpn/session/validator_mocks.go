@@ -24,14 +24,8 @@ import (
 
 const mockedVPNConfig = "config_string"
 
-type mockedConfigProvider func() string
-
-func (mcp mockedConfigProvider) ProvideServiceConfig() (session.ServiceConfiguration, error) {
-	return mcp(), nil
-}
-
-func provideMockedVPNConfig() string {
-	return mockedVPNConfig
+func mockedConfigProvider() (session.ServiceConfiguration, error) {
+	return mockedVPNConfig, nil
 }
 
 // MockIdentityExtractor mocked identity extractor

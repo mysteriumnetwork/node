@@ -18,6 +18,8 @@
 package service
 
 import (
+	"crypto/x509/pkix"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -28,10 +30,10 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/openvpn"
-	openvpn_discovery "github.com/mysteriumnetwork/node/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/openvpn/tls"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -103,7 +105,19 @@ func (manager *Manager) Start() (err error) {
 
 	proposal := openvpn_discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, manager.protocol)
 
-	primitives, err := tls.NewTLSPrimitives(serviceLocation, providerID)
+	caSubject := pkix.Name{
+		Country:            []string{serviceLocation.Country},
+		Organization:       []string{"Mystermium.network"},
+		OrganizationalUnit: []string{"Mysterium Team"},
+	}
+	serverCertSubject := pkix.Name{
+		Country:            []string{serviceLocation.Country},
+		Organization:       []string{"Mysterium node operator company"},
+		OrganizationalUnit: []string{"Node operator team"},
+		CommonName:         providerID.Address,
+	}
+
+	primitives, err := tls.NewTLSPrimitives(caSubject, serverCertSubject)
 	if err != nil {
 		return err
 	}

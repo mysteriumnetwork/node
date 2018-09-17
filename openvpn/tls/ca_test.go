@@ -19,24 +19,33 @@ package tls
 
 import (
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
-var fakeServiceLocation = dto.Location{"GB", "", ""}
-var fakeProviderID = identity.Identity{"some fake identity "}
+var caSubject = pkix.Name{
+	Country:            []string{"GB"},
+	Organization:       []string{""},
+	OrganizationalUnit: []string{""},
+}
+
+var serverCertSubject = pkix.Name{
+	Country:            []string{"GB"},
+	Organization:       []string{""},
+	OrganizationalUnit: []string{""},
+	CommonName:         "some fake identity ",
+}
 
 func TestCertificateAuthorityIsCreatedAndCertCanBeSerialized(t *testing.T) {
-	_, err := CreateAuthority(newCACert(fakeServiceLocation))
+	_, err := CreateAuthority(newCACert(caSubject))
 	assert.NoError(t, err)
 }
 
 func TestServerCertificateIsCreatedAndBothCertAndKeyCanBeSerialized(t *testing.T) {
-	ca, err := CreateAuthority(newCACert(fakeServiceLocation))
+	ca, err := CreateAuthority(newCACert(caSubject))
 	assert.NoError(t, err)
-	_, err = ca.CreateDerived(newServerCert(x509.ExtKeyUsageServerAuth, fakeServiceLocation, fakeProviderID))
+	_, err = ca.CreateDerived(newServerCert(x509.ExtKeyUsageServerAuth, serverCertSubject))
 	assert.NoError(t, err)
 }
