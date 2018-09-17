@@ -26,7 +26,13 @@ import (
 )
 
 // SessionStatsHandler is invoked when middleware receives statistics
-type SessionStatsHandler func(bytesIn, bytesOut int) error
+type SessionStatsHandler func(Bytecount) error
+
+// Bytecount represents the bytecount response
+type Bytecount struct {
+	BytesIn  int
+	BytesOut int
+}
 
 const byteCountCommandTemplate = "bytecount %d"
 
@@ -71,7 +77,7 @@ func (middleware *middleware) ConsumeLine(line string) (consumed bool, err error
 		return
 	}
 
-	err = middleware.sessionStatsHandler(bytesIn, bytesOut)
+	err = middleware.sessionStatsHandler(Bytecount{BytesIn: bytesIn, BytesOut: bytesOut})
 
 	return
 }

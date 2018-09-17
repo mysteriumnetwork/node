@@ -22,8 +22,8 @@ type fakeStatsRecorder struct {
 	BytesOut int
 }
 
-func (sender *fakeStatsRecorder) record(bytesIn, bytesOut int) error {
-	sender.BytesIn = bytesIn
-	sender.BytesOut = bytesOut
+func (sender *fakeStatsRecorder) record(bc Bytecount) error {
+	sender.BytesIn = bc.BytesIn
+	sender.BytesOut = bc.BytesOut
 	return nil
 }
