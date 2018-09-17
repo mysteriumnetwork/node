@@ -48,8 +48,8 @@ func TestWaitAndStopProcessDoesNotDeadLocks(t *testing.T) {
 
 	select {
 	case <-processWaitExited:
-	case <-time.After(100 * time.Millisecond):
-		assert.Fail(t, "CmdWrapper.Wait() didn't return in 100 miliseconds")
+	case <-time.After(600 * time.Millisecond):
+		assert.Fail(t, "CmdWrapper.Wait() didn't return in 600 miliseconds")
 	}
 
 	select {
