@@ -34,7 +34,7 @@ type MockIdentityExtractor struct {
 	OnExtractReturnError    error
 }
 
-// MockSessionManager mocked session manager
+// MockSessionManager mocked session clientMap
 type MockSessionManager struct {
 	OnFindReturnSession session.Session
 	OnFindReturnSuccess bool

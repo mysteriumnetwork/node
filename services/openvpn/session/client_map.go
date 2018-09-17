@@ -21,32 +21,26 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 )
 
-// NewManager returns session manager which maintains a map of session id -> OpenVPN clientID
-func NewManager(m session.Manager) *manager {
-	return &manager{
+// NewClientMap returns struct which maintains a map of session id -> OpenVPN clientID
+func NewClientMap(m session.Manager) *clientMap {
+	return &clientMap{
 		sessionManager:   m,
 		sessionClientIDs: make(map[session.SessionID]int),
 		sessionMapLock:   sync.Mutex{},
 	}
 }
 
-type manager struct {
+type clientMap struct {
 	sessionManager   session.Manager
 	sessionClientIDs map[session.SessionID]int
 	sessionMapLock   sync.Mutex
 }
 
-// Create delegates session creation to underlying session.manager
-func (manager *manager) Create(peerID identity.Identity) (session.Session, error) {
-	return manager.sessionManager.Create(peerID)
-}
-
 // FindSession returns OpenVPN session instance by given session id
-func (manager *manager) FindSession(clientID int, id session.SessionID) (session.Session, bool, error) {
+func (manager *clientMap) FindSession(clientID int, id session.SessionID) (session.Session, bool, error) {
 	sessionInstance, foundSession := manager.sessionManager.FindSession(id)
 
 	if !foundSession {
@@ -63,7 +57,7 @@ func (manager *manager) FindSession(clientID int, id session.SessionID) (session
 }
 
 // UpdateSession updates OpenVPN session with clientID, returns false on clientID conflict
-func (manager *manager) UpdateSession(clientID int, id session.SessionID) bool {
+func (manager *clientMap) UpdateSession(clientID int, id session.SessionID) bool {
 	manager.sessionMapLock.Lock()
 	defer manager.sessionMapLock.Unlock()
 
@@ -76,9 +70,10 @@ func (manager *manager) UpdateSession(clientID int, id session.SessionID) bool {
 }
 
 // RemoveSession removes given session from underlying session managers
-func (manager *manager) RemoveSession(id session.SessionID) {
+func (manager *clientMap) RemoveSession(id session.SessionID) {
 	manager.sessionMapLock.Lock()
 	defer manager.sessionMapLock.Unlock()
+
 	manager.sessionManager.RemoveSession(id)
 	delete(manager.sessionClientIDs, id)
 }

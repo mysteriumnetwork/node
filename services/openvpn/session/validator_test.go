@@ -40,7 +40,7 @@ var mockExtractor = &MockIdentityExtractor{
 	nil,
 }
 
-var fakeManager = NewManager(mockManager)
+var fakeManager = NewClientMap(mockManager)
 
 var mockValidator = NewValidator(fakeManager, mockExtractor)
 
@@ -54,7 +54,7 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 		},
 	)
 
-	manager := &manager{sessionManager, make(map[session.SessionID]int), sync.Mutex{}}
+	manager := &clientMap{sessionManager, make(map[session.SessionID]int), sync.Mutex{}}
 	mockValidator := &Validator{manager, mockExtractor}
 	authenticated, err := mockValidator.Validate(1, "not important", "not important")
 
@@ -113,7 +113,7 @@ func TestCleanupReturnsErrorIfSessionNotExists(t *testing.T) {
 		identity.FromAddress("deadbeef"),
 		nil,
 	}
-	fakeManager := NewManager(mockManager)
+	fakeManager := NewClientMap(mockManager)
 	mockValidator := NewValidator(fakeManager, mockExtractor)
 
 	err := mockValidator.Cleanup("nonexistent_session")

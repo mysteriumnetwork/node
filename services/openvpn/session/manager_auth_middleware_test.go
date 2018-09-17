@@ -22,8 +22,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/openvpn/management"
 	"github.com/mysteriumnetwork/node/openvpn/middlewares/server/auth"
-	"github.com/mysteriumnetwork/node/session"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +30,6 @@ type fakeAuthenticatorStub struct {
 	password      string
 	called        bool
 	authenticated bool
-	manager       session.Manager
 }
 
 func (f *fakeAuthenticatorStub) fakeAuthenticator(clientID int, username, password string) (bool, error) {
