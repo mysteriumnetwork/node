@@ -32,19 +32,13 @@ var expectedSession = Session{
 	ConsumerID: identity.FromAddress("deadbeef"),
 }
 
-type mockedConfigProvider func() string
-
-func (mcp mockedConfigProvider) ProvideServiceConfig() (ServiceConfiguration, error) {
-	return mcp(), nil
-}
-
-func provideMockedVPNConfig() string {
-	return mockedVPNConfig
+func mockedConfigProvider() (ServiceConfiguration, error) {
+	return mockedVPNConfig, nil
 }
 
 func TestManagerCreatesNewSession(t *testing.T) {
 	manager := NewManager(
-		mockedConfigProvider(provideMockedVPNConfig),
+		mockedConfigProvider,
 		&GeneratorFake{
 			SessionIdMock: SessionID("mocked-id"),
 		},

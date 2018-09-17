@@ -78,8 +78,11 @@ func NewManager(
 				serviceOptions.OpenvpnPort,
 				serviceOptions.OpenvpnProtocol,
 			)
+			serviceConfigProvider := func() (session.ServiceConfiguration, error) {
+				return clientConfigGenerator(), nil
+			}
 			return session.NewManager(
-				session.NewOpenVPNServiceConfigProvider(clientConfigGenerator),
+				serviceConfigProvider,
 				&session.UUIDGenerator{},
 			)
 		},

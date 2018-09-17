@@ -48,7 +48,7 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 	mockExtractor := &MockIdentityExtractor{}
 
 	sessionManager := session.NewManager(
-		mockedConfigProvider(provideMockedVPNConfig),
+		mockedConfigProvider,
 		&session.GeneratorFake{
 			SessionIdMock: session.SessionID("mocked-id"),
 		},
