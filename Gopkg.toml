@@ -75,4 +75,5 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/go-openvpn"
-  branch = "master"
+  version = "0.0.5"
+
