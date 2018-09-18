@@ -22,10 +22,21 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-const mockedVPNConfig = "config_string"
+func mockStorage(sessions ...session.Session) *session.Storage {
+	storage := session.NewStorage()
+	for _, sessionInstance := range sessions {
+		storage.Add(sessionInstance)
+	}
 
-func mockedConfigProvider() (session.ServiceConfiguration, error) {
-	return mockedVPNConfig, nil
+	return storage
+}
+
+func mockValidator(identityToExtract identity.Identity, sessions ...session.Session) *Validator {
+	mockExtractor := &MockIdentityExtractor{
+		identityToExtract,
+		nil,
+	}
+	return NewValidator(mockStorage(sessions...), mockExtractor)
 }
 
 // MockIdentityExtractor mocked identity extractor
@@ -34,28 +45,7 @@ type MockIdentityExtractor struct {
 	OnExtractReturnError    error
 }
 
-// MockSessionManager mocked session manager
-type MockSessionManager struct {
-	OnFindReturnSession session.Session
-	OnFindReturnSuccess bool
-}
-
-// Create creates mocked session instance
-func (manager *MockSessionManager) Create(peerID identity.Identity) (sessionInstance session.Session, err error) {
-	return session.Session{}, nil
-}
-
-// FindSession returns mocked session
-func (manager *MockSessionManager) FindSession(sessionID session.SessionID) (session.Session, bool) {
-	return manager.OnFindReturnSession, manager.OnFindReturnSuccess
-}
-
 // Extract returns mocked identity
 func (extractor *MockIdentityExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
 	return extractor.OnExtractReturnIdentity, extractor.OnExtractReturnError
-}
-
-// RemoveSession stubbed mock method to satisfy interface
-func (manager *MockSessionManager) RemoveSession(sessionID session.SessionID) {
-	// stub
 }

@@ -25,92 +25,81 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var mockManager = &MockSessionManager{
-	session.Session{
-		ID:         session.SessionID("fake-id"),
-		Config:     mockedVPNConfig,
-		ConsumerID: identity.FromAddress("deadbeef"),
-	},
-	true,
-}
+const (
+	sessionExistingString = "fake-id"
+)
 
-var mockExtractor = &MockIdentityExtractor{
-	identity.FromAddress("deadbeef"),
-	nil,
-}
-
-var mockValidator = NewValidator(mockManager, mockExtractor)
+var (
+	identityExisting = identity.FromAddress("deadbeef")
+	sessionExisting  = session.Session{
+		ID:         session.SessionID(sessionExistingString),
+		Config:     "config_string",
+		ConsumerID: identityExisting,
+	}
+)
 
 func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
-	mockExtractor := &MockIdentityExtractor{}
-	sessionManager := session.NewManager(
-		mockedConfigProvider,
-		&session.GeneratorFake{
-			SessionIdMock: session.SessionID("mocked-id"),
-		},
-	)
+	validator := mockValidator(identity.Identity{})
 
-	mockValidator := NewValidator(sessionManager, mockExtractor)
-	authenticated, err := mockValidator.Validate(1, "not important", "not important")
+	authenticated, err := validator.Validate(1, "not important", "not important")
 
 	assert.Errorf(t, err, "no underlying session exists, possible break-in attempt")
 	assert.False(t, authenticated)
 }
 
 func TestValidateReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
-	mockExtractor := &MockIdentityExtractor{
-		identity.FromAddress("wrongsignature"),
-		nil,
-	}
+	validator := mockValidator(identity.FromAddress("wrongsignature"), sessionExisting)
 
-	mockValidator := NewValidator(mockManager, mockExtractor)
-	authenticated, err := mockValidator.Validate(1, "not important", "not important")
+	authenticated, err := validator.Validate(1, sessionExistingString, "not important")
 
 	assert.NoError(t, err)
 	assert.False(t, authenticated)
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing.T) {
-	authenticated, err := mockValidator.Validate(1, "not important", "not important")
+	validator := mockValidator(identityExisting, sessionExisting)
+
+	authenticated, err := validator.Validate(1, sessionExistingString, "not important")
 
 	assert.NoError(t, err)
 	assert.True(t, authenticated)
 }
 
 func TestValidateReturnsFalseWhenSessionExistsAndSignatureIsValidAndClientIDDiffers(t *testing.T) {
-	mockValidator.Validate(1, "not important", "not important")
-	authenticated, err := mockValidator.Validate(2, "not important", "not important")
+	validator := mockValidator(identityExisting, sessionExisting)
+
+	validator.Validate(1, sessionExistingString, "not important")
+	authenticated, err := validator.Validate(2, sessionExistingString, "not important")
 
 	assert.Errorf(t, err, "provided clientID does not mach active clientID")
 	assert.False(t, authenticated)
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatches(t *testing.T) {
-	mockValidator.Validate(1, "not important", "not important")
-	authenticated, err := mockValidator.Validate(1, "not important", "not important")
+	validator := mockValidator(identityExisting, sessionExisting)
+
+	validator.Validate(1, sessionExistingString, "not important")
+	authenticated, err := validator.Validate(1, sessionExistingString, "not important")
 
 	assert.NoError(t, err)
 	assert.True(t, authenticated)
 }
 
 func TestCleanupReturnsNoErrorIfSessionIsCleared(t *testing.T) {
-	mockValidator.Validate(1, "not important", "not important")
-	err := mockValidator.Cleanup("not important")
+	validator := mockValidator(identityExisting, sessionExisting)
 
-	_, found, _ := mockValidator.clientMap.FindClientSession(1, "not important")
+	validator.Validate(1, sessionExistingString, "not important")
+	err := validator.Cleanup(sessionExistingString)
+
+	_, found, _ := validator.clientMap.FindClientSession(1, "not important")
 	assert.False(t, found)
 	assert.NoError(t, err)
 }
 
 func TestCleanupReturnsErrorIfSessionNotExists(t *testing.T) {
-	mockManager := &MockSessionManager{}
-	mockExtractor := &MockIdentityExtractor{
-		identity.FromAddress("deadbeef"),
-		nil,
-	}
+	validator := mockValidator(identityExisting)
 
-	mockValidator := NewValidator(mockManager, mockExtractor)
-	err := mockValidator.Cleanup("nonexistent_session")
+	err := validator.Cleanup("nonexistent_session")
 
 	assert.Errorf(t, err, "no underlying session exists: nonexistent_session")
 }

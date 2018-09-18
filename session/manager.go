@@ -27,11 +27,15 @@ import (
 type ServiceConfigProvider func() (ServiceConfiguration, error)
 
 // NewManager returns session manager which maintains a map of session id -> session
-func NewManager(serviceConfigProvider ServiceConfigProvider, idGenerator Generator) *manager {
+func NewManager(
+	serviceConfigProvider ServiceConfigProvider,
+	idGenerator Generator,
+	sessionStorage *Storage,
+) *manager {
 	return &manager{
 		idGenerator:    idGenerator,
 		configProvider: serviceConfigProvider,
-		sessionMap:     make(map[SessionID]Session),
+		sessions:       sessionStorage,
 		creationLock:   sync.Mutex{},
 	}
 }
@@ -39,7 +43,7 @@ func NewManager(serviceConfigProvider ServiceConfigProvider, idGenerator Generat
 type manager struct {
 	idGenerator    Generator
 	configProvider ServiceConfigProvider
-	sessionMap     map[SessionID]Session
+	sessions       *Storage
 	creationLock   sync.Mutex
 }
 
@@ -47,6 +51,7 @@ type manager struct {
 func (manager *manager) Create(peerID identity.Identity) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
+
 	sessionInstance.ID = manager.idGenerator.Generate()
 	sessionInstance.ConsumerID = peerID
 	sessionInstance.Config, err = manager.configProvider()
@@ -54,19 +59,7 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance Sessio
 		return
 	}
 
-	manager.sessionMap[sessionInstance.ID] = sessionInstance
+	manager.sessions.Add(sessionInstance)
+
 	return sessionInstance, nil
-}
-
-// FindClientSession returns underlying session instance
-func (manager *manager) FindSession(id SessionID) (Session, bool) {
-	sessionInstance, found := manager.sessionMap[id]
-	return sessionInstance, found
-}
-
-// RemoveSession removes given session from underlying session manager
-func (manager *manager) RemoveSession(id SessionID) {
-	manager.creationLock.Lock()
-	defer manager.creationLock.Unlock()
-	delete(manager.sessionMap, id)
 }

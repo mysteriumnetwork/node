@@ -57,6 +57,8 @@ func NewManager(
 
 	natService := nat.NewService()
 
+	sessionStorage := session.NewStorage()
+
 	return &Manager{
 		identityLoader:   identityLoader,
 		locationResolver: locationResolver,
@@ -81,12 +83,9 @@ func NewManager(
 			serviceConfigProvider := func() (session.ServiceConfiguration, error) {
 				return clientConfigGenerator(), nil
 			}
-			return session.NewManager(
-				serviceConfigProvider,
-				&session.UUIDGenerator{},
-			)
+			return session.NewManager(serviceConfigProvider, &session.UUIDGenerator{}, sessionStorage)
 		},
-		vpnServerFactory: func(manager session.Manager, primitives *tls.Primitives, callback state.Callback) openvpn.Process {
+		vpnServerFactory: func(primitives *tls.Primitives, callback state.Callback) openvpn.Process {
 			// TODO: check nodeOptions for --openvpn-transport option
 			serverConfigGenerator := openvpn_node.NewServerConfigGenerator(
 				nodeOptions.Directories.Runtime,
@@ -96,7 +95,7 @@ func NewManager(
 				serviceOptions.OpenvpnProtocol,
 			)
 
-			sessionValidator := openvpn_session.NewValidator(manager, identity.NewExtractor())
+			sessionValidator := openvpn_session.NewValidator(sessionStorage, identity.NewExtractor())
 
 			return openvpn_node.NewServer(
 				nodeOptions.Openvpn.BinaryPath,
