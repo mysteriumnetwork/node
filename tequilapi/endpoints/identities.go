@@ -197,7 +197,7 @@ func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.
 		return
 	}
 
-	err = endpoint.mysteriumClient.RegisterIdentity(id, endpoint.signerFactory(id))
+	err = endpoint.mysteriumClient.RegisterIdentity(request.Context(), id, endpoint.signerFactory(id))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return

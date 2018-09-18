@@ -18,6 +18,8 @@
 package server
 
 import (
+	"context"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -26,12 +28,12 @@ import (
 
 // Client is interface how to access Mysterium API
 type Client interface {
-	RegisterIdentity(id identity.Identity, signer identity.Signer) (err error)
+	RegisterIdentity(ctx context.Context, id identity.Identity, signer identity.Signer) (err error)
 
-	FindProposals(providerID string) (proposals []dto_discovery.ServiceProposal, err error)
-	RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
-	UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
-	PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
+	FindProposals(ctx context.Context, providerID string) (proposals []dto_discovery.ServiceProposal, err error)
+	RegisterProposal(ctx context.Context, proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
+	UnregisterProposal(ctx context.Context, proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
+	PingProposal(ctx context.Context, proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 
 	SendSessionStats(sessionId session.SessionID, sessionStats dto.SessionStats, signer identity.Signer) (err error)
 }

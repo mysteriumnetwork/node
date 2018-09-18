@@ -18,6 +18,8 @@
 package server
 
 import (
+	"context"
+
 	log "github.com/cihub/seelog"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -40,7 +42,7 @@ type ClientFake struct {
 }
 
 // RegisterProposal announces service proposal
-func (client *ClientFake) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error) {
+func (client *ClientFake) RegisterProposal(ctx context.Context, proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error) {
 	client.proposalsMock = append(client.proposalsMock, proposal)
 	log.Info(mysteriumAPILogPrefix, "Fake proposal registered: ", proposal)
 
@@ -48,7 +50,7 @@ func (client *ClientFake) RegisterProposal(proposal dto_discovery.ServiceProposa
 }
 
 // UnregisterProposal unregisters a service proposal when client disconnects
-func (client *ClientFake) UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+func (client *ClientFake) UnregisterProposal(ctx context.Context, proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	remainingProposals := make([]dto_discovery.ServiceProposal, 0)
 
 	for _, pr := range client.proposalsMock {
@@ -64,7 +66,7 @@ func (client *ClientFake) UnregisterProposal(proposal dto_discovery.ServicePropo
 }
 
 // RegisterIdentity announces that new identity was created
-func (client *ClientFake) RegisterIdentity(id identity.Identity, signer identity.Signer) (err error) {
+func (client *ClientFake) RegisterIdentity(ctx context.Context, id identity.Identity, signer identity.Signer) (err error) {
 	client.RegisteredIdentity = id
 	log.Info(mysteriumAPILogPrefix, "Fake newIdentity registered: ", id.Address)
 
@@ -72,14 +74,14 @@ func (client *ClientFake) RegisterIdentity(id identity.Identity, signer identity
 }
 
 // PingProposal heartbeats that service proposal is still active
-func (client *ClientFake) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error) {
+func (client *ClientFake) PingProposal(ctx context.Context, proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error) {
 	log.Info(mysteriumAPILogPrefix, "Proposal stats sent: ", proposal.ProviderID)
 
 	return nil
 }
 
 // FindProposals fetches announced proposals by given filters
-func (client *ClientFake) FindProposals(providerID string) (proposals []dto_discovery.ServiceProposal, err error) {
+func (client *ClientFake) FindProposals(ctx context.Context, providerID string) (proposals []dto_discovery.ServiceProposal, err error) {
 	log.Info(mysteriumAPILogPrefix, "Fake proposals requested for provider: ", providerID)
 
 	for _, proposal := range client.proposalsMock {

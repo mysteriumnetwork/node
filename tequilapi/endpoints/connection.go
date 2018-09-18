@@ -177,7 +177,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	}
 
 	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.ProviderID), connectOptions)
+	err = ce.manager.Connect(req.Context(), identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.ProviderID), connectOptions)
 
 	if err != nil {
 		switch err {

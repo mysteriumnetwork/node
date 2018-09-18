@@ -18,6 +18,7 @@
 package discovery
 
 import (
+	"context"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -53,17 +54,14 @@ func (d *Discovery) Start(ownIdentity identity.Identity, proposal dto_discovery.
 	d.signer = d.signerCreate(ownIdentity)
 	d.proposal = proposal
 
-	stopLoop := make(chan bool)
-	d.stop = func() {
-		// cancel (stop) discovery loop
-		stopLoop <- true
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	d.stop = cancel
 
 	d.proposalAnnouncementStopped.Add(1)
 
 	go d.checkRegistration()
 
-	go d.mainDiscoveryLoop(stopLoop)
+	go d.mainDiscoveryLoop(ctx)
 }
 
 // Wait wait for proposal announcements to stop / unregister
@@ -76,22 +74,21 @@ func (d *Discovery) Stop() {
 	d.stop()
 }
 
-func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool) {
-
+func (d *Discovery) mainDiscoveryLoop(ctx context.Context) {
 	for {
 		select {
-		case <-stopLoop:
+		case <-ctx.Done():
 			d.stopLoop()
 		case event := <-d.statusChan:
 			switch event {
 			case IdentityUnregistered:
 				d.registerIdentity()
 			case RegisterProposal:
-				go d.registerProposal()
+				go d.registerProposal(ctx)
 			case PingProposal:
-				go d.pingProposal()
+				go d.pingProposal(ctx)
 			case UnregisterProposal:
-				go d.unregisterProposal()
+				go d.unregisterProposal(ctx)
 			case IdentityRegisterFailed, ProposalUnregistered, UnregisterProposalFailed:
 				d.proposalAnnouncementStopped.Done()
 				return
@@ -134,8 +131,8 @@ func (d *Discovery) registerIdentity() {
 	}()
 }
 
-func (d *Discovery) registerProposal() {
-	err := d.mysteriumClient.RegisterProposal(d.proposal, d.signer)
+func (d *Discovery) registerProposal(ctx context.Context) {
+	err := d.mysteriumClient.RegisterProposal(ctx, d.proposal, d.signer)
 	if err != nil {
 		log.Errorf("%s Failed to register proposal, retrying after 1 min. %s", logPrefix, err.Error())
 		time.Sleep(1 * time.Minute)
@@ -145,17 +142,17 @@ func (d *Discovery) registerProposal() {
 	d.changeStatus(PingProposal)
 }
 
-func (d *Discovery) pingProposal() {
+func (d *Discovery) pingProposal(ctx context.Context) {
 	time.Sleep(1 * time.Minute)
-	err := d.mysteriumClient.PingProposal(d.proposal, d.signer)
+	err := d.mysteriumClient.PingProposal(ctx, d.proposal, d.signer)
 	if err != nil {
 		log.Error(logPrefix, "Failed to ping proposal: ", err)
 	}
 	d.changeStatus(PingProposal)
 }
 
-func (d *Discovery) unregisterProposal() {
-	err := d.mysteriumClient.UnregisterProposal(d.proposal, d.signer)
+func (d *Discovery) unregisterProposal(ctx context.Context) {
+	err := d.mysteriumClient.UnregisterProposal(ctx, d.proposal, d.signer)
 	if err != nil {
 		log.Error(logPrefix, "Failed to unregister proposal: ", err)
 		d.changeStatus(UnregisterProposalFailed)

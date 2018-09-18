@@ -18,8 +18,11 @@
 package connection
 
 import (
+	"context"
+
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
+
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -36,7 +39,7 @@ type VpnClientCreator func(session.SessionDto, identity.Identity, identity.Ident
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
-	Connect(consumerID identity.Identity, providerID identity.Identity, options ConnectOptions) error
+	Connect(ctx context.Context, consumerID identity.Identity, providerID identity.Identity, options ConnectOptions) error
 	// Status queries current status of connection
 	Status() ConnectionStatus
 	// Disconnect closes established connection, reports error if no connection

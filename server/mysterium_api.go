@@ -18,6 +18,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -64,8 +65,8 @@ func NewClient(discoveryAPIAddress string) Client {
 }
 
 // RegisterIdentity registers given identity to discovery service
-func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "identities", dto.CreateIdentityRequest{
+func (mApi *mysteriumAPI) RegisterIdentity(ctx context.Context, id identity.Identity, signer identity.Signer) error {
+	req, err := requests.NewSignedPostRequest(ctx, mApi.discoveryAPIAddress, "identities", dto.CreateIdentityRequest{
 		Identity: id.Address,
 	}, signer)
 	if err != nil {
@@ -80,8 +81,8 @@ func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 }
 
 // RegisterProposal registers service proposal to discovery service
-func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", dto.NodeRegisterRequest{
+func (mApi *mysteriumAPI) RegisterProposal(ctx context.Context, proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+	req, err := requests.NewSignedPostRequest(ctx, mApi.discoveryAPIAddress, "register_proposal", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	}, signer)
 	if err != nil {
@@ -97,8 +98,8 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 }
 
 // UnregisterProposal unregisters a service proposal when client disconnects
-func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "unregister_proposal", dto.ProposalUnregisterRequest{
+func (mApi *mysteriumAPI) UnregisterProposal(ctx context.Context, proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+	req, err := requests.NewSignedPostRequest(ctx, mApi.discoveryAPIAddress, "unregister_proposal", dto.ProposalUnregisterRequest{
 		ProviderID: proposal.ProviderID,
 	}, signer)
 	if err != nil {
@@ -115,8 +116,8 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 }
 
 // PingProposal pings service proposal as being alive
-func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
+func (mApi *mysteriumAPI) PingProposal(ctx context.Context, proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+	req, err := requests.NewSignedPostRequest(ctx, mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
 		NodeKey: proposal.ProviderID,
 	}, signer)
 	if err != nil {
@@ -131,13 +132,13 @@ func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, s
 }
 
 // FindProposals fetches currently active service proposals from discovery
-func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.ServiceProposal, error) {
+func (mApi *mysteriumAPI) FindProposals(ctx context.Context, providerID string) ([]dto_discovery.ServiceProposal, error) {
 	values := url.Values{}
 	if providerID != "" {
 		values.Set("node_key", providerID)
 	}
 
-	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", values)
+	req, err := requests.NewGetRequest(ctx, mApi.discoveryAPIAddress, "proposals", values)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +157,7 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 // SendSessionStats sends session statistics
 func (mApi *mysteriumAPI) SendSessionStats(sessionID session.SessionID, sessionStats dto.SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionID)
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
+	req, err := requests.NewSignedPostRequest(context.Background(), mApi.discoveryAPIAddress, path, sessionStats, signer)
 	if err != nil {
 		return err
 	}

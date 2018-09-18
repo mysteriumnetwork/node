@@ -19,6 +19,7 @@ package requests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -34,22 +35,22 @@ const (
 )
 
 // NewGetRequest generates http Get request
-func NewGetRequest(apiURI, path string, params url.Values) (*http.Request, error) {
+func NewGetRequest(ctx context.Context, apiURI, path string, params url.Values) (*http.Request, error) {
 	pathWithQuery := fmt.Sprintf("%v?%v", path, params.Encode())
-	return newRequest(http.MethodGet, apiURI, pathWithQuery, nil)
+	return newRequest(ctx, http.MethodGet, apiURI, pathWithQuery, nil)
 }
 
 // NewPostRequest generates http Post request
-func NewPostRequest(apiURI, path string, requestBody interface{}) (*http.Request, error) {
+func NewPostRequest(ctx context.Context, apiURI, path string, requestBody interface{}) (*http.Request, error) {
 	bodyBytes, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
 	}
-	return newRequest(http.MethodPost, apiURI, path, bodyBytes)
+	return newRequest(ctx, http.MethodPost, apiURI, path, bodyBytes)
 }
 
 // NewSignedPostRequest signs payload and generates http Post request
-func NewSignedPostRequest(apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
+func NewSignedPostRequest(ctx context.Context, apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
 	bodyBytes, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
@@ -60,7 +61,7 @@ func NewSignedPostRequest(apiURI, path string, requestBody interface{}, signer i
 		return nil, err
 	}
 
-	req, err := newRequest(http.MethodPost, apiURI, path, bodyBytes)
+	req, err := newRequest(ctx, http.MethodPost, apiURI, path, bodyBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +75,7 @@ func encodeToJSON(value interface{}) ([]byte, error) {
 	return json.Marshal(value)
 }
 
-func newRequest(method, apiURI, path string, body []byte) (*http.Request, error) {
-
+func newRequest(ctx context.Context, method, apiURI, path string, body []byte) (*http.Request, error) {
 	fullUrl := fmt.Sprintf("%v/%v", apiURI, path)
 	req, err := http.NewRequest(method, fullUrl, bytes.NewBuffer(body))
 	if err != nil {
@@ -85,5 +85,5 @@ func newRequest(method, apiURI, path string, body []byte) (*http.Request, error)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	return req, nil
+	return req.WithContext(ctx), nil
 }

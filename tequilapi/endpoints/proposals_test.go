@@ -18,6 +18,7 @@
 package endpoints
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -51,7 +52,7 @@ var proposals = []dto_discovery.ServiceProposal{
 func TestProposalsEndpointListByNodeId(t *testing.T) {
 	discoveryAPI := server.NewClientFake()
 	for _, proposal := range proposals {
-		discoveryAPI.RegisterProposal(proposal, nil)
+		discoveryAPI.RegisterProposal(context.Background(), proposal, nil)
 	}
 
 	req, err := http.NewRequest(
@@ -94,7 +95,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 func TestProposalsEndpointList(t *testing.T) {
 	discoveryAPI := server.NewClientFake()
 	for _, proposal := range proposals {
-		discoveryAPI.RegisterProposal(proposal, nil)
+		discoveryAPI.RegisterProposal(context.Background(), proposal, nil)
 	}
 
 	req, err := http.NewRequest(

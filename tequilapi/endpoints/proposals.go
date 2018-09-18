@@ -123,7 +123,7 @@ func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	providerID := req.URL.Query().Get("providerId")
-	proposals, err := pe.mysteriumClient.FindProposals(providerID)
+	proposals, err := pe.mysteriumClient.FindProposals(req.Context(), providerID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return

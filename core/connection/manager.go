@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/utils"
 )
 
 const managerLogPrefix = "[connection-manager] "
@@ -47,16 +47,16 @@ var (
 )
 
 type connectionManager struct {
+	ctx context.Context
 	//these are passed on creation
 	mysteriumClient server.Client
 	newDialog       DialogCreator
 	newVpnClient    VpnClientCreator
 	statsKeeper     stats.SessionStatsKeeper
 	//these are populated by Connect at runtime
+	mutex           sync.RWMutex
 	status          ConnectionStatus
 	cleanConnection func()
-
-	mutex sync.RWMutex
 }
 
 // NewManager creates connection manager with given dependencies
@@ -72,12 +72,13 @@ func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator,
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
+func (manager *connectionManager) Connect(ctx context.Context, consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
 
 	manager.mutex.Lock()
+	manager.ctx, manager.cleanConnection = context.WithCancel(ctx)
 	manager.status = statusConnecting()
 	manager.mutex.Unlock()
 	defer func() {
@@ -89,76 +90,57 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 	}()
 
 	err = manager.startConnection(consumerID, providerID, options)
-	if err == utils.ErrRequestCancelled {
+	if err == context.Canceled {
 		return ErrConnectionCancelled
 	}
 	return err
 }
 
 func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
-	cancelable := utils.NewCancelable()
-
 	manager.mutex.Lock()
-	manager.cleanConnection = utils.CallOnce(func() {
-		log.Info(managerLogPrefix, "Cancelling connection initiation")
-		manager.status = statusDisconnecting()
-		cancelable.Cancel()
-	})
+	cancelCtx := manager.cleanConnection
 	manager.mutex.Unlock()
 
-	val, err := cancelable.
-		NewRequest(func() (interface{}, error) {
-			return manager.findProposalByProviderID(providerID)
-		}).
-		Call()
-	if err != nil {
-		return err
-	}
-	proposal := val.(*dto.ServiceProposal)
+	var cancel []func()
+	defer func() {
+		manager.cleanConnection = func() {
+			manager.status = statusDisconnecting()
+			cancelCtx()
+			for _, f := range cancel {
+				f()
+			}
+		}
+		if err != nil {
+			log.Info(managerLogPrefix, "Cancelling connection initiation")
+			defer manager.cleanConnection()
+		}
+	}()
 
-	val, err = cancelable.
-		NewRequest(func() (interface{}, error) {
-			return manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
-		}).
-		Cleanup(utils.InvokeOnSuccess(func(val interface{}) {
-			val.(communication.Dialog).Close()
-		})).
-		Call()
+	proposal, err := manager.findProposalByProviderID(providerID)
 	if err != nil {
 		return err
 	}
-	dialog := val.(communication.Dialog)
 
-	val, err = cancelable.
-		NewRequest(func() (interface{}, error) {
-			return session.RequestSessionCreate(dialog, proposal.ID)
-		}).
-		Call()
+	dialog, err := manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
-		dialog.Close()
 		return err
 	}
-	vpnSession := val.(*session.SessionDto)
+	cancel = append(cancel, func() { dialog.Close() })
+
+	vpnSession, err := session.RequestSessionCreate(dialog, proposal.ID)
+	if err != nil {
+		return err
+	}
 
 	stateChannel := make(chan openvpn.State, 10)
-	val, err = cancelable.
-		NewRequest(func() (interface{}, error) {
-			return manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel, options)
-		}).
-		Cleanup(utils.InvokeOnSuccess(func(val interface{}) {
-			val.(openvpn.Process).Stop()
-		})).
-		Call()
+	openvpnClient, err := manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel, options)
 	if err != nil {
-		dialog.Close()
 		return err
 	}
-	openvpnClient := val.(openvpn.Process)
+	cancel = append(cancel, openvpnClient.Stop)
 
-	err = manager.waitForConnectedState(stateChannel, vpnSession.ID, cancelable.Cancelled)
+	err = manager.waitForConnectedState(stateChannel, vpnSession.ID)
 	if err != nil {
-		dialog.Close()
-		openvpnClient.Stop()
 		return err
 	}
 
@@ -167,15 +149,6 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		// we may need to wait for tun device to bet setup
 		firewall.NewKillSwitch().Enable()
 	}
-
-	manager.mutex.Lock()
-	manager.cleanConnection = func() {
-		log.Info(managerLogPrefix, "Closing active connection")
-		manager.status = statusDisconnecting()
-		openvpnClient.Stop()
-		log.Info(managerLogPrefix, "Openvpn client stop requested")
-	}
-	manager.mutex.Unlock()
 
 	go openvpnClientWaiter(openvpnClient, dialog)
 	go manager.consumeOpenvpnStates(stateChannel, vpnSession.ID)
@@ -206,7 +179,7 @@ func warnOnClean() {
 
 // TODO this can be extracted as dependency later when node selection criteria will be clear
 func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity) (*dto.ServiceProposal, error) {
-	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
+	proposals, err := manager.mysteriumClient.FindProposals(manager.ctx, providerID.Address)
 	if err != nil {
 		return nil, err
 	}
@@ -246,8 +219,7 @@ func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionD
 	return openvpnClient, nil
 }
 
-func (manager *connectionManager) waitForConnectedState(stateChannel <-chan openvpn.State, sessionID session.SessionID, cancelRequest utils.CancelChannel) error {
-
+func (manager *connectionManager) waitForConnectedState(stateChannel <-chan openvpn.State, sessionID session.SessionID) error {
 	for {
 		select {
 		case state, more := <-stateChannel:
@@ -262,8 +234,8 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan open
 			default:
 				manager.onStateChanged(state, sessionID)
 			}
-		case <-cancelRequest:
-			return utils.ErrRequestCancelled
+		case <-manager.ctx.Done():
+			return manager.ctx.Err()
 		}
 	}
 }

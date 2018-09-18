@@ -18,6 +18,7 @@
 package endpoints
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,7 +35,7 @@ type fakeManagerForLocation struct {
 	onStatusReturn connection.ConnectionStatus
 }
 
-func (fm *fakeManagerForLocation) Connect(consumerID identity.Identity, providerID identity.Identity, options connection.ConnectOptions) error {
+func (fm *fakeManagerForLocation) Connect(ctx context.Context, consumerID identity.Identity, providerID identity.Identity, options connection.ConnectOptions) error {
 	return nil
 }
 
