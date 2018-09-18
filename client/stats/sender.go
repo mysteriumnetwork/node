@@ -21,8 +21,8 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/server/dto"
 	"github.com/mysteriumnetwork/node/session"

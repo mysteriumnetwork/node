@@ -25,8 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/openvpn"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/stretchr/testify/assert"
 )

@@ -72,3 +72,8 @@
 [[constraint]]
   name = "github.com/urfave/cli"
   version = "1.20.0"
+
+[[constraint]]
+  name = "github.com/mysteriumnetwork/go-openvpn"
+  version = "0.0.5"
+

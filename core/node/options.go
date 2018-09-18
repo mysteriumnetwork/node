@@ -17,7 +17,7 @@
 
 package node
 
-import openvpn_core "github.com/mysteriumnetwork/node/openvpn/core"
+import openvpn_core "github.com/mysteriumnetwork/go-openvpn/openvpn/core"
 
 // Options describes options which are required to start Node
 type Options struct {
