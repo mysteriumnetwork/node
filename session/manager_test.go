@@ -48,8 +48,8 @@ func saveSession(sessionInstance Session) error {
 func TestManager_Create(t *testing.T) {
 	manager := NewManager(
 		mockedConfigProvider,
-		&GeneratorFake{
-			SessionIdMock: expectedID,
+		func() SessionID {
+			return expectedID
 		},
 		saveSession,
 	)

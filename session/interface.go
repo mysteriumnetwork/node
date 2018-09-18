@@ -29,11 +29,6 @@ type Session struct {
 	ConsumerID identity.Identity
 }
 
-// Generator defines method for session id generation
-type Generator interface {
-	Generate() SessionID
-}
-
 // Manager defines methods for session management
 type Manager interface {
 	Create(identity.Identity) (Session, error)

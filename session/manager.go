@@ -26,17 +26,20 @@ import (
 // ServiceConfigProvider defines configuration providing dependency
 type ServiceConfigProvider func() (ServiceConfiguration, error)
 
+// IDGenerator defines method for session id generation
+type IDGenerator func() SessionID
+
 // SaveCallback stores newly started sessions
 type SaveCallback func(Session) error
 
 // NewManager returns session manager which maintains a map of session id -> session
 func NewManager(
 	serviceConfigProvider ServiceConfigProvider,
-	idGenerator Generator,
+	idGenerator IDGenerator,
 	saveCallback SaveCallback,
 ) *manager {
 	return &manager{
-		idGenerator:    idGenerator,
+		generateID:     idGenerator,
 		configProvider: serviceConfigProvider,
 		saveSession:    saveCallback,
 		creationLock:   sync.Mutex{},
@@ -44,7 +47,7 @@ func NewManager(
 }
 
 type manager struct {
-	idGenerator    Generator
+	generateID     IDGenerator
 	configProvider ServiceConfigProvider
 	saveSession    SaveCallback
 	creationLock   sync.Mutex
@@ -55,7 +58,7 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance Sessio
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
-	sessionInstance.ID = manager.idGenerator.Generate()
+	sessionInstance.ID = manager.generateID()
 	sessionInstance.ConsumerID = peerID
 	sessionInstance.Config, err = manager.configProvider()
 	if err != nil {
