@@ -57,7 +57,7 @@ func NewManager(
 
 	natService := nat.NewService()
 
-	sessionStorage := session.NewStorage()
+	sessionStorage := session.NewStorageMemory()
 
 	return &Manager{
 		identityLoader:   identityLoader,

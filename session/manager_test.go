@@ -40,7 +40,7 @@ func mockedConfigProvider() (ServiceConfiguration, error) {
 }
 
 func TestManager_Create(t *testing.T) {
-	storage := NewStorage()
+	storage := NewStorageMemory()
 	manager := NewManager(
 		mockedConfigProvider,
 		&GeneratorFake{

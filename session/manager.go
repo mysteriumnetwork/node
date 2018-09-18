@@ -30,7 +30,7 @@ type ServiceConfigProvider func() (ServiceConfiguration, error)
 func NewManager(
 	serviceConfigProvider ServiceConfigProvider,
 	idGenerator Generator,
-	sessionStorage *Storage,
+	sessionStorage *StorageMemory,
 ) *manager {
 	return &manager{
 		idGenerator:    idGenerator,
@@ -43,7 +43,7 @@ func NewManager(
 type manager struct {
 	idGenerator    Generator
 	configProvider ServiceConfigProvider
-	sessions       *Storage
+	sessions       *StorageMemory
 	creationLock   sync.Mutex
 }
 

@@ -63,8 +63,8 @@ func TestStorage_Remove(t *testing.T) {
 	assert.Len(t, storage.sessionMap, 0)
 }
 
-func mockStorage(sessionInstance Session) *Storage {
-	return &Storage{
+func mockStorage(sessionInstance Session) *StorageMemory {
+	return &StorageMemory{
 		sessionMap: map[SessionID]Session{
 			sessionInstance.ID: sessionInstance,
 		},

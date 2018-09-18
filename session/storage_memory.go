@@ -21,22 +21,22 @@ import (
 	"sync"
 )
 
-// NewStorage initiates new session storage
-func NewStorage() *Storage {
-	return &Storage{
+// NewStorageMemory initiates new session storage
+func NewStorageMemory() *StorageMemory {
+	return &StorageMemory{
 		sessionMap: make(map[SessionID]Session),
 		lock:       sync.Mutex{},
 	}
 }
 
-// Storage maintains a map of session id -> session
-type Storage struct {
+// StorageMemory maintains a map of session id -> session
+type StorageMemory struct {
 	sessionMap map[SessionID]Session
 	lock       sync.Mutex
 }
 
 // Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
-func (storage *Storage) Add(sessionInstance Session) {
+func (storage *StorageMemory) Add(sessionInstance Session) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
@@ -44,13 +44,13 @@ func (storage *Storage) Add(sessionInstance Session) {
 }
 
 // Find returns underlying session instance
-func (storage *Storage) Find(id SessionID) (Session, bool) {
+func (storage *StorageMemory) Find(id SessionID) (Session, bool) {
 	sessionInstance, found := storage.sessionMap[id]
 	return sessionInstance, found
 }
 
 // Remove removes given session from underlying storage
-func (storage *Storage) Remove(id SessionID) {
+func (storage *StorageMemory) Remove(id SessionID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 

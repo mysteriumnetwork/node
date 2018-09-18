@@ -34,7 +34,7 @@ type Validator struct {
 }
 
 // NewValidator return Validator instance
-func NewValidator(sessionStorage *session.Storage, extractor identity.Extractor) *Validator {
+func NewValidator(sessionStorage *session.StorageMemory, extractor identity.Extractor) *Validator {
 	return &Validator{
 		clientMap: &clientMap{
 			sessions:         sessionStorage,

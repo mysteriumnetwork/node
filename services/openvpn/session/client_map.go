@@ -25,7 +25,7 @@ import (
 )
 
 type clientMap struct {
-	sessions         *session.Storage
+	sessions         *session.StorageMemory
 	sessionClientIDs map[session.SessionID]int
 	sessionMapLock   sync.Mutex
 }

@@ -22,8 +22,8 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-func mockStorage(sessions ...session.Session) *session.Storage {
-	storage := session.NewStorage()
+func mockStorage(sessions ...session.Session) *session.StorageMemory {
+	storage := session.NewStorageMemory()
 	for _, sessionInstance := range sessions {
 		storage.Add(sessionInstance)
 	}
