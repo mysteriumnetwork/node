@@ -63,11 +63,11 @@ type manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *manager) Create(peerID identity.Identity) (sessionInstance Session, err error) {
+func (manager *manager) Create(consumerID identity.Identity) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
-	sessionInstance, err = manager.createSession(peerID)
+	sessionInstance, err = manager.createSession(consumerID)
 	if err != nil {
 		return
 	}
