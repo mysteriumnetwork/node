@@ -19,7 +19,6 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -31,7 +30,7 @@ import (
 var testRequestAPIURL = "http://testUrl"
 
 func TestHttpErrorIsReportedAsErrorReturnValue(t *testing.T) {
-	req, err := requests.NewGetRequest(context.Background(), testRequestAPIURL, "path", nil)
+	req, err := requests.NewGetRequest(testRequestAPIURL, "path", nil)
 	assert.NoError(t, err)
 
 	response := &http.Response{
@@ -48,7 +47,7 @@ type testResponse struct {
 
 func TestHttpResponseBodyIsParsedCorrectly(t *testing.T) {
 
-	req, err := requests.NewGetRequest(context.Background(), testRequestAPIURL, "path", nil)
+	req, err := requests.NewGetRequest(testRequestAPIURL, "path", nil)
 	assert.NoError(t, err)
 
 	response := &http.Response{

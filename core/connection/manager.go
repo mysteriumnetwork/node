@@ -72,13 +72,13 @@ func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator,
 	}
 }
 
-func (manager *connectionManager) Connect(ctx context.Context, consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
+func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
 
 	manager.mutex.Lock()
-	manager.ctx, manager.cleanConnection = context.WithCancel(ctx)
+	manager.ctx, manager.cleanConnection = context.WithCancel(context.Background())
 	manager.status = statusConnecting()
 	manager.mutex.Unlock()
 	defer func() {
@@ -179,7 +179,7 @@ func warnOnClean() {
 
 // TODO this can be extracted as dependency later when node selection criteria will be clear
 func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity) (*dto.ServiceProposal, error) {
-	proposals, err := manager.mysteriumClient.FindProposals(manager.ctx, providerID.Address)
+	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
 	if err != nil {
 		return nil, err
 	}

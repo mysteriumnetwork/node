@@ -18,7 +18,6 @@
 package selector
 
 import (
-	"context"
 	"errors"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -85,7 +84,7 @@ func (h *handler) UseNew(passphrase string) (id identity.Identity, err error) {
 		return
 	}
 
-	if err = h.identityAPI.RegisterIdentity(context.Background(), id, h.signerFactory(id)); err != nil {
+	if err = h.identityAPI.RegisterIdentity(id, h.signerFactory(id)); err != nil {
 		return
 	}
 

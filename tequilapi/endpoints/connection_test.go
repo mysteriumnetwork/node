@@ -18,7 +18,6 @@
 package endpoints
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -44,7 +43,7 @@ type fakeManager struct {
 	requestedProvider  identity.Identity
 }
 
-func (fm *fakeManager) Connect(ctx context.Context, consumerID identity.Identity, providerID identity.Identity, options connection.ConnectOptions) error {
+func (fm *fakeManager) Connect(consumerID identity.Identity, providerID identity.Identity, options connection.ConnectOptions) error {
 	fm.requestedConsumer = consumerID
 	fm.requestedProvider = providerID
 	return fm.onConnectReturn
