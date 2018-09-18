@@ -22,30 +22,55 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-func mockStorage(sessions ...session.Session) *session.StorageMemory {
-	storage := session.NewStorageMemory()
-	for _, sessionInstance := range sessions {
-		storage.Add(sessionInstance)
-	}
-
-	return storage
-}
-
-func mockValidator(identityToExtract identity.Identity, sessions ...session.Session) *Validator {
-	mockExtractor := &MockIdentityExtractor{
+func mockValidator(identityToExtract identity.Identity) *Validator {
+	mockExtractor := &mockIdentityExtractor{
 		identityToExtract,
 		nil,
 	}
-	return NewValidator(mockStorage(sessions...), mockExtractor)
+	mockSessions := &mockSessions{
+		session.Session{},
+		false,
+	}
+	return NewValidator(mockSessions, mockExtractor)
 }
 
-// MockIdentityExtractor mocked identity extractor
-type MockIdentityExtractor struct {
+func mockValidatorWithSession(identityToExtract identity.Identity, sessionInstance session.Session) *Validator {
+	mockExtractor := &mockIdentityExtractor{
+		identityToExtract,
+		nil,
+	}
+	mockSessions := &mockSessions{
+		sessionInstance,
+		true,
+	}
+	return NewValidator(mockSessions, mockExtractor)
+}
+
+// mockIdentityExtractor mocked identity extractor
+type mockIdentityExtractor struct {
 	OnExtractReturnIdentity identity.Identity
 	OnExtractReturnError    error
 }
 
 // Extract returns mocked identity
-func (extractor *MockIdentityExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
+func (extractor *mockIdentityExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
 	return extractor.OnExtractReturnIdentity, extractor.OnExtractReturnError
+}
+
+type mockSessions struct {
+	OnFindReturnSession session.Session
+	OnFindReturnSuccess bool
+}
+
+func (sessions *mockSessions) Add(sessionInstance session.Session) error {
+	return nil
+}
+
+func (sessions *mockSessions) Find(session.SessionID) (session.Session, bool) {
+	return sessions.OnFindReturnSession, sessions.OnFindReturnSuccess
+}
+
+func (sessions *mockSessions) Remove(session.SessionID) {
+	sessions.OnFindReturnSession = session.Session{}
+	sessions.OnFindReturnSuccess = false
 }

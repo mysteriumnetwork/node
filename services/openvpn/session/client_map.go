@@ -24,8 +24,16 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
+// SessionMap defines map of current sessions
+type SessionMap interface {
+	Add(session.Session) error
+	Find(session.SessionID) (session.Session, bool)
+	Remove(session.SessionID)
+}
+
+// clientMap extends current sessions with client id metadata from Openvpn
 type clientMap struct {
-	sessions         *session.StorageMemory
+	sessions         SessionMap
 	sessionClientIDs map[session.SessionID]int
 	sessionMapLock   sync.Mutex
 }

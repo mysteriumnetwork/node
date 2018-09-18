@@ -48,7 +48,7 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 }
 
 func TestValidateReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
-	validator := mockValidator(identity.FromAddress("wrongsignature"), sessionExisting)
+	validator := mockValidatorWithSession(identity.FromAddress("wrongsignature"), sessionExisting)
 
 	authenticated, err := validator.Validate(1, sessionExistingString, "not important")
 
@@ -57,7 +57,7 @@ func TestValidateReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing.T) {
-	validator := mockValidator(identityExisting, sessionExisting)
+	validator := mockValidatorWithSession(identityExisting, sessionExisting)
 
 	authenticated, err := validator.Validate(1, sessionExistingString, "not important")
 
@@ -66,7 +66,7 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing.T) {
 }
 
 func TestValidateReturnsFalseWhenSessionExistsAndSignatureIsValidAndClientIDDiffers(t *testing.T) {
-	validator := mockValidator(identityExisting, sessionExisting)
+	validator := mockValidatorWithSession(identityExisting, sessionExisting)
 
 	validator.Validate(1, sessionExistingString, "not important")
 	authenticated, err := validator.Validate(2, sessionExistingString, "not important")
@@ -76,7 +76,7 @@ func TestValidateReturnsFalseWhenSessionExistsAndSignatureIsValidAndClientIDDiff
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatches(t *testing.T) {
-	validator := mockValidator(identityExisting, sessionExisting)
+	validator := mockValidatorWithSession(identityExisting, sessionExisting)
 
 	validator.Validate(1, sessionExistingString, "not important")
 	authenticated, err := validator.Validate(1, sessionExistingString, "not important")
@@ -86,7 +86,7 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatch
 }
 
 func TestCleanupReturnsNoErrorIfSessionIsCleared(t *testing.T) {
-	validator := mockValidator(identityExisting, sessionExisting)
+	validator := mockValidatorWithSession(identityExisting, sessionExisting)
 
 	validator.Validate(1, sessionExistingString, "not important")
 	err := validator.Cleanup(sessionExistingString)

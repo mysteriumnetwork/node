@@ -29,7 +29,7 @@ import (
 
 var (
 	identityToExtract = identity.FromAddress("deadbeef")
-	validator         = mockValidator(identityToExtract, session.Session{
+	validator         = mockValidatorWithSession(identityToExtract, session.Session{
 		ID:         session.SessionID("Boop!"),
 		Config:     "config_string",
 		ConsumerID: identityToExtract,
