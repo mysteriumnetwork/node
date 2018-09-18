@@ -31,22 +31,22 @@ import (
 const endpoint = "promise-create"
 
 // NewPromise creates new Promise object filled by the requested arguments
-func NewPromise(consumerID, providerID identity.Identity, amount money.Money) *Promise {
+func NewPromise(issuerID, benefiterID identity.Identity, amount money.Money) *Promise {
 	return &Promise{
 		SerialNumber: 1,
 		Amount:       amount,
-		IssuerID:     consumerID.Address,
-		BenefiterID:  providerID.Address,
+		IssuerID:     issuerID.Address,
+		BenefiterID:  benefiterID.Address,
 	}
 }
 
-// NewSignedPromise creates a signed promise with a passed signer
-func NewSignedPromise(promise *Promise, signer identity.Signer) (*SignedPromise, error) {
+// SignByIssuer creates a signed promise with a passed issuerSigner
+func SignByIssuer(promise *Promise, issuerSigner identity.Signer) (*SignedPromise, error) {
 	out, err := json.Marshal(promise)
 	if err != nil {
 		return nil, err
 	}
-	signature, err := signer.Sign(out)
+	signature, err := issuerSigner.Sign(out)
 
 	return &SignedPromise{
 		Promise:         *promise,
@@ -62,7 +62,7 @@ func Send(signedPromise *SignedPromise, sender communication.Sender) (*Response,
 
 	response := responsePtr.(*Response)
 	if err != nil || !response.Success {
-		return nil, errors.New("PromiseDto create failed. " + response.Message)
+		return nil, errors.New("Promise issuing failed: " + response.Message)
 	}
 
 	return response, nil

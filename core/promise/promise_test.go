@@ -82,14 +82,14 @@ func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
 	return identity.SignatureBytes([]byte("FakeSignature")), nil
 }
 
-func TestNewSignedPromise(t *testing.T) {
+func TestSignByIssuer(t *testing.T) {
 	promise := NewPromise(
 		identity.Identity{Address: "Consumer"},
 		identity.Identity{Address: "Provider"},
 		money.Money{Amount: 123, Currency: "TEST"},
 	)
 
-	signedPromise, err := NewSignedPromise(promise, &fakeSigner{})
+	signedPromise, err := SignByIssuer(promise, &fakeSigner{})
 	assert.NoError(t, err)
 
 	expectedSignature := base64.StdEncoding.EncodeToString([]byte("FakeSignature"))
