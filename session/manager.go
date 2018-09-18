@@ -33,14 +33,10 @@ type IDGenerator func() SessionID
 type SaveCallback func(Session) error
 
 // NewManager returns session manager which maintains a map of session id -> session
-func NewManager(
-	serviceConfigProvider ServiceConfigProvider,
-	idGenerator IDGenerator,
-	saveCallback SaveCallback,
-) *manager {
+func NewManager(idGenerator IDGenerator, configProvider ServiceConfigProvider, saveCallback SaveCallback) *manager {
 	return &manager{
 		generateID:     idGenerator,
-		configProvider: serviceConfigProvider,
+		generateConfig: configProvider,
 		saveSession:    saveCallback,
 		creationLock:   sync.Mutex{},
 	}
@@ -48,7 +44,7 @@ func NewManager(
 
 type manager struct {
 	generateID     IDGenerator
-	configProvider ServiceConfigProvider
+	generateConfig ServiceConfigProvider
 	saveSession    SaveCallback
 	creationLock   sync.Mutex
 }
@@ -60,7 +56,7 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance Sessio
 
 	sessionInstance.ID = manager.generateID()
 	sessionInstance.ConsumerID = peerID
-	sessionInstance.Config, err = manager.configProvider()
+	sessionInstance.Config, err = manager.generateConfig()
 	if err != nil {
 		return
 	}

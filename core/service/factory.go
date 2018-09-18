@@ -83,7 +83,7 @@ func NewManager(
 			serviceConfigProvider := func() (session.ServiceConfiguration, error) {
 				return clientConfigGenerator(), nil
 			}
-			return session.NewManager(serviceConfigProvider, session.GenerateUUID, sessionStorage.Add)
+			return session.NewManager(session.GenerateUUID, serviceConfigProvider, sessionStorage.Add)
 		},
 		vpnServerFactory: func(primitives *tls.Primitives, callback state.Callback) openvpn.Process {
 			// TODO: check nodeOptions for --openvpn-transport option

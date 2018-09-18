@@ -47,10 +47,10 @@ func saveSession(sessionInstance Session) error {
 
 func TestManager_Create(t *testing.T) {
 	manager := NewManager(
-		mockedConfigProvider,
 		func() SessionID {
 			return expectedID
 		},
+		mockedConfigProvider,
 		saveSession,
 	)
 
