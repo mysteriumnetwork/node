@@ -25,6 +25,11 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
+// Manager defines methods for session management
+type Manager interface {
+	Create(identity.Identity) (Session, error)
+}
+
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
 	CurrentProposalID int
