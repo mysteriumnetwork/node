@@ -25,8 +25,8 @@ import (
 	"github.com/mysteriumnetwork/node/server"
 )
 
-// NewFakeDiscrovery creates fake discovery structure
-func NewFakeDiscrovery() *Discovery {
+// NewFakeDiscovery creates fake discovery structure
+func NewFakeDiscovery() *Discovery {
 	return &Discovery{
 		statusChan:                  make(chan Status),
 		proposalAnnouncementStopped: &sync.WaitGroup{},
