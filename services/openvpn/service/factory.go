@@ -60,6 +60,25 @@ func NewManager(
 
 	sessionStorage := session.NewStorageMemory()
 
+	openvpnServiceAddress := func(outboundIP, publicIP string) string {
+		//TODO public ip could be overridden by arg nodeOptions if needed
+		if publicIP != outboundIP {
+			log.Warnf(
+				`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s]. 
+You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
+				publicIP,
+				outboundIP,
+				publicIP,
+				serviceOptions.OpenvpnPort,
+				outboundIP,
+				serviceOptions.OpenvpnPort,
+			)
+
+		}
+
+		return publicIP
+	}
+
 	return &Manager{
 		identityLoader:   identityLoader,
 		locationResolver: locationResolver,
@@ -73,11 +92,11 @@ func NewManager(
 			)
 		},
 
-		sessionManagerFactory: func(primitives *tls.Primitives, vpnServerIP string) session.Manager {
+		sessionManagerFactory: func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager {
 			// TODO: check nodeOptions for --openvpn-transport option
 			clientConfigGenerator := openvpn_node.NewClientConfigGenerator(
 				primitives,
-				vpnServerIP,
+				openvpnServiceAddress(outboundIP, publicIP),
 				serviceOptions.OpenvpnPort,
 				serviceOptions.OpenvpnProtocol,
 			)
@@ -104,24 +123,6 @@ func NewManager(
 				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 				state.NewMiddleware(vpnStateCallback),
 			)
-		},
-		openvpnServiceAddress: func(outboundIP, publicIP string) string {
-			//TODO public ip could be overridden by arg nodeOptions if needed
-			if publicIP != outboundIP {
-				log.Warnf(
-					`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s]. 
-You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
-					publicIP,
-					outboundIP,
-					publicIP,
-					serviceOptions.OpenvpnPort,
-					outboundIP,
-					serviceOptions.OpenvpnPort,
-				)
-
-			}
-
-			return publicIP
 		},
 		protocol:  serviceOptions.OpenvpnProtocol,
 		discovery: discoveryService,

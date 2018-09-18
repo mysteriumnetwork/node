@@ -46,14 +46,13 @@ type Manager struct {
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
-	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
+	sessionManagerFactory func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager
 
 	vpnServerFactory func(primitives *tls.Primitives) openvpn.Process
+	vpnServer        openvpn.Process
 
-	vpnServer             openvpn.Process
-	openvpnServiceAddress func(string, string) string
-	protocol              string
-	discovery             *discovery.Discovery
+	protocol  string
+	discovery *discovery.Discovery
 }
 
 const logPrefix = "[service-manager] "
@@ -123,7 +122,7 @@ func (manager *Manager) Start() (err error) {
 
 	manager.discovery.Start(providerID, proposal)
 
-	sessionManager := manager.sessionManagerFactory(primitives, manager.openvpnServiceAddress(outboundIP, publicIP))
+	sessionManager := manager.sessionManagerFactory(primitives, outboundIP, publicIP)
 
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err := manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
