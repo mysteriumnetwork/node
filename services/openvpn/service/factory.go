@@ -37,7 +37,9 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	openvpn_node "github.com/mysteriumnetwork/node/services/openvpn"
+	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -92,6 +94,9 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 			)
 		},
 
+		proposalFactory: func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal {
+			return openvpn_discovery.NewServiceProposalWithLocation(currentLocation, serviceOptions.OpenvpnProtocol)
+		},
 		sessionManagerFactory: func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager {
 			// TODO: check nodeOptions for --openvpn-transport option
 			clientConfigGenerator := openvpn_node.NewClientConfigGenerator(
@@ -124,7 +129,6 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 				state.NewMiddleware(vpnStateCallback),
 			)
 		},
-		protocol:  serviceOptions.OpenvpnProtocol,
 		discovery: discoveryService,
 	}
 }

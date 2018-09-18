@@ -32,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -46,12 +45,12 @@ type Manager struct {
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
+	proposalFactory       func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal
 	sessionManagerFactory func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager
 
 	vpnServerFactory func(primitives *tls.Primitives) openvpn.Process
 	vpnServer        openvpn.Process
 
-	protocol  string
 	discovery *discovery.Discovery
 }
 
@@ -97,19 +96,18 @@ func (manager *Manager) Start() (err error) {
 	if err != nil {
 		return err
 	}
+	currentLocation := dto_discovery.Location{Country: currentCountry}
 	log.Info(logPrefix, "Country detected: ", currentCountry)
 
-	serviceLocation := dto_discovery.Location{Country: currentCountry}
-
-	proposal := openvpn_discovery.NewServiceProposalWithLocation(providerID, providerContact, serviceLocation, manager.protocol)
+	proposal := manager.proposalFactory(currentLocation)
 
 	caSubject := pkix.Name{
-		Country:            []string{serviceLocation.Country},
+		Country:            []string{currentLocation.Country},
 		Organization:       []string{"Mystermium.network"},
 		OrganizationalUnit: []string{"Mysterium Team"},
 	}
 	serverCertSubject := pkix.Name{
-		Country:            []string{serviceLocation.Country},
+		Country:            []string{currentLocation.Country},
 		Organization:       []string{"Mysterium node operator company"},
 		OrganizationalUnit: []string{"Node operator team"},
 		CommonName:         providerID.Address,
@@ -119,8 +117,6 @@ func (manager *Manager) Start() (err error) {
 	if err != nil {
 		return err
 	}
-
-	manager.discovery.Start(providerID, proposal)
 
 	sessionManager := manager.sessionManagerFactory(primitives, outboundIP, publicIP)
 
@@ -133,6 +129,9 @@ func (manager *Manager) Start() (err error) {
 	if err := manager.vpnServer.Start(); err != nil {
 		return err
 	}
+
+	proposal.SetProviderContact(providerID, providerContact)
+	manager.discovery.Start(providerID, proposal)
 
 	return nil
 }

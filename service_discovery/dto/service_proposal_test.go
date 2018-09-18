@@ -21,9 +21,33 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
+
+var (
+	providerID      = identity.FromAddress("123456")
+	providerContact = Contact{
+		Type: "type1",
+	}
+)
+
+func Test_ServiceProposal_SetDiscoveryData(t *testing.T) {
+	proposal := ServiceProposal{ID: 123, ProviderID: "123"}
+	proposal.SetProviderContact(providerID, providerContact)
+
+	assert.Exactly(
+		t,
+		ServiceProposal{
+			ID:               1,
+			Format:           "service-proposal/v1",
+			ProviderID:       providerID.Address,
+			ProviderContacts: []Contact{providerContact},
+		},
+		proposal,
+	)
+}
 
 type TestServiceDefinition struct{}
 
@@ -37,7 +61,7 @@ func (method TestPaymentMethod) GetPrice() money.Money {
 	return money.Money{}
 }
 
-func TestServiceProposalSerialize(t *testing.T) {
+func Test_ServiceProposal_Serialize(t *testing.T) {
 	sp := ServiceProposal{
 		ID:                1,
 		Format:            "service-proposal/v1",
