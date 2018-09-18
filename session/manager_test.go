@@ -31,6 +31,7 @@ var (
 		Config:     mockedVPNConfig,
 		ConsumerID: identity.FromAddress("deadbeef"),
 	}
+	lastSession Session
 )
 
 const mockedVPNConfig = "config_string"
@@ -39,19 +40,22 @@ func mockedConfigProvider() (ServiceConfiguration, error) {
 	return mockedVPNConfig, nil
 }
 
+func saveSession(sessionInstance Session) error {
+	lastSession = sessionInstance
+	return nil
+}
+
 func TestManager_Create(t *testing.T) {
-	storage := NewStorageMemory()
 	manager := NewManager(
 		mockedConfigProvider,
 		&GeneratorFake{
 			SessionIdMock: expectedID,
 		},
-		storage,
+		saveSession,
 	)
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"))
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedSession, sessionInstance)
-	assert.Len(t, storage.sessionMap, 1)
-	assert.Exactly(t, expectedSession, storage.sessionMap[expectedID])
+	assert.Exactly(t, expectedSession, lastSession)
 }

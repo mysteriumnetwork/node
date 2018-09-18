@@ -36,11 +36,12 @@ type StorageMemory struct {
 }
 
 // Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
-func (storage *StorageMemory) Add(sessionInstance Session) {
+func (storage *StorageMemory) Add(sessionInstance Session) error {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
 	storage.sessionMap[sessionInstance.ID] = sessionInstance
+	return nil
 }
 
 // Find returns underlying session instance
