@@ -18,7 +18,6 @@
 package session
 
 import (
-	"sync"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -40,13 +39,10 @@ var mockExtractor = &MockIdentityExtractor{
 	nil,
 }
 
-var fakeManager = NewManager(mockManager)
-
-var mockValidator = NewValidator(fakeManager, mockExtractor)
+var mockValidator = NewValidator(mockManager, mockExtractor)
 
 func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 	mockExtractor := &MockIdentityExtractor{}
-
 	sessionManager := session.NewManager(
 		mockedConfigProvider,
 		&session.GeneratorFake{
@@ -54,8 +50,7 @@ func TestValidateReturnsFalseWhenNoSessionFound(t *testing.T) {
 		},
 	)
 
-	manager := &manager{sessionManager, make(map[session.SessionID]int), sync.Mutex{}}
-	mockValidator := &Validator{manager, mockExtractor}
+	mockValidator := NewValidator(sessionManager, mockExtractor)
 	authenticated, err := mockValidator.Validate(1, "not important", "not important")
 
 	assert.Errorf(t, err, "no underlying session exists, possible break-in attempt")
@@ -68,8 +63,7 @@ func TestValidateReturnsFalseWhenSignatureIsInvalid(t *testing.T) {
 		nil,
 	}
 
-	mockValidator := &Validator{fakeManager, mockExtractor}
-
+	mockValidator := NewValidator(mockManager, mockExtractor)
 	authenticated, err := mockValidator.Validate(1, "not important", "not important")
 
 	assert.NoError(t, err)
@@ -102,7 +96,8 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatch
 func TestCleanupReturnsNoErrorIfSessionIsCleared(t *testing.T) {
 	mockValidator.Validate(1, "not important", "not important")
 	err := mockValidator.Cleanup("not important")
-	_, found, _ := fakeManager.FindSession(1, "not important")
+
+	_, found, _ := mockValidator.clientMap.FindClientSession(1, "not important")
 	assert.False(t, found)
 	assert.NoError(t, err)
 }
@@ -113,9 +108,8 @@ func TestCleanupReturnsErrorIfSessionNotExists(t *testing.T) {
 		identity.FromAddress("deadbeef"),
 		nil,
 	}
-	fakeManager := NewManager(mockManager)
-	mockValidator := NewValidator(fakeManager, mockExtractor)
 
+	mockValidator := NewValidator(mockManager, mockExtractor)
 	err := mockValidator.Cleanup("nonexistent_session")
 
 	assert.Errorf(t, err, "no underlying session exists: nonexistent_session")

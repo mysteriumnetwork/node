@@ -96,8 +96,7 @@ func NewManager(
 				serviceOptions.OpenvpnProtocol,
 			)
 
-			ovpnSessionManager := openvpn_session.NewManager(manager)
-			sessionValidator := openvpn_session.NewValidator(ovpnSessionManager, identity.NewExtractor())
+			sessionValidator := openvpn_session.NewValidator(manager, identity.NewExtractor())
 
 			return openvpn_node.NewServer(
 				nodeOptions.Openvpn.BinaryPath,
