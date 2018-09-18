@@ -86,7 +86,7 @@ func NewManager(
 			}
 			return session.NewManager(session.GenerateUUID, serviceConfigProvider, sessionStorage.Add)
 		},
-		vpnServerFactory: func(primitives *tls.Primitives, callback state.Callback) openvpn.Process {
+		vpnServerFactory: func(primitives *tls.Primitives) openvpn.Process {
 			// TODO: check nodeOptions for --openvpn-transport option
 			serverConfigGenerator := openvpn_node.NewServerConfigGenerator(
 				nodeOptions.Directories.Runtime,
@@ -102,7 +102,7 @@ func NewManager(
 				nodeOptions.Openvpn.BinaryPath,
 				serverConfigGenerator,
 				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
-				state.NewMiddleware(callback),
+				state.NewMiddleware(vpnStateCallback),
 			)
 		},
 		openvpnServiceAddress: func(outboundIP, publicIP string) string {

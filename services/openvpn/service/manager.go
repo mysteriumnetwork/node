@@ -22,7 +22,6 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -49,7 +48,7 @@ type Manager struct {
 
 	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
 
-	vpnServerFactory func(primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
+	vpnServerFactory func(primitives *tls.Primitives) openvpn.Process
 
 	vpnServer             openvpn.Process
 	openvpnServiceAddress func(string, string) string
@@ -131,17 +130,7 @@ func (manager *Manager) Start() (err error) {
 		return err
 	}
 
-	vpnStateCallback := func(state openvpn.State) {
-		switch state {
-		case openvpn.ProcessStarted:
-			log.Info("Openvpn service booting up")
-		case openvpn.ConnectedState:
-			log.Info("Openvpn service started successfully")
-		case openvpn.ProcessExited:
-			log.Info("Openvpn service exited")
-		}
-	}
-	manager.vpnServer = manager.vpnServerFactory(primitives, vpnStateCallback)
+	manager.vpnServer = manager.vpnServerFactory(primitives)
 	if err := manager.vpnServer.Start(); err != nil {
 		return err
 	}
@@ -178,4 +167,15 @@ func (manager *Manager) Kill() error {
 	}
 
 	return err
+}
+
+func vpnStateCallback(state openvpn.State) {
+	switch state {
+	case openvpn.ProcessStarted:
+		log.Info(logPrefix, "Openvpn service booting up")
+	case openvpn.ConnectedState:
+		log.Info(logPrefix, "Openvpn service started successfully")
+	case openvpn.ProcessExited:
+		log.Info(logPrefix, "Openvpn service exited")
+	}
 }
