@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/node/client/stats"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/client/bytescount"
 	"github.com/stretchr/testify/assert"
 )
 

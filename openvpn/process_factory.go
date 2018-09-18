@@ -18,9 +18,9 @@
 package openvpn
 
 import (
-	"github.com/mysteriumnetwork/node/openvpn/config"
-	"github.com/mysteriumnetwork/node/openvpn/management"
-	"github.com/mysteriumnetwork/node/openvpn/tunnel"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/tunnel"
 )
 
 // CreateNewProcess creates new openvpn process with given config params

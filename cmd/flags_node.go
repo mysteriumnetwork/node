@@ -18,8 +18,8 @@
 package cmd
 
 import (
+	openvpn_core "github.com/mysteriumnetwork/go-openvpn/openvpn/core"
 	"github.com/mysteriumnetwork/node/core/node"
-	openvpn_core "github.com/mysteriumnetwork/node/openvpn/core"
 	"github.com/urfave/cli"
 )
 

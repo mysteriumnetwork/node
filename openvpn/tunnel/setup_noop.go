@@ -17,7 +17,7 @@
 
 package tunnel
 
-import "github.com/mysteriumnetwork/node/openvpn/config"
+import "github.com/mysteriumnetwork/go-openvpn/openvpn/config"
 
 // NoopSetup represents a noop tunnel setup - aka it does nothing
 type NoopSetup struct {

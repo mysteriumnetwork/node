@@ -22,9 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/openvpn/config"
-	"github.com/mysteriumnetwork/node/openvpn/management"
-	"github.com/mysteriumnetwork/node/openvpn/tunnel"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/tunnel"
 )
 
 // OpenvpnProcess represents an openvpn process manager

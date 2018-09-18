@@ -18,8 +18,8 @@
 package openvpn
 
 import (
-	"github.com/mysteriumnetwork/node/openvpn/config"
-	"github.com/mysteriumnetwork/node/openvpn/tls"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 )
 
 // ServerConfig defines openvpn in server mode configuration structure

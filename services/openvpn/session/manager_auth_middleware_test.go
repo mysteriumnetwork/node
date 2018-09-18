@@ -20,8 +20,8 @@ package session
 import (
 	"testing"
 
-	"github.com/mysteriumnetwork/node/openvpn/management"
-	"github.com/mysteriumnetwork/node/openvpn/middlewares/server/auth"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/stretchr/testify/assert"
 )
 
