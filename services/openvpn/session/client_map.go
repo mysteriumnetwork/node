@@ -32,19 +32,17 @@ type clientMap struct {
 
 // FindClientSession returns OpenVPN session instance by given session id
 func (cm *clientMap) FindClientSession(clientID int, id session.SessionID) (session.Session, bool, error) {
-	sessionInstance, foundSession := cm.sessionManager.FindSession(id)
-
-	if !foundSession {
+	sessionInstance, sessionExist := cm.sessionManager.FindSession(id)
+	if !sessionExist {
 		return session.Session{}, false, errors.New("no underlying session exists, possible break-in attempt")
 	}
 
-	sessionClientID, clientIDFound := cm.sessionClientIDs[id]
-
-	if clientIDFound && clientID != sessionClientID {
+	sessionClientID, clientIDExist := cm.sessionClientIDs[id]
+	if clientIDExist && clientID != sessionClientID {
 		return sessionInstance, false, errors.New("provided clientID does not mach active clientID")
 	}
 
-	return sessionInstance, clientIDFound, nil
+	return sessionInstance, clientIDExist, nil
 }
 
 // UpdateClientSession updates OpenVPN session with clientID, returns false on clientID conflict
@@ -52,8 +50,8 @@ func (cm *clientMap) UpdateClientSession(clientID int, id session.SessionID) boo
 	cm.sessionMapLock.Lock()
 	defer cm.sessionMapLock.Unlock()
 
-	_, foundClientID := cm.sessionClientIDs[id]
-	if !foundClientID {
+	_, clientIDExist := cm.sessionClientIDs[id]
+	if !clientIDExist {
 		cm.sessionClientIDs[id] = clientID
 	}
 
@@ -65,8 +63,8 @@ func (cm *clientMap) RemoveSession(id session.SessionID) error {
 	cm.sessionMapLock.Lock()
 	defer cm.sessionMapLock.Unlock()
 
-	_, found := cm.sessionManager.FindSession(id)
-	if !found {
+	_, clientIDExist := cm.sessionManager.FindSession(id)
+	if !clientIDExist {
 		return errors.New("no underlying session exists: " + string(id))
 	}
 
