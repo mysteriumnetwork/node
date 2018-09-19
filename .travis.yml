@@ -161,7 +161,17 @@ jobs:
         file: build/package/*
         skip_cleanup: true
         api_key: "$GIT_RELEASES_API_KEY"
-    - script: bin/release_docker $TRAVIS_TAG latest
+        on:
+          tags: true
+    - script:
+      - bin/s3 sync s3://docker-images build/docker
+      - docker load -i build/docker/myst_alpine.tgz
+      - docker load -i build/docker/myst_ubuntu.tgz
+      - docker load -i build/docker/mysterium-node_alpine.tgz
+      - docker load -i build/docker/mysterium-client_alpine.tgz
+      - docker load -i build/docker/mysterium-node_ubuntu.tgz
+      - docker load -i build/docker/mysterium-client_ubuntu.tgz
+      - bin/release_docker $TRAVIS_TAG latest
       name: "Pushing release to hub.docker.com"
 
 notifications:

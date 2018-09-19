@@ -44,11 +44,7 @@ func (service *servicePFCtl) Start() error {
 	}
 
 	service.clearStaleRules()
-	err = service.enableRules()
-	if err != nil {
-		return err
-	}
-	return nil
+	return service.enableRules()
 }
 
 func (service *servicePFCtl) Stop() {
