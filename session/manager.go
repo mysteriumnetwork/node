@@ -30,7 +30,7 @@ type ServiceConfigProvider func() (ServiceConfiguration, error)
 type IDGenerator func() SessionID
 
 // SaveCallback stores newly started sessions
-type SaveCallback func(Session) error
+type SaveCallback func(Session)
 
 // NewManager returns session manager which maintains a map of session id -> session
 func NewManager(idGenerator IDGenerator, configProvider ServiceConfigProvider, saveCallback SaveCallback) *manager {

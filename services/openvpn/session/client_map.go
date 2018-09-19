@@ -26,7 +26,7 @@ import (
 
 // SessionMap defines map of current sessions
 type SessionMap interface {
-	Add(session.Session) error
+	Add(session.Session)
 	Find(session.SessionID) (session.Session, bool)
 	Remove(session.SessionID)
 }

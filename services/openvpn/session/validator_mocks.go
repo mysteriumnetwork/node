@@ -62,8 +62,7 @@ type mockSessions struct {
 	OnFindReturnSuccess bool
 }
 
-func (sessions *mockSessions) Add(sessionInstance session.Session) error {
-	return nil
+func (sessions *mockSessions) Add(sessionInstance session.Session) {
 }
 
 func (sessions *mockSessions) Find(session.SessionID) (session.Session, bool) {

@@ -40,9 +40,8 @@ func mockedConfigProvider() (ServiceConfiguration, error) {
 	return mockedVPNConfig, nil
 }
 
-func saveSession(sessionInstance Session) error {
+func saveSession(sessionInstance Session) {
 	lastSession = sessionInstance
-	return nil
 }
 
 func TestManager_Create(t *testing.T) {
