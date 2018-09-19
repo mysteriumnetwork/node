@@ -23,63 +23,52 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
-	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
-	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 )
 
-// Manager represent entrypoint for Mysterium service with top level components
+const logPrefix = "[service-openvpn] "
+
+// ServerFactory initiates Openvon server instance during runtime
+type ServerFactory func(primitives *tls.Primitives) openvpn.Process
+
+// ProposalFactory prepares service proposal during runtime
+type ProposalFactory func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal
+
+// SessionManagerFactory initiates session manager instance during runtime
+type SessionManagerFactory func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager
+
+// Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	identityLoader   identity_selector.Loader
-	ipResolver       ip.Resolver
-	natService       nat.NATService
-	locationResolver location.Resolver
+	ipResolver            ip.Resolver
+	natService            nat.NATService
+	locationResolver      location.Resolver
+	proposalFactory       ProposalFactory
+	sessionManagerFactory SessionManagerFactory
 
-	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
-	dialogWaiter        communication.DialogWaiter
-
-	proposalFactory       func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal
-	sessionManagerFactory func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager
-
-	vpnServerFactory func(primitives *tls.Primitives) openvpn.Process
+	vpnServerFactory ServerFactory
 	vpnServer        openvpn.Process
-
-	discovery *discovery.Discovery
 }
 
-const logPrefix = "[service-manager] "
-
 // Start starts service - does not block
-func (manager *Manager) Start() (err error) {
-	log.Infof(logPrefix, "Starting Mysterium Server (%s)", metadata.VersionAsString())
-
-	providerID, err := manager.identityLoader()
-	if err != nil {
-		return err
-	}
-
-	manager.dialogWaiter = manager.dialogWaiterFactory(providerID)
-	providerContact, err := manager.dialogWaiter.Start()
-	if err != nil {
-		return err
-	}
-
+func (manager *Manager) Start(providerID identity.Identity) (
+	proposal dto_discovery.ServiceProposal,
+	sessionManager session.Manager,
+	err error,
+) {
 	publicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
-		return err
+		return
 	}
 
 	// if for some reason we will need truly external IP, use GetPublicIP()
 	outboundIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
-		return err
+		return
 	}
 
 	manager.natService.Add(nat.RuleForwarding{
@@ -94,20 +83,18 @@ func (manager *Manager) Start() (err error) {
 
 	currentCountry, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
-		return err
+		return
 	}
 	currentLocation := dto_discovery.Location{Country: currentCountry}
 	log.Info(logPrefix, "Country detected: ", currentCountry)
 
-	proposal := manager.proposalFactory(currentLocation)
-
 	caSubject := pkix.Name{
-		Country:            []string{currentLocation.Country},
+		Country:            []string{currentCountry},
 		Organization:       []string{"Mystermium.network"},
 		OrganizationalUnit: []string{"Mysterium Team"},
 	}
 	serverCertSubject := pkix.Name{
-		Country:            []string{currentLocation.Country},
+		Country:            []string{currentCountry},
 		Organization:       []string{"Mysterium node operator company"},
 		OrganizationalUnit: []string{"Node operator team"},
 		CommonName:         providerID.Address,
@@ -115,47 +102,26 @@ func (manager *Manager) Start() (err error) {
 
 	primitives, err := tls.NewTLSPrimitives(caSubject, serverCertSubject)
 	if err != nil {
-		return err
-	}
-
-	sessionManager := manager.sessionManagerFactory(primitives, outboundIP, publicIP)
-
-	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
-	if err := manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
-		return err
+		return
 	}
 
 	manager.vpnServer = manager.vpnServerFactory(primitives)
-	if err := manager.vpnServer.Start(); err != nil {
-		return err
+	if err = manager.vpnServer.Start(); err != nil {
+		return
 	}
 
-	proposal.SetProviderContact(providerID, providerContact)
-	manager.discovery.Start(providerID, proposal)
-
-	return nil
+	proposal = manager.proposalFactory(currentLocation)
+	sessionManager = manager.sessionManagerFactory(primitives, outboundIP, publicIP)
+	return
 }
 
 // Wait blocks until service is stopped
 func (manager *Manager) Wait() error {
-	log.Info(logPrefix, "Waiting for discovery service to finish")
-	manager.discovery.Wait()
-
-	log.Info(logPrefix, "Waiting for vpn service to finish")
 	return manager.vpnServer.Wait()
 }
 
-// Kill stops service
-func (manager *Manager) Kill() error {
-	if manager.discovery != nil {
-		manager.discovery.Stop()
-	}
-
-	var err error
-	if manager.dialogWaiter != nil {
-		err = manager.dialogWaiter.Stop()
-	}
-
+// Stop stops service
+func (manager *Manager) Stop() error {
 	if manager.natService != nil {
 		manager.natService.Stop()
 	}
@@ -164,7 +130,7 @@ func (manager *Manager) Kill() error {
 		manager.vpnServer.Stop()
 	}
 
-	return err
+	return nil
 }
 
 func vpnStateCallback(state openvpn.State) {

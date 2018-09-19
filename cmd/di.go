@@ -56,7 +56,7 @@ type Dependencies struct {
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
 
-	ServiceManager *openvpn_service.Manager
+	ServiceManager *service.Manager
 }
 
 // Bootstrap initiates all container dependencies
@@ -106,15 +106,14 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
-	di.ServiceManager = openvpn_service.NewManager(
-		nodeOptions,
-		serviceOptions,
+	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver)
+
+	di.ServiceManager = service.NewManager(
 		di.NetworkDefinition,
 		identityLoader,
 		di.SignerFactory,
 		di.IdentityRegistry,
-		di.IPResolver,
-		di.LocationResolver,
+		openvpnServiceManager,
 		discoveryService,
 	)
 }

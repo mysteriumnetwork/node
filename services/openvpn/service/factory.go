@@ -23,19 +23,11 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
-	"github.com/mysteriumnetwork/node/communication"
-	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
-	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	openvpn_node "github.com/mysteriumnetwork/node/services/openvpn"
@@ -44,25 +36,17 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-// NewManager function creates new service manager by given options
+// NewManager creates new instance of Openvpn service
 func NewManager(
 	nodeOptions node.Options,
 	serviceOptions service.Options,
-	networkDefinition metadata.NetworkDefinition,
-	identityLoader identity_selector.Loader,
-	signerFactory identity.SignerFactory,
-	identityRegistry identity_registry.IdentityRegistry,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
-	discoveryService *discovery.Discovery,
 ) *Manager {
-	logconfig.Bootstrap()
-
 	natService := nat.NewService()
-
 	sessionStorage := session.NewStorageMemory()
 
-	openvpnServiceAddress := func(outboundIP, publicIP string) string {
+	vpnServerIP := func(outboundIP, publicIP string) string {
 		//TODO public ip could be overridden by arg nodeOptions if needed
 		if publicIP != outboundIP {
 			log.Warnf(
@@ -82,18 +66,9 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 	}
 
 	return &Manager{
-		identityLoader:   identityLoader,
 		locationResolver: locationResolver,
 		ipResolver:       ipResolver,
 		natService:       natService,
-		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
-			return nats_dialog.NewDialogWaiter(
-				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
-				signerFactory(myID),
-				identityRegistry,
-			)
-		},
-
 		proposalFactory: func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal {
 			return openvpn_discovery.NewServiceProposalWithLocation(currentLocation, serviceOptions.OpenvpnProtocol)
 		},
@@ -101,7 +76,7 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 			// TODO: check nodeOptions for --openvpn-transport option
 			clientConfigGenerator := openvpn_node.NewClientConfigGenerator(
 				primitives,
-				openvpnServiceAddress(outboundIP, publicIP),
+				vpnServerIP(outboundIP, publicIP),
 				serviceOptions.OpenvpnPort,
 				serviceOptions.OpenvpnProtocol,
 			)
@@ -129,6 +104,5 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 				state.NewMiddleware(vpnStateCallback),
 			)
 		},
-		discovery: discoveryService,
 	}
 }
