@@ -55,6 +55,13 @@ func ParseArgumentsNetwork(flags *flag.FlagSet, options *node.OptionsNetwork) {
 		"Defines test network configuration",
 	)
 
+	flags.BoolVar(
+		&options.ExperimentIdentityCheck,
+		"experiment-identity-check",
+		false,
+		"Enables experimental identity check",
+	)
+
 	flags.StringVar(
 		&options.EtherClientRPC,
 		"ether.client.rpc",
@@ -78,6 +85,11 @@ var (
 	localnetFlag = cli.BoolFlag{
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
+	}
+
+	identityCheckFlag = cli.BoolFlag{
+		Name:  "experiment-identity-check",
+		Usage: "Enables experimental identity check",
 	}
 
 	discoveryAddressFlag = cli.StringFlag{
@@ -108,6 +120,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
 		testFlag, localnetFlag,
+		identityCheckFlag,
 		discoveryAddressFlag, brokerAddressFlag,
 		etherRpcFlag, etherContractPaymentsFlag,
 	)
@@ -118,6 +131,8 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 	return node.OptionsNetwork{
 		ctx.GlobalBool(testFlag.Name),
 		ctx.GlobalBool(localnetFlag.Name),
+
+		ctx.GlobalBool(identityCheckFlag.Name),
 
 		ctx.GlobalString(discoveryAddressFlag.Name),
 		ctx.GlobalString(brokerAddressFlag.Name),

@@ -22,6 +22,8 @@ type OptionsNetwork struct {
 	Testnet  bool
 	Localnet bool
 
+	ExperimentIdentityCheck bool
+
 	DiscoveryAPIAddress string
 	BrokerAddress       string
 
