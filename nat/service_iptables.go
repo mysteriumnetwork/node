@@ -36,15 +36,11 @@ func (service *serviceIPTables) Add(rule RuleForwarding) {
 func (service *serviceIPTables) Start() error {
 	err := service.ipForward.Enable()
 	if err != nil {
-		return err
+		log.Warn(natLogPrefix, "Failed to enable IP forwarding: ", err)
 	}
 
 	service.clearStaleRules()
-	err = service.enableRules()
-	if err != nil {
-		return err
-	}
-	return nil
+	return service.enableRules()
 }
 
 func (service *serviceIPTables) Stop() {
