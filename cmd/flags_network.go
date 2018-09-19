@@ -56,7 +56,7 @@ func ParseArgumentsNetwork(flags *flag.FlagSet, options *node.OptionsNetwork) {
 	)
 
 	flags.BoolVar(
-		&options.IdentityCheck,
+		&options.ExperimentIdentityCheck,
 		"experiment-identity-check",
 		false,
 		"Enables experimental identity check",
