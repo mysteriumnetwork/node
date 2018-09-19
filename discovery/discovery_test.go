@@ -35,7 +35,7 @@ var (
 )
 
 func TestStartRegistersProposal(t *testing.T) {
-	d := NewFakeDiscrovery()
+	d := NewFakeDiscovery()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
 	d.Start(providerID, proposal)
@@ -45,7 +45,7 @@ func TestStartRegistersProposal(t *testing.T) {
 }
 
 func TestStartRegistersIdentitySuccessfully(t *testing.T) {
-	d := NewFakeDiscrovery()
+	d := NewFakeDiscovery()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: true, Registered: false}
 
 	d.Start(providerID, proposal)
@@ -55,7 +55,7 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 }
 
 func TestStartRegisterIdentityCancelled(t *testing.T) {
-	d := NewFakeDiscrovery()
+	d := NewFakeDiscovery()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: false}
 
 	d.Start(providerID, proposal)
@@ -70,7 +70,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 }
 
 func TestStartStopUnregisterProposal(t *testing.T) {
-	d := NewFakeDiscrovery()
+	d := NewFakeDiscovery()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
 	d.Start(providerID, proposal)
@@ -91,7 +91,7 @@ func observeStatus(d *Discovery, status Status) Status {
 			d.RUnlock()
 			return d.status
 		}
-		time.Sleep(10 * time.Millisecond)
 		d.RUnlock()
+		time.Sleep(10 * time.Millisecond)
 	}
 }
