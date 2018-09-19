@@ -43,21 +43,21 @@ func (producer *createProducer) Produce() (requestPtr interface{}) {
 }
 
 // RequestSessionCreate requests session creation and returns session DTO
-func RequestSessionCreate(sender communication.Sender, proposalID int, sessionPtr *Session) error {
+func RequestSessionCreate(sender communication.Sender, proposalID int) (sessionID ID, serviceConfig json.RawMessage, err error) {
 	responsePtr, err := sender.Request(&createProducer{
 		ProposalID: proposalID,
 	})
-	response := responsePtr.(*CreateResponse)
-
-	if err != nil || !response.Success {
-		return errors.New("Session create failed. " + response.Message)
+	if err != nil {
+		return
 	}
 
-	return responseToSession(response, sessionPtr)
-}
+	response := responsePtr.(*CreateResponse)
+	if !response.Success {
+		err = errors.New("Session create failed. " + response.Message)
+		return
+	}
 
-func responseToSession(response *CreateResponse, sessionPtr *Session) error {
-	sessionPtr.ID = response.Session.ID
-
-	return json.Unmarshal(response.Session.Config, &sessionPtr.Config)
+	sessionID = response.Session.ID
+	serviceConfig = response.Session.Config
+	return
 }

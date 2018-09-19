@@ -305,8 +305,8 @@ func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
 	return &connectionRequest, nil
 }
 
-func getConnectOptions(cr *connectionRequest) connection.ConnectOptions {
-	return connection.ConnectOptions{DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch}
+func getConnectOptions(cr *connectionRequest) connection.ConnectParams {
+	return connection.ConnectParams{DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch}
 }
 
 func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap {

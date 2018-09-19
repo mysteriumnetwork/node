@@ -19,7 +19,6 @@ package openvpn
 
 import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
-	"github.com/mysteriumnetwork/node/session"
 )
 
 // ClientConfig represents specific "openvpn as client" configuration
@@ -72,20 +71,18 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(session *session.Session, configDir string, runtimeDir string) (*ClientConfig, error) {
-	vpnConfig := session.Config.(*VPNConfig)
-
-	err := NewDefaultValidator().IsValid(vpnConfig)
+func NewClientConfigFromSession(config *VPNConfig, configDir string, runtimeDir string) (*ClientConfig, error) {
+	err := NewDefaultValidator().IsValid(config)
 	if err != nil {
 		return nil, err
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
 	clientFileConfig.SetReconnectRetry(2)
-	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
-	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
-	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)
-	clientFileConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)
+	clientFileConfig.SetClientMode(config.RemoteIP, config.RemotePort)
+	clientFileConfig.SetProtocol(config.RemoteProtocol)
+	clientFileConfig.SetTLSCACertificate(config.CACertificate)
+	clientFileConfig.SetTLSCrypt(config.TLSPresharedKey)
 
 	return clientFileConfig, nil
 }

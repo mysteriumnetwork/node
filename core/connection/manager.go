@@ -23,14 +23,12 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
-	openvpn_node "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -43,8 +41,8 @@ var (
 	ErrAlreadyExists = errors.New("connection already exists")
 	// ErrConnectionCancelled indicates that connection in progress was cancelled by request of api user
 	ErrConnectionCancelled = errors.New("connection was cancelled")
-	// ErrOpenvpnProcessDied indicates that Connect method didn't reach "Connected" phase due to openvpn error
-	ErrOpenvpnProcessDied = errors.New("openvpn process died")
+	// ErrConnectionFailed indicates that Connect method didn't reach "Connected" phase due to connection error
+	ErrConnectionFailed = errors.New("connection has failed")
 )
 
 type connectionManager struct {
@@ -52,22 +50,21 @@ type connectionManager struct {
 	mysteriumClient  server.Client
 	newDialog        DialogCreator
 	newPromiseIssuer PromiseIssuerCreator
-	newVpnClient     VpnClientCreator
+	newConnection    VpnConnectionCreator
 	statsKeeper      stats.SessionStatsKeeper
-	//these are populated by Connect at runtime
-	ctx             context.Context
-	mutex           sync.RWMutex
-	status          ConnectionStatus
-	cleanConnection func()
+	ctx              context.Context
+	mutex            sync.RWMutex
+	status           ConnectionStatus
+	cleanConnection  func()
 }
 
 // NewManager creates connection manager with given dependencies
 func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator, promiseIssuerCreator PromiseIssuerCreator,
-	vpnClientCreator VpnClientCreator, statsKeeper stats.SessionStatsKeeper) *connectionManager {
+	newConnection VpnConnectionCreator, statsKeeper stats.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
 		mysteriumClient:  mysteriumClient,
 		newDialog:        dialogCreator,
-		newVpnClient:     vpnClientCreator,
+		newConnection:    newConnection,
 		statsKeeper:      statsKeeper,
 		status:           statusNotConnected(),
 		cleanConnection:  warnOnClean,
@@ -75,7 +72,7 @@ func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator, prom
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
+func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, params ConnectParams) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -92,17 +89,22 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}
 	}()
 
-	err = manager.startConnection(consumerID, providerID, options)
+	err = manager.startConnection(consumerID, providerID, params)
 	if err == context.Canceled {
 		return ErrConnectionCancelled
 	}
 	return err
 }
 
-func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity, options ConnectOptions) (err error) {
+func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity, params ConnectParams) (err error) {
 	manager.mutex.Lock()
 	cancelCtx := manager.cleanConnection
 	manager.mutex.Unlock()
+
+	connectionOptions := ConnectOptions{
+		ConsumerID: consumerID,
+		ProviderID: providerID,
+	}
 
 	var cancel []func()
 	defer func() {
@@ -130,8 +132,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	}
 	cancel = append(cancel, func() { dialog.Close() })
 
-	vpnSession := &session.Session{Config: &openvpn_node.VPNConfig{}}
-	err = session.RequestSessionCreate(dialog, proposal.ID, vpnSession)
+	connectionOptions.SessionID, connectionOptions.Config, err = session.RequestSessionCreate(dialog, proposal.ID)
 	if err != nil {
 		return err
 	}
@@ -143,26 +144,34 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	}
 	cancel = append(cancel, func() { promiseIssuer.Stop() })
 
-	stateChannel := make(chan openvpn.State, 10)
-	openvpnClient, err := manager.startOpenvpnClient(vpnSession, consumerID, providerID, stateChannel, options)
-	if err != nil {
-		return err
-	}
-	cancel = append(cancel, openvpnClient.Stop)
+	stateChannel := make(chan State, 10)
 
-	err = manager.waitForConnectedState(stateChannel, vpnSession.ID)
+	connection, err := manager.newConnection(
+		connectionOptions,
+		stateChannel,
+	)
 	if err != nil {
 		return err
 	}
 
-	if !options.DisableKillSwitch {
+	if err = connection.Start(); err != nil {
+		return err
+	}
+	cancel = append(cancel, connection.Stop)
+
+	err = manager.waitForConnectedState(stateChannel, connectionOptions.SessionID)
+	if err != nil {
+		return err
+	}
+
+	if !params.DisableKillSwitch {
 		// TODO: Implement fw based kill switch for respective OS
 		// we may need to wait for tun device to bet setup
 		firewall.NewKillSwitch().Enable()
 	}
 
-	go openvpnClientWaiter(openvpnClient, dialog, promiseIssuer)
-	go manager.consumeOpenvpnStates(stateChannel, vpnSession.ID)
+	go connectionWaiter(connection, dialog, promiseIssuer)
+	go manager.consumeConnectionStates(stateChannel, connectionOptions.SessionID)
 	return nil
 }
 
@@ -201,47 +210,28 @@ func (manager *connectionManager) findProposalByProviderID(providerID identity.I
 	return &proposals[0], nil
 }
 
-func openvpnClientWaiter(openvpnClient openvpn.Process, dialog communication.Dialog, promiseIssuer PromiseIssuer) {
-	err := openvpnClient.Wait()
+func connectionWaiter(connection Connection, dialog communication.Dialog, promiseIssuer PromiseIssuer) {
+	err := connection.Wait()
 	if err != nil {
-		log.Warn(managerLogPrefix, "Openvpn client exited with error: ", err)
+		log.Warn(managerLogPrefix, "Connection exited with error: ", err)
 	} else {
-		log.Info(managerLogPrefix, "Openvpn client exited")
+		log.Info(managerLogPrefix, "Connection exited")
 	}
 
 	promiseIssuer.Stop()
 	dialog.Close()
 }
 
-func (manager *connectionManager) startOpenvpnClient(vpnSession *session.Session, consumerID, providerID identity.Identity, stateChannel chan openvpn.State, options ConnectOptions) (openvpn.Process, error) {
-	openvpnClient, err := manager.newVpnClient(
-		vpnSession,
-		consumerID,
-		providerID,
-		channelToStateCallbackAdapter(stateChannel),
-		options,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = openvpnClient.Start(); err != nil {
-		return nil, err
-	}
-
-	return openvpnClient, nil
-}
-
-func (manager *connectionManager) waitForConnectedState(stateChannel <-chan openvpn.State, sessionID session.ID) error {
+func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State, sessionID session.ID) error {
 	for {
 		select {
 		case state, more := <-stateChannel:
 			if !more {
-				return ErrOpenvpnProcessDied
+				return ErrConnectionFailed
 			}
 
 			switch state {
-			case openvpn.ConnectedState:
+			case Connected:
 				manager.onStateChanged(state, sessionID)
 				return nil
 			default:
@@ -253,7 +243,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan open
 	}
 }
 
-func (manager *connectionManager) consumeOpenvpnStates(stateChannel <-chan openvpn.State, sessionID session.ID) {
+func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan State, sessionID session.ID) {
 	for state := range stateChannel {
 		manager.onStateChanged(state, sessionID)
 	}
@@ -265,17 +255,17 @@ func (manager *connectionManager) consumeOpenvpnStates(stateChannel <-chan openv
 	log.Debug(managerLogPrefix, "State updater stopCalled")
 }
 
-func (manager *connectionManager) onStateChanged(state openvpn.State, sessionID session.ID) {
+func (manager *connectionManager) onStateChanged(state State, sessionID session.ID) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
 	switch state {
-	case openvpn.ConnectedState:
+	case Connected:
 		manager.statsKeeper.MarkSessionStart()
 		manager.status = statusConnected(sessionID)
-	case openvpn.ExitingState:
+	case Disconnecting:
 		manager.statsKeeper.MarkSessionEnd()
-	case openvpn.ReconnectingState:
+	case Reconnecting:
 		manager.status = statusReconnecting()
 	}
 }

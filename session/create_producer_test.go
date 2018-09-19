@@ -18,10 +18,24 @@
 package session
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	succesfullSessionConfig   = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
+	succesfullSessionID       = ID("session-id")
+	successfulSessionResponse = &CreateResponse{
+		Success: true,
+		Message: "Everything is great!",
+		Session: SessionDto{
+			ID:     succesfullSessionID,
+			Config: succesfullSessionConfig,
+		},
+	}
 )
 
 type fakeSessionConfig struct {
@@ -31,19 +45,10 @@ type fakeSessionConfig struct {
 
 func TestProducer_RequestSessionCreate(t *testing.T) {
 	sender := &fakeSender{}
-
-	fakeSession := Session{Config: &fakeSessionConfig{}}
-	err := RequestSessionCreate(sender, 123, &fakeSession)
-
+	sid, config, err := RequestSessionCreate(sender, 123)
 	assert.NoError(t, err)
-	assert.Exactly(
-		t,
-		Session{
-			ID:     ID("session-id"),
-			Config: &fakeSessionConfig{"string-param", 123},
-		},
-		fakeSession,
-	)
+	assert.Exactly(t, succesfullSessionID, sid)
+	assert.Exactly(t, succesfullSessionConfig, config)
 }
 
 type fakeSender struct {
