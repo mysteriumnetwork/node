@@ -37,7 +37,7 @@ type handler struct {
 // Handle starts serving services in given Dialog instance
 func (handler *handler) Handle(dialog communication.Dialog) error {
 	subscribeError := dialog.Respond(
-		&SessionCreateConsumer{
+		&createConsumer{
 			CurrentProposalID: handler.CurrentProposalID,
 			SessionManager:    handler.SessionManager,
 			PeerID:            dialog.PeerID(),

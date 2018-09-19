@@ -104,11 +104,11 @@ func (d *Discovery) stopLoop() {
 	log.Info(logPrefix, "stopping discovery loop..")
 	d.RLock()
 	if d.status == WaitingForRegistration {
+		d.RUnlock()
 		d.unsubscribe()
+		d.RLock()
 	}
-	d.RUnlock()
 
-	d.RLock()
 	if d.status == RegisterProposal || d.status == PingProposal {
 		d.RUnlock()
 		d.changeStatus(UnregisterProposal)

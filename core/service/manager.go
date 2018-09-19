@@ -49,7 +49,7 @@ type Manager struct {
 
 	sessionManagerFactory func(primitives *tls.Primitives, serverIP string) session.Manager
 
-	vpnServerFactory func(sessionManager session.Manager, primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
+	vpnServerFactory func(primitives *tls.Primitives, openvpnStateCallback state.Callback) openvpn.Process
 
 	vpnServer             openvpn.Process
 	openvpnServiceAddress func(string, string) string
@@ -141,7 +141,7 @@ func (manager *Manager) Start() (err error) {
 			log.Info("Openvpn service exited")
 		}
 	}
-	manager.vpnServer = manager.vpnServerFactory(sessionManager, primitives, vpnStateCallback)
+	manager.vpnServer = manager.vpnServerFactory(primitives, vpnStateCallback)
 	if err := manager.vpnServer.Start(); err != nil {
 		return err
 	}

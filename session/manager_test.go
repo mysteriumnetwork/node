@@ -24,48 +24,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const mockedVPNConfig = "config_string"
+var (
+	expectedID      = SessionID("mocked-id")
+	expectedSession = Session{
+		ID:         expectedID,
+		Config:     mockedVPNConfig,
+		ConsumerID: identity.FromAddress("deadbeef"),
+	}
+	lastSession Session
+)
 
-var expectedSession = Session{
-	ID:         SessionID("mocked-id"),
-	Config:     mockedVPNConfig,
-	ConsumerID: identity.FromAddress("deadbeef"),
-}
+const mockedVPNConfig = "config_string"
 
 func mockedConfigProvider() (ServiceConfiguration, error) {
 	return mockedVPNConfig, nil
 }
 
-func TestManagerCreatesNewSession(t *testing.T) {
+func saveSession(sessionInstance Session) {
+	lastSession = sessionInstance
+}
+
+func TestManager_Create(t *testing.T) {
 	manager := NewManager(
-		mockedConfigProvider,
-		&GeneratorFake{
-			SessionIdMock: SessionID("mocked-id"),
+		func() SessionID {
+			return expectedID
 		},
+		mockedConfigProvider,
+		saveSession,
 	)
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"))
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedSession, sessionInstance)
-
-	expectedSessionMap := make(map[SessionID]Session)
-	expectedSessionMap[expectedSession.ID] = expectedSession
-	assert.Exactly(
-		t,
-		expectedSessionMap,
-		manager.sessionMap,
-	)
-}
-
-func TestManagerLookupsExistingSession(t *testing.T) {
-	sessionMap := make(map[SessionID]Session)
-	sessionMap[expectedSession.ID] = expectedSession
-
-	manager := manager{
-		sessionMap: sessionMap,
-	}
-
-	session, found := manager.FindSession(SessionID("mocked-id"))
-	assert.True(t, found)
-	assert.Exactly(t, expectedSession, session)
+	assert.Exactly(t, expectedSession, lastSession)
 }

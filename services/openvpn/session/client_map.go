@@ -24,15 +24,23 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
+// SessionMap defines map of current sessions
+type SessionMap interface {
+	Add(session.Session)
+	Find(session.SessionID) (session.Session, bool)
+	Remove(session.SessionID)
+}
+
+// clientMap extends current sessions with client id metadata from Openvpn
 type clientMap struct {
-	sessionManager   session.Manager
+	sessions         SessionMap
 	sessionClientIDs map[session.SessionID]int
 	sessionMapLock   sync.Mutex
 }
 
 // FindClientSession returns OpenVPN session instance by given session id
 func (cm *clientMap) FindClientSession(clientID int, id session.SessionID) (session.Session, bool, error) {
-	sessionInstance, sessionExist := cm.sessionManager.FindSession(id)
+	sessionInstance, sessionExist := cm.sessions.Find(id)
 	if !sessionExist {
 		return session.Session{}, false, errors.New("no underlying session exists, possible break-in attempt")
 	}
@@ -63,12 +71,12 @@ func (cm *clientMap) RemoveSession(id session.SessionID) error {
 	cm.sessionMapLock.Lock()
 	defer cm.sessionMapLock.Unlock()
 
-	_, clientIDExist := cm.sessionManager.FindSession(id)
+	_, clientIDExist := cm.sessions.Find(id)
 	if !clientIDExist {
 		return errors.New("no underlying session exists: " + string(id))
 	}
 
-	cm.sessionManager.RemoveSession(id)
+	cm.sessions.Remove(id)
 	delete(cm.sessionClientIDs, id)
 	return nil
 }

@@ -75,7 +75,6 @@ func encodeToJSON(value interface{}) ([]byte, error) {
 }
 
 func newRequest(method, apiURI, path string, body []byte) (*http.Request, error) {
-
 	fullUrl := fmt.Sprintf("%v/%v", apiURI, path)
 	req, err := http.NewRequest(method, fullUrl, bytes.NewBuffer(body))
 	if err != nil {

@@ -23,10 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var generator UUIDGenerator
-
 func TestSessionIdLength(t *testing.T) {
-	sid := generator.Generate()
-
+	sid := GenerateUUID()
 	assert.Len(t, sid, 36)
 }

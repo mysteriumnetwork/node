@@ -26,20 +26,26 @@ import (
 // ServiceConfigProvider defines configuration providing dependency
 type ServiceConfigProvider func() (ServiceConfiguration, error)
 
+// IDGenerator defines method for session id generation
+type IDGenerator func() SessionID
+
+// SaveCallback stores newly started sessions
+type SaveCallback func(Session)
+
 // NewManager returns session manager which maintains a map of session id -> session
-func NewManager(serviceConfigProvider ServiceConfigProvider, idGenerator Generator) *manager {
+func NewManager(idGenerator IDGenerator, configProvider ServiceConfigProvider, saveCallback SaveCallback) *manager {
 	return &manager{
-		idGenerator:    idGenerator,
-		configProvider: serviceConfigProvider,
-		sessionMap:     make(map[SessionID]Session),
+		generateID:     idGenerator,
+		generateConfig: configProvider,
+		saveSession:    saveCallback,
 		creationLock:   sync.Mutex{},
 	}
 }
 
 type manager struct {
-	idGenerator    Generator
-	configProvider ServiceConfigProvider
-	sessionMap     map[SessionID]Session
+	generateID     IDGenerator
+	generateConfig ServiceConfigProvider
+	saveSession    SaveCallback
 	creationLock   sync.Mutex
 }
 
@@ -47,26 +53,14 @@ type manager struct {
 func (manager *manager) Create(peerID identity.Identity) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
-	sessionInstance.ID = manager.idGenerator.Generate()
+
+	sessionInstance.ID = manager.generateID()
 	sessionInstance.ConsumerID = peerID
-	sessionInstance.Config, err = manager.configProvider()
+	sessionInstance.Config, err = manager.generateConfig()
 	if err != nil {
 		return
 	}
 
-	manager.sessionMap[sessionInstance.ID] = sessionInstance
+	manager.saveSession(sessionInstance)
 	return sessionInstance, nil
-}
-
-// FindSession returns underlying session instance
-func (manager *manager) FindSession(id SessionID) (Session, bool) {
-	sessionInstance, found := manager.sessionMap[id]
-	return sessionInstance, found
-}
-
-// RemoveSession removes given session from underlying session manager
-func (manager *manager) RemoveSession(id SessionID) {
-	manager.creationLock.Lock()
-	defer manager.creationLock.Unlock()
-	delete(manager.sessionMap, id)
 }

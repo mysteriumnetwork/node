@@ -25,22 +25,26 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-type SessionCreateConsumer struct {
+// createConsumer processes session create requests from communication channel.
+type createConsumer struct {
 	CurrentProposalID int
 	SessionManager    Manager
 	PeerID            identity.Identity
 }
 
-func (consumer *SessionCreateConsumer) GetRequestEndpoint() communication.RequestEndpoint {
+// GetMessageEndpoint returns endpoint there to receive messages
+func (consumer *createConsumer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpointSessionCreate
 }
 
-func (consumer *SessionCreateConsumer) NewRequest() (requestPtr interface{}) {
+// NewRequest creates struct where request from endpoint will be serialized
+func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 	var request SessionCreateRequest
 	return &request
 }
 
-func (consumer *SessionCreateConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
+// Consume handles requests from endpoint and replies with response
+func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*SessionCreateRequest)
 	if consumer.CurrentProposalID != request.ProposalId {
 		response = &SessionCreateResponse{
