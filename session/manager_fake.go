@@ -34,12 +34,3 @@ var fakeConfig = struct {
 func (manager *ManagerFake) Create(peerID identity.Identity) (Session, error) {
 	return Session{"new-id", fakeConfig, peerID}, nil
 }
-
-// FindSession always returns empty session and signals that session is not found
-func (manager *ManagerFake) FindSession(id SessionID) (Session, bool) {
-	return Session{}, false
-}
-
-// RemoveSession does nothing, just a stub
-func (manager *ManagerFake) RemoveSession(id SessionID) {
-}

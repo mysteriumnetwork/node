@@ -22,7 +22,18 @@ import (
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	identityToExtract = identity.FromAddress("deadbeef")
+	validator         = mockValidatorWithSession(identityToExtract, session.Session{
+		ID:         session.SessionID("Boop!"),
+		Config:     "config_string",
+		ConsumerID: identityToExtract,
+	})
 )
 
 type fakeAuthenticatorStub struct {
@@ -60,7 +71,7 @@ func (f *fakeAuthenticatorStub) newFakeSessionValidator(clientID int, username, 
 	f.username = username
 	f.password = password
 
-	return mockValidator.Validate(clientID, username, password)
+	return validator.Validate(clientID, username, password)
 }
 
 func TestMiddlewareConsumesClientIdsAntKeysWithSeveralDigits(t *testing.T) {

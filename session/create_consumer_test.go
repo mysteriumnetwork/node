@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var consumer = SessionCreateConsumer{
+var consumer = createConsumer{
 	CurrentProposalID: 101,
 	SessionManager:    &ManagerFake{},
 }

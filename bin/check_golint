@@ -42,7 +42,6 @@ MESSAGES_RECONFIGURE=()
 
 check_uncleaned_package "github.com/mysteriumnetwork/node/identity" 6
 check_uncleaned_package "github.com/mysteriumnetwork/node/tequilapi" 11
-check_uncleaned_package "github.com/mysteriumnetwork/node/session" 6
 check_uncleaned_package "github.com/mysteriumnetwork/node/service_discovery/dto" 13
 check_uncleaned_package "github.com/mysteriumnetwork/node/server/dto" 6
 check_uncleaned_package "github.com/mysteriumnetwork/node/money" 4

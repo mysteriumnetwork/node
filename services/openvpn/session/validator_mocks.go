@@ -22,40 +22,54 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-const mockedVPNConfig = "config_string"
-
-func mockedConfigProvider() (session.ServiceConfiguration, error) {
-	return mockedVPNConfig, nil
+func mockValidator(identityToExtract identity.Identity) *Validator {
+	mockExtractor := &mockIdentityExtractor{
+		identityToExtract,
+		nil,
+	}
+	mockSessions := &mockSessions{
+		session.Session{},
+		false,
+	}
+	return NewValidator(mockSessions, mockExtractor)
 }
 
-// MockIdentityExtractor mocked identity extractor
-type MockIdentityExtractor struct {
+func mockValidatorWithSession(identityToExtract identity.Identity, sessionInstance session.Session) *Validator {
+	mockExtractor := &mockIdentityExtractor{
+		identityToExtract,
+		nil,
+	}
+	mockSessions := &mockSessions{
+		sessionInstance,
+		true,
+	}
+	return NewValidator(mockSessions, mockExtractor)
+}
+
+// mockIdentityExtractor mocked identity extractor
+type mockIdentityExtractor struct {
 	OnExtractReturnIdentity identity.Identity
 	OnExtractReturnError    error
 }
 
-// MockSessionManager mocked session clientMap
-type MockSessionManager struct {
+// Extract returns mocked identity
+func (extractor *mockIdentityExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
+	return extractor.OnExtractReturnIdentity, extractor.OnExtractReturnError
+}
+
+type mockSessions struct {
 	OnFindReturnSession session.Session
 	OnFindReturnSuccess bool
 }
 
-// Create creates mocked session instance
-func (manager *MockSessionManager) Create(peerID identity.Identity) (sessionInstance session.Session, err error) {
-	return session.Session{}, nil
+func (sessions *mockSessions) Add(sessionInstance session.Session) {
 }
 
-// FindSession returns mocked session
-func (manager *MockSessionManager) FindSession(sessionID session.SessionID) (session.Session, bool) {
-	return manager.OnFindReturnSession, manager.OnFindReturnSuccess
+func (sessions *mockSessions) Find(session.SessionID) (session.Session, bool) {
+	return sessions.OnFindReturnSession, sessions.OnFindReturnSuccess
 }
 
-// Extract returns mocked identity
-func (extractor *MockIdentityExtractor) Extract(message []byte, signature identity.Signature) (identity.Identity, error) {
-	return extractor.OnExtractReturnIdentity, extractor.OnExtractReturnError
-}
-
-// RemoveSession stubbed mock method to satisfy interface
-func (manager *MockSessionManager) RemoveSession(sessionID session.SessionID) {
-	// stub
+func (sessions *mockSessions) Remove(session.SessionID) {
+	sessions.OnFindReturnSession = session.Session{}
+	sessions.OnFindReturnSuccess = false
 }
