@@ -157,7 +157,9 @@ jobs:
         file: build/package/*
         skip_cleanup: true
         api_key: "$GIT_RELEASES_API_KEY"
-    - script: 
+        on:
+          tags: true
+    - script:
       - bin/s3 sync s3://docker-images build/docker
       - docker load -i build/docker/myst_alpine.tgz
       - docker load -i build/docker/myst_ubuntu.tgz
