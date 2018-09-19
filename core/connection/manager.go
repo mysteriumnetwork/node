@@ -47,13 +47,13 @@ var (
 )
 
 type connectionManager struct {
-	ctx context.Context
 	//these are passed on creation
 	mysteriumClient server.Client
 	newDialog       DialogCreator
 	newVpnClient    VpnClientCreator
 	statsKeeper     stats.SessionStatsKeeper
 	//these are populated by Connect at runtime
+	ctx             context.Context
 	mutex           sync.RWMutex
 	status          ConnectionStatus
 	cleanConnection func()
