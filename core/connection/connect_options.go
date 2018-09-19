@@ -17,8 +17,23 @@
 
 package connection
 
-// ConnectOptions holds connect options
-type ConnectOptions struct {
+import (
+	"encoding/json"
+
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session"
+)
+
+// ConnectParams holds plugin specific params
+type ConnectParams struct {
 	// kill switch option restricting communication only through VPN
 	DisableKillSwitch bool
+}
+
+// ConnectOptions represents the params we need to ensure a successful connection
+type ConnectOptions struct {
+	SessionID  session.ID
+	Config     json.RawMessage
+	ConsumerID identity.Identity
+	ProviderID identity.Identity
 }

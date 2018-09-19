@@ -15,9 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package openvpn
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -25,61 +26,82 @@ import (
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
-	openvpn_node "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
-	"github.com/mysteriumnetwork/node/session"
 )
 
-// ConfigureVpnClientFactory creates openvpn construction function by given vpn session, consumer id and state callbacks
-func ConfigureVpnClientFactory(
+// ConfigureOpenVpnClientFactory creates openvpn construction function by given vpn session, consumer id and state callbacks
+func ConfigureOpenVpnClientFactory(
 	mysteriumAPIClient server.Client,
 	openvpnBinary, configDirectory, runtimeDirectory string,
 	signerFactory identity.SignerFactory,
 	statsKeeper stats.SessionStatsKeeper,
 	originalLocationCache location.Cache,
-) VpnClientCreator {
-	return func(vpnSession *session.Session, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback, options ConnectOptions) (openvpn.Process, error) {
-		vpnClientConfig, err := openvpn_node.NewClientConfigFromSession(vpnSession, configDirectory, runtimeDirectory)
+) connection.VpnConnectionCreator {
+	return func(connectionOptions connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
+		var receivedConfig VPNConfig
+		err := json.Unmarshal(connectionOptions.Config, &receivedConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		signer := signerFactory(consumerID)
+		vpnClientConfig, err := NewClientConfigFromSession(&receivedConfig, configDirectory, runtimeDirectory)
+		if err != nil {
+			return nil, err
+		}
+
+		signer := signerFactory(connectionOptions.ConsumerID)
 
 		statsSaver := bytescount.NewSessionStatsSaver(statsKeeper)
 
 		statsSender := stats.NewRemoteStatsSender(
 			statsKeeper,
 			mysteriumAPIClient,
-			vpnSession.ID,
-			providerID,
+			connectionOptions.SessionID,
+			connectionOptions.ProviderID,
 			signer,
 			originalLocationCache.Get().Country,
 			time.Minute,
 		)
+		credentialsProvider := openvpn_session.SignatureCredentialsProvider(connectionOptions.SessionID, signer)
 
-		credentialsProvider := openvpn_session.SignatureCredentialsProvider(vpnSession.ID, signer)
+		openvpnStateCallback := func(openvpnState openvpn.State) {
+			connectionState := OpenVpnStateCallbackToConnectionState(openvpnState)
+			if connectionState != connection.Unknown {
+				stateChannel <- connectionState
+			}
 
-		return openvpn_node.NewClient(
+			//this is the last state - close channel (according to best practices of go - channel writer controls channel)
+			if openvpnState == openvpn.ProcessExited {
+				close(stateChannel)
+			}
+		}
+
+		return NewClient(
 			openvpnBinary,
 			vpnClientConfig,
-			state.NewMiddleware(stateCallback, statsSender.StateHandler),
+			state.NewMiddleware(openvpnStateCallback, statsSender.StateHandler),
 			openvpn_bytescount.NewMiddleware(statsSaver, 1*time.Second),
 			auth.NewMiddleware(credentialsProvider),
 		), nil
 	}
 }
 
-func channelToStateCallbackAdapter(channel chan openvpn.State) state.Callback {
-	return func(state openvpn.State) {
-		channel <- state
-		if state == openvpn.ProcessExited {
-			//this is the last state - close channel (according to best practices of go - channel writer controls channel)
-			close(channel)
-		}
+// OpenvpnStateMap maps openvpn states to connection state
+var OpenvpnStateMap = map[openvpn.State]connection.State{
+	openvpn.ConnectedState:    connection.Connected,
+	openvpn.ExitingState:      connection.Disconnecting,
+	openvpn.ReconnectingState: connection.Reconnecting,
+}
+
+// OpenVpnStateCallbackToConnectionState maps openvpn.State to connection.State. Returns a pointer to connection.state, or nil
+func OpenVpnStateCallbackToConnectionState(input openvpn.State) connection.State {
+	if val, ok := OpenvpnStateMap[input]; ok {
+		return val
 	}
+	return connection.Unknown
 }

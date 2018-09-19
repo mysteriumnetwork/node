@@ -33,6 +33,8 @@ const (
 	Disconnecting = State("Disconnecting")
 	// Reconnecting means that connection is lost but underlying service is trying to reestablish it
 	Reconnecting = State("Reconnecting")
+	// Unknown means that we could not map the underlying transport state to our state
+	Unknown = State("Unknown")
 )
 
 // ConnectionStatus holds connection state and session id of the connnection
