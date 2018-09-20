@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
@@ -44,7 +45,7 @@ import (
 // NewManager function creates new service manager by given options
 func NewManager(
 	nodeOptions node.Options,
-	serviceOptions Options,
+	serviceOptions service.Options,
 	networkDefinition metadata.NetworkDefinition,
 	identityLoader identity_selector.Loader,
 	signerFactory identity.SignerFactory,

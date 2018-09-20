@@ -35,6 +35,7 @@ import (
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 )
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -55,7 +56,7 @@ type Dependencies struct {
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
 
-	ServiceManager *service.Manager
+	ServiceManager *openvpn_service.Manager
 }
 
 // Bootstrap initiates all container dependencies
@@ -105,7 +106,7 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
-	di.ServiceManager = service.NewManager(
+	di.ServiceManager = openvpn_service.NewManager(
 		nodeOptions,
 		serviceOptions,
 		di.NetworkDefinition,
