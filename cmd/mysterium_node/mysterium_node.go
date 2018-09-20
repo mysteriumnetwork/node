@@ -68,8 +68,8 @@ func NewCommand() (*cli.App, error) {
 	app.Flags = append(app.Flags, cliFlag)
 	app.Commands = []cli.Command{
 		*versionCommand,
-		*license.NewCommand(licenseCopyright),
-		*service.NewCommand(),
+		*licenseCommand,
+		*serviceCommand,
 	}
 	app.Action = runMain
 
@@ -114,6 +114,8 @@ var (
 	)
 	versionSummary = metadata.VersionAsSummary(licenseCopyright)
 	versionCommand = version.NewCommand(versionSummary)
+	licenseCommand = license.NewCommand(licenseCopyright)
+	serviceCommand = service.NewCommand(licenseCommand.Name)
 
 	cliFlag = cli.BoolFlag{
 		Name:  "cli",

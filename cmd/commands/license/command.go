@@ -25,11 +25,13 @@ import (
 )
 
 var (
-	licenseWarrantyFlag = cli.BoolFlag{
+	// LicenseWarrantyFlag flag allows to print license warranty
+	LicenseWarrantyFlag = cli.BoolFlag{
 		Name:  "warranty",
 		Usage: "Show details of license warranty",
 	}
-	licenseConditionsFlag = cli.BoolFlag{
+	// LicenseConditionsFlag flag allows to print license conditions
+	LicenseConditionsFlag = cli.BoolFlag{
 		Name:  "conditions",
 		Usage: "Show details of license conditions",
 	}
@@ -41,14 +43,14 @@ func NewCommand(licenseCopyright string) *cli.Command {
 		Name:      "license",
 		Usage:     "Show license",
 		ArgsUsage: " ",
-		Flags:     []cli.Flag{licenseWarrantyFlag, licenseConditionsFlag},
+		Flags:     []cli.Flag{LicenseWarrantyFlag, LicenseConditionsFlag},
 		Action: func(ctx *cli.Context) error {
-			if ctx.IsSet(licenseWarrantyFlag.Name) {
+			if ctx.IsSet(LicenseWarrantyFlag.Name) {
 				_, err := fmt.Fprintln(ctx.App.Writer, metadata.LicenseWarranty)
 				return err
 			}
 
-			if ctx.IsSet(licenseConditionsFlag.Name) {
+			if ctx.IsSet(LicenseConditionsFlag.Name) {
 				_, err := fmt.Fprintln(ctx.App.Writer, metadata.LicenseConditions)
 				return err
 			}

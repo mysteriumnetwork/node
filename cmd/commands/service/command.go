@@ -21,13 +21,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/urfave/cli"
-
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/urfave/cli"
 )
 
 var (
@@ -60,7 +59,7 @@ var (
 )
 
 // NewCommand function creates service command
-func NewCommand() *cli.Command {
+func NewCommand(licenseCommandName string) *cli.Command {
 	var di cmd.Dependencies
 
 	stopCommand := func() error {
@@ -84,7 +83,7 @@ func NewCommand() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
-				printWarning()
+				printTermWarning(licenseCommandName)
 				os.Exit(2)
 			}
 
@@ -125,12 +124,10 @@ func NewCommand() *cli.Command {
 	}
 }
 
-func printWarning() {
-	licenceCmd := license.NewCommand("")
-
+func printTermWarning(licenseCommandName string) {
 	fmt.Println(metadata.VersionAsSummary(metadata.LicenseCopyright(
-		"run program with 'myst "+licenceCmd.Name+" --"+licenceCmd.Flags[0].GetName()+"' option",
-		"run program with 'myst "+licenceCmd.Name+" --"+licenceCmd.Flags[1].GetName()+"' option",
+		"run program with 'myst "+licenseCommandName+" --"+license.LicenseWarrantyFlag.Name+"' option",
+		"run program with 'myst "+licenseCommandName+" --"+license.LicenseConditionsFlag.Name+"' option",
 	)))
 	fmt.Println()
 
