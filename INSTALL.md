@@ -4,7 +4,7 @@
 Most convenient way requiring least configuration is to run a node using [Docker](https://docs.docker.com/install/). 
 All node versions are available through docker hub: 
  
-https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
+https://hub.docker.com/r/mysteriumnetwork/myst/
 
 ### Fetching and running docker image
 ```bash
@@ -16,9 +16,8 @@ Note 2: it's mandatory to run docker container with --net host to correctly dete
 
 ### Debugging
 ```bash
-sudo docker logs -f mysterium-node
+sudo docker logs -f myst
 ```
-
 
 ## Mysterium VPN node (Debian && Ubuntu) - tested on Ubuntu 16.04
 Note: you need to replace {version} with specific version number from [releases](https://github.com/mysteriumnetwork/node/releases/)
