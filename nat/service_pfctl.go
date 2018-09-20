@@ -40,15 +40,11 @@ func (service *servicePFCtl) Add(rule RuleForwarding) {
 func (service *servicePFCtl) Start() error {
 	err := service.ipForward.Enable()
 	if err != nil {
-		return err
+		log.Warn(natLogPrefix, "Failed to enable IP forwarding: ", err)
 	}
 
 	service.clearStaleRules()
-	err = service.enableRules()
-	if err != nil {
-		return err
-	}
-	return nil
+	return service.enableRules()
 }
 
 func (service *servicePFCtl) Stop() {
