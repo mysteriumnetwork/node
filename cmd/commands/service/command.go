@@ -19,10 +19,12 @@ package service
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli"
 
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/utils"
@@ -82,12 +84,8 @@ func NewCommand() *cli.Command {
 		},
 		Action: func(ctx *cli.Context) error {
 			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
-				fmt.Println(metadata.VersionAsSummary(metadata.LicenseCopyright(
-					"run program with '--license.warranty' option",
-					"run program with '--license.conditions' option",
-				)))
-				fmt.Println()
-				return fmt.Errorf("If you agree with these Terms & Conditions, run program again with '--agreed-terms-and-conditions' flag")
+				printWarning()
+				os.Exit(2)
 			}
 
 			nodeOptions := cmd.ParseFlagsNode(ctx)
@@ -125,4 +123,16 @@ func NewCommand() *cli.Command {
 			return <-errorChannel
 		},
 	}
+}
+
+func printWarning() {
+	licenceCmd := license.NewCommand("")
+
+	fmt.Println(metadata.VersionAsSummary(metadata.LicenseCopyright(
+		"run program with 'myst "+licenceCmd.Name+" --"+licenceCmd.Flags[0].GetName()+"' option",
+		"run program with 'myst "+licenceCmd.Name+" --"+licenceCmd.Flags[1].GetName()+"' option",
+	)))
+	fmt.Println()
+
+	fmt.Println("If you agree with these Terms & Conditions, run program again with '--agreed-terms-and-conditions' flag")
 }
