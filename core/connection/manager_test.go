@@ -75,7 +75,7 @@ func (tc *testContext) SetupTest() {
 	}
 
 	tc.fakePromiseIssuer = &fakePromiseIssuer{}
-	promiseIssuerFactory := func(_ communication.Dialog) PromiseIssuer {
+	promiseIssuerFactory := func(_ identity.Identity, _ communication.Dialog) PromiseIssuer {
 		return tc.fakePromiseIssuer
 	}
 

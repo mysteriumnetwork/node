@@ -52,7 +52,7 @@ type PromiseIssuer interface {
 }
 
 // PromiseIssuerCreator creates new PromiseIssuer given context
-type PromiseIssuerCreator func(communication.Dialog) PromiseIssuer
+type PromiseIssuerCreator func(issuerID identity.Identity, dialog communication.Dialog) PromiseIssuer
 
 // Manager interface provides methods to manage connection
 type Manager interface {

@@ -23,6 +23,8 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
@@ -47,6 +49,11 @@ type PromiseIssuer struct {
 func (issuer *PromiseIssuer) Start(proposal dto.ServiceProposal) error {
 	issuer.proposal = proposal
 
+	if _, err := issuer.sendNewPromise(); err != nil {
+		// TODO Handle response for send promise
+		return err
+	}
+
 	return issuer.subscribePromiseBalance()
 }
 
@@ -54,6 +61,16 @@ func (issuer *PromiseIssuer) Start(proposal dto.ServiceProposal) error {
 func (issuer *PromiseIssuer) Stop() error {
 	// TODO Should unregister consumers(subscriptions) here
 	return nil
+}
+
+func (issuer *PromiseIssuer) sendNewPromise() (*promise.Response, error) {
+	unsignedPromise := promise.NewPromise(issuer.IssuerID, identity.FromAddress(issuer.proposal.ProviderID), money.NewMoney(10, "MYST"))
+	signedPromise, err := promise.SignByIssuer(unsignedPromise, issuer.Signer)
+	if err != nil {
+		return nil, err
+	}
+
+	return promise.Send(signedPromise, issuer.Dialog)
 }
 
 func (issuer *PromiseIssuer) subscribePromiseBalance() error {
