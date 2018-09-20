@@ -147,6 +147,10 @@ jobs:
       - bin/release_docker dev
       name: "Pushing dev docker images"
 
+    - script:
+      - bin/helpers/go-reports-update.sh
+      name: "Update Go Report Card"
+
     # Official release (on tags only)
     - stage: release
       script: bin/s3 sync s3://build-artifacts build/package
