@@ -118,16 +118,21 @@ func (manager *Manager) Wait() error {
 
 // Kill stops service
 func (manager *Manager) Kill() error {
+	var errDialogWaiter, errService error
+
 	if manager.discovery != nil {
 		manager.discovery.Stop()
 	}
-
-	var err error
 	if manager.dialogWaiter != nil {
-		err = manager.dialogWaiter.Stop()
+		errDialogWaiter = manager.dialogWaiter.Stop()
 	}
+	errService = manager.service.Stop()
 
-	manager.service.Stop()
-
-	return err
+	if errDialogWaiter != nil {
+		return errDialogWaiter
+	}
+	if errService != nil {
+		return errService
+	}
+	return nil
 }
