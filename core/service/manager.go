@@ -54,10 +54,10 @@ func NewManager(
 
 	return &Manager{
 		identityLoader: identityLoader,
-		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
+		dialogWaiterFactory: func(providerID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
-				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
-				signerFactory(myID),
+				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, providerID),
+				signerFactory(providerID),
 				identityRegistry,
 			)
 		},

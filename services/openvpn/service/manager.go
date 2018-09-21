@@ -90,7 +90,7 @@ func (manager *Manager) Start(providerID identity.Identity) (
 
 	caSubject := pkix.Name{
 		Country:            []string{currentCountry},
-		Organization:       []string{"Mystermium.network"},
+		Organization:       []string{"Mysterium Network"},
 		OrganizationalUnit: []string{"Mysterium Team"},
 	}
 	serverCertSubject := pkix.Name{
