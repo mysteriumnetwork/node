@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	openvpn_node "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -127,13 +128,14 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	}
 	cancel = append(cancel, func() { dialog.Close() })
 
-	vpnSession, err := session.RequestSessionCreate(dialog, proposal.ID)
+	vpnSession := &session.Session{Config: &openvpn_node.VPNConfig{}}
+	err = session.RequestSessionCreate(dialog, proposal.ID, vpnSession)
 	if err != nil {
 		return err
 	}
 
 	stateChannel := make(chan openvpn.State, 10)
-	openvpnClient, err := manager.startOpenvpnClient(*vpnSession, consumerID, providerID, stateChannel, options)
+	openvpnClient, err := manager.startOpenvpnClient(vpnSession, consumerID, providerID, stateChannel, options)
 	if err != nil {
 		return err
 	}
@@ -200,7 +202,7 @@ func openvpnClientWaiter(openvpnClient openvpn.Process, dialog communication.Dia
 	dialog.Close()
 }
 
-func (manager *connectionManager) startOpenvpnClient(vpnSession session.SessionDto, consumerID, providerID identity.Identity, stateChannel chan openvpn.State, options ConnectOptions) (openvpn.Process, error) {
+func (manager *connectionManager) startOpenvpnClient(vpnSession *session.Session, consumerID, providerID identity.Identity, stateChannel chan openvpn.State, options ConnectOptions) (openvpn.Process, error) {
 	openvpnClient, err := manager.newVpnClient(
 		vpnSession,
 		consumerID,

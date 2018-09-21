@@ -20,6 +20,8 @@ package session
 import (
 	"errors"
 
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/communication"
 )
 
@@ -42,15 +44,21 @@ func (producer *createProducer) Produce() (requestPtr interface{}) {
 }
 
 // RequestSessionCreate requests session creation and returns session DTO
-func RequestSessionCreate(sender communication.Sender, proposalID int) (*SessionDto, error) {
+func RequestSessionCreate(sender communication.Sender, proposalID int, sessionPtr *Session) error {
 	responsePtr, err := sender.Request(&createProducer{
 		ProposalID: proposalID,
 	})
 	response := responsePtr.(*SessionCreateResponse)
 
 	if err != nil || !response.Success {
-		return nil, errors.New("SessionDto create failed. " + response.Message)
+		return errors.New("Session create failed. " + response.Message)
 	}
 
-	return &response.Session, nil
+	return responseToSession(response, sessionPtr)
+}
+
+func responseToSession(response *SessionCreateResponse, sessionPtr *Session) error {
+	sessionPtr.ID = response.Session.ID
+
+	return json.Unmarshal(response.Session.Config, &sessionPtr.Config)
 }
