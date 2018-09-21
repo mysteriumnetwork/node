@@ -23,7 +23,6 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -47,28 +46,27 @@ var (
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient  server.Client
-	newDialog        DialogCreator
-	newPromiseIssuer PromiseIssuerCreator
-	newConnection    VpnConnectionCreator
-	statsKeeper      stats.SessionStatsKeeper
-	ctx              context.Context
-	mutex            sync.RWMutex
-	status           ConnectionStatus
-	cleanConnection  func()
+	mysteriumClient   server.Client
+	newDialog         DialogCreator
+	newPromiseIssuer  PromiseIssuerCreator
+	connectionCreator ConnectionCreator
+	//these are populated by Connect at runtime
+	ctx             context.Context
+	mutex           sync.RWMutex
+	status          ConnectionStatus
+	cleanConnection func()
 }
 
 // NewManager creates connection manager with given dependencies
 func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator, promiseIssuerCreator PromiseIssuerCreator,
-	newConnection VpnConnectionCreator, statsKeeper stats.SessionStatsKeeper) *connectionManager {
+	connectionCreator ConnectionCreator) *connectionManager {
 	return &connectionManager{
-		mysteriumClient:  mysteriumClient,
-		newDialog:        dialogCreator,
-		newConnection:    newConnection,
-		statsKeeper:      statsKeeper,
-		status:           statusNotConnected(),
-		cleanConnection:  warnOnClean,
-		newPromiseIssuer: promiseIssuerCreator,
+		mysteriumClient:   mysteriumClient,
+		newDialog:         dialogCreator,
+		newPromiseIssuer:  promiseIssuerCreator,
+		connectionCreator: connectionCreator,
+		status:            statusNotConnected(),
+		cleanConnection:   warnOnClean,
 	}
 }
 
@@ -146,7 +144,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 
 	stateChannel := make(chan State, 10)
 
-	connection, err := manager.newConnection(
+	connection, err := manager.connectionCreator.CreateConnection(
 		connectionOptions,
 		stateChannel,
 	)
@@ -261,10 +259,7 @@ func (manager *connectionManager) onStateChanged(state State, sessionID session.
 
 	switch state {
 	case Connected:
-		manager.statsKeeper.MarkSessionStart()
 		manager.status = statusConnected(sessionID)
-	case Disconnecting:
-		manager.statsKeeper.MarkSessionEnd()
 	case Reconnecting:
 		manager.status = statusReconnecting()
 	}
