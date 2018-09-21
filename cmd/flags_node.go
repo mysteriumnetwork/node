@@ -34,6 +34,17 @@ var (
 		Usage: "Port for listening incoming api requests",
 		Value: 4050,
 	}
+
+	promiseCurrencyFlag = cli.StringFlag{
+		Name:  "promise.currency",
+		Usage: "Type of currency that will be used for issuing promises",
+		Value: "MYST",
+	}
+	promiseAmountFlag = cli.IntFlag{
+		Name:  "promise.amount",
+		Usage: "Amount of money that will be used for issuing a single promise",
+		Value: 100,
+	}
 )
 
 // RegisterFlagsNode function register node flags to flag list
@@ -43,6 +54,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	}
 
 	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag)
+	*flags = append(*flags, promiseCurrencyFlag, promiseAmountFlag)
 
 	RegisterFlagsNetwork(flags)
 	openvpn_core.RegisterFlags(flags)
@@ -58,6 +70,9 @@ func ParseFlagsNode(ctx *cli.Context) node.Options {
 
 		ctx.GlobalString(tequilapiAddressFlag.Name),
 		ctx.GlobalInt(tequilapiPortFlag.Name),
+
+		ctx.GlobalString(promiseCurrencyFlag.Name),
+		ctx.GlobalUint64(promiseAmountFlag.Name),
 
 		openvpn_core.ParseFlags(ctx),
 		ParseFlagsLocation(ctx),

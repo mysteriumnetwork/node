@@ -24,7 +24,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
@@ -64,7 +63,7 @@ func (issuer *PromiseIssuer) Stop() error {
 }
 
 func (issuer *PromiseIssuer) sendNewPromise() (*promise.Response, error) {
-	unsignedPromise := promise.NewPromise(issuer.IssuerID, identity.FromAddress(issuer.proposal.ProviderID), money.NewMoney(10, "MYST"))
+	unsignedPromise := promise.NewPromise(issuer.IssuerID, identity.FromAddress(issuer.proposal.ProviderID), issuer.Amount)
 	signedPromise, err := promise.SignByIssuer(unsignedPromise, issuer.Signer)
 	if err != nil {
 		return nil, err
