@@ -36,9 +36,11 @@ type Connection interface {
 // StateChannel is the channel we receive state change events on
 type StateChannel chan State
 
-// VpnConnectionCreator creates new vpn client by given session,
+// ConnectionCreator creates new vpn client by given session,
 // consumer identity, provider identity and uses state channel to report state changes
-type VpnConnectionCreator func(ConnectOptions, StateChannel) (Connection, error)
+type ConnectionCreator interface {
+	CreateConnection(ConnectOptions, StateChannel) (Connection, error)
+}
 
 // PromiseIssuer issues promises from consumer to provider.
 // Consumer signs those promises.
