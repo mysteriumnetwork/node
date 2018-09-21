@@ -24,10 +24,12 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
+// CreateProducer creates requests/responses of the "session-create" events for communication channel
 type CreateProducer struct {
 	ProposalID int
 }
 
+// GetRequestEndpoint returns endpoint to receive messages
 func (producer *CreateProducer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpointSessionCreate
 }
