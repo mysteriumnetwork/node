@@ -64,16 +64,17 @@ func NewNode(
 	locationDetector := location.NewDetector(ipResolver, locationResolver)
 	originalLocationCache := location.NewLocationCache(locationDetector)
 
-	vpnClientFactory := openvpn.ConfigureOpenVpnClientFactory(
+	connectionFactory := openvpn.NewOpenvpnProcessBasedConnectionFactory(
 		mysteriumClient,
 		options.Openvpn.BinaryPath,
 		options.Directories.Config,
 		options.Directories.Runtime,
-		signerFactory,
 		statsKeeper,
 		originalLocationCache,
+		signerFactory,
 	)
-	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuerFactory, vpnClientFactory, statsKeeper)
+
+	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory)
 
 	router := tequilapi.NewAPIRouter()
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
