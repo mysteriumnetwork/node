@@ -148,7 +148,7 @@ jobs:
       name: "Pushing dev docker images"
 
     - script:
-      - bin/helpers/go-reports-update.sh
+      - bin/release_goreport
       name: "Update Go Report Card"
 
     # Official release (on tags only)
