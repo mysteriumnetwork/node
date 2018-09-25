@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
+	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -33,8 +34,10 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 )
 
@@ -61,6 +64,12 @@ type Dependencies struct {
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
+	logconfig.Bootstrap()
+	nats_discovery.Bootstrap()
+	openvpn.Bootstrap()
+
+	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
+
 	if err := nodeOptions.Directories.Check(); err != nil {
 		return err
 	}
@@ -78,6 +87,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapNodeComponents(nodeOptions)
 
 	return nil
+}
+
+// Shutdown stops container
+func (di *Dependencies) Shutdown() {
+	log.Flush()
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {

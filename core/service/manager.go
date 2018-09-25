@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
@@ -57,8 +56,6 @@ func NewManager(
 	service Service,
 	discoveryService *discovery.Discovery,
 ) *Manager {
-	logconfig.Bootstrap()
-
 	return &Manager{
 		identityLoader: identityLoader,
 		dialogWaiterFactory: func(providerID identity.Identity) communication.DialogWaiter {
@@ -86,8 +83,6 @@ type Manager struct {
 
 // Start starts service - does not block
 func (manager *Manager) Start() (err error) {
-	log.Infof(logPrefix, "Starting Mysterium Server (%s)", metadata.VersionAsString())
-
 	providerID, err := manager.identityLoader()
 	if err != nil {
 		return err
