@@ -31,8 +31,8 @@ import (
 )
 
 var (
-	errLowAmount          = fmt.Errorf("promise amount less then the service proposal price")
-	errLowBalance         = fmt.Errorf("issuer balance less then the promise amount")
+	errLowAmount          = fmt.Errorf("promise amount less than the service proposal price")
+	errLowBalance         = fmt.Errorf("issuer balance less than the promise amount")
 	errBadSignature       = fmt.Errorf("invalid Signature for the provided identity")
 	errUnknownBenefiter   = fmt.Errorf("unknown promise benefiter received")
 	errUnsupportedRequest = fmt.Errorf("unsupported request")
@@ -69,43 +69,28 @@ func (c *Consumer) Consume(requestPtr interface{}) (response interface{}, err er
 
 	signature := identity.SignatureBase64(string(request.SignedPromise.IssuerSignature))
 	issuer := identity.FromAddress(request.SignedPromise.Promise.IssuerID)
-	verify := identity.NewVerifierIdentity(issuer)
-	if !verify.Verify(receivedPromise, signature) {
-		return &Response{
-			Success: false,
-			Message: errBadSignature.Error(),
-			Request: request,
-		}, nil
+	verifier := identity.NewVerifierIdentity(issuer)
+	if !verifier.Verify(receivedPromise, signature) {
+		return failedResponse(errBadSignature, request), nil
 	}
 
 	benefiter := identity.FromAddress(request.SignedPromise.Promise.BenefiterID)
 	if benefiter.Address != c.proposal.ProviderID {
-		return &Response{
-			Success: false,
-			Message: errUnknownBenefiter.Error(),
-			Request: request,
-		}, nil
+		return failedResponse(errUnknownBenefiter, request), nil
 	}
 
 	price := c.proposal.PaymentMethod.GetPrice()
 	amount := request.SignedPromise.Promise.Amount.Amount
 	if amount < price.Amount {
-		return &Response{
-			Success: false,
-			Message: errLowAmount.Error(),
-			Request: request,
-		}, nil
+		return failedResponse(errLowAmount, request), nil
 	}
 
 	balance, err := c.etherClient.BalanceAt(context.Background(), common.HexToAddress(issuer.Address), nil)
 	if err != nil {
 		return nil, err
-	} else if balance.Uint64() < amount {
-		return &Response{
-			Success: false,
-			Message: errLowBalance.Error(),
-			Request: request,
-		}, nil
+	}
+	if balance.Uint64() < amount {
+		return failedResponse(errLowBalance, request), nil
 	}
 
 	if err := c.storage.Store(issuer.Address, &request.SignedPromise.Promise); err != nil {
@@ -113,4 +98,8 @@ func (c *Consumer) Consume(requestPtr interface{}) (response interface{}, err er
 	}
 
 	return &Response{Success: true, Message: "Promise accepted", Request: request}, nil
+}
+
+func failedResponse(err error, request *Request) *Response {
+	return &Response{Success: false, Message: err.Error(), Request: request}
 }
