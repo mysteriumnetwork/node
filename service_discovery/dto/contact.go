@@ -17,6 +17,19 @@
 
 package dto
 
+import "encoding/json"
+
+// ContactList is list of Contact structures, to have custom JSON marshaling
+type ContactList []Contact
+
+// MarshalJSON encodes in such manner that `null` situation avoided in JSON
+func (list ContactList) MarshalJSON() ([]byte, error) {
+	if list == nil {
+		return json.Marshal([]Contact{})
+	}
+	return json.Marshal([]Contact(list))
+}
+
 type Contact struct {
 	Type       string            `json:"type"`
 	Definition ContactDefinition `json:"definition"`
