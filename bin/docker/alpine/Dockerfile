@@ -1,4 +1,4 @@
-FROM golang:1.9.2-alpine AS builder
+FROM golang:1.11-alpine AS builder
 
 # Install packages
 RUN apk add --update --no-cache bash gcc musl-dev make \
