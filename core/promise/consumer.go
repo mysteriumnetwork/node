@@ -89,7 +89,7 @@ func (c *Consumer) Consume(requestPtr interface{}) (response interface{}, err er
 
 	price := c.proposal.PaymentMethod.GetPrice()
 	amount := request.SignedPromise.Promise.Amount.Amount
-	if price.Amount > amount {
+	if amount < price.Amount {
 		return &Response{
 			Success: false,
 			Message: errLowAmount.Error(),
