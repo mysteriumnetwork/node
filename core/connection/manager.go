@@ -221,7 +221,7 @@ func (manager *connectionManager) startOpenvpnClient(vpnSession *session.Session
 	return openvpnClient, nil
 }
 
-func (manager *connectionManager) waitForConnectedState(stateChannel <-chan openvpn.State, sessionID session.SessionID) error {
+func (manager *connectionManager) waitForConnectedState(stateChannel <-chan openvpn.State, sessionID session.ID) error {
 	for {
 		select {
 		case state, more := <-stateChannel:
@@ -242,7 +242,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan open
 	}
 }
 
-func (manager *connectionManager) consumeOpenvpnStates(stateChannel <-chan openvpn.State, sessionID session.SessionID) {
+func (manager *connectionManager) consumeOpenvpnStates(stateChannel <-chan openvpn.State, sessionID session.ID) {
 	for state := range stateChannel {
 		manager.onStateChanged(state, sessionID)
 	}
@@ -254,7 +254,7 @@ func (manager *connectionManager) consumeOpenvpnStates(stateChannel <-chan openv
 	log.Debug(managerLogPrefix, "State updater stopped")
 }
 
-func (manager *connectionManager) onStateChanged(state openvpn.State, sessionID session.SessionID) {
+func (manager *connectionManager) onStateChanged(state openvpn.State, sessionID session.ID) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 

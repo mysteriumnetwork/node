@@ -154,7 +154,7 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 }
 
 // SendSessionStats sends session statistics
-func (mApi *mysteriumAPI) SendSessionStats(sessionID session.SessionID, sessionStats dto.SessionStats, signer identity.Signer) error {
+func (mApi *mysteriumAPI) SendSessionStats(sessionID session.ID, sessionStats dto.SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionID)
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
 	if err != nil {

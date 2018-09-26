@@ -96,7 +96,7 @@ func (client *ClientFake) FindProposals(providerID string) (proposals []dto_disc
 }
 
 // SendSessionStats heartbeats that session is still active + session upload and download amounts
-func (client *ClientFake) SendSessionStats(sessionId session.SessionID, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
+func (client *ClientFake) SendSessionStats(sessionId session.ID, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
 	log.Info(mysteriumAPILogPrefix, "Fake session stats sent: ", sessionId)
 
 	return nil

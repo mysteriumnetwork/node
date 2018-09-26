@@ -27,7 +27,7 @@ import (
 type ServiceConfigProvider func() (ServiceConfiguration, error)
 
 // IDGenerator defines method for session id generation
-type IDGenerator func() SessionID
+type IDGenerator func() ID
 
 // SaveCallback stores newly started sessions
 type SaveCallback func(Session)

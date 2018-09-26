@@ -23,7 +23,7 @@ import (
 )
 
 // SignatureCredentialsProvider returns session id as username and id signed with given signer as password
-func SignatureCredentialsProvider(sessionID session.SessionID, signer identity.Signer) func() (username string, password string, err error) {
+func SignatureCredentialsProvider(sessionID session.ID, signer identity.Signer) func() (username string, password string, err error) {
 	return func() (username string, password string, err error) {
 		signature, err := signer.Sign([]byte(SignaturePrefix + sessionID))
 		if err != nil {
