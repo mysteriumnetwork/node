@@ -1,4 +1,4 @@
-FROM golang:1.9.2 AS builder
+FROM golang:1.11-alpine AS builder
 
 # Install FPM
 RUN apt-get update \

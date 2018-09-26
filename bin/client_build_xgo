@@ -32,7 +32,7 @@ mkdir -p ${DIR_BUILD}
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
 xgo \
-    --go=1.9.2 \
+    --go=1.11 \
     --targets="$XGO_TARGETS" \
     --dest=${DIR_TEMP} \
     --out=mysterium_client \
