@@ -44,13 +44,13 @@ func (consumer *createConsumer) GetRequestEndpoint() communication.RequestEndpoi
 
 // NewRequest creates struct where request from endpoint will be serialized
 func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
-	var request SessionCreateRequest
+	var request CreateRequest
 	return &request
 }
 
 // Consume handles requests from endpoint and replies with response
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
-	request := requestPtr.(*SessionCreateRequest)
+	request := requestPtr.(*CreateRequest)
 	if consumer.CurrentProposalID != request.ProposalId {
 		return respondWithError(fmt.Sprintf("Proposal doesn't exist: %d", request.ProposalId)), nil
 	}
@@ -63,21 +63,21 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	return respondWithSession(sessionInstance), nil
 }
 
-func respondWithError(errorMessage string) *SessionCreateResponse {
-	return &SessionCreateResponse{
+func respondWithError(errorMessage string) *CreateResponse {
+	return &CreateResponse{
 		Success: false,
 		Message: errorMessage,
 	}
 }
 
-func respondWithSession(sessionInstance Session) *SessionCreateResponse {
+func respondWithSession(sessionInstance Session) *CreateResponse {
 	serializedConfig, err := json.Marshal(sessionInstance.Config)
 	if err != nil {
 		// TODO Cant expose error to response, some logging should be here
 		return respondWithError("Failed to serialize session.")
 	}
 
-	return &SessionCreateResponse{
+	return &CreateResponse{
 		Success: true,
 		Session: SessionDto{
 			ID:     sessionInstance.ID,

@@ -348,7 +348,7 @@ func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
 }
 
 func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	return &session.SessionCreateResponse{
+	return &session.CreateResponse{
 			Success: true,
 			Message: "Everything is great!",
 			Session: session.SessionDto{

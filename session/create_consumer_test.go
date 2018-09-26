@@ -30,14 +30,14 @@ var consumer = createConsumer{
 }
 
 func TestConsumer_UnknownProposal(t *testing.T) {
-	request := consumer.NewRequest().(*SessionCreateRequest)
+	request := consumer.NewRequest().(*CreateRequest)
 	request.ProposalId = 100
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
 	assert.Exactly(
 		t,
-		&SessionCreateResponse{
+		&CreateResponse{
 			Success: false,
 			Message: "Proposal doesn't exist: 100",
 		},
@@ -46,14 +46,14 @@ func TestConsumer_UnknownProposal(t *testing.T) {
 }
 
 func TestConsumer_Success(t *testing.T) {
-	request := consumer.NewRequest().(*SessionCreateRequest)
+	request := consumer.NewRequest().(*CreateRequest)
 	request.ProposalId = 101
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
 	assert.Exactly(
 		t,
-		&SessionCreateResponse{
+		&CreateResponse{
 			Success: true,
 			Session: SessionDto{
 				ID:     "new-id",

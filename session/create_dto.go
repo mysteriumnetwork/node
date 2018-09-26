@@ -25,13 +25,13 @@ import (
 
 const endpointSessionCreate = communication.RequestEndpoint("session-create")
 
-// SessionCreateRequest structure represents message from service consumer to initiate session for given proposal id
-type SessionCreateRequest struct {
+// CreateRequest structure represents message from service consumer to initiate session for given proposal id
+type CreateRequest struct {
 	ProposalId int `json:"proposal_id"`
 }
 
-// SessionCreateResponse structure represents service provider response to given session request from consumer
-type SessionCreateResponse struct {
+// CreateResponse structure represents service provider response to given session request from consumer
+type CreateResponse struct {
 	Success bool       `json:"success"`
 	Message string     `json:"message"`
 	Session SessionDto `json:"session"`
