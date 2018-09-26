@@ -34,7 +34,7 @@ import (
 
 const logPrefix = "[service-openvpn] "
 
-// ServerFactory initiates Openvon server instance during runtime
+// ServerFactory initiates Openvpn server instance during runtime
 type ServerFactory func(primitives *tls.Primitives) openvpn.Process
 
 // ProposalFactory prepares service proposal during runtime
