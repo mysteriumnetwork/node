@@ -25,6 +25,11 @@ import (
 
 const endpointSessionCreate = communication.RequestEndpoint("session-create")
 
+var (
+	responseInvalidProposal = CreateResponse{Success: false, Message: "Invalid Proposal"}
+	responseInternalError   = CreateResponse{Success: false, Message: "Internal Error"}
+)
+
 // CreateRequest structure represents message from service consumer to initiate session for given proposal id
 type CreateRequest struct {
 	ProposalId int `json:"proposal_id"`

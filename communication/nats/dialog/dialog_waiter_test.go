@@ -124,9 +124,9 @@ func TestDialogWaiter_ServeDialogsRejectUnregisteredConsumers(t *testing.T) {
 		`{
 			"payload":	{
 				"reason":400,
-				"reasonMessage":"Invalid identity"
+				"reasonMessage":"Invalid Identity"
 			},
-			"signature":"c2lnbmVkeyJyZWFzb24iOjQwMCwicmVhc29uTWVzc2FnZSI6IkludmFsaWQgaWRlbnRpdHkifQ=="
+			"signature":"c2lnbmVkeyJyZWFzb24iOjQwMCwicmVhc29uTWVzc2FnZSI6IkludmFsaWQgSWRlbnRpdHkifQ=="
 		}`,
 		string(msg.Data),
 	)

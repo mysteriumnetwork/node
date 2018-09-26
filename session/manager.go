@@ -20,8 +20,15 @@ package session
 import (
 	"sync"
 
+	"errors"
+
 	"github.com/mysteriumnetwork/node/identity"
 	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+)
+
+var (
+	// ErrorInvalidProposal is validation error then invalid proposal requested for session creation
+	ErrorInvalidProposal = errors.New("proposal does not exist")
 )
 
 // IDGenerator defines method for session id generation
@@ -72,9 +79,14 @@ type manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *manager) Create(consumerID identity.Identity) (sessionInstance Session, err error) {
+func (manager *manager) Create(consumerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
+
+	if manager.currentProposal.ID != proposalID {
+		err = ErrorInvalidProposal
+		return
+	}
 
 	sessionInstance, err = manager.createSession(consumerID)
 	if err != nil {

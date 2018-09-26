@@ -41,7 +41,7 @@ func TestResponseSerialize(t *testing.T) {
 			responseInvalidIdentity,
 			`{
 				"reason": 400,
-				"reasonMessage": "Invalid identity"
+				"reasonMessage": "Invalid Identity"
 			}`,
 		},
 	}

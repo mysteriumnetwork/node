@@ -19,20 +19,17 @@ package session
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // NewDialogHandler constructs handler which gets all incoming dialogs and starts handling them
-func NewDialogHandler(proposal dto_discovery.ServiceProposal, sessionManager Manager) *handler {
+func NewDialogHandler(sessionManager Manager) *handler {
 	return &handler{
-		CurrentProposal: proposal,
-		SessionManager:  sessionManager,
+		SessionManager: sessionManager,
 	}
 }
 
 type handler struct {
-	CurrentProposal dto_discovery.ServiceProposal
-	SessionManager  Manager
+	SessionManager Manager
 }
 
 // Handle starts serving services in given Dialog instance
@@ -43,9 +40,8 @@ func (handler *handler) Handle(dialog communication.Dialog) error {
 func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) error {
 	return dialog.Respond(
 		&createConsumer{
-			CurrentProposalID: handler.CurrentProposal.ID,
-			SessionManager:    handler.SessionManager,
-			PeerID:            dialog.PeerID(),
+			SessionManager: handler.SessionManager,
+			PeerID:         dialog.PeerID(),
 		},
 	)
 }
