@@ -25,9 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSenderInterface(t *testing.T) {
-	var _ communication.Sender = &senderNATS{}
-}
+var _ communication.Sender = &senderNATS{}
 
 func TestSenderNew(t *testing.T) {
 	connection := &connectionFake{}

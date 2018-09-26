@@ -17,12 +17,6 @@
 
 package promise
 
-import (
-	"testing"
+import "github.com/mysteriumnetwork/node/communication"
 
-	"github.com/mysteriumnetwork/node/communication"
-)
-
-func TestBalanceMessageProducer_Interface(t *testing.T) {
-	var _ communication.MessageProducer = &BalanceMessageProducer{}
-}
+var _ communication.MessageProducer = &BalanceMessageProducer{}

@@ -28,9 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDialogEstablisher_Interface(t *testing.T) {
-	var _ communication.DialogEstablisher = &dialogEstablisher{}
-}
+var _ communication.DialogEstablisher = &dialogEstablisher{}
 
 func TestDialogEstablisher_Factory(t *testing.T) {
 	id := identity.FromAddress("123456")

@@ -38,9 +38,7 @@ var (
 	}
 )
 
-func TestPromiseIssuer_Interface(t *testing.T) {
-	var _ connection.PromiseIssuer = &PromiseIssuer{}
-}
+var _ connection.PromiseIssuer = &PromiseIssuer{}
 
 func TestPromiseIssuer_Start_SubscriptionFails(t *testing.T) {
 	dialog := &fakeDialog{

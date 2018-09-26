@@ -30,13 +30,7 @@ type customPayload struct {
 	Field int
 }
 
-func TestCodecSigner_Interface(t *testing.T) {
-	var _ communication.Codec = NewCodecSecured(
-		communication.NewCodecJSON(),
-		&identity.SignerFake{},
-		&identity.VerifierFake{},
-	)
-}
+var _ communication.Codec = &codecSecured{}
 
 func TestCodecSigner_Pack(t *testing.T) {
 	table := []struct {

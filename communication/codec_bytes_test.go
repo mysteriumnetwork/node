@@ -24,9 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCodecBytesInterface(t *testing.T) {
-	var _ Codec = NewCodecBytes()
-}
+var _ Codec = &codecBytes{}
 
 func TestCodecBytesPack(t *testing.T) {
 	table := []struct {

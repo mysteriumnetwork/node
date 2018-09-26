@@ -17,12 +17,6 @@
 
 package promise
 
-import (
-	"testing"
+import "github.com/mysteriumnetwork/node/communication"
 
-	"github.com/mysteriumnetwork/node/communication"
-)
-
-func TestBalanceMessageConsumer_Interface(t *testing.T) {
-	var _ communication.MessageConsumer = &BalanceMessageConsumer{}
-}
+var _ communication.MessageConsumer = &BalanceMessageConsumer{}

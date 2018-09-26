@@ -17,12 +17,6 @@
 
 package noop
 
-import (
-	"testing"
+import "github.com/mysteriumnetwork/node/session"
 
-	"github.com/mysteriumnetwork/node/session"
-)
-
-func TestPromiseProcessor_Interface(t *testing.T) {
-	var _ session.PromiseProcessor = &PromiseProcessor{}
-}
+var _ session.PromiseProcessor = &PromiseProcessor{}

@@ -30,9 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDialogWaiter_Interface(t *testing.T) {
-	var _ communication.DialogWaiter = &dialogWaiter{}
-}
+var _ communication.DialogWaiter = &dialogWaiter{}
 
 func TestDialogWaiter_Factory(t *testing.T) {
 	address := discovery.NewAddress("custom", "nats://far-server:4222")
