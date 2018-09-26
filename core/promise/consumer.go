@@ -20,7 +20,7 @@ package promise
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 
 	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,11 +31,11 @@ import (
 )
 
 var (
-	errLowAmount          = fmt.Errorf("promise amount less than the service proposal price")
-	errLowBalance         = fmt.Errorf("issuer balance less than the promise amount")
-	errBadSignature       = fmt.Errorf("invalid Signature for the provided identity")
-	errUnknownBenefiter   = fmt.Errorf("unknown promise benefiter received")
-	errUnsupportedRequest = fmt.Errorf("unsupported request")
+	errLowAmount          = errors.New("promise amount less than the service proposal price")
+	errLowBalance         = errors.New("issuer balance less than the promise amount")
+	errBadSignature       = errors.New("invalid Signature for the provided identity")
+	errUnknownBenefiter   = errors.New("unknown promise benefiter received")
+	errUnsupportedRequest = errors.New("unsupported request")
 )
 
 // Consumer process promise-requests
