@@ -23,60 +23,60 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
-	"github.com/mysteriumnetwork/node/communication"
-	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
-	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/discovery"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/nat"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	openvpn_node "github.com/mysteriumnetwork/node/services/openvpn"
+	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 )
 
-// NewManager function creates new service manager by given options
+// NewManager creates new instance of Openvpn service
 func NewManager(
 	nodeOptions node.Options,
-	serviceOptions Options,
-	networkDefinition metadata.NetworkDefinition,
-	identityLoader identity_selector.Loader,
-	signerFactory identity.SignerFactory,
-	identityRegistry identity_registry.IdentityRegistry,
+	serviceOptions service.Options,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
-	discoveryService *discovery.Discovery,
 ) *Manager {
-	logconfig.Bootstrap()
-
 	natService := nat.NewService()
-
 	sessionStorage := session.NewStorageMemory()
 
+	vpnServerIP := func(outboundIP, publicIP string) string {
+		//TODO public ip could be overridden by arg nodeOptions if needed
+		if publicIP != outboundIP {
+			log.Warnf(
+				`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s]. 
+You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
+				publicIP,
+				outboundIP,
+				publicIP,
+				serviceOptions.OpenvpnPort,
+				outboundIP,
+				serviceOptions.OpenvpnPort,
+			)
+
+		}
+
+		return publicIP
+	}
+
 	return &Manager{
-		identityLoader:   identityLoader,
 		locationResolver: locationResolver,
 		ipResolver:       ipResolver,
 		natService:       natService,
-		dialogWaiterFactory: func(myID identity.Identity) communication.DialogWaiter {
-			return nats_dialog.NewDialogWaiter(
-				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, myID),
-				signerFactory(myID),
-				identityRegistry,
-			)
+		proposalFactory: func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal {
+			return openvpn_discovery.NewServiceProposalWithLocation(currentLocation, serviceOptions.OpenvpnProtocol)
 		},
-
-		sessionManagerFactory: func(primitives *tls.Primitives, vpnServerIP string) session.Manager {
+		sessionManagerFactory: func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager {
 			// TODO: check nodeOptions for --openvpn-transport option
 			clientConfigGenerator := openvpn_node.NewClientConfigGenerator(
 				primitives,
-				vpnServerIP,
+				vpnServerIP(outboundIP, publicIP),
 				serviceOptions.OpenvpnPort,
 				serviceOptions.OpenvpnProtocol,
 			)
@@ -85,7 +85,7 @@ func NewManager(
 			}
 			return session.NewManager(session.GenerateUUID, serviceConfigProvider, sessionStorage.Add)
 		},
-		vpnServerFactory: func(primitives *tls.Primitives, callback state.Callback) openvpn.Process {
+		vpnServerFactory: func(primitives *tls.Primitives) openvpn.Process {
 			// TODO: check nodeOptions for --openvpn-transport option
 			serverConfigGenerator := openvpn_node.NewServerConfigGenerator(
 				nodeOptions.Directories.Runtime,
@@ -101,28 +101,8 @@ func NewManager(
 				nodeOptions.Openvpn.BinaryPath,
 				serverConfigGenerator,
 				auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
-				state.NewMiddleware(callback),
+				state.NewMiddleware(vpnStateCallback),
 			)
 		},
-		openvpnServiceAddress: func(outboundIP, publicIP string) string {
-			//TODO public ip could be overridden by arg nodeOptions if needed
-			if publicIP != outboundIP {
-				log.Warnf(
-					`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s]. 
-You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
-					publicIP,
-					outboundIP,
-					publicIP,
-					serviceOptions.OpenvpnPort,
-					outboundIP,
-					serviceOptions.OpenvpnPort,
-				)
-
-			}
-
-			return publicIP
-		},
-		protocol:  serviceOptions.OpenvpnProtocol,
-		discovery: discoveryService,
 	}
 }

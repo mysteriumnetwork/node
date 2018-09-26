@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	dto_openvpn "github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
@@ -29,20 +28,13 @@ import (
 )
 
 func init() {
-	nats_discovery.Bootstrap()
 	openvpn.Bootstrap()
 }
 
-func TestServiceProposalUnserialize(t *testing.T) {
+func Test_ServiceProposal_UnserializeServiceDefinition(t *testing.T) {
 	jsonData := []byte(`{
-		"id": 1,
-		"format": "service-proposal/v1",
 		"service_type": "openvpn",
-		"service_definition": {},
-		"payment_method_type": "PER_TIME",
-		"payment_method": {},
-		"provider_id": "node",
-		"provider_contacts": []
+		"service_definition": {}
 	}`)
 
 	var actual dto_discovery.ServiceProposal
@@ -50,42 +42,41 @@ func TestServiceProposalUnserialize(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := dto_discovery.ServiceProposal{
-		ID:                1,
-		Format:            "service-proposal/v1",
 		ServiceType:       "openvpn",
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
-		PaymentMethodType: "PER_TIME",
-		PaymentMethod:     dto_openvpn.PaymentPerTime{},
-		ProviderID:        "node",
-		ProviderContacts:  []dto_discovery.Contact{},
 	}
 	assert.Equal(t, expected, actual)
 }
 
-func TestServiceProposalUnserializeUnknownService(t *testing.T) {
-	jsonData := []byte(`{
-		"service_type": "unknown",
-		"service_definition": {},
-		"payment_method_type": "PER_TIME",
-		"payment_method": {},
-		"provider_contacts": []
-	}`)
+func Test_ServiceProposal_SerializeServiceDefinition(t *testing.T) {
+	sp := dto_discovery.ServiceProposal{
+		ServiceType:       "openvpn",
+		ServiceDefinition: dto_openvpn.ServiceDefinition{},
+	}
 
-	var actual dto_discovery.ServiceProposal
-	err := json.Unmarshal(jsonData, &actual)
+	actualJSON, err := json.Marshal(sp)
+	assert.NoError(t, err)
 
-	assert.EqualError(t, err, "Service unserializer 'unknown' doesn't exist")
-	assert.Equal(t, "unknown", actual.ServiceType)
-	assert.Nil(t, actual.ServiceDefinition)
+	expectedJSON := `{
+	  "id": 0,
+	  "format": "",
+	  "service_type": "openvpn",
+	  "service_definition": {
+	    "location": {},
+	    "location_originate": {}
+	  },
+	  "payment_method_type": "",
+	  "payment_method": null,
+	  "provider_id": "",
+	  "provider_contacts": []
+	}`
+	assert.JSONEq(t, expectedJSON, string(actualJSON))
 }
 
-func TestServiceProposalUnserializePerTimePaymentMethod(t *testing.T) {
+func Test_ServiceProposal_UnserializePerTimePaymentMethod(t *testing.T) {
 	jsonData := []byte(`{
-		"service_type": "openvpn",
-		"service_definition": {},
 		"payment_method_type": "PER_TIME",
-		"payment_method": {},
-		"provider_contacts": []
+		"payment_method": {}
 	}`)
 
 	var actual dto_discovery.ServiceProposal
@@ -93,55 +84,4 @@ func TestServiceProposalUnserializePerTimePaymentMethod(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Exactly(t, dto_openvpn.PaymentPerTime{}, actual.PaymentMethod)
-}
-
-func TestServiceProposalUnserializeUnknownPaymentMethod(t *testing.T) {
-	jsonData := []byte(`{
-		"service_type": "openvpn",
-		"service_definition": {},
-		"payment_method_type": "unknown",
-		"payment_method": {},
-		"provider_contacts": []
-	}`)
-
-	var actual dto_discovery.ServiceProposal
-	err := json.Unmarshal(jsonData, &actual)
-
-	assert.EqualError(t, err, "Payment method unserializer 'unknown' doesn't exist")
-	assert.Equal(t, "unknown", actual.PaymentMethodType)
-	assert.Nil(t, actual.PaymentMethod)
-}
-
-func TestServiceProposalSerialize(t *testing.T) {
-	expectedJSON := `{
-		"id": 1,
-		"format": "service-proposal/v1",
-		"service_type": "openvpn",
-		"service_definition": {
-			"location": {},
-			"location_originate": {}
-		},
-		"payment_method_type": "PER_TIME",
-		"payment_method": {
-			"price": {},
-			"duration": 0
-		},
-		"provider_id": "node",
-		"provider_contacts": []
-	}`
-
-	sp := dto_discovery.ServiceProposal{
-		ID:                1,
-		Format:            "service-proposal/v1",
-		ServiceType:       "openvpn",
-		ServiceDefinition: dto_openvpn.ServiceDefinition{},
-		PaymentMethodType: "PER_TIME",
-		PaymentMethod:     dto_openvpn.PaymentPerTime{},
-		ProviderID:        "node",
-		ProviderContacts:  []dto_discovery.Contact{},
-	}
-
-	actualJSON, err := json.Marshal(sp)
-	assert.NoError(t, err)
-	assert.JSONEq(t, expectedJSON, string(actualJSON))
 }

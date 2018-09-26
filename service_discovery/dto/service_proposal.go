@@ -20,6 +20,12 @@ package dto
 import (
 	"encoding/json"
 	"errors"
+
+	"github.com/mysteriumnetwork/node/identity"
+)
+
+const (
+	proposalFormat = "service-proposal/v1"
 )
 
 type ServiceProposal struct {
@@ -45,7 +51,16 @@ type ServiceProposal struct {
 	ProviderID string `json:"provider_id"`
 
 	// Communication methods possible
-	ProviderContacts []Contact `json:"provider_contacts"`
+	ProviderContacts ContactList `json:"provider_contacts"`
+}
+
+// SetProviderContact updates service proposal description with general data
+func (proposal *ServiceProposal) SetProviderContact(providerID identity.Identity, providerContact Contact) {
+	proposal.Format = proposalFormat
+	// TODO This will be generated later
+	proposal.ID = 1
+	proposal.ProviderID = providerID.Address
+	proposal.ProviderContacts = ContactList{providerContact}
 }
 
 /**
@@ -73,7 +88,7 @@ func unserializeServiceDefinition(serviceType string, message *json.RawMessage) 
 type PaymentMethodUnserializer func(*json.RawMessage) (PaymentMethod, error)
 
 // service payment method unserializer registry
-var paymentMethodMap map[string]PaymentMethodUnserializer = make(map[string]PaymentMethodUnserializer, 0)
+var paymentMethodMap = make(map[string]PaymentMethodUnserializer, 0)
 
 func RegisterPaymentMethodUnserializer(paymentMethod string, unserializer func(*json.RawMessage) (PaymentMethod, error)) {
 	paymentMethodMap[paymentMethod] = unserializer
@@ -93,13 +108,17 @@ func unserializePaymentMethod(paymentMethod string, message *json.RawMessage) (P
 type ContactDefinitionUnserializer func(*json.RawMessage) (ContactDefinition, error)
 
 // service payment method unserializer registry
-var contactDefinitionMap map[string]ContactDefinitionUnserializer = make(map[string]ContactDefinitionUnserializer, 0)
+var contactDefinitionMap = make(map[string]ContactDefinitionUnserializer, 0)
 
-func RegisterContactDefinitionUnserializer(paymentMethod string, unserializer func(*json.RawMessage) (ContactDefinition, error)) {
+func RegisterContactUnserializer(paymentMethod string, unserializer func(*json.RawMessage) (ContactDefinition, error)) {
 	contactDefinitionMap[paymentMethod] = unserializer
 }
 
-func unserializeContactDefinition(message *json.RawMessage) (contactList []Contact, err error) {
+func unserializeContacts(message *json.RawMessage) (contactList ContactList, err error) {
+	if message == nil {
+		return
+	}
+
 	// get an array of raw definitions
 	var contacts []struct {
 		Type       string           `json:"type"`
@@ -109,10 +128,7 @@ func unserializeContactDefinition(message *json.RawMessage) (contactList []Conta
 		return
 	}
 
-	length := len(contacts)
-
-	contactList = make([]Contact, length)
-
+	contactList = make([]Contact, len(contacts))
 	for index, contactItem := range contacts {
 		if fn, ok := contactDefinitionMap[contactItem.Type]; ok {
 
@@ -133,7 +149,7 @@ func unserializeContactDefinition(message *json.RawMessage) (contactList []Conta
 	return
 }
 
-func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
+func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	var jsonData struct {
 		ID                int              `json:"id"`
 		Format            string           `json:"format"`
@@ -144,39 +160,30 @@ func (genericProposal *ServiceProposal) UnmarshalJSON(data []byte) (err error) {
 		PaymentMethod     *json.RawMessage `json:"payment_method"`
 		ProviderContacts  *json.RawMessage `json:"provider_contacts"`
 	}
-	if err = json.Unmarshal(data, &jsonData); err != nil {
-		return
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return err
 	}
 
-	genericProposal.ID = jsonData.ID
-	genericProposal.Format = jsonData.Format
-	genericProposal.ServiceType = jsonData.ServiceType
-	genericProposal.ProviderID = jsonData.ProviderID
-	genericProposal.PaymentMethodType = jsonData.PaymentMethodType
+	proposal.ID = jsonData.ID
+	proposal.Format = jsonData.Format
+	proposal.ServiceType = jsonData.ServiceType
+	proposal.ProviderID = jsonData.ProviderID
+	proposal.PaymentMethodType = jsonData.PaymentMethodType
 
 	// run the service definition implementation from our registry
-	genericProposal.ServiceDefinition, err = unserializeServiceDefinition(
+	proposal.ServiceDefinition, _ = unserializeServiceDefinition(
 		jsonData.ServiceType,
 		jsonData.ServiceDefinition,
 	)
-	if err != nil {
-		return
-	}
 
 	// run the payment method implementation from our registry
-	genericProposal.PaymentMethod, err = unserializePaymentMethod(
+	proposal.PaymentMethod, _ = unserializePaymentMethod(
 		jsonData.PaymentMethodType,
 		jsonData.PaymentMethod,
 	)
-	if err != nil {
-		return
-	}
 
 	// run contact unserializer
-	genericProposal.ProviderContacts, err = unserializeContactDefinition(jsonData.ProviderContacts)
-	if err != nil {
-		return
-	}
+	proposal.ProviderContacts, _ = unserializeContacts(jsonData.ProviderContacts)
 
 	return nil
 }

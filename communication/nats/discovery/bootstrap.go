@@ -25,7 +25,7 @@ import (
 
 // Bootstrap loads NATS discovery package into the overall system
 func Bootstrap() {
-	dto_discovery.RegisterContactDefinitionUnserializer(
+	dto_discovery.RegisterContactUnserializer(
 		TypeContactNATSV1,
 		func(rawDefinition *json.RawMessage) (dto_discovery.ContactDefinition, error) {
 			var contact ContactNATSV1

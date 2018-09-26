@@ -17,30 +17,16 @@
 
 package session
 
-import (
-	"encoding/json"
+import "github.com/mysteriumnetwork/node/identity"
 
-	"github.com/mysteriumnetwork/node/communication"
-)
+// SessionID represents session id type
+type SessionID string
 
-const endpointSessionCreate = communication.RequestEndpoint("session-create")
-
-// SessionCreateRequest structure represents message from service consumer to initiate session for given proposal id
-type SessionCreateRequest struct {
-	ProposalId int `json:"proposal_id"`
-}
-
-// SessionCreateResponse structure represents service provider response to given session request from consumer
-type SessionCreateResponse struct {
-	Success bool       `json:"success"`
-	Message string     `json:"message"`
-	Session SessionDto `json:"session"`
-}
-
-// SessionDto structure represents session information data within session creation response (session id and configuration options for underlaying service type)
-type SessionDto struct {
-	ID     SessionID       `json:"id"`
-	Config json.RawMessage `json:"config"`
+// Session structure holds all required information about current session between service consumer and provider
+type Session struct {
+	ID         SessionID
+	Config     ServiceConfiguration
+	ConsumerID identity.Identity
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party

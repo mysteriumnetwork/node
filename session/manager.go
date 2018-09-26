@@ -32,7 +32,7 @@ type IDGenerator func() SessionID
 // SaveCallback stores newly started sessions
 type SaveCallback func(Session)
 
-// NewManager returns session manager which maintains a map of session id -> session
+// NewManager returns new session manager
 func NewManager(idGenerator IDGenerator, configProvider ServiceConfigProvider, saveCallback SaveCallback) *manager {
 	return &manager{
 		generateID:     idGenerator,
@@ -42,6 +42,7 @@ func NewManager(idGenerator IDGenerator, configProvider ServiceConfigProvider, s
 	}
 }
 
+// manager knows how to start and provision session
 type manager struct {
 	generateID     IDGenerator
 	generateConfig ServiceConfigProvider
