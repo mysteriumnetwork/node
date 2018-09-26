@@ -38,8 +38,12 @@ jobs:
 
     # Test stage
     - stage: test
-      script: bin/check_govet
-      name: "govet check"
+      script: bin/test_e2e
+      name: "End-to-end tests"
+      if: type = pull_request
+
+    - script: bin/test
+      name: "Unit tests"
 
     - script: bin/builder_run bin/check_golint
       name: "golint check"
@@ -50,12 +54,8 @@ jobs:
     - script: bin/check_license
       name: "license check"
 
-    - script: bin/test_e2e
-      name: "End-to-end tests"
-      if: type = pull_request
-
-    - script: bin/test
-      name: "Unit tests"
+    - script: bin/check_govet
+      name: "govet check"
 
     # Build artifacts
     - stage: build
@@ -148,7 +148,7 @@ jobs:
       name: "Pushing dev docker images"
 
     - script:
-      - bin/helpers/go-reports-update.sh
+      - bin/release_goreport
       name: "Update Go Report Card"
 
     # Official release (on tags only)
