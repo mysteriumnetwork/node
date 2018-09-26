@@ -61,29 +61,21 @@ jobs:
     - stage: build
       script:
       - BINARY=build/myst/myst_linux_amd64 bin/package_standalone linux
-      - BINARY=build/server/mysterium_server_linux_amd64 bin/server_package_standalone linux
-      - BINARY=build/client/mysterium_client_linux_amd64 bin/client_package_standalone linux
       - bin/s3 sync build/package s3://build-artifacts
       name: "Linux packages"
 
     - script:
       - bin/builder_run BINARY=build/myst/myst bin/package_debian $BUILD_VERSION amd64
-      - bin/builder_run BINARY=build/server/mysterium_server bin/server_package_debian $BUILD_VERSION amd64
-      - bin/builder_run BINARY=build/client/mysterium_client bin/client_package_debian $BUILD_VERSION amd64
       - bin/s3 sync build/package s3://build-artifacts
       name: "DEB packages"
 
     - script:
       - BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin
-      - BINARY=build/server/mysterium_server_darwin_amd64 bin/server_package_standalone darwin
-      - BINARY=build/client/mysterium_client_darwin_amd64 bin/client_package_standalone darwin
       - bin/s3 sync build/package s3://build-artifacts
       name: "OSX packages"
 
     - script:
       - BINARY=build/myst/myst_windows_amd64.exe bin/package_standalone windows
-      - BINARY=build/server/mysterium_server_windows_amd64.exe bin/server_package_standalone windows
-      - BINARY=build/client/mysterium_client_windows_amd64.exe bin/client_package_standalone windows
       - bin/s3 sync build/package s3://build-artifacts
       name: "Windows packages"
 
@@ -98,30 +90,6 @@ jobs:
       - docker save myst:ubuntu | gzip > myst_ubuntu.tgz
       - bin/s3 cp myst_ubuntu.tgz s3://docker-images
       name: "Ubuntu docker image"
-
-    - script:
-      - bin/server_package_docker
-      - docker save mysterium-node:alpine | gzip > mysterium-node_alpine.tgz
-      - bin/s3 cp mysterium-node_alpine.tgz s3://docker-images
-      name: "Alpine docker image for node"
-
-    - script:
-      - bin/client_package_docker
-      - docker save mysterium-client:alpine | gzip > mysterium-client_alpine.tgz
-      - bin/s3 cp mysterium-client_alpine.tgz s3://docker-images
-      name: "Alpine docker image for client"
-
-    - script:
-      - bin/server_package_docker_ubuntu $BUILD_VERSION
-      - docker save mysterium-node:ubuntu | gzip > mysterium-node_ubuntu.tgz
-      - bin/s3 cp mysterium-node_ubuntu.tgz s3://docker-images
-      name: "Ubuntu docker image for node"
-
-    - script:
-      - bin/client_package_docker_ubuntu $BUILD_VERSION
-      - docker save mysterium-client:ubuntu | gzip > mysterium-client_ubuntu.tgz
-      - bin/s3 cp mysterium-client_ubuntu.tgz s3://docker-images
-      name: "Ubuntu docker image for client"
 
     # Development bleeding-edge release (on master commits only)
     - stage: release-dev
@@ -140,10 +108,6 @@ jobs:
       - bin/s3 sync s3://docker-images build/docker
       - docker load -i build/docker/myst_alpine.tgz
       - docker load -i build/docker/myst_ubuntu.tgz
-      - docker load -i build/docker/mysterium-node_alpine.tgz
-      - docker load -i build/docker/mysterium-client_alpine.tgz
-      - docker load -i build/docker/mysterium-node_ubuntu.tgz
-      - docker load -i build/docker/mysterium-client_ubuntu.tgz
       - bin/release_docker dev
       name: "Pushing dev docker images"
 
@@ -167,10 +131,6 @@ jobs:
       - bin/s3 sync s3://docker-images build/docker
       - docker load -i build/docker/myst_alpine.tgz
       - docker load -i build/docker/myst_ubuntu.tgz
-      - docker load -i build/docker/mysterium-node_alpine.tgz
-      - docker load -i build/docker/mysterium-client_alpine.tgz
-      - docker load -i build/docker/mysterium-node_ubuntu.tgz
-      - docker load -i build/docker/mysterium-client_ubuntu.tgz
       - bin/release_docker $TRAVIS_TAG latest
       name: "Pushing release to hub.docker.com"
 

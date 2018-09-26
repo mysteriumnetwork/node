@@ -1,5 +1,0 @@
-#!/bin/bash
-
-sudo ./build/client/mysterium_client \
-   --localnet \
-   $@
