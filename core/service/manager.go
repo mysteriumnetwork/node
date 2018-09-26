@@ -18,6 +18,8 @@
 package service
 
 import (
+	"errors"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -33,6 +35,11 @@ import (
 )
 
 const logPrefix = "[service-manager] "
+
+var (
+	// ErrorLocation error indicates that action (i.e. disconnect)
+	ErrorLocation = errors.New("failed to detect service location")
+)
 
 // Service interface represents pluggable Mysterium service
 type Service interface {

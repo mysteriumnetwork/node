@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -83,6 +84,8 @@ func (manager *Manager) Start(providerID identity.Identity) (
 
 	currentCountry, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
+		log.Warn(logPrefix, "Failed to detect service country. ", err)
+		err = service.ErrorLocation
 		return
 	}
 	currentLocation := dto_discovery.Location{Country: currentCountry}

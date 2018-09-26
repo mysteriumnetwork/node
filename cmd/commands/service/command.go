@@ -29,6 +29,8 @@ import (
 	"github.com/urfave/cli"
 )
 
+const serviceCommandName = "service"
+
 var (
 	identityFlag = cli.StringFlag{
 		Name:  "identity",
@@ -73,7 +75,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	}
 
 	return &cli.Command{
-		Name:      "service",
+		Name:      serviceCommandName,
 		Usage:     "Starts and publishes service on Mysterium Network",
 		ArgsUsage: " ",
 		Flags: []cli.Flag{
@@ -119,7 +121,14 @@ func NewCommand(licenseCommandName string) *cli.Command {
 
 			cmd.RegisterSignalCallback(utils.SoftKiller(stopCommand))
 
-			return <-errorChannel
+			err := <-errorChannel
+			switch err {
+			case service.ErrorLocation:
+				printLocationWarning("myst")
+				return nil
+			default:
+				return err
+			}
 		},
 	}
 }
@@ -132,4 +141,14 @@ func printTermWarning(licenseCommandName string) {
 	fmt.Println()
 
 	fmt.Println("If you agree with these Terms & Conditions, run program again with '--agreed-terms-and-conditions' flag")
+}
+
+func printLocationWarning(executableName string) {
+	fmt.Printf(
+		"Automatic location detection failed. Enter country manually by running program again with '%s %s --%s=US' flag",
+		executableName,
+		serviceCommandName,
+		cmd.LocationCountryFlag.Name,
+	)
+	fmt.Println()
 }
