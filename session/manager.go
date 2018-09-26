@@ -18,9 +18,8 @@
 package session
 
 import (
-	"sync"
-
 	"errors"
+	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
 	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -44,7 +43,7 @@ type SaveCallback func(Session)
 // Provider checks promises from consumer and signs them also.
 // Provider clears promises from consumer.
 type PromiseProcessor interface {
-	Start() error
+	Start(discovery_dto.ServiceProposal) error
 	Stop() error
 }
 
@@ -93,7 +92,7 @@ func (manager *manager) Create(consumerID identity.Identity, proposalID int) (se
 		return
 	}
 
-	err = manager.promiseProcessor.Start()
+	err = manager.promiseProcessor.Start(manager.currentProposal)
 	if err != nil {
 		return
 	}

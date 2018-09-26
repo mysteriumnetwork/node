@@ -54,11 +54,13 @@ func saveSession(sessionInstance Session) {
 }
 
 type fakePromiseProcessor struct {
-	started bool
+	started  bool
+	proposal discovery_dto.ServiceProposal
 }
 
-func (processor *fakePromiseProcessor) Start() error {
+func (processor *fakePromiseProcessor) Start(proposal discovery_dto.ServiceProposal) error {
 	processor.started = true
+	processor.proposal = proposal
 	return nil
 }
 
@@ -91,4 +93,5 @@ func TestManager_Create_StartsPromiseProcessor(t *testing.T) {
 	_, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID)
 	assert.NoError(t, err)
 	assert.True(t, promiseProcessor.started)
+	assert.Exactly(t, currentProposal, promiseProcessor.proposal)
 }
