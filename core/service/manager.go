@@ -107,7 +107,7 @@ func (manager *Manager) Start() (err error) {
 	proposal.SetProviderContact(providerID, providerContact)
 
 	sessionManager := manager.sessionManagerFactory(sessionConfigProvider)
-	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
+	dialogHandler := session.NewDialogHandler(proposal, sessionManager)
 	if err = manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}
