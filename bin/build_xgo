@@ -36,7 +36,7 @@ xgo \
     --targets="$XGO_TARGETS" \
     --dest=${DIR_TEMP} \
     --out=myst \
-    --ldflags="$(get_linker_ldflags)" \
+    --ldflags="-w -s $(get_linker_ldflags)" \
     $(pwd)/cmd/mysterium_node
 
 # Remove version from binary name:

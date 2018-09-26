@@ -24,7 +24,7 @@ export GOARCH=${GOARCH:-`go env GOHOSTARCH`}
 export GOBIN=`pwd`/build/myst
 echo "Compiling 'myst' for '$GOOS/$GOARCH'.."
 
-go build -ldflags="$(get_linker_ldflags)" -o $GOBIN/myst cmd/mysterium_node/mysterium_node.go 
+go build -ldflags="-w -s $(get_linker_ldflags)" -o $GOBIN/myst cmd/mysterium_node/mysterium_node.go 
 if [ $? -ne 0 ]; then
     print_error "Compile failed!"
     exit 1
