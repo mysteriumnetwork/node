@@ -21,10 +21,12 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
+	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
+	proposal        = discovery_dto.ServiceProposal{}
 	expectedID      = ID("mocked-id")
 	expectedSession = Session{
 		ID:         expectedID,
@@ -63,7 +65,7 @@ func (processor *fakePromiseProcessor) Stop() error {
 }
 
 func TestManager_Create_StoresSession(t *testing.T) {
-	manager := NewManager(generateSessionID, mockedConfigProvider, saveSession, &fakePromiseProcessor{})
+	manager := NewManager(proposal, generateSessionID, mockedConfigProvider, saveSession, &fakePromiseProcessor{})
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"))
 	assert.NoError(t, err)
@@ -73,7 +75,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 func TestManager_Create_StartsPromiseProcessor(t *testing.T) {
 	promiseProcessor := &fakePromiseProcessor{}
-	manager := NewManager(generateSessionID, mockedConfigProvider, saveSession, promiseProcessor)
+	manager := NewManager(proposal, generateSessionID, mockedConfigProvider, saveSession, promiseProcessor)
 
 	_, err := manager.Create(identity.FromAddress("deadbeef"))
 	assert.NoError(t, err)

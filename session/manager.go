@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
+	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // IDGenerator defines method for session id generation
@@ -41,8 +42,15 @@ type PromiseProcessor interface {
 }
 
 // NewManager returns new session manager
-func NewManager(idGenerator IDGenerator, configProvider ConfigProvider, saveCallback SaveCallback, promiseProcessor PromiseProcessor) *manager {
+func NewManager(
+	currentProposal discovery_dto.ServiceProposal,
+	idGenerator IDGenerator,
+	configProvider ConfigProvider,
+	saveCallback SaveCallback,
+	promiseProcessor PromiseProcessor,
+) *manager {
 	return &manager{
+		currentProposal:  currentProposal,
 		generateID:       idGenerator,
 		provideConfig:    configProvider,
 		saveSession:      saveCallback,
@@ -54,6 +62,7 @@ func NewManager(idGenerator IDGenerator, configProvider ConfigProvider, saveCall
 
 // manager knows how to start and provision session
 type manager struct {
+	currentProposal  discovery_dto.ServiceProposal
 	generateID       IDGenerator
 	provideConfig    ConfigProvider
 	saveSession      SaveCallback

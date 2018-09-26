@@ -38,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/session"
@@ -132,8 +133,14 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.SignerFactory,
 		di.IdentityRegistry,
 		openvpnServiceManager,
-		func(configProvider session.ConfigProvider) session.Manager {
-			return session.NewManager(session.GenerateUUID, configProvider, sessionStorage.Add, &noop.PromiseProcessor{})
+		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) session.Manager {
+			return session.NewManager(
+				proposal,
+				session.GenerateUUID,
+				configProvider,
+				sessionStorage.Add,
+				&noop.PromiseProcessor{},
+			)
 		},
 		discoveryService,
 	)

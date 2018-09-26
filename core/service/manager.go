@@ -48,7 +48,7 @@ type Service interface {
 }
 
 // SessionManagerFactory initiates session manager instance during runtime
-type SessionManagerFactory func(configProvider session.ConfigProvider) session.Manager
+type SessionManagerFactory func(dto_discovery.ServiceProposal, session.ConfigProvider) session.Manager
 
 // NewManager creates new instance of pluggable services manager
 func NewManager(
@@ -106,7 +106,7 @@ func (manager *Manager) Start() (err error) {
 	}
 	proposal.SetProviderContact(providerID, providerContact)
 
-	sessionManager := manager.sessionManagerFactory(sessionConfigProvider)
+	sessionManager := manager.sessionManagerFactory(proposal, sessionConfigProvider)
 	dialogHandler := session.NewDialogHandler(proposal, sessionManager)
 	if err = manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
