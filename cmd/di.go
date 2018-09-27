@@ -131,7 +131,7 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.SignerFactory,
 		di.IdentityRegistry,
 		openvpnServiceManager,
-		func(configProvider session.ServiceConfigProvider) session.Manager {
+		func(configProvider session.ConfigProvider) session.Manager {
 			return session.NewManager(session.GenerateUUID, configProvider, sessionStorage.Add)
 		},
 		discoveryService,

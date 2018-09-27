@@ -42,13 +42,13 @@ var (
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
-	Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ServiceConfigProvider, error)
+	Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error)
 	Wait() error
 	Stop() error
 }
 
 // SessionManagerFactory initiates session manager instance during runtime
-type SessionManagerFactory func(configProvider session.ServiceConfigProvider) session.Manager
+type SessionManagerFactory func(configProvider session.ConfigProvider) session.Manager
 
 // NewManager creates new instance of pluggable services manager
 func NewManager(

@@ -52,7 +52,7 @@ func NewManager(
 		ipResolver:                   ipResolver,
 		natService:                   natService,
 		proposalFactory:              newProposalFactory(serviceOptions),
-		serviceConfigProviderFactory: newServiceConfigProviderFactory(serviceOptions),
+		sessionConfigProviderFactory: newSessionConfigProviderFactory(serviceOptions),
 		vpnServerConfigFactory:       newServerConfigFactory(nodeOptions, serviceOptions),
 		vpnServerFactory:             newServerFactory(nodeOptions, sessionValidator),
 	}
@@ -90,8 +90,8 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 	}
 }
 
-func newServiceConfigProviderFactory(serviceOptions service.Options) ServiceConfigProviderFactory {
-	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ServiceConfigProvider {
+func newSessionConfigProviderFactory(serviceOptions service.Options) SessionConfigProviderFactory {
+	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigProvider {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP)
 
 		return newSessionConfigProvider(serviceOptions, secPrimitives, serverIP)
@@ -99,7 +99,7 @@ func newServiceConfigProviderFactory(serviceOptions service.Options) ServiceConf
 }
 
 // newSessionConfigProvider returns function generating session config for remote client
-func newSessionConfigProvider(serviceOptions service.Options, secPrimitives *tls.Primitives, serverIP string) session.ServiceConfigProvider {
+func newSessionConfigProvider(serviceOptions service.Options, secPrimitives *tls.Primitives, serverIP string) session.ConfigProvider {
 	// TODO: check nodeOptions for --openvpn-transport option
 	return func() (session.ServiceConfiguration, error) {
 		return &openvpn_service.VPNConfig{
