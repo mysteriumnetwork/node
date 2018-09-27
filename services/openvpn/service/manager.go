@@ -29,13 +29,17 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 const logPrefix = "[service-openvpn] "
 
+// ServerConfigFactory callback returns generated server config
+type ServerConfigFactory func(*tls.Primitives) *openvpn_service.ServerConfig
+
 // ServerFactory initiates Openvpn server instance during runtime
-type ServerFactory func(primitives *tls.Primitives) openvpn.Process
+type ServerFactory func(*openvpn_service.ServerConfig) openvpn.Process
 
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal
@@ -51,8 +55,9 @@ type Manager struct {
 	proposalFactory       ProposalFactory
 	sessionManagerFactory SessionManagerFactory
 
-	vpnServerFactory ServerFactory
-	vpnServer        openvpn.Process
+	vpnServerConfigFactory ServerConfigFactory
+	vpnServerFactory       ServerFactory
+	vpnServer              openvpn.Process
 }
 
 // Start starts service - does not block
@@ -108,7 +113,8 @@ func (manager *Manager) Start(providerID identity.Identity) (
 		return
 	}
 
-	manager.vpnServer = manager.vpnServerFactory(primitives)
+	vpnServerConfig := manager.vpnServerConfigFactory(primitives)
+	manager.vpnServer = manager.vpnServerFactory(vpnServerConfig)
 	if err = manager.vpnServer.Start(); err != nil {
 		return
 	}

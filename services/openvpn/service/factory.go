@@ -30,7 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-	openvpn_node "github.com/mysteriumnetwork/node/services/openvpn"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
@@ -45,14 +45,16 @@ func NewManager(
 ) *Manager {
 	natService := nat.NewService()
 	sessionStorage := session.NewStorageMemory()
+	sessionValidator := openvpn_session.NewValidator(sessionStorage, identity.NewExtractor())
 
 	return &Manager{
-		locationResolver:      locationResolver,
-		ipResolver:            ipResolver,
-		natService:            natService,
-		proposalFactory:       newProposalFactory(serviceOptions),
-		sessionManagerFactory: newSessionManagerFactory(serviceOptions, sessionStorage),
-		vpnServerFactory:      newServerFactory(nodeOptions, serviceOptions, sessionStorage),
+		locationResolver:       locationResolver,
+		ipResolver:             ipResolver,
+		natService:             natService,
+		proposalFactory:        newProposalFactory(serviceOptions),
+		sessionManagerFactory:  newSessionManagerFactory(serviceOptions, sessionStorage),
+		vpnServerConfigFactory: newServerConfigFactory(nodeOptions, serviceOptions),
+		vpnServerFactory:       newServerFactory(nodeOptions, sessionValidator),
 	}
 }
 
@@ -62,22 +64,26 @@ func newProposalFactory(serviceOptions service.Options) ProposalFactory {
 	}
 }
 
-func newServerFactory(nodeOptions node.Options, serviceOptions service.Options, sessionStorage *session.StorageMemory) ServerFactory {
-	return func(primitives *tls.Primitives) openvpn.Process {
+// newServerConfigFactory returns function generating server config and generates required security primitives
+func newServerConfigFactory(nodeOptions node.Options, serviceOptions service.Options) ServerConfigFactory {
+	return func(secPrimitives *tls.Primitives) *openvpn_service.ServerConfig {
 		// TODO: check nodeOptions for --openvpn-transport option
-		serverConfigGenerator := openvpn_node.NewServerConfigGenerator(
+		return openvpn_service.NewServerConfig(
 			nodeOptions.Directories.Runtime,
 			nodeOptions.Directories.Config,
-			primitives,
+			"10.8.0.0", "255.255.255.0",
+			secPrimitives,
 			serviceOptions.OpenvpnPort,
 			serviceOptions.OpenvpnProtocol,
 		)
+	}
+}
 
-		sessionValidator := openvpn_session.NewValidator(sessionStorage, identity.NewExtractor())
-
-		return openvpn_node.NewServer(
+func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator) ServerFactory {
+	return func(config *openvpn_service.ServerConfig) openvpn.Process {
+		return openvpn.CreateNewProcess(
 			nodeOptions.Openvpn.BinaryPath,
-			serverConfigGenerator,
+			config.GenericConfig,
 			auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 			state.NewMiddleware(vpnStateCallback),
 		)
@@ -87,7 +93,7 @@ func newServerFactory(nodeOptions node.Options, serviceOptions service.Options, 
 func newSessionManagerFactory(serviceOptions service.Options, sessionStorage *session.StorageMemory) SessionManagerFactory {
 	return func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager {
 		// TODO: check nodeOptions for --openvpn-transport option
-		clientConfigGenerator := openvpn_node.NewClientConfigGenerator(
+		clientConfigGenerator := openvpn_service.NewClientConfigGenerator(
 			primitives,
 			vpnServerIP(serviceOptions, outboundIP, publicIP),
 			serviceOptions.OpenvpnPort,
