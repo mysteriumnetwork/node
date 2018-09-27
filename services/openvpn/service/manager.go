@@ -47,9 +47,6 @@ type ProposalFactory func(currentLocation dto_discovery.Location) dto_discovery.
 // ServiceConfigProviderFactory initiates ServiceConfigProvider instance during runtime
 type ServiceConfigProviderFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ServiceConfigProvider
 
-// SessionManagerFactory initiates session manager instance during runtime
-type SessionManagerFactory func(configProvider session.ServiceConfigProvider) session.Manager
-
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
 	ipResolver       ip.Resolver
@@ -58,7 +55,6 @@ type Manager struct {
 	proposalFactory  ProposalFactory
 
 	serviceConfigProviderFactory ServiceConfigProviderFactory
-	sessionManagerFactory        SessionManagerFactory
 
 	vpnServerConfigFactory ServerConfigFactory
 	vpnServerFactory       ServerFactory
@@ -68,7 +64,7 @@ type Manager struct {
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (
 	proposal dto_discovery.ServiceProposal,
-	sessionManager session.Manager,
+	sessionConfigProvider session.ServiceConfigProvider,
 	err error,
 ) {
 	publicIP, err := manager.ipResolver.GetPublicIP()
@@ -125,9 +121,7 @@ func (manager *Manager) Start(providerID identity.Identity) (
 	}
 
 	proposal = manager.proposalFactory(currentLocation)
-
-	sessionConfigProvider := manager.serviceConfigProviderFactory(primitives, outboundIP, publicIP)
-	sessionManager = manager.sessionManagerFactory(sessionConfigProvider)
+	sessionConfigProvider = manager.serviceConfigProviderFactory(primitives, outboundIP, publicIP)
 	return
 }
 

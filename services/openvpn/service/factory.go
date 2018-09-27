@@ -42,10 +42,10 @@ func NewManager(
 	serviceOptions service.Options,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
+	sessionMap openvpn_session.SessionMap,
 ) *Manager {
 	natService := nat.NewService()
-	sessionStorage := session.NewStorageMemory()
-	sessionValidator := openvpn_session.NewValidator(sessionStorage, identity.NewExtractor())
+	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 
 	return &Manager{
 		locationResolver:             locationResolver,
@@ -53,7 +53,6 @@ func NewManager(
 		natService:                   natService,
 		proposalFactory:              newProposalFactory(serviceOptions),
 		serviceConfigProviderFactory: newServiceConfigProviderFactory(serviceOptions),
-		sessionManagerFactory:        newSessionManagerFactory(sessionStorage),
 		vpnServerConfigFactory:       newServerConfigFactory(nodeOptions, serviceOptions),
 		vpnServerFactory:             newServerFactory(nodeOptions, sessionValidator),
 	}
@@ -110,12 +109,6 @@ func newSessionConfigProvider(serviceOptions service.Options, secPrimitives *tls
 			secPrimitives.PresharedKey.ToPEMFormat(),
 			secPrimitives.CertificateAuthority.ToPEMFormat(),
 		}, nil
-	}
-}
-
-func newSessionManagerFactory(sessionStorage *session.StorageMemory) SessionManagerFactory {
-	return func(configProvider session.ServiceConfigProvider) session.Manager {
-		return session.NewManager(session.GenerateUUID, configProvider, sessionStorage.Add)
 	}
 }
 

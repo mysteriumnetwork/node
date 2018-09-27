@@ -42,10 +42,13 @@ var (
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
-	Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.Manager, error)
+	Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ServiceConfigProvider, error)
 	Wait() error
 	Stop() error
 }
+
+// SessionManagerFactory initiates session manager instance during runtime
+type SessionManagerFactory func(configProvider session.ServiceConfigProvider) session.Manager
 
 // NewManager creates new instance of pluggable services manager
 func NewManager(
@@ -54,6 +57,7 @@ func NewManager(
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
 	service Service,
+	sessionManagerFactory SessionManagerFactory,
 	discoveryService *discovery.Discovery,
 ) *Manager {
 	return &Manager{
@@ -65,8 +69,9 @@ func NewManager(
 				identityRegistry,
 			)
 		},
-		service:   service,
-		discovery: discoveryService,
+		service:               service,
+		sessionManagerFactory: sessionManagerFactory,
+		discovery:             discoveryService,
 	}
 }
 
@@ -77,8 +82,9 @@ type Manager struct {
 	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter        communication.DialogWaiter
 
-	service   Service
-	discovery *discovery.Discovery
+	service               Service
+	sessionManagerFactory SessionManagerFactory
+	discovery             *discovery.Discovery
 }
 
 // Start starts service - does not block
@@ -88,7 +94,7 @@ func (manager *Manager) Start() (err error) {
 		return err
 	}
 
-	proposal, sessionManager, err := manager.service.Start(providerID)
+	proposal, sessionConfigProvider, err := manager.service.Start(providerID)
 	if err != nil {
 		return err
 	}
@@ -100,6 +106,7 @@ func (manager *Manager) Start() (err error) {
 	}
 	proposal.SetProviderContact(providerID, providerContact)
 
+	sessionManager := manager.sessionManagerFactory(sessionConfigProvider)
 	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
 	if err = manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err

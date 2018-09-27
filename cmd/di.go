@@ -39,6 +39,7 @@ import (
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -120,7 +121,9 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
-	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver)
+	sessionStorage := session.NewStorageMemory()
+
+	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
 
 	di.ServiceManager = service.NewManager(
 		di.NetworkDefinition,
@@ -128,6 +131,9 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.SignerFactory,
 		di.IdentityRegistry,
 		openvpnServiceManager,
+		func(configProvider session.ServiceConfigProvider) session.Manager {
+			return session.NewManager(session.GenerateUUID, configProvider, sessionStorage.Add)
+		},
 		discoveryService,
 	)
 }
