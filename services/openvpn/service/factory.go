@@ -48,13 +48,14 @@ func NewManager(
 	sessionValidator := openvpn_session.NewValidator(sessionStorage, identity.NewExtractor())
 
 	return &Manager{
-		locationResolver:       locationResolver,
-		ipResolver:             ipResolver,
-		natService:             natService,
-		proposalFactory:        newProposalFactory(serviceOptions),
-		sessionManagerFactory:  newSessionManagerFactory(serviceOptions, sessionStorage),
-		vpnServerConfigFactory: newServerConfigFactory(nodeOptions, serviceOptions),
-		vpnServerFactory:       newServerFactory(nodeOptions, sessionValidator),
+		locationResolver:             locationResolver,
+		ipResolver:                   ipResolver,
+		natService:                   natService,
+		proposalFactory:              newProposalFactory(serviceOptions),
+		serviceConfigProviderFactory: newServiceConfigProviderFactory(serviceOptions),
+		sessionManagerFactory:        newSessionManagerFactory(sessionStorage),
+		vpnServerConfigFactory:       newServerConfigFactory(nodeOptions, serviceOptions),
+		vpnServerFactory:             newServerFactory(nodeOptions, sessionValidator),
 	}
 }
 
@@ -90,19 +91,31 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 	}
 }
 
-func newSessionManagerFactory(serviceOptions service.Options, sessionStorage *session.StorageMemory) SessionManagerFactory {
-	return func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager {
-		// TODO: check nodeOptions for --openvpn-transport option
-		clientConfigGenerator := openvpn_service.NewClientConfigGenerator(
-			primitives,
-			vpnServerIP(serviceOptions, outboundIP, publicIP),
+func newServiceConfigProviderFactory(serviceOptions service.Options) ServiceConfigProviderFactory {
+	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ServiceConfigProvider {
+		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP)
+
+		return newSessionConfigProvider(serviceOptions, secPrimitives, serverIP)
+	}
+}
+
+// newSessionConfigProvider returns function generating session config for remote client
+func newSessionConfigProvider(serviceOptions service.Options, secPrimitives *tls.Primitives, serverIP string) session.ServiceConfigProvider {
+	// TODO: check nodeOptions for --openvpn-transport option
+	return func() (session.ServiceConfiguration, error) {
+		return &openvpn_service.VPNConfig{
+			serverIP,
 			serviceOptions.OpenvpnPort,
 			serviceOptions.OpenvpnProtocol,
-		)
-		serviceConfigProvider := func() (session.ServiceConfiguration, error) {
-			return clientConfigGenerator(), nil
-		}
-		return session.NewManager(session.GenerateUUID, serviceConfigProvider, sessionStorage.Add)
+			secPrimitives.PresharedKey.ToPEMFormat(),
+			secPrimitives.CertificateAuthority.ToPEMFormat(),
+		}, nil
+	}
+}
+
+func newSessionManagerFactory(sessionStorage *session.StorageMemory) SessionManagerFactory {
+	return func(configProvider session.ServiceConfigProvider) session.Manager {
+		return session.NewManager(session.GenerateUUID, configProvider, sessionStorage.Add)
 	}
 }
 

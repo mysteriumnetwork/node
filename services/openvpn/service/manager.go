@@ -35,7 +35,7 @@ import (
 
 const logPrefix = "[service-openvpn] "
 
-// ServerConfigFactory callback returns generated server config
+// ServerConfigFactory callback generates session config for remote client
 type ServerConfigFactory func(*tls.Primitives) *openvpn_service.ServerConfig
 
 // ServerFactory initiates Openvpn server instance during runtime
@@ -44,16 +44,21 @@ type ServerFactory func(*openvpn_service.ServerConfig) openvpn.Process
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal
 
+// ServiceConfigProviderFactory initiates ServiceConfigProvider instance during runtime
+type ServiceConfigProviderFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ServiceConfigProvider
+
 // SessionManagerFactory initiates session manager instance during runtime
-type SessionManagerFactory func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager
+type SessionManagerFactory func(configProvider session.ServiceConfigProvider) session.Manager
 
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	ipResolver            ip.Resolver
-	natService            nat.NATService
-	locationResolver      location.Resolver
-	proposalFactory       ProposalFactory
-	sessionManagerFactory SessionManagerFactory
+	ipResolver       ip.Resolver
+	natService       nat.NATService
+	locationResolver location.Resolver
+	proposalFactory  ProposalFactory
+
+	serviceConfigProviderFactory ServiceConfigProviderFactory
+	sessionManagerFactory        SessionManagerFactory
 
 	vpnServerConfigFactory ServerConfigFactory
 	vpnServerFactory       ServerFactory
@@ -120,7 +125,9 @@ func (manager *Manager) Start(providerID identity.Identity) (
 	}
 
 	proposal = manager.proposalFactory(currentLocation)
-	sessionManager = manager.sessionManagerFactory(primitives, outboundIP, publicIP)
+
+	sessionConfigProvider := manager.serviceConfigProviderFactory(primitives, outboundIP, publicIP)
+	sessionManager = manager.sessionManagerFactory(sessionConfigProvider)
 	return
 }
 

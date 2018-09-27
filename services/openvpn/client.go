@@ -20,7 +20,6 @@ package openvpn
 import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 )
 
 // NewClient creates openvpn client with given config params
@@ -35,20 +34,4 @@ type VPNConfig struct {
 	RemoteProtocol  string `json:"protocol"`
 	TLSPresharedKey string `json:"TLSPresharedKey"`
 	CACertificate   string `json:"CACertificate"`
-}
-
-// ClientConfigGenerator callback returns generated server config
-type ClientConfigGenerator func() *VPNConfig
-
-// NewClientConfigGenerator returns function generating config params for remote client
-func NewClientConfigGenerator(primitives *tls.Primitives, vpnServerIP string, port int, protocol string) ClientConfigGenerator {
-	return func() *VPNConfig {
-		return &VPNConfig{
-			vpnServerIP,
-			port,
-			protocol,
-			primitives.PresharedKey.ToPEMFormat(),
-			primitives.CertificateAuthority.ToPEMFormat(),
-		}
-	}
 }
