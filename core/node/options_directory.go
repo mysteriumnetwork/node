@@ -55,7 +55,7 @@ func ensureOrCreateDir(dir string) error {
 	err := ensureDirExists(dir)
 	if os.IsNotExist(err) {
 		log.Info("[Directory config checker] ", "Directory: ", dir, " does not exit. Creating new one")
-		return os.MkdirAll(dir, 0600)
+		return os.MkdirAll(dir, 0700)
 	}
 	return err
 }

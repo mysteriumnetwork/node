@@ -1,0 +1,7 @@
+# This is the configuration file for /etc/init.d/mysterium-server
+# Define additional args for mysterium_server (see help for full list)
+CONF_DIR="--config-dir=/etc/mysterium-node"
+RUN_DIR="--runtime-dir=/var/run/mysterium-node"
+DISCOVERY=""
+BROKER=""
+PROTO=""
