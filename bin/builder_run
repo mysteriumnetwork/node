@@ -14,7 +14,7 @@
 # Usage:
 #> bin/builder_run pwd
 #> bin/builder_run bin/package_all <version>
-#> bin/builder_run bin/server_build; bin/server_package_debian 0.0.1 amd64
+#> bin/builder_run bin/server_build; bin/package_debian 0.0.1 amd64
 
 COMMAND=$@
 if [ -z "$COMMAND" ]; then
