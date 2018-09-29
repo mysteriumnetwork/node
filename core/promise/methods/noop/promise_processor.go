@@ -17,10 +17,15 @@
 
 package noop
 
-import discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+import (
+	"github.com/mysteriumnetwork/node/communication"
+	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+)
 
 // PromiseProcessor process promises in such way, what no actual money is deducted from promise
-type PromiseProcessor struct{}
+type PromiseProcessor struct {
+	Dialog communication.Dialog
+}
 
 // Start processing promises for given service proposal
 func (processor *PromiseProcessor) Start(proposal discovery_dto.ServiceProposal) error {

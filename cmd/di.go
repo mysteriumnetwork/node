@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
+	"github.com/mysteriumnetwork/node/communication"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -133,17 +134,31 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.SignerFactory,
 		di.IdentityRegistry,
 		openvpnServiceManager,
-		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) session.Manager {
-			return session.NewManager(
-				proposal,
-				session.GenerateUUID,
-				configProvider,
-				sessionStorage.Add,
-				&noop.PromiseProcessor{},
-			)
+		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
+			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage)
+			return session.NewDialogHandler(sessionManagerFactory)
 		},
 		discoveryService,
 	)
+}
+
+func newSessionManagerFactory(
+	proposal dto_discovery.ServiceProposal,
+	configProvider session.ConfigProvider,
+	sessionStorage *session.StorageMemory,
+) session.ManagerFactory {
+	return func(dialog communication.Dialog) session.Manager {
+		promiseProcessor := &noop.PromiseProcessor{
+			Dialog: dialog,
+		}
+		return session.NewManager(
+			proposal,
+			session.GenerateUUID,
+			configProvider,
+			sessionStorage.Add,
+			promiseProcessor,
+		)
+	}
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides
