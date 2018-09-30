@@ -72,8 +72,8 @@ printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
         --after-remove bin/package/installation/post-uninstall.sh \
         -s dir -t deb \
         ${BINARY}=${OS_DIR_BIN}/myst \
-        bin/package/config/=${OS_DIR_CONFIG}/ \
-        bin/common_package/=${OS_DIR_CONFIG}/ \
+        bin/package/config/linux/=${OS_DIR_CONFIG}/ \
+        bin/package/config/common/=${OS_DIR_CONFIG}/ \
         bin/package/sudoers/=${OS_DIR_SUDOERS}/ \
         bin/package/installation/=${OS_DIR_INSTALLATION}/ \
         INSTALL.md=${OS_DIR_DOC}/

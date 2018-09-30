@@ -39,9 +39,7 @@ else
     cp -vp ${BINARY} ${DIR_TEMP}/myst
 fi
 
-copy_client_config $OS $DIR_TEMP
-cp -vrp "bin/common_package/" ${DIR_TEMP}/config
-cp -vrp "bin/package/config/." ${DIR_TEMP}/config
+copy_config $OS $DIR_TEMP
 
 # Tarball package directory
 if [ "$OS" == "windows" ]; then
