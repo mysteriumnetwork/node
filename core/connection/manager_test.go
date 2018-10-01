@@ -92,7 +92,7 @@ func (tc *testContext) SetupTest() {
 	}
 
 	tc.openvpnCreationError = nil
-	fakeVpnClientFactory := func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, callback state.Callback, options ConnectOptions) (openvpn.Process, error) {
+	fakeVpnClientFactory := func(vpnSession *session.Session, consumerID identity.Identity, providerID identity.Identity, callback state.Callback, options ConnectOptions) (openvpn.Process, error) {
 		tc.RLock()
 		defer tc.RUnlock()
 		//each test can set this value to simulate openvpn creation error, this flag is reset BEFORE each test
@@ -348,12 +348,12 @@ func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
 }
 
 func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	return &session.SessionCreateResponse{
+	return &session.CreateResponse{
 			Success: true,
 			Message: "Everything is great!",
 			Session: session.SessionDto{
 				ID:     "vpn-connection-id",
-				Config: []byte{},
+				Config: []byte("{}"),
 			},
 		},
 		nil

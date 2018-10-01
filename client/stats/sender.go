@@ -33,7 +33,7 @@ const statsSenderLogPrefix = "[session-stats-sender] "
 // RemoteStatsSender sends session stats to remote API server with a fixed sendInterval.
 // Extra one send will be done on session disconnect.
 type RemoteStatsSender struct {
-	sessionID       session.SessionID
+	sessionID       session.ID
 	providerID      identity.Identity
 	consumerCountry string
 
@@ -46,7 +46,7 @@ type RemoteStatsSender struct {
 }
 
 // NewRemoteStatsSender function creates new session stats sender by given options
-func NewRemoteStatsSender(statsKeeper SessionStatsKeeper, mysteriumClient server.Client, sessionID session.SessionID, providerID identity.Identity, signer identity.Signer, consumerCountry string, interval time.Duration) *RemoteStatsSender {
+func NewRemoteStatsSender(statsKeeper SessionStatsKeeper, mysteriumClient server.Client, sessionID session.ID, providerID identity.Identity, signer identity.Signer, consumerCountry string, interval time.Duration) *RemoteStatsSender {
 	return &RemoteStatsSender{
 		sessionID:       sessionID,
 		providerID:      providerID,

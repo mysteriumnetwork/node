@@ -65,11 +65,11 @@ type mockSessions struct {
 func (sessions *mockSessions) Add(sessionInstance session.Session) {
 }
 
-func (sessions *mockSessions) Find(session.SessionID) (session.Session, bool) {
+func (sessions *mockSessions) Find(session.ID) (session.Session, bool) {
 	return sessions.OnFindReturnSession, sessions.OnFindReturnSuccess
 }
 
-func (sessions *mockSessions) Remove(session.SessionID) {
+func (sessions *mockSessions) Remove(session.ID) {
 	sessions.OnFindReturnSession = session.Session{}
 	sessions.OnFindReturnSuccess = false
 }

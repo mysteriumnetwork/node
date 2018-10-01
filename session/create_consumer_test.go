@@ -30,14 +30,14 @@ var consumer = createConsumer{
 }
 
 func TestConsumer_UnknownProposal(t *testing.T) {
-	request := consumer.NewRequest().(*SessionCreateRequest)
+	request := consumer.NewRequest().(*CreateRequest)
 	request.ProposalId = 100
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
 	assert.Exactly(
 		t,
-		&SessionCreateResponse{
+		&CreateResponse{
 			Success: false,
 			Message: "Proposal doesn't exist: 100",
 		},
@@ -46,18 +46,18 @@ func TestConsumer_UnknownProposal(t *testing.T) {
 }
 
 func TestConsumer_Success(t *testing.T) {
-	request := consumer.NewRequest().(*SessionCreateRequest)
+	request := consumer.NewRequest().(*CreateRequest)
 	request.ProposalId = 101
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
 	assert.Exactly(
 		t,
-		&SessionCreateResponse{
+		&CreateResponse{
 			Success: true,
 			Session: SessionDto{
 				ID:     "new-id",
-				Config: []byte("{\"Param1\":\"string-param\",\"Param2\":123}"),
+				Config: []byte(`{"Param1":"string-param","Param2":123}`),
 			},
 		},
 		sessionResponse,
@@ -67,15 +67,11 @@ func TestConsumer_Success(t *testing.T) {
 // managerFake represents fake manager usually useful in tests
 type managerFake struct{}
 
-var fakeConfig = struct {
-	Param1 string
-	Param2 int
-}{
-	"string-param",
-	123,
-}
-
 // Create function creates and returns fake session
 func (manager *managerFake) Create(peerID identity.Identity) (Session, error) {
-	return Session{"new-id", fakeConfig, peerID}, nil
+	return Session{
+		"new-id",
+		fakeSessionConfig{"string-param", 123},
+		peerID,
+	}, nil
 }

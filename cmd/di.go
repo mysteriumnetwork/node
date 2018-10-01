@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
+	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -33,9 +34,12 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -61,6 +65,12 @@ type Dependencies struct {
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
+	logconfig.Bootstrap()
+	nats_discovery.Bootstrap()
+	openvpn.Bootstrap()
+
+	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
+
 	if err := nodeOptions.Directories.Check(); err != nil {
 		return err
 	}
@@ -78,6 +88,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapNodeComponents(nodeOptions)
 
 	return nil
+}
+
+// Shutdown stops container
+func (di *Dependencies) Shutdown() {
+	log.Flush()
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
@@ -106,7 +121,9 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
-	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver)
+	sessionStorage := session.NewStorageMemory()
+
+	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
 
 	di.ServiceManager = service.NewManager(
 		di.NetworkDefinition,
@@ -114,6 +131,9 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.SignerFactory,
 		di.IdentityRegistry,
 		openvpnServiceManager,
+		func(configProvider session.ConfigProvider) session.Manager {
+			return session.NewManager(session.GenerateUUID, configProvider, sessionStorage.Add)
+		},
 		discoveryService,
 	)
 }

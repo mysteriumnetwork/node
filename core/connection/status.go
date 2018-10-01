@@ -38,14 +38,14 @@ const (
 // ConnectionStatus holds connection state and session id of the connnection
 type ConnectionStatus struct {
 	State     State
-	SessionID session.SessionID
+	SessionID session.ID
 }
 
 func statusConnecting() ConnectionStatus {
 	return ConnectionStatus{Connecting, ""}
 }
 
-func statusConnected(sessionID session.SessionID) ConnectionStatus {
+func statusConnected(sessionID session.ID) ConnectionStatus {
 	return ConnectionStatus{Connected, sessionID}
 }
 

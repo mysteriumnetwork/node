@@ -23,31 +23,31 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-// ServiceConfigProvider defines configuration providing dependency
-type ServiceConfigProvider func() (ServiceConfiguration, error)
-
 // IDGenerator defines method for session id generation
-type IDGenerator func() SessionID
+type IDGenerator func() ID
+
+// ConfigProvider provides session config for remote client
+type ConfigProvider func() (ServiceConfiguration, error)
 
 // SaveCallback stores newly started sessions
 type SaveCallback func(Session)
 
 // NewManager returns new session manager
-func NewManager(idGenerator IDGenerator, configProvider ServiceConfigProvider, saveCallback SaveCallback) *manager {
+func NewManager(idGenerator IDGenerator, configProvider ConfigProvider, saveCallback SaveCallback) *manager {
 	return &manager{
-		generateID:     idGenerator,
-		generateConfig: configProvider,
-		saveSession:    saveCallback,
-		creationLock:   sync.Mutex{},
+		generateID:    idGenerator,
+		provideConfig: configProvider,
+		saveSession:   saveCallback,
+		creationLock:  sync.Mutex{},
 	}
 }
 
 // manager knows how to start and provision session
 type manager struct {
-	generateID     IDGenerator
-	generateConfig ServiceConfigProvider
-	saveSession    SaveCallback
-	creationLock   sync.Mutex
+	generateID    IDGenerator
+	provideConfig ConfigProvider
+	saveSession   SaveCallback
+	creationLock  sync.Mutex
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
@@ -57,7 +57,7 @@ func (manager *manager) Create(peerID identity.Identity) (sessionInstance Sessio
 
 	sessionInstance.ID = manager.generateID()
 	sessionInstance.ConsumerID = peerID
-	sessionInstance.Config, err = manager.generateConfig()
+	sessionInstance.Config, err = manager.provideConfig()
 	if err != nil {
 		return
 	}

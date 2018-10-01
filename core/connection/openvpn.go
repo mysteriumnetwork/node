@@ -18,7 +18,6 @@
 package connection
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -43,14 +42,8 @@ func ConfigureVpnClientFactory(
 	statsKeeper stats.SessionStatsKeeper,
 	originalLocationCache location.Cache,
 ) VpnClientCreator {
-	return func(vpnSession session.SessionDto, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback, options ConnectOptions) (openvpn.Process, error) {
-		var receivedConfig openvpn_node.VPNConfig
-		err := json.Unmarshal(vpnSession.Config, &receivedConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		vpnClientConfig, err := openvpn_node.NewClientConfigFromSession(&receivedConfig, configDirectory, runtimeDirectory)
+	return func(vpnSession *session.Session, consumerID identity.Identity, providerID identity.Identity, stateCallback state.Callback, options ConnectOptions) (openvpn.Process, error) {
+		vpnClientConfig, err := openvpn_node.NewClientConfigFromSession(vpnSession, configDirectory, runtimeDirectory)
 		if err != nil {
 			return nil, err
 		}
