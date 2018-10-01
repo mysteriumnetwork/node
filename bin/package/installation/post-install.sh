@@ -24,7 +24,8 @@ function install_initd {
 function install_systemd {
     printf "Installing systemd script '$OS_DIR_SYSTEMD/mysterium-node.service'..\n" \
         && cp -f $OS_DIR_INSTALLATION/systemd.service $OS_DIR_SYSTEMD/mysterium-node.service \
-        && systemctl enable mysterium-node
+        && systemctl enable mysterium-node \
+        && systemctl start mysterium-node
 }
 
 function install_update_rcd {
@@ -41,6 +42,10 @@ printf "Creating user '$DAEMON_USER:$DAEMON_GROUP'...\n" \
     && useradd --system -U $DAEMON_USER -G root -s /bin/false -m -d $OS_DIR_DATA \
     && usermod -a -G root $DAEMON_USER \
     && chown -R -L $DAEMON_USER:$DAEMON_GROUP $OS_DIR_DATA
+
+printf "Creating directories...\n" \
+    && mkdir -p $OS_DIR_LOG $OS_DIR_CONFIG $OS_DIR_RUN $OS_DIR_DATA \
+    && chown $DAEMON_USER:$DAEMON_GROUP $OS_DIR_LOG $OS_DIR_CONFIG $OS_DIR_RUN $OS_DIR_DATA
 
 # Remove legacy symlink, if it exists
 if [[ -L $OS_DIR_INITD/mysterium-node ]]; then
