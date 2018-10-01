@@ -17,6 +17,62 @@
 
 package noop
 
-import "github.com/mysteriumnetwork/node/session"
+import (
+	"testing"
+	"time"
+
+	"github.com/mysteriumnetwork/node/core/promise"
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/session"
+	"github.com/stretchr/testify/assert"
+)
 
 var _ session.PromiseProcessor = &PromiseProcessor{}
+
+func TestPromiseProcessor_Start_SendsBalanceMessages(t *testing.T) {
+	dialog := &fakeDialog{}
+
+	processor := &PromiseProcessor{
+		dialog:          dialog,
+		balanceInterval: time.Millisecond,
+	}
+	err := processor.Start(proposal)
+	defer processor.Stop()
+
+	assert.NoError(t, err)
+	waitForBallanceState(t, processor, balanceNotifying)
+
+	lastMessage, err := dialog.waitSendMessage()
+	assert.NoError(t, err)
+	assert.Exactly(
+		t,
+		promise.BalanceMessage{1, true, money.NewMoney(10, money.CURRENCY_MYST)},
+		lastMessage,
+	)
+}
+
+func TestPromiseProcessor_Stop_StopsBalanceMessages(t *testing.T) {
+	dialog := &fakeDialog{}
+
+	processor := &PromiseProcessor{
+		dialog:          dialog,
+		balanceInterval: time.Millisecond,
+	}
+	err := processor.Start(proposal)
+	assert.NoError(t, err)
+	waitForBallanceState(t, processor, balanceNotifying)
+
+	err = processor.Stop()
+	assert.NoError(t, err)
+	waitForBallanceState(t, processor, balanceStopped)
+}
+
+func waitForBallanceState(t *testing.T, processor *PromiseProcessor, expectedState balanceState) {
+	for i := 0; i < 10; i++ {
+		if processor.getBalanceState() == expectedState {
+			return
+		}
+		time.Sleep(time.Millisecond)
+	}
+	assert.Fail(t, "State expected to be ", string(expectedState))
+}

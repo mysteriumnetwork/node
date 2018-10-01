@@ -18,6 +18,7 @@
 package session
 
 import (
+	"errors"
 	"testing"
 
 	"errors"

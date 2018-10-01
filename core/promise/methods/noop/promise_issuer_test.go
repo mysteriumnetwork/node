@@ -21,7 +21,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
@@ -42,70 +41,38 @@ var _ connection.PromiseIssuer = &PromiseIssuer{}
 
 func TestPromiseIssuer_Start_SubscriptionFails(t *testing.T) {
 	dialog := &fakeDialog{
-		onReceiveReturnError: errors.New("reject subscriptions"),
+		returnError: errors.New("reject subscriptions"),
 	}
-	issuer := &PromiseIssuer{dialog: dialog}
 
 	logs := make([]string, 0)
 	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
 	defer logconfig.ReplaceLogger(logger)
 
+	issuer := &PromiseIssuer{dialog: dialog}
 	err := issuer.Start(proposal)
+	defer issuer.Stop()
+
 	assert.EqualError(t, err, "reject subscriptions")
 	assert.Len(t, logs, 0)
 }
 
 func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
-	dialog := &fakeDialog{}
-	issuer := &PromiseIssuer{dialog: dialog}
+	dialog := &fakeDialog{
+		returnReceiveMessage: promise.BalanceMessage{1, true, testToken(10)},
+	}
 
 	logs := make([]string, 0)
 	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
 	defer logconfig.ReplaceLogger(logger)
 
+	issuer := &PromiseIssuer{dialog: dialog}
 	err := issuer.Start(proposal)
 	assert.NoError(t, err)
 
-	dialog.onReceiveLastConsumer.Consume(
-		promise.BalanceMessage{1, true, testToken(10)},
-	)
 	assert.Len(t, logs, 1)
 	assert.Equal(t, "[promise-issuer] Promise balance notified: 1000000000TEST", logs[0])
 }
 
 func testToken(amount float64) money.Money {
 	return money.NewMoney(amount, money.Currency("TEST"))
-}
-
-type fakeDialog struct {
-	onReceiveLastConsumer communication.MessageConsumer
-	onReceiveReturnError  error
-}
-
-func (fd *fakeDialog) PeerID() identity.Identity {
-	return providerID
-}
-
-func (fd *fakeDialog) Close() error {
-	return nil
-}
-
-func (fd *fakeDialog) Receive(consumer communication.MessageConsumer) error {
-	if fd.onReceiveReturnError != nil {
-		return fd.onReceiveReturnError
-	}
-
-	fd.onReceiveLastConsumer = consumer
-	return nil
-}
-func (fd *fakeDialog) Respond(consumer communication.RequestConsumer) error {
-	return nil
-}
-
-func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
-	return nil
-}
-
-func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	return nil, nil
 }
