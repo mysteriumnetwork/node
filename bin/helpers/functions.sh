@@ -16,3 +16,12 @@ function copy_client_config {
         cp -vrp "bin/client_package/config/${OS_DIR}/." ${DST_DIR}/config
     fi
 }
+
+function copy_config {
+    local OS_DIR=$1
+    local DST_DIR=$2
+    cp -vrp "bin/package/config/common/" ${DST_DIR}/config
+    if [[ -d "bin/package/config/${OS_DIR}/" ]]; then
+        cp -vrp "bin/package/config/${OS_DIR}/." ${DST_DIR}/config
+    fi
+}
