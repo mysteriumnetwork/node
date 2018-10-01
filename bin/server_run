@@ -1,6 +1,0 @@
-#!/bin/bash
-
-sudo ./build/server/mysterium_server \
-   --localnet \
-   --agreed-terms-and-conditions \
-   $@

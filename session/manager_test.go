@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	expectedID      = SessionID("mocked-id")
+	expectedID      = ID("mocked-id")
 	expectedSession = Session{
 		ID:         expectedID,
 		Config:     mockedVPNConfig,
@@ -46,7 +46,7 @@ func saveSession(sessionInstance Session) {
 
 func TestManager_Create(t *testing.T) {
 	manager := NewManager(
-		func() SessionID {
+		func() ID {
 			return expectedID
 		},
 		mockedConfigProvider,

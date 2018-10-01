@@ -19,12 +19,12 @@ package session
 
 import "github.com/mysteriumnetwork/node/identity"
 
-// SessionID represents session id type
-type SessionID string
+// ID represents session id type
+type ID string
 
 // Session structure holds all required information about current session between service consumer and provider
 type Session struct {
-	ID         SessionID
+	ID         ID
 	Config     ServiceConfiguration
 	ConsumerID identity.Identity
 }

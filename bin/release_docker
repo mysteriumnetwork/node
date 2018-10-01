@@ -2,9 +2,7 @@
 
 ###########################################################################
 # Uploads all created Docker images to Docker Hub
-# - https://hub.docker.com/r/mysteriumnetwork/mysterium/
-# - https://hub.docker.com/r/mysteriumnetwork/mysterium-node/
-# - https://hub.docker.com/r/mysteriumnetwork/mysterium-client/
+# - https://hub.docker.com/r/mysteriumnetwork/myst/
 #
 # Usage:
 #> bin/release_docker <version>..
@@ -37,14 +35,6 @@ while test $# -gt 0; do
     docker_release_image myst:alpine mysteriumnetwork/myst:${VERSION_TAG}
     docker_release_image myst:alpine mysteriumnetwork/myst:${VERSION_TAG}-alpine
     docker_release_image myst:ubuntu mysteriumnetwork/myst:${VERSION_TAG}-ubuntu
-
-    docker_release_image myst:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}
-    docker_release_image myst:alpine mysteriumnetwork/mysterium-node:${VERSION_TAG}-alpine
-    docker_release_image myst:ubuntu mysteriumnetwork/mysterium-node:${VERSION_TAG}-ubuntu
-
-    docker_release_image mysterium-client:alpine mysteriumnetwork/mysterium-client:${VERSION_TAG}
-    docker_release_image mysterium-client:alpine mysteriumnetwork/mysterium-client:${VERSION_TAG}-alpine
-    docker_release_image mysterium-client:ubuntu mysteriumnetwork/mysterium-client:${VERSION_TAG}-ubuntu
 done
 
 print_success "Docker Hub releases created!"

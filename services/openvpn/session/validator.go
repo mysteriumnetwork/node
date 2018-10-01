@@ -38,7 +38,7 @@ func NewValidator(sessionMap SessionMap, extractor identity.Extractor) *Validato
 	return &Validator{
 		clientMap: &clientMap{
 			sessions:         sessionMap,
-			sessionClientIDs: make(map[session.SessionID]int),
+			sessionClientIDs: make(map[session.ID]int),
 			sessionMapLock:   sync.Mutex{},
 		},
 		identityExtractor: extractor,
@@ -48,7 +48,7 @@ func NewValidator(sessionMap SessionMap, extractor identity.Extractor) *Validato
 // Validate provides glue code for openvpn management interface to validate incoming client login request,
 // it expects session id as username, and session signature signed by client as password
 func (v *Validator) Validate(clientID int, sessionString, signatureString string) (bool, error) {
-	sessionID := session.SessionID(sessionString)
+	sessionID := session.ID(sessionString)
 	currentSession, found, err := v.clientMap.FindClientSession(clientID, sessionID)
 
 	if err != nil {
@@ -69,7 +69,7 @@ func (v *Validator) Validate(clientID int, sessionString, signatureString string
 
 // Cleanup removes session from underlying session managers
 func (v *Validator) Cleanup(sessionString string) error {
-	sessionID := session.SessionID(sessionString)
+	sessionID := session.ID(sessionString)
 
 	return v.clientMap.RemoveSession(sessionID)
 }

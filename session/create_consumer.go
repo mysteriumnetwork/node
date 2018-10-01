@@ -44,44 +44,44 @@ func (consumer *createConsumer) GetRequestEndpoint() communication.RequestEndpoi
 
 // NewRequest creates struct where request from endpoint will be serialized
 func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
-	var request SessionCreateRequest
+	var request CreateRequest
 	return &request
 }
 
 // Consume handles requests from endpoint and replies with response
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
-	request := requestPtr.(*SessionCreateRequest)
+	request := requestPtr.(*CreateRequest)
 	if consumer.CurrentProposalID != request.ProposalId {
-		response = &SessionCreateResponse{
-			Success: false,
-			Message: fmt.Sprintf("Proposal doesn't exist: %d", request.ProposalId),
-		}
-		return
+		return respondWithError(fmt.Sprintf("Proposal doesn't exist: %d", request.ProposalId)), nil
 	}
 
-	clientSession, err := consumer.SessionManager.Create(consumer.PeerID)
+	sessionInstance, err := consumer.SessionManager.Create(consumer.PeerID)
 	if err != nil {
-		response = &SessionCreateResponse{
-			Success: false,
-			Message: "Failed to create session.",
-		}
-		return
+		return respondWithError("Failed to create session."), nil
 	}
 
-	serializedConfig, err := json.Marshal(clientSession.Config)
+	return respondWithSession(sessionInstance), nil
+}
+
+func respondWithError(errorMessage string) *CreateResponse {
+	return &CreateResponse{
+		Success: false,
+		Message: errorMessage,
+	}
+}
+
+func respondWithSession(sessionInstance Session) *CreateResponse {
+	serializedConfig, err := json.Marshal(sessionInstance.Config)
 	if err != nil {
-		response = &SessionCreateResponse{
-			Success: false,
-			Message: "Failed to serialize config.",
-		}
+		// TODO Cant expose error to response, some logging should be here
+		return respondWithError("Failed to serialize session.")
 	}
 
-	response = &SessionCreateResponse{
+	return &CreateResponse{
 		Success: true,
 		Session: SessionDto{
-			ID:     clientSession.ID,
+			ID:     sessionInstance.ID,
 			Config: serializedConfig,
 		},
 	}
-	return
 }

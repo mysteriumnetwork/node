@@ -29,36 +29,42 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 const logPrefix = "[service-openvpn] "
 
-// ServerFactory initiates Openvon server instance during runtime
-type ServerFactory func(primitives *tls.Primitives) openvpn.Process
+// ServerConfigFactory callback generates session config for remote client
+type ServerConfigFactory func(*tls.Primitives) *openvpn_service.ServerConfig
+
+// ServerFactory initiates Openvpn server instance during runtime
+type ServerFactory func(*openvpn_service.ServerConfig) openvpn.Process
 
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal
 
-// SessionManagerFactory initiates session manager instance during runtime
-type SessionManagerFactory func(primitives *tls.Primitives, outboundIP, publicIP string) session.Manager
+// SessionConfigProviderFactory initiates ConfigProvider instance during runtime
+type SessionConfigProviderFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigProvider
 
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	ipResolver            ip.Resolver
-	natService            nat.NATService
-	locationResolver      location.Resolver
-	proposalFactory       ProposalFactory
-	sessionManagerFactory SessionManagerFactory
+	ipResolver       ip.Resolver
+	natService       nat.NATService
+	locationResolver location.Resolver
+	proposalFactory  ProposalFactory
 
-	vpnServerFactory ServerFactory
-	vpnServer        openvpn.Process
+	sessionConfigProviderFactory SessionConfigProviderFactory
+
+	vpnServerConfigFactory ServerConfigFactory
+	vpnServerFactory       ServerFactory
+	vpnServer              openvpn.Process
 }
 
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (
 	proposal dto_discovery.ServiceProposal,
-	sessionManager session.Manager,
+	sessionConfigProvider session.ConfigProvider,
 	err error,
 ) {
 	publicIP, err := manager.ipResolver.GetPublicIP()
@@ -108,13 +114,14 @@ func (manager *Manager) Start(providerID identity.Identity) (
 		return
 	}
 
-	manager.vpnServer = manager.vpnServerFactory(primitives)
+	vpnServerConfig := manager.vpnServerConfigFactory(primitives)
+	manager.vpnServer = manager.vpnServerFactory(vpnServerConfig)
 	if err = manager.vpnServer.Start(); err != nil {
 		return
 	}
 
 	proposal = manager.proposalFactory(currentLocation)
-	sessionManager = manager.sessionManagerFactory(primitives, outboundIP, publicIP)
+	sessionConfigProvider = manager.sessionConfigProviderFactory(primitives, outboundIP, publicIP)
 	return
 }
 
