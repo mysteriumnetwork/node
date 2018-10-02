@@ -46,6 +46,7 @@ services:
       --localnet
       --discovery-address=http://discovery/v1
       --ether.client.rpc=http://geth:8545
+      daemon
 
   #'external' IP detection
   ipify:
