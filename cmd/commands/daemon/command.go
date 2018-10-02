@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package run
+package daemon
 
 import (
 	"github.com/mysteriumnetwork/node/cmd"
@@ -28,8 +28,8 @@ func NewCommand() *cli.Command {
 	var di cmd.Dependencies
 
 	return &cli.Command{
-		Name:      "run",
-		Usage:     "Runs Mysterium node",
+		Name:      "daemon",
+		Usage:     "Starts Mysterium Tequilapi service",
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {

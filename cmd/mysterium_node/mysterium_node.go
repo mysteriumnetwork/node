@@ -23,6 +23,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd"
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
+	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/cmd/commands/service"
 	"github.com/mysteriumnetwork/node/cmd/commands/version"
@@ -36,6 +37,7 @@ var (
 		"run command 'license --conditions'",
 	)
 	versionSummary = metadata.VersionAsSummary(licenseCopyright)
+	daemonCommand  = daemon.NewCommand()
 	versionCommand = version.NewCommand(versionSummary)
 	licenseCommand = license.NewCommand(licenseCopyright)
 	serviceCommand = service.NewCommand(licenseCommand.Name)
@@ -76,6 +78,7 @@ func NewCommand() (*cli.App, error) {
 		*versionCommand,
 		*licenseCommand,
 		*serviceCommand,
+		*daemonCommand,
 		*cliCommand,
 	}
 
