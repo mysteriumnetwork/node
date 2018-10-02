@@ -64,7 +64,7 @@ func NewNode(
 	locationDetector := location.NewDetector(ipResolver, locationResolver)
 	originalLocationCache := location.NewLocationCache(locationDetector)
 
-	connectionFactory := openvpn.NewOpenvpnProcessBasedConnectionFactory(
+	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
 		mysteriumClient,
 		options.Openvpn.BinaryPath,
 		options.Directories.Config,

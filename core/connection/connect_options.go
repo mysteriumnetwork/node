@@ -18,8 +18,6 @@
 package connection
 
 import (
-	"encoding/json"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -32,8 +30,8 @@ type ConnectParams struct {
 
 // ConnectOptions represents the params we need to ensure a successful connection
 type ConnectOptions struct {
-	SessionID  session.ID
-	Config     json.RawMessage
-	ConsumerID identity.Identity
-	ProviderID identity.Identity
+	ConsumerID    identity.Identity
+	ProviderID    identity.Identity
+	SessionID     session.ID
+	SessionConfig []byte
 }
