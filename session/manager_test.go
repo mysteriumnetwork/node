@@ -45,8 +45,8 @@ func mockedConfigProvider() (ServiceConfiguration, error) {
 	return expectedSessionConfig, nil
 }
 
-func generateSessionID() ID {
-	return expectedID
+func generateSessionID() (ID, error) {
+	return expectedID, nil
 }
 
 func saveSession(sessionInstance Session) {

@@ -19,7 +19,11 @@ package session
 
 import "github.com/gofrs/uuid"
 
-// GenerateUUID method returns ID based on random UUID
-func GenerateUUID() ID {
-	return ID(uuid.Must(uuid.NewV4()).String())
+// GenerateUUID method returns ID based on random UUID, or error if we fail to generate one
+func GenerateUUID() (ID, error) {
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return ID(""), err
+	}
+	return ID(uid.String()), nil
 }

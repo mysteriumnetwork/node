@@ -24,6 +24,7 @@ import (
 )
 
 func TestSessionIdLength(t *testing.T) {
-	sid := GenerateUUID()
+	sid, err := GenerateUUID()
+	assert.Nil(t, err)
 	assert.Len(t, sid, 36)
 }
