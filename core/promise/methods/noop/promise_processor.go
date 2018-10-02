@@ -22,9 +22,16 @@ import (
 	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
+// NewPromiseProcessor creates instance of PromiseProcessor
+func NewPromiseProcessor(dialog communication.Dialog) *PromiseProcessor {
+	return &PromiseProcessor{
+		dialog: dialog,
+	}
+}
+
 // PromiseProcessor process promises in such way, what no actual money is deducted from promise
 type PromiseProcessor struct {
-	Dialog communication.Dialog
+	dialog communication.Dialog
 }
 
 // Start processing promises for given service proposal

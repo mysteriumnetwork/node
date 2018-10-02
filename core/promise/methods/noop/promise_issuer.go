@@ -28,9 +28,16 @@ import (
 
 const issuerLogPrefix = "[promise-issuer] "
 
+// NewPromiseIssuer creates instance of PromiseIssuer
+func NewPromiseIssuer(dialog communication.Dialog) *PromiseIssuer {
+	return &PromiseIssuer{
+		dialog: dialog,
+	}
+}
+
 // PromiseIssuer issues promises in such way, what no actual money is added to promise
 type PromiseIssuer struct {
-	Dialog communication.Dialog
+	dialog communication.Dialog
 
 	// these are populated by Start at runtime
 	proposal dto.ServiceProposal
@@ -50,7 +57,7 @@ func (issuer *PromiseIssuer) Stop() error {
 }
 
 func (issuer *PromiseIssuer) subscribePromiseBalance() error {
-	return issuer.Dialog.Receive(
+	return issuer.dialog.Receive(
 		&promise.BalanceMessageConsumer{issuer.processBalanceMessage},
 	)
 }

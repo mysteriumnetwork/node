@@ -55,7 +55,7 @@ func NewNode(
 	}
 
 	promiseIssuerFactory := func(dialog communication.Dialog) connection.PromiseIssuer {
-		return &noop.PromiseIssuer{Dialog: dialog}
+		return noop.NewPromiseIssuer(dialog)
 	}
 
 	statsKeeper := stats.NewSessionStatsKeeper(time.Now)

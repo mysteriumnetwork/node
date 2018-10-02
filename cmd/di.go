@@ -148,9 +148,7 @@ func newSessionManagerFactory(
 	sessionStorage *session.StorageMemory,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) session.Manager {
-		promiseProcessor := &noop.PromiseProcessor{
-			Dialog: dialog,
-		}
+		promiseProcessor := noop.NewPromiseProcessor(dialog)
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,

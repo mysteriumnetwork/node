@@ -44,7 +44,7 @@ func TestPromiseIssuer_Start_SubscriptionFails(t *testing.T) {
 	dialog := &fakeDialog{
 		onReceiveReturnError: errors.New("reject subscriptions"),
 	}
-	issuer := &PromiseIssuer{Dialog: dialog}
+	issuer := &PromiseIssuer{dialog: dialog}
 
 	logs := make([]string, 0)
 	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
@@ -57,7 +57,7 @@ func TestPromiseIssuer_Start_SubscriptionFails(t *testing.T) {
 
 func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
 	dialog := &fakeDialog{}
-	issuer := &PromiseIssuer{Dialog: dialog}
+	issuer := &PromiseIssuer{dialog: dialog}
 
 	logs := make([]string, 0)
 	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
