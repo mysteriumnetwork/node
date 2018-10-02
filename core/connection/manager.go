@@ -99,11 +99,6 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	cancelCtx := manager.cleanConnection
 	manager.mutex.Unlock()
 
-	connectionOptions := ConnectOptions{
-		ConsumerID: consumerID,
-		ProviderID: providerID,
-	}
-
 	var cancel []func()
 	defer func() {
 		manager.cleanConnection = func() {
@@ -130,7 +125,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	}
 	cancel = append(cancel, func() { dialog.Close() })
 
-	connectionOptions.SessionID, connectionOptions.Config, err = session.RequestSessionCreate(dialog, proposal.ID)
+	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID)
 	if err != nil {
 		return err
 	}
@@ -145,7 +140,12 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	stateChannel := make(chan State, 10)
 
 	connection, err := manager.connectionCreator.CreateConnection(
-		connectionOptions,
+		ConnectOptions{
+			SessionID:     sessionID,
+			SessionConfig: sessionConfig,
+			ConsumerID:    consumerID,
+			ProviderID:    providerID,
+		},
 		stateChannel,
 	)
 	if err != nil {
@@ -157,7 +157,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	}
 	cancel = append(cancel, connection.Stop)
 
-	err = manager.waitForConnectedState(stateChannel, connectionOptions.SessionID)
+	err = manager.waitForConnectedState(stateChannel, sessionID)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	}
 
 	go connectionWaiter(connection, dialog, promiseIssuer)
-	go manager.consumeConnectionStates(stateChannel, connectionOptions.SessionID)
+	go manager.consumeConnectionStates(stateChannel, sessionID)
 	return nil
 }
 
