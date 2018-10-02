@@ -17,9 +17,9 @@
 
 package session
 
-import "github.com/satori/go.uuid"
+import "github.com/gofrs/uuid"
 
 // GenerateUUID method returns ID based on random UUID
 func GenerateUUID() ID {
-	return ID(uuid.NewV4().String())
+	return ID(uuid.Must(uuid.NewV4()).String())
 }
