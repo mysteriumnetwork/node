@@ -30,9 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDialogWaiter_Interface(t *testing.T) {
-	var _ communication.DialogWaiter = &dialogWaiter{}
-}
+var _ communication.DialogWaiter = &dialogWaiter{}
 
 func TestDialogWaiter_Factory(t *testing.T) {
 	address := discovery.NewAddress("custom", "nats://far-server:4222")
@@ -126,9 +124,9 @@ func TestDialogWaiter_ServeDialogsRejectUnregisteredConsumers(t *testing.T) {
 		`{
 			"payload":	{
 				"reason":400,
-				"reasonMessage":"Invalid identity"
+				"reasonMessage":"Invalid Identity"
 			},
-			"signature":"c2lnbmVkeyJyZWFzb24iOjQwMCwicmVhc29uTWVzc2FnZSI6IkludmFsaWQgaWRlbnRpdHkifQ=="
+			"signature":"c2lnbmVkeyJyZWFzb24iOjQwMCwicmVhc29uTWVzc2FnZSI6IkludmFsaWQgSWRlbnRpdHkifQ=="
 		}`,
 		string(msg.Data),
 	)

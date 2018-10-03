@@ -17,6 +17,10 @@
 
 package money
 
+import (
+	"fmt"
+)
+
 type Money struct {
 	Amount   uint64   `json:"amount,omitempty"`
 	Currency Currency `json:"currency,omitempty"`
@@ -24,4 +28,13 @@ type Money struct {
 
 func NewMoney(amount float64, currency Currency) Money {
 	return Money{uint64(amount * 100000000), currency}
+}
+
+// String converts struct to string
+func (value *Money) String() string {
+	return fmt.Sprintf(
+		"%d%s",
+		value.Amount,
+		value.Currency,
+	)
 }

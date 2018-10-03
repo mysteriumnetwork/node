@@ -19,7 +19,6 @@ package session
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
@@ -27,14 +26,13 @@ import (
 
 // Manager defines methods for session management
 type Manager interface {
-	Create(identity.Identity) (Session, error)
+	Create(consumerID identity.Identity, proposalID int) (Session, error)
 }
 
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
-	CurrentProposalID int
-	SessionManager    Manager
-	PeerID            identity.Identity
+	SessionManager Manager
+	PeerID         identity.Identity
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
@@ -51,33 +49,27 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 // Consume handles requests from endpoint and replies with response
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
-	if consumer.CurrentProposalID != request.ProposalId {
-		return respondWithError(fmt.Sprintf("Proposal doesn't exist: %d", request.ProposalId)), nil
-	}
 
-	sessionInstance, err := consumer.SessionManager.Create(consumer.PeerID)
-	if err != nil {
-		return respondWithError("Failed to create session."), nil
-	}
-
-	return respondWithSession(sessionInstance), nil
-}
-
-func respondWithError(errorMessage string) *CreateResponse {
-	return &CreateResponse{
-		Success: false,
-		Message: errorMessage,
+	sessionInstance, err := consumer.SessionManager.Create(consumer.PeerID, request.ProposalId)
+	switch err {
+	case nil:
+		return responseWithSession(sessionInstance), nil
+	case ErrorInvalidProposal:
+		return responseInvalidProposal, nil
+	default:
+		return responseInternalError, nil
 	}
 }
 
-func respondWithSession(sessionInstance Session) *CreateResponse {
+func responseWithSession(sessionInstance Session) CreateResponse {
 	serializedConfig, err := json.Marshal(sessionInstance.Config)
 	if err != nil {
+		// Failed to serialize session
 		// TODO Cant expose error to response, some logging should be here
-		return respondWithError("Failed to serialize session.")
+		return responseInternalError
 	}
 
-	return &CreateResponse{
+	return CreateResponse{
 		Success: true,
 		Session: SessionDto{
 			ID:     sessionInstance.ID,

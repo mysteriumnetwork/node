@@ -15,30 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nats
+package promise
 
-import (
-	"testing"
-	"time"
+import "github.com/mysteriumnetwork/node/money"
 
-	"github.com/mysteriumnetwork/node/communication"
-	"github.com/stretchr/testify/assert"
-)
-
-var _ communication.Sender = &senderNATS{}
-
-func TestSenderNew(t *testing.T) {
-	connection := &connectionFake{}
-	codec := communication.NewCodecFake()
-
-	assert.Equal(
-		t,
-		&senderNATS{
-			connection:     connection,
-			codec:          codec,
-			timeoutRequest: 2 * time.Second,
-			messageTopic:   "custom.",
-		},
-		NewSender(connection, codec, "custom"),
-	)
+// SignedPromise represents payment promise signed by issuer
+type SignedPromise struct {
+	Promise         Promise
+	IssuerSignature Signature
 }
+
+// Promise represents payment promise between two parties
+type Promise struct {
+	SerialNumber int
+	IssuerID     string
+	BenefiterID  string
+	Amount       money.Money
+}
+
+// Signature represents some data signed with a key
+type Signature string

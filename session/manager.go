@@ -18,9 +18,16 @@
 package session
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
+	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+)
+
+var (
+	// ErrorInvalidProposal is validation error then invalid proposal requested for session creation
+	ErrorInvalidProposal = errors.New("proposal does not exist")
 )
 
 // IDGenerator defines method for session id generation
@@ -32,36 +39,71 @@ type ConfigProvider func() (ServiceConfiguration, error)
 // SaveCallback stores newly started sessions
 type SaveCallback func(Session)
 
+// PromiseProcessor processes promises at provider side.
+// Provider checks promises from consumer and signs them also.
+// Provider clears promises from consumer.
+type PromiseProcessor interface {
+	Start(discovery_dto.ServiceProposal) error
+	Stop() error
+}
+
 // NewManager returns new session manager
-func NewManager(idGenerator IDGenerator, configProvider ConfigProvider, saveCallback SaveCallback) *manager {
+func NewManager(
+	currentProposal discovery_dto.ServiceProposal,
+	idGenerator IDGenerator,
+	configProvider ConfigProvider,
+	saveCallback SaveCallback,
+	promiseProcessor PromiseProcessor,
+) *manager {
 	return &manager{
-		generateID:    idGenerator,
-		provideConfig: configProvider,
-		saveSession:   saveCallback,
-		creationLock:  sync.Mutex{},
+		currentProposal:  currentProposal,
+		generateID:       idGenerator,
+		provideConfig:    configProvider,
+		saveSession:      saveCallback,
+		promiseProcessor: promiseProcessor,
+
+		creationLock: sync.Mutex{},
 	}
 }
 
 // manager knows how to start and provision session
 type manager struct {
-	generateID    IDGenerator
-	provideConfig ConfigProvider
-	saveSession   SaveCallback
-	creationLock  sync.Mutex
+	currentProposal  discovery_dto.ServiceProposal
+	generateID       IDGenerator
+	provideConfig    ConfigProvider
+	saveSession      SaveCallback
+	promiseProcessor PromiseProcessor
+
+	creationLock sync.Mutex
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *manager) Create(peerID identity.Identity) (sessionInstance Session, err error) {
+func (manager *manager) Create(consumerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
-	sessionInstance.ID = manager.generateID()
-	sessionInstance.ConsumerID = peerID
-	sessionInstance.Config, err = manager.provideConfig()
+	if manager.currentProposal.ID != proposalID {
+		err = ErrorInvalidProposal
+		return
+	}
+
+	sessionInstance, err = manager.createSession(consumerID)
+	if err != nil {
+		return
+	}
+
+	err = manager.promiseProcessor.Start(manager.currentProposal)
 	if err != nil {
 		return
 	}
 
 	manager.saveSession(sessionInstance)
 	return sessionInstance, nil
+}
+
+func (manager *manager) createSession(consumerID identity.Identity) (sessionInstance Session, err error) {
+	sessionInstance.ID = manager.generateID()
+	sessionInstance.ConsumerID = consumerID
+	sessionInstance.Config, err = manager.provideConfig()
+	return
 }

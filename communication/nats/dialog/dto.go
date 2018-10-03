@@ -26,8 +26,8 @@ const endpointDialogCreate = communication.RequestEndpoint("dialog-create")
 
 var (
 	responseOK              = dialogCreateResponse{200, "OK"}
-	responseInvalidIdentity = dialogCreateResponse{400, "Invalid identity"}
-	responseInternalError   = dialogCreateResponse{500, "Failed to create dialog"}
+	responseInvalidIdentity = dialogCreateResponse{400, "Invalid Identity"}
+	responseInternalError   = dialogCreateResponse{500, "Internal Error"}
 )
 
 type dialogCreateRequest struct {

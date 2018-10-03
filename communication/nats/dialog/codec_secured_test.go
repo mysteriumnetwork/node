@@ -30,13 +30,7 @@ type customPayload struct {
 	Field int
 }
 
-func TestCodecSigner_Interface(t *testing.T) {
-	var _ communication.Codec = NewCodecSecured(
-		communication.NewCodecJSON(),
-		&identity.SignerFake{},
-		&identity.VerifierFake{},
-	)
-}
+var _ communication.Codec = &codecSecured{}
 
 func TestCodecSigner_Pack(t *testing.T) {
 	table := []struct {
@@ -228,7 +222,7 @@ func TestCodecSigner_UnpackError(t *testing.T) {
 		var payload string
 		err := codec.Unpack([]byte(tt.data), &payload)
 
-		assert.EqualError(t, err, tt.expectedError)
 		assert.Exactly(t, payload, "")
+		assert.EqualError(t, err, tt.expectedError)
 	}
 }

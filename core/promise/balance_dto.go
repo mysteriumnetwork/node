@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,30 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nats
+package promise
 
 import (
-	"testing"
-	"time"
-
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/stretchr/testify/assert"
+	"github.com/mysteriumnetwork/node/money"
 )
 
-var _ communication.Sender = &senderNATS{}
+const balanceEndpoint = communication.MessageEndpoint("promise-balance")
 
-func TestSenderNew(t *testing.T) {
-	connection := &connectionFake{}
-	codec := communication.NewCodecFake()
-
-	assert.Equal(
-		t,
-		&senderNATS{
-			connection:     connection,
-			codec:          codec,
-			timeoutRequest: 2 * time.Second,
-			messageTopic:   "custom.",
-		},
-		NewSender(connection, codec, "custom"),
-	)
+// BalanceMessage represents service Provider's balance notification to Consumer.
+// Consumer needs to know how Provider sees a promise:
+//  - does Provider still accept previous promise
+//  - amount left in promise
+//  - Consumer has interpreter speed how Provider deducts money from promise
+type BalanceMessage struct {
+	RequestID int         `json:"request_id"`
+	Accepted  bool        `json:"accepted"`
+	Balance   money.Money `json:"balance"`
 }
