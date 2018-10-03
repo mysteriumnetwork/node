@@ -104,10 +104,6 @@ func TestPaymentMethodPerBytesUnserialize(t *testing.T) {
 		err := json.Unmarshal([]byte(test.json), &model)
 
 		assert.Equal(t, test.expectedModel, model)
-		if test.expectedError != nil {
-			assert.EqualError(t, err, test.expectedError.Error())
-		} else {
-			assert.NoError(t, err)
-		}
+		assert.Equal(t, test.expectedError, err)
 	}
 }

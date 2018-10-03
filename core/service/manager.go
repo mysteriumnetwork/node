@@ -47,8 +47,8 @@ type Service interface {
 	Stop() error
 }
 
-// SessionManagerFactory initiates session manager instance during runtime
-type SessionManagerFactory func(configProvider session.ConfigProvider) session.Manager
+// DialogHandlerFactory initiates instance which is able to handle incoming dialogs
+type DialogHandlerFactory func(dto_discovery.ServiceProposal, session.ConfigProvider) communication.DialogHandler
 
 // NewManager creates new instance of pluggable services manager
 func NewManager(
@@ -57,7 +57,7 @@ func NewManager(
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
 	service Service,
-	sessionManagerFactory SessionManagerFactory,
+	dialogHandlerFactory DialogHandlerFactory,
 	discoveryService *discovery.Discovery,
 ) *Manager {
 	return &Manager{
@@ -69,9 +69,9 @@ func NewManager(
 				identityRegistry,
 			)
 		},
-		service:               service,
-		sessionManagerFactory: sessionManagerFactory,
-		discovery:             discoveryService,
+		service:              service,
+		dialogHandlerFactory: dialogHandlerFactory,
+		discovery:            discoveryService,
 	}
 }
 
@@ -79,12 +79,12 @@ func NewManager(
 type Manager struct {
 	identityLoader identity_selector.Loader
 
-	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
-	dialogWaiter        communication.DialogWaiter
+	dialogWaiterFactory  func(identity identity.Identity) communication.DialogWaiter
+	dialogWaiter         communication.DialogWaiter
+	dialogHandlerFactory DialogHandlerFactory
 
-	service               Service
-	sessionManagerFactory SessionManagerFactory
-	discovery             *discovery.Discovery
+	service   Service
+	discovery *discovery.Discovery
 }
 
 // Start starts service - does not block
@@ -106,8 +106,7 @@ func (manager *Manager) Start() (err error) {
 	}
 	proposal.SetProviderContact(providerID, providerContact)
 
-	sessionManager := manager.sessionManagerFactory(sessionConfigProvider)
-	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
+	dialogHandler := manager.dialogHandlerFactory(proposal, sessionConfigProvider)
 	if err = manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}

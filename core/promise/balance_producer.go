@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,30 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nats
+package promise
 
 import (
-	"testing"
-	"time"
-
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/stretchr/testify/assert"
 )
 
-var _ communication.Sender = &senderNATS{}
+// BalanceMessageProducer sends balance notification to thought communication channel.
+type BalanceMessageProducer struct {
+	Message BalanceMessage
+}
 
-func TestSenderNew(t *testing.T) {
-	connection := &connectionFake{}
-	codec := communication.NewCodecFake()
+// GetMessageEndpoint returns endpoint there to send messages
+func (producer *BalanceMessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
+	return balanceEndpoint
+}
 
-	assert.Equal(
-		t,
-		&senderNATS{
-			connection:     connection,
-			codec:          codec,
-			timeoutRequest: 2 * time.Second,
-			messageTopic:   "custom.",
-		},
-		NewSender(connection, codec, "custom"),
-	)
+// Produce creates message which will be serialized to endpoint
+func (producer *BalanceMessageProducer) Produce() (messagePtr interface{}) {
+	return producer.Message
 }

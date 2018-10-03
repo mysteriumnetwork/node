@@ -34,6 +34,16 @@ type DialogCreator func(consumerID, providerID identity.Identity, contact dto.Co
 // consumer identity, provider identity and uses state callback to report state changes
 type VpnClientCreator func(*session.Session, identity.Identity, identity.Identity, state.Callback, ConnectOptions) (openvpn.Process, error)
 
+// PromiseIssuer issues promises from consumer to provider.
+// Consumer signs those promises.
+type PromiseIssuer interface {
+	Start(proposal dto.ServiceProposal) error
+	Stop() error
+}
+
+// PromiseIssuerCreator creates new PromiseIssuer given context
+type PromiseIssuerCreator func(communication.Dialog) PromiseIssuer
+
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists

@@ -27,9 +27,7 @@ type customPayload struct {
 	Field int
 }
 
-func TestCodecJSONInterface(t *testing.T) {
-	var _ Codec = NewCodecJSON()
-}
+var _ Codec = &codecJSON{}
 
 func TestCodecJSONPack(t *testing.T) {
 	table := []struct {

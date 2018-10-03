@@ -21,40 +21,77 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
+	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
+	currentProposalID = 68
+	currentProposal   = discovery_dto.ServiceProposal{
+		ID: currentProposalID,
+	}
 	expectedID      = ID("mocked-id")
 	expectedSession = Session{
 		ID:         expectedID,
-		Config:     mockedVPNConfig,
+		Config:     expectedSessionConfig,
 		ConsumerID: identity.FromAddress("deadbeef"),
 	}
 	lastSession Session
 )
 
-const mockedVPNConfig = "config_string"
+const expectedSessionConfig = "config_string"
 
 func mockedConfigProvider() (ServiceConfiguration, error) {
-	return mockedVPNConfig, nil
+	return expectedSessionConfig, nil
+}
+
+func generateSessionID() ID {
+	return expectedID
 }
 
 func saveSession(sessionInstance Session) {
 	lastSession = sessionInstance
 }
 
-func TestManager_Create(t *testing.T) {
-	manager := NewManager(
-		func() ID {
-			return expectedID
-		},
-		mockedConfigProvider,
-		saveSession,
-	)
+type fakePromiseProcessor struct {
+	started  bool
+	proposal discovery_dto.ServiceProposal
+}
 
-	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"))
+func (processor *fakePromiseProcessor) Start(proposal discovery_dto.ServiceProposal) error {
+	processor.started = true
+	processor.proposal = proposal
+	return nil
+}
+
+func (processor *fakePromiseProcessor) Stop() error {
+	processor.started = false
+	return nil
+}
+
+func TestManager_Create_StoresSession(t *testing.T) {
+	manager := NewManager(currentProposal, generateSessionID, mockedConfigProvider, saveSession, &fakePromiseProcessor{})
+
+	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID)
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedSession, sessionInstance)
 	assert.Exactly(t, expectedSession, lastSession)
+}
+
+func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
+	manager := NewManager(currentProposal, generateSessionID, mockedConfigProvider, saveSession, &fakePromiseProcessor{})
+
+	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), 69)
+	assert.Exactly(t, err, ErrorInvalidProposal)
+	assert.Exactly(t, Session{}, sessionInstance)
+}
+
+func TestManager_Create_StartsPromiseProcessor(t *testing.T) {
+	promiseProcessor := &fakePromiseProcessor{}
+	manager := NewManager(currentProposal, generateSessionID, mockedConfigProvider, saveSession, promiseProcessor)
+
+	_, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID)
+	assert.NoError(t, err)
+	assert.True(t, promiseProcessor.started)
+	assert.Exactly(t, currentProposal, promiseProcessor.proposal)
 }

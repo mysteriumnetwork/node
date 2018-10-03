@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,38 +15,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package promise
 
 import (
 	"encoding/json"
 	"regexp"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLocationSerialize(t *testing.T) {
+func TestBalanceMessage_Serialize(t *testing.T) {
 	var tests = []struct {
-		model        Location
+		model        BalanceMessage
 		expectedJSON string
 	}{
 		{
-			Location{"XX", "YY", "AS123"},
+			BalanceMessage{123, true, money.Money{}},
 			`{
-				"country": "XX",
-				"city": "YY",
-				"asn": "AS123"
+				"request_id": 123,
+				"accepted": true,
+				"balance": {}
 			}`,
 		},
 		{
-			Location{Country: "XX"},
+			BalanceMessage{0, false, money.Money{}},
 			`{
-				"country": "XX"
+				"request_id": 0,
+				"accepted": false,
+				"balance": {}
 			}`,
 		},
 		{
-			Location{},
-			`{}`,
+			BalanceMessage{},
+			`{
+				"request_id": 0,
+				"accepted": false,
+				"balance": {}
+			}`,
 		},
 	}
 
@@ -58,37 +65,30 @@ func TestLocationSerialize(t *testing.T) {
 	}
 }
 
-func TestLocationUnserialize(t *testing.T) {
+func TestBalanceMessage_Unserialize(t *testing.T) {
 	var tests = []struct {
 		json          string
-		expectedModel Location
+		expectedModel BalanceMessage
 		expectedError error
 	}{
 		{
 			`{
-				"country": "XX",
-				"city": "YY",
-				"asn": "AS123"
+				"request_id": 123,
+				"accepted": true,
+				"balance": {}
 			}`,
-			Location{"XX", "YY", "AS123"},
-			nil,
-		},
-		{
-			`{
-				"country": "XX"
-			}`,
-			Location{Country: "XX"},
+			BalanceMessage{123, true, money.Money{}},
 			nil,
 		},
 		{
 			`{}`,
-			Location{},
+			BalanceMessage{},
 			nil,
 		},
 	}
 
 	for _, test := range tests {
-		var model Location
+		var model BalanceMessage
 		err := json.Unmarshal([]byte(test.json), &model)
 
 		assert.Equal(t, test.expectedModel, model)
@@ -96,12 +96,12 @@ func TestLocationUnserialize(t *testing.T) {
 	}
 }
 
-func TestLocationUnserializeError(t *testing.T) {
-	jsonData := []byte(`{
-		"country": 1
+func TestBalanceMessage_UnserializeError(t *testing.T) {
+	jsonData := []byte(`
+		{"request_id": "6"
 	}`)
 
-	var model Location
+	var model BalanceMessage
 	err := json.Unmarshal(jsonData, &model)
 
 	assert.IsType(t, &json.UnmarshalTypeError{}, err)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package promise
 
-import (
-	"github.com/mysteriumnetwork/node/money"
-)
+import "github.com/mysteriumnetwork/node/communication"
 
-// PromiseBody represents payment promise between two parties
-type PromiseBody struct {
-	SerialNumber int
-	IssuerID     string
-	BenefiterID  string
-	Amount       money.Money
-}
+var _ communication.MessageConsumer = &BalanceMessageConsumer{}

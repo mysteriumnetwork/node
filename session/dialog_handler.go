@@ -21,31 +21,30 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
+// ManagerFactory initiates session manager instance during runtime
+type ManagerFactory func(dialog communication.Dialog) Manager
+
 // NewDialogHandler constructs handler which gets all incoming dialogs and starts handling them
-func NewDialogHandler(proposalId int, sessionManager Manager) *handler {
+func NewDialogHandler(sessionManagerFactory ManagerFactory) *handler {
 	return &handler{
-		CurrentProposalID: proposalId,
-		SessionManager:    sessionManager,
+		sessionManagerFactory: sessionManagerFactory,
 	}
 }
 
 type handler struct {
-	CurrentProposalID int
-	SessionManager    Manager
+	sessionManagerFactory ManagerFactory
 }
 
 // Handle starts serving services in given Dialog instance
 func (handler *handler) Handle(dialog communication.Dialog) error {
-	subscribeError := dialog.Respond(
+	return handler.subscribeSessionRequests(dialog)
+}
+
+func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) error {
+	return dialog.Respond(
 		&createConsumer{
-			CurrentProposalID: handler.CurrentProposalID,
-			SessionManager:    handler.SessionManager,
-			PeerID:            dialog.PeerID(),
+			SessionManager: handler.sessionManagerFactory(dialog),
+			PeerID:         dialog.PeerID(),
 		},
 	)
-	if subscribeError != nil {
-		return subscribeError
-	}
-
-	return nil
 }
