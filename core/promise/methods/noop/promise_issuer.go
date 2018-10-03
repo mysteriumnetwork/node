@@ -24,21 +24,18 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 const issuerLogPrefix = "[promise-issuer] "
 
-// NewPromiseIssuer creates instance of PromiseIssuer
-func NewPromiseIssuer(dialog communication.Dialog) *PromiseIssuer {
-	return &PromiseIssuer{
-		dialog: dialog,
-	}
-}
-
 // PromiseIssuer issues promises in such way, what no actual money is added to promise
 type PromiseIssuer struct {
-	dialog communication.Dialog
+	IssuerID identity.Identity
+	Dialog   communication.Dialog
+	Signer   identity.Signer
+	Amount   money.Money
 
 	// these are populated by Start at runtime
 	proposal dto.ServiceProposal
@@ -47,11 +44,6 @@ type PromiseIssuer struct {
 // Start issuing promises for given service proposal
 func (issuer *PromiseIssuer) Start(proposal dto.ServiceProposal) error {
 	issuer.proposal = proposal
-
-	if _, err := issuer.sendNewPromise(); err != nil {
-		// TODO Handle response for send promise
-		return err
-	}
 
 	return issuer.subscribePromiseBalance()
 }
@@ -62,18 +54,8 @@ func (issuer *PromiseIssuer) Stop() error {
 	return nil
 }
 
-func (issuer *PromiseIssuer) sendNewPromise() (*promise.Response, error) {
-	unsignedPromise := promise.NewPromise(issuer.IssuerID, identity.FromAddress(issuer.proposal.ProviderID), issuer.Amount)
-	signedPromise, err := promise.SignByIssuer(unsignedPromise, issuer.Signer)
-	if err != nil {
-		return nil, err
-	}
-
-	return promise.Send(signedPromise, issuer.Dialog)
-}
-
 func (issuer *PromiseIssuer) subscribePromiseBalance() error {
-	return issuer.dialog.Receive(
+	return issuer.Dialog.Receive(
 		&promise.BalanceMessageConsumer{issuer.processBalanceMessage},
 	)
 }
@@ -85,24 +67,4 @@ func (issuer *PromiseIssuer) processBalanceMessage(message promise.BalanceMessag
 
 	log.Info(issuerLogPrefix, fmt.Sprintf("Promise balance notified: %s", message.Balance.String()))
 	return nil
-}
-
-func (issuer *PromiseIssuer) subscribePromiseBalance() error {
-	subscribeError := issuer.Dialog.Receive(
-		&promise.BalanceMessageConsumer{issuer.processBalanceMessage},
-	)
-	if subscribeError != nil {
-		return subscribeError
-	}
-
-	return nil
-}
-
-func (issuer *PromiseIssuer) processBalanceMessage(message *promise.BalanceMessage) {
-	balanceString := fmt.Sprintf("%d%s", message.Balance.Amount, message.Balance.Currency)
-	if !message.Accepted {
-		seelog.Warn(issuerLogPrefix, fmt.Sprintf("Promise %d is rejected: %s", message.RequestID, balanceString))
-	}
-
-	seelog.Info(issuerLogPrefix, fmt.Sprintf("Promise %d balance is %s", message.RequestID, balanceString))
 }

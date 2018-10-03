@@ -34,11 +34,13 @@ func (producer *CreateProducer) GetRequestEndpoint() communication.RequestEndpoi
 	return endpointSessionCreate
 }
 
-func (producer *createProducer) NewResponse() (responsePtr interface{}) {
+// NewResponse creates struct where response to endpoint will be serialized
+func (producer *CreateProducer) NewResponse() (responsePtr interface{}) {
 	return &CreateResponse{}
 }
 
-func (producer *createProducer) Produce() (requestPtr interface{}) {
+// Produce creates requests for the endpoint
+func (producer *CreateProducer) Produce() (requestPtr interface{}) {
 	return &CreateRequest{
 		ProposalId: producer.ProposalID,
 	}
@@ -46,7 +48,7 @@ func (producer *createProducer) Produce() (requestPtr interface{}) {
 
 // RequestSessionCreate requests session creation and returns session DTO
 func RequestSessionCreate(sender communication.Sender, proposalID int, sessionPtr *Session) error {
-	responsePtr, err := sender.Request(&createProducer{
+	responsePtr, err := sender.Request(&CreateProducer{
 		ProposalID: proposalID,
 	})
 	response := responsePtr.(*CreateResponse)

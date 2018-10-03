@@ -112,37 +112,6 @@ func (manager *Manager) Start() (err error) {
 	}
 
 	manager.discovery.Start(providerID, proposal)
-<<<<<<< HEAD
-=======
-
-	sessionManager := manager.sessionManagerFactory(primitives, manager.openvpnServiceAddress(outboundIP, publicIP))
-
-	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
-	if err := manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
-		return err
-	}
-
-	promiseChecker := promise.NewPromiseChecker()
-	if err := manager.dialogWaiter.ServeDialogs(promiseChecker); err != nil {
-		return err
-	}
-
-	vpnStateCallback := func(state openvpn.State) {
-		switch state {
-		case openvpn.ProcessStarted:
-			log.Info("Openvpn service booting up")
-		case openvpn.ConnectedState:
-			log.Info("Openvpn service started successfully")
-		case openvpn.ProcessExited:
-			log.Info("Openvpn service exited")
-		}
-	}
-	manager.vpnServer = manager.vpnServerFactory(primitives, vpnStateCallback)
-	if err := manager.vpnServer.Start(); err != nil {
-		return err
-	}
-
->>>>>>> 4fa90b08... Better naming for promises. #345
 	return nil
 }
 

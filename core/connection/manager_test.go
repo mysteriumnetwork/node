@@ -19,7 +19,6 @@ package connection
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -371,26 +370,25 @@ func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
 }
 
 func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	return &session.CreateResponse{
-			Success: true,
-			Message: "Everything is great!",
-			Session: session.SessionDto{
-				ID:     "vpn-connection-id",
-				Config: []byte("{}"),
+	switch producer.(type) {
+	case *promise.Producer:
+		return &promise.Response{
+				Success: true,
+				Message: "Everything is great!",
 			},
 			nil
 	case *session.CreateProducer:
-		return &session.SessionCreateResponse{
+		return &session.CreateResponse{
 				Success: true,
 				Message: "Everything is great!",
 				Session: session.SessionDto{
 					ID:     "vpn-connection-id",
-					Config: []byte{},
+					Config: []byte("{}"),
 				},
 			},
 			nil
 	}
-	return nil, fmt.Errorf("unknown producer type")
+	return nil, errors.New("unknown producer type")
 }
 
 type fakePromiseIssuer struct {

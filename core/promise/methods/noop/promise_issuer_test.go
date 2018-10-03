@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,7 +48,7 @@ func TestPromiseIssuer_Start_SubscriptionFails(t *testing.T) {
 	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
 	defer logconfig.ReplaceLogger(logger)
 
-	issuer := &PromiseIssuer{dialog: dialog}
+	issuer := &PromiseIssuer{Dialog: dialog}
 	err := issuer.Start(proposal)
 	defer issuer.Stop()
 
@@ -66,7 +65,7 @@ func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
 	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
 	defer logconfig.ReplaceLogger(logger)
 
-	issuer := &PromiseIssuer{dialog: dialog}
+	issuer := &PromiseIssuer{Dialog: dialog}
 	err := issuer.Start(proposal)
 	assert.NoError(t, err)
 

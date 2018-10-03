@@ -213,14 +213,6 @@
   revision = "c65b2f87fee37d1c7854c9164a450713c28d50cd"
 
 [[projects]]
-  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
-  name = "github.com/pkg/errors"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
-
-[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -430,7 +422,6 @@
     "github.com/mysteriumnetwork/payments/registry/generated",
     "github.com/nats-io/go-nats",
     "github.com/oschwald/geoip2-golang",
-    "github.com/pkg/errors",
     "github.com/satori/go.uuid",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/suite",
