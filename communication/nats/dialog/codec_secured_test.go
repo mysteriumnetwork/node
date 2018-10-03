@@ -222,7 +222,7 @@ func TestCodecSigner_UnpackError(t *testing.T) {
 		var payload string
 		err := codec.Unpack([]byte(tt.data), &payload)
 
-		assert.EqualError(t, err, tt.expectedError)
 		assert.Exactly(t, payload, "")
+		assert.EqualError(t, err, tt.expectedError)
 	}
 }

@@ -35,20 +35,15 @@ func TestCodecBytesPack(t *testing.T) {
 		{`hello`, []byte(`hello`), nil},
 		{`hello "name"`, []byte(`hello "name"`), nil},
 		{nil, []byte{}, nil},
-		{true, nil, errors.New("Cant pack payload: true")},
+		{true, []byte{}, errors.New("Cant pack payload: true")},
 	}
 
 	codec := codecBytes{}
 	for _, tt := range table {
 		data, err := codec.Pack(tt.payload)
 
-		if tt.expectedError != nil {
-			assert.Error(t, err)
-			assert.EqualError(t, err, tt.expectedError.Error())
-		} else {
-			assert.NoError(t, err)
-			assert.Exactly(t, tt.expectedData, data)
-		}
+		assert.Exactly(t, tt.expectedData, data)
+		assert.Exactly(t, tt.expectedError, err)
 	}
 }
 
