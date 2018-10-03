@@ -30,7 +30,7 @@ import (
 
 const issuerLogPrefix = "[promise-issuer] "
 
-// PromiseIssuer issues promises in such way, what no actual money is added to promise
+// PromiseIssuer issues promises in such way, that no actual money is added to promise
 type PromiseIssuer struct {
 	IssuerID identity.Identity
 	Dialog   communication.Dialog

@@ -28,40 +28,6 @@ import (
 
 const CurrencyToken = money.Currency("Token")
 
-func Test_PromiseBody(t *testing.T) {
-
-	amount := money.Money{
-		Amount:   uint64(5),
-		Currency: CurrencyToken,
-	}
-
-	promise := Promise{
-		SerialNumber: 1,
-		IssuerID:     "issuer1",
-		BenefiterID:  "benefiter1",
-		Amount:       amount,
-	}
-
-	assert.Equal(t, 1, promise.SerialNumber)
-	assert.Equal(t, "issuer1", promise.IssuerID)
-	assert.Equal(t, "benefiter1", promise.BenefiterID)
-	assert.Equal(t, uint64(5), promise.Amount.Amount)
-	assert.Equal(t, CurrencyToken, promise.Amount.Currency)
-}
-
-func Test_SignedPromise(t *testing.T) {
-
-	promise := Promise{}
-
-	signedPromise := SignedPromise{
-		Promise:         promise,
-		IssuerSignature: "signature",
-	}
-
-	assert.Equal(t, promise, signedPromise.Promise)
-	assert.Equal(t, Signature("signature"), signedPromise.IssuerSignature)
-}
-
 func TestNewPromise(t *testing.T) {
 	promise := NewPromise(
 		identity.Identity{Address: "Consumer"},
@@ -76,12 +42,6 @@ func TestNewPromise(t *testing.T) {
 	assert.Equal(t, CurrencyToken, promise.Amount.Currency)
 }
 
-type fakeSigner struct{}
-
-func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
-	return identity.SignatureBytes([]byte("FakeSignature")), nil
-}
-
 func TestSignByIssuer(t *testing.T) {
 	promise := NewPromise(
 		identity.Identity{Address: "Consumer"},
@@ -94,4 +54,10 @@ func TestSignByIssuer(t *testing.T) {
 
 	expectedSignature := base64.StdEncoding.EncodeToString([]byte("FakeSignature"))
 	assert.Equal(t, expectedSignature, string(signedPromise.IssuerSignature))
+}
+
+type fakeSigner struct{}
+
+func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
+	return identity.SignatureBytes([]byte("FakeSignature")), nil
 }
