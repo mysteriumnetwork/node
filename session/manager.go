@@ -31,7 +31,7 @@ var (
 )
 
 // IDGenerator defines method for session id generation
-type IDGenerator func() ID
+type IDGenerator func() (ID, error)
 
 // ConfigProvider provides session config for remote client
 type ConfigProvider func() (ServiceConfiguration, error)
@@ -102,7 +102,10 @@ func (manager *manager) Create(consumerID identity.Identity, proposalID int) (se
 }
 
 func (manager *manager) createSession(consumerID identity.Identity) (sessionInstance Session, err error) {
-	sessionInstance.ID = manager.generateID()
+	sessionInstance.ID, err = manager.generateID()
+	if err != nil {
+		return
+	}
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.Config, err = manager.provideConfig()
 	return
