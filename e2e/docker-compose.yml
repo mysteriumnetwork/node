@@ -44,7 +44,6 @@ services:
     command: >
       --ipify-url=http://ipify:3000
       --localnet
-      --promise.amount=12500000
       --discovery-address=http://discovery/v1
       --ether.client.rpc=http://geth:8545
       daemon

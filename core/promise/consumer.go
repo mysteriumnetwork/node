@@ -45,6 +45,15 @@ type Consumer struct {
 	storage     storage.Storage
 }
 
+// NewConsumer creates new instance of the promise consumer
+func NewConsumer(proposal dto.ServiceProposal, etherClient ethereum.ChainStateReader, storage storage.Storage) *Consumer {
+	return &Consumer{
+		proposal:    proposal,
+		etherClient: etherClient,
+		storage:     storage,
+	}
+}
+
 // GetRequestEndpoint returns endpoint where to receive requests
 func (c *Consumer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpoint

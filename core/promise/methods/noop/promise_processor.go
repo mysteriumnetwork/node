@@ -23,8 +23,10 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
+	"github.com/mysteriumnetwork/node/core/promise/storage"
 	"github.com/mysteriumnetwork/node/money"
 	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
@@ -37,9 +39,11 @@ const (
 )
 
 // NewPromiseProcessor creates instance of PromiseProcessor
-func NewPromiseProcessor(dialog communication.Dialog) *PromiseProcessor {
+func NewPromiseProcessor(dialog communication.Dialog, etherClient ethereum.ChainStateReader, storage storage.Storage) *PromiseProcessor {
 	return &PromiseProcessor{
-		dialog: dialog,
+		dialog:      dialog,
+		etherClient: etherClient,
+		storage:     storage,
 
 		balanceInterval: 5 * time.Second,
 		balanceState:    balanceStopped,
@@ -51,7 +55,9 @@ type balanceState string
 
 // PromiseProcessor process promises in such way, what no actual money is deducted from promise
 type PromiseProcessor struct {
-	dialog communication.Dialog
+	dialog      communication.Dialog
+	etherClient ethereum.ChainStateReader
+	storage     storage.Storage
 
 	balanceInterval   time.Duration
 	balanceState      balanceState
@@ -68,7 +74,8 @@ func (processor *PromiseProcessor) Start(proposal discovery_dto.ServiceProposal)
 		Amount: money.NewMoney(10, money.CURRENCY_MYST),
 	}
 
-	if err := processor.dialog.Respond(&promise.Consumer{}); err != nil {
+	consumer := promise.NewConsumer(proposal, processor.etherClient, processor.storage)
+	if err := processor.dialog.Respond(consumer); err != nil {
 		return err
 	}
 
@@ -80,6 +87,7 @@ func (processor *PromiseProcessor) Start(proposal discovery_dto.ServiceProposal)
 
 // Stop stops processing promises
 func (processor *PromiseProcessor) Stop() error {
+	processor.storage.Close()
 	processor.balanceShutdown <- true
 	return nil
 }

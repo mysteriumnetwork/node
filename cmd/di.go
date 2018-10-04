@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	log "github.com/cihub/seelog"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -31,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
+	"github.com/mysteriumnetwork/node/core/promise/storage"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
@@ -139,7 +141,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 }
 
 // BootstrapServiceComponents initiates ServiceManager dependency
-func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, serviceOptions service.Options) {
+func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, serviceOptions service.Options) error {
 	identityHandler := identity_selector.NewHandler(
 		di.IdentityManager,
 		di.MysteriumClient,
@@ -151,6 +153,10 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
 	sessionStorage := session.NewStorageMemory()
+	promiseStorage, err := storage.NewStorage(nodeOptions.Directories.Data)
+	if err != nil {
+		return err
+	}
 
 	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
 
@@ -161,20 +167,23 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.IdentityRegistry,
 		openvpnServiceManager,
 		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
-			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage)
+			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, di.EtherClient, promiseStorage)
 			return session.NewDialogHandler(sessionManagerFactory)
 		},
 		discoveryService,
 	)
+	return nil
 }
 
 func newSessionManagerFactory(
 	proposal dto_discovery.ServiceProposal,
 	configProvider session.ConfigProvider,
 	sessionStorage *session.StorageMemory,
+	etherclient ethereum.ChainStateReader,
+	promiseStorage storage.Storage,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) session.Manager {
-		promiseProcessor := noop.NewPromiseProcessor(dialog)
+		promiseProcessor := noop.NewPromiseProcessor(dialog, etherclient, promiseStorage)
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,

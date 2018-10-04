@@ -92,6 +92,9 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				ctx.String(openvpnProtocolFlag.Name),
 				ctx.Int(openvpnPortFlag.Name),
 			})
+			if err != nil {
+				return err
+			}
 
 			go func() {
 				if err := di.ServiceManager.Start(di.EtherClient); err != nil {
@@ -103,7 +106,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 
 			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
 
-			err := <-errorChannel
+			err = <-errorChannel
 			switch err {
 			case service.ErrorLocation:
 				printLocationWarning("myst")
