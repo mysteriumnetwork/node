@@ -68,6 +68,10 @@ func (processor *PromiseProcessor) Start(proposal discovery_dto.ServiceProposal)
 		Amount: money.NewMoney(10, money.CURRENCY_MYST),
 	}
 
+	if err := processor.dialog.Respond(&promise.Consumer{}); err != nil {
+		return err
+	}
+
 	processor.balanceShutdown = make(chan bool, 1)
 	go processor.balanceLoop()
 

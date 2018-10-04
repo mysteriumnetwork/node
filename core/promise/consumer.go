@@ -21,17 +21,21 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
-type consumer struct{}
+// Consumer process promise-requests
+type Consumer struct{}
 
-func (c *consumer) GetRequestEndpoint() communication.RequestEndpoint {
+// GetRequestEndpoint returns endpoint where to receive requests
+func (c *Consumer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpoint
 }
 
-func (c *consumer) NewRequest() (requestPtr interface{}) {
+// NewRequest creates struct where request from endpoint will be serialized
+func (c *Consumer) NewRequest() (requestPtr interface{}) {
 	return &Request{}
 }
 
-func (c *consumer) Consume(requestPtr interface{}) (response interface{}, err error) {
+// Consume handles requests from endpoint and replies with response
+func (c *Consumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	// request := requestPtr.(*Request)
 
 	// TODO there should be some validation of the received proposal and storing it somewhere for the server needs.

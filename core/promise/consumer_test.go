@@ -24,14 +24,14 @@ import (
 )
 
 func TestNewRequest(t *testing.T) {
-	consumer := consumer{}
+	consumer := Consumer{}
 
 	assert.Equal(t, &Request{}, consumer.NewRequest())
 }
 
 func TestConsume(t *testing.T) {
 	// TODO this test is just placeholder, it should be changed when real consumer will be implemented.
-	consumer := consumer{}
+	consumer := Consumer{}
 
 	signedPromise := &SignedPromise{Promise: Promise{}, IssuerSignature: "ProducerSignature"}
 

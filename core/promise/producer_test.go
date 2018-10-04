@@ -25,7 +25,7 @@ import (
 
 func TestProducerConsumerEndpoints(t *testing.T) {
 	producer := Producer{}
-	consumer := consumer{}
+	consumer := Consumer{}
 
 	assert.Equal(t, producer.GetRequestEndpoint(), consumer.GetRequestEndpoint())
 }
