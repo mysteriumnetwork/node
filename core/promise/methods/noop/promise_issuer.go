@@ -24,7 +24,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
@@ -32,18 +31,26 @@ const issuerLogPrefix = "[promise-issuer] "
 
 // PromiseIssuer issues promises in such way, that no actual money is added to promise
 type PromiseIssuer struct {
-	IssuerID identity.Identity
-	Dialog   communication.Dialog
-	Signer   identity.Signer
-	Amount   money.Money
+	issuerID identity.Identity
+	dialog   communication.Dialog
+	signer   identity.Signer
 
 	// these are populated by Start at runtime
 	proposal dto.ServiceProposal
 }
 
+// NewPromiseIssuer creates instance of the promise issuer
+func NewPromiseIssuer(issuerID identity.Identity, dialog communication.Dialog, signer identity.Signer) *PromiseIssuer {
+	return &PromiseIssuer{issuerID: issuerID, dialog: dialog, signer: signer}
+}
+
 // Start issuing promises for given service proposal
 func (issuer *PromiseIssuer) Start(proposal dto.ServiceProposal) error {
 	issuer.proposal = proposal
+
+	if err := issuer.sendNewPromise(); err != nil {
+		return err
+	}
 
 	return issuer.subscribePromiseBalance()
 }
@@ -54,8 +61,22 @@ func (issuer *PromiseIssuer) Stop() error {
 	return nil
 }
 
+func (issuer *PromiseIssuer) sendNewPromise() error {
+	unsignedPromise := promise.NewPromise(
+		issuer.issuerID,
+		identity.FromAddress(issuer.proposal.ProviderID),
+		issuer.proposal.PaymentMethod.GetPrice())
+
+	signedPromise, err := unsignedPromise.SignByIssuer(issuer.signer)
+	if err != nil {
+		return err
+	}
+
+	return signedPromise.Send(issuer.dialog)
+}
+
 func (issuer *PromiseIssuer) subscribePromiseBalance() error {
-	return issuer.Dialog.Receive(
+	return issuer.dialog.Receive(
 		&promise.BalanceMessageConsumer{issuer.processBalanceMessage},
 	)
 }

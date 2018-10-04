@@ -26,9 +26,6 @@ type Options struct {
 	TequilapiAddress string
 	TequilapiPort    int
 
-	PromiseCurrency string
-	PromiseAmount   uint64
-
 	Openvpn  openvpn_core.NodeOptions
 	Location OptionsLocation
 	OptionsNetwork

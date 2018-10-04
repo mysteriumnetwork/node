@@ -31,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -56,14 +55,7 @@ func NewNode(
 	}
 
 	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
-		return &noop.PromiseIssuer{
-			IssuerID: issuerID,
-			Dialog:   dialog,
-			Signer:   signerFactory(issuerID),
-			Amount: money.Money{
-				Amount:   options.PromiseAmount,
-				Currency: money.Currency(options.PromiseCurrency),
-			}}
+		return noop.NewPromiseIssuer(issuerID, dialog, signerFactory(issuerID))
 	}
 
 	statsKeeper := stats.NewSessionStatsKeeper(time.Now)

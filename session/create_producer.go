@@ -24,23 +24,19 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
-// CreateProducer creates requests/responses of the "session-create" events for communication channel
-type CreateProducer struct {
+type createProducer struct {
 	ProposalID int
 }
 
-// GetRequestEndpoint returns endpoint to receive messages
-func (producer *CreateProducer) GetRequestEndpoint() communication.RequestEndpoint {
+func (producer *createProducer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpointSessionCreate
 }
 
-// NewResponse creates struct where response to endpoint will be serialized
-func (producer *CreateProducer) NewResponse() (responsePtr interface{}) {
+func (producer *createProducer) NewResponse() (responsePtr interface{}) {
 	return &CreateResponse{}
 }
 
-// Produce creates requests for the endpoint
-func (producer *CreateProducer) Produce() (requestPtr interface{}) {
+func (producer *createProducer) Produce() (requestPtr interface{}) {
 	return &CreateRequest{
 		ProposalId: producer.ProposalID,
 	}
@@ -48,7 +44,7 @@ func (producer *CreateProducer) Produce() (requestPtr interface{}) {
 
 // RequestSessionCreate requests session creation and returns session DTO
 func RequestSessionCreate(sender communication.Sender, proposalID int, sessionPtr *Session) error {
-	responsePtr, err := sender.Request(&CreateProducer{
+	responsePtr, err := sender.Request(&createProducer{
 		ProposalID: proposalID,
 	})
 	response := responsePtr.(*CreateResponse)

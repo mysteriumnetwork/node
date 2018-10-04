@@ -49,7 +49,7 @@ func TestSignByIssuer(t *testing.T) {
 		money.Money{Amount: 123, Currency: "TEST"},
 	)
 
-	signedPromise, err := SignByIssuer(promise, &fakeSigner{})
+	signedPromise, err := promise.SignByIssuer(&fakeSigner{})
 	assert.NoError(t, err)
 
 	expectedSignature := base64.StdEncoding.EncodeToString([]byte("FakeSignature"))

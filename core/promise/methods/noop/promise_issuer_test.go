@@ -33,7 +33,8 @@ import (
 var (
 	providerID = identity.FromAddress("provider-id")
 	proposal   = dto.ServiceProposal{
-		ProviderID: providerID.Address,
+		ProviderID:    providerID.Address,
+		PaymentMethod: fakePaymentMethod{},
 	}
 )
 
@@ -48,7 +49,7 @@ func TestPromiseIssuer_Start_SubscriptionFails(t *testing.T) {
 	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
 	defer logconfig.ReplaceLogger(logger)
 
-	issuer := &PromiseIssuer{Dialog: dialog}
+	issuer := &PromiseIssuer{dialog: dialog, signer: &identity.SignerFake{}}
 	err := issuer.Start(proposal)
 	defer issuer.Stop()
 
@@ -65,7 +66,7 @@ func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
 	logger := logconfig.ReplaceLogger(logconfig.NewLoggerCapture(&logs))
 	defer logconfig.ReplaceLogger(logger)
 
-	issuer := &PromiseIssuer{Dialog: dialog}
+	issuer := &PromiseIssuer{dialog: dialog, signer: &identity.SignerFake{}}
 	err := issuer.Start(proposal)
 	assert.NoError(t, err)
 
@@ -75,4 +76,10 @@ func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
 
 func testToken(amount float64) money.Money {
 	return money.NewMoney(amount, money.Currency("TEST"))
+}
+
+type fakePaymentMethod struct{}
+
+func (fpm fakePaymentMethod) GetPrice() money.Money {
+	return money.NewMoney(1111111111, money.Currency("FAKE"))
 }

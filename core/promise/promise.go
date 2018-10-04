@@ -41,29 +41,27 @@ func NewPromise(issuerID, benefiterID identity.Identity, amount money.Money) *Pr
 }
 
 // SignByIssuer creates a signed promise with a passed issuerSigner
-func SignByIssuer(promise *Promise, issuerSigner identity.Signer) (*SignedPromise, error) {
-	out, err := json.Marshal(promise)
+func (p *Promise) SignByIssuer(issuerSigner identity.Signer) (*SignedPromise, error) {
+	out, err := json.Marshal(p)
 	if err != nil {
 		return nil, err
 	}
 	signature, err := issuerSigner.Sign(out)
 
 	return &SignedPromise{
-		Promise:         *promise,
+		Promise:         *p,
 		IssuerSignature: Signature(signature.Base64()),
 	}, err
 }
 
 // Send sends signed promise via the communication channel
-func Send(signedPromise *SignedPromise, sender communication.Sender) (*Response, error) {
-	responsePtr, err := sender.Request(&Producer{
-		SignedPromise: signedPromise,
-	})
+func (sp *SignedPromise) Send(sender communication.Sender) error {
+	responsePtr, err := sender.Request(&Producer{SignedPromise: sp})
 
 	response := responsePtr.(*Response)
 	if err != nil || !response.Success {
-		return nil, errors.New("Promise issuing failed: " + response.Message)
+		return errors.New("Promise issuing failed: " + response.Message)
 	}
 
-	return response, nil
+	return nil
 }
