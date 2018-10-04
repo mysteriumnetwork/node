@@ -94,7 +94,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			})
 
 			go func() {
-				if err := di.ServiceManager.Start(); err != nil {
+				if err := di.ServiceManager.Start(di.EtherClient); err != nil {
 					errorChannel <- err
 					return
 				}

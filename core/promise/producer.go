@@ -33,8 +33,9 @@ type Request struct {
 
 // Response structure represents service provider response to given session request from consumer
 type Response struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+	Success bool     `json:"success"`
+	Message string   `json:"message"`
+	Request *Request `json:"request"`
 }
 
 // GetRequestEndpoint returns communication endpoint that will be used for sending promises
