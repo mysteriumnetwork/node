@@ -22,6 +22,7 @@ import (
 	"os"
 
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -66,13 +67,9 @@ func NewCommand(licenseCommandName string) *cli.Command {
 
 	stopCommand := func() error {
 		errorServiceManager := di.ServiceManager.Kill()
-		errorNode := di.Node.Kill()
 		di.Shutdown()
 
-		if errorServiceManager != nil {
-			return errorServiceManager
-		}
-		return errorNode
+		return errorServiceManager
 	}
 
 	return &cli.Command{
@@ -90,27 +87,16 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				os.Exit(2)
 			}
 
-			nodeOptions := cmd.ParseFlagsNode(ctx)
-			if err := di.Bootstrap(nodeOptions); err != nil {
-				return err
-			}
-			di.BootstrapServiceComponents(nodeOptions, service.Options{
+			errorChannel := make(chan error, 1)
+			daemon.StartDaemon(ctx, &di, errorChannel)
+
+			di.BootstrapServiceComponents(cmd.ParseFlagsNode(ctx), service.Options{
 				ctx.String(identityFlag.Name),
 				ctx.String(identityPassphraseFlag.Name),
 
 				ctx.String(openvpnProtocolFlag.Name),
 				ctx.Int(openvpnPortFlag.Name),
 			})
-
-			errorChannel := make(chan error, 1)
-
-			go func() {
-				if err := di.Node.Start(); err != nil {
-					errorChannel <- err
-					return
-				}
-				errorChannel <- di.Node.Wait()
-			}()
 
 			go func() {
 				if err := di.ServiceManager.Start(); err != nil {

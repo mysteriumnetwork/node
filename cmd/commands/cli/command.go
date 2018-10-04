@@ -19,7 +19,6 @@ package cli
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"path/filepath"
 	"strconv"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/metadata"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
@@ -44,32 +44,26 @@ func NewCommand() *cli.Command {
 		Name:  cliCommandName,
 		Usage: "Starts a CLI client with a Tequilapi",
 		Action: func(ctx *cli.Context) error {
-			nodeOptions := cmd.ParseFlagsNode(ctx)
-			if err := di.Bootstrap(nodeOptions); err != nil {
-				return err
-			}
-			cmd.RegisterSignalCallback(utils.SoftKiller(di.Node.Kill))
-
 			errorChannel := make(chan error)
-			go func() {
-				if err := di.Node.Start(); err != nil {
-					errorChannel <- err
-					return
-				}
-				errorChannel <- di.Node.Wait()
-			}()
+			daemon.StartDaemon(ctx, &di, errorChannel)
 
+			nodeOptions := cmd.ParseFlagsNode(ctx)
 			cmdCLI := &cliApp{
 				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
 				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 			}
-			cmd.RegisterSignalCallback(utils.HardKiller(cmdCLI.Kill))
+			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
 
 			go func() {
 				errorChannel <- cmdCLI.Run()
 			}()
 
 			return <-errorChannel
+		},
+		After: func(ctx *cli.Context) error {
+			err := di.Node.Kill()
+			di.Shutdown()
+			return err
 		},
 	}
 }
@@ -114,14 +108,11 @@ func (c *cliApp) Run() (err error) {
 
 	for {
 		line, err := c.reader.Readline()
-		if err == readline.ErrInterrupt {
-			if len(line) == 0 {
-				c.quit()
-			} else {
-				continue
-			}
-		} else if err == io.EOF {
+		if err == readline.ErrInterrupt && len(line) > 0 {
+			continue
+		} else if err != nil {
 			c.quit()
+			return err
 		}
 
 		c.handleActions(line)
@@ -343,7 +334,7 @@ func (c *cliApp) help() {
 
 // quit stops cli and client commands and exits application
 func (c *cliApp) quit() {
-	stop := utils.HardKiller(c.Kill)
+	stop := utils.SoftKiller(c.Kill)
 	stop()
 }
 
