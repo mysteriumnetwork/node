@@ -32,33 +32,14 @@ func NewCommand() *cli.Command {
 		Usage:     "Starts Mysterium Tequilapi service",
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
-			errorChannel := make(chan error)
-			StartDaemon(ctx, &di, errorChannel)
-
-			return <-errorChannel
+			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
+				return err
+			}
+			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
+			return di.Node.Wait()
 		},
 		After: func(ctx *cli.Context) error {
-			err := di.Node.Kill()
-			di.Shutdown()
-			return err
+			return di.Shutdown()
 		},
 	}
-}
-
-// StartDaemon start a new daemon instance
-func StartDaemon(ctx *cli.Context, di *cmd.Dependencies, errCh chan error) {
-	if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
-		errCh <- err
-		return
-	}
-
-	cmd.RegisterSignalCallback(utils.SoftKiller(di.Node.Kill))
-
-	go func() {
-		if err := di.Node.Start(); err != nil {
-			errCh <- err
-			return
-		}
-		errCh <- di.Node.Wait()
-	}()
 }

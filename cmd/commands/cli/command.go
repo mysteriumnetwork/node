@@ -26,7 +26,6 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/metadata"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
@@ -45,25 +44,24 @@ func NewCommand() *cli.Command {
 		Usage: "Starts a CLI client with a Tequilapi",
 		Action: func(ctx *cli.Context) error {
 			errorChannel := make(chan error)
-			daemon.StartDaemon(ctx, &di, errorChannel)
+			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
+				return err
+			}
+			go func() { errorChannel <- di.Node.Wait() }()
 
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			cmdCLI := &cliApp{
 				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
 				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 			}
+			go func() { errorChannel <- cmdCLI.Run() }()
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
-
-			go func() {
-				errorChannel <- cmdCLI.Run()
-			}()
+			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
 
 			return <-errorChannel
 		},
 		After: func(ctx *cli.Context) error {
-			err := di.Node.Kill()
-			di.Shutdown()
-			return err
+			return di.Shutdown()
 		},
 	}
 }

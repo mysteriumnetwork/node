@@ -22,7 +22,6 @@ import (
 	"os"
 
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -65,13 +64,6 @@ var (
 func NewCommand(licenseCommandName string) *cli.Command {
 	var di cmd.Dependencies
 
-	stopCommand := func() error {
-		errorServiceManager := di.ServiceManager.Kill()
-		di.Shutdown()
-
-		return errorServiceManager
-	}
-
 	return &cli.Command{
 		Name:      serviceCommandName,
 		Usage:     "Starts and publishes service on Mysterium Network",
@@ -88,9 +80,12 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			}
 
 			errorChannel := make(chan error, 1)
-			daemon.StartDaemon(ctx, &di, errorChannel)
+			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
+				return err
+			}
+			go func() { errorChannel <- di.Node.Wait() }()
 
-			di.BootstrapServiceComponents(cmd.ParseFlagsNode(ctx), service.Options{
+			di.BootstrapServiceComponents(di.NodeOptions, service.Options{
 				ctx.String(identityFlag.Name),
 				ctx.String(identityPassphraseFlag.Name),
 
@@ -106,7 +101,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				errorChannel <- di.ServiceManager.Wait()
 			}()
 
-			cmd.RegisterSignalCallback(utils.SoftKiller(stopCommand))
+			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
 
 			err := <-errorChannel
 			switch err {
@@ -116,6 +111,9 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			default:
 				return err
 			}
+		},
+		After: func(ctx *cli.Context) error {
+			return di.Shutdown()
 		},
 	}
 }
