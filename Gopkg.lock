@@ -96,6 +96,14 @@
   version = "v1.7.0"
 
 [[projects]]
+  digest = "1:ce579162ae1341f3e5ab30c0dce767f28b1eb6a81359aad01723f1ba6b4becdf"
+  name = "github.com/gofrs/uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "370558f003bfe29580cd0f698d8640daccdcc45c"
+  version = "v3.1.1"
+
+[[projects]]
   branch = "master"
   digest = "1:4a0c6bb4805508a6287675fac876be2ac1182539ca8a32468d8128882e9d5009"
   name = "github.com/golang/snappy"
@@ -235,14 +243,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "15587285ef6b6e7a3f657e2e00f9f271883bcf22"
-
-[[projects]]
-  digest = "1:274f67cb6fed9588ea2521ecdac05a6d62a8c51c074c1fccc6a49a40ba80e925"
-  name = "github.com/satori/go.uuid"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
 
 [[projects]]
   digest = "1:5110e3d4f130772fd39e6ce8208ad1955b242ccfcc8ad9d158857250579c82f4"
@@ -403,6 +403,7 @@
     "github.com/ethereum/go-ethereum/crypto",
     "github.com/ethereum/go-ethereum/ethclient",
     "github.com/ethereum/go-ethereum/params",
+    "github.com/gofrs/uuid",
     "github.com/julienschmidt/httprouter",
     "github.com/mitchellh/go-homedir",
     "github.com/mysteriumnetwork/go-openvpn/openvpn",
@@ -422,7 +423,6 @@
     "github.com/mysteriumnetwork/payments/registry/generated",
     "github.com/nats-io/go-nats",
     "github.com/oschwald/geoip2-golang",
-    "github.com/satori/go.uuid",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/suite",
     "github.com/urfave/cli",
