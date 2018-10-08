@@ -18,44 +18,46 @@
 package promise
 
 import (
+	"encoding/base64"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/stretchr/testify/assert"
 )
 
 const CurrencyToken = money.Currency("Token")
 
-func Test_PromiseBody(t *testing.T) {
+func TestNewPromise(t *testing.T) {
+	promise := NewPromise(
+		identity.Identity{Address: "Consumer"},
+		identity.Identity{Address: "Provider"},
+		money.Money{Amount: 123, Currency: CurrencyToken},
+	)
 
-	amount := money.Money{
-		Amount:   uint64(5),
-		Currency: CurrencyToken,
-	}
-
-	promise := Promise{
-		SerialNumber: 1,
-		IssuerID:     "issuer1",
-		BenefiterID:  "benefiter1",
-		Amount:       amount,
-	}
-
-	assert.Equal(t, promise.SerialNumber, 1)
-	assert.Equal(t, promise.IssuerID, "issuer1")
-	assert.Equal(t, promise.BenefiterID, "benefiter1")
-	assert.Equal(t, promise.Amount.Amount, uint64(5))
-	assert.Equal(t, promise.Amount.Currency, CurrencyToken)
+	assert.Equal(t, 1, promise.SerialNumber)
+	assert.Equal(t, "Consumer", promise.IssuerID)
+	assert.Equal(t, "Provider", promise.BenefiterID)
+	assert.Equal(t, uint64(123), promise.Amount.Amount)
+	assert.Equal(t, CurrencyToken, promise.Amount.Currency)
 }
 
-func Test_SignedPromise(t *testing.T) {
+func TestSignByIssuer(t *testing.T) {
+	promise := NewPromise(
+		identity.Identity{Address: "Consumer"},
+		identity.Identity{Address: "Provider"},
+		money.Money{Amount: 123, Currency: "TEST"},
+	)
 
-	promise := Promise{}
+	signedPromise, err := promise.SignByIssuer(&fakeSigner{})
+	assert.NoError(t, err)
 
-	signedPromise := SignedPromise{
-		Promise:         promise,
-		IssuerSignature: "signature",
-	}
+	expectedSignature := base64.StdEncoding.EncodeToString([]byte("FakeSignature"))
+	assert.Equal(t, expectedSignature, string(signedPromise.IssuerSignature))
+}
 
-	assert.Equal(t, signedPromise.Promise, promise)
-	assert.Equal(t, signedPromise.IssuerSignature, Signature("signature"))
+type fakeSigner struct{}
+
+func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
+	return identity.SignatureBytes([]byte("FakeSignature")), nil
 }

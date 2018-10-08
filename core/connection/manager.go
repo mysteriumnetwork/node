@@ -136,7 +136,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		return err
 	}
 
-	promiseIssuer := manager.newPromiseIssuer(dialog)
+	promiseIssuer := manager.newPromiseIssuer(consumerID, dialog)
 	err = promiseIssuer.Start(*proposal)
 	if err != nil {
 		return err

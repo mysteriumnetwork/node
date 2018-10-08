@@ -54,8 +54,8 @@ func NewNode(
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
-	promiseIssuerFactory := func(dialog communication.Dialog) connection.PromiseIssuer {
-		return noop.NewPromiseIssuer(dialog)
+	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
+		return noop.NewPromiseIssuer(issuerID, dialog, signerFactory(issuerID))
 	}
 
 	statsKeeper := stats.NewSessionStatsKeeper(time.Now)

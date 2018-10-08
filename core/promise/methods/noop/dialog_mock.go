@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
 )
 
@@ -85,5 +86,5 @@ func (fd *fakeDialog) waitSendMessage() (interface{}, error) {
 }
 
 func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	return nil, nil
+	return &promise.Response{Success: true}, nil
 }

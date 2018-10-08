@@ -73,7 +73,7 @@ func (tc *testContext) SetupTest() {
 	}
 
 	tc.fakePromiseIssuer = &fakePromiseIssuer{}
-	promiseIssuerFactory := func(_ communication.Dialog) PromiseIssuer {
+	promiseIssuerFactory := func(_ identity.Identity, _ communication.Dialog) PromiseIssuer {
 		return tc.fakePromiseIssuer
 	}
 
@@ -371,7 +371,6 @@ func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
 func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
 	return &session.CreateResponse{
 			Success: true,
-			Message: "Everything is great!",
 			Session: session.SessionDto{
 				ID:     "vpn-connection-id",
 				Config: []byte("{}"),
