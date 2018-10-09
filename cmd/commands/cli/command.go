@@ -19,31 +19,55 @@ package cli
 
 import (
 	"fmt"
-	"io"
 	"log"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
+	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/metadata"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/urfave/cli"
 )
 
-// NewCommand constructs CLI based with possibility to control quiting
-func NewCommand(
-	historyFile string,
-	tequilapi *tequilapi_client.Client,
-) *Command {
-	return &Command{
-		historyFile: historyFile,
-		tequilapi:   tequilapi,
+const cliCommandName = "cli"
+
+// NewCommand constructs CLI based Mysterium UI with possibility to control quiting
+func NewCommand() *cli.Command {
+	var di cmd.Dependencies
+
+	return &cli.Command{
+		Name:  cliCommandName,
+		Usage: "Starts a CLI client with a Tequilapi",
+		Action: func(ctx *cli.Context) error {
+			errorChannel := make(chan error)
+			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
+				return err
+			}
+			go func() { errorChannel <- di.Node.Wait() }()
+
+			nodeOptions := cmd.ParseFlagsNode(ctx)
+			cmdCLI := &cliApp{
+				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
+				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
+			}
+			go func() { errorChannel <- cmdCLI.Run() }()
+			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
+			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
+
+			return <-errorChannel
+		},
+		After: func(ctx *cli.Context) error {
+			return di.Shutdown()
+		},
 	}
 }
 
-// Command describes CLI based Mysterium UI
-type Command struct {
+// cliApp describes CLI based Mysterium UI
+type cliApp struct {
 	historyFile      string
 	tequilapi        *tequilapi_client.Client
 	fetchedProposals []tequilapi_client.ProposalDTO
@@ -61,7 +85,7 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 ))
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
-func (c *Command) Run() (err error) {
+func (c *cliApp) Run() (err error) {
 	fmt.Println(versionSummary)
 
 	c.fetchedProposals = c.fetchProposals()
@@ -82,14 +106,11 @@ func (c *Command) Run() (err error) {
 
 	for {
 		line, err := c.reader.Readline()
-		if err == readline.ErrInterrupt {
-			if len(line) == 0 {
-				c.quit()
-			} else {
-				continue
-			}
-		} else if err == io.EOF {
+		if err == readline.ErrInterrupt && len(line) > 0 {
+			continue
+		} else if err != nil {
 			c.quit()
+			return err
 		}
 
 		c.handleActions(line)
@@ -97,12 +118,12 @@ func (c *Command) Run() (err error) {
 }
 
 // Kill stops cli
-func (c *Command) Kill() error {
+func (c *cliApp) Kill() error {
 	c.reader.Clean()
 	return c.reader.Close()
 }
 
-func (c *Command) handleActions(line string) {
+func (c *cliApp) handleActions(line string) {
 	line = strings.TrimSpace(line)
 
 	staticCmds := []struct {
@@ -152,7 +173,7 @@ func (c *Command) handleActions(line string) {
 	}
 }
 
-func (c *Command) connect(argsString string) {
+func (c *cliApp) connect(argsString string) {
 	options := strings.Fields(argsString)
 
 	if len(options) < 2 {
@@ -196,7 +217,7 @@ func (c *Command) connect(argsString string) {
 	success("Connected.")
 }
 
-func (c *Command) unlock(argsString string) {
+func (c *cliApp) unlock(argsString string) {
 	unlockSignature := "Unlock <identity> [passphrase]"
 	if len(argsString) == 0 {
 		info("Press tab to select identity.", unlockSignature)
@@ -225,7 +246,7 @@ func (c *Command) unlock(argsString string) {
 	success(fmt.Sprintf("Identity %s unlocked.", identity))
 }
 
-func (c *Command) disconnect() {
+func (c *cliApp) disconnect() {
 	err := c.tequilapi.Disconnect()
 	if err != nil {
 		warn(err)
@@ -235,7 +256,7 @@ func (c *Command) disconnect() {
 	success("Disconnected.")
 }
 
-func (c *Command) status() {
+func (c *cliApp) status() {
 	status, err := c.tequilapi.Status()
 	if err != nil {
 		warn(err)
@@ -256,7 +277,7 @@ func (c *Command) status() {
 	}
 }
 
-func (c *Command) healthcheck() {
+func (c *cliApp) healthcheck() {
 	healthcheck, err := c.tequilapi.Healthcheck()
 	if err != nil {
 		warn(err)
@@ -270,7 +291,7 @@ func (c *Command) healthcheck() {
 	info(buildString)
 }
 
-func (c *Command) proposals() {
+func (c *cliApp) proposals() {
 	proposals := c.fetchProposals()
 	c.fetchedProposals = proposals
 	info(fmt.Sprintf("Found %v proposals", len(proposals)))
@@ -285,7 +306,7 @@ func (c *Command) proposals() {
 	}
 }
 
-func (c *Command) fetchProposals() []tequilapi_client.ProposalDTO {
+func (c *cliApp) fetchProposals() []tequilapi_client.ProposalDTO {
 	proposals, err := c.tequilapi.Proposals()
 	if err != nil {
 		warn(err)
@@ -294,7 +315,7 @@ func (c *Command) fetchProposals() []tequilapi_client.ProposalDTO {
 	return proposals
 }
 
-func (c *Command) ip() {
+func (c *cliApp) ip() {
 	ip, err := c.tequilapi.GetIP()
 	if err != nil {
 		warn(err)
@@ -304,18 +325,18 @@ func (c *Command) ip() {
 	info("IP:", ip)
 }
 
-func (c *Command) help() {
+func (c *cliApp) help() {
 	info("Mysterium CLI tequilapi commands:")
 	fmt.Println(c.completer.Tree("  "))
 }
 
 // quit stops cli and client commands and exits application
-func (c *Command) quit() {
-	stop := utils.HardKiller(c.Kill)
+func (c *cliApp) quit() {
+	stop := utils.SoftKiller(c.Kill)
 	stop()
 }
 
-func (c *Command) identities(argsString string) {
+func (c *cliApp) identities(argsString string) {
 	const usage = "identities command:\n    list\n    new [passphrase]"
 	if len(argsString) == 0 {
 		info(usage)
@@ -366,7 +387,7 @@ func (c *Command) identities(argsString string) {
 	}
 }
 
-func (c *Command) registration(argsString string) {
+func (c *cliApp) registration(argsString string) {
 	status, err := c.tequilapi.IdentityRegistrationStatus(argsString)
 	if err != nil {
 		warn("Something went wrong: ", err)
@@ -391,7 +412,7 @@ func (c *Command) registration(argsString string) {
 		status.Signature.V)
 }
 
-func (c *Command) stopClient() {
+func (c *cliApp) stopClient() {
 	err := c.tequilapi.Stop()
 	if err != nil {
 		warn("Cannot stop client:", err)
@@ -399,11 +420,11 @@ func (c *Command) stopClient() {
 	success("Client stopped")
 }
 
-func (c *Command) version(argsString string) {
+func (c *cliApp) version(argsString string) {
 	fmt.Println(versionSummary)
 }
 
-func (c *Command) license(argsString string) {
+func (c *cliApp) license(argsString string) {
 	if argsString == "warranty" {
 		fmt.Print(metadata.LicenseWarranty)
 	} else if argsString == "conditions" {

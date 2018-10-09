@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package run
+package daemon
 
 import (
 	"github.com/mysteriumnetwork/node/cmd"
@@ -28,26 +28,18 @@ func NewCommand() *cli.Command {
 	var di cmd.Dependencies
 
 	return &cli.Command{
-		Name:      "run",
-		Usage:     "Runs Mysterium node",
+		Name:      "daemon",
+		Usage:     "Starts Mysterium Tequilapi service",
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
-
-			cmd.RegisterSignalCallback(utils.SoftKiller(di.Node.Kill))
-
-			if err := di.Node.Start(); err != nil {
-				return err
-			}
-
+			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
 			return di.Node.Wait()
 		},
 		After: func(ctx *cli.Context) error {
-			err := di.Node.Kill()
-			di.Shutdown()
-			return err
+			return di.Shutdown()
 		},
 	}
 }

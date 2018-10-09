@@ -20,19 +20,28 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
+	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
-	"github.com/mysteriumnetwork/node/cmd/commands/run"
 	"github.com/mysteriumnetwork/node/cmd/commands/service"
 	"github.com/mysteriumnetwork/node/cmd/commands/version"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
-	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
-	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
+)
+
+var (
+	licenseCopyright = metadata.LicenseCopyright(
+		"run command 'license --warranty'",
+		"run command 'license --conditions'",
+	)
+	versionSummary = metadata.VersionAsSummary(licenseCopyright)
+	daemonCommand  = daemon.NewCommand()
+	versionCommand = version.NewCommand(versionSummary)
+	licenseCommand = license.NewCommand(licenseCopyright)
+	serviceCommand = service.NewCommand(licenseCommand.Name)
+	cliCommand     = command_cli.NewCommand()
 )
 
 func main() {
@@ -65,60 +74,13 @@ func NewCommand() (*cli.App, error) {
 	if err := cmd.RegisterFlagsNode(&app.Flags); err != nil {
 		return nil, err
 	}
-	app.Flags = append(app.Flags, cliFlag)
 	app.Commands = []cli.Command{
 		*versionCommand,
 		*licenseCommand,
 		*serviceCommand,
+		*daemonCommand,
+		*cliCommand,
 	}
-	app.Action = runMain
 
 	return app, nil
 }
-
-func runMain(ctx *cli.Context) error {
-	options := commandOptions{
-		CLI:         ctx.Bool(cliFlag.Name),
-		NodeOptions: cmd.ParseFlagsNode(ctx),
-	}
-
-	if options.CLI {
-		return runCLI(options.NodeOptions)
-	}
-
-	fmt.Println(versionSummary)
-	fmt.Println()
-
-	return run.NewCommand().Run(ctx)
-}
-
-func runCLI(options node.Options) error {
-	cmdCli := command_cli.NewCommand(
-		filepath.Join(options.Directories.Data, ".cli_history"),
-		tequilapi_client.NewClient(options.TequilapiAddress, options.TequilapiPort),
-	)
-	cmd.RegisterSignalCallback(utils.HardKiller(cmdCli.Kill))
-
-	return cmdCli.Run()
-}
-
-type commandOptions struct {
-	CLI         bool
-	NodeOptions node.Options
-}
-
-var (
-	licenseCopyright = metadata.LicenseCopyright(
-		"run command 'license --warranty'",
-		"run command 'license --conditions'",
-	)
-	versionSummary = metadata.VersionAsSummary(licenseCopyright)
-	versionCommand = version.NewCommand(versionSummary)
-	licenseCommand = license.NewCommand(licenseCopyright)
-	serviceCommand = service.NewCommand(licenseCommand.Name)
-
-	cliFlag = cli.BoolFlag{
-		Name:  "cli",
-		Usage: "Run an interactive CLI based Mysterium UI",
-	}
-)
