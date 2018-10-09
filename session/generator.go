@@ -17,9 +17,13 @@
 
 package session
 
-import "github.com/satori/go.uuid"
+import "github.com/gofrs/uuid"
 
-// GenerateUUID method returns SessionID based on random UUID
-func GenerateUUID() SessionID {
-	return SessionID(uuid.NewV4().String())
+// GenerateUUID method returns ID based on random UUID, or error if we fail to generate one
+func GenerateUUID() (ID, error) {
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return ID(""), err
+	}
+	return ID(uid.String()), nil
 }

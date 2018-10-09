@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
@@ -43,10 +42,13 @@ var (
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
-	Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.Manager, error)
+	Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error)
 	Wait() error
 	Stop() error
 }
+
+// DialogHandlerFactory initiates instance which is able to handle incoming dialogs
+type DialogHandlerFactory func(dto_discovery.ServiceProposal, session.ConfigProvider) communication.DialogHandler
 
 // NewManager creates new instance of pluggable services manager
 func NewManager(
@@ -55,10 +57,9 @@ func NewManager(
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
 	service Service,
+	dialogHandlerFactory DialogHandlerFactory,
 	discoveryService *discovery.Discovery,
 ) *Manager {
-	logconfig.Bootstrap()
-
 	return &Manager{
 		identityLoader: identityLoader,
 		dialogWaiterFactory: func(providerID identity.Identity) communication.DialogWaiter {
@@ -68,8 +69,9 @@ func NewManager(
 				identityRegistry,
 			)
 		},
-		service:   service,
-		discovery: discoveryService,
+		service:              service,
+		dialogHandlerFactory: dialogHandlerFactory,
+		discovery:            discoveryService,
 	}
 }
 
@@ -77,8 +79,9 @@ func NewManager(
 type Manager struct {
 	identityLoader identity_selector.Loader
 
-	dialogWaiterFactory func(identity identity.Identity) communication.DialogWaiter
-	dialogWaiter        communication.DialogWaiter
+	dialogWaiterFactory  func(identity identity.Identity) communication.DialogWaiter
+	dialogWaiter         communication.DialogWaiter
+	dialogHandlerFactory DialogHandlerFactory
 
 	service   Service
 	discovery *discovery.Discovery
@@ -86,14 +89,12 @@ type Manager struct {
 
 // Start starts service - does not block
 func (manager *Manager) Start() (err error) {
-	log.Infof(logPrefix, "Starting Mysterium Server (%s)", metadata.VersionAsString())
-
 	providerID, err := manager.identityLoader()
 	if err != nil {
 		return err
 	}
 
-	proposal, sessionManager, err := manager.service.Start(providerID)
+	proposal, sessionConfigProvider, err := manager.service.Start(providerID)
 	if err != nil {
 		return err
 	}
@@ -105,7 +106,7 @@ func (manager *Manager) Start() (err error) {
 	}
 	proposal.SetProviderContact(providerID, providerContact)
 
-	dialogHandler := session.NewDialogHandler(proposal.ID, sessionManager)
+	dialogHandler := manager.dialogHandlerFactory(proposal, sessionConfigProvider)
 	if err = manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}

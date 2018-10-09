@@ -28,9 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDialogEstablisher_Interface(t *testing.T) {
-	var _ communication.DialogEstablisher = &dialogEstablisher{}
-}
+var _ communication.DialogEstablisher = &dialogEstablisher{}
 
 func TestDialogEstablisher_Factory(t *testing.T) {
 	id := identity.FromAddress("123456")
@@ -38,8 +36,8 @@ func TestDialogEstablisher_Factory(t *testing.T) {
 
 	establisher := NewDialogEstablisher(id, signer)
 	assert.NotNil(t, establisher)
-	assert.Equal(t, id, establisher.myID)
-	assert.Equal(t, signer, establisher.mySigner)
+	assert.Equal(t, id, establisher.ID)
+	assert.Equal(t, signer, establisher.Signer)
 }
 
 func TestDialogEstablisher_EstablishDialog(t *testing.T) {
@@ -102,12 +100,12 @@ func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
 	assert.Nil(t, dialogInstance)
 }
 
-func mockEstablisher(myID identity.Identity, connection nats.Connection, signer identity.Signer) *dialogEstablisher {
+func mockEstablisher(ID identity.Identity, connection nats.Connection, signer identity.Signer) *dialogEstablisher {
 	peerTopic := "peer-topic"
 
 	return &dialogEstablisher{
-		myID:     myID,
-		mySigner: signer,
+		ID:     ID,
+		Signer: signer,
 		peerAddressFactory: func(contact dto_discovery.Contact) (*discovery.AddressNATS, error) {
 			return discovery.NewAddressWithConnection(connection, peerTopic), nil
 		},

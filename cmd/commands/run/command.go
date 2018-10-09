@@ -45,7 +45,9 @@ func NewCommand() *cli.Command {
 			return di.Node.Wait()
 		},
 		After: func(ctx *cli.Context) error {
-			return di.Node.Kill()
+			err := di.Node.Kill()
+			di.Shutdown()
+			return err
 		},
 	}
 }

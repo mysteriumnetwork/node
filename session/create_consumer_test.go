@@ -18,64 +18,83 @@
 package session
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
 
-var consumer = createConsumer{
-	CurrentProposalID: 101,
-	SessionManager:    &managerFake{},
-}
-
-func TestConsumer_UnknownProposal(t *testing.T) {
-	request := consumer.NewRequest().(*SessionCreateRequest)
-	request.ProposalId = 100
-	sessionResponse, err := consumer.Consume(request)
-
-	assert.NoError(t, err)
-	assert.Exactly(
-		t,
-		&SessionCreateResponse{
-			Success: false,
-			Message: "Proposal doesn't exist: 100",
-		},
-		sessionResponse,
-	)
-}
-
 func TestConsumer_Success(t *testing.T) {
-	request := consumer.NewRequest().(*SessionCreateRequest)
+	mockManager := &managerFake{
+		returnSession: Session{
+			"new-id",
+			fakeSessionConfig{"string-param", 123},
+			identity.FromAddress("123"),
+		},
+	}
+	consumer := createConsumer{
+		SessionManager: mockManager,
+		PeerID:         identity.FromAddress("peer-id"),
+	}
+
+	request := consumer.NewRequest().(*CreateRequest)
 	request.ProposalId = 101
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
+	assert.Exactly(t, mockManager.lastConsumerID, identity.FromAddress("peer-id"))
+	assert.Exactly(t, mockManager.lastProposalID, 101)
 	assert.Exactly(
 		t,
-		&SessionCreateResponse{
+		CreateResponse{
 			Success: true,
 			Session: SessionDto{
 				ID:     "new-id",
-				Config: []byte("{\"Param1\":\"string-param\",\"Param2\":123}"),
+				Config: []byte(`{"Param1":"string-param","Param2":123}`),
 			},
 		},
 		sessionResponse,
 	)
 }
 
-// managerFake represents fake manager usually useful in tests
-type managerFake struct{}
+func TestConsumer_ErrorInvalidProposal(t *testing.T) {
+	mockManager := &managerFake{
+		returnError: ErrorInvalidProposal,
+	}
+	consumer := createConsumer{SessionManager: mockManager}
 
-var fakeConfig = struct {
-	Param1 string
-	Param2 int
-}{
-	"string-param",
-	123,
+	request := consumer.NewRequest().(*CreateRequest)
+	sessionResponse, err := consumer.Consume(request)
+
+	assert.NoError(t, err)
+	assert.Exactly(t, responseInvalidProposal, sessionResponse)
+}
+
+func TestConsumer_ErrorFatal(t *testing.T) {
+	mockManager := &managerFake{
+		returnError: errors.New("fatality"),
+	}
+	consumer := createConsumer{SessionManager: mockManager}
+
+	request := consumer.NewRequest().(*CreateRequest)
+	sessionResponse, err := consumer.Consume(request)
+
+	assert.NoError(t, err)
+	assert.Exactly(t, responseInternalError, sessionResponse)
+}
+
+// managerFake represents fake manager usually useful in tests
+type managerFake struct {
+	lastConsumerID identity.Identity
+	lastProposalID int
+	returnSession  Session
+	returnError    error
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(peerID identity.Identity) (Session, error) {
-	return Session{"new-id", fakeConfig, peerID}, nil
+func (manager *managerFake) Create(consumerID identity.Identity, proposalID int) (Session, error) {
+	manager.lastConsumerID = consumerID
+	manager.lastProposalID = proposalID
+	return manager.returnSession, manager.returnError
 }

@@ -15,16 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package promise
 
 import (
-	"github.com/mysteriumnetwork/node/money"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// PromiseBody represents payment promise between two parties
-type PromiseBody struct {
-	SerialNumber int
-	IssuerID     string
-	BenefiterID  string
-	Amount       money.Money
+func TestProducerConsumerEndpoints(t *testing.T) {
+	producer := Producer{}
+	consumer := Consumer{}
+
+	assert.Equal(t, producer.GetRequestEndpoint(), consumer.GetRequestEndpoint())
+}
+
+func TestNewResponse(t *testing.T) {
+	producer := Producer{}
+
+	assert.Equal(t, producer.NewResponse(), &Response{})
+}
+
+func TestProduce(t *testing.T) {
+	signedPromise := &SignedPromise{Promise: Promise{}, IssuerSignature: "ProducerSignature"}
+	producer := Producer{SignedPromise: signedPromise}
+
+	assert.Equal(t, &Request{signedPromise}, producer.Produce())
+
 }

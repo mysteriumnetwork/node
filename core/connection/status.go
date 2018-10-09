@@ -25,7 +25,7 @@ type State string
 const (
 	// NotConnected means no connection exists
 	NotConnected = State("NotConnected")
-	// Connecting means that connection is started but not yet fully established
+	// Connecting means that connection is startCalled but not yet fully established
 	Connecting = State("Connecting")
 	// Connected means that fully established connection exists
 	Connected = State("Connected")
@@ -38,14 +38,14 @@ const (
 // ConnectionStatus holds connection state and session id of the connnection
 type ConnectionStatus struct {
 	State     State
-	SessionID session.SessionID
+	SessionID session.ID
 }
 
 func statusConnecting() ConnectionStatus {
 	return ConnectionStatus{Connecting, ""}
 }
 
-func statusConnected(sessionID session.SessionID) ConnectionStatus {
+func statusConnected(sessionID session.ID) ConnectionStatus {
 	return ConnectionStatus{Connected, sessionID}
 }
 

@@ -25,17 +25,24 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
+	"github.com/mysteriumnetwork/node/communication"
+	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -61,6 +68,12 @@ type Dependencies struct {
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
+	logconfig.Bootstrap()
+	nats_discovery.Bootstrap()
+	openvpn.Bootstrap()
+
+	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
+
 	if err := nodeOptions.Directories.Check(); err != nil {
 		return err
 	}
@@ -78,6 +91,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapNodeComponents(nodeOptions)
 
 	return nil
+}
+
+// Shutdown stops container
+func (di *Dependencies) Shutdown() {
+	log.Flush()
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
@@ -106,7 +124,9 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
-	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver)
+	sessionStorage := session.NewStorageMemory()
+
+	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
 
 	di.ServiceManager = service.NewManager(
 		di.NetworkDefinition,
@@ -114,8 +134,29 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.SignerFactory,
 		di.IdentityRegistry,
 		openvpnServiceManager,
+		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
+			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage)
+			return session.NewDialogHandler(sessionManagerFactory)
+		},
 		discoveryService,
 	)
+}
+
+func newSessionManagerFactory(
+	proposal dto_discovery.ServiceProposal,
+	configProvider session.ConfigProvider,
+	sessionStorage *session.StorageMemory,
+) session.ManagerFactory {
+	return func(dialog communication.Dialog) session.Manager {
+		promiseProcessor := noop.NewPromiseProcessor(dialog)
+		return session.NewManager(
+			proposal,
+			session.GenerateUUID,
+			configProvider,
+			sessionStorage.Add,
+			promiseProcessor,
+		)
+	}
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides

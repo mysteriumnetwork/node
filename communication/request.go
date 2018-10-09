@@ -17,19 +17,25 @@
 
 package communication
 
-// RequestEndpoint is special type that describes unique message endpoint
+// RequestEndpoint is special type that describes unique requests endpoint
 type RequestEndpoint string
 
 // RequestProducer represents instance which creates requests/responses of specific endpoint
 type RequestProducer interface {
+	// GetRequestEndpoint returns endpoint where to send requests
 	GetRequestEndpoint() RequestEndpoint
-	NewResponse() (responsePtr interface{})
+	// Produce creates request which will be serialized to endpoint
 	Produce() (requestPtr interface{})
+	// NewResponse creates struct where responses from endpoint will be serialized
+	NewResponse() (responsePtr interface{})
 }
 
 // RequestConsumer represents instance which handles requests/responses of specific endpoint
 type RequestConsumer interface {
+	// GetRequestEndpoint returns endpoint where to receive requests
 	GetRequestEndpoint() RequestEndpoint
-	NewRequest() (messagePtr interface{})
+	// NewRequest creates struct where request from endpoint will be serialized
+	NewRequest() (requestPtr interface{})
+	// Consume handles requests from endpoint and replies with response
 	Consume(requestPtr interface{}) (responsePtr interface{}, err error)
 }

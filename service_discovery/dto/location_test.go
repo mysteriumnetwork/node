@@ -19,7 +19,7 @@ package dto
 
 import (
 	"encoding/json"
-	"strings"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -92,20 +92,18 @@ func TestLocationUnserialize(t *testing.T) {
 		err := json.Unmarshal([]byte(test.json), &model)
 
 		assert.Equal(t, test.expectedModel, model)
-		if test.expectedError != nil {
-			assert.EqualError(t, err, test.expectedError.Error())
-		} else {
-			assert.NoError(t, err)
-		}
+		assert.Exactly(t, test.expectedError, err)
 	}
 }
 
 func TestLocationUnserializeError(t *testing.T) {
+	jsonData := []byte(`{
+		"country": 1
+	}`)
+
 	var model Location
-	jsonLocation := `{
-				"country": 1
-			}`
-	err := json.Unmarshal([]byte(jsonLocation), &model)
-	unmarshalError := strings.HasPrefix(err.Error(), "json: ")
-	assert.True(t, unmarshalError)
+	err := json.Unmarshal(jsonData, &model)
+
+	assert.IsType(t, &json.UnmarshalTypeError{}, err)
+	assert.Regexp(t, regexp.MustCompile("^json: "), err.Error())
 }

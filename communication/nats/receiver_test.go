@@ -24,9 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestReceiverInterface(t *testing.T) {
-	var _ communication.Receiver = &receiverNATS{}
-}
+var _ communication.Receiver = &receiverNATS{}
 
 func TestReceiverNew(t *testing.T) {
 	connection := &connectionFake{}

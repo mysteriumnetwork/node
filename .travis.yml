@@ -38,12 +38,12 @@ jobs:
 
     # Test stage
     - stage: test
-      script: bin/test_e2e
+      script: bin/test
+      name: "Unit tests"
+
+    - script: bin/test_e2e
       name: "End-to-end tests"
       if: type = pull_request
-
-    - script: bin/test
-      name: "Unit tests"
 
     - script: bin/builder_run bin/check_golint
       name: "golint check"

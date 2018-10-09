@@ -67,6 +67,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	stopCommand := func() error {
 		errorServiceManager := di.ServiceManager.Kill()
 		errorNode := di.Node.Kill()
+		di.Shutdown()
 
 		if errorServiceManager != nil {
 			return errorServiceManager

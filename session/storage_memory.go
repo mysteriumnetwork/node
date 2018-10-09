@@ -24,14 +24,14 @@ import (
 // NewStorageMemory initiates new session storage
 func NewStorageMemory() *StorageMemory {
 	return &StorageMemory{
-		sessionMap: make(map[SessionID]Session),
+		sessionMap: make(map[ID]Session),
 		lock:       sync.Mutex{},
 	}
 }
 
 // StorageMemory maintains a map of session id -> session
 type StorageMemory struct {
-	sessionMap map[SessionID]Session
+	sessionMap map[ID]Session
 	lock       sync.Mutex
 }
 
@@ -44,13 +44,13 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 }
 
 // Find returns underlying session instance
-func (storage *StorageMemory) Find(id SessionID) (Session, bool) {
+func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	sessionInstance, found := storage.sessionMap[id]
 	return sessionInstance, found
 }
 
 // Remove removes given session from underlying storage
-func (storage *StorageMemory) Remove(id SessionID) {
+func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 

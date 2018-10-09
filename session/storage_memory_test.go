@@ -25,7 +25,7 @@ import (
 
 var (
 	sessionExisting = Session{
-		ID: SessionID("mocked-id"),
+		ID: ID("mocked-id"),
 	}
 )
 
@@ -40,7 +40,7 @@ func TestStorage_FindSession_Existing(t *testing.T) {
 func TestStorage_FindSession_Unknown(t *testing.T) {
 	storage := mockStorage(sessionExisting)
 
-	sessionInstance, found := storage.Find(SessionID("unknown-id"))
+	sessionInstance, found := storage.Find(ID("unknown-id"))
 	assert.False(t, found)
 	assert.Exactly(t, Session{}, sessionInstance)
 }
@@ -48,7 +48,7 @@ func TestStorage_FindSession_Unknown(t *testing.T) {
 func TestStorage_Add(t *testing.T) {
 	storage := mockStorage(sessionExisting)
 	sessionNew := Session{
-		ID: SessionID("new-id"),
+		ID: ID("new-id"),
 	}
 
 	storage.Add(sessionNew)
@@ -65,7 +65,7 @@ func TestStorage_Remove(t *testing.T) {
 
 func mockStorage(sessionInstance Session) *StorageMemory {
 	return &StorageMemory{
-		sessionMap: map[SessionID]Session{
+		sessionMap: map[ID]Session{
 			sessionInstance.ID: sessionInstance,
 		},
 	}

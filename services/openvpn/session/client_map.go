@@ -27,19 +27,19 @@ import (
 // SessionMap defines map of current sessions
 type SessionMap interface {
 	Add(session.Session)
-	Find(session.SessionID) (session.Session, bool)
-	Remove(session.SessionID)
+	Find(session.ID) (session.Session, bool)
+	Remove(session.ID)
 }
 
 // clientMap extends current sessions with client id metadata from Openvpn
 type clientMap struct {
 	sessions         SessionMap
-	sessionClientIDs map[session.SessionID]int
+	sessionClientIDs map[session.ID]int
 	sessionMapLock   sync.Mutex
 }
 
 // FindClientSession returns OpenVPN session instance by given session id
-func (cm *clientMap) FindClientSession(clientID int, id session.SessionID) (session.Session, bool, error) {
+func (cm *clientMap) FindClientSession(clientID int, id session.ID) (session.Session, bool, error) {
 	sessionInstance, sessionExist := cm.sessions.Find(id)
 	if !sessionExist {
 		return session.Session{}, false, errors.New("no underlying session exists, possible break-in attempt")
@@ -54,7 +54,7 @@ func (cm *clientMap) FindClientSession(clientID int, id session.SessionID) (sess
 }
 
 // UpdateClientSession updates OpenVPN session with clientID, returns false on clientID conflict
-func (cm *clientMap) UpdateClientSession(clientID int, id session.SessionID) bool {
+func (cm *clientMap) UpdateClientSession(clientID int, id session.ID) bool {
 	cm.sessionMapLock.Lock()
 	defer cm.sessionMapLock.Unlock()
 
@@ -67,7 +67,7 @@ func (cm *clientMap) UpdateClientSession(clientID int, id session.SessionID) boo
 }
 
 // RemoveSession removes given session from underlying session managers
-func (cm *clientMap) RemoveSession(id session.SessionID) error {
+func (cm *clientMap) RemoveSession(id session.ID) error {
 	cm.sessionMapLock.Lock()
 	defer cm.sessionMapLock.Unlock()
 

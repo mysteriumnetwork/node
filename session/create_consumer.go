@@ -19,7 +19,6 @@ package session
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
@@ -27,14 +26,13 @@ import (
 
 // Manager defines methods for session management
 type Manager interface {
-	Create(identity.Identity) (Session, error)
+	Create(consumerID identity.Identity, proposalID int) (Session, error)
 }
 
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
-	CurrentProposalID int
-	SessionManager    Manager
-	PeerID            identity.Identity
+	SessionManager Manager
+	PeerID         identity.Identity
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
@@ -44,44 +42,38 @@ func (consumer *createConsumer) GetRequestEndpoint() communication.RequestEndpoi
 
 // NewRequest creates struct where request from endpoint will be serialized
 func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
-	var request SessionCreateRequest
+	var request CreateRequest
 	return &request
 }
 
 // Consume handles requests from endpoint and replies with response
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
-	request := requestPtr.(*SessionCreateRequest)
-	if consumer.CurrentProposalID != request.ProposalId {
-		response = &SessionCreateResponse{
-			Success: false,
-			Message: fmt.Sprintf("Proposal doesn't exist: %d", request.ProposalId),
-		}
-		return
-	}
+	request := requestPtr.(*CreateRequest)
 
-	clientSession, err := consumer.SessionManager.Create(consumer.PeerID)
+	sessionInstance, err := consumer.SessionManager.Create(consumer.PeerID, request.ProposalId)
+	switch err {
+	case nil:
+		return responseWithSession(sessionInstance), nil
+	case ErrorInvalidProposal:
+		return responseInvalidProposal, nil
+	default:
+		return responseInternalError, nil
+	}
+}
+
+func responseWithSession(sessionInstance Session) CreateResponse {
+	serializedConfig, err := json.Marshal(sessionInstance.Config)
 	if err != nil {
-		response = &SessionCreateResponse{
-			Success: false,
-			Message: "Failed to create session.",
-		}
-		return
+		// Failed to serialize session
+		// TODO Cant expose error to response, some logging should be here
+		return responseInternalError
 	}
 
-	serializedConfig, err := json.Marshal(clientSession.Config)
-	if err != nil {
-		response = &SessionCreateResponse{
-			Success: false,
-			Message: "Failed to serialize config.",
-		}
-	}
-
-	response = &SessionCreateResponse{
+	return CreateResponse{
 		Success: true,
 		Session: SessionDto{
-			ID:     clientSession.ID,
+			ID:     sessionInstance.ID,
 			Config: serializedConfig,
 		},
 	}
-	return
 }

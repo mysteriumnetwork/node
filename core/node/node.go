@@ -25,17 +25,14 @@ import (
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
-	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -52,13 +49,13 @@ func NewNode(
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 ) *Node {
-	logconfig.Bootstrap()
-	nats_discovery.Bootstrap()
-	openvpn.Bootstrap()
-
 	dialogFactory := func(consumerID, providerID identity.Identity, contact dto.Contact) (communication.Dialog, error) {
 		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, signerFactory(consumerID))
 		return dialogEstablisher.EstablishDialog(providerID, contact)
+	}
+
+	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
+		return noop.NewPromiseIssuer(issuerID, dialog, signerFactory(issuerID))
 	}
 
 	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
@@ -75,7 +72,7 @@ func NewNode(
 		statsKeeper,
 		originalLocationCache,
 	)
-	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, vpnClientFactory, statsKeeper)
+	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuerFactory, vpnClientFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
@@ -104,8 +101,6 @@ type Node struct {
 
 // Start starts Mysterium node (Tequilapi service, fetches location)
 func (node *Node) Start() error {
-	log.Infof("Starting Mysterium Client (%s)", metadata.VersionAsString())
-
 	originalLocation, err := node.originalLocationCache.RefreshAndGet()
 	if err != nil {
 		log.Warn("Failed to detect original country: ", err)
@@ -151,8 +146,6 @@ func (node *Node) Kill() error {
 
 	node.httpAPIServer.Stop()
 	log.Info("Api stopped")
-
-	log.Flush()
 
 	return nil
 }
