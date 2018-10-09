@@ -98,17 +98,28 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 }
 
 // Shutdown stops container
-func (di *Dependencies) Shutdown() error {
+func (di *Dependencies) Shutdown() (err error) {
+	var errs []error
+	defer func() {
+		for i := range errs {
+			log.Error("Dependencies shutdown failed: ", errs[i])
+			if err == nil {
+				err = errs[i]
+			}
+		}
+	}()
+
 	if di.ServiceManager != nil {
 		if err := di.ServiceManager.Kill(); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
 	if di.Node != nil {
 		if err := di.Node.Kill(); err != nil {
-			return err
+			errs = append(errs, err)
 		}
 	}
+
 	log.Flush()
 	return nil
 }
