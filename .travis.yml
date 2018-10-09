@@ -11,7 +11,7 @@ env:
     - BUILD_VERSION_MAJOR=0
 
 before_install:
-  - export BUILD_VERSION=${TRAVIS_TAG:-"$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"}
+  - if [ -z "${TRAVIS_TAG/dev/}" ]; then export BUILD_VERSION="$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"; fi
 
 cache:
   directories:
