@@ -21,7 +21,6 @@ import (
 	"errors"
 
 	log "github.com/cihub/seelog"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -89,7 +88,7 @@ type Manager struct {
 }
 
 // Start starts service - does not block
-func (manager *Manager) Start(etherClient *ethclient.Client) (err error) {
+func (manager *Manager) Start() (err error) {
 	providerID, err := manager.identityLoader()
 	if err != nil {
 		return err

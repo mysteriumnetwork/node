@@ -18,12 +18,10 @@
 package promise
 
 import (
-	"context"
 	"encoding/json"
-	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
@@ -34,13 +32,13 @@ var jsonRequest = []byte(`{
 		"Promise": {
 			"SerialNumber": 1,
 			"IssuerID": "0x8eaf2780c6098dd1baee2b7c8c62f2d92ba1fe29",
-			"BenefiterID": "0x67c8afcfc5432cf1ce8d5e289aeacbffa1904f82",
-			"Amount": {
-				"amount": 100,
+			"BenefiterID": "0x1526273ac60cdebfa2aece92da3261ecb564763a",
+			"Fee": {
+				"amount": 12500000,
 				"currency": "MYST"
 			}
 		},
-		"IssuerSignature": "GK/or0Ecwdatka4mpZipIC1+LBXVXdVNHKpkvUTo/2F4plqzTehRGDEfg74wzdtXN2uXdvoeUZC/aVE5Ine8sQE="
+		"IssuerSignature": "rjBYE1rglsb3UVeIplTqodA4mgowkpNoxz89rZTwVf4KsDPhwx0RfyREd86wbZpXTnxs6Ry9rixOqpjOs4iAawE="
 	}
 }`)
 
@@ -54,7 +52,7 @@ func TestConsumeUnsupportedRequest(t *testing.T) {
 	consumer := Consumer{}
 	response, err := consumer.Consume(0)
 	assert.Error(t, errUnsupportedRequest, err)
-	assert.Nil(t, response)
+	assert.Equal(t, response, failedResponse(errUnsupportedRequest))
 }
 
 func TestConsumeBadSignature(t *testing.T) {
@@ -66,7 +64,6 @@ func TestConsumeBadSignature(t *testing.T) {
 	assert.Equal(t, &Response{
 		Success: false,
 		Message: errBadSignature.Error(),
-		Request: request,
 	}, response)
 }
 
@@ -81,7 +78,6 @@ func TestConsumeUnknownBenefiter(t *testing.T) {
 	assert.Equal(t, &Response{
 		Success: false,
 		Message: errUnknownBenefiter.Error(),
-		Request: &request,
 	}, response)
 }
 
@@ -91,16 +87,15 @@ func TestConsumeLowAmount(t *testing.T) {
 	assert.Nil(t, err)
 
 	proposal := dto.ServiceProposal{
-		ProviderID:    "0x67c8afcfc5432cf1ce8d5e289aeacbffa1904f82",
-		PaymentMethod: fakePayment{999},
+		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
+		PaymentMethod: fakePayment{999999999},
 	}
-	consumer := Consumer{proposal: proposal}
+	consumer := Consumer{proposal: proposal, balanceRegistry: fakeBlockchain(12500000)}
 	response, err := consumer.Consume(&request)
 	assert.Nil(t, err)
 	assert.Equal(t, &Response{
 		Success: false,
 		Message: errLowAmount.Error(),
-		Request: &request,
 	}, response)
 }
 
@@ -110,16 +105,15 @@ func TestConsumeLowBalance(t *testing.T) {
 	assert.Nil(t, err)
 
 	proposal := dto.ServiceProposal{
-		ProviderID:    "0x67c8afcfc5432cf1ce8d5e289aeacbffa1904f82",
+		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{1},
 	}
-	consumer := Consumer{proposal: proposal, etherClient: &fakeBlockchain{1}}
+	consumer := Consumer{proposal: proposal, balanceRegistry: fakeBlockchain(1)}
 	response, err := consumer.Consume(&request)
 	assert.Nil(t, err)
 	assert.Equal(t, &Response{
 		Success: false,
 		Message: errLowBalance.Error(),
-		Request: &request,
 	}, response)
 }
 
@@ -129,16 +123,15 @@ func TestConsume(t *testing.T) {
 	assert.Nil(t, err)
 
 	proposal := dto.ServiceProposal{
-		ProviderID:    "0x67c8afcfc5432cf1ce8d5e289aeacbffa1904f82",
+		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{1},
 	}
-	consumer := Consumer{proposal: proposal, etherClient: &fakeBlockchain{99999}, storage: &fakeStorage{}}
+	consumer := Consumer{proposal: proposal, balanceRegistry: fakeBlockchain(999999999), storage: &fakeStorage{}}
 	response, err := consumer.Consume(&request)
 	assert.NoError(t, err)
 	assert.Equal(t, &Response{
 		Success: true,
 		Message: "Promise accepted",
-		Request: &request,
 	}, response)
 }
 
@@ -150,21 +143,10 @@ func (fp fakePayment) GetPrice() money.Money {
 	return money.Money{Amount: fp.amount}
 }
 
-type fakeBlockchain struct {
-	balance int64
-}
-
-func (fb *fakeBlockchain) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	return big.NewInt(fb.balance), nil
-}
-func (fb *fakeBlockchain) StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
-	return nil, nil
-}
-func (fb *fakeBlockchain) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
-	return nil, nil
-}
-func (fb *fakeBlockchain) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
-	return 0, nil
+func fakeBlockchain(balance uint64) identity.BalanceRegistry {
+	return func(_ identity.Identity) (uint64, error) {
+		return balance, nil
+	}
 }
 
 type fakeStorage struct{}

@@ -18,14 +18,10 @@
 package promise
 
 import (
-	"context"
-	"encoding/json"
 	"errors"
 
-	ethereum "github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/core/promise/storage"
+	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
@@ -40,17 +36,17 @@ var (
 
 // Consumer process promise-requests
 type Consumer struct {
-	proposal    dto.ServiceProposal
-	etherClient ethereum.ChainStateReader
-	storage     storage.Storage
+	proposal        dto.ServiceProposal
+	balanceRegistry identity.BalanceRegistry
+	storage         storage.Storage
 }
 
 // NewConsumer creates new instance of the promise consumer
-func NewConsumer(proposal dto.ServiceProposal, etherClient ethereum.ChainStateReader, storage storage.Storage) *Consumer {
+func NewConsumer(proposal dto.ServiceProposal, balanceRegistry identity.BalanceRegistry, storage storage.Storage) *Consumer {
 	return &Consumer{
-		proposal:    proposal,
-		etherClient: etherClient,
-		storage:     storage,
+		proposal:        proposal,
+		balanceRegistry: balanceRegistry,
+		storage:         storage,
 	}
 }
 
@@ -68,47 +64,20 @@ func (c *Consumer) NewRequest() (requestPtr interface{}) {
 func (c *Consumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request, ok := requestPtr.(*Request)
 	if !ok {
-		return nil, errUnsupportedRequest
+		return failedResponse(errUnsupportedRequest), errUnsupportedRequest
 	}
 
-	receivedPromise, err := json.Marshal(request.SignedPromise.Promise)
-	if err != nil {
+	if err := request.SignedPromise.Validate(c.proposal, c.balanceRegistry); err != nil {
+		return failedResponse(err), nil
+	}
+
+	if err := c.storage.Store(request.SignedPromise.Promise.IssuerID, &request.SignedPromise.Promise); err != nil {
 		return nil, err
 	}
 
-	signature := identity.SignatureBase64(string(request.SignedPromise.IssuerSignature))
-	issuer := identity.FromAddress(request.SignedPromise.Promise.IssuerID)
-	verifier := identity.NewVerifierIdentity(issuer)
-	if !verifier.Verify(receivedPromise, signature) {
-		return failedResponse(errBadSignature, request), nil
-	}
-
-	benefiter := identity.FromAddress(request.SignedPromise.Promise.BenefiterID)
-	if benefiter.Address != c.proposal.ProviderID {
-		return failedResponse(errUnknownBenefiter, request), nil
-	}
-
-	price := c.proposal.PaymentMethod.GetPrice()
-	amount := request.SignedPromise.Promise.Amount.Amount
-	if amount < price.Amount {
-		return failedResponse(errLowAmount, request), nil
-	}
-
-	balance, err := c.etherClient.BalanceAt(context.Background(), common.HexToAddress(issuer.Address), nil)
-	if err != nil {
-		return nil, err
-	}
-	if balance.Uint64() < amount {
-		return failedResponse(errLowBalance, request), nil
-	}
-
-	if err := c.storage.Store(issuer.Address, &request.SignedPromise.Promise); err != nil {
-		return nil, err
-	}
-
-	return &Response{Success: true, Message: "Promise accepted", Request: request}, nil
+	return &Response{Success: true, Message: "Promise accepted"}, nil
 }
 
-func failedResponse(err error, request *Request) *Response {
-	return &Response{Success: false, Message: err.Error(), Request: request}
+func failedResponse(err error) *Response {
+	return &Response{Success: false, Message: err.Error()}
 }

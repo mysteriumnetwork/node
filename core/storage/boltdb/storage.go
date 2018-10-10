@@ -18,35 +18,43 @@
 package boltdb
 
 import (
+	"path/filepath"
+
 	"github.com/asdine/storm"
+	"github.com/mysteriumnetwork/node/core/storage"
 )
 
-type storage struct {
+type bolt struct {
 	db *storm.DB
 }
 
-// OpenDB creates new or open existing BoltDB
-func OpenDB(name string) (*storage, error) {
+// NewStorage creates a new BoltDB storage for service promises
+func NewStorage(path string) (storage.Storage, error) {
+	return openDB(filepath.Join(path, "myst.db"))
+}
+
+// openDB creates new or open existing BoltDB
+func openDB(name string) (*bolt, error) {
 	db, err := storm.Open(name)
-	return &storage{db}, err
+	return &bolt{db}, err
 }
 
 // Store allows to keep promises grouped by the issuer
-func (s *storage) Store(issuer string, data interface{}) error {
-	return s.db.From(issuer).Save(data)
+func (b *bolt) Store(issuer string, data interface{}) error {
+	return b.db.From(issuer).Save(data)
 }
 
 // GetAll allows to get all promises by the issuer
-func (s *storage) GetAll(issuer string, data interface{}) error {
-	return s.db.From(issuer).All(data)
+func (b *bolt) GetAll(issuer string, data interface{}) error {
+	return b.db.From(issuer).All(data)
 }
 
 // Delete removes promise record from the database
-func (s *storage) Delete(issuer string, data interface{}) error {
-	return s.db.From(issuer).DeleteStruct(data)
+func (b *bolt) Delete(issuer string, data interface{}) error {
+	return b.db.From(issuer).DeleteStruct(data)
 }
 
 // Close closes database
-func (s *storage) Close() error {
-	return s.db.Close()
+func (b *bolt) Close() error {
+	return b.db.Close()
 }

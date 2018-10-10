@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,22 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package storage
+package identity
 
 import (
-	"path/filepath"
+	"context"
 
-	"github.com/mysteriumnetwork/node/core/promise/storage/boltdb"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// Storage stores persistent objects for future usage
-type Storage interface {
-	Store(issuer string, data interface{}) error
-	Delete(issuer string, data interface{}) error
-	Close() error
-}
+// BalanceRegistry provides amount of money that identity have on the balance in the blockchain
+type BalanceRegistry func(Identity) (uint64, error)
 
-// NewStorage creates a new BoltDB storage for service promises
-func NewStorage(path string) (Storage, error) {
-	return boltdb.OpenDB(filepath.Join(path, "myst.db"))
+// NewBalanceRegistry creates new balance registry
+func NewBalanceRegistry(etherClient *ethclient.Client) BalanceRegistry {
+	return func(identity Identity) (uint64, error) {
+		balance, err := etherClient.BalanceAt(context.Background(), common.HexToAddress(identity.Address), nil)
+		return balance.Uint64(), err
+	}
 }

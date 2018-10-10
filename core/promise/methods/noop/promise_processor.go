@@ -23,12 +23,12 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
-	"github.com/mysteriumnetwork/node/core/promise/storage"
+	"github.com/mysteriumnetwork/node/core/storage"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
-	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 const (
@@ -39,11 +39,11 @@ const (
 )
 
 // NewPromiseProcessor creates instance of PromiseProcessor
-func NewPromiseProcessor(dialog communication.Dialog, etherClient ethereum.ChainStateReader, storage storage.Storage) *PromiseProcessor {
+func NewPromiseProcessor(dialog communication.Dialog, balanceRegistry identity.BalanceRegistry, storage storage.Storage) *PromiseProcessor {
 	return &PromiseProcessor{
-		dialog:      dialog,
-		etherClient: etherClient,
-		storage:     storage,
+		dialog:          dialog,
+		balanceRegistry: balanceRegistry,
+		storage:         storage,
 
 		balanceInterval: 5 * time.Second,
 		balanceState:    balanceStopped,
@@ -55,9 +55,9 @@ type balanceState string
 
 // PromiseProcessor process promises in such way, what no actual money is deducted from promise
 type PromiseProcessor struct {
-	dialog      communication.Dialog
-	etherClient ethereum.ChainStateReader
-	storage     storage.Storage
+	dialog          communication.Dialog
+	balanceRegistry identity.BalanceRegistry
+	storage         storage.Storage
 
 	balanceInterval   time.Duration
 	balanceState      balanceState
@@ -69,12 +69,12 @@ type PromiseProcessor struct {
 }
 
 // Start processing promises for given service proposal
-func (processor *PromiseProcessor) Start(proposal discovery_dto.ServiceProposal) error {
+func (processor *PromiseProcessor) Start(proposal dto.ServiceProposal) error {
 	processor.lastPromise = promise.Promise{
-		Amount: money.NewMoney(10, money.CURRENCY_MYST),
+		Fee: money.NewMoney(10, money.CURRENCY_MYST),
 	}
 
-	consumer := promise.NewConsumer(proposal, processor.etherClient, processor.storage)
+	consumer := promise.NewConsumer(proposal, processor.balanceRegistry, processor.storage)
 	if err := processor.dialog.Respond(consumer); err != nil {
 		return err
 	}
@@ -87,7 +87,6 @@ func (processor *PromiseProcessor) Start(proposal discovery_dto.ServiceProposal)
 
 // Stop stops processing promises
 func (processor *PromiseProcessor) Stop() error {
-	processor.storage.Close()
 	processor.balanceShutdown <- true
 	return nil
 }
@@ -103,7 +102,7 @@ balanceLoop:
 
 		case <-time.After(processor.balanceInterval):
 			processor.balanceSend(
-				promise.BalanceMessage{1, true, processor.lastPromise.Amount},
+				promise.BalanceMessage{1, true, processor.lastPromise.Fee},
 			)
 		}
 	}
