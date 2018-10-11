@@ -18,8 +18,6 @@
 package promise
 
 import (
-	"errors"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/identity"
@@ -27,26 +25,23 @@ import (
 )
 
 var (
-	errLowAmount          = errors.New("promise amount less than the service proposal price")
-	errLowBalance         = errors.New("issuer balance less than the promise amount")
-	errBadSignature       = errors.New("invalid Signature for the provided identity")
-	errUnknownBenefiter   = errors.New("unknown promise benefiter received")
-	errUnsupportedRequest = errors.New("unsupported request")
+	responseInvalidPromise = Response{Success: false, Message: "Invalid Promise"}
+	responseInternalError  = Response{Success: false, Message: "Internal Error"}
 )
 
 // Consumer process promise-requests
 type Consumer struct {
-	proposal        dto.ServiceProposal
-	balanceRegistry identity.BalanceRegistry
-	storage         storage.Storage
+	proposal dto.ServiceProposal
+	balance  identity.Balance
+	storage  storage.Storage
 }
 
 // NewConsumer creates new instance of the promise consumer
-func NewConsumer(proposal dto.ServiceProposal, balanceRegistry identity.BalanceRegistry, storage storage.Storage) *Consumer {
+func NewConsumer(proposal dto.ServiceProposal, balance identity.Balance, storage storage.Storage) *Consumer {
 	return &Consumer{
-		proposal:        proposal,
-		balanceRegistry: balanceRegistry,
-		storage:         storage,
+		proposal: proposal,
+		balance:  balance,
+		storage:  storage,
 	}
 }
 
@@ -64,20 +59,16 @@ func (c *Consumer) NewRequest() (requestPtr interface{}) {
 func (c *Consumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request, ok := requestPtr.(*Request)
 	if !ok {
-		return failedResponse(errUnsupportedRequest), errUnsupportedRequest
+		return responseInvalidPromise, errUnsupportedRequest
 	}
 
-	if err := request.SignedPromise.Validate(c.proposal, c.balanceRegistry); err != nil {
-		return failedResponse(err), nil
+	if err := request.SignedPromise.Validate(c.proposal, c.balance); err != nil {
+		return responseInvalidPromise, err
 	}
 
 	if err := c.storage.Store(request.SignedPromise.Promise.IssuerID, &request.SignedPromise.Promise); err != nil {
-		return nil, err
+		return responseInternalError, err
 	}
 
-	return &Response{Success: true, Message: "Promise accepted"}, nil
-}
-
-func failedResponse(err error) *Response {
-	return &Response{Success: false, Message: err.Error()}
+	return &Response{Success: true}, nil
 }

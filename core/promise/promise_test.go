@@ -38,8 +38,8 @@ func TestNewPromise(t *testing.T) {
 	assert.Equal(t, 1, promise.SerialNumber)
 	assert.Equal(t, "Consumer", promise.IssuerID)
 	assert.Equal(t, "Provider", promise.BenefiterID)
-	assert.Equal(t, uint64(123), promise.Fee.Amount)
-	assert.Equal(t, CurrencyToken, promise.Fee.Currency)
+	assert.Equal(t, uint64(123), promise.Amount.Amount)
+	assert.Equal(t, CurrencyToken, promise.Amount.Currency)
 }
 
 func TestSignByIssuer(t *testing.T) {

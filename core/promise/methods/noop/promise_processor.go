@@ -39,11 +39,11 @@ const (
 )
 
 // NewPromiseProcessor creates instance of PromiseProcessor
-func NewPromiseProcessor(dialog communication.Dialog, balanceRegistry identity.BalanceRegistry, storage storage.Storage) *PromiseProcessor {
+func NewPromiseProcessor(dialog communication.Dialog, balance identity.Balance, storage storage.Storage) *PromiseProcessor {
 	return &PromiseProcessor{
-		dialog:          dialog,
-		balanceRegistry: balanceRegistry,
-		storage:         storage,
+		dialog:  dialog,
+		balance: balance,
+		storage: storage,
 
 		balanceInterval: 5 * time.Second,
 		balanceState:    balanceStopped,
@@ -55,9 +55,9 @@ type balanceState string
 
 // PromiseProcessor process promises in such way, what no actual money is deducted from promise
 type PromiseProcessor struct {
-	dialog          communication.Dialog
-	balanceRegistry identity.BalanceRegistry
-	storage         storage.Storage
+	dialog  communication.Dialog
+	balance identity.Balance
+	storage storage.Storage
 
 	balanceInterval   time.Duration
 	balanceState      balanceState
@@ -70,11 +70,12 @@ type PromiseProcessor struct {
 
 // Start processing promises for given service proposal
 func (processor *PromiseProcessor) Start(proposal dto.ServiceProposal) error {
+	// TODO: replace static value with some real data
 	processor.lastPromise = promise.Promise{
-		Fee: money.NewMoney(10, money.CURRENCY_MYST),
+		Amount: money.NewMoney(10, money.CURRENCY_MYST),
 	}
 
-	consumer := promise.NewConsumer(proposal, processor.balanceRegistry, processor.storage)
+	consumer := promise.NewConsumer(proposal, processor.balance, processor.storage)
 	if err := processor.dialog.Respond(consumer); err != nil {
 		return err
 	}
@@ -101,8 +102,9 @@ balanceLoop:
 			break balanceLoop
 
 		case <-time.After(processor.balanceInterval):
+			// TODO: replace static value with some real data
 			processor.balanceSend(
-				promise.BalanceMessage{1, true, processor.lastPromise.Fee},
+				promise.BalanceMessage{1, true, processor.lastPromise.Amount},
 			)
 		}
 	}

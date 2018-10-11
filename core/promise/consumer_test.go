@@ -33,12 +33,12 @@ var jsonRequest = []byte(`{
 			"SerialNumber": 1,
 			"IssuerID": "0x8eaf2780c6098dd1baee2b7c8c62f2d92ba1fe29",
 			"BenefiterID": "0x1526273ac60cdebfa2aece92da3261ecb564763a",
-			"Fee": {
+			"Amount": {
 				"amount": 12500000,
 				"currency": "MYST"
 			}
 		},
-		"IssuerSignature": "rjBYE1rglsb3UVeIplTqodA4mgowkpNoxz89rZTwVf4KsDPhwx0RfyREd86wbZpXTnxs6Ry9rixOqpjOs4iAawE="
+		"IssuerSignature": "sXeJmBrjjMXkGraD8ItqNEI+0IommozG4dF24FvgbWQdgHJi10EvJOLt0F2AS5Y0MBe8hlDo3B0vlH2hW5uHSQE="
 	}
 }`)
 
@@ -52,7 +52,7 @@ func TestConsumeUnsupportedRequest(t *testing.T) {
 	consumer := Consumer{}
 	response, err := consumer.Consume(0)
 	assert.Error(t, errUnsupportedRequest, err)
-	assert.Equal(t, response, failedResponse(errUnsupportedRequest))
+	assert.Equal(t, response, responseInvalidPromise)
 }
 
 func TestConsumeBadSignature(t *testing.T) {
@@ -60,11 +60,8 @@ func TestConsumeBadSignature(t *testing.T) {
 	signedPromise := &SignedPromise{Promise: Promise{}, IssuerSignature: "ProducerSignature"}
 	request := &Request{signedPromise}
 	response, err := consumer.Consume(request)
-	assert.Nil(t, err)
-	assert.Equal(t, &Response{
-		Success: false,
-		Message: errBadSignature.Error(),
-	}, response)
+	assert.Equal(t, errBadSignature, err)
+	assert.Equal(t, responseInvalidPromise, response)
 }
 
 func TestConsumeUnknownBenefiter(t *testing.T) {
@@ -74,11 +71,9 @@ func TestConsumeUnknownBenefiter(t *testing.T) {
 
 	consumer := Consumer{}
 	response, err := consumer.Consume(&request)
-	assert.Nil(t, err)
-	assert.Equal(t, &Response{
-		Success: false,
-		Message: errUnknownBenefiter.Error(),
-	}, response)
+	assert.Equal(t, errUnknownBenefiter, err)
+	assert.Equal(t, responseInvalidPromise, response)
+
 }
 
 func TestConsumeLowAmount(t *testing.T) {
@@ -90,13 +85,10 @@ func TestConsumeLowAmount(t *testing.T) {
 		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{999999999},
 	}
-	consumer := Consumer{proposal: proposal, balanceRegistry: fakeBlockchain(12500000)}
+	consumer := Consumer{proposal: proposal, balance: fakeBlockchain(12500000)}
 	response, err := consumer.Consume(&request)
-	assert.Nil(t, err)
-	assert.Equal(t, &Response{
-		Success: false,
-		Message: errLowAmount.Error(),
-	}, response)
+	assert.Equal(t, errLowAmount, err)
+	assert.Equal(t, responseInvalidPromise, response)
 }
 
 func TestConsumeLowBalance(t *testing.T) {
@@ -108,13 +100,11 @@ func TestConsumeLowBalance(t *testing.T) {
 		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{1},
 	}
-	consumer := Consumer{proposal: proposal, balanceRegistry: fakeBlockchain(1)}
+	consumer := Consumer{proposal: proposal, balance: fakeBlockchain(1)}
 	response, err := consumer.Consume(&request)
-	assert.Nil(t, err)
-	assert.Equal(t, &Response{
-		Success: false,
-		Message: errLowBalance.Error(),
-	}, response)
+	assert.Equal(t, errLowBalance, err)
+	assert.Equal(t, responseInvalidPromise, response)
+
 }
 
 func TestConsume(t *testing.T) {
@@ -126,13 +116,10 @@ func TestConsume(t *testing.T) {
 		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{1},
 	}
-	consumer := Consumer{proposal: proposal, balanceRegistry: fakeBlockchain(999999999), storage: &fakeStorage{}}
+	consumer := Consumer{proposal: proposal, balance: fakeBlockchain(999999999), storage: &fakeStorage{}}
 	response, err := consumer.Consume(&request)
 	assert.NoError(t, err)
-	assert.Equal(t, &Response{
-		Success: true,
-		Message: "Promise accepted",
-	}, response)
+	assert.Equal(t, &Response{Success: true}, response)
 }
 
 type fakePayment struct {
@@ -143,7 +130,7 @@ func (fp fakePayment) GetPrice() money.Money {
 	return money.Money{Amount: fp.amount}
 }
 
-func fakeBlockchain(balance uint64) identity.BalanceRegistry {
+func fakeBlockchain(balance uint64) identity.Balance {
 	return func(_ identity.Identity) (uint64, error) {
 		return balance, nil
 	}

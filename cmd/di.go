@@ -175,7 +175,7 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 
 	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
 
-	balanceRegistry := identity.NewBalanceRegistry(di.EtherClient)
+	balance := identity.NewBalance(di.EtherClient)
 
 	di.ServiceManager = service.NewManager(
 		di.NetworkDefinition,
@@ -185,7 +185,7 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		openvpnServiceManager,
 		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
 			promiseHandler := func(dialog communication.Dialog) *noop.PromiseProcessor {
-				return noop.NewPromiseProcessor(dialog, balanceRegistry, di.Storage)
+				return noop.NewPromiseProcessor(dialog, balance, di.Storage)
 			}
 			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
 			return session.NewDialogHandler(sessionManagerFactory)

@@ -30,7 +30,7 @@ type Promise struct {
 	SerialNumber int    `storm:"id"`
 	IssuerID     string `storm:"index"`
 	BenefiterID  string `storm:"index"`
-	Fee          money.Money
+	Amount       money.Money
 }
 
 // Signature represents some data signed with a key

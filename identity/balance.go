@@ -24,11 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// BalanceRegistry provides amount of money that identity have on the balance in the blockchain
-type BalanceRegistry func(Identity) (uint64, error)
+// Balance provides amount of money that identity have on the balance in the blockchain
+type Balance func(Identity) (uint64, error)
 
-// NewBalanceRegistry creates new balance registry
-func NewBalanceRegistry(etherClient *ethclient.Client) BalanceRegistry {
+// NewBalance creates new balance registry
+func NewBalance(etherClient *ethclient.Client) Balance {
 	return func(identity Identity) (uint64, error) {
 		balance, err := etherClient.BalanceAt(context.Background(), common.HexToAddress(identity.Address), nil)
 		return balance.Uint64(), err

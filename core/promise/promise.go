@@ -31,11 +31,19 @@ import (
 
 const endpoint = "promise-create"
 
+var (
+	errLowAmount          = errors.New("promise amount less than the service proposal price")
+	errLowBalance         = errors.New("issuer balance less than the promise amount")
+	errBadSignature       = errors.New("invalid Signature for the provided identity")
+	errUnknownBenefiter   = errors.New("unknown promise benefiter received")
+	errUnsupportedRequest = errors.New("unsupported request")
+)
+
 // NewPromise creates new Promise object filled by the requested arguments
 func NewPromise(issuerID, benefiterID identity.Identity, amount money.Money) *Promise {
 	return &Promise{
 		SerialNumber: 1,
-		Fee:          amount,
+		Amount:       amount,
 		IssuerID:     issuerID.Address,
 		BenefiterID:  benefiterID.Address,
 	}
@@ -70,7 +78,7 @@ func (sp *SignedPromise) Send(sender communication.Sender) error {
 // Validate check signed promise to be valid. It checks signature, benefiter address.
 // Also it compares the promised amount to be enough for the proposal.
 // And finally it checks that issuer have enough balance to issue the promice.
-func (sp *SignedPromise) Validate(proposal dto.ServiceProposal, balanceRegistry identity.BalanceRegistry) error {
+func (sp *SignedPromise) Validate(proposal dto.ServiceProposal, balance identity.Balance) error {
 	receivedPromise, err := json.Marshal(sp.Promise)
 	if err != nil {
 		return err
@@ -89,16 +97,16 @@ func (sp *SignedPromise) Validate(proposal dto.ServiceProposal, balanceRegistry 
 	}
 
 	price := proposal.PaymentMethod.GetPrice()
-	amount := sp.Promise.Fee.Amount
-	if amount < price.Amount {
+	promisedValue := sp.Promise.Amount
+	if promisedValue.Amount < price.Amount {
 		return errLowAmount
 	}
 
-	balance, err := balanceRegistry(issuer)
+	issuerBalance, err := balance(issuer)
 	if err != nil {
 		return err
 	}
-	if balance < amount {
+	if issuerBalance < promisedValue.Amount {
 		return errLowBalance
 	}
 
