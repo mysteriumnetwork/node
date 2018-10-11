@@ -1,0 +1,32 @@
+#!/bin/bash
+
+###########################################################################
+# Packaging script which creates iOS framework (Swift compatible).
+#
+# Usage:
+#> bin/package_ios <architecture>
+#
+# Package (specific architecture: arm64, amd64):
+#> bin/package_ios arm64
+
+set -e
+
+source bin/helpers/output.sh
+source bin/helpers/functions.sh
+
+ARCH=$1
+if [[ ! "$ARCH" =~ ^(arm64|amd64)$ ]]; then
+    print_error "Missing architecture! Should be: arm64, amd64"
+    exit 1
+fi
+
+DIR_BUILD="build/package"
+PACKAGE_FILE="${DIR_BUILD}/Mysterium.framework"
+
+gomobile bind -v \
+    -target=ios/${ARCH} \
+    -o $PACKAGE_FILE \
+    github.com/mysteriumnetwork/node/mobile/mysterium
+
+print_success "iOS package '$PACKAGE_FILE' complete!"
+exit 0
