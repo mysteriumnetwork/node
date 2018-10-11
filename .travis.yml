@@ -80,6 +80,11 @@ jobs:
       name: "Windows packages"
 
     - script:
+      - bin/package_ios amd64
+      - bin/s3 sync build/package s3://build-artifacts
+      name: "iOS packages"
+
+    - script:
       - bin/package_docker
       - docker save myst:alpine | gzip > myst_alpine.tgz
       - bin/s3 cp myst_alpine.tgz s3://docker-images
