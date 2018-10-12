@@ -18,3 +18,15 @@ closeComment: >
     This issue has been automatically closed because it has not had activity for
     a long time. If this issue is still valid, please ping a maintainer and ask them to label it as "pinned".
     Thank you for your contributions.
+
+pulls:
+  daysUntilStale: 14
+  daysUntilClose: 14
+  markComment: >
+    This pull request has been automatically marked as stale because it has not had
+    recent activity. It will be closed if no further activity occurs. Thank you
+    for your contributions.
+  closeComment: >
+    This pull request has been automatically closed because it has not had activity for
+    a long time. If this pull request is still valid, please ping a maintainer and ask them to label it as "pinned".
+    Thank you for your contributions.
