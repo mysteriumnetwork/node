@@ -19,14 +19,18 @@ package cmd
 
 import (
 	"path/filepath"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
+	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -47,6 +51,8 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/tequilapi"
+	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 )
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -149,17 +155,50 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
+	dialogFactory := func(consumerID, providerID identity.Identity, contact dto_discovery.Contact) (communication.Dialog, error) {
+		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID))
+		return dialogEstablisher.EstablishDialog(providerID, contact)
+	}
+
+	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
+		if nodeOptions.ExperimentPromiseCheck {
+			return &noop.FakePromiseEngine{}
+		}
+		return noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
+	}
+
+	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
+
+	locationDetector := location.NewDetector(di.IPResolver, di.LocationResolver)
+	originalLocationCache := location.NewLocationCache(locationDetector)
+
+	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
+		di.MysteriumClient,
+		nodeOptions.Openvpn.BinaryPath,
+		nodeOptions.Directories.Config,
+		nodeOptions.Directories.Runtime,
+		statsKeeper,
+		originalLocationCache,
+		di.SignerFactory,
+	)
+
+	connectionManager := connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, statsKeeper)
+
+	router := tequilapi.NewAPIRouter()
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumClient, di.SignerFactory)
+	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, di.IPResolver, statsKeeper)
+	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
+	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
+	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
+
+	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
+
 	di.NodeOptions = nodeOptions
 	di.Node = node.NewNode(
-		nodeOptions,
-		di.IdentityManager,
-		di.SignerFactory,
-		di.IdentityRegistry,
-		di.IdentityRegistration,
-		di.MysteriumClient,
-		di.MysteriumMorqaClient,
-		di.IPResolver,
-		di.LocationResolver,
+		connectionManager,
+		httpAPIServer,
+		router,
+		originalLocationCache,
 	)
 }
 
