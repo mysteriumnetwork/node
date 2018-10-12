@@ -75,6 +75,10 @@ type Dependencies struct {
 
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
+	LocationDetector location.Detector
+	LocationOriginal location.Cache
+
+	StatsKeeper stats.SessionStatsKeeper
 
 	ConnectionManager connection.Manager
 	ServiceManager    *service.Manager
@@ -169,35 +173,32 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
 	}
 
-	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
-
-	locationDetector := location.NewDetector(di.IPResolver, di.LocationResolver)
-	originalLocationCache := location.NewLocationCache(locationDetector)
+	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
 
 	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
 		di.MysteriumClient,
 		nodeOptions.Openvpn.BinaryPath,
 		nodeOptions.Directories.Config,
 		nodeOptions.Directories.Runtime,
-		statsKeeper,
-		originalLocationCache,
+		di.StatsKeeper,
+		di.LocationOriginal,
 		di.SignerFactory,
 	)
 
-	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, statsKeeper)
+	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, di.StatsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumClient, di.SignerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, statsKeeper)
-	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, locationDetector, originalLocationCache)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatsKeeper)
+	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
 
 	di.NodeOptions = nodeOptions
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, originalLocationCache)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal)
 }
 
 // BootstrapServiceComponents initiates ServiceManager dependency
@@ -325,4 +326,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	default:
 		di.LocationResolver = location.NewBuiltInResolver()
 	}
+
+	di.LocationDetector = location.NewDetector(di.IPResolver, di.LocationResolver)
+	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
 }
