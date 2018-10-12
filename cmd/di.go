@@ -53,6 +53,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -185,6 +186,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	connectionManager := connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
+	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumClient, di.SignerFactory)
 	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, di.IPResolver, statsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
@@ -194,12 +196,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
 
 	di.NodeOptions = nodeOptions
-	di.Node = node.NewNode(
-		connectionManager,
-		httpAPIServer,
-		router,
-		originalLocationCache,
-	)
+	di.Node = node.NewNode(connectionManager, httpAPIServer, originalLocationCache)
 }
 
 // BootstrapServiceComponents initiates ServiceManager dependency

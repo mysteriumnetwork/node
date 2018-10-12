@@ -19,23 +19,18 @@ package node
 
 import (
 	log "github.com/cihub/seelog"
-	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/tequilapi"
-	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
-	"github.com/mysteriumnetwork/node/utils"
 )
 
 // NewNode function creates new Mysterium node by given options
 func NewNode(
 	connectionManager connection.Manager,
 	tequilapiServer tequilapi.APIServer,
-	router *httprouter.Router,
 	originalLocationCache location.Cache,
 ) *Node {
 	return &Node{
-		router:                router,
 		connectionManager:     connectionManager,
 		httpAPIServer:         tequilapiServer,
 		originalLocationCache: originalLocationCache,
@@ -45,7 +40,6 @@ func NewNode(
 // Node represent entrypoint for Mysterium node with top level components
 type Node struct {
 	connectionManager     connection.Manager
-	router                *httprouter.Router
 	httpAPIServer         tequilapi.APIServer
 	originalLocationCache location.Cache
 }
@@ -58,8 +52,6 @@ func (node *Node) Start() error {
 	} else {
 		log.Info("Original country detected: ", originalLocation.Country)
 	}
-
-	tequilapi_endpoints.AddRouteForStop(node.router, utils.SoftKiller(node.Kill))
 
 	err = node.httpAPIServer.StartServing()
 	if err != nil {
