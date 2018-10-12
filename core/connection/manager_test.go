@@ -88,11 +88,13 @@ func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptio
 
 var (
 	myID                  = identity.FromAddress("identity-1")
-	activeProviderID      = identity.FromAddress("vpn-node-1")
+	activeProviderID      = identity.FromAddress("fake-node-1")
 	activeProviderContact = dto.Contact{}
+	activeServiceType     = "fake-service"
 	activeProposal        = dto.ServiceProposal{
 		ProviderID:       activeProviderID.Address,
 		ProviderContacts: []dto.Contact{activeProviderContact},
+		ServiceType:      activeServiceType,
 	}
 )
 
@@ -138,11 +140,26 @@ func (tc *testContext) SetupTest() {
 		},
 	}
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, tc.fakeConnectionFactory)
+	connectionCreators := map[string]ConnectionCreator{
+		activeServiceType: tc.fakeConnectionFactory,
+	}
+	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, connectionCreators)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
 	assert.Exactly(tc.T(), statusNotConnected(), tc.connManager.Status())
+}
+
+func (tc *testContext) TestWithUnsupportedServiceTypeConnectionIsNotMade() {
+	providerID := identity.FromAddress("unknown-node")
+	proposal := dto.ServiceProposal{
+		ProviderID:  providerID.Address,
+		ServiceType: "unsupported",
+	}
+	tc.fakeDiscoveryClient.RegisterProposal(proposal, nil)
+
+	assert.Equal(tc.T(), ErrUnsupportedServiceType, tc.connManager.Connect(myID, providerID, ConnectParams{}))
+	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestWithUnknownProviderConnectionIsNotMade() {

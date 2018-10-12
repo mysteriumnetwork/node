@@ -42,14 +42,16 @@ var (
 	ErrConnectionCancelled = errors.New("connection was cancelled")
 	// ErrConnectionFailed indicates that Connect method didn't reach "Connected" phase due to connection error
 	ErrConnectionFailed = errors.New("connection has failed")
+	// ErrUnsupportedServiceType indicates that target proposal contains unsupported service type
+	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
 )
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient   server.Client
-	newDialog         DialogCreator
-	newPromiseIssuer  PromiseIssuerCreator
-	connectionCreator ConnectionCreator
+	mysteriumClient    server.Client
+	newDialog          DialogCreator
+	newPromiseIssuer   PromiseIssuerCreator
+	connectionCreators map[string]ConnectionCreator
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -58,15 +60,19 @@ type connectionManager struct {
 }
 
 // NewManager creates connection manager with given dependencies
-func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator, promiseIssuerCreator PromiseIssuerCreator,
-	connectionCreator ConnectionCreator) *connectionManager {
+func NewManager(
+	mysteriumClient server.Client,
+	dialogCreator DialogCreator,
+	promiseIssuerCreator PromiseIssuerCreator,
+	connectionCreators map[string]ConnectionCreator,
+) *connectionManager {
 	return &connectionManager{
-		mysteriumClient:   mysteriumClient,
-		newDialog:         dialogCreator,
-		newPromiseIssuer:  promiseIssuerCreator,
-		connectionCreator: connectionCreator,
-		status:            statusNotConnected(),
-		cleanConnection:   warnOnClean,
+		mysteriumClient:    mysteriumClient,
+		newDialog:          dialogCreator,
+		newPromiseIssuer:   promiseIssuerCreator,
+		connectionCreators: connectionCreators,
+		status:             statusNotConnected(),
+		cleanConnection:    warnOnClean,
 	}
 }
 
@@ -119,6 +125,11 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		return err
 	}
 
+	connectionCreator, exists := manager.connectionCreators[proposal.ServiceType]
+	if !exists {
+		return errors.New("unsupported service type in proposal")
+	}
+
 	dialog, err := manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
@@ -139,7 +150,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 
 	stateChannel := make(chan State, 10)
 
-	connection, err := manager.connectionCreator.CreateConnection(
+	connection, err := connectionCreator.CreateConnection(
 		ConnectOptions{
 			SessionID:     sessionID,
 			SessionConfig: sessionConfig,

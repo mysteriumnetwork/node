@@ -74,8 +74,9 @@ type Dependencies struct {
 
 	StatsKeeper stats.SessionStatsKeeper
 
-	ConnectionManager connection.Manager
-	ServiceManager    *service.Manager
+	ConnectionManager  connection.Manager
+	ConnectionCreators map[string]connection.ConnectionCreator
+	ServiceManager     *service.Manager
 }
 
 // Bootstrap initiates all container dependencies
@@ -101,6 +102,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapIdentityComponents(nodeOptions.Directories)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNodeComponents(nodeOptions)
+	di.bootstrapServiceOpenvpn(nodeOptions)
 
 	if err := di.Node.Start(); err != nil {
 		return err
@@ -148,17 +150,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
 
-	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
-		di.MysteriumClient,
-		nodeOptions.Openvpn.BinaryPath,
-		nodeOptions.Directories.Config,
-		nodeOptions.Directories.Runtime,
-		di.StatsKeeper,
-		di.LocationOriginal,
-		di.SignerFactory,
-	)
-
-	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory)
+	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, di.ConnectionCreators)
+	di.ConnectionCreators = make(map[string]connection.ConnectionCreator)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
@@ -172,6 +165,18 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	di.NodeOptions = nodeOptions
 	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal)
+}
+
+func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
+	di.ConnectionCreators["openvpn"] = openvpn.NewProcessBasedConnectionFactory(
+		di.MysteriumClient,
+		nodeOptions.Openvpn.BinaryPath,
+		nodeOptions.Directories.Config,
+		nodeOptions.Directories.Runtime,
+		di.StatsKeeper,
+		di.LocationOriginal,
+		di.SignerFactory,
+	)
 }
 
 // BootstrapServiceComponents initiates ServiceManager dependency
