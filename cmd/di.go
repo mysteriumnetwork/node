@@ -66,6 +66,7 @@ type Dependencies struct {
 	MysteriumMorqaClient metrics.QualityOracle
 	EtherClient          *ethclient.Client
 
+	Storage              storage.Storage
 	Keystore             *keystore.KeyStore
 	IdentityManager      identity.Manager
 	SignerFactory        identity.SignerFactory
@@ -75,8 +76,8 @@ type Dependencies struct {
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
 
-	ServiceManager *service.Manager
-	Storage        storage.Storage
+	ConnectionManager connection.Manager
+	ServiceManager    *service.Manager
 }
 
 // Bootstrap initiates all container dependencies
@@ -183,20 +184,20 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.SignerFactory,
 	)
 
-	connectionManager := connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, statsKeeper)
+	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumClient, di.SignerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, connectionManager, di.IPResolver, statsKeeper)
-	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, statsKeeper)
+	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
 
 	di.NodeOptions = nodeOptions
-	di.Node = node.NewNode(connectionManager, httpAPIServer, originalLocationCache)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, originalLocationCache)
 }
 
 // BootstrapServiceComponents initiates ServiceManager dependency
