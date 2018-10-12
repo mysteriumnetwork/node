@@ -34,7 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
+	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -48,6 +48,7 @@ import (
 	"github.com/mysteriumnetwork/node/server/metrics"
 	"github.com/mysteriumnetwork/node/server/metrics/oracle"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/session"
@@ -80,8 +81,9 @@ type Dependencies struct {
 
 	StatsKeeper stats.SessionStatsKeeper
 
-	ConnectionManager connection.Manager
-	ServiceManager    *service.Manager
+	ConnectionManager  connection.Manager
+	ConnectionCreators map[string]connection.ConnectionCreator
+	ServiceManager     *service.Manager
 }
 
 // Bootstrap initiates all container dependencies
@@ -111,6 +113,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapIdentityComponents(nodeOptions.Directories)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNodeComponents(nodeOptions)
+	di.bootstrapServiceOpenvpn(nodeOptions)
+	di.bootstrapServiceNoop(nodeOptions)
 
 	if err := di.Node.Start(); err != nil {
 		return err
@@ -168,24 +172,15 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
 		if nodeOptions.ExperimentPromiseCheck {
-			return &noop.FakePromiseEngine{}
+			return &promise_noop.FakePromiseEngine{}
 		}
-		return noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
+		return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
 	}
 
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
 
-	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
-		di.MysteriumClient,
-		nodeOptions.Openvpn.BinaryPath,
-		nodeOptions.Directories.Config,
-		nodeOptions.Directories.Runtime,
-		di.StatsKeeper,
-		di.LocationOriginal,
-		di.SignerFactory,
-	)
-
-	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, di.StatsKeeper)
+	di.ConnectionCreators = make(map[string]connection.ConnectionCreator)
+	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, &di.ConnectionCreators, di.StatsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
@@ -199,6 +194,22 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	di.NodeOptions = nodeOptions
 	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal)
+}
+
+func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
+	di.ConnectionCreators["openvpn"] = openvpn.NewProcessBasedConnectionFactory(
+		di.MysteriumClient,
+		nodeOptions.Openvpn.BinaryPath,
+		nodeOptions.Directories.Config,
+		nodeOptions.Directories.Runtime,
+		di.StatsKeeper,
+		di.LocationOriginal,
+		di.SignerFactory,
+	)
+}
+
+func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
+	di.ConnectionCreators["dummy"] = &service_noop.ConnectionFactory{}
 }
 
 // BootstrapServiceComponents initiates ServiceManager dependency
@@ -228,9 +239,9 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
 			promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
 				if nodeOptions.ExperimentPromiseCheck {
-					return &noop.FakePromiseEngine{}
+					return &promise_noop.FakePromiseEngine{}
 				}
-				return noop.NewPromiseProcessor(dialog, balance, di.Storage)
+				return promise_noop.NewPromiseProcessor(dialog, balance, di.Storage)
 			}
 			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
 			return session.NewDialogHandler(sessionManagerFactory)
