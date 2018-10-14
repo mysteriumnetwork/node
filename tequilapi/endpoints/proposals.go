@@ -65,6 +65,19 @@ type proposalRes struct {
 
 	// qualitative service definition
 	ServiceDefinition serviceDefinitionRes `json:"serviceDefinition"`
+
+	// Quality of the service
+	Quality *serviceQuality `json:"quality,omitempty"`
+}
+
+type serviceQuality struct {
+	Connects connectsHistory `json:"connects"`
+}
+
+type connectsHistory struct {
+	Success int `json:"success"`
+	Fail    int `json:"fail"`
+	Timeout int `json:"timeout"`
 }
 
 func proposalToRes(p dto_discovery.ServiceProposal) proposalRes {
@@ -123,12 +136,17 @@ func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	providerID := req.URL.Query().Get("providerId")
+	fetchQuality := req.URL.Query().Get("fetchQuality")
 	proposals, err := pe.mysteriumClient.FindProposals(providerID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+
 	proposalsRes := proposalsRes{mapProposalsToRes(proposals, proposalToRes)}
+	if fetchQuality == "true" {
+		proposalsRes.addFakeQualities()
+	}
 	utils.WriteAsJSON(proposalsRes, resp)
 }
 
@@ -136,4 +154,16 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 func AddRoutesForProposals(router *httprouter.Router, mc server.Client) {
 	pe := NewProposalsEndpoint(mc)
 	router.GET("/proposals", pe.List)
+}
+
+func (rp *proposalsRes) addFakeQualities() {
+	for i := range rp.Proposals {
+		rp.Proposals[i].Quality = &serviceQuality{
+			Connects: connectsHistory{
+				Success: 100,
+				Fail:    5,
+				Timeout: 8,
+			},
+		}
+	}
 }
