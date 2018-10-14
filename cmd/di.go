@@ -34,7 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
+	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
@@ -44,8 +44,9 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
-	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
@@ -103,6 +104,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNodeComponents(nodeOptions)
 	di.bootstrapServiceOpenvpn(nodeOptions)
+	di.bootstrapServiceNoop(nodeOptions)
 
 	if err := di.Node.Start(); err != nil {
 		return err
@@ -145,7 +147,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	}
 
 	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
-		return noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
+		return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
 	}
 
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
@@ -179,6 +181,10 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 	)
 }
 
+func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
+	di.ConnectionCreators["dummy"] = &service_noop.ConnectionFactory{}
+}
+
 // BootstrapServiceComponents initiates ServiceManager dependency
 func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, serviceOptions service.Options) {
 	identityHandler := identity_selector.NewHandler(
@@ -193,7 +199,7 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 
 	sessionStorage := session.NewStorageMemory()
 
-	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
+	openvpnServiceManager := service_openvpn.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
 
 	di.ServiceManager = service.NewManager(
 		di.NetworkDefinition,
@@ -215,7 +221,7 @@ func newSessionManagerFactory(
 	sessionStorage *session.StorageMemory,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) session.Manager {
-		promiseProcessor := noop.NewPromiseProcessor(dialog)
+		promiseProcessor := promise_noop.NewPromiseProcessor(dialog)
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
