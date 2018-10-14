@@ -24,7 +24,10 @@ import (
 	"github.com/mitchellh/go-homedir"
 	openvpn_core "github.com/mysteriumnetwork/go-openvpn/openvpn/core"
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/identity"
+	service_noop "github.com/mysteriumnetwork/node/services/noop"
 )
 
 // NewNode function creates new Node
@@ -68,19 +71,44 @@ func NewNode() {
 		di.Shutdown()
 	}()
 
-	proposals, err := di.MysteriumClient.FindProposals("0xd961ebabbdc17b7f82a18ef4f575d9e06f5a412d")
-	if err != nil {
-		panic(err)
-	}
-	if len(proposals) < 1 {
-		panic("No FI server found")
-	}
-
-	log.Infof("Proposals: %#v", proposals)
+	// TODO Remove later, this is for initial green path test only
+	testConnectFlow(&di, identity.FromAddress("0xd961ebabbdc17b7f82a18ef4f575d9e06f5a412d"))
 
 	// TODO Return node startup/runtime errors to mobile
 	err = di.Node.Wait()
 	if err != nil {
 		panic(err)
 	}
+}
+
+func testConnectFlow(di *cmd.Dependencies, providerID identity.Identity) {
+	consumers := di.IdentityManager.GetIdentities()
+	if len(consumers) < 1 {
+		panic("No identity found")
+	}
+	consumerID := consumers[0]
+
+	log.Infof("Unlocking consumer: %#v", consumerID)
+	err := di.IdentityManager.Unlock(consumerID.Address, "")
+	if err != nil {
+		panic(err)
+	}
+
+	log.Infof("Connecting to provider: %#v", providerID)
+	// TODO Mock transport until encrypted tunnel is ready in mobile
+	di.ConnectionCreators = map[string]connection.ConnectionCreator{
+		"openvpn": &service_noop.ConnectionFactory{},
+	}
+	err = di.ConnectionManager.Connect(consumerID, providerID, connection.ConnectParams{})
+	if err != nil {
+		panic(err)
+	}
+
+	connectionStatus := di.ConnectionManager.Status()
+	log.Infof("Connection status: %#v", connectionStatus)
+	err = di.ConnectionManager.Disconnect()
+	if err != nil {
+		panic(err)
+	}
+
 }
