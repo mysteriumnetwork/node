@@ -18,10 +18,14 @@
 package service
 
 import (
+	"fmt"
+
+	"github.com/urfave/cli"
+
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/urfave/cli"
 )
 
 var (
@@ -46,6 +50,11 @@ var (
 		Usage: "Openvpn port to use. Default 1194",
 		Value: 1194,
 	}
+
+	agreedTermsConditionsFlag = cli.BoolFlag{
+		Name:  "agreed-terms-and-conditions",
+		Usage: "Agree with terms & conditions",
+	}
 )
 
 // NewCommand function creates service command
@@ -69,10 +78,20 @@ func NewCommand() *cli.Command {
 		Flags: []cli.Flag{
 			identityFlag, identityPassphraseFlag,
 			openvpnProtocolFlag, openvpnPortFlag,
+			agreedTermsConditionsFlag,
 		},
 		Action: func(ctx *cli.Context) error {
+			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
+				fmt.Println(metadata.VersionAsSummary(metadata.LicenseCopyright(
+					"run program with '--license.warranty' option",
+					"run program with '--license.conditions' option",
+				)))
+				fmt.Println()
+				return fmt.Errorf("If you agree with these Terms & Conditions, run program again with '--agreed-terms-and-conditions' flag")
+			}
+
 			nodeOptions := cmd.ParseFlagsNode(ctx)
-			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
+			if err := di.Bootstrap(nodeOptions); err != nil {
 				return err
 			}
 			di.BootstrapServiceComponents(nodeOptions, service.Options{
