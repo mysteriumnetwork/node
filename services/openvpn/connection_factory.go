@@ -84,7 +84,7 @@ func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, 
 		op.originalLocationCache.Get().Country,
 		time.Minute,
 	)
-	stateCallback := GetStateCallback(stateChannel, op.statsKeeper)
+	stateCallback := GetStateCallback(stateChannel)
 	return state.NewMiddleware(stateCallback, statsSender.StateHandler)
 }
 

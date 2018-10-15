@@ -30,23 +30,19 @@ import (
 )
 
 func TestGetStateCallbackReturnsCorrectState(t *testing.T) {
-	statsKeeper := &fakeSessionStatsKeeper{}
 	channel := make(chan connection.State, 1)
-	callback := GetStateCallback(channel, statsKeeper)
+	callback := GetStateCallback(channel)
 	callback(openvpn.ConnectedState)
 	assert.Equal(t, connection.Connected, <-channel)
-	assert.True(t, statsKeeper.sessionStartMarked)
 }
 
 func TestGetStateCallbackClosesChannelOnProcessExit(t *testing.T) {
-	statsKeeper := &fakeSessionStatsKeeper{}
 	channel := make(chan connection.State, 1)
-	callback := GetStateCallback(channel, statsKeeper)
+	callback := GetStateCallback(channel)
 	callback(openvpn.ExitingState)
 	res, ok := <-channel
 	assert.Equal(t, connection.Disconnecting, res)
 	assert.True(t, ok)
-	assert.True(t, statsKeeper.sessionEndMarked)
 }
 
 func TestOpenVpnStateCallbackToConnectionState(t *testing.T) {

@@ -19,7 +19,6 @@ package openvpn
 
 import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
-	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
@@ -39,18 +38,11 @@ func OpenVpnStateCallbackToConnectionState(input openvpn.State) connection.State
 }
 
 // GetStateCallback returns the callback for working with openvpn state
-func GetStateCallback(stateChannel connection.StateChannel, statKeeper stats.SessionStatsKeeper) func(openvpnState openvpn.State) {
+func GetStateCallback(stateChannel connection.StateChannel) func(openvpnState openvpn.State) {
 	return func(openvpnState openvpn.State) {
 		connectionState := OpenVpnStateCallbackToConnectionState(openvpnState)
 		if connectionState != connection.Unknown {
 			stateChannel <- connectionState
-		}
-
-		switch connectionState {
-		case connection.Connected:
-			statKeeper.MarkSessionStart()
-		case connection.Disconnecting:
-			statKeeper.MarkSessionEnd()
 		}
 
 		//this is the last state - close channel (according to best practices of go - channel writer controls channel)

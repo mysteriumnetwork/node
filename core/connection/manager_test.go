@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
@@ -52,6 +53,7 @@ type testContext struct {
 	fakeConnectionFactory *connectionFactoryFake
 	connManager           *connectionManager
 	fakeDiscoveryClient   *server.ClientFake
+	fakeStatsKeeper       *fakeSessionStatsKeeper
 	fakeDialog            *fakeDialog
 	fakePromiseIssuer     *fakePromiseIssuer
 	sync.RWMutex
@@ -138,7 +140,9 @@ func (tc *testContext) SetupTest() {
 		},
 	}
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, tc.fakeConnectionFactory)
+	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
+
+	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, tc.fakeConnectionFactory, tc.fakeStatsKeeper)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
@@ -164,6 +168,7 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 	err := tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
+	assert.True(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
@@ -191,6 +196,7 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	tc.fakeConnectionFactory.fakeVpnClient.reportState(ProcessExited)
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
+	assert.True(tc.T(), tc.fakeStatsKeeper.sessionEndMarked)
 }
 
 func (tc *testContext) TestConnectResultsInAlreadyConnectedErrorWhenConnectionExists() {
@@ -411,4 +417,27 @@ func waitABit() {
 	//usually time.Sleep call gives a chance for other goroutines to kick in
 	//important when testing async code
 	time.Sleep(10 * time.Millisecond)
+}
+
+type fakeSessionStatsKeeper struct {
+	sessionStartMarked, sessionEndMarked bool
+}
+
+func (fsk *fakeSessionStatsKeeper) Save(stats stats.SessionStats) {
+}
+
+func (fsk *fakeSessionStatsKeeper) Retrieve() stats.SessionStats {
+	return stats.SessionStats{}
+}
+
+func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
+	fsk.sessionStartMarked = true
+}
+
+func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
+	return time.Duration(0)
+}
+
+func (fsk *fakeSessionStatsKeeper) MarkSessionEnd() {
+	fsk.sessionEndMarked = true
 }

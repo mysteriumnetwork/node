@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -50,6 +51,7 @@ type connectionManager struct {
 	newDialog         DialogCreator
 	newPromiseIssuer  PromiseIssuerCreator
 	connectionCreator ConnectionCreator
+	statsKeeper       stats.SessionStatsKeeper
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -59,8 +61,9 @@ type connectionManager struct {
 
 // NewManager creates connection manager with given dependencies
 func NewManager(mysteriumClient server.Client, dialogCreator DialogCreator, promiseIssuerCreator PromiseIssuerCreator,
-	connectionCreator ConnectionCreator) *connectionManager {
+	connectionCreator ConnectionCreator, statsKeeper stats.SessionStatsKeeper) *connectionManager {
 	return &connectionManager{
+		statsKeeper:       statsKeeper,
 		mysteriumClient:   mysteriumClient,
 		newDialog:         dialogCreator,
 		newPromiseIssuer:  promiseIssuerCreator,
@@ -259,7 +262,10 @@ func (manager *connectionManager) onStateChanged(state State, sessionID session.
 
 	switch state {
 	case Connected:
+		manager.statsKeeper.MarkSessionStart()
 		manager.status = statusConnected(sessionID)
+	case Disconnecting:
+		manager.statsKeeper.MarkSessionEnd()
 	case Reconnecting:
 		manager.status = statusReconnecting()
 	}
