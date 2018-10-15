@@ -18,8 +18,9 @@
 package openvpn
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
-	"github.com/mysteriumnetwork/node/session"
 )
 
 // ClientConfig represents specific "openvpn as client" configuration
@@ -72,10 +73,14 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(session *session.Session, configDir string, runtimeDir string) (*ClientConfig, error) {
-	vpnConfig := session.Config.(*VPNConfig)
+func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeDir string) (*ClientConfig, error) {
+	vpnConfig := &VPNConfig{}
+	err := json.Unmarshal(sessionConfig, vpnConfig)
+	if err != nil {
+		return nil, err
+	}
 
-	err := NewDefaultValidator().IsValid(vpnConfig)
+	err = NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
 		return nil, err
 	}

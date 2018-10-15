@@ -33,6 +33,7 @@ import (
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -63,16 +64,17 @@ func NewNode(
 	locationDetector := location.NewDetector(ipResolver, locationResolver)
 	originalLocationCache := location.NewLocationCache(locationDetector)
 
-	vpnClientFactory := connection.ConfigureVpnClientFactory(
+	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
 		mysteriumClient,
 		options.Openvpn.BinaryPath,
 		options.Directories.Config,
 		options.Directories.Runtime,
-		signerFactory,
 		statsKeeper,
 		originalLocationCache,
+		signerFactory,
 	)
-	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuerFactory, vpnClientFactory, statsKeeper)
+
+	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
