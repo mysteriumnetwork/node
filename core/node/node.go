@@ -74,7 +74,7 @@ func NewNode(
 		signerFactory,
 	)
 
-	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory)
+	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, statsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
