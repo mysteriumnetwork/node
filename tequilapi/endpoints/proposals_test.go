@@ -141,3 +141,61 @@ func TestProposalsEndpointList(t *testing.T) {
 		resp.Body.String(),
 	)
 }
+
+func TestProposalsEndpointListFetchQuality(t *testing.T) {
+	discoveryAPI := server.NewClientFake()
+	for _, proposal := range proposals {
+		discoveryAPI.RegisterProposal(proposal, nil)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant?fetchQuality=true",
+		nil,
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewProposalsEndpoint(discoveryAPI).List
+	handlerFunc(resp, req, nil)
+
+	assert.JSONEq(
+		t,
+		`{
+			"proposals": [
+				{
+					"id": 1,
+					"providerId": "0xProviderId",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {
+							"asn": "LT",
+							"country": "Lithuania",
+							"city": "Vilnius"
+						}
+					},
+					"quality": {
+						"connects": {
+							"success": 5,
+							"fail": 3,
+							"timeout": 2
+						}
+					}
+				},
+				{
+					"id": 1,
+					"providerId": "other_provider",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {
+							"asn": "LT",
+							"country": "Lithuania",
+							"city": "Vilnius"
+						}
+					}
+				}
+			]
+		}`,
+		resp.Body.String(),
+	)
+}

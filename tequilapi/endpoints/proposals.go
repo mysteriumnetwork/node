@@ -98,10 +98,11 @@ func proposalToRes(p dto_discovery.ServiceProposal) proposalRes {
 func mapProposalsToRes(
 	proposalArry []dto_discovery.ServiceProposal,
 	f func(dto_discovery.ServiceProposal) proposalRes,
+	quality func(proposalRes) proposalRes,
 ) []proposalRes {
 	proposalsResArry := make([]proposalRes, len(proposalArry))
 	for i, proposal := range proposalArry {
-		proposalsResArry[i] = f(proposal)
+		proposalsResArry[i] = quality(f(proposal))
 	}
 	return proposalsResArry
 }
@@ -143,10 +144,15 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 		return
 	}
 
-	proposalsRes := proposalsRes{mapProposalsToRes(proposals, proposalToRes)}
+	addQualityToRes := func(p proposalRes) proposalRes { return p }
 	if fetchQuality == "true" {
-		proposalsRes.addFakeQualities()
+		addQualityToRes, err = addQuality(pe.mysteriumClient)
+		if err != nil {
+			utils.SendError(resp, err, http.StatusInternalServerError)
+		}
 	}
+
+	proposalsRes := proposalsRes{mapProposalsToRes(proposals, proposalToRes, addQualityToRes)}
 	utils.WriteAsJSON(proposalsRes, resp)
 }
 
@@ -156,14 +162,23 @@ func AddRoutesForProposals(router *httprouter.Router, mc server.Client) {
 	router.GET("/proposals", pe.List)
 }
 
-func (rp *proposalsRes) addFakeQualities() {
-	for i := range rp.Proposals {
-		rp.Proposals[i].Quality = &serviceQuality{
-			Connects: connectsHistory{
-				Success: 100,
-				Fail:    5,
-				Timeout: 8,
-			},
-		}
+func addQuality(mc server.Client) (func(p proposalRes) proposalRes, error) {
+	connects, err := mc.ProposalsQuality()
+	if err != nil {
+		return nil, err
 	}
+
+	return func(p proposalRes) proposalRes {
+		for _, c := range connects {
+			if c.Proposal.ProviderID == p.ProviderID {
+				p.Quality = &serviceQuality{Connects: connectsHistory{
+					Success: c.CountSuccess,
+					Fail:    c.CountFail,
+					Timeout: c.CountTimeout,
+				}}
+				return p
+			}
+		}
+		return p
+	}, nil
 }

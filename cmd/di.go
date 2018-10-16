@@ -241,7 +241,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.NetworkDefinition = network
-	di.MysteriumClient = server.NewClient(network.DiscoveryAPIAddress)
+	di.MysteriumClient = server.NewClient(network.DiscoveryAPIAddress, network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {

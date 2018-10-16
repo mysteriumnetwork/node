@@ -95,6 +95,22 @@ func (client *ClientFake) FindProposals(providerID string) (proposals []dto_disc
 	return proposals, nil
 }
 
+// ProposalsQuality returns a list of proposals connection quality
+func (client *ClientFake) ProposalsQuality() ([]dto.QualityConnects, error) {
+	quality := make([]dto.QualityConnects, len(client.proposalsMock))
+	for _, proposal := range client.proposalsMock {
+		quality = append(quality, dto.QualityConnects{
+			Proposal:     dto.QualityProposal{ID: proposal.ID, ProviderID: proposal.ProviderID},
+			CountAll:     10,
+			CountSuccess: 5,
+			CountFail:    3,
+			CountTimeout: 2,
+		})
+		return quality, nil
+	}
+	return quality, nil
+}
+
 // SendSessionStats heartbeats that session is still active + session upload and download amounts
 func (client *ClientFake) SendSessionStats(sessionId session.ID, sessionStats dto.SessionStats, signer identity.Signer) (err error) {
 	log.Info(mysteriumAPILogPrefix, "Fake session stats sent: ", sessionId)
