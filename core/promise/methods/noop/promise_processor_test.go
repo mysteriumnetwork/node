@@ -35,12 +35,13 @@ func TestPromiseProcessor_Start_SendsBalanceMessages(t *testing.T) {
 	processor := &PromiseProcessor{
 		dialog:          dialog,
 		balanceInterval: time.Millisecond,
+		storage:         fakeStorage{},
 	}
 	err := processor.Start(proposal)
 	defer processor.Stop()
 
 	assert.NoError(t, err)
-	waitForBallanceState(t, processor, balanceNotifying)
+	waitForBalanceState(t, processor, balanceNotifying)
 
 	lastMessage, err := dialog.waitSendMessage()
 	assert.NoError(t, err)
@@ -57,17 +58,18 @@ func TestPromiseProcessor_Stop_StopsBalanceMessages(t *testing.T) {
 	processor := &PromiseProcessor{
 		dialog:          dialog,
 		balanceInterval: time.Millisecond,
+		storage:         fakeStorage{},
 	}
 	err := processor.Start(proposal)
 	assert.NoError(t, err)
-	waitForBallanceState(t, processor, balanceNotifying)
+	waitForBalanceState(t, processor, balanceNotifying)
 
 	err = processor.Stop()
 	assert.NoError(t, err)
-	waitForBallanceState(t, processor, balanceStopped)
+	waitForBalanceState(t, processor, balanceStopped)
 }
 
-func waitForBallanceState(t *testing.T, processor *PromiseProcessor, expectedState balanceState) {
+func waitForBalanceState(t *testing.T, processor *PromiseProcessor, expectedState balanceState) {
 	for i := 0; i < 10; i++ {
 		if processor.getBalanceState() == expectedState {
 			return
@@ -76,3 +78,9 @@ func waitForBallanceState(t *testing.T, processor *PromiseProcessor, expectedSta
 	}
 	assert.Fail(t, "State expected to be ", string(expectedState))
 }
+
+type fakeStorage struct{}
+
+func (fs fakeStorage) Store(issuer string, data interface{}) error  { return nil }
+func (fs fakeStorage) Delete(issuer string, data interface{}) error { return nil }
+func (fs fakeStorage) Close() error                                 { return nil }

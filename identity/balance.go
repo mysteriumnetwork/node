@@ -15,23 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package promise
+package identity
 
-import "github.com/mysteriumnetwork/node/money"
+import (
+	"context"
 
-// SignedPromise represents payment promise signed by issuer
-type SignedPromise struct {
-	Promise         Promise
-	IssuerSignature Signature
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+)
+
+// Balance provides amount of money that identity have on the balance in the blockchain
+type Balance func(Identity) (uint64, error)
+
+// NewBalance creates new balance registry
+func NewBalance(etherClient *ethclient.Client) Balance {
+	return func(identity Identity) (uint64, error) {
+		balance, err := etherClient.BalanceAt(context.Background(), common.HexToAddress(identity.Address), nil)
+		return balance.Uint64(), err
+	}
 }
-
-// Promise represents payment promise between two parties
-type Promise struct {
-	SerialNumber int    `storm:"id"`
-	IssuerID     string `storm:"index"`
-	BenefiterID  string `storm:"index"`
-	Amount       money.Money
-}
-
-// Signature represents some data signed with a key
-type Signature string
