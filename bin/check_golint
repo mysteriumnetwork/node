@@ -37,7 +37,11 @@ if [ -z "$ARGUMENTS" ]; then
     ARGUMENTS=`go list ./...`
 fi
 
-MESSAGES_ERROR=`golint --set_exit_status --min_confidence=1 ${ARGUMENTS} 2>/dev/null`
+MESSAGES_ERROR=()
+for arg in ${ARGUMENTS[@]}; do
+    MESSAGES_ERROR+=`golint --set_exit_status --min_confidence=1 ${arg} 2>/dev/null`
+done
+
 MESSAGES_RECONFIGURE=()
 
 check_uncleaned_package "github.com/mysteriumnetwork/node/identity" 6
