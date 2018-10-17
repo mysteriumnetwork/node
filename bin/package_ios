@@ -15,8 +15,8 @@ source bin/helpers/output.sh
 source bin/helpers/functions.sh
 
 ARCH=$1
-if [[ ! "$ARCH" =~ ^(arm64|arm64)$ ]]; then
-    print_error "Missing architecture! Should be: arm64, arm64"
+if [[ ! "$ARCH" =~ ^(arm64|amd64)$ ]]; then
+    print_error "Missing architecture! Should be: arm64, amd64"
     exit 1
 fi
 
