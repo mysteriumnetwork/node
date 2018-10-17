@@ -48,7 +48,7 @@ jobs:
     - script: bin/builder_run bin/check_golint
       name: "golint check"
 
-    - script: bin/check_goimports
+    - script: bin/builder_run bin/check_goimports
       name: "goimports check"
 
     - script: bin/check_license
