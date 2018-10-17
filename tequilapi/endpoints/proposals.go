@@ -18,6 +18,7 @@
 package endpoints
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -67,17 +68,7 @@ type proposalRes struct {
 	ServiceDefinition serviceDefinitionRes `json:"serviceDefinition"`
 
 	// Quality of the service
-	Quality *serviceQuality `json:"quality,omitempty"`
-}
-
-type serviceQuality struct {
-	Connects connectsHistory `json:"connects"`
-}
-
-type connectsHistory struct {
-	Success int `json:"success"`
-	Fail    int `json:"fail"`
-	Timeout int `json:"timeout"`
+	Quality json.RawMessage `json:"quality,omitempty"`
 }
 
 func proposalToRes(p dto_discovery.ServiceProposal) proposalRes {
@@ -169,18 +160,23 @@ func addQuality(mc server.MorqaClient) (func(p proposalRes) proposalRes, error) 
 		return nil, err
 	}
 
-	return func(p proposalRes) proposalRes {
-		for _, c := range connects {
-			if c.Proposal.ProviderID == p.ProviderID {
-				p.Quality = &serviceQuality{Connects: connectsHistory{
-					Success: c.CountSuccess,
-					Fail:    c.CountFail,
-					Timeout: c.CountTimeout,
-				}}
-				return p
-			}
+	proposalsQuality := make(map[string]json.RawMessage, len(connects))
+	for _, c := range connects {
+		var info struct{ Proposal struct{ ProviderID string } }
+
+		if err := json.Unmarshal(c, &info); err != nil {
+			return nil, err
 		}
-		p.Quality = &serviceQuality{}
+
+		proposalsQuality[info.Proposal.ProviderID] = c
+	}
+
+	return func(p proposalRes) proposalRes {
+		if quality, ok := proposalsQuality[p.ProviderID]; ok {
+			p.Quality = quality
+			return p
+		}
+		p.Quality = []byte("{}")
 		return p
 	}, nil
 }

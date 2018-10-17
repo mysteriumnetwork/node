@@ -18,6 +18,8 @@
 package server
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -38,5 +40,5 @@ type Client interface {
 
 // MorqaClient allows to interact with a quality oracle service (MORQA)
 type MorqaClient interface {
-	ProposalsQuality() ([]dto.QualityConnects, error)
+	ProposalsQuality() ([]json.RawMessage, error)
 }

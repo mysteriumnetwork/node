@@ -17,34 +17,9 @@
 
 package dto
 
+import "encoding/json"
+
 // ServiceQualityResponse represents response from the quality oracle service
 type ServiceQualityResponse struct {
-	Connects []QualityConnects `json:"connects"`
-}
-
-// QualityConnects represents a single proposal connection quality description
-type QualityConnects struct {
-	Proposal     QualityProposal `json:"proposal"`
-	CountAll     int             `json:"countAll"`
-	CountSuccess int             `json:"countSuccess"`
-	CountFail    int             `json:"countFail"`
-	CountTimeout int             `json:"countTimeout"`
-}
-
-// QualityProposal represents a proposal definition from the quality oracle service
-type QualityProposal struct {
-	ID                int                `json:"id"`
-	ProviderID        string             `json:"ProviderID"`
-	ServiceType       string             `json:"ServiceType"`
-	ServiceDefinition *ServiceDefinition `json:"ServiceDefinition,omitempty"`
-}
-
-// ServiceDefinition represents the service definition struct
-type ServiceDefinition struct {
-	LocationOriginate LocationOriginate `json:"locationOriginate"`
-}
-
-// LocationOriginate represents the location originate
-type LocationOriginate struct {
-	Country string `json:"country"`
+	Connects []json.RawMessage `json:"connects"`
 }

@@ -18,12 +18,12 @@
 package endpoints
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/server"
-	"github.com/mysteriumnetwork/node/server/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
@@ -176,11 +176,13 @@ func TestProposalsEndpointListFetchQuality(t *testing.T) {
 						}
 					},
 					"quality": {
-						"connects": {
-							"success": 5,
-							"fail": 3,
-							"timeout": 2
-						}
+						"proposal": {
+							"ProviderID": "0xProviderId"
+						},
+						"countAll": 10,
+						"countSuccess": 5,
+						"countFail": 3,
+						"countTimeout": 2
 					}
 				},
 				{
@@ -194,13 +196,7 @@ func TestProposalsEndpointListFetchQuality(t *testing.T) {
 							"city": "Vilnius"
 						}
 					},
-					"quality": {
-						"connects": {
-							"success": 0,
-							"fail": 0,
-							"timeout": 0
-						}
-					}
+					"quality": {}
 				}
 			]
 		}`,
@@ -211,17 +207,17 @@ func TestProposalsEndpointListFetchQuality(t *testing.T) {
 type mysteriumMorqaFake struct{}
 
 // ProposalsQuality returns a list of proposals connection quality
-func (m *mysteriumMorqaFake) ProposalsQuality() ([]dto.QualityConnects, error) {
-	quality := make([]dto.QualityConnects, len(proposals))
+func (m *mysteriumMorqaFake) ProposalsQuality() ([]json.RawMessage, error) {
 	for _, proposal := range proposals {
-		quality = append(quality, dto.QualityConnects{
-			Proposal:     dto.QualityProposal{ID: proposal.ID, ProviderID: proposal.ProviderID},
-			CountAll:     10,
-			CountSuccess: 5,
-			CountFail:    3,
-			CountTimeout: 2,
-		})
-		return quality, nil
+		return []json.RawMessage{json.RawMessage(`{
+			"proposal":{
+				"ProviderID": "` + proposal.ProviderID + `"
+			},
+			"countAll": 10,
+			"countSuccess": 5,
+			"countFail": 3,
+			"countTimeout": 2
+		}`)}, nil
 	}
-	return quality, nil
+	return nil, nil
 }

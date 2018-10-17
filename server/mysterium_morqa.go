@@ -18,6 +18,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -44,7 +45,7 @@ func NewMorqaClient(qualityOracleAddress string) MorqaClient {
 }
 
 // ProposalsQuality returns a list of proposals connection quality
-func (m *mysteriumMorqa) ProposalsQuality() ([]dto.QualityConnects, error) {
+func (m *mysteriumMorqa) ProposalsQuality() ([]json.RawMessage, error) {
 	req, err := requests.NewGetRequest(m.qualityOracleAddress, "proposals/quality", nil)
 	if err != nil {
 		return nil, err
