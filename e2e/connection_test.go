@@ -97,6 +97,9 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client) teq
 }
 
 func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID string, proposal tequilapi_client.ProposalDTO) {
+	err := topUpAccount(consumerID)
+	assert.Nil(t, err)
+
 	status, err := tequilapi.Status()
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", status.Status)

@@ -70,6 +70,7 @@ func ParseFlagsDirectory(ctx *cli.Context) node.OptionsDirectory {
 	dataDir := ctx.GlobalString(dataDirFlag)
 	return node.OptionsDirectory{
 		dataDir,
+		filepath.Join(dataDir, "db"),
 		filepath.Join(dataDir, "keystore"),
 		ctx.GlobalString(configDirFlag),
 		ctx.GlobalString(runtimeDirFlag),

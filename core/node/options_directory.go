@@ -28,6 +28,8 @@ import (
 type OptionsDirectory struct {
 	// Data directory stores persistent data like keystore, cli history, etc.
 	Data string
+	// Data directory stores database
+	Storage string
 	// Data directory stores identity keys
 	Keystore string
 	// Config directory stores all data needed for runtime (db scripts etc.)
@@ -44,6 +46,11 @@ func (options *OptionsDirectory) Check() error {
 	}
 
 	err = ensureOrCreateDir(options.Runtime)
+	if err != nil {
+		return err
+	}
+
+	err = ensureOrCreateDir(options.Storage)
 	if err != nil {
 		return err
 	}

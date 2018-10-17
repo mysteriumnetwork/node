@@ -25,8 +25,10 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
+	"github.com/mysteriumnetwork/node/core/storage"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
-	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 const (
@@ -37,9 +39,11 @@ const (
 )
 
 // NewPromiseProcessor creates instance of PromiseProcessor
-func NewPromiseProcessor(dialog communication.Dialog) *PromiseProcessor {
+func NewPromiseProcessor(dialog communication.Dialog, balance identity.Balance, storage storage.Storage) *PromiseProcessor {
 	return &PromiseProcessor{
-		dialog: dialog,
+		dialog:  dialog,
+		balance: balance,
+		storage: storage,
 
 		balanceInterval: 5 * time.Second,
 		balanceState:    balanceStopped,
@@ -51,7 +55,9 @@ type balanceState string
 
 // PromiseProcessor process promises in such way, what no actual money is deducted from promise
 type PromiseProcessor struct {
-	dialog communication.Dialog
+	dialog  communication.Dialog
+	balance identity.Balance
+	storage storage.Storage
 
 	balanceInterval   time.Duration
 	balanceState      balanceState
@@ -63,12 +69,14 @@ type PromiseProcessor struct {
 }
 
 // Start processing promises for given service proposal
-func (processor *PromiseProcessor) Start(proposal discovery_dto.ServiceProposal) error {
+func (processor *PromiseProcessor) Start(proposal dto.ServiceProposal) error {
+	// TODO: replace static value with some real data
 	processor.lastPromise = promise.Promise{
 		Amount: money.NewMoney(10, money.CURRENCY_MYST),
 	}
 
-	if err := processor.dialog.Respond(&promise.Consumer{}); err != nil {
+	consumer := promise.NewConsumer(proposal, processor.balance, processor.storage)
+	if err := processor.dialog.Respond(consumer); err != nil {
 		return err
 	}
 
@@ -94,6 +102,7 @@ balanceLoop:
 			break balanceLoop
 
 		case <-time.After(processor.balanceInterval):
+			// TODO: replace static value with some real data
 			processor.balanceSend(
 				promise.BalanceMessage{1, true, processor.lastPromise.Amount},
 			)
