@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/metadata"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 )
 
@@ -62,7 +63,14 @@ func NewNode() {
 			"",
 			"LT",
 		},
-		node.OptionsNetwork{Testnet: true},
+		node.OptionsNetwork{
+			true,
+			false,
+			metadata.TestnetDefinition.DiscoveryAPIAddress,
+			metadata.TestnetDefinition.BrokerAddress,
+			metadata.TestnetDefinition.EtherClientRPC,
+			metadata.DefaultNetwork.PaymentsContractAddress.String(),
+		},
 	})
 	if err != nil {
 		panic(err)
@@ -76,7 +84,7 @@ func NewNode() {
 	di.ConnectionRegistry.Register("openvpn", service_noop.NewConnectionCreator())
 
 	// TODO Remove later, this is for initial green path test only
-	testConnectFlow(&di, identity.FromAddress("0xd961ebabbdc17b7f82a18ef4f575d9e06f5a412d"))
+	//testConnectFlow(&di, identity.FromAddress("0xd961ebabbdc17b7f82a18ef4f575d9e06f5a412d"))
 
 	// TODO Return node startup/runtime errors to mobile
 	err = di.Node.Wait()
