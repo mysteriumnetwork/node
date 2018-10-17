@@ -33,7 +33,10 @@ type Client interface {
 	UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 	PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 
-	ProposalsQuality() ([]dto.QualityConnects, error)
-
 	SendSessionStats(sessionId session.ID, sessionStats dto.SessionStats, signer identity.Signer) (err error)
+}
+
+// MorqaClient allows to interact with a quality oracle service (MORQA)
+type MorqaClient interface {
+	ProposalsQuality() ([]dto.QualityConnects, error)
 }

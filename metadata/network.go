@@ -35,7 +35,7 @@ var TestnetDefinition = NetworkDefinition{
 	"https://testnet-api.mysterium.network/v1",
 	"testnet-broker.mysterium.network",
 	"https://ropsten.infura.io",
-	"https://morqa.mysterium.network/api/v1",
+	"https://testnet-morqa.mysterium.network/api/v1",
 	common.HexToAddress("0xbe5F9CCea12Df756bF4a5Baf4c29A10c3ee7C83B"),
 }
 

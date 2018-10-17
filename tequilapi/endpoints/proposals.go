@@ -108,12 +108,13 @@ func mapProposalsToRes(
 }
 
 type proposalsEndpoint struct {
-	mysteriumClient server.Client
+	mysteriumClient      server.Client
+	mysteriumMorqaClient server.MorqaClient
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
-	return &proposalsEndpoint{mc}
+func NewProposalsEndpoint(mc server.Client, morqaClient server.MorqaClient) *proposalsEndpoint {
+	return &proposalsEndpoint{mc, morqaClient}
 }
 
 // swagger:operation GET /proposals Proposal listProposals
@@ -146,7 +147,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 
 	addQualityToRes := func(p proposalRes) proposalRes { return p }
 	if fetchQuality == "true" {
-		addQualityToRes, err = addQuality(pe.mysteriumClient)
+		addQualityToRes, err = addQuality(pe.mysteriumMorqaClient)
 		if err != nil {
 			utils.SendError(resp, err, http.StatusInternalServerError)
 		}
@@ -157,12 +158,12 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, mc server.Client) {
-	pe := NewProposalsEndpoint(mc)
+func AddRoutesForProposals(router *httprouter.Router, mc server.Client, morqaClient server.MorqaClient) {
+	pe := NewProposalsEndpoint(mc, morqaClient)
 	router.GET("/proposals", pe.List)
 }
 
-func addQuality(mc server.Client) (func(p proposalRes) proposalRes, error) {
+func addQuality(mc server.MorqaClient) (func(p proposalRes) proposalRes, error) {
 	connects, err := mc.ProposalsQuality()
 	if err != nil {
 		return nil, err
@@ -179,6 +180,7 @@ func addQuality(mc server.Client) (func(p proposalRes) proposalRes, error) {
 				return p
 			}
 		}
+		p.Quality = &serviceQuality{}
 		return p
 	}, nil
 }

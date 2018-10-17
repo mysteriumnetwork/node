@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
@@ -66,7 +67,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI).List
+	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -105,7 +106,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI).List
+	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -156,7 +157,7 @@ func TestProposalsEndpointListFetchQuality(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI).List
+	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -192,10 +193,35 @@ func TestProposalsEndpointListFetchQuality(t *testing.T) {
 							"country": "Lithuania",
 							"city": "Vilnius"
 						}
+					},
+					"quality": {
+						"connects": {
+							"success": 0,
+							"fail": 0,
+							"timeout": 0
+						}
 					}
 				}
 			]
 		}`,
 		resp.Body.String(),
 	)
+}
+
+type mysteriumMorqaFake struct{}
+
+// ProposalsQuality returns a list of proposals connection quality
+func (m *mysteriumMorqaFake) ProposalsQuality() ([]dto.QualityConnects, error) {
+	quality := make([]dto.QualityConnects, len(proposals))
+	for _, proposal := range proposals {
+		quality = append(quality, dto.QualityConnects{
+			Proposal:     dto.QualityProposal{ID: proposal.ID, ProviderID: proposal.ProviderID},
+			CountAll:     10,
+			CountSuccess: 5,
+			CountFail:    3,
+			CountTimeout: 2,
+		})
+		return quality, nil
+	}
+	return quality, nil
 }

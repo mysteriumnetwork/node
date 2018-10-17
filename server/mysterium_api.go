@@ -51,17 +51,15 @@ func newHTTPTransport(requestTimeout time.Duration) HTTPTransport {
 }
 
 type mysteriumAPI struct {
-	http                 HTTPTransport
-	discoveryAPIAddress  string
-	qualityOracleAddress string
+	http                HTTPTransport
+	discoveryAPIAddress string
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
-func NewClient(discoveryAPIAddress, qualityOracleAddress string) Client {
+func NewClient(discoveryAPIAddress string) Client {
 	return &mysteriumAPI{
 		newHTTPTransport(1 * time.Minute),
 		discoveryAPIAddress,
-		qualityOracleAddress,
 	}
 }
 
@@ -153,22 +151,6 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 	log.Info(mysteriumAPILogPrefix, "Proposals fetched: ", len(proposalsResponse.Proposals))
 
 	return proposalsResponse.Proposals, nil
-}
-
-// ProposalsQuality returns a list of proposals connection quality
-func (mApi *mysteriumAPI) ProposalsQuality() ([]dto.QualityConnects, error) {
-	req, err := requests.NewGetRequest(mApi.qualityOracleAddress, "proposals/quality", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var qualityResponse dto.ServiceQualityResponse
-	err = mApi.doRequestAndParseResponse(req, &qualityResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	return qualityResponse.Connects, nil
 }
 
 // SendSessionStats sends session statistics
