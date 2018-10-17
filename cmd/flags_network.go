@@ -18,57 +18,10 @@
 package cmd
 
 import (
-	"flag"
-
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli"
 )
-
-// ParseArgumentsNetwork function parses (or registers) network options from flag library
-func ParseArgumentsNetwork(flags *flag.FlagSet, options *node.OptionsNetwork) {
-	flags.StringVar(
-		&options.DiscoveryAPIAddress,
-		"discovery-address",
-		metadata.DefaultNetwork.DiscoveryAPIAddress,
-		"Address (URL form) of discovery service",
-	)
-
-	flags.StringVar(
-		&options.BrokerAddress,
-		"broker-address",
-		metadata.DefaultNetwork.BrokerAddress,
-		"Address (IP or domain name) of message broker",
-	)
-
-	flags.BoolVar(
-		&options.Localnet,
-		"localnet",
-		false,
-		"Defines network configuration which expects locally deployed broker and discovery services",
-	)
-
-	flags.BoolVar(
-		&options.Testnet,
-		"testnet",
-		false,
-		"Defines test network configuration",
-	)
-
-	flags.StringVar(
-		&options.EtherClientRPC,
-		"ether.client.rpc",
-		metadata.DefaultNetwork.EtherClientRPC,
-		"Url or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
-	)
-
-	flags.StringVar(
-		&options.EtherPaymentsAddress,
-		"ether.contract.payments",
-		metadata.DefaultNetwork.PaymentsContractAddress.String(),
-		"Address of payments contract",
-	)
-}
 
 var (
 	testFlag = cli.BoolFlag{
@@ -78,6 +31,11 @@ var (
 	localnetFlag = cli.BoolFlag{
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
+	}
+
+	identityCheckFlag = cli.BoolFlag{
+		Name:  "experiment-identity-check",
+		Usage: "Enables experimental identity check",
 	}
 
 	discoveryAddressFlag = cli.StringFlag{
@@ -108,6 +66,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
 		testFlag, localnetFlag,
+		identityCheckFlag,
 		discoveryAddressFlag, brokerAddressFlag,
 		etherRpcFlag, etherContractPaymentsFlag,
 	)
@@ -118,6 +77,8 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 	return node.OptionsNetwork{
 		ctx.GlobalBool(testFlag.Name),
 		ctx.GlobalBool(localnetFlag.Name),
+
+		ctx.GlobalBool(identityCheckFlag.Name),
 
 		ctx.GlobalString(discoveryAddressFlag.Name),
 		ctx.GlobalString(brokerAddressFlag.Name),

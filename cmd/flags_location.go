@@ -31,7 +31,7 @@ var (
 	locationDatabaseFlag = cli.StringFlag{
 		Name:  "location.database",
 		Usage: "Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
-		Value: "GeoLite2-Country.mmdb",
+		Value: "",
 	}
 	// LocationCountryFlag allows to configure service country manually
 	LocationCountryFlag = cli.StringFlag{
@@ -49,8 +49,8 @@ func RegisterFlagsLocation(flags *[]cli.Flag) {
 // ParseFlagsLocation function fills in location options from CLI context
 func ParseFlagsLocation(ctx *cli.Context) node.OptionsLocation {
 	return node.OptionsLocation{
-		ctx.GlobalString(ipifyUrlFlag.Name),
-		ctx.GlobalString(locationDatabaseFlag.Name),
-		ctx.GlobalString(LocationCountryFlag.Name),
+		IpifyUrl:   ctx.GlobalString(ipifyUrlFlag.Name),
+		ExternalDb: ctx.GlobalString(locationDatabaseFlag.Name),
+		Country:    ctx.GlobalString(LocationCountryFlag.Name),
 	}
 }

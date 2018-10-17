@@ -19,7 +19,7 @@ package node
 
 // OptionsLocation describes possible parameters of location detection configuration
 type OptionsLocation struct {
-	IpifyUrl string
-	Database string
-	Country  string
+	IpifyUrl   string
+	ExternalDb string
+	Country    string
 }

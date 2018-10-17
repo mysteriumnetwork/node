@@ -249,8 +249,12 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	log.Info("Using Eth contract at address: ", network.PaymentsContractAddress.String())
-	if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress); err != nil {
-		return err
+	if options.ExperimentIdentityCheck {
+		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress); err != nil {
+			return err
+		}
+	} else {
+		di.IdentityRegistry = &identity_registry.FakeRegistry{Registered: true, RegistrationEventExists: true}
 	}
 
 	return nil
@@ -270,8 +274,10 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 
 	switch {
 	case options.Country != "":
-		di.LocationResolver = location.NewResolverFake(options.Country)
+		di.LocationResolver = location.NewStaticResolver(options.Country)
+	case options.ExternalDb != "":
+		di.LocationResolver = location.NewExternalDbResolver(filepath.Join(configDirectory, options.ExternalDb))
 	default:
-		di.LocationResolver = location.NewResolver(filepath.Join(configDirectory, options.Database))
+		di.LocationResolver = location.NewBuiltInResolver()
 	}
 }

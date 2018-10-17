@@ -46,7 +46,7 @@ func TestLocationCacheFirstSecondCalls(t *testing.T) {
 }
 
 func TestLocationCacheWithError(t *testing.T) {
-	locationErr := errors.New("location resolver error")
+	locationErr := errors.New("location DbResolver error")
 	locationDetector := NewDetectorFakeFailing(locationErr)
 	locationCache := NewLocationCache(locationDetector)
 

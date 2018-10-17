@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"flag"
 	"os"
 	"path/filepath"
 
@@ -26,40 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/urfave/cli"
 )
-
-// ParseDirectoryArguments function takes directory options and fills in values from FlagSet structure
-func ParseDirectoryArguments(flags *flag.FlagSet, options *node.OptionsDirectory) error {
-
-	userHomeDir, err := homedir.Dir()
-	if err != nil {
-		return err
-	}
-
-	currentDir, err := getExecutableDir()
-	if err != nil {
-		return err
-	}
-
-	flags.StringVar(
-		&options.Data,
-		"data-dir",
-		filepath.Join(userHomeDir, ".mysterium"),
-		"Data directory containing keystore & other persistent files",
-	)
-	flags.StringVar(
-		&options.Config,
-		"config-dir",
-		filepath.Join(currentDir, "config"),
-		"Configs directory containing all configuration, script and helper files",
-	)
-	flags.StringVar(
-		&options.Runtime,
-		"runtime-dir",
-		currentDir,
-		"Runtime writable directory for temp files",
-	)
-	return nil
-}
 
 const (
 	dataDirFlag    = "data-dir"
