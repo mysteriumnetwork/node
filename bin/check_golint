@@ -20,7 +20,9 @@ check_uncleaned_package () {
 
     PACKAGE_MESSAGES=`echo "${MESSAGES_ERROR}" | grep "${PACKAGE}"`
     PACKAGE_MESSAGES_COUNT=`echo -n "${PACKAGE_MESSAGES}" | grep -c '^'`
-    print_warning "[warning] ${PACKAGE_MESSAGES_COUNT} messages in '${PACKAGE}': \n${PACKAGE_MESSAGES}\n"
+    if [ ${PACKAGE_MESSAGES_COUNT} -gt 0 ]; then
+	print_warning "[warning] ${PACKAGE_MESSAGES_COUNT} messages in '${PACKAGE}': \n${PACKAGE_MESSAGES}\n"
+    fi
 
     MESSAGES_ERROR=`echo -n "${MESSAGES_ERROR}" | grep -v "${PACKAGE}"`
     if [ ${PACKAGE_MESSAGES_COUNT} -eq 0 ]; then
