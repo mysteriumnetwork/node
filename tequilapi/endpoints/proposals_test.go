@@ -18,6 +18,7 @@
 package endpoints
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -66,7 +67,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI).List
+	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -105,7 +106,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI).List
+	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -140,4 +141,83 @@ func TestProposalsEndpointList(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
+}
+
+func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
+	discoveryAPI := server.NewClientFake()
+	for _, proposal := range proposals {
+		discoveryAPI.RegisterProposal(proposal, nil)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant?fetchConnectCounts=true",
+		nil,
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
+	handlerFunc(resp, req, nil)
+
+	assert.JSONEq(
+		t,
+		`{
+			"proposals": [
+				{
+					"id": 1,
+					"providerId": "0xProviderId",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {
+							"asn": "LT",
+							"country": "Lithuania",
+							"city": "Vilnius"
+						}
+					},
+					"metrics": {
+						"connectCount": {
+							"success": 5,
+							"fail": 3,
+							"timeout": 2
+						}
+					}
+				},
+				{
+					"id": 1,
+					"providerId": "other_provider",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {
+							"asn": "LT",
+							"country": "Lithuania",
+							"city": "Vilnius"
+						}
+					},
+					"metrics": {}
+				}
+			]
+		}`,
+		resp.Body.String(),
+	)
+}
+
+type mysteriumMorqaFake struct{}
+
+// ProposalsMetrics returns a list of proposals connection metrics
+func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
+	for _, proposal := range proposals {
+		return []json.RawMessage{json.RawMessage(`{
+			"proposalID": {
+				"providerID": "` + proposal.ProviderID + `",
+				"serviceType": "` + proposal.ServiceType + `"
+			},
+			"connectCount": {
+				"success": 5,
+				"fail": 3,
+				"timeout": 2
+			}
+		}`)}
+	}
+	return nil
 }

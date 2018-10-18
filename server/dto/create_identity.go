@@ -17,6 +17,7 @@
 
 package dto
 
+// CreateIdentityRequest represents JSON request for creating identity
 type CreateIdentityRequest struct {
 	Identity string `json:"identity"`
 }

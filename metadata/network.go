@@ -26,6 +26,7 @@ type NetworkDefinition struct {
 	DiscoveryAPIAddress     string
 	BrokerAddress           string
 	EtherClientRPC          string
+	QualityOracle           string
 	PaymentsContractAddress common.Address
 }
 
@@ -34,6 +35,7 @@ var TestnetDefinition = NetworkDefinition{
 	"https://testnet-api.mysterium.network/v1",
 	"testnet-broker.mysterium.network",
 	"https://ropsten.infura.io",
+	"https://testnet-morqa.mysterium.network/api/v1",
 	common.HexToAddress("0xbe5F9CCea12Df756bF4a5Baf4c29A10c3ee7C83B"),
 }
 
@@ -42,6 +44,7 @@ var LocalnetDefinition = NetworkDefinition{
 	"http://localhost/v1",
 	"localhost",
 	"http://localhost:8545",
+	"http://localhost:8080",
 	common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea"),
 }
 
