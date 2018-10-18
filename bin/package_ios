@@ -21,12 +21,19 @@ if [[ ! "$ARCH" =~ ^(arm64|amd64)$ ]]; then
 fi
 
 DIR_BUILD="build/package"
-PACKAGE_FILE="${DIR_BUILD}/Mysterium.framework"
+PACKAGE_FILE="${DIR_BUILD}/Mysterium.framework.zip"
+DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
+DIR_FRAMEWORK="${DIR_TEMP}/Mysterium.framework"
 
 gomobile bind -v \
     -target=ios/${ARCH} \
-    -o $PACKAGE_FILE \
+    -o ${DIR_FRAMEWORK} \
     github.com/mysteriumnetwork/node/mobile/mysterium
+
+cp bin/package/ios/Info.plist ${DIR_FRAMEWORK}/Versions/A/Resources/Info.plist
+
+(cd ${DIR_TEMP} && zip -r - .) > ${PACKAGE_FILE}
+rm -rf ${DIR_TEMP}
 
 print_success "iOS package '$PACKAGE_FILE' complete!"
 exit 0
