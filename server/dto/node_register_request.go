@@ -19,6 +19,7 @@ package dto
 
 import dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 
+// NodeRegisterRequest represents JSON for node registration request
 type NodeRegisterRequest struct {
 	ServiceProposal dto_discovery.ServiceProposal `json:"service_proposal"`
 }

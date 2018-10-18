@@ -59,6 +59,12 @@ var (
 		Usage: "Address of payments contract",
 		Value: metadata.DefaultNetwork.PaymentsContractAddress.String(),
 	}
+
+	qualityOracleFlag = cli.StringFlag{
+		Name:  "quality-oracle.address",
+		Usage: "Address of the quality oracle service",
+		Value: metadata.DefaultNetwork.QualityOracle,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -69,6 +75,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		identityCheckFlag,
 		discoveryAddressFlag, brokerAddressFlag,
 		etherRpcFlag, etherContractPaymentsFlag,
+		qualityOracleFlag,
 	)
 }
 
@@ -85,5 +92,7 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 
 		ctx.GlobalString(etherRpcFlag.Name),
 		ctx.GlobalString(etherContractPaymentsFlag.Name),
+
+		ctx.GlobalString(qualityOracleFlag.Name),
 	}
 }
