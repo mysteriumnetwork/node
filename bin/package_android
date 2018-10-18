@@ -1,0 +1,34 @@
+#!/bin/bash
+
+###########################################################################
+# Packaging script which creates Android AAR (Android Archive).
+#
+# Usage:
+#> bin/package_android <architecture>
+#
+# Package (specific architecture: arm64, arm):
+#> bin/package_android arm64
+
+set -e
+
+source bin/helpers/output.sh
+source bin/helpers/functions.sh
+
+ARCH=$1
+if [[ ! "$ARCH" =~ ^(arm64|arm)$ ]]; then
+    print_error "Missing architecture! Should be: arm64, arm"
+    exit 1
+fi
+
+DIR_BUILD="build/package"
+PACKAGE_FILE="${DIR_BUILD}/Mysterium.aar"
+
+gomobile bind -v \
+    -target=android/${ARCH} \
+    -o $PACKAGE_FILE \
+    github.com/mysteriumnetwork/node/mobile/mysterium
+
+rm ${DIR_BUILD}/Mysterium-sources.jar
+
+print_success "Android package '$PACKAGE_FILE' complete!"
+exit 0
