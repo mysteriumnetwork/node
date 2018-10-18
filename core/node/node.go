@@ -56,6 +56,9 @@ func NewNode(
 	}
 
 	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
+		if options.ExperimentPromiseCheck {
+			return &noop.FakePromiseEngine{}
+		}
 		return noop.NewPromiseIssuer(issuerID, dialog, signerFactory(issuerID))
 	}
 

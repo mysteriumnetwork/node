@@ -15,19 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package noop
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Testnet  bool
-	Localnet bool
+import discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
 
-	ExperimentIdentityCheck bool
-	ExperimentPromiseCheck  bool
+// FakePromiseEngine do nothing. It required for the temporary --experiment-promise-check flag.
+// TODO it should be removed once --experiment-promise-check will be deleted.
+type FakePromiseEngine struct{}
 
-	DiscoveryAPIAddress string
-	BrokerAddress       string
+// Start fakes promise engine start
+func (*FakePromiseEngine) Start(_ discovery_dto.ServiceProposal) error {
+	return nil
+}
 
-	EtherClientRPC       string
-	EtherPaymentsAddress string
+// Stop fakes promise engine stop
+func (*FakePromiseEngine) Stop() error {
+	return nil
 }
