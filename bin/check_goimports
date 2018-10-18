@@ -12,6 +12,8 @@
 #> bin/check_goimports ./communication
 #> bin/check_goimports ./communication/...
 
+set -e
+
 source bin/helpers/output.sh
 
 ARGUMENTS=$@
