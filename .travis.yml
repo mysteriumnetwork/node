@@ -8,10 +8,10 @@ env:
     - BUILD_COMMIT=$TRAVIS_COMMIT
     - BUILD_BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
-    - BUILD_VERSION_MAJOR=0
+    - BUILD_VERSION=$TRAVIS_TAG
 
 before_install:
-  - if [ -z "${TRAVIS_TAG/dev/}" ]; then export BUILD_VERSION="$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"; fi
+  - if [ -z "${BUILD_VERSION/dev/}" ]; then export BUILD_VERSION="0-dev.$TRAVIS_BUILD_NUMBER"; fi
 
 cache:
   directories:
