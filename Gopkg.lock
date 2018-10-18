@@ -418,7 +418,6 @@
     "github.com/asdine/storm",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
-    "github.com/ethereum/go-ethereum",
     "github.com/ethereum/go-ethereum/accounts",
     "github.com/ethereum/go-ethereum/accounts/abi/bind",
     "github.com/ethereum/go-ethereum/accounts/keystore",
