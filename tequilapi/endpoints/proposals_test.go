@@ -143,7 +143,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	)
 }
 
-func TestProposalsEndpointListFetchQuality(t *testing.T) {
+func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	discoveryAPI := server.NewClientFake()
 	for _, proposal := range proposals {
 		discoveryAPI.RegisterProposal(proposal, nil)
@@ -151,7 +151,7 @@ func TestProposalsEndpointListFetchQuality(t *testing.T) {
 
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/irrelevant?fetchQuality=true",
+		"/irrelevant?fetchConnectCounts=true",
 		nil,
 	)
 	assert.Nil(t, err)
@@ -175,14 +175,12 @@ func TestProposalsEndpointListFetchQuality(t *testing.T) {
 							"city": "Vilnius"
 						}
 					},
-					"quality": {
-						"proposal": {
-							"ProviderID": "0xProviderId"
+					"metrics": {
+						"connectCounts": {
+							"Success": 5,
+							"Fail": 3,
+							"Timeout": 2
 						},
-						"countAll": 10,
-						"countSuccess": 5,
-						"countFail": 3,
-						"countTimeout": 2
 					}
 				},
 				{
@@ -196,7 +194,7 @@ func TestProposalsEndpointListFetchQuality(t *testing.T) {
 							"city": "Vilnius"
 						}
 					},
-					"quality": {}
+					"metrics": {}
 				}
 			]
 		}`,
@@ -206,18 +204,19 @@ func TestProposalsEndpointListFetchQuality(t *testing.T) {
 
 type mysteriumMorqaFake struct{}
 
-// ProposalsQuality returns a list of proposals connection quality
-func (m *mysteriumMorqaFake) ProposalsQuality() ([]json.RawMessage, error) {
+// ProposalsMetrics returns a list of proposals connection metrics
+func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
 	for _, proposal := range proposals {
 		return []json.RawMessage{json.RawMessage(`{
-			"proposal":{
+			"proposalID":{
 				"ProviderID": "` + proposal.ProviderID + `"
 			},
-			"countAll": 10,
-			"countSuccess": 5,
-			"countFail": 3,
-			"countTimeout": 2
-		}`)}, nil
+			"connectCounts": {
+				"Success": 5,
+				"Fail": 3,
+				"Timeout": 2
+			}
+		}`)}
 	}
-	return nil, nil
+	return nil
 }

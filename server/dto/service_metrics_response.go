@@ -19,7 +19,7 @@ package dto
 
 import "encoding/json"
 
-// ServiceQualityResponse represents response from the quality oracle service
-type ServiceQualityResponse struct {
+// ServiceMetricsResponse represents response from the quality oracle service
+type ServiceMetricsResponse struct {
 	Connects []json.RawMessage `json:"connects"`
 }

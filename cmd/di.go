@@ -54,7 +54,7 @@ type Dependencies struct {
 
 	NetworkDefinition    metadata.NetworkDefinition
 	MysteriumClient      server.Client
-	MysteriumMorqaClient server.MorqaClient
+	MysteriumMorqaClient server.QualityOracle
 	EtherClient          *ethclient.Client
 
 	Keystore             *keystore.KeyStore

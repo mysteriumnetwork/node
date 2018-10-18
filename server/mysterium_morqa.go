@@ -37,27 +37,29 @@ type mysteriumMorqa struct {
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
-func NewMorqaClient(qualityOracleAddress string) MorqaClient {
+func NewMorqaClient(qualityOracleAddress string) QualityOracle {
 	return &mysteriumMorqa{
 		newHTTPTransport(1 * time.Minute),
 		qualityOracleAddress,
 	}
 }
 
-// ProposalsQuality returns a list of proposals connection quality
-func (m *mysteriumMorqa) ProposalsQuality() ([]json.RawMessage, error) {
+// ProposalsMetrics returns a list of proposals connection metrics
+func (m *mysteriumMorqa) ProposalsMetrics() []json.RawMessage {
 	req, err := requests.NewGetRequest(m.qualityOracleAddress, "proposals/quality", nil)
 	if err != nil {
-		return nil, err
+		log.Warn(mysteriumMorqaLogPrefix, "Failed to create proposals metrics request", err)
+		return nil
 	}
 
-	var qualityResponse dto.ServiceQualityResponse
-	err = m.doRequestAndParseResponse(req, &qualityResponse)
+	var metricsResponse dto.ServiceMetricsResponse
+	err = m.doRequestAndParseResponse(req, &metricsResponse)
 	if err != nil {
-		return nil, err
+		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics", err)
+		return nil
 	}
 
-	return qualityResponse.Connects, nil
+	return metricsResponse.Connects
 }
 
 func (m *mysteriumMorqa) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {

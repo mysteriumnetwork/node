@@ -46,7 +46,7 @@ func NewNode(
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
 	identityRegistration identity_registry.RegistrationDataProvider,
-	mysteriumClient server.Client, mysteriumMorqaClient server.MorqaClient,
+	mysteriumClient server.Client, mysteriumMorqaClient server.QualityOracle,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 ) *Node {

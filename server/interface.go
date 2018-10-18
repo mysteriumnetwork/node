@@ -38,7 +38,7 @@ type Client interface {
 	SendSessionStats(sessionId session.ID, sessionStats dto.SessionStats, signer identity.Signer) (err error)
 }
 
-// MorqaClient allows to interact with a quality oracle service (MORQA)
-type MorqaClient interface {
-	ProposalsQuality() ([]json.RawMessage, error)
+// QualityOracle allows to interact with a quality oracle service (MORQA)
+type QualityOracle interface {
+	ProposalsMetrics() []json.RawMessage
 }
