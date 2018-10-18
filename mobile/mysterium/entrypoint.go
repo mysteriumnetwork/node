@@ -43,33 +43,32 @@ func NewNode() {
 	currentDir := userHomeDir
 
 	err = di.Bootstrap(node.Options{
-		node.OptionsDirectory{
-			dataDir,
-			filepath.Join(dataDir, "db"),
-			filepath.Join(dataDir, "keystore"),
+		Directories: node.OptionsDirectory{
+			Data:     dataDir,
+			Storage: filepath.Join(dataDir, "db"),
+			Keystore: filepath.Join(dataDir, "keystore"),
 			// TODO Embbed all config file to released artifacts
-			filepath.Join(currentDir, "config"),
+			Config: filepath.Join(currentDir, "config"),
 			// TODO Where to save runtime data
-			currentDir,
+			Runtime: currentDir,
 		},
 
-		"127.0.0.1",
-		4050,
+		TequilapiAddress: "127.0.0.1",
+		TequilapiPort:    4050,
 
-		openvpn_core.NodeOptions{},
-		node.OptionsLocation{
-			"https://api.ipify.org/",
-			// TODO Embbed location DB to released artifacts
-			"",
-			"LT",
+		// TODO Make Openvpn pluggable connection optional
+		Openvpn: openvpn_core.NodeOptions{},
+
+		Location: node.OptionsLocation{
+			IpifyUrl: "https://api.ipify.org/",
+			Country:  "LT",
 		},
-		node.OptionsNetwork{
-			true,
-			false,
-			metadata.TestnetDefinition.DiscoveryAPIAddress,
-			metadata.TestnetDefinition.BrokerAddress,
-			metadata.TestnetDefinition.EtherClientRPC,
-			metadata.DefaultNetwork.PaymentsContractAddress.String(),
+		OptionsNetwork: node.OptionsNetwork{
+			Testnet:              true,
+			DiscoveryAPIAddress:  metadata.TestnetDefinition.DiscoveryAPIAddress,
+			BrokerAddress:        metadata.TestnetDefinition.BrokerAddress,
+			EtherClientRPC:       metadata.TestnetDefinition.EtherClientRPC,
+			EtherPaymentsAddress: metadata.DefaultNetwork.PaymentsContractAddress.String(),
 		},
 	})
 	if err != nil {
