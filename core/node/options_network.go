@@ -30,4 +30,6 @@ type OptionsNetwork struct {
 
 	EtherClientRPC       string
 	EtherPaymentsAddress string
+
+	QualityOracle string
 }

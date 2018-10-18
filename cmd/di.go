@@ -41,6 +41,8 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/metrics"
+	"github.com/mysteriumnetwork/node/server/metrics/oracle"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
@@ -52,9 +54,10 @@ type Dependencies struct {
 	NodeOptions node.Options
 	Node        *node.Node
 
-	NetworkDefinition metadata.NetworkDefinition
-	MysteriumClient   server.Client
-	EtherClient       *ethclient.Client
+	NetworkDefinition    metadata.NetworkDefinition
+	MysteriumClient      server.Client
+	MysteriumMorqaClient metrics.QualityOracle
+	EtherClient          *ethclient.Client
 
 	Keystore             *keystore.KeyStore
 	IdentityManager      identity.Manager
@@ -154,6 +157,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.IdentityRegistry,
 		di.IdentityRegistration,
 		di.MysteriumClient,
+		di.MysteriumMorqaClient,
 		di.IPResolver,
 		di.LocationResolver,
 	)
@@ -245,6 +249,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 
 	di.NetworkDefinition = network
 	di.MysteriumClient = server.NewClient(network.DiscoveryAPIAddress)
+	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
