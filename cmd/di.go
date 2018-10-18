@@ -188,7 +188,10 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.IdentityRegistry,
 		openvpnServiceManager,
 		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
-			promiseHandler := func(dialog communication.Dialog) *noop.PromiseProcessor {
+			promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
+				if nodeOptions.ExperimentPromiseCheck {
+					return &noop.FakePromiseEngine{}
+				}
 				return noop.NewPromiseProcessor(dialog, balance, di.Storage)
 			}
 			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
@@ -202,7 +205,7 @@ func newSessionManagerFactory(
 	proposal dto_discovery.ServiceProposal,
 	configProvider session.ConfigProvider,
 	sessionStorage *session.StorageMemory,
-	promiseHandler func(dialog communication.Dialog) *noop.PromiseProcessor,
+	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) session.Manager {
 		return session.NewManager(
