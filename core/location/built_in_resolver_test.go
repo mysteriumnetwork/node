@@ -15,9 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package location
 
-// CreateIdentityRequest represents JSON request for creating identity
-type CreateIdentityRequest struct {
-	Identity string `json:"identity"`
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestBuiltInResolverWorks(t *testing.T) {
+	country, err := NewBuiltInResolver().ResolveCountry("46.111.111.99")
+	assert.NoError(t, err)
+	assert.Equal(t, "RU", country)
 }

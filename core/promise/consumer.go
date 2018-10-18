@@ -19,10 +19,31 @@ package promise
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/core/storage"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
+)
+
+var (
+	responseInvalidPromise = Response{Success: false, Message: "Invalid Promise"}
+	responseInternalError  = Response{Success: false, Message: "Internal Error"}
 )
 
 // Consumer process promise-requests
-type Consumer struct{}
+type Consumer struct {
+	proposal dto.ServiceProposal
+	balance  identity.Balance
+	storage  storage.Storage
+}
+
+// NewConsumer creates new instance of the promise consumer
+func NewConsumer(proposal dto.ServiceProposal, balance identity.Balance, storage storage.Storage) *Consumer {
+	return &Consumer{
+		proposal: proposal,
+		balance:  balance,
+		storage:  storage,
+	}
+}
 
 // GetRequestEndpoint returns endpoint where to receive requests
 func (c *Consumer) GetRequestEndpoint() communication.RequestEndpoint {
@@ -36,17 +57,18 @@ func (c *Consumer) NewRequest() (requestPtr interface{}) {
 
 // Consume handles requests from endpoint and replies with response
 func (c *Consumer) Consume(requestPtr interface{}) (response interface{}, err error) {
-	// request := requestPtr.(*Request)
+	request, ok := requestPtr.(*Request)
+	if !ok {
+		return responseInvalidPromise, errUnsupportedRequest
+	}
 
-	// TODO there should be some validation of the received proposal and storing it somewhere for the server needs.
-	// TODO signature validation of the promise should be here too.
+	if err := request.SignedPromise.Validate(c.proposal, c.balance); err != nil {
+		return responseInvalidPromise, err
+	}
 
-	// if request.SignedPromise.IssuerSignature == valid {
-	// 		return &Response{
-	// 			Success: false,
-	// 			Message: fmt.Sprintf("Bas signature: %s", request.SignedPromise.IssuerSignature),
-	// 		}, fmt.Errorf("Bad promise signature")
-	// }
+	if err := c.storage.Store(request.SignedPromise.Promise.IssuerID, &request.SignedPromise.Promise); err != nil {
+		return responseInternalError, err
+	}
 
-	return &Response{Success: true, Message: "Promise accepted"}, nil
+	return &Response{Success: true}, nil
 }

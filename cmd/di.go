@@ -32,6 +32,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/storage"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
@@ -39,6 +41,8 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/metrics"
+	"github.com/mysteriumnetwork/node/server/metrics/oracle"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
@@ -50,9 +54,10 @@ type Dependencies struct {
 	NodeOptions node.Options
 	Node        *node.Node
 
-	NetworkDefinition metadata.NetworkDefinition
-	MysteriumClient   server.Client
-	EtherClient       *ethclient.Client
+	NetworkDefinition    metadata.NetworkDefinition
+	MysteriumClient      server.Client
+	MysteriumMorqaClient metrics.QualityOracle
+	EtherClient          *ethclient.Client
 
 	Keystore             *keystore.KeyStore
 	IdentityManager      identity.Manager
@@ -64,6 +69,7 @@ type Dependencies struct {
 	LocationResolver location.Resolver
 
 	ServiceManager *service.Manager
+	Storage        storage.Storage
 }
 
 // Bootstrap initiates all container dependencies
@@ -83,6 +89,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork); err != nil {
+		return err
+	}
+
+	if err := di.bootstrapStorage(nodeOptions.Directories.Storage); err != nil {
 		return err
 	}
 
@@ -119,8 +129,22 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
+	if di.Storage != nil {
+		if err := di.Storage.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
 	log.Flush()
+	return nil
+}
+
+func (di *Dependencies) bootstrapStorage(path string) error {
+	localStorage, err := boltdb.NewStorage(path)
+	if err != nil {
+		return err
+	}
+	di.Storage = localStorage
 	return nil
 }
 
@@ -133,6 +157,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.IdentityRegistry,
 		di.IdentityRegistration,
 		di.MysteriumClient,
+		di.MysteriumMorqaClient,
 		di.IPResolver,
 		di.LocationResolver,
 	)
@@ -154,6 +179,8 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 
 	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
 
+	balance := identity.NewBalance(di.EtherClient)
+
 	di.ServiceManager = service.NewManager(
 		di.NetworkDefinition,
 		identityLoader,
@@ -161,7 +188,13 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.IdentityRegistry,
 		openvpnServiceManager,
 		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
-			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage)
+			promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
+				if nodeOptions.ExperimentPromiseCheck {
+					return &noop.FakePromiseEngine{}
+				}
+				return noop.NewPromiseProcessor(dialog, balance, di.Storage)
+			}
+			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
 			return session.NewDialogHandler(sessionManagerFactory)
 		},
 		discoveryService,
@@ -172,15 +205,15 @@ func newSessionManagerFactory(
 	proposal dto_discovery.ServiceProposal,
 	configProvider session.ConfigProvider,
 	sessionStorage *session.StorageMemory,
+	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) session.Manager {
-		promiseProcessor := noop.NewPromiseProcessor(dialog)
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
 			configProvider,
 			sessionStorage.Add,
-			promiseProcessor,
+			promiseHandler(dialog),
 		)
 	}
 }
@@ -216,6 +249,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 
 	di.NetworkDefinition = network
 	di.MysteriumClient = server.NewClient(network.DiscoveryAPIAddress)
+	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
@@ -248,8 +282,10 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 
 	switch {
 	case options.Country != "":
-		di.LocationResolver = location.NewResolverFake(options.Country)
+		di.LocationResolver = location.NewStaticResolver(options.Country)
+	case options.ExternalDb != "":
+		di.LocationResolver = location.NewExternalDbResolver(filepath.Join(configDirectory, options.ExternalDb))
 	default:
-		di.LocationResolver = location.NewResolver(filepath.Join(configDirectory, options.Database))
+		di.LocationResolver = location.NewBuiltInResolver()
 	}
 }

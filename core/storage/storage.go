@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package storage
 
-// CreateIdentityRequest represents JSON request for creating identity
-type CreateIdentityRequest struct {
-	Identity string `json:"identity"`
+// Storage stores persistent objects for future usage
+type Storage interface {
+	Store(issuer string, data interface{}) error
+	Delete(issuer string, data interface{}) error
+	Close() error
 }

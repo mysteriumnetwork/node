@@ -15,9 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package identity
 
-// CreateIdentityRequest represents JSON request for creating identity
-type CreateIdentityRequest struct {
-	Identity string `json:"identity"`
+import (
+	"context"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+)
+
+// Balance provides amount of money that identity have on the balance in the blockchain
+type Balance func(Identity) (uint64, error)
+
+// NewBalance creates new balance registry
+func NewBalance(etherClient *ethclient.Client) Balance {
+	return func(identity Identity) (uint64, error) {
+		balance, err := etherClient.BalanceAt(context.Background(), common.HexToAddress(identity.Address), nil)
+		return balance.Uint64(), err
+	}
 }

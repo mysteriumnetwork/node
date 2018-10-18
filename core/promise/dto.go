@@ -27,9 +27,9 @@ type SignedPromise struct {
 
 // Promise represents payment promise between two parties
 type Promise struct {
-	SerialNumber int
-	IssuerID     string
-	BenefiterID  string
+	SerialNumber int    `storm:"id"`
+	IssuerID     string `storm:"index"`
+	BenefiterID  string `storm:"index"`
 	Amount       money.Money
 }
 

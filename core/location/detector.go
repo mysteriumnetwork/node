@@ -33,7 +33,7 @@ func NewDetector(ipResolver ip.Resolver, locationResolver Resolver) Detector {
 func NewDetectorFake(ipAddress string, country string) Detector {
 	return &detector{
 		ipResolver:       ip.NewResolverFake(ipAddress),
-		locationResolver: NewResolverFake(country),
+		locationResolver: NewStaticResolver(country),
 	}
 }
 
@@ -41,7 +41,7 @@ func NewDetectorFake(ipAddress string, country string) Detector {
 func NewDetectorFakeFailing(err error) Detector {
 	return &detector{
 		ipResolver:       ip.NewResolverFake(""),
-		locationResolver: NewResolverFakeFailing(err),
+		locationResolver: NewFailingResolver(err),
 	}
 }
 

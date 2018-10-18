@@ -17,6 +17,7 @@
 
 package dto
 
+// ProposalUnregisterRequest represents request JSON for unregister a single proposal
 type ProposalUnregisterRequest struct {
 	// Unique identifier of a provider
 	ProviderID string `json:"provider_id"`

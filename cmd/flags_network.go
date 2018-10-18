@@ -38,6 +38,11 @@ var (
 		Usage: "Enables experimental identity check",
 	}
 
+	promiseCheckFlag = cli.BoolFlag{
+		Name:  "experiment-promise-check",
+		Usage: "Enables experimental promises check",
+	}
+
 	discoveryAddressFlag = cli.StringFlag{
 		Name:  "discovery-address",
 		Usage: "Address (URL form) of discovery service",
@@ -59,6 +64,12 @@ var (
 		Usage: "Address of payments contract",
 		Value: metadata.DefaultNetwork.PaymentsContractAddress.String(),
 	}
+
+	qualityOracleFlag = cli.StringFlag{
+		Name:  "quality-oracle.address",
+		Usage: "Address of the quality oracle service",
+		Value: metadata.DefaultNetwork.QualityOracle,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -67,8 +78,10 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		*flags,
 		testFlag, localnetFlag,
 		identityCheckFlag,
+		promiseCheckFlag,
 		discoveryAddressFlag, brokerAddressFlag,
 		etherRpcFlag, etherContractPaymentsFlag,
+		qualityOracleFlag,
 	)
 }
 
@@ -79,11 +92,14 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ctx.GlobalBool(localnetFlag.Name),
 
 		ctx.GlobalBool(identityCheckFlag.Name),
+		ctx.GlobalBool(promiseCheckFlag.Name),
 
 		ctx.GlobalString(discoveryAddressFlag.Name),
 		ctx.GlobalString(brokerAddressFlag.Name),
 
 		ctx.GlobalString(etherRpcFlag.Name),
 		ctx.GlobalString(etherContractPaymentsFlag.Name),
+
+		ctx.GlobalString(qualityOracleFlag.Name),
 	}
 }

@@ -242,3 +242,13 @@ func registerIdentity(registrationData tequilapi_client.RegistrationDataDTO) err
 	err = userWallet.RegisterIdentity(registrationData)
 	return err
 }
+
+func topUpAccount(id string) error {
+	//deployer account - owner of contracts, and can issue tokens
+	masterAccWallet, err := NewDeployerWallet()
+	if err != nil {
+		return err
+	}
+
+	return masterAccWallet.GiveEther(common.HexToAddress(id), 1, params.Ether)
+}

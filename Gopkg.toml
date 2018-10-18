@@ -77,3 +77,7 @@
   name = "github.com/mysteriumnetwork/go-openvpn"
   version = "0.0.5"
 
+
+[[constraint]]
+  name = "github.com/asdine/storm"
+  version = "2.1.2"

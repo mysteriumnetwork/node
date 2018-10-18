@@ -28,11 +28,12 @@ type errorResponse struct {
 	Error string `json:"error"`
 }
 
-func parseResponseError(response *http.Response) error {
+// ParseResponseError checks the respose for correctness and return error if it is invalid
+func ParseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		var error errorResponse
 
-		err := parseResponseJSON(response, &error)
+		err := ParseResponseJSON(response, &error)
 		if err != nil {
 			return err
 		}
@@ -43,7 +44,8 @@ func parseResponseError(response *http.Response) error {
 	return nil
 }
 
-func parseResponseJSON(response *http.Response, dto interface{}) error {
+// ParseResponseJSON parse response to the provided object
+func ParseResponseJSON(response *http.Response, dto interface{}) error {
 	if response.Body == nil {
 		return nil
 	}

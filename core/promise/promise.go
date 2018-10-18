@@ -26,9 +26,18 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 const endpoint = "promise-create"
+
+var (
+	errLowAmount          = errors.New("promise amount less than the service proposal price")
+	errLowBalance         = errors.New("issuer balance less than the promise amount")
+	errBadSignature       = errors.New("invalid Signature for the provided identity")
+	errUnknownBenefiter   = errors.New("unknown promise benefiter received")
+	errUnsupportedRequest = errors.New("unsupported request")
+)
 
 // NewPromise creates new Promise object filled by the requested arguments
 func NewPromise(issuerID, benefiterID identity.Identity, amount money.Money) *Promise {
@@ -61,6 +70,44 @@ func (sp *SignedPromise) Send(sender communication.Sender) error {
 	response := responsePtr.(*Response)
 	if err != nil || !response.Success {
 		return errors.New("Promise issuing failed: " + response.Message)
+	}
+
+	return nil
+}
+
+// Validate check signed promise to be valid. It checks signature, benefiter address.
+// Also it compares the promised amount to be enough for the proposal.
+// And finally it checks that issuer have enough balance to issue the promice.
+func (sp *SignedPromise) Validate(proposal dto.ServiceProposal, balance identity.Balance) error {
+	receivedPromise, err := json.Marshal(sp.Promise)
+	if err != nil {
+		return err
+	}
+
+	signature := identity.SignatureBase64(string(sp.IssuerSignature))
+	issuer := identity.FromAddress(sp.Promise.IssuerID)
+	verifier := identity.NewVerifierIdentity(issuer)
+	if !verifier.Verify(receivedPromise, signature) {
+		return errBadSignature
+	}
+
+	benefiter := identity.FromAddress(sp.Promise.BenefiterID)
+	if benefiter.Address != proposal.ProviderID {
+		return errUnknownBenefiter
+	}
+
+	price := proposal.PaymentMethod.GetPrice()
+	promisedValue := sp.Promise.Amount
+	if promisedValue.Amount < price.Amount {
+		return errLowAmount
+	}
+
+	issuerBalance, err := balance(issuer)
+	if err != nil {
+		return err
+	}
+	if issuerBalance < promisedValue.Amount {
+		return errLowBalance
 	}
 
 	return nil
