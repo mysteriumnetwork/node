@@ -19,8 +19,11 @@ dep:
 dep-ensure:
 	dep ensure
 
-build:
+build: FORCE
 	./bin/build
 
 build-image:
 	./bin/package_docker
+
+FORCE: ;
+
