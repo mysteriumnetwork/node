@@ -39,7 +39,7 @@ type httpRequestInterface interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-func newHttpClient(baseURL string, logPrefix string, ua string) *httpClient {
+func newHTTPClient(baseURL string, logPrefix string, ua string) *httpClient {
 	return &httpClient{
 		http: &http.Client{
 			Transport: &http.Transport{},
