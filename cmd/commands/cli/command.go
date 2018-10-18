@@ -332,7 +332,7 @@ func (c *cliApp) help() {
 
 // quit stops cli and client commands and exits application
 func (c *cliApp) quit() {
-	stop := utils.SoftKiller(c.Kill)
+	stop := utils.HardKiller(c.Kill)
 	stop()
 }
 
