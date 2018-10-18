@@ -18,8 +18,6 @@
 package server
 
 import (
-	"encoding/json"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -36,9 +34,4 @@ type Client interface {
 	PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 
 	SendSessionStats(sessionId session.ID, sessionStats dto.SessionStats, signer identity.Signer) (err error)
-}
-
-// QualityOracle allows to interact with a quality oracle service (MORQA)
-type QualityOracle interface {
-	ProposalsMetrics() []json.RawMessage
 }

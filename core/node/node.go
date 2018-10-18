@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/metrics"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -46,7 +47,7 @@ func NewNode(
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
 	identityRegistration identity_registry.RegistrationDataProvider,
-	mysteriumClient server.Client, mysteriumMorqaClient server.QualityOracle,
+	mysteriumClient server.Client, mysteriumMorqaClient metrics.QualityOracle,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 ) *Node {

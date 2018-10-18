@@ -24,6 +24,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/metrics"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -101,11 +102,11 @@ func mapProposalsToRes(
 
 type proposalsEndpoint struct {
 	mysteriumClient      server.Client
-	mysteriumMorqaClient server.QualityOracle
+	mysteriumMorqaClient metrics.QualityOracle
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(mc server.Client, morqaClient server.QualityOracle) *proposalsEndpoint {
+func NewProposalsEndpoint(mc server.Client, morqaClient metrics.QualityOracle) *proposalsEndpoint {
 	return &proposalsEndpoint{mc, morqaClient}
 }
 
@@ -147,29 +148,30 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, mc server.Client, morqaClient server.QualityOracle) {
+func AddRoutesForProposals(router *httprouter.Router, mc server.Client, morqaClient metrics.QualityOracle) {
 	pe := NewProposalsEndpoint(mc, morqaClient)
 	router.GET("/proposals", pe.List)
 }
 
 func noMetrics(p proposalRes) proposalRes { return p }
 
-func addMetrics(mc server.QualityOracle) func(p proposalRes) proposalRes {
+func addMetrics(mc metrics.QualityOracle) func(p proposalRes) proposalRes {
 	connects := mc.ProposalsMetrics()
 	proposalsMetrics := make(map[string]json.RawMessage, len(connects))
+
+	var proposal struct {
+		ProposalID proposalRes `json:"proposalId"`
+	}
+	var metrics struct {
+		ConnectCount json.RawMessage `json:"connectCount"`
+	}
+
 	for _, c := range connects {
-		var info struct {
-			ProposalID struct {
-				ProviderID  string
-				ServiceType string
-			}
-		}
-		if err := json.Unmarshal(c, &info); err != nil {
+		if err := json.Unmarshal(c, &proposal); err != nil {
 			log.Warn("Failed to parse proposal info")
 			return noMetrics
 		}
 
-		var metrics struct{ ConnectCount json.RawMessage }
 		if err := json.Unmarshal(c, &metrics); err != nil {
 			log.Warn("Failed to parse metrics")
 			return noMetrics
@@ -180,11 +182,12 @@ func addMetrics(mc server.QualityOracle) func(p proposalRes) proposalRes {
 			log.Warn("Failed to marshal metrics JSON")
 			return noMetrics
 		}
-		proposalsMetrics[info.ProposalID.ProviderID] = out
+		key := proposal.ProposalID.ProviderID + "-" + proposal.ProposalID.ServiceType
+		proposalsMetrics[key] = out
 	}
 
 	return func(p proposalRes) proposalRes {
-		if metrics, ok := proposalsMetrics[p.ProviderID]; ok {
+		if metrics, ok := proposalsMetrics[p.ProviderID+"-"+p.ServiceType]; ok {
 			p.Metrics = metrics
 			return p
 		}

@@ -176,11 +176,11 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 						}
 					},
 					"metrics": {
-						"connectCounts": {
-							"Success": 5,
-							"Fail": 3,
-							"Timeout": 2
-						},
+						"connectCount": {
+							"success": 5,
+							"fail": 3,
+							"timeout": 2
+						}
 					}
 				},
 				{
@@ -208,13 +208,14 @@ type mysteriumMorqaFake struct{}
 func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
 	for _, proposal := range proposals {
 		return []json.RawMessage{json.RawMessage(`{
-			"proposalID":{
-				"ProviderID": "` + proposal.ProviderID + `"
+			"proposalID": {
+				"providerID": "` + proposal.ProviderID + `",
+				"serviceType": "` + proposal.ServiceType + `"
 			},
-			"connectCounts": {
-				"Success": 5,
-				"Fail": 3,
-				"Timeout": 2
+			"connectCount": {
+				"success": 5,
+				"fail": 3,
+				"timeout": 2
 			}
 		}`)}
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package server
+package oracle
 
 import (
 	"encoding/json"
@@ -24,7 +24,8 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/requests"
-	"github.com/mysteriumnetwork/node/server/dto"
+	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/metrics"
 )
 
 const (
@@ -32,15 +33,25 @@ const (
 )
 
 type mysteriumMorqa struct {
-	http                 HTTPTransport
+	http                 server.HTTPTransport
 	qualityOracleAddress string
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
-func NewMorqaClient(qualityOracleAddress string) QualityOracle {
+func NewMorqaClient(qualityOracleAddress string) metrics.QualityOracle {
 	return &mysteriumMorqa{
 		newHTTPTransport(1 * time.Minute),
 		qualityOracleAddress,
+	}
+}
+
+func newHTTPTransport(requestTimeout time.Duration) server.HTTPTransport {
+	return &http.Client{
+		Transport: &http.Transport{
+			//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
+			DisableKeepAlives: true,
+		},
+		Timeout: requestTimeout,
 	}
 }
 
@@ -52,7 +63,7 @@ func (m *mysteriumMorqa) ProposalsMetrics() []json.RawMessage {
 		return nil
 	}
 
-	var metricsResponse dto.ServiceMetricsResponse
+	var metricsResponse metrics.ServiceMetricsResponse
 	err = m.doRequestAndParseResponse(req, &metricsResponse)
 	if err != nil {
 		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics", err)
@@ -70,11 +81,11 @@ func (m *mysteriumMorqa) doRequestAndParseResponse(req *http.Request, responseVa
 	}
 	defer resp.Body.Close()
 
-	err = parseResponseError(resp)
+	err = server.ParseResponseError(resp)
 	if err != nil {
 		log.Error(mysteriumMorqaLogPrefix, err)
 		return err
 	}
 
-	return parseResponseJSON(resp, responseValue)
+	return server.ParseResponseJSON(resp, responseValue)
 }
