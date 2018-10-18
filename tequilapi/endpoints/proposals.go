@@ -155,12 +155,12 @@ func AddRoutesForProposals(router *httprouter.Router, mc server.Client, morqaCli
 func noMetrics(p proposalRes) proposalRes { return p }
 
 func addMetrics(mc metrics.QualityOracle) func(p proposalRes) proposalRes {
-	connects := mc.ProposalsMetrics()
-	proposalsMetrics := make(map[string]json.RawMessage, len(connects))
+	receivedMetrics := mc.ProposalsMetrics()
+	proposalsMetrics := make(map[string]json.RawMessage, len(receivedMetrics))
 	var proposal struct{ ProposalID proposalRes }
 
-	for _, c := range connects {
-		json, err := metrics.Parse(c, &proposal)
+	for _, m := range receivedMetrics {
+		json, err := metrics.Parse(m, &proposal)
 		if err != nil {
 			return noMetrics
 		}
