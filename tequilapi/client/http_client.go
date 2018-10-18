@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	log "github.com/cihub/seelog"
 )
@@ -43,6 +44,7 @@ func newHTTPClient(baseURL string, logPrefix string, ua string) *httpClient {
 	return &httpClient{
 		http: &http.Client{
 			Transport: &http.Transport{},
+			Timeout:   time.Second * 120,
 		},
 		baseURL:   baseURL,
 		logPrefix: logPrefix,
