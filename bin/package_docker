@@ -12,6 +12,10 @@ source bin/helpers/output.sh
 
 printf "Building Alpine image..\n"
 docker build \
+    --build-arg BUILD_BRANCH=${BUILD_BRANCH} \
+    --build-arg BUILD_COMMIT=${BUILD_COMMIT} \
+    --build-arg BUILD_NUMBER=${BUILD_NUMBER} \
+    --build-arg BUILD_VERSION=${BUILD_VERSION} \
     --file bin/docker/alpine/Dockerfile \
     --tag myst:alpine \
     .
