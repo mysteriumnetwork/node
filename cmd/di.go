@@ -59,8 +59,7 @@ import (
 
 // Dependencies is DI container for top level components which is reusedin several places
 type Dependencies struct {
-	NodeOptions node.Options
-	Node        *node.Node
+	Node *node.Node
 
 	NetworkDefinition    metadata.NetworkDefinition
 	MysteriumClient      server.Client
@@ -193,7 +192,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
 
-	di.NodeOptions = nodeOptions
 	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal)
 }
 

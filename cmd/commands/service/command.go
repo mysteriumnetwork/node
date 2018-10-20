@@ -64,6 +64,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			}
 
 			errorChannel := make(chan error, 3)
+
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
