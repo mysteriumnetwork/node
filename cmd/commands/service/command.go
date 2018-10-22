@@ -25,7 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
 )
 
@@ -101,7 +100,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				errorChannel <- di.ServiceManager.Wait()
 			}()
 
-			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
+			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
 
 			err := <-errorChannel
 			switch err {
