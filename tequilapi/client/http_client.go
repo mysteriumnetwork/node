@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	log "github.com/cihub/seelog"
 )
@@ -39,12 +40,13 @@ type httpRequestInterface interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-func newHttpClient(baseUrl string, logPrefix string, ua string) *httpClient {
+func newHTTPClient(baseURL string, logPrefix string, ua string) *httpClient {
 	return &httpClient{
 		http: &http.Client{
 			Transport: &http.Transport{},
+			Timeout:   time.Second * 120,
 		},
-		baseUrl:   baseUrl,
+		baseURL:   baseURL,
 		logPrefix: logPrefix,
 		ua:        ua,
 	}
@@ -52,13 +54,13 @@ func newHttpClient(baseUrl string, logPrefix string, ua string) *httpClient {
 
 type httpClient struct {
 	http      httpRequestInterface
-	baseUrl   string
+	baseURL   string
 	logPrefix string
 	ua        string
 }
 
 func (client *httpClient) Get(path string, values url.Values) (*http.Response, error) {
-	basePath := fmt.Sprintf("%v/%v", client.baseUrl, path)
+	basePath := fmt.Sprintf("%v/%v", client.baseURL, path)
 
 	var fullPath string
 	params := values.Encode()
@@ -89,7 +91,7 @@ func (client httpClient) doPayloadRequest(method, path string, payload interface
 		return nil, err
 	}
 
-	return client.executeRequest(method, client.baseUrl+"/"+path, payloadJSON)
+	return client.executeRequest(method, client.baseURL+"/"+path, payloadJSON)
 }
 
 func (client *httpClient) executeRequest(method, fullPath string, payloadJSON []byte) (*http.Response, error) {
