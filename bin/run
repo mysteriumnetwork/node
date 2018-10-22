@@ -2,4 +2,6 @@
 
 sudo ./build/myst/myst \
    --localnet \
+   --experiment-identity-check=0 \
+   --experiment-promise-check=1 \
    $@
