@@ -1,0 +1,6 @@
+#!/bin/bash
+
+sudo ./bin/run \
+    --data-dir=./build/myst/consumer \
+    --runtime-dir=./build/myst/consumer \
+    $@

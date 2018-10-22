@@ -1,0 +1,7 @@
+#!/bin/bash
+
+sudo ./bin/run \
+    --data-dir=./build/myst/provider \
+    --runtime-dir=./build/myst/provider \
+    service --agreed-terms-and-conditions \
+    $@
