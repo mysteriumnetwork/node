@@ -21,6 +21,10 @@ fi
 
 printf "Building Ubuntu image..\n"
 docker build \
+    --build-arg BUILD_BRANCH=${BUILD_BRANCH} \
+    --build-arg BUILD_COMMIT=${BUILD_COMMIT} \
+    --build-arg BUILD_NUMBER=${BUILD_NUMBER} \
+    --build-arg BUILD_VERSION=${BUILD_VERSION} \
     --file bin/docker/ubuntu/Dockerfile \
     --build-arg PACKAGE_VERSION=${VERSION} \
     --tag myst:ubuntu \
