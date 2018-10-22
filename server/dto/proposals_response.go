@@ -19,6 +19,7 @@ package dto
 
 import "github.com/mysteriumnetwork/node/service_discovery/dto"
 
+// ProposalsResponse represents JSON response for the list of proposals
 type ProposalsResponse struct {
 	Proposals []dto.ServiceProposal `json:"proposals"`
 }

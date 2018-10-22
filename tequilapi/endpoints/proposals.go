@@ -18,10 +18,12 @@
 package endpoints
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/metrics"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -65,6 +67,9 @@ type proposalRes struct {
 
 	// qualitative service definition
 	ServiceDefinition serviceDefinitionRes `json:"serviceDefinition"`
+
+	// Metrics of the service
+	Metrics json.RawMessage `json:"metrics,omitempty"`
 }
 
 func proposalToRes(p dto_discovery.ServiceProposal) proposalRes {
@@ -85,21 +90,23 @@ func proposalToRes(p dto_discovery.ServiceProposal) proposalRes {
 func mapProposalsToRes(
 	proposalArry []dto_discovery.ServiceProposal,
 	f func(dto_discovery.ServiceProposal) proposalRes,
+	metrics func(proposalRes) proposalRes,
 ) []proposalRes {
 	proposalsResArry := make([]proposalRes, len(proposalArry))
 	for i, proposal := range proposalArry {
-		proposalsResArry[i] = f(proposal)
+		proposalsResArry[i] = metrics(f(proposal))
 	}
 	return proposalsResArry
 }
 
 type proposalsEndpoint struct {
-	mysteriumClient server.Client
+	mysteriumClient      server.Client
+	mysteriumMorqaClient metrics.QualityOracle
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
-	return &proposalsEndpoint{mc}
+func NewProposalsEndpoint(mc server.Client, morqaClient metrics.QualityOracle) *proposalsEndpoint {
+	return &proposalsEndpoint{mc, morqaClient}
 }
 
 // swagger:operation GET /proposals Proposal listProposals
@@ -123,17 +130,50 @@ func NewProposalsEndpoint(mc server.Client) *proposalsEndpoint {
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	providerID := req.URL.Query().Get("providerId")
+	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
 	proposals, err := pe.mysteriumClient.FindProposals(providerID)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	proposalsRes := proposalsRes{mapProposalsToRes(proposals, proposalToRes)}
+
+	addMetricsToRes := noMetrics
+	if fetchConnectCounts == "true" {
+		addMetricsToRes = addMetrics(pe.mysteriumMorqaClient)
+	}
+
+	proposalsRes := proposalsRes{mapProposalsToRes(proposals, proposalToRes, addMetricsToRes)}
 	utils.WriteAsJSON(proposalsRes, resp)
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, mc server.Client) {
-	pe := NewProposalsEndpoint(mc)
+func AddRoutesForProposals(router *httprouter.Router, mc server.Client, morqaClient metrics.QualityOracle) {
+	pe := NewProposalsEndpoint(mc, morqaClient)
 	router.GET("/proposals", pe.List)
+}
+
+func noMetrics(p proposalRes) proposalRes { return p }
+
+func addMetrics(mc metrics.QualityOracle) func(p proposalRes) proposalRes {
+	receivedMetrics := mc.ProposalsMetrics()
+	proposalsMetrics := make(map[string]json.RawMessage, len(receivedMetrics))
+	var proposal struct{ ProposalID proposalRes }
+
+	for _, m := range receivedMetrics {
+		json, err := metrics.Parse(m, &proposal)
+		if err != nil {
+			return noMetrics
+		}
+		p := proposal.ProposalID
+		proposalsMetrics[p.ProviderID+"-"+p.ServiceType] = json
+	}
+
+	return func(p proposalRes) proposalRes {
+		if metrics, ok := proposalsMetrics[p.ProviderID+"-"+p.ServiceType]; ok {
+			p.Metrics = metrics
+			return p
+		}
+		p.Metrics = []byte("{}")
+		return p
+	}
 }

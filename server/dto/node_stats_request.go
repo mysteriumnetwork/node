@@ -17,6 +17,7 @@
 
 package dto
 
+// NodeStatsRequest represents JSON request for the node session stats information
 type NodeStatsRequest struct {
 	NodeKey  string         `json:"node_key"`
 	Sessions []SessionStats `json:"sessions"`

@@ -12,6 +12,8 @@
 #> bin/check_goimports ./communication
 #> bin/check_goimports ./communication/...
 
+set -e
+
 source bin/helpers/output.sh
 
 ARGUMENTS=$@
@@ -20,7 +22,7 @@ if [ -z "$ARGUMENTS" ]; then
 fi
 DIRECTORIES=`go list -f '{{.Dir}}' $ARGUMENTS`
 
-unformatted=`goimports -e -l $DIRECTORIES`
+unformatted=`goimports -e -l $DIRECTORIES 2>&1`
 if [ ! -z "$unformatted" ]; then
     print_error "Following files are not formatted using goimports:"
     echo "$unformatted"

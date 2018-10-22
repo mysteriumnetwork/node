@@ -1,9 +1,15 @@
 FROM mysteriumnetwork/mysterium-node-builder AS builder
 
+ARG BUILD_BRANCH=$BUILD_BRANCH
+ARG BUILD_COMMIT=$BUILD_COMMIT
+ARG BUILD_NUMBER=$BUILD_NUMBER
+ARG BUILD_VERSION=$BUILD_VERSION
+ARG PACKAGE_VERSION
+
 # Compile application
 WORKDIR /go/src/github.com/mysteriumnetwork/node
 ADD . .
-ARG PACKAGE_VERSION
+
 RUN GOOS=linux GOARCH=amd64 bin/build \
     && bin/package_debian ${PACKAGE_VERSION} amd64
 

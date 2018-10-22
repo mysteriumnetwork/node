@@ -23,10 +23,13 @@ type OptionsNetwork struct {
 	Localnet bool
 
 	ExperimentIdentityCheck bool
+	ExperimentPromiseCheck  bool
 
 	DiscoveryAPIAddress string
 	BrokerAddress       string
 
 	EtherClientRPC       string
 	EtherPaymentsAddress string
+
+	QualityOracle string
 }
