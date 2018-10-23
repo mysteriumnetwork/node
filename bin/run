@@ -1,5 +1,11 @@
 #!/bin/bash
 
 sudo ./build/myst/myst \
+   --data-dir=./build/myst/node \
+   --runtime-dir=./build/myst/node \
    --localnet \
+   --experiment-identity-check=0 \
+   --experiment-promise-check=1 \
+   --tequilapi.address=127.0.0.1 \
+   --tequilapi.port=4051 \
    $@
