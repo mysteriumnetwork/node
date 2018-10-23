@@ -37,31 +37,18 @@ const cliCommandName = "cli"
 
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
-	var di cmd.Dependencies
-
 	return &cli.Command{
 		Name:  cliCommandName,
 		Usage: "Starts a CLI client with a Tequilapi",
 		Action: func(ctx *cli.Context) error {
-			errorChannel := make(chan error)
-			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
-				return err
-			}
-			go func() { errorChannel <- di.Node.Wait() }()
-
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			cmdCLI := &cliApp{
 				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
 				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 			}
-			go func() { errorChannel <- cmdCLI.Run() }()
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
-			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
 
-			return <-errorChannel
-		},
-		After: func(ctx *cli.Context) error {
-			return di.Shutdown()
+			return cmdCLI.Run()
 		},
 	}
 }
