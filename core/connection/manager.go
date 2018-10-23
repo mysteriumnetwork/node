@@ -146,7 +146,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 	}
 
 	promiseIssuer := manager.newPromiseIssuer(consumerID, dialog)
-	err = promiseIssuer.Start(*proposal)
+	err = promiseIssuer.Start(proposal)
 	if err != nil {
 		return err
 	}
@@ -160,6 +160,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 			SessionConfig: sessionConfig,
 			ConsumerID:    consumerID,
 			ProviderID:    providerID,
+			Proposal:      proposal,
 		},
 		stateChannel,
 	)
@@ -211,16 +212,18 @@ func warnOnClean() {
 }
 
 // TODO this can be extracted as dependency later when node selection criteria will be clear
-func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity) (*dto.ServiceProposal, error) {
+func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity) (proposal dto.ServiceProposal, err error) {
 	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
 	if err != nil {
-		return nil, err
+		return
 	}
 	if len(proposals) == 0 {
 		err = errors.New("provider has no service proposals")
-		return nil, err
+		return
 	}
-	return &proposals[0], nil
+
+	proposal = proposals[0]
+	return
 }
 
 func connectionWaiter(connection Connection, dialog communication.Dialog, promiseIssuer PromiseIssuer) {
