@@ -23,29 +23,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-)
-
-type fakeState string
-
-const (
-	ProcessStarted      fakeState = "ProcessStarted"
-	ConnectingState     fakeState = "ConnectingState"
-	ReconnectingState   fakeState = "ReconnectingState"
-	WaitState           fakeState = "WaitState"
-	AuthenticatingState fakeState = "AuthenticatingState"
-	GetConfigState      fakeState = "GetConfigState"
-	AssignIPState       fakeState = "AssignIPState"
-	ConnectedState      fakeState = "ConnectedState"
-	ExitingState        fakeState = "ExitingState"
-	ProcessExited       fakeState = "ProcessExited"
 )
 
 type testContext struct {
@@ -57,35 +40,6 @@ type testContext struct {
 	fakeDialog            *fakeDialog
 	fakePromiseIssuer     *fakePromiseIssuer
 	sync.RWMutex
-}
-
-type connectionFactoryFake struct {
-	vpnClientCreationError error
-	fakeVpnClient          *vpnClientFake
-}
-
-func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptions, stateChannel StateChannel) (Connection, error) {
-	//each test can set this value to simulate openvpn creation error, this flag is reset BEFORE each test
-	if cff.vpnClientCreationError != nil {
-		return nil, cff.vpnClientCreationError
-	}
-	stateCallback := func(state fakeState) {
-		if state == ConnectedState {
-			stateChannel <- Connected
-		}
-		if state == ExitingState {
-			stateChannel <- Disconnecting
-		}
-		if state == ReconnectingState {
-			stateChannel <- Reconnecting
-		}
-		//this is the last state - close channel (according to best practices of go - channel writer controls channel)
-		if state == ProcessExited {
-			close(stateChannel)
-		}
-	}
-	cff.fakeVpnClient.StateCallback(stateCallback)
-	return cff.fakeVpnClient, nil
 }
 
 var (
@@ -124,17 +78,17 @@ func (tc *testContext) SetupTest() {
 		fakeVpnClient: &vpnClientFake{
 			nil,
 			[]fakeState{
-				ProcessStarted,
-				ConnectingState,
-				WaitState,
-				AuthenticatingState,
-				GetConfigState,
-				AssignIPState,
-				ConnectedState,
+				processStarted,
+				connectingState,
+				waitState,
+				authenticatingState,
+				getConfigState,
+				assignIPState,
+				connectedState,
 			},
 			[]fakeState{
-				ExitingState,
-				ProcessExited,
+				exitingState,
+				processExited,
 			},
 			nil,
 			sync.WaitGroup{},
@@ -209,8 +163,8 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	assert.Equal(tc.T(), statusDisconnecting(), tc.connManager.Status())
-	tc.fakeConnectionFactory.fakeVpnClient.reportState(ExitingState)
-	tc.fakeConnectionFactory.fakeVpnClient.reportState(ProcessExited)
+	tc.fakeConnectionFactory.fakeVpnClient.reportState(exitingState)
+	tc.fakeConnectionFactory.fakeVpnClient.reportState(processExited)
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 	assert.True(tc.T(), tc.fakeStatsKeeper.sessionEndMarked)
@@ -227,7 +181,7 @@ func (tc *testContext) TestDisconnectReturnsErrorWhenNoConnectionExists() {
 
 func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconnectingState() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
-	tc.fakeConnectionFactory.fakeVpnClient.reportState(ReconnectingState)
+	tc.fakeConnectionFactory.fakeVpnClient.reportState(reconnectingState)
 	waitABit()
 	assert.Equal(tc.T(), statusReconnecting(), tc.connManager.Status())
 }
@@ -297,7 +251,7 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfOpenvpnClientExitsDuringCo
 		err = tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
 	}()
 	waitABit()
-	tc.fakeConnectionFactory.fakeVpnClient.reportState(ProcessExited)
+	tc.fakeConnectionFactory.fakeVpnClient.reportState(processExited)
 	connectWaiter.Wait()
 	assert.Equal(tc.T(), ErrConnectionFailed, err)
 }
@@ -320,141 +274,8 @@ func TestConnectionManagerSuite(t *testing.T) {
 	suite.Run(t, new(testContext))
 }
 
-type vpnClientFake struct {
-	onStartReturnError  error
-	onStartReportStates []fakeState
-	onStopReportStates  []fakeState
-	stateCallback       func(state fakeState)
-	fakeProcess         sync.WaitGroup
-
-	sync.RWMutex
-}
-
-func (foc *vpnClientFake) Start() error {
-	foc.RLock()
-	defer foc.RUnlock()
-
-	if foc.onStartReturnError != nil {
-		return foc.onStartReturnError
-	}
-
-	foc.fakeProcess.Add(1)
-	for _, fakeState := range foc.onStartReportStates {
-		foc.reportState(fakeState)
-	}
-	return nil
-}
-
-func (foc *vpnClientFake) Wait() error {
-	foc.fakeProcess.Wait()
-	return nil
-}
-
-func (foc *vpnClientFake) Stop() {
-	for _, fakeState := range foc.onStopReportStates {
-		foc.reportState(fakeState)
-	}
-	foc.fakeProcess.Done()
-}
-
-func (foc *vpnClientFake) reportState(state fakeState) {
-	foc.RLock()
-	defer foc.RUnlock()
-
-	foc.stateCallback(state)
-}
-
-func (foc *vpnClientFake) StateCallback(callback func(state fakeState)) {
-	foc.Lock()
-	defer foc.Unlock()
-
-	foc.stateCallback = callback
-}
-
-type fakeDialog struct {
-	peerID identity.Identity
-	closed bool
-
-	sync.RWMutex
-}
-
-func (fd *fakeDialog) PeerID() identity.Identity {
-	fd.RLock()
-	defer fd.RUnlock()
-
-	return fd.peerID
-}
-
-func (fd *fakeDialog) Close() error {
-	fd.Lock()
-	defer fd.Unlock()
-
-	fd.closed = true
-	return nil
-}
-
-func (fd *fakeDialog) Receive(consumer communication.MessageConsumer) error {
-	return nil
-}
-func (fd *fakeDialog) Respond(consumer communication.RequestConsumer) error {
-	return nil
-}
-
-func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
-	return nil
-}
-
-func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	return &session.CreateResponse{
-			Success: true,
-			Session: session.SessionDto{
-				ID:     "vpn-connection-id",
-				Config: []byte("{}"),
-			},
-		},
-		nil
-}
-
-type fakePromiseIssuer struct {
-	startCalled bool
-	stopCalled  bool
-}
-
-func (issuer *fakePromiseIssuer) Start(proposal dto.ServiceProposal) error {
-	issuer.startCalled = true
-	return nil
-}
-
-func (issuer *fakePromiseIssuer) Stop() error {
-	issuer.stopCalled = true
-	return nil
-}
-
 func waitABit() {
 	//usually time.Sleep call gives a chance for other goroutines to kick in
 	//important when testing async code
 	time.Sleep(10 * time.Millisecond)
-}
-
-type fakeSessionStatsKeeper struct {
-	sessionStartMarked, sessionEndMarked bool
-}
-
-func (fsk *fakeSessionStatsKeeper) Save(stats stats.SessionStats) {
-}
-
-func (fsk *fakeSessionStatsKeeper) Retrieve() stats.SessionStats {
-	return stats.SessionStats{}
-}
-
-func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
-	fsk.sessionStartMarked = true
-}
-
-func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
-	return time.Duration(0)
-}
-
-func (fsk *fakeSessionStatsKeeper) MarkSessionEnd() {
-	fsk.sessionEndMarked = true
 }
