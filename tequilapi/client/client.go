@@ -28,7 +28,7 @@ import (
 // NewClient returns a new instance of Client
 func NewClient(ip string, port int) *Client {
 	return &Client{
-		http: newHttpClient(
+		http: newHTTPClient(
 			fmt.Sprintf("http://%s:%d", ip, port),
 			"[Tequilapi.Client] ",
 			"goclient-v0.1",
