@@ -27,7 +27,7 @@ import (
 var _ ConnectionCreator = (&Registry{}).CreateConnection
 
 var (
-	connectionMock    = &vpnClientFake{}
+	connectionMock    = &connectionFake{}
 	connectionFactory = func(connectionParams ConnectOptions, stateChannel StateChannel) (Connection, error) {
 		return connectionMock, nil
 	}

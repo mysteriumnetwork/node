@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -54,6 +55,7 @@ var (
 		ServiceType:       activeServiceType,
 		ServiceDefinition: &fakeServiceDefinition{},
 	}
+	establishedSessionID = session.ID("session-100")
 )
 
 func (tc *testContext) SetupTest() {
@@ -63,7 +65,7 @@ func (tc *testContext) SetupTest() {
 	tc.fakeDiscoveryClient = server.NewClientFake()
 	tc.fakeDiscoveryClient.RegisterProposal(activeProposal, nil)
 
-	tc.fakeDialog = &fakeDialog{}
+	tc.fakeDialog = &fakeDialog{sessionID: establishedSessionID}
 	dialogCreator := func(consumer, provider identity.Identity, contact dto.Contact) (communication.Dialog, error) {
 		tc.RLock()
 		defer tc.RUnlock()
@@ -76,8 +78,8 @@ func (tc *testContext) SetupTest() {
 	}
 
 	tc.fakeConnectionFactory = &connectionFactoryFake{
-		vpnClientCreationError: nil,
-		fakeVpnClient: &vpnClientFake{
+		mockError: nil,
+		mockConnection: &connectionFake{
 			nil,
 			[]fakeState{
 				processStarted,
@@ -124,7 +126,7 @@ func (tc *testContext) TestWithUnknownProviderConnectionIsNotMade() {
 }
 
 func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
-	tc.fakeConnectionFactory.vpnClientCreationError = errors.New("fatal connection error")
+	tc.fakeConnectionFactory.mockError = errors.New("fatal connection error")
 
 	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
@@ -134,12 +136,12 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
 	err := tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 	assert.True(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
-	tc.fakeConnectionFactory.fakeVpnClient.onStartReportStates = []fakeState{}
+	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{}
 
 	go func() {
 		tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
@@ -152,15 +154,15 @@ func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 }
 
 func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
-	tc.fakeConnectionFactory.fakeVpnClient.onStopReportStates = []fakeState{}
+	tc.fakeConnectionFactory.mockConnection.onStopReportStates = []fakeState{}
 	err := tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	assert.Equal(tc.T(), statusDisconnecting(), tc.connManager.Status())
-	tc.fakeConnectionFactory.fakeVpnClient.reportState(exitingState)
-	tc.fakeConnectionFactory.fakeVpnClient.reportState(processExited)
+	tc.fakeConnectionFactory.mockConnection.reportState(exitingState)
+	tc.fakeConnectionFactory.mockConnection.reportState(processExited)
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 	assert.True(tc.T(), tc.fakeStatsKeeper.sessionEndMarked)
@@ -177,14 +179,14 @@ func (tc *testContext) TestDisconnectReturnsErrorWhenNoConnectionExists() {
 
 func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconnectingState() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
-	tc.fakeConnectionFactory.fakeVpnClient.reportState(reconnectingState)
+	tc.fakeConnectionFactory.mockConnection.reportState(reconnectingState)
 	waitABit()
 	assert.Equal(tc.T(), statusReconnecting(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestDoubleDisconnectResultsInError() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
-	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
@@ -193,31 +195,31 @@ func (tc *testContext) TestDoubleDisconnectResultsInError() {
 
 func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
-	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
 	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
-	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
 }
 
-func (tc *testContext) TestConnectFailsIfOpenvpnFactoryReturnsError() {
-	tc.fakeConnectionFactory.vpnClientCreationError = errors.New("failed to create vpn instance")
+func (tc *testContext) TestConnectFailsIfConnectionFactoryReturnsError() {
+	tc.fakeConnectionFactory.mockError = errors.New("failed to create vpn instance")
 	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
 }
 
 func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutError() {
 	tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
-	assert.Equal(tc.T(), statusConnected("vpn-connection-id"), tc.connManager.Status())
+	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 }
 
 func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
-	tc.fakeConnectionFactory.fakeVpnClient.onStartReportStates = []fakeState{}
+	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{}
 	connectWaiter := &sync.WaitGroup{}
 	connectWaiter.Add(1)
 	var err error
@@ -235,9 +237,9 @@ func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
 	assert.Equal(tc.T(), ErrConnectionCancelled, err)
 }
 
-func (tc *testContext) TestConnectMethodReturnsErrorIfOpenvpnClientExitsDuringConnect() {
-	tc.fakeConnectionFactory.fakeVpnClient.onStartReportStates = []fakeState{}
-	tc.fakeConnectionFactory.fakeVpnClient.onStopReportStates = []fakeState{}
+func (tc *testContext) TestConnectMethodReturnsErrorIfConnectionExitsDuringConnect() {
+	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{}
+	tc.fakeConnectionFactory.mockConnection.onStopReportStates = []fakeState{}
 	connectWaiter := sync.WaitGroup{}
 	connectWaiter.Add(1)
 
@@ -247,7 +249,7 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfOpenvpnClientExitsDuringCo
 		err = tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
 	}()
 	waitABit()
-	tc.fakeConnectionFactory.fakeVpnClient.reportState(processExited)
+	tc.fakeConnectionFactory.mockConnection.reportState(processExited)
 	connectWaiter.Wait()
 	assert.Equal(tc.T(), ErrConnectionFailed, err)
 }
@@ -259,7 +261,7 @@ func (tc *testContext) Test_PromiseIssuer_WhenManagerMadeConnectionIsStarted() {
 }
 
 func (tc *testContext) Test_PromiseIssuer_OnConnectErrorIsStopped() {
-	tc.fakeConnectionFactory.vpnClientCreationError = errors.New("fatal connection error")
+	tc.fakeConnectionFactory.mockError = errors.New("fatal connection error")
 
 	err := tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
 	assert.Error(tc.T(), err)
