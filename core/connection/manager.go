@@ -49,11 +49,11 @@ var (
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient    server.Client
-	newDialog          DialogCreator
-	newPromiseIssuer   PromiseIssuerCreator
-	connectionCreators *map[string]ConnectionCreator
-	statsKeeper        stats.SessionStatsKeeper
+	mysteriumClient   server.Client
+	newDialog         DialogCreator
+	newPromiseIssuer  PromiseIssuerCreator
+	connectionCreator ConnectionCreator
+	statsKeeper       stats.SessionStatsKeeper
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -66,17 +66,17 @@ func NewManager(
 	mysteriumClient server.Client,
 	dialogCreator DialogCreator,
 	promiseIssuerCreator PromiseIssuerCreator,
-	connectionCreators *map[string]ConnectionCreator,
+	connectionCreator ConnectionCreator,
 	statsKeeper stats.SessionStatsKeeper,
 ) *connectionManager {
 	return &connectionManager{
-		statsKeeper:        statsKeeper,
-		mysteriumClient:    mysteriumClient,
-		newDialog:          dialogCreator,
-		newPromiseIssuer:   promiseIssuerCreator,
-		connectionCreators: connectionCreators,
-		status:             statusNotConnected(),
-		cleanConnection:    warnOnClean,
+		statsKeeper:       statsKeeper,
+		mysteriumClient:   mysteriumClient,
+		newDialog:         dialogCreator,
+		newPromiseIssuer:  promiseIssuerCreator,
+		connectionCreator: connectionCreator,
+		status:            statusNotConnected(),
+		cleanConnection:   warnOnClean,
 	}
 }
 
@@ -129,11 +129,6 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		return err
 	}
 
-	connectionCreator, exists := (*manager.connectionCreators)[proposal.ServiceType]
-	if !exists {
-		return errors.New("unsupported service type in proposal")
-	}
-
 	dialog, err := manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
@@ -154,7 +149,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 
 	stateChannel := make(chan State, 10)
 
-	connection, err := connectionCreator.CreateConnection(
+	connection, err := manager.connectionCreator.CreateConnection(
 		ConnectOptions{
 			SessionID:     sessionID,
 			SessionConfig: sessionConfig,

@@ -95,29 +95,14 @@ func (tc *testContext) SetupTest() {
 			sync.RWMutex{},
 		},
 	}
-	connectionCreators := &map[string]ConnectionCreator{
-		activeServiceType: tc.fakeConnectionFactory,
-	}
 
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, connectionCreators, tc.fakeStatsKeeper)
+	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, tc.fakeConnectionFactory, tc.fakeStatsKeeper)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
 	assert.Exactly(tc.T(), statusNotConnected(), tc.connManager.Status())
-}
-
-func (tc *testContext) TestWithUnsupportedServiceTypeConnectionIsNotMade() {
-	providerID := identity.FromAddress("unknown-node")
-	proposal := dto.ServiceProposal{
-		ProviderID:  providerID.Address,
-		ServiceType: "unsupported",
-	}
-	tc.fakeDiscoveryClient.RegisterProposal(proposal, nil)
-
-	assert.Equal(tc.T(), ErrUnsupportedServiceType, tc.connManager.Connect(myID, providerID, ConnectParams{}))
-	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestWithUnknownProviderConnectionIsNotMade() {
