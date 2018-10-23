@@ -27,6 +27,6 @@ type ConnectionFactory struct{}
 // CreateConnection implements the connection.ConnectionCreator interface
 func (establisher *ConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
 	return &Connection{
-		stateChannel: make(connection.StateChannel),
+		stateChannel: stateChannel,
 	}, nil
 }

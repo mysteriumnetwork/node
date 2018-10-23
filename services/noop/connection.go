@@ -31,7 +31,7 @@ type Connection struct {
 // Start implements the connection.Connection interface
 func (c *Connection) Start() error {
 	c.stateChannel <- connection.Connecting
-	time.Sleep(time.Millisecond)
+	time.Sleep(5 * time.Second)
 	c.stateChannel <- connection.Connected
 
 	return nil
@@ -45,6 +45,6 @@ func (c *Connection) Wait() error {
 // Stop implements the connection.Connection interface
 func (c *Connection) Stop() {
 	c.stateChannel <- connection.Disconnecting
-	time.Sleep(time.Millisecond)
+	time.Sleep(2 * time.Second)
 	c.stateChannel <- connection.NotConnected
 }
