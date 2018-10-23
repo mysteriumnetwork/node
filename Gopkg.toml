@@ -31,7 +31,7 @@
 
 [[constraint]]
   name = "github.com/chzyer/readline"
-  version = "1.4.0"
+  revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
 
 [[constraint]]
   name = "github.com/cihub/seelog"
