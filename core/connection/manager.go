@@ -47,13 +47,17 @@ var (
 	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
 )
 
+// ConnectionCreator creates new vpn client by given session,
+// consumer identity, provider identity and uses state channel to report state changes
+type ConnectionCreator func(ConnectOptions, StateChannel) (Connection, error)
+
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient   server.Client
-	newDialog         DialogCreator
-	newPromiseIssuer  PromiseIssuerCreator
-	connectionCreator ConnectionCreator
-	statsKeeper       stats.SessionStatsKeeper
+	mysteriumClient  server.Client
+	newDialog        DialogCreator
+	newPromiseIssuer PromiseIssuerCreator
+	newConnection    ConnectionCreator
+	statsKeeper      stats.SessionStatsKeeper
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -70,13 +74,13 @@ func NewManager(
 	statsKeeper stats.SessionStatsKeeper,
 ) *connectionManager {
 	return &connectionManager{
-		statsKeeper:       statsKeeper,
-		mysteriumClient:   mysteriumClient,
-		newDialog:         dialogCreator,
-		newPromiseIssuer:  promiseIssuerCreator,
-		connectionCreator: connectionCreator,
-		status:            statusNotConnected(),
-		cleanConnection:   warnOnClean,
+		statsKeeper:      statsKeeper,
+		mysteriumClient:  mysteriumClient,
+		newDialog:        dialogCreator,
+		newPromiseIssuer: promiseIssuerCreator,
+		newConnection:    connectionCreator,
+		status:           statusNotConnected(),
+		cleanConnection:  warnOnClean,
 	}
 }
 
@@ -149,7 +153,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 
 	stateChannel := make(chan State, 10)
 
-	connection, err := manager.connectionCreator.CreateConnection(
+	connection, err := manager.newConnection(
 		ConnectOptions{
 			SessionID:     sessionID,
 			SessionConfig: sessionConfig,

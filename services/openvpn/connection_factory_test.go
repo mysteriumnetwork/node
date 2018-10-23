@@ -47,9 +47,9 @@ func (cf *cacheFake) RefreshAndGet() (location.Location, error) {
 	return cf.location, cf.err
 }
 
-var _ connection.ConnectionCreator = &ProcessBasedConnectionFactory{}
+var _ connection.ConnectionCreator = (&ProcessBasedConnectionFactory{}).CreateConnection
 
-func fakeSignerFactory(id identity.Identity) identity.Signer {
+func fakeSignerFactory(_ identity.Identity) identity.Signer {
 	return &identity.SignerFake{}
 }
 

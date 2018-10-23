@@ -21,12 +21,11 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
-// ConnectionFactory creates noop connections
-type ConnectionFactory struct{}
-
-// CreateConnection implements the connection.ConnectionCreator interface
-func (establisher *ConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
-	return &Connection{
-		stateChannel: stateChannel,
-	}, nil
+// NewConnectionCreator creates noop connections
+func NewConnectionCreator() connection.ConnectionCreator {
+	return func(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
+		return &Connection{
+			stateChannel: stateChannel,
+		}, nil
+	}
 }
