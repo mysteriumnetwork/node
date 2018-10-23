@@ -31,7 +31,7 @@ func NewCommand() *cli.Command {
 		Usage:     "Starts Mysterium Tequilapi service",
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
-			errorChannel := make(chan error, 1)
+			errorChannel := make(chan error, 2)
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
