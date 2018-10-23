@@ -12,8 +12,10 @@ env:
 
 before_install:
   - if [ -z "$BUILD_VERSION" ]; then
-      export BUILD_VERSION=$(curl -s https://api.github.com/repos/${TRAVIS_REPO_SLUG}/releases |
-      jq -r '( first(.[]  | select(.prerelease == true)) ) | .tag_name');
+      export BUILD_VERSION=$(
+        curl -s -H "Authorization:token $GIT_RELEASES_API_KEY"
+        https://api.github.com/repos/${TRAVIS_REPO_SLUG}/releases |
+        jq -r '( first(.[]  | select(.prerelease == true)) ) | .tag_name');
     fi
 
 cache:
