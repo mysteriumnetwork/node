@@ -230,22 +230,29 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		return openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage), nil
 	}
 
-	di.ServiceManager = service.NewManager(
-		di.NetworkDefinition,
-		identityHandler,
-		di.SignerFactory,
-		di.IdentityRegistry,
-		newService,
-		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
-			promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
-				if nodeOptions.ExperimentPromiseCheck {
-					return &promise_noop.FakePromiseEngine{}
-				}
-				return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
+	newDialogWaiter := func(providerID identity.Identity) communication.DialogWaiter {
+		return nats_dialog.NewDialogWaiter(
+			nats_discovery.NewAddressGenerate(di.NetworkDefinition.BrokerAddress, providerID),
+			di.SignerFactory(providerID),
+			di.IdentityRegistry,
+		)
+	}
+	newDialogHandler := func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
+		promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
+			if nodeOptions.ExperimentPromiseCheck {
+				return &promise_noop.FakePromiseEngine{}
 			}
-			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
-			return session.NewDialogHandler(sessionManagerFactory)
-		},
+			return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
+		}
+		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
+		return session.NewDialogHandler(sessionManagerFactory)
+	}
+
+	di.ServiceManager = service.NewManager(
+		identityHandler,
+		newService,
+		newDialogWaiter,
+		newDialogHandler,
 		discoveryService,
 	)
 }

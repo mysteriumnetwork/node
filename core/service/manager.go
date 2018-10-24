@@ -22,13 +22,9 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
-	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
-	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/metadata"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -50,29 +46,24 @@ type Service interface {
 	Stop() error
 }
 
+// DialogWaiterFactory initiates communication channel which waits for incoming dialogs
+type DialogWaiterFactory func(providerID identity.Identity) communication.DialogWaiter
+
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
 type DialogHandlerFactory func(dto_discovery.ServiceProposal, session.ConfigProvider) communication.DialogHandler
 
 // NewManager creates new instance of pluggable services manager
 func NewManager(
-	networkDefinition metadata.NetworkDefinition,
 	identityLoader identity_selector.Handler,
-	signerFactory identity.SignerFactory,
-	identityRegistry identity_registry.IdentityRegistry,
 	serviceFactory ServiceFactory,
+	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryService *discovery.Discovery,
 ) *Manager {
 	return &Manager{
-		identityHandler: identityLoader,
-		dialogWaiterFactory: func(providerID identity.Identity) communication.DialogWaiter {
-			return nats_dialog.NewDialogWaiter(
-				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, providerID),
-				signerFactory(providerID),
-				identityRegistry,
-			)
-		},
+		identityHandler:      identityLoader,
 		serviceFactory:       serviceFactory,
+		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
 		discovery:            discoveryService,
 	}
