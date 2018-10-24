@@ -40,6 +40,9 @@ var (
 	ErrorLocation = errors.New("failed to detect service location")
 )
 
+// ServiceFactory initiates instance which is able to serve connections
+type ServiceFactory func(Options) (Service, error)
+
 // Service interface represents pluggable Mysterium service
 type Service interface {
 	Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error)
@@ -56,7 +59,7 @@ func NewManager(
 	identityLoader identity_selector.Handler,
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
-	service Service,
+	serviceFactory ServiceFactory,
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryService *discovery.Discovery,
 ) *Manager {
@@ -69,7 +72,7 @@ func NewManager(
 				identityRegistry,
 			)
 		},
-		service:              service,
+		serviceFactory:       serviceFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
 		discovery:            discoveryService,
 	}
@@ -83,7 +86,9 @@ type Manager struct {
 	dialogWaiter         communication.DialogWaiter
 	dialogHandlerFactory DialogHandlerFactory
 
-	service   Service
+	serviceFactory ServiceFactory
+	service        Service
+
 	discovery *discovery.Discovery
 }
 
@@ -95,6 +100,10 @@ func (manager *Manager) Start(options Options) (err error) {
 		return err
 	}
 
+	manager.service, err = manager.serviceFactory(options)
+	if err != nil {
+		return err
+	}
 	proposal, sessionConfigProvider, err := manager.service.Start(providerID)
 	if err != nil {
 		return err

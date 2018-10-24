@@ -91,8 +91,6 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				OpenvpnProtocol: ctx.String(openvpnProtocolFlag.Name),
 				OpenvpnPort:     ctx.Int(openvpnPortFlag.Name),
 			}
-			di.BootstrapServiceComponents(di.NodeOptions, serviceOptions)
-
 			go func() {
 				if err := di.ServiceManager.Start(serviceOptions); err != nil {
 					errorChannel <- err

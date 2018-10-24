@@ -113,6 +113,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapIdentityComponents(nodeOptions.Directories)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNodeComponents(nodeOptions)
+	di.bootstrapServiceComponents(nodeOptions)
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 
@@ -213,8 +214,8 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register("dummy", service_noop.NewConnectionCreator())
 }
 
-// BootstrapServiceComponents initiates ServiceManager dependency
-func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, serviceOptions service.Options) {
+// bootstrapServiceComponents initiates ServiceManager dependency
+func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	identityHandler := identity_selector.NewHandler(
 		di.IdentityManager,
 		di.MysteriumClient,
@@ -225,23 +226,22 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
 	sessionStorage := session.NewStorageMemory()
-
-	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
-
-	balance := identity.NewBalance(di.EtherClient)
+	newService := func(serviceOptions service.Options) (service.Service, error) {
+		return openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage), nil
+	}
 
 	di.ServiceManager = service.NewManager(
 		di.NetworkDefinition,
 		identityHandler,
 		di.SignerFactory,
 		di.IdentityRegistry,
-		openvpnServiceManager,
+		newService,
 		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
 			promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
 				if nodeOptions.ExperimentPromiseCheck {
 					return &promise_noop.FakePromiseEngine{}
 				}
-				return promise_noop.NewPromiseProcessor(dialog, balance, di.Storage)
+				return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
 			}
 			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
 			return session.NewDialogHandler(sessionManagerFactory)
