@@ -156,6 +156,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.MysteriumClient,
 		di.IPResolver,
 		di.LocationResolver,
+		di.Storage,
 	)
 }
 

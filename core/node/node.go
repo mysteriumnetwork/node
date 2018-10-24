@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
+	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/server"
@@ -49,6 +50,7 @@ func NewNode(
 	mysteriumClient server.Client,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
+	storage storage.Storage,
 ) *Node {
 	dialogFactory := func(consumerID, providerID identity.Identity, contact dto.Contact) (communication.Dialog, error) {
 		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, signerFactory(consumerID))
@@ -74,7 +76,14 @@ func NewNode(
 		signerFactory,
 	)
 
-	connectionManager := connection.NewManager(mysteriumClient, dialogFactory, promiseIssuerFactory, connectionFactory, statsKeeper)
+	connectionManager := connection.NewManager(
+		mysteriumClient,
+		dialogFactory,
+		promiseIssuerFactory,
+		connectionFactory,
+		statsKeeper,
+		storage,
+	)
 
 	router := tequilapi.NewAPIRouter()
 	httpAPIServer := tequilapi.NewServer(options.TequilapiAddress, options.TequilapiPort, router)
@@ -84,6 +93,7 @@ func NewNode(
 	tequilapi_endpoints.AddRoutesForLocation(router, connectionManager, locationDetector, originalLocationCache)
 	tequilapi_endpoints.AddRoutesForProposals(router, mysteriumClient)
 	identity_registry.AddIdentityRegistrationEndpoint(router, identityRegistration, identityRegistry)
+	tequilapi_endpoints.AddRoutesForSession(router, storage)
 
 	return &Node{
 		router:                router,

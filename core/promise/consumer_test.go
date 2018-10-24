@@ -141,3 +141,7 @@ type fakeStorage struct{}
 func (fs *fakeStorage) Store(issuer string, data interface{}) error  { return nil }
 func (fs *fakeStorage) Delete(issuer string, data interface{}) error { return nil }
 func (fs *fakeStorage) Close() error                                 { return nil }
+func (fs *fakeStorage) StoreSession(bucketName string, key string, value interface{}) error {
+	return nil
+}
+func (fs *fakeStorage) GetAll(issuer string, data interface{}) error { return nil }

@@ -56,6 +56,7 @@ type testContext struct {
 	fakeStatsKeeper       *fakeSessionStatsKeeper
 	fakeDialog            *fakeDialog
 	fakePromiseIssuer     *fakePromiseIssuer
+	fakeStorage           *fakeStorage
 	sync.RWMutex
 }
 
@@ -95,6 +96,7 @@ var (
 	activeProposal        = dto.ServiceProposal{
 		ProviderID:       activeProviderID.Address,
 		ProviderContacts: []dto.Contact{activeProviderContact},
+		//ServiceDefinition: dto.ServiceDefinition{}
 	}
 )
 
@@ -142,7 +144,16 @@ func (tc *testContext) SetupTest() {
 
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, tc.fakeConnectionFactory, tc.fakeStatsKeeper)
+	tc.fakeStorage = &fakeStorage{}
+
+	tc.connManager = NewManager(
+		tc.fakeDiscoveryClient,
+		dialogCreator,
+		promiseIssuerFactory,
+		tc.fakeConnectionFactory,
+		tc.fakeStatsKeeper,
+		tc.fakeStorage,
+	)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
@@ -441,3 +452,11 @@ func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
 func (fsk *fakeSessionStatsKeeper) MarkSessionEnd() {
 	fsk.sessionEndMarked = true
 }
+
+type fakeStorage struct{}
+
+func (fs fakeStorage) Store(issuer string, data interface{}) error                         { return nil }
+func (fs fakeStorage) Delete(issuer string, data interface{}) error                        { return nil }
+func (fs fakeStorage) Close() error                                                        { return nil }
+func (fs fakeStorage) StoreSession(bucketName string, key string, value interface{}) error { return nil }
+func (fs fakeStorage) GetAll(issuer string, data interface{}) error                        { return nil }
