@@ -227,7 +227,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 
 	sessionStorage := session.NewStorageMemory()
 	newService := func(serviceOptions service.Options) (service.Service, error) {
-		return openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage), nil
+		transportOptions := serviceOptions.Options.(openvpn_service.Options)
+		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, sessionStorage), nil
 	}
 
 	newDialogWaiter := func(providerID identity.Identity) communication.DialogWaiter {

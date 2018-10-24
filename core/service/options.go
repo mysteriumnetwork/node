@@ -21,7 +21,7 @@ package service
 type Options struct {
 	Identity   string
 	Passphrase string
-
-	OpenvpnProtocol string
-	OpenvpnPort     int
+	Options    TransportOptions
 }
+
+type TransportOptions interface{}
