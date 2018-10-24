@@ -15,25 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package noop
 
 import (
-	"github.com/mysteriumnetwork/node/identity"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/core/connection"
 )
 
-// ConnectParams holds plugin specific params
-type ConnectParams struct {
-	// kill switch option restricting communication only through VPN
-	DisableKillSwitch bool
-}
+// ConnectionFactory creates noop connections
+type ConnectionFactory struct{}
 
-// ConnectOptions represents the params we need to ensure a successful connection
-type ConnectOptions struct {
-	ConsumerID    identity.Identity
-	ProviderID    identity.Identity
-	Proposal      dto_discovery.ServiceProposal
-	SessionID     session.ID
-	SessionConfig []byte
+// CreateConnection implements the connection.ConnectionCreator interface
+func (establisher *ConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
+	return &Connection{
+		stateChannel: stateChannel,
+	}, nil
 }

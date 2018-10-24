@@ -18,22 +18,30 @@
 package connection
 
 import (
-	"github.com/mysteriumnetwork/node/identity"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/session"
+	"time"
+
+	"github.com/mysteriumnetwork/node/client/stats"
 )
 
-// ConnectParams holds plugin specific params
-type ConnectParams struct {
-	// kill switch option restricting communication only through VPN
-	DisableKillSwitch bool
+type fakeSessionStatsKeeper struct {
+	sessionStartMarked, sessionEndMarked bool
 }
 
-// ConnectOptions represents the params we need to ensure a successful connection
-type ConnectOptions struct {
-	ConsumerID    identity.Identity
-	ProviderID    identity.Identity
-	Proposal      dto_discovery.ServiceProposal
-	SessionID     session.ID
-	SessionConfig []byte
+func (fsk *fakeSessionStatsKeeper) Save(stats stats.SessionStats) {
+}
+
+func (fsk *fakeSessionStatsKeeper) Retrieve() stats.SessionStats {
+	return stats.SessionStats{}
+}
+
+func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
+	fsk.sessionStartMarked = true
+}
+
+func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
+	return time.Duration(0)
+}
+
+func (fsk *fakeSessionStatsKeeper) MarkSessionEnd() {
+	fsk.sessionEndMarked = true
 }

@@ -55,28 +55,28 @@ func TestOpenVpnStateCallbackToConnectionState(t *testing.T) {
 		want connection.State
 	}{
 		{
-			name: "Maps openvpn.ConnectedState to connection.Connected",
+			name: "Maps openvpn.connectedState to connection.Connected",
 			args: args{
 				input: openvpn.ConnectedState,
 			},
 			want: connection.Connected,
 		},
 		{
-			name: "Maps openvpn.ExitingState to connection.Disconnecting",
+			name: "Maps openvpn.exitingState to connection.Disconnecting",
 			args: args{
 				input: openvpn.ExitingState,
 			},
 			want: connection.Disconnecting,
 		},
 		{
-			name: "Maps openvpn.ReconnectingState to connection.Reconnecting",
+			name: "Maps openvpn.reconnectingState to connection.Reconnecting",
 			args: args{
 				input: openvpn.ReconnectingState,
 			},
 			want: connection.Reconnecting,
 		},
 		{
-			name: "Maps openvpn.GetConfigState to connection.Unknown",
+			name: "Maps openvpn.getConfigState to connection.Unknown",
 			args: args{
 				input: openvpn.GetConfigState,
 			},
