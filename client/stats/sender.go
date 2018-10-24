@@ -63,6 +63,7 @@ func NewRemoteStatsSender(statsKeeper SessionStatsKeeper, mysteriumClient server
 
 // StateHandler expects connect and disconnect events from the OpenVPN client to start or stop actual sending stats.
 func (rss *RemoteStatsSender) StateHandler(state openvpn.State) {
+	// TODO Decouple stats.Sender from 'openvpn' states
 	switch state {
 	case openvpn.ConnectedState:
 		go rss.intervalSend()

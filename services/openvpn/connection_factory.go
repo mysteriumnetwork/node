@@ -75,6 +75,7 @@ func (op *ProcessBasedConnectionFactory) newBytecountMiddleware() management.Mid
 }
 
 func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, signer identity.Signer, connectionOptions connection.ConnectOptions, stateChannel connection.StateChannel) management.Middleware {
+	// TODO Move stats.Sender from 'openvpn' package
 	statsSender := stats.NewRemoteStatsSender(
 		op.statsKeeper,
 		op.mysteriumAPIClient,
