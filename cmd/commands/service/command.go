@@ -84,16 +84,17 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			}
 			go func() { errorChannel <- di.Node.Wait() }()
 
-			di.BootstrapServiceComponents(di.NodeOptions, service.Options{
-				ctx.String(identityFlag.Name),
-				ctx.String(identityPassphraseFlag.Name),
+			serviceOptions := service.Options{
+				Identity:   ctx.String(identityFlag.Name),
+				Passphrase: ctx.String(identityPassphraseFlag.Name),
 
-				ctx.String(openvpnProtocolFlag.Name),
-				ctx.Int(openvpnPortFlag.Name),
-			})
+				OpenvpnProtocol: ctx.String(openvpnProtocolFlag.Name),
+				OpenvpnPort:     ctx.Int(openvpnPortFlag.Name),
+			}
+			di.BootstrapServiceComponents(di.NodeOptions, serviceOptions)
 
 			go func() {
-				if err := di.ServiceManager.Start(); err != nil {
+				if err := di.ServiceManager.Start(serviceOptions); err != nil {
 					errorChannel <- err
 					return
 				}

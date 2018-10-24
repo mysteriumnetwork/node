@@ -221,7 +221,6 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)
-	identityLoader := identity_selector.NewLoader(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
@@ -233,7 +232,7 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 
 	di.ServiceManager = service.NewManager(
 		di.NetworkDefinition,
-		identityLoader,
+		identityHandler,
 		di.SignerFactory,
 		di.IdentityRegistry,
 		openvpnServiceManager,

@@ -53,7 +53,7 @@ type DialogHandlerFactory func(dto_discovery.ServiceProposal, session.ConfigProv
 // NewManager creates new instance of pluggable services manager
 func NewManager(
 	networkDefinition metadata.NetworkDefinition,
-	identityLoader identity_selector.Loader,
+	identityLoader identity_selector.Handler,
 	signerFactory identity.SignerFactory,
 	identityRegistry identity_registry.IdentityRegistry,
 	service Service,
@@ -61,7 +61,7 @@ func NewManager(
 	discoveryService *discovery.Discovery,
 ) *Manager {
 	return &Manager{
-		identityLoader: identityLoader,
+		identityHandler: identityLoader,
 		dialogWaiterFactory: func(providerID identity.Identity) communication.DialogWaiter {
 			return nats_dialog.NewDialogWaiter(
 				nats_discovery.NewAddressGenerate(networkDefinition.BrokerAddress, providerID),
@@ -77,7 +77,7 @@ func NewManager(
 
 // Manager entrypoint which knows how to start pluggable Mysterium services
 type Manager struct {
-	identityLoader identity_selector.Loader
+	identityHandler identity_selector.Handler
 
 	dialogWaiterFactory  func(identity identity.Identity) communication.DialogWaiter
 	dialogWaiter         communication.DialogWaiter
@@ -88,8 +88,9 @@ type Manager struct {
 }
 
 // Start starts service - does not block
-func (manager *Manager) Start() (err error) {
-	providerID, err := manager.identityLoader()
+func (manager *Manager) Start(options Options) (err error) {
+	loadIdentity := identity_selector.NewLoader(manager.identityHandler, options.Identity, options.Passphrase)
+	providerID, err := loadIdentity()
 	if err != nil {
 		return err
 	}
