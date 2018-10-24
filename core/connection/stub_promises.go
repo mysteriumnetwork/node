@@ -17,23 +17,19 @@
 
 package connection
 
-import (
-	"github.com/mysteriumnetwork/node/identity"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/session"
-)
+import "github.com/mysteriumnetwork/node/service_discovery/dto"
 
-// ConnectParams holds plugin specific params
-type ConnectParams struct {
-	// kill switch option restricting communication only through VPN
-	DisableKillSwitch bool
+type fakePromiseIssuer struct {
+	startCalled bool
+	stopCalled  bool
 }
 
-// ConnectOptions represents the params we need to ensure a successful connection
-type ConnectOptions struct {
-	ConsumerID    identity.Identity
-	ProviderID    identity.Identity
-	Proposal      dto_discovery.ServiceProposal
-	SessionID     session.ID
-	SessionConfig []byte
+func (issuer *fakePromiseIssuer) Start(proposal dto.ServiceProposal) error {
+	issuer.startCalled = true
+	return nil
+}
+
+func (issuer *fakePromiseIssuer) Stop() error {
+	issuer.stopCalled = true
+	return nil
 }
