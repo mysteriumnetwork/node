@@ -34,6 +34,8 @@ const logPrefix = "[service-manager] "
 var (
 	// ErrorLocation error indicates that action (i.e. disconnect)
 	ErrorLocation = errors.New("failed to detect service location")
+	// ErrUnsupportedServiceType indicates that manager tried to create unsupported service type
+	ErrUnsupportedServiceType = errors.New("unsupported service type")
 )
 
 // ServiceFactory initiates instance which is able to serve connections
