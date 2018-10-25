@@ -37,31 +37,18 @@ const cliCommandName = "cli"
 
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
-	var di cmd.Dependencies
-
 	return &cli.Command{
 		Name:  cliCommandName,
 		Usage: "Starts a CLI client with a Tequilapi",
 		Action: func(ctx *cli.Context) error {
-			errorChannel := make(chan error)
-			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
-				return err
-			}
-			go func() { errorChannel <- di.Node.Wait() }()
-
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			cmdCLI := &cliApp{
 				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
 				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 			}
-			go func() { errorChannel <- cmdCLI.Run() }()
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
-			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
 
-			return <-errorChannel
-		},
-		After: func(ctx *cli.Context) error {
-			return di.Shutdown()
+			return cmdCLI.Run()
 		},
 	}
 }
@@ -134,7 +121,6 @@ func (c *cliApp) handleActions(line string) {
 		{"quit", c.quit},
 		{"help", c.help},
 		{"status", c.status},
-		{"proposals", c.proposals},
 		{"healthcheck", c.healthcheck},
 		{"ip", c.ip},
 		{"disconnect", c.disconnect},
@@ -151,6 +137,7 @@ func (c *cliApp) handleActions(line string) {
 		{command: "version", handler: c.version},
 		{command: "license", handler: c.license},
 		{command: "registration", handler: c.registration},
+		{command: "proposals", handler: c.proposals},
 	}
 
 	for _, cmd := range staticCmds {
@@ -291,18 +278,30 @@ func (c *cliApp) healthcheck() {
 	info(buildString)
 }
 
-func (c *cliApp) proposals() {
+func (c *cliApp) proposals(filter string) {
 	proposals := c.fetchProposals()
 	c.fetchedProposals = proposals
-	info(fmt.Sprintf("Found %v proposals", len(proposals)))
+
+	filterMsg := ""
+	if filter != "" {
+		filterMsg = fmt.Sprintf("(filter: '%s')", filter)
+	}
+	info(fmt.Sprintf("Found %v proposals %s", len(proposals), filterMsg))
 
 	for _, proposal := range proposals {
 		country := proposal.ServiceDefinition.LocationOriginate.Country
 		if country == "" {
 			country = "Unknown"
 		}
+
 		msg := fmt.Sprintf("- provider id: %v, proposal id: %v, country: %v", proposal.ProviderID, proposal.ID, country)
-		info(msg)
+
+		if filter == "" ||
+			strings.Contains(proposal.ProviderID, filter) ||
+			strings.Contains(country, filter) {
+
+			info(msg)
+		}
 	}
 }
 

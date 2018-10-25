@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package noop
 
-// CreateIdentityRequest represents JSON request for creating identity
-type CreateIdentityRequest struct {
-	Identity string `json:"identity"`
+import (
+	"github.com/mysteriumnetwork/node/core/connection"
+)
+
+// ConnectionFactory creates noop connections
+type ConnectionFactory struct{}
+
+// CreateConnection implements the connection.ConnectionCreator interface
+func (establisher *ConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
+	return &Connection{
+		stateChannel: stateChannel,
+	}, nil
 }

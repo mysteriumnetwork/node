@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package connection
 
-// CreateIdentityRequest represents JSON request for creating identity
-type CreateIdentityRequest struct {
-	Identity string `json:"identity"`
+import "github.com/mysteriumnetwork/node/service_discovery/dto"
+
+type fakePromiseIssuer struct {
+	startCalled bool
+	stopCalled  bool
+}
+
+func (issuer *fakePromiseIssuer) Start(proposal dto.ServiceProposal) error {
+	issuer.startCalled = true
+	return nil
+}
+
+func (issuer *fakePromiseIssuer) Stop() error {
+	issuer.stopCalled = true
+	return nil
 }

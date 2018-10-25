@@ -4,6 +4,11 @@ FROM golang:1.11-alpine AS builder
 RUN apk add --update --no-cache bash gcc musl-dev make \
     && rm -rf /var/cache/apk/*
 
+ARG BUILD_BRANCH=$BUILD_BRANCH
+ARG BUILD_COMMIT=$BUILD_COMMIT
+ARG BUILD_NUMBER=$BUILD_NUMBER
+ARG BUILD_VERSION=$BUILD_VERSION
+
 # Compile application
 WORKDIR /go/src/github.com/mysteriumnetwork/node
 ADD . .

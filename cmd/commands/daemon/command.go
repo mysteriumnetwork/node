@@ -19,7 +19,6 @@ package daemon
 
 import (
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
 )
 
@@ -32,11 +31,15 @@ func NewCommand() *cli.Command {
 		Usage:     "Starts Mysterium Tequilapi service",
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
+			errorChannel := make(chan error, 2)
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
-			cmd.RegisterSignalCallback(utils.SoftKiller(di.Shutdown))
-			return di.Node.Wait()
+			go func() { errorChannel <- di.Node.Wait() }()
+
+			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
+
+			return <-errorChannel
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()

@@ -177,7 +177,7 @@ func (mApi *mysteriumAPI) doRequest(req *http.Request) error {
 	}
 	defer resp.Body.Close()
 
-	return parseResponseError(resp)
+	return ParseResponseError(resp)
 }
 
 func (mApi *mysteriumAPI) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
@@ -188,11 +188,11 @@ func (mApi *mysteriumAPI) doRequestAndParseResponse(req *http.Request, responseV
 	}
 	defer resp.Body.Close()
 
-	err = parseResponseError(resp)
+	err = ParseResponseError(resp)
 	if err != nil {
 		log.Error(mysteriumAPILogPrefix, err)
 		return err
 	}
 
-	return parseResponseJSON(resp, responseValue)
+	return ParseResponseJSON(resp, responseValue)
 }

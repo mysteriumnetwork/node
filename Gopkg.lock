@@ -39,12 +39,11 @@
   version = "v2.0.6"
 
 [[projects]]
-  digest = "1:b95738a1e6ace058b5b8544303c0871fc01d224ef0d672f778f696265d0f2917"
+  digest = "1:454adc7f974228ff789428b6dc098638c57a64aa0718f0bd61e53d3cd39d7a75"
   name = "github.com/chzyer/readline"
   packages = ["."]
   pruneopts = "UT"
-  revision = "62c6fe6193755f722b8b8788aa7357be55a50ff1"
-  version = "v1.4"
+  revision = "2972be24d48e78746da79ba8e24e8b488c9880de"
 
 [[projects]]
   digest = "1:50e893a85575fa48dc4982a279e50e2fd8b74e4f7c587860c1e25c77083b8125"
@@ -418,7 +417,6 @@
     "github.com/asdine/storm",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
-    "github.com/ethereum/go-ethereum",
     "github.com/ethereum/go-ethereum/accounts",
     "github.com/ethereum/go-ethereum/accounts/abi/bind",
     "github.com/ethereum/go-ethereum/accounts/keystore",

@@ -15,21 +15,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package connection
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Testnet  bool
-	Localnet bool
+import (
+	"time"
 
-	ExperimentIdentityCheck bool
-	ExperimentPromiseCheck  bool
+	"github.com/mysteriumnetwork/node/client/stats"
+)
 
-	DiscoveryAPIAddress string
-	BrokerAddress       string
+type fakeSessionStatsKeeper struct {
+	sessionStartMarked, sessionEndMarked bool
+}
 
-	EtherClientRPC       string
-	EtherPaymentsAddress string
+func (fsk *fakeSessionStatsKeeper) Save(stats stats.SessionStats) {
+}
 
-	QualityOracle string
+func (fsk *fakeSessionStatsKeeper) Retrieve() stats.SessionStats {
+	return stats.SessionStats{}
+}
+
+func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
+	fsk.sessionStartMarked = true
+}
+
+func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
+	return time.Duration(0)
+}
+
+func (fsk *fakeSessionStatsKeeper) MarkSessionEnd() {
+	fsk.sessionEndMarked = true
 }

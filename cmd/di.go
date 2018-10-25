@@ -19,18 +19,22 @@ package cmd
 
 import (
 	"path/filepath"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
+	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/promise/methods/noop"
+	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -41,10 +45,16 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/server/metrics"
+	"github.com/mysteriumnetwork/node/server/metrics/oracle"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/tequilapi"
+	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -52,10 +62,12 @@ type Dependencies struct {
 	NodeOptions node.Options
 	Node        *node.Node
 
-	NetworkDefinition metadata.NetworkDefinition
-	MysteriumClient   server.Client
-	EtherClient       *ethclient.Client
+	NetworkDefinition    metadata.NetworkDefinition
+	MysteriumClient      server.Client
+	MysteriumMorqaClient metrics.QualityOracle
+	EtherClient          *ethclient.Client
 
+	Storage              storage.Storage
 	Keystore             *keystore.KeyStore
 	IdentityManager      identity.Manager
 	SignerFactory        identity.SignerFactory
@@ -64,9 +76,14 @@ type Dependencies struct {
 
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
+	LocationDetector location.Detector
+	LocationOriginal location.Cache
 
-	ServiceManager *service.Manager
-	Storage        storage.Storage
+	StatsKeeper stats.SessionStatsKeeper
+
+	ConnectionManager  connection.Manager
+	ConnectionRegistry *connection.Registry
+	ServiceManager     *service.Manager
 }
 
 // Bootstrap initiates all container dependencies
@@ -96,6 +113,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapIdentityComponents(nodeOptions.Directories)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNodeComponents(nodeOptions)
+	di.bootstrapServiceOpenvpn(nodeOptions)
+	di.bootstrapServiceNoop(nodeOptions)
 
 	if err := di.Node.Start(); err != nil {
 		return err
@@ -146,10 +165,45 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
+	dialogFactory := func(consumerID, providerID identity.Identity, contact dto_discovery.Contact) (communication.Dialog, error) {
+		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID))
+		return dialogEstablisher.EstablishDialog(providerID, contact)
+	}
+
+	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
+		if nodeOptions.ExperimentPromiseCheck {
+			return &promise_noop.FakePromiseEngine{}
+		}
+		return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
+	}
+
+	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
+
+	di.ConnectionRegistry = connection.NewRegistry()
+	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, di.ConnectionRegistry, di.StatsKeeper)
+
+	router := tequilapi.NewAPIRouter()
+	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumClient, di.SignerFactory)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatsKeeper)
+	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
+	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
+	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
+
+	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
+
 	di.NodeOptions = nodeOptions
-	di.Node = node.NewNode(
-		nodeOptions,
-		di.IdentityManager,
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal)
+}
+
+func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
+	di.ConnectionRegistry.Register("openvpn", openvpn.NewProcessBasedConnectionFactory(
+		di.MysteriumClient,
+		nodeOptions.Openvpn.BinaryPath,
+		nodeOptions.Directories.Config,
+		nodeOptions.Directories.Runtime,
+		di.StatsKeeper,
+		di.LocationOriginal,
 		di.SignerFactory,
 		di.IdentityRegistry,
 		di.IdentityRegistration,
@@ -158,6 +212,11 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.LocationResolver,
 		di.Storage,
 	)
+	))
+}
+
+func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
+	di.ConnectionRegistry.Register("dummy", &service_noop.ConnectionFactory{})
 }
 
 // BootstrapServiceComponents initiates ServiceManager dependency
@@ -185,8 +244,11 @@ func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, ser
 		di.IdentityRegistry,
 		openvpnServiceManager,
 		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
-			promiseHandler := func(dialog communication.Dialog) *noop.PromiseProcessor {
-				return noop.NewPromiseProcessor(dialog, balance, di.Storage)
+			promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
+				if nodeOptions.ExperimentPromiseCheck {
+					return &promise_noop.FakePromiseEngine{}
+				}
+				return promise_noop.NewPromiseProcessor(dialog, balance, di.Storage)
 			}
 			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
 			return session.NewDialogHandler(sessionManagerFactory)
@@ -199,7 +261,7 @@ func newSessionManagerFactory(
 	proposal dto_discovery.ServiceProposal,
 	configProvider session.ConfigProvider,
 	sessionStorage *session.StorageMemory,
-	promiseHandler func(dialog communication.Dialog) *noop.PromiseProcessor,
+	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) session.Manager {
 		return session.NewManager(
@@ -243,6 +305,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 
 	di.NetworkDefinition = network
 	di.MysteriumClient = server.NewClient(network.DiscoveryAPIAddress)
+	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
@@ -281,4 +344,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	default:
 		di.LocationResolver = location.NewBuiltInResolver()
 	}
+
+	di.LocationDetector = location.NewDetector(di.IPResolver, di.LocationResolver)
+	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
 }

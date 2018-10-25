@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,9 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package noop
 
-// CreateIdentityRequest represents JSON request for creating identity
-type CreateIdentityRequest struct {
-	Identity string `json:"identity"`
+import discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+
+// FakePromiseEngine do nothing. It required for the temporary --experiment-promise-check flag.
+// TODO it should be removed once --experiment-promise-check will be deleted.
+type FakePromiseEngine struct{}
+
+// Start fakes promise engine start
+func (*FakePromiseEngine) Start(_ discovery_dto.ServiceProposal) error {
+	return nil
+}
+
+// Stop fakes promise engine stop
+func (*FakePromiseEngine) Stop() error {
+	return nil
 }

@@ -20,7 +20,7 @@ services:
       MYSQL_PASSWORD: myst_api
 
   discovery:
-    image: mysteriumnetwork/mysterium-api:0.2.2
+    image: mysteriumnetwork/mysterium-api:0.3.0
     expose:
     - 80
     environment:
@@ -32,6 +32,7 @@ services:
       ETHER_RPC_URL: "http://geth:8545"
       IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
       ETHER_MINING_MODE: "poa"
+      DISCOVERY_VERIFY_IDENTITY: "false"
     depends_on:
     - db
     - geth

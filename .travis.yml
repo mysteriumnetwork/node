@@ -8,10 +8,15 @@ env:
     - BUILD_COMMIT=$TRAVIS_COMMIT
     - BUILD_BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
-    - BUILD_VERSION_MAJOR=0
+    - BUILD_VERSION=$TRAVIS_TAG
 
 before_install:
-  - if [ -z "${TRAVIS_TAG/dev/}" ]; then export BUILD_VERSION="$BUILD_VERSION_MAJOR-dev.$TRAVIS_BUILD_NUMBER"; fi
+  - if [ -z "$BUILD_VERSION" ]; then
+      export BUILD_VERSION=$(
+        curl -s -H "Authorization:token $GIT_RELEASES_API_KEY"
+        https://api.github.com/repos/${TRAVIS_REPO_SLUG}/releases |
+        jq -r '( first(.[]  | select(.prerelease == true)) ) | .tag_name');
+    fi
 
 cache:
   directories:
@@ -94,9 +99,9 @@ jobs:
     # Development bleeding-edge release (on master commits only)
     - stage: release-dev
       script:
-        - git tag -f dev
+        - git tag -f $BUILD_VERSION
         - git remote add gh https://${TRAVIS_REPO_SLUG%/*}:${GIT_RELEASES_API_KEY}@github.com/${TRAVIS_REPO_SLUG}.git
-        - git push -f gh dev
+        - git push -f gh $BUILD_VERSION
 
     - script:
       - bin/release_goreport
@@ -119,7 +124,7 @@ jobs:
       - docker load -i build/docker/myst_alpine.tgz
       - docker load -i build/docker/myst_ubuntu.tgz
       - bin/release_docker $TRAVIS_TAG
-      - if [ "$TRAVIS_TAG" != "dev" ]; then bin/release_docker latest; fi
+      - if [[ $TRAVIS_TAG != *-rc ]]; then bin/release_docker latest; fi
       name: "Pushing release to hub.docker.com"
 
 notifications:

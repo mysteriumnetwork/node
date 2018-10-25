@@ -11,5 +11,5 @@ alias myst="myst-home"
 alias myst-broker="myst-home && docker-compose up broker"
 alias myst-nats="myst-broker"
 
-alias myst-client="myst-home && bin/build && bin/run"
-alias myst-server="myst-home && bin/build && bin/run service"
+alias myst-consumer="myst-home && bin/build && bin/run_consumer"
+alias myst-provider="myst-home && bin/build && bin/run_provider"

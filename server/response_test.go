@@ -37,7 +37,7 @@ func TestHttpErrorIsReportedAsErrorReturnValue(t *testing.T) {
 		StatusCode: 400,
 		Request:    req,
 	}
-	err = parseResponseError(response)
+	err = ParseResponseError(response)
 	assert.Error(t, err)
 }
 
@@ -59,7 +59,7 @@ func TestHttpResponseBodyIsParsedCorrectly(t *testing.T) {
 			}`)),
 	}
 	var testDto testResponse
-	err = parseResponseJSON(response, &testDto)
+	err = ParseResponseJSON(response, &testDto)
 	assert.NoError(t, err)
 	assert.Equal(t, testResponse{"abc"}, testDto)
 

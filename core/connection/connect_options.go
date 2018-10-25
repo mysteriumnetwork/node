@@ -19,6 +19,7 @@ package connection
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -32,6 +33,7 @@ type ConnectParams struct {
 type ConnectOptions struct {
 	ConsumerID    identity.Identity
 	ProviderID    identity.Identity
+	Proposal      dto_discovery.ServiceProposal
 	SessionID     session.ID
 	SessionConfig []byte
 }

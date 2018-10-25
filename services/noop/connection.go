@@ -15,21 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package noop
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Testnet  bool
-	Localnet bool
+import (
+	"time"
 
-	ExperimentIdentityCheck bool
-	ExperimentPromiseCheck  bool
+	"github.com/mysteriumnetwork/node/core/connection"
+)
 
-	DiscoveryAPIAddress string
-	BrokerAddress       string
+// Connection which does no real tunneling
+type Connection struct {
+	stateChannel connection.StateChannel
+}
 
-	EtherClientRPC       string
-	EtherPaymentsAddress string
+// Start implements the connection.Connection interface
+func (c *Connection) Start() error {
+	c.stateChannel <- connection.Connecting
+	time.Sleep(5 * time.Second)
+	c.stateChannel <- connection.Connected
 
-	QualityOracle string
+	return nil
+}
+
+// Wait implements the connection.Connection interface
+func (c *Connection) Wait() error {
+	return nil
+}
+
+// Stop implements the connection.Connection interface
+func (c *Connection) Stop() {
+	c.stateChannel <- connection.Disconnecting
+	time.Sleep(2 * time.Second)
+	c.stateChannel <- connection.NotConnected
 }

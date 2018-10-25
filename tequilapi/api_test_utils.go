@@ -32,7 +32,7 @@ type TestClient interface {
 
 type testClient struct {
 	t       *testing.T
-	baseUrl string
+	baseURL string
 }
 
 // NewTestClient returns client for making test requests
@@ -44,7 +44,7 @@ func NewTestClient(t *testing.T, address string) TestClient {
 }
 
 func (tc *testClient) Get(path string) *http.Response {
-	resp, err := http.Get(tc.baseUrl + path)
+	resp, err := http.Get(tc.baseURL + path)
 	if err != nil {
 		assert.FailNow(tc.t, "Uh oh catched error: ", err.Error())
 	}
