@@ -180,7 +180,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
 
 	di.ConnectionRegistry = connection.NewRegistry()
-	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, di.ConnectionRegistry, di.StatsKeeper)
+	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, di.ConnectionRegistry.CreateConnection, di.StatsKeeper)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
@@ -197,7 +197,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
-	di.ConnectionRegistry.Register("openvpn", openvpn.NewProcessBasedConnectionFactory(
+	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
 		di.MysteriumClient,
 		nodeOptions.Openvpn.BinaryPath,
 		nodeOptions.Directories.Config,
@@ -205,11 +205,12 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		di.StatsKeeper,
 		di.LocationOriginal,
 		di.SignerFactory,
-	))
+	)
+	di.ConnectionRegistry.Register("openvpn", connectionFactory.CreateConnection)
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
-	di.ConnectionRegistry.Register("dummy", &service_noop.ConnectionFactory{})
+	di.ConnectionRegistry.Register("dummy", service_noop.NewConnectionCreator())
 }
 
 // BootstrapServiceComponents initiates ServiceManager dependency

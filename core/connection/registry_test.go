@@ -24,12 +24,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var _ ConnectionCreator = &Registry{}
+var _ ConnectionCreator = (&Registry{}).CreateConnection
 
 var (
 	connectionMock    = &vpnClientFake{}
-	connectionFactory = &connectionFactoryFake{
-		fakeVpnClient: connectionMock,
+	connectionFactory = func(connectionParams ConnectOptions, stateChannel StateChannel) (Connection, error) {
+		return connectionMock, nil
 	}
 )
 

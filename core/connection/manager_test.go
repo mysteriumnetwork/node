@@ -98,7 +98,7 @@ func (tc *testContext) SetupTest() {
 
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, tc.fakeConnectionFactory, tc.fakeStatsKeeper)
+	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, tc.fakeConnectionFactory.CreateConnection, tc.fakeStatsKeeper)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
