@@ -24,4 +24,5 @@ type Options struct {
 	Options    TransportOptions
 }
 
+// TransportOptions represents any type of options for plugable service
 type TransportOptions interface{}
