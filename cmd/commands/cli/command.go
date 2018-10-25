@@ -121,7 +121,6 @@ func (c *cliApp) handleActions(line string) {
 		{"quit", c.quit},
 		{"help", c.help},
 		{"status", c.status},
-		{"proposals", c.proposals},
 		{"healthcheck", c.healthcheck},
 		{"ip", c.ip},
 		{"disconnect", c.disconnect},
@@ -138,6 +137,7 @@ func (c *cliApp) handleActions(line string) {
 		{command: "version", handler: c.version},
 		{command: "license", handler: c.license},
 		{command: "registration", handler: c.registration},
+		{command: "proposals", handler: c.proposals},
 	}
 
 	for _, cmd := range staticCmds {
@@ -278,18 +278,30 @@ func (c *cliApp) healthcheck() {
 	info(buildString)
 }
 
-func (c *cliApp) proposals() {
+func (c *cliApp) proposals(filter string) {
 	proposals := c.fetchProposals()
 	c.fetchedProposals = proposals
-	info(fmt.Sprintf("Found %v proposals", len(proposals)))
+
+	filterMsg := ""
+	if filter != "" {
+		filterMsg = fmt.Sprintf("(filter: '%s')", filter)
+	}
+	info(fmt.Sprintf("Found %v proposals %s", len(proposals), filterMsg))
 
 	for _, proposal := range proposals {
 		country := proposal.ServiceDefinition.LocationOriginate.Country
 		if country == "" {
 			country = "Unknown"
 		}
+
 		msg := fmt.Sprintf("- provider id: %v, proposal id: %v, country: %v", proposal.ProviderID, proposal.ID, country)
-		info(msg)
+
+		if filter == "" ||
+			strings.Contains(proposal.ProviderID, filter) ||
+			strings.Contains(country, filter) {
+
+			info(msg)
+		}
 	}
 }
 
