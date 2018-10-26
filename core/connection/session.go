@@ -18,10 +18,11 @@
 package connection
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
-	"time"
 )
 
 type Session struct {

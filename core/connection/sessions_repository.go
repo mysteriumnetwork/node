@@ -18,12 +18,14 @@
 package connection
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/session"
-	"time"
 )
 
+// SessionsRepository describes functions for storing session objects
 type SessionsRepository interface {
 	Save(Session) error
 	Update(session.ID, time.Duration, stats.SessionStats) error
@@ -34,6 +36,7 @@ type sessionsRepository struct {
 	storage storage.Storage
 }
 
+// NewSessionRepository creates session repository with given dependencies
 func NewSessionRepository(storage storage.Storage) SessionsRepository {
 	return &sessionsRepository{
 		storage: storage,

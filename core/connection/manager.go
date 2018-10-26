@@ -20,6 +20,9 @@ package connection
 import (
 	"context"
 	"errors"
+	"sync"
+	"time"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
@@ -28,8 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
-	"sync"
-	"time"
 )
 
 const managerLogPrefix = "[connection-manager] "

@@ -18,10 +18,11 @@
 package endpoints
 
 import (
+	"net/http"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
-	"net/http"
 )
 
 type SessionsEndpoint struct {
