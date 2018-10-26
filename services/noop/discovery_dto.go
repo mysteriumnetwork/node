@@ -22,7 +22,10 @@ import (
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
-// ServiceDefinition structure represents various service parameters
+// ServiceType indicates "noop" service type
+const ServiceType = "noop"
+
+// ServiceDefinition structure represents "noop" service parameters
 type ServiceDefinition struct {
 	// Approximate information on location where the service is provided from
 	Location dto_discovery.Location `json:"location"`

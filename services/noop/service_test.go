@@ -48,7 +48,7 @@ func Test_Manager_Start(t *testing.T) {
 				Location: dto_discovery.Location{Country: ""},
 			},
 
-			PaymentMethodType: PaymentMethodNoop,
+			PaymentMethodType: "NOOP",
 			PaymentMethod: PaymentNoop{
 				Price: money.Money{0, money.Currency("MYST")},
 			},

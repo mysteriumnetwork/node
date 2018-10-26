@@ -45,7 +45,7 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 	log.Info(logPrefix, "Noop service started successfully")
 
 	proposal := dto_discovery.ServiceProposal{
-		ServiceType: "noop",
+		ServiceType: ServiceType,
 		ServiceDefinition: ServiceDefinition{
 			Location: dto_discovery.Location{Country: ""},
 		},
