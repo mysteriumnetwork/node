@@ -218,7 +218,10 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
-	di.ConnectionRegistry.Register("dummy", service_noop.NewConnectionCreator())
+	di.ServiceRegistry.Register("noop", func(serviceOptions service.Options) (service.Service, error) {
+		return service_noop.NewManager(), nil
+	})
+	di.ConnectionRegistry.Register("noop", service_noop.NewConnectionCreator())
 }
 
 // bootstrapServiceComponents initiates ServiceManager dependency
