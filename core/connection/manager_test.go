@@ -108,7 +108,7 @@ func (tc *testContext) SetupTest() {
 		tc.fakeDiscoveryClient,
 		dialogCreator,
 		promiseIssuerFactory,
-		tc.fakeConnectionFactory,
+		tc.fakeConnectionFactory.CreateConnection,
 		tc.fakeStatsKeeper,
 		tc.fakeSessionRepository,
 	)
