@@ -20,17 +20,15 @@ package connection
 import (
 	"context"
 	"errors"
-	"sync"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
+	"sync"
 	"time"
 )
 
@@ -51,12 +49,12 @@ var (
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient   server.Client
-	newDialog         DialogCreator
-	newPromiseIssuer  PromiseIssuerCreator
-	connectionCreator ConnectionCreator
-	statsKeeper       stats.SessionStatsKeeper
-	storage           storage.Storage
+	mysteriumClient    server.Client
+	newDialog          DialogCreator
+	newPromiseIssuer   PromiseIssuerCreator
+	connectionCreator  ConnectionCreator
+	statsKeeper        stats.SessionStatsKeeper
+	sessionsRepository SessionsRepository
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -71,17 +69,17 @@ func NewManager(
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator ConnectionCreator,
 	statsKeeper stats.SessionStatsKeeper,
-	storage storage.Storage,
+	sessionsRepository SessionsRepository,
 ) *connectionManager {
 	return &connectionManager{
-		statsKeeper:       statsKeeper,
-		mysteriumClient:   mysteriumClient,
-		newDialog:         dialogCreator,
-		newPromiseIssuer:  promiseIssuerCreator,
-		connectionCreator: connectionCreator,
-		status:            statusNotConnected(),
-		cleanConnection:   warnOnClean,
-		storage:           storage,
+		statsKeeper:        statsKeeper,
+		mysteriumClient:    mysteriumClient,
+		newDialog:          dialogCreator,
+		newPromiseIssuer:   promiseIssuerCreator,
+		connectionCreator:  connectionCreator,
+		status:             statusNotConnected(),
+		cleanConnection:    warnOnClean,
+		sessionsRepository: sessionsRepository,
 	}
 }
 
@@ -154,22 +152,20 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 
 	stateChannel := make(chan State, 10)
 
-	connection, err := manager.connectionCreator.CreateConnection(
-		ConnectOptions{
-			SessionID:     sessionID,
-			SessionConfig: sessionConfig,
-			ConsumerID:    consumerID,
-			ProviderID:    providerID,
-			Proposal:      proposal,
-		},
-		stateChannel,
-	)
+	connectOptions := ConnectOptions{
+		SessionID:     sessionID,
+		SessionConfig: sessionConfig,
+		ConsumerID:    consumerID,
+		ProviderID:    providerID,
+		Proposal:      proposal,
+	}
+
+	connection, err := manager.connectionCreator.CreateConnection(connectOptions, stateChannel)
 	if err != nil {
 		return err
 	}
 
-	providerCountry := "UNKNOWN" //proposal.ServiceDefinition.GetLocation().Country
-	err = manager.saveSession(sessionID, providerID, proposal.ServiceType, providerCountry)
+	err = manager.saveSession(connectOptions)
 	if err != nil {
 		return err
 	}
@@ -292,18 +288,17 @@ func (manager *connectionManager) onStateChanged(state State, sessionID session.
 	}
 }
 
-func (manager *connectionManager) saveSession(sessionID session.ID, providerID identity.Identity,
-	serviceType string, providerCountry string) error {
+func (manager *connectionManager) saveSession(connectOptions ConnectOptions) error {
+	providerCountry := connectOptions.Proposal.ServiceDefinition.GetLocation().Country
 	se := Session{
-		SessionID:       sessionID,
-		ProviderID:      providerID,
-		ServiceType:     serviceType,
+		SessionID:       connectOptions.SessionID,
+		ProviderID:      connectOptions.ProviderID,
+		ServiceType:     connectOptions.Proposal.ServiceType,
 		ProviderCountry: providerCountry,
 		TimeStarted:     time.Now(),
 	}
 
-	//err := manager.storage.StoreSession("all-sessions", string(sessionID), &se)
-	err := manager.storage.Store("all-sessions", &se)
+	err := manager.sessionsRepository.Save(se)
 	if err != nil {
 		return err
 	}

@@ -86,3 +86,6 @@ func (fs fakeStorage) Delete(issuer string, data interface{}) error             
 func (fs fakeStorage) Close() error                                                        { return nil }
 func (fs fakeStorage) StoreSession(bucketName string, key string, value interface{}) error { return nil }
 func (fs fakeStorage) GetAll(issuer string, data interface{}) error                        { return nil }
+func (fs fakeStorage) Save(data interface{}) error                                         { return nil }
+func (fs fakeStorage) Update(data interface{}) error                                       { return nil }
+func (fs fakeStorage) GetAllSessions(data interface{}) error                               { return nil }

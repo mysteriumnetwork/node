@@ -23,10 +23,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -39,7 +41,7 @@ type testContext struct {
 	fakeStatsKeeper       *fakeSessionStatsKeeper
 	fakeDialog            *fakeDialog
 	fakePromiseIssuer     *fakePromiseIssuer
-	fakeStorage           *fakeStorage
+	fakeSessionRepository *fakeSessionRepository
 	sync.RWMutex
 }
 
@@ -49,10 +51,10 @@ var (
 	activeProviderContact = dto.Contact{}
 	activeServiceType     = "fake-service"
 	activeProposal        = dto.ServiceProposal{
-		ProviderID:       activeProviderID.Address,
-		ProviderContacts: []dto.Contact{activeProviderContact},
-		ServiceType:      activeServiceType,
-		//ServiceDefinition: dto.ServiceDefinition{}
+		ProviderID:        activeProviderID.Address,
+		ProviderContacts:  []dto.Contact{activeProviderContact},
+		ServiceType:       activeServiceType,
+		ServiceDefinition: &fakeServiceDefinition{},
 	}
 )
 
@@ -100,7 +102,7 @@ func (tc *testContext) SetupTest() {
 
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
 
-	tc.fakeStorage = &fakeStorage{}
+	tc.fakeSessionRepository = &fakeSessionRepository{}
 
 	tc.connManager = NewManager(
 		tc.fakeDiscoveryClient,
@@ -108,7 +110,7 @@ func (tc *testContext) SetupTest() {
 		promiseIssuerFactory,
 		tc.fakeConnectionFactory,
 		tc.fakeStatsKeeper,
-		tc.fakeStorage,
+		tc.fakeSessionRepository,
 	)
 }
 
@@ -276,33 +278,14 @@ func waitABit() {
 	time.Sleep(10 * time.Millisecond)
 }
 
-type fakeSessionStatsKeeper struct {
-	sessionStartMarked, sessionEndMarked bool
+type fakeSessionRepository struct{}
+
+func (fs *fakeSessionRepository) Save(Session) error { return nil }
+func (fs *fakeSessionRepository) Update(session.ID, time.Duration, stats.SessionStats) error {
+	return nil
 }
+func (fs *fakeSessionRepository) GetAll() ([]Session, error) { return nil, nil }
 
-func (fsk *fakeSessionStatsKeeper) Save(stats stats.SessionStats) {
-}
+type fakeServiceDefinition struct{}
 
-func (fsk *fakeSessionStatsKeeper) Retrieve() stats.SessionStats {
-	return stats.SessionStats{}
-}
-
-func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
-	fsk.sessionStartMarked = true
-}
-
-func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
-	return time.Duration(0)
-}
-
-func (fsk *fakeSessionStatsKeeper) MarkSessionEnd() {
-	fsk.sessionEndMarked = true
-}
-
-type fakeStorage struct{}
-
-func (fs fakeStorage) Store(issuer string, data interface{}) error                         { return nil }
-func (fs fakeStorage) Delete(issuer string, data interface{}) error                        { return nil }
-func (fs fakeStorage) Close() error                                                        { return nil }
-func (fs fakeStorage) StoreSession(bucketName string, key string, value interface{}) error { return nil }
-func (fs fakeStorage) GetAll(issuer string, data interface{}) error                        { return nil }
+func (fs *fakeServiceDefinition) GetLocation() dto.Location { return dto.Location{} }

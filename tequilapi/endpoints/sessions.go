@@ -20,31 +20,30 @@ package endpoints
 import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"net/http"
 )
 
 type SessionsEndpoint struct {
-	storage storage.Storage
+	sessionRepository connection.SessionsRepository
 }
 
-func NewSessionsEndpoint(storage storage.Storage) *SessionsEndpoint {
+func NewSessionsEndpoint(sessionRepository connection.SessionsRepository) *SessionsEndpoint {
 	return &SessionsEndpoint{
-		storage: storage,
+		sessionRepository: sessionRepository,
 	}
 }
 
 func (endpoint *SessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sessions := []connection.Session{}
-	if err := endpoint.storage.GetAll("all-sessions", &sessions); err != nil {
+	sessions, err := endpoint.sessionRepository.GetAll()
+	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 	utils.WriteAsJSON(sessions, resp)
 }
 
-func AddRoutesForSession(router *httprouter.Router, storage storage.Storage) {
-	sessionsEndpoint := NewSessionsEndpoint(storage)
+func AddRoutesForSession(router *httprouter.Router, sessionsRepository connection.SessionsRepository) {
+	sessionsEndpoint := NewSessionsEndpoint(sessionsRepository)
 	router.GET("/sessions", sessionsEndpoint.List)
 }

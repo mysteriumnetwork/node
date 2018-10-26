@@ -59,14 +59,14 @@ func (b *bolt) Close() error {
 	return b.db.Close()
 }
 
-func (b *bolt) StoreSession(bucketName string, key string, value interface{}) error {
-	if err := b.db.Set(bucketName, key, value); err != nil {
-		return err
-	}
-	return nil
+func (b *bolt) Save(data interface{}) error {
+	return b.db.Save(data)
 }
 
-// GetAll allows to get all promises by the issuer
-//func (b *bolt) GetSessions(bucketName string, data interface{}) error {
-//	return b.db.From(issuer).All(data)
-//}
+func (b *bolt) Update(data interface{}) error {
+	return b.db.Update(data)
+}
+
+func (b *bolt) GetAllSessions(data interface{}) error {
+	return b.db.All(data)
+}

@@ -145,3 +145,6 @@ func (fs *fakeStorage) StoreSession(bucketName string, key string, value interfa
 	return nil
 }
 func (fs *fakeStorage) GetAll(issuer string, data interface{}) error { return nil }
+func (fs *fakeStorage) Save(data interface{}) error                  { return nil }
+func (fs *fakeStorage) Update(data interface{}) error                { return nil }
+func (fs *fakeStorage) GetAllSessions(data interface{}) error        { return nil }
