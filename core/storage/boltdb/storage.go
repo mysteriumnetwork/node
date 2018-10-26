@@ -59,14 +59,7 @@ func (b *bolt) Close() error {
 	return b.db.Close()
 }
 
-func (b *bolt) Save(data interface{}) error {
-	return b.db.Save(data)
-}
-
-func (b *bolt) Update(data interface{}) error {
-	return b.db.Update(data)
-}
-
-func (b *bolt) GetAllSessions(data interface{}) error {
-	return b.db.All(data)
+// GetDB returns Storm handler
+func (b *bolt) GetDB() *storm.DB {
+	return b.db
 }

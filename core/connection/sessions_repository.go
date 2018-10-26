@@ -43,21 +43,22 @@ func NewSessionRepository(storage storage.Storage) SessionsRepository {
 	}
 }
 
-// Saves a new session
+// Save saves a new session
 func (repo *sessionsRepository) Save(se Session) error {
-	return repo.storage.Save(&se)
+	return repo.storage.GetDB().Save(&se)
 }
 
-// Updates specified fields of existing session by id
+// Update updates specified fields of existing session by id
 func (repo *sessionsRepository) Update(sessionID session.ID, duration time.Duration, dataStats stats.SessionStats) error {
 	// update two fields by sessionID
 	se := Session{SessionID: sessionID, Duration: duration, DataStats: dataStats}
-	return repo.storage.Update(&se)
+	return repo.storage.GetDB().Update(&se)
 }
 
+// GetAll returns array of all sessions
 func (repo *sessionsRepository) GetAll() ([]Session, error) {
 	var sessions []Session
-	err := repo.storage.GetAllSessions(&sessions)
+	err := repo.storage.GetDB().All(&sessions)
 	if err != nil {
 		return nil, err
 	}
