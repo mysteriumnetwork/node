@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/urfave/cli"
 )
 
@@ -42,17 +43,6 @@ var (
 		Value: "",
 	}
 
-	openvpnProtocolFlag = cli.StringFlag{
-		Name:  "openvpn.proto",
-		Usage: "Openvpn protocol to use. Options: { udp, tcp }",
-		Value: "udp",
-	}
-	openvpnPortFlag = cli.IntFlag{
-		Name:  "openvpn.port",
-		Usage: "Openvpn port to use. Default 1194",
-		Value: 1194,
-	}
-
 	agreedTermsConditionsFlag = cli.BoolFlag{
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
@@ -63,15 +53,10 @@ var (
 func NewCommand(licenseCommandName string) *cli.Command {
 	var di cmd.Dependencies
 
-	return &cli.Command{
+	command := &cli.Command{
 		Name:      serviceCommandName,
 		Usage:     "Starts and publishes service on Mysterium Network",
 		ArgsUsage: " ",
-		Flags: []cli.Flag{
-			identityFlag, identityPassphraseFlag,
-			openvpnProtocolFlag, openvpnPortFlag,
-			agreedTermsConditionsFlag,
-		},
 		Action: func(ctx *cli.Context) error {
 			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
 				printTermWarning(licenseCommandName)
@@ -79,26 +64,16 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			}
 
 			errorChannel := make(chan error, 3)
+
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
 			go func() { errorChannel <- di.Node.Wait() }()
 
-			di.BootstrapServiceComponents(di.NodeOptions, service.Options{
-				ctx.String(identityFlag.Name),
-				ctx.String(identityPassphraseFlag.Name),
-
-				ctx.String(openvpnProtocolFlag.Name),
-				ctx.Int(openvpnPortFlag.Name),
-			})
-
-			go func() {
-				if err := di.ServiceManager.Start(); err != nil {
-					errorChannel <- err
-					return
-				}
-				errorChannel <- di.ServiceManager.Wait()
-			}()
+			if err := di.ServiceManager.Start(parseFlags(ctx)); err != nil {
+				return err
+			}
+			go func() { errorChannel <- di.ServiceManager.Wait() }()
 
 			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
 
@@ -114,6 +89,27 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
 		},
+	}
+	registerFlags(&command.Flags)
+
+	return command
+}
+
+// registerFlags function register service flags to flag list
+func registerFlags(flags *[]cli.Flag) {
+	*flags = append(*flags,
+		agreedTermsConditionsFlag,
+		identityFlag, identityPassphraseFlag,
+	)
+	openvpn_service.RegisterFlags(flags)
+}
+
+// parseFlags function fills in node options from CLI context
+func parseFlags(ctx *cli.Context) service.Options {
+	return service.Options{
+		Identity:   ctx.String(identityFlag.Name),
+		Passphrase: ctx.String(identityPassphraseFlag.Name),
+		Options:    openvpn_service.ParseFlags(ctx),
 	}
 }
 

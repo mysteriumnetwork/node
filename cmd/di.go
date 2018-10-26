@@ -59,8 +59,7 @@ import (
 
 // Dependencies is DI container for top level components which is reusedin several places
 type Dependencies struct {
-	NodeOptions node.Options
-	Node        *node.Node
+	Node *node.Node
 
 	NetworkDefinition    metadata.NetworkDefinition
 	MysteriumClient      server.Client
@@ -113,6 +112,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapIdentityComponents(nodeOptions.Directories)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNodeComponents(nodeOptions)
+	di.bootstrapServiceComponents(nodeOptions)
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 
@@ -192,7 +192,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
 
-	di.NodeOptions = nodeOptions
 	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal)
 }
 
@@ -213,40 +212,46 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register("dummy", service_noop.NewConnectionCreator())
 }
 
-// BootstrapServiceComponents initiates ServiceManager dependency
-func (di *Dependencies) BootstrapServiceComponents(nodeOptions node.Options, serviceOptions service.Options) {
+// bootstrapServiceComponents initiates ServiceManager dependency
+func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	identityHandler := identity_selector.NewHandler(
 		di.IdentityManager,
 		di.MysteriumClient,
 		identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)
-	identityLoader := identity_selector.NewLoader(identityHandler, serviceOptions.Identity, serviceOptions.Passphrase)
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
 	sessionStorage := session.NewStorageMemory()
+	newService := func(serviceOptions service.Options) (service.Service, error) {
+		transportOptions := serviceOptions.Options.(openvpn_service.Options)
+		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, sessionStorage), nil
+	}
 
-	openvpnServiceManager := openvpn_service.NewManager(nodeOptions, serviceOptions, di.IPResolver, di.LocationResolver, sessionStorage)
-
-	balance := identity.NewBalance(di.EtherClient)
+	newDialogWaiter := func(providerID identity.Identity) communication.DialogWaiter {
+		return nats_dialog.NewDialogWaiter(
+			nats_discovery.NewAddressGenerate(di.NetworkDefinition.BrokerAddress, providerID),
+			di.SignerFactory(providerID),
+			di.IdentityRegistry,
+		)
+	}
+	newDialogHandler := func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
+		promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
+			if nodeOptions.ExperimentPromiseCheck {
+				return &promise_noop.FakePromiseEngine{}
+			}
+			return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
+		}
+		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
+		return session.NewDialogHandler(sessionManagerFactory)
+	}
 
 	di.ServiceManager = service.NewManager(
-		di.NetworkDefinition,
-		identityLoader,
-		di.SignerFactory,
-		di.IdentityRegistry,
-		openvpnServiceManager,
-		func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
-			promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
-				if nodeOptions.ExperimentPromiseCheck {
-					return &promise_noop.FakePromiseEngine{}
-				}
-				return promise_noop.NewPromiseProcessor(dialog, balance, di.Storage)
-			}
-			sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
-			return session.NewDialogHandler(sessionManagerFactory)
-		},
+		identityHandler,
+		newService,
+		newDialogWaiter,
+		newDialogHandler,
 		discoveryService,
 	)
 }

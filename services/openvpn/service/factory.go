@@ -26,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -39,7 +38,7 @@ import (
 // NewManager creates new instance of Openvpn service
 func NewManager(
 	nodeOptions node.Options,
-	serviceOptions service.Options,
+	serviceOptions Options,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
 	sessionMap openvpn_session.SessionMap,
@@ -58,14 +57,14 @@ func NewManager(
 	}
 }
 
-func newProposalFactory(serviceOptions service.Options) ProposalFactory {
+func newProposalFactory(serviceOptions Options) ProposalFactory {
 	return func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal {
 		return openvpn_discovery.NewServiceProposalWithLocation(currentLocation, serviceOptions.OpenvpnProtocol)
 	}
 }
 
 // newServerConfigFactory returns function generating server config and generates required security primitives
-func newServerConfigFactory(nodeOptions node.Options, serviceOptions service.Options) ServerConfigFactory {
+func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) ServerConfigFactory {
 	return func(secPrimitives *tls.Primitives) *openvpn_service.ServerConfig {
 		// TODO: check nodeOptions for --openvpn-transport option
 		return openvpn_service.NewServerConfig(
@@ -90,7 +89,7 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 	}
 }
 
-func newSessionConfigProviderFactory(serviceOptions service.Options) SessionConfigProviderFactory {
+func newSessionConfigProviderFactory(serviceOptions Options) SessionConfigProviderFactory {
 	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigProvider {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP)
 
@@ -99,7 +98,7 @@ func newSessionConfigProviderFactory(serviceOptions service.Options) SessionConf
 }
 
 // newSessionConfigProvider returns function generating session config for remote client
-func newSessionConfigProvider(serviceOptions service.Options, secPrimitives *tls.Primitives, serverIP string) session.ConfigProvider {
+func newSessionConfigProvider(serviceOptions Options, secPrimitives *tls.Primitives, serverIP string) session.ConfigProvider {
 	// TODO: check nodeOptions for --openvpn-transport option
 	return func() (session.ServiceConfiguration, error) {
 		return &openvpn_service.VPNConfig{
@@ -112,7 +111,7 @@ func newSessionConfigProvider(serviceOptions service.Options, secPrimitives *tls
 	}
 }
 
-func vpnServerIP(serviceOptions service.Options, outboundIP, publicIP string) string {
+func vpnServerIP(serviceOptions Options, outboundIP, publicIP string) string {
 	//TODO public ip could be overridden by arg nodeOptions if needed
 	if publicIP != outboundIP {
 		log.Warnf(
