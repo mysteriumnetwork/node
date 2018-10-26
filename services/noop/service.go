@@ -18,6 +18,8 @@
 package noop
 
 import (
+	"sync"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
@@ -33,15 +35,16 @@ func NewManager() *Manager {
 }
 
 // Manager represents entrypoint for Noop service
-type Manager struct{}
+type Manager struct {
+	fakeProcess sync.WaitGroup
+}
 
 // Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (
-	proposal dto_discovery.ServiceProposal,
-	sessionConfigProvider session.ConfigProvider,
-	err error,
-) {
-	proposal = dto_discovery.ServiceProposal{
+func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
+	manager.fakeProcess.Add(1)
+	log.Info(logPrefix, "Noop service started successfully")
+
+	proposal := dto_discovery.ServiceProposal{
 		ServiceType: "noop",
 		ServiceDefinition: ServiceDefinition{
 			Location: dto_discovery.Location{Country: ""},
@@ -51,19 +54,22 @@ func (manager *Manager) Start(providerID identity.Identity) (
 			Price: money.NewMoney(0, money.CURRENCY_MYST),
 		},
 	}
-	sessionConfigProvider = func() (session.ServiceConfiguration, error) {
+	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
 		return nil, nil
 	}
-	log.Info(logPrefix, "Openvpn service started successfully")
-	return
+	return proposal, sessionConfigProvider, nil
 }
 
 // Wait blocks until service is stopped
 func (manager *Manager) Wait() error {
+	manager.fakeProcess.Wait()
 	return nil
 }
 
 // Stop stops service
 func (manager *Manager) Stop() error {
+	manager.fakeProcess.Done()
+
+	log.Info(logPrefix, "Noop service stopped")
 	return nil
 }

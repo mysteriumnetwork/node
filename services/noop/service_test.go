@@ -20,6 +20,8 @@ package noop
 import (
 	"testing"
 
+	"time"
+
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
@@ -61,10 +63,28 @@ func Test_Manager_Start(t *testing.T) {
 
 func Test_Manager_Wait(t *testing.T) {
 	manager := &Manager{}
-	assert.NoError(t, manager.Wait())
+	manager.Start(providerID)
+
+	go func() {
+		manager.Wait()
+		assert.Fail(t, "Wait should be blocking")
+	}()
+
+	waitABit()
 }
 
 func Test_Manager_Stop(t *testing.T) {
 	manager := &Manager{}
-	assert.NoError(t, manager.Stop())
+	manager.Start(providerID)
+
+	err := manager.Stop()
+	assert.NoError(t, err)
+
+	// Wait should not block after stopping
+	manager.Wait()
+}
+
+// usually time.Sleep call gives a chance for other goroutines to kick in important when testing async code
+func waitABit() {
+	time.Sleep(10 * time.Millisecond)
 }
