@@ -17,29 +17,29 @@
 
 package service
 
-// Registry holds of all plugable services
+// Registry holds all pluggable services
 type Registry struct {
 	factories map[string]ServiceFactory
 }
 
-// NewRegistry creates registry of plugable services
+// NewRegistry creates a registry of pluggable services
 func NewRegistry() *Registry {
 	return &Registry{
 		factories: make(map[string]ServiceFactory),
 	}
 }
 
-// Register new plugable service
+// Register registers a new pluggable service
 func (registry *Registry) Register(serviceType string, creator ServiceFactory) {
 	registry.factories[serviceType] = creator
 }
 
-// CreateConnection create plugable service
+// Create creates pluggable service
 func (registry *Registry) Create(options Options) (Service, error) {
-	createConnection, exists := registry.factories[options.Type]
+	createService, exists := registry.factories[options.Type]
 	if !exists {
 		return nil, ErrUnsupportedServiceType
 	}
 
-	return createConnection(options)
+	return createService(options)
 }

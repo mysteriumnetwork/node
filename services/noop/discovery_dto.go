@@ -33,10 +33,10 @@ func (service ServiceDefinition) GetLocation() dto_discovery.Location {
 	return service.Location
 }
 
-// PaymentMethodNoop defines payment method wo payment at all
+// PaymentMethodNoop indicates payment method without payment at all
 const PaymentMethodNoop = "NOOP"
 
-// PaymentNoop structure
+// PaymentNoop structure describes 0 price for Noop payment
 type PaymentNoop struct {
 	Price money.Money `json:"price"`
 }

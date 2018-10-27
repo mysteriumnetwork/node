@@ -34,7 +34,7 @@ const logPrefix = "[service-manager] "
 var (
 	// ErrorLocation error indicates that action (i.e. disconnect)
 	ErrorLocation = errors.New("failed to detect service location")
-	// ErrUnsupportedServiceType indicates that manager tried to create unsupported service type
+	// ErrUnsupportedServiceType indicates that manager tried to create an unsupported service type
 	ErrUnsupportedServiceType = errors.New("unsupported service type")
 )
 
