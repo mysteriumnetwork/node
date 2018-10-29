@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
+// Session holds structure for saving session history
 type Session struct {
 	SessionID       session.ID `storm:"id"`
 	ProviderID      identity.Identity
@@ -32,6 +33,6 @@ type Session struct {
 	ProviderCountry string
 	TimeStarted     time.Time
 	// these will be updated while session is ongoing
-	Duration  time.Duration
+	Duration  int // in seconds
 	DataStats stats.SessionStats
 }

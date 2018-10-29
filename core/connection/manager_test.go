@@ -281,7 +281,7 @@ func waitABit() {
 type fakeSessionRepository struct{}
 
 func (fs *fakeSessionRepository) Save(Session) error { return nil }
-func (fs *fakeSessionRepository) Update(session.ID, time.Duration, stats.SessionStats) error {
+func (fs *fakeSessionRepository) Update(session.ID, int, stats.SessionStats) error {
 	return nil
 }
 func (fs *fakeSessionRepository) GetAll() ([]Session, error) { return nil, nil }

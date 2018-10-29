@@ -25,6 +25,39 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
+// swagger:model SessionsDTO
+type sessionsDTO struct {
+	Sessions []sessionDTO `json:"sessions"`
+}
+
+// swagger:model SessionDTO
+type sessionDTO struct {
+	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
+	SessionID string `json:"sessionId"`
+
+	// example: 0x0000000000000000000000000000000000000001
+	ProviderID string `json:"providerId"`
+
+	// example: openpvn
+	ServiceType string `json:"serviceType"`
+
+	// example: NL
+	ProviderCountry string `json:"providerCountry"`
+
+	// example: 2018-10-29 16:22:05
+	DateStarted string `json:"dateStarted"`
+
+	// example: 1024
+	BytesSent int `json:"bytesSent"`
+
+	// example: 1024
+	BytesReceived int `json:"bytesReceived"`
+
+	// duration in seconds
+	// example: 120
+	Duration int `json:"duration"`
+}
+
 type SessionsEndpoint struct {
 	sessionRepository connection.SessionsRepository
 }
@@ -35,16 +68,51 @@ func NewSessionsEndpoint(sessionRepository connection.SessionsRepository) *Sessi
 	}
 }
 
+// swagger:operation GET /sessions Session listSessions
+// ---
+// summary: Returns sessions history
+// description: Returns list of sessions history
+// responses:
+//   200:
+//     description: List of sessions
+//     schema:
+//       "$ref": "#/definitions/SessionsDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *SessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	sessions, err := endpoint.sessionRepository.GetAll()
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	utils.WriteAsJSON(sessions, resp)
+	sessionsSerializable := sessionsDTO{Sessions: mapSessions(sessions, sessionToDto)}
+	utils.WriteAsJSON(sessionsSerializable, resp)
 }
 
 func AddRoutesForSession(router *httprouter.Router, sessionsRepository connection.SessionsRepository) {
 	sessionsEndpoint := NewSessionsEndpoint(sessionsRepository)
 	router.GET("/sessions", sessionsEndpoint.List)
+}
+
+func sessionToDto(se connection.Session) sessionDTO {
+	return sessionDTO{
+		SessionID:       string(se.SessionID),
+		ProviderID:      string(se.ProviderID.Address),
+		ServiceType:     se.ServiceType,
+		ProviderCountry: se.ProviderCountry,
+		DateStarted:     se.TimeStarted.Format("2018-10-29 16:22:05"),
+		BytesSent:       se.DataStats.BytesSent,
+		BytesReceived:   se.DataStats.BytesReceived,
+		Duration:        se.Duration,
+	}
+}
+
+func mapSessions(sessions []connection.Session, f func(connection.Session) sessionDTO) []sessionDTO {
+	dtoArray := make([]sessionDTO, len(sessions))
+	for i, se := range sessions {
+		dtoArray[i] = f(se)
+	}
+	return dtoArray
 }
