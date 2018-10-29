@@ -49,7 +49,7 @@ import (
 	"github.com/mysteriumnetwork/node/server/metrics/oracle"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
-	"github.com/mysteriumnetwork/node/services/openvpn"
+	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -92,7 +92,7 @@ type Dependencies struct {
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.Bootstrap()
 	nats_discovery.Bootstrap()
-	openvpn.Bootstrap()
+	service_openvpn.Bootstrap()
 
 	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
 
@@ -203,9 +203,9 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		transportOptions := serviceOptions.Options.(openvpn_service.Options)
 		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, di.ServiceSessionStorage), nil
 	}
-	di.ServiceRegistry.Register("openvpn", createService)
+	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 
-	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
+	connectionFactory := service_openvpn.NewProcessBasedConnectionFactory(
 		di.MysteriumClient,
 		nodeOptions.Openvpn.BinaryPath,
 		nodeOptions.Directories.Config,
@@ -214,7 +214,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		di.LocationOriginal,
 		di.SignerFactory,
 	)
-	di.ConnectionRegistry.Register("openvpn", connectionFactory.CreateConnection)
+	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory.CreateConnection)
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
