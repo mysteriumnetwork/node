@@ -14,21 +14,13 @@ set -e
 source bin/helpers/output.sh
 source bin/helpers/functions.sh
 
-ARCH=$1
-if [[ ! "$ARCH" =~ ^(arm64|amd64)$ ]]; then
-    print_error "Missing architecture! Should be: arm64, amd64"
-    exit 1
-fi
-
 DIR_BUILD="build/package"
+mkdir -p $DIR_BUILD
 PACKAGE_FILE="${DIR_BUILD}/Mysterium.framework.zip"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 DIR_FRAMEWORK="${DIR_TEMP}/Mysterium.framework"
 
-gomobile bind -v \
-    -target=ios/${ARCH} \
-    -o ${DIR_FRAMEWORK} \
-    github.com/mysteriumnetwork/node/mobile/mysterium
+xgo -image=mysteriumnetwork/xgo:1.11 -targets=ios/* -v -out Mysterium -dest $DIR_TEMP `pwd`/mobile/mysterium
 
 cp bin/package/ios/Info.plist ${DIR_FRAMEWORK}/Versions/A/Resources/Info.plist
 
@@ -36,4 +28,3 @@ cp bin/package/ios/Info.plist ${DIR_FRAMEWORK}/Versions/A/Resources/Info.plist
 rm -rf ${DIR_TEMP}
 
 print_success "iOS package '$PACKAGE_FILE' complete!"
-exit 0
