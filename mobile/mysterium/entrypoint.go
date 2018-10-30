@@ -45,7 +45,7 @@ func NewNode() {
 	err = di.Bootstrap(node.Options{
 		Directories: node.OptionsDirectory{
 			Data:     dataDir,
-			Storage: filepath.Join(dataDir, "db"),
+			Storage:  filepath.Join(dataDir, "db"),
 			Keystore: filepath.Join(dataDir, "keystore"),
 			// TODO Embbed all config file to released artifacts
 			Config: filepath.Join(currentDir, "config"),
