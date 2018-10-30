@@ -83,6 +83,8 @@ type Dependencies struct {
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
 	ServiceManager     *service.Manager
+
+	SessionStorage connection.SessionStorage
 }
 
 // Bootstrap initiates all container dependencies
@@ -177,7 +179,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
 	}
 
-	sessionRepository := connection.NewSessionRepository(di.Storage)
+	di.SessionStorage = connection.NewSessionStorage(di.Storage)
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
@@ -186,7 +188,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		promiseIssuerFactory,
 		di.ConnectionRegistry.CreateConnection,
 		di.StatsKeeper,
-		sessionRepository,
+		di.SessionStorage,
 	)
 
 	router := tequilapi.NewAPIRouter()
@@ -195,7 +197,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
-	tequilapi_endpoints.AddRoutesForSession(router, sessionRepository)
+	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)

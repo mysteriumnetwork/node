@@ -59,13 +59,13 @@ type sessionDTO struct {
 }
 
 type sessionsEndpoint struct {
-	sessionRepository connection.SessionsRepository
+	sessionStorage connection.SessionStorage
 }
 
 // NewSessionsEndpoint creates and returns sessions endpoint
-func NewSessionsEndpoint(sessionRepository connection.SessionsRepository) *sessionsEndpoint {
+func NewSessionsEndpoint(sessionStorage connection.SessionStorage) *sessionsEndpoint {
 	return &sessionsEndpoint{
-		sessionRepository: sessionRepository,
+		sessionStorage: sessionStorage,
 	}
 }
 
@@ -83,7 +83,7 @@ func NewSessionsEndpoint(sessionRepository connection.SessionsRepository) *sessi
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sessions, err := endpoint.sessionRepository.GetAll()
+	sessions, err := endpoint.sessionStorage.GetAll()
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -93,7 +93,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 }
 
 // AddRoutesForSession attaches sessions endpoints to router
-func AddRoutesForSession(router *httprouter.Router, sessionsRepository connection.SessionsRepository) {
+func AddRoutesForSession(router *httprouter.Router, sessionsRepository connection.SessionStorage) {
 	sessionsEndpoint := NewSessionsEndpoint(sessionsRepository)
 	router.GET("/sessions", sessionsEndpoint.List)
 }

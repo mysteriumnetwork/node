@@ -54,12 +54,12 @@ type ConnectionCreator func(ConnectOptions, StateChannel) (Connection, error)
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient    server.Client
-	newDialog          DialogCreator
-	newPromiseIssuer   PromiseIssuerCreator
-	newConnection      ConnectionCreator
-	statsKeeper        stats.SessionStatsKeeper
-	sessionsRepository SessionsRepository
+	mysteriumClient  server.Client
+	newDialog        DialogCreator
+	newPromiseIssuer PromiseIssuerCreator
+	newConnection    ConnectionCreator
+	statsKeeper      stats.SessionStatsKeeper
+	sessionStorage   SessionStorage
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -74,17 +74,17 @@ func NewManager(
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator ConnectionCreator,
 	statsKeeper stats.SessionStatsKeeper,
-	sessionsRepository SessionsRepository,
+	sessionStorage SessionStorage,
 ) *connectionManager {
 	return &connectionManager{
-		statsKeeper:        statsKeeper,
-		mysteriumClient:    mysteriumClient,
-		newDialog:          dialogCreator,
-		newPromiseIssuer:   promiseIssuerCreator,
-		newConnection:      connectionCreator,
-		status:             statusNotConnected(),
-		cleanConnection:    warnOnClean,
-		sessionsRepository: sessionsRepository,
+		statsKeeper:      statsKeeper,
+		mysteriumClient:  mysteriumClient,
+		newDialog:        dialogCreator,
+		newPromiseIssuer: promiseIssuerCreator,
+		newConnection:    connectionCreator,
+		status:           statusNotConnected(),
+		cleanConnection:  warnOnClean,
+		sessionStorage:   sessionStorage,
 	}
 }
 
@@ -303,7 +303,7 @@ func (manager *connectionManager) saveSession(connectOptions ConnectOptions) err
 		TimeStarted:     time.Now(),
 	}
 
-	err := manager.sessionsRepository.Save(se)
+	err := manager.sessionStorage.Save(se)
 	if err != nil {
 		return err
 	}
