@@ -30,13 +30,7 @@ type serviceFake struct {
 }
 
 func (service *serviceFake) Start(identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
-	proposal := dto_discovery.ServiceProposal{}
-
-	if service.onStartReturnError != nil {
-		return proposal, nil, service.onStartReturnError
-	}
-
-	return proposal, nil, nil
+	return dto_discovery.ServiceProposal{}, nil, service.onStartReturnError
 }
 
 func (service *serviceFake) Wait() error {
