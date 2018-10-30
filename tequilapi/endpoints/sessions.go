@@ -58,12 +58,13 @@ type sessionDTO struct {
 	Duration int `json:"duration"`
 }
 
-type SessionsEndpoint struct {
+type sessionsEndpoint struct {
 	sessionRepository connection.SessionsRepository
 }
 
-func NewSessionsEndpoint(sessionRepository connection.SessionsRepository) *SessionsEndpoint {
-	return &SessionsEndpoint{
+// NewSessionsEndpoint creates and returns sessions endpoint
+func NewSessionsEndpoint(sessionRepository connection.SessionsRepository) *sessionsEndpoint {
+	return &sessionsEndpoint{
 		sessionRepository: sessionRepository,
 	}
 }
@@ -81,7 +82,7 @@ func NewSessionsEndpoint(sessionRepository connection.SessionsRepository) *Sessi
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *SessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	sessions, err := endpoint.sessionRepository.GetAll()
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -91,6 +92,7 @@ func (endpoint *SessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 	utils.WriteAsJSON(sessionsSerializable, resp)
 }
 
+// AddRoutesForSession attaches sessions endpoints to router
 func AddRoutesForSession(router *httprouter.Router, sessionsRepository connection.SessionsRepository) {
 	sessionsEndpoint := NewSessionsEndpoint(sessionsRepository)
 	router.GET("/sessions", sessionsEndpoint.List)
