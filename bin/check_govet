@@ -12,6 +12,7 @@
 #> bin/check_govet ./communication
 #> bin/check_govet ./communication/...
 
+set -e
 source bin/helpers/output.sh
 
 ARGUMENTS=$@
@@ -22,4 +23,3 @@ fi
 go vet -composites=false ${ARGUMENTS}
 
 print_success "All files are compliant to go vet."
-exit 0

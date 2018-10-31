@@ -2,6 +2,7 @@
 
 # Checks whether all source files have valid license header
 
+set -e
 source bin/helpers/output.sh
 
 COPYRIGHT='Copyright \(C\) [[:digit:]]{4} The "MysteriumNetwork/node" Authors\.'
@@ -25,4 +26,3 @@ if [ ! -z "$bad_files" ]; then
 fi
 
 print_success "All files have copyright headers."
-exit 0
