@@ -137,7 +137,9 @@ func (manager *Manager) Kill() error {
 	if manager.dialogWaiter != nil {
 		errDialogWaiter = manager.dialogWaiter.Stop()
 	}
-	errService = manager.service.Stop()
+	if manager.service != nil {
+		errService = manager.service.Stop()
+	}
 
 	if errDialogWaiter != nil {
 		return errDialogWaiter

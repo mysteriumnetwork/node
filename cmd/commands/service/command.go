@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
+	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/urfave/cli"
 )
@@ -109,6 +110,7 @@ func parseFlags(ctx *cli.Context) service.Options {
 	return service.Options{
 		Identity:   ctx.String(identityFlag.Name),
 		Passphrase: ctx.String(identityPassphraseFlag.Name),
+		Type:       service_openvpn.ServiceType,
 		Options:    openvpn_service.ParseFlags(ctx),
 	}
 }
