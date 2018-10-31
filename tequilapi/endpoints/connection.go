@@ -80,10 +80,10 @@ type ipResponse struct {
 // swagger:model ConnectionStatisticsDTO
 type statisticsResponse struct {
 	// example: 1024
-	BytesSent int `json:"bytesSent"`
+	BytesSent uint64 `json:"bytesSent"`
 
 	// example: 1024
-	BytesReceived int `json:"bytesReceived"`
+	BytesReceived uint64 `json:"bytesReceived"`
 
 	// connection duration in seconds
 	// example: 60
