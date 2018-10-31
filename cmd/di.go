@@ -229,12 +229,16 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, sessionStorage), nil
 	}
 
-	newDialogWaiter := func(providerID identity.Identity) communication.DialogWaiter {
+	newDialogWaiter := func(providerID identity.Identity) (communication.DialogWaiter, error) {
+		address, err := nats_discovery.NewAddressFromHostAndID(di.NetworkDefinition.BrokerAddress, providerID)
+		if err != nil {
+			return nil, err
+		}
 		return nats_dialog.NewDialogWaiter(
-			nats_discovery.NewAddressFromHostAndID(di.NetworkDefinition.BrokerAddress, providerID),
+			address,
 			di.SignerFactory(providerID),
 			di.IdentityRegistry,
-		)
+		), nil
 	}
 	newDialogHandler := func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
 		promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {

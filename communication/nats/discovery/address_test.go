@@ -50,8 +50,8 @@ func TestNewAddressFromHostAndID(t *testing.T) {
 
 	myID := identity.FromAddress("provider1")
 	for _, tc := range tests {
-		address := NewAddressFromHostAndID(tc.uri, myID)
-
+		address, err := NewAddressFromHostAndID(tc.uri, myID)
+		assert.NoError(t, err)
 		assert.Equal(
 			t,
 			&AddressNATS{

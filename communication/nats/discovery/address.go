@@ -36,7 +36,7 @@ func NewAddress(topic string, addresses ...string) *AddressNATS {
 }
 
 // NewAddressFromHostAndID generates NATS address for current node
-func NewAddressFromHostAndID(uri string, myID identity.Identity) *AddressNATS {
+func NewAddressFromHostAndID(uri string, myID identity.Identity) (*AddressNATS, error) {
 	var url string
 	if strings.HasPrefix(uri, "nats:") {
 		url = uri
@@ -46,7 +46,7 @@ func NewAddressFromHostAndID(uri string, myID identity.Identity) *AddressNATS {
 
 	url = fmt.Sprintf("%s:%d", url, BrokerPort)
 
-	return NewAddress(myID.Address, url)
+	return NewAddress(myID.Address, url), nil
 }
 
 // NewAddressForContact extracts NATS address from given contact structure
