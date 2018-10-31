@@ -40,18 +40,27 @@ func TestNewAddress(t *testing.T) {
 }
 
 func TestNewAddressFromHostAndID(t *testing.T) {
-	myID := identity.FromAddress("provider1")
-	brokerIP := "127.0.0.1"
-	address := NewAddressFromHostAndID(brokerIP, myID)
+	var tests = []struct {
+		uri  string
+		want string
+	}{
+		{"127.0.0.1", "nats://127.0.0.1:4222"},
+	}
 
-	assert.Equal(
-		t,
-		&AddressNATS{
-			servers: []string{"nats://" + brokerIP + ":4222"},
-			topic:   "provider1",
-		},
-		address,
-	)
+	myID := identity.FromAddress("provider1")
+	for _, tc := range tests {
+		address := NewAddressFromHostAndID(tc.uri, myID)
+
+		assert.Equal(
+			t,
+			&AddressNATS{
+				servers: []string{tc.want},
+				topic:   "provider1",
+			},
+			address,
+		)
+
+	}
 }
 
 func TestNewAddressForContact(t *testing.T) {
