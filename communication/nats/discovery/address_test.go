@@ -46,6 +46,11 @@ func TestNewAddressFromHostAndID(t *testing.T) {
 	}{
 		{"127.0.0.1", "nats://127.0.0.1:4222"},
 		{"nats://127.0.0.1", "nats://127.0.0.1:4222"},
+		{"127.0.0.1:4222", "nats://127.0.0.1:4222"},
+		{"nats://127.0.0.1:4222", "nats://127.0.0.1:4222"},
+
+		{"nats://127.0.0.1:4333", "nats://127.0.0.1:4333"},
+		{"nats://example.com:4333", "nats://example.com:4333"},
 	}
 
 	myID := identity.FromAddress("provider1")
