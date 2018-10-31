@@ -17,13 +17,29 @@
 
 package service
 
-// Options describes options which are required to start a service
-type Options struct {
-	Identity   string
-	Passphrase string
-	Type       string
-	Options    TransportOptions
+// Registry holds all pluggable services
+type Registry struct {
+	factories map[string]ServiceFactory
 }
 
-// TransportOptions represents any type of options for plugable service
-type TransportOptions interface{}
+// NewRegistry creates a registry of pluggable services
+func NewRegistry() *Registry {
+	return &Registry{
+		factories: make(map[string]ServiceFactory),
+	}
+}
+
+// Register registers a new pluggable service
+func (registry *Registry) Register(serviceType string, creator ServiceFactory) {
+	registry.factories[serviceType] = creator
+}
+
+// Create creates pluggable service
+func (registry *Registry) Create(options Options) (Service, error) {
+	createService, exists := registry.factories[options.Type]
+	if !exists {
+		return nil, ErrUnsupportedServiceType
+	}
+
+	return createService(options)
+}
