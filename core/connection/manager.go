@@ -302,10 +302,5 @@ func (manager *connectionManager) saveSession(connectOptions ConnectOptions) err
 		ProviderCountry: providerCountry,
 		TimeStarted:     time.Now(),
 	}
-
-	err := manager.sessionStorage.Save(se)
-	if err != nil {
-		return err
-	}
-	return nil
+	return manager.sessionStorage.Save(se)
 }

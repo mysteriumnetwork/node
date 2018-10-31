@@ -17,22 +17,23 @@
 
 package storage
 
-import "github.com/asdine/storm"
-
 // FakeStorage for testing
 type FakeStorage struct{}
 
 // Store for testing
-func (fs *FakeStorage) Store(issuer string, data interface{}) error { return nil }
+func (fs *FakeStorage) Store(string, interface{}) error { return nil }
 
 // Delete for testing
-func (fs *FakeStorage) Delete(issuer string, data interface{}) error { return nil }
+func (fs *FakeStorage) Delete(string, interface{}) error { return nil }
+
+// Save for testing
+func (fs *FakeStorage) Save(object interface{}) error { return nil }
+
+// Update for testing
+func (fs *FakeStorage) Update(interface{}) error { return nil }
+
+// GetAll for testing
+func (fs *FakeStorage) GetAll(interface{}) error { return nil }
 
 // Close for testing
 func (fs *FakeStorage) Close() error { return nil }
-
-// GetAll for testing
-func (fs *FakeStorage) GetAll(issuer string, data interface{}) error { return nil }
-
-// GetDB for testing
-func (fs *FakeStorage) GetDB() *storm.DB { return nil }

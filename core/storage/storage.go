@@ -17,13 +17,12 @@
 
 package storage
 
-import "github.com/asdine/storm"
-
 // Storage stores persistent objects for future usage
 type Storage interface {
 	Store(issuer string, data interface{}) error
-	GetAll(issuer string, data interface{}) error
 	Delete(issuer string, data interface{}) error
+	Save(object interface{}) error
+	Update(object interface{}) error
+	GetAll(array interface{}) error
 	Close() error
-	GetDB() *storm.DB
 }
