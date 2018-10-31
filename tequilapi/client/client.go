@@ -239,3 +239,16 @@ func (client *Client) Stop() error {
 
 	return nil
 }
+
+// GetSessions returns all sessions from history
+func (client *Client) GetSessions() (endpoints.SessionsDTO, error) {
+	response, err := client.http.Get("sessions", url.Values{})
+	if err != nil {
+		return endpoints.SessionsDTO{}, err
+	}
+	defer response.Body.Close()
+
+	var sessions endpoints.SessionsDTO
+	err = parseResponseJSON(response, &sessions)
+	return sessions, err
+}

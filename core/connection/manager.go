@@ -288,6 +288,7 @@ func (manager *connectionManager) onStateChanged(state State, sessionID session.
 		manager.status = statusConnected(sessionID)
 	case Disconnecting:
 		manager.statsKeeper.MarkSessionEnd()
+		manager.sessionStorage.Update(sessionID, time.Now(), manager.statsKeeper.Retrieve())
 	case Reconnecting:
 		manager.status = statusReconnecting()
 	}

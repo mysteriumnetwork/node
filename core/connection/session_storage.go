@@ -18,6 +18,8 @@
 package connection
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/session"
@@ -26,7 +28,7 @@ import (
 // SessionStorage describes functions for storing session objects
 type SessionStorage interface {
 	Save(Session) error
-	Update(session.ID, int, stats.SessionStats) error
+	Update(session.ID, time.Time, stats.SessionStats) error
 	GetAll() ([]Session, error)
 }
 
@@ -47,9 +49,9 @@ func (repo *sessionStorage) Save(se Session) error {
 }
 
 // Update updates specified fields of existing session by id
-func (repo *sessionStorage) Update(sessionID session.ID, duration int, dataStats stats.SessionStats) error {
+func (repo *sessionStorage) Update(sessionID session.ID, TimeUpdated time.Time, dataStats stats.SessionStats) error {
 	// update two fields by sessionID
-	se := Session{SessionID: sessionID, Duration: duration, DataStats: dataStats}
+	se := Session{SessionID: sessionID, TimeUpdated: TimeUpdated, DataStats: dataStats}
 	return repo.storage.GetDB().Update(&se)
 }
 

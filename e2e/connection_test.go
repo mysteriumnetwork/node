@@ -100,9 +100,9 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	err := topUpAccount(consumerID)
 	assert.Nil(t, err)
 
-	status, err := tequilapi.Status()
+	connectionStatus, err := tequilapi.Status()
 	assert.NoError(t, err)
-	assert.Equal(t, "NotConnected", status.Status)
+	assert.Equal(t, "NotConnected", connectionStatus.Status)
 
 	nonVpnIp, err := tequilapi.GetIP()
 	assert.NoError(t, err)
@@ -114,7 +114,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	_, err = tequilapi.Connect(consumerID, proposal.ProviderID, endpoints.ConnectOptions{true})
+	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, endpoints.ConnectOptions{true})
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {
@@ -127,6 +127,18 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.NoError(t, err)
 	seelog.Info("Shifted consumer IP: ", vpnIp)
 
+	// sessions history should be created after connect
+	sessionsDTO, err := tequilapi.GetSessions()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(sessionsDTO.Sessions))
+	assert.Equal(t, uint64(0), sessionsDTO.Sessions[0].Duration)
+	assert.Equal(t, uint64(0), sessionsDTO.Sessions[0].BytesSent)
+	assert.Equal(t, uint64(0), sessionsDTO.Sessions[0].BytesReceived)
+	assert.Equal(t, "e2e-land", sessionsDTO.Sessions[0].ProviderCountry)
+	assert.Equal(t, "openvpn", sessionsDTO.Sessions[0].ServiceType)
+	assert.Equal(t, proposal.ProviderID, sessionsDTO.Sessions[0].ProviderID)
+	assert.Equal(t, connectionStatus.SessionID, sessionsDTO.Sessions[0].SessionID)
+
 	err = tequilapi.Disconnect()
 	assert.NoError(t, err)
 
@@ -135,4 +147,12 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 		return status.Status == "NotConnected", err
 	})
 	assert.NoError(t, err)
+
+	// sessions history should be updated after disconnect
+	sessionsDTO, err = tequilapi.GetSessions()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(sessionsDTO.Sessions))
+	seelog.Info("Session duration in seconds: ", sessionsDTO.Sessions[0].Duration)
+	seelog.Info("Bytes sent: ", sessionsDTO.Sessions[0].BytesSent)
+	seelog.Info("Bytes received: ", sessionsDTO.Sessions[0].BytesReceived)
 }

@@ -20,18 +20,20 @@ package endpoints
 import (
 	"net/http"
 
+	"time"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // swagger:model SessionsDTO
-type sessionsDTO struct {
-	Sessions []sessionDTO `json:"sessions"`
+type SessionsDTO struct {
+	Sessions []SessionDTO `json:"sessions"`
 }
 
 // swagger:model SessionDTO
-type sessionDTO struct {
+type SessionDTO struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	SessionID string `json:"sessionId"`
 
@@ -48,14 +50,14 @@ type sessionDTO struct {
 	DateStarted string `json:"dateStarted"`
 
 	// example: 1024
-	BytesSent int `json:"bytesSent"`
+	BytesSent uint64 `json:"bytesSent"`
 
 	// example: 1024
-	BytesReceived int `json:"bytesReceived"`
+	BytesReceived uint64 `json:"bytesReceived"`
 
 	// duration in seconds
 	// example: 120
-	Duration int `json:"duration"`
+	Duration uint64 `json:"duration"`
 }
 
 type sessionsEndpoint struct {
@@ -88,7 +90,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	sessionsSerializable := sessionsDTO{Sessions: mapSessions(sessions, sessionToDto)}
+	sessionsSerializable := SessionsDTO{Sessions: mapSessions(sessions, sessionToDto)}
 	utils.WriteAsJSON(sessionsSerializable, resp)
 }
 
@@ -98,21 +100,28 @@ func AddRoutesForSession(router *httprouter.Router, sessionsRepository connectio
 	router.GET("/sessions", sessionsEndpoint.List)
 }
 
-func sessionToDto(se connection.Session) sessionDTO {
-	return sessionDTO{
+func sessionToDto(se connection.Session) SessionDTO {
+	return SessionDTO{
 		SessionID:       string(se.SessionID),
 		ProviderID:      string(se.ProviderID.Address),
 		ServiceType:     se.ServiceType,
 		ProviderCountry: se.ProviderCountry,
 		DateStarted:     se.TimeStarted.Format("2018-10-29 16:22:05"),
-		BytesSent:       se.DataStats.BytesSent,
-		BytesReceived:   se.DataStats.BytesReceived,
-		Duration:        se.Duration,
+		BytesSent:       uint64(se.DataStats.BytesSent),
+		BytesReceived:   uint64(se.DataStats.BytesReceived),
+		Duration:        getDuration(se.TimeStarted, se.TimeUpdated),
 	}
 }
 
-func mapSessions(sessions []connection.Session, f func(connection.Session) sessionDTO) []sessionDTO {
-	dtoArray := make([]sessionDTO, len(sessions))
+func getDuration(start time.Time, end time.Time) uint64 {
+	if end.IsZero() {
+		return 0
+	}
+	return uint64(end.Sub(start).Seconds())
+}
+
+func mapSessions(sessions []connection.Session, f func(connection.Session) SessionDTO) []SessionDTO {
+	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = f(se)
 	}

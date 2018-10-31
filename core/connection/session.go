@@ -32,7 +32,7 @@ type Session struct {
 	ServiceType     string
 	ProviderCountry string
 	TimeStarted     time.Time
-	// these will be updated while session is ongoing
-	Duration  int // in seconds
-	DataStats stats.SessionStats
+	// these will be updated on disconnect event
+	TimeUpdated time.Time // Duration can be calculated: TimeUpdated - TimeStarted
+	DataStats   stats.SessionStats
 }
