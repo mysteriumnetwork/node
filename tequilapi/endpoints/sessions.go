@@ -48,10 +48,10 @@ type sessionDTO struct {
 	DateStarted string `json:"dateStarted"`
 
 	// example: 1024
-	BytesSent int `json:"bytesSent"`
+	BytesSent uint64 `json:"bytesSent"`
 
 	// example: 1024
-	BytesReceived int `json:"bytesReceived"`
+	BytesReceived uint64 `json:"bytesReceived"`
 
 	// duration in seconds
 	// example: 120
