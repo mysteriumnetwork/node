@@ -32,17 +32,22 @@ import (
 )
 
 // NewNode function creates new Node
-func NewNode() {
+func NewNode(appPath string) {
 	var di cmd.Dependencies
 
-	userHomeDir, err := homedir.Dir()
-	if err != nil {
-		panic(err)
+	var dataDir, currentDir string
+	if appPath == "" {
+		currentDir, err := homedir.Dir()
+		if err != nil {
+			panic(err)
+		}
+		dataDir = filepath.Join(currentDir, ".mysterium")
+	} else {
+		dataDir = filepath.Join(appPath, ".mysterium")
+		currentDir = appPath
 	}
-	dataDir := filepath.Join(userHomeDir, ".mysterium")
-	currentDir := userHomeDir
 
-	err = di.Bootstrap(node.Options{
+	err := di.Bootstrap(node.Options{
 		Directories: node.OptionsDirectory{
 			Data:     dataDir,
 			Storage:  filepath.Join(dataDir, "db"),
