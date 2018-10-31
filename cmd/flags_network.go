@@ -56,7 +56,7 @@ var (
 
 	etherRpcFlag = cli.StringFlag{
 		Name:  "ether.client.rpc",
-		Usage: "Url or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
+		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
 	}
 	etherContractPaymentsFlag = cli.StringFlag{
