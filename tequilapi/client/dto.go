@@ -27,9 +27,9 @@ type StatusDTO struct {
 
 // StatisticsDTO holds statistics about connection
 type StatisticsDTO struct {
-	BytesSent     int `json:"bytesSent"`
-	BytesReceived int `json:"bytesReceived"`
-	Duration      int `json:"duration"`
+	BytesSent     uint64 `json:"bytesSent"`
+	BytesReceived uint64 `json:"bytesReceived"`
+	Duration      int    `json:"duration"`
 }
 
 // ProposalList describes list of proposals
