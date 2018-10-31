@@ -45,12 +45,12 @@ var (
 
 	discoveryAddressFlag = cli.StringFlag{
 		Name:  "discovery-address",
-		Usage: "Address (URL form) of discovery service",
+		Usage: "`URL` of discovery service",
 		Value: metadata.DefaultNetwork.DiscoveryAPIAddress,
 	}
 	brokerAddressFlag = cli.StringFlag{
 		Name:  "broker-address",
-		Usage: "Address (IP or domain name) of message broker",
+		Usage: "`URI` of message broker",
 		Value: metadata.DefaultNetwork.BrokerAddress,
 	}
 
