@@ -39,10 +39,10 @@ func TestNewAddress(t *testing.T) {
 	)
 }
 
-func TestNewAddressGenerate(t *testing.T) {
+func TestNewAddressFromHostAndID(t *testing.T) {
 	myID := identity.FromAddress("provider1")
 	brokerIP := "127.0.0.1"
-	address := NewAddressGenerate(brokerIP, myID)
+	address := NewAddressFromHostAndID(brokerIP, myID)
 
 	assert.Equal(
 		t,

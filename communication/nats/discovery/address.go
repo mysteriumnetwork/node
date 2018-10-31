@@ -34,8 +34,8 @@ func NewAddress(topic string, addresses ...string) *AddressNATS {
 	}
 }
 
-// NewAddressGenerate generates NATS address for current node
-func NewAddressGenerate(brokerIP string, myID identity.Identity) *AddressNATS {
+// NewAddressFromHostAndID generates NATS address for current node
+func NewAddressFromHostAndID(brokerIP string, myID identity.Identity) *AddressNATS {
 	address := fmt.Sprintf("nats://%s:%d", brokerIP, BrokerPort)
 
 	return NewAddress(myID.Address, address)

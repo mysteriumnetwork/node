@@ -231,7 +231,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 
 	newDialogWaiter := func(providerID identity.Identity) communication.DialogWaiter {
 		return nats_dialog.NewDialogWaiter(
-			nats_discovery.NewAddressGenerate(di.NetworkDefinition.BrokerAddress, providerID),
+			nats_discovery.NewAddressFromHostAndID(di.NetworkDefinition.BrokerAddress, providerID),
 			di.SignerFactory(providerID),
 			di.IdentityRegistry,
 		)
