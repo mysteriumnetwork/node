@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/datasize"
 	"github.com/mysteriumnetwork/node/money"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 )
 
@@ -32,7 +33,7 @@ func NewServiceProposalWithLocation(
 	protocol string,
 ) dto_discovery.ServiceProposal {
 	return dto_discovery.ServiceProposal{
-		ServiceType: "openvpn",
+		ServiceType: openvpn.ServiceType,
 		ServiceDefinition: dto.ServiceDefinition{
 			Location:          serviceLocation,
 			LocationOriginate: serviceLocation,

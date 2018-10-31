@@ -21,6 +21,7 @@ package service
 type Options struct {
 	Identity   string
 	Passphrase string
+	Type       string
 	Options    TransportOptions
 }
 

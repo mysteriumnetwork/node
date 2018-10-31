@@ -24,10 +24,13 @@ import (
 	dto_openvpn "github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 )
 
+// ServiceType indicates "openvpn" service type
+const ServiceType = "openvpn"
+
 // Bootstrap is called on program initialization time and registers various deserializers related to opepnvpn service
 func Bootstrap() {
 	dto_discovery.RegisterServiceDefinitionUnserializer(
-		"openvpn",
+		ServiceType,
 		func(rawDefinition *json.RawMessage) (dto_discovery.ServiceDefinition, error) {
 			var definition dto_openvpn.ServiceDefinition
 			err := json.Unmarshal(*rawDefinition, &definition)

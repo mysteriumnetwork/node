@@ -49,7 +49,7 @@ import (
 	"github.com/mysteriumnetwork/node/server/metrics/oracle"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
-	"github.com/mysteriumnetwork/node/services/openvpn"
+	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -82,7 +82,10 @@ type Dependencies struct {
 
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
-	ServiceManager     *service.Manager
+
+	ServiceManager        *service.Manager
+	ServiceRegistry       *service.Registry
+	ServiceSessionStorage *session.StorageMemory
 
 	SessionStorage connection.SessionStorage
 }
@@ -91,7 +94,7 @@ type Dependencies struct {
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.Bootstrap()
 	nats_discovery.Bootstrap()
-	openvpn.Bootstrap()
+	service_openvpn.Bootstrap()
 
 	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
 
@@ -206,7 +209,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
-	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
+	createService := func(serviceOptions service.Options) (service.Service, error) {
+		transportOptions := serviceOptions.Options.(openvpn_service.Options)
+		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, di.ServiceSessionStorage), nil
+	}
+	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
+
+	connectionFactory := service_openvpn.NewProcessBasedConnectionFactory(
 		di.MysteriumClient,
 		nodeOptions.Openvpn.BinaryPath,
 		nodeOptions.Directories.Config,
@@ -215,11 +224,14 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		di.LocationOriginal,
 		di.SignerFactory,
 	)
-	di.ConnectionRegistry.Register("openvpn", connectionFactory.CreateConnection)
+	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory.CreateConnection)
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
-	di.ConnectionRegistry.Register("dummy", service_noop.NewConnectionCreator())
+	di.ServiceRegistry.Register(service_noop.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
+		return service_noop.NewManager(), nil
+	})
+	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
 }
 
 // bootstrapServiceComponents initiates ServiceManager dependency
@@ -232,12 +244,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	)
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
-
-	sessionStorage := session.NewStorageMemory()
-	newService := func(serviceOptions service.Options) (service.Service, error) {
-		transportOptions := serviceOptions.Options.(openvpn_service.Options)
-		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, sessionStorage), nil
-	}
 
 	newDialogWaiter := func(providerID identity.Identity) communication.DialogWaiter {
 		return nats_dialog.NewDialogWaiter(
@@ -253,13 +259,15 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			}
 			return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
 		}
-		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
+		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, di.ServiceSessionStorage, promiseHandler)
 		return session.NewDialogHandler(sessionManagerFactory)
 	}
 
+	di.ServiceRegistry = service.NewRegistry()
+	di.ServiceSessionStorage = session.NewStorageMemory()
 	di.ServiceManager = service.NewManager(
 		identityHandler,
-		newService,
+		di.ServiceRegistry.Create,
 		newDialogWaiter,
 		newDialogHandler,
 		discoveryService,

@@ -15,14 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package storage
+package service
 
-// Storage stores persistent objects for future usage
-type Storage interface {
-	Store(issuer string, data interface{}) error
-	Delete(issuer string, data interface{}) error
-	Save(object interface{}) error
-	Update(object interface{}) error
-	GetAll(array interface{}) error
-	Close() error
+// Registry holds all pluggable services
+type Registry struct {
+	factories map[string]ServiceFactory
+}
+
+// NewRegistry creates a registry of pluggable services
+func NewRegistry() *Registry {
+	return &Registry{
+		factories: make(map[string]ServiceFactory),
+	}
+}
+
+// Register registers a new pluggable service
+func (registry *Registry) Register(serviceType string, creator ServiceFactory) {
+	registry.factories[serviceType] = creator
+}
+
+// Create creates pluggable service
+func (registry *Registry) Create(options Options) (Service, error) {
+	createService, exists := registry.factories[options.Type]
+	if !exists {
+		return nil, ErrUnsupportedServiceType
+	}
+
+	return createService(options)
 }

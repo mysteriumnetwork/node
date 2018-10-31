@@ -46,7 +46,7 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 				Protocol:          "tcp",
 			},
 
-			PaymentMethodType: dto.PaymentMethodPerTime,
+			PaymentMethodType: "PER_TIME",
 			PaymentMethod: dto.PaymentPerTime{
 				Price:    money.Money{12500000, money.Currency("MYST")},
 				Duration: 60 * time.Minute,
