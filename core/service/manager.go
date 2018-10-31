@@ -34,6 +34,8 @@ const logPrefix = "[service-manager] "
 var (
 	// ErrorLocation error indicates that action (i.e. disconnect)
 	ErrorLocation = errors.New("failed to detect service location")
+	// ErrUnsupportedServiceType indicates that manager tried to create an unsupported service type
+	ErrUnsupportedServiceType = errors.New("unsupported service type")
 )
 
 // ServiceFactory initiates instance which is able to serve connections
@@ -135,7 +137,9 @@ func (manager *Manager) Kill() error {
 	if manager.dialogWaiter != nil {
 		errDialogWaiter = manager.dialogWaiter.Stop()
 	}
-	errService = manager.service.Stop()
+	if manager.service != nil {
+		errService = manager.service.Stop()
+	}
 
 	if errDialogWaiter != nil {
 		return errDialogWaiter

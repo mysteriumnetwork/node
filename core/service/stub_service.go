@@ -17,13 +17,26 @@
 
 package service
 
-// Options describes options which are required to start a service
-type Options struct {
-	Identity   string
-	Passphrase string
-	Type       string
-	Options    TransportOptions
+import (
+	"github.com/mysteriumnetwork/node/identity"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
+)
+
+var _ Service = &serviceFake{}
+
+type serviceFake struct {
+	onStartReturnError error
 }
 
-// TransportOptions represents any type of options for plugable service
-type TransportOptions interface{}
+func (service *serviceFake) Start(identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
+	return dto_discovery.ServiceProposal{}, nil, service.onStartReturnError
+}
+
+func (service *serviceFake) Wait() error {
+	return nil
+}
+
+func (service *serviceFake) Stop() error {
+	return nil
+}
