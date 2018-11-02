@@ -17,7 +17,12 @@
 
 package node
 
-import openvpn_core "github.com/mysteriumnetwork/go-openvpn/openvpn/core"
+// Openvpn interface is abstraction over real openvpn options to unblock mobile development
+// will disappear as soon as go-openvpn will unify common factory for openvpn creation
+type Openvpn interface {
+	Check() error
+	BinaryPath() string
+}
 
 // Options describes options which are required to start Node
 type Options struct {
@@ -26,7 +31,7 @@ type Options struct {
 	TequilapiAddress string
 	TequilapiPort    int
 
-	Openvpn  openvpn_core.NodeOptions
+	Openvpn  Openvpn
 	Location OptionsLocation
 	OptionsNetwork
 }

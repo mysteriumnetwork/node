@@ -24,7 +24,6 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mitchellh/go-homedir"
-	openvpn_core "github.com/mysteriumnetwork/go-openvpn/openvpn/core"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -66,7 +65,7 @@ func NewNode(appPath string) (*MobileNode, error) {
 		TequilapiPort:    4050,
 
 		// TODO Make Openvpn pluggable connection optional
-		Openvpn: openvpn_core.NodeOptions{},
+		Openvpn: noOpenvpnYet{},
 
 		Location: node.OptionsLocation{
 			IpifyUrl: "https://api.ipify.org/",
@@ -130,3 +129,16 @@ func (mobNode *MobileNode) Shutdown() error {
 func (mobNode *MobileNode) WaitUntilDies() error {
 	return mobNode.di.Node.Wait()
 }
+
+type noOpenvpnYet struct {
+}
+
+func (noOpenvpnYet) Check() error {
+	return nil
+}
+
+func (noOpenvpnYet) BinaryPath() string {
+	panic("implement me")
+}
+
+var _ node.Openvpn = noOpenvpnYet{}
