@@ -32,6 +32,7 @@ import (
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 )
 
+// MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
 	di cmd.Dependencies
 }
@@ -88,6 +89,7 @@ func NewNode(appPath string) (*MobileNode, error) {
 	return &MobileNode{di}, nil
 }
 
+// TestConnectFlow checks whenever connection can be successfully established
 func (mobNode *MobileNode) TestConnectFlow() error {
 	consumers := mobNode.di.IdentityManager.GetIdentities()
 	var consumerID identity.Identity
@@ -119,10 +121,12 @@ func (mobNode *MobileNode) TestConnectFlow() error {
 	return mobNode.di.ConnectionManager.Disconnect()
 }
 
+// Shutdown function stops running mobile node
 func (mobNode *MobileNode) Shutdown() error {
 	return mobNode.di.Node.Kill()
 }
 
+// WaitUntilDies function returns when node stops
 func (mobNode *MobileNode) WaitUntilDies() error {
 	return mobNode.di.Node.Wait()
 }
