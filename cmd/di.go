@@ -96,10 +96,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
 
-	// TODO Implement different check for in "mobile" package
-	//if err := nodeOptions.Directories.Check(); err != nil {
-	//	return err
-	//}
+	if err := nodeOptions.Directories.Check(); err != nil {
+		return err
+	}
 	//
 	//if err := nodeOptions.Openvpn.Check(); err != nil {
 	//	return err

@@ -20,19 +20,24 @@ package mysterium
 import (
 	"path/filepath"
 
+	"github.com/mysteriumnetwork/node/identity"
+
 	log "github.com/cihub/seelog"
 	"github.com/mitchellh/go-homedir"
 	openvpn_core "github.com/mysteriumnetwork/go-openvpn/openvpn/core"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 )
 
+type MobileNode struct {
+	di cmd.Dependencies
+}
+
 // NewNode function creates new Node
-func NewNode(appPath string) {
+func NewNode(appPath string) (*MobileNode, error) {
 	var di cmd.Dependencies
 
 	var dataDir, currentDir string
@@ -52,8 +57,6 @@ func NewNode(appPath string) {
 			Data:     dataDir,
 			Storage:  filepath.Join(dataDir, "db"),
 			Keystore: filepath.Join(dataDir, "keystore"),
-			// TODO Embbed all config file to released artifacts
-			Config: filepath.Join(currentDir, "config"),
 			// TODO Where to save runtime data
 			Runtime: currentDir,
 		},
@@ -77,50 +80,49 @@ func NewNode(appPath string) {
 		},
 	})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	defer func() {
-		log.Info("Shutdown Mysterium Node")
-		di.Shutdown()
-	}()
 
-	// TODO Mock transport until encrypted tunnel is ready in mobile
 	di.ConnectionRegistry.Register("openvpn", service_noop.NewConnectionCreator())
 
-	// TODO Remove later, this is for initial green path test only
-	//testConnectFlow(&di, identity.FromAddress("0xd961ebabbdc17b7f82a18ef4f575d9e06f5a412d"))
-
-	// TODO Return node startup/runtime errors to mobile
-	err = di.Node.Wait()
-	if err != nil {
-		panic(err)
-	}
+	return &MobileNode{di}, nil
 }
 
-func testConnectFlow(di *cmd.Dependencies, providerID identity.Identity) {
-	consumers := di.IdentityManager.GetIdentities()
+func (mobNode *MobileNode) TestConnectFlow() error {
+	consumers := mobNode.di.IdentityManager.GetIdentities()
+	var consumerID identity.Identity
 	if len(consumers) < 1 {
-		panic("No identity found")
+		created, err := mobNode.di.IdentityManager.CreateNewIdentity("")
+		if err != nil {
+			return err
+		}
+		consumerID = created
+	} else {
+		consumerID = consumers[0]
 	}
-	consumerID := consumers[0]
 
 	log.Infof("Unlocking consumer: %#v", consumerID)
-	err := di.IdentityManager.Unlock(consumerID.Address, "")
+	err := mobNode.di.IdentityManager.Unlock(consumerID.Address, "")
 	if err != nil {
-		panic(err)
+		return err
+	}
+	providerId := identity.FromAddress("0xd961ebabbdc17b7f82a18ef4f575d9e06f5a412d")
+	log.Infof("Connecting to provider: %#v", providerId)
+	err = mobNode.di.ConnectionManager.Connect(consumerID, providerId, connection.ConnectParams{})
+	if err != nil {
+		return err
 	}
 
-	log.Infof("Connecting to provider: %#v", providerID)
-	err = di.ConnectionManager.Connect(consumerID, providerID, connection.ConnectParams{})
-	if err != nil {
-		panic(err)
-	}
-
-	connectionStatus := di.ConnectionManager.Status()
+	connectionStatus := mobNode.di.ConnectionManager.Status()
 	log.Infof("Connection status: %#v", connectionStatus)
-	err = di.ConnectionManager.Disconnect()
-	if err != nil {
-		panic(err)
-	}
 
+	return mobNode.di.ConnectionManager.Disconnect()
+}
+
+func (mobNode *MobileNode) Shutdown() error {
+	return mobNode.di.Node.Kill()
+}
+
+func (mobNode *MobileNode) WaitUntilDies() error {
+	return mobNode.di.Node.Wait()
 }
