@@ -59,11 +59,15 @@ type sessionDTO struct {
 }
 
 type sessionsEndpoint struct {
-	sessionStorage connection.SessionStorage
+	sessionStorage sessionStorageGet
+}
+
+type sessionStorageGet interface {
+	GetAll() ([]connection.Session, error)
 }
 
 // NewSessionsEndpoint creates and returns sessions endpoint
-func NewSessionsEndpoint(sessionStorage connection.SessionStorage) *sessionsEndpoint {
+func NewSessionsEndpoint(sessionStorage sessionStorageGet) *sessionsEndpoint {
 	return &sessionsEndpoint{
 		sessionStorage: sessionStorage,
 	}
@@ -93,8 +97,8 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 }
 
 // AddRoutesForSession attaches sessions endpoints to router
-func AddRoutesForSession(router *httprouter.Router, sessionsRepository connection.SessionStorage) {
-	sessionsEndpoint := NewSessionsEndpoint(sessionsRepository)
+func AddRoutesForSession(router *httprouter.Router, sessionStorage sessionStorageGet) {
+	sessionsEndpoint := NewSessionsEndpoint(sessionStorage)
 	router.GET("/sessions", sessionsEndpoint.List)
 }
 

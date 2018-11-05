@@ -52,6 +52,10 @@ var (
 // consumer identity, provider identity and uses state channel to report state changes
 type ConnectionCreator func(ConnectOptions, StateChannel) (Connection, error)
 
+type sessionStorageSave interface {
+	Save(Session) error
+}
+
 type connectionManager struct {
 	//these are passed on creation
 	mysteriumClient  server.Client
@@ -59,7 +63,7 @@ type connectionManager struct {
 	newPromiseIssuer PromiseIssuerCreator
 	newConnection    ConnectionCreator
 	statsKeeper      stats.SessionStatsKeeper
-	sessionStorage   SessionStorage
+	sessionStorage   sessionStorageSave
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -74,7 +78,7 @@ func NewManager(
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator ConnectionCreator,
 	statsKeeper stats.SessionStatsKeeper,
-	sessionStorage SessionStorage,
+	sessionStorage sessionStorageSave,
 ) *connectionManager {
 	return &connectionManager{
 		statsKeeper:      statsKeeper,

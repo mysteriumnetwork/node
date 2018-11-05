@@ -23,12 +23,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -281,10 +279,6 @@ func waitABit() {
 type fakeSessionRepository struct{}
 
 func (fs *fakeSessionRepository) Save(Session) error { return nil }
-func (fs *fakeSessionRepository) Update(session.ID, int, stats.SessionStats) error {
-	return nil
-}
-func (fs *fakeSessionRepository) GetAll() ([]Session, error) { return nil, nil }
 
 type fakeServiceDefinition struct{}
 
