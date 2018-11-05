@@ -40,12 +40,14 @@ type OptionsDirectory struct {
 
 // Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)
 func (options *OptionsDirectory) Check() error {
-	err := ensureDirExists(options.Config)
-	if err != nil {
-		return err
-	}
 
-	err = ensureOrCreateDir(options.Runtime)
+	if options.Config != "" {
+		err := ensureDirExists(options.Config)
+		if err != nil {
+			return err
+		}
+	}
+	err := ensureOrCreateDir(options.Runtime)
 	if err != nil {
 		return err
 	}

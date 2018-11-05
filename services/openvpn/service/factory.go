@@ -81,7 +81,7 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator) ServerFactory {
 	return func(config *openvpn_service.ServerConfig) openvpn.Process {
 		return openvpn.CreateNewProcess(
-			nodeOptions.Openvpn.BinaryPath,
+			nodeOptions.Openvpn.BinaryPath(),
 			config.GenericConfig,
 			auth.NewMiddleware(sessionValidator.Validate, sessionValidator.Cleanup),
 			state.NewMiddleware(vpnStateCallback),

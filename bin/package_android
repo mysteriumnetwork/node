@@ -1,0 +1,26 @@
+#!/bin/bash
+
+###########################################################################
+# Packaging script which creates Android AAR (Android Archive).
+#
+# Usage:
+#> bin/package_android <architecture>
+#
+# Package (specific architecture: arm64, arm):
+#> bin/package_android arm64
+
+set -e
+
+source bin/helpers/output.sh
+source bin/helpers/functions.sh
+
+if ! [ -x "$(command -v xgo)" ]; then
+    go get github.com/karalabe/xgo
+fi
+
+DIR_BUILD="build/package"
+
+xgo -image=mysteriumnetwork/xgo:1.11 -targets=android/* -out Mysterium -dest $DIR_BUILD `pwd`/mobile/mysterium
+
+print_success "Android package '$PACKAGE_FILE' complete!"
+exit 0
