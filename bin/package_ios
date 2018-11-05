@@ -26,11 +26,12 @@ DIR_FRAMEWORK="${DIR_TEMP}/Mysterium.framework"
 
 xgo \
     -image=mysteriumnetwork/xgo:1.11 \
-    --ldflags="-w -s $(get_linker_ldflags)" \
+    -ldflags="-w -s $(get_linker_ldflags)" \
     -targets=ios/* -out Mysterium -dest $DIR_TEMP \
     `pwd`/mobile/mysterium
 
-chown -R travis ${DIR_FRAMEWORK}
+me=`whoami`
+sudo chown -R $me ${DIR_FRAMEWORK}
 cp -vp bin/package/ios/Info.plist ${DIR_FRAMEWORK}/Versions/A/Resources/Info.plist
 
 (cd ${DIR_TEMP} && zip -r - .) > ${PACKAGE_FILE}
