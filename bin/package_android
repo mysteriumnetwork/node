@@ -20,7 +20,11 @@ fi
 
 DIR_BUILD="build/package"
 
-xgo -image=mysteriumnetwork/xgo:1.11 -targets=android/* -out Mysterium -dest $DIR_BUILD `pwd`/mobile/mysterium
+xgo \
+    -image=mysteriumnetwork/xgo:1.11 \
+    --ldflags="-w -s $(get_linker_ldflags)" \
+    -targets=android/* -out Mysterium -dest $DIR_TEMP \
+ `pwd`/mobile/mysterium
 
 print_success "Android package '$PACKAGE_FILE' complete!"
 exit 0
