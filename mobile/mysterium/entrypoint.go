@@ -138,7 +138,7 @@ func (noOpenvpnYet) Check() error {
 }
 
 func (noOpenvpnYet) BinaryPath() string {
-	panic("implement me")
+	return "no openvpn binary available on mobile"
 }
 
 var _ node.Openvpn = noOpenvpnYet{}
