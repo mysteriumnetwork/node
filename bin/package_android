@@ -14,6 +14,10 @@ set -e
 source bin/helpers/output.sh
 source bin/helpers/functions.sh
 
+if ! [ -x "$(command -v xgo)" ]; then
+    go get github.com/karalabe/xgo
+fi
+
 DIR_BUILD="build/package"
 
 xgo -image=mysteriumnetwork/xgo:1.11 -targets=android/* -out Mysterium -dest $DIR_BUILD `pwd`/mobile/mysterium
