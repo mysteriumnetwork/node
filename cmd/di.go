@@ -207,7 +207,8 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 
 	connectionFactory := service_openvpn.NewProcessBasedConnectionFactory(
 		di.MysteriumClient,
-		nodeOptions.Openvpn.BinaryPath,
+		// TODO instead of passing binary path here, Openvpn from node options could represent abstract vpn factory itself
+		nodeOptions.Openvpn.BinaryPath(),
 		nodeOptions.Directories.Config,
 		nodeOptions.Directories.Runtime,
 		di.StatsKeeper,
