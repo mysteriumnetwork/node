@@ -30,6 +30,7 @@ xgo \
     -targets=ios/* -out Mysterium -dest $DIR_TEMP \
     `pwd`/mobile/mysterium
 
+chown -R travis ${DIR_FRAMEWORK}
 cp -vp bin/package/ios/Info.plist ${DIR_FRAMEWORK}/Versions/A/Resources/Info.plist
 
 (cd ${DIR_TEMP} && zip -r - .) > ${PACKAGE_FILE}
