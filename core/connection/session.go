@@ -15,14 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package storage
+package connection
 
-// Storage stores persistent objects for future usage
-type Storage interface {
-	Store(issuer string, data interface{}) error
-	Delete(issuer string, data interface{}) error
-	Save(object interface{}) error
-	Update(object interface{}) error
-	GetAll(array interface{}) error
-	Close() error
+import (
+	"time"
+
+	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session"
+)
+
+// Session holds structure for saving session history
+type Session struct {
+	SessionID       session.ID `storm:"id"`
+	ProviderID      identity.Identity
+	ServiceType     string
+	ProviderCountry string
+	TimeStarted     time.Time
+	// these will be updated while session is ongoing
+	Duration  int // in seconds
+	DataStats stats.SessionStats
 }

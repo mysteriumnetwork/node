@@ -39,6 +39,7 @@ type testContext struct {
 	fakeStatsKeeper       *fakeSessionStatsKeeper
 	fakeDialog            *fakeDialog
 	fakePromiseIssuer     *fakePromiseIssuer
+	fakeSessionRepository *fakeSessionRepository
 	sync.RWMutex
 }
 
@@ -48,9 +49,10 @@ var (
 	activeProviderContact = dto.Contact{}
 	activeServiceType     = "fake-service"
 	activeProposal        = dto.ServiceProposal{
-		ProviderID:       activeProviderID.Address,
-		ProviderContacts: []dto.Contact{activeProviderContact},
-		ServiceType:      activeServiceType,
+		ProviderID:        activeProviderID.Address,
+		ProviderContacts:  []dto.Contact{activeProviderContact},
+		ServiceType:       activeServiceType,
+		ServiceDefinition: &fakeServiceDefinition{},
 	}
 )
 
@@ -98,7 +100,16 @@ func (tc *testContext) SetupTest() {
 
 	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
 
-	tc.connManager = NewManager(tc.fakeDiscoveryClient, dialogCreator, promiseIssuerFactory, tc.fakeConnectionFactory.CreateConnection, tc.fakeStatsKeeper)
+	tc.fakeSessionRepository = &fakeSessionRepository{}
+
+	tc.connManager = NewManager(
+		tc.fakeDiscoveryClient,
+		dialogCreator,
+		promiseIssuerFactory,
+		tc.fakeConnectionFactory.CreateConnection,
+		tc.fakeStatsKeeper,
+		tc.fakeSessionRepository,
+	)
 }
 
 func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
@@ -264,3 +275,11 @@ func waitABit() {
 	//important when testing async code
 	time.Sleep(10 * time.Millisecond)
 }
+
+type fakeSessionRepository struct{}
+
+func (fs *fakeSessionRepository) Save(Session) error { return nil }
+
+type fakeServiceDefinition struct{}
+
+func (fs *fakeServiceDefinition) GetLocation() dto.Location { return dto.Location{} }
