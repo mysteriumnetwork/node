@@ -20,8 +20,6 @@ package endpoints
 import (
 	"net/http"
 
-	"time"
-
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -111,17 +109,10 @@ func sessionToDto(se connection.Session) SessionDTO {
 		ServiceType:     se.ServiceType,
 		ProviderCountry: se.ProviderCountry,
 		DateStarted:     se.TimeStarted.Format("2018-10-29 16:22:05"),
-		BytesSent:       uint64(se.DataStats.BytesSent),
-		BytesReceived:   uint64(se.DataStats.BytesReceived),
-		Duration:        getDuration(se.TimeStarted, se.TimeUpdated),
+		BytesSent:       se.DataStats.BytesSent,
+		BytesReceived:   se.DataStats.BytesReceived,
+		Duration:        se.GetDuration(),
 	}
-}
-
-func getDuration(start time.Time, end time.Time) uint64 {
-	if end.IsZero() {
-		return 0
-	}
-	return uint64(end.Sub(start).Seconds())
 }
 
 func mapSessions(sessions []connection.Session, f func(connection.Session) SessionDTO) []SessionDTO {

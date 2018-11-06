@@ -131,13 +131,14 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	sessionsDTO, err := tequilapi.GetSessions()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
-	assert.Equal(t, uint64(0), sessionsDTO.Sessions[0].Duration)
-	assert.Equal(t, uint64(0), sessionsDTO.Sessions[0].BytesSent)
-	assert.Equal(t, uint64(0), sessionsDTO.Sessions[0].BytesReceived)
-	assert.Equal(t, "e2e-land", sessionsDTO.Sessions[0].ProviderCountry)
-	assert.Equal(t, "openvpn", sessionsDTO.Sessions[0].ServiceType)
-	assert.Equal(t, proposal.ProviderID, sessionsDTO.Sessions[0].ProviderID)
-	assert.Equal(t, connectionStatus.SessionID, sessionsDTO.Sessions[0].SessionID)
+	se := sessionsDTO.Sessions[0]
+	assert.Equal(t, uint64(0), se.Duration)
+	assert.Equal(t, uint64(0), se.BytesSent)
+	assert.Equal(t, uint64(0), se.BytesReceived)
+	assert.Equal(t, "e2e-land", se.ProviderCountry)
+	assert.Equal(t, "openvpn", se.ServiceType)
+	assert.Equal(t, proposal.ProviderID, se.ProviderID)
+	assert.Equal(t, connectionStatus.SessionID, se.SessionID)
 
 	err = tequilapi.Disconnect()
 	assert.NoError(t, err)
@@ -152,7 +153,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	sessionsDTO, err = tequilapi.GetSessions()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
-	seelog.Info("Session duration in seconds: ", sessionsDTO.Sessions[0].Duration)
-	seelog.Info("Bytes sent: ", sessionsDTO.Sessions[0].BytesSent)
-	seelog.Info("Bytes received: ", sessionsDTO.Sessions[0].BytesReceived)
+	se = sessionsDTO.Sessions[0]
+	assert.NotEqual(t, uint64(0), se.BytesSent)
+	assert.NotEqual(t, uint64(0), se.BytesReceived)
 }

@@ -33,6 +33,14 @@ type Session struct {
 	ProviderCountry string
 	TimeStarted     time.Time
 	// these will be updated on disconnect event
-	TimeUpdated time.Time // Duration can be calculated: TimeUpdated - TimeStarted
+	TimeUpdated time.Time
 	DataStats   stats.SessionStats
+}
+
+// GetDuration returns delta in seconds (TimeUpdated - TimeStarted)
+func (se *Session) GetDuration() uint64 {
+	if se.TimeUpdated.IsZero() {
+		return 0
+	}
+	return uint64(se.TimeUpdated.Sub(se.TimeStarted).Seconds())
 }

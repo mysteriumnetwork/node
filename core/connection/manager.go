@@ -52,8 +52,9 @@ var (
 // consumer identity, provider identity and uses state channel to report state changes
 type ConnectionCreator func(ConnectOptions, StateChannel) (Connection, error)
 
-type sessionStorageSave interface {
+type sessionSaver interface {
 	Save(Session) error
+	Update(session.ID, time.Time, stats.SessionStats) error
 }
 
 type connectionManager struct {
@@ -63,7 +64,7 @@ type connectionManager struct {
 	newPromiseIssuer PromiseIssuerCreator
 	newConnection    ConnectionCreator
 	statsKeeper      stats.SessionStatsKeeper
-	sessionStorage   sessionStorageSave
+	sessionStorage   sessionSaver
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -78,7 +79,7 @@ func NewManager(
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator ConnectionCreator,
 	statsKeeper stats.SessionStatsKeeper,
-	sessionStorage sessionStorageSave,
+	sessionStorage sessionSaver,
 ) *connectionManager {
 	return &connectionManager{
 		statsKeeper:      statsKeeper,
