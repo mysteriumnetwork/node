@@ -25,38 +25,32 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-// SessionStorage describes functions for storing session objects
-type SessionStorage interface {
-	Save(Session) error
-	Update(session.ID, time.Time, stats.SessionStats) error
-	GetAll() ([]Session, error)
-}
-
-type sessionStorage struct {
+// SessionStorage contains functions for storing, getting session objects
+type SessionStorage struct {
 	storage storage.Storage
 }
 
 // NewSessionStorage creates session repository with given dependencies
-func NewSessionStorage(storage storage.Storage) SessionStorage {
-	return &sessionStorage{
+func NewSessionStorage(storage storage.Storage) *SessionStorage {
+	return &SessionStorage{
 		storage: storage,
 	}
 }
 
 // Save saves a new session
-func (repo *sessionStorage) Save(se Session) error {
+func (repo *SessionStorage) Save(se Session) error {
 	return repo.storage.Save(&se)
 }
 
 // Update updates specified fields of existing session by id
-func (repo *sessionStorage) Update(sessionID session.ID, TimeUpdated time.Time, dataStats stats.SessionStats) error {
+func (repo *SessionStorage) Update(sessionID session.ID, TimeUpdated time.Time, dataStats stats.SessionStats) error {
 	// update two fields by sessionID
 	se := Session{SessionID: sessionID, TimeUpdated: TimeUpdated, DataStats: dataStats}
 	return repo.storage.Update(&se)
 }
 
 // GetAll returns array of all sessions
-func (repo *sessionStorage) GetAll() ([]Session, error) {
+func (repo *SessionStorage) GetAll() ([]Session, error) {
 	var sessions []Session
 	err := repo.storage.GetAll(&sessions)
 	if err != nil {

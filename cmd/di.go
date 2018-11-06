@@ -86,8 +86,6 @@ type Dependencies struct {
 	ServiceManager        *service.Manager
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
-
-	SessionStorage connection.SessionStorage
 }
 
 // Bootstrap initiates all container dependencies
@@ -182,7 +180,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
 	}
 
-	di.SessionStorage = connection.NewSessionStorage(di.Storage)
+	sessionStorage := connection.NewSessionStorage(di.Storage)
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
@@ -191,7 +189,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		promiseIssuerFactory,
 		di.ConnectionRegistry.CreateConnection,
 		di.StatsKeeper,
-		di.SessionStorage,
+		sessionStorage,
 	)
 
 	router := tequilapi.NewAPIRouter()
@@ -200,7 +198,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
-	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)
+	tequilapi_endpoints.AddRoutesForSession(router, sessionStorage)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
@@ -217,7 +215,8 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 
 	connectionFactory := service_openvpn.NewProcessBasedConnectionFactory(
 		di.MysteriumClient,
-		nodeOptions.Openvpn.BinaryPath,
+		// TODO instead of passing binary path here, Openvpn from node options could represent abstract vpn factory itself
+		nodeOptions.Openvpn.BinaryPath(),
 		nodeOptions.Directories.Config,
 		nodeOptions.Directories.Runtime,
 		di.StatsKeeper,
