@@ -6,6 +6,6 @@
 #> bin/check
 
 bin/check_govet
-bin/check_golint
+bin/builder_run bin/check_golint
 bin/check_goimports
 bin/check_license
