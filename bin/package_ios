@@ -24,9 +24,15 @@ PACKAGE_FILE="${DIR_BUILD}/Mysterium.framework.zip"
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 DIR_FRAMEWORK="${DIR_TEMP}/Mysterium.framework"
 
-xgo -image=mysteriumnetwork/xgo:1.11 -targets=ios/* -out Mysterium -dest $DIR_TEMP `pwd`/mobile/mysterium
+xgo \
+    -image=mysteriumnetwork/xgo:1.11 \
+    -ldflags="-w -s $(get_linker_ldflags)" \
+    -targets=ios/* -out Mysterium -dest $DIR_TEMP \
+    `pwd`/mobile/mysterium
 
-cp bin/package/ios/Info.plist ${DIR_FRAMEWORK}/Versions/A/Resources/Info.plist
+me=`whoami`
+sudo chown -R $me ${DIR_FRAMEWORK}
+cp -vp bin/package/ios/Info.plist ${DIR_FRAMEWORK}/Versions/A/Resources/Info.plist
 
 (cd ${DIR_TEMP} && zip -r - .) > ${PACKAGE_FILE}
 rm -rf ${DIR_TEMP}
