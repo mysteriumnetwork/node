@@ -20,13 +20,12 @@ package mysterium
 import (
 	"path/filepath"
 
-	"github.com/mysteriumnetwork/node/identity"
-
 	log "github.com/cihub/seelog"
 	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 )
@@ -36,8 +35,11 @@ type MobileNode struct {
 	di cmd.Dependencies
 }
 
+// MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
+type MobileNetworkOptions node.OptionsNetwork
+
 // NewNode function creates new Node
-func NewNode(appPath string) (*MobileNode, error) {
+func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode, error) {
 	var di cmd.Dependencies
 
 	var dataDir, currentDir string
@@ -71,13 +73,8 @@ func NewNode(appPath string) (*MobileNode, error) {
 			IpifyUrl: "https://api.ipify.org/",
 			Country:  "LT",
 		},
-		OptionsNetwork: node.OptionsNetwork{
-			Testnet:              true,
-			DiscoveryAPIAddress:  metadata.TestnetDefinition.DiscoveryAPIAddress,
-			BrokerAddress:        metadata.TestnetDefinition.BrokerAddress,
-			EtherClientRPC:       metadata.TestnetDefinition.EtherClientRPC,
-			EtherPaymentsAddress: metadata.DefaultNetwork.PaymentsContractAddress.String(),
-		},
+
+		OptionsNetwork: node.OptionsNetwork(*optionsNetwork),
 	})
 	if err != nil {
 		return nil, err
@@ -88,8 +85,19 @@ func NewNode(appPath string) (*MobileNode, error) {
 	return &MobileNode{di}, nil
 }
 
+// DefaultNetworkOptions returns default network options to connect with
+func DefaultNetworkOptions() *MobileNetworkOptions {
+	return &MobileNetworkOptions{
+		Testnet:              true,
+		DiscoveryAPIAddress:  metadata.TestnetDefinition.DiscoveryAPIAddress,
+		BrokerAddress:        metadata.TestnetDefinition.BrokerAddress,
+		EtherClientRPC:       metadata.TestnetDefinition.EtherClientRPC,
+		EtherPaymentsAddress: metadata.DefaultNetwork.PaymentsContractAddress.String(),
+	}
+}
+
 // TestConnectFlow checks whenever connection can be successfully established
-func (mobNode *MobileNode) TestConnectFlow() error {
+func (mobNode *MobileNode) TestConnectFlow(providerAddress string) error {
 	consumers := mobNode.di.IdentityManager.GetIdentities()
 	var consumerID identity.Identity
 	if len(consumers) < 1 {
@@ -107,7 +115,7 @@ func (mobNode *MobileNode) TestConnectFlow() error {
 	if err != nil {
 		return err
 	}
-	providerId := identity.FromAddress("0xd961ebabbdc17b7f82a18ef4f575d9e06f5a412d")
+	providerId := identity.FromAddress(providerAddress)
 	log.Infof("Connecting to provider: %#v", providerId)
 	err = mobNode.di.ConnectionManager.Connect(consumerID, providerId, connection.ConnectParams{})
 	if err != nil {
@@ -137,6 +145,7 @@ func (noOpenvpnYet) Check() error {
 	return nil
 }
 
+// BinaryPath returns noop binary path
 func (noOpenvpnYet) BinaryPath() string {
 	return "no openvpn binary available on mobile"
 }
