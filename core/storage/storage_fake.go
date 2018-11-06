@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,23 @@
 
 package storage
 
-// Storage stores persistent objects for future usage
-type Storage interface {
-	Store(issuer string, data interface{}) error
-	Delete(issuer string, data interface{}) error
-	Save(object interface{}) error
-	Update(object interface{}) error
-	GetAll(array interface{}) error
-	Close() error
-}
+// FakeStorage for testing
+type FakeStorage struct{}
+
+// Store for testing
+func (fs *FakeStorage) Store(string, interface{}) error { return nil }
+
+// Delete for testing
+func (fs *FakeStorage) Delete(string, interface{}) error { return nil }
+
+// Save for testing
+func (fs *FakeStorage) Save(object interface{}) error { return nil }
+
+// Update for testing
+func (fs *FakeStorage) Update(interface{}) error { return nil }
+
+// GetAll for testing
+func (fs *FakeStorage) GetAll(interface{}) error { return nil }
+
+// Close for testing
+func (fs *FakeStorage) Close() error { return nil }
