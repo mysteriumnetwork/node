@@ -157,7 +157,7 @@
   revision = "58046073cbffe2f25d425fe1331102f55cf719de"
 
 [[projects]]
-  digest = "1:aee43bc142f59f28645b92122ee61cd5a0c8c48a9cab4883286abcc6aa74e774"
+  digest = "1:1fce10a421f46911bd9cd2e838e0d9646db2a1323f3f3c7f2dbd8a8f7cc47fa3"
   name = "github.com/mysteriumnetwork/go-openvpn"
   packages = [
     "openvpn",
@@ -170,8 +170,9 @@
     "openvpn/middlewares/state",
     "openvpn/tls",
     "openvpn/tunnel",
+    "openvpn3",
   ]
-  pruneopts = "UT"
+  pruneopts = "T"
   revision = "e365d7d4acc0617db68b5fddcec033c9c55a2185"
   version = "v0.0.5"
 
@@ -438,6 +439,7 @@
     "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/tls",
+    "github.com/mysteriumnetwork/go-openvpn/openvpn3",
     "github.com/mysteriumnetwork/payments/cli/helpers",
     "github.com/mysteriumnetwork/payments/identity",
     "github.com/mysteriumnetwork/payments/mysttoken/generated",

@@ -20,6 +20,8 @@ package mysterium
 import (
 	"path/filepath"
 
+	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
+
 	log "github.com/cihub/seelog"
 	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/cmd"
@@ -27,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
-	service_noop "github.com/mysteriumnetwork/node/services/noop"
 )
 
 // MobileNode represents node object tuned for mobile devices
@@ -38,8 +39,10 @@ type MobileNode struct {
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
 type MobileNetworkOptions node.OptionsNetwork
 
+type Openvpn3TunnelSetup openvpn3.TunnelSetup
+
 // NewNode function creates new Node
-func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode, error) {
+func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup Openvpn3TunnelSetup) (*MobileNode, error) {
 	var di cmd.Dependencies
 
 	var dataDir, currentDir string
@@ -80,7 +83,14 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		return nil, err
 	}
 
-	di.ConnectionRegistry.Register("openvpn", service_noop.NewConnectionCreator())
+	di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, channels connection.StateChannel) (connection.Connection, error) {
+
+		session := openvpn3.NewSession(nil, tunnelSetup)
+
+		return &sessionWrapper{
+			session: session,
+		}, nil
+	})
 
 	return &MobileNode{di}, nil
 }
