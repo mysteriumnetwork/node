@@ -80,7 +80,7 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/go-openvpn"
-  branch = "feature/android-emulator-support"
+  version = "0.0.6"
 
 
 [[constraint]]
