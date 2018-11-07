@@ -33,7 +33,8 @@ import (
 
 // MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
-	di cmd.Dependencies
+	di       cmd.Dependencies
+	identity identity.Identity
 }
 
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
@@ -95,28 +96,44 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup O
 		}, nil
 	})
 
-	return &MobileNode{di}, nil
+	return &MobileNode{di: di}, nil
 }
 
 // DefaultNetworkOptions returns default network options to connect with
 func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
-		Testnet:              true,
-		DiscoveryAPIAddress:  metadata.TestnetDefinition.DiscoveryAPIAddress,
-		BrokerAddress:        metadata.TestnetDefinition.BrokerAddress,
-		EtherClientRPC:       metadata.TestnetDefinition.EtherClientRPC,
-		EtherPaymentsAddress: metadata.DefaultNetwork.PaymentsContractAddress.String(),
+		Testnet:                 true,
+		ExperimentIdentityCheck: true,
+		DiscoveryAPIAddress:     metadata.TestnetDefinition.DiscoveryAPIAddress,
+		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
+		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,
+		EtherPaymentsAddress:    metadata.DefaultNetwork.PaymentsContractAddress.String(),
 	}
 }
 
 // TestConnectFlow checks whenever connection can be successfully established
 func (mobNode *MobileNode) TestConnectFlow(providerAddress string) error {
+	providerId := identity.FromAddress(providerAddress)
+	log.Infof("Connecting to provider: %#v", providerId)
+	err := mobNode.di.ConnectionManager.Connect(mobNode.identity, providerId, connection.ConnectParams{})
+	if err != nil {
+		return err
+	}
+
+	connectionStatus := mobNode.di.ConnectionManager.Status()
+	log.Infof("Connection status: %#v", connectionStatus)
+
+	return mobNode.di.ConnectionManager.Disconnect()
+}
+
+// TestConnectFlow checks whenever connection can be successfully established
+func (mobNode *MobileNode) CreateIdentity() (string, error) {
 	consumers := mobNode.di.IdentityManager.GetIdentities()
 	var consumerID identity.Identity
 	if len(consumers) < 1 {
 		created, err := mobNode.di.IdentityManager.CreateNewIdentity("")
 		if err != nil {
-			return err
+			return "", err
 		}
 		consumerID = created
 	} else {
@@ -126,19 +143,10 @@ func (mobNode *MobileNode) TestConnectFlow(providerAddress string) error {
 	log.Infof("Unlocking consumer: %#v", consumerID)
 	err := mobNode.di.IdentityManager.Unlock(consumerID.Address, "")
 	if err != nil {
-		return err
+		return "", err
 	}
-	providerId := identity.FromAddress(providerAddress)
-	log.Infof("Connecting to provider: %#v", providerId)
-	err = mobNode.di.ConnectionManager.Connect(consumerID, providerId, connection.ConnectParams{})
-	if err != nil {
-		return err
-	}
-
-	connectionStatus := mobNode.di.ConnectionManager.Status()
-	log.Infof("Connection status: %#v", connectionStatus)
-
-	return mobNode.di.ConnectionManager.Disconnect()
+	mobNode.identity = consumerID
+	return consumerID.Address, nil
 }
 
 // Shutdown function stops running mobile node
