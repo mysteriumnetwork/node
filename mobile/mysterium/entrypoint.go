@@ -85,7 +85,10 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup O
 
 	di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, channels connection.StateChannel) (connection.Connection, error) {
 
-		session := openvpn3.NewSession(nil, tunnelSetup)
+		config := openvpn3.NewConfig("")
+		config.GuiVersion = "govpn 0.1"
+
+		session := openvpn3.NewSession(config, openvpn3.UserCredentials{}, tunnelSetup)
 
 		return &sessionWrapper{
 			session: session,

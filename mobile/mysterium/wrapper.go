@@ -8,7 +8,7 @@ type sessionWrapper struct {
 
 func (wrapper *sessionWrapper) Start() error {
 
-	wrapper.session.Start("", openvpn3.Credentials{})
+	wrapper.session.Start()
 	return nil
 }
 
