@@ -34,4 +34,6 @@ type Options struct {
 	Openvpn  Openvpn
 	Location OptionsLocation
 	OptionsNetwork
+
+	ServiceTypes []string
 }

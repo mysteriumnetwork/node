@@ -53,7 +53,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 }
 
 // ParseFlagsNode function fills in node options from CLI context
-func ParseFlagsNode(ctx *cli.Context) node.Options {
+func ParseFlagsNode(ctx *cli.Context, serviceTypes []string) node.Options {
 	return node.Options{
 		ParseFlagsDirectory(ctx),
 
@@ -63,6 +63,7 @@ func ParseFlagsNode(ctx *cli.Context) node.Options {
 		wrapper{nodeOptions: openvpn_core.ParseFlags(ctx)},
 		ParseFlagsLocation(ctx),
 		ParseFlagsNetwork(ctx),
+		serviceTypes,
 	}
 }
 

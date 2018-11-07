@@ -36,12 +36,12 @@ import (
 const cliCommandName = "cli"
 
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
-func NewCommand() *cli.Command {
+func NewCommand(defaultServicesToStart []string) *cli.Command {
 	return &cli.Command{
 		Name:  cliCommandName,
 		Usage: "Starts a CLI client with a Tequilapi",
 		Action: func(ctx *cli.Context) error {
-			nodeOptions := cmd.ParseFlagsNode(ctx)
+			nodeOptions := cmd.ParseFlagsNode(ctx, defaultServicesToStart)
 			cmdCLI := &cliApp{
 				historyFile: filepath.Join(nodeOptions.Directories.Data, ".cli_history"),
 				tequilapi:   tequilapi_client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),

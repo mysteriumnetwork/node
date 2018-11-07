@@ -83,7 +83,7 @@ type Dependencies struct {
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
 
-	ServiceManager        *service.Manager
+	ServiceRunner         *service.Runner
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 }
@@ -138,11 +138,12 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}()
 
-	if di.ServiceManager != nil {
-		if err := di.ServiceManager.Kill(); err != nil {
-			errs = append(errs, err)
+	if di.ServiceRunner != nil {
+		if runnerErrs := di.ServiceRunner.Kill(); len(runnerErrs) > 0 {
+			errs = append(errs, runnerErrs...)
 		}
 	}
+
 	if di.Node != nil {
 		if err := di.Node.Kill(); err != nil {
 			errs = append(errs, err)
@@ -264,13 +265,20 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 
 	di.ServiceRegistry = service.NewRegistry()
 	di.ServiceSessionStorage = session.NewStorageMemory()
-	di.ServiceManager = service.NewManager(
-		identityHandler,
-		di.ServiceRegistry.Create,
-		newDialogWaiter,
-		newDialogHandler,
-		discoveryService,
-	)
+
+	if len(nodeOptions.ServiceTypes) > 0 {
+		serviceManagerMap := make(map[string]service.RunnableService, len(nodeOptions.ServiceTypes))
+		for _, serviceType := range nodeOptions.ServiceTypes {
+			serviceManagerMap[serviceType] = service.NewManager(
+				identityHandler,
+				di.ServiceRegistry.Create,
+				newDialogWaiter,
+				newDialogHandler,
+				discoveryService,
+			)
+		}
+		di.ServiceRunner = service.NewRunner(serviceManagerMap)
+	}
 }
 
 func newSessionManagerFactory(

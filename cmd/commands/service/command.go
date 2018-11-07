@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
+	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/urfave/cli"
@@ -51,49 +52,81 @@ var (
 )
 
 // NewCommand function creates service command
-func NewCommand(licenseCommandName string) *cli.Command {
+func NewCommand(licenseCommandName string, defaultServiceTypes []string) *cli.Command {
 	var di cmd.Dependencies
-
 	command := &cli.Command{
-		Name:      serviceCommandName,
-		Usage:     "Starts and publishes service on Mysterium Network",
-		ArgsUsage: " ",
+		Name:        serviceCommandName,
+		Usage:       "Starts and publishes services on Mysterium Network",
+		ArgsUsage:   " ",
+		Subcommands: getSubcommands(&di, licenseCommandName, defaultServiceTypes),
 		Action: func(ctx *cli.Context) error {
-			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
-				printTermWarning(licenseCommandName)
-				os.Exit(2)
-			}
-
-			errorChannel := make(chan error, 3)
-
-			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
-				return err
-			}
-			go func() { errorChannel <- di.Node.Wait() }()
-
-			if err := di.ServiceManager.Start(parseFlags(ctx)); err != nil {
-				return err
-			}
-			go func() { errorChannel <- di.ServiceManager.Wait() }()
-
-			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
-
-			err := <-errorChannel
-			switch err {
-			case service.ErrorLocation:
-				printLocationWarning("myst")
-				return nil
-			default:
-				return err
-			}
+			return runServices(ctx, &di, licenseCommandName, defaultServiceTypes)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
 		},
 	}
+
 	registerFlags(&command.Flags)
 
 	return command
+}
+
+func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName string, serviceTypes []string) error {
+	if !ctx.Bool(agreedTermsConditionsFlag.Name) {
+		printTermWarning(licenseCommandName)
+		os.Exit(2)
+	}
+
+	errorChannel := make(chan error, 2+len(serviceTypes))
+
+	if err := di.Bootstrap(cmd.ParseFlagsNode(ctx, serviceTypes)); err != nil {
+		return err
+	}
+	go func() { errorChannel <- di.Node.Wait() }()
+
+	for _, serviceType := range serviceTypes {
+		options, err := parseFlagsByServiceType(ctx, serviceType)
+		if err != nil {
+			return err
+		}
+		err = di.ServiceRunner.StartServiceByType(serviceType, options, errorChannel)
+		if err != nil {
+			return err
+		}
+	}
+
+	cmd.RegisterSignalCallback(func() { errorChannel <- nil })
+
+	err := <-errorChannel
+	switch err {
+	case service.ErrorLocation:
+		printLocationWarning("myst")
+		return nil
+	default:
+		return err
+	}
+}
+
+func getSubcommandForType(di *cmd.Dependencies, licenseCommandName string, serviceType string) cli.Command {
+	return cli.Command{
+		Name:  serviceType,
+		Usage: fmt.Sprintf("Starts and publishes only %v service on Mysterium Network", serviceType),
+		Action: func(ctx *cli.Context) error {
+			return runServices(ctx, di, licenseCommandName, []string{serviceType})
+		},
+		After: func(ctx *cli.Context) error {
+			return di.Shutdown()
+		},
+	}
+}
+
+func getSubcommands(di *cmd.Dependencies, licenseCommandName string, serviceTypes []string) []cli.Command {
+	res := make([]cli.Command, len(serviceTypes))
+	for i := range serviceTypes {
+		res = append(res, getSubcommandForType(di, licenseCommandName, serviceTypes[i]))
+	}
+	return res
 }
 
 // registerFlags function register service flags to flag list
@@ -105,13 +138,33 @@ func registerFlags(flags *[]cli.Flag) {
 	openvpn_service.RegisterFlags(flags)
 }
 
-// parseFlags function fills in node options from CLI context
-func parseFlags(ctx *cli.Context) service.Options {
+func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, error) {
+	switch serviceType {
+	case service_noop.ServiceType:
+		return parseNoopFlags(ctx), nil
+	case service_openvpn.ServiceType:
+		return parseOpenvpnFlags(ctx), nil
+	default:
+		return service.Options{}, fmt.Errorf("Unknown service type: %q", serviceType)
+	}
+}
+
+// parseOpenvpnFlags function fills in openvpn options from CLI context
+func parseOpenvpnFlags(ctx *cli.Context) service.Options {
 	return service.Options{
 		Identity:   ctx.String(identityFlag.Name),
 		Passphrase: ctx.String(identityPassphraseFlag.Name),
 		Type:       service_openvpn.ServiceType,
 		Options:    openvpn_service.ParseFlags(ctx),
+	}
+}
+
+// parseNoopFlags function fills in noop service options from CLI context
+func parseNoopFlags(ctx *cli.Context) service.Options {
+	return service.Options{
+		Identity:   ctx.String(identityFlag.Name),
+		Passphrase: ctx.String(identityPassphraseFlag.Name),
+		Type:       service_noop.ServiceType,
 	}
 }
 
