@@ -20,6 +20,8 @@ package mysterium
 import (
 	"path/filepath"
 
+	"github.com/mysteriumnetwork/node/services/openvpn"
+
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 
 	log "github.com/cihub/seelog"
@@ -84,12 +86,29 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup O
 		return nil, err
 	}
 
-	di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, channels connection.StateChannel) (connection.Connection, error) {
+	di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, channel connection.StateChannel) (connection.Connection, error) {
 
-		config := openvpn3.NewConfig("")
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
+		if err != nil {
+			return nil, err
+		}
+
+		profileContent, err := vpnClientConfig.ToConfigFileContent()
+		if err != nil {
+			return nil, err
+		}
+
+		config := openvpn3.NewConfig(profileContent)
 		config.GuiVersion = "govpn 0.1"
 
-		session := openvpn3.NewSession(config, openvpn3.UserCredentials{}, tunnelSetup)
+		//signer := di.SignerFactory(options.ConsumerID)
+
+		credentials := openvpn3.UserCredentials{
+			Username: "session id",
+			Password: "signature",
+		}
+
+		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(channel, di.StatsKeeper), tunnelSetup)
 
 		return &sessionWrapper{
 			session: session,
