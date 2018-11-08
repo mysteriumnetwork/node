@@ -1,0 +1,38 @@
+#!/bin/bash
+
+###########################################################################
+# Uploads all created Android artifacts to the Bintray and JCenter
+# - https://bintray.com/mysterium/Node
+#
+# Usage:
+#> bin/release_android <VERSION> <BINTRAY_USER_NAME> <BINTRAY_API_TOKEN>
+
+set -e
+
+source bin/helpers/output.sh
+
+VERSION=$1
+if [ -z "$VERSION" ]; then
+    print_error "Missing version"
+    exit 1
+fi
+
+USER=$2
+if [ -z "$USER" ]; then
+    print_error "Missing Bintray API user"
+    exit 1
+fi
+
+TOKEN=$3
+if [ -z "$TOKEN" ]; then
+    print_error "Missing Bintray API token"
+    exit 1
+fi
+
+sed -i '' -E "s|<version>.+</version>|<version>$VERSION</version>|g" bin/package/android/pom.xml
+
+URL=https://api.bintray.com/content/mysterium/Node/Mysterium/$VERSION/network/mysterium/Node/Mysterium/$VERSION
+
+curl -T bin/package/android/pom.xml         -u$USER:$TOKEN $URL/Mysterium-$VERSION.pom?publish=1
+curl -T build/package/Mysterium.aar         -u$USER:$TOKEN $URL/Mysterium-$VERSION.aar?publish=1
+curl -T build/package/Mysterium-sources.jar -u$USER:$TOKEN $URL/Mysterium-$VERSION-sources.jar?publish=1
