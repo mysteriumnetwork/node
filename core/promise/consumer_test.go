@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -116,7 +117,7 @@ func TestConsume(t *testing.T) {
 		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{1},
 	}
-	consumer := Consumer{proposal: proposal, balance: fakeBlockchain(999999999), storage: &fakeStorage{}}
+	consumer := Consumer{proposal: proposal, balance: fakeBlockchain(999999999), storage: &storage.FakeStorage{}}
 	response, err := consumer.Consume(&request)
 	assert.NoError(t, err)
 	assert.Equal(t, &Response{Success: true}, response)
@@ -135,9 +136,3 @@ func fakeBlockchain(balance uint64) identity.Balance {
 		return balance, nil
 	}
 }
-
-type fakeStorage struct{}
-
-func (fs *fakeStorage) Store(issuer string, data interface{}) error  { return nil }
-func (fs *fakeStorage) Delete(issuer string, data interface{}) error { return nil }
-func (fs *fakeStorage) Close() error                                 { return nil }

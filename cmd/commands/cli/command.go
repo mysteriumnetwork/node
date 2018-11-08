@@ -342,6 +342,14 @@ func (c *cliApp) identities(argsString string) {
 		return
 	}
 
+	switch argsString {
+	case "new", "list": // Known sub-commands.
+	default:
+		warnf("Unknown sub-command '%s'\n", argsString)
+		fmt.Println(usage)
+		return
+	}
+
 	args := strings.Fields(argsString)
 	if len(args) < 1 {
 		info(usage)

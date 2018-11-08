@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/client/stats"
@@ -51,6 +52,10 @@ var (
 // consumer identity, provider identity and uses state channel to report state changes
 type ConnectionCreator func(ConnectOptions, StateChannel) (Connection, error)
 
+type sessionStorageSave interface {
+	Save(Session) error
+}
+
 type connectionManager struct {
 	//these are passed on creation
 	mysteriumClient  server.Client
@@ -58,6 +63,7 @@ type connectionManager struct {
 	newPromiseIssuer PromiseIssuerCreator
 	newConnection    ConnectionCreator
 	statsKeeper      stats.SessionStatsKeeper
+	sessionStorage   sessionStorageSave
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
@@ -72,6 +78,7 @@ func NewManager(
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator ConnectionCreator,
 	statsKeeper stats.SessionStatsKeeper,
+	sessionStorage sessionStorageSave,
 ) *connectionManager {
 	return &connectionManager{
 		statsKeeper:      statsKeeper,
@@ -81,6 +88,7 @@ func NewManager(
 		newConnection:    connectionCreator,
 		status:           statusNotConnected(),
 		cleanConnection:  warnOnClean,
+		sessionStorage:   sessionStorage,
 	}
 }
 
@@ -153,16 +161,20 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 
 	stateChannel := make(chan State, 10)
 
-	connection, err := manager.newConnection(
-		ConnectOptions{
-			SessionID:     sessionID,
-			SessionConfig: sessionConfig,
-			ConsumerID:    consumerID,
-			ProviderID:    providerID,
-			Proposal:      proposal,
-		},
-		stateChannel,
-	)
+	connectOptions := ConnectOptions{
+		SessionID:     sessionID,
+		SessionConfig: sessionConfig,
+		ConsumerID:    consumerID,
+		ProviderID:    providerID,
+		Proposal:      proposal,
+	}
+
+	connection, err := manager.newConnection(connectOptions, stateChannel)
+	if err != nil {
+		return err
+	}
+
+	err = manager.saveSession(connectOptions)
 	if err != nil {
 		return err
 	}
@@ -283,4 +295,16 @@ func (manager *connectionManager) onStateChanged(state State, sessionID session.
 	case Reconnecting:
 		manager.status = statusReconnecting()
 	}
+}
+
+func (manager *connectionManager) saveSession(connectOptions ConnectOptions) error {
+	providerCountry := connectOptions.Proposal.ServiceDefinition.GetLocation().Country
+	se := Session{
+		SessionID:       connectOptions.SessionID,
+		ProviderID:      connectOptions.ProviderID,
+		ServiceType:     connectOptions.Proposal.ServiceType,
+		ProviderCountry: providerCountry,
+		TimeStarted:     time.Now(),
+	}
+	return manager.sessionStorage.Save(se)
 }

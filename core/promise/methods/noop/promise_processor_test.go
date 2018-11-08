@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/promise"
+	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +36,7 @@ func TestPromiseProcessor_Start_SendsBalanceMessages(t *testing.T) {
 	processor := &PromiseProcessor{
 		dialog:          dialog,
 		balanceInterval: time.Millisecond,
-		storage:         fakeStorage{},
+		storage:         &storage.FakeStorage{},
 	}
 	err := processor.Start(proposal)
 	defer processor.Stop()
@@ -58,7 +59,7 @@ func TestPromiseProcessor_Stop_StopsBalanceMessages(t *testing.T) {
 	processor := &PromiseProcessor{
 		dialog:          dialog,
 		balanceInterval: time.Millisecond,
-		storage:         fakeStorage{},
+		storage:         &storage.FakeStorage{},
 	}
 	err := processor.Start(proposal)
 	assert.NoError(t, err)
@@ -78,9 +79,3 @@ func waitForBalanceState(t *testing.T, processor *PromiseProcessor, expectedStat
 	}
 	assert.Fail(t, "State expected to be ", string(expectedState))
 }
-
-type fakeStorage struct{}
-
-func (fs fakeStorage) Store(issuer string, data interface{}) error  { return nil }
-func (fs fakeStorage) Delete(issuer string, data interface{}) error { return nil }
-func (fs fakeStorage) Close() error                                 { return nil }
