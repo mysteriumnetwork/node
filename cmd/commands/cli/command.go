@@ -395,6 +395,10 @@ func (c *cliApp) identities(argsString string) {
 }
 
 func (c *cliApp) registration(argsString string) {
+	if argsString == "" {
+		warn("Please supply identity")
+		return
+	}
 	status, err := c.tequilapi.IdentityRegistrationStatus(argsString)
 	if err != nil {
 		warn("Something went wrong: ", err)
