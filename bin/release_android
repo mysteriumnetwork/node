@@ -31,8 +31,8 @@ fi
 
 sed -i '' -E "s|<version>.+</version>|<version>$VERSION</version>|g" bin/package/android/pom.xml
 
-URL=https://api.bintray.com/content/mysterium/Node/Mysterium/$VERSION/network/mysterium/Node/Mysterium/$VERSION
+URL=https://api.bintray.com/content/mysterium/Node/mobile-node/$VERSION/mysterium/network/mobile-node/$VERSION
 
-curl -T bin/package/android/pom.xml         -u$USER:$TOKEN $URL/Mysterium-$VERSION.pom?publish=1
-curl -T build/package/Mysterium.aar         -u$USER:$TOKEN $URL/Mysterium-$VERSION.aar?publish=1
-curl -T build/package/Mysterium-sources.jar -u$USER:$TOKEN $URL/Mysterium-$VERSION-sources.jar?publish=1
+curl -T bin/package/android/pom.xml         -u$USER:$TOKEN "$URL/mobile-node-$VERSION.pom?override=1&publish=1"
+curl -T build/package/Mysterium.aar         -u$USER:$TOKEN "$URL/mobile-node-$VERSION.aar?override=1&publish=1"
+curl -T build/package/Mysterium-sources.jar -u$USER:$TOKEN "$URL/mobile-node-$VERSION-sources.jar?override=1&publish=1"
