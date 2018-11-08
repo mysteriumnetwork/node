@@ -125,7 +125,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	vpnIp, err := tequilapi.GetIP()
 	assert.NoError(t, err)
-	seelog.Info("Shifted consumer IP: ", vpnIp)
+	seelog.Info("Changed consumer IP: ", vpnIp)
 
 	// sessions history should be created after connect
 	sessionsDTO, err := tequilapi.GetSessions()
@@ -139,6 +139,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.Equal(t, "openvpn", se.ServiceType)
 	assert.Equal(t, proposal.ProviderID, se.ProviderID)
 	assert.Equal(t, connectionStatus.SessionID, se.SessionID)
+	assert.Equal(t, "New", se.Status)
 
 	err = tequilapi.Disconnect()
 	assert.NoError(t, err)
@@ -156,4 +157,5 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	se = sessionsDTO.Sessions[0]
 	assert.NotEqual(t, uint64(0), se.BytesSent)
 	assert.NotEqual(t, uint64(0), se.BytesReceived)
+	assert.Equal(t, "Completed", se.Status)
 }

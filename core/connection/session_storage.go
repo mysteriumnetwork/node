@@ -43,9 +43,10 @@ func (repo *SessionStorage) Save(se Session) error {
 }
 
 // Update updates specified fields of existing session by id
-func (repo *SessionStorage) Update(sessionID session.ID, TimeUpdated time.Time, dataStats stats.SessionStats) error {
-	// update two fields by sessionID
-	se := Session{SessionID: sessionID, TimeUpdated: TimeUpdated, DataStats: dataStats}
+func (repo *SessionStorage) Update(sessionID session.ID, TimeUpdated time.Time, dataStats stats.SessionStats,
+	status SessionStatus) error {
+	// update fields by sessionID
+	se := Session{SessionID: sessionID, TimeUpdated: TimeUpdated, DataStats: dataStats, Status: status}
 	return repo.storage.Update(&se)
 }
 

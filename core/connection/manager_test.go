@@ -280,8 +280,10 @@ func waitABit() {
 
 type fakeSessionRepository struct{}
 
-func (fs *fakeSessionRepository) Save(Session) error                                     { return nil }
-func (fs *fakeSessionRepository) Update(session.ID, time.Time, stats.SessionStats) error { return nil }
+func (fs *fakeSessionRepository) Save(Session) error { return nil }
+func (fs *fakeSessionRepository) Update(session.ID, time.Time, stats.SessionStats, SessionStatus) error {
+	return nil
+}
 
 type fakeServiceDefinition struct{}
 

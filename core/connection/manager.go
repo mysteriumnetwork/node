@@ -54,7 +54,7 @@ type ConnectionCreator func(ConnectOptions, StateChannel) (Connection, error)
 
 type sessionSaver interface {
 	Save(Session) error
-	Update(session.ID, time.Time, stats.SessionStats) error
+	Update(session.ID, time.Time, stats.SessionStats, SessionStatus) error
 }
 
 type connectionManager struct {
@@ -293,7 +293,7 @@ func (manager *connectionManager) onStateChanged(state State, sessionID session.
 		manager.status = statusConnected(sessionID)
 	case Disconnecting:
 		manager.statsKeeper.MarkSessionEnd()
-		manager.sessionStorage.Update(sessionID, time.Now(), manager.statsKeeper.Retrieve())
+		manager.sessionStorage.Update(sessionID, time.Now(), manager.statsKeeper.Retrieve(), SessionStatusCompleted)
 	case Reconnecting:
 		manager.status = statusReconnecting()
 	}
@@ -307,6 +307,7 @@ func (manager *connectionManager) saveSession(connectOptions ConnectOptions) err
 		ServiceType:     connectOptions.Proposal.ServiceType,
 		ProviderCountry: providerCountry,
 		TimeStarted:     time.Now(),
+		Status:          SessionStatusNew,
 	}
 	return manager.sessionStorage.Save(se)
 }

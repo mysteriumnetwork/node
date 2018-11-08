@@ -56,6 +56,9 @@ type SessionDTO struct {
 	// duration in seconds
 	// example: 120
 	Duration uint64 `json:"duration"`
+
+	// example: Completed
+	Status string `json:"status"`
 }
 
 type sessionsEndpoint struct {
@@ -112,6 +115,7 @@ func sessionToDto(se connection.Session) SessionDTO {
 		BytesSent:       se.DataStats.BytesSent,
 		BytesReceived:   se.DataStats.BytesReceived,
 		Duration:        se.GetDuration(),
+		Status:          se.GetStatus(),
 	}
 }
 

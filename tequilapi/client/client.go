@@ -242,13 +242,13 @@ func (client *Client) Stop() error {
 
 // GetSessions returns all sessions from history
 func (client *Client) GetSessions() (endpoints.SessionsDTO, error) {
+	sessions := endpoints.SessionsDTO{}
 	response, err := client.http.Get("sessions", url.Values{})
 	if err != nil {
-		return endpoints.SessionsDTO{}, err
+		return sessions, err
 	}
 	defer response.Body.Close()
 
-	var sessions endpoints.SessionsDTO
 	err = parseResponseJSON(response, &sessions)
 	return sessions, err
 }
