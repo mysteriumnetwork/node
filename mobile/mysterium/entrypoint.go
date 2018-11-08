@@ -20,6 +20,8 @@ package mysterium
 import (
 	"path/filepath"
 
+	session2 "github.com/mysteriumnetwork/node/services/openvpn/session"
+
 	"github.com/mysteriumnetwork/node/services/openvpn"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
@@ -100,12 +102,18 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup O
 
 		config := openvpn3.NewConfig(profileContent)
 		config.GuiVersion = "govpn 0.1"
+		config.CompressionMode = "asym"
 
-		//signer := di.SignerFactory(options.ConsumerID)
+		signer := di.SignerFactory(options.ConsumerID)
+
+		username, password, err := session2.SignatureCredentialsProvider(options.SessionID, signer)()
+		if err != nil {
+			return nil, err
+		}
 
 		credentials := openvpn3.UserCredentials{
-			Username: "session id",
-			Password: "signature",
+			Username: username,
+			Password: password,
 		}
 
 		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(channel, di.StatsKeeper), tunnelSetup)

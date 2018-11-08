@@ -23,6 +23,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 )
@@ -88,6 +89,7 @@ func validIPFormat(config *VPNConfig) error {
 
 // preshared key format (PEM blocks with data encoded to hex) are taken from
 // openvpn --genkey --secret static.key, which is openvpn specific
+// side effect: it reformats key from single line to multiline fixed length strings
 func validTLSPresharedKey(config *VPNConfig) error {
 	contentScanner := bufio.NewScanner(bytes.NewBufferString(config.TLSPresharedKey))
 	for contentScanner.Scan() {
@@ -121,6 +123,24 @@ func validTLSPresharedKey(config *VPNConfig) error {
 	if len(key) != 512 {
 		return errors.New("invalid key length")
 	}
+
+	var buff = &bytes.Buffer{}
+	fmt.Fprintln(buff, "-----BEGIN OpenVPN Static key V1-----")
+	left := key
+	for {
+		if len(left) == 0 {
+			break
+		}
+		if len(left) <= 64 {
+			fmt.Fprintln(buff, left)
+			break
+		}
+		fmt.Fprintln(buff, left[0:64])
+		left = left[64:]
+	}
+	fmt.Fprintln(buff, "-----END OpenVPN Static key V1-----")
+	config.TLSPresharedKey = buff.String()
+
 	return nil
 }
 
