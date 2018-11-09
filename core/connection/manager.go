@@ -301,13 +301,6 @@ func (manager *connectionManager) onStateChanged(state State, sessionID session.
 
 func (manager *connectionManager) saveSession(connectOptions ConnectOptions) error {
 	providerCountry := connectOptions.Proposal.ServiceDefinition.GetLocation().Country
-	se := Session{
-		SessionID:       connectOptions.SessionID,
-		ProviderID:      connectOptions.ProviderID,
-		ServiceType:     connectOptions.Proposal.ServiceType,
-		ProviderCountry: providerCountry,
-		TimeStarted:     time.Now(),
-		Status:          SessionStatusNew,
-	}
-	return manager.sessionStorage.Save(se)
+	se := NewSession(connectOptions.SessionID, connectOptions.ProviderID, connectOptions.Proposal.ServiceType, providerCountry)
+	return manager.sessionStorage.Save(*se)
 }

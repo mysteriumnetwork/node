@@ -111,11 +111,11 @@ func sessionToDto(se connection.Session) SessionDTO {
 		ProviderID:      string(se.ProviderID.Address),
 		ServiceType:     se.ServiceType,
 		ProviderCountry: se.ProviderCountry,
-		DateStarted:     se.TimeStarted.Format("2018-10-29 16:22:05"),
+		DateStarted:     se.Started.Format("2018-10-29 16:22:05"),
 		BytesSent:       se.DataStats.BytesSent,
 		BytesReceived:   se.DataStats.BytesReceived,
 		Duration:        se.GetDuration(),
-		Status:          se.GetStatus(),
+		Status:          se.Status.String(),
 	}
 }
 

@@ -35,33 +35,43 @@ const (
 	SessionStatusCompleted = SessionStatus(1)
 )
 
-// Session holds structure for saving session history
-type Session struct {
-	SessionID       session.ID `storm:"id"`
-	ProviderID      identity.Identity
-	ServiceType     string
-	ProviderCountry string
-	TimeStarted     time.Time
-	Status          SessionStatus
-	TimeUpdated     time.Time          // is updated on disconnect event
-	DataStats       stats.SessionStats // is updated on disconnect event
-}
-
-// GetDuration returns delta in seconds (TimeUpdated - TimeStarted)
-func (se *Session) GetDuration() uint64 {
-	if se.TimeUpdated.IsZero() {
-		return 0
-	}
-	return uint64(se.TimeUpdated.Sub(se.TimeStarted).Seconds())
-}
-
-// GetStatus converts status constant to string
-func (se *Session) GetStatus() string {
-	switch se.Status {
+// String converts status constant to string
+func (st *SessionStatus) String() string {
+	switch *st {
 	case SessionStatusNew:
 		return "New"
 	case SessionStatusCompleted:
 		return "Completed"
 	}
 	return ""
+}
+
+// NewSession creates session with given dependencies
+func NewSession(sessionID session.ID, providerID identity.Identity, serviceType string, providerCountry string) *Session {
+	return &Session{
+		SessionID:       sessionID,
+		ProviderID:      providerID,
+		ServiceType:     serviceType,
+		ProviderCountry: providerCountry,
+		Started:         time.Now(),
+		Updated:         time.Now(),
+		Status:          SessionStatusNew,
+	}
+}
+
+// Session holds structure for saving session history
+type Session struct {
+	SessionID       session.ID `storm:"id"`
+	ProviderID      identity.Identity
+	ServiceType     string
+	ProviderCountry string
+	Started         time.Time
+	Status          SessionStatus
+	Updated         time.Time
+	DataStats       stats.SessionStats // is updated on disconnect event
+}
+
+// GetDuration returns delta in seconds (TimeUpdated - TimeStarted)
+func (se *Session) GetDuration() uint64 {
+	return uint64(se.Updated.Sub(se.Started).Seconds())
 }
