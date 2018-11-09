@@ -29,7 +29,7 @@ if [ -z "$TOKEN" ]; then
     exit 1
 fi
 
-sed -i '' -E "s|<version>.+</version>|<version>$VERSION</version>|g" bin/package/android/pom.xml
+sed -i -E "s|<version>.+</version>|<version>$VERSION</version>|g" bin/package/android/pom.xml
 
 URL=https://api.bintray.com/content/mysterium/Node/mobile-node/$VERSION/mysterium/network/mobile-node/$VERSION
 
