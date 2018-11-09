@@ -79,10 +79,5 @@
   version = "1.20.0"
 
 [[constraint]]
-  name = "github.com/mysteriumnetwork/go-openvpn"
-  branch = "feature/delegate-socket-protect"
-
-
-[[constraint]]
   name = "github.com/asdine/storm"
   version = "2.1.2"
