@@ -54,7 +54,6 @@ func NewSession(sessionID session.ID, providerID identity.Identity, serviceType 
 		ServiceType:     serviceType,
 		ProviderCountry: providerCountry,
 		Started:         time.Now(),
-		Updated:         time.Now(),
 		Status:          SessionStatusNew,
 	}
 }
@@ -73,5 +72,9 @@ type Session struct {
 
 // GetDuration returns delta in seconds (TimeUpdated - TimeStarted)
 func (se *Session) GetDuration() uint64 {
-	return uint64(se.Updated.Sub(se.Started).Seconds())
+	if se.Status == SessionStatusCompleted {
+		return uint64(se.Updated.Sub(se.Started).Seconds())
+	} else {
+		return 0
+	}
 }
