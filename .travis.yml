@@ -66,44 +66,44 @@ jobs:
     - stage: build
       script:
       - BINARY=build/myst/myst_linux_amd64 bin/package_standalone linux
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://build-artifacts/$TRAVIS_BUILD_NUMBER
       name: "Linux packages"
 
     - script:
       - bin/builder_run BINARY=build/myst/myst bin/package_debian $BUILD_VERSION amd64
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://build-artifacts/$TRAVIS_BUILD_NUMBER
       name: "DEB packages"
 
     - script:
       - BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://build-artifacts/$TRAVIS_BUILD_NUMBER
       name: "OSX packages"
 
     - script:
       - BINARY=build/myst/myst_windows_amd64.exe bin/package_standalone windows
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://build-artifacts/$TRAVIS_BUILD_NUMBER
       name: "Windows packages"
 
     - script:
       - bin/package_ios amd64
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://build-artifacts/$TRAVIS_BUILD_NUMBER
       name: "iOS packages"
 
     - script:
       - bin/package_android amd64
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://build-artifacts/$TRAVIS_BUILD_NUMBER
       name: "Android packages"
 
     - script:
       - bin/package_docker
       - docker save myst:alpine | gzip > myst_alpine.tgz
-      - bin/s3 cp myst_alpine.tgz s3://docker-images
+      - bin/s3 cp myst_alpine.tgz s3://docker-images/$TRAVIS_BUILD_NUMBER
       name: "Alpine docker image"
 
     - script:
       - bin/package_docker_ubuntu $BUILD_VERSION
       - docker save myst:ubuntu | gzip > myst_ubuntu.tgz
-      - bin/s3 cp myst_ubuntu.tgz s3://docker-images
+      - bin/s3 cp myst_ubuntu.tgz s3://docker-images/$TRAVIS_BUILD_NUMBER
       name: "Ubuntu docker image"
 
     # Development bleeding-edge release (on master commits only)
@@ -119,7 +119,7 @@ jobs:
 
     # Official release (on tags only)
     - stage: release
-      script: bin/s3 sync s3://build-artifacts build/package
+      script: bin/s3 sync s3://build-artifacts/$TRAVIS_BUILD_NUMBER build/package
       name: "Official release (on tags only)"
       deploy:
         provider: releases
@@ -130,7 +130,7 @@ jobs:
         on:
           tags: true
     - script:
-      - bin/s3 sync s3://docker-images build/docker
+      - bin/s3 sync s3://docker-images/$TRAVIS_BUILD_NUMBER build/docker
       - docker load -i build/docker/myst_alpine.tgz
       - docker load -i build/docker/myst_ubuntu.tgz
       - bin/release_docker $TRAVIS_TAG
