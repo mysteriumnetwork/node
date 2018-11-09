@@ -18,6 +18,14 @@ before_install:
         jq -r '( first(.[]  | select(.prerelease == true)) ) | .tag_name');
     fi
 
+after_success:
+  - bin/s3 rm --recursive s3://build-artifacts/$TRAVIS_BUILD_NUMBER
+  - bin/s3 rm --recursive s3://docker-images/$TRAVIS_BUILD_NUMBER
+
+after_failure:
+  - bin/s3 rm --recursive s3://build-artifacts/$TRAVIS_BUILD_NUMBER
+  - bin/s3 rm --recursive s3://docker-images/$TRAVIS_BUILD_NUMBER
+
 cache:
   directories:
     - vendor
