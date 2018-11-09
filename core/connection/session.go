@@ -74,7 +74,6 @@ type Session struct {
 func (se *Session) GetDuration() uint64 {
 	if se.Status == SessionStatusCompleted {
 		return uint64(se.Updated.Sub(se.Started).Seconds())
-	} else {
-		return 0
 	}
+	return 0
 }
