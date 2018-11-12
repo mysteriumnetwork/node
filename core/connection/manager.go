@@ -48,8 +48,12 @@ var (
 	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
 )
 
-// ConnectionCreator creates new vpn client by given session,
-// consumer identity, provider identity and uses state channel to report state changes
+// ConnectionCreator creates new connection by given options and uses state channel to report state changes
+// Given options:
+//  - session,
+//  - consumer identity
+//  - service provider identity
+//  - service proposal
 type ConnectionCreator func(ConnectOptions, StateChannel) (Connection, error)
 
 type sessionSaver interface {

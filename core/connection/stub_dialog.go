@@ -26,9 +26,10 @@ import (
 )
 
 type fakeDialog struct {
-	peerID identity.Identity
-	closed bool
+	peerID    identity.Identity
+	sessionID session.ID
 
+	closed bool
 	sync.RWMutex
 }
 
@@ -62,7 +63,7 @@ func (fd *fakeDialog) Request(producer communication.RequestProducer) (responseP
 	return &session.CreateResponse{
 			Success: true,
 			Session: session.SessionDto{
-				ID:     "vpn-connection-id",
+				ID:     fd.sessionID,
 				Config: []byte("{}"),
 			},
 		},

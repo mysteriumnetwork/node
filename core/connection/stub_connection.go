@@ -35,15 +35,16 @@ const (
 )
 
 type connectionFactoryFake struct {
-	vpnClientCreationError error
-	fakeVpnClient          *vpnClientFake
+	mockError      error
+	mockConnection *connectionFake
 }
 
 func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptions, stateChannel StateChannel) (Connection, error) {
-	//each test can set this value to simulate openvpn creation error, this flag is reset BEFORE each test
-	if cff.vpnClientCreationError != nil {
-		return nil, cff.vpnClientCreationError
+	//each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
+	if cff.mockError != nil {
+		return nil, cff.mockError
 	}
+
 	stateCallback := func(state fakeState) {
 		if state == connectedState {
 			stateChannel <- Connected
@@ -59,11 +60,11 @@ func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptio
 			close(stateChannel)
 		}
 	}
-	cff.fakeVpnClient.StateCallback(stateCallback)
-	return cff.fakeVpnClient, nil
+	cff.mockConnection.StateCallback(stateCallback)
+	return cff.mockConnection, nil
 }
 
-type vpnClientFake struct {
+type connectionFake struct {
 	onStartReturnError  error
 	onStartReportStates []fakeState
 	onStopReportStates  []fakeState
@@ -73,7 +74,7 @@ type vpnClientFake struct {
 	sync.RWMutex
 }
 
-func (foc *vpnClientFake) Start() error {
+func (foc *connectionFake) Start() error {
 	foc.RLock()
 	defer foc.RUnlock()
 
@@ -88,26 +89,26 @@ func (foc *vpnClientFake) Start() error {
 	return nil
 }
 
-func (foc *vpnClientFake) Wait() error {
+func (foc *connectionFake) Wait() error {
 	foc.fakeProcess.Wait()
 	return nil
 }
 
-func (foc *vpnClientFake) Stop() {
+func (foc *connectionFake) Stop() {
 	for _, fakeState := range foc.onStopReportStates {
 		foc.reportState(fakeState)
 	}
 	foc.fakeProcess.Done()
 }
 
-func (foc *vpnClientFake) reportState(state fakeState) {
+func (foc *connectionFake) reportState(state fakeState) {
 	foc.RLock()
 	defer foc.RUnlock()
 
 	foc.stateCallback(state)
 }
 
-func (foc *vpnClientFake) StateCallback(callback func(state fakeState)) {
+func (foc *connectionFake) StateCallback(callback func(state fakeState)) {
 	foc.Lock()
 	defer foc.Unlock()
 
