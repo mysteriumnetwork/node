@@ -42,7 +42,6 @@ type channelToCallbacksAdapter struct {
 }
 
 func (adapter channelToCallbacksAdapter) OnEvent(event openvpn3.Event) {
-
 	switch event.Name {
 	case "CONNECTING":
 		adapter.channel <- connection.Connecting
@@ -61,8 +60,6 @@ func (channelToCallbacksAdapter) Log(text string) {
 }
 
 func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistics) {
-	seelog.Infof("Stats: %+v", openvpnStats)
-
 	adapter.statsUpdater.Save(stats.SessionStats{
 		BytesSent:     uint64(openvpnStats.BytesOut),
 		BytesReceived: uint64(openvpnStats.BytesIn),

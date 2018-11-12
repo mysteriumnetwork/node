@@ -20,13 +20,12 @@ package mysterium
 import (
 	"path/filepath"
 
-	session "github.com/mysteriumnetwork/node/services/openvpn/session"
+	"github.com/mysteriumnetwork/node/services/openvpn/session"
 
 	"github.com/mysteriumnetwork/node/services/openvpn"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 
-	log "github.com/cihub/seelog"
 	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -68,15 +67,13 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup O
 			Data:     dataDir,
 			Storage:  filepath.Join(dataDir, "db"),
 			Keystore: filepath.Join(dataDir, "keystore"),
-			// TODO Where to save runtime data
-			Runtime: currentDir,
+			Runtime:  currentDir,
 		},
 
 		TequilapiAddress: "127.0.0.1",
 		TequilapiPort:    4050,
 
-		// TODO Make Openvpn pluggable connection optional
-		Openvpn: noOpenvpnYet{},
+		Openvpn: embbededLibCheck{},
 
 		Location: node.OptionsLocation{
 			IpifyUrl: "https://api.ipify.org/",
@@ -139,29 +136,6 @@ func DefaultNetworkOptions() *MobileNetworkOptions {
 	}
 }
 
-// CreateIdentity creates new identity and returns identity id - will be removed
-func (mobNode *MobileNode) CreateIdentity() (string, error) {
-	consumers := mobNode.di.IdentityManager.GetIdentities()
-	var consumerID identity.Identity
-	if len(consumers) < 1 {
-		created, err := mobNode.di.IdentityManager.CreateNewIdentity("")
-		if err != nil {
-			return "", err
-		}
-		consumerID = created
-	} else {
-		consumerID = consumers[0]
-	}
-
-	log.Infof("Unlocking consumer: %#v", consumerID)
-	err := mobNode.di.IdentityManager.Unlock(consumerID.Address, "")
-	if err != nil {
-		return "", err
-	}
-	mobNode.identity = consumerID
-	return consumerID.Address, nil
-}
-
 // Shutdown function stops running mobile node
 func (mobNode *MobileNode) Shutdown() error {
 	return mobNode.di.Node.Kill()
@@ -172,16 +146,18 @@ func (mobNode *MobileNode) WaitUntilDies() error {
 	return mobNode.di.Node.Wait()
 }
 
-type noOpenvpnYet struct {
+type embbededLibCheck struct {
 }
 
-func (noOpenvpnYet) Check() error {
+// Check always returns nil as embedded lib does not have any external failing deps
+func (embbededLibCheck) Check() error {
 	return nil
 }
 
 // BinaryPath returns noop binary path
-func (noOpenvpnYet) BinaryPath() string {
-	return "no openvpn binary available on mobile"
+func (embbededLibCheck) BinaryPath() string {
+	return "mobile uses embedded openvpn lib"
 }
 
-var _ node.Openvpn = noOpenvpnYet{}
+// check if our struct satisfies Openvpn interface expected by node options
+var _ node.Openvpn = embbededLibCheck{}
