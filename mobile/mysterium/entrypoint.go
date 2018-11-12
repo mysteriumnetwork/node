@@ -20,7 +20,7 @@ package mysterium
 import (
 	"path/filepath"
 
-	session2 "github.com/mysteriumnetwork/node/services/openvpn/session"
+	session "github.com/mysteriumnetwork/node/services/openvpn/session"
 
 	"github.com/mysteriumnetwork/node/services/openvpn"
 
@@ -44,6 +44,7 @@ type MobileNode struct {
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
 type MobileNetworkOptions node.OptionsNetwork
 
+// Openvpn3TunnelSetup is alias for openvpn3 tunnel setup interface exposed to Android/iOS interop
 type Openvpn3TunnelSetup openvpn3.TunnelSetup
 
 // NewNode function creates new Node
@@ -106,7 +107,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup O
 
 		signer := di.SignerFactory(options.ConsumerID)
 
-		username, password, err := session2.SignatureCredentialsProvider(options.SessionID, signer)()
+		username, password, err := session.SignatureCredentialsProvider(options.SessionID, signer)()
 		if err != nil {
 			return nil, err
 		}
@@ -138,22 +139,7 @@ func DefaultNetworkOptions() *MobileNetworkOptions {
 	}
 }
 
-// TestConnectFlow checks whenever connection can be successfully established
-func (mobNode *MobileNode) TestConnectFlow(providerAddress string) error {
-	providerId := identity.FromAddress(providerAddress)
-	log.Infof("Connecting to provider: %#v", providerId)
-	err := mobNode.di.ConnectionManager.Connect(mobNode.identity, providerId, connection.ConnectParams{})
-	if err != nil {
-		return err
-	}
-
-	connectionStatus := mobNode.di.ConnectionManager.Status()
-	log.Infof("Connection status: %#v", connectionStatus)
-
-	return mobNode.di.ConnectionManager.Disconnect()
-}
-
-// TestConnectFlow checks whenever connection can be successfully established
+// CreateIdentity creates new identity and returns identity id - will be removed
 func (mobNode *MobileNode) CreateIdentity() (string, error) {
 	consumers := mobNode.di.IdentityManager.GetIdentities()
 	var consumerID identity.Identity
