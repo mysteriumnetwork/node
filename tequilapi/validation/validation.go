@@ -21,11 +21,13 @@ import (
 	"encoding/json"
 )
 
+// FieldError structure is produced by validator
 type FieldError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
+// FieldErrorList contains list of FieldError
 type FieldErrorList struct {
 	list []FieldError
 }

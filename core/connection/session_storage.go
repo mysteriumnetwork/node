@@ -18,6 +18,8 @@
 package connection
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/session"
@@ -41,9 +43,9 @@ func (repo *SessionStorage) Save(se Session) error {
 }
 
 // Update updates specified fields of existing session by id
-func (repo *SessionStorage) Update(sessionID session.ID, duration int, dataStats stats.SessionStats) error {
-	// update two fields by sessionID
-	se := Session{SessionID: sessionID, Duration: duration, DataStats: dataStats}
+func (repo *SessionStorage) Update(sessionID session.ID, updated time.Time, dataStats stats.SessionStats, status SessionStatus) error {
+	// update fields by sessionID
+	se := Session{SessionID: sessionID, Updated: updated, DataStats: dataStats, Status: status}
 	return repo.storage.Update(&se)
 }
 
