@@ -342,6 +342,14 @@ func (c *cliApp) identities(argsString string) {
 		return
 	}
 
+	switch argsString {
+	case "new", "list": // Known sub-commands.
+	default:
+		warnf("Unknown sub-command '%s'\n", argsString)
+		fmt.Println(usage)
+		return
+	}
+
 	args := strings.Fields(argsString)
 	if len(args) < 1 {
 		info(usage)
@@ -387,6 +395,10 @@ func (c *cliApp) identities(argsString string) {
 }
 
 func (c *cliApp) registration(argsString string) {
+	if argsString == "" {
+		warn("Please supply identity")
+		return
+	}
 	status, err := c.tequilapi.IdentityRegistrationStatus(argsString)
 	if err != nil {
 		warn("Something went wrong: ", err)

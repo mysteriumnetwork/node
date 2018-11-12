@@ -136,6 +136,10 @@ jobs:
       - bin/release_docker $TRAVIS_TAG
       - if [[ $TRAVIS_TAG != *-rc ]]; then bin/release_docker latest; fi
       name: "Pushing release to hub.docker.com"
+    - script:
+      - bin/s3 sync s3://build-artifacts build/package
+      - bin/release_android "$TRAVIS_TAG" "$BINTRAY_USER" "$BINTRAY_TOKEN"
+      name: "Publish Android SDK to Bintray and JCenter"
 
 notifications:
   slack:

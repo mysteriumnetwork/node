@@ -36,6 +36,11 @@ func warn(items ...interface{}) {
 	fmt.Println(items...)
 }
 
+func warnf(format string, items ...interface{}) {
+	fmt.Printf(warningColor + "[WARNING] \033[0m")
+	fmt.Printf(format, items...)
+}
+
 func success(items ...interface{}) {
 	fmt.Printf(successColor + "[SUCCESS] \033[0m")
 	fmt.Println(items...)
