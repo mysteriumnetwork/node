@@ -23,4 +23,5 @@ type SessionStats struct {
 	BytesReceived   uint64 `json:"bytes_received"`
 	ProviderID      string `json:"provider_id"`
 	ConsumerCountry string `json:"consumer_country"`
+	ServiceType     string `json:"service_type"`
 }
