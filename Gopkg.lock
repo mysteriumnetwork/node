@@ -157,12 +157,11 @@
   revision = "58046073cbffe2f25d425fe1331102f55cf719de"
 
 [[projects]]
-  digest = "1:aee43bc142f59f28645b92122ee61cd5a0c8c48a9cab4883286abcc6aa74e774"
+  digest = "1:922ba2530db4158831900365a3f05973003e34b3d94458b823392c02e4dfacfa"
   name = "github.com/mysteriumnetwork/go-openvpn"
   packages = [
     "openvpn",
     "openvpn/config",
-    "openvpn/core",
     "openvpn/management",
     "openvpn/middlewares/client/auth",
     "openvpn/middlewares/client/bytescount",
@@ -431,7 +430,6 @@
     "github.com/mitchellh/go-homedir",
     "github.com/mysteriumnetwork/go-openvpn/openvpn",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/config",
-    "github.com/mysteriumnetwork/go-openvpn/openvpn/core",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/management",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount",
