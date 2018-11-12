@@ -99,7 +99,8 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 // UnregisterProposal unregisters a service proposal when client disconnects
 func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "unregister_proposal", dto.ProposalUnregisterRequest{
-		ProviderID: proposal.ProviderID,
+		ProviderID:  proposal.ProviderID,
+		ServiceType: proposal.ServiceType,
 	}, signer)
 	if err != nil {
 		return err
@@ -117,7 +118,8 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 // PingProposal pings service proposal as being alive
 func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
-		NodeKey: proposal.ProviderID,
+		NodeKey:     proposal.ProviderID,
+		ServiceType: proposal.ServiceType,
 	}, signer)
 	if err != nil {
 		return err
