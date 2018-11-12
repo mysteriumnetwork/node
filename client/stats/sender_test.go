@@ -41,7 +41,7 @@ func TestRemoteStatsSenderOnDisconnect(t *testing.T) {
 	statsKeeper := NewSessionStatsKeeper(time.Now)
 	mysteriumClient := server.NewClient(ts.URL)
 	signer := &identity.SignerFake{}
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, signer, "KG", time.Minute)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, "openvpn", signer, "KG", time.Minute)
 
 	sender.StateHandler(openvpn.ConnectedState)
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 0 }))
@@ -60,7 +60,7 @@ func TestRemoteStatsSenderInterval(t *testing.T) {
 	signer := &identity.SignerFake{}
 	mysteriumClient := server.NewClient(ts.URL)
 	statsKeeper := NewSessionStatsKeeper(time.Now)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, signer, "KG", time.Nanosecond)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, "openvpn", signer, "KG", time.Nanosecond)
 
 	sender.StateHandler(openvpn.ConnectedState)
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) > 3 }))

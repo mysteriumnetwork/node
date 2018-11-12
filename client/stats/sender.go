@@ -36,6 +36,7 @@ type RemoteStatsSender struct {
 	sessionID       session.ID
 	providerID      identity.Identity
 	consumerCountry string
+	serviceType     string
 
 	signer          identity.Signer
 	statsKeeper     SessionStatsKeeper
@@ -46,11 +47,12 @@ type RemoteStatsSender struct {
 }
 
 // NewRemoteStatsSender function creates new session stats sender by given options
-func NewRemoteStatsSender(statsKeeper SessionStatsKeeper, mysteriumClient server.Client, sessionID session.ID, providerID identity.Identity, signer identity.Signer, consumerCountry string, interval time.Duration) *RemoteStatsSender {
+func NewRemoteStatsSender(statsKeeper SessionStatsKeeper, mysteriumClient server.Client, sessionID session.ID, providerID identity.Identity, serviceType string, signer identity.Signer, consumerCountry string, interval time.Duration) *RemoteStatsSender {
 	return &RemoteStatsSender{
 		sessionID:       sessionID,
 		providerID:      providerID,
 		consumerCountry: consumerCountry,
+		serviceType:     serviceType,
 
 		signer:          signer,
 		statsKeeper:     statsKeeper,
@@ -92,6 +94,7 @@ func (rss *RemoteStatsSender) send() error {
 	return rss.mysteriumClient.SendSessionStats(
 		rss.sessionID,
 		dto.SessionStats{
+			ServiceType:     rss.serviceType,
 			BytesSent:       sessionStats.BytesSent,
 			BytesReceived:   sessionStats.BytesReceived,
 			ProviderID:      rss.providerID.Address,
