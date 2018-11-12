@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
@@ -281,6 +282,9 @@ func waitABit() {
 type fakeSessionRepository struct{}
 
 func (fs *fakeSessionRepository) Save(Session) error { return nil }
+func (fs *fakeSessionRepository) Update(session.ID, time.Time, stats.SessionStats, SessionStatus) error {
+	return nil
+}
 
 type fakeServiceDefinition struct{}
 

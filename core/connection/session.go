@@ -25,14 +25,55 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
+// SessionStatus represents list of possible session statuses
+type SessionStatus int
+
+const (
+	// SessionStatusNew means that newly created session object is written to storage
+	SessionStatusNew = SessionStatus(0)
+	// SessionStatusCompleted means that session object is updated on connection disconnect event
+	SessionStatusCompleted = SessionStatus(1)
+)
+
+// String converts status constant to string
+func (st *SessionStatus) String() string {
+	switch *st {
+	case SessionStatusNew:
+		return "New"
+	case SessionStatusCompleted:
+		return "Completed"
+	}
+	return ""
+}
+
+// NewSession creates session with given dependencies
+func NewSession(sessionID session.ID, providerID identity.Identity, serviceType string, providerCountry string) *Session {
+	return &Session{
+		SessionID:       sessionID,
+		ProviderID:      providerID,
+		ServiceType:     serviceType,
+		ProviderCountry: providerCountry,
+		Started:         time.Now(),
+		Status:          SessionStatusNew,
+	}
+}
+
 // Session holds structure for saving session history
 type Session struct {
 	SessionID       session.ID `storm:"id"`
 	ProviderID      identity.Identity
 	ServiceType     string
 	ProviderCountry string
-	TimeStarted     time.Time
-	// these will be updated while session is ongoing
-	Duration  int // in seconds
-	DataStats stats.SessionStats
+	Started         time.Time
+	Status          SessionStatus
+	Updated         time.Time
+	DataStats       stats.SessionStats // is updated on disconnect event
+}
+
+// GetDuration returns delta in seconds (TimeUpdated - TimeStarted)
+func (se *Session) GetDuration() uint64 {
+	if se.Status == SessionStatusCompleted {
+		return uint64(se.Updated.Sub(se.Started).Seconds())
+	}
+	return 0
 }

@@ -100,9 +100,9 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	err := topUpAccount(consumerID)
 	assert.Nil(t, err)
 
-	status, err := tequilapi.Status()
+	connectionStatus, err := tequilapi.Status()
 	assert.NoError(t, err)
-	assert.Equal(t, "NotConnected", status.Status)
+	assert.Equal(t, "NotConnected", connectionStatus.Status)
 
 	nonVpnIp, err := tequilapi.GetIP()
 	assert.NoError(t, err)
@@ -114,7 +114,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	_, err = tequilapi.Connect(consumerID, proposal.ProviderID, endpoints.ConnectOptions{true})
+	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, endpoints.ConnectOptions{true})
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {
@@ -125,7 +125,21 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 
 	vpnIp, err := tequilapi.GetIP()
 	assert.NoError(t, err)
-	seelog.Info("Shifted consumer IP: ", vpnIp)
+	seelog.Info("Changed consumer IP: ", vpnIp)
+
+	// sessions history should be created after connect
+	sessionsDTO, err := tequilapi.GetSessions()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(sessionsDTO.Sessions))
+	se := sessionsDTO.Sessions[0]
+	assert.Equal(t, uint64(0), se.Duration)
+	assert.Equal(t, uint64(0), se.BytesSent)
+	assert.Equal(t, uint64(0), se.BytesReceived)
+	assert.Equal(t, "e2e-land", se.ProviderCountry)
+	assert.Equal(t, "openvpn", se.ServiceType)
+	assert.Equal(t, proposal.ProviderID, se.ProviderID)
+	assert.Equal(t, connectionStatus.SessionID, se.SessionID)
+	assert.Equal(t, "New", se.Status)
 
 	err = tequilapi.Disconnect()
 	assert.NoError(t, err)
@@ -135,4 +149,13 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 		return status.Status == "NotConnected", err
 	})
 	assert.NoError(t, err)
+
+	// sessions history should be updated after disconnect
+	sessionsDTO, err = tequilapi.GetSessions()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(sessionsDTO.Sessions))
+	se = sessionsDTO.Sessions[0]
+	assert.NotEqual(t, uint64(0), se.BytesSent)
+	assert.NotEqual(t, uint64(0), se.BytesReceived)
+	assert.Equal(t, "Completed", se.Status)
 }
