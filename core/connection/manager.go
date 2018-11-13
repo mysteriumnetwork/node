@@ -97,7 +97,7 @@ func NewManager(
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, params ConnectParams) (err error) {
+func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, serviceType string, params ConnectParams) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -114,14 +114,14 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}
 	}()
 
-	err = manager.startConnection(consumerID, providerID, params)
+	err = manager.startConnection(consumerID, providerID, serviceType, params)
 	if err == context.Canceled {
 		return ErrConnectionCancelled
 	}
 	return err
 }
 
-func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity, params ConnectParams) (err error) {
+func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity, serviceType string, params ConnectParams) (err error) {
 	manager.mutex.Lock()
 	cancelCtx := manager.cleanConnection
 	manager.mutex.Unlock()
@@ -141,7 +141,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		}
 	}()
 
-	proposal, err := manager.findProposalByProviderID(providerID)
+	proposal, err := manager.findProposalByProviderID(providerID, serviceType)
 	if err != nil {
 		return err
 	}
@@ -228,8 +228,8 @@ func warnOnClean() {
 }
 
 // TODO this can be extracted as dependency later when node selection criteria will be clear
-func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity) (proposal dto.ServiceProposal, err error) {
-	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address)
+func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity, serviceType string) (proposal dto.ServiceProposal, err error) {
+	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address, serviceType)
 	if err != nil {
 		return
 	}

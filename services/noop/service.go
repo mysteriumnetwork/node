@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -30,13 +31,14 @@ import (
 const logPrefix = "[service-noop] "
 
 // NewManager creates new instance of Noop service
-func NewManager() *Manager {
-	return &Manager{}
+func NewManager(resolver location.Resolver) *Manager {
+	return &Manager{locationResolver: resolver}
 }
 
 // Manager represents entrypoint for Noop service
 type Manager struct {
-	fakeProcess sync.WaitGroup
+	fakeProcess      sync.WaitGroup
+	locationResolver location.Resolver
 }
 
 // Start starts service - does not block
@@ -47,7 +49,7 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 	proposal := dto_discovery.ServiceProposal{
 		ServiceType: ServiceType,
 		ServiceDefinition: ServiceDefinition{
-			Location: dto_discovery.Location{Country: ""},
+			Location: dto_discovery.Location{Country: "LT"},
 		},
 		PaymentMethodType: PaymentMethodNoop,
 		PaymentMethod: PaymentNoop{

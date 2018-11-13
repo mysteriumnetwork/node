@@ -18,6 +18,7 @@
 package noop
 
 import (
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -25,26 +26,41 @@ import (
 
 // Connection which does no real tunneling
 type Connection struct {
-	stateChannel connection.StateChannel
+	isRunning      bool
+	noopConnection sync.WaitGroup
+	stateChannel   connection.StateChannel
 }
 
 // Start implements the connection.Connection interface
 func (c *Connection) Start() error {
+	c.noopConnection.Add(1)
+	c.isRunning = true
+
 	c.stateChannel <- connection.Connecting
+
 	time.Sleep(5 * time.Second)
 	c.stateChannel <- connection.Connected
-
 	return nil
 }
 
 // Wait implements the connection.Connection interface
 func (c *Connection) Wait() error {
+	if c.isRunning {
+		c.noopConnection.Wait()
+	}
 	return nil
 }
 
 // Stop implements the connection.Connection interface
 func (c *Connection) Stop() {
+	if !c.isRunning {
+		return
+	}
+
+	c.isRunning = false
 	c.stateChannel <- connection.Disconnecting
 	time.Sleep(2 * time.Second)
 	c.stateChannel <- connection.NotConnected
+	c.noopConnection.Done()
+	close(c.stateChannel)
 }

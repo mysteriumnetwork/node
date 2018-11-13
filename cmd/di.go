@@ -228,8 +228,9 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
+	service_noop.Bootstrap()
 	di.ServiceRegistry.Register(service_noop.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
-		return service_noop.NewManager(), nil
+		return service_noop.NewManager(di.LocationResolver), nil
 	})
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
 }
@@ -244,7 +245,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	)
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
-
 	newDialogWaiter := func(providerID identity.Identity) communication.DialogWaiter {
 		return nats_dialog.NewDialogWaiter(
 			nats_discovery.NewAddressGenerate(di.NetworkDefinition.BrokerAddress, providerID),

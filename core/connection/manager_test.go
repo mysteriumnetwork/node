@@ -122,20 +122,20 @@ func (tc *testContext) TestWhenNoConnectionIsMadeStatusIsNotConnected() {
 func (tc *testContext) TestWithUnknownProviderConnectionIsNotMade() {
 	noProposalsError := errors.New("provider has no service proposals")
 
-	assert.Equal(tc.T(), noProposalsError, tc.connManager.Connect(myID, identity.FromAddress("unknown-node"), ConnectParams{}))
+	assert.Equal(tc.T(), noProposalsError, tc.connManager.Connect(myID, identity.FromAddress("unknown-node"), activeServiceType, ConnectParams{}))
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
 	tc.fakeConnectionFactory.mockError = errors.New("fatal connection error")
 
-	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
+	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{}))
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 	assert.True(tc.T(), tc.fakeDialog.closed)
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
-	err := tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
+	err := tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 	assert.True(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
@@ -145,7 +145,7 @@ func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{}
 
 	go func() {
-		tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
+		tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{})
 	}()
 
 	waitABit()
@@ -156,7 +156,7 @@ func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 
 func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	tc.fakeConnectionFactory.mockConnection.onStopReportStates = []fakeState{}
-	err := tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
+	err := tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 
@@ -170,8 +170,8 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 }
 
 func (tc *testContext) TestConnectResultsInAlreadyConnectedErrorWhenConnectionExists() {
-	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
-	assert.Equal(tc.T(), ErrAlreadyExists, tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{}))
+	assert.Equal(tc.T(), ErrAlreadyExists, tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{}))
 }
 
 func (tc *testContext) TestDisconnectReturnsErrorWhenNoConnectionExists() {
@@ -179,14 +179,14 @@ func (tc *testContext) TestDisconnectReturnsErrorWhenNoConnectionExists() {
 }
 
 func (tc *testContext) TestReconnectingStatusIsReportedWhenOpenVpnGoesIntoReconnectingState() {
-	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{}))
 	tc.fakeConnectionFactory.mockConnection.reportState(reconnectingState)
 	waitABit()
 	assert.Equal(tc.T(), statusReconnecting(), tc.connManager.Status())
 }
 
 func (tc *testContext) TestDoubleDisconnectResultsInError() {
-	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{}))
 	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
@@ -195,13 +195,13 @@ func (tc *testContext) TestDoubleDisconnectResultsInError() {
 }
 
 func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
-	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{}))
 	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 
-	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
+	assert.NoError(tc.T(), tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{}))
 	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 	assert.NoError(tc.T(), tc.connManager.Disconnect())
 	waitABit()
@@ -209,13 +209,13 @@ func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 
 }
 
-func (tc *testContext) TestConnectFailsIfConnectionFactoryReturnsError() {
+func (tc *testContext) TestConnectFailsIfOpenvpnFactoryReturnsError() {
 	tc.fakeConnectionFactory.mockError = errors.New("failed to create vpn instance")
-	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID, ConnectParams{}))
+	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{}))
 }
 
 func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutError() {
-	tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
+	tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{})
 	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 }
 
@@ -226,7 +226,7 @@ func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
 	var err error
 	go func() {
 		defer connectWaiter.Done()
-		err = tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
+		err = tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{})
 	}()
 
 	waitABit()
@@ -247,7 +247,7 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfConnectionExitsDuringConne
 	var err error
 	go func() {
 		defer connectWaiter.Done()
-		err = tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
+		err = tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{})
 	}()
 	waitABit()
 	tc.fakeConnectionFactory.mockConnection.reportState(processExited)
@@ -256,7 +256,7 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfConnectionExitsDuringConne
 }
 
 func (tc *testContext) Test_PromiseIssuer_WhenManagerMadeConnectionIsStarted() {
-	err := tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
+	err := tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.True(tc.T(), tc.fakePromiseIssuer.startCalled)
 }
@@ -264,7 +264,7 @@ func (tc *testContext) Test_PromiseIssuer_WhenManagerMadeConnectionIsStarted() {
 func (tc *testContext) Test_PromiseIssuer_OnConnectErrorIsStopped() {
 	tc.fakeConnectionFactory.mockError = errors.New("fatal connection error")
 
-	err := tc.connManager.Connect(myID, activeProviderID, ConnectParams{})
+	err := tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{})
 	assert.Error(tc.T(), err)
 	assert.True(tc.T(), tc.fakePromiseIssuer.stopCalled)
 }

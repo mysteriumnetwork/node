@@ -33,10 +33,14 @@ var (
 	providerID = identity.FromAddress("provider-id")
 )
 
-var _ service.Service = NewManager()
+var _ service.Service = NewManager(&fakeResolver{})
 
 func Test_Manager_Start(t *testing.T) {
-	manager := &Manager{}
+	fakeResolver := &fakeResolver{
+		err: nil,
+		res: "LT",
+	}
+	manager := NewManager(fakeResolver)
 	proposal, sessionConfigProvider, err := manager.Start(providerID)
 	assert.NoError(t, err)
 
@@ -45,12 +49,15 @@ func Test_Manager_Start(t *testing.T) {
 		dto_discovery.ServiceProposal{
 			ServiceType: "noop",
 			ServiceDefinition: ServiceDefinition{
-				Location: dto_discovery.Location{Country: ""},
+				Location: dto_discovery.Location{Country: "LT"},
 			},
 
 			PaymentMethodType: "NOOP",
 			PaymentMethod: PaymentNoop{
-				Price: money.Money{0, money.Currency("MYST")},
+				Price: money.Money{
+					Amount:   0,
+					Currency: money.Currency("MYST"),
+				},
 			},
 		},
 		proposal,
@@ -87,4 +94,14 @@ func Test_Manager_Stop(t *testing.T) {
 // usually time.Sleep call gives a chance for other goroutines to kick in important when testing async code
 func waitABit() {
 	time.Sleep(10 * time.Millisecond)
+}
+
+type fakeResolver struct {
+	err error
+	res string
+}
+
+// ResolveCountry performs a fake resolution
+func (fr *fakeResolver) ResolveCountry(ip string) (string, error) {
+	return fr.res, fr.err
 }

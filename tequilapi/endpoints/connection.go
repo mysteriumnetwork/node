@@ -56,6 +56,12 @@ type connectionRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"providerId"`
 
+	// service type
+	// required: false
+	// default: openvpn
+	// example: openvpn
+	ServiceType string `json:"serviceType"`
+
 	// connect options
 	// required: false
 	ConnectOptions ConnectOptions `json:"connectOptions,omitempty"`
@@ -135,7 +141,7 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 // parameters:
 //   - in: body
 //     name: body
-//     description: Parameters in body (consumerId, providerId) required for creating new connection
+//     description: Parameters in body (consumerId, providerId, serviceType) required for creating new connection
 //     schema:
 //       $ref: "#/definitions/ConnectionRequestDTO"
 // responses:
@@ -177,7 +183,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	}
 
 	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.ProviderID), connectOptions)
+	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.ProviderID), cr.ServiceType, connectOptions)
 
 	if err != nil {
 		switch err {
@@ -297,7 +303,11 @@ func AddRoutesForConnection(router *httprouter.Router, manager connection.Manage
 }
 
 func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
-	var connectionRequest = connectionRequest{}
+	var connectionRequest = connectionRequest{
+		// This defaults the service type to openvpn, for backwards compatability
+		// If specified in the request, the value will get overriden
+		ServiceType: "openvpn",
+	}
 	err := json.NewDecoder(req.Body).Decode(&connectionRequest)
 	if err != nil {
 		return nil, err

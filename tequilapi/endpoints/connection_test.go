@@ -35,17 +35,19 @@ import (
 )
 
 type fakeManager struct {
-	onConnectReturn    error
-	onDisconnectReturn error
-	onStatusReturn     connection.ConnectionStatus
-	disconnectCount    int
-	requestedConsumer  identity.Identity
-	requestedProvider  identity.Identity
+	onConnectReturn      error
+	onDisconnectReturn   error
+	onStatusReturn       connection.ConnectionStatus
+	disconnectCount      int
+	requestedConsumer    identity.Identity
+	requestedProvider    identity.Identity
+	requestedServiceType string
 }
 
-func (fm *fakeManager) Connect(consumerID identity.Identity, providerID identity.Identity, options connection.ConnectParams) error {
+func (fm *fakeManager) Connect(consumerID identity.Identity, providerID identity.Identity, serviceType string, options connection.ConnectParams) error {
 	fm.requestedConsumer = consumerID
 	fm.requestedProvider = providerID
+	fm.requestedServiceType = serviceType
 	return fm.onConnectReturn
 }
 
@@ -274,7 +276,31 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 
 	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumer)
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
+	assert.Equal(t, "openvpn", fakeManager.requestedServiceType)
+}
 
+func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
+	fakeManager := fakeManager{}
+
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil)
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/irrelevant",
+		strings.NewReader(
+			`{
+				"consumerId" : "my-identity",
+				"providerId" : "required-node",
+				"serviceType": "noop"
+			}`))
+	resp := httptest.NewRecorder()
+
+	connEndpoint.Create(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusCreated, resp.Code)
+
+	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumer)
+	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
+	assert.Equal(t, "noop", fakeManager.requestedServiceType)
 }
 
 func TestDeleteCallsDisconnect(t *testing.T) {

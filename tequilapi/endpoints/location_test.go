@@ -34,7 +34,7 @@ type fakeManagerForLocation struct {
 	onStatusReturn connection.ConnectionStatus
 }
 
-func (fm *fakeManagerForLocation) Connect(consumerID identity.Identity, providerID identity.Identity, options connection.ConnectParams) error {
+func (fm *fakeManagerForLocation) Connect(consumerID identity.Identity, providerID identity.Identity, serviceType string, options connection.ConnectParams) error {
 	return nil
 }
 
