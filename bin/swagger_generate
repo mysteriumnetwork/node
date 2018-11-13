@@ -1,0 +1,3 @@
+#!/bin/bash
+
+swagger generate spec --base-path=./cmd/mysterium_node/ -o tequilapi.json --scan-models
