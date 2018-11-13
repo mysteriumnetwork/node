@@ -114,7 +114,7 @@ jobs:
     - script:
       - go get github.com/go-swagger/go-swagger/cmd/swagger/
       - bin/swagger_generate
-      - bin/s3 sync tequilapi.json s3://build-artifacts/$TRAVIS_BUILD_NUMBER
+      - bin/s3 sync tequilapi.json s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
       name: "Swagger JSON"
 
     # Development bleeding-edge release (on master commits only)
