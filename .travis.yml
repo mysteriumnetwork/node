@@ -102,13 +102,13 @@ jobs:
     - script:
       - bin/package_docker
       - docker save myst:alpine | gzip > myst_alpine.tgz
-      - bin/s3 cp myst_alpine.tgz s3://travis-$TRAVIS_BUILD_NUMBER/docker-images
+      - bin/s3 cp myst_alpine.tgz s3://travis-$TRAVIS_BUILD_NUMBER/docker-images/
       name: "Alpine docker image"
 
     - script:
       - bin/package_docker_ubuntu $BUILD_VERSION
       - docker save myst:ubuntu | gzip > myst_ubuntu.tgz
-      - bin/s3 cp myst_ubuntu.tgz s3://travis-$TRAVIS_BUILD_NUMBER/docker-images
+      - bin/s3 cp myst_ubuntu.tgz s3://travis-$TRAVIS_BUILD_NUMBER/docker-images/
       name: "Ubuntu docker image"
 
     # Development bleeding-edge release (on master commits only)
@@ -117,6 +117,7 @@ jobs:
         - git tag -f $BUILD_VERSION
         - git remote add gh https://${TRAVIS_REPO_SLUG%/*}:${GIT_RELEASES_API_KEY}@github.com/${TRAVIS_REPO_SLUG}.git
         - git push -f gh $BUILD_VERSION
+      name: "Push dev git tag"
 
     - script:
       - bin/release_goreport
