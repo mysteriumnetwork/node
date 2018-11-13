@@ -127,17 +127,10 @@ func validTLSPresharedKey(config *VPNConfig) error {
 	var buff = &bytes.Buffer{}
 	fmt.Fprintln(buff, "-----BEGIN OpenVPN Static key V1-----")
 	left := key
-	for {
-		if len(left) == 0 {
-			break
-		}
-		if len(left) <= 64 {
-			fmt.Fprintln(buff, left)
-			break
-		}
+	for ; len(left) > 64; left = left[64:] {
 		fmt.Fprintln(buff, left[0:64])
-		left = left[64:]
 	}
+	fmt.Fprintln(buff, left)
 	fmt.Fprintln(buff, "-----END OpenVPN Static key V1-----")
 	config.TLSPresharedKey = buff.String()
 

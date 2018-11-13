@@ -33,6 +33,18 @@ addc15c1393f4db6c7f8d55ba598fbe5
 -----END OpenVPN Static key V1-----
 `
 
+const tlsTestKeyPreformatted = `-----BEGIN OpenVPN Static key V1-----
+7573bf79ebecb38d2a009d28830ecf5b0b11e27362513fe4b09b55f07054c4c7
+c3cebeb00bf8bb2d05cfa0f79308e762e684b931db2179e7a21618ea869cbb5b
+1b9753ca05d3b87708389ccc154c9278a92964002ea888c1011fb06444088162
+ff6a4c1d5a8ee0ab30fd1b4dc9aaaa8c8901b426d25063cc660d47103ff14e2c
+ae99ca9ce28d70f927d090c144c49b3d86832c1e1c67562a6d248dff8a258394
+8a065015ec84d8d7bfe63385e257a6338471e2c67075416f4771beb0c872cc09
+c9ce4318fd8c9446987664f04ceeeb4e3c49f7101aa4953795014696a2f4e1cb
+129127fe5830627563efb127589b3693addc15c1393f4db6c7f8d55ba598fbe5
+-----END OpenVPN Static key V1-----
+`
+
 const caCertificate = `
 -----BEGIN CERTIFICATE-----
 MIIByDCCAW6gAwIBAgICBFcwCgYIKoZIzj0EAwIwQzELMAkGA1UEBhMCR0IxGzAZ
@@ -77,6 +89,7 @@ func TestPortOutOfRangeIsNotAllowed(t *testing.T) {
 func TestTLSPresharedKeyIsValid(t *testing.T) {
 	vpnConfig := VPNConfig{TLSPresharedKey: tlsTestKey}
 	assert.NoError(t, validTLSPresharedKey(&vpnConfig))
+	assert.Equal(t, tlsTestKeyPreformatted, vpnConfig.TLSPresharedKey)
 }
 
 func TestCACertificateIsValid(t *testing.T) {

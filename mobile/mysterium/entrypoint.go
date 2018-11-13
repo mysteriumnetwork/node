@@ -20,24 +20,19 @@ package mysterium
 import (
 	"path/filepath"
 
-	"github.com/mysteriumnetwork/node/services/openvpn/session"
-
-	"github.com/mysteriumnetwork/node/services/openvpn"
-
-	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
-
 	"github.com/mitchellh/go-homedir"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/openvpn/session"
 )
 
 // MobileNode represents node object tuned for mobile devices
 type MobileNode struct {
-	di       cmd.Dependencies
-	identity identity.Identity
+	di cmd.Dependencies
 }
 
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
@@ -73,7 +68,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup O
 		TequilapiAddress: "127.0.0.1",
 		TequilapiPort:    4050,
 
-		Openvpn: embbededLibCheck{},
+		Openvpn: embeddedLibCheck{},
 
 		Location: node.OptionsLocation{
 			IpifyUrl: "https://api.ipify.org/",
@@ -146,18 +141,18 @@ func (mobNode *MobileNode) WaitUntilDies() error {
 	return mobNode.di.Node.Wait()
 }
 
-type embbededLibCheck struct {
+type embeddedLibCheck struct {
 }
 
 // Check always returns nil as embedded lib does not have any external failing deps
-func (embbededLibCheck) Check() error {
+func (embeddedLibCheck) Check() error {
 	return nil
 }
 
 // BinaryPath returns noop binary path
-func (embbededLibCheck) BinaryPath() string {
+func (embeddedLibCheck) BinaryPath() string {
 	return "mobile uses embedded openvpn lib"
 }
 
 // check if our struct satisfies Openvpn interface expected by node options
-var _ node.Openvpn = embbededLibCheck{}
+var _ node.Openvpn = embeddedLibCheck{}
