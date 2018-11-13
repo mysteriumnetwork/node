@@ -244,10 +244,13 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		di.SignerFactory,
 	)
 
-	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
-	newDialogWaiter := func(providerID identity.Identity) communication.DialogWaiter {
+	di.ServiceRegistry = service.NewRegistry()
+	di.ServiceSessionStorage = session.NewStorageMemory()
+
+	newDialogWaiter := func(providerID identity.Identity, serviceType string) communication.DialogWaiter {
+		address := nats_discovery.NewAddressGenerate(di.NetworkDefinition.BrokerAddress, providerID, serviceType)
 		return nats_dialog.NewDialogWaiter(
-			nats_discovery.NewAddressGenerate(di.NetworkDefinition.BrokerAddress, providerID),
+			address,
 			di.SignerFactory(providerID),
 			di.IdentityRegistry,
 		)
@@ -263,18 +266,15 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		return session.NewDialogHandler(sessionManagerFactory)
 	}
 
-	di.ServiceRegistry = service.NewRegistry()
-	di.ServiceSessionStorage = session.NewStorageMemory()
-
 	if len(nodeOptions.ServiceTypes) > 0 {
 		serviceManagerMap := make(map[string]service.RunnableService, len(nodeOptions.ServiceTypes))
-		for _, serviceType := range nodeOptions.ServiceTypes {
-			serviceManagerMap[serviceType] = service.NewManager(
+		for i := range nodeOptions.ServiceTypes {
+			serviceManagerMap[nodeOptions.ServiceTypes[i]] = service.NewManager(
 				identityHandler,
 				di.ServiceRegistry.Create,
 				newDialogWaiter,
 				newDialogHandler,
-				discoveryService,
+				discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory),
 			)
 		}
 		di.ServiceRunner = service.NewRunner(serviceManagerMap)

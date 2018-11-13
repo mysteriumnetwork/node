@@ -153,3 +153,8 @@ func vpnStateCallback(state openvpn.State) {
 		log.Info(logPrefix, "Openvpn service exited")
 	}
 }
+
+// GetType returns the service type
+func (manager *Manager) GetType() string {
+	return openvpn_service.ServiceType
+}

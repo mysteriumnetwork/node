@@ -75,3 +75,8 @@ func (manager *Manager) Stop() error {
 	log.Info(logPrefix, "Noop service stopped")
 	return nil
 }
+
+// GetType returns the service type
+func (manager *Manager) GetType() string {
+	return ServiceType
+}

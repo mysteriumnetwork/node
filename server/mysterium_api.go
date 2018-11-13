@@ -127,7 +127,7 @@ func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, s
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Proposal pinged for node: ", proposal.ProviderID)
+		log.Info(mysteriumAPILogPrefix, "Proposal pinged for node: ", proposal.ProviderID, " service type: ", proposal.ServiceType)
 	}
 	return err
 }

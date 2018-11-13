@@ -40,3 +40,7 @@ func (service *serviceFake) Wait() error {
 func (service *serviceFake) Stop() error {
 	return nil
 }
+
+func (service *serviceFake) GetType() string {
+	return "fake"
+}
