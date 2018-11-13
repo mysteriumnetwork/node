@@ -1,5 +1,4 @@
-sudo: true
-os: linux
+dist: xenial
 language: go
 go: ["1.11"]
 
