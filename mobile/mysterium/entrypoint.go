@@ -20,14 +20,14 @@ package mysterium
 import (
 	"path/filepath"
 
-	log "github.com/cihub/seelog"
 	"github.com/mitchellh/go-homedir"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/metadata"
-	service_noop "github.com/mysteriumnetwork/node/services/noop"
+	"github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/openvpn/session"
 )
 
 // MobileNode represents node object tuned for mobile devices
@@ -38,8 +38,11 @@ type MobileNode struct {
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
 type MobileNetworkOptions node.OptionsNetwork
 
+// Openvpn3TunnelSetup is alias for openvpn3 tunnel setup interface exposed to Android/iOS interop
+type Openvpn3TunnelSetup openvpn3.TunnelSetup
+
 // NewNode function creates new Node
-func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode, error) {
+func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup Openvpn3TunnelSetup) (*MobileNode, error) {
 	var di cmd.Dependencies
 
 	var dataDir, currentDir string
@@ -59,15 +62,13 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			Data:     dataDir,
 			Storage:  filepath.Join(dataDir, "db"),
 			Keystore: filepath.Join(dataDir, "keystore"),
-			// TODO Where to save runtime data
-			Runtime: currentDir,
+			Runtime:  currentDir,
 		},
 
 		TequilapiAddress: "127.0.0.1",
 		TequilapiPort:    4050,
 
-		// TODO Make Openvpn pluggable connection optional
-		Openvpn: noOpenvpnYet{},
+		Openvpn: embeddedLibCheck{},
 
 		Location: node.OptionsLocation{
 			IpifyUrl: "https://api.ipify.org/",
@@ -80,52 +81,54 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		return nil, err
 	}
 
-	di.ConnectionRegistry.Register("openvpn", service_noop.NewConnectionCreator())
+	di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, channel connection.StateChannel) (connection.Connection, error) {
 
-	return &MobileNode{di}, nil
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
+		if err != nil {
+			return nil, err
+		}
+
+		profileContent, err := vpnClientConfig.ToConfigFileContent()
+		if err != nil {
+			return nil, err
+		}
+
+		config := openvpn3.NewConfig(profileContent)
+		config.GuiVersion = "govpn 0.1"
+		config.CompressionMode = "asym"
+
+		signer := di.SignerFactory(options.ConsumerID)
+
+		username, password, err := session.SignatureCredentialsProvider(options.SessionID, signer)()
+		if err != nil {
+			return nil, err
+		}
+
+		credentials := openvpn3.UserCredentials{
+			Username: username,
+			Password: password,
+		}
+
+		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(channel, di.StatsKeeper), tunnelSetup)
+
+		return &sessionWrapper{
+			session: session,
+		}, nil
+	})
+
+	return &MobileNode{di: di}, nil
 }
 
 // DefaultNetworkOptions returns default network options to connect with
 func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
-		Testnet:              true,
-		DiscoveryAPIAddress:  metadata.TestnetDefinition.DiscoveryAPIAddress,
-		BrokerAddress:        metadata.TestnetDefinition.BrokerAddress,
-		EtherClientRPC:       metadata.TestnetDefinition.EtherClientRPC,
-		EtherPaymentsAddress: metadata.DefaultNetwork.PaymentsContractAddress.String(),
+		Testnet:                 true,
+		ExperimentIdentityCheck: true,
+		DiscoveryAPIAddress:     metadata.TestnetDefinition.DiscoveryAPIAddress,
+		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
+		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,
+		EtherPaymentsAddress:    metadata.DefaultNetwork.PaymentsContractAddress.String(),
 	}
-}
-
-// TestConnectFlow checks whenever connection can be successfully established
-func (mobNode *MobileNode) TestConnectFlow(providerAddress string) error {
-	consumers := mobNode.di.IdentityManager.GetIdentities()
-	var consumerID identity.Identity
-	if len(consumers) < 1 {
-		created, err := mobNode.di.IdentityManager.CreateNewIdentity("")
-		if err != nil {
-			return err
-		}
-		consumerID = created
-	} else {
-		consumerID = consumers[0]
-	}
-
-	log.Infof("Unlocking consumer: %#v", consumerID)
-	err := mobNode.di.IdentityManager.Unlock(consumerID.Address, "")
-	if err != nil {
-		return err
-	}
-	providerId := identity.FromAddress(providerAddress)
-	log.Infof("Connecting to provider: %#v", providerId)
-	err = mobNode.di.ConnectionManager.Connect(consumerID, providerId, connection.ConnectParams{})
-	if err != nil {
-		return err
-	}
-
-	connectionStatus := mobNode.di.ConnectionManager.Status()
-	log.Infof("Connection status: %#v", connectionStatus)
-
-	return mobNode.di.ConnectionManager.Disconnect()
 }
 
 // Shutdown function stops running mobile node
@@ -138,16 +141,18 @@ func (mobNode *MobileNode) WaitUntilDies() error {
 	return mobNode.di.Node.Wait()
 }
 
-type noOpenvpnYet struct {
+type embeddedLibCheck struct {
 }
 
-func (noOpenvpnYet) Check() error {
+// Check always returns nil as embedded lib does not have any external failing deps
+func (embeddedLibCheck) Check() error {
 	return nil
 }
 
 // BinaryPath returns noop binary path
-func (noOpenvpnYet) BinaryPath() string {
-	return "no openvpn binary available on mobile"
+func (embeddedLibCheck) BinaryPath() string {
+	return "mobile uses embedded openvpn lib"
 }
 
-var _ node.Openvpn = noOpenvpnYet{}
+// check if our struct satisfies Openvpn interface expected by node options
+var _ node.Openvpn = embeddedLibCheck{}
