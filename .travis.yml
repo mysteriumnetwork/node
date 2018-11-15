@@ -113,6 +113,12 @@ jobs:
       - bin/s3 cp myst_ubuntu.tgz s3://travis-$TRAVIS_BUILD_NUMBER/docker-images/
       name: "Ubuntu docker image"
 
+    - script:
+      - go get github.com/go-swagger/go-swagger/cmd/swagger/
+      - bin/swagger_generate
+      - bin/s3 cp tequilapi.json s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts/
+      name: "Swagger JSON"
+
     # Development bleeding-edge release (on master commits only)
     - stage: release-dev
       script:

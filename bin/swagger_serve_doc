@@ -1,4 +1,0 @@
-#!/bin/bash
-
-swagger generate spec --base-path=./cmd/mysterium_node/ -o ./tequilapi_spec.json --scan-models
-swagger serve ./tequilapi_spec.json -F=swagger
