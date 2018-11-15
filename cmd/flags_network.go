@@ -45,18 +45,18 @@ var (
 
 	discoveryAddressFlag = cli.StringFlag{
 		Name:  "discovery-address",
-		Usage: "Address (URL form) of discovery service",
+		Usage: "`URL` of discovery service",
 		Value: metadata.DefaultNetwork.DiscoveryAPIAddress,
 	}
 	brokerAddressFlag = cli.StringFlag{
 		Name:  "broker-address",
-		Usage: "Address (IP or domain name) of message broker",
+		Usage: "`URI` of message broker",
 		Value: metadata.DefaultNetwork.BrokerAddress,
 	}
 
 	etherRpcFlag = cli.StringFlag{
 		Name:  "ether.client.rpc",
-		Usage: "Url or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
+		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
 	}
 	etherContractPaymentsFlag = cli.StringFlag{

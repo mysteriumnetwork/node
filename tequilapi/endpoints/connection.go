@@ -304,7 +304,7 @@ func AddRoutesForConnection(router *httprouter.Router, manager connection.Manage
 
 func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
 	var connectionRequest = connectionRequest{
-		// This defaults the service type to openvpn, for backward compatability
+		// This defaults the service type to openvpn, for backward compatibility
 		// If specified in the request, the value will get overridden
 		ServiceType: "openvpn",
 	}

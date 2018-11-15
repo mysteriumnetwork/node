@@ -247,13 +247,17 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	di.ServiceRegistry = service.NewRegistry()
 	di.ServiceSessionStorage = session.NewStorageMemory()
 
-	newDialogWaiter := func(providerID identity.Identity, serviceType string) communication.DialogWaiter {
-		address := nats_discovery.NewAddressGenerate(di.NetworkDefinition.BrokerAddress, providerID, serviceType)
+	newDialogWaiter := func(providerID identity.Identity, serviceType string) (communication.DialogWaiter, error) {
+		address, err := nats_discovery.NewAddressFromHostAndID(di.NetworkDefinition.BrokerAddress, providerID, serviceType)
+		if err != nil {
+			return nil, err
+		}
+
 		return nats_dialog.NewDialogWaiter(
 			address,
 			di.SignerFactory(providerID),
 			di.IdentityRegistry,
-		)
+		), nil
 	}
 	newDialogHandler := func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
 		promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
