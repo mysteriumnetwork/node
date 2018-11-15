@@ -18,6 +18,7 @@
 package noop
 
 import (
+	"errors"
 	"testing"
 
 	"time"
@@ -33,14 +34,18 @@ var (
 	providerID = identity.FromAddress("provider-id")
 )
 
-var _ service.Service = NewManager(&fakeResolver{})
+var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{})
+var locationResolverStub = &fakeLocationResolver{
+	err: nil,
+	res: "LT",
+}
+var ipresolverStub = &fakeIPResolver{
+	publicIPRes: "127.0.0.1",
+	publicErr:   nil,
+}
 
 func Test_Manager_Start(t *testing.T) {
-	fakeResolver := &fakeResolver{
-		err: nil,
-		res: "LT",
-	}
-	manager := NewManager(fakeResolver)
+	manager := NewManager(locationResolverStub, ipresolverStub)
 	proposal, sessionConfigProvider, err := manager.Start(providerID)
 	assert.NoError(t, err)
 
@@ -68,8 +73,38 @@ func Test_Manager_Start(t *testing.T) {
 	assert.Nil(t, sessionConfig)
 }
 
+func Test_Manager_Start_IPResolverErrs(t *testing.T) {
+	fakeErr := errors.New("some error")
+	ipResStub := &fakeIPResolver{
+		publicIPRes: "127.0.0.1",
+		publicErr:   fakeErr,
+	}
+	manager := NewManager(locationResolverStub, ipResStub)
+	_, _, err := manager.Start(providerID)
+	assert.Equal(t, fakeErr, err)
+}
+
+func Test_Manager_Start_LocResolverErrs(t *testing.T) {
+	fakeErr := errors.New("some error")
+	locResStub := &fakeLocationResolver{
+		res: "LT",
+		err: fakeErr,
+	}
+	manager := NewManager(locResStub, ipresolverStub)
+	_, _, err := manager.Start(providerID)
+	assert.Equal(t, fakeErr, err)
+}
+
+func Test_Manager_MultipleStarts(t *testing.T) {
+	manager := NewManager(locationResolverStub, ipresolverStub)
+	_, _, err := manager.Start(providerID)
+	assert.Nil(t, err)
+	_, _, err = manager.Start(providerID)
+	assert.Nil(t, err)
+}
+
 func Test_Manager_Wait(t *testing.T) {
-	manager := &Manager{}
+	manager := NewManager(locationResolverStub, ipresolverStub)
 	manager.Start(providerID)
 
 	go func() {
@@ -81,7 +116,7 @@ func Test_Manager_Wait(t *testing.T) {
 }
 
 func Test_Manager_Stop(t *testing.T) {
-	manager := &Manager{}
+	manager := NewManager(locationResolverStub, ipresolverStub)
 	manager.Start(providerID)
 
 	err := manager.Stop()
@@ -96,12 +131,27 @@ func waitABit() {
 	time.Sleep(10 * time.Millisecond)
 }
 
-type fakeResolver struct {
+type fakeLocationResolver struct {
 	err error
 	res string
 }
 
 // ResolveCountry performs a fake resolution
-func (fr *fakeResolver) ResolveCountry(ip string) (string, error) {
+func (fr *fakeLocationResolver) ResolveCountry(ip string) (string, error) {
 	return fr.res, fr.err
+}
+
+type fakeIPResolver struct {
+	publicIPRes   string
+	publicErr     error
+	outbountIPRes string
+	outbountErr   error
+}
+
+func (fir *fakeIPResolver) GetPublicIP() (string, error) {
+	return fir.publicIPRes, fir.publicErr
+}
+
+func (fir *fakeIPResolver) GetOutboundIP() (string, error) {
+	return fir.outbountIPRes, fir.outbountErr
 }

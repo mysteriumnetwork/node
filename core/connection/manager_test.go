@@ -209,8 +209,8 @@ func (tc *testContext) TestTwoConnectDisconnectCyclesReturnNoError() {
 
 }
 
-func (tc *testContext) TestConnectFailsIfOpenvpnFactoryReturnsError() {
-	tc.fakeConnectionFactory.mockError = errors.New("failed to create vpn instance")
+func (tc *testContext) TestConnectFailsIfConnectionFactoryReturnsError() {
+	tc.fakeConnectionFactory.mockError = errors.New("failed to create connection instance")
 	assert.Error(tc.T(), tc.connManager.Connect(myID, activeProviderID, activeServiceType, ConnectParams{}))
 }
 

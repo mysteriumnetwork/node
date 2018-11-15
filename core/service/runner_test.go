@@ -88,7 +88,7 @@ func Test_RunnerBubblesErrors(t *testing.T) {
 	err := runner.StartServiceByType(sType, Options{}, c)
 	assert.Nil(t, err)
 
-	errs := runner.Kill()
+	errs := runner.KillAll()
 	assert.Len(t, errs, 0)
 
 	assert.Equal(t, fakeErr, <-c)
@@ -108,7 +108,7 @@ func Test_RunnerKillReturnsErrors(t *testing.T) {
 	err := runner.StartServiceByType(sType, Options{}, c)
 	assert.Nil(t, err)
 
-	errs := runner.Kill()
+	errs := runner.KillAll()
 	assert.Len(t, errs, 1)
 	assert.Equal(t, fakeErr, errs[0])
 }

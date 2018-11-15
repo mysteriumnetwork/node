@@ -139,7 +139,7 @@ func (di *Dependencies) Shutdown() (err error) {
 	}()
 
 	if di.ServiceRunner != nil {
-		if runnerErrs := di.ServiceRunner.Kill(); len(runnerErrs) > 0 {
+		if runnerErrs := di.ServiceRunner.KillAll(); len(runnerErrs) > 0 {
 			errs = append(errs, runnerErrs...)
 		}
 	}
@@ -230,7 +230,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	service_noop.Bootstrap()
 	di.ServiceRegistry.Register(service_noop.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
-		return service_noop.NewManager(di.LocationResolver), nil
+		return service_noop.NewManager(di.LocationResolver, di.IPResolver), nil
 	})
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
 }

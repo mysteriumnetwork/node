@@ -58,8 +58,8 @@ func (sr *Runner) StartServiceByType(serviceType string, options Options, errorC
 	return nil
 }
 
-// Kill kills all the service managers
-func (sr *Runner) Kill() []error {
+// KillAll kills all the service managers
+func (sr *Runner) KillAll() []error {
 	errors := make([]error, 0)
 	for _, serviceManager := range sr.serviceManagers {
 		if err := serviceManager.Kill(); err != nil {

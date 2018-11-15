@@ -23,7 +23,7 @@ import (
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
-// Bootstrap is called on program initialization time and registers various deserializers related to opepnvpn service
+// Bootstrap is called on program initialization time and registers various deserializers related to noop service
 func Bootstrap() {
 	dto_discovery.RegisterServiceDefinitionUnserializer(
 		ServiceType,
