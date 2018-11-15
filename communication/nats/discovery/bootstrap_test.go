@@ -27,6 +27,7 @@ import (
 )
 
 func init() {
+	// TODO Use transport mock in tests instead of real openvpn
 	openvpn.Bootstrap()
 	Bootstrap()
 }

@@ -111,13 +111,12 @@ bin/run_consumer cli
 
 * **Step 1.** Install go-swagger
 ```bash
-brew tap go-swagger/go-swagger
-brew install go-swagger
+go get github.com/go-swagger/go-swagger/cmd/swagger/
 ```
 
-* **Step 2.** Generate specification and serve serve it locally:
+* **Step 2.** Generate specification:
 ```bash
-bin/swagger_serve_doc
+bin/swagger_generate
 ```
 
 ## Dependency management

@@ -19,5 +19,6 @@ package dto
 
 // ProposalsRequest represents JSON request for the proposals
 type ProposalsRequest struct {
-	NodeKey string `json:"node_key"`
+	NodeKey     string `json:"node_key"`
+	ServiceType string `json:"service_type"`
 }

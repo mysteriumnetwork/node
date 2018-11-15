@@ -21,5 +21,8 @@ package storage
 type Storage interface {
 	Store(issuer string, data interface{}) error
 	Delete(issuer string, data interface{}) error
+	Save(object interface{}) error
+	Update(object interface{}) error
+	GetAll(array interface{}) error
 	Close() error
 }

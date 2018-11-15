@@ -18,8 +18,8 @@
 package cmd
 
 import (
-	openvpn_core "github.com/mysteriumnetwork/go-openvpn/openvpn/core"
 	"github.com/mysteriumnetwork/node/core/node"
+	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
 	"github.com/urfave/cli"
 )
 
@@ -45,6 +45,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag)
 
 	RegisterFlagsNetwork(flags)
+	// TODO Register Openvpn flags as transport arguments
 	openvpn_core.RegisterFlags(flags)
 	RegisterFlagsLocation(flags)
 
@@ -59,8 +60,23 @@ func ParseFlagsNode(ctx *cli.Context) node.Options {
 		ctx.GlobalString(tequilapiAddressFlag.Name),
 		ctx.GlobalInt(tequilapiPortFlag.Name),
 
-		openvpn_core.ParseFlags(ctx),
+		wrapper{nodeOptions: openvpn_core.ParseFlags(ctx)},
 		ParseFlagsLocation(ctx),
 		ParseFlagsNetwork(ctx),
 	}
 }
+
+// TODO this struct will disappear when we unify go-openvpn embedded lib and external process based session creation/handling
+type wrapper struct {
+	nodeOptions openvpn_core.NodeOptions
+}
+
+func (w wrapper) Check() error {
+	return w.nodeOptions.Check()
+}
+
+func (w wrapper) BinaryPath() string {
+	return w.nodeOptions.BinaryPath
+}
+
+var _ node.Openvpn = wrapper{}

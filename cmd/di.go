@@ -49,7 +49,7 @@ import (
 	"github.com/mysteriumnetwork/node/server/metrics/oracle"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
-	"github.com/mysteriumnetwork/node/services/openvpn"
+	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -82,14 +82,17 @@ type Dependencies struct {
 
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
-	ServiceManager     *service.Manager
+
+	ServiceManager        *service.Manager
+	ServiceRegistry       *service.Registry
+	ServiceSessionStorage *session.StorageMemory
 }
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	logconfig.Bootstrap()
 	nats_discovery.Bootstrap()
-	openvpn.Bootstrap()
+	service_openvpn.Bootstrap()
 
 	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
 
@@ -177,10 +180,17 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
 	}
 
+	sessionStorage := connection.NewSessionStorage(di.Storage)
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
-
 	di.ConnectionRegistry = connection.NewRegistry()
-	di.ConnectionManager = connection.NewManager(di.MysteriumClient, dialogFactory, promiseIssuerFactory, di.ConnectionRegistry.CreateConnection, di.StatsKeeper)
+	di.ConnectionManager = connection.NewManager(
+		di.MysteriumClient,
+		dialogFactory,
+		promiseIssuerFactory,
+		di.ConnectionRegistry.CreateConnection,
+		di.StatsKeeper,
+		sessionStorage,
+	)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
@@ -188,6 +198,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatsKeeper)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
+	tequilapi_endpoints.AddRoutesForSession(router, sessionStorage)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
@@ -196,20 +207,30 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
-	connectionFactory := openvpn.NewProcessBasedConnectionFactory(
+	createService := func(serviceOptions service.Options) (service.Service, error) {
+		transportOptions := serviceOptions.Options.(openvpn_service.Options)
+		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, di.ServiceSessionStorage), nil
+	}
+	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
+
+	connectionFactory := service_openvpn.NewProcessBasedConnectionFactory(
 		di.MysteriumClient,
-		nodeOptions.Openvpn.BinaryPath,
+		// TODO instead of passing binary path here, Openvpn from node options could represent abstract vpn factory itself
+		nodeOptions.Openvpn.BinaryPath(),
 		nodeOptions.Directories.Config,
 		nodeOptions.Directories.Runtime,
 		di.StatsKeeper,
 		di.LocationOriginal,
 		di.SignerFactory,
 	)
-	di.ConnectionRegistry.Register("openvpn", connectionFactory.CreateConnection)
+	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory.CreateConnection)
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
-	di.ConnectionRegistry.Register("dummy", service_noop.NewConnectionCreator())
+	di.ServiceRegistry.Register(service_noop.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
+		return service_noop.NewManager(), nil
+	})
+	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
 }
 
 // bootstrapServiceComponents initiates ServiceManager dependency
@@ -234,6 +255,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		if err != nil {
 			return nil, err
 		}
+
 		return nats_dialog.NewDialogWaiter(
 			address,
 			di.SignerFactory(providerID),
@@ -247,13 +269,15 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			}
 			return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
 		}
-		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, sessionStorage, promiseHandler)
+		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, di.ServiceSessionStorage, promiseHandler)
 		return session.NewDialogHandler(sessionManagerFactory)
 	}
 
+	di.ServiceRegistry = service.NewRegistry()
+	di.ServiceSessionStorage = session.NewStorageMemory()
 	di.ServiceManager = service.NewManager(
 		identityHandler,
-		newService,
+		di.ServiceRegistry.Create,
 		newDialogWaiter,
 		newDialogHandler,
 		discoveryService,

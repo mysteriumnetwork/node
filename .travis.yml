@@ -1,5 +1,4 @@
-sudo: true
-os: linux
+dist: xenial
 language: go
 go: ["1.11"]
 
@@ -18,6 +17,9 @@ before_install:
         jq -r '( first(.[]  | select(.prerelease == true)) ) | .tag_name');
     fi
 
+after_failure:
+  - bin/s3 rb --force s3://travis-$TRAVIS_BUILD_NUMBER
+
 cache:
   directories:
     - vendor
@@ -31,6 +33,7 @@ stages:
     if: type != pull_request AND branch = master AND tag IS blank
   - name: release
     if: tag IS present
+  - cleanup
 
 jobs:
   include:
@@ -40,6 +43,8 @@ jobs:
       script:
         - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
         - dep ensure
+    - script: bin/s3 mb s3://travis-$TRAVIS_BUILD_NUMBER
+      name: "Creating S3 bucket"
 
     # Test stage
     - stage: test
@@ -66,35 +71,51 @@ jobs:
     - stage: build
       script:
       - BINARY=build/myst/myst_linux_amd64 bin/package_standalone linux
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
       name: "Linux packages"
 
     - script:
       - bin/builder_run BINARY=build/myst/myst bin/package_debian $BUILD_VERSION amd64
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
       name: "DEB packages"
 
     - script:
       - BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
       name: "OSX packages"
 
     - script:
       - BINARY=build/myst/myst_windows_amd64.exe bin/package_standalone windows
-      - bin/s3 sync build/package s3://build-artifacts
+      - bin/s3 sync build/package s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
       name: "Windows packages"
+
+    - script:
+      - bin/package_ios amd64
+      - bin/s3 sync build/package s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
+      name: "iOS packages"
+
+    - script:
+      - bin/package_android amd64
+      - bin/s3 sync build/package s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
+      name: "Android packages"
 
     - script:
       - bin/package_docker
       - docker save myst:alpine | gzip > myst_alpine.tgz
-      - bin/s3 cp myst_alpine.tgz s3://docker-images
+      - bin/s3 cp myst_alpine.tgz s3://travis-$TRAVIS_BUILD_NUMBER/docker-images/
       name: "Alpine docker image"
 
     - script:
       - bin/package_docker_ubuntu $BUILD_VERSION
       - docker save myst:ubuntu | gzip > myst_ubuntu.tgz
-      - bin/s3 cp myst_ubuntu.tgz s3://docker-images
+      - bin/s3 cp myst_ubuntu.tgz s3://travis-$TRAVIS_BUILD_NUMBER/docker-images/
       name: "Ubuntu docker image"
+
+    - script:
+      - go get github.com/go-swagger/go-swagger/cmd/swagger/
+      - bin/swagger_generate
+      - bin/s3 cp tequilapi.json s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts/
+      name: "Swagger JSON"
 
     # Development bleeding-edge release (on master commits only)
     - stage: release-dev
@@ -102,6 +123,7 @@ jobs:
         - git tag -f $BUILD_VERSION
         - git remote add gh https://${TRAVIS_REPO_SLUG%/*}:${GIT_RELEASES_API_KEY}@github.com/${TRAVIS_REPO_SLUG}.git
         - git push -f gh $BUILD_VERSION
+      name: "Push dev git tag"
 
     - script:
       - bin/release_goreport
@@ -109,7 +131,7 @@ jobs:
 
     # Official release (on tags only)
     - stage: release
-      script: bin/s3 sync s3://build-artifacts build/package
+      script: bin/s3 sync s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts build/package
       name: "Official release (on tags only)"
       deploy:
         provider: releases
@@ -120,12 +142,21 @@ jobs:
         on:
           tags: true
     - script:
-      - bin/s3 sync s3://docker-images build/docker
+      - bin/s3 sync s3://travis-$TRAVIS_BUILD_NUMBER/docker-images build/docker
       - docker load -i build/docker/myst_alpine.tgz
       - docker load -i build/docker/myst_ubuntu.tgz
       - bin/release_docker $TRAVIS_TAG
       - if [[ $TRAVIS_TAG != *-rc ]]; then bin/release_docker latest; fi
       name: "Pushing release to hub.docker.com"
+    - script:
+      - bin/s3 sync s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts build/package
+      - bin/release_android "$TRAVIS_TAG" "$BINTRAY_USER" "$BINTRAY_TOKEN"
+      name: "Publish Android SDK to Bintray and JCenter"
+
+    - stage: cleanup
+      script:
+        - bin/s3 rb --force s3://travis-$TRAVIS_BUILD_NUMBER
+      name: "Cleaning up S3 bucket"
 
 notifications:
   slack:

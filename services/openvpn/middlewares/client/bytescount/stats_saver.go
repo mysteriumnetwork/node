@@ -25,7 +25,7 @@ import (
 // NewSessionStatsSaver returns stats handler, which saves stats stats keeper
 func NewSessionStatsSaver(statsKeeper stats.SessionStatsKeeper) bytescount.SessionStatsHandler {
 	return func(bc bytescount.Bytecount) error {
-		statsKeeper.Save(stats.SessionStats{BytesSent: bc.BytesOut, BytesReceived: bc.BytesIn})
+		statsKeeper.Save(stats.SessionStats{BytesSent: uint64(bc.BytesOut), BytesReceived: uint64(bc.BytesIn)})
 		return nil
 	}
 }
