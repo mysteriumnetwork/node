@@ -244,12 +244,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 
 	discoveryService := discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory)
 
-	sessionStorage := session.NewStorageMemory()
-	newService := func(serviceOptions service.Options) (service.Service, error) {
-		transportOptions := serviceOptions.Options.(openvpn_service.Options)
-		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, sessionStorage), nil
-	}
-
 	newDialogWaiter := func(providerID identity.Identity) (communication.DialogWaiter, error) {
 		address, err := nats_discovery.NewAddressFromHostAndID(di.NetworkDefinition.BrokerAddress, providerID)
 		if err != nil {
