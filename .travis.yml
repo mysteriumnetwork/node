@@ -25,7 +25,7 @@ cache:
     - vendor
 
 stages:
-  - dep-cache
+  - pre-init
   - test
   - name: build
     if: (type != pull_request AND branch = master AND tag IS blank) OR tag IS present
@@ -33,18 +33,20 @@ stages:
     if: type != pull_request AND branch = master AND tag IS blank
   - name: release
     if: tag IS present
-  - cleanup
+  - name: cleanup
+    if: (type != pull_request AND branch = master AND tag IS blank) OR tag IS present
 
 jobs:
   include:
-    # Dependencies cache stage
-    - stage: dep-cache
+    # Dependencies cache stage and S3 bucket init
+    - stage: pre-init
       name: "Vendor update"
       script:
         - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
         - dep ensure
     - script: bin/s3 mb s3://travis-$TRAVIS_BUILD_NUMBER
       name: "Creating S3 bucket"
+      if: (type != pull_request AND branch = master AND tag IS blank) OR tag IS present
 
     # Test stage
     - stage: test
