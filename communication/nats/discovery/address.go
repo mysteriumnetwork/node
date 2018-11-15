@@ -19,6 +19,8 @@ package discovery
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/identity"
@@ -34,11 +36,26 @@ func NewAddress(topic string, addresses ...string) *AddressNATS {
 	}
 }
 
-// NewAddressGenerate generates NATS address for current node
-func NewAddressGenerate(brokerIP string, myID identity.Identity) *AddressNATS {
-	address := fmt.Sprintf("nats://%s:%d", brokerIP, BrokerPort)
+// NewAddressFromHostAndID generates NATS address for current node
+func NewAddressFromHostAndID(uri string, myID identity.Identity) (*AddressNATS, error) {
+	// Add scheme first otherwise url.Parse() fails.
+	var rawurl string
+	if strings.HasPrefix(uri, "nats:") {
+		rawurl = uri
+	} else {
+		rawurl = fmt.Sprintf("nats://%s", uri)
+	}
 
-	return NewAddress(myID.Address, address)
+	url, err := url.Parse(rawurl)
+	if err != nil {
+		return nil, err
+	}
+
+	if url.Port() == "" {
+		url.Host = fmt.Sprintf("%s:%d", url.Host, BrokerPort)
+	}
+
+	return NewAddress(myID.Address, url.String()), nil
 }
 
 // NewAddressForContact extracts NATS address from given contact structure
