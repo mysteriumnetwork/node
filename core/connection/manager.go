@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -63,7 +62,6 @@ type sessionSaver interface {
 
 type connectionManager struct {
 	//these are passed on creation
-	mysteriumClient  server.Client
 	newDialog        DialogCreator
 	newPromiseIssuer PromiseIssuerCreator
 	newConnection    ConnectionCreator
@@ -78,7 +76,6 @@ type connectionManager struct {
 
 // NewManager creates connection manager with given dependencies
 func NewManager(
-	mysteriumClient server.Client,
 	dialogCreator DialogCreator,
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator ConnectionCreator,
@@ -87,7 +84,6 @@ func NewManager(
 ) *connectionManager {
 	return &connectionManager{
 		statsKeeper:      statsKeeper,
-		mysteriumClient:  mysteriumClient,
 		newDialog:        dialogCreator,
 		newPromiseIssuer: promiseIssuerCreator,
 		newConnection:    connectionCreator,
@@ -97,7 +93,7 @@ func NewManager(
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID, providerID identity.Identity, serviceType string, params ConnectParams) (err error) {
+func (manager *connectionManager) Connect(consumerID identity.Identity, proposal dto.ServiceProposal, params ConnectParams) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -114,14 +110,14 @@ func (manager *connectionManager) Connect(consumerID, providerID identity.Identi
 		}
 	}()
 
-	err = manager.startConnection(consumerID, providerID, serviceType, params)
+	err = manager.startConnection(consumerID, proposal, params)
 	if err == context.Canceled {
 		return ErrConnectionCancelled
 	}
 	return err
 }
 
-func (manager *connectionManager) startConnection(consumerID, providerID identity.Identity, serviceType string, params ConnectParams) (err error) {
+func (manager *connectionManager) startConnection(consumerID identity.Identity, proposal dto.ServiceProposal, params ConnectParams) (err error) {
 	manager.mutex.Lock()
 	cancelCtx := manager.cleanConnection
 	manager.mutex.Unlock()
@@ -141,11 +137,7 @@ func (manager *connectionManager) startConnection(consumerID, providerID identit
 		}
 	}()
 
-	proposal, err := manager.findProposalByProviderID(providerID, serviceType)
-	if err != nil {
-		return err
-	}
-
+	providerID := identity.FromAddress(proposal.ProviderID)
 	dialog, err := manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
@@ -225,21 +217,6 @@ func (manager *connectionManager) Disconnect() error {
 
 func warnOnClean() {
 	log.Warn(managerLogPrefix, "Trying to close when there is nothing to close. Possible bug or race condition")
-}
-
-// TODO this can be extracted as dependency later when node selection criteria will be clear
-func (manager *connectionManager) findProposalByProviderID(providerID identity.Identity, serviceType string) (proposal dto.ServiceProposal, err error) {
-	proposals, err := manager.mysteriumClient.FindProposals(providerID.Address, serviceType)
-	if err != nil {
-		return
-	}
-	if len(proposals) == 0 {
-		err = errors.New("provider has no service proposals")
-		return
-	}
-
-	proposal = proposals[0]
-	return
 }
 
 func connectionWaiter(connection Connection, dialog communication.Dialog, promiseIssuer PromiseIssuer) {

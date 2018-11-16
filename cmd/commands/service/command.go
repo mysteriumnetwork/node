@@ -52,15 +52,16 @@ var (
 )
 
 // NewCommand function creates service command
-func NewCommand(licenseCommandName string, defaultServiceTypes []string) *cli.Command {
+func NewCommand(licenseCommandName string) *cli.Command {
+	serviceTypes := []string{"openvpn", "noop"}
 	var di cmd.Dependencies
 	command := &cli.Command{
 		Name:        serviceCommandName,
 		Usage:       "Starts and publishes services on Mysterium Network",
 		ArgsUsage:   " ",
-		Subcommands: getSubcommands(&di, licenseCommandName, defaultServiceTypes),
+		Subcommands: getSubcommands(&di, licenseCommandName, serviceTypes),
 		Action: func(ctx *cli.Context) error {
-			return runServices(ctx, &di, licenseCommandName, defaultServiceTypes)
+			return runServices(ctx, &di, licenseCommandName, serviceTypes)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
@@ -78,9 +79,14 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName stri
 		os.Exit(2)
 	}
 
+	// We need a small buffer for the error channel as we'll have quite a few concurrent reporters
+	// The buffer size is determined as follows:
+	// 1 for the signal callback
+	// 1 for the node.Wait()
+	// 1 for each of the services
 	errorChannel := make(chan error, 2+len(serviceTypes))
 
-	if err := di.Bootstrap(cmd.ParseFlagsNode(ctx, serviceTypes)); err != nil {
+	if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 		return err
 	}
 	go func() { errorChannel <- di.Node.Wait() }()
@@ -109,7 +115,7 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName stri
 }
 
 func getSubcommandForType(di *cmd.Dependencies, licenseCommandName string, serviceType string) cli.Command {
-	return cli.Command{
+	command := cli.Command{
 		Name:  serviceType,
 		Usage: fmt.Sprintf("Starts and publishes only %v service on Mysterium Network", serviceType),
 		Action: func(ctx *cli.Context) error {
@@ -119,6 +125,8 @@ func getSubcommandForType(di *cmd.Dependencies, licenseCommandName string, servi
 			return di.Shutdown()
 		},
 	}
+	registerFlags(&command.Flags)
+	return command
 }
 
 func getSubcommands(di *cmd.Dependencies, licenseCommandName string, serviceTypes []string) []cli.Command {

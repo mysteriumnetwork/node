@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +35,7 @@ type fakeManagerForLocation struct {
 	onStatusReturn connection.ConnectionStatus
 }
 
-func (fm *fakeManagerForLocation) Connect(consumerID identity.Identity, providerID identity.Identity, serviceType string, options connection.ConnectParams) error {
+func (fm *fakeManagerForLocation) Connect(consumerID identity.Identity, proposal dto.ServiceProposal, options connection.ConnectParams) error {
 	return nil
 }
 

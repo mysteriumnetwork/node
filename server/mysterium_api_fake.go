@@ -89,7 +89,7 @@ func (client *ClientFake) FindProposals(providerID string, serviceType string) (
 		}
 		var serviceMatched = true
 		if serviceType != "" {
-			serviceMatched = serviceMatched && (serviceType == proposal.ServiceType)
+			serviceMatched = (serviceType == proposal.ServiceType)
 		}
 		if providerMatched && serviceMatched {
 			proposals = append(proposals, proposal)

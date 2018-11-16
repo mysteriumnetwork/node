@@ -46,7 +46,6 @@ type Service interface {
 	Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error)
 	Wait() error
 	Stop() error
-	GetType() string
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
@@ -102,8 +101,7 @@ func (manager *Manager) Start(options Options) (err error) {
 	if err != nil {
 		return err
 	}
-
-	manager.dialogWaiter, err = manager.dialogWaiterFactory(providerID, manager.service.GetType())
+	manager.dialogWaiter, err = manager.dialogWaiterFactory(providerID, proposal.ServiceType)
 	if err != nil {
 		return err
 	}

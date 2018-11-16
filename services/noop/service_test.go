@@ -100,7 +100,8 @@ func Test_Manager_MultipleStarts(t *testing.T) {
 	_, _, err := manager.Start(providerID)
 	assert.Nil(t, err)
 	_, _, err = manager.Start(providerID)
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
+	assert.Equal(t, ErrAlreadyStarted, err)
 }
 
 func Test_Manager_Wait(t *testing.T) {

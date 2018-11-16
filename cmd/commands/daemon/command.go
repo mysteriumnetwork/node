@@ -23,7 +23,7 @@ import (
 )
 
 // NewCommand function creates run command
-func NewCommand(defaultServicesToStart []string) *cli.Command {
+func NewCommand() *cli.Command {
 	var di cmd.Dependencies
 
 	return &cli.Command{
@@ -32,7 +32,7 @@ func NewCommand(defaultServicesToStart []string) *cli.Command {
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
 			errorChannel := make(chan error, 2)
-			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx, defaultServicesToStart)); err != nil {
+			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
 			go func() { errorChannel <- di.Node.Wait() }()

@@ -32,17 +32,16 @@ import (
 )
 
 var (
-	defaultServicesToStart = []string{"openvpn", "noop"}
-	licenseCopyright       = metadata.LicenseCopyright(
+	licenseCopyright = metadata.LicenseCopyright(
 		"run command 'license --warranty'",
 		"run command 'license --conditions'",
 	)
 	versionSummary = metadata.VersionAsSummary(licenseCopyright)
-	daemonCommand  = daemon.NewCommand(defaultServicesToStart)
+	daemonCommand  = daemon.NewCommand()
 	versionCommand = version.NewCommand(versionSummary)
 	licenseCommand = license.NewCommand(licenseCopyright)
-	serviceCommand = service.NewCommand(licenseCommand.Name, defaultServicesToStart)
-	cliCommand     = command_cli.NewCommand(defaultServicesToStart)
+	serviceCommand = service.NewCommand(licenseCommand.Name)
+	cliCommand     = command_cli.NewCommand()
 )
 
 func main() {

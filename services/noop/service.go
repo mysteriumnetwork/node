@@ -18,6 +18,7 @@
 package noop
 
 import (
+	"errors"
 	"sync"
 
 	log "github.com/cihub/seelog"
@@ -31,6 +32,9 @@ import (
 
 const logPrefix = "[service-noop] "
 
+// ErrAlreadyStarted is the error we return when the start is called multiple times
+var ErrAlreadyStarted = errors.New("Service already started")
+
 // NewManager creates new instance of Noop service
 func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
 	return &Manager{
@@ -41,7 +45,7 @@ func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Man
 
 // Manager represents entrypoint for Noop service
 type Manager struct {
-	fakeProcess      sync.WaitGroup
+	process          sync.WaitGroup
 	locationResolver location.Resolver
 	ipResolver       ip.Resolver
 	isStarted        bool
@@ -54,10 +58,10 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 	}
 
 	if manager.isStarted {
-		return dto_discovery.ServiceProposal{}, sessionConfigProvider, nil
+		return dto_discovery.ServiceProposal{}, sessionConfigProvider, ErrAlreadyStarted
 	}
 
-	manager.fakeProcess.Add(1)
+	manager.process.Add(1)
 	manager.isStarted = true
 	log.Info(logPrefix, "Noop service started successfully")
 
@@ -90,7 +94,7 @@ func (manager *Manager) Wait() error {
 	if !manager.isStarted {
 		return nil
 	}
-	manager.fakeProcess.Wait()
+	manager.process.Wait()
 	return nil
 }
 
@@ -100,13 +104,8 @@ func (manager *Manager) Stop() error {
 		return nil
 	}
 
-	manager.fakeProcess.Done()
+	manager.process.Done()
 	manager.isStarted = false
 	log.Info(logPrefix, "Noop service stopped")
 	return nil
-}
-
-// GetType returns the service type
-func (manager *Manager) GetType() string {
-	return ServiceType
 }

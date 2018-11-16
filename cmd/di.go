@@ -139,9 +139,8 @@ func (di *Dependencies) Shutdown() (err error) {
 	}()
 
 	if di.ServiceRunner != nil {
-		if runnerErrs := di.ServiceRunner.KillAll(); len(runnerErrs) > 0 {
-			errs = append(errs, runnerErrs...)
-		}
+		runnerErrs := di.ServiceRunner.KillAll()
+		errs = append(errs, runnerErrs...)
 	}
 
 	if di.Node != nil {
@@ -185,7 +184,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
-		di.MysteriumClient,
 		dialogFactory,
 		promiseIssuerFactory,
 		di.ConnectionRegistry.CreateConnection,
@@ -196,7 +194,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumClient, di.SignerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatsKeeper)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatsKeeper, di.MysteriumClient)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForSession(router, sessionStorage)
@@ -225,6 +223,8 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		di.SignerFactory,
 	)
 	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory.CreateConnection)
+
+	di.ServiceRunner.Register(service_openvpn.ServiceType)
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
@@ -233,6 +233,8 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 		return service_noop.NewManager(di.LocationResolver, di.IPResolver), nil
 	})
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
+
+	di.ServiceRunner.Register(service_noop.ServiceType)
 }
 
 // bootstrapServiceComponents initiates ServiceManager dependency
@@ -270,19 +272,17 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		return session.NewDialogHandler(sessionManagerFactory)
 	}
 
-	if len(nodeOptions.ServiceTypes) > 0 {
-		serviceManagerMap := make(map[string]service.RunnableService, len(nodeOptions.ServiceTypes))
-		for i := range nodeOptions.ServiceTypes {
-			serviceManagerMap[nodeOptions.ServiceTypes[i]] = service.NewManager(
-				identityHandler,
-				di.ServiceRegistry.Create,
-				newDialogWaiter,
-				newDialogHandler,
-				discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory),
-			)
-		}
-		di.ServiceRunner = service.NewRunner(serviceManagerMap)
+	runnableServiceFactory := func() service.RunnableService {
+		return service.NewManager(
+			identityHandler,
+			di.ServiceRegistry.Create,
+			newDialogWaiter,
+			newDialogHandler,
+			discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory),
+		)
 	}
+
+	di.ServiceRunner = service.NewRunner(runnableServiceFactory)
 }
 
 func newSessionManagerFactory(

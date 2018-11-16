@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
- * This program is free software: you can redistribute it and/or modify
+ * This program is mree software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
+ * the mree Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
@@ -26,32 +26,40 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type FakeRunnable struct {
+type MockRunnable struct {
 	killErr  error
 	waitErr  error
 	startErr error
 	wg       sync.WaitGroup
 }
 
-func (fr *FakeRunnable) Start(options Options) (err error) {
-	fr.wg.Add(1)
-	return fr.startErr
+func (mr *MockRunnable) Start(options Options) (err error) {
+	mr.wg.Add(1)
+	return mr.startErr
 }
 
-func (fr *FakeRunnable) Wait() error {
-	fr.wg.Wait()
-	return fr.waitErr
+func (mr *MockRunnable) Wait() error {
+	mr.wg.Wait()
+	return mr.waitErr
 }
 
-func (fr *FakeRunnable) Kill() error {
-	fr.wg.Done()
-	return fr.killErr
+func (mr *MockRunnable) Kill() error {
+	mr.wg.Done()
+	return mr.killErr
+}
+
+type mockFactory struct {
+	MockRunnable *MockRunnable
+}
+
+func (mf *mockFactory) serviceFactory() RunnableService {
+	return mf.MockRunnable
 }
 
 func Test_RunnerErrsOnNonExistantService(t *testing.T) {
-	m := make(map[string]RunnableService)
+	m := &mockFactory{}
 	c := make(chan error, 1)
-	runner := NewRunner(m)
+	runner := NewRunner(m.serviceFactory)
 	sType := "service"
 	err := runner.StartServiceByType(sType, Options{}, c)
 	assert.Error(t, err)
@@ -59,32 +67,31 @@ func Test_RunnerErrsOnNonExistantService(t *testing.T) {
 }
 
 func Test_RunnerErrsOnStart(t *testing.T) {
-	m := make(map[string]RunnableService)
-	c := make(chan error, 1)
-	sType := "test"
 	fakeErr := errors.New("error")
 
-	m["test"] = &FakeRunnable{
+	m := &mockFactory{MockRunnable: &MockRunnable{
 		startErr: fakeErr,
-	}
+	}}
+	c := make(chan error, 1)
+	sType := "test"
 
-	runner := NewRunner(m)
+	runner := NewRunner(m.serviceFactory)
+	runner.Register(sType)
 	err := runner.StartServiceByType(sType, Options{}, c)
 	assert.Error(t, err)
 	assert.Equal(t, fakeErr, err)
 }
 
 func Test_RunnerBubblesErrors(t *testing.T) {
-	m := make(map[string]RunnableService)
+	fakeErr := errors.New("error")
+	m := &mockFactory{MockRunnable: &MockRunnable{
+		waitErr: fakeErr,
+	}}
 	c := make(chan error, 1)
 	sType := "test"
-	fakeErr := errors.New("error")
 
-	m["test"] = &FakeRunnable{
-		waitErr: fakeErr,
-	}
-
-	runner := NewRunner(m)
+	runner := NewRunner(m.serviceFactory)
+	runner.Register(sType)
 	err := runner.StartServiceByType(sType, Options{}, c)
 	assert.Nil(t, err)
 
@@ -95,16 +102,16 @@ func Test_RunnerBubblesErrors(t *testing.T) {
 }
 
 func Test_RunnerKillReturnsErrors(t *testing.T) {
-	m := make(map[string]RunnableService)
+	fakeErr := errors.New("error")
+	m := &mockFactory{MockRunnable: &MockRunnable{
+		killErr: fakeErr,
+	}}
 	c := make(chan error, 1)
 	sType := "test"
-	fakeErr := errors.New("error")
 
-	m["test"] = &FakeRunnable{
-		killErr: fakeErr,
-	}
+	runner := NewRunner(m.serviceFactory)
+	runner.Register(sType)
 
-	runner := NewRunner(m)
 	err := runner.StartServiceByType(sType, Options{}, c)
 	assert.Nil(t, err)
 
