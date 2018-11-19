@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -56,12 +57,15 @@ func (mf *mockFactory) serviceFactory() RunnableService {
 	return mf.MockRunnable
 }
 
+func wait() {
+	time.Sleep(time.Millisecond * 5)
+}
+
 func Test_RunnerErrsOnNonExistantService(t *testing.T) {
 	m := &mockFactory{}
-	c := make(chan error, 1)
 	runner := NewRunner(m.serviceFactory)
 	sType := "service"
-	err := runner.StartServiceByType(sType, Options{}, c)
+	err := runner.StartServiceByType(sType, Options{})
 	assert.Error(t, err)
 	assert.Equal(t, fmt.Sprintf("unknown service type %q", sType), err.Error())
 }
@@ -72,12 +76,17 @@ func Test_RunnerErrsOnStart(t *testing.T) {
 	m := &mockFactory{MockRunnable: &MockRunnable{
 		startErr: fakeErr,
 	}}
-	c := make(chan error, 1)
 	sType := "test"
 
 	runner := NewRunner(m.serviceFactory)
 	runner.Register(sType)
-	err := runner.StartServiceByType(sType, Options{}, c)
+	go func() {
+		wait()
+		errs := runner.KillAll()
+		assert.Len(t, errs, 0)
+	}()
+
+	err := runner.StartServiceByType(sType, Options{})
 	assert.Error(t, err)
 	assert.Equal(t, fakeErr, err)
 }
@@ -87,18 +96,18 @@ func Test_RunnerBubblesErrors(t *testing.T) {
 	m := &mockFactory{MockRunnable: &MockRunnable{
 		waitErr: fakeErr,
 	}}
-	c := make(chan error, 1)
 	sType := "test"
 
 	runner := NewRunner(m.serviceFactory)
 	runner.Register(sType)
-	err := runner.StartServiceByType(sType, Options{}, c)
-	assert.Nil(t, err)
-
-	errs := runner.KillAll()
-	assert.Len(t, errs, 0)
-
-	assert.Equal(t, fakeErr, <-c)
+	go func() {
+		wait()
+		errs := runner.KillAll()
+		assert.Len(t, errs, 0)
+	}()
+	err := runner.StartServiceByType(sType, Options{})
+	assert.NotNil(t, err)
+	assert.Equal(t, fakeErr, err)
 }
 
 func Test_RunnerKillReturnsErrors(t *testing.T) {
@@ -106,16 +115,17 @@ func Test_RunnerKillReturnsErrors(t *testing.T) {
 	m := &mockFactory{MockRunnable: &MockRunnable{
 		killErr: fakeErr,
 	}}
-	c := make(chan error, 1)
 	sType := "test"
 
 	runner := NewRunner(m.serviceFactory)
 	runner.Register(sType)
 
-	err := runner.StartServiceByType(sType, Options{}, c)
+	go func() {
+		wait()
+		errs := runner.KillAll()
+		assert.Len(t, errs, 1)
+		assert.Equal(t, fakeErr, errs[0])
+	}()
+	err := runner.StartServiceByType(sType, Options{})
 	assert.Nil(t, err)
-
-	errs := runner.KillAll()
-	assert.Len(t, errs, 1)
-	assert.Equal(t, fakeErr, errs[0])
 }

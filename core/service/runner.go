@@ -50,11 +50,10 @@ func (sr *Runner) Register(serviceType string) {
 	sr.serviceManagers[serviceType] = sr.serviceFactory()
 }
 
-// StartServiceByType starts a manager of the given service type if it has one.
+// StartServiceByType starts a manager of the given service type if it has one. The method blocks.
 // It passes the options to the start method of the manager.
-// On initialization failure, it returns errors.
-// The error channel is used for subscribing to runtime errors.
-func (sr *Runner) StartServiceByType(serviceType string, options Options, errorChannel chan error) error {
+// If an error occurs in the underlying service, the error is then returned.
+func (sr *Runner) StartServiceByType(serviceType string, options Options) error {
 	if _, ok := sr.serviceManagers[serviceType]; !ok {
 		return fmt.Errorf("unknown service type %q", serviceType)
 	}
@@ -63,9 +62,7 @@ func (sr *Runner) StartServiceByType(serviceType string, options Options, errorC
 		return err
 	}
 
-	go func() { errorChannel <- sr.serviceManagers[serviceType].Wait() }()
-
-	return nil
+	return sr.serviceManagers[serviceType].Wait()
 }
 
 // KillAll kills all service managers

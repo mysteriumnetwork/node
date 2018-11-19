@@ -96,10 +96,9 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName stri
 		if err != nil {
 			return err
 		}
-		err = di.ServiceRunner.StartServiceByType(serviceType, options, errorChannel)
-		if err != nil {
-			return err
-		}
+		go func(serviceType string) {
+			errorChannel <- di.ServiceRunner.StartServiceByType(serviceType, options)
+		}(serviceType)
 	}
 
 	cmd.RegisterSignalCallback(func() { errorChannel <- nil })
