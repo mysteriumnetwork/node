@@ -40,6 +40,8 @@ type testContext struct {
 	fakeDialog            *fakeDialog
 	fakePromiseIssuer     *fakePromiseIssuer
 	fakeSessionRepository *fakeSessionRepository
+	stubStatSenderFactory StatsSenderFactory
+	stubSender            *StubStatSender
 	sync.RWMutex
 }
 
@@ -100,11 +102,21 @@ func (tc *testContext) SetupTest() {
 
 	tc.fakeSessionRepository = &fakeSessionRepository{}
 
+	tc.stubSender = &StubStatSender{}
+	tc.stubStatSenderFactory = func(consumerID identity.Identity,
+		sessionID session.ID,
+		proposal dto.ServiceProposal,
+		interval time.Duration,
+	) StatsSender {
+		return tc.stubSender
+	}
+
 	tc.connManager = NewManager(
 		dialogCreator,
 		promiseIssuerFactory,
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.fakeStatsKeeper,
+		tc.stubStatSenderFactory,
 		tc.fakeSessionRepository,
 	)
 }
@@ -126,6 +138,7 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
 	assert.True(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
+	assert.True(tc.T(), tc.stubSender.StartCalled)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
@@ -154,6 +167,7 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 	assert.True(tc.T(), tc.fakeStatsKeeper.sessionEndMarked)
+	assert.True(tc.T(), tc.stubSender.StopCalled)
 }
 
 func (tc *testContext) TestConnectResultsInAlreadyConnectedErrorWhenConnectionExists() {

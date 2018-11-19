@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
@@ -36,7 +35,6 @@ import (
 
 // ProcessBasedConnectionFactory represents a factory for creating process-based openvpn connections
 type ProcessBasedConnectionFactory struct {
-	mysteriumAPIClient    server.Client
 	openvpnBinary         string
 	configDirectory       string
 	runtimeDirectory      string
@@ -47,14 +45,12 @@ type ProcessBasedConnectionFactory struct {
 
 // NewProcessBasedConnectionFactory creates a new ProcessBasedConnectionFactory
 func NewProcessBasedConnectionFactory(
-	mysteriumAPIClient server.Client,
 	openvpnBinary, configDirectory, runtimeDirectory string,
 	statsKeeper stats.SessionStatsKeeper,
 	originalLocationCache location.Cache,
 	signerFactory identity.SignerFactory,
 ) *ProcessBasedConnectionFactory {
 	return &ProcessBasedConnectionFactory{
-		mysteriumAPIClient:    mysteriumAPIClient,
 		openvpnBinary:         openvpnBinary,
 		configDirectory:       configDirectory,
 		runtimeDirectory:      runtimeDirectory,
@@ -75,19 +71,8 @@ func (op *ProcessBasedConnectionFactory) newBytecountMiddleware() management.Mid
 }
 
 func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, signer identity.Signer, connectionOptions connection.ConnectOptions, stateChannel connection.StateChannel) management.Middleware {
-	// TODO Move stats.Sender from 'openvpn' package
-	statsSender := stats.NewRemoteStatsSender(
-		op.statsKeeper,
-		op.mysteriumAPIClient,
-		session,
-		connectionOptions.ProviderID,
-		"openvpn",
-		signer,
-		op.originalLocationCache.Get().Country,
-		time.Minute,
-	)
 	stateCallback := GetStateCallback(stateChannel)
-	return state.NewMiddleware(stateCallback, statsSender.StateHandler)
+	return state.NewMiddleware(stateCallback)
 }
 
 // CreateConnection implements the connection.ConnectionCreator interface

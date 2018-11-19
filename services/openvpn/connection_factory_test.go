@@ -23,7 +23,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,8 +53,7 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 }
 
 func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
-	clientFake := server.NewClientFake()
-	factory := NewProcessBasedConnectionFactory(clientFake, "./", "./", "./", &fakeSessionStatsKeeper{}, &cacheFake{}, fakeSignerFactory)
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &fakeSessionStatsKeeper{}, &cacheFake{}, fakeSignerFactory)
 	channel := make(chan connection.State)
 	connectionOptions := connection.ConnectOptions{}
 	_, err := factory.CreateConnection(connectionOptions, channel)
@@ -64,8 +62,7 @@ func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
 }
 
 func TestConnectionFactory_CreatesConnection(t *testing.T) {
-	clientFake := server.NewClientFake()
-	factory := NewProcessBasedConnectionFactory(clientFake, "./", "./", "./", &fakeSessionStatsKeeper{}, &cacheFake{}, fakeSignerFactory)
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &fakeSessionStatsKeeper{}, &cacheFake{}, fakeSignerFactory)
 	channel := make(chan connection.State)
 	connectionOptions := connection.ConnectOptions{
 		ConsumerID:    identity.Identity{Address: "consumer"},

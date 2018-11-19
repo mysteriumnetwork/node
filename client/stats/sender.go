@@ -18,10 +18,10 @@
 package stats
 
 import (
+	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/server/dto"
@@ -44,6 +44,9 @@ type RemoteStatsSender struct {
 
 	sendInterval time.Duration
 	done         chan struct{}
+
+	opLock  sync.Mutex
+	started bool
 }
 
 // NewRemoteStatsSender function creates new session stats sender by given options
@@ -63,15 +66,31 @@ func NewRemoteStatsSender(statsKeeper SessionStatsKeeper, mysteriumClient server
 	}
 }
 
-// StateHandler expects connect and disconnect events from the OpenVPN client to start or stop actual sending stats.
-func (rss *RemoteStatsSender) StateHandler(state openvpn.State) {
-	// TODO Decouple stats.Sender from 'openvpn' states
-	switch state {
-	case openvpn.ConnectedState:
-		go rss.intervalSend()
-	case openvpn.ExitingState:
-		close(rss.done)
+// Start starts the sending of stats
+func (rss *RemoteStatsSender) Start() {
+	rss.opLock.Lock()
+	defer rss.opLock.Unlock()
+
+	if rss.started {
+		return
 	}
+
+	rss.done = make(chan struct{})
+	go rss.intervalSend()
+	rss.started = true
+}
+
+// Stop stops the sending of stats
+func (rss *RemoteStatsSender) Stop() {
+	rss.opLock.Lock()
+	defer rss.opLock.Unlock()
+
+	if !rss.started {
+		return
+	}
+
+	close(rss.done)
+	rss.started = false
 }
 
 func (rss *RemoteStatsSender) intervalSend() {
