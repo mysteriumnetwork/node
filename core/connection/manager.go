@@ -62,17 +62,34 @@ type sessionSaver interface {
 
 type connectionManager struct {
 	//these are passed on creation
-	newDialog        DialogCreator
-	newPromiseIssuer PromiseIssuerCreator
-	newConnection    ConnectionCreator
-	statsKeeper      stats.SessionStatsKeeper
-	sessionStorage   sessionSaver
+	newDialog          DialogCreator
+	newPromiseIssuer   PromiseIssuerCreator
+	newConnection      ConnectionCreator
+	statsKeeper        stats.SessionStatsKeeper
+	statsSenderFactory StatsSenderFactory
+	sessionStorage     sessionSaver
+
 	//these are populated by Connect at runtime
+	statsSender     StatsSender
 	ctx             context.Context
 	mutex           sync.RWMutex
 	status          ConnectionStatus
 	cleanConnection func()
 }
+
+// StatsSender represents a periodic stat sender
+type StatsSender interface {
+	Start()
+	Stop()
+}
+
+// StatsSenderFactory is the factory used to construct the stat sender
+type StatsSenderFactory func(
+	consumerID identity.Identity,
+	sessionID session.ID,
+	proposal dto.ServiceProposal,
+	interval time.Duration,
+) StatsSender
 
 // NewManager creates connection manager with given dependencies
 func NewManager(
@@ -80,16 +97,18 @@ func NewManager(
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator ConnectionCreator,
 	statsKeeper stats.SessionStatsKeeper,
+	statsSenderFactory StatsSenderFactory,
 	sessionStorage sessionSaver,
 ) *connectionManager {
 	return &connectionManager{
-		statsKeeper:      statsKeeper,
-		newDialog:        dialogCreator,
-		newPromiseIssuer: promiseIssuerCreator,
-		newConnection:    connectionCreator,
-		status:           statusNotConnected(),
-		cleanConnection:  warnOnClean,
-		sessionStorage:   sessionStorage,
+		statsKeeper:        statsKeeper,
+		statsSenderFactory: statsSenderFactory,
+		newDialog:          dialogCreator,
+		newPromiseIssuer:   promiseIssuerCreator,
+		newConnection:      connectionCreator,
+		status:             statusNotConnected(),
+		cleanConnection:    warnOnClean,
+		sessionStorage:     sessionStorage,
 	}
 }
 
@@ -165,6 +184,8 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		ProviderID:    providerID,
 		Proposal:      proposal,
 	}
+
+	manager.statsSender = manager.statsSenderFactory(consumerID, sessionID, proposal, time.Minute)
 
 	connection, err := manager.newConnection(connectOptions, stateChannel)
 	if err != nil {
@@ -272,9 +293,11 @@ func (manager *connectionManager) onStateChanged(state State, sessionID session.
 	case Connected:
 		manager.statsKeeper.MarkSessionStart()
 		manager.status = statusConnected(sessionID)
+		manager.statsSender.Start()
 	case Disconnecting:
 		manager.statsKeeper.MarkSessionEnd()
 		manager.sessionStorage.Update(sessionID, time.Now(), manager.statsKeeper.Retrieve(), SessionStatusCompleted)
+		manager.statsSender.Stop()
 	case Reconnecting:
 		manager.status = statusReconnecting()
 	}

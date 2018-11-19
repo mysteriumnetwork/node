@@ -184,12 +184,36 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	sessionStorage := connection.NewSessionStorage(di.Storage)
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
+
+	statsSenderFactory := func(
+		consumerID identity.Identity,
+		sessionID session.ID,
+		proposal dto_discovery.ServiceProposal,
+		interval time.Duration,
+	) connection.StatsSender {
+		country := di.LocationOriginal.Get().Country
+		signer := di.SignerFactory(consumerID)
+		providerID := identity.FromAddress(proposal.ProviderID)
+
+		return stats.NewRemoteStatsSender(
+			di.StatsKeeper,
+			di.MysteriumClient,
+			sessionID,
+			providerID,
+			proposal.ServiceType,
+			signer,
+			country,
+			interval,
+		)
+	}
+
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
 		promiseIssuerFactory,
 		di.ConnectionRegistry.CreateConnection,
 		di.StatsKeeper,
+		statsSenderFactory,
 		sessionStorage,
 	)
 
@@ -215,7 +239,6 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 
 	connectionFactory := service_openvpn.NewProcessBasedConnectionFactory(
-		di.MysteriumClient,
 		// TODO instead of passing binary path here, Openvpn from node options could represent abstract vpn factory itself
 		nodeOptions.Openvpn.BinaryPath(),
 		nodeOptions.Directories.Config,

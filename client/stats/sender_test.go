@@ -25,13 +25,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRemoteStatsSenderOnDisconnect(t *testing.T) {
+func TestRemoteStatsSenderStartsAndStops(t *testing.T) {
 	var counter int64
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt64(&counter, 1)
@@ -43,10 +42,10 @@ func TestRemoteStatsSenderOnDisconnect(t *testing.T) {
 	signer := &identity.SignerFake{}
 	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, "openvpn", signer, "KG", time.Minute)
 
-	sender.StateHandler(openvpn.ConnectedState)
+	sender.Start()
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 0 }))
 
-	sender.StateHandler(openvpn.ExitingState)
+	sender.Stop()
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 1 }))
 }
 
@@ -62,10 +61,10 @@ func TestRemoteStatsSenderInterval(t *testing.T) {
 	statsKeeper := NewSessionStatsKeeper(time.Now)
 	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, "openvpn", signer, "KG", time.Nanosecond)
 
-	sender.StateHandler(openvpn.ConnectedState)
+	sender.Start()
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) > 3 }))
 
-	sender.StateHandler(openvpn.ExitingState)
+	sender.Stop()
 }
 
 func waitFor(f func() bool) error {
