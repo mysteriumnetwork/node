@@ -61,7 +61,17 @@ func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptio
 		}
 	}
 	cff.mockConnection.StateCallback(stateCallback)
-	return cff.mockConnection, nil
+
+	// we copy the values over, so that the factory always returns a new instance of connection
+	copy := connectionFake{
+		onStartReportStates: cff.mockConnection.onStartReportStates,
+		onStartReturnError:  cff.mockConnection.onStartReturnError,
+		onStopReportStates:  cff.mockConnection.onStopReportStates,
+		stateCallback:       cff.mockConnection.stateCallback,
+		fakeProcess:         sync.WaitGroup{},
+	}
+
+	return &copy, nil
 }
 
 type connectionFake struct {
