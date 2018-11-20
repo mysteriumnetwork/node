@@ -85,8 +85,8 @@ func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvid
 //   - in: path
 //     name: id
 //     description: hex address of identity
-//     example: "0x0000000000000000000000000000000000000001"
 //     type: string
+//     required: true
 // responses:
 //   200:
 //     description: Registration status and data

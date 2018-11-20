@@ -29,5 +29,7 @@
 //   Produces:
 //   - application/json
 //
+//   Version: dev
+//
 // swagger:meta
 package tequilapi
