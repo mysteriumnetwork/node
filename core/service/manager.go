@@ -49,7 +49,7 @@ type Service interface {
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
-type DialogWaiterFactory func(providerID identity.Identity) (communication.DialogWaiter, error)
+type DialogWaiterFactory func(providerID identity.Identity, serviceType string) (communication.DialogWaiter, error)
 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
 type DialogHandlerFactory func(dto_discovery.ServiceProposal, session.ConfigProvider) communication.DialogHandler
@@ -75,7 +75,7 @@ func NewManager(
 type Manager struct {
 	identityHandler identity_selector.Handler
 
-	dialogWaiterFactory  func(identity identity.Identity) (communication.DialogWaiter, error)
+	dialogWaiterFactory  DialogWaiterFactory
 	dialogWaiter         communication.DialogWaiter
 	dialogHandlerFactory DialogHandlerFactory
 
@@ -101,8 +101,7 @@ func (manager *Manager) Start(options Options) (err error) {
 	if err != nil {
 		return err
 	}
-
-	manager.dialogWaiter, err = manager.dialogWaiterFactory(providerID)
+	manager.dialogWaiter, err = manager.dialogWaiterFactory(providerID, proposal.ServiceType)
 	if err != nil {
 		return err
 	}

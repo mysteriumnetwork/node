@@ -114,7 +114,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, endpoints.ConnectOptions{true})
+	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, "openvpn", endpoints.ConnectOptions{true})
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {

@@ -15,32 +15,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package noop
 
 import (
-	"github.com/mysteriumnetwork/node/identity"
+	"encoding/json"
+
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/session"
 )
 
-var _ Service = &serviceFake{}
+// Bootstrap is called on program initialization time and registers various deserializers related to noop service
+func Bootstrap() {
+	dto_discovery.RegisterServiceDefinitionUnserializer(
+		ServiceType,
+		func(rawDefinition *json.RawMessage) (dto_discovery.ServiceDefinition, error) {
+			var definition ServiceDefinition
+			err := json.Unmarshal(*rawDefinition, &definition)
 
-type serviceFake struct {
-	onStartReturnError error
-}
+			return definition, err
+		},
+	)
 
-func (service *serviceFake) Start(identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
-	return dto_discovery.ServiceProposal{}, nil, service.onStartReturnError
-}
+	dto_discovery.RegisterPaymentMethodUnserializer(
+		PaymentMethodNoop,
+		func(rawDefinition *json.RawMessage) (dto_discovery.PaymentMethod, error) {
+			var method PaymentNoop
+			err := json.Unmarshal(*rawDefinition, &method)
 
-func (service *serviceFake) Wait() error {
-	return nil
-}
-
-func (service *serviceFake) Stop() error {
-	return nil
-}
-
-func (service *serviceFake) GetType() string {
-	return "fake"
+			return method, err
+		},
+	)
 }

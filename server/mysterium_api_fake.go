@@ -79,15 +79,19 @@ func (client *ClientFake) PingProposal(proposal dto_discovery.ServiceProposal, s
 }
 
 // FindProposals fetches announced proposals by given filters
-func (client *ClientFake) FindProposals(providerID string) (proposals []dto_discovery.ServiceProposal, err error) {
+func (client *ClientFake) FindProposals(providerID string, serviceType string) (proposals []dto_discovery.ServiceProposal, err error) {
 	log.Info(mysteriumAPILogPrefix, "Fake proposals requested for provider: ", providerID)
 
 	for _, proposal := range client.proposalsMock {
-		var filterMatched = true
+		var providerMatched = true
 		if providerID != "" {
-			filterMatched = filterMatched && (providerID == proposal.ProviderID)
+			providerMatched = providerMatched && (providerID == proposal.ProviderID)
 		}
-		if filterMatched {
+		var serviceMatched = true
+		if serviceType != "" {
+			serviceMatched = (serviceType == proposal.ServiceType)
+		}
+		if providerMatched && serviceMatched {
 			proposals = append(proposals, proposal)
 		}
 	}

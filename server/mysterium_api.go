@@ -127,18 +127,18 @@ func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, s
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Proposal pinged for node: ", proposal.ProviderID)
+		log.Info(mysteriumAPILogPrefix, "Proposal pinged for node: ", proposal.ProviderID, " service type: ", proposal.ServiceType)
 	}
 	return err
 }
 
 // FindProposals fetches currently active service proposals from discovery
-func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.ServiceProposal, error) {
+func (mApi *mysteriumAPI) FindProposals(providerID string, serviceType string) ([]dto_discovery.ServiceProposal, error) {
 	values := url.Values{}
 	if providerID != "" {
 		values.Set("node_key", providerID)
+		values.Set("service_type", serviceType)
 	}
-
 	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", values)
 	if err != nil {
 		return nil, err
@@ -151,7 +151,6 @@ func (mApi *mysteriumAPI) FindProposals(providerID string) ([]dto_discovery.Serv
 	}
 
 	log.Info(mysteriumAPILogPrefix, "Proposals fetched: ", len(proposalsResponse.Proposals))
-
 	return proposalsResponse.Proposals, nil
 }
 

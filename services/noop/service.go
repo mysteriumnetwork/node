@@ -18,9 +18,12 @@
 package noop
 
 import (
+	"errors"
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -29,47 +32,80 @@ import (
 
 const logPrefix = "[service-noop] "
 
+// ErrAlreadyStarted is the error we return when the start is called multiple times
+var ErrAlreadyStarted = errors.New("Service already started")
+
 // NewManager creates new instance of Noop service
-func NewManager() *Manager {
-	return &Manager{}
+func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
+	return &Manager{
+		locationResolver: locationResolver,
+		ipResolver:       ipResolver,
+	}
 }
 
 // Manager represents entrypoint for Noop service
 type Manager struct {
-	fakeProcess sync.WaitGroup
+	process          sync.WaitGroup
+	locationResolver location.Resolver
+	ipResolver       ip.Resolver
+	isStarted        bool
 }
 
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
-	manager.fakeProcess.Add(1)
+	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
+		return nil, nil
+	}
+
+	if manager.isStarted {
+		return dto_discovery.ServiceProposal{}, sessionConfigProvider, ErrAlreadyStarted
+	}
+
+	manager.process.Add(1)
+	manager.isStarted = true
 	log.Info(logPrefix, "Noop service started successfully")
+
+	publicIP, err := manager.ipResolver.GetPublicIP()
+	if err != nil {
+		return dto_discovery.ServiceProposal{}, sessionConfigProvider, err
+	}
+
+	country, err := manager.locationResolver.ResolveCountry(publicIP)
+	if err != nil {
+		return dto_discovery.ServiceProposal{}, sessionConfigProvider, err
+	}
 
 	proposal := dto_discovery.ServiceProposal{
 		ServiceType: ServiceType,
 		ServiceDefinition: ServiceDefinition{
-			Location: dto_discovery.Location{Country: ""},
+			Location: dto_discovery.Location{Country: country},
 		},
 		PaymentMethodType: PaymentMethodNoop,
 		PaymentMethod: PaymentNoop{
 			Price: money.NewMoney(0, money.CURRENCY_MYST),
 		},
 	}
-	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
-		return nil, nil
-	}
+
 	return proposal, sessionConfigProvider, nil
 }
 
 // Wait blocks until service is stopped
 func (manager *Manager) Wait() error {
-	manager.fakeProcess.Wait()
+	if !manager.isStarted {
+		return nil
+	}
+	manager.process.Wait()
 	return nil
 }
 
 // Stop stops service
 func (manager *Manager) Stop() error {
-	manager.fakeProcess.Done()
+	if !manager.isStarted {
+		return nil
+	}
 
+	manager.process.Done()
+	manager.isStarted = false
 	log.Info(logPrefix, "Noop service stopped")
 	return nil
 }

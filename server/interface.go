@@ -28,7 +28,7 @@ import (
 type Client interface {
 	RegisterIdentity(id identity.Identity, signer identity.Signer) (err error)
 
-	FindProposals(providerID string) (proposals []dto_discovery.ServiceProposal, err error)
+	FindProposals(providerID string, serviceType string) (proposals []dto_discovery.ServiceProposal, err error)
 	RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 	UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 	PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)

@@ -119,6 +119,12 @@ func NewProposalsEndpoint(mc server.Client, morqaClient metrics.QualityOracle) *
 //     description: id of provider proposals
 //     example: "0x0000000000000000000000000000000000000001"
 //     type: string
+// parameters:
+//   - in: query
+//     name: serviceType
+//     description: the service type of the proposal
+//     example: "openvpn"
+//     type: string
 // responses:
 //   200:
 //     description: List of proposals
@@ -130,8 +136,9 @@ func NewProposalsEndpoint(mc server.Client, morqaClient metrics.QualityOracle) *
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	providerID := req.URL.Query().Get("providerId")
+	serviceType := req.URL.Query().Get("serviceType")
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
-	proposals, err := pe.mysteriumClient.FindProposals(providerID)
+	proposals, err := pe.mysteriumClient.FindProposals(providerID, serviceType)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return

@@ -163,17 +163,17 @@ func (c *cliApp) handleActions(line string) {
 func (c *cliApp) connect(argsString string) {
 	options := strings.Fields(argsString)
 
-	if len(options) < 2 {
-		info("Please type in the provider identity. Connect <consumer-identity> <provider-identity> [disable-kill-switch]")
+	if len(options) < 3 {
+		info("Please type in the provider identity. Connect <consumer-identity> <provider-identity> <service-type> [disable-kill-switch]")
 		return
 	}
 
-	consumerID, providerID := options[0], options[1]
+	consumerID, providerID, serviceType := options[0], options[1], options[2]
 
 	var disableKill bool
 	var err error
-	if len(options) > 2 {
-		disableKillStr := options[2]
+	if len(options) > 3 {
+		disableKillStr := options[3]
 		disableKill, err = strconv.ParseBool(disableKillStr)
 		if err != nil {
 			info("Please use true / false for <disable-kill-switch>")
@@ -195,7 +195,7 @@ func (c *cliApp) connect(argsString string) {
 
 	status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	_, err = c.tequilapi.Connect(consumerID, providerID, connectOptions)
+	_, err = c.tequilapi.Connect(consumerID, providerID, serviceType, connectOptions)
 	if err != nil {
 		warn(err)
 		return
