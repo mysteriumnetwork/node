@@ -1,0 +1,20 @@
+#!/bin/bash
+
+###########################################################################
+# Creates Docker image (Documentation)
+#
+# Usage:
+#> bin/package_docker
+
+set -e
+
+source bin/helpers/output.sh
+
+printf "Building documentation image..\n"
+docker build \
+    --file bin/docs_docker/Dockerfile \
+    --tag tequilapi:${BUILD_VERSION} \
+    .
+
+print_success "Docker image building process complete!"
+exit 0
