@@ -51,6 +51,7 @@ import (
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
@@ -116,6 +117,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNodeComponents(nodeOptions)
 	di.bootstrapServiceComponents(nodeOptions)
+	di.bootstrapServiceWireguard(nodeOptions)
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 
@@ -235,6 +237,16 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
 
 	di.ServiceRunner.Register(service_noop.ServiceType)
+}
+
+func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
+	service_wireguard.Bootstrap()
+	di.ServiceRegistry.Register(service_wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
+		return service_wireguard.NewManager(di.LocationResolver, di.IPResolver), nil
+	})
+	di.ConnectionRegistry.Register(service_wireguard.ServiceType, service_wireguard.NewConnectionCreator())
+
+	di.ServiceRunner.Register(service_wireguard.ServiceType)
 }
 
 // bootstrapServiceComponents initiates ServiceManager dependency
