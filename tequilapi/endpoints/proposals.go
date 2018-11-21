@@ -117,13 +117,11 @@ func NewProposalsEndpoint(mc server.Client, morqaClient metrics.QualityOracle) *
 //   - in: query
 //     name: providerId
 //     description: id of provider proposals
-//     example: "0x0000000000000000000000000000000000000001"
 //     type: string
 // parameters:
 //   - in: query
 //     name: serviceType
 //     description: the service type of the proposal
-//     example: "openvpn"
 //     type: string
 // responses:
 //   200:
