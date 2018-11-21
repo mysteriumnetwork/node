@@ -160,7 +160,6 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 // - name: id
 //   in: path
 //   description: Identity stored in keystore
-//   example: "0x0000000000000000000000000000000000000001"
 //   type: string
 //   required: true
 // - in: body
@@ -214,7 +213,6 @@ func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.
 // - in: path
 //   name: id
 //   description: Identity stored in keystore
-//   example: "0x0000000000000000000000000000000000000001"
 //   type: string
 //   required: true
 // - in: body
