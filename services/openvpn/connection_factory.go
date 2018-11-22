@@ -24,7 +24,6 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
-	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
@@ -40,13 +39,11 @@ type ProcessBasedConnectionFactory struct {
 	runtimeDirectory      string
 	originalLocationCache location.Cache
 	signerFactory         identity.SignerFactory
-	statsKeeper           stats.SessionStatsKeeper
 }
 
 // NewProcessBasedConnectionFactory creates a new ProcessBasedConnectionFactory
 func NewProcessBasedConnectionFactory(
 	openvpnBinary, configDirectory, runtimeDirectory string,
-	statsKeeper stats.SessionStatsKeeper,
 	originalLocationCache location.Cache,
 	signerFactory identity.SignerFactory,
 ) *ProcessBasedConnectionFactory {
@@ -54,7 +51,6 @@ func NewProcessBasedConnectionFactory(
 		openvpnBinary:         openvpnBinary,
 		configDirectory:       configDirectory,
 		runtimeDirectory:      runtimeDirectory,
-		statsKeeper:           statsKeeper,
 		originalLocationCache: originalLocationCache,
 		signerFactory:         signerFactory,
 	}
@@ -65,8 +61,8 @@ func (op *ProcessBasedConnectionFactory) newAuthMiddleware(sessionID session.ID,
 	return auth.NewMiddleware(credentialsProvider)
 }
 
-func (op *ProcessBasedConnectionFactory) newBytecountMiddleware() management.Middleware {
-	statsSaver := bytescount.NewSessionStatsSaver(op.statsKeeper)
+func (op *ProcessBasedConnectionFactory) newBytecountMiddleware(statsChannel connection.StatsChannel) management.Middleware {
+	statsSaver := bytescount.NewSessionStatsSaver(statsChannel)
 	return openvpn_bytescount.NewMiddleware(statsSaver, 1*time.Second)
 }
 
@@ -76,7 +72,7 @@ func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, 
 }
 
 // CreateConnection implements the connection.ConnectionCreator interface
-func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
+func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel, statsChannel connection.StatsChannel) (connection.Connection, error) {
 	vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory)
 	if err != nil {
 		return nil, err
@@ -86,7 +82,7 @@ func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.Con
 
 	stateMiddleware := op.newStateMiddleware(options.SessionID, signer, options, stateChannel)
 	authMiddleware := op.newAuthMiddleware(options.SessionID, signer)
-	byteCountMiddleware := op.newBytecountMiddleware()
+	byteCountMiddleware := op.newBytecountMiddleware(statsChannel)
 
 	return NewClient(
 		op.openvpnBinary,

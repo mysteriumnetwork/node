@@ -21,14 +21,16 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/client/stats"
+	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
+
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -98,18 +100,24 @@ type statisticsResponse struct {
 	Duration int `json:"duration"`
 }
 
+// SessionStatsKeeper represents the session stat keeper
+type SessionStatsKeeper interface {
+	Retrieve() stats_dto.SessionStats
+	GetSessionDuration() time.Duration
+}
+
 // ConnectionEndpoint struct represents /connection resource and it's subresources
 type ConnectionEndpoint struct {
 	manager     connection.Manager
 	ipResolver  ip.Resolver
-	statsKeeper stats.SessionStatsKeeper
+	statsKeeper SessionStatsKeeper
 	mystClient  server.Client
 }
 
 const connectionLogPrefix = "[Connection] "
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper stats.SessionStatsKeeper, mystClient server.Client) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper SessionStatsKeeper, mystClient server.Client) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:     manager,
 		ipResolver:  ipResolver,
@@ -309,7 +317,7 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager, ipResolver ip.Resolver,
-	statsKeeper stats.SessionStatsKeeper, mystClient server.Client) {
+	statsKeeper SessionStatsKeeper, mystClient server.Client) {
 	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper, mystClient)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)

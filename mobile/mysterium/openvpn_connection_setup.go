@@ -20,7 +20,8 @@ package mysterium
 import (
 	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
-	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/client/stats/dto"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/session"
@@ -45,31 +46,49 @@ func (wrapper *sessionWrapper) Wait() error {
 }
 
 type statsUpdater interface {
-	Save(stats stats.SessionStats)
+	Save(stats dto.SessionStats)
 }
 
-func channelToCallbacks(channel connection.StateChannel, updater statsUpdater) openvpn3.MobileSessionCallbacks {
+// StatUpdater takes in the state channel and reports stats to it
+// TODO: SEPARATE PR TO FIX THIS MESS
+type StatUpdater struct {
+	statsChannel connection.StatsChannel
+}
 
+// NewStatUpdater returns a new instance of StatUpdater
+func NewStatUpdater(channel connection.StatsChannel) *StatUpdater {
+	return &StatUpdater{
+		statsChannel: channel,
+	}
+}
+
+// Save sends the stats to the stat channel
+func (su *StatUpdater) Save(stats dto.SessionStats) {
+	su.statsChannel <- stats
+}
+
+func channelToCallbacks(stateChannel connection.StateChannel, statsChannel connection.StatsChannel) openvpn3.MobileSessionCallbacks {
+	updater := NewStatUpdater(statsChannel)
 	return channelToCallbacksAdapter{
-		channel:      channel,
+		stateChannel: stateChannel,
 		statsUpdater: updater,
 	}
 }
 
 type channelToCallbacksAdapter struct {
-	channel      connection.StateChannel
+	stateChannel connection.StateChannel
 	statsUpdater statsUpdater
 }
 
 func (adapter channelToCallbacksAdapter) OnEvent(event openvpn3.Event) {
 	switch event.Name {
 	case "CONNECTING":
-		adapter.channel <- connection.Connecting
+		adapter.stateChannel <- connection.Connecting
 	case "CONNECTED":
-		adapter.channel <- connection.Connected
+		adapter.stateChannel <- connection.Connected
 	case "DISCONNECTED":
-		adapter.channel <- connection.NotConnected
-		close(adapter.channel)
+		adapter.stateChannel <- connection.NotConnected
+		close(adapter.stateChannel)
 	default:
 		seelog.Infof("Unhandled event: %+v", event)
 	}
@@ -80,7 +99,7 @@ func (channelToCallbacksAdapter) Log(text string) {
 }
 
 func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistics) {
-	adapter.statsUpdater.Save(stats.SessionStats{
+	adapter.statsUpdater.Save(dto.SessionStats{
 		BytesSent:     uint64(openvpnStats.BytesOut),
 		BytesReceived: uint64(openvpnStats.BytesIn),
 	})
@@ -91,7 +110,7 @@ type Openvpn3TunnelSetup openvpn3.TunnelSetup
 
 // OverrideOpenvpnConnection replaces default openvpn connection factory with mobile related one
 func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup) {
-	mobNode.di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, channel connection.StateChannel) (connection.Connection, error) {
+	mobNode.di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statsChannel connection.StatsChannel) (connection.Connection, error) {
 
 		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
 		if err != nil {
@@ -120,7 +139,7 @@ func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelS
 			Password: password,
 		}
 
-		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(channel, mobNode.di.StatsKeeper), tunnelSetup)
+		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statsChannel), tunnelSetup)
 
 		return &sessionWrapper{
 			session: session,

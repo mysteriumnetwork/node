@@ -23,9 +23,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/client/stats"
+	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
+
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
@@ -36,12 +37,10 @@ type testContext struct {
 	suite.Suite
 	fakeConnectionFactory *connectionFactoryFake
 	connManager           *connectionManager
-	fakeStatsKeeper       *fakeSessionStatsKeeper
 	fakeDialog            *fakeDialog
 	fakePromiseIssuer     *fakePromiseIssuer
-	fakeSessionRepository *fakeSessionRepository
-	stubStatSenderFactory StatsSenderFactory
-	stubSender            *StubStatSender
+	stubPublisher         *StubPublisher
+	mockStats             stats_dto.SessionStats
 	sync.RWMutex
 }
 
@@ -63,6 +62,7 @@ func (tc *testContext) SetupTest() {
 	tc.Lock()
 	defer tc.Unlock()
 
+	tc.stubPublisher = &StubPublisher{}
 	tc.fakeDialog = &fakeDialog{sessionID: establishedSessionID}
 	dialogCreator := func(consumer, provider identity.Identity, contact dto.Contact) (communication.Dialog, error) {
 		tc.RLock()
@@ -74,7 +74,10 @@ func (tc *testContext) SetupTest() {
 	promiseIssuerFactory := func(_ identity.Identity, _ communication.Dialog) PromiseIssuer {
 		return tc.fakePromiseIssuer
 	}
-
+	tc.mockStats = stats_dto.SessionStats{
+		BytesReceived: 10,
+		BytesSent:     20,
+	}
 	tc.fakeConnectionFactory = &connectionFactoryFake{
 		mockError: nil,
 		mockConnection: &connectionFake{
@@ -93,31 +96,17 @@ func (tc *testContext) SetupTest() {
 				processExited,
 			},
 			nil,
+			tc.mockStats,
 			sync.WaitGroup{},
 			sync.RWMutex{},
 		},
-	}
-
-	tc.fakeStatsKeeper = &fakeSessionStatsKeeper{}
-
-	tc.fakeSessionRepository = &fakeSessionRepository{}
-
-	tc.stubSender = &StubStatSender{}
-	tc.stubStatSenderFactory = func(consumerID identity.Identity,
-		sessionID session.ID,
-		proposal dto.ServiceProposal,
-		interval time.Duration,
-	) StatsSender {
-		return tc.stubSender
 	}
 
 	tc.connManager = NewManager(
 		dialogCreator,
 		promiseIssuerFactory,
 		tc.fakeConnectionFactory.CreateConnection,
-		tc.fakeStatsKeeper,
-		tc.stubStatSenderFactory,
-		tc.fakeSessionRepository,
+		tc.stubPublisher,
 	)
 }
 
@@ -137,8 +126,6 @@ func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateA
 	err := tc.connManager.Connect(myID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected(establishedSessionID), tc.connManager.Status())
-	assert.True(tc.T(), tc.fakeStatsKeeper.sessionStartMarked)
-	assert.True(tc.T(), tc.stubSender.StartCalled)
 }
 
 func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
@@ -166,8 +153,6 @@ func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
 	tc.fakeConnectionFactory.mockConnection.reportState(processExited)
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
-	assert.True(tc.T(), tc.fakeStatsKeeper.sessionEndMarked)
-	assert.True(tc.T(), tc.stubSender.StopCalled)
 }
 
 func (tc *testContext) TestConnectResultsInAlreadyConnectedErrorWhenConnectionExists() {
@@ -270,6 +255,38 @@ func (tc *testContext) Test_PromiseIssuer_OnConnectErrorIsStopped() {
 	assert.True(tc.T(), tc.fakePromiseIssuer.stopCalled)
 }
 
+func (tc *testContext) Test_ManagerPublishesEvents() {
+	tc.stubPublisher.Clear()
+
+	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{
+		connectedState,
+	}
+
+	err := tc.connManager.Connect(myID, activeProposal, ConnectParams{})
+	assert.NoError(tc.T(), err)
+
+	waitABit()
+
+	history := tc.stubPublisher.GetEventHistory()
+	assert.Len(tc.T(), history, 2)
+
+	for _, v := range history {
+		if v.calledWithTopic == string(StatsEvent) {
+			event := v.calledWithArgs[0].(stats_dto.SessionStats)
+			assert.True(tc.T(), event.BytesReceived == tc.mockStats.BytesReceived)
+			assert.True(tc.T(), event.BytesSent == tc.mockStats.BytesSent)
+		}
+		if v.calledWithTopic == string(StateEvent) {
+			event := v.calledWithArgs[0].(StateEventPayload)
+			assert.Equal(tc.T(), Connected, event.State)
+			assert.Equal(tc.T(), myID, event.SessionInfo.ConsumerID)
+			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
+			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
+			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
+		}
+	}
+}
+
 func TestConnectionManagerSuite(t *testing.T) {
 	suite.Run(t, new(testContext))
 }
@@ -278,13 +295,6 @@ func waitABit() {
 	//usually time.Sleep call gives a chance for other goroutines to kick in
 	//important when testing async code
 	time.Sleep(10 * time.Millisecond)
-}
-
-type fakeSessionRepository struct{}
-
-func (fs *fakeSessionRepository) Save(Session) error { return nil }
-func (fs *fakeSessionRepository) Update(session.ID, time.Time, stats.SessionStats, SessionStatus) error {
-	return nil
 }
 
 type fakeServiceDefinition struct{}

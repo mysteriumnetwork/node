@@ -25,10 +25,42 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 )
+
+var mockStateEvent = connection.StateEventPayload{
+	State: connection.Connected,
+	SessionInfo: connection.SessionInfo{
+		ConsumerID: identity.FromAddress("0x000"),
+		SessionID:  session.ID("test"),
+		Proposal: dto.ServiceProposal{
+			ServiceType: "just a test",
+		},
+	},
+}
+
+func mockSignerFactory(_ identity.Identity) identity.Signer {
+	return &identity.SignerFake{}
+}
+
+type StubSubscriber struct {
+	SubscribeCalled   bool
+	UnsubscribeCalled bool
+}
+
+func (ss *StubSubscriber) Subscribe(topic string, fn interface{}) error {
+	ss.SubscribeCalled = true
+	return nil
+}
+func (ss *StubSubscriber) Unsubscribe(topic string, handler interface{}) error {
+	ss.UnsubscribeCalled = true
+	return nil
+}
 
 func TestRemoteStatsSenderStartsAndStops(t *testing.T) {
 	var counter int64
@@ -39,14 +71,17 @@ func TestRemoteStatsSenderStartsAndStops(t *testing.T) {
 
 	statsKeeper := NewSessionStatsKeeper(time.Now)
 	mysteriumClient := server.NewClient(ts.URL)
-	signer := &identity.SignerFake{}
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, "openvpn", signer, "KG", time.Minute)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Minute)
 
-	sender.Start()
+	sender.consumeStateEvent(mockStateEvent)
+
+	sender.start()
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 0 }))
+	assert.True(t, sender.started)
+	sender.stop()
 
-	sender.Stop()
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 1 }))
+	assert.False(t, sender.started)
 }
 
 func TestRemoteStatsSenderInterval(t *testing.T) {
@@ -56,15 +91,81 @@ func TestRemoteStatsSenderInterval(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	signer := &identity.SignerFake{}
 	mysteriumClient := server.NewClient(ts.URL)
 	statsKeeper := NewSessionStatsKeeper(time.Now)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, "0x00000", identity.Identity{Address: "0x00001"}, "openvpn", signer, "KG", time.Nanosecond)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Nanosecond)
 
-	sender.Start()
+	sender.consumeStateEvent(mockStateEvent)
+
+	sender.start()
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) > 3 }))
 
-	sender.Stop()
+	sender.stop()
+}
+
+func TestRemoteStatsStartsWithoutSigner(t *testing.T) {
+	var counter int64
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt64(&counter, 1)
+	}))
+	defer ts.Close()
+
+	mysteriumClient := server.NewClient(ts.URL)
+	statsKeeper := NewSessionStatsKeeper(time.Now)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Nanosecond)
+
+	sender.start()
+	time.Sleep(time.Nanosecond * 2)
+	assert.Equal(t, int64(0), atomic.LoadInt64(&counter))
+	sender.stop()
+}
+
+func TestRemoteStatsSenderSubscribe(t *testing.T) {
+	var counter int64
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt64(&counter, 1)
+	}))
+	defer ts.Close()
+
+	mysteriumClient := server.NewClient(ts.URL)
+	statsKeeper := NewSessionStatsKeeper(time.Now)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Nanosecond)
+	bus := &StubSubscriber{}
+	sender.Subscribe(bus)
+	assert.True(t, bus.SubscribeCalled)
+}
+
+func TestRemoteStatsSenderUnsubscribe(t *testing.T) {
+	var counter int64
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt64(&counter, 1)
+	}))
+	defer ts.Close()
+
+	mysteriumClient := server.NewClient(ts.URL)
+	statsKeeper := NewSessionStatsKeeper(time.Now)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Nanosecond)
+	bus := &StubSubscriber{}
+	sender.Unsubscribe(bus)
+	assert.True(t, bus.UnsubscribeCalled)
+}
+
+func TestRemoteStatsSenderConsumeStateEvent(t *testing.T) {
+	var counter int64
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt64(&counter, 1)
+	}))
+	defer ts.Close()
+
+	mysteriumClient := server.NewClient(ts.URL)
+	statsKeeper := NewSessionStatsKeeper(time.Now)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Nanosecond)
+	sender.consumeStateEvent(mockStateEvent)
+	assert.True(t, sender.started)
+	copy := mockStateEvent
+	copy.State = connection.Disconnecting
+	sender.consumeStateEvent(copy)
+	assert.False(t, sender.started)
 }
 
 func waitFor(f func() bool) error {

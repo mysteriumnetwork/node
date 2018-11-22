@@ -21,15 +21,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStatsSavingWorks(t *testing.T) {
 	statsKeeper := NewSessionStatsKeeper(time.Now)
-	stats := SessionStats{BytesSent: 1, BytesReceived: 2}
+	stats := dto.SessionStats{BytesSent: 1, BytesReceived: 2}
 
-	statsKeeper.Save(stats)
+	statsKeeper.consumeStatsEvent(stats)
 	assert.Equal(t, stats, statsKeeper.Retrieve())
 }
 
@@ -38,7 +40,7 @@ func TestGetSessionDurationReturnsFlooredDuration(t *testing.T) {
 	statsKeeper := NewSessionStatsKeeper(settableClock.GetTime)
 
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 3, 0, time.UTC))
-	statsKeeper.MarkSessionStart()
+	statsKeeper.markSessionStart()
 
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 4, 700000000, time.UTC))
 	expectedDuration, err := time.ParseDuration("1s700000000ns")
@@ -58,9 +60,41 @@ func TestStopSessionResetsSessionDuration(t *testing.T) {
 	statsKeeper := NewSessionStatsKeeper(settableClock.GetTime)
 
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 3, 0, time.UTC))
-	statsKeeper.MarkSessionStart()
+	statsKeeper.markSessionStart()
 
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 4, 700000000, time.UTC))
-	statsKeeper.MarkSessionEnd()
+	statsKeeper.markSessionEnd()
 	assert.Equal(t, time.Duration(0), statsKeeper.GetSessionDuration())
+}
+
+func TestStatsKeeperSubscribe(t *testing.T) {
+	bus := &StubSubscriber{}
+	statsKeeper := NewSessionStatsKeeper(time.Now)
+	statsKeeper.Subscribe(bus)
+	assert.True(t, bus.SubscribeCalled)
+}
+
+func TestStatsKeeperUnsubscribe(t *testing.T) {
+	bus := &StubSubscriber{}
+	statsKeeper := NewSessionStatsKeeper(time.Now)
+	statsKeeper.Unsubscribe(bus)
+	assert.True(t, bus.UnsubscribeCalled)
+}
+
+func TestStatsKeeperConsumeStateEventConnected(t *testing.T) {
+	statsKeeper := NewSessionStatsKeeper(time.Now)
+	statsKeeper.consumeStateEvent(connection.StateEventPayload{
+		State: connection.Connected,
+	})
+	assert.NotNil(t, statsKeeper.sessionStart)
+}
+
+func TestStatsKeeperConsumeStateEventDisconnected(t *testing.T) {
+	now := time.Now()
+	statsKeeper := NewSessionStatsKeeper(time.Now)
+	statsKeeper.sessionStart = &now
+	statsKeeper.consumeStateEvent(connection.StateEventPayload{
+		State: connection.Disconnecting,
+	})
+	assert.Nil(t, statsKeeper.sessionStart)
 }

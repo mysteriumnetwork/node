@@ -20,12 +20,10 @@ package openvpn
 import (
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
-	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
@@ -90,27 +88,4 @@ func TestOpenVpnStateCallbackToConnectionState(t *testing.T) {
 			}
 		})
 	}
-}
-
-type fakeSessionStatsKeeper struct {
-	sessionStartMarked, sessionEndMarked bool
-}
-
-func (fsk *fakeSessionStatsKeeper) Save(stats stats.SessionStats) {
-}
-
-func (fsk *fakeSessionStatsKeeper) Retrieve() stats.SessionStats {
-	return stats.SessionStats{}
-}
-
-func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
-	fsk.sessionStartMarked = true
-}
-
-func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
-	return time.Duration(0)
-}
-
-func (fsk *fakeSessionStatsKeeper) MarkSessionEnd() {
-	fsk.sessionEndMarked = true
 }

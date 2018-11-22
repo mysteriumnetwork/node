@@ -19,49 +19,40 @@ package stats
 
 import (
 	"time"
-)
 
-// SessionStatsKeeper keeps session stats
-type SessionStatsKeeper interface {
-	Save(stats SessionStats)
-	Retrieve() SessionStats
-	MarkSessionStart()
-	GetSessionDuration() time.Duration
-	MarkSessionEnd()
-}
+	"github.com/mysteriumnetwork/node/core/connection"
+
+	"github.com/mysteriumnetwork/node/client/stats/dto"
+)
 
 // TimeGetter function returns current time
 type TimeGetter func() time.Time
 
-type sessionStatsKeeper struct {
-	sessionStats SessionStats
+// SessionStatsKeeper keeps the session stats safe and sound
+type SessionStatsKeeper struct {
+	sessionStats dto.SessionStats
 	timeGetter   TimeGetter
 	sessionStart *time.Time
 }
 
 // NewSessionStatsKeeper returns new session stats keeper with given timeGetter function
-func NewSessionStatsKeeper(timeGetter TimeGetter) SessionStatsKeeper {
-	return &sessionStatsKeeper{timeGetter: timeGetter}
-}
-
-// Save saves session stats to keeper
-func (keeper *sessionStatsKeeper) Save(stats SessionStats) {
-	keeper.sessionStats = stats
+func NewSessionStatsKeeper(timeGetter TimeGetter) *SessionStatsKeeper {
+	return &SessionStatsKeeper{timeGetter: timeGetter}
 }
 
 // Retrieve retrieves session stats from keeper
-func (keeper *sessionStatsKeeper) Retrieve() SessionStats {
+func (keeper *SessionStatsKeeper) Retrieve() dto.SessionStats {
 	return keeper.sessionStats
 }
 
 // MarkSessionStart marks current time as session start time for statistics
-func (keeper *sessionStatsKeeper) MarkSessionStart() {
+func (keeper *SessionStatsKeeper) markSessionStart() {
 	time := keeper.timeGetter()
 	keeper.sessionStart = &time
 }
 
 // GetSessionDuration returns elapsed time from marked session start
-func (keeper *sessionStatsKeeper) GetSessionDuration() time.Duration {
+func (keeper *SessionStatsKeeper) GetSessionDuration() time.Duration {
 	if keeper.sessionStart == nil {
 		return time.Duration(0)
 	}
@@ -70,6 +61,31 @@ func (keeper *sessionStatsKeeper) GetSessionDuration() time.Duration {
 }
 
 // MarkSessionEnd stops counting session duration
-func (keeper *sessionStatsKeeper) MarkSessionEnd() {
+func (keeper *SessionStatsKeeper) markSessionEnd() {
 	keeper.sessionStart = nil
+}
+
+// Subscribe subscribes the keeper on the bus for relevant events
+func (keeper *SessionStatsKeeper) Subscribe(bus connection.EventSubscriptionKeeper) {
+	bus.Subscribe(string(connection.StatsEvent), keeper.consumeStatsEvent)
+	bus.Subscribe(string(connection.StateEvent), keeper.consumeStateEvent)
+}
+
+// Unsubscribe unsubscribes the sender from bus
+func (keeper *SessionStatsKeeper) Unsubscribe(bus connection.EventSubscriptionKeeper) {
+	bus.Unsubscribe(string(connection.StatsEvent), keeper.consumeStatsEvent)
+	bus.Unsubscribe(string(connection.StateEvent), keeper.consumeStateEvent)
+}
+
+func (keeper *SessionStatsKeeper) consumeStatsEvent(stats dto.SessionStats) {
+	keeper.sessionStats = stats
+}
+
+func (keeper *SessionStatsKeeper) consumeStateEvent(stateEvent connection.StateEventPayload) {
+	switch stateEvent.State {
+	case connection.Disconnecting:
+		keeper.markSessionEnd()
+	case connection.Connected:
+		keeper.markSessionStart()
+	}
 }

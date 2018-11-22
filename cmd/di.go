@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/asaskevich/EventBus"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -58,6 +59,12 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 )
 
+// EventSubscriber represents our event subscribers
+type EventSubscriber interface {
+	Subscribe(bus connection.EventSubscriptionKeeper)
+	Unsubscribe(bus connection.EventSubscriptionKeeper)
+}
+
 // Dependencies is DI container for top level components which is reusedin several places
 type Dependencies struct {
 	Node *node.Node
@@ -79,7 +86,12 @@ type Dependencies struct {
 	LocationDetector location.Detector
 	LocationOriginal location.Cache
 
-	StatsKeeper stats.SessionStatsKeeper
+	StatsKeeper    *stats.SessionStatsKeeper
+	StatsSender    *stats.RemoteStatsSender
+	SessionStorage *connection.SessionStorage
+
+	EventBus         EventBus.Bus
+	EventSubscribers []EventSubscriber
 
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
@@ -121,6 +133,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 
+	di.EventSubscribers = []EventSubscriber{di.StatsKeeper, di.StatsSender, di.SessionStorage}
+	di.subscribeBusConsumers()
+
 	if err := di.Node.Start(); err != nil {
 		return err
 	}
@@ -139,6 +154,8 @@ func (di *Dependencies) Shutdown() (err error) {
 			}
 		}
 	}()
+
+	di.unsubscribeBusConsumers()
 
 	if di.ServiceRunner != nil {
 		runnerErrs := di.ServiceRunner.KillAll()
@@ -169,6 +186,18 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	return nil
 }
 
+func (di *Dependencies) subscribeBusConsumers() {
+	for _, v := range di.EventSubscribers {
+		v.Subscribe(di.EventBus)
+	}
+}
+
+func (di *Dependencies) unsubscribeBusConsumers() {
+	for _, v := range di.EventSubscribers {
+		v.Unsubscribe(di.EventBus)
+	}
+}
+
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	dialogFactory := func(consumerID, providerID identity.Identity, contact dto_discovery.Contact) (communication.Dialog, error) {
 		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID))
@@ -182,39 +211,24 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
 	}
 
-	sessionStorage := connection.NewSessionStorage(di.Storage)
 	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
+	di.StatsSender = stats.NewRemoteStatsSender(
+		di.StatsKeeper,
+		di.MysteriumClient,
+		di.SignerFactory,
+		di.LocationOriginal.Get().Country,
+		time.Minute,
+	)
+	di.SessionStorage = connection.NewSessionStorage(di.Storage, di.StatsKeeper)
 
-	statsSenderFactory := func(
-		consumerID identity.Identity,
-		sessionID session.ID,
-		proposal dto_discovery.ServiceProposal,
-		interval time.Duration,
-	) connection.StatsSender {
-		country := di.LocationOriginal.Get().Country
-		signer := di.SignerFactory(consumerID)
-		providerID := identity.FromAddress(proposal.ProviderID)
-
-		return stats.NewRemoteStatsSender(
-			di.StatsKeeper,
-			di.MysteriumClient,
-			sessionID,
-			providerID,
-			proposal.ServiceType,
-			signer,
-			country,
-			interval,
-		)
-	}
+	di.EventBus = EventBus.New()
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
 		promiseIssuerFactory,
 		di.ConnectionRegistry.CreateConnection,
-		di.StatsKeeper,
-		statsSenderFactory,
-		sessionStorage,
+		di.EventBus,
 	)
 
 	router := tequilapi.NewAPIRouter()
@@ -223,7 +237,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatsKeeper, di.MysteriumClient)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
-	tequilapi_endpoints.AddRoutesForSession(router, sessionStorage)
+	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
@@ -243,7 +257,6 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		nodeOptions.Openvpn.BinaryPath(),
 		nodeOptions.Directories.Config,
 		nodeOptions.Directories.Runtime,
-		di.StatsKeeper,
 		di.LocationOriginal,
 		di.SignerFactory,
 	)

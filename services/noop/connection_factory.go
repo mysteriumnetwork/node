@@ -23,7 +23,7 @@ import (
 
 // NewConnectionCreator creates noop connections
 func NewConnectionCreator() connection.ConnectionCreator {
-	return func(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
+	return func(options connection.ConnectOptions, stateChannel connection.StateChannel, statsChannel connection.StatsChannel) (connection.Connection, error) {
 		return &Connection{
 			stateChannel: stateChannel,
 		}, nil

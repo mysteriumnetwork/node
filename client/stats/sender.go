@@ -18,8 +18,11 @@
 package stats
 
 import (
+	"errors"
 	"sync"
 	"time"
+
+	"github.com/mysteriumnetwork/node/core/connection"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
@@ -30,6 +33,9 @@ import (
 
 const statsSenderLogPrefix = "[session-stats-sender] "
 
+// ErrSessionNotStarted represents the error that occurs when the session has not been started yet
+var ErrSessionNotStarted = errors.New("session not started")
+
 // RemoteStatsSender sends session stats to remote API server with a fixed sendInterval.
 // Extra one send will be done on session disconnect.
 type RemoteStatsSender struct {
@@ -39,7 +45,8 @@ type RemoteStatsSender struct {
 	serviceType     string
 
 	signer          identity.Signer
-	statsKeeper     SessionStatsKeeper
+	signerFactory   identity.SignerFactory
+	statsKeeper     *SessionStatsKeeper
 	mysteriumClient server.Client
 
 	sendInterval time.Duration
@@ -50,14 +57,10 @@ type RemoteStatsSender struct {
 }
 
 // NewRemoteStatsSender function creates new session stats sender by given options
-func NewRemoteStatsSender(statsKeeper SessionStatsKeeper, mysteriumClient server.Client, sessionID session.ID, providerID identity.Identity, serviceType string, signer identity.Signer, consumerCountry string, interval time.Duration) *RemoteStatsSender {
+func NewRemoteStatsSender(statsKeeper *SessionStatsKeeper, mysteriumClient server.Client, signerFactory identity.SignerFactory, consumerCountry string, interval time.Duration) *RemoteStatsSender {
 	return &RemoteStatsSender{
-		sessionID:       sessionID,
-		providerID:      providerID,
 		consumerCountry: consumerCountry,
-		serviceType:     serviceType,
-
-		signer:          signer,
+		signerFactory:   signerFactory,
 		statsKeeper:     statsKeeper,
 		mysteriumClient: mysteriumClient,
 
@@ -66,8 +69,8 @@ func NewRemoteStatsSender(statsKeeper SessionStatsKeeper, mysteriumClient server
 	}
 }
 
-// Start starts the sending of stats
-func (rss *RemoteStatsSender) Start() {
+// start starts the sending of stats
+func (rss *RemoteStatsSender) start() {
 	rss.opLock.Lock()
 	defer rss.opLock.Unlock()
 
@@ -78,10 +81,11 @@ func (rss *RemoteStatsSender) Start() {
 	rss.done = make(chan struct{})
 	go rss.intervalSend()
 	rss.started = true
+	log.Debug(statsSenderLogPrefix, "started")
 }
 
-// Stop stops the sending of stats
-func (rss *RemoteStatsSender) Stop() {
+// stop stops the sending of stats
+func (rss *RemoteStatsSender) stop() {
 	rss.opLock.Lock()
 	defer rss.opLock.Unlock()
 
@@ -91,6 +95,7 @@ func (rss *RemoteStatsSender) Stop() {
 
 	close(rss.done)
 	rss.started = false
+	log.Debug(statsSenderLogPrefix, "stopping")
 }
 
 func (rss *RemoteStatsSender) intervalSend() {
@@ -104,12 +109,18 @@ func (rss *RemoteStatsSender) intervalSend() {
 		case <-time.After(rss.sendInterval):
 			if err := rss.send(); err != nil {
 				log.Error(statsSenderLogPrefix, "Failed to send session stats to the remote service: ", err)
+			} else {
+				log.Debug(statsSenderLogPrefix, "Stats sent")
 			}
 		}
 	}
 }
 
 func (rss *RemoteStatsSender) send() error {
+	if rss.signer == nil {
+		return ErrSessionNotStarted
+	}
+
 	sessionStats := rss.statsKeeper.Retrieve()
 	return rss.mysteriumClient.SendSessionStats(
 		rss.sessionID,
@@ -122,4 +133,27 @@ func (rss *RemoteStatsSender) send() error {
 		},
 		rss.signer,
 	)
+}
+
+// Subscribe subscribes the sender on the bus for relevant events
+func (rss *RemoteStatsSender) Subscribe(bus connection.EventSubscriptionKeeper) {
+	bus.Subscribe(string(connection.StateEvent), rss.consumeStateEvent)
+}
+
+// Unsubscribe unsubscribes the sender from bus
+func (rss *RemoteStatsSender) Unsubscribe(bus connection.EventSubscriptionKeeper) {
+	bus.Unsubscribe(string(connection.StateEvent), rss.consumeStateEvent)
+}
+
+func (rss *RemoteStatsSender) consumeStateEvent(stateEvent connection.StateEventPayload) {
+	switch stateEvent.State {
+	case connection.Disconnecting:
+		rss.stop()
+	case connection.Connected:
+		rss.providerID = identity.FromAddress(stateEvent.SessionInfo.Proposal.ProviderID)
+		rss.sessionID = stateEvent.SessionInfo.SessionID
+		rss.serviceType = stateEvent.SessionInfo.Proposal.ServiceType
+		rss.signer = rss.signerFactory(stateEvent.SessionInfo.ConsumerID)
+		rss.start()
+	}
 }

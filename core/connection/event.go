@@ -17,31 +17,24 @@
 
 package connection
 
-import (
-	"time"
+// Topic represents the different topics a consumer can subscribe to
+type Topic string
 
-	"github.com/mysteriumnetwork/node/client/stats"
+var (
+	// StateEvent represents the connection state change topic
+	StateEvent Topic = "State"
+	// StatsEvent represents the connection stats topic
+	StatsEvent Topic = "Stats"
 )
 
-type fakeSessionStatsKeeper struct {
-	sessionStartMarked, sessionEndMarked bool
+// StateEventPayload is the struct we'll emit on a StateEvent topic event
+type StateEventPayload struct {
+	State       State
+	SessionInfo SessionInfo
 }
 
-func (fsk *fakeSessionStatsKeeper) Save(stats stats.SessionStats) {
-}
-
-func (fsk *fakeSessionStatsKeeper) Retrieve() stats.SessionStats {
-	return stats.SessionStats{}
-}
-
-func (fsk *fakeSessionStatsKeeper) MarkSessionStart() {
-	fsk.sessionStartMarked = true
-}
-
-func (fsk *fakeSessionStatsKeeper) GetSessionDuration() time.Duration {
-	return time.Duration(0)
-}
-
-func (fsk *fakeSessionStatsKeeper) MarkSessionEnd() {
-	fsk.sessionEndMarked = true
+// EventSubscriptionKeeper lets us subscribe to events and unsubscribe from them
+type EventSubscriptionKeeper interface {
+	Subscribe(topic string, fn interface{}) error
+	Unsubscribe(topic string, handler interface{}) error
 }

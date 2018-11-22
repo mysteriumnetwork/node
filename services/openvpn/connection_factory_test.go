@@ -20,6 +20,7 @@ package openvpn
 import (
 	"testing"
 
+	"github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
@@ -53,23 +54,25 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 }
 
 func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", &fakeSessionStatsKeeper{}, &cacheFake{}, fakeSignerFactory)
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory)
 	channel := make(chan connection.State)
+	statsChannel := make(chan dto.SessionStats)
 	connectionOptions := connection.ConnectOptions{}
-	_, err := factory.CreateConnection(connectionOptions, channel)
+	_, err := factory.CreateConnection(connectionOptions, channel, statsChannel)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "unexpected end of JSON input")
 }
 
 func TestConnectionFactory_CreatesConnection(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", &fakeSessionStatsKeeper{}, &cacheFake{}, fakeSignerFactory)
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory)
 	channel := make(chan connection.State)
 	connectionOptions := connection.ConnectOptions{
 		ConsumerID:    identity.Identity{Address: "consumer"},
 		ProviderID:    identity.Identity{Address: "provider"},
 		SessionConfig: fakeSessionConfig,
 	}
-	conn, err := factory.CreateConnection(connectionOptions, channel)
+	statsChannel := make(chan dto.SessionStats)
+	conn, err := factory.CreateConnection(connectionOptions, channel, statsChannel)
 	assert.Nil(t, err)
 	assert.NotNil(t, conn)
 }

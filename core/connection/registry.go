@@ -35,11 +35,11 @@ func (registry *Registry) Register(serviceType string, creator ConnectionCreator
 }
 
 // CreateConnection create plugable connection
-func (registry *Registry) CreateConnection(options ConnectOptions, stateChannel StateChannel) (Connection, error) {
+func (registry *Registry) CreateConnection(options ConnectOptions, stateChannel StateChannel, statsChannel StatsChannel) (Connection, error) {
 	createConnection, exists := registry.creators[options.Proposal.ServiceType]
 	if !exists {
 		return nil, ErrUnsupportedServiceType
 	}
 
-	return createConnection(options, stateChannel)
+	return createConnection(options, stateChannel, statsChannel)
 }

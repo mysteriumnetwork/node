@@ -29,6 +29,7 @@ type Connection struct {
 	isRunning      bool
 	noopConnection sync.WaitGroup
 	stateChannel   connection.StateChannel
+	statsChannel   connection.StatsChannel
 }
 
 // Start implements the connection.Connection interface

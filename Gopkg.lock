@@ -9,6 +9,14 @@
   revision = "70ad3c3262ada0444973f3f02e4a8339319236b3"
 
 [[projects]]
+  branch = "master"
+  digest = "1:e2a1ff1174d564ed4b75a62757f4a9081ed3b8c99ed17e47eb252b048b4ff018"
+  name = "github.com/asaskevich/EventBus"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d46933a94f05c6657d7b923fcf5ac563ee37ec79"
+
+[[projects]]
   digest = "1:97f8392a94d45a67691bfc224ee4365a83864467ca5a04bd5017be293e1b4391"
   name = "github.com/asdine/storm"
   packages = [
@@ -414,6 +422,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/asaskevich/EventBus",
     "github.com/asdine/storm",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",

@@ -18,22 +18,40 @@
 package connection
 
 import (
+	"fmt"
 	"time"
 
-	"github.com/mysteriumnetwork/node/client/stats"
-	"github.com/mysteriumnetwork/node/core/storage"
+	log "github.com/cihub/seelog"
+	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 )
 
+const sessionStorageLogPrefix = "[session-storage] "
+
+// StatsRetriever can fetch current session stats
+type StatsRetriever interface {
+	Retrieve() stats_dto.SessionStats
+}
+
+// SessionStorer allows us to get all sessions, save and update them
+type SessionStorer interface {
+	Save(object interface{}) error
+	Update(object interface{}) error
+	GetAll(array interface{}) error
+}
+
 // SessionStorage contains functions for storing, getting session objects
 type SessionStorage struct {
-	storage storage.Storage
+	storage        SessionStorer
+	statsRetriever StatsRetriever
 }
 
 // NewSessionStorage creates session repository with given dependencies
-func NewSessionStorage(storage storage.Storage) *SessionStorage {
+func NewSessionStorage(storage SessionStorer, statsRetriever StatsRetriever) *SessionStorage {
 	return &SessionStorage{
-		storage: storage,
+		storage:        storage,
+		statsRetriever: statsRetriever,
 	}
 }
 
@@ -43,7 +61,7 @@ func (repo *SessionStorage) Save(se Session) error {
 }
 
 // Update updates specified fields of existing session by id
-func (repo *SessionStorage) Update(sessionID session.ID, updated time.Time, dataStats stats.SessionStats, status SessionStatus) error {
+func (repo *SessionStorage) Update(sessionID session.ID, updated time.Time, dataStats stats_dto.SessionStats, status SessionStatus) error {
 	// update fields by sessionID
 	se := Session{SessionID: sessionID, Updated: updated, DataStats: dataStats, Status: status}
 	return repo.storage.Update(&se)
@@ -57,4 +75,40 @@ func (repo *SessionStorage) GetAll() ([]Session, error) {
 		return nil, err
 	}
 	return sessions, nil
+}
+
+// Subscribe subscribes the storage on the bus for relevant events
+func (repo *SessionStorage) Subscribe(bus EventSubscriptionKeeper) {
+	bus.Subscribe(string(StateEvent), repo.consumeStateEvent)
+}
+
+// Unsubscribe unsubscribes the storage from bus
+func (repo *SessionStorage) Unsubscribe(bus EventSubscriptionKeeper) {
+	bus.Unsubscribe(string(StateEvent), repo.consumeStateEvent)
+}
+
+func (repo *SessionStorage) consumeStateEvent(stateEvent StateEventPayload) {
+	switch stateEvent.State {
+	case Disconnecting:
+		err := repo.Update(stateEvent.SessionInfo.SessionID, time.Now(), repo.statsRetriever.Retrieve(), SessionStatusCompleted)
+		if err != nil {
+			log.Error(sessionStorageLogPrefix, err)
+		} else {
+			log.Trace(sessionStorageLogPrefix, fmt.Sprintf("Session %v updated", stateEvent.SessionInfo.SessionID))
+		}
+	case Connected:
+		providerCountry := stateEvent.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country
+		se := NewSession(
+			stateEvent.SessionInfo.SessionID,
+			identity.FromAddress(stateEvent.SessionInfo.Proposal.ProviderID),
+			stateEvent.SessionInfo.Proposal.ServiceType,
+			providerCountry,
+		)
+		err := repo.Save(*se)
+		if err != nil {
+			log.Error(sessionStorageLogPrefix, err)
+		} else {
+			log.Trace(sessionStorageLogPrefix, fmt.Sprintf("Session %v saved", stateEvent.SessionInfo.SessionID))
+		}
+	}
 }

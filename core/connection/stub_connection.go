@@ -17,7 +17,11 @@
 
 package connection
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/mysteriumnetwork/node/client/stats/dto"
+)
 
 type fakeState string
 
@@ -39,7 +43,7 @@ type connectionFactoryFake struct {
 	mockConnection *connectionFake
 }
 
-func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptions, stateChannel StateChannel) (Connection, error) {
+func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptions, stateChannel StateChannel, statsChannel StatsChannel) (Connection, error) {
 	//each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
 	if cff.mockError != nil {
 		return nil, cff.mockError
@@ -48,6 +52,7 @@ func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptio
 	stateCallback := func(state fakeState) {
 		if state == connectedState {
 			stateChannel <- Connected
+			statsChannel <- cff.mockConnection.onStartReportStats
 		}
 		if state == exitingState {
 			stateChannel <- Disconnecting
@@ -68,6 +73,7 @@ func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptio
 		onStartReturnError:  cff.mockConnection.onStartReturnError,
 		onStopReportStates:  cff.mockConnection.onStopReportStates,
 		stateCallback:       cff.mockConnection.stateCallback,
+		onStartReportStats:  cff.mockConnection.onStartReportStats,
 		fakeProcess:         sync.WaitGroup{},
 	}
 
@@ -79,8 +85,8 @@ type connectionFake struct {
 	onStartReportStates []fakeState
 	onStopReportStates  []fakeState
 	stateCallback       func(state fakeState)
+	onStartReportStats  dto.SessionStats
 	fakeProcess         sync.WaitGroup
-
 	sync.RWMutex
 }
 

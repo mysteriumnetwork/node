@@ -20,7 +20,7 @@ package connection
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/client/stats"
+	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -67,7 +67,7 @@ type Session struct {
 	Started         time.Time
 	Status          SessionStatus
 	Updated         time.Time
-	DataStats       stats.SessionStats // is updated on disconnect event
+	DataStats       stats_dto.SessionStats // is updated on disconnect event
 }
 
 // GetDuration returns delta in seconds (TimeUpdated - TimeStarted)
