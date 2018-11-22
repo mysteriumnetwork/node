@@ -28,6 +28,7 @@ import (
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/urfave/cli"
 )
 
@@ -53,7 +54,7 @@ var (
 
 // NewCommand function creates service command
 func NewCommand(licenseCommandName string) *cli.Command {
-	serviceTypes := []string{"openvpn", "noop"}
+	serviceTypes := []string{"openvpn", "wireguard", "noop"}
 	var di cmd.Dependencies
 	command := &cli.Command{
 		Name:        serviceCommandName,
@@ -151,6 +152,8 @@ func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Opti
 		return parseNoopFlags(ctx), nil
 	case service_openvpn.ServiceType:
 		return parseOpenvpnFlags(ctx), nil
+	case service_wireguard.ServiceType:
+		return parseWireguardFlags(ctx), nil
 	default:
 		return service.Options{}, fmt.Errorf("Unknown service type: %q", serviceType)
 	}
@@ -172,6 +175,15 @@ func parseNoopFlags(ctx *cli.Context) service.Options {
 		Identity:   ctx.String(identityFlag.Name),
 		Passphrase: ctx.String(identityPassphraseFlag.Name),
 		Type:       service_noop.ServiceType,
+	}
+}
+
+// parseWireguardFlags function fills in wireguard service options from CLI context
+func parseWireguardFlags(ctx *cli.Context) service.Options {
+	return service.Options{
+		Identity:   ctx.String(identityFlag.Name),
+		Passphrase: ctx.String(identityPassphraseFlag.Name),
+		Type:       service_wireguard.ServiceType,
 	}
 }
 

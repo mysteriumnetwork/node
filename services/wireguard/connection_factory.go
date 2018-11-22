@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Tequila API
-//
-// The purpose of this documentation is to provide developers an insight of how to
-// interact with Mysterium Node via Tequila API.
-// This should demonstrate all the possible API calls with described parameters and responses.
-//
-//   Host: 127.0.0.1:4050
-//
-//   Consumes:
-//   - application/json
-//
-//   Produces:
-//   - application/json
-//
-//   Version: dev
-//
-// swagger:meta
-package tequilapi
+package wireguard
+
+import (
+	"github.com/mysteriumnetwork/node/core/connection"
+)
+
+// NewConnectionCreator creates wireguard connections
+func NewConnectionCreator() connection.ConnectionCreator {
+	return func(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
+		return &Connection{
+			stateChannel: stateChannel,
+		}, nil
+	}
+}
