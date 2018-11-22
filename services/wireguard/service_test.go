@@ -18,14 +18,11 @@
 package wireguard
 
 import (
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/money"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,78 +38,6 @@ var locationResolverStub = &fakeLocationResolver{
 var ipresolverStub = &fakeIPResolver{
 	publicIPRes: "127.0.0.1",
 	publicErr:   nil,
-}
-
-func Test_Manager_Start(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub)
-	proposal, sessionConfigProvider, err := manager.Start(providerID)
-	assert.NoError(t, err)
-
-	assert.Exactly(
-		t,
-		dto_discovery.ServiceProposal{
-			ServiceType: "wireguard",
-			ServiceDefinition: ServiceDefinition{
-				Location: dto_discovery.Location{Country: "LT"},
-			},
-
-			PaymentMethodType: "WG",
-			PaymentMethod: Payment{
-				Price: money.Money{
-					Amount:   0,
-					Currency: money.Currency("MYST"),
-				},
-			},
-		},
-		proposal,
-	)
-
-	sessionConfig, err := sessionConfigProvider()
-	assert.NoError(t, err)
-	assert.Exactly(t, Config{"rYx7j7p+xqBBPH+2lu19s2AzSzXzoedNLYGMBoOuDW0=", "192.168.100.2", "1.2.3.4:52820"}, sessionConfig)
-}
-
-func Test_Manager_Start_IPResolverErrs(t *testing.T) {
-	fakeErr := errors.New("some error")
-	ipResStub := &fakeIPResolver{
-		publicIPRes: "127.0.0.1",
-		publicErr:   fakeErr,
-	}
-	manager := NewManager(locationResolverStub, ipResStub)
-	_, _, err := manager.Start(providerID)
-	assert.Equal(t, fakeErr, err)
-}
-
-func Test_Manager_Start_LocResolverErrs(t *testing.T) {
-	fakeErr := errors.New("some error")
-	locResStub := &fakeLocationResolver{
-		res: "LT",
-		err: fakeErr,
-	}
-	manager := NewManager(locResStub, ipresolverStub)
-	_, _, err := manager.Start(providerID)
-	assert.Equal(t, fakeErr, err)
-}
-
-func Test_Manager_MultipleStarts(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub)
-	_, _, err := manager.Start(providerID)
-	assert.Nil(t, err)
-	_, _, err = manager.Start(providerID)
-	assert.NotNil(t, err)
-	assert.Equal(t, ErrAlreadyStarted, err)
-}
-
-func Test_Manager_Wait(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub)
-	manager.Start(providerID)
-
-	go func() {
-		manager.Wait()
-		assert.Fail(t, "Wait should be blocking")
-	}()
-
-	waitABit()
 }
 
 func Test_Manager_Stop(t *testing.T) {

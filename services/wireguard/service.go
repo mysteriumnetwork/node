@@ -19,9 +19,14 @@ package wireguard
 
 import (
 	"errors"
+	"fmt"
+	"net"
+	"os/exec"
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"github.com/mdlayher/wireguardctrl"
+	"github.com/mdlayher/wireguardctrl/wgtypes"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
@@ -30,7 +35,11 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-const logPrefix = "[service-wireguard] "
+const (
+	logPrefix = "[service-wireguard] "
+
+	interfaceName = "myst"
+)
 
 // ErrAlreadyStarted is the error we return when the start is called multiple times
 var ErrAlreadyStarted = errors.New("Service already started")
@@ -49,13 +58,15 @@ type Manager struct {
 	locationResolver location.Resolver
 	ipResolver       ip.Resolver
 	isStarted        bool
+	wgClient         *wireguardctrl.Client
 }
 
 // Config represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection
 type Config struct {
 	PublicKey string
-	IP        string
 	Endpoint  string
+	PeerKey   string // TODO peer private key should be generated on consumer side
+	PeerIP    string
 }
 
 // Start starts service - does not block
@@ -65,8 +76,18 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 
+	wgClient, err := wireguardctrl.New()
+	if err != nil {
+		return dto_discovery.ServiceProposal{}, nil, err
+	}
+	manager.wgClient = wgClient
+
+	if err := manager.initInterface(interfaceName); err != nil {
+		return dto_discovery.ServiceProposal{}, nil, err
+	}
+
 	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
-		return setupWireguard(publicIP)
+		return manager.peerConfig(interfaceName, publicIP)
 	}
 
 	if manager.isStarted {
@@ -111,41 +132,83 @@ func (manager *Manager) Stop() error {
 		return nil
 	}
 
+	if err := manager.wgClient.Close(); err != nil {
+		return err
+	}
+
+	if err := manager.deleteInterface(interfaceName); err != nil {
+		return err
+	}
+
 	manager.process.Done()
 	manager.isStarted = false
 	log.Info(logPrefix, "Wireguard service stopped")
 	return nil
 }
 
-func setupWireguard(publicIP string) (Config, error) {
-	// TODO initialize wireguard interface.
-	// out, err := exec.Command("ip", "link", "add", "dev", "wg0", "type", "wireguard").CombinedOutput()
-	// out, err := exec.Command("ip", "address", "add", "dev", "wg0", "192.168.100.1/24").CombinedOutput()
+func (manager *Manager) initInterface(name string) error {
+	if _, err := manager.wgClient.Device(name); err != nil {
+		if err := exec.Command("ip", "link", "add", "dev", name, "type", "wireguard").Run(); err != nil {
+			return err
+		}
+	}
 
-	// TODO configure wireguard interface.
-	// client, err := wireguardctrl.New()
-	// if err != nil {
-	// 	return Config{}, err
-	// }
+	if err := exec.Command("ip", "address", "replace", "dev", name, "192.168.100.1/24").Run(); err != nil {
+		return err
+	}
 
-	// TODO wireguard device configuration like private key, listen port, peer list should survive through restarts.
-	// TODO we need to have some persistent storage for it.
-	// client.ConfigureDevice("wg0", wgtypes.Config{
-	// 	PrivateKey: "8C6Pp0cI2tgLeYOMVbnMMLl/zN2blFK+OWGaIxX0bHY=",
-	// 	ListenPort: 52820,
-	// 	Peers:      nil,
-	// })
+	if err := exec.Command("ip", "link", "set", "dev", name, "up").Run(); err != nil {
+		return err
+	}
 
-	// TODO if the wireguard interface already configured we can get required parameters from it.
-	// device, err := client.Device("wg0")
-	// if err != nil {
-	// 	return Config{}, err
-	// }
+	// TODO wireguard provider listen port should be passed as startup argument
+	port := 52820
+	key, err := wgtypes.GeneratePrivateKey()
+	if err != nil {
+		return err
+	}
+
+	return manager.wgClient.ConfigureDevice(name, wgtypes.Config{
+		PrivateKey:   &key,
+		ListenPort:   &port,
+		Peers:        nil,
+		ReplacePeers: true,
+	})
+}
+
+func (manager *Manager) deleteInterface(name string) error {
+	return exec.Command("ip", "link", "del", "dev", name).Run()
+}
+
+func (manager *Manager) peerConfig(name, publicIP string) (Config, error) {
+	peerKey, err := wgtypes.GeneratePrivateKey()
+	if err != nil {
+		return Config{}, err
+	}
+
+	_, peerIP, err := net.ParseCIDR("192.168.100.2/32")
+	if err != nil {
+		return Config{}, err
+	}
+
+	err = manager.wgClient.ConfigureDevice(name, wgtypes.Config{
+		Peers: []wgtypes.PeerConfig{wgtypes.PeerConfig{
+			PublicKey:  peerKey.PublicKey(),
+			AllowedIPs: []net.IPNet{*peerIP}}}})
+	if err != nil {
+		return Config{}, err
+	}
+
+	device, err := manager.wgClient.Device(name)
+	if err != nil {
+		return Config{}, err
+	}
 
 	return Config{
 		// TODO Local IP should be calculated automatically for new connections.
-		IP:        "192.168.100.2",
-		PublicKey: "rYx7j7p+xqBBPH+2lu19s2AzSzXzoedNLYGMBoOuDW0=", //device.PublicKey.String(),
-		Endpoint:  "1.2.3.4:52820",                                //fmt.Sprintf("%s:%d", publicIP, device.ListenPort),
+		PublicKey: device.PublicKey.String(),
+		Endpoint:  fmt.Sprintf("%s:%d", publicIP, device.ListenPort),
+		PeerIP:    "192.168.100.2",
+		PeerKey:   peerKey.String(),
 	}, nil
 }

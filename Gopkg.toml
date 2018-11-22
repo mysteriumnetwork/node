@@ -89,3 +89,7 @@
 [[constraint]]
   name = "github.com/asaskevich/EventBus"
   revision = "d46933a94f05c6657d7b923fcf5ac563ee37ec79"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mdlayher/wireguardctrl"

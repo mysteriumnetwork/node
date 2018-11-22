@@ -158,6 +158,39 @@
   version = "v0.0.3"
 
 [[projects]]
+  branch = "master"
+  digest = "1:d6664486d8cf8f3053e34f388a5a17b5ca210ed2e25eb3a0d59cc3a95c31abb8"
+  name = "github.com/mdlayher/genetlink"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e97704c1b7955246e3c4f6d9746a7b45ff3c5a26"
+
+[[projects]]
+  branch = "master"
+  digest = "1:5752b16f826da12e814b5af1012ad8802731f85b2e397d3d3f36b02e5aabdb81"
+  name = "github.com/mdlayher/netlink"
+  packages = [
+    ".",
+    "nlenc",
+  ]
+  pruneopts = "UT"
+  revision = "2e37830c371e54b400461538ef95dae4d2d3279b"
+
+[[projects]]
+  branch = "master"
+  digest = "1:29f3af6f3b46bccbd6994c01053eebebb84b5ec2cf8e8d06ed705f4cfa643e5a"
+  name = "github.com/mdlayher/wireguardctrl"
+  packages = [
+    ".",
+    "internal/wgnl",
+    "internal/wgnl/internal/wgh",
+    "internal/wguser",
+    "wgtypes",
+  ]
+  pruneopts = "UT"
+  revision = "15a089393cc3b891b2181cd738347dc568a0b4b0"
+
+[[projects]]
   digest = "1:c7354463195544b1ab3c1f1fadb41430947f5d28dfbf2cdbd38268c5717a5a03"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
@@ -315,9 +348,10 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:29672ea8ec3ef342d345f668d47666e45366b7691080ee4c07bf4851f4fa8864"
+  digest = "1:4e429286441e8ff586f6daa31fd9de81b8deb1cb4dce601fd08772f78eac1bb0"
   name = "golang.org/x/crypto"
   packages = [
+    "curve25519",
     "pbkdf2",
     "scrypt",
   ]
@@ -326,9 +360,12 @@
 
 [[projects]]
   branch = "release-branch.go1.11"
-  digest = "1:7427036b6d926b3d1fa0773771820735b35554a98296f1074df440ee30a97296"
+  digest = "1:f3d599202b6b13ac36de61dceb22a5cb13a6bd87783e1c44a8cc4347da328555"
   name = "golang.org/x/net"
-  packages = ["websocket"]
+  packages = [
+    "bpf",
+    "websocket",
+  ]
   pruneopts = "UT"
   revision = "c39426892332e1bb5ec0a434a079bf82f5d30c54"
 
@@ -437,6 +474,8 @@
     "github.com/ethereum/go-ethereum/params",
     "github.com/gofrs/uuid",
     "github.com/julienschmidt/httprouter",
+    "github.com/mdlayher/wireguardctrl",
+    "github.com/mdlayher/wireguardctrl/wgtypes",
     "github.com/mitchellh/go-homedir",
     "github.com/mysteriumnetwork/go-openvpn/openvpn",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/config",
