@@ -186,15 +186,14 @@ func (manager *Manager) peerConfig(name, publicIP string) (Config, error) {
 		return Config{}, err
 	}
 
+	// TODO constant peer IP should be replaced by some generation to allow more than one peer to connect
 	_, peerIP, err := net.ParseCIDR("192.168.100.2/32")
 	if err != nil {
 		return Config{}, err
 	}
 
 	err = manager.wgClient.ConfigureDevice(name, wgtypes.Config{
-		Peers: []wgtypes.PeerConfig{wgtypes.PeerConfig{
-			PublicKey:  peerKey.PublicKey(),
-			AllowedIPs: []net.IPNet{*peerIP}}}})
+		Peers: []wgtypes.PeerConfig{{PublicKey: peerKey.PublicKey(), AllowedIPs: []net.IPNet{*peerIP}}}})
 	if err != nil {
 		return Config{}, err
 	}
