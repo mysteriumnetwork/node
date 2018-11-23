@@ -62,6 +62,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		ArgsUsage:   " ",
 		Subcommands: getSubcommands(&di, licenseCommandName, serviceTypes),
 		Action: func(ctx *cli.Context) error {
+			serviceTypes := []string{"openvpn", "noop"} // TODO do not start wireguard service by default
 			return runServices(ctx, &di, licenseCommandName, serviceTypes)
 		},
 		After: func(ctx *cli.Context) error {

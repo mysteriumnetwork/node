@@ -19,19 +19,15 @@ package wireguard
 
 import (
 	"errors"
-	"fmt"
-	"net"
-	"os/exec"
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mdlayher/wireguardctrl"
-	"github.com/mdlayher/wireguardctrl/wgtypes"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/services/wireguard/network"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -41,7 +37,7 @@ const (
 	interfaceName = "myst"
 )
 
-// ErrAlreadyStarted is the error we return when the start is called multiple times
+// ErrAlreadyStarted is the error we return when the start is called multiple times.
 var ErrAlreadyStarted = errors.New("Service already started")
 
 // NewManager creates new instance of Wireguard service
@@ -52,21 +48,27 @@ func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Man
 	}
 }
 
-// Manager represents entrypoint for Wireguard service
+// Manager represents entrypoint for Wireguard service.
 type Manager struct {
+	isStarted        bool
 	process          sync.WaitGroup
 	locationResolver location.Resolver
 	ipResolver       ip.Resolver
-	isStarted        bool
-	wgClient         *wireguardctrl.Client
+	wg               Network
 }
 
-// Config represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection
+// Config represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type Config struct {
-	PublicKey string
-	Endpoint  string
-	PeerKey   string // TODO peer private key should be generated on consumer side
-	PeerIP    string
+	Provider network.Provider
+	Consumer network.Consumer
+}
+
+// Network represents Wireguard network instance, it provide information
+// required for establishing connection between service provider and consumer.
+type Network interface {
+	Provider() (network.Provider, error)
+	Consumer() (network.Consumer, error)
+	Close() error
 }
 
 // Start starts service - does not block
@@ -76,18 +78,22 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 
-	wgClient, err := wireguardctrl.New()
+	manager.wg, err = network.NewNetwork(interfaceName, publicIP)
 	if err != nil {
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
-	manager.wgClient = wgClient
 
-	if err := manager.initInterface(interfaceName); err != nil {
+	provider, err := manager.wg.Provider()
+	if err != nil {
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 
 	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
-		return manager.peerConfig(interfaceName, publicIP)
+		consumer, err := manager.wg.Consumer()
+		if err != nil {
+			return Config{}, nil
+		}
+		return Config{Provider: provider, Consumer: consumer}, nil
 	}
 
 	if manager.isStarted {
@@ -117,7 +123,7 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 	return proposal, sessionConfigProvider, nil
 }
 
-// Wait blocks until service is stopped
+// Wait blocks until service is stopped.
 func (manager *Manager) Wait() error {
 	if !manager.isStarted {
 		return nil
@@ -126,17 +132,13 @@ func (manager *Manager) Wait() error {
 	return nil
 }
 
-// Stop stops service
+// Stop stops service.
 func (manager *Manager) Stop() error {
 	if !manager.isStarted {
 		return nil
 	}
 
-	if err := manager.wgClient.Close(); err != nil {
-		return err
-	}
-
-	if err := manager.deleteInterface(interfaceName); err != nil {
+	if err := manager.wg.Close(); err != nil {
 		return err
 	}
 
@@ -144,70 +146,4 @@ func (manager *Manager) Stop() error {
 	manager.isStarted = false
 	log.Info(logPrefix, "Wireguard service stopped")
 	return nil
-}
-
-func (manager *Manager) initInterface(name string) error {
-	if _, err := manager.wgClient.Device(name); err != nil {
-		if err := exec.Command("ip", "link", "add", "dev", name, "type", "wireguard").Run(); err != nil {
-			return err
-		}
-	}
-
-	if err := exec.Command("ip", "address", "replace", "dev", name, "192.168.100.1/24").Run(); err != nil {
-		return err
-	}
-
-	if err := exec.Command("ip", "link", "set", "dev", name, "up").Run(); err != nil {
-		return err
-	}
-
-	// TODO wireguard provider listen port should be passed as startup argument
-	port := 52820
-	key, err := wgtypes.GeneratePrivateKey()
-	if err != nil {
-		return err
-	}
-
-	return manager.wgClient.ConfigureDevice(name, wgtypes.Config{
-		PrivateKey:   &key,
-		ListenPort:   &port,
-		Peers:        nil,
-		ReplacePeers: true,
-	})
-}
-
-func (manager *Manager) deleteInterface(name string) error {
-	return exec.Command("ip", "link", "del", "dev", name).Run()
-}
-
-func (manager *Manager) peerConfig(name, publicIP string) (Config, error) {
-	peerKey, err := wgtypes.GeneratePrivateKey()
-	if err != nil {
-		return Config{}, err
-	}
-
-	// TODO constant peer IP should be replaced by some generation to allow more than one peer to connect
-	_, peerIP, err := net.ParseCIDR("192.168.100.2/32")
-	if err != nil {
-		return Config{}, err
-	}
-
-	err = manager.wgClient.ConfigureDevice(name, wgtypes.Config{
-		Peers: []wgtypes.PeerConfig{{PublicKey: peerKey.PublicKey(), AllowedIPs: []net.IPNet{*peerIP}}}})
-	if err != nil {
-		return Config{}, err
-	}
-
-	device, err := manager.wgClient.Device(name)
-	if err != nil {
-		return Config{}, err
-	}
-
-	return Config{
-		// TODO Local IP should be calculated automatically for new connections.
-		PublicKey: device.PublicKey.String(),
-		Endpoint:  fmt.Sprintf("%s:%d", publicIP, device.ListenPort),
-		PeerIP:    "192.168.100.2",
-		PeerKey:   peerKey.String(),
-	}, nil
 }
