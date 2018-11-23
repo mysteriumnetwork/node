@@ -18,15 +18,22 @@
 package wireguard
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 // NewConnectionCreator creates wireguard connections
-func NewConnectionCreator() connection.Creator {
-	return func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+func NewConnectionCreator() connection.ConnectionCreator {
+	return func(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
+		var config Config
+		if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
+			return nil, err
+		}
+
 		return &Connection{
-			stateChannel:      stateChannel,
-			statisticsChannel: statisticsChannel,
+			stateChannel: stateChannel,
+			config:       config,
 		}, nil
 	}
 }

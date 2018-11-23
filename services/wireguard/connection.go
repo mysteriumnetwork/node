@@ -19,28 +19,47 @@ package wireguard
 
 import (
 	"sync"
-	"time"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/services/wireguard/network"
 )
 
 // Connection which does no real tunneling
 type Connection struct {
-	isRunning         bool
-	noopConnection    sync.WaitGroup
-	stateChannel      connection.StateChannel
-	statisticsChannel connection.StatisticsChannel
+	isRunning    bool
+	connection   sync.WaitGroup
+	stateChannel connection.StateChannel
+
+	config Config
+	wg     Consumer
+}
+
+// Consumer represents Wireguard network instance that consume provided service.
+type Consumer interface {
+	Consumer(provider network.Provider, consumer network.Consumer) error
+	Close() error
 }
 
 // Start implements the connection.Connection interface
 func (c *Connection) Start() error {
-	c.noopConnection.Add(1)
+	wg, err := network.NewNetwork(interfaceName, "")
+	if err != nil {
+		return err
+	}
+	c.wg = wg
+
+	c.connection.Add(1)
 	c.isRunning = true
 
 	c.stateChannel <- connection.Connecting
 
-	// TODO establish real wireguard connection to the service provider
-	time.Sleep(5 * time.Second)
+	if err := c.wg.Consumer(c.config.Provider, c.config.Consumer); err != nil {
+		c.isRunning = false
+		c.stateChannel <- connection.NotConnected
+		c.connection.Done()
+		return err
+	}
 
 	c.stateChannel <- connection.Connected
 	return nil
@@ -49,7 +68,7 @@ func (c *Connection) Start() error {
 // Wait implements the connection.Connection interface
 func (c *Connection) Wait() error {
 	if c.isRunning {
-		c.noopConnection.Wait()
+		c.connection.Wait()
 	}
 	return nil
 }
@@ -63,10 +82,11 @@ func (c *Connection) Stop() {
 	c.isRunning = false
 	c.stateChannel <- connection.Disconnecting
 
-	// TODO destroy wireguard connection
-	time.Sleep(2 * time.Second)
+	if err := c.wg.Close(); err != nil {
+		log.Error(logPrefix, "Failed to close wireguard connection", err)
+	}
 
 	c.stateChannel <- connection.NotConnected
-	c.noopConnection.Done()
+	c.connection.Done()
 	close(c.stateChannel)
 }
