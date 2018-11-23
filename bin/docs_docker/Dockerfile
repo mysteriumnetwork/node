@@ -1,9 +1,5 @@
 FROM redocly/redoc AS redoc
 
-# Install packages
-RUN apk add --update --no-cache bash curl \
-    && rm -rf /var/cache/apk/*
-
 COPY tequilapi.json /usr/share/nginx/html/tequilapi.json
 
 ENV SPEC_URL='/tequilapi.json'
