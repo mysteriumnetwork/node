@@ -21,13 +21,9 @@ import (
 	"path/filepath"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/mysteriumnetwork/node/services/openvpn"
-	"github.com/mysteriumnetwork/node/services/openvpn/session"
 )
 
 // MobileNode represents node object tuned for mobile devices
@@ -38,11 +34,8 @@ type MobileNode struct {
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
 type MobileNetworkOptions node.OptionsNetwork
 
-// Openvpn3TunnelSetup is alias for openvpn3 tunnel setup interface exposed to Android/iOS interop
-type Openvpn3TunnelSetup openvpn3.TunnelSetup
-
 // NewNode function creates new Node
-func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup Openvpn3TunnelSetup) (*MobileNode, error) {
+func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode, error) {
 	var di cmd.Dependencies
 
 	var dataDir, currentDir string
@@ -80,41 +73,6 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions, tunnelSetup O
 	if err != nil {
 		return nil, err
 	}
-
-	di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, channel connection.StateChannel) (connection.Connection, error) {
-
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
-		if err != nil {
-			return nil, err
-		}
-
-		profileContent, err := vpnClientConfig.ToConfigFileContent()
-		if err != nil {
-			return nil, err
-		}
-
-		config := openvpn3.NewConfig(profileContent)
-		config.GuiVersion = "govpn 0.1"
-		config.CompressionMode = "asym"
-
-		signer := di.SignerFactory(options.ConsumerID)
-
-		username, password, err := session.SignatureCredentialsProvider(options.SessionID, signer)()
-		if err != nil {
-			return nil, err
-		}
-
-		credentials := openvpn3.UserCredentials{
-			Username: username,
-			Password: password,
-		}
-
-		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(channel, di.StatsKeeper), tunnelSetup)
-
-		return &sessionWrapper{
-			session: session,
-		}, nil
-	})
 
 	return &MobileNode{di: di}, nil
 }

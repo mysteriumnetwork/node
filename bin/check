@@ -9,3 +9,4 @@ bin/check_govet
 bin/check_golint
 bin/check_goimports
 bin/check_license
+bin/check_swagger
