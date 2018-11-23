@@ -15,27 +15,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package session
 
 import (
 	"errors"
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/client/stats/dto"
+	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/core/connection"
 	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session"
+	node_session "github.com/mysteriumnetwork/node/session"
 )
 
 var (
 	stubRetriever = &StubRetriever{}
-	stubLocation  = &fakeServiceDefinition{}
+	stubLocation  = &StubServiceDefinition{}
 
 	errMock         = errors.New("error")
-	sessionID       = session.ID("sessionID")
+	sessionID       = node_session.ID("sessionID")
 	consumerID      = identity.FromAddress("consumerID")
 	providerID      = identity.FromAddress("providerID")
 	serviceType     = "serviceType"
@@ -43,7 +44,7 @@ var (
 	startTime       = time.Now()
 	sessionStatus   = SessionStatusNew
 
-	mockStats   = dto.SessionStats{BytesReceived: 10, BytesSent: 15}
+	mockStats   = stats_dto.SessionStats{BytesReceived: 10, BytesSent: 15}
 	mockSession = Session{
 		SessionID:       sessionID,
 		ProviderID:      providerID,
@@ -52,9 +53,9 @@ var (
 		Started:         startTime,
 		Status:          sessionStatus,
 	}
-	mockPayload = StateEventPayload{
-		State: Connected,
-		SessionInfo: SessionInfo{
+	mockPayload = connection.StateEventPayload{
+		State: connection.Connected,
+		SessionInfo: connection.SessionInfo{
 			SessionID:  sessionID,
 			ConsumerID: consumerID,
 			Proposal: discovery_dto.ServiceProposal{
@@ -127,8 +128,8 @@ func TestSessionStorageConsumeEventDisconnectingOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
 	storage := NewSessionStorage(storer, stubRetriever)
-	storage.consumeStateEvent(StateEventPayload{
-		State: Disconnecting,
+	storage.consumeStateEvent(connection.StateEventPayload{
+		State: connection.Disconnecting,
 	})
 	assert.True(t, storer.UpdateCalled)
 }
@@ -140,7 +141,7 @@ func TestSessionStorageConsumeEventDisconnectingErrors(t *testing.T) {
 
 	storage := NewSessionStorage(storer, stubRetriever)
 	assert.NotPanics(t, func() {
-		storage.consumeStateEvent(StateEventPayload{State: Disconnecting})
+		storage.consumeStateEvent(connection.StateEventPayload{State: connection.Disconnecting})
 	})
 
 	assert.True(t, storer.UpdateCalled)
@@ -164,3 +165,40 @@ func TestSessionStorageConsumeEventConnectedError(t *testing.T) {
 	})
 	assert.True(t, storer.SaveCalled)
 }
+
+// StubSessionStorer allows us to get all sessions, save and update them
+type StubSessionStorer struct {
+	SaveError    error
+	SaveCalled   bool
+	UpdateError  error
+	UpdateCalled bool
+	GetAllCalled bool
+	GetAllError  error
+}
+
+func (sss *StubSessionStorer) Save(object interface{}) error {
+	sss.SaveCalled = true
+	return sss.SaveError
+}
+
+func (sss *StubSessionStorer) Update(object interface{}) error {
+	sss.UpdateCalled = true
+	return sss.UpdateError
+}
+
+func (sss *StubSessionStorer) GetAll(array interface{}) error {
+	sss.GetAllCalled = true
+	return sss.GetAllError
+}
+
+type StubRetriever struct {
+	Value stats_dto.SessionStats
+}
+
+func (sr *StubRetriever) Retrieve() stats_dto.SessionStats {
+	return sr.Value
+}
+
+type StubServiceDefinition struct{}
+
+func (fs *StubServiceDefinition) GetLocation() discovery_dto.Location { return discovery_dto.Location{} }

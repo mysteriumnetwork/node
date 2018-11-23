@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/client"
 	"github.com/mysteriumnetwork/node/core/connection"
 
 	log "github.com/cihub/seelog"
@@ -136,12 +137,12 @@ func (rss *RemoteStatsSender) send() error {
 }
 
 // Subscribe subscribes the sender on the bus for relevant events
-func (rss *RemoteStatsSender) Subscribe(bus connection.EventSubscriptionKeeper) {
+func (rss *RemoteStatsSender) Subscribe(bus client.EventSubscriptionKeeper) {
 	bus.Subscribe(string(connection.StateEvent), rss.consumeStateEvent)
 }
 
 // Unsubscribe unsubscribes the sender from bus
-func (rss *RemoteStatsSender) Unsubscribe(bus connection.EventSubscriptionKeeper) {
+func (rss *RemoteStatsSender) Unsubscribe(bus client.EventSubscriptionKeeper) {
 	bus.Unsubscribe(string(connection.StateEvent), rss.consumeStateEvent)
 }
 

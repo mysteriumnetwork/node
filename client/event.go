@@ -15,20 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package client
 
-// Topic represents the different topics a consumer can subscribe to
-type Topic string
-
-var (
-	// StateEvent represents the connection state change topic
-	StateEvent Topic = "State"
-	// StatsEvent represents the connection stats topic
-	StatsEvent Topic = "Stats"
-)
-
-// StateEventPayload is the struct we'll emit on a StateEvent topic event
-type StateEventPayload struct {
-	State       State
-	SessionInfo SessionInfo
+// EventSubscriptionKeeper lets us subscribe to events and unsubscribe from them
+type EventSubscriptionKeeper interface {
+	Subscribe(topic string, fn interface{}) error
+	Unsubscribe(topic string, handler interface{}) error
 }

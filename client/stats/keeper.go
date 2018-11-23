@@ -20,6 +20,7 @@ package stats
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/client"
 	"github.com/mysteriumnetwork/node/core/connection"
 
 	"github.com/mysteriumnetwork/node/client/stats/dto"
@@ -66,13 +67,13 @@ func (keeper *SessionStatsKeeper) markSessionEnd() {
 }
 
 // Subscribe subscribes the keeper on the bus for relevant events
-func (keeper *SessionStatsKeeper) Subscribe(bus connection.EventSubscriptionKeeper) {
+func (keeper *SessionStatsKeeper) Subscribe(bus client.EventSubscriptionKeeper) {
 	bus.Subscribe(string(connection.StatsEvent), keeper.consumeStatsEvent)
 	bus.Subscribe(string(connection.StateEvent), keeper.consumeStateEvent)
 }
 
 // Unsubscribe unsubscribes the sender from bus
-func (keeper *SessionStatsKeeper) Unsubscribe(bus connection.EventSubscriptionKeeper) {
+func (keeper *SessionStatsKeeper) Unsubscribe(bus client.EventSubscriptionKeeper) {
 	bus.Unsubscribe(string(connection.StatsEvent), keeper.consumeStatsEvent)
 	bus.Unsubscribe(string(connection.StateEvent), keeper.consumeStateEvent)
 }

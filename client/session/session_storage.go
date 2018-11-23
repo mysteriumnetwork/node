@@ -15,16 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package session
 
 import (
 	"fmt"
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/client"
 	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session"
+	node_session "github.com/mysteriumnetwork/node/session"
 )
 
 const sessionStorageLogPrefix = "[session-storage] "
@@ -61,7 +63,7 @@ func (repo *SessionStorage) Save(se Session) error {
 }
 
 // Update updates specified fields of existing session by id
-func (repo *SessionStorage) Update(sessionID session.ID, updated time.Time, dataStats stats_dto.SessionStats, status SessionStatus) error {
+func (repo *SessionStorage) Update(sessionID node_session.ID, updated time.Time, dataStats stats_dto.SessionStats, status SessionStatus) error {
 	// update fields by sessionID
 	se := Session{SessionID: sessionID, Updated: updated, DataStats: dataStats, Status: status}
 	return repo.storage.Update(&se)
@@ -78,25 +80,25 @@ func (repo *SessionStorage) GetAll() ([]Session, error) {
 }
 
 // Subscribe subscribes the storage on the bus for relevant events
-func (repo *SessionStorage) Subscribe(bus EventSubscriptionKeeper) {
-	bus.Subscribe(string(StateEvent), repo.consumeStateEvent)
+func (repo *SessionStorage) Subscribe(bus client.EventSubscriptionKeeper) {
+	bus.Subscribe(string(connection.StateEvent), repo.consumeStateEvent)
 }
 
 // Unsubscribe unsubscribes the storage from bus
-func (repo *SessionStorage) Unsubscribe(bus EventSubscriptionKeeper) {
-	bus.Unsubscribe(string(StateEvent), repo.consumeStateEvent)
+func (repo *SessionStorage) Unsubscribe(bus client.EventSubscriptionKeeper) {
+	bus.Unsubscribe(string(connection.StateEvent), repo.consumeStateEvent)
 }
 
-func (repo *SessionStorage) consumeStateEvent(stateEvent StateEventPayload) {
+func (repo *SessionStorage) consumeStateEvent(stateEvent connection.StateEventPayload) {
 	switch stateEvent.State {
-	case Disconnecting:
+	case connection.Disconnecting:
 		err := repo.Update(stateEvent.SessionInfo.SessionID, time.Now(), repo.statsRetriever.Retrieve(), SessionStatusCompleted)
 		if err != nil {
 			log.Error(sessionStorageLogPrefix, err)
 		} else {
 			log.Trace(sessionStorageLogPrefix, fmt.Sprintf("Session %v updated", stateEvent.SessionInfo.SessionID))
 		}
-	case Connected:
+	case connection.Connected:
 		providerCountry := stateEvent.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country
 		se := NewSession(
 			stateEvent.SessionInfo.SessionID,

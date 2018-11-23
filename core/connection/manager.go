@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"time"
 
 	"github.com/asaskevich/EventBus"
 
@@ -57,11 +56,6 @@ var (
 //  - service provider identity
 //  - service proposal
 type ConnectionCreator func(ConnectOptions, StateChannel, StatsChannel) (Connection, error)
-
-type sessionSaver interface {
-	Save(Session) error
-	Update(session.ID, time.Time, stats_dto.SessionStats, SessionStatus) error
-}
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {

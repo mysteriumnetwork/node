@@ -27,6 +27,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
+	"github.com/mysteriumnetwork/node/client"
+	client_session "github.com/mysteriumnetwork/node/client/session"
 	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -61,8 +63,8 @@ import (
 
 // EventSubscriber represents our event subscribers
 type EventSubscriber interface {
-	Subscribe(bus connection.EventSubscriptionKeeper)
-	Unsubscribe(bus connection.EventSubscriptionKeeper)
+	Subscribe(bus client.EventSubscriptionKeeper)
+	Unsubscribe(bus client.EventSubscriptionKeeper)
 }
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -88,7 +90,7 @@ type Dependencies struct {
 
 	StatsKeeper    *stats.SessionStatsKeeper
 	StatsSender    *stats.RemoteStatsSender
-	SessionStorage *connection.SessionStorage
+	SessionStorage *client_session.SessionStorage
 
 	EventBus         EventBus.Bus
 	EventSubscribers []EventSubscriber
@@ -219,7 +221,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.LocationOriginal.Get().Country,
 		time.Minute,
 	)
-	di.SessionStorage = connection.NewSessionStorage(di.Storage, di.StatsKeeper)
+	di.SessionStorage = client_session.NewSessionStorage(di.Storage, di.StatsKeeper)
 
 	di.EventBus = EventBus.New()
 

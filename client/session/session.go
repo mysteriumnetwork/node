@@ -15,14 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package session
 
 import (
 	"time"
 
 	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session"
+	node_session "github.com/mysteriumnetwork/node/session"
 )
 
 // SessionStatus represents list of possible session statuses
@@ -47,7 +47,7 @@ func (st *SessionStatus) String() string {
 }
 
 // NewSession creates session with given dependencies
-func NewSession(sessionID session.ID, providerID identity.Identity, serviceType string, providerCountry string) *Session {
+func NewSession(sessionID node_session.ID, providerID identity.Identity, serviceType string, providerCountry string) *Session {
 	return &Session{
 		SessionID:       sessionID,
 		ProviderID:      providerID,
@@ -60,7 +60,7 @@ func NewSession(sessionID session.ID, providerID identity.Identity, serviceType 
 
 // Session holds structure for saving session history
 type Session struct {
-	SessionID       session.ID `storm:"id"`
+	SessionID       node_session.ID `storm:"id"`
 	ProviderID      identity.Identity
 	ServiceType     string
 	ProviderCountry string
