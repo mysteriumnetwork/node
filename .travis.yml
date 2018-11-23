@@ -69,6 +69,11 @@ jobs:
     - script: bin/check_govet
       name: "govet check"
 
+    - script:
+      - go get github.com/go-swagger/go-swagger/cmd/swagger/
+      - bin/check_swagger
+      name: "swagger check"
+
     # Build artifacts
     - stage: build
       script:
