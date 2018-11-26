@@ -37,8 +37,8 @@ type Connection interface {
 // StateChannel is the channel we receive state change events on
 type StateChannel chan State
 
-// StatsChannel is the channel we receive stats change events on
-type StatsChannel chan stats_dto.SessionStats
+// StatisticsChannel is the channel we receive stats change events on
+type StatisticsChannel chan stats_dto.SessionStats
 
 // PromiseIssuer issues promises from consumer to provider.
 // Consumer signs those promises.

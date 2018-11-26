@@ -52,23 +52,23 @@ type statsUpdater interface {
 // StatUpdater takes in the state channel and reports stats to it
 // TODO: SEPARATE PR TO FIX THIS MESS
 type StatUpdater struct {
-	statsChannel connection.StatsChannel
+	statisticsChannel connection.StatisticsChannel
 }
 
 // NewStatUpdater returns a new instance of StatUpdater
-func NewStatUpdater(channel connection.StatsChannel) *StatUpdater {
+func NewStatUpdater(channel connection.StatisticsChannel) *StatUpdater {
 	return &StatUpdater{
-		statsChannel: channel,
+		statisticsChannel: channel,
 	}
 }
 
 // Save sends the stats to the stat channel
 func (su *StatUpdater) Save(stats dto.SessionStats) {
-	su.statsChannel <- stats
+	su.statisticsChannel <- stats
 }
 
-func channelToCallbacks(stateChannel connection.StateChannel, statsChannel connection.StatsChannel) openvpn3.MobileSessionCallbacks {
-	updater := NewStatUpdater(statsChannel)
+func channelToCallbacks(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) openvpn3.MobileSessionCallbacks {
+	updater := NewStatUpdater(statisticsChannel)
 	return channelToCallbacksAdapter{
 		stateChannel: stateChannel,
 		statsUpdater: updater,
@@ -110,7 +110,7 @@ type Openvpn3TunnelSetup openvpn3.TunnelSetup
 
 // OverrideOpenvpnConnection replaces default openvpn connection factory with mobile related one
 func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup) {
-	mobNode.di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statsChannel connection.StatsChannel) (connection.Connection, error) {
+	mobNode.di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 
 		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
 		if err != nil {
@@ -139,7 +139,7 @@ func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelS
 			Password: password,
 		}
 
-		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statsChannel), tunnelSetup)
+		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), tunnelSetup)
 
 		return &sessionWrapper{
 			session: session,

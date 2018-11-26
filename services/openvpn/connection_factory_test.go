@@ -56,9 +56,9 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
 	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory)
 	channel := make(chan connection.State)
-	statsChannel := make(chan dto.SessionStats)
+	statisticsChannel := make(chan dto.SessionStats)
 	connectionOptions := connection.ConnectOptions{}
-	_, err := factory.CreateConnection(connectionOptions, channel, statsChannel)
+	_, err := factory.CreateConnection(connectionOptions, channel, statisticsChannel)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "unexpected end of JSON input")
 }
@@ -71,8 +71,8 @@ func TestConnectionFactory_CreatesConnection(t *testing.T) {
 		ProviderID:    identity.Identity{Address: "provider"},
 		SessionConfig: fakeSessionConfig,
 	}
-	statsChannel := make(chan dto.SessionStats)
-	conn, err := factory.CreateConnection(connectionOptions, channel, statsChannel)
+	statisticsChannel := make(chan dto.SessionStats)
+	conn, err := factory.CreateConnection(connectionOptions, channel, statisticsChannel)
 	assert.Nil(t, err)
 	assert.NotNil(t, conn)
 }

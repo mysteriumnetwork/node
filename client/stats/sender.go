@@ -22,10 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/client"
-	"github.com/mysteriumnetwork/node/core/connection"
-
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/server/dto"
@@ -136,17 +134,8 @@ func (rss *RemoteStatsSender) send() error {
 	)
 }
 
-// Subscribe subscribes the sender on the bus for relevant events
-func (rss *RemoteStatsSender) Subscribe(bus client.EventSubscriptionKeeper) {
-	bus.Subscribe(string(connection.StateEvent), rss.consumeStateEvent)
-}
-
-// Unsubscribe unsubscribes the sender from bus
-func (rss *RemoteStatsSender) Unsubscribe(bus client.EventSubscriptionKeeper) {
-	bus.Unsubscribe(string(connection.StateEvent), rss.consumeStateEvent)
-}
-
-func (rss *RemoteStatsSender) consumeStateEvent(stateEvent connection.StateEventPayload) {
+// ConsumeStateEvent handles the connection state changes
+func (rss *RemoteStatsSender) ConsumeStateEvent(stateEvent connection.StateEvent) {
 	switch stateEvent.State {
 	case connection.Disconnecting:
 		rss.stop()

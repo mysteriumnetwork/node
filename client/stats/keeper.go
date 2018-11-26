@@ -20,10 +20,8 @@ package stats
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/client"
-	"github.com/mysteriumnetwork/node/core/connection"
-
 	"github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 // TimeGetter function returns current time
@@ -66,23 +64,13 @@ func (keeper *SessionStatsKeeper) markSessionEnd() {
 	keeper.sessionStart = nil
 }
 
-// Subscribe subscribes the keeper on the bus for relevant events
-func (keeper *SessionStatsKeeper) Subscribe(bus client.EventSubscriptionKeeper) {
-	bus.Subscribe(string(connection.StatsEvent), keeper.consumeStatsEvent)
-	bus.Subscribe(string(connection.StateEvent), keeper.consumeStateEvent)
-}
-
-// Unsubscribe unsubscribes the sender from bus
-func (keeper *SessionStatsKeeper) Unsubscribe(bus client.EventSubscriptionKeeper) {
-	bus.Unsubscribe(string(connection.StatsEvent), keeper.consumeStatsEvent)
-	bus.Unsubscribe(string(connection.StateEvent), keeper.consumeStateEvent)
-}
-
-func (keeper *SessionStatsKeeper) consumeStatsEvent(stats dto.SessionStats) {
+// ConsumeStatisticsEvent handles the connection statistics changes
+func (keeper *SessionStatsKeeper) ConsumeStatisticsEvent(stats dto.SessionStats) {
 	keeper.sessionStats = stats
 }
 
-func (keeper *SessionStatsKeeper) consumeStateEvent(stateEvent connection.StateEventPayload) {
+// ConsumeStateEvent handles the connection state changes
+func (keeper *SessionStatsKeeper) ConsumeStateEvent(stateEvent connection.StateEvent) {
 	switch stateEvent.State {
 	case connection.Disconnecting:
 		keeper.markSessionEnd()

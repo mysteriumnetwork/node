@@ -62,7 +62,7 @@ func (tc *testContext) SetupTest() {
 	tc.Lock()
 	defer tc.Unlock()
 
-	tc.stubPublisher = &StubPublisher{}
+	tc.stubPublisher = NewStubPublisher()
 	tc.fakeDialog = &fakeDialog{sessionID: establishedSessionID}
 	dialogCreator := func(consumer, provider identity.Identity, contact dto.Contact) (communication.Dialog, error) {
 		tc.RLock()
@@ -271,13 +271,13 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	assert.Len(tc.T(), history, 2)
 
 	for _, v := range history {
-		if v.calledWithTopic == string(StatsEvent) {
+		if v.calledWithTopic == string(StatsticsEventTopic) {
 			event := v.calledWithArgs[0].(stats_dto.SessionStats)
 			assert.True(tc.T(), event.BytesReceived == tc.mockStats.BytesReceived)
 			assert.True(tc.T(), event.BytesSent == tc.mockStats.BytesSent)
 		}
-		if v.calledWithTopic == string(StateEvent) {
-			event := v.calledWithArgs[0].(StateEventPayload)
+		if v.calledWithTopic == string(StateEventTopic) {
+			event := v.calledWithArgs[0].(StateEvent)
 			assert.Equal(tc.T(), Connected, event.State)
 			assert.Equal(tc.T(), myID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)

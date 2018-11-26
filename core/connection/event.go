@@ -21,14 +21,14 @@ package connection
 type Topic string
 
 var (
-	// StateEvent represents the connection state change topic
-	StateEvent Topic = "State"
-	// StatsEvent represents the connection stats topic
-	StatsEvent Topic = "Stats"
+	// StateEventTopic represents the connection state change topic
+	StateEventTopic Topic = "State"
+	// StatsticsEventTopic represents the connection stats topic
+	StatsticsEventTopic Topic = "Stats"
 )
 
-// StateEventPayload is the struct we'll emit on a StateEvent topic event
-type StateEventPayload struct {
+// StateEvent is the struct we'll emit on a StateEvent topic event
+type StateEvent struct {
 	State       State
 	SessionInfo SessionInfo
 }

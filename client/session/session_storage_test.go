@@ -24,11 +24,10 @@ import (
 
 	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/core/connection"
-	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/mysteriumnetwork/node/identity"
+	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
 	node_session "github.com/mysteriumnetwork/node/session"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -53,7 +52,7 @@ var (
 		Started:         startTime,
 		Status:          sessionStatus,
 	}
-	mockPayload = connection.StateEventPayload{
+	mockPayload = connection.StateEvent{
 		State: connection.Connected,
 		SessionInfo: connection.SessionInfo{
 			SessionID:  sessionID,
@@ -82,7 +81,6 @@ func TestSessionStorageSaveReturnsError(t *testing.T) {
 
 	storage := NewSessionStorage(storer, stubRetriever)
 	err := storage.Save(mockSession)
-	assert.NotNil(t, err)
 	assert.Equal(t, errMock, err)
 }
 
@@ -100,7 +98,6 @@ func TestSessionStorageUpdateReturnsError(t *testing.T) {
 	}
 	storage := NewSessionStorage(storer, stubRetriever)
 	err := storage.Update(sessionID, startTime, mockStats, sessionStatus)
-	assert.NotNil(t, err)
 	assert.Equal(t, errMock, err)
 }
 
@@ -128,7 +125,7 @@ func TestSessionStorageConsumeEventDisconnectingOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
 	storage := NewSessionStorage(storer, stubRetriever)
-	storage.consumeStateEvent(connection.StateEventPayload{
+	storage.ConsumeStateEvent(connection.StateEvent{
 		State: connection.Disconnecting,
 	})
 	assert.True(t, storer.UpdateCalled)
@@ -141,7 +138,7 @@ func TestSessionStorageConsumeEventDisconnectingErrors(t *testing.T) {
 
 	storage := NewSessionStorage(storer, stubRetriever)
 	assert.NotPanics(t, func() {
-		storage.consumeStateEvent(connection.StateEventPayload{State: connection.Disconnecting})
+		storage.ConsumeStateEvent(connection.StateEvent{State: connection.Disconnecting})
 	})
 
 	assert.True(t, storer.UpdateCalled)
@@ -151,7 +148,7 @@ func TestSessionStorageConsumeEventConnectedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
 	storage := NewSessionStorage(storer, stubRetriever)
-	storage.consumeStateEvent(mockPayload)
+	storage.ConsumeStateEvent(mockPayload)
 	assert.True(t, storer.SaveCalled)
 }
 
@@ -161,7 +158,7 @@ func TestSessionStorageConsumeEventConnectedError(t *testing.T) {
 	}
 	storage := NewSessionStorage(storer, stubRetriever)
 	assert.NotPanics(t, func() {
-		storage.consumeStateEvent(mockPayload)
+		storage.ConsumeStateEvent(mockPayload)
 	})
 	assert.True(t, storer.SaveCalled)
 }

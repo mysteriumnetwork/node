@@ -43,7 +43,7 @@ type connectionFactoryFake struct {
 	mockConnection *connectionFake
 }
 
-func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptions, stateChannel StateChannel, statsChannel StatsChannel) (Connection, error) {
+func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptions, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
 	//each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
 	if cff.mockError != nil {
 		return nil, cff.mockError
@@ -52,7 +52,7 @@ func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptio
 	stateCallback := func(state fakeState) {
 		if state == connectedState {
 			stateChannel <- Connected
-			statsChannel <- cff.mockConnection.onStartReportStats
+			statisticsChannel <- cff.mockConnection.onStartReportStats
 		}
 		if state == exitingState {
 			stateChannel <- Disconnecting

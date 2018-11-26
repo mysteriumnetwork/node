@@ -23,10 +23,10 @@ import (
 
 // NewConnectionCreator creates wireguard connections
 func NewConnectionCreator() connection.ConnectionCreator {
-	return func(options connection.ConnectOptions, stateChannel connection.StateChannel, statsChannel connection.StatsChannel) (connection.Connection, error) {
+	return func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 		return &Connection{
-			stateChannel: stateChannel,
-			statsChannel: statsChannel,
+			stateChannel:      stateChannel,
+			statisticsChannel: statisticsChannel,
 		}, nil
 	}
 }

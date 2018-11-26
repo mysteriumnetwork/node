@@ -31,7 +31,7 @@ func TestStatsSavingWorks(t *testing.T) {
 	statsKeeper := NewSessionStatsKeeper(time.Now)
 	stats := dto.SessionStats{BytesSent: 1, BytesReceived: 2}
 
-	statsKeeper.consumeStatsEvent(stats)
+	statsKeeper.ConsumeStatisticsEvent(stats)
 	assert.Equal(t, stats, statsKeeper.Retrieve())
 }
 
@@ -67,23 +67,9 @@ func TestStopSessionResetsSessionDuration(t *testing.T) {
 	assert.Equal(t, time.Duration(0), statsKeeper.GetSessionDuration())
 }
 
-func TestStatsKeeperSubscribe(t *testing.T) {
-	bus := &StubSubscriber{}
-	statsKeeper := NewSessionStatsKeeper(time.Now)
-	statsKeeper.Subscribe(bus)
-	assert.True(t, bus.SubscribeCalled)
-}
-
-func TestStatsKeeperUnsubscribe(t *testing.T) {
-	bus := &StubSubscriber{}
-	statsKeeper := NewSessionStatsKeeper(time.Now)
-	statsKeeper.Unsubscribe(bus)
-	assert.True(t, bus.UnsubscribeCalled)
-}
-
 func TestStatsKeeperConsumeStateEventConnected(t *testing.T) {
 	statsKeeper := NewSessionStatsKeeper(time.Now)
-	statsKeeper.consumeStateEvent(connection.StateEventPayload{
+	statsKeeper.ConsumeStateEvent(connection.StateEvent{
 		State: connection.Connected,
 	})
 	assert.NotNil(t, statsKeeper.sessionStart)
@@ -93,7 +79,7 @@ func TestStatsKeeperConsumeStateEventDisconnected(t *testing.T) {
 	now := time.Now()
 	statsKeeper := NewSessionStatsKeeper(time.Now)
 	statsKeeper.sessionStart = &now
-	statsKeeper.consumeStateEvent(connection.StateEventPayload{
+	statsKeeper.ConsumeStateEvent(connection.StateEvent{
 		State: connection.Disconnecting,
 	})
 	assert.Nil(t, statsKeeper.sessionStart)

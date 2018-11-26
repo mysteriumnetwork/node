@@ -25,18 +25,18 @@ import (
 	node_session "github.com/mysteriumnetwork/node/session"
 )
 
-// SessionStatus represents list of possible session statuses
-type SessionStatus int
+// Status represents list of possible session statuses
+type Status int
 
 const (
 	// SessionStatusNew means that newly created session object is written to storage
-	SessionStatusNew = SessionStatus(0)
+	SessionStatusNew = Status(0)
 	// SessionStatusCompleted means that session object is updated on connection disconnect event
-	SessionStatusCompleted = SessionStatus(1)
+	SessionStatusCompleted = Status(1)
 )
 
 // String converts status constant to string
-func (st *SessionStatus) String() string {
+func (st *Status) String() string {
 	switch *st {
 	case SessionStatusNew:
 		return "New"
@@ -65,7 +65,7 @@ type Session struct {
 	ServiceType     string
 	ProviderCountry string
 	Started         time.Time
-	Status          SessionStatus
+	Status          Status
 	Updated         time.Time
 	DataStats       stats_dto.SessionStats // is updated on disconnect event
 }

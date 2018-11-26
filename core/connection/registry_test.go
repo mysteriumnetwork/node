@@ -30,7 +30,7 @@ var _ ConnectionCreator = (&Registry{}).CreateConnection
 
 var (
 	connectionMock    = &connectionFake{}
-	connectionFactory = func(connectionParams ConnectOptions, stateChannel StateChannel, statsChannel StatsChannel) (Connection, error) {
+	connectionFactory = func(connectionParams ConnectOptions, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
 		return connectionMock, nil
 	}
 )

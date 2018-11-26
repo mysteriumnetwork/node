@@ -61,8 +61,8 @@ func (op *ProcessBasedConnectionFactory) newAuthMiddleware(sessionID session.ID,
 	return auth.NewMiddleware(credentialsProvider)
 }
 
-func (op *ProcessBasedConnectionFactory) newBytecountMiddleware(statsChannel connection.StatsChannel) management.Middleware {
-	statsSaver := bytescount.NewSessionStatsSaver(statsChannel)
+func (op *ProcessBasedConnectionFactory) newBytecountMiddleware(statisticsChannel connection.StatisticsChannel) management.Middleware {
+	statsSaver := bytescount.NewSessionStatsSaver(statisticsChannel)
 	return openvpn_bytescount.NewMiddleware(statsSaver, 1*time.Second)
 }
 
@@ -72,7 +72,7 @@ func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, 
 }
 
 // CreateConnection implements the connection.ConnectionCreator interface
-func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel, statsChannel connection.StatsChannel) (connection.Connection, error) {
+func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 	vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory)
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.Con
 
 	stateMiddleware := op.newStateMiddleware(options.SessionID, signer, options, stateChannel)
 	authMiddleware := op.newAuthMiddleware(options.SessionID, signer)
-	byteCountMiddleware := op.newBytecountMiddleware(statsChannel)
+	byteCountMiddleware := op.newBytecountMiddleware(statisticsChannel)
 
 	return NewClient(
 		op.openvpnBinary,

@@ -34,7 +34,7 @@ type WireguardTunnelSetup tunnSetupPlaceholder
 
 // OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
 func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
-	mobNode.di.ConnectionRegistry.Register("wireguard", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statsChannel connection.StatsChannel) (connection.Connection, error) {
+	mobNode.di.ConnectionRegistry.Register("wireguard", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 		return nil, errors.New("not implemented yet")
 	})
 }

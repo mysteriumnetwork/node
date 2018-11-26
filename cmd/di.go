@@ -27,9 +27,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
-	"github.com/mysteriumnetwork/node/client"
 	client_session "github.com/mysteriumnetwork/node/client/session"
 	"github.com/mysteriumnetwork/node/client/stats"
+	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -61,10 +61,14 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 )
 
-// EventSubscriber represents our event subscribers
-type EventSubscriber interface {
-	Subscribe(bus client.EventSubscriptionKeeper)
-	Unsubscribe(bus client.EventSubscriptionKeeper)
+// StateEventConsumer represents our connection state event consumers
+type StateEventConsumer interface {
+	ConsumeStateEvent(stateEvent connection.StateEvent)
+}
+
+// StatisticsEventConsumer represents our connection statistics event consumers
+type StatisticsEventConsumer interface {
+	ConsumeStatisticsEvent(stateEvent stats_dto.SessionStats)
 }
 
 // Dependencies is DI container for top level components which is reusedin several places
@@ -90,10 +94,11 @@ type Dependencies struct {
 
 	StatsKeeper    *stats.SessionStatsKeeper
 	StatsSender    *stats.RemoteStatsSender
-	SessionStorage *client_session.SessionStorage
+	SessionStorage *client_session.Storage
 
-	EventBus         EventBus.Bus
-	EventSubscribers []EventSubscriber
+	EventBus                 EventBus.Bus
+	StatisticsEventConsumers []StatisticsEventConsumer
+	StateEventConsumers      []StateEventConsumer
 
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
@@ -135,8 +140,13 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 
-	di.EventSubscribers = []EventSubscriber{di.StatsKeeper, di.StatsSender, di.SessionStorage}
-	di.subscribeBusConsumers()
+	di.StateEventConsumers = []StateEventConsumer{di.StatsKeeper, di.StatsSender, di.SessionStorage}
+	di.StatisticsEventConsumers = []StatisticsEventConsumer{di.StatsKeeper}
+
+	err := di.subscribeEventConsumers()
+	if err != nil {
+		return err
+	}
 
 	if err := di.Node.Start(); err != nil {
 		return err
@@ -157,7 +167,10 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}()
 
-	di.unsubscribeBusConsumers()
+	unsubscribeErrors := di.unsubscribeEventConsumers()
+	if len(unsubscribeErrors) > 0 {
+		errs = append(errs, unsubscribeErrors...)
+	}
 
 	if di.ServiceRunner != nil {
 		runnerErrs := di.ServiceRunner.KillAll()
@@ -188,16 +201,37 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	return nil
 }
 
-func (di *Dependencies) subscribeBusConsumers() {
-	for _, v := range di.EventSubscribers {
-		v.Subscribe(di.EventBus)
+func (di *Dependencies) subscribeEventConsumers() error {
+	for _, v := range di.StateEventConsumers {
+		err := di.EventBus.Subscribe(string(connection.StateEventTopic), v.ConsumeStateEvent)
+		if err != nil {
+			return err
+		}
 	}
+	for _, v := range di.StatisticsEventConsumers {
+		err := di.EventBus.Subscribe(string(connection.StatsticsEventTopic), v.ConsumeStatisticsEvent)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (di *Dependencies) unsubscribeBusConsumers() {
-	for _, v := range di.EventSubscribers {
-		v.Unsubscribe(di.EventBus)
+func (di *Dependencies) unsubscribeEventConsumers() []error {
+	errors := make([]error, 0)
+	for _, v := range di.StateEventConsumers {
+		err := di.EventBus.Unsubscribe(string(connection.StateEventTopic), v.ConsumeStateEvent)
+		if err != nil {
+			errors = append(errors, err)
+		}
 	}
+	for _, v := range di.StatisticsEventConsumers {
+		err := di.EventBus.Unsubscribe(string(connection.StatsticsEventTopic), v.ConsumeStatisticsEvent)
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
+	return errors
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {

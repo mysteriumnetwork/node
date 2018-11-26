@@ -23,10 +23,8 @@ import (
 	"sync"
 
 	"github.com/asaskevich/EventBus"
-
 	log "github.com/cihub/seelog"
 	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -55,7 +53,7 @@ var (
 //  - consumer identity
 //  - service provider identity
 //  - service proposal
-type ConnectionCreator func(ConnectOptions, StateChannel, StatsChannel) (Connection, error)
+type ConnectionCreator func(ConnectOptions, StateChannel, StatisticsChannel) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
@@ -64,12 +62,17 @@ type SessionInfo struct {
 	Proposal   dto.ServiceProposal
 }
 
+// Publisher is responsible for publishing given events
+type Publisher interface {
+	Publish(topic string, args ...interface{})
+}
+
 type connectionManager struct {
 	//these are passed on creation
 	newDialog        DialogCreator
 	newPromiseIssuer PromiseIssuerCreator
 	newConnection    ConnectionCreator
-	eventPublisher   EventBus.BusPublisher
+	eventPublisher   Publisher
 
 	//these are populated by Connect at runtime
 	ctx             context.Context
@@ -167,7 +170,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	cancel = append(cancel, func() { promiseIssuer.Stop() })
 
 	stateChannel := make(chan State, 10)
-	statsChannel := make(chan stats_dto.SessionStats, 10)
+	statisticsChannel := make(chan stats_dto.SessionStats, 10)
 
 	connectOptions := ConnectOptions{
 		SessionID:     sessionID,
@@ -177,7 +180,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		Proposal:      proposal,
 	}
 
-	connection, err := manager.newConnection(connectOptions, stateChannel, statsChannel)
+	connection, err := manager.newConnection(connectOptions, stateChannel, statisticsChannel)
 	if err != nil {
 		return err
 	}
@@ -198,7 +201,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		firewall.NewKillSwitch().Enable()
 	}
 
-	go manager.consumeStats(statsChannel)
+	go manager.consumeStats(statisticsChannel)
 	go manager.consumeConnectionStates(stateChannel)
 	go connectionWaiter(connection, dialog, promiseIssuer)
 	return nil
@@ -271,9 +274,9 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 	log.Debug(managerLogPrefix, "State updater stopCalled")
 }
 
-func (manager *connectionManager) consumeStats(statsChannel <-chan stats_dto.SessionStats) {
-	for stats := range statsChannel {
-		manager.eventPublisher.Publish(string(StatsEvent), stats)
+func (manager *connectionManager) consumeStats(statisticsChannel <-chan stats_dto.SessionStats) {
+	for stats := range statisticsChannel {
+		manager.eventPublisher.Publish(string(StatsticsEventTopic), stats)
 	}
 }
 
@@ -281,7 +284,7 @@ func (manager *connectionManager) onStateChanged(state State) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	manager.eventPublisher.Publish(string(StateEvent), StateEventPayload{
+	manager.eventPublisher.Publish(string(StateEventTopic), StateEvent{
 		State:       state,
 		SessionInfo: manager.sessionInfo,
 	})
