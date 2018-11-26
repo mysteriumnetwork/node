@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/location"
+
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
@@ -48,6 +50,12 @@ func mockSignerFactory(_ identity.Identity) identity.Signer {
 	return &identity.SignerFake{}
 }
 
+func mockLocationDetector() location.Location {
+	return location.Location{
+		Country: "KG",
+	}
+}
+
 func TestRemoteStatsSenderStartsAndStops(t *testing.T) {
 	var counter int64
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +65,7 @@ func TestRemoteStatsSenderStartsAndStops(t *testing.T) {
 
 	statsKeeper := NewSessionStatsKeeper(time.Now)
 	mysteriumClient := server.NewClient(ts.URL)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Minute)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Minute)
 
 	sender.ConsumeStateEvent(mockStateEvent)
 
@@ -79,7 +87,7 @@ func TestRemoteStatsSenderInterval(t *testing.T) {
 
 	mysteriumClient := server.NewClient(ts.URL)
 	statsKeeper := NewSessionStatsKeeper(time.Now)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Nanosecond)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
 
 	sender.ConsumeStateEvent(mockStateEvent)
 
@@ -98,7 +106,7 @@ func TestRemoteStatsStartsWithoutSigner(t *testing.T) {
 
 	mysteriumClient := server.NewClient(ts.URL)
 	statsKeeper := NewSessionStatsKeeper(time.Now)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Nanosecond)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
 
 	sender.start()
 	time.Sleep(time.Nanosecond * 2)
@@ -115,7 +123,7 @@ func TestRemoteStatsSenderConsumeStateEvent(t *testing.T) {
 
 	mysteriumClient := server.NewClient(ts.URL)
 	statsKeeper := NewSessionStatsKeeper(time.Now)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, "KG", time.Nanosecond)
+	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
 	sender.ConsumeStateEvent(mockStateEvent)
 	assert.True(t, sender.started)
 	copy := mockStateEvent

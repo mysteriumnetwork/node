@@ -24,6 +24,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/server/dto"
@@ -35,13 +36,16 @@ const statsSenderLogPrefix = "[session-stats-sender] "
 // ErrSessionNotStarted represents the error that occurs when the session has not been started yet
 var ErrSessionNotStarted = errors.New("session not started")
 
+// LocationDetector detects the country for session stats
+type LocationDetector func() location.Location
+
 // RemoteStatsSender sends session stats to remote API server with a fixed sendInterval.
 // Extra one send will be done on session disconnect.
 type RemoteStatsSender struct {
-	sessionID       session.ID
-	providerID      identity.Identity
-	consumerCountry string
-	serviceType     string
+	sessionID        session.ID
+	providerID       identity.Identity
+	locationDetector LocationDetector
+	serviceType      string
 
 	signer          identity.Signer
 	signerFactory   identity.SignerFactory
@@ -56,12 +60,12 @@ type RemoteStatsSender struct {
 }
 
 // NewRemoteStatsSender function creates new session stats sender by given options
-func NewRemoteStatsSender(statsKeeper *SessionStatsKeeper, mysteriumClient server.Client, signerFactory identity.SignerFactory, consumerCountry string, interval time.Duration) *RemoteStatsSender {
+func NewRemoteStatsSender(statsKeeper *SessionStatsKeeper, mysteriumClient server.Client, signerFactory identity.SignerFactory, locationDetector LocationDetector, interval time.Duration) *RemoteStatsSender {
 	return &RemoteStatsSender{
-		consumerCountry: consumerCountry,
-		signerFactory:   signerFactory,
-		statsKeeper:     statsKeeper,
-		mysteriumClient: mysteriumClient,
+		locationDetector: locationDetector,
+		signerFactory:    signerFactory,
+		statsKeeper:      statsKeeper,
+		mysteriumClient:  mysteriumClient,
 
 		sendInterval: interval,
 		done:         make(chan struct{}),
@@ -128,7 +132,7 @@ func (rss *RemoteStatsSender) send() error {
 			BytesSent:       sessionStats.BytesSent,
 			BytesReceived:   sessionStats.BytesReceived,
 			ProviderID:      rss.providerID.Address,
-			ConsumerCountry: rss.consumerCountry,
+			ConsumerCountry: rss.locationDetector().Country,
 		},
 		rss.signer,
 	)

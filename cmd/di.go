@@ -252,7 +252,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.StatsKeeper,
 		di.MysteriumClient,
 		di.SignerFactory,
-		di.LocationOriginal.Get().Country,
+		di.LocationOriginal.Get,
 		time.Minute,
 	)
 	di.SessionStorage = client_session.NewSessionStorage(di.Storage, di.StatsKeeper)
