@@ -18,13 +18,11 @@
 package connection
 
 // Topic represents the different topics a consumer can subscribe to
-type Topic string
-
-var (
+const (
 	// StateEventTopic represents the connection state change topic
-	StateEventTopic Topic = "State"
-	// StatsticsEventTopic represents the connection stats topic
-	StatsticsEventTopic Topic = "Stats"
+	StateEventTopic = "State"
+	// StatisticsEventTopic represents the connection stats topic
+	StatisticsEventTopic = "Statistics"
 )
 
 // StateEvent is the struct we'll emit on a StateEvent topic event

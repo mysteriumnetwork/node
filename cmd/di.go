@@ -27,12 +27,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
-	client_session "github.com/mysteriumnetwork/node/client/session"
-	"github.com/mysteriumnetwork/node/client/stats"
-	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
+	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -61,16 +60,6 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 )
 
-// StateEventConsumer represents our connection state event consumers
-type StateEventConsumer interface {
-	ConsumeStateEvent(stateEvent connection.StateEvent)
-}
-
-// StatisticsEventConsumer represents our connection statistics event consumers
-type StatisticsEventConsumer interface {
-	ConsumeStatisticsEvent(stateEvent stats_dto.SessionStats)
-}
-
 // Dependencies is DI container for top level components which is reusedin several places
 type Dependencies struct {
 	Node *node.Node
@@ -92,13 +81,11 @@ type Dependencies struct {
 	LocationDetector location.Detector
 	LocationOriginal location.Cache
 
-	StatsKeeper    *stats.SessionStatsKeeper
-	StatsSender    *stats.RemoteStatsSender
-	SessionStorage *client_session.Storage
+	StatisticsTracker  *statistics.SessionStatisticsTracker
+	StatisticsReporter *statistics.SessionStatisticsReporter
+	SessionStorage     *consumer_session.Storage
 
-	EventBus                 EventBus.Bus
-	StatisticsEventConsumers []StatisticsEventConsumer
-	StateEventConsumers      []StateEventConsumer
+	EventBus EventBus.Bus
 
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
@@ -140,9 +127,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 
-	di.StateEventConsumers = []StateEventConsumer{di.StatsKeeper, di.StatsSender, di.SessionStorage}
-	di.StatisticsEventConsumers = []StatisticsEventConsumer{di.StatsKeeper}
-
 	err := di.subscribeEventConsumers()
 	if err != nil {
 		return err
@@ -166,11 +150,6 @@ func (di *Dependencies) Shutdown() (err error) {
 			}
 		}
 	}()
-
-	unsubscribeErrors := di.unsubscribeEventConsumers()
-	if len(unsubscribeErrors) > 0 {
-		errs = append(errs, unsubscribeErrors...)
-	}
 
 	if di.ServiceRunner != nil {
 		runnerErrs := di.ServiceRunner.KillAll()
@@ -202,36 +181,27 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 }
 
 func (di *Dependencies) subscribeEventConsumers() error {
-	for _, v := range di.StateEventConsumers {
-		err := di.EventBus.Subscribe(string(connection.StateEventTopic), v.ConsumeStateEvent)
-		if err != nil {
-			return err
-		}
+	// state events
+	err := di.EventBus.Subscribe(connection.StateEventTopic, di.StatisticsTracker.ConsumeStateEvent)
+	if err != nil {
+		return err
 	}
-	for _, v := range di.StatisticsEventConsumers {
-		err := di.EventBus.Subscribe(string(connection.StatsticsEventTopic), v.ConsumeStatisticsEvent)
-		if err != nil {
-			return err
-		}
+	err = di.EventBus.Subscribe(connection.StateEventTopic, di.StatisticsReporter.ConsumeStateEvent)
+	if err != nil {
+		return err
 	}
-	return nil
-}
+	err = di.EventBus.Subscribe(connection.StateEventTopic, di.SessionStorage.ConsumeStateEvent)
+	if err != nil {
+		return err
+	}
 
-func (di *Dependencies) unsubscribeEventConsumers() []error {
-	errors := make([]error, 0)
-	for _, v := range di.StateEventConsumers {
-		err := di.EventBus.Unsubscribe(string(connection.StateEventTopic), v.ConsumeStateEvent)
-		if err != nil {
-			errors = append(errors, err)
-		}
+	// statistics events
+	err = di.EventBus.Subscribe(connection.StatisticsEventTopic, di.StatisticsTracker.ConsumeStatisticsEvent)
+	if err != nil {
+		return err
 	}
-	for _, v := range di.StatisticsEventConsumers {
-		err := di.EventBus.Unsubscribe(string(connection.StatsticsEventTopic), v.ConsumeStatisticsEvent)
-		if err != nil {
-			errors = append(errors, err)
-		}
-	}
-	return errors
+
+	return nil
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
@@ -247,15 +217,15 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
 	}
 
-	di.StatsKeeper = stats.NewSessionStatsKeeper(time.Now)
-	di.StatsSender = stats.NewRemoteStatsSender(
-		di.StatsKeeper,
+	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
+	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
+		di.StatisticsTracker,
 		di.MysteriumClient,
 		di.SignerFactory,
 		di.LocationOriginal.Get,
 		time.Minute,
 	)
-	di.SessionStorage = client_session.NewSessionStorage(di.Storage, di.StatsKeeper)
+	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
 
 	di.EventBus = EventBus.New()
 
@@ -270,7 +240,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumClient, di.SignerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatsKeeper, di.MysteriumClient)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumClient)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)

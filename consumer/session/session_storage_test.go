@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -43,8 +43,8 @@ var (
 	startTime       = time.Now()
 	sessionStatus   = SessionStatusNew
 
-	mockStats   = stats_dto.SessionStats{BytesReceived: 10, BytesSent: 15}
-	mockSession = Session{
+	mockStatistics = consumer.SessionStatistics{BytesReceived: 10, BytesSent: 15}
+	mockSession    = Session{
 		SessionID:       sessionID,
 		ProviderID:      providerID,
 		ServiceType:     serviceType,
@@ -87,7 +87,7 @@ func TestSessionStorageSaveReturnsError(t *testing.T) {
 func TestSessionStorageUpdate(t *testing.T) {
 	storer := &StubSessionStorer{}
 	storage := NewSessionStorage(storer, stubRetriever)
-	err := storage.Update(sessionID, startTime, mockStats, sessionStatus)
+	err := storage.Update(sessionID, startTime, mockStatistics, sessionStatus)
 	assert.Nil(t, err)
 	assert.True(t, storer.UpdateCalled)
 }
@@ -97,7 +97,7 @@ func TestSessionStorageUpdateReturnsError(t *testing.T) {
 		UpdateError: errMock,
 	}
 	storage := NewSessionStorage(storer, stubRetriever)
-	err := storage.Update(sessionID, startTime, mockStats, sessionStatus)
+	err := storage.Update(sessionID, startTime, mockStatistics, sessionStatus)
 	assert.Equal(t, errMock, err)
 }
 
@@ -189,10 +189,10 @@ func (sss *StubSessionStorer) GetAll(array interface{}) error {
 }
 
 type StubRetriever struct {
-	Value stats_dto.SessionStats
+	Value consumer.SessionStatistics
 }
 
-func (sr *StubRetriever) Retrieve() stats_dto.SessionStats {
+func (sr *StubRetriever) Retrieve() consumer.SessionStatistics {
 	return sr.Value
 }
 

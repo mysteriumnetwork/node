@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/client/session"
+	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 

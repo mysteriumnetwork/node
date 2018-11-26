@@ -22,7 +22,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
-	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
 	node_session "github.com/mysteriumnetwork/node/session"
@@ -32,7 +32,7 @@ const sessionStorageLogPrefix = "[session-storage] "
 
 // StatsRetriever can fetch current session stats
 type StatsRetriever interface {
-	Retrieve() stats_dto.SessionStats
+	Retrieve() consumer.SessionStatistics
 }
 
 // Storer allows us to get all sessions, save and update them
@@ -62,7 +62,7 @@ func (repo *Storage) Save(se Session) error {
 }
 
 // Update updates specified fields of existing session by id
-func (repo *Storage) Update(sessionID node_session.ID, updated time.Time, dataStats stats_dto.SessionStats, status Status) error {
+func (repo *Storage) Update(sessionID node_session.ID, updated time.Time, dataStats consumer.SessionStatistics, status Status) error {
 	// update fields by sessionID
 	se := Session{SessionID: sessionID, Updated: updated, DataStats: dataStats, Status: status}
 	return repo.storage.Update(&se)

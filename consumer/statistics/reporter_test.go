@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package stats
+package statistics
 
 import (
 	"fmt"
@@ -25,9 +25,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/location"
-
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -63,19 +62,19 @@ func TestRemoteStatsSenderStartsAndStops(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	statsKeeper := NewSessionStatsKeeper(time.Now)
+	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	mysteriumClient := server.NewClient(ts.URL)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Minute)
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Minute)
 
-	sender.ConsumeStateEvent(mockStateEvent)
+	reporter.ConsumeStateEvent(mockStateEvent)
 
-	sender.start()
+	reporter.start(mockStateEvent.SessionInfo.ConsumerID, mockStateEvent.SessionInfo.Proposal.ServiceType, mockStateEvent.SessionInfo.Proposal.ProviderID, mockStateEvent.SessionInfo.SessionID)
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 0 }))
-	assert.True(t, sender.started)
-	sender.stop()
+	assert.True(t, reporter.started)
+	reporter.stop()
 
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 1 }))
-	assert.False(t, sender.started)
+	assert.False(t, reporter.started)
 }
 
 func TestRemoteStatsSenderInterval(t *testing.T) {
@@ -86,15 +85,15 @@ func TestRemoteStatsSenderInterval(t *testing.T) {
 	defer ts.Close()
 
 	mysteriumClient := server.NewClient(ts.URL)
-	statsKeeper := NewSessionStatsKeeper(time.Now)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
+	statisticsTracker := NewSessionStatisticsTracker(time.Now)
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
 
-	sender.ConsumeStateEvent(mockStateEvent)
+	reporter.ConsumeStateEvent(mockStateEvent)
 
-	sender.start()
+	reporter.start(mockStateEvent.SessionInfo.ConsumerID, mockStateEvent.SessionInfo.Proposal.ServiceType, mockStateEvent.SessionInfo.Proposal.ProviderID, mockStateEvent.SessionInfo.SessionID)
 	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) > 3 }))
 
-	sender.stop()
+	reporter.stop()
 }
 
 func TestRemoteStatsStartsWithoutSigner(t *testing.T) {
@@ -105,13 +104,13 @@ func TestRemoteStatsStartsWithoutSigner(t *testing.T) {
 	defer ts.Close()
 
 	mysteriumClient := server.NewClient(ts.URL)
-	statsKeeper := NewSessionStatsKeeper(time.Now)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
+	statisticsTracker := NewSessionStatisticsTracker(time.Now)
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
 
-	sender.start()
+	reporter.start(mockStateEvent.SessionInfo.ConsumerID, mockStateEvent.SessionInfo.Proposal.ServiceType, mockStateEvent.SessionInfo.Proposal.ProviderID, mockStateEvent.SessionInfo.SessionID)
 	time.Sleep(time.Nanosecond * 2)
 	assert.Equal(t, int64(0), atomic.LoadInt64(&counter))
-	sender.stop()
+	reporter.stop()
 }
 
 func TestRemoteStatsSenderConsumeStateEvent(t *testing.T) {
@@ -122,14 +121,14 @@ func TestRemoteStatsSenderConsumeStateEvent(t *testing.T) {
 	defer ts.Close()
 
 	mysteriumClient := server.NewClient(ts.URL)
-	statsKeeper := NewSessionStatsKeeper(time.Now)
-	sender := NewRemoteStatsSender(statsKeeper, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
-	sender.ConsumeStateEvent(mockStateEvent)
-	assert.True(t, sender.started)
+	statisticsTracker := NewSessionStatisticsTracker(time.Now)
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
+	reporter.ConsumeStateEvent(mockStateEvent)
+	assert.True(t, reporter.started)
 	copy := mockStateEvent
 	copy.State = connection.Disconnecting
-	sender.ConsumeStateEvent(copy)
-	assert.False(t, sender.started)
+	reporter.ConsumeStateEvent(copy)
+	assert.False(t, reporter.started)
 }
 
 func waitFor(f func() bool) error {

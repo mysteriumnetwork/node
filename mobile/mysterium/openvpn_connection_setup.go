@@ -20,8 +20,8 @@ package mysterium
 import (
 	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
-	"github.com/mysteriumnetwork/node/client/stats/dto"
 
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/session"
@@ -46,24 +46,24 @@ func (wrapper *sessionWrapper) Wait() error {
 }
 
 type statsUpdater interface {
-	Save(stats dto.SessionStats)
+	Save(stats consumer.SessionStatistics)
 }
 
-// StatUpdater takes in the state channel and reports stats to it
+// statUpdater takes in the state channel and reports stats to it
 // TODO: SEPARATE PR TO FIX THIS MESS
-type StatUpdater struct {
+type statUpdater struct {
 	statisticsChannel connection.StatisticsChannel
 }
 
 // NewStatUpdater returns a new instance of StatUpdater
-func NewStatUpdater(channel connection.StatisticsChannel) *StatUpdater {
-	return &StatUpdater{
+func NewStatUpdater(channel connection.StatisticsChannel) *statUpdater {
+	return &statUpdater{
 		statisticsChannel: channel,
 	}
 }
 
 // Save sends the stats to the stat channel
-func (su *StatUpdater) Save(stats dto.SessionStats) {
+func (su *statUpdater) Save(stats consumer.SessionStatistics) {
 	su.statisticsChannel <- stats
 }
 
@@ -99,7 +99,7 @@ func (channelToCallbacksAdapter) Log(text string) {
 }
 
 func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistics) {
-	adapter.statsUpdater.Save(dto.SessionStats{
+	adapter.statsUpdater.Save(consumer.SessionStatistics{
 		BytesSent:     uint64(openvpnStats.BytesOut),
 		BytesReceived: uint64(openvpnStats.BytesIn),
 	})

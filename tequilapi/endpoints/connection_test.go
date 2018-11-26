@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
@@ -67,16 +67,16 @@ func (fm *fakeManager) Wait() error {
 	return nil
 }
 
-type StubStatsKeeper struct {
+type StubStatisticsTracker struct {
 	duration time.Duration
-	stats    stats_dto.SessionStats
+	stats    consumer.SessionStatistics
 }
 
-func (ssk *StubStatsKeeper) Retrieve() stats_dto.SessionStats {
+func (ssk *StubStatisticsTracker) Retrieve() consumer.SessionStatistics {
 	return ssk.stats
 }
 
-func (ssk *StubStatsKeeper) GetSessionDuration() time.Duration {
+func (ssk *StubStatisticsTracker) GetSessionDuration() time.Duration {
 	return ssk.duration
 }
 
@@ -94,7 +94,7 @@ func getMockMystAPIWithProposal(providerID, serviceType string) *server.ClientFa
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
-	statsKeeper := &StubStatsKeeper{
+	statsKeeper := &StubStatisticsTracker{
 		duration: time.Minute,
 	}
 	ipResolver := ip.NewResolverFake("123.123.123.123")
@@ -380,9 +380,9 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 }
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
-	statsKeeper := &StubStatsKeeper{
+	statsKeeper := &StubStatisticsTracker{
 		duration: time.Minute,
-		stats:    stats_dto.SessionStats{BytesSent: 1, BytesReceived: 2},
+		stats:    consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
 	}
 
 	manager := fakeManager{}
@@ -402,8 +402,8 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 }
 
 func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testing.T) {
-	statsKeeper := &StubStatsKeeper{
-		stats: stats_dto.SessionStats{BytesSent: 1, BytesReceived: 2},
+	statsKeeper := &StubStatisticsTracker{
+		stats: consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
 	}
 
 	manager := fakeManager{}

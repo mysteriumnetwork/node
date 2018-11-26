@@ -24,8 +24,8 @@ import (
 
 	"github.com/asaskevich/EventBus"
 	log "github.com/cihub/seelog"
-	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -47,13 +47,13 @@ var (
 	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
 )
 
-// ConnectionCreator creates new connection by given options and uses state channel to report state changes
+// Creator creates new connection by given options and uses state channel to report state changes
 // Given options:
 //  - session,
 //  - consumer identity
 //  - service provider identity
 //  - service proposal
-type ConnectionCreator func(ConnectOptions, StateChannel, StatisticsChannel) (Connection, error)
+type Creator func(ConnectOptions, StateChannel, StatisticsChannel) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
@@ -71,7 +71,7 @@ type connectionManager struct {
 	//these are passed on creation
 	newDialog        DialogCreator
 	newPromiseIssuer PromiseIssuerCreator
-	newConnection    ConnectionCreator
+	newConnection    Creator
 	eventPublisher   Publisher
 
 	//these are populated by Connect at runtime
@@ -86,7 +86,7 @@ type connectionManager struct {
 func NewManager(
 	dialogCreator DialogCreator,
 	promiseIssuerCreator PromiseIssuerCreator,
-	connectionCreator ConnectionCreator,
+	connectionCreator Creator,
 	eventPublisher EventBus.BusPublisher,
 ) *connectionManager {
 	return &connectionManager{
@@ -170,7 +170,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	cancel = append(cancel, func() { promiseIssuer.Stop() })
 
 	stateChannel := make(chan State, 10)
-	statisticsChannel := make(chan stats_dto.SessionStats, 10)
+	statisticsChannel := make(chan consumer.SessionStatistics, 10)
 
 	connectOptions := ConnectOptions{
 		SessionID:     sessionID,
@@ -274,9 +274,9 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 	log.Debug(managerLogPrefix, "State updater stopCalled")
 }
 
-func (manager *connectionManager) consumeStats(statisticsChannel <-chan stats_dto.SessionStats) {
+func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) {
 	for stats := range statisticsChannel {
-		manager.eventPublisher.Publish(string(StatsticsEventTopic), stats)
+		manager.eventPublisher.Publish(StatisticsEventTopic, stats)
 	}
 }
 
@@ -284,7 +284,7 @@ func (manager *connectionManager) onStateChanged(state State) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	manager.eventPublisher.Publish(string(StateEventTopic), StateEvent{
+	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
 		State:       state,
 		SessionInfo: manager.sessionInfo,
 	})

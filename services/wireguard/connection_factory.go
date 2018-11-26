@@ -22,7 +22,7 @@ import (
 )
 
 // NewConnectionCreator creates wireguard connections
-func NewConnectionCreator() connection.ConnectionCreator {
+func NewConnectionCreator() connection.Creator {
 	return func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 		return &Connection{
 			stateChannel:      stateChannel,

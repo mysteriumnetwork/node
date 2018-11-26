@@ -19,14 +19,14 @@ package bytescount
 
 import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
-	"github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 // NewSessionStatsSaver returns stats handler, which saves stats stats keeper
 func NewSessionStatsSaver(statisticsChannel connection.StatisticsChannel) bytescount.SessionStatsHandler {
 	return func(bc bytescount.Bytecount) error {
-		statisticsChannel <- dto.SessionStats{BytesSent: uint64(bc.BytesOut), BytesReceived: uint64(bc.BytesIn)}
+		statisticsChannel <- consumer.SessionStatistics{BytesSent: uint64(bc.BytesOut), BytesReceived: uint64(bc.BytesIn)}
 		return nil
 	}
 }

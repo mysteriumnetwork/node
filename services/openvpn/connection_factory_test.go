@@ -20,7 +20,7 @@ package openvpn
 import (
 	"testing"
 
-	"github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
@@ -47,7 +47,7 @@ func (cf *cacheFake) RefreshAndGet() (location.Location, error) {
 	return cf.location, cf.err
 }
 
-var _ connection.ConnectionCreator = (&ProcessBasedConnectionFactory{}).CreateConnection
+var _ connection.Creator = (&ProcessBasedConnectionFactory{}).CreateConnection
 
 func fakeSignerFactory(_ identity.Identity) identity.Signer {
 	return &identity.SignerFake{}
@@ -56,7 +56,7 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
 	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory)
 	channel := make(chan connection.State)
-	statisticsChannel := make(chan dto.SessionStats)
+	statisticsChannel := make(chan consumer.SessionStatistics)
 	connectionOptions := connection.ConnectOptions{}
 	_, err := factory.CreateConnection(connectionOptions, channel, statisticsChannel)
 	assert.NotNil(t, err)
@@ -71,7 +71,7 @@ func TestConnectionFactory_CreatesConnection(t *testing.T) {
 		ProviderID:    identity.Identity{Address: "provider"},
 		SessionConfig: fakeSessionConfig,
 	}
-	statisticsChannel := make(chan dto.SessionStats)
+	statisticsChannel := make(chan consumer.SessionStatistics)
 	conn, err := factory.CreateConnection(connectionOptions, channel, statisticsChannel)
 	assert.Nil(t, err)
 	assert.NotNil(t, conn)

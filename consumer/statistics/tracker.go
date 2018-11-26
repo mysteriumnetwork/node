@@ -15,66 +15,66 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package stats
+package statistics
 
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
 // TimeGetter function returns current time
 type TimeGetter func() time.Time
 
-// SessionStatsKeeper keeps the session stats safe and sound
-type SessionStatsKeeper struct {
-	sessionStats dto.SessionStats
+// SessionStatisticsTracker keeps the session stats safe and sound
+type SessionStatisticsTracker struct {
+	sessionStats consumer.SessionStatistics
 	timeGetter   TimeGetter
 	sessionStart *time.Time
 }
 
-// NewSessionStatsKeeper returns new session stats keeper with given timeGetter function
-func NewSessionStatsKeeper(timeGetter TimeGetter) *SessionStatsKeeper {
-	return &SessionStatsKeeper{timeGetter: timeGetter}
+// NewSessionStatisticsTracker returns new session stats statisticsTracker with given timeGetter function
+func NewSessionStatisticsTracker(timeGetter TimeGetter) *SessionStatisticsTracker {
+	return &SessionStatisticsTracker{timeGetter: timeGetter}
 }
 
-// Retrieve retrieves session stats from keeper
-func (keeper *SessionStatsKeeper) Retrieve() dto.SessionStats {
-	return keeper.sessionStats
+// Retrieve retrieves session stats from statisticsTracker
+func (sst *SessionStatisticsTracker) Retrieve() consumer.SessionStatistics {
+	return sst.sessionStats
 }
 
 // MarkSessionStart marks current time as session start time for statistics
-func (keeper *SessionStatsKeeper) markSessionStart() {
-	time := keeper.timeGetter()
-	keeper.sessionStart = &time
+func (sst *SessionStatisticsTracker) markSessionStart() {
+	time := sst.timeGetter()
+	sst.sessionStart = &time
 }
 
 // GetSessionDuration returns elapsed time from marked session start
-func (keeper *SessionStatsKeeper) GetSessionDuration() time.Duration {
-	if keeper.sessionStart == nil {
+func (sst *SessionStatisticsTracker) GetSessionDuration() time.Duration {
+	if sst.sessionStart == nil {
 		return time.Duration(0)
 	}
-	duration := keeper.timeGetter().Sub(*keeper.sessionStart)
+	duration := sst.timeGetter().Sub(*sst.sessionStart)
 	return duration
 }
 
 // MarkSessionEnd stops counting session duration
-func (keeper *SessionStatsKeeper) markSessionEnd() {
-	keeper.sessionStart = nil
+func (sst *SessionStatisticsTracker) markSessionEnd() {
+	sst.sessionStart = nil
 }
 
 // ConsumeStatisticsEvent handles the connection statistics changes
-func (keeper *SessionStatsKeeper) ConsumeStatisticsEvent(stats dto.SessionStats) {
-	keeper.sessionStats = stats
+func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(stats consumer.SessionStatistics) {
+	sst.sessionStats = stats
 }
 
 // ConsumeStateEvent handles the connection state changes
-func (keeper *SessionStatsKeeper) ConsumeStateEvent(stateEvent connection.StateEvent) {
+func (sst *SessionStatisticsTracker) ConsumeStateEvent(stateEvent connection.StateEvent) {
 	switch stateEvent.State {
 	case connection.Disconnecting:
-		keeper.markSessionEnd()
+		sst.markSessionEnd()
 	case connection.Connected:
-		keeper.markSessionStart()
+		sst.markSessionStart()
 	}
 }

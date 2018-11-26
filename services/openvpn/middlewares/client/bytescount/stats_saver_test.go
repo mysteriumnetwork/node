@@ -21,15 +21,15 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
-	"github.com/mysteriumnetwork/node/client/stats/dto"
+	"github.com/mysteriumnetwork/node/consumer"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSessionStatsSaver(t *testing.T) {
-	channel := make(chan dto.SessionStats, 1)
+	channel := make(chan consumer.SessionStatistics, 1)
 	saver := NewSessionStatsSaver(channel)
-	stats := dto.SessionStats{BytesSent: 1, BytesReceived: 2}
+	stats := consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2}
 	saver(bytescount.Bytecount{BytesOut: 1, BytesIn: 2})
 	assert.Equal(t, stats, <-channel)
 }

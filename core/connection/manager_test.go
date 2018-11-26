@@ -23,10 +23,9 @@ import (
 	"testing"
 	"time"
 
-	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
-
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
@@ -40,7 +39,7 @@ type testContext struct {
 	fakeDialog            *fakeDialog
 	fakePromiseIssuer     *fakePromiseIssuer
 	stubPublisher         *StubPublisher
-	mockStats             stats_dto.SessionStats
+	mockStatistics        consumer.SessionStatistics
 	sync.RWMutex
 }
 
@@ -74,7 +73,7 @@ func (tc *testContext) SetupTest() {
 	promiseIssuerFactory := func(_ identity.Identity, _ communication.Dialog) PromiseIssuer {
 		return tc.fakePromiseIssuer
 	}
-	tc.mockStats = stats_dto.SessionStats{
+	tc.mockStatistics = consumer.SessionStatistics{
 		BytesReceived: 10,
 		BytesSent:     20,
 	}
@@ -96,7 +95,7 @@ func (tc *testContext) SetupTest() {
 				processExited,
 			},
 			nil,
-			tc.mockStats,
+			tc.mockStatistics,
 			sync.WaitGroup{},
 			sync.RWMutex{},
 		},
@@ -271,12 +270,12 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	assert.Len(tc.T(), history, 2)
 
 	for _, v := range history {
-		if v.calledWithTopic == string(StatsticsEventTopic) {
-			event := v.calledWithArgs[0].(stats_dto.SessionStats)
-			assert.True(tc.T(), event.BytesReceived == tc.mockStats.BytesReceived)
-			assert.True(tc.T(), event.BytesSent == tc.mockStats.BytesSent)
+		if v.calledWithTopic == StatisticsEventTopic {
+			event := v.calledWithArgs[0].(consumer.SessionStatistics)
+			assert.True(tc.T(), event.BytesReceived == tc.mockStatistics.BytesReceived)
+			assert.True(tc.T(), event.BytesSent == tc.mockStatistics.BytesSent)
 		}
-		if v.calledWithTopic == string(StateEventTopic) {
+		if v.calledWithTopic == StateEventTopic {
 			event := v.calledWithArgs[0].(StateEvent)
 			assert.Equal(tc.T(), Connected, event.State)
 			assert.Equal(tc.T(), myID, event.SessionInfo.ConsumerID)

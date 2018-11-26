@@ -18,8 +18,8 @@
 package connection
 
 import (
-	stats_dto "github.com/mysteriumnetwork/node/client/stats/dto"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
@@ -38,7 +38,7 @@ type Connection interface {
 type StateChannel chan State
 
 // StatisticsChannel is the channel we receive stats change events on
-type StatisticsChannel chan stats_dto.SessionStats
+type StatisticsChannel chan consumer.SessionStatistics
 
 // PromiseIssuer issues promises from consumer to provider.
 // Consumer signs those promises.
