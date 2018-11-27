@@ -61,8 +61,8 @@ func newConnectionEndpoint(iface string, endpoint net.UDPAddr) (*connectionEndpo
 
 // ProviderConfig starts and configure wireguard network interface for providing service.
 // It returns information required to establish connection to the service.
-func (n *connectionEndpoint) ProviderConfig(ip net.IPNet) (Provider, error) {
-	if err := n.up(ip); err != nil {
+func (ce *connectionEndpoint) ProviderConfig(ip net.IPNet) (Provider, error) {
+	if err := ce.up(ip); err != nil {
 		return Provider{}, err
 	}
 
@@ -73,7 +73,7 @@ func (n *connectionEndpoint) ProviderConfig(ip net.IPNet) (Provider, error) {
 		return Provider{}, err
 	}
 
-	if err := n.wgClient.ConfigureDevice(n.iface, wgtypes.Config{
+	if err := ce.wgClient.ConfigureDevice(ce.iface, wgtypes.Config{
 		PrivateKey:   &key,
 		ListenPort:   &port,
 		ReplacePeers: true,
@@ -84,19 +84,19 @@ func (n *connectionEndpoint) ProviderConfig(ip net.IPNet) (Provider, error) {
 	return Provider{
 		IP:        ip,
 		PublicKey: key.PublicKey(),
-		Endpoint:  n.endpoint,
+		Endpoint:  ce.endpoint,
 	}, nil
 }
 
 // ConsumerConfig adds service consumer public key to the list of allowed peers.
 // It returns information required to configure a consumer instance to allow connections.
-func (n *connectionEndpoint) ConsumerConfig(ip net.IPNet) (Consumer, error) {
+func (ce *connectionEndpoint) ConsumerConfig(ip net.IPNet) (Consumer, error) {
 	peerKey, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
 		return Consumer{}, err
 	}
 
-	err = n.wgClient.ConfigureDevice(n.iface, wgtypes.Config{
+	err = ce.wgClient.ConfigureDevice(ce.iface, wgtypes.Config{
 		Peers: []wgtypes.PeerConfig{{PublicKey: peerKey.PublicKey(), AllowedIPs: []net.IPNet{ip}}}})
 	if err != nil {
 		return Consumer{}, err
@@ -106,26 +106,26 @@ func (n *connectionEndpoint) ConsumerConfig(ip net.IPNet) (Consumer, error) {
 }
 
 // Close closes wireguard client and destroys wireguard network interface.
-func (n *connectionEndpoint) Close() error {
-	if err := n.wgClient.Close(); err != nil {
+func (ce *connectionEndpoint) Close() error {
+	if err := ce.wgClient.Close(); err != nil {
 		return err
 	}
 
-	return exec.Command("ip", "link", "del", "dev", n.iface).Run()
+	return exec.Command("ip", "link", "del", "dev", ce.iface).Run()
 }
 
-func (n *connectionEndpoint) up(net net.IPNet) error {
-	if d, err := n.wgClient.Device(n.iface); err != nil || d.Name != n.iface {
-		if out, err := exec.Command("ip", "link", "add", "dev", n.iface, "type", "wireguard").CombinedOutput(); err != nil {
+func (ce *connectionEndpoint) up(net net.IPNet) error {
+	if d, err := ce.wgClient.Device(ce.iface); err != nil || d.Name != ce.iface {
+		if out, err := exec.Command("ip", "link", "add", "dev", ce.iface, "type", "wireguard").CombinedOutput(); err != nil {
 			fmt.Println(string(out), err)
 			return err
 		}
 	}
 
-	if out, err := exec.Command("ip", "address", "replace", "dev", n.iface, net.String()).CombinedOutput(); err != nil {
+	if out, err := exec.Command("ip", "address", "replace", "dev", ce.iface, net.String()).CombinedOutput(); err != nil {
 		fmt.Println(string(out), err)
 		return err
 	}
 
-	return exec.Command("ip", "link", "set", "dev", n.iface, "up").Run()
+	return exec.Command("ip", "link", "set", "dev", ce.iface, "up").Run()
 }
