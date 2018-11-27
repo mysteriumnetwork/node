@@ -45,39 +45,16 @@ func (wrapper *sessionWrapper) Wait() error {
 	return wrapper.session.Wait()
 }
 
-type statsUpdater interface {
-	Save(stats consumer.SessionStatistics)
-}
-
-// statUpdater takes in the state channel and reports stats to it
-// TODO: SEPARATE PR TO FIX THIS MESS
-type statUpdater struct {
-	statisticsChannel connection.StatisticsChannel
-}
-
-// NewStatUpdater returns a new instance of StatUpdater
-func NewStatUpdater(channel connection.StatisticsChannel) *statUpdater {
-	return &statUpdater{
-		statisticsChannel: channel,
-	}
-}
-
-// Save sends the stats to the stat channel
-func (su *statUpdater) Save(stats consumer.SessionStatistics) {
-	su.statisticsChannel <- stats
-}
-
 func channelToCallbacks(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) openvpn3.MobileSessionCallbacks {
-	updater := NewStatUpdater(statisticsChannel)
 	return channelToCallbacksAdapter{
-		stateChannel: stateChannel,
-		statsUpdater: updater,
+		stateChannel:      stateChannel,
+		statisticsChannel: statisticsChannel,
 	}
 }
 
 type channelToCallbacksAdapter struct {
-	stateChannel connection.StateChannel
-	statsUpdater statsUpdater
+	stateChannel      connection.StateChannel
+	statisticsChannel connection.StatisticsChannel
 }
 
 func (adapter channelToCallbacksAdapter) OnEvent(event openvpn3.Event) {
@@ -99,10 +76,10 @@ func (channelToCallbacksAdapter) Log(text string) {
 }
 
 func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistics) {
-	adapter.statsUpdater.Save(consumer.SessionStatistics{
+	adapter.statisticsChannel <- consumer.SessionStatistics{
 		BytesSent:     uint64(openvpnStats.BytesOut),
 		BytesReceived: uint64(openvpnStats.BytesIn),
-	})
+	}
 }
 
 // Openvpn3TunnelSetup is alias for openvpn3 tunnel setup interface exposed to Android/iOS interop
