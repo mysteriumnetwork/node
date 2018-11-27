@@ -32,11 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-const (
-	logPrefix = "[service-wireguard] "
-
-	interfaceName = "myst"
-)
+const logPrefix = "[service-wireguard] "
 
 // ErrAlreadyStarted is the error we return when the start is called multiple times.
 var ErrAlreadyStarted = errors.New("Service already started")
