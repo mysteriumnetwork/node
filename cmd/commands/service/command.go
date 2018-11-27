@@ -54,16 +54,14 @@ var (
 
 // NewCommand function creates service command
 func NewCommand(licenseCommandName string) *cli.Command {
-	serviceTypes := []string{"openvpn", "wireguard", "noop"}
 	var di cmd.Dependencies
 	command := &cli.Command{
 		Name:        serviceCommandName,
 		Usage:       "Starts and publishes services on Mysterium Network",
 		ArgsUsage:   " ",
-		Subcommands: getSubcommands(&di, licenseCommandName, serviceTypes),
+		Subcommands: getSubcommands(&di, licenseCommandName, serviceTypesAvailable),
 		Action: func(ctx *cli.Context) error {
-			serviceTypes := []string{"openvpn", "noop"} // TODO do not start wireguard service by default
-			return runServices(ctx, &di, licenseCommandName, serviceTypes)
+			return runServices(ctx, &di, licenseCommandName, serviceTypesEnabled)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()

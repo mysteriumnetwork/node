@@ -19,6 +19,7 @@ package wireguard
 
 import (
 	"errors"
+	"net"
 	"sync"
 
 	log "github.com/cihub/seelog"
@@ -27,7 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/services/wireguard/network"
+	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -45,29 +46,31 @@ func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Man
 	return &Manager{
 		locationResolver: locationResolver,
 		ipResolver:       ipResolver,
+		resources:        resources.Handler{},
 	}
 }
 
 // Manager represents entrypoint for Wireguard service.
 type Manager struct {
-	isStarted        bool
-	process          sync.WaitGroup
-	locationResolver location.Resolver
-	ipResolver       ip.Resolver
-	wg               Network
+	isStarted          bool
+	process            sync.WaitGroup
+	locationResolver   location.Resolver
+	ipResolver         ip.Resolver
+	connectionEndpoint ConfigProvider
+	resources          resources.Handler
 }
 
 // Config represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type Config struct {
-	Provider network.Provider
-	Consumer network.Consumer
+	Provider Provider
+	Consumer Consumer
 }
 
-// Network represents Wireguard network instance, it provide information
+// ConfigProvider represents Wireguard network instance, it provide information
 // required for establishing connection between service provider and consumer.
-type Network interface {
-	Provider() (network.Provider, error)
-	Consumer() (network.Consumer, error)
+type ConfigProvider interface {
+	ProviderConfig(ip net.IPNet) (Provider, error)
+	ConsumerConfig(ip net.IPNet) (Consumer, error)
 	Close() error
 }
 
@@ -78,18 +81,19 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 
-	manager.wg, err = network.NewNetwork(interfaceName, publicIP)
+	endpoint := net.UDPAddr{IP: net.ParseIP(publicIP), Port: manager.resources.AllocatePort()}
+	manager.connectionEndpoint, err = newConnectionEndpoint(manager.resources.AllocateInterface(), endpoint)
 	if err != nil {
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 
-	provider, err := manager.wg.Provider()
+	provider, err := manager.connectionEndpoint.ProviderConfig(manager.resources.AllocateIP())
 	if err != nil {
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 
 	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
-		consumer, err := manager.wg.Consumer()
+		consumer, err := manager.connectionEndpoint.ConsumerConfig(manager.resources.AllocateIP())
 		if err != nil {
 			return Config{}, nil
 		}
@@ -138,7 +142,7 @@ func (manager *Manager) Stop() error {
 		return nil
 	}
 
-	if err := manager.wg.Close(); err != nil {
+	if err := manager.connectionEndpoint.Close(); err != nil {
 		return err
 	}
 
