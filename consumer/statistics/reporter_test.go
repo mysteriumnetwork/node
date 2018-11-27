@@ -55,7 +55,7 @@ func mockLocationDetector() location.Location {
 	}
 }
 
-func TestRemoteStatsSenderStartsAndStops(t *testing.T) {
+func TestStatisticsReporterStartsAndStops(t *testing.T) {
 	var counter int64
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt64(&counter, 1)
@@ -77,7 +77,7 @@ func TestRemoteStatsSenderStartsAndStops(t *testing.T) {
 	assert.False(t, reporter.started)
 }
 
-func TestRemoteStatsSenderInterval(t *testing.T) {
+func TestStatisticsReporterInterval(t *testing.T) {
 	var counter int64
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt64(&counter, 1)
@@ -96,24 +96,7 @@ func TestRemoteStatsSenderInterval(t *testing.T) {
 	reporter.stop()
 }
 
-func TestRemoteStatsStartsWithoutSigner(t *testing.T) {
-	var counter int64
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt64(&counter, 1)
-	}))
-	defer ts.Close()
-
-	mysteriumClient := server.NewClient(ts.URL)
-	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
-
-	reporter.start(mockStateEvent.SessionInfo.ConsumerID, mockStateEvent.SessionInfo.Proposal.ServiceType, mockStateEvent.SessionInfo.Proposal.ProviderID, mockStateEvent.SessionInfo.SessionID)
-	time.Sleep(time.Nanosecond * 2)
-	assert.Equal(t, int64(0), atomic.LoadInt64(&counter))
-	reporter.stop()
-}
-
-func TestRemoteStatsSenderConsumeStateEvent(t *testing.T) {
+func TestStatisticsReporterConsumeStateEvent(t *testing.T) {
 	var counter int64
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt64(&counter, 1)
