@@ -52,12 +52,12 @@ func NewService(
 	signerCreate identity.SignerFactory,
 ) *Discovery {
 	return &Discovery{
-		identityRegistry:     identityRegistry,
-		identityRegistration: identityRegistration,
-		mysteriumClient:      mysteriumClient,
-		signerCreate:         signerCreate,
-		statusChan:           make(chan Status),
-		status:               StatusUndefined,
+		identityRegistry:            identityRegistry,
+		identityRegistration:        identityRegistration,
+		mysteriumClient:             mysteriumClient,
+		signerCreate:                signerCreate,
+		statusChan:                  make(chan Status),
+		status:                      StatusUndefined,
 		proposalAnnouncementStopped: &sync.WaitGroup{},
 		unsubscribe:                 func() {},
 		stop:                        func() {},
