@@ -26,9 +26,10 @@ import (
 
 // Connection which does no real tunneling
 type Connection struct {
-	isRunning      bool
-	noopConnection sync.WaitGroup
-	stateChannel   connection.StateChannel
+	isRunning         bool
+	noopConnection    sync.WaitGroup
+	stateChannel      connection.StateChannel
+	statisticsChannel connection.StatisticsChannel
 }
 
 // Start implements the connection.Connection interface

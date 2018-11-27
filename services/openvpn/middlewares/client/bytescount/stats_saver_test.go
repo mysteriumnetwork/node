@@ -19,18 +19,17 @@ package bytescount
 
 import (
 	"testing"
-	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
-	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/consumer"
+
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSessionStatsSaver(t *testing.T) {
-	statsKeeper := stats.NewSessionStatsKeeper(time.Now)
-
-	saver := NewSessionStatsSaver(statsKeeper)
-	stats := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
+	channel := make(chan consumer.SessionStatistics, 1)
+	saver := NewSessionStatsSaver(channel)
+	stats := consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2}
 	saver(bytescount.Bytecount{BytesOut: 1, BytesIn: 2})
-	assert.Equal(t, stats, statsKeeper.Retrieve())
+	assert.Equal(t, stats, <-channel)
 }

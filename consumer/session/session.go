@@ -15,28 +15,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package session
 
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session"
+	node_session "github.com/mysteriumnetwork/node/session"
 )
 
-// SessionStatus represents list of possible session statuses
-type SessionStatus int
+// Status represents list of possible session statuses
+type Status int
 
 const (
 	// SessionStatusNew means that newly created session object is written to storage
-	SessionStatusNew = SessionStatus(0)
+	SessionStatusNew = Status(0)
 	// SessionStatusCompleted means that session object is updated on connection disconnect event
-	SessionStatusCompleted = SessionStatus(1)
+	SessionStatusCompleted = Status(1)
 )
 
 // String converts status constant to string
-func (st *SessionStatus) String() string {
+func (st *Status) String() string {
 	switch *st {
 	case SessionStatusNew:
 		return "New"
@@ -47,7 +47,7 @@ func (st *SessionStatus) String() string {
 }
 
 // NewSession creates session with given dependencies
-func NewSession(sessionID session.ID, providerID identity.Identity, serviceType string, providerCountry string) *Session {
+func NewSession(sessionID node_session.ID, providerID identity.Identity, serviceType string, providerCountry string) *Session {
 	return &Session{
 		SessionID:       sessionID,
 		ProviderID:      providerID,
@@ -60,14 +60,14 @@ func NewSession(sessionID session.ID, providerID identity.Identity, serviceType 
 
 // Session holds structure for saving session history
 type Session struct {
-	SessionID       session.ID `storm:"id"`
+	SessionID       node_session.ID `storm:"id"`
 	ProviderID      identity.Identity
 	ServiceType     string
 	ProviderCountry string
 	Started         time.Time
-	Status          SessionStatus
+	Status          Status
 	Updated         time.Time
-	DataStats       stats.SessionStats // is updated on disconnect event
+	DataStats       consumer.SessionStatistics // is updated on disconnect event
 }
 
 // GetDuration returns delta in seconds (TimeUpdated - TimeStarted)

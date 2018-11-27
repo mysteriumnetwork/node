@@ -20,15 +20,17 @@ package connection
 import (
 	"testing"
 
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
+
 	"github.com/stretchr/testify/assert"
 )
 
-var _ ConnectionCreator = (&Registry{}).CreateConnection
+var _ Creator = (&Registry{}).CreateConnection
 
 var (
 	connectionMock    = &connectionFake{}
-	connectionFactory = func(connectionParams ConnectOptions, stateChannel StateChannel) (Connection, error) {
+	connectionFactory = func(connectionParams ConnectOptions, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
 		return connectionMock, nil
 	}
 )
@@ -40,7 +42,7 @@ func TestRegistry_Factory(t *testing.T) {
 
 func TestRegistry_Register(t *testing.T) {
 	registry := Registry{
-		creators: map[string]ConnectionCreator{},
+		creators: map[string]Creator{},
 	}
 
 	registry.Register("any", connectionFactory)
@@ -50,7 +52,7 @@ func TestRegistry_Register(t *testing.T) {
 func TestRegistry_CreateConnection_NonExisting(t *testing.T) {
 	registry := &Registry{}
 
-	connection, err := registry.CreateConnection(ConnectOptions{}, make(chan State))
+	connection, err := registry.CreateConnection(ConnectOptions{}, make(chan State), make(chan consumer.SessionStatistics))
 	assert.Equal(t, ErrUnsupportedServiceType, err)
 	assert.Nil(t, connection)
 }
@@ -61,12 +63,12 @@ func TestRegistry_CreateConnection_Existing(t *testing.T) {
 	}
 
 	registry := Registry{
-		creators: map[string]ConnectionCreator{
+		creators: map[string]Creator{
 			"fake-service": connectionFactory,
 		},
 	}
 
-	connection, err := registry.CreateConnection(connectOptions, make(chan State))
+	connection, err := registry.CreateConnection(connectOptions, make(chan State), make(chan consumer.SessionStatistics))
 	assert.NoError(t, err)
 	assert.Equal(t, connectionMock, connection)
 }

@@ -20,10 +20,10 @@ package openvpn
 import (
 	"testing"
 
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,32 +47,32 @@ func (cf *cacheFake) RefreshAndGet() (location.Location, error) {
 	return cf.location, cf.err
 }
 
-var _ connection.ConnectionCreator = (&ProcessBasedConnectionFactory{}).CreateConnection
+var _ connection.Creator = (&ProcessBasedConnectionFactory{}).CreateConnection
 
 func fakeSignerFactory(_ identity.Identity) identity.Signer {
 	return &identity.SignerFake{}
 }
 
 func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
-	clientFake := server.NewClientFake()
-	factory := NewProcessBasedConnectionFactory(clientFake, "./", "./", "./", &fakeSessionStatsKeeper{}, &cacheFake{}, fakeSignerFactory)
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory)
 	channel := make(chan connection.State)
+	statisticsChannel := make(chan consumer.SessionStatistics)
 	connectionOptions := connection.ConnectOptions{}
-	_, err := factory.CreateConnection(connectionOptions, channel)
+	_, err := factory.CreateConnection(connectionOptions, channel, statisticsChannel)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "unexpected end of JSON input")
 }
 
 func TestConnectionFactory_CreatesConnection(t *testing.T) {
-	clientFake := server.NewClientFake()
-	factory := NewProcessBasedConnectionFactory(clientFake, "./", "./", "./", &fakeSessionStatsKeeper{}, &cacheFake{}, fakeSignerFactory)
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory)
 	channel := make(chan connection.State)
 	connectionOptions := connection.ConnectOptions{
 		ConsumerID:    identity.Identity{Address: "consumer"},
 		ProviderID:    identity.Identity{Address: "provider"},
 		SessionConfig: fakeSessionConfig,
 	}
-	conn, err := factory.CreateConnection(connectionOptions, channel)
+	statisticsChannel := make(chan consumer.SessionStatistics)
+	conn, err := factory.CreateConnection(connectionOptions, channel, statisticsChannel)
 	assert.Nil(t, err)
 	assert.NotNil(t, conn)
 }

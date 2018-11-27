@@ -21,11 +21,11 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"time"
 
+	"github.com/asaskevich/EventBus"
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -47,30 +47,38 @@ var (
 	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
 )
 
-// ConnectionCreator creates new connection by given options and uses state channel to report state changes
+// Creator creates new connection by given options and uses state channel to report state changes
 // Given options:
 //  - session,
 //  - consumer identity
 //  - service provider identity
 //  - service proposal
-type ConnectionCreator func(ConnectOptions, StateChannel) (Connection, error)
+type Creator func(ConnectOptions, StateChannel, StatisticsChannel) (Connection, error)
 
-type sessionSaver interface {
-	Save(Session) error
-	Update(session.ID, time.Time, stats.SessionStats, SessionStatus) error
+// SessionInfo contains all the relevant info of the current session
+type SessionInfo struct {
+	SessionID  session.ID
+	ConsumerID identity.Identity
+	Proposal   dto.ServiceProposal
+}
+
+// Publisher is responsible for publishing given events
+type Publisher interface {
+	Publish(topic string, args ...interface{})
 }
 
 type connectionManager struct {
 	//these are passed on creation
 	newDialog        DialogCreator
 	newPromiseIssuer PromiseIssuerCreator
-	newConnection    ConnectionCreator
-	statsKeeper      stats.SessionStatsKeeper
-	sessionStorage   sessionSaver
+	newConnection    Creator
+	eventPublisher   Publisher
+
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
 	status          ConnectionStatus
+	sessionInfo     SessionInfo
 	cleanConnection func()
 }
 
@@ -78,18 +86,16 @@ type connectionManager struct {
 func NewManager(
 	dialogCreator DialogCreator,
 	promiseIssuerCreator PromiseIssuerCreator,
-	connectionCreator ConnectionCreator,
-	statsKeeper stats.SessionStatsKeeper,
-	sessionStorage sessionSaver,
+	connectionCreator Creator,
+	eventPublisher EventBus.BusPublisher,
 ) *connectionManager {
 	return &connectionManager{
-		statsKeeper:      statsKeeper,
 		newDialog:        dialogCreator,
 		newPromiseIssuer: promiseIssuerCreator,
 		newConnection:    connectionCreator,
 		status:           statusNotConnected(),
 		cleanConnection:  warnOnClean,
-		sessionStorage:   sessionStorage,
+		eventPublisher:   eventPublisher,
 	}
 }
 
@@ -149,6 +155,13 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		return err
 	}
 
+	// set the session info for future use
+	manager.sessionInfo = SessionInfo{
+		SessionID:  sessionID,
+		ConsumerID: consumerID,
+		Proposal:   proposal,
+	}
+
 	promiseIssuer := manager.newPromiseIssuer(consumerID, dialog)
 	err = promiseIssuer.Start(proposal)
 	if err != nil {
@@ -157,6 +170,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	cancel = append(cancel, func() { promiseIssuer.Stop() })
 
 	stateChannel := make(chan State, 10)
+	statisticsChannel := make(chan consumer.SessionStatistics, 10)
 
 	connectOptions := ConnectOptions{
 		SessionID:     sessionID,
@@ -166,12 +180,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		Proposal:      proposal,
 	}
 
-	connection, err := manager.newConnection(connectOptions, stateChannel)
-	if err != nil {
-		return err
-	}
-
-	err = manager.saveSession(connectOptions)
+	connection, err := manager.newConnection(connectOptions, stateChannel, statisticsChannel)
 	if err != nil {
 		return err
 	}
@@ -192,8 +201,9 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		firewall.NewKillSwitch().Enable()
 	}
 
+	go manager.consumeStats(statisticsChannel)
+	go manager.consumeConnectionStates(stateChannel)
 	go connectionWaiter(connection, dialog, promiseIssuer)
-	go manager.consumeConnectionStates(stateChannel, sessionID)
 	return nil
 }
 
@@ -241,10 +251,10 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 
 			switch state {
 			case Connected:
-				manager.onStateChanged(state, sessionID)
+				manager.onStateChanged(state)
 				return nil
 			default:
-				manager.onStateChanged(state, sessionID)
+				manager.onStateChanged(state)
 			}
 		case <-manager.ctx.Done():
 			return manager.ctx.Err()
@@ -252,9 +262,9 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 	}
 }
 
-func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan State, sessionID session.ID) {
+func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan State) {
 	for state := range stateChannel {
-		manager.onStateChanged(state, sessionID)
+		manager.onStateChanged(state)
 	}
 
 	manager.mutex.Lock()
@@ -264,24 +274,25 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 	log.Debug(managerLogPrefix, "State updater stopCalled")
 }
 
-func (manager *connectionManager) onStateChanged(state State, sessionID session.ID) {
-	manager.mutex.Lock()
-	defer manager.mutex.Unlock()
-
-	switch state {
-	case Connected:
-		manager.statsKeeper.MarkSessionStart()
-		manager.status = statusConnected(sessionID)
-	case Disconnecting:
-		manager.statsKeeper.MarkSessionEnd()
-		manager.sessionStorage.Update(sessionID, time.Now(), manager.statsKeeper.Retrieve(), SessionStatusCompleted)
-	case Reconnecting:
-		manager.status = statusReconnecting()
+func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) {
+	for stats := range statisticsChannel {
+		manager.eventPublisher.Publish(StatisticsEventTopic, stats)
 	}
 }
 
-func (manager *connectionManager) saveSession(connectOptions ConnectOptions) error {
-	providerCountry := connectOptions.Proposal.ServiceDefinition.GetLocation().Country
-	se := NewSession(connectOptions.SessionID, connectOptions.ProviderID, connectOptions.Proposal.ServiceType, providerCountry)
-	return manager.sessionStorage.Save(*se)
+func (manager *connectionManager) onStateChanged(state State) {
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
+
+	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
+		State:       state,
+		SessionInfo: manager.sessionInfo,
+	})
+
+	switch state {
+	case Connected:
+		manager.status = statusConnected(manager.sessionInfo.SessionID)
+	case Reconnecting:
+		manager.status = statusReconnecting()
+	}
 }

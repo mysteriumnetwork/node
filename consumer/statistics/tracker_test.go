@@ -15,52 +15,72 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package stats
+package statistics
 
 import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/consumer"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStatsSavingWorks(t *testing.T) {
-	statsKeeper := NewSessionStatsKeeper(time.Now)
-	stats := SessionStats{BytesSent: 1, BytesReceived: 2}
+	statisticsTracker := NewSessionStatisticsTracker(time.Now)
+	stats := consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2}
 
-	statsKeeper.Save(stats)
-	assert.Equal(t, stats, statsKeeper.Retrieve())
+	statisticsTracker.ConsumeStatisticsEvent(stats)
+	assert.Equal(t, stats, statisticsTracker.Retrieve())
 }
 
 func TestGetSessionDurationReturnsFlooredDuration(t *testing.T) {
 	settableClock := utils.SettableClock{}
-	statsKeeper := NewSessionStatsKeeper(settableClock.GetTime)
+	statisticsTracker := NewSessionStatisticsTracker(settableClock.GetTime)
 
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 3, 0, time.UTC))
-	statsKeeper.MarkSessionStart()
+	statisticsTracker.markSessionStart()
 
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 4, 700000000, time.UTC))
 	expectedDuration, err := time.ParseDuration("1s700000000ns")
 	assert.NoError(t, err)
-	duration := statsKeeper.GetSessionDuration()
+	duration := statisticsTracker.GetSessionDuration()
 	assert.Equal(t, expectedDuration, duration)
 }
 
 func TestGetSessionDurationFailsWhenSessionStartNotMarked(t *testing.T) {
-	statsKeeper := NewSessionStatsKeeper(time.Now)
+	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 
-	assert.Equal(t, time.Duration(0), statsKeeper.GetSessionDuration())
+	assert.Equal(t, time.Duration(0), statisticsTracker.GetSessionDuration())
 }
 
 func TestStopSessionResetsSessionDuration(t *testing.T) {
 	settableClock := utils.SettableClock{}
-	statsKeeper := NewSessionStatsKeeper(settableClock.GetTime)
+	statisticsTracker := NewSessionStatisticsTracker(settableClock.GetTime)
 
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 3, 0, time.UTC))
-	statsKeeper.MarkSessionStart()
+	statisticsTracker.markSessionStart()
 
 	settableClock.SetTime(time.Date(2000, time.January, 0, 10, 12, 4, 700000000, time.UTC))
-	statsKeeper.MarkSessionEnd()
-	assert.Equal(t, time.Duration(0), statsKeeper.GetSessionDuration())
+	statisticsTracker.markSessionEnd()
+	assert.Equal(t, time.Duration(0), statisticsTracker.GetSessionDuration())
+}
+
+func TestStatisticsTrackerConsumeStateEventConnected(t *testing.T) {
+	statisticsTracker := NewSessionStatisticsTracker(time.Now)
+	statisticsTracker.ConsumeStateEvent(connection.StateEvent{
+		State: connection.Connected,
+	})
+	assert.NotNil(t, statisticsTracker.sessionStart)
+}
+
+func TestStatisticsTrackerConsumeStateEventDisconnected(t *testing.T) {
+	now := time.Now()
+	statisticsTracker := NewSessionStatisticsTracker(time.Now)
+	statisticsTracker.sessionStart = &now
+	statisticsTracker.ConsumeStateEvent(connection.StateEvent{
+		State: connection.Disconnecting,
+	})
+	assert.Nil(t, statisticsTracker.sessionStart)
 }

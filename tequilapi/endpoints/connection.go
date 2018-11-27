@@ -21,10 +21,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/client/stats"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
@@ -98,23 +99,29 @@ type statisticsResponse struct {
 	Duration int `json:"duration"`
 }
 
+// SessionStatisticsTracker represents the session stat keeper
+type SessionStatisticsTracker interface {
+	Retrieve() consumer.SessionStatistics
+	GetSessionDuration() time.Duration
+}
+
 // ConnectionEndpoint struct represents /connection resource and it's subresources
 type ConnectionEndpoint struct {
-	manager     connection.Manager
-	ipResolver  ip.Resolver
-	statsKeeper stats.SessionStatsKeeper
-	mystClient  server.Client
+	manager           connection.Manager
+	ipResolver        ip.Resolver
+	statisticsTracker SessionStatisticsTracker
+	mystClient        server.Client
 }
 
 const connectionLogPrefix = "[Connection] "
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper stats.SessionStatsKeeper, mystClient server.Client) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper SessionStatisticsTracker, mystClient server.Client) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
-		manager:     manager,
-		ipResolver:  ipResolver,
-		statsKeeper: statsKeeper,
-		mystClient:  mystClient,
+		manager:           manager,
+		ipResolver:        ipResolver,
+		statisticsTracker: statsKeeper,
+		mystClient:        mystClient,
 	}
 }
 
@@ -294,9 +301,9 @@ func (ce *ConnectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	st := ce.statsKeeper.Retrieve()
+	st := ce.statisticsTracker.Retrieve()
 
-	duration := ce.statsKeeper.GetSessionDuration()
+	duration := ce.statisticsTracker.GetSessionDuration()
 
 	response := statisticsResponse{
 		BytesSent:     st.BytesSent,
@@ -309,7 +316,7 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager, ipResolver ip.Resolver,
-	statsKeeper stats.SessionStatsKeeper, mystClient server.Client) {
+	statsKeeper SessionStatisticsTracker, mystClient server.Client) {
 	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper, mystClient)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)

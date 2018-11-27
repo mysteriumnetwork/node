@@ -26,13 +26,13 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/client/stats"
+
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,6 +67,19 @@ func (fm *fakeManager) Wait() error {
 	return nil
 }
 
+type StubStatisticsTracker struct {
+	duration time.Duration
+	stats    consumer.SessionStatistics
+}
+
+func (ssk *StubStatisticsTracker) Retrieve() consumer.SessionStatistics {
+	return ssk.stats
+}
+
+func (ssk *StubStatisticsTracker) GetSessionDuration() time.Duration {
+	return ssk.duration
+}
+
 func getMockMystAPIWithProposal(providerID, serviceType string) *server.ClientFake {
 	mystAPI := server.NewClientFake()
 	mystAPI.RegisterProposal(dto.ServiceProposal{
@@ -81,13 +94,10 @@ func getMockMystAPIWithProposal(providerID, serviceType string) *server.ClientFa
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 	fakeManager := fakeManager{}
-	settableClock := utils.SettableClock{}
-	statsKeeper := stats.NewSessionStatsKeeper(settableClock.GetTime)
+	statsKeeper := &StubStatisticsTracker{
+		duration: time.Minute,
+	}
 	ipResolver := ip.NewResolverFake("123.123.123.123")
-	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
-	settableClock.SetTime(sessionStart)
-	statsKeeper.MarkSessionStart()
-	settableClock.SetTime(sessionStart.Add(time.Minute))
 
 	mystAPI := getMockMystAPIWithProposal("node1", "noop")
 	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper, mystAPI)
@@ -370,15 +380,10 @@ func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 }
 
 func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
-	settableClock := utils.SettableClock{}
-	statsKeeper := stats.NewSessionStatsKeeper(settableClock.GetTime)
-	st := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
-	statsKeeper.Save(st)
-
-	sessionStart := time.Date(2000, time.January, 0, 10, 0, 0, 0, time.UTC)
-	settableClock.SetTime(sessionStart)
-	statsKeeper.MarkSessionStart()
-	settableClock.SetTime(sessionStart.Add(time.Minute))
+	statsKeeper := &StubStatisticsTracker{
+		duration: time.Minute,
+		stats:    consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
+	}
 
 	manager := fakeManager{}
 	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, mystClient)
@@ -397,10 +402,9 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 }
 
 func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testing.T) {
-	settableClock := utils.SettableClock{}
-	statsKeeper := stats.NewSessionStatsKeeper(settableClock.GetTime)
-	st := stats.SessionStats{BytesSent: 1, BytesReceived: 2}
-	statsKeeper.Save(st)
+	statsKeeper := &StubStatisticsTracker{
+		stats: consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
+	}
 
 	manager := fakeManager{}
 	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, mystClient)

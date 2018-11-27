@@ -24,11 +24,9 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
-	"github.com/mysteriumnetwork/node/client/stats"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
@@ -36,29 +34,23 @@ import (
 
 // ProcessBasedConnectionFactory represents a factory for creating process-based openvpn connections
 type ProcessBasedConnectionFactory struct {
-	mysteriumAPIClient    server.Client
 	openvpnBinary         string
 	configDirectory       string
 	runtimeDirectory      string
 	originalLocationCache location.Cache
 	signerFactory         identity.SignerFactory
-	statsKeeper           stats.SessionStatsKeeper
 }
 
 // NewProcessBasedConnectionFactory creates a new ProcessBasedConnectionFactory
 func NewProcessBasedConnectionFactory(
-	mysteriumAPIClient server.Client,
 	openvpnBinary, configDirectory, runtimeDirectory string,
-	statsKeeper stats.SessionStatsKeeper,
 	originalLocationCache location.Cache,
 	signerFactory identity.SignerFactory,
 ) *ProcessBasedConnectionFactory {
 	return &ProcessBasedConnectionFactory{
-		mysteriumAPIClient:    mysteriumAPIClient,
 		openvpnBinary:         openvpnBinary,
 		configDirectory:       configDirectory,
 		runtimeDirectory:      runtimeDirectory,
-		statsKeeper:           statsKeeper,
 		originalLocationCache: originalLocationCache,
 		signerFactory:         signerFactory,
 	}
@@ -69,29 +61,18 @@ func (op *ProcessBasedConnectionFactory) newAuthMiddleware(sessionID session.ID,
 	return auth.NewMiddleware(credentialsProvider)
 }
 
-func (op *ProcessBasedConnectionFactory) newBytecountMiddleware() management.Middleware {
-	statsSaver := bytescount.NewSessionStatsSaver(op.statsKeeper)
+func (op *ProcessBasedConnectionFactory) newBytecountMiddleware(statisticsChannel connection.StatisticsChannel) management.Middleware {
+	statsSaver := bytescount.NewSessionStatsSaver(statisticsChannel)
 	return openvpn_bytescount.NewMiddleware(statsSaver, 1*time.Second)
 }
 
 func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, signer identity.Signer, connectionOptions connection.ConnectOptions, stateChannel connection.StateChannel) management.Middleware {
-	// TODO Move stats.Sender from 'openvpn' package
-	statsSender := stats.NewRemoteStatsSender(
-		op.statsKeeper,
-		op.mysteriumAPIClient,
-		session,
-		connectionOptions.ProviderID,
-		"openvpn",
-		signer,
-		op.originalLocationCache.Get().Country,
-		time.Minute,
-	)
 	stateCallback := GetStateCallback(stateChannel)
-	return state.NewMiddleware(stateCallback, statsSender.StateHandler)
+	return state.NewMiddleware(stateCallback)
 }
 
-// CreateConnection implements the connection.ConnectionCreator interface
-func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
+// CreateConnection implements the connection.Creator interface
+func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 	vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory)
 	if err != nil {
 		return nil, err
@@ -101,7 +82,7 @@ func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.Con
 
 	stateMiddleware := op.newStateMiddleware(options.SessionID, signer, options, stateChannel)
 	authMiddleware := op.newAuthMiddleware(options.SessionID, signer)
-	byteCountMiddleware := op.newBytecountMiddleware()
+	byteCountMiddleware := op.newBytecountMiddleware(statisticsChannel)
 
 	return NewClient(
 		op.openvpnBinary,

@@ -17,19 +17,16 @@
 
 package connection
 
-import "github.com/mysteriumnetwork/node/service_discovery/dto"
+// Topic represents the different topics a consumer can subscribe to
+const (
+	// StateEventTopic represents the connection state change topic
+	StateEventTopic = "State"
+	// StatisticsEventTopic represents the connection stats topic
+	StatisticsEventTopic = "Statistics"
+)
 
-type fakePromiseIssuer struct {
-	startCalled bool
-	stopCalled  bool
-}
-
-func (issuer *fakePromiseIssuer) Start(proposal dto.ServiceProposal) error {
-	issuer.startCalled = true
-	return nil
-}
-
-func (issuer *fakePromiseIssuer) Stop() error {
-	issuer.stopCalled = true
-	return nil
+// StateEvent is the struct we'll emit on a StateEvent topic event
+type StateEvent struct {
+	State       State
+	SessionInfo SessionInfo
 }

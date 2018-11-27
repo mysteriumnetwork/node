@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -66,7 +66,7 @@ type sessionsEndpoint struct {
 }
 
 type sessionStorageGet interface {
-	GetAll() ([]connection.Session, error)
+	GetAll() ([]session.Session, error)
 }
 
 // NewSessionsEndpoint creates and returns sessions endpoint
@@ -105,7 +105,7 @@ func AddRoutesForSession(router *httprouter.Router, sessionStorage sessionStorag
 	router.GET("/sessions", sessionsEndpoint.List)
 }
 
-func sessionToDto(se connection.Session) SessionDTO {
+func sessionToDto(se session.Session) SessionDTO {
 	return SessionDTO{
 		SessionID:       string(se.SessionID),
 		ProviderID:      string(se.ProviderID.Address),
@@ -119,7 +119,7 @@ func sessionToDto(se connection.Session) SessionDTO {
 	}
 }
 
-func mapSessions(sessions []connection.Session, f func(connection.Session) SessionDTO) []SessionDTO {
+func mapSessions(sessions []session.Session, f func(session.Session) SessionDTO) []SessionDTO {
 	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = f(se)

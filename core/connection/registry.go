@@ -19,27 +19,27 @@ package connection
 
 // Registry holds of all plugable connections
 type Registry struct {
-	creators map[string]ConnectionCreator
+	creators map[string]Creator
 }
 
 // NewRegistry creates registry of plugable connections
 func NewRegistry() *Registry {
 	return &Registry{
-		creators: make(map[string]ConnectionCreator),
+		creators: make(map[string]Creator),
 	}
 }
 
 // Register new plugable connection
-func (registry *Registry) Register(serviceType string, creator ConnectionCreator) {
+func (registry *Registry) Register(serviceType string, creator Creator) {
 	registry.creators[serviceType] = creator
 }
 
 // CreateConnection create plugable connection
-func (registry *Registry) CreateConnection(options ConnectOptions, stateChannel StateChannel) (Connection, error) {
+func (registry *Registry) CreateConnection(options ConnectOptions, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
 	createConnection, exists := registry.creators[options.Proposal.ServiceType]
 	if !exists {
 		return nil, ErrUnsupportedServiceType
 	}
 
-	return createConnection(options, stateChannel)
+	return createConnection(options, stateChannel, statisticsChannel)
 }
