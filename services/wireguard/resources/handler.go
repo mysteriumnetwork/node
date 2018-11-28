@@ -39,7 +39,7 @@ func (h *Handler) AllocatePort() int { return 52820 }
 func (h *Handler) ReleaseInterface(string) error { return nil }
 
 // ReleaseIP releases IP address.
-func (h *Handler) ReleaseIP(ip string) error { return nil }
+func (h *Handler) ReleaseIP(ip net.IPNet) error { return nil }
 
 // ReleasePort releases UDP port.
 func (h *Handler) ReleasePort(port int) error { return nil }

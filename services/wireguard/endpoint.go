@@ -18,112 +18,124 @@
 package wireguard
 
 import (
-	"fmt"
 	"net"
 	"os/exec"
 
 	"github.com/mdlayher/wireguardctrl"
 	"github.com/mdlayher/wireguardctrl/wgtypes"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
-// Provider is a configuration data required for establishing connection to the service provider.
-type Provider struct {
-	IP        net.IPNet
-	PublicKey wgtypes.Key
-	Endpoint  net.UDPAddr
-}
-
-// Consumer is a configuration data required to configure service consumer.
-type Consumer struct {
-	IP         net.IPNet
-	PrivateKey wgtypes.Key // TODO peer private key should be generated on consumer side
-}
-
 type connectionEndpoint struct {
-	iface    string
-	endpoint net.UDPAddr
-	wgClient *wireguardctrl.Client
+	iface      string
+	ip         net.IPNet
+	endpoint   net.UDPAddr
+	wgClient   *wireguardctrl.Client
+	resources  resources.Handler
+	ipResolver ip.Resolver
 }
 
-// newConnectionEndpoint creates Wireguard client with predefined interface name and endpoint.
-func newConnectionEndpoint(iface string, endpoint net.UDPAddr) (*connectionEndpoint, error) {
+// NewConnectionEndpoint creates Wireguard client with predefined interface name and endpoint.
+func NewConnectionEndpoint(ipResolver ip.Resolver) (*connectionEndpoint, error) {
 	wgClient, err := wireguardctrl.New()
 	if err != nil {
 		return nil, err
 	}
 
 	return &connectionEndpoint{
-		iface:    iface,
-		endpoint: endpoint,
-		wgClient: wgClient,
+		wgClient:   wgClient,
+		ipResolver: ipResolver,
+		resources:  resources.Handler{},
 	}, nil
 }
 
-// ProviderConfig starts and configure wireguard network interface for providing service.
-// It returns information required to establish connection to the service.
-func (ce *connectionEndpoint) ProviderConfig(ip net.IPNet) (Provider, error) {
-	if err := ce.up(ip); err != nil {
-		return Provider{}, err
+// Start starts and configure wireguard network interface for providing service.
+func (ce *connectionEndpoint) Start() error {
+	publicIP, err := ce.ipResolver.GetPublicIP()
+	if err != nil {
+		return err
 	}
 
-	// TODO wireguard provider listen port should be passed as startup argument
-	port := 52820
+	ce.ip = ce.resources.AllocateIP()
+	ce.iface = ce.resources.AllocateInterface()
+	ce.endpoint = net.UDPAddr{IP: net.ParseIP(publicIP), Port: ce.resources.AllocatePort()}
+	if err := ce.up(); err != nil {
+		return err
+	}
+
 	key, err := wgtypes.GeneratePrivateKey()
 	if err != nil {
-		return Provider{}, err
+		return err
 	}
 
 	if err := ce.wgClient.ConfigureDevice(ce.iface, wgtypes.Config{
 		PrivateKey:   &key,
-		ListenPort:   &port,
+		ListenPort:   &ce.endpoint.Port,
 		ReplacePeers: true,
 	}); err != nil {
-		return Provider{}, err
+		return err
 	}
 
-	return Provider{
-		IP:        ip,
-		PublicKey: key.PublicKey(),
-		Endpoint:  ce.endpoint,
+	return nil
+}
+
+// NewConsumer adds service consumer public key to the list of allowed peers.
+func (ce *connectionEndpoint) NewConsumer() (configProvider, error) {
+	peerKey, err := wgtypes.GeneratePrivateKey()
+	if err != nil {
+		return consumer{}, err
+	}
+
+	ip := ce.resources.AllocateIP()
+	config := wgtypes.Config{
+		Peers: []wgtypes.PeerConfig{{
+			Endpoint:   &ce.endpoint,
+			PublicKey:  peerKey.PublicKey(),
+			AllowedIPs: []net.IPNet{ip},
+		}},
+	}
+
+	if err := ce.wgClient.ConfigureDevice(ce.iface, config); err != nil {
+		return consumer{}, err
+	}
+
+	return consumer{
+		ip:         ip,
+		peer:       config.Peers[0],
+		privateKey: peerKey,
 	}, nil
 }
 
-// ConsumerConfig adds service consumer public key to the list of allowed peers.
-// It returns information required to configure a consumer instance to allow connections.
-func (ce *connectionEndpoint) ConsumerConfig(ip net.IPNet) (Consumer, error) {
-	peerKey, err := wgtypes.GeneratePrivateKey()
-	if err != nil {
-		return Consumer{}, err
-	}
-
-	err = ce.wgClient.ConfigureDevice(ce.iface, wgtypes.Config{
-		Peers: []wgtypes.PeerConfig{{PublicKey: peerKey.PublicKey(), AllowedIPs: []net.IPNet{ip}}}})
-	if err != nil {
-		return Consumer{}, err
-	}
-
-	return Consumer{IP: ip, PrivateKey: peerKey}, nil
-}
-
-// Close closes wireguard client and destroys wireguard network interface.
-func (ce *connectionEndpoint) Close() error {
+// Stop closes wireguard client and destroys wireguard network interface.
+func (ce *connectionEndpoint) Stop() error {
 	if err := ce.wgClient.Close(); err != nil {
 		return err
 	}
 
-	return exec.Command("ip", "link", "del", "dev", ce.iface).Run()
+	if err := exec.Command("ip", "link", "del", "dev", ce.iface).Run(); err != nil {
+		return err
+	}
+
+	if err := ce.resources.ReleasePort(ce.endpoint.Port); err != nil {
+		return err
+	}
+
+	if err := ce.resources.ReleaseIP(ce.ip); err != nil {
+		return err
+	}
+
+	return ce.resources.ReleaseInterface(ce.iface)
 }
 
-func (ce *connectionEndpoint) up(net net.IPNet) error {
+func (ce *connectionEndpoint) up() error {
 	if d, err := ce.wgClient.Device(ce.iface); err != nil || d.Name != ce.iface {
-		if out, err := exec.Command("ip", "link", "add", "dev", ce.iface, "type", "wireguard").CombinedOutput(); err != nil {
-			fmt.Println(string(out), err)
+		if err := exec.Command("ip", "link", "add", "dev", ce.iface, "type", "wireguard").Run(); err != nil {
 			return err
 		}
 	}
 
-	if out, err := exec.Command("ip", "address", "replace", "dev", ce.iface, net.String()).CombinedOutput(); err != nil {
-		fmt.Println(string(out), err)
+	if err := exec.Command("ip", "address", "replace", "dev", ce.iface, ce.ip.String()).Run(); err != nil {
 		return err
 	}
 

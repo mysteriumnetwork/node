@@ -68,7 +68,11 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 
 func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(service_wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
-		return service_wireguard.NewManager(di.LocationResolver, di.IPResolver), nil
+		connectionEndpoint, err := service_wireguard.NewConnectionEndpoint(di.IPResolver)
+		if err != nil {
+			return nil, err
+		}
+		return service_wireguard.NewManager(di.LocationResolver, di.IPResolver, connectionEndpoint), nil
 	})
 
 	di.ServiceRunner.Register(service_wireguard.ServiceType)

@@ -18,11 +18,14 @@
 package wireguard
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/money"
+	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,7 +33,7 @@ var (
 	providerID = identity.FromAddress("provider-id")
 )
 
-var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{})
+var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{}, &fakeConnectionEndpoint{})
 var locationResolverStub = &fakeLocationResolver{
 	err: nil,
 	res: "LT",
@@ -40,8 +43,70 @@ var ipresolverStub = &fakeIPResolver{
 	publicErr:   nil,
 }
 
+var connectionEndpointStub = &fakeConnectionEndpoint{}
+
+func Test_Manager_Start(t *testing.T) {
+	manager := NewManager(locationResolverStub, ipresolverStub, connectionEndpointStub)
+	proposal, sessionConfigProvider, err := manager.Start(providerID)
+	assert.NoError(t, err)
+	assert.Exactly(
+		t,
+		dto_discovery.ServiceProposal{
+			ServiceType: "wireguard",
+			ServiceDefinition: ServiceDefinition{
+				Location: dto_discovery.Location{Country: "LT"},
+			},
+			PaymentMethodType: "WG",
+			PaymentMethod: Payment{
+				Price: money.Money{
+					Amount:   0,
+					Currency: money.Currency("MYST"),
+				},
+			},
+		},
+		proposal,
+	)
+	sessionConfig, err := sessionConfigProvider()
+	assert.NoError(t, err)
+	assert.Exactly(t, serviceConfig{}, sessionConfig)
+}
+
+func Test_Manager_Start_IPResolverErrs(t *testing.T) {
+	fakeErr := errors.New("some error")
+	ipResStub := &fakeIPResolver{
+		publicIPRes: "127.0.0.1",
+		publicErr:   fakeErr,
+	}
+	manager := NewManager(locationResolverStub, ipResStub, connectionEndpointStub)
+	_, _, err := manager.Start(providerID)
+	assert.Equal(t, fakeErr, err)
+}
+
+func Test_Manager_Start_LocResolverErrs(t *testing.T) {
+	fakeErr := errors.New("some error")
+	locResStub := &fakeLocationResolver{
+		res: "LT",
+		err: fakeErr,
+	}
+	manager := NewManager(locResStub, ipresolverStub, connectionEndpointStub)
+
+	_, _, err := manager.Start(providerID)
+	assert.Equal(t, fakeErr, err)
+}
+
+func Test_Manager_Wait(t *testing.T) {
+	manager := NewManager(locationResolverStub, ipresolverStub, connectionEndpointStub)
+
+	manager.Start(providerID)
+	go func() {
+		manager.Wait()
+		assert.Fail(t, "Wait should be blocking")
+	}()
+	waitABit()
+}
+
 func Test_Manager_Stop(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub)
+	manager := NewManager(locationResolverStub, ipresolverStub, connectionEndpointStub)
 	manager.Start(providerID)
 
 	err := manager.Stop()
@@ -80,3 +145,15 @@ func (fir *fakeIPResolver) GetPublicIP() (string, error) {
 func (fir *fakeIPResolver) GetOutboundIP() (string, error) {
 	return fir.outboundIPRes, fir.outboundErr
 }
+
+type fakeConnectionEndpoint struct{}
+
+func (fce *fakeConnectionEndpoint) Start() error { return nil }
+func (fce *fakeConnectionEndpoint) Stop() error  { return nil }
+func (fce *fakeConnectionEndpoint) NewConsumer() (configProvider, error) {
+	return fakeConfigProvider{}, nil
+}
+
+type fakeConfigProvider struct{}
+
+func (fcp fakeConfigProvider) Config() (serviceConfig, error) { return serviceConfig{}, nil }
