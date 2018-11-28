@@ -87,9 +87,14 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName stri
 	// 1 for each of the services
 	errorChannel := make(chan error, 2+len(serviceTypes))
 
-	if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
+	nodeOptions := cmd.ParseFlagsNode(ctx)
+	if err := di.Bootstrap(nodeOptions); err != nil {
 		return err
 	}
+	if err := di.BootstrapServices(nodeOptions); err != nil {
+		return err
+	}
+
 	go func() { errorChannel <- di.Node.Wait() }()
 
 	for _, serviceType := range serviceTypes {
