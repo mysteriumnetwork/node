@@ -24,22 +24,22 @@ import "net"
 type Allocator struct{}
 
 // AllocateInterface provides available name for the wireguard network interface.
-func (h *Allocator) AllocateInterface() string { return "myst0" }
+func (a *Allocator) AllocateInterface() string { return "myst0" }
 
 // AllocateIPNet provides available IP address for the wireguard connection.
-func (h *Allocator) AllocateIPNet() net.IPNet {
+func (a *Allocator) AllocateIPNet() net.IPNet {
 	_, subnet, _ := net.ParseCIDR("10.182.47.0/24")
 	return *subnet
 }
 
 // AllocatePort provides available UDP port for the wireguard endpoint.
-func (h *Allocator) AllocatePort() int { return 52820 }
+func (a *Allocator) AllocatePort() int { return 52820 }
 
 // ReleaseInterface releases name for the wireguard network interface.
-func (h *Allocator) ReleaseInterface(string) error { return nil }
+func (a *Allocator) ReleaseInterface(string) error { return nil }
 
 // ReleaseIPNet releases IP address.
-func (h *Allocator) ReleaseIPNet(ip net.IPNet) error { return nil }
+func (a *Allocator) ReleaseIPNet(ip net.IPNet) error { return nil }
 
 // ReleasePort releases UDP port.
-func (h *Allocator) ReleasePort(port int) error { return nil }
+func (a *Allocator) ReleasePort(port int) error { return nil }
