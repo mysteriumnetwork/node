@@ -67,7 +67,7 @@ type sessionsEndpoint struct {
 }
 
 type sessionStorageGet interface {
-	GetAll() ([]session.Session, error)
+	GetAll() ([]session.History, error)
 }
 
 // NewSessionsEndpoint creates and returns sessions endpoint
@@ -106,7 +106,7 @@ func AddRoutesForSession(router *httprouter.Router, sessionStorage sessionStorag
 	router.GET("/sessions", sessionsEndpoint.List)
 }
 
-func sessionToDto(se session.Session) SessionDTO {
+func sessionToDto(se session.History) SessionDTO {
 	return SessionDTO{
 		SessionID:       string(se.SessionID),
 		ProviderID:      string(se.ProviderID.Address),
@@ -116,11 +116,11 @@ func sessionToDto(se session.Session) SessionDTO {
 		BytesSent:       se.DataStats.BytesSent,
 		BytesReceived:   se.DataStats.BytesReceived,
 		Duration:        se.GetDuration(),
-		Status:          se.Status.String(),
+		Status:          string(se.Status),
 	}
 }
 
-func mapSessions(sessions []session.Session, f func(session.Session) SessionDTO) []SessionDTO {
+func mapSessions(sessions []session.History, f func(session.History) SessionDTO) []SessionDTO {
 	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = f(se)

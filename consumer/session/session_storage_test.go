@@ -44,7 +44,7 @@ var (
 	sessionStatus   = SessionStatusNew
 
 	mockStatistics = consumer.SessionStatistics{BytesReceived: 10, BytesSent: 15}
-	mockSession    = Session{
+	mockSession    = History{
 		SessionID:       sessionID,
 		ProviderID:      providerID,
 		ServiceType:     serviceType,
@@ -65,41 +65,6 @@ var (
 		},
 	}
 )
-
-func TestSessionStorageSave(t *testing.T) {
-	storer := &StubSessionStorer{}
-	storage := NewSessionStorage(storer, stubRetriever)
-	err := storage.Save(mockSession)
-	assert.Nil(t, err)
-	assert.True(t, storer.SaveCalled)
-}
-
-func TestSessionStorageSaveReturnsError(t *testing.T) {
-	storer := &StubSessionStorer{
-		SaveError: errMock,
-	}
-
-	storage := NewSessionStorage(storer, stubRetriever)
-	err := storage.Save(mockSession)
-	assert.Equal(t, errMock, err)
-}
-
-func TestSessionStorageUpdate(t *testing.T) {
-	storer := &StubSessionStorer{}
-	storage := NewSessionStorage(storer, stubRetriever)
-	err := storage.Update(sessionID, startTime, mockStatistics, sessionStatus)
-	assert.Nil(t, err)
-	assert.True(t, storer.UpdateCalled)
-}
-
-func TestSessionStorageUpdateReturnsError(t *testing.T) {
-	storer := &StubSessionStorer{
-		UpdateError: errMock,
-	}
-	storage := NewSessionStorage(storer, stubRetriever)
-	err := storage.Update(sessionID, startTime, mockStatistics, sessionStatus)
-	assert.Equal(t, errMock, err)
-}
 
 func TestSessionStorageGetAll(t *testing.T) {
 	storer := &StubSessionStorer{}
@@ -173,17 +138,17 @@ type StubSessionStorer struct {
 	GetAllError  error
 }
 
-func (sss *StubSessionStorer) Save(object interface{}) error {
+func (sss *StubSessionStorer) Store(from string, object interface{}) error {
 	sss.SaveCalled = true
 	return sss.SaveError
 }
 
-func (sss *StubSessionStorer) Update(object interface{}) error {
+func (sss *StubSessionStorer) Update(from string, object interface{}) error {
 	sss.UpdateCalled = true
 	return sss.UpdateError
 }
 
-func (sss *StubSessionStorer) GetAll(array interface{}) error {
+func (sss *StubSessionStorer) GetAllFrom(from string, array interface{}) error {
 	sss.GetAllCalled = true
 	return sss.GetAllError
 }

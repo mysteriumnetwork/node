@@ -38,7 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
@@ -65,7 +64,7 @@ type Dependencies struct {
 	MysteriumMorqaClient metrics.QualityOracle
 	EtherClient          *ethclient.Client
 
-	Storage              storage.Storage
+	Storage              *boltdb.Bolt
 	Keystore             *keystore.KeyStore
 	IdentityManager      identity.Manager
 	SignerFactory        identity.SignerFactory
