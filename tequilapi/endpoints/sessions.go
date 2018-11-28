@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer/session"
@@ -111,7 +112,7 @@ func sessionToDto(se session.Session) SessionDTO {
 		ProviderID:      string(se.ProviderID.Address),
 		ServiceType:     se.ServiceType,
 		ProviderCountry: se.ProviderCountry,
-		DateStarted:     se.Started.Format("2006-01-02 15:04:05"),
+		DateStarted:     se.Started.Format(time.RFC3339),
 		BytesSent:       se.DataStats.BytesSent,
 		BytesReceived:   se.DataStats.BytesReceived,
 		Duration:        se.GetDuration(),

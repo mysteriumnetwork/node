@@ -18,13 +18,17 @@
 package endpoints
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/consumer"
-
 	"github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/identity"
 	node_session "github.com/mysteriumnetwork/node/session"
@@ -51,9 +55,8 @@ var (
 )
 
 func TestSessionToDto(t *testing.T) {
-	value := "2010-01-01 12:00:00"
-	format := "2006-01-02 15:04:05"
-	startedAt, _ := time.Parse(format, value)
+	value := "2010-01-01T12:00:00Z"
+	startedAt, _ := time.Parse(time.RFC3339, value)
 
 	se := SessionMock
 	se.Started = startedAt
@@ -68,4 +71,63 @@ func TestSessionToDto(t *testing.T) {
 	assert.Equal(t, SessionMock.DataStats.BytesSent, sessionDTO.BytesSent)
 	assert.Equal(t, SessionMock.GetDuration(), sessionDTO.Duration)
 	assert.Equal(t, SessionMock.Status.String(), sessionDTO.Status)
+}
+
+func TestListEndpoint(t *testing.T) {
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.Nil(t, err)
+
+	ssm := &sessionStorageMock{
+		errToReturn: nil,
+		sessionsToReturn: []session.Session{
+			SessionMock,
+		},
+	}
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewSessionsEndpoint(ssm).List
+	handlerFunc(resp, req, nil)
+
+	parsedResponse := &SessionsDTO{}
+	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
+	assert.Nil(t, err)
+	assert.EqualValues(t, sessionToDto(SessionMock), parsedResponse.Sessions[0])
+}
+
+func TestListEndpointBubblesError(t *testing.T) {
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.Nil(t, err)
+
+	mockErr := errors.New("something exploded")
+	ssm := &sessionStorageMock{
+		errToReturn:      mockErr,
+		sessionsToReturn: []session.Session{},
+	}
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewSessionsEndpoint(ssm).List
+	handlerFunc(resp, req, nil)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	assert.Equal(t,
+		fmt.Sprintf(`{"message":%q}%v`, mockErr.Error(), "\n"),
+		resp.Body.String(),
+	)
+}
+
+type sessionStorageMock struct {
+	sessionsToReturn []session.Session
+	errToReturn      error
+}
+
+func (ssm *sessionStorageMock) GetAll() ([]session.Session, error) {
+	return ssm.sessionsToReturn, ssm.errToReturn
 }
