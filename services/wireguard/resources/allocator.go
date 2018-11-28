@@ -19,27 +19,27 @@ package resources
 
 import "net"
 
-// Handler is mock wireguard resource handler.
+// Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.
-type Handler struct{}
+type Allocator struct{}
 
 // AllocateInterface provides available name for the wireguard network interface.
-func (h *Handler) AllocateInterface() string { return "myst0" }
+func (h *Allocator) AllocateInterface() string { return "myst0" }
 
 // AllocateIP provides available IP address for the wireguard connection.
-func (h *Handler) AllocateIP() net.IPNet {
+func (h *Allocator) AllocateIP() net.IPNet {
 	ip, ipnet, _ := net.ParseCIDR("10.182.47.1/24")
 	return net.IPNet{IP: ip, Mask: ipnet.Mask}
 }
 
 // AllocatePort provides available UDP port for the wireguard endpoint.
-func (h *Handler) AllocatePort() int { return 52820 }
+func (h *Allocator) AllocatePort() int { return 52820 }
 
 // ReleaseInterface releases name for the wireguard network interface.
-func (h *Handler) ReleaseInterface(string) error { return nil }
+func (h *Allocator) ReleaseInterface(string) error { return nil }
 
 // ReleaseIP releases IP address.
-func (h *Handler) ReleaseIP(ip net.IPNet) error { return nil }
+func (h *Allocator) ReleaseIP(ip net.IPNet) error { return nil }
 
 // ReleasePort releases UDP port.
-func (h *Handler) ReleasePort(port int) error { return nil }
+func (h *Allocator) ReleasePort(port int) error { return nil }

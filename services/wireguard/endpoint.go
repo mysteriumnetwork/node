@@ -28,12 +28,12 @@ import (
 )
 
 type connectionEndpoint struct {
-	iface      string
-	ip         net.IPNet
-	endpoint   net.UDPAddr
-	wgClient   *wireguardctrl.Client
-	resources  resources.Handler
-	ipResolver ip.Resolver
+	iface             string
+	ip                net.IPNet
+	endpoint          net.UDPAddr
+	wgClient          *wireguardctrl.Client
+	ipResolver        ip.Resolver
+	resourceAllocator resources.Allocator
 }
 
 // NewConnectionEndpoint creates Wireguard client with predefined interface name and endpoint.
@@ -44,9 +44,9 @@ func NewConnectionEndpoint(ipResolver ip.Resolver) (*connectionEndpoint, error) 
 	}
 
 	return &connectionEndpoint{
-		wgClient:   wgClient,
-		ipResolver: ipResolver,
-		resources:  resources.Handler{},
+		wgClient:          wgClient,
+		ipResolver:        ipResolver,
+		resourceAllocator: resources.Allocator{},
 	}, nil
 }
 
@@ -57,9 +57,9 @@ func (ce *connectionEndpoint) Start() error {
 		return err
 	}
 
-	ce.ip = ce.resources.AllocateIP()
-	ce.iface = ce.resources.AllocateInterface()
-	ce.endpoint = net.UDPAddr{IP: net.ParseIP(publicIP), Port: ce.resources.AllocatePort()}
+	ce.ip = ce.resourceAllocator.AllocateIP()
+	ce.iface = ce.resourceAllocator.AllocateInterface()
+	ce.endpoint = net.UDPAddr{IP: net.ParseIP(publicIP), Port: ce.resourceAllocator.AllocatePort()}
 	if err := ce.up(); err != nil {
 		return err
 	}
@@ -69,11 +69,13 @@ func (ce *connectionEndpoint) Start() error {
 		return err
 	}
 
-	if err := ce.wgClient.ConfigureDevice(ce.iface, wgtypes.Config{
+	config := wgtypes.Config{
 		PrivateKey:   &key,
 		ListenPort:   &ce.endpoint.Port,
 		ReplacePeers: true,
-	}); err != nil {
+	}
+
+	if err := ce.wgClient.ConfigureDevice(ce.iface, config); err != nil {
 		return err
 	}
 
@@ -87,7 +89,7 @@ func (ce *connectionEndpoint) NewConsumer() (configProvider, error) {
 		return consumer{}, err
 	}
 
-	ip := ce.resources.AllocateIP()
+	ip := ce.resourceAllocator.AllocateIP()
 	config := wgtypes.Config{
 		Peers: []wgtypes.PeerConfig{{
 			Endpoint:   &ce.endpoint,
@@ -101,9 +103,9 @@ func (ce *connectionEndpoint) NewConsumer() (configProvider, error) {
 	}
 
 	return consumer{
-		ip:         ip,
-		peer:       config.Peers[0],
-		privateKey: peerKey,
+		interfaceAddress: ip,
+		peer:             config.Peers[0],
+		privateKey:       peerKey,
 	}, nil
 }
 
@@ -117,15 +119,15 @@ func (ce *connectionEndpoint) Stop() error {
 		return err
 	}
 
-	if err := ce.resources.ReleasePort(ce.endpoint.Port); err != nil {
+	if err := ce.resourceAllocator.ReleasePort(ce.endpoint.Port); err != nil {
 		return err
 	}
 
-	if err := ce.resources.ReleaseIP(ce.ip); err != nil {
+	if err := ce.resourceAllocator.ReleaseIP(ce.ip); err != nil {
 		return err
 	}
 
-	return ce.resources.ReleaseInterface(ce.iface)
+	return ce.resourceAllocator.ReleaseInterface(ce.iface)
 }
 
 func (ce *connectionEndpoint) up() error {

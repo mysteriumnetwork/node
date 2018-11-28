@@ -27,11 +27,12 @@ import (
 var errNoIPAddress = errors.New("IP address required")
 
 type consumer struct {
-	ip         net.IPNet
-	peer       wgtypes.PeerConfig
-	privateKey wgtypes.Key
+	interfaceAddress net.IPNet
+	peer             wgtypes.PeerConfig
+	privateKey       wgtypes.Key
 }
 
+// Config generates serviceConfiguration that will be used by Consumer to establish connection.
 func (c consumer) Config() (serviceConfig, error) {
 	if len(c.peer.AllowedIPs) == 0 {
 		return serviceConfig{}, errNoIPAddress
@@ -43,7 +44,7 @@ func (c consumer) Config() (serviceConfig, error) {
 	config.Provider.Endpoint = *c.peer.Endpoint
 	config.Provider.PublicKey = c.peer.PublicKey
 
-	config.Consumer.IP = c.ip
+	config.Consumer.IP = c.interfaceAddress
 	config.Consumer.PrivateKey = c.privateKey
 
 	return config, nil
