@@ -57,14 +57,13 @@ type Manager struct {
 // serviceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type serviceConfig struct {
 	Provider struct {
-		IP        net.IPNet
 		PublicKey wgtypes.Key
 		Endpoint  net.UDPAddr
 	}
 	Consumer struct {
-		IP         net.IPNet
 		PrivateKey wgtypes.Key // TODO peer private key should be generated on consumer side
 	}
+	AllowedIPs net.IPNet
 }
 
 // ConnectionEndpoint represents Wireguard network instance, it provide information

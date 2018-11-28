@@ -29,7 +29,7 @@ import (
 
 type connectionEndpoint struct {
 	iface             string
-	ip                net.IPNet
+	allowedIPs        net.IPNet
 	endpoint          net.UDPAddr
 	wgClient          *wireguardctrl.Client
 	ipResolver        ip.Resolver
@@ -57,8 +57,8 @@ func (ce *connectionEndpoint) Start() error {
 		return err
 	}
 
-	ce.ip = ce.resourceAllocator.AllocateIP()
 	ce.iface = ce.resourceAllocator.AllocateInterface()
+	ce.allowedIPs = ce.resourceAllocator.AllocateIPNet()
 	ce.endpoint = net.UDPAddr{IP: net.ParseIP(publicIP), Port: ce.resourceAllocator.AllocatePort()}
 	if err := ce.up(); err != nil {
 		return err
@@ -89,12 +89,11 @@ func (ce *connectionEndpoint) NewConsumer() (configProvider, error) {
 		return consumer{}, err
 	}
 
-	ip := ce.resourceAllocator.AllocateIP()
 	config := wgtypes.Config{
 		Peers: []wgtypes.PeerConfig{{
 			Endpoint:   &ce.endpoint,
 			PublicKey:  peerKey.PublicKey(),
-			AllowedIPs: []net.IPNet{ip},
+			AllowedIPs: []net.IPNet{ce.allowedIPs},
 		}},
 	}
 
@@ -103,9 +102,9 @@ func (ce *connectionEndpoint) NewConsumer() (configProvider, error) {
 	}
 
 	return consumer{
-		interfaceAddress: ip,
-		peer:             config.Peers[0],
-		privateKey:       peerKey,
+		allowedIPs: ce.allowedIPs,
+		peer:       config.Peers[0],
+		privateKey: peerKey,
 	}, nil
 }
 
@@ -123,7 +122,7 @@ func (ce *connectionEndpoint) Stop() error {
 		return err
 	}
 
-	if err := ce.resourceAllocator.ReleaseIP(ce.ip); err != nil {
+	if err := ce.resourceAllocator.ReleaseIPNet(ce.allowedIPs); err != nil {
 		return err
 	}
 
@@ -137,9 +136,21 @@ func (ce *connectionEndpoint) up() error {
 		}
 	}
 
-	if err := exec.Command("ip", "address", "replace", "dev", ce.iface, ce.ip.String()).Run(); err != nil {
+	subnet := ce.allowedIPs
+	subnet.IP = providerIP(subnet)
+	if err := exec.Command("ip", "address", "replace", "dev", ce.iface, subnet.String()).Run(); err != nil {
 		return err
 	}
 
 	return exec.Command("ip", "link", "set", "dev", ce.iface, "up").Run()
+}
+
+func providerIP(subnet net.IPNet) net.IP {
+	subnet.IP[len(subnet.IP)-1] = byte(1)
+	return subnet.IP
+}
+
+func consumerIP(subnet net.IPNet) net.IP {
+	subnet.IP[len(subnet.IP)-1] = byte(2)
+	return subnet.IP
 }
