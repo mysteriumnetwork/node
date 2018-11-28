@@ -37,12 +37,15 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
+// BootstrapServices loads all the components required for running services
+func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
 	di.bootstrapServiceComponents(nodeOptions)
 
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 	di.bootstrapServiceWireguard(nodeOptions)
+
+	return nil
 }
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {

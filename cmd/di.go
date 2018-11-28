@@ -120,7 +120,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapNodeComponents(nodeOptions)
 
 	di.registerConnections(nodeOptions)
-	di.bootstrapServices(nodeOptions)
 
 	err := di.subscribeEventConsumers()
 	if err != nil {

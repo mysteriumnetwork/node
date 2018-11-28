@@ -20,11 +20,15 @@
 package cmd
 
 import (
+	"errors"
+
 	"github.com/mysteriumnetwork/node/core/node"
 )
 
-func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
-	// On mobile platforms, we don't intend on running the services.
-	// Therefore, we do nothing.
-	return
+// ErrServiceStartingUnsupported represents the error when this entrypoint is used in an unsupported OS
+var ErrServiceStartingUnsupported = errors.New("running of services is not supported on your OS")
+
+// BootstrapServices loads all the components required for running services
+func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
+	return ErrServiceStartingUnsupported
 }
