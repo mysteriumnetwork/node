@@ -18,6 +18,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -50,6 +51,9 @@ var (
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
 	}
+
+	// ErrServiceStartingUnsupported represents the error when this entrypoint is used in an unsupported OS
+	ErrServiceStartingUnsupported = errors.New("running of services is not supported on your OS")
 )
 
 // NewCommand function creates service command
@@ -75,6 +79,11 @@ func NewCommand(licenseCommandName string) *cli.Command {
 }
 
 func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName string, serviceTypes []string) error {
+	if di.ServiceRunner == nil {
+		fmt.Println(ErrServiceStartingUnsupported.Error())
+		os.Exit(2)
+	}
+
 	if !ctx.Bool(agreedTermsConditionsFlag.Name) {
 		printTermWarning(licenseCommandName)
 		os.Exit(2)

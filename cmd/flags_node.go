@@ -45,7 +45,6 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag)
 
 	RegisterFlagsNetwork(flags)
-	// TODO Register Openvpn flags as transport arguments
 	openvpn_core.RegisterFlags(flags)
 	RegisterFlagsLocation(flags)
 
