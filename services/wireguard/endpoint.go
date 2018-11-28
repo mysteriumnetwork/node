@@ -27,9 +27,14 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
+var allowedIPs = []net.IPNet{
+	{IP: net.IPv4zero, Mask: net.CIDRMask(0, 32)},
+	{IP: net.IPv6zero, Mask: net.CIDRMask(0, 128)},
+}
+
 type connectionEndpoint struct {
 	iface             string
-	allowedIPs        net.IPNet
+	subnet            net.IPNet
 	endpoint          net.UDPAddr
 	wgClient          *wireguardctrl.Client
 	ipResolver        ip.Resolver
@@ -58,7 +63,7 @@ func (ce *connectionEndpoint) Start() error {
 	}
 
 	ce.iface = ce.resourceAllocator.AllocateInterface()
-	ce.allowedIPs = ce.resourceAllocator.AllocateIPNet()
+	ce.subnet = ce.resourceAllocator.AllocateIPNet()
 	ce.endpoint = net.UDPAddr{IP: net.ParseIP(publicIP), Port: ce.resourceAllocator.AllocatePort()}
 	if err := ce.up(); err != nil {
 		return err
@@ -93,7 +98,7 @@ func (ce *connectionEndpoint) NewConsumer() (configProvider, error) {
 		Peers: []wgtypes.PeerConfig{{
 			Endpoint:   &ce.endpoint,
 			PublicKey:  peerKey.PublicKey(),
-			AllowedIPs: []net.IPNet{ce.allowedIPs},
+			AllowedIPs: allowedIPs,
 		}},
 	}
 
@@ -102,7 +107,7 @@ func (ce *connectionEndpoint) NewConsumer() (configProvider, error) {
 	}
 
 	return consumer{
-		allowedIPs: ce.allowedIPs,
+		subnet:     ce.subnet,
 		peer:       config.Peers[0],
 		privateKey: peerKey,
 	}, nil
@@ -122,7 +127,7 @@ func (ce *connectionEndpoint) Stop() error {
 		return err
 	}
 
-	if err := ce.resourceAllocator.ReleaseIPNet(ce.allowedIPs); err != nil {
+	if err := ce.resourceAllocator.ReleaseIPNet(ce.subnet); err != nil {
 		return err
 	}
 
@@ -136,7 +141,7 @@ func (ce *connectionEndpoint) up() error {
 		}
 	}
 
-	subnet := ce.allowedIPs
+	subnet := ce.subnet
 	subnet.IP = providerIP(subnet)
 	if err := exec.Command("ip", "address", "replace", "dev", ce.iface, subnet.String()).Run(); err != nil {
 		return err

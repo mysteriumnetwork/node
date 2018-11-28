@@ -63,7 +63,7 @@ type serviceConfig struct {
 	Consumer struct {
 		PrivateKey wgtypes.Key // TODO peer private key should be generated on consumer side
 	}
-	AllowedIPs net.IPNet
+	Subnet net.IPNet
 }
 
 // ConnectionEndpoint represents Wireguard network instance, it provide information
