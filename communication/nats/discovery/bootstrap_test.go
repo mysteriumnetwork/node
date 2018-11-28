@@ -22,13 +22,10 @@ import (
 	"testing"
 
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/stretchr/testify/assert"
 )
 
 func init() {
-	// TODO Use transport mock in tests instead of real openvpn
-	openvpn.Bootstrap()
 	Bootstrap()
 }
 
