@@ -2,6 +2,22 @@
 
 
 [[projects]]
+  digest = "1:54dbf15386462c57da4cb7cfd523e85c888106d972186533de17342f11304ac5"
+  name = "git.zx2c4.com/wireguard-go"
+  packages = [
+    "device",
+    "ratelimiter",
+    "replay",
+    "rwcancel",
+    "tai64n",
+    "tun",
+    "xchacha20poly1305",
+  ]
+  pruneopts = "UT"
+  revision = "ffd4865b321335a7b3dca2dc328120d178bae687"
+  source = "github.com/mysteriumnetwork/wireguard-go"
+
+[[projects]]
   digest = "1:7d191fd0c54ff370eaf6116a14dafe2a328df487baea280699f597aae858d00d"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
@@ -346,11 +362,16 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:4e429286441e8ff586f6daa31fd9de81b8deb1cb4dce601fd08772f78eac1bb0"
+  digest = "1:c4296eee6926c02ba1b130e41e59e38ae088eb8afb4177a1e20cbe8c61781dd1"
   name = "golang.org/x/crypto"
   packages = [
+    "blake2s",
+    "chacha20poly1305",
     "curve25519",
+    "internal/chacha20",
+    "internal/subtle",
     "pbkdf2",
+    "poly1305",
     "scrypt",
   ]
   pruneopts = "UT"
@@ -358,10 +379,14 @@
 
 [[projects]]
   branch = "release-branch.go1.11"
-  digest = "1:f3d599202b6b13ac36de61dceb22a5cb13a6bd87783e1c44a8cc4347da328555"
+  digest = "1:8f2aed8be0d0a5771da9df6a0bf28ffe8534643b97caf6c51c1dabb4a47d80c3"
   name = "golang.org/x/net"
   packages = [
     "bpf",
+    "internal/iana",
+    "internal/socket",
+    "ipv4",
+    "ipv6",
     "websocket",
   ]
   pruneopts = "UT"
@@ -369,9 +394,10 @@
 
 [[projects]]
   branch = "release-branch.go1.11"
-  digest = "1:a60cae5be8993938498243605b120290533a5208fd5cac81c932afbad3642fb0"
+  digest = "1:ada3f6483b5d87199a41dfccf9e9965019d2c26ef9b199c58ab12bc57a9823cd"
   name = "golang.org/x/sys"
   packages = [
+    "cpu",
     "unix",
     "windows",
   ]
@@ -457,6 +483,8 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "git.zx2c4.com/wireguard-go/device",
+    "git.zx2c4.com/wireguard-go/tun",
     "github.com/asaskevich/EventBus",
     "github.com/asdine/storm",
     "github.com/chzyer/readline",

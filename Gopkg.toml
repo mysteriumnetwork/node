@@ -93,3 +93,8 @@
 [[constraint]]
   revision = "15a089393cc3b891b2181cd738347dc568a0b4b0"
   name = "github.com/mdlayher/wireguardctrl"
+
+[[constraint]]
+  name = "git.zx2c4.com/wireguard-go"
+  revision = "ffd4865b321335a7b3dca2dc328120d178bae687"
+  source = "github.com/mysteriumnetwork/wireguard-go"
