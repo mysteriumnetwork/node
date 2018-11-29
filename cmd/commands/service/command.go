@@ -28,7 +28,6 @@ import (
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
-	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/urfave/cli"
 )
 
@@ -151,16 +150,10 @@ func registerFlags(flags *[]cli.Flag) {
 }
 
 func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, error) {
-	switch serviceType {
-	case service_noop.ServiceType:
-		return parseNoopFlags(ctx), nil
-	case service_openvpn.ServiceType:
-		return parseOpenvpnFlags(ctx), nil
-	case service_wireguard.ServiceType:
-		return parseWireguardFlags(ctx), nil
-	default:
-		return service.Options{}, fmt.Errorf("Unknown service type: %q", serviceType)
+	if f, ok := serviceTypesFlagsParser[serviceType]; ok {
+		return f(ctx), nil
 	}
+	return service.Options{}, fmt.Errorf("Unknown service type: %q", serviceType)
 }
 
 // parseOpenvpnFlags function fills in openvpn options from CLI context
@@ -179,15 +172,6 @@ func parseNoopFlags(ctx *cli.Context) service.Options {
 		Identity:   ctx.String(identityFlag.Name),
 		Passphrase: ctx.String(identityPassphraseFlag.Name),
 		Type:       service_noop.ServiceType,
-	}
-}
-
-// parseWireguardFlags function fills in wireguard service options from CLI context
-func parseWireguardFlags(ctx *cli.Context) service.Options {
-	return service.Options{
-		Identity:   ctx.String(identityFlag.Name),
-		Passphrase: ctx.String(identityPassphraseFlag.Name),
-		Type:       service_wireguard.ServiceType,
 	}
 }
 
