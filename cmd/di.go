@@ -50,7 +50,6 @@ import (
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
-	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
@@ -133,12 +132,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	return nil
 }
 
-func (di *Dependencies) registerConnections(nodeOptions node.Options) {
-	di.registerOpenvpnConnection(nodeOptions)
-	di.registerNoopConnection()
-	di.registerWireguardConnection()
-}
-
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 	service_openvpn.Bootstrap()
 	connectionFactory := service_openvpn.NewProcessBasedConnectionFactory(
@@ -155,11 +148,6 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 func (di *Dependencies) registerNoopConnection() {
 	service_noop.Bootstrap()
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
-}
-
-func (di *Dependencies) registerWireguardConnection() {
-	service_wireguard.Bootstrap()
-	di.ConnectionRegistry.Register(service_wireguard.ServiceType, service_wireguard.NewConnectionCreator())
 }
 
 // Shutdown stops container
