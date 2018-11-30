@@ -19,9 +19,11 @@ package wireguard
 
 import (
 	"errors"
+	"net"
 	"testing"
 	"time"
 
+	"github.com/mdlayher/wireguardctrl/wgtypes"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
@@ -68,7 +70,7 @@ func Test_Manager_Start(t *testing.T) {
 	)
 	sessionConfig, err := sessionConfigProvider()
 	assert.NoError(t, err)
-	assert.Exactly(t, serviceConfig{}, sessionConfig)
+	assert.NotNil(t, sessionConfig)
 }
 
 func Test_Manager_Start_IPResolverErrs(t *testing.T) {
@@ -148,12 +150,7 @@ func (fir *fakeIPResolver) GetOutboundIP() (string, error) {
 
 type fakeConnectionEndpoint struct{}
 
-func (fce *fakeConnectionEndpoint) Start() error { return nil }
-func (fce *fakeConnectionEndpoint) Stop() error  { return nil }
-func (fce *fakeConnectionEndpoint) NewConsumer() (configProvider, error) {
-	return fakeConfigProvider{}, nil
-}
-
-type fakeConfigProvider struct{}
-
-func (fcp fakeConfigProvider) Config() (serviceConfig, error) { return serviceConfig{}, nil }
+func (fce *fakeConnectionEndpoint) Stop() error                                 { return nil }
+func (fce *fakeConnectionEndpoint) Start(_ *serviceConfig) error                { return nil }
+func (fce *fakeConnectionEndpoint) Config() (serviceConfig, error)              { return serviceConfig{}, nil }
+func (fce *fakeConnectionEndpoint) AddPeer(_ wgtypes.Key, _ *net.UDPAddr) error { return nil }
