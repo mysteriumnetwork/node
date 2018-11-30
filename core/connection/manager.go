@@ -22,7 +22,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/asaskevich/EventBus"
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
@@ -87,7 +86,7 @@ func NewManager(
 	dialogCreator DialogCreator,
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator Creator,
-	eventPublisher EventBus.BusPublisher,
+	eventPublisher Publisher,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:        dialogCreator,
