@@ -19,10 +19,10 @@ package mysterium
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
-
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -94,10 +94,13 @@ type ReconnectableSession interface {
 
 type sessionTracker struct {
 	session *openvpn3.Session
+	mux     sync.Mutex
 }
 
 func (st *sessionTracker) sessionCreated(s *openvpn3.Session) {
+	st.mux.Lock()
 	st.session = s
+	st.mux.Unlock()
 }
 
 // Reconnect reconnects active session after given time
@@ -112,7 +115,7 @@ func (st *sessionTracker) Reconnect(afterSeconds int) error {
 func (st *sessionTracker) handleState(stateEvent connection.StateEvent) {
 	// On disconnected - remove session
 	if stateEvent.State == connection.Disconnecting {
-		st.session.Stop()
+		st.session = nil
 	}
 }
 
