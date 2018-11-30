@@ -22,67 +22,51 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/services/wireguard/network"
 )
 
 // Connection which does no real tunneling
 type Connection struct {
-	isRunning    bool
 	connection   sync.WaitGroup
 	stateChannel connection.StateChannel
 
-	config Config
-	wg     Consumer
-}
-
-// Consumer represents Wireguard network instance that consume provided service.
-type Consumer interface {
-	Consumer(provider network.Provider, consumer network.Consumer) error
-	Close() error
+	config             serviceConfig
+	connectionEndpoint ConnectionEndpoint
 }
 
 // Start implements the connection.Connection interface
-func (c *Connection) Start() error {
-	wg, err := network.NewNetwork(interfaceName, "")
+func (c *Connection) Start() (err error) {
+	c.connectionEndpoint, err = NewConnectionEndpoint(nil)
 	if err != nil {
 		return err
 	}
-	c.wg = wg
 
 	c.connection.Add(1)
-	c.isRunning = true
-
 	c.stateChannel <- connection.Connecting
 
-	if err := c.wg.Consumer(c.config.Provider, c.config.Consumer); err != nil {
-		c.isRunning = false
+	if err := c.connectionEndpoint.Start(&c.config); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
 		return err
 	}
 
+	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {
+		return err
+	}
 	c.stateChannel <- connection.Connected
 	return nil
 }
 
 // Wait implements the connection.Connection interface
 func (c *Connection) Wait() error {
-	if c.isRunning {
-		c.connection.Wait()
-	}
+	c.connection.Wait()
 	return nil
 }
 
 // Stop implements the connection.Connection interface
 func (c *Connection) Stop() {
-	if !c.isRunning {
-		return
-	}
-
-	c.isRunning = false
 	c.stateChannel <- connection.Disconnecting
 
-	if err := c.wg.Close(); err != nil {
+	if err := c.connectionEndpoint.Stop(); err != nil {
 		log.Error(logPrefix, "Failed to close wireguard connection", err)
 	}
 
