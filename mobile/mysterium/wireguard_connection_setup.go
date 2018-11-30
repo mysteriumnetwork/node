@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/services/wireguard"
+
 	"git.zx2c4.com/wireguard-go/device"
 	"git.zx2c4.com/wireguard-go/tun"
 	"github.com/cihub/seelog"
@@ -30,9 +32,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
-// TODO this probably can be aligned with openvpn3 setup interface as its very close to android api, but for sake of
-// package independencies we are not reusing the same interface although implementation is rougly the same
-type tunnSetupPlaceholder interface {
+// WireguardTunnelSetup exposes api for caller to implement external tunnel setup
+type WireguardTunnelSetup interface {
 	NewTunnel()
 	AddTunnelAddress(ip string)
 	AddRoute(route string)
@@ -42,14 +43,11 @@ type tunnSetupPlaceholder interface {
 	SetMTU(mtu int)
 	Protect(socket int) error
 	SetSessionName(session string)
-	Close()
 }
-
-// WireguardTunnelSetup represents interface for setuping tunnel on caller side (i.e. android api)
-type WireguardTunnelSetup tunnSetupPlaceholder
 
 // OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
 func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
+	wireguard.Bootstrap()
 	mobNode.di.ConnectionRegistry.Register("wireguard", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 		//TODO this heavy linfting might go to doInit
 		tun, err := newTunnDevice(wgTunnelSetup)
@@ -80,6 +78,7 @@ func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTu
 
 func newTunnDevice(wgTunnSetup WireguardTunnelSetup) (tun.TUNDevice, error) {
 	wgTunnSetup.NewTunnel()
+	wgTunnSetup.AddTunnelAddress("10.182.47.5/24")
 	wgTunnSetup.SetMTU(1280)
 	wgTunnSetup.SetBlocking(true)
 
