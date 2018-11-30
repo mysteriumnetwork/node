@@ -53,6 +53,16 @@ jobs:
       script: bin/test
       name: "Unit tests"
 
+    - script:
+      - bin/package_ios amd64
+      name: "iOS packages"
+      if: type = pull_request
+
+    - script:
+      - bin/package_android amd64
+      name: "Android packages"
+      if: type = pull_request
+
     - script: bin/test_e2e
       name: "End-to-end tests"
       if: type = pull_request
