@@ -9,7 +9,6 @@
   revision = "70ad3c3262ada0444973f3f02e4a8339319236b3"
 
 [[projects]]
-  branch = "master"
   digest = "1:e2a1ff1174d564ed4b75a62757f4a9081ed3b8c99ed17e47eb252b048b4ff018"
   name = "github.com/asaskevich/EventBus"
   packages = ["."]
@@ -177,7 +176,6 @@
   revision = "2e37830c371e54b400461538ef95dae4d2d3279b"
 
 [[projects]]
-  branch = "master"
   digest = "1:29f3af6f3b46bccbd6994c01053eebebb84b5ec2cf8e8d06ed705f4cfa643e5a"
   name = "github.com/mdlayher/wireguardctrl"
   packages = [
@@ -198,7 +196,7 @@
   revision = "58046073cbffe2f25d425fe1331102f55cf719de"
 
 [[projects]]
-  digest = "1:9362d4344877814570721cae69ed7e662637b24dde069d8890404d8dc7e75372"
+  digest = "1:6b8e93147538bc08659ddbd98480d0bf72998a8b0fdf33bc642df223fb43a600"
   name = "github.com/mysteriumnetwork/go-openvpn"
   packages = [
     "openvpn",
@@ -213,8 +211,8 @@
     "openvpn3",
   ]
   pruneopts = "T"
-  revision = "d0ee04998e5e0d1bbf076409f7303bb988cbdf45"
-  version = "v0.0.9"
+  revision = "751efacae2ee8432b9964ec78667dc4368b76419"
+  version = "0.0.10"
 
 [[projects]]
   digest = "1:a034b3c95c40d7a083083f4cad8c1a2ad1459c7e9962130477a9d1f4265e7dd9"

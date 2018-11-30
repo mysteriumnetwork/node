@@ -18,6 +18,8 @@
 package mysterium
 
 import (
+	"errors"
+
 	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 
@@ -85,8 +87,42 @@ func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistic
 // Openvpn3TunnelSetup is alias for openvpn3 tunnel setup interface exposed to Android/iOS interop
 type Openvpn3TunnelSetup openvpn3.TunnelSetup
 
-// OverrideOpenvpnConnection replaces default openvpn connection factory with mobile related one
-func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup) {
+// ReconnectableSession interface exposing reconnect for an active session
+type ReconnectableSession interface {
+	Reconnect(afterSeconds int) error
+}
+
+type sessionTracker struct {
+	session *openvpn3.Session
+}
+
+func (st *sessionTracker) sessionCreated(s *openvpn3.Session) {
+	st.session = s
+}
+
+// Reconnect reconnects active session after given time
+func (st *sessionTracker) Reconnect(afterSeconds int) error {
+	if st.session == nil {
+		return errors.New("session not created yet")
+	}
+
+	return st.session.Reconnect(afterSeconds)
+}
+
+func (st *sessionTracker) handleState(stateEvent connection.StateEvent) {
+	// On disconnected - remove session
+	if stateEvent.State == connection.Disconnecting {
+		st.session.Stop()
+	}
+}
+
+// OverrideOpenvpnConnection replaces default openvpn connection factory with mobile related one returning session that can be reconnected
+func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup) ReconnectableSession {
+
+	st := &sessionTracker{}
+
+	mobNode.di.EventBus.Subscribe(connection.StateEventTopic, st.handleState)
+
 	mobNode.di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 
 		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
@@ -117,9 +153,11 @@ func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelS
 		}
 
 		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), tunnelSetup)
+		st.sessionCreated(session)
 
 		return &sessionWrapper{
 			session: session,
 		}, nil
 	})
+	return st
 }
