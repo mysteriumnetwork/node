@@ -69,27 +69,34 @@ type serviceConfig struct {
 // ConnectionEndpoint represents Wireguard network instance, it provide information
 // required for establishing connection between service provider and consumer.
 type ConnectionEndpoint interface {
-	Start() error
-	NewConsumer() (configProvider, error)
-	Stop() error
-}
-
-type configProvider interface {
+	Start(config *serviceConfig) error
+	AddPeer(publicKey wgtypes.Key, endpoint *net.UDPAddr) error
 	Config() (serviceConfig, error)
+	Stop() error
 }
 
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
-	if err := manager.connectionEndpoint.Start(); err != nil {
+	if err := manager.connectionEndpoint.Start(nil); err != nil {
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 
 	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
-		consumer, err := manager.connectionEndpoint.NewConsumer()
+		privateKey, err := wgtypes.GeneratePrivateKey()
 		if err != nil {
 			return serviceConfig{}, err
 		}
-		return consumer.Config()
+
+		if err := manager.connectionEndpoint.AddPeer(privateKey.PublicKey(), nil); err != nil {
+			return serviceConfig{}, err
+		}
+		config, err := manager.connectionEndpoint.Config()
+		if err != nil {
+			return serviceConfig{}, err
+		}
+
+		config.Consumer.PrivateKey = privateKey
+		return config, nil
 	}
 
 	publicIP, err := manager.ipResolver.GetPublicIP()

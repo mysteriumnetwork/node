@@ -24,9 +24,9 @@ import (
 )
 
 // NewConnectionCreator creates wireguard connections
-func NewConnectionCreator() connection.ConnectionCreator {
-	return func(options connection.ConnectOptions, stateChannel connection.StateChannel) (connection.Connection, error) {
-		var config Config
+func NewConnectionCreator() connection.Creator {
+	return func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticChannel connection.StatisticsChannel) (connection.Connection, error) {
+		var config serviceConfig
 		if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
 			return nil, err
 		}
