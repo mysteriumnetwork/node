@@ -57,7 +57,7 @@ func NewConnectionEndpoint(ipResolver ip.Resolver) (ConnectionEndpoint, error) {
 
 // Start starts and configure wireguard network interface for providing service.
 // If config is nil, required options will be generated automatically.
-func (ce *connectionEndpoint) Start(config *serviceConfig) error {
+func (ce *connectionEndpoint) Start(config *ServiceConfig) error {
 	ce.iface = ce.resourceAllocator.AllocateInterface()
 	ce.endpoint.Port = ce.resourceAllocator.AllocatePort()
 	if ce.ipResolver != nil {
@@ -108,13 +108,13 @@ func (ce *connectionEndpoint) AddPeer(publicKey wgtypes.Key, endpoint *net.UDPAd
 }
 
 // Config provides wireguard service configuration for the current connection endpoint.
-func (ce *connectionEndpoint) Config() (serviceConfig, error) {
+func (ce *connectionEndpoint) Config() (ServiceConfig, error) {
 	d, err := ce.wgClient.Device(ce.iface)
 	if err != nil || d.Name != ce.iface {
-		return serviceConfig{}, err
+		return ServiceConfig{}, err
 	}
 
-	var config serviceConfig
+	var config ServiceConfig
 	config.Provider.PublicKey = d.PublicKey
 	config.Provider.Endpoint = ce.endpoint
 	config.Subnet = ce.subnet

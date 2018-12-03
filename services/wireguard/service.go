@@ -18,6 +18,8 @@
 package wireguard
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"net"
 	"sync"
 
@@ -50,8 +52,8 @@ type Manager struct {
 	wg                 sync.WaitGroup
 }
 
-// serviceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
-type serviceConfig struct {
+// ServiceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
+type ServiceConfig struct {
 	Provider struct {
 		PublicKey wgtypes.Key
 		Endpoint  net.UDPAddr
@@ -65,9 +67,9 @@ type serviceConfig struct {
 // ConnectionEndpoint represents Wireguard network instance, it provide information
 // required for establishing connection between service provider and consumer.
 type ConnectionEndpoint interface {
-	Start(config *serviceConfig) error
+	Start(config *ServiceConfig) error
 	AddPeer(publicKey wgtypes.Key, endpoint *net.UDPAddr) error
-	Config() (serviceConfig, error)
+	Config() (ServiceConfig, error)
 	Stop() error
 }
 
@@ -80,15 +82,15 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
 		privateKey, err := wgtypes.GeneratePrivateKey()
 		if err != nil {
-			return serviceConfig{}, err
+			return ServiceConfig{}, err
 		}
 
 		if err := manager.connectionEndpoint.AddPeer(privateKey.PublicKey(), nil); err != nil {
-			return serviceConfig{}, err
+			return ServiceConfig{}, err
 		}
 		config, err := manager.connectionEndpoint.Config()
 		if err != nil {
-			return serviceConfig{}, err
+			return ServiceConfig{}, err
 		}
 
 		config.Consumer.PrivateKey = privateKey
@@ -136,5 +138,79 @@ func (manager *Manager) Stop() error {
 	}
 
 	log.Info(logPrefix, "Wireguard service stopped")
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler interface to provide human readable configuration.
+func (s ServiceConfig) MarshalJSON() ([]byte, error) {
+	type provider struct {
+		PublicKey string `json:"public_key"`
+		Endpoint  string `json:"endpoint"`
+	}
+	type consumer struct {
+		PrivateKey string `json:"private_key"`
+	}
+
+	return json.Marshal(&struct {
+		Provider provider `json:"provider"`
+		Consumer consumer `json:"consumer"`
+		Subnet   string   `json:"subnet"`
+	}{
+		provider{
+			s.Provider.PublicKey.String(),
+			s.Provider.Endpoint.String(),
+		},
+		consumer{
+			s.Consumer.PrivateKey.String(),
+		},
+		s.Subnet.String(),
+	})
+}
+
+// UnmarshalJSON implements json.Unmarshaler interface to receive human readable configuration.
+func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
+	type provider struct {
+		PublicKey string `json:"public_key"`
+		Endpoint  string `json:"endpoint"`
+	}
+	type consumer struct {
+		PrivateKey string `json:"private_key"`
+	}
+	var config struct {
+		Provider provider `json:"provider"`
+		Consumer consumer `json:"consumer"`
+		Subnet   string   `json:"subnet"`
+	}
+
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+
+	providerPublicKey, err := base64.StdEncoding.DecodeString(config.Provider.PublicKey)
+	if err != nil {
+		return err
+	}
+	consumerPrivateKey, err := base64.StdEncoding.DecodeString(config.Consumer.PrivateKey)
+	if err != nil {
+		return err
+	}
+	endpoint, err := net.ResolveUDPAddr("udp", config.Provider.Endpoint)
+	if err != nil {
+		return err
+	}
+	_, subnet, err := net.ParseCIDR(config.Subnet)
+	if err != nil {
+		return err
+	}
+
+	if s.Provider.PublicKey, err = wgtypes.NewKey(providerPublicKey); err != nil {
+		return err
+	}
+	if s.Consumer.PrivateKey, err = wgtypes.NewKey(consumerPrivateKey); err != nil {
+		return err
+	}
+	s.Provider.Endpoint = *endpoint
+	s.Subnet = *subnet
+
 	return nil
 }

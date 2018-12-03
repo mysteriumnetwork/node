@@ -29,7 +29,7 @@ type Connection struct {
 	connection   sync.WaitGroup
 	stateChannel connection.StateChannel
 
-	config             serviceConfig
+	config             ServiceConfig
 	connectionEndpoint ConnectionEndpoint
 }
 

@@ -151,6 +151,6 @@ func (fir *fakeIPResolver) GetOutboundIP() (string, error) {
 type fakeConnectionEndpoint struct{}
 
 func (fce *fakeConnectionEndpoint) Stop() error                                 { return nil }
-func (fce *fakeConnectionEndpoint) Start(_ *serviceConfig) error                { return nil }
-func (fce *fakeConnectionEndpoint) Config() (serviceConfig, error)              { return serviceConfig{}, nil }
+func (fce *fakeConnectionEndpoint) Start(_ *ServiceConfig) error                { return nil }
+func (fce *fakeConnectionEndpoint) Config() (ServiceConfig, error)              { return ServiceConfig{}, nil }
 func (fce *fakeConnectionEndpoint) AddPeer(_ wgtypes.Key, _ *net.UDPAddr) error { return nil }
