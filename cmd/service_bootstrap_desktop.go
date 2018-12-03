@@ -105,9 +105,9 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	newDialogHandler := func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
 		promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
 			if nodeOptions.ExperimentPromiseCheck {
-				return &promise_noop.FakePromiseEngine{}
+				return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
 			}
-			return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
+			return &promise_noop.FakePromiseEngine{}
 		}
 		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, di.ServiceSessionStorage, promiseHandler)
 		return session.NewDialogHandler(sessionManagerFactory)
