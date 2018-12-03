@@ -121,6 +121,7 @@ func (st *sessionTracker) handleState(stateEvent connection.StateEvent) {
 
 // OverrideOpenvpnConnection replaces default openvpn connection factory with mobile related one returning session that can be reconnected
 func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup) ReconnectableSession {
+	openvpn.Bootstrap()
 
 	st := &sessionTracker{}
 
