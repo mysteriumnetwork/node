@@ -18,7 +18,6 @@
 package wireguard
 
 import (
-	"errors"
 	"net"
 	"sync"
 
@@ -33,9 +32,6 @@ import (
 )
 
 const logPrefix = "[service-wireguard] "
-
-// ErrAlreadyStarted is the error we return when the start is called multiple times.
-var ErrAlreadyStarted = errors.New("Service already started")
 
 // NewManager creates new instance of Wireguard service
 func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver, connectionEndpoint ConnectionEndpoint) *Manager {

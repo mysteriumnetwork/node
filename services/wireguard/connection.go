@@ -24,7 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
-// Connection which does no real tunneling
+// Connection which does wireguard tunneling.
 type Connection struct {
 	connection   sync.WaitGroup
 	stateChannel connection.StateChannel
@@ -33,7 +33,7 @@ type Connection struct {
 	connectionEndpoint ConnectionEndpoint
 }
 
-// Start implements the connection.Connection interface
+// Start establish wireguard connection to the service provider.
 func (c *Connection) Start() (err error) {
 	c.connectionEndpoint, err = NewConnectionEndpoint(nil)
 	if err != nil {
@@ -56,13 +56,13 @@ func (c *Connection) Start() (err error) {
 	return nil
 }
 
-// Wait implements the connection.Connection interface
+// Wait blocks until wireguard connection not stopped.
 func (c *Connection) Wait() error {
 	c.connection.Wait()
 	return nil
 }
 
-// Stop implements the connection.Connection interface
+// Stop stops wireguard connection and closes connection endpoint.
 func (c *Connection) Stop() {
 	c.stateChannel <- connection.Disconnecting
 
