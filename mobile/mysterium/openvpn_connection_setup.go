@@ -105,6 +105,8 @@ func (st *sessionTracker) sessionCreated(s *openvpn3.Session) {
 
 // Reconnect reconnects active session after given time
 func (st *sessionTracker) Reconnect(afterSeconds int) error {
+	st.mux.Lock()
+	defer st.mux.Unlock()
 	if st.session == nil {
 		return errors.New("session not created yet")
 	}
@@ -115,7 +117,9 @@ func (st *sessionTracker) Reconnect(afterSeconds int) error {
 func (st *sessionTracker) handleState(stateEvent connection.StateEvent) {
 	// On disconnected - remove session
 	if stateEvent.State == connection.Disconnecting {
+		st.mux.Lock()
 		st.session = nil
+		st.mux.Unlock()
 	}
 }
 
