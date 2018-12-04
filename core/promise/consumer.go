@@ -28,7 +28,7 @@ var (
 	responseInternalError  = Response{Success: false, Message: "Internal Error"}
 )
 
-// Storer alows storing of data by topic
+// Storer allows storing of data by topic
 type Storer interface {
 	Store(issuer string, data interface{}) error
 }

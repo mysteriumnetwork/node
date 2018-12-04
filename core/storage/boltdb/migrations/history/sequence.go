@@ -15,17 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package migrations
+package history
 
 import (
 	"time"
 
-	"github.com/asdine/storm"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations"
 )
 
-// Migration represents a migration we want to run on bolt db
-type Migration struct {
-	Name    string `storm:"id"`
-	Date    time.Time
-	Migrate func(*storm.DB) error `json:"-"`
+// Sequence contains the whole migration sequence for boltdb
+var Sequence = []migrations.Migration{
+	{
+		Name: "session-to-session-history",
+		Date: time.Date(
+			2018, 12, 04, 12, 00, 00, 0, time.UTC),
+		Migrate: migrations.MigrateSessionToHistory,
+	},
 }

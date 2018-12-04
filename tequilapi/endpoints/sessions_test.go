@@ -60,7 +60,7 @@ func TestSessionToDto(t *testing.T) {
 
 	se := SessionMock
 	se.Started = startedAt
-	sessionDTO := sessionToDto(se)
+	sessionDTO := toHistoryView(se)
 
 	assert.Equal(t, value, sessionDTO.DateStarted)
 	assert.Equal(t, string(SessionMock.SessionID), sessionDTO.SessionID)
@@ -95,7 +95,7 @@ func TestListEndpoint(t *testing.T) {
 	parsedResponse := &SessionsDTO{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
-	assert.EqualValues(t, sessionToDto(SessionMock), parsedResponse.Sessions[0])
+	assert.EqualValues(t, toHistoryView(SessionMock), parsedResponse.Sessions[0])
 }
 
 func TestListEndpointBubblesError(t *testing.T) {

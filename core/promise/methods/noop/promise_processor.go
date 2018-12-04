@@ -37,13 +37,8 @@ const (
 	balanceStopped   = balanceState("Stopped")
 )
 
-// Storer alows storing of data by topic
-type Storer interface {
-	Store(issuer string, data interface{}) error
-}
-
 // NewPromiseProcessor creates instance of PromiseProcessor
-func NewPromiseProcessor(dialog communication.Dialog, balance identity.Balance, storage Storer) *PromiseProcessor {
+func NewPromiseProcessor(dialog communication.Dialog, balance identity.Balance, storage promise.Storer) *PromiseProcessor {
 	return &PromiseProcessor{
 		dialog:  dialog,
 		balance: balance,
@@ -61,7 +56,7 @@ type balanceState string
 type PromiseProcessor struct {
 	dialog  communication.Dialog
 	balance identity.Balance
-	storage Storer
+	storage promise.Storer
 
 	balanceInterval   time.Duration
 	balanceState      balanceState

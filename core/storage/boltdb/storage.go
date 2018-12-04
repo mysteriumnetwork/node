@@ -36,14 +36,7 @@ func NewStorage(path string) (*Bolt, error) {
 // openDB creates new or open existing BoltDB
 func openDB(name string) (*Bolt, error) {
 	db, err := storm.Open(name)
-	if err != nil {
-		return nil, err
-	}
-
-	bolt := &Bolt{db}
-	migrator := NewMigrator(bolt)
-	err = migrator.Up()
-	return bolt, err
+	return &Bolt{db}, err
 }
 
 // Store allows to keep struct grouped by the bucket

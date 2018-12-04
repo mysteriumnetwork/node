@@ -20,7 +20,6 @@ package session
 import (
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -34,24 +33,12 @@ var (
 	stubRetriever = &StubRetriever{}
 	stubLocation  = &StubServiceDefinition{}
 
-	errMock         = errors.New("error")
-	sessionID       = node_session.ID("sessionID")
-	consumerID      = identity.FromAddress("consumerID")
-	providerID      = identity.FromAddress("providerID")
-	serviceType     = "serviceType"
-	providerCountry = "providerCountry"
-	startTime       = time.Now()
-	sessionStatus   = SessionStatusNew
+	errMock     = errors.New("error")
+	sessionID   = node_session.ID("sessionID")
+	consumerID  = identity.FromAddress("consumerID")
+	providerID  = identity.FromAddress("providerID")
+	serviceType = "serviceType"
 
-	mockStatistics = consumer.SessionStatistics{BytesReceived: 10, BytesSent: 15}
-	mockSession    = History{
-		SessionID:       sessionID,
-		ProviderID:      providerID,
-		ServiceType:     serviceType,
-		ProviderCountry: providerCountry,
-		Started:         startTime,
-		Status:          sessionStatus,
-	}
 	mockPayload = connection.StateEvent{
 		State: connection.Connected,
 		SessionInfo: connection.SessionInfo{

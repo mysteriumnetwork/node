@@ -24,7 +24,6 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -71,13 +70,13 @@ func (repo *Storage) GetAll() ([]History, error) {
 func (repo *Storage) ConsumeStateEvent(stateEvent connection.StateEvent) {
 	switch stateEvent.State {
 	case connection.Disconnecting:
-		repo.handleDisconnectingState(stateEvent.SessionInfo.SessionID)
+		repo.handleDisconnectingEvent(stateEvent.SessionInfo.SessionID)
 	case connection.Connected:
 		repo.handleConnectedEvent(stateEvent.SessionInfo)
 	}
 }
 
-func (repo *Storage) handleDisconnectingState(sessionID session.ID) {
+func (repo *Storage) handleDisconnectingEvent(sessionID session.ID) {
 	updatedSession := &History{
 		SessionID: sessionID,
 		Updated:   time.Now().UTC(),
@@ -93,12 +92,9 @@ func (repo *Storage) handleDisconnectingState(sessionID session.ID) {
 }
 
 func (repo *Storage) handleConnectedEvent(sessionInfo connection.SessionInfo) {
-	providerCountry := sessionInfo.Proposal.ServiceDefinition.GetLocation().Country
 	se := NewHistory(
 		sessionInfo.SessionID,
-		identity.FromAddress(sessionInfo.Proposal.ProviderID),
-		sessionInfo.Proposal.ServiceType,
-		providerCountry,
+		sessionInfo.Proposal,
 	)
 	err := repo.storage.Store(sessionStorageBucketName, se)
 	if err != nil {

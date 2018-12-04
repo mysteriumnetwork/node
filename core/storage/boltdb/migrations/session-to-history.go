@@ -52,7 +52,7 @@ func (s Session) ToSessionHistory() consumer_session.History {
 		status = "Completed"
 	}
 
-	v2 := consumer_session.History{
+	return consumer_session.History{
 		SessionID:       s.SessionID,
 		ProviderID:      s.ProviderID,
 		ServiceType:     s.ServiceType,
@@ -62,7 +62,6 @@ func (s Session) ToSessionHistory() consumer_session.History {
 		Updated:         s.Updated,
 		DataStats:       s.DataStats,
 	}
-	return v2
 }
 
 // MigrateSessionToHistory runs the session to session history migration

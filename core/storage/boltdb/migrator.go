@@ -18,6 +18,8 @@
 package boltdb
 
 import (
+	"sort"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations"
 )
@@ -27,26 +29,19 @@ const migrationIndexBucketName = "migrations"
 
 // Migrator represents the component responsible for running migrations on bolt db
 type Migrator struct {
-	db         *Bolt
-	migrations []migrations.Migration
+	db *Bolt
 }
 
 // NewMigrator returns a new instance of migrator
 func NewMigrator(db *Bolt) *Migrator {
 	return &Migrator{
 		db: db,
-		migrations: []migrations.Migration{
-			migrations.Migration{
-				Name:    "session-to-session-history",
-				Migrate: migrations.MigrateSessionToHistory,
-			},
-		},
 	}
 }
 
-func (m *Migrator) isMigrationRun(migration migrations.Migration) (bool, error) {
+func (m *Migrator) isApplied(migration migrations.Migration) (bool, error) {
 	migrations := []migrations.Migration{}
-	err := m.db.db.All(&migrations)
+	err := m.db.db.From(migrationIndexBucketName).All(&migrations)
 	if err != nil {
 		return true, err
 	}
@@ -60,31 +55,35 @@ func (m *Migrator) isMigrationRun(migration migrations.Migration) (bool, error) 
 }
 
 func (m *Migrator) saveMigrationRun(migration migrations.Migration) error {
-	return m.db.db.Save(&migration)
+	return m.db.db.From(migrationIndexBucketName).Save(&migration)
 }
 
 func (m *Migrator) migrate(migration migrations.Migration) error {
-	isRun, err := m.isMigrationRun(migration)
-	if err != nil {
+	isRun, err := m.isApplied(migration)
+	if err != nil || isRun {
 		return err
 	}
-	if isRun {
-		return nil
-	}
-	log.Info(migrationLogPrefix, "running migration", migration.Name)
+	log.Info(migrationLogPrefix, "running migration ", migration.Name)
 	err = migration.Migrate(m.db.db)
 	if err != nil {
 		return err
 	}
-	log.Info(migrationLogPrefix, "saving migration", migration.Name)
-	err = m.saveMigrationRun(migration)
-	return err
+	log.Info(migrationLogPrefix, "saving migration ", migration.Name)
+	return m.saveMigrationRun(migration)
 }
 
-// Up updates the bolt DB to the latest version
-func (m *Migrator) Up() error {
-	for i := range m.migrations {
-		err := m.migrate(m.migrations[i])
+func (m *Migrator) sortMigrations(sequence []migrations.Migration) []migrations.Migration {
+	sort.Slice(sequence, func(i, j int) bool {
+		return sequence[i].Date.Before(sequence[j].Date)
+	})
+	return sequence
+}
+
+// RunMigrations runs the given sequence of migrations
+func (m *Migrator) RunMigrations(sequence []migrations.Migration) error {
+	sorted := m.sortMigrations(sequence)
+	for i := range sorted {
+		err := m.migrate(sorted[i])
 		if err != nil {
 			return err
 		}
