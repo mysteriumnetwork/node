@@ -15,15 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package wireguard
+package endpoint
 
 import (
+	"encoding/base64"
 	"net"
 	"os/exec"
 
 	"github.com/mdlayher/wireguardctrl"
 	"github.com/mdlayher/wireguardctrl/wgtypes"
 	"github.com/mysteriumnetwork/node/core/ip"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
@@ -42,7 +44,7 @@ type connectionEndpoint struct {
 }
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
-func NewConnectionEndpoint(ipResolver ip.Resolver) (ConnectionEndpoint, error) {
+func NewConnectionEndpoint(ipResolver ip.Resolver) (*connectionEndpoint, error) {
 	wgClient, err := wireguardctrl.New()
 	if err != nil {
 		return nil, err
@@ -57,7 +59,7 @@ func NewConnectionEndpoint(ipResolver ip.Resolver) (ConnectionEndpoint, error) {
 
 // Start starts and configure wireguard network interface for providing service.
 // If config is nil, required options will be generated automatically.
-func (ce *connectionEndpoint) Start(config *ServiceConfig) error {
+func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	ce.iface = ce.resourceAllocator.AllocateInterface()
 	ce.endpoint.Port = ce.resourceAllocator.AllocatePort()
 	if ce.ipResolver != nil {
@@ -84,7 +86,16 @@ func (ce *connectionEndpoint) Start(config *ServiceConfig) error {
 	} else {
 		ce.subnet = config.Subnet
 		ce.subnet.IP = consumerIP(ce.subnet)
-		deviceConfig.PrivateKey = &config.Consumer.PrivateKey
+		key, err := base64.StdEncoding.DecodeString(config.Consumer.PrivateKey)
+		if err != nil {
+			return err
+		}
+
+		privateKey, err := wgtypes.NewKey(key)
+		if err != nil {
+			return err
+		}
+		deviceConfig.PrivateKey = &privateKey
 	}
 
 	if err := ce.up(); err != nil {
@@ -95,11 +106,21 @@ func (ce *connectionEndpoint) Start(config *ServiceConfig) error {
 }
 
 // AddPeer adds new wireguard peer to the wireguard network interface.
-func (ce *connectionEndpoint) AddPeer(publicKey wgtypes.Key, endpoint *net.UDPAddr) error {
+func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr) error {
+	key, err := base64.StdEncoding.DecodeString(publicKey)
+	if err != nil {
+		return err
+	}
+
+	publicKeyW, err := wgtypes.NewKey(key)
+	if err != nil {
+		return err
+	}
+
 	deviceConfig := wgtypes.Config{
 		Peers: []wgtypes.PeerConfig{{
 			Endpoint:   endpoint,
-			PublicKey:  publicKey,
+			PublicKey:  publicKeyW,
 			AllowedIPs: allowedIPs,
 		}},
 	}
@@ -108,14 +129,14 @@ func (ce *connectionEndpoint) AddPeer(publicKey wgtypes.Key, endpoint *net.UDPAd
 }
 
 // Config provides wireguard service configuration for the current connection endpoint.
-func (ce *connectionEndpoint) Config() (ServiceConfig, error) {
+func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	d, err := ce.wgClient.Device(ce.iface)
 	if err != nil || d.Name != ce.iface {
-		return ServiceConfig{}, err
+		return wg.ServiceConfig{}, err
 	}
 
-	var config ServiceConfig
-	config.Provider.PublicKey = d.PublicKey
+	var config wg.ServiceConfig
+	config.Provider.PublicKey = d.PublicKey.String()
 	config.Provider.Endpoint = ce.endpoint
 	config.Subnet = ce.subnet
 

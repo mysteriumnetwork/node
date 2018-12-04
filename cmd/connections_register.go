@@ -21,7 +21,8 @@ package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/core/node"
-	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 )
 
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
@@ -31,6 +32,6 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) registerWireguardConnection() {
-	service_wireguard.Bootstrap()
-	di.ConnectionRegistry.Register(service_wireguard.ServiceType, service_wireguard.NewConnectionCreator())
+	wireguard.Bootstrap()
+	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator())
 }

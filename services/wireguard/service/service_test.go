@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package wireguard
+package service
 
 import (
 	"errors"
@@ -23,11 +23,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mdlayher/wireguardctrl/wgtypes"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,11 +55,11 @@ func Test_Manager_Start(t *testing.T) {
 		t,
 		dto_discovery.ServiceProposal{
 			ServiceType: "wireguard",
-			ServiceDefinition: ServiceDefinition{
+			ServiceDefinition: wg.ServiceDefinition{
 				Location: dto_discovery.Location{Country: "LT"},
 			},
 			PaymentMethodType: "WG",
-			PaymentMethod: Payment{
+			PaymentMethod: wg.Payment{
 				Price: money.Money{
 					Amount:   0,
 					Currency: money.Currency("MYST"),
@@ -150,7 +150,7 @@ func (fir *fakeIPResolver) GetOutboundIP() (string, error) {
 
 type fakeConnectionEndpoint struct{}
 
-func (fce *fakeConnectionEndpoint) Stop() error                                 { return nil }
-func (fce *fakeConnectionEndpoint) Start(_ *ServiceConfig) error                { return nil }
-func (fce *fakeConnectionEndpoint) Config() (ServiceConfig, error)              { return ServiceConfig{}, nil }
-func (fce *fakeConnectionEndpoint) AddPeer(_ wgtypes.Key, _ *net.UDPAddr) error { return nil }
+func (fce *fakeConnectionEndpoint) Stop() error                            { return nil }
+func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { return nil }
+func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
+func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }

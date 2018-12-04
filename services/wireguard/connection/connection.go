@@ -15,27 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package wireguard
+package connection
 
 import (
 	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 )
+
+const logPrefix = "[connection-wireguard] "
 
 // Connection which does wireguard tunneling.
 type Connection struct {
 	connection   sync.WaitGroup
 	stateChannel connection.StateChannel
 
-	config             ServiceConfig
-	connectionEndpoint ConnectionEndpoint
+	config             wg.ServiceConfig
+	connectionEndpoint wg.ConnectionEndpoint
 }
 
 // Start establish wireguard connection to the service provider.
 func (c *Connection) Start() (err error) {
-	c.connectionEndpoint, err = NewConnectionEndpoint(nil)
+	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(nil)
 	if err != nil {
 		return err
 	}

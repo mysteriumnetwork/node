@@ -33,7 +33,9 @@ import (
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
-	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard "github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
+	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -67,15 +69,15 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
-	di.ServiceRegistry.Register(service_wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
-		connectionEndpoint, err := service_wireguard.NewConnectionEndpoint(di.IPResolver)
+	di.ServiceRegistry.Register(wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
+		connectionEndpoint, err := wireguard_endpoint.NewConnectionEndpoint(di.IPResolver)
 		if err != nil {
 			return nil, err
 		}
-		return service_wireguard.NewManager(di.LocationResolver, di.IPResolver, connectionEndpoint), nil
+		return wireguard_service.NewManager(di.LocationResolver, di.IPResolver, connectionEndpoint), nil
 	})
 
-	di.ServiceRunner.Register(service_wireguard.ServiceType)
+	di.ServiceRunner.Register(wireguard.ServiceType)
 }
 
 // bootstrapServiceComponents initiates ServiceManager dependency
