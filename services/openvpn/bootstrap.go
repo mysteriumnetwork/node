@@ -27,7 +27,7 @@ import (
 // ServiceType indicates "openvpn" service type
 const ServiceType = "openvpn"
 
-// Bootstrap is called on program initialization time and registers various deserializers related to opepnvpn service
+// Bootstrap is called on program initialization time and registers various deserializers related to OpenVPN service
 func Bootstrap() {
 	dto_discovery.RegisterServiceDefinitionUnserializer(
 		ServiceType,
