@@ -21,13 +21,13 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mdlayher/wireguardctrl/wgtypes"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -57,20 +57,26 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 	}
 
 	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
-		privateKey, err := wgtypes.GeneratePrivateKey()
+		privateKey, err := endpoint.GeneratePrivateKey()
 		if err != nil {
 			return wg.ServiceConfig{}, err
 		}
 
-		if err := manager.connectionEndpoint.AddPeer(privateKey.PublicKey().String(), nil); err != nil {
+		publicKey, err := endpoint.PrivateKeyToPublicKey(privateKey)
+		if err != nil {
 			return wg.ServiceConfig{}, err
 		}
+
+		if err := manager.connectionEndpoint.AddPeer(publicKey, nil); err != nil {
+			return wg.ServiceConfig{}, err
+		}
+
 		config, err := manager.connectionEndpoint.Config()
 		if err != nil {
 			return wg.ServiceConfig{}, err
 		}
 
-		config.Consumer.PrivateKey = privateKey.String()
+		config.Consumer.PrivateKey = privateKey
 		return config, nil
 	}
 
