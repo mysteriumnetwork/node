@@ -223,9 +223,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
 		if nodeOptions.ExperimentPromiseCheck {
-			return &promise_noop.FakePromiseEngine{}
+			return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
 		}
-		return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
+		return &promise_noop.FakePromiseEngine{}
 	}
 
 	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)

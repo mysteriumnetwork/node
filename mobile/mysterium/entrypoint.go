@@ -81,7 +81,8 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
 		Testnet:                 true,
-		ExperimentIdentityCheck: true,
+		ExperimentIdentityCheck: false,
+		ExperimentPromiseCheck:  false,
 		DiscoveryAPIAddress:     metadata.TestnetDefinition.DiscoveryAPIAddress,
 		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
 		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,
