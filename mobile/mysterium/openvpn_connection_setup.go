@@ -66,6 +66,7 @@ func (adapter channelToCallbacksAdapter) OnEvent(event openvpn3.Event) {
 	case "CONNECTED":
 		adapter.stateChannel <- connection.Connected
 	case "DISCONNECTED":
+		adapter.stateChannel <- connection.Disconnecting
 		adapter.stateChannel <- connection.NotConnected
 		close(adapter.stateChannel)
 	default:
