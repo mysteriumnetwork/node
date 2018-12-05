@@ -1,5 +1,3 @@
-// +build !android
-
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
@@ -17,21 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package userspace
 
 import (
-	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/services/wireguard"
-	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
+	"errors"
 )
 
-func (di *Dependencies) registerConnections(nodeOptions node.Options) {
-	di.registerOpenvpnConnection(nodeOptions)
-	di.registerNoopConnection()
-	di.registerWireguardConnection()
-}
+type client struct{}
 
-func (di *Dependencies) registerWireguardConnection() {
-	wireguard.Bootstrap()
-	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator())
+// NewWireguardClient creates new wireguard user space client.
+func NewWireguardClient() (*client, error) {
+	return nil, errors.New("Not implemented")
 }

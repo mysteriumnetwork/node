@@ -15,10 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package wireguard
+package service
 
 import (
 	"errors"
+	"net"
 	"testing"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,11 +55,11 @@ func Test_Manager_Start(t *testing.T) {
 		t,
 		dto_discovery.ServiceProposal{
 			ServiceType: "wireguard",
-			ServiceDefinition: ServiceDefinition{
+			ServiceDefinition: wg.ServiceDefinition{
 				Location: dto_discovery.Location{Country: "LT"},
 			},
 			PaymentMethodType: "WG",
-			PaymentMethod: Payment{
+			PaymentMethod: wg.Payment{
 				Price: money.Money{
 					Amount:   0,
 					Currency: money.Currency("MYST"),
@@ -68,7 +70,7 @@ func Test_Manager_Start(t *testing.T) {
 	)
 	sessionConfig, err := sessionConfigProvider()
 	assert.NoError(t, err)
-	assert.Exactly(t, serviceConfig{}, sessionConfig)
+	assert.NotNil(t, sessionConfig)
 }
 
 func Test_Manager_Start_IPResolverErrs(t *testing.T) {
@@ -148,12 +150,7 @@ func (fir *fakeIPResolver) GetOutboundIP() (string, error) {
 
 type fakeConnectionEndpoint struct{}
 
-func (fce *fakeConnectionEndpoint) Start() error { return nil }
-func (fce *fakeConnectionEndpoint) Stop() error  { return nil }
-func (fce *fakeConnectionEndpoint) NewConsumer() (configProvider, error) {
-	return fakeConfigProvider{}, nil
-}
-
-type fakeConfigProvider struct{}
-
-func (fcp fakeConfigProvider) Config() (serviceConfig, error) { return serviceConfig{}, nil }
+func (fce *fakeConnectionEndpoint) Stop() error                            { return nil }
+func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { return nil }
+func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
+func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }

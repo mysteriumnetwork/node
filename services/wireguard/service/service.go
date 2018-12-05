@@ -15,30 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package wireguard
+package service
 
 import (
-	"errors"
-	"net"
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mdlayher/wireguardctrl/wgtypes"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 const logPrefix = "[service-wireguard] "
 
-// ErrAlreadyStarted is the error we return when the start is called multiple times.
-var ErrAlreadyStarted = errors.New("Service already started")
-
 // NewManager creates new instance of Wireguard service
-func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver, connectionEndpoint ConnectionEndpoint) *Manager {
+func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver, connectionEndpoint wg.ConnectionEndpoint) *Manager {
 	return &Manager{
 		locationResolver:   locationResolver,
 		ipResolver:         ipResolver,
@@ -50,46 +46,38 @@ func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver, conn
 type Manager struct {
 	locationResolver   location.Resolver
 	ipResolver         ip.Resolver
-	connectionEndpoint ConnectionEndpoint
+	connectionEndpoint wg.ConnectionEndpoint
 	wg                 sync.WaitGroup
-}
-
-// serviceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
-type serviceConfig struct {
-	Provider struct {
-		PublicKey wgtypes.Key
-		Endpoint  net.UDPAddr
-	}
-	Consumer struct {
-		PrivateKey wgtypes.Key // TODO peer private key should be generated on consumer side
-	}
-	Subnet net.IPNet
-}
-
-// ConnectionEndpoint represents Wireguard network instance, it provide information
-// required for establishing connection between service provider and consumer.
-type ConnectionEndpoint interface {
-	Start() error
-	NewConsumer() (configProvider, error)
-	Stop() error
-}
-
-type configProvider interface {
-	Config() (serviceConfig, error)
 }
 
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
-	if err := manager.connectionEndpoint.Start(); err != nil {
+	if err := manager.connectionEndpoint.Start(nil); err != nil {
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 
 	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
-		consumer, err := manager.connectionEndpoint.NewConsumer()
+		privateKey, err := endpoint.GeneratePrivateKey()
 		if err != nil {
-			return serviceConfig{}, err
+			return wg.ServiceConfig{}, err
 		}
-		return consumer.Config()
+
+		publicKey, err := endpoint.PrivateKeyToPublicKey(privateKey)
+		if err != nil {
+			return wg.ServiceConfig{}, err
+		}
+
+		if err := manager.connectionEndpoint.AddPeer(publicKey, nil); err != nil {
+			return wg.ServiceConfig{}, err
+		}
+
+		config, err := manager.connectionEndpoint.Config()
+		if err != nil {
+			return wg.ServiceConfig{}, err
+		}
+
+		config.Consumer.PrivateKey = privateKey
+		return config, nil
 	}
 
 	publicIP, err := manager.ipResolver.GetPublicIP()
@@ -106,12 +94,12 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 	log.Info(logPrefix, "Wireguard service started successfully")
 
 	proposal := dto_discovery.ServiceProposal{
-		ServiceType: ServiceType,
-		ServiceDefinition: ServiceDefinition{
+		ServiceType: wg.ServiceType,
+		ServiceDefinition: wg.ServiceDefinition{
 			Location: dto_discovery.Location{Country: country},
 		},
-		PaymentMethodType: PaymentMethod,
-		PaymentMethod: Payment{
+		PaymentMethodType: wg.PaymentMethod,
+		PaymentMethod: wg.Payment{
 			Price: money.NewMoney(0, money.CURRENCY_MYST),
 		},
 	}

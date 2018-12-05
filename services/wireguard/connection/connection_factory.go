@@ -15,18 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package wireguard
+package connection
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/core/connection"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
 // NewConnectionCreator creates wireguard connections
 func NewConnectionCreator() connection.Creator {
 	return func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+		var config wg.ServiceConfig
+		if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
+			return nil, err
+		}
+
 		return &Connection{
-			stateChannel:      stateChannel,
-			statisticsChannel: statisticsChannel,
+			stateChannel: stateChannel,
+			config:       config,
 		}, nil
 	}
 }

@@ -1,3 +1,5 @@
+// +build !linux linux,android
+
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
@@ -15,31 +17,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package wireguard
+package endpoint
 
 import (
 	"errors"
-	"net"
 
-	"github.com/mdlayher/wireguardctrl/wgtypes"
+	"github.com/mysteriumnetwork/node/core/ip"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
-var errNoIPAddress = errors.New("IP address required")
-
-type consumer struct {
-	subnet     net.IPNet
-	peer       wgtypes.PeerConfig
-	privateKey wgtypes.Key
+// NewConnectionEndpoint creates new wireguard connection endpoint.
+func NewConnectionEndpoint(ipResolver ip.Resolver) (wg.ConnectionEndpoint, error) {
+	return nil, errors.New("Not implemented")
 }
 
-// Config generates serviceConfiguration that will be used by Consumer to establish connection.
-func (c consumer) Config() (serviceConfig, error) {
-	var config serviceConfig
+// GeneratePrivateKey creates new wireguard private key
+func GeneratePrivateKey() (string, error) {
+	return "", nil
+}
 
-	config.Provider.Endpoint = *c.peer.Endpoint
-	config.Provider.PublicKey = c.peer.PublicKey
-	config.Consumer.PrivateKey = c.privateKey
-	config.Subnet = c.subnet
-
-	return config, nil
+// PrivateKeyToPublicKey generates wireguard public key from private key
+func PrivateKeyToPublicKey(_ string) (string, error) {
+	return "", nil
 }
