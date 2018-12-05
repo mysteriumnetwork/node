@@ -19,7 +19,6 @@ package endpoint
 
 import (
 	"net"
-	"os/exec"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -27,13 +26,14 @@ import (
 )
 
 type wgClient interface {
-	ConfigureDevice(name string, config wg.Device) error
-	Device(name string) (wg.Device, error)
+	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
+	AddPeer(name string, peer wg.PeerInfo) error
 	Close() error
 }
 
 type connectionEndpoint struct {
 	iface             string
+	privateKey        string
 	subnet            net.IPNet
 	endpoint          net.UDPAddr
 	ipResolver        ip.Resolver
@@ -54,10 +54,6 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		ce.endpoint.IP = net.ParseIP(publicIP)
 	}
 
-	deviceConfig := device{
-		listenPort: &ce.endpoint.Port,
-	}
-
 	if config == nil {
 		privateKey, err := GeneratePrivateKey()
 		if err != nil {
@@ -65,50 +61,41 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		}
 		ce.subnet = ce.resourceAllocator.AllocateIPNet()
 		ce.subnet.IP = providerIP(ce.subnet)
-		deviceConfig.privateKey = &privateKey
+		ce.privateKey = privateKey
 	} else {
 		ce.subnet = config.Subnet
 		ce.subnet.IP = consumerIP(ce.subnet)
-		deviceConfig.privateKey = &config.Consumer.PrivateKey
+		ce.privateKey = config.Consumer.PrivateKey
 	}
 
-	if err := ce.up(); err != nil {
-		return err
-	}
-
-	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig)
+	var deviceConfig deviceConfig
+	deviceConfig.listenPort = ce.endpoint.Port
+	deviceConfig.privateKey = ce.privateKey
+	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.subnet)
 }
 
 // AddPeer adds new wireguard peer to the wireguard network interface.
 func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr) error {
-	var deviceConfig device
-	deviceConfig.peerEndpoint = endpoint
-	deviceConfig.peerPublicKey = &publicKey
-	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig)
+	return ce.wgClient.AddPeer(ce.iface, peerInfo{endpoint, publicKey})
 }
 
 // Config provides wireguard service configuration for the current connection endpoint.
 func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
-	d, err := ce.wgClient.Device(ce.iface)
-	if err != nil || *d.Name() != ce.iface {
+	publicKey, err := PrivateKeyToPublicKey(ce.privateKey)
+	if err != nil {
 		return wg.ServiceConfig{}, err
 	}
 
 	var config wg.ServiceConfig
-	config.Provider.PublicKey = *d.PublicKey()
+	config.Provider.PublicKey = publicKey
 	config.Provider.Endpoint = ce.endpoint
 	config.Subnet = ce.subnet
-
 	return config, nil
 }
 
 // Stop closes wireguard client and destroys wireguard network interface.
 func (ce *connectionEndpoint) Stop() error {
 	if err := ce.wgClient.Close(); err != nil {
-		return err
-	}
-
-	if err := exec.Command("ip", "link", "del", "dev", ce.iface).Run(); err != nil {
 		return err
 	}
 
@@ -123,18 +110,29 @@ func (ce *connectionEndpoint) Stop() error {
 	return ce.resourceAllocator.ReleaseInterface(ce.iface)
 }
 
-func (ce *connectionEndpoint) up() error {
-	if d, err := ce.wgClient.Device(ce.iface); err != nil || *d.Name() != ce.iface {
-		if err := exec.Command("ip", "link", "add", "dev", ce.iface, "type", "wireguard").Run(); err != nil {
-			return err
-		}
-	}
+type deviceConfig struct {
+	privateKey string
+	listenPort int
+}
 
-	if err := exec.Command("ip", "address", "replace", "dev", ce.iface, ce.subnet.String()).Run(); err != nil {
-		return err
-	}
+func (d deviceConfig) PrivateKey() string {
+	return d.privateKey
+}
 
-	return exec.Command("ip", "link", "set", "dev", ce.iface, "up").Run()
+func (d deviceConfig) ListenPort() int {
+	return d.listenPort
+}
+
+type peerInfo struct {
+	endpoint  *net.UDPAddr
+	publicKey string
+}
+
+func (p peerInfo) Endpoint() *net.UDPAddr {
+	return p.endpoint
+}
+func (p peerInfo) PublicKey() string {
+	return p.publicKey
 }
 
 func providerIP(subnet net.IPNet) net.IP {

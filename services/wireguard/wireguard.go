@@ -61,6 +61,18 @@ type ConnectionEndpoint interface {
 	Stop() error
 }
 
+// DeviceConfig describes wireguard device configuration.
+type DeviceConfig interface {
+	PrivateKey() string
+	ListenPort() int
+}
+
+// PeerInfo represents wireguard peer information.
+type PeerInfo interface {
+	Endpoint() *net.UDPAddr
+	PublicKey() string
+}
+
 // ServiceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type ServiceConfig struct {
 	Provider struct {

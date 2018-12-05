@@ -54,6 +54,8 @@ func (c *Connection) Start() (err error) {
 	}
 
 	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {
+		c.stateChannel <- connection.NotConnected
+		c.connection.Done()
 		return err
 	}
 	c.stateChannel <- connection.Connected

@@ -20,6 +20,7 @@ package kernelspace
 import (
 	"encoding/base64"
 	"net"
+	"os/exec"
 
 	"github.com/mdlayher/wireguardctrl"
 	"github.com/mdlayher/wireguardctrl/wgtypes"
@@ -32,6 +33,7 @@ var allowedIPs = []net.IPNet{
 }
 
 type client struct {
+	iface    string
 	wgClient *wireguardctrl.Client
 }
 
@@ -41,88 +43,92 @@ func NewWireguardClient() (*client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &client{wgClient}, nil
+	return &client{wgClient: wgClient}, nil
 }
 
-func (c *client) ConfigureDevice(name string, config wg.Device) error {
+func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, subnet net.IPNet) error {
 	var deviceConfig wgtypes.Config
-
-	if port := config.ListenPort(); port != nil {
-		deviceConfig.ListenPort = port
-	}
-
-	if key := config.PrivateKey(); key != nil {
-		k, err := base64.StdEncoding.DecodeString(*key)
-		if err != nil {
-			return err
-		}
-		privateKey, err := wgtypes.NewKey(k)
+	if config != nil {
+		port := config.ListenPort()
+		privateKey, err := stringToKey(config.PrivateKey())
 		if err != nil {
 			return err
 		}
 		deviceConfig.PrivateKey = &privateKey
+		deviceConfig.ListenPort = &port
 	}
 
-	var peerPublicKey *wgtypes.Key
-	if key := config.PeerPublicKey(); key != nil {
-		k, err := base64.StdEncoding.DecodeString(*key)
+	if err := c.up(iface, subnet); err != nil {
+		return err
+	}
+	c.iface = iface
+	return c.wgClient.ConfigureDevice(iface, deviceConfig)
+}
+
+func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
+	var deviceConfig wgtypes.Config
+	if peer != nil {
+		endpoint := peer.Endpoint()
+		publicKey, err := stringToKey(peer.PublicKey())
 		if err != nil {
 			return err
 		}
-		publicKey, err := wgtypes.NewKey(k)
-		if err != nil {
-			return err
-		}
-		peerPublicKey = &publicKey
-	}
-	endpoint := config.PeerEndpoint()
-
-	if endpoint != nil || peerPublicKey != nil {
 		deviceConfig.Peers = []wgtypes.PeerConfig{{
 			Endpoint:   endpoint,
-			PublicKey:  *peerPublicKey,
+			PublicKey:  publicKey,
 			AllowedIPs: allowedIPs,
 		}}
 	}
-
-	return c.wgClient.ConfigureDevice(name, deviceConfig)
+	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
-func (c *client) Device(name string) (wg.Device, error) {
-	d, err := c.wgClient.Device(name)
-	if err != nil || d.Name != name {
-		return device{}, err
+func (c *client) up(iface string, subnet net.IPNet) error {
+	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
+		if err := exec.Command("ip", "link", "add", "dev", iface, "type", "wireguard").Run(); err != nil {
+			return err
+		}
 	}
 
-	return device{
-		name:       name,
-		privateKey: d.PrivateKey,
-	}, nil
+	if err := exec.Command("ip", "address", "replace", "dev", iface, subnet.String()).Run(); err != nil {
+		return err
+	}
+
+	return exec.Command("ip", "link", "set", "dev", iface, "up").Run()
 }
 
 func (c *client) Close() error {
+	if err := exec.Command("ip", "link", "del", "dev", c.iface).Run(); err != nil {
+		return err
+	}
 	return c.wgClient.Close()
 }
 
-type device struct {
-	name       string
-	privateKey wgtypes.Key
+// GeneratePrivateKey creates new wireguard private key
+func GeneratePrivateKey() (string, error) {
+	key, err := wgtypes.GeneratePrivateKey()
+	if err != nil {
+		return "", err
+	}
+	return key.String(), nil
 }
 
-func (d device) Name() *string {
-	return &d.name
+// PrivateKeyToPublicKey generates wireguard public key from private key
+func PrivateKeyToPublicKey(key string) (string, error) {
+	k, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return "", err
+	}
+	privateKey, err := wgtypes.NewKey(k)
+	if err != nil {
+		return "", err
+	}
+	return privateKey.PublicKey().String(), nil
 }
 
-func (d device) PrivateKey() *string {
-	key := d.privateKey.String()
-	return &key
+func stringToKey(key string) (wgtypes.Key, error) {
+	k, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return wgtypes.Key{}, err
+	}
+	return wgtypes.NewKey(k)
 }
-
-func (d device) PublicKey() *string {
-	key := d.privateKey.PublicKey().String()
-	return &key
-}
-
-func (d device) ListenPort() *int           { return nil }
-func (d device) PeerEndpoint() *net.UDPAddr { return nil }
-func (d device) PeerPublicKey() *string     { return nil }

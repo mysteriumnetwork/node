@@ -23,10 +23,11 @@ import (
 	"errors"
 
 	"github.com/mysteriumnetwork/node/core/ip"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
-func NewConnectionEndpoint(ipResolver ip.Resolver) (*connectionEndpoint, error) {
+func NewConnectionEndpoint(ipResolver ip.Resolver) (wg.ConnectionEndpoint, error) {
 	return nil, errors.New("Not implemented")
 }
 

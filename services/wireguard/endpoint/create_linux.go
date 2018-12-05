@@ -20,16 +20,14 @@
 package endpoint
 
 import (
-	"encoding/base64"
-
-	"github.com/mdlayher/wireguardctrl/wgtypes"
 	"github.com/mysteriumnetwork/node/core/ip"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
-func NewConnectionEndpoint(ipResolver ip.Resolver) (*connectionEndpoint, error) {
+func NewConnectionEndpoint(ipResolver ip.Resolver) (wg.ConnectionEndpoint, error) {
 	wgClient, err := kernelspace.NewWireguardClient()
 	if err != nil {
 		return nil, err
@@ -44,22 +42,10 @@ func NewConnectionEndpoint(ipResolver ip.Resolver) (*connectionEndpoint, error) 
 
 // GeneratePrivateKey creates new wireguard private key
 func GeneratePrivateKey() (string, error) {
-	key, err := wgtypes.GeneratePrivateKey()
-	if err != nil {
-		return "", err
-	}
-	return key.String(), nil
+	return kernelspace.GeneratePrivateKey()
 }
 
 // PrivateKeyToPublicKey generates wireguard public key from private key
 func PrivateKeyToPublicKey(key string) (string, error) {
-	k, err := base64.StdEncoding.DecodeString(key)
-	if err != nil {
-		return "", err
-	}
-	privateKey, err := wgtypes.NewKey(k)
-	if err != nil {
-		return "", err
-	}
-	return privateKey.PublicKey().String(), nil
+	return kernelspace.PrivateKeyToPublicKey(key)
 }
