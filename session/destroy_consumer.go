@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,28 +24,28 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-// createConsumer processes session create requests from communication channel.
-type createConsumer struct {
+// destroyConsumer processes session create requests from communication channel.
+type destroyConsumer struct {
 	SessionManager Manager
 	PeerID         identity.Identity
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
-func (consumer *createConsumer) GetRequestEndpoint() communication.RequestEndpoint {
+func (consumer *destroyConsumer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpointSessionCreate
 }
 
 // NewRequest creates struct where request from endpoint will be serialized
-func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
-	var request CreateRequest
+func (consumer *destroyConsumer) NewRequest() (requestPtr interface{}) {
+	var request DestroyRequest
 	return &request
 }
 
 // Consume handles requests from endpoint and replies with response
-func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
-	request := requestPtr.(*CreateRequest)
+func (consumer *destroyConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
+	request := requestPtr.(*DestroyRequest)
 
-	sessionInstance, err := consumer.SessionManager.Create(consumer.PeerID, request.ProposalId)
+	err = consumer.SessionManager.Destroy(consumer.PeerID, request.SessionID)
 	switch err {
 	case nil:
 		return responseWithSession(sessionInstance), nil

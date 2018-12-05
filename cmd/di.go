@@ -289,7 +289,7 @@ func newSessionManagerFactory(
 			proposal,
 			session.GenerateUUID,
 			configProvider,
-			sessionStorage.Add,
+			sessionStorage,
 			promiseHandler(dialog),
 		)
 	}

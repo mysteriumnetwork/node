@@ -47,19 +47,25 @@ type PromiseProcessor interface {
 	Stop() error
 }
 
+// Manager defines methods for session management
+type Manager interface {
+	Create(consumerID identity.Identity, proposalID int) (Session, error)
+	Destroy(consumerID identity.Identity, sessionID string) error
+}
+
 // NewManager returns new session manager
 func NewManager(
 	currentProposal discovery_dto.ServiceProposal,
 	idGenerator IDGenerator,
 	configProvider ConfigProvider,
-	saveCallback SaveCallback,
+	sessionStorage *StorageMemory,
 	promiseProcessor PromiseProcessor,
 ) *manager {
 	return &manager{
 		currentProposal:  currentProposal,
 		generateID:       idGenerator,
 		provideConfig:    configProvider,
-		saveSession:      saveCallback,
+		sessionStorage:   sessionStorage,
 		promiseProcessor: promiseProcessor,
 
 		creationLock: sync.Mutex{},
@@ -71,7 +77,7 @@ type manager struct {
 	currentProposal  discovery_dto.ServiceProposal
 	generateID       IDGenerator
 	provideConfig    ConfigProvider
-	saveSession      SaveCallback
+	sessionStorage   *StorageMemory
 	promiseProcessor PromiseProcessor
 
 	creationLock sync.Mutex
@@ -97,8 +103,31 @@ func (manager *manager) Create(consumerID identity.Identity, proposalID int) (se
 		return
 	}
 
-	manager.saveSession(sessionInstance)
+	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
+}
+
+// Create creates session instance. Multiple sessions per peerID is possible in case different services are used
+func (manager *manager) Destroy(consumerID identity.Identity, sessionID string) (err error) {
+	manager.creationLock.Lock()
+	defer manager.creationLock.Unlock()
+
+	if manager.currentProposal.ID != proposalID {
+		err = ErrorInvalidProposal
+		return
+	}
+
+	err = manager.promiseProcessor.Stop()
+	if err != nil {
+		return
+	}
+
+	sessionInstance, err = manager.sessionStorage.Remove(sessionID)
+	if err != nil {
+		return
+	}
+
+	return nil
 }
 
 func (manager *manager) createSession(consumerID identity.Identity) (sessionInstance Session, err error) {
