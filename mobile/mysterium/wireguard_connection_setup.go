@@ -58,12 +58,12 @@ func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTu
 		devApi := device.UserspaceDeviceApi(tun)
 		socket, err := devApi.GetNetworkSocket()
 		if err != nil {
-			tun.Close()
+			devApi.Close()
 			return nil, err
 		}
-		err = wgTunnelSetup.Protect(int(socket))
+		err = wgTunnelSetup.Protect(socket)
 		if err != nil {
-			tun.Close()
+			devApi.Close()
 			return nil, err
 		}
 		return &wireguardConnection{
@@ -121,6 +121,7 @@ func (wg *wireguardConnection) Wait() error {
 
 func (wg *wireguardConnection) Stop() {
 	wg.stateChannel <- connection.Disconnecting
+	wg.stateChannel <- connection.NotConnected
 	close(wg.stopChannel)
 }
 
