@@ -29,7 +29,7 @@ type serviceFake struct {
 	onStartReturnError error
 }
 
-func (service *serviceFake) Start(identity.Identity) (market.ServiceProposal, session.ConfigProvider, error) {
+func (service *serviceFake) Start(identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
 	return market.ServiceProposal{}, nil, service.onStartReturnError
 }
 

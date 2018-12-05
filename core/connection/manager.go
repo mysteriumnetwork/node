@@ -44,6 +44,8 @@ var (
 	ErrConnectionFailed = errors.New("connection has failed")
 	// ErrUnsupportedServiceType indicates that target proposal contains unsupported service type
 	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
+	// ErrAckNotRegistered indicates that the target connection does not know how to handle acks
+	ErrAckNotRegistered = errors.New("ack not registered for service type")
 )
 
 // Creator creates new connection by given options and uses state channel to report state changes
@@ -72,6 +74,7 @@ type connectionManager struct {
 	newPromiseIssuer PromiseIssuerCreator
 	newConnection    Creator
 	eventPublisher   Publisher
+	ackRegistry      AckRegistry
 
 	//these are populated by Connect at runtime
 	ctx             context.Context
@@ -81,11 +84,15 @@ type connectionManager struct {
 	cleanConnection func()
 }
 
+// AckRegistry allows for aquiring of registered ack handlers for different services
+type AckRegistry func(serviceType string) (session.AckHandler, error)
+
 // NewManager creates connection manager with given dependencies
 func NewManager(
 	dialogCreator DialogCreator,
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator Creator,
+	ackRegistry AckRegistry,
 	eventPublisher Publisher,
 ) *connectionManager {
 	return &connectionManager{
@@ -95,6 +102,7 @@ func NewManager(
 		status:           statusNotConnected(),
 		cleanConnection:  warnOnClean,
 		eventPublisher:   eventPublisher,
+		ackRegistry:      ackRegistry,
 	}
 }
 
@@ -149,7 +157,12 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 	cancel = append(cancel, func() { dialog.Close() })
 
-	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID)
+	ackHandler, err := manager.ackRegistry(proposal.ServiceType)
+	if err != nil {
+		return err
+	}
+
+	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, ackHandler)
 	if err != nil {
 		return err
 	}

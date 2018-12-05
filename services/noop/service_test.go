@@ -67,9 +67,12 @@ func Test_Manager_Start(t *testing.T) {
 		proposal,
 	)
 
-	sessionConfig, err := sessionConfigProvider()
+	sessionConfig, err := sessionConfigProvider.ProvideConfig()
 	assert.NoError(t, err)
 	assert.Nil(t, sessionConfig)
+
+	err = sessionConfigProvider.ConsumeConfig(nil)
+	assert.NoError(t, err)
 }
 
 func Test_Manager_Start_IPResolverErrs(t *testing.T) {

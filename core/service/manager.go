@@ -43,7 +43,7 @@ type ServiceFactory func(Options) (Service, error)
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
-	Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigProvider, error)
+	Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error)
 	Wait() error
 	Stop() error
 }
@@ -52,11 +52,9 @@ type Service interface {
 type DialogWaiterFactory func(providerID identity.Identity, serviceType string) (communication.DialogWaiter, error)
 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
-type DialogHandlerFactory func(market.ServiceProposal, session.ConfigProvider) communication.DialogHandler
+type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator) communication.DialogHandler
 
-// NewManager creates new instance of pluggable services manager
 func NewManager(
-	identityLoader identity_selector.Handler,
 	serviceFactory ServiceFactory,
 	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,

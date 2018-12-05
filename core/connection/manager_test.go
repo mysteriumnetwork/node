@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"encoding/json"
 	"errors"
 	"sync"
 	"testing"
@@ -101,10 +102,17 @@ func (tc *testContext) SetupTest() {
 		},
 	}
 
+	mockAckRegistry := func(serviceType string) (session.AckHandler, error) {
+		return func(sessionResponse session.SessionDto, ackSend func(payload interface{}) error) (json.RawMessage, error) {
+			return nil, nil
+		}, nil
+	}
+
 	tc.connManager = NewManager(
 		dialogCreator,
 		promiseIssuerFactory,
 		tc.fakeConnectionFactory.CreateConnection,
+		mockAckRegistry,
 		tc.stubPublisher,
 	)
 }

@@ -51,14 +51,22 @@ type Manager struct {
 	isStarted        bool
 }
 
+type negotiator struct {
+}
+
+func (n *negotiator) ProvideConfig() (session.ServiceConfiguration, error) {
+	return nil, nil
+}
+func (n *negotiator) ConsumeConfig(cfg session.ServiceConfiguration) error {
+	return nil
+}
+
 // Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigProvider, error) {
-	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
-		return nil, nil
-	}
+func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
+	cofigNegotiator := &negotiator{}
 
 	if manager.isStarted {
-		return market.ServiceProposal{}, sessionConfigProvider, ErrAlreadyStarted
+		return market.ServiceProposal{}, cofigNegotiator, ErrAlreadyStarted
 	}
 
 	manager.process.Add(1)
@@ -67,12 +75,12 @@ func (manager *Manager) Start(providerID identity.Identity) (market.ServicePropo
 
 	publicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
-		return market.ServiceProposal{}, sessionConfigProvider, err
+		return market.ServiceProposal{}, cofigNegotiator, err
 	}
 
 	country, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
-		return market.ServiceProposal{}, sessionConfigProvider, err
+		return market.ServiceProposal{}, cofigNegotiator, err
 	}
 
 	proposal := market.ServiceProposal{
@@ -86,7 +94,7 @@ func (manager *Manager) Start(providerID identity.Identity) (market.ServicePropo
 		},
 	}
 
-	return proposal, sessionConfigProvider, nil
+	return proposal, cofigNegotiator, nil
 }
 
 // Wait blocks until service is stopped

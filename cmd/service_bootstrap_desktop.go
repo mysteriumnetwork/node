@@ -104,15 +104,15 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			di.IdentityRegistry,
 		), nil
 	}
-	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
+	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator) communication.DialogHandler {
 		promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
 			if nodeOptions.ExperimentPromiseCheck {
 				return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
 			}
 			return &promise_noop.FakePromiseEngine{}
 		}
-		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider, di.ServiceSessionStorage, promiseHandler)
-		return session.NewDialogHandler(sessionManagerFactory)
+		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider.ProvideConfig, di.ServiceSessionStorage, promiseHandler)
+		return session.NewDialogHandler(sessionManagerFactory, configProvider.ConsumeConfig)
 	}
 
 	runnableServiceFactory := func() service.RunnableService {

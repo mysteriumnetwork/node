@@ -18,6 +18,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"time"
 
@@ -152,11 +153,25 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 		di.SignerFactory,
 	)
 	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory.CreateConnection)
+
+	// Openvpn does not even need to call ack, so ignore it
+	ackHandler := func(sessionResponse session.SessionDto, ackSend func(payload interface{}) error) (json.RawMessage, error) {
+		return sessionResponse.Config, nil
+	}
+
+	di.ConnectionRegistry.AddAck(service_openvpn.ServiceType, ackHandler)
 }
 
 func (di *Dependencies) registerNoopConnection() {
 	service_noop.Bootstrap()
+
+	// noop does not even need to call ack, so ignore it
+	ackHandler := func(sessionResponse session.SessionDto, ackSend func(payload interface{}) error) (json.RawMessage, error) {
+		return sessionResponse.Config, nil
+	}
+
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
+	di.ConnectionRegistry.AddAck(service_noop.ServiceType, ackHandler)
 }
 
 // Shutdown stops container
@@ -261,6 +276,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		dialogFactory,
 		promiseIssuerFactory,
 		di.ConnectionRegistry.CreateConnection,
+		di.ConnectionRegistry.GetAck,
 		di.EventBus,
 	)
 

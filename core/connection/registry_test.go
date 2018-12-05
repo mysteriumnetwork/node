@@ -18,10 +18,12 @@
 package connection
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,6 +34,10 @@ var (
 	connectionFactory = func(connectionParams ConnectOptions, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
 		return connectionMock, nil
 	}
+	mockAckHandler = func(sessionResponse session.SessionDto, ackSend func(payload interface{}) error) (json.RawMessage, error) {
+		return nil, nil
+	}
+	serviceType = "serviceType"
 )
 
 func TestRegistry_Factory(t *testing.T) {
@@ -44,7 +50,7 @@ func TestRegistry_Register(t *testing.T) {
 		creators: map[string]Creator{},
 	}
 
-	registry.Register("any", connectionFactory)
+	registry.Register(serviceType, connectionFactory)
 	assert.Len(t, registry.creators, 1)
 }
 
@@ -70,4 +76,37 @@ func TestRegistry_CreateConnection_Existing(t *testing.T) {
 	connection, err := registry.CreateConnection(connectOptions, make(chan State), make(chan consumer.SessionStatistics))
 	assert.NoError(t, err)
 	assert.Equal(t, connectionMock, connection)
+}
+
+func TestRegistryAddAck(t *testing.T) {
+	registry := Registry{
+		acks: map[string]session.AckHandler{},
+	}
+
+	registry.AddAck(serviceType, mockAckHandler)
+	assert.Len(t, registry.acks, 1)
+}
+
+func TestRegistryGetAckExists(t *testing.T) {
+	registry := Registry{
+		acks: map[string]session.AckHandler{},
+	}
+	serviceType := serviceType
+
+	registry.AddAck(serviceType, mockAckHandler)
+	handler, err := registry.GetAck(serviceType)
+	assert.Nil(t, err)
+	assert.NotNil(t, handler)
+}
+
+func TestRegistryGetAckNonExisting(t *testing.T) {
+	registry := Registry{
+		acks: map[string]session.AckHandler{},
+	}
+	serviceType := serviceType
+
+	registry.AddAck("any", mockAckHandler)
+	handler, err := registry.GetAck(serviceType)
+	assert.Nil(t, handler)
+	assert.Equal(t, ErrAckNotRegistered, err)
 }

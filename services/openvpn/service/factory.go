@@ -47,13 +47,13 @@ func NewManager(
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 
 	return &Manager{
-		locationResolver:             locationResolver,
-		ipResolver:                   ipResolver,
-		natService:                   natService,
-		proposalFactory:              newProposalFactory(serviceOptions),
-		sessionConfigProviderFactory: newSessionConfigProviderFactory(serviceOptions),
-		vpnServerConfigFactory:       newServerConfigFactory(nodeOptions, serviceOptions),
-		vpnServerFactory:             newServerFactory(nodeOptions, sessionValidator),
+		locationResolver:               locationResolver,
+		ipResolver:                     ipResolver,
+		natService:                     natService,
+		proposalFactory:                newProposalFactory(serviceOptions),
+		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(serviceOptions),
+		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
+		vpnServerFactory:               newServerFactory(nodeOptions, sessionValidator),
 	}
 }
 
@@ -89,26 +89,35 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 	}
 }
 
-func newSessionConfigProviderFactory(serviceOptions Options) SessionConfigProviderFactory {
-	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigProvider {
+// newSessionConfigNegotiatorFactory returns function generating session config for remote client
+func newSessionConfigNegotiatorFactory(serviceOptions Options) SessionConfigNegotiatorFactory {
+	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigNegotiator {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP)
-
-		return newSessionConfigProvider(serviceOptions, secPrimitives, serverIP)
+		return &OpenvpnConfigNegotiator{
+			vpnConfig: openvpn_service.VPNConfig{
+				RemoteIP:        serverIP,
+				RemotePort:      serviceOptions.OpenvpnPort,
+				RemoteProtocol:  serviceOptions.OpenvpnProtocol,
+				TLSPresharedKey: secPrimitives.PresharedKey.ToPEMFormat(),
+				CACertificate:   secPrimitives.CertificateAuthority.ToPEMFormat(),
+			},
+		}
 	}
 }
 
-// newSessionConfigProvider returns function generating session config for remote client
-func newSessionConfigProvider(serviceOptions Options, secPrimitives *tls.Primitives, serverIP string) session.ConfigProvider {
-	// TODO: check nodeOptions for --openvpn-transport option
-	return func() (session.ServiceConfiguration, error) {
-		return &openvpn_service.VPNConfig{
-			serverIP,
-			serviceOptions.OpenvpnPort,
-			serviceOptions.OpenvpnProtocol,
-			secPrimitives.PresharedKey.ToPEMFormat(),
-			secPrimitives.CertificateAuthority.ToPEMFormat(),
-		}, nil
-	}
+// OpenvpnConfigNegotiator knows how to send the openvpn config to the consumer
+type OpenvpnConfigNegotiator struct {
+	vpnConfig openvpn_service.VPNConfig
+}
+
+// ConsumeConfig doesnt do anything on openvpn side, since it's not required here
+func (ocn *OpenvpnConfigNegotiator) ConsumeConfig(session.ServiceConfiguration) error {
+	return nil
+}
+
+// ProvideConfig returns the config for user
+func (ocn *OpenvpnConfigNegotiator) ProvideConfig() (session.ServiceConfiguration, error) {
+	return &ocn.vpnConfig, nil
 }
 
 func vpnServerIP(serviceOptions Options, outboundIP, publicIP string) string {

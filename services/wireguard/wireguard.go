@@ -73,6 +73,11 @@ type PeerInfo interface {
 	PublicKey() string
 }
 
+// ConsumerPublicKey is used for sending the public key from cosnumer to provider
+type ConsumerPublicKey struct {
+	PublicKey string
+}
+
 // ServiceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type ServiceConfig struct {
 	Provider struct {

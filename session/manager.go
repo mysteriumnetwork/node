@@ -37,8 +37,17 @@ var (
 // IDGenerator defines method for session id generation
 type IDGenerator func() (ID, error)
 
+// ConfigNegotiator is able to handle config negotiations
+type ConfigNegotiator interface {
+	ProvideConfig() (ServiceConfiguration, error)
+	ConsumeConfig(ServiceConfiguration) error
+}
+
 // ConfigProvider provides session config for remote client
 type ConfigProvider func() (ServiceConfiguration, error)
+
+// ConfigReceiver provides clients session configuration for the provider
+type ConfigReceiver func(ServiceConfiguration) error
 
 // SaveCallback stores newly started sessions
 type SaveCallback func(Session)
