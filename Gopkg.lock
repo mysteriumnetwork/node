@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:54dbf15386462c57da4cb7cfd523e85c888106d972186533de17342f11304ac5"
+  digest = "1:abf60831e864f0111a346615ada9f64f19b3361e03baa4604176ccb91be188b9"
   name = "git.zx2c4.com/wireguard-go"
   packages = [
     "device",
@@ -14,7 +14,7 @@
     "xchacha20poly1305",
   ]
   pruneopts = "UT"
-  revision = "ffd4865b321335a7b3dca2dc328120d178bae687"
+  revision = "f901ba1171a9ed762f252d69ad323ea0c4df1165"
   source = "github.com/mysteriumnetwork/wireguard-go"
 
 [[projects]]
