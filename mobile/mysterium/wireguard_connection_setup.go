@@ -35,8 +35,8 @@ import (
 // WireguardTunnelSetup exposes api for caller to implement external tunnel setup
 type WireguardTunnelSetup interface {
 	NewTunnel()
-	AddTunnelAddress(ip string)
-	AddRoute(route string)
+	AddTunnelAddress(ip string, prefixLen int)
+	AddRoute(route string, prefixLen int)
 	AddDNS(ip string)
 	SetBlocking(blocking bool)
 	Establish() (int, error)
@@ -78,7 +78,7 @@ func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTu
 
 func newTunnDevice(wgTunnSetup WireguardTunnelSetup) (tun.TUNDevice, error) {
 	wgTunnSetup.NewTunnel()
-	wgTunnSetup.AddTunnelAddress("10.182.47.5/24")
+	wgTunnSetup.AddTunnelAddress("10.182.47.5", 24)
 	wgTunnSetup.SetMTU(1280)
 	wgTunnSetup.SetBlocking(true)
 
@@ -103,19 +103,15 @@ type wireguardConnection struct {
 
 func (wg *wireguardConnection) Start() error {
 	wg.stateChannel <- connection.Connecting
-	err := wg.doInit()
-	if err != nil {
-		wg.stateChannel <- connection.NotConnected
-		return err
-	}
+	wg.doInit()
+
 	wg.stateChannel <- connection.Connected
 	return nil
 }
 
-func (wg *wireguardConnection) doInit() error {
+func (wg *wireguardConnection) doInit() {
 	wg.closed.Add(1)
 	go wg.runPeriodically(time.Second)
-	return nil
 }
 
 func (wg *wireguardConnection) Wait() error {
