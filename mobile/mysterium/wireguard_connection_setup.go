@@ -18,18 +18,19 @@
 package mysterium
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"os"
 	"sync"
 	"time"
-
-	"github.com/mysteriumnetwork/node/services/wireguard"
 
 	"git.zx2c4.com/wireguard-go/device"
 	"git.zx2c4.com/wireguard-go/tun"
 	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/services/wireguard"
 )
 
 // WireguardTunnelSetup exposes api for caller to implement external tunnel setup
@@ -49,13 +50,26 @@ type WireguardTunnelSetup interface {
 func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
 	wireguard.Bootstrap()
 	mobNode.di.ConnectionRegistry.Register("wireguard", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+
+		var config wireguard.ServiceConfig
+		err := json.Unmarshal(options.SessionConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+
 		//TODO this heavy linfting might go to doInit
-		tun, err := newTunnDevice(wgTunnelSetup)
+		tun, err := newTunnDevice(wgTunnelSetup, &config)
 		if err != nil {
 			return nil, err
 		}
 
 		devApi := device.UserspaceDeviceApi(tun)
+		err = setupWireguardDevice(devApi, &config)
+		if err != nil {
+			devApi.Close()
+			return nil, err
+		}
+
 		socket, err := devApi.GetNetworkSocket()
 		if err != nil {
 			devApi.Close()
@@ -76,9 +90,56 @@ func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTu
 	})
 }
 
-func newTunnDevice(wgTunnSetup WireguardTunnelSetup) (tun.TUNDevice, error) {
+func setupWireguardDevice(devApi *device.DeviceApi, config *wireguard.ServiceConfig) error {
+	err := devApi.SetListeningPort(0) //random port
+	if err != nil {
+		return err
+	}
+
+	privKeyArr, err := base64stringTo32ByteArray(config.Consumer.PrivateKey)
+	if err != nil {
+		return err
+	}
+	err = devApi.SetPrivateKey(device.NoisePrivateKey(privKeyArr))
+	if err != nil {
+		return err
+	}
+
+	peerPubKeyArr, err := base64stringTo32ByteArray(config.Provider.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	ep := config.Provider.Endpoint.String()
+	parsed, err := device.CreateEndpoint(ep)
+	if err != nil {
+		return err
+	}
+
+	err = devApi.AddPeer(device.ExternalPeer{
+		PublicKey:      device.NoisePublicKey(peerPubKeyArr),
+		RemoteEndpoint: parsed,
+	})
+	return err
+}
+
+func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
+	decoded, err := base64.StdEncoding.DecodeString(s)
+	if len(decoded) != 32 {
+		err = errors.New("unexpected key size")
+	}
+	if err != nil {
+		return
+	}
+
+	copy(res[:], decoded)
+	return
+}
+
+func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceConfig) (tun.TUNDevice, error) {
 	wgTunnSetup.NewTunnel()
-	wgTunnSetup.AddTunnelAddress("10.182.47.5", 24)
+	prefixLen, _ := config.Subnet.Mask.Size()
+	wgTunnSetup.AddTunnelAddress(config.Subnet.IP.String(), prefixLen)
 	wgTunnSetup.SetMTU(1280)
 	wgTunnSetup.SetBlocking(true)
 
