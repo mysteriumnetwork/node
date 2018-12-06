@@ -23,9 +23,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +51,7 @@ var ipresolverStub = &fakeIPResolver{
 var connectionEndpointStub = &fakeConnectionEndpoint{}
 
 func Test_Manager_Start(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub, connectionEndpointStub)
+	manager := newManagerStub(locationResolverStub, ipresolverStub)
 	proposal, sessionConfigProvider, err := manager.Start(providerID)
 	assert.NoError(t, err)
 	assert.Exactly(
@@ -79,7 +82,7 @@ func Test_Manager_Start_IPResolverErrs(t *testing.T) {
 		publicIPRes: "127.0.0.1",
 		publicErr:   fakeErr,
 	}
-	manager := NewManager(locationResolverStub, ipResStub, connectionEndpointStub)
+	manager := newManagerStub(locationResolverStub, ipResStub)
 	_, _, err := manager.Start(providerID)
 	assert.Equal(t, fakeErr, err)
 }
@@ -90,14 +93,14 @@ func Test_Manager_Start_LocResolverErrs(t *testing.T) {
 		res: "LT",
 		err: fakeErr,
 	}
-	manager := NewManager(locResStub, ipresolverStub, connectionEndpointStub)
+	manager := newManagerStub(locResStub, ipresolverStub)
 
 	_, _, err := manager.Start(providerID)
 	assert.Equal(t, fakeErr, err)
 }
 
 func Test_Manager_Wait(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub, connectionEndpointStub)
+	manager := newManagerStub(locationResolverStub, ipresolverStub)
 
 	manager.Start(providerID)
 	go func() {
@@ -108,7 +111,7 @@ func Test_Manager_Wait(t *testing.T) {
 }
 
 func Test_Manager_Stop(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub, connectionEndpointStub)
+	manager := newManagerStub(locationResolverStub, ipresolverStub)
 	manager.Start(providerID)
 
 	err := manager.Stop()
@@ -154,3 +157,18 @@ func (fce *fakeConnectionEndpoint) Stop() error                            { ret
 func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { return nil }
 func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
 func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }
+
+func newManagerStub(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
+	return &Manager{
+		locationResolver:   locationResolver,
+		ipResolver:         ipResolver,
+		connectionEndpoint: connectionEndpointStub,
+		natService:         &serviceFake{},
+	}
+}
+
+type serviceFake struct{}
+
+func (service *serviceFake) Add(rule nat.RuleForwarding) {}
+func (service *serviceFake) Start() error                { return nil }
+func (service *serviceFake) Stop()                       {}
