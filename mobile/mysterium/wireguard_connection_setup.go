@@ -21,16 +21,21 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"os"
 	"sync"
 	"time"
 
 	"git.zx2c4.com/wireguard-go/device"
 	"git.zx2c4.com/wireguard-go/tun"
-	"github.com/cihub/seelog"
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard"
+)
+
+const (
+	//taken from android-wireguard project
+	androidTunMtu = 1280
+	tag           = "[wg connection] "
 )
 
 // WireguardTunnelSetup exposes api for caller to implement external tunnel setup
@@ -49,7 +54,7 @@ type WireguardTunnelSetup interface {
 // OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
 func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
 	wireguard.Bootstrap()
-	mobNode.di.ConnectionRegistry.Register("wireguard", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+	mobNode.di.ConnectionRegistry.Register(wireguard.ServiceType, func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 
 		var config wireguard.ServiceConfig
 		err := json.Unmarshal(options.SessionConfig, &config)
@@ -69,7 +74,7 @@ func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTu
 			devApi.Close()
 			return nil, err
 		}
-
+		devApi.Boot()
 		socket, err := devApi.GetNetworkSocket()
 		if err != nil {
 			devApi.Close()
@@ -85,7 +90,7 @@ func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTu
 			stopChannel:       make(chan struct{}),
 			stateChannel:      stateChannel,
 			statisticsChannel: statisticsChannel,
-			closed:            &sync.WaitGroup{},
+			stopCompleted:     &sync.WaitGroup{},
 		}, nil
 	})
 }
@@ -140,16 +145,19 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceCo
 	wgTunnSetup.NewTunnel()
 	prefixLen, _ := config.Subnet.Mask.Size()
 	wgTunnSetup.AddTunnelAddress(config.Subnet.IP.String(), prefixLen)
-	wgTunnSetup.SetMTU(1280)
+	wgTunnSetup.SetMTU(androidTunMtu)
 	wgTunnSetup.SetBlocking(true)
+
+	//route all traffic through tunnel
+	wgTunnSetup.AddRoute("0.0.0.0", 1)
+	wgTunnSetup.AddRoute("128.0.0.0", 1)
 
 	fd, err := wgTunnSetup.Establish()
 	if err != nil {
 		return nil, err
 	}
-	//from this point fd is valid android tunnel and needs to be disposed to change back network to it's original state
-	file := os.NewFile(uintptr(fd), "/dev/tun")
-	return tun.CreateTUNFromFile(file, 1280)
+	log.Info(tag, "Tun value is: ", fd)
+	return newDeviceFromFd(fd)
 }
 
 type wireguardConnection struct {
@@ -158,7 +166,7 @@ type wireguardConnection struct {
 	stopChannel       chan struct{}
 	stateChannel      connection.StateChannel
 	statisticsChannel connection.StatisticsChannel
-	closed            *sync.WaitGroup
+	stopCompleted     *sync.WaitGroup
 	cleanup           func()
 }
 
@@ -171,18 +179,17 @@ func (wg *wireguardConnection) Start() error {
 }
 
 func (wg *wireguardConnection) doInit() {
-	wg.closed.Add(1)
+	wg.stopCompleted.Add(1)
 	go wg.runPeriodically(time.Second)
 }
 
 func (wg *wireguardConnection) Wait() error {
-	wg.closed.Wait()
+	wg.stopCompleted.Wait()
 	return nil
 }
 
 func (wg *wireguardConnection) Stop() {
 	wg.stateChannel <- connection.Disconnecting
-	wg.stateChannel <- connection.NotConnected
 	close(wg.stopChannel)
 }
 
@@ -192,7 +199,7 @@ func (wg *wireguardConnection) updateStatistics() {
 	var err error
 	defer func() {
 		if err != nil {
-			seelog.Error("[wg connection] Error updating statistics: ", err)
+			log.Error(tag, "Error updating statistics: ", err)
 		}
 	}()
 
@@ -217,7 +224,7 @@ func (wg *wireguardConnection) doCleanup() {
 	wg.device.Wait()
 	wg.stateChannel <- connection.NotConnected
 	close(wg.stateChannel)
-	wg.closed.Done()
+	wg.stopCompleted.Done()
 }
 
 func (wg *wireguardConnection) runPeriodically(duration time.Duration) {
@@ -228,7 +235,7 @@ func (wg *wireguardConnection) runPeriodically(duration time.Duration) {
 
 		case <-wg.stopChannel:
 			wg.doCleanup()
-			break
+			return
 		}
 	}
 }
