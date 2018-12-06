@@ -27,8 +27,10 @@ import (
 
 var (
 	// ErrorInvalidProposal is validation error then invalid proposal requested for session creation
-	ErrorInvalidProposal   = errors.New("proposal does not exist")
-	ErrorSessionNotExists  = errors.New("session does not exists")
+	ErrorInvalidProposal = errors.New("proposal does not exist")
+	// ErrorSessionNotExists returned when consumer tries to destroy session that does not exists
+	ErrorSessionNotExists = errors.New("session does not exists")
+	// ErrorWrongSessionOwner returned when consumer tries to destroy session that does not belongs to him
 	ErrorWrongSessionOwner = errors.New("wrong session owner")
 )
 
@@ -130,6 +132,7 @@ func (manager *manager) Destroy(consumerID identity.Identity, sessionID string) 
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))
+
 	return nil
 }
 

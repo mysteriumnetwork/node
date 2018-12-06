@@ -99,6 +99,7 @@ func (manager *managerFake) Create(consumerID identity.Identity, proposalID int)
 	return manager.returnSession, manager.returnError
 }
 
-func (manager *managerFake) Destroy(consumerID identity.Identity, serviceID string) error {
+// Destroy fake destroy function
+func (manager *managerFake) Destroy(consumerID identity.Identity, sessionID string) error {
 	return nil
 }

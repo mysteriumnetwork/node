@@ -76,7 +76,6 @@ func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) er
 }
 
 func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) error {
-
 	requestTopic := receiver.messageTopic + string(consumer.GetRequestEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
@@ -112,7 +111,13 @@ func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) er
 		}
 	}
 
+	log.Debug(receiverLogPrefix, fmt.Sprintf("Request '%s' topic has been subscribed to", requestTopic))
+
 	_, err := receiver.connection.Subscribe(requestTopic, messageHandler)
+	// TODO: nats.Subscription.Unsubscribe() should be called when topic is no longer needed
+	//  session-create and session-destroy topic should be cleared after session-destroy message is received
+	//    or session timeouts (promise processor detects session timeout)
+	// scope of "session-create topic deduplication #533"
 	if err != nil {
 		err = fmt.Errorf("failed subscribe request '%s'. %s", requestTopic, err)
 		return err

@@ -41,8 +41,19 @@ func (handler *handler) Handle(dialog communication.Dialog) error {
 }
 
 func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) error {
-	return dialog.Respond(
+	err := dialog.Respond(
 		&createConsumer{
+			SessionManager: handler.sessionManagerFactory(dialog),
+			PeerID:         dialog.PeerID(),
+		},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return dialog.Respond(
+		&destroyConsumer{
 			SessionManager: handler.sessionManagerFactory(dialog),
 			PeerID:         dialog.PeerID(),
 		},

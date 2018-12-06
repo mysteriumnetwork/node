@@ -24,12 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// managerFake represents fake manager usually useful in tests
+// managerDestroyFake represents fake destroy manager usually useful in tests
 type managerDestroyFake struct {
-	lastConsumerID identity.Identity
-	lastProposalID int
-	returnSession  Session
-	returnError    error
+	returnSession Session
+	returnError   error
 }
 
 func TestDestroyConsumer_Success(t *testing.T) {
@@ -89,6 +87,7 @@ func (manager *managerDestroyFake) Create(consumerID identity.Identity, proposal
 	return Session{}, nil
 }
 
-func (manager *managerDestroyFake) Destroy(consumerID identity.Identity, serviceID string) error {
+// Destroy fake destroy function
+func (manager *managerDestroyFake) Destroy(consumerID identity.Identity, sessionID string) error {
 	return manager.returnError
 }

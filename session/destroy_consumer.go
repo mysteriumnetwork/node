@@ -28,7 +28,7 @@ type destroyConsumer struct {
 	PeerID         identity.Identity
 }
 
-// GetMessageEndpoint returns endpoint there to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages
 func (consumer *destroyConsumer) GetRequestEndpoint() communication.RequestEndpoint {
 	return endpointSessionDestroy
 }
@@ -46,11 +46,11 @@ func (consumer *destroyConsumer) Consume(requestPtr interface{}) (response inter
 	return destroyResponse(err), err
 }
 
-func destroyResponse(error error) DestroyResponse {
-	if error != nil {
+func destroyResponse(err error) DestroyResponse {
+	if err != nil {
 		return DestroyResponse{
 			Success: false,
-			Message: error.Error(),
+			Message: err.Error(),
 		}
 	}
 	return DestroyResponse{

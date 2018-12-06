@@ -19,9 +19,13 @@ package session
 
 import (
 	"errors"
+	"fmt"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 )
+
+const sessionDestroyPrefix = "[session.DestroyProducer] "
 
 type destroyProducer struct {
 	SessionID string
@@ -42,19 +46,21 @@ func (producer *destroyProducer) Produce() (requestPtr interface{}) {
 }
 
 // RequestSessionDestroy requests session destruction and returns response data
-func RequestSessionDestroy(sender communication.Sender, sessionID ID) (err error) {
+func RequestSessionDestroy(sender communication.Sender, sessionID ID) error {
 	responsePtr, err := sender.Request(&destroyProducer{
 		SessionID: string(sessionID),
 	})
 	if err != nil {
-		return
+		log.Info(sessionDestroyPrefix, fmt.Sprintf("Session destroy request failed: %#v", err.Error()))
+		return err
 	}
 
 	response := responsePtr.(*DestroyResponse)
 	if !response.Success {
-		err = errors.New("Session destroy failed. " + response.Message)
-		return
+		log.Info(sessionDestroyPrefix, fmt.Sprintf("Session destroy response failed: %#v", response.Message))
+
+		return errors.New("Session destroy failed: " + response.Message)
 	}
 
-	return
+	return nil
 }
