@@ -21,6 +21,7 @@ import (
 	"net"
 
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
@@ -39,6 +40,7 @@ type connectionEndpoint struct {
 	ipResolver        ip.Resolver
 	resourceAllocator resources.Allocator
 	wgClient          wgClient
+	natService        nat.NATService
 }
 
 // Start starts and configure wireguard network interface for providing service.
@@ -46,13 +48,6 @@ type connectionEndpoint struct {
 func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	ce.iface = ce.resourceAllocator.AllocateInterface()
 	ce.endpoint.Port = ce.resourceAllocator.AllocatePort()
-	if ce.ipResolver != nil {
-		publicIP, err := ce.ipResolver.GetPublicIP()
-		if err != nil {
-			return err
-		}
-		ce.endpoint.IP = net.ParseIP(publicIP)
-	}
 
 	if config == nil {
 		privateKey, err := GeneratePrivateKey()
@@ -66,6 +61,29 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		ce.subnet = config.Subnet
 		ce.subnet.IP = consumerIP(ce.subnet)
 		ce.privateKey = config.Consumer.PrivateKey
+	}
+
+	if ce.ipResolver != nil {
+		publicIP, err := ce.ipResolver.GetPublicIP()
+		if err != nil {
+			return err
+		}
+		ce.endpoint.IP = net.ParseIP(publicIP)
+
+		outboundIP, err := ce.ipResolver.GetOutboundIP()
+		if err != nil {
+			return err
+		}
+
+		ce.natService = nat.NewService()
+		ce.natService.Add(nat.RuleForwarding{
+			SourceAddress: ce.subnet.String(),
+			TargetIP:      outboundIP,
+		})
+
+		if err := ce.natService.Start(); err != nil {
+			return err
+		}
 	}
 
 	var deviceConfig deviceConfig
@@ -97,6 +115,10 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 func (ce *connectionEndpoint) Stop() error {
 	if err := ce.wgClient.Close(); err != nil {
 		return err
+	}
+
+	if ce.natService != nil {
+		ce.natService.Stop()
 	}
 
 	if err := ce.resourceAllocator.ReleasePort(ce.endpoint.Port); err != nil {
