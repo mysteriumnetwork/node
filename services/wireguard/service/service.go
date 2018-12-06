@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/nat"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
@@ -39,6 +40,7 @@ func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver, conn
 		locationResolver:   locationResolver,
 		ipResolver:         ipResolver,
 		connectionEndpoint: connectionEndpoint,
+		natService:         nat.NewService(),
 	}
 }
 
@@ -48,11 +50,28 @@ type Manager struct {
 	ipResolver         ip.Resolver
 	connectionEndpoint wg.ConnectionEndpoint
 	wg                 sync.WaitGroup
+	natService         nat.NATService
 }
 
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
 	if err := manager.connectionEndpoint.Start(nil); err != nil {
+		return dto_discovery.ServiceProposal{}, nil, err
+	}
+	config, err := manager.connectionEndpoint.Config()
+	if err != nil {
+		return dto_discovery.ServiceProposal{}, nil, err
+	}
+
+	outboundIP, err := manager.ipResolver.GetOutboundIP()
+	if err != nil {
+		return dto_discovery.ServiceProposal{}, nil, err
+	}
+	manager.natService.Add(nat.RuleForwarding{
+		SourceAddress: config.Subnet.String(),
+		TargetIP:      outboundIP,
+	})
+	if err := manager.natService.Start(); err != nil {
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 
@@ -116,6 +135,7 @@ func (manager *Manager) Wait() error {
 // Stop stops service.
 func (manager *Manager) Stop() error {
 	manager.wg.Done()
+	manager.natService.Stop()
 	if err := manager.connectionEndpoint.Stop(); err != nil {
 		return err
 	}
