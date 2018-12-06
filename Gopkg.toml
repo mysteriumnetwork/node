@@ -96,5 +96,5 @@
 
 [[constraint]]
   name = "git.zx2c4.com/wireguard-go"
-  revision = "29762b79e3c42d3a91f5f119360fd1c84e59b541"
+  revision = "5acb51d173e2938591471974e53d5262f8adfa51"
   source = "github.com/mysteriumnetwork/wireguard-go"

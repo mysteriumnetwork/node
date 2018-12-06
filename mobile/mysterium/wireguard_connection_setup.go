@@ -62,6 +62,11 @@ func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTu
 			return nil, err
 		}
 
+		wgTunnelSetup.NewTunnel()
+		wgTunnelSetup.SetSessionName("wg-tun-session")
+		//TODO fetch from user connection options
+		wgTunnelSetup.AddDNS("8.8.8.8")
+
 		//TODO this heavy linfting might go to doInit
 		tun, err := newTunnDevice(wgTunnelSetup, &config)
 		if err != nil {
@@ -122,8 +127,11 @@ func setupWireguardDevice(devApi *device.DeviceApi, config *wireguard.ServiceCon
 	}
 
 	err = devApi.AddPeer(device.ExternalPeer{
-		PublicKey:      device.NoisePublicKey(peerPubKeyArr),
-		RemoteEndpoint: parsed,
+		PublicKey:       device.NoisePublicKey(peerPubKeyArr),
+		RemoteEndpoint:  parsed,
+		KeepAlivePeriod: 60,
+		//all traffic through this peer (unfortunatelly 0.0.0.0/0 didn't work as it was treated as ipv6)
+		AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
 	})
 	return err
 }
@@ -142,9 +150,11 @@ func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
 }
 
 func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceConfig) (tun.TUNDevice, error) {
-	wgTunnSetup.NewTunnel()
+	//TODO a hack - service provider should send concrete IP instead of subnet
 	prefixLen, _ := config.Subnet.Mask.Size()
-	wgTunnSetup.AddTunnelAddress(config.Subnet.IP.String(), prefixLen)
+	myIP := config.Subnet.IP
+	myIP[len(myIP)-1] = byte(2)
+	wgTunnSetup.AddTunnelAddress(myIP.String(), prefixLen)
 	wgTunnSetup.SetMTU(androidTunMtu)
 	wgTunnSetup.SetBlocking(true)
 
@@ -157,7 +167,14 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceCo
 		return nil, err
 	}
 	log.Info(tag, "Tun value is: ", fd)
-	return newDeviceFromFd(fd)
+	tun, err := newDeviceFromFd(fd)
+	if err == nil {
+		//non-fatal
+		name, nameErr := tun.Name()
+		log.Info(tag, "Name value: ", name, " Possible error: ", nameErr)
+	}
+
+	return tun, err
 }
 
 type wireguardConnection struct {
