@@ -27,7 +27,9 @@ import (
 
 var (
 	// ErrorInvalidProposal is validation error then invalid proposal requested for session creation
-	ErrorInvalidProposal = errors.New("proposal does not exist")
+	ErrorInvalidProposal   = errors.New("proposal does not exist")
+	ErrorSessionNotExists  = errors.New("session does not exists")
+	ErrorWrongSessionOwner = errors.New("wrong session owner")
 )
 
 // IDGenerator defines method for session id generation
@@ -107,26 +109,27 @@ func (manager *manager) Create(consumerID identity.Identity, proposalID int) (se
 	return sessionInstance, nil
 }
 
-// Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *manager) Destroy(consumerID identity.Identity, sessionID string) (err error) {
+// Destroy destroys session by given sessionID
+func (manager *manager) Destroy(consumerID identity.Identity, sessionID string) error {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
-	if manager.currentProposal.ID != proposalID {
-		err = ErrorInvalidProposal
-		return
+	sessionInstance, found := manager.sessionStorage.Find(ID(sessionID))
+
+	if !found {
+		return ErrorSessionNotExists
 	}
 
-	err = manager.promiseProcessor.Stop()
+	if sessionInstance.ConsumerID != consumerID {
+		return ErrorWrongSessionOwner
+	}
+
+	err := manager.promiseProcessor.Stop()
 	if err != nil {
-		return
+		return err
 	}
 
-	sessionInstance, err = manager.sessionStorage.Remove(sessionID)
-	if err != nil {
-		return
-	}
-
+	manager.sessionStorage.Remove(ID(sessionID))
 	return nil
 }
 

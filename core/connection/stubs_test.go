@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/communication"
@@ -253,13 +254,25 @@ func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
 	return nil
 }
 
+var ErrUnknownRequest = errors.New("unknown request")
+
 func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	return &session.CreateResponse{
-			Success: true,
-			Session: session.SessionDto{
-				ID:     fd.sessionID,
-				Config: []byte("{}"),
+	if producer.GetRequestEndpoint() == communication.RequestEndpoint("session-destroy") {
+		return &session.DestroyResponse{
+				Success: true,
 			},
-		},
-		nil
+			nil
+	}
+
+	if producer.GetRequestEndpoint() == communication.RequestEndpoint("session-create") {
+		return &session.CreateResponse{
+				Success: true,
+				Session: session.SessionDto{
+					ID:     fd.sessionID,
+					Config: []byte("{}"),
+				},
+			},
+			nil
+	}
+	return nil, ErrUnknownRequest
 }

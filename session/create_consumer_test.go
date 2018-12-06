@@ -98,3 +98,7 @@ func (manager *managerFake) Create(consumerID identity.Identity, proposalID int)
 	manager.lastProposalID = proposalID
 	return manager.returnSession, manager.returnError
 }
+
+func (manager *managerFake) Destroy(consumerID identity.Identity, serviceID string) error {
+	return nil
+}

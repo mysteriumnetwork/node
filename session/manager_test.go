@@ -49,10 +49,6 @@ func generateSessionID() (ID, error) {
 	return expectedID, nil
 }
 
-func saveSession(sessionInstance Session) {
-	lastSession = sessionInstance
-}
-
 type fakePromiseProcessor struct {
 	started  bool
 	proposal discovery_dto.ServiceProposal
@@ -70,16 +66,17 @@ func (processor *fakePromiseProcessor) Stop() error {
 }
 
 func TestManager_Create_StoresSession(t *testing.T) {
-	manager := NewManager(currentProposal, generateSessionID, mockedConfigProvider, saveSession, &fakePromiseProcessor{})
+	sessionStore := NewStorageMemory()
+	manager := NewManager(currentProposal, generateSessionID, mockedConfigProvider, sessionStore, &fakePromiseProcessor{})
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID)
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedSession, sessionInstance)
-	assert.Exactly(t, expectedSession, lastSession)
 }
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
-	manager := NewManager(currentProposal, generateSessionID, mockedConfigProvider, saveSession, &fakePromiseProcessor{})
+	sessionStore := NewStorageMemory()
+	manager := NewManager(currentProposal, generateSessionID, mockedConfigProvider, sessionStore, &fakePromiseProcessor{})
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), 69)
 	assert.Exactly(t, err, ErrorInvalidProposal)
@@ -88,7 +85,8 @@ func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 
 func TestManager_Create_StartsPromiseProcessor(t *testing.T) {
 	promiseProcessor := &fakePromiseProcessor{}
-	manager := NewManager(currentProposal, generateSessionID, mockedConfigProvider, saveSession, promiseProcessor)
+	sessionStore := NewStorageMemory()
+	manager := NewManager(currentProposal, generateSessionID, mockedConfigProvider, sessionStore, promiseProcessor)
 
 	_, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID)
 	assert.NoError(t, err)

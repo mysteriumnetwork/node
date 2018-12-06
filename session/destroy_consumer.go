@@ -18,8 +18,6 @@
 package session
 
 import (
-	"encoding/json"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 )
@@ -32,13 +30,12 @@ type destroyConsumer struct {
 
 // GetMessageEndpoint returns endpoint there to receive messages
 func (consumer *destroyConsumer) GetRequestEndpoint() communication.RequestEndpoint {
-	return endpointSessionCreate
+	return endpointSessionDestroy
 }
 
 // NewRequest creates struct where request from endpoint will be serialized
 func (consumer *destroyConsumer) NewRequest() (requestPtr interface{}) {
-	var request DestroyRequest
-	return &request
+	return &DestroyRequest{}
 }
 
 // Consume handles requests from endpoint and replies with response
@@ -46,29 +43,17 @@ func (consumer *destroyConsumer) Consume(requestPtr interface{}) (response inter
 	request := requestPtr.(*DestroyRequest)
 
 	err = consumer.SessionManager.Destroy(consumer.PeerID, request.SessionID)
-	switch err {
-	case nil:
-		return responseWithSession(sessionInstance), nil
-	case ErrorInvalidProposal:
-		return responseInvalidProposal, nil
-	default:
-		return responseInternalError, nil
-	}
+	return destroyResponse(err), err
 }
 
-func responseWithSession(sessionInstance Session) CreateResponse {
-	serializedConfig, err := json.Marshal(sessionInstance.Config)
-	if err != nil {
-		// Failed to serialize session
-		// TODO Cant expose error to response, some logging should be here
-		return responseInternalError
+func destroyResponse(error error) DestroyResponse {
+	if error != nil {
+		return DestroyResponse{
+			Success: false,
+			Message: error.Error(),
+		}
 	}
-
-	return CreateResponse{
+	return DestroyResponse{
 		Success: true,
-		Session: SessionDto{
-			ID:     sessionInstance.ID,
-			Config: serializedConfig,
-		},
 	}
 }

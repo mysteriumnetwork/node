@@ -154,6 +154,8 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		return err
 	}
 
+	cancel = append(cancel, func() { session.RequestSessionDestroy(dialog, sessionID) })
+
 	// set the session info for future use
 	manager.sessionInfo = SessionInfo{
 		SessionID:  sessionID,
@@ -196,7 +198,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 
 	if !params.DisableKillSwitch {
 		// TODO: Implement fw based kill switch for respective OS
-		// we may need to wait for tun device to bet setup
+		// we may need to wait for tun device setup to be finished
 		firewall.NewKillSwitch().Enable()
 	}
 

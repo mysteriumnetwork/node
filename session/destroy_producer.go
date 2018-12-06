@@ -32,7 +32,7 @@ func (producer *destroyProducer) GetRequestEndpoint() communication.RequestEndpo
 }
 
 func (producer *destroyProducer) NewResponse() (responsePtr interface{}) {
-	return &CreateResponse{}
+	return &DestroyResponse{}
 }
 
 func (producer *destroyProducer) Produce() (requestPtr interface{}) {
@@ -42,9 +42,9 @@ func (producer *destroyProducer) Produce() (requestPtr interface{}) {
 }
 
 // RequestSessionDestroy requests session destruction and returns response data
-func RequestSessionDestroy(sender communication.Sender, sessionID string) (err error) {
+func RequestSessionDestroy(sender communication.Sender, sessionID ID) (err error) {
 	responsePtr, err := sender.Request(&destroyProducer{
-		SessionID: sessionID,
+		SessionID: string(sessionID),
 	})
 	if err != nil {
 		return
