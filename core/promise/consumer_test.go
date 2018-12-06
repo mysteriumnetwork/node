@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -117,7 +116,7 @@ func TestConsume(t *testing.T) {
 		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{1},
 	}
-	consumer := Consumer{proposal: proposal, balance: fakeBlockchain(999999999), storage: &storage.FakeStorage{}}
+	consumer := Consumer{proposal: proposal, balance: fakeBlockchain(999999999), storage: &MockStorer{}}
 	response, err := consumer.Consume(&request)
 	assert.NoError(t, err)
 	assert.Equal(t, &Response{Success: true}, response)
@@ -136,3 +135,9 @@ func fakeBlockchain(balance uint64) identity.Balance {
 		return balance, nil
 	}
 }
+
+// MockStorer is a storer that does not do a whole lot
+type MockStorer struct{}
+
+// Store for testing
+func (ms *MockStorer) Store(string, interface{}) error { return nil }

@@ -22,56 +22,43 @@ import (
 
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	node_session "github.com/mysteriumnetwork/node/session"
 )
 
-// Status represents list of possible session statuses
-type Status int
-
 const (
 	// SessionStatusNew means that newly created session object is written to storage
-	SessionStatusNew = Status(0)
+	SessionStatusNew = "New"
 	// SessionStatusCompleted means that session object is updated on connection disconnect event
-	SessionStatusCompleted = Status(1)
+	SessionStatusCompleted = "Completed"
 )
 
-// String converts status constant to string
-func (st *Status) String() string {
-	switch *st {
-	case SessionStatusNew:
-		return "New"
-	case SessionStatusCompleted:
-		return "Completed"
-	}
-	return ""
-}
-
-// NewSession creates session with given dependencies
-func NewSession(sessionID node_session.ID, providerID identity.Identity, serviceType string, providerCountry string) *Session {
-	return &Session{
+// NewHistory creates a new session history datapoint
+func NewHistory(sessionID node_session.ID, proposal dto.ServiceProposal) *History {
+	return &History{
 		SessionID:       sessionID,
-		ProviderID:      providerID,
-		ServiceType:     serviceType,
-		ProviderCountry: providerCountry,
-		Started:         time.Now(),
+		ProviderID:      identity.FromAddress(proposal.ProviderID),
+		ServiceType:     proposal.ServiceType,
+		ProviderCountry: proposal.ServiceDefinition.GetLocation().Country,
+		Started:         time.Now().UTC(),
 		Status:          SessionStatusNew,
 	}
 }
 
-// Session holds structure for saving session history
-type Session struct {
+// History holds structure for saving session history
+type History struct {
 	SessionID       node_session.ID `storm:"id"`
 	ProviderID      identity.Identity
 	ServiceType     string
 	ProviderCountry string
 	Started         time.Time
-	Status          Status
+	Status          string
 	Updated         time.Time
 	DataStats       consumer.SessionStatistics // is updated on disconnect event
 }
 
 // GetDuration returns delta in seconds (TimeUpdated - TimeStarted)
-func (se *Session) GetDuration() uint64 {
+func (se *History) GetDuration() uint64 {
 	if se.Status == SessionStatusCompleted {
 		return uint64(se.Updated.Sub(se.Started).Seconds())
 	}

@@ -15,14 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package storage
+package history
 
-// Storage stores persistent objects for future usage
-type Storage interface {
-	Store(issuer string, data interface{}) error
-	Delete(issuer string, data interface{}) error
-	Save(object interface{}) error
-	Update(object interface{}) error
-	GetAll(array interface{}) error
-	Close() error
+import (
+	"time"
+
+	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations"
+)
+
+// Sequence contains the whole migration sequence for boltdb
+var Sequence = []migrations.Migration{
+	{
+		Name: "session-to-session-history",
+		Date: time.Date(
+			2018, 12, 04, 12, 00, 00, 0, time.UTC),
+		Migrate: migrations.MigrateSessionToHistory,
+	},
 }

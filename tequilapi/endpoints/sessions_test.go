@@ -43,7 +43,7 @@ var (
 		BytesReceived: 10,
 		BytesSent:     10,
 	}
-	SessionMock = session.Session{
+	SessionMock = session.History{
 		SessionID:       sessionID,
 		ProviderID:      ProviderID,
 		ServiceType:     ServiceType,
@@ -60,7 +60,7 @@ func TestSessionToDto(t *testing.T) {
 
 	se := SessionMock
 	se.Started = startedAt
-	sessionDTO := sessionToDto(se)
+	sessionDTO := toHistoryView(se)
 
 	assert.Equal(t, value, sessionDTO.DateStarted)
 	assert.Equal(t, string(SessionMock.SessionID), sessionDTO.SessionID)
@@ -70,7 +70,7 @@ func TestSessionToDto(t *testing.T) {
 	assert.Equal(t, SessionMock.DataStats.BytesReceived, sessionDTO.BytesReceived)
 	assert.Equal(t, SessionMock.DataStats.BytesSent, sessionDTO.BytesSent)
 	assert.Equal(t, SessionMock.GetDuration(), sessionDTO.Duration)
-	assert.Equal(t, SessionMock.Status.String(), sessionDTO.Status)
+	assert.Equal(t, SessionMock.Status, sessionDTO.Status)
 }
 
 func TestListEndpoint(t *testing.T) {
@@ -83,7 +83,7 @@ func TestListEndpoint(t *testing.T) {
 
 	ssm := &sessionStorageMock{
 		errToReturn: nil,
-		sessionsToReturn: []session.Session{
+		sessionsToReturn: []session.History{
 			SessionMock,
 		},
 	}
@@ -95,7 +95,7 @@ func TestListEndpoint(t *testing.T) {
 	parsedResponse := &SessionsDTO{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
-	assert.EqualValues(t, sessionToDto(SessionMock), parsedResponse.Sessions[0])
+	assert.EqualValues(t, toHistoryView(SessionMock), parsedResponse.Sessions[0])
 }
 
 func TestListEndpointBubblesError(t *testing.T) {
@@ -109,7 +109,7 @@ func TestListEndpointBubblesError(t *testing.T) {
 	mockErr := errors.New("something exploded")
 	ssm := &sessionStorageMock{
 		errToReturn:      mockErr,
-		sessionsToReturn: []session.Session{},
+		sessionsToReturn: []session.History{},
 	}
 
 	resp := httptest.NewRecorder()
@@ -124,10 +124,10 @@ func TestListEndpointBubblesError(t *testing.T) {
 }
 
 type sessionStorageMock struct {
-	sessionsToReturn []session.Session
+	sessionsToReturn []session.History
 	errToReturn      error
 }
 
-func (ssm *sessionStorageMock) GetAll() ([]session.Session, error) {
+func (ssm *sessionStorageMock) GetAll() ([]session.History, error) {
 	return ssm.sessionsToReturn, ssm.errToReturn
 }

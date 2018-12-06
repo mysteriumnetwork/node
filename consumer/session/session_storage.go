@@ -24,11 +24,11 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/identity"
-	node_session "github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 const sessionStorageLogPrefix = "[session-storage] "
+const sessionStorageBucketName = "session-history"
 
 // StatsRetriever can fetch current session stats
 type StatsRetriever interface {
@@ -37,9 +37,9 @@ type StatsRetriever interface {
 
 // Storer allows us to get all sessions, save and update them
 type Storer interface {
-	Save(object interface{}) error
-	Update(object interface{}) error
-	GetAll(array interface{}) error
+	Store(bucket string, object interface{}) error
+	Update(bucket string, object interface{}) error
+	GetAllFrom(bucket string, array interface{}) error
 }
 
 // Storage contains functions for storing, getting session objects
@@ -56,22 +56,10 @@ func NewSessionStorage(storage Storer, statsRetriever StatsRetriever) *Storage {
 	}
 }
 
-// Save saves a new session
-func (repo *Storage) Save(se Session) error {
-	return repo.storage.Save(&se)
-}
-
-// Update updates specified fields of existing session by id
-func (repo *Storage) Update(sessionID node_session.ID, updated time.Time, dataStats consumer.SessionStatistics, status Status) error {
-	// update fields by sessionID
-	se := Session{SessionID: sessionID, Updated: updated, DataStats: dataStats, Status: status}
-	return repo.storage.Update(&se)
-}
-
 // GetAll returns array of all sessions
-func (repo *Storage) GetAll() ([]Session, error) {
-	var sessions []Session
-	err := repo.storage.GetAll(&sessions)
+func (repo *Storage) GetAll() ([]History, error) {
+	var sessions []History
+	err := repo.storage.GetAllFrom(sessionStorageBucketName, &sessions)
 	if err != nil {
 		return nil, err
 	}
@@ -82,25 +70,36 @@ func (repo *Storage) GetAll() ([]Session, error) {
 func (repo *Storage) ConsumeStateEvent(stateEvent connection.StateEvent) {
 	switch stateEvent.State {
 	case connection.Disconnecting:
-		err := repo.Update(stateEvent.SessionInfo.SessionID, time.Now(), repo.statsRetriever.Retrieve(), SessionStatusCompleted)
-		if err != nil {
-			log.Error(sessionStorageLogPrefix, err)
-		} else {
-			log.Trace(sessionStorageLogPrefix, fmt.Sprintf("Session %v updated", stateEvent.SessionInfo.SessionID))
-		}
+		repo.handleDisconnectingEvent(stateEvent.SessionInfo.SessionID)
 	case connection.Connected:
-		providerCountry := stateEvent.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country
-		se := NewSession(
-			stateEvent.SessionInfo.SessionID,
-			identity.FromAddress(stateEvent.SessionInfo.Proposal.ProviderID),
-			stateEvent.SessionInfo.Proposal.ServiceType,
-			providerCountry,
-		)
-		err := repo.Save(*se)
-		if err != nil {
-			log.Error(sessionStorageLogPrefix, err)
-		} else {
-			log.Trace(sessionStorageLogPrefix, fmt.Sprintf("Session %v saved", stateEvent.SessionInfo.SessionID))
-		}
+		repo.handleConnectedEvent(stateEvent.SessionInfo)
+	}
+}
+
+func (repo *Storage) handleDisconnectingEvent(sessionID session.ID) {
+	updatedSession := &History{
+		SessionID: sessionID,
+		Updated:   time.Now().UTC(),
+		DataStats: repo.statsRetriever.Retrieve(),
+		Status:    SessionStatusCompleted,
+	}
+	err := repo.storage.Update(sessionStorageBucketName, updatedSession)
+	if err != nil {
+		log.Error(sessionStorageLogPrefix, err)
+	} else {
+		log.Trace(sessionStorageLogPrefix, fmt.Sprintf("Session %v updated", sessionID))
+	}
+}
+
+func (repo *Storage) handleConnectedEvent(sessionInfo connection.SessionInfo) {
+	se := NewHistory(
+		sessionInfo.SessionID,
+		sessionInfo.Proposal,
+	)
+	err := repo.storage.Store(sessionStorageBucketName, se)
+	if err != nil {
+		log.Error(sessionStorageLogPrefix, err)
+	} else {
+		log.Trace(sessionStorageLogPrefix, fmt.Sprintf("Session %v saved", sessionInfo.SessionID))
 	}
 }

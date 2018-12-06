@@ -25,7 +25,6 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
-	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
@@ -39,7 +38,7 @@ const (
 )
 
 // NewPromiseProcessor creates instance of PromiseProcessor
-func NewPromiseProcessor(dialog communication.Dialog, balance identity.Balance, storage storage.Storage) *PromiseProcessor {
+func NewPromiseProcessor(dialog communication.Dialog, balance identity.Balance, storage promise.Storer) *PromiseProcessor {
 	return &PromiseProcessor{
 		dialog:  dialog,
 		balance: balance,
@@ -57,7 +56,7 @@ type balanceState string
 type PromiseProcessor struct {
 	dialog  communication.Dialog
 	balance identity.Balance
-	storage storage.Storage
+	storage promise.Storer
 
 	balanceInterval   time.Duration
 	balanceState      balanceState

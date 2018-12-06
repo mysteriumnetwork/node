@@ -28,18 +28,18 @@ import (
 
 // swagger:model SessionsDTO
 type SessionsDTO struct {
-	Sessions []SessionDTO `json:"sessions"`
+	Sessions []sessionDTO `json:"sessions"`
 }
 
-// swagger:model SessionDTO
-type SessionDTO struct {
+// swagger:model sessionDTO
+type sessionDTO struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	SessionID string `json:"sessionId"`
 
 	// example: 0x0000000000000000000000000000000000000001
 	ProviderID string `json:"providerId"`
 
-	// example: openpvn
+	// example: openvpn
 	ServiceType string `json:"serviceType"`
 
 	// example: NL
@@ -67,7 +67,7 @@ type sessionsEndpoint struct {
 }
 
 type sessionStorageGet interface {
-	GetAll() ([]session.Session, error)
+	GetAll() ([]session.History, error)
 }
 
 // NewSessionsEndpoint creates and returns sessions endpoint
@@ -96,7 +96,7 @@ func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.R
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	sessionsSerializable := SessionsDTO{Sessions: mapSessions(sessions, sessionToDto)}
+	sessionsSerializable := SessionsDTO{Sessions: mapSessions(sessions, toHistoryView)}
 	utils.WriteAsJSON(sessionsSerializable, resp)
 }
 
@@ -106,22 +106,22 @@ func AddRoutesForSession(router *httprouter.Router, sessionStorage sessionStorag
 	router.GET("/sessions", sessionsEndpoint.List)
 }
 
-func sessionToDto(se session.Session) SessionDTO {
-	return SessionDTO{
+func toHistoryView(se session.History) sessionDTO {
+	return sessionDTO{
 		SessionID:       string(se.SessionID),
-		ProviderID:      string(se.ProviderID.Address),
+		ProviderID:      se.ProviderID.Address,
 		ServiceType:     se.ServiceType,
 		ProviderCountry: se.ProviderCountry,
 		DateStarted:     se.Started.Format(time.RFC3339),
 		BytesSent:       se.DataStats.BytesSent,
 		BytesReceived:   se.DataStats.BytesReceived,
 		Duration:        se.GetDuration(),
-		Status:          se.Status.String(),
+		Status:          se.Status,
 	}
 }
 
-func mapSessions(sessions []session.Session, f func(session.Session) SessionDTO) []SessionDTO {
-	dtoArray := make([]SessionDTO, len(sessions))
+func mapSessions(sessions []session.History, f func(session.History) sessionDTO) []sessionDTO {
+	dtoArray := make([]sessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = f(se)
 	}

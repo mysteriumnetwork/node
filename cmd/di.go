@@ -38,8 +38,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -56,6 +56,15 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 )
 
+// Storage stores persistent objects for future usage
+type Storage interface {
+	Store(issuer string, data interface{}) error
+	Delete(issuer string, data interface{}) error
+	Update(bucket string, object interface{}) error
+	GetAllFrom(bucket string, data interface{}) error
+	Close() error
+}
+
 // Dependencies is DI container for top level components which is reusedin several places
 type Dependencies struct {
 	Node *node.Node
@@ -65,7 +74,7 @@ type Dependencies struct {
 	MysteriumMorqaClient metrics.QualityOracle
 	EtherClient          *ethclient.Client
 
-	Storage              storage.Storage
+	Storage              Storage
 	Keystore             *keystore.KeyStore
 	IdentityManager      identity.Manager
 	SignerFactory        identity.SignerFactory
@@ -187,6 +196,13 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	if err != nil {
 		return err
 	}
+
+	migrator := boltdb.NewMigrator(localStorage)
+	err = migrator.RunMigrations(history.Sequence)
+	if err != nil {
+		return err
+	}
+
 	di.Storage = localStorage
 	return nil
 }

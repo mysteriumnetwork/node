@@ -19,7 +19,6 @@ package promise
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
@@ -29,15 +28,20 @@ var (
 	responseInternalError  = Response{Success: false, Message: "Internal Error"}
 )
 
+// Storer allows storing of data by topic
+type Storer interface {
+	Store(issuer string, data interface{}) error
+}
+
 // Consumer process promise-requests
 type Consumer struct {
 	proposal dto.ServiceProposal
 	balance  identity.Balance
-	storage  storage.Storage
+	storage  Storer
 }
 
 // NewConsumer creates new instance of the promise consumer
-func NewConsumer(proposal dto.ServiceProposal, balance identity.Balance, storage storage.Storage) *Consumer {
+func NewConsumer(proposal dto.ServiceProposal, balance identity.Balance, storage Storer) *Consumer {
 	return &Consumer{
 		proposal: proposal,
 		balance:  balance,

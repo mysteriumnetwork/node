@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/promise"
-	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
@@ -30,13 +29,19 @@ import (
 
 var _ session.PromiseProcessor = &PromiseProcessor{}
 
+// MockStorer is a storer that does not do a whole lot
+type MockStorer struct{}
+
+// Store for testing
+func (ms *MockStorer) Store(string, interface{}) error { return nil }
+
 func TestPromiseProcessor_Start_SendsBalanceMessages(t *testing.T) {
 	dialog := &fakeDialog{}
 
 	processor := &PromiseProcessor{
 		dialog:          dialog,
 		balanceInterval: time.Millisecond,
-		storage:         &storage.FakeStorage{},
+		storage:         &MockStorer{},
 	}
 	err := processor.Start(proposal)
 	defer processor.Stop()
@@ -59,7 +64,7 @@ func TestPromiseProcessor_Stop_StopsBalanceMessages(t *testing.T) {
 	processor := &PromiseProcessor{
 		dialog:          dialog,
 		balanceInterval: time.Millisecond,
-		storage:         &storage.FakeStorage{},
+		storage:         &MockStorer{},
 	}
 	err := processor.Start(proposal)
 	assert.NoError(t, err)

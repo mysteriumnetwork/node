@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,25 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package storage
+package migrations
 
-// FakeStorage for testing
-type FakeStorage struct{}
+import (
+	"time"
 
-// Store for testing
-func (fs *FakeStorage) Store(string, interface{}) error { return nil }
+	"github.com/asdine/storm"
+)
 
-// Delete for testing
-func (fs *FakeStorage) Delete(string, interface{}) error { return nil }
-
-// Save for testing
-func (fs *FakeStorage) Save(object interface{}) error { return nil }
-
-// Update for testing
-func (fs *FakeStorage) Update(interface{}) error { return nil }
-
-// GetAll for testing
-func (fs *FakeStorage) GetAll(interface{}) error { return nil }
-
-// Close for testing
-func (fs *FakeStorage) Close() error { return nil }
+// Migration represents a migration we want to run on bolt db
+type Migration struct {
+	Name    string `storm:"id"`
+	Date    time.Time
+	Migrate func(*storm.DB) error `json:"-"`
+}
