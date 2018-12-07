@@ -34,7 +34,7 @@ type wgClient interface {
 type connectionEndpoint struct {
 	iface             string
 	privateKey        string
-	subnet            net.IPNet
+	ipAddr            net.IPNet
 	endpoint          net.UDPAddr
 	ipResolver        ip.Resolver
 	resourceAllocator resources.Allocator
@@ -59,19 +59,18 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		if err != nil {
 			return err
 		}
-		ce.subnet = ce.resourceAllocator.AllocateIPNet()
-		ce.subnet.IP = providerIP(ce.subnet)
+		ce.ipAddr = ce.resourceAllocator.AllocateIPNet()
+		ce.ipAddr.IP = providerIP(ce.ipAddr)
 		ce.privateKey = privateKey
 	} else {
-		ce.subnet = config.Subnet
-		ce.subnet.IP = consumerIP(ce.subnet)
+		ce.ipAddr = config.Consumer.IPAddress
 		ce.privateKey = config.Consumer.PrivateKey
 	}
 
 	var deviceConfig deviceConfig
 	deviceConfig.listenPort = ce.endpoint.Port
 	deviceConfig.privateKey = ce.privateKey
-	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.subnet)
+	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.ipAddr)
 }
 
 // AddPeer adds new wireguard peer to the wireguard network interface.
@@ -89,7 +88,8 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	var config wg.ServiceConfig
 	config.Provider.PublicKey = publicKey
 	config.Provider.Endpoint = ce.endpoint
-	config.Subnet = ce.subnet
+	config.Consumer.IPAddress = ce.ipAddr
+	config.Consumer.IPAddress.IP = consumerIP(ce.ipAddr)
 	return config, nil
 }
 
@@ -103,7 +103,7 @@ func (ce *connectionEndpoint) Stop() error {
 		return err
 	}
 
-	if err := ce.resourceAllocator.ReleaseIPNet(ce.subnet); err != nil {
+	if err := ce.resourceAllocator.ReleaseIPNet(ce.ipAddr); err != nil {
 		return err
 	}
 

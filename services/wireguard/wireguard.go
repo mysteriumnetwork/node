@@ -81,8 +81,8 @@ type ServiceConfig struct {
 	}
 	Consumer struct {
 		PrivateKey string // TODO peer private key should be generated on consumer side
+		IPAddress  net.IPNet
 	}
-	Subnet net.IPNet
 }
 
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.
@@ -93,12 +93,12 @@ func (s ServiceConfig) MarshalJSON() ([]byte, error) {
 	}
 	type consumer struct {
 		PrivateKey string `json:"private_key"`
+		IPAddress  string `json:"ip_address"`
 	}
 
 	return json.Marshal(&struct {
 		Provider provider `json:"provider"`
 		Consumer consumer `json:"consumer"`
-		Subnet   string   `json:"subnet"`
 	}{
 		provider{
 			s.Provider.PublicKey,
@@ -106,8 +106,8 @@ func (s ServiceConfig) MarshalJSON() ([]byte, error) {
 		},
 		consumer{
 			s.Consumer.PrivateKey,
+			s.Consumer.IPAddress.String(),
 		},
-		s.Subnet.String(),
 	})
 }
 
@@ -119,11 +119,11 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 	}
 	type consumer struct {
 		PrivateKey string `json:"private_key"`
+		IPAddress  string `json:"ip_address"`
 	}
 	var config struct {
 		Provider provider `json:"provider"`
 		Consumer consumer `json:"consumer"`
-		Subnet   string   `json:"subnet"`
 	}
 
 	if err := json.Unmarshal(data, &config); err != nil {
@@ -134,15 +134,16 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	_, subnet, err := net.ParseCIDR(config.Subnet)
+	ip, ipnet, err := net.ParseCIDR(config.Consumer.IPAddress)
 	if err != nil {
 		return err
 	}
 
+	s.Provider.Endpoint = *endpoint
 	s.Provider.PublicKey = config.Provider.PublicKey
 	s.Consumer.PrivateKey = config.Consumer.PrivateKey
-	s.Provider.Endpoint = *endpoint
-	s.Subnet = *subnet
+	s.Consumer.IPAddress = *ipnet
+	s.Consumer.IPAddress.IP = ip
 
 	return nil
 }

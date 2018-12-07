@@ -68,7 +68,7 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 		return dto_discovery.ServiceProposal{}, nil, err
 	}
 	manager.natService.Add(nat.RuleForwarding{
-		SourceAddress: config.Subnet.String(),
+		SourceAddress: config.Consumer.IPAddress.String(),
 		TargetIP:      outboundIP,
 	})
 	if err := manager.natService.Start(); err != nil {
