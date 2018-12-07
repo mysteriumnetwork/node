@@ -150,11 +150,9 @@ func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
 }
 
 func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceConfig) (tun.TUNDevice, error) {
-	//TODO a hack - service provider should send concrete IP instead of subnet
-	prefixLen, _ := config.Subnet.Mask.Size()
-	myIP := config.Subnet.IP
-	myIP[len(myIP)-1] = byte(2)
-	wgTunnSetup.AddTunnelAddress(myIP.String(), prefixLen)
+	consumerIP := config.Consumer.IPAddress
+	prefixLen, _ := consumerIP.Mask.Size()
+	wgTunnSetup.AddTunnelAddress(consumerIP.IP.String(), prefixLen)
 	wgTunnSetup.SetMTU(androidTunMtu)
 	wgTunnSetup.SetBlocking(true)
 
