@@ -17,6 +17,7 @@
 
 package dto
 
+// Location struct represents geographic location of service provider
 type Location struct {
 	Country string `json:"country,omitempty"`
 	City    string `json:"city,omitempty"`

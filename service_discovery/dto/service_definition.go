@@ -17,6 +17,43 @@
 
 package dto
 
+import "encoding/json"
+
+// ServiceDefinition interface is marker interface for all service definition types
 type ServiceDefinition interface {
 	GetLocation() Location
+}
+
+// UnsupportedServiceDefinition represents unknown or unsupported service definition returned by deserializer
+type UnsupportedServiceDefinition struct {
+}
+
+// GetLocation always panics on unsupported service types
+func (UnsupportedServiceDefinition) GetLocation() Location {
+	//no location available - should never be called
+	panic("not supported")
+}
+
+var _ ServiceDefinition = UnsupportedServiceDefinition{}
+
+// ServiceDefinitionUnserializer defines function to register for concrete service definition
+type ServiceDefinitionUnserializer func(*json.RawMessage) (ServiceDefinition, error)
+
+// service definition unserializer registry
+var serviceDefinitionMap = make(map[string]ServiceDefinitionUnserializer, 10)
+
+// RegisterServiceDefinitionUnserializer registers deserializer for specified service definition
+func RegisterServiceDefinitionUnserializer(serviceType string, unserializer ServiceDefinitionUnserializer) {
+	serviceDefinitionMap[serviceType] = unserializer
+}
+func unserializeServiceDefinition(serviceType string, message *json.RawMessage) ServiceDefinition {
+	method, ok := serviceDefinitionMap[serviceType]
+	if !ok {
+		return UnsupportedServiceDefinition{}
+	}
+	sd, err := method(message)
+	if err != nil {
+		return UnsupportedServiceDefinition{}
+	}
+	return sd
 }

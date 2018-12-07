@@ -30,9 +30,68 @@ func (list ContactList) MarshalJSON() ([]byte, error) {
 	return json.Marshal([]Contact(list))
 }
 
+// Contact represents contact object with type and concrete definition according to type
 type Contact struct {
 	Type       string            `json:"type"`
 	Definition ContactDefinition `json:"definition"`
 }
 
-type ContactDefinition interface{}
+// ContactDefinition is marker interface for contacts of all types
+type ContactDefinition interface {
+}
+
+// UnsupportedContactType is a contact which is returned by unserializer when encountering unregistered types of contact
+type UnsupportedContactType struct {
+}
+
+var _ ContactDefinition = UnsupportedContactType{}
+
+// ContactDefinitionUnserializer represents function which called for concrete contact type to unserialize
+type ContactDefinitionUnserializer func(*json.RawMessage) (ContactDefinition, error)
+
+// contact unserializer registry
+// TODO avoid global map variables and wrap this functionality into some kind of compoment?
+var contactDefinitionMap = make(map[string]ContactDefinitionUnserializer, 0)
+
+// RegisterContactUnserializer registers unserializer for specified payment method
+func RegisterContactUnserializer(paymentMethod string, unserializer func(*json.RawMessage) (ContactDefinition, error)) {
+	contactDefinitionMap[paymentMethod] = unserializer
+}
+
+func unserializeContacts(message *json.RawMessage) (contactList ContactList) {
+	contactList = ContactList{}
+	if message == nil {
+		return
+	}
+
+	// get an array of raw definitions
+	var contacts []struct {
+		Type       string           `json:"type"`
+		Definition *json.RawMessage `json:"definition"`
+	}
+	if err := json.Unmarshal([]byte(*message), &contacts); err != nil {
+		return
+	}
+
+	for _, contactItem := range contacts {
+		contactList = append(contactList, Contact{
+			Type:       contactItem.Type,
+			Definition: unserializeContact(contactItem.Type, contactItem.Definition),
+		})
+	}
+
+	return
+}
+
+func unserializeContact(contactType string, rawMessage *json.RawMessage) ContactDefinition {
+	fn, ok := contactDefinitionMap[contactType]
+	if !ok {
+		return UnsupportedContactType{}
+	}
+	definition, er := fn(rawMessage)
+	if er != nil {
+		return UnsupportedContactType{}
+	}
+
+	return definition
+}

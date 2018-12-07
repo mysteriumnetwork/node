@@ -44,6 +44,8 @@ func Test_ServiceProposal_UnserializeServiceDefinition(t *testing.T) {
 	expected := dto_discovery.ServiceProposal{
 		ServiceType:       "openvpn",
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
+		PaymentMethod:     dto_discovery.UnsupportedPaymentMethod{},
+		ProviderContacts:  dto_discovery.ContactList{},
 	}
 	assert.Equal(t, expected, actual)
 }
