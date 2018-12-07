@@ -51,12 +51,19 @@ type PromiseProcessor interface {
 	Stop() error
 }
 
+// Storage interface to session storage
+type Storage interface {
+	Add(sessionInstance Session)
+	Find(id ID) (Session, bool)
+	Remove(id ID)
+}
+
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal discovery_dto.ServiceProposal,
 	idGenerator IDGenerator,
 	configProvider ConfigProvider,
-	sessionStorage *StorageMemory,
+	sessionStorage Storage,
 	promiseProcessor PromiseProcessor,
 ) *Manager {
 	return &Manager{
@@ -75,7 +82,7 @@ type Manager struct {
 	currentProposal  discovery_dto.ServiceProposal
 	generateID       IDGenerator
 	provideConfig    ConfigProvider
-	sessionStorage   *StorageMemory
+	sessionStorage   Storage
 	promiseProcessor PromiseProcessor
 
 	creationLock sync.Mutex
