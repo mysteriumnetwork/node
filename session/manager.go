@@ -51,21 +51,15 @@ type PromiseProcessor interface {
 	Stop() error
 }
 
-// Manager defines methods for session management
-type Manager interface {
-	Create(consumerID identity.Identity, proposalID int) (Session, error)
-	Destroy(consumerID identity.Identity, sessionID string) error
-}
-
-// NewManager returns new session manager
+// NewManager returns new session Manager
 func NewManager(
 	currentProposal discovery_dto.ServiceProposal,
 	idGenerator IDGenerator,
 	configProvider ConfigProvider,
 	sessionStorage *StorageMemory,
 	promiseProcessor PromiseProcessor,
-) *manager {
-	return &manager{
+) *Manager {
+	return &Manager{
 		currentProposal:  currentProposal,
 		generateID:       idGenerator,
 		provideConfig:    configProvider,
@@ -76,8 +70,8 @@ func NewManager(
 	}
 }
 
-// manager knows how to start and provision session
-type manager struct {
+// Manager knows how to start and provision session
+type Manager struct {
 	currentProposal  discovery_dto.ServiceProposal
 	generateID       IDGenerator
 	provideConfig    ConfigProvider
@@ -88,7 +82,7 @@ type manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *manager) Create(consumerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -112,7 +106,7 @@ func (manager *manager) Create(consumerID identity.Identity, proposalID int) (se
 }
 
 // Destroy destroys session by given sessionID
-func (manager *manager) Destroy(consumerID identity.Identity, sessionID string) error {
+func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) error {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -136,7 +130,7 @@ func (manager *manager) Destroy(consumerID identity.Identity, sessionID string) 
 	return nil
 }
 
-func (manager *manager) createSession(consumerID identity.Identity) (sessionInstance Session, err error) {
+func (manager *Manager) createSession(consumerID identity.Identity) (sessionInstance Session, err error) {
 	sessionInstance.ID, err = manager.generateID()
 	if err != nil {
 		return

@@ -21,8 +21,8 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
-// ManagerFactory initiates session manager instance during runtime
-type ManagerFactory func(dialog communication.Dialog) Manager
+// ManagerFactory initiates session Manager instance during runtime
+type ManagerFactory func(dialog communication.Dialog) *Manager
 
 // NewDialogHandler constructs handler which gets all incoming dialogs and starts handling them
 func NewDialogHandler(sessionManagerFactory ManagerFactory) *handler {

@@ -84,7 +84,7 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 	assert.Exactly(t, responseInternalError, sessionResponse)
 }
 
-// managerFake represents fake manager usually useful in tests
+// managerFake represents fake Manager usually useful in tests
 type managerFake struct {
 	lastConsumerID identity.Identity
 	lastProposalID int

@@ -26,8 +26,13 @@ import (
 
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
-	SessionManager Manager
+	SessionManager Creator
 	PeerID         identity.Identity
+}
+
+// Creator defines method for session creation
+type Creator interface {
+	Create(consumerID identity.Identity, proposalID int) (Session, error)
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages

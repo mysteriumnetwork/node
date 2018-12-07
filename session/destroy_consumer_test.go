@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// managerDestroyFake represents fake destroy manager usually useful in tests
+// managerDestroyFake represents fake destroy Manager usually useful in tests
 type managerDestroyFake struct {
 	returnSession Session
 	returnError   error
