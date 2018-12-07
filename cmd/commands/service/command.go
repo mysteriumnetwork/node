@@ -20,6 +20,7 @@ package service
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
@@ -55,12 +56,16 @@ var (
 func NewCommand(licenseCommandName string) *cli.Command {
 	var di cmd.Dependencies
 	command := &cli.Command{
-		Name:        serviceCommandName,
-		Usage:       "Starts and publishes services on Mysterium Network",
-		ArgsUsage:   " ",
-		Subcommands: getSubcommands(&di, licenseCommandName, serviceTypesAvailable),
+		Name:      serviceCommandName,
+		Usage:     "Starts and publishes services on Mysterium Network",
+		ArgsUsage: "comma separated list of services to start",
 		Action: func(ctx *cli.Context) error {
-			return runServices(ctx, &di, licenseCommandName, serviceTypesEnabled)
+			arg := ctx.Args().Get(0)
+			if arg == "" {
+				return runServices(ctx, &di, licenseCommandName, serviceTypesEnabled)
+			}
+			serviceTypes := strings.Split(arg, ",")
+			return runServices(ctx, &di, licenseCommandName, serviceTypes)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
@@ -115,29 +120,6 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName stri
 	default:
 		return err
 	}
-}
-
-func getSubcommandForType(di *cmd.Dependencies, licenseCommandName string, serviceType string) cli.Command {
-	command := cli.Command{
-		Name:  serviceType,
-		Usage: fmt.Sprintf("Starts and publishes only %v service on Mysterium Network", serviceType),
-		Action: func(ctx *cli.Context) error {
-			return runServices(ctx, di, licenseCommandName, []string{serviceType})
-		},
-		After: func(ctx *cli.Context) error {
-			return di.Shutdown()
-		},
-	}
-	registerFlags(&command.Flags)
-	return command
-}
-
-func getSubcommands(di *cmd.Dependencies, licenseCommandName string, serviceTypes []string) []cli.Command {
-	res := make([]cli.Command, len(serviceTypes))
-	for i := range serviceTypes {
-		res = append(res, getSubcommandForType(di, licenseCommandName, serviceTypes[i]))
-	}
-	return res
 }
 
 // registerFlags function register service flags to flag list
