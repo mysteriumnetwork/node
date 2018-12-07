@@ -24,8 +24,13 @@ import (
 
 // destroyConsumer processes session create requests from communication channel.
 type destroyConsumer struct {
-	SessionManager Manager
-	PeerID         identity.Identity
+	SessionDestroyer Destroyer
+	PeerID           identity.Identity
+}
+
+// Destroyer interface for destroying session
+type Destroyer interface {
+	Destroy(consumerID identity.Identity, sessionID string) error
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
@@ -42,17 +47,11 @@ func (consumer *destroyConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *destroyConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*DestroyRequest)
 
-	err = consumer.SessionManager.Destroy(consumer.PeerID, request.SessionID)
-	return destroyResponse(err), err
+	err = consumer.SessionDestroyer.Destroy(consumer.PeerID, request.SessionID)
+	return destroyResponse(), err
 }
 
-func destroyResponse(err error) DestroyResponse {
-	if err != nil {
-		return DestroyResponse{
-			Success: false,
-			Message: err.Error(),
-		}
-	}
+func destroyResponse() DestroyResponse {
 	return DestroyResponse{
 		Success: true,
 	}

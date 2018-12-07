@@ -31,7 +31,7 @@ type managerDestroyFake struct {
 }
 
 func TestDestroyConsumer_Success(t *testing.T) {
-	mockManager := &managerDestroyFake{
+	mockDestroyer := &managerDestroyFake{
 		returnSession: Session{
 			"some-session-id",
 			fakeSessionConfig{"string-param", 123},
@@ -39,8 +39,8 @@ func TestDestroyConsumer_Success(t *testing.T) {
 		},
 	}
 	consumer := destroyConsumer{
-		SessionManager: mockManager,
-		PeerID:         identity.FromAddress("peer-id"),
+		SessionDestroyer: mockDestroyer,
+		PeerID:           identity.FromAddress("peer-id"),
 	}
 
 	request := consumer.NewRequest().(*DestroyRequest)
@@ -57,34 +57,29 @@ func TestDestroyConsumer_Success(t *testing.T) {
 }
 
 func TestDestroyConsumer_ErrorInvalidSession(t *testing.T) {
-	mockManager := &managerDestroyFake{
+	mockDestroyer := &managerDestroyFake{
 		returnError: ErrorSessionNotExists,
 	}
-	consumer := destroyConsumer{SessionManager: mockManager}
+	consumer := destroyConsumer{SessionDestroyer: mockDestroyer}
 
 	request := consumer.NewRequest().(*DestroyRequest)
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.Error(t, err)
-	assert.Exactly(t, destroyResponse(ErrorSessionNotExists), sessionResponse)
+	assert.Exactly(t, destroyResponse(), sessionResponse)
 }
 
 func TestDestroyConsumer_ErrorNotSessionOwner(t *testing.T) {
-	mockManager := &managerDestroyFake{
+	mockDestroyer := &managerDestroyFake{
 		returnError: ErrorWrongSessionOwner,
 	}
-	consumer := destroyConsumer{SessionManager: mockManager}
+	consumer := destroyConsumer{SessionDestroyer: mockDestroyer}
 
 	request := consumer.NewRequest().(*DestroyRequest)
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.Error(t, err)
-	assert.Exactly(t, destroyResponse(ErrorWrongSessionOwner), sessionResponse)
-}
-
-// Create function creates and returns fake session
-func (manager *managerDestroyFake) Create(consumerID identity.Identity, proposalID int) (Session, error) {
-	return Session{}, nil
+	assert.Exactly(t, destroyResponse(), sessionResponse)
 }
 
 // Destroy fake destroy function

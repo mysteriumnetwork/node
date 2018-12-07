@@ -54,8 +54,8 @@ func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) er
 
 	return dialog.Respond(
 		&destroyConsumer{
-			SessionManager: handler.sessionManagerFactory(dialog),
-			PeerID:         dialog.PeerID(),
+			SessionDestroyer: handler.sessionManagerFactory(dialog),
+			PeerID:           dialog.PeerID(),
 		},
 	)
 }
