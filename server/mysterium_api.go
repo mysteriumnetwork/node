@@ -137,8 +137,12 @@ func (mApi *mysteriumAPI) FindProposals(providerID string, serviceType string) (
 	values := url.Values{}
 	if providerID != "" {
 		values.Set("node_key", providerID)
+	}
+
+	if serviceType != "" {
 		values.Set("service_type", serviceType)
 	}
+
 	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", values)
 	if err != nil {
 		return nil, err

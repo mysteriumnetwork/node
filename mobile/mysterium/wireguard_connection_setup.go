@@ -18,23 +18,239 @@
 package mysterium
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"sync"
+	"time"
 
+	"git.zx2c4.com/wireguard-go/device"
+	"git.zx2c4.com/wireguard-go/tun"
+	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/services/wireguard"
 )
 
-// TODO this probably can be aligned with openvpn3 setup interface as its very close to android api, but for sake of
-// package independencies we are not reusing the same interface although implementation is rougly the same
-type tunnSetupPlaceholder interface {
-	Establish() int
-}
+const (
+	//taken from android-wireguard project
+	androidTunMtu = 1280
+	tag           = "[wg connection] "
+)
 
-// WireguardTunnelSetup represents interface for setuping tunnel on caller side (i.e. android api)
-type WireguardTunnelSetup tunnSetupPlaceholder
+// WireguardTunnelSetup exposes api for caller to implement external tunnel setup
+type WireguardTunnelSetup interface {
+	NewTunnel()
+	AddTunnelAddress(ip string, prefixLen int)
+	AddRoute(route string, prefixLen int)
+	AddDNS(ip string)
+	SetBlocking(blocking bool)
+	Establish() (int, error)
+	SetMTU(mtu int)
+	Protect(socket int) error
+	SetSessionName(session string)
+}
 
 // OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
 func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
-	mobNode.di.ConnectionRegistry.Register("wireguard", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-		return nil, errors.New("not implemented yet")
+	wireguard.Bootstrap()
+	mobNode.di.ConnectionRegistry.Register(wireguard.ServiceType, func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+
+		var config wireguard.ServiceConfig
+		err := json.Unmarshal(options.SessionConfig, &config)
+		if err != nil {
+			return nil, err
+		}
+
+		wgTunnelSetup.NewTunnel()
+		wgTunnelSetup.SetSessionName("wg-tun-session")
+		//TODO fetch from user connection options
+		wgTunnelSetup.AddDNS("8.8.8.8")
+
+		//TODO this heavy linfting might go to doInit
+		tun, err := newTunnDevice(wgTunnelSetup, &config)
+		if err != nil {
+			return nil, err
+		}
+
+		devApi := device.UserspaceDeviceApi(tun)
+		err = setupWireguardDevice(devApi, &config)
+		if err != nil {
+			devApi.Close()
+			return nil, err
+		}
+		devApi.Boot()
+		socket, err := devApi.GetNetworkSocket()
+		if err != nil {
+			devApi.Close()
+			return nil, err
+		}
+		err = wgTunnelSetup.Protect(socket)
+		if err != nil {
+			devApi.Close()
+			return nil, err
+		}
+		return &wireguardConnection{
+			device:            devApi,
+			stopChannel:       make(chan struct{}),
+			stateChannel:      stateChannel,
+			statisticsChannel: statisticsChannel,
+			stopCompleted:     &sync.WaitGroup{},
+		}, nil
 	})
+}
+
+func setupWireguardDevice(devApi *device.DeviceApi, config *wireguard.ServiceConfig) error {
+	err := devApi.SetListeningPort(0) //random port
+	if err != nil {
+		return err
+	}
+
+	privKeyArr, err := base64stringTo32ByteArray(config.Consumer.PrivateKey)
+	if err != nil {
+		return err
+	}
+	err = devApi.SetPrivateKey(device.NoisePrivateKey(privKeyArr))
+	if err != nil {
+		return err
+	}
+
+	peerPubKeyArr, err := base64stringTo32ByteArray(config.Provider.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	ep := config.Provider.Endpoint.String()
+	endpoint, err := device.CreateEndpoint(ep)
+	if err != nil {
+		return err
+	}
+
+	err = devApi.AddPeer(device.ExternalPeer{
+		PublicKey:       device.NoisePublicKey(peerPubKeyArr),
+		RemoteEndpoint:  endpoint,
+		KeepAlivePeriod: 20,
+		//all traffic through this peer (unfortunatelly 0.0.0.0/0 didn't work as it was treated as ipv6)
+		AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
+	})
+	return err
+}
+
+func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
+	decoded, err := base64.StdEncoding.DecodeString(s)
+	if len(decoded) != 32 {
+		err = errors.New("unexpected key size")
+	}
+	if err != nil {
+		return
+	}
+
+	copy(res[:], decoded)
+	return
+}
+
+func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceConfig) (tun.TUNDevice, error) {
+	consumerIP := config.Consumer.IPAddress
+	prefixLen, _ := consumerIP.Mask.Size()
+	wgTunnSetup.AddTunnelAddress(consumerIP.IP.String(), prefixLen)
+	wgTunnSetup.SetMTU(androidTunMtu)
+	wgTunnSetup.SetBlocking(true)
+
+	//route all traffic through tunnel
+	wgTunnSetup.AddRoute("0.0.0.0", 1)
+	wgTunnSetup.AddRoute("128.0.0.0", 1)
+
+	fd, err := wgTunnSetup.Establish()
+	if err != nil {
+		return nil, err
+	}
+	log.Info(tag, "Tun value is: ", fd)
+	tun, err := newDeviceFromFd(fd)
+	if err == nil {
+		//non-fatal
+		name, nameErr := tun.Name()
+		log.Info(tag, "Name value: ", name, " Possible error: ", nameErr)
+	}
+
+	return tun, err
+}
+
+type wireguardConnection struct {
+	device            *device.DeviceApi
+	wgTunnelSetup     WireguardTunnelSetup
+	stopChannel       chan struct{}
+	stateChannel      connection.StateChannel
+	statisticsChannel connection.StatisticsChannel
+	stopCompleted     *sync.WaitGroup
+	cleanup           func()
+}
+
+func (wg *wireguardConnection) Start() error {
+	wg.stateChannel <- connection.Connecting
+	wg.doInit()
+
+	wg.stateChannel <- connection.Connected
+	return nil
+}
+
+func (wg *wireguardConnection) doInit() {
+	wg.stopCompleted.Add(1)
+	go wg.runPeriodically(time.Second)
+}
+
+func (wg *wireguardConnection) Wait() error {
+	wg.stopCompleted.Wait()
+	return nil
+}
+
+func (wg *wireguardConnection) Stop() {
+	wg.stateChannel <- connection.Disconnecting
+	close(wg.stopChannel)
+}
+
+var _ connection.Connection = &wireguardConnection{}
+
+func (wg *wireguardConnection) updateStatistics() {
+	var err error
+	defer func() {
+		if err != nil {
+			log.Error(tag, "Error updating statistics: ", err)
+		}
+	}()
+
+	peers, err := wg.device.Peers()
+	if err != nil {
+		return
+	}
+	if len(peers) != 1 {
+		err = errors.New("exactly 1 peer expected")
+		return
+	}
+	peerStatistics := peers[0].Stats
+
+	wg.statisticsChannel <- consumer.SessionStatistics{
+		BytesSent:     peerStatistics.Sent,
+		BytesReceived: peerStatistics.Received,
+	}
+}
+
+func (wg *wireguardConnection) doCleanup() {
+	wg.device.Close()
+	wg.device.Wait()
+	wg.stateChannel <- connection.NotConnected
+	close(wg.stateChannel)
+	wg.stopCompleted.Done()
+}
+
+func (wg *wireguardConnection) runPeriodically(duration time.Duration) {
+	for {
+		select {
+		case <-time.After(duration):
+			wg.updateStatistics()
+
+		case <-wg.stopChannel:
+			wg.doCleanup()
+			return
+		}
+	}
 }
