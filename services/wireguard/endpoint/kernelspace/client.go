@@ -46,7 +46,7 @@ func NewWireguardClient() (*client, error) {
 	return &client{wgClient: wgClient}, nil
 }
 
-func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, subnet net.IPNet) error {
+func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, ipAddr net.IPNet) error {
 	var deviceConfig wgtypes.Config
 	if config != nil {
 		port := config.ListenPort()
@@ -58,7 +58,7 @@ func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, subnet ne
 		deviceConfig.ListenPort = &port
 	}
 
-	if err := c.up(iface, subnet); err != nil {
+	if err := c.up(iface, ipAddr); err != nil {
 		return err
 	}
 	c.iface = iface
@@ -82,14 +82,14 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
-func (c *client) up(iface string, subnet net.IPNet) error {
+func (c *client) up(iface string, ipAddr net.IPNet) error {
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
 		if err := exec.Command("ip", "link", "add", "dev", iface, "type", "wireguard").Run(); err != nil {
 			return err
 		}
 	}
 
-	if err := exec.Command("ip", "address", "replace", "dev", iface, subnet.String()).Run(); err != nil {
+	if err := exec.Command("ip", "address", "replace", "dev", iface, ipAddr.String()).Run(); err != nil {
 		return err
 	}
 
