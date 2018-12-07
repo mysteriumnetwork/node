@@ -121,15 +121,15 @@ func setupWireguardDevice(devApi *device.DeviceApi, config *wireguard.ServiceCon
 	}
 
 	ep := config.Provider.Endpoint.String()
-	parsed, err := device.CreateEndpoint(ep)
+	endpoint, err := device.CreateEndpoint(ep)
 	if err != nil {
 		return err
 	}
 
 	err = devApi.AddPeer(device.ExternalPeer{
 		PublicKey:       device.NoisePublicKey(peerPubKeyArr),
-		RemoteEndpoint:  parsed,
-		KeepAlivePeriod: 60,
+		RemoteEndpoint:  endpoint,
+		KeepAlivePeriod: 20,
 		//all traffic through this peer (unfortunatelly 0.0.0.0/0 didn't work as it was treated as ipv6)
 		AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
 	})
