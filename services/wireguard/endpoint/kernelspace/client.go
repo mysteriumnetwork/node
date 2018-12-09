@@ -19,9 +19,12 @@ package kernelspace
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net"
 	"os/exec"
+	"strings"
 
+	"github.com/jackpal/gateway"
 	"github.com/mdlayher/wireguardctrl"
 	"github.com/mdlayher/wireguardctrl/wgtypes"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -73,6 +76,11 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 		if err != nil {
 			return err
 		}
+		if endpoint != nil {
+			if err := c.addRoute(iface, *endpoint); err != nil {
+				return err
+			}
+		}
 		deviceConfig.Peers = []wgtypes.PeerConfig{{
 			Endpoint:   endpoint,
 			PublicKey:  publicKey,
@@ -84,20 +92,46 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 
 func (c *client) up(iface string, ipAddr net.IPNet) error {
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
-		if err := exec.Command("ip", "link", "add", "dev", iface, "type", "wireguard").Run(); err != nil {
+		if err := ipExec("link", "add", "dev", iface, "type", "wireguard"); err != nil {
 			return err
 		}
 	}
 
-	if err := exec.Command("ip", "address", "replace", "dev", iface, ipAddr.String()).Run(); err != nil {
+	if err := ipExec("address", "replace", "dev", iface, ipAddr.String()); err != nil {
 		return err
 	}
 
-	return exec.Command("ip", "link", "set", "dev", iface, "up").Run()
+	return ipExec("link", "set", "dev", iface, "up")
+}
+
+func (c *client) addRoute(iface string, endpoint net.UDPAddr) error {
+	gw, err := gateway.DiscoverGateway()
+	if err != nil {
+		return err
+	}
+
+	if err := ipExec("route", "replace", endpoint.IP.String(), "via", gw.String()); err != nil {
+		return err
+	}
+	if err := ipExec("route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
+		return err
+	}
+	return ipExec("route", "replace", "128.0.0.0/1", "dev", iface)
 }
 
 func (c *client) Close() error {
-	if err := exec.Command("ip", "link", "del", "dev", c.iface).Run(); err != nil {
+	d, err := c.wgClient.Device(c.iface)
+	if err != nil || d.Name != c.iface {
+		return err
+	}
+
+	if len(d.Peers) > 0 && d.Peers[0].Endpoint != nil {
+		if err := ipExec("route", "del", d.Peers[0].Endpoint.IP.String()); err != nil {
+			return err
+		}
+	}
+
+	if err := ipExec("link", "del", "dev", c.iface); err != nil {
 		return err
 	}
 	return c.wgClient.Close()
@@ -131,4 +165,11 @@ func stringToKey(key string) (wgtypes.Key, error) {
 		return wgtypes.Key{}, err
 	}
 	return wgtypes.NewKey(k)
+}
+
+func ipExec(args ...string) error {
+	if err := exec.Command("ip", args...).Run(); err != nil {
+		return fmt.Errorf("'ip %v': %v", strings.Join(args, " "), err)
+	}
+	return nil
 }

@@ -149,6 +149,14 @@
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
+  digest = "1:b352ae8b1a77cc6b48fc8e314e34a522cfc76d6ca3a06c93b29c9cde5de6771e"
+  name = "github.com/jackpal/gateway"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "cbcf4e3f3baee7952fc386c8b2534af4d267c875"
+  version = "v1.0.5"
+
+[[projects]]
   digest = "1:ccfa094742ce1c97fd3f6481e1bf98f3d9862510eee2bc0eb56e2745396bd330"
   name = "github.com/julienschmidt/httprouter"
   packages = ["."]
@@ -499,6 +507,7 @@
     "github.com/ethereum/go-ethereum/ethclient",
     "github.com/ethereum/go-ethereum/params",
     "github.com/gofrs/uuid",
+    "github.com/jackpal/gateway",
     "github.com/julienschmidt/httprouter",
     "github.com/mdlayher/wireguardctrl",
     "github.com/mdlayher/wireguardctrl/wgtypes",
