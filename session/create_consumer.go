@@ -26,8 +26,8 @@ import (
 
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
-	SessionManager Creator
-	PeerID         identity.Identity
+	sessionCreator Creator
+	peerID         identity.Identity
 }
 
 // Creator defines method for session creation
@@ -50,7 +50,7 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
-	sessionInstance, err := consumer.SessionManager.Create(consumer.PeerID, request.ProposalId)
+	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId)
 	switch err {
 	case nil:
 		return responseWithSession(sessionInstance), nil

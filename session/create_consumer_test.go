@@ -34,8 +34,8 @@ func TestConsumer_Success(t *testing.T) {
 		},
 	}
 	consumer := createConsumer{
-		SessionManager: mockManager,
-		PeerID:         identity.FromAddress("peer-id"),
+		sessionCreator: mockManager,
+		peerID:         identity.FromAddress("peer-id"),
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -62,7 +62,7 @@ func TestConsumer_ErrorInvalidProposal(t *testing.T) {
 	mockManager := &managerFake{
 		returnError: ErrorInvalidProposal,
 	}
-	consumer := createConsumer{SessionManager: mockManager}
+	consumer := createConsumer{sessionCreator: mockManager}
 
 	request := consumer.NewRequest().(*CreateRequest)
 	sessionResponse, err := consumer.Consume(request)
@@ -75,7 +75,7 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 	mockManager := &managerFake{
 		returnError: errors.New("fatality"),
 	}
-	consumer := createConsumer{SessionManager: mockManager}
+	consumer := createConsumer{sessionCreator: mockManager}
 
 	request := consumer.NewRequest().(*CreateRequest)
 	sessionResponse, err := consumer.Consume(request)

@@ -43,8 +43,8 @@ func (handler *handler) Handle(dialog communication.Dialog) error {
 func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) error {
 	err := dialog.Respond(
 		&createConsumer{
-			SessionManager: handler.sessionManagerFactory(dialog),
-			PeerID:         dialog.PeerID(),
+			sessionCreator: handler.sessionManagerFactory(dialog),
+			peerID:         dialog.PeerID(),
 		},
 	)
 
