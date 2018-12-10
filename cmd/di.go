@@ -284,12 +284,12 @@ func newSessionManagerFactory(
 	sessionStorage *session.StorageMemory,
 	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
 ) session.ManagerFactory {
-	return func(dialog communication.Dialog) session.Manager {
+	return func(dialog communication.Dialog) *session.Manager {
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
 			configProvider,
-			sessionStorage.Add,
+			sessionStorage,
 			promiseHandler(dialog),
 		)
 	}

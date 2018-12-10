@@ -42,7 +42,7 @@ type CreateResponse struct {
 	Session SessionDto `json:"session"`
 }
 
-// SessionDto structure represents session information data within session creation response (session id and configuration options for underlaying service type)
+// SessionDto structure represents session information data within session creation response (session id and configuration options for underlying service type)
 type SessionDto struct {
 	ID     ID              `json:"id"`
 	Config json.RawMessage `json:"config"`

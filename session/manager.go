@@ -28,6 +28,10 @@ import (
 var (
 	// ErrorInvalidProposal is validation error then invalid proposal requested for session creation
 	ErrorInvalidProposal = errors.New("proposal does not exist")
+	// ErrorSessionNotExists returned when consumer tries to destroy session that does not exists
+	ErrorSessionNotExists = errors.New("session does not exists")
+	// ErrorWrongSessionOwner returned when consumer tries to destroy session that does not belongs to him
+	ErrorWrongSessionOwner = errors.New("wrong session owner")
 )
 
 // IDGenerator defines method for session id generation
@@ -47,38 +51,45 @@ type PromiseProcessor interface {
 	Stop() error
 }
 
-// NewManager returns new session manager
+// Storage interface to session storage
+type Storage interface {
+	Add(sessionInstance Session)
+	Find(id ID) (Session, bool)
+	Remove(id ID)
+}
+
+// NewManager returns new session Manager
 func NewManager(
 	currentProposal discovery_dto.ServiceProposal,
 	idGenerator IDGenerator,
 	configProvider ConfigProvider,
-	saveCallback SaveCallback,
+	sessionStorage Storage,
 	promiseProcessor PromiseProcessor,
-) *manager {
-	return &manager{
+) *Manager {
+	return &Manager{
 		currentProposal:  currentProposal,
 		generateID:       idGenerator,
 		provideConfig:    configProvider,
-		saveSession:      saveCallback,
+		sessionStorage:   sessionStorage,
 		promiseProcessor: promiseProcessor,
 
 		creationLock: sync.Mutex{},
 	}
 }
 
-// manager knows how to start and provision session
-type manager struct {
+// Manager knows how to start and provision session
+type Manager struct {
 	currentProposal  discovery_dto.ServiceProposal
 	generateID       IDGenerator
 	provideConfig    ConfigProvider
-	saveSession      SaveCallback
+	sessionStorage   Storage
 	promiseProcessor PromiseProcessor
 
 	creationLock sync.Mutex
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *manager) Create(consumerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -97,11 +108,36 @@ func (manager *manager) Create(consumerID identity.Identity, proposalID int) (se
 		return
 	}
 
-	manager.saveSession(sessionInstance)
+	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
 }
 
-func (manager *manager) createSession(consumerID identity.Identity) (sessionInstance Session, err error) {
+// Destroy destroys session by given sessionID
+func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) error {
+	manager.creationLock.Lock()
+	defer manager.creationLock.Unlock()
+
+	sessionInstance, found := manager.sessionStorage.Find(ID(sessionID))
+
+	if !found {
+		return ErrorSessionNotExists
+	}
+
+	if sessionInstance.ConsumerID != consumerID {
+		return ErrorWrongSessionOwner
+	}
+
+	err := manager.promiseProcessor.Stop()
+	if err != nil {
+		return err
+	}
+
+	manager.sessionStorage.Remove(ID(sessionID))
+
+	return nil
+}
+
+func (manager *Manager) createSession(consumerID identity.Identity) (sessionInstance Session, err error) {
 	sessionInstance.ID, err = manager.generateID()
 	if err != nil {
 		return
