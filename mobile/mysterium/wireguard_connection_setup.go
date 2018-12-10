@@ -62,6 +62,12 @@ func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTu
 			return nil, err
 		}
 
+		var consumerKey wireguard.ConsumerPrivateKey
+		if err := json.Unmarshal(options.ConsumerConfig, &consumerKey); err != nil {
+			return nil, err
+		}
+		config.Consumer.PrivateKey = consumerKey.PrivateKey
+
 		wgTunnelSetup.NewTunnel()
 		wgTunnelSetup.SetSessionName("wg-tun-session")
 		//TODO fetch from user connection options

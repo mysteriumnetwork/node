@@ -18,11 +18,18 @@
 package session
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	mockConsumer = func(json.RawMessage) error {
+		return nil
+	}
 )
 
 func TestConsumer_Success(t *testing.T) {
@@ -36,6 +43,7 @@ func TestConsumer_Success(t *testing.T) {
 	consumer := createConsumer{
 		sessionCreator: mockManager,
 		peerID:         identity.FromAddress("peer-id"),
+		configConsumer: mockConsumer,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -62,7 +70,10 @@ func TestConsumer_ErrorInvalidProposal(t *testing.T) {
 	mockManager := &managerFake{
 		returnError: ErrorInvalidProposal,
 	}
-	consumer := createConsumer{sessionCreator: mockManager}
+	consumer := createConsumer{
+		sessionCreator: mockManager,
+		configConsumer: mockConsumer,
+	}
 
 	request := consumer.NewRequest().(*CreateRequest)
 	sessionResponse, err := consumer.Consume(request)
@@ -75,7 +86,10 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 	mockManager := &managerFake{
 		returnError: errors.New("fatality"),
 	}
-	consumer := createConsumer{sessionCreator: mockManager}
+	consumer := createConsumer{
+		sessionCreator: mockManager,
+		configConsumer: mockConsumer,
+	}
 
 	request := consumer.NewRequest().(*CreateRequest)
 	sessionResponse, err := consumer.Consume(request)

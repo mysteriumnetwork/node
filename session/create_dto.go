@@ -32,7 +32,8 @@ var (
 
 // CreateRequest structure represents message from service consumer to initiate session for given proposal id
 type CreateRequest struct {
-	ProposalId int `json:"proposal_id"`
+	ProposalId int             `json:"proposal_id"`
+	Config     json.RawMessage `json:"config"`
 }
 
 // CreateResponse structure represents service provider response to given session request from consumer

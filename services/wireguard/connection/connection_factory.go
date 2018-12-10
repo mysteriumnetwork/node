@@ -32,6 +32,12 @@ func NewConnectionCreator() connection.Creator {
 			return nil, err
 		}
 
+		var consumerKey wg.ConsumerPrivateKey
+		if err := json.Unmarshal(options.ConsumerConfig, &consumerKey); err != nil {
+			return nil, err
+		}
+		config.Consumer.PrivateKey = consumerKey.PrivateKey
+
 		return &Connection{
 			stateChannel: stateChannel,
 			config:       config,

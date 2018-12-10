@@ -26,7 +26,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
@@ -35,7 +34,7 @@ type fakeManagerForLocation struct {
 	onStatusReturn connection.ConnectionStatus
 }
 
-func (fm *fakeManagerForLocation) Connect(consumerID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
+func (fm *fakeManagerForLocation) Connect(consumerParams connection.ConsumerParams, proposal market.ServiceProposal, options connection.ConnectParams) error {
 	return nil
 }
 

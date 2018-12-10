@@ -17,19 +17,15 @@
 
 package connection
 
-import "github.com/mysteriumnetwork/node/session"
-
 // Registry holds of all plugable connections
 type Registry struct {
 	creators map[string]Creator
-	acks     map[string]session.AckHandler
 }
 
 // NewRegistry creates registry of plugable connections
 func NewRegistry() *Registry {
 	return &Registry{
 		creators: make(map[string]Creator),
-		acks:     make(map[string]session.AckHandler),
 	}
 }
 
@@ -46,18 +42,4 @@ func (registry *Registry) CreateConnection(options ConnectOptions, stateChannel 
 	}
 
 	return createConnection(options, stateChannel, statisticsChannel)
-}
-
-// AddAck registers an ack handler for a service type
-func (registry *Registry) AddAck(serviceType string, handler session.AckHandler) {
-	registry.acks[serviceType] = handler
-}
-
-// GetAck returns the ack for the service type
-func (registry *Registry) GetAck(serviceType string) (session.AckHandler, error) {
-	ackHandler, exists := registry.acks[serviceType]
-	if !exists {
-		return nil, ErrAckNotRegistered
-	}
-	return ackHandler, nil
 }

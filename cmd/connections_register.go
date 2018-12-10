@@ -34,5 +34,4 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 func (di *Dependencies) registerWireguardConnection() {
 	wireguard.Bootstrap()
 	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator())
-	di.ConnectionRegistry.AddAck(wireguard.ServiceType, wireguard_connection.WireguardAckHandler)
 }

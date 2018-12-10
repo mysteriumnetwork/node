@@ -31,9 +31,18 @@ type ConnectParams struct {
 
 // ConnectOptions represents the params we need to ensure a successful connection
 type ConnectOptions struct {
+<<<<<<< HEAD
 	ConsumerID    identity.Identity
 	ProviderID    identity.Identity
 	Proposal      market.ServiceProposal
 	SessionID     session.ID
 	SessionConfig []byte
+=======
+	ConsumerID     identity.Identity
+	ProviderID     identity.Identity
+	Proposal       dto_discovery.ServiceProposal
+	SessionID      session.ID
+	SessionConfig  []byte
+	ConsumerConfig []byte
+>>>>>>> payload sending on session-create from consumer to provider
 }

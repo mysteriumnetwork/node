@@ -18,6 +18,7 @@
 package service
 
 import (
+	"encoding/json"
 	"sync"
 
 	log "github.com/cihub/seelog"
@@ -63,12 +64,16 @@ func (manager *Manager) ProvideConfig() (session.ServiceConfiguration, error) {
 }
 
 // ConsumeConfig takes in the provided config and adds it to the wg device
-func (manager *Manager) ConsumeConfig(publicKey session.ServiceConfiguration) error {
-	consumerPublicKey := publicKey.(wg.ConsumerPublicKey)
-	if err := manager.connectionEndpoint.AddPeer(consumerPublicKey.PublicKey, nil); err != nil {
+func (manager *Manager) ConsumeConfig(publicKey json.RawMessage) error {
+	key := &wg.ConsumerPublicKey{}
+	err := json.Unmarshal(publicKey, key)
+	if err != nil {
 		return err
 	}
 
+	if err := manager.connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
+		return err
+	}
 	return nil
 }
 

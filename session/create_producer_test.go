@@ -48,16 +48,9 @@ type mockAckHandler struct {
 	mockError    error
 }
 
-func (mah *mockAckHandler) Ack(sessionResponse SessionDto, ackSend func(payload interface{}) error) (json.RawMessage, error) {
-	return mah.mockResponse, mah.mockError
-}
-
 func TestProducer_RequestSessionCreate(t *testing.T) {
 	sender := &fakeSender{}
-	mah := &mockAckHandler{
-		mockResponse: succesfullSessionConfig,
-	}
-	sid, config, err := RequestSessionCreate(sender, 123, mah.Ack)
+	sid, config, err := RequestSessionCreate(sender, 123, []byte{})
 	assert.NoError(t, err)
 	assert.Exactly(t, succesfullSessionID, sid)
 	assert.Exactly(t, succesfullSessionConfig, config)

@@ -26,6 +26,7 @@ import (
 
 type createProducer struct {
 	ProposalID int
+	Config     json.RawMessage
 }
 
 func (producer *createProducer) GetRequestEndpoint() communication.RequestEndpoint {
@@ -39,16 +40,15 @@ func (producer *createProducer) NewResponse() (responsePtr interface{}) {
 func (producer *createProducer) Produce() (requestPtr interface{}) {
 	return &CreateRequest{
 		ProposalId: producer.ProposalID,
+		Config:     producer.Config,
 	}
 }
 
-// AckHandler allows the services to handle acks in their prefered way
-type AckHandler func(sessionResponse SessionDto, ackSend func(payload interface{}) error) (json.RawMessage, error)
-
 // RequestSessionCreate requests session creation and returns session DTO
-func RequestSessionCreate(sender communication.Sender, proposalID int, ackHandler AckHandler) (sessionID ID, sessionConfig json.RawMessage, err error) {
+func RequestSessionCreate(sender communication.Sender, proposalID int, config json.RawMessage) (sessionID ID, sessionConfig json.RawMessage, err error) {
 	responsePtr, err := sender.Request(&createProducer{
 		ProposalID: proposalID,
+		Config:     config,
 	})
 	if err != nil {
 		return
@@ -60,20 +60,7 @@ func RequestSessionCreate(sender communication.Sender, proposalID int, ackHandle
 		return
 	}
 
-	acker := func(payload interface{}) error {
-		_, err := sender.Request(&AckProducer{
-			Payload: payload,
-		})
-		return err
-	}
-
-	config, err := ackHandler(response.Session, acker)
-	if err != nil {
-		err = errors.New("Session ack failed. " + err.Error())
-		return
-	}
-
 	sessionID = response.Session.ID
-	sessionConfig = config
+	sessionConfig = response.Session.Config
 	return
 }

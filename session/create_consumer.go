@@ -28,6 +28,7 @@ import (
 type createConsumer struct {
 	sessionCreator Creator
 	peerID         identity.Identity
+	configConsumer ConfigConsumer
 }
 
 // Creator defines method for session creation
@@ -49,6 +50,11 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 // Consume handles requests from endpoint and replies with response
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
+
+	err = consumer.configConsumer(request.Config)
+	if err != nil {
+		return responseInternalError, err
+	}
 
 	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId)
 	switch err {

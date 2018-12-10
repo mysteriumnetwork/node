@@ -19,6 +19,7 @@ package connection
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 
@@ -44,8 +45,6 @@ var (
 	ErrConnectionFailed = errors.New("connection has failed")
 	// ErrUnsupportedServiceType indicates that target proposal contains unsupported service type
 	ErrUnsupportedServiceType = errors.New("unsupported service type in proposal")
-	// ErrAckNotRegistered indicates that the target connection does not know how to handle acks
-	ErrAckNotRegistered = errors.New("ack not registered for service type")
 )
 
 // Creator creates new connection by given options and uses state channel to report state changes
@@ -68,13 +67,21 @@ type Publisher interface {
 	Publish(topic string, args ...interface{})
 }
 
+// ConsumerParams represents the consumer parameters.
+// The ConnectionConfig is passed to the concrete connection implementation.
+// The SessionCreationParams is sent to the provider on session-create.
+type ConsumerParams struct {
+	ConsumerID            identity.Identity
+	ConnectionConfig      interface{}
+	SessionCreationParams interface{}
+}
+
 type connectionManager struct {
 	//these are passed on creation
 	newDialog        DialogCreator
 	newPromiseIssuer PromiseIssuerCreator
 	newConnection    Creator
 	eventPublisher   Publisher
-	ackRegistry      AckRegistry
 
 	//these are populated by Connect at runtime
 	ctx             context.Context
@@ -84,15 +91,11 @@ type connectionManager struct {
 	cleanConnection func()
 }
 
-// AckRegistry allows for aquiring of registered ack handlers for different services
-type AckRegistry func(serviceType string) (session.AckHandler, error)
-
 // NewManager creates connection manager with given dependencies
 func NewManager(
 	dialogCreator DialogCreator,
 	promiseIssuerCreator PromiseIssuerCreator,
 	connectionCreator Creator,
-	ackRegistry AckRegistry,
 	eventPublisher Publisher,
 ) *connectionManager {
 	return &connectionManager{
@@ -102,11 +105,10 @@ func NewManager(
 		status:           statusNotConnected(),
 		cleanConnection:  warnOnClean,
 		eventPublisher:   eventPublisher,
-		ackRegistry:      ackRegistry,
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (manager *connectionManager) Connect(consumerParams ConsumerParams, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -123,14 +125,14 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 		}
 	}()
 
-	err = manager.startConnection(consumerID, proposal, params)
+	err = manager.startConnection(consumerParams, proposal, params)
 	if err == context.Canceled {
 		return ErrConnectionCancelled
 	}
 	return err
 }
 
-func (manager *connectionManager) startConnection(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (manager *connectionManager) startConnection(consumerParams ConsumerParams, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	manager.mutex.Lock()
 	cancelCtx := manager.cleanConnection
 	manager.mutex.Unlock()
@@ -151,18 +153,18 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}()
 
 	providerID := identity.FromAddress(proposal.ProviderID)
-	dialog, err := manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
+	dialog, err := manager.newDialog(consumerParams.ConsumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
 	cancel = append(cancel, func() { dialog.Close() })
 
-	ackHandler, err := manager.ackRegistry(proposal.ServiceType)
+	sessionCreateConfig, err := json.Marshal(consumerParams.SessionCreationParams)
 	if err != nil {
-		return err
+		return
 	}
 
-	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, ackHandler)
+	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig)
 	if err != nil {
 		return err
 	}
@@ -172,11 +174,11 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	// set the session info for future use
 	manager.sessionInfo = SessionInfo{
 		SessionID:  sessionID,
-		ConsumerID: consumerID,
+		ConsumerID: consumerParams.ConsumerID,
 		Proposal:   proposal,
 	}
 
-	promiseIssuer := manager.newPromiseIssuer(consumerID, dialog)
+	promiseIssuer := manager.newPromiseIssuer(consumerParams.ConsumerID, dialog)
 	err = promiseIssuer.Start(proposal)
 	if err != nil {
 		return err
@@ -186,12 +188,18 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	stateChannel := make(chan State, 10)
 	statisticsChannel := make(chan consumer.SessionStatistics, 10)
 
+	consumerConfig, err := json.Marshal(consumerParams.ConnectionConfig)
+	if err != nil {
+		return
+	}
+
 	connectOptions := ConnectOptions{
-		SessionID:     sessionID,
-		SessionConfig: sessionConfig,
-		ConsumerID:    consumerID,
-		ProviderID:    providerID,
-		Proposal:      proposal,
+		SessionID:      sessionID,
+		SessionConfig:  sessionConfig,
+		ConsumerID:     consumerParams.ConsumerID,
+		ProviderID:     providerID,
+		Proposal:       proposal,
+		ConsumerConfig: consumerConfig,
 	}
 
 	connection, err := manager.newConnection(connectOptions, stateChannel, statisticsChannel)

@@ -18,6 +18,8 @@
 package service
 
 import (
+	"encoding/json"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
@@ -110,8 +112,8 @@ type OpenvpnConfigNegotiator struct {
 	vpnConfig openvpn_service.VPNConfig
 }
 
-// ConsumeConfig doesnt do anything on openvpn side, since it's not required here
-func (ocn *OpenvpnConfigNegotiator) ConsumeConfig(session.ServiceConfiguration) error {
+// ConsumeConfig doesn't do anything on the openvpn side, since it's not required here
+func (ocn *OpenvpnConfigNegotiator) ConsumeConfig(json.RawMessage) error {
 	return nil
 }
 

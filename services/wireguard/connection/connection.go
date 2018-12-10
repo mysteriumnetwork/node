@@ -34,6 +34,7 @@ type Connection struct {
 	stateChannel connection.StateChannel
 
 	config             wg.ServiceConfig
+	consumerKey        wg.ConsumerPrivateKey
 	connectionEndpoint wg.ConnectionEndpoint
 }
 
@@ -79,4 +80,21 @@ func (c *Connection) Stop() {
 	c.stateChannel <- connection.NotConnected
 	c.connection.Done()
 	close(c.stateChannel)
+}
+
+// GenerateConnectionParams generates the wg specific connection params
+func GenerateConnectionParams() (cPubKey wg.ConsumerPublicKey, cPrivKey wg.ConsumerPrivateKey, err error) {
+	privateKey, err := endpoint.GeneratePrivateKey()
+	if err != nil {
+		return cPubKey, cPrivKey, err
+	}
+	publicKey, err := endpoint.PrivateKeyToPublicKey(privateKey)
+	if err != nil {
+		return cPubKey, cPrivKey, err
+	}
+	return wg.ConsumerPublicKey{
+			PublicKey: publicKey,
+		}, wg.ConsumerPrivateKey{
+			PrivateKey: privateKey,
+		}, nil
 }
