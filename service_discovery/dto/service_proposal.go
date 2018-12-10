@@ -27,7 +27,7 @@ const (
 	proposalFormat = "service-proposal/v1"
 )
 
-// ServiceProposal is top level structure which is presented to marked place by service provider, and looked up by service consumer
+// ServiceProposal is top level structure which is presented to marketplace by service provider, and looked up by service consumer
 // service proposal can be marked as unsupported by deserializer, because of unknown service, payment method, or contact type
 type ServiceProposal struct {
 	// Per provider unique serial number of service description provided
@@ -104,7 +104,7 @@ func (proposal *ServiceProposal) SetProviderContact(providerID identity.Identity
 	proposal.ProviderContacts = ContactList{providerContact}
 }
 
-// IsSupported function returns true if this service proposal can be used for connections by service consumer
+// IsSupported returns true if this service proposal can be used for connections by service consumer
 // can be used as a filter to filter out all proposals which are unsupported for any reason
 func (proposal *ServiceProposal) IsSupported() bool {
 	if _, serviceNotSupported := proposal.ServiceDefinition.(UnsupportedServiceDefinition); serviceNotSupported {

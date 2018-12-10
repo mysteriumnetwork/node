@@ -23,13 +23,13 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 )
 
-// PaymentMethod is a marker interface for all types of payment methods
+// PaymentMethod is a interface for all types of payment methods
 type PaymentMethod interface {
 	// Service price per unit of metering
 	GetPrice() money.Money
 }
 
-// UnsupportedPaymentMethod represents payment method which is uknown to node (i.e. not registered)
+// UnsupportedPaymentMethod represents payment method which is unknown to node (i.e. not registered)
 type UnsupportedPaymentMethod struct {
 }
 
@@ -45,7 +45,8 @@ var _ PaymentMethod = UnsupportedPaymentMethod{}
 type PaymentMethodUnserializer func(*json.RawMessage) (PaymentMethod, error)
 
 // service payment method unserializer registry
-var paymentMethodMap = make(map[string]PaymentMethodUnserializer, 0)
+//TODO same idea as for contact global map
+var paymentMethodMap = make(map[string]PaymentMethodUnserializer)
 
 // RegisterPaymentMethodUnserializer registers unserializer for specified payment method type
 func RegisterPaymentMethodUnserializer(paymentMethod string, unserializer func(*json.RawMessage) (PaymentMethod, error)) {

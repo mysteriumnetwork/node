@@ -19,7 +19,7 @@ package dto
 
 import "encoding/json"
 
-// ServiceDefinition interface is marker interface for all service definition types
+// ServiceDefinition interface is interface for all service definition types
 type ServiceDefinition interface {
 	GetLocation() Location
 }
@@ -40,7 +40,8 @@ var _ ServiceDefinition = UnsupportedServiceDefinition{}
 type ServiceDefinitionUnserializer func(*json.RawMessage) (ServiceDefinition, error)
 
 // service definition unserializer registry
-var serviceDefinitionMap = make(map[string]ServiceDefinitionUnserializer, 10)
+//TODO same idea as for contact global map
+var serviceDefinitionMap = make(map[string]ServiceDefinitionUnserializer)
 
 // RegisterServiceDefinitionUnserializer registers deserializer for specified service definition
 func RegisterServiceDefinitionUnserializer(serviceType string, unserializer ServiceDefinitionUnserializer) {

@@ -36,7 +36,7 @@ type Contact struct {
 	Definition ContactDefinition `json:"definition"`
 }
 
-// ContactDefinition is marker interface for contacts of all types
+// ContactDefinition is interface for contacts of all types
 type ContactDefinition interface {
 }
 
@@ -50,8 +50,8 @@ var _ ContactDefinition = UnsupportedContactType{}
 type ContactDefinitionUnserializer func(*json.RawMessage) (ContactDefinition, error)
 
 // contact unserializer registry
-// TODO avoid global map variables and wrap this functionality into some kind of compoment?
-var contactDefinitionMap = make(map[string]ContactDefinitionUnserializer, 0)
+// TODO avoid global map variables and wrap this functionality into some kind of component?
+var contactDefinitionMap = make(map[string]ContactDefinitionUnserializer)
 
 // RegisterContactUnserializer registers unserializer for specified payment method
 func RegisterContactUnserializer(paymentMethod string, unserializer func(*json.RawMessage) (ContactDefinition, error)) {
@@ -88,8 +88,8 @@ func unserializeContact(contactType string, rawMessage *json.RawMessage) Contact
 	if !ok {
 		return UnsupportedContactType{}
 	}
-	definition, er := fn(rawMessage)
-	if er != nil {
+	definition, err := fn(rawMessage)
+	if err != nil {
 		return UnsupportedContactType{}
 	}
 
