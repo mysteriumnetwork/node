@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/server/dto"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -45,6 +44,10 @@ type Retriever interface {
 	Retrieve() consumer.SessionStatistics
 }
 
+type RemoteReporter interface {
+	SendSessionStats(session.ID, dto.SessionStats, identity.Signer) error
+}
+
 // SessionStatisticsReporter sends session stats to remote API server with a fixed sendInterval.
 // Extra one send will be done on session disconnect.
 type SessionStatisticsReporter struct {
@@ -52,7 +55,7 @@ type SessionStatisticsReporter struct {
 
 	signerFactory       identity.SignerFactory
 	statisticsRetriever Retriever
-	mysteriumClient     server.Client
+	remoteReporter      RemoteReporter
 
 	sendInterval time.Duration
 	done         chan struct{}
@@ -62,12 +65,12 @@ type SessionStatisticsReporter struct {
 }
 
 // NewSessionStatisticsReporter function creates new session stats sender by given options
-func NewSessionStatisticsReporter(statisticsRetriever Retriever, mysteriumClient server.Client, signerFactory identity.SignerFactory, locationDetector LocationDetector, interval time.Duration) *SessionStatisticsReporter {
+func NewSessionStatisticsReporter(statisticsRetriever Retriever, remoteReporter RemoteReporter, signerFactory identity.SignerFactory, locationDetector LocationDetector, interval time.Duration) *SessionStatisticsReporter {
 	return &SessionStatisticsReporter{
 		locationDetector:    locationDetector,
 		signerFactory:       signerFactory,
 		statisticsRetriever: statisticsRetriever,
-		mysteriumClient:     mysteriumClient,
+		remoteReporter:      remoteReporter,
 
 		sendInterval: interval,
 		done:         make(chan struct{}),
@@ -127,7 +130,7 @@ func (sr *SessionStatisticsReporter) stop() {
 
 func (sr *SessionStatisticsReporter) send(serviceType, providerID, country string, sessionID session.ID, signer identity.Signer) error {
 	sessionStats := sr.statisticsRetriever.Retrieve()
-	return sr.mysteriumClient.SendSessionStats(
+	return sr.remoteReporter.SendSessionStats(
 		sessionID,
 		dto.SessionStats{
 			ServiceType:     serviceType,

@@ -19,12 +19,12 @@ package server
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server/dto"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-	"github.com/mysteriumnetwork/node/session"
 )
 
 // Client is interface how to access Mysterium API
+// TODO this interface should slowly decay into smaller interfaces defined on caller side
+// example - statistics reporter
 type Client interface {
 	RegisterIdentity(id identity.Identity, signer identity.Signer) (err error)
 
@@ -32,6 +32,4 @@ type Client interface {
 	RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 	UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 	PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
-
-	SendSessionStats(sessionID session.ID, sessionStats dto.SessionStats, signer identity.Signer) (err error)
 }
