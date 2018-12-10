@@ -145,7 +145,7 @@ func TestSecondClientIsNotDisconnectedWhenFirstClientDisconnects(t *testing.T) {
 
 }
 
-func TestSecondClientWithTheSameCredentialsIsDisconnected(t *testing.T) {
+func TestSecondClientWithTheSameCredentialsIsConnected(t *testing.T) {
 	var firstClientConnected = []string{
 		">CLIENT:CONNECT,1,4",
 		">CLIENT:ENV,username=Boop!",
@@ -180,9 +180,9 @@ func TestSecondClientWithTheSameCredentialsIsDisconnected(t *testing.T) {
 	assert.True(t, fas.called)
 	assert.Equal(t, "Boop!", fas.username)
 	assert.Equal(t, "V6ifmvLuAT+hbtLBX/0xm3C0afywxTIdw1HqLmA4onpwmibHbxVhl50Gr3aRUZMqw1WxkfSIVdhpbCluHGBKsgE=", fas.password)
-	// second authentication with the same credentials but with different clientID should fail
+	// second authentication with the same credentials but with different clientID should succeed
 
-	assert.Equal(t, "client-deny 2 4 internal error", mockMangement.LastLine)
+	assert.Equal(t, "client-auth-nt 2 4", mockMangement.LastLine)
 }
 
 func feedLinesToMiddleware(middleware management.Middleware, lines []string) {

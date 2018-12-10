@@ -65,14 +65,14 @@ func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValid(t *testing.T) {
 	assert.True(t, authenticated)
 }
 
-func TestValidateReturnsFalseWhenSessionExistsAndSignatureIsValidAndClientIDDiffers(t *testing.T) {
+func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDDiffers(t *testing.T) {
 	validator := mockValidatorWithSession(identityExisting, sessionExisting)
 
 	validator.Validate(1, sessionExistingString, "not important")
 	authenticated, err := validator.Validate(2, sessionExistingString, "not important")
 
-	assert.Errorf(t, err, "provided clientID does not mach active clientID")
-	assert.False(t, authenticated)
+	assert.NoError(t, err)
+	assert.True(t, authenticated)
 }
 
 func TestValidateReturnsTrueWhenSessionExistsAndSignatureIsValidAndClientIDMatches(t *testing.T) {
