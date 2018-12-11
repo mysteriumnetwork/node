@@ -19,15 +19,13 @@ package kernelspace
 
 import (
 	"encoding/base64"
-	"fmt"
 	"net"
-	"os/exec"
-	"strings"
 
 	"github.com/jackpal/gateway"
 	"github.com/mdlayher/wireguardctrl"
 	"github.com/mdlayher/wireguardctrl/wgtypes"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 var allowedIPs = []net.IPNet{
@@ -95,16 +93,16 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 
 func (c *client) up(iface string, ipAddr net.IPNet) error {
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
-		if err := suExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
+		if err := utils.SuExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
 			return err
 		}
 	}
 
-	if err := suExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
+	if err := utils.SuExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
 		return err
 	}
 
-	return suExec("ip", "link", "set", "dev", iface, "up")
+	return utils.SuExec("ip", "link", "set", "dev", iface, "up")
 }
 
 func (c *client) excludeRoute(endpoint net.UDPAddr) error {
@@ -113,14 +111,14 @@ func (c *client) excludeRoute(endpoint net.UDPAddr) error {
 		return err
 	}
 
-	return suExec("ip", "route", "replace", endpoint.IP.String(), "via", gw.String())
+	return utils.SuExec("ip", "route", "replace", endpoint.IP.String(), "via", gw.String())
 }
 
 func (c *client) addDefaultRoute(iface string) error {
-	if err := suExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
+	if err := utils.SuExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
 		return err
 	}
-	return suExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
+	return utils.SuExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
 }
 
 func (c *client) Close() error {
@@ -130,12 +128,12 @@ func (c *client) Close() error {
 	}
 
 	if len(d.Peers) > 0 && d.Peers[0].Endpoint != nil {
-		if err := suExec("ip", "route", "del", d.Peers[0].Endpoint.IP.String()); err != nil {
+		if err := utils.SuExec("ip", "route", "del", d.Peers[0].Endpoint.IP.String()); err != nil {
 			return err
 		}
 	}
 
-	if err := suExec("ip", "link", "del", "dev", c.iface); err != nil {
+	if err := utils.SuExec("ip", "link", "del", "dev", c.iface); err != nil {
 		return err
 	}
 	return c.wgClient.Close()
@@ -169,11 +167,4 @@ func stringToKey(key string) (wgtypes.Key, error) {
 		return wgtypes.Key{}, err
 	}
 	return wgtypes.NewKey(k)
-}
-
-func suExec(args ...string) error {
-	if out, err := exec.Command("sudo", args...).CombinedOutput(); err != nil {
-		return fmt.Errorf("'sudo %v': %v output: %s", strings.Join(args, " "), err, out)
-	}
-	return nil
 }
