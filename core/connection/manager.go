@@ -48,12 +48,7 @@ var (
 )
 
 // Creator creates new connection by given options and uses state channel to report state changes
-// Given options:
-//  - session,
-//  - consumer identity
-//  - service provider identity
-//  - service proposal
-type Creator func(ConnectOptions, StateChannel, StatisticsChannel) (Connection, error)
+type Creator func(serviceType string, stateChannnel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
@@ -65,15 +60,6 @@ type SessionInfo struct {
 // Publisher is responsible for publishing given events
 type Publisher interface {
 	Publish(topic string, args ...interface{})
-}
-
-// ConsumerParams represents the consumer parameters.
-// The ConnectionConfig is passed to the concrete connection implementation.
-// The SessionCreationParams is sent to the provider on session-create.
-type ConsumerParams struct {
-	ConsumerID            identity.Identity
-	ConnectionConfig      interface{}
-	SessionCreationParams interface{}
 }
 
 type connectionManager struct {
@@ -108,7 +94,7 @@ func NewManager(
 	}
 }
 
-func (manager *connectionManager) Connect(consumerParams ConsumerParams, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (manager *connectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -125,14 +111,14 @@ func (manager *connectionManager) Connect(consumerParams ConsumerParams, proposa
 		}
 	}()
 
-	err = manager.startConnection(consumerParams, proposal, params)
+	err = manager.startConnection(consumerID, proposal, params)
 	if err == context.Canceled {
 		return ErrConnectionCancelled
 	}
 	return err
 }
 
-func (manager *connectionManager) startConnection(consumerParams ConsumerParams, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (manager *connectionManager) startConnection(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	manager.mutex.Lock()
 	cancelCtx := manager.cleanConnection
 	manager.mutex.Unlock()
@@ -153,18 +139,31 @@ func (manager *connectionManager) startConnection(consumerParams ConsumerParams,
 	}()
 
 	providerID := identity.FromAddress(proposal.ProviderID)
-	dialog, err := manager.newDialog(consumerParams.ConsumerID, providerID, proposal.ProviderContacts[0])
+	dialog, err := manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
 	cancel = append(cancel, func() { dialog.Close() })
 
-	sessionCreateConfig, err := json.Marshal(consumerParams.SessionCreationParams)
+	stateChannel := make(chan State, 10)
+	statisticsChannel := make(chan consumer.SessionStatistics, 10)
+
+	connection, err := manager.newConnection(proposal.ServiceType, stateChannel, statisticsChannel)
 	if err != nil {
-		return
+		return err
 	}
 
-	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig)
+	sessionCreateConfig, err := connection.GetSessionConfig()
+	if err != nil {
+		return err
+	}
+
+	sessionCreateConfigJSON, err := json.Marshal(sessionCreateConfig)
+	if err != nil {
+		return err
+	}
+
+	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfigJSON)
 	if err != nil {
 		return err
 	}
@@ -174,40 +173,26 @@ func (manager *connectionManager) startConnection(consumerParams ConsumerParams,
 	// set the session info for future use
 	manager.sessionInfo = SessionInfo{
 		SessionID:  sessionID,
-		ConsumerID: consumerParams.ConsumerID,
+		ConsumerID: consumerID,
 		Proposal:   proposal,
 	}
 
-	promiseIssuer := manager.newPromiseIssuer(consumerParams.ConsumerID, dialog)
+	promiseIssuer := manager.newPromiseIssuer(consumerID, dialog)
 	err = promiseIssuer.Start(proposal)
 	if err != nil {
 		return err
 	}
 	cancel = append(cancel, func() { promiseIssuer.Stop() })
 
-	stateChannel := make(chan State, 10)
-	statisticsChannel := make(chan consumer.SessionStatistics, 10)
-
-	consumerConfig, err := json.Marshal(consumerParams.ConnectionConfig)
-	if err != nil {
-		return
-	}
-
 	connectOptions := ConnectOptions{
-		SessionID:      sessionID,
-		SessionConfig:  sessionConfig,
-		ConsumerID:     consumerParams.ConsumerID,
-		ProviderID:     providerID,
-		Proposal:       proposal,
-		ConsumerConfig: consumerConfig,
+		SessionID:     sessionID,
+		SessionConfig: sessionConfig,
+		ConsumerID:    consumerID,
+		ProviderID:    providerID,
+		Proposal:      proposal,
 	}
 
-	connection, err := manager.newConnection(connectOptions, stateChannel, statisticsChannel)
-	if err != nil {
-		return err
-	}
-
-	if err = connection.Start(); err != nil {
+	if err = connection.Start(connectOptions); err != nil {
 		return err
 	}
 	cancel = append(cancel, connection.Stop)

@@ -27,11 +27,18 @@ import (
 // DialogCreator creates new dialog between consumer and provider, using given contact information
 type DialogCreator func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error)
 
+// SessionCreationConfig are the parameters that get sent to the provider
+type SessionCreationConfig interface{}
+
+// ConsumerConfig are the parameters used for the initiation of connection
+type ConsumerConfig interface{}
+
 // Connection represents a connection
 type Connection interface {
-	Start() error
+	Start(ConnectOptions) error
 	Wait() error
 	Stop()
+	GetSessionConfig() (SessionCreationConfig, error)
 }
 
 // StateChannel is the channel we receive state change events on
@@ -53,7 +60,7 @@ type PromiseIssuerCreator func(issuerID identity.Identity, dialog communication.
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
-	Connect(consumerParams ConsumerParams, proposal market.ServiceProposal, params ConnectParams) error
+	Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) error
 	// Status queries current status of connection
 	Status() ConnectionStatus
 	// Disconnect closes established connection, reports error if no connection

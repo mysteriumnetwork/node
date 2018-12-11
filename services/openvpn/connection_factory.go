@@ -20,6 +20,7 @@ package openvpn
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
@@ -72,23 +73,23 @@ func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, 
 }
 
 // CreateConnection implements the connection.Creator interface
-func (op *ProcessBasedConnectionFactory) CreateConnection(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-	vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory)
-	if err != nil {
-		return nil, err
+func (op *ProcessBasedConnectionFactory) CreateConnection(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+	procFactory := func(options connection.ConnectOptions) (openvpn.Process, error) {
+		vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory)
+		if err != nil {
+			return nil, err
+		}
+
+		signer := op.signerFactory(options.ConsumerID)
+
+		stateMiddleware := op.newStateMiddleware(options.SessionID, signer, options, stateChannel)
+		authMiddleware := op.newAuthMiddleware(options.SessionID, signer)
+		byteCountMiddleware := op.newBytecountMiddleware(statisticsChannel)
+		proc := openvpn.CreateNewProcess(op.openvpnBinary, vpnClientConfig.GenericConfig, stateMiddleware, byteCountMiddleware, authMiddleware)
+		return proc, nil
 	}
 
-	signer := op.signerFactory(options.ConsumerID)
-
-	stateMiddleware := op.newStateMiddleware(options.SessionID, signer, options, stateChannel)
-	authMiddleware := op.newAuthMiddleware(options.SessionID, signer)
-	byteCountMiddleware := op.newBytecountMiddleware(statisticsChannel)
-
-	return NewClient(
-		op.openvpnBinary,
-		vpnClientConfig,
-		stateMiddleware,
-		byteCountMiddleware,
-		authMiddleware,
-	), nil
+	return &Client{
+		processFactory: procFactory,
+	}, nil
 }

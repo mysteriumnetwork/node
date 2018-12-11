@@ -43,11 +43,6 @@ type fakeSessionConfig struct {
 	Param2 int
 }
 
-type mockAckHandler struct {
-	mockResponse json.RawMessage
-	mockError    error
-}
-
 func TestProducer_RequestSessionCreate(t *testing.T) {
 	sender := &fakeSender{}
 	sid, config, err := RequestSessionCreate(sender, 123, []byte{})

@@ -18,13 +18,52 @@
 package openvpn
 
 import (
+	"errors"
+
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
-	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
+	"github.com/mysteriumnetwork/node/core/connection"
 )
 
-// NewClient creates openvpn client with given config params
-func NewClient(openvpnBinary string, config *ClientConfig, middlewares ...management.Middleware) openvpn.Process {
-	return openvpn.CreateNewProcess(openvpnBinary, config.GenericConfig, middlewares...)
+// ErrProcessNotStarted represents the error we return when the process is not started yet
+var ErrProcessNotStarted = errors.New("process not started yet")
+
+// processFactory creates a new openvpn process
+type processFactory func(options connection.ConnectOptions) (openvpn.Process, error)
+
+// Client takes in the openvpn process and works with it
+type Client struct {
+	process        openvpn.Process
+	processFactory processFactory
+}
+
+// Start starts the connection
+func (c *Client) Start(options connection.ConnectOptions) error {
+	proc, err := c.processFactory(options)
+	if err != nil {
+		return err
+	}
+	c.process = proc
+	return c.process.Start()
+}
+
+// Wait waits for the connection to exit
+func (c *Client) Wait() error {
+	if c.process == nil {
+		return ErrProcessNotStarted
+	}
+	return c.process.Wait()
+}
+
+// Stop stops the connection
+func (c *Client) Stop() {
+	if c.process != nil {
+		c.process.Stop()
+	}
+}
+
+// GetSessionConfig returns the consumer-side configuration. In openvpn case - it doesn't return anything
+func (c *Client) GetSessionConfig() (connection.SessionCreationConfig, error) {
+	return nil, nil
 }
 
 //VPNConfig structure represents VPN configuration options for given session

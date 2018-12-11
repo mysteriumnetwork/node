@@ -27,7 +27,6 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/metadata"
-	wg "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -195,19 +194,8 @@ func (c *cliApp) connect(argsString string) {
 	}
 
 	status("CONNECTING", "from:", consumerID, "to:", providerID)
-	consumerOptions := endpoints.ConsumerOptions{}
 
-	if serviceType == "wireguard" {
-		pubkey, privkey, err := wg.GenerateConnectionParams()
-		if err != nil {
-			warn(err)
-			return
-		}
-		consumerOptions.ConnectionConfig = privkey
-		consumerOptions.SessionCreationParams = pubkey
-	}
-
-	_, err = c.tequilapi.Connect(consumerID, providerID, serviceType, connectOptions, consumerOptions)
+	_, err = c.tequilapi.Connect(consumerID, providerID, serviceType, connectOptions)
 	if err != nil {
 		warn(err)
 		return

@@ -29,22 +29,40 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn/session"
 )
 
+type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, error)
+
+var errSessionWrapperNotStarted = errors.New("session wrapper not started")
+
 type sessionWrapper struct {
-	session *openvpn3.Session
+	session        *openvpn3.Session
+	sessionFactory openvpn3SessionFactory
 }
 
-func (wrapper *sessionWrapper) Start() error {
-
+func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
+	session, err := wrapper.sessionFactory(options)
+	if err != nil {
+		return err
+	}
+	wrapper.session = session
 	wrapper.session.Start()
 	return nil
 }
 
 func (wrapper *sessionWrapper) Stop() {
-	wrapper.session.Stop()
+	if wrapper.session != nil {
+		wrapper.session.Stop()
+	}
 }
 
 func (wrapper *sessionWrapper) Wait() error {
-	return wrapper.session.Wait()
+	if wrapper.session != nil {
+		return wrapper.session.Wait()
+	}
+	return errSessionWrapperNotStarted
+}
+
+func (wrapper *sessionWrapper) GetSessionConfig() (connection.SessionCreationConfig, error) {
+	return nil, nil
 }
 
 func channelToCallbacks(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) openvpn3.MobileSessionCallbacks {
@@ -132,40 +150,41 @@ func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelS
 
 	mobNode.di.EventBus.Subscribe(connection.StateEventTopic, st.handleState)
 
-	mobNode.di.ConnectionRegistry.Register("openvpn", func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+	mobNode.di.ConnectionRegistry.Register("openvpn", func(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+		sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, error) {
+			vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
+			if err != nil {
+				return nil, err
+			}
 
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
-		if err != nil {
-			return nil, err
+			profileContent, err := vpnClientConfig.ToConfigFileContent()
+			if err != nil {
+				return nil, err
+			}
+
+			config := openvpn3.NewConfig(profileContent)
+			config.GuiVersion = "govpn 0.1"
+			config.CompressionMode = "asym"
+			config.ConnTimeout = 0 //essentially means - reconnect forever (but can always stopped with disconnect)
+
+			signer := mobNode.di.SignerFactory(options.ConsumerID)
+
+			username, password, err := session.SignatureCredentialsProvider(options.SessionID, signer)()
+			if err != nil {
+				return nil, err
+			}
+
+			credentials := openvpn3.UserCredentials{
+				Username: username,
+				Password: password,
+			}
+
+			session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), tunnelSetup)
+			st.sessionCreated(session)
+			return session, nil
 		}
-
-		profileContent, err := vpnClientConfig.ToConfigFileContent()
-		if err != nil {
-			return nil, err
-		}
-
-		config := openvpn3.NewConfig(profileContent)
-		config.GuiVersion = "govpn 0.1"
-		config.CompressionMode = "asym"
-		config.ConnTimeout = 0 //essentially means - reconnect forever (but can always stopped with disconnect)
-
-		signer := mobNode.di.SignerFactory(options.ConsumerID)
-
-		username, password, err := session.SignatureCredentialsProvider(options.SessionID, signer)()
-		if err != nil {
-			return nil, err
-		}
-
-		credentials := openvpn3.UserCredentials{
-			Username: username,
-			Password: password,
-		}
-
-		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), tunnelSetup)
-		st.sessionCreated(session)
-
 		return &sessionWrapper{
-			session: session,
+			sessionFactory: sessionFactory,
 		}, nil
 	})
 	return st

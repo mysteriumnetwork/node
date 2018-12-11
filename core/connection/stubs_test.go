@@ -132,7 +132,7 @@ type connectionFactoryFake struct {
 	mockConnection *connectionFake
 }
 
-func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptions, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
+func (cff *connectionFactoryFake) CreateConnection(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
 	//each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
 	if cff.mockError != nil {
 		return nil, cff.mockError
@@ -179,7 +179,11 @@ type connectionFake struct {
 	sync.RWMutex
 }
 
-func (foc *connectionFake) Start() error {
+func (foc *connectionFake) GetSessionConfig() (SessionCreationConfig, error) {
+	return nil, nil
+}
+
+func (foc *connectionFake) Start(connectionParams ConnectOptions) error {
 	foc.RLock()
 	defer foc.RUnlock()
 

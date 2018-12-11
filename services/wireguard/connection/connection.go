@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"encoding/json"
 	"sync"
 
 	log "github.com/cihub/seelog"
@@ -34,12 +35,18 @@ type Connection struct {
 	stateChannel connection.StateChannel
 
 	config             wg.ServiceConfig
-	consumerKey        wg.ConsumerPrivateKey
 	connectionEndpoint wg.ConnectionEndpoint
 }
 
 // Start establish wireguard connection to the service provider.
-func (c *Connection) Start() (err error) {
+func (c *Connection) Start(options connection.ConnectOptions) (err error) {
+	var config wg.ServiceConfig
+	if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
+		return err
+	}
+	c.config.Provider = config.Provider
+	c.config.Consumer.IPAddress = config.Consumer.IPAddress
+
 	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(nil)
 	if err != nil {
 		return err
@@ -69,6 +76,17 @@ func (c *Connection) Wait() error {
 	return nil
 }
 
+// GetSessionConfig returns the consumer configuration for session creation
+func (c *Connection) GetSessionConfig() (connection.SessionCreationConfig, error) {
+	publicKey, err := endpoint.PrivateKeyToPublicKey(c.config.Consumer.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	return wg.ConsumerPublicKey{
+		PublicKey: publicKey,
+	}, nil
+}
+
 // Stop stops wireguard connection and closes connection endpoint.
 func (c *Connection) Stop() {
 	c.stateChannel <- connection.Disconnecting
@@ -80,21 +98,4 @@ func (c *Connection) Stop() {
 	c.stateChannel <- connection.NotConnected
 	c.connection.Done()
 	close(c.stateChannel)
-}
-
-// GenerateConnectionParams generates the wg specific connection params
-func GenerateConnectionParams() (cPubKey wg.ConsumerPublicKey, cPrivKey wg.ConsumerPrivateKey, err error) {
-	privateKey, err := endpoint.GeneratePrivateKey()
-	if err != nil {
-		return cPubKey, cPrivKey, err
-	}
-	publicKey, err := endpoint.PrivateKeyToPublicKey(privateKey)
-	if err != nil {
-		return cPubKey, cPrivKey, err
-	}
-	return wg.ConsumerPublicKey{
-			PublicKey: publicKey,
-		}, wg.ConsumerPrivateKey{
-			PrivateKey: privateKey,
-		}, nil
 }

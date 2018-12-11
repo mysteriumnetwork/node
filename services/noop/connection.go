@@ -32,7 +32,7 @@ type Connection struct {
 }
 
 // Start implements the connection.Connection interface
-func (c *Connection) Start() error {
+func (c *Connection) Start(params connection.ConnectOptions) error {
 	c.noopConnection.Add(1)
 	c.isRunning = true
 
@@ -63,4 +63,9 @@ func (c *Connection) Stop() {
 	c.stateChannel <- connection.NotConnected
 	c.noopConnection.Done()
 	close(c.stateChannel)
+}
+
+// GetSessionConfig returns the consumer configuration for session creation
+func (c *Connection) GetSessionConfig() (connection.SessionCreationConfig, error) {
+	return nil, nil
 }

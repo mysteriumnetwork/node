@@ -22,8 +22,8 @@ import (
 )
 
 // NewConnectionCreator creates noop connections
-func NewConnectionCreator() connection.Creator {
-	return func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+func NewConnectionCreator() connection.Factory {
+	return func(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 		return &Connection{
 			stateChannel: stateChannel,
 		}, nil

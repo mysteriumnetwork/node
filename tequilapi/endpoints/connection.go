@@ -67,16 +67,6 @@ type connectionRequest struct {
 	// connect options
 	// required: false
 	ConnectOptions ConnectOptions `json:"connectOptions,omitempty"`
-
-	// consumer options
-	// required: false
-	ConsumerOptions ConsumerOptions `json:"consumerOptions,omitempty"`
-}
-
-// swagger:model ConsumerOptions
-type ConsumerOptions struct {
-	ConnectionConfig      interface{} `json:"connectionConfig,omitempty"`
-	SessionCreationParams interface{} `json:"sessionCreationParams,omitempty"`
 }
 
 // swagger:model ConnectionStatusDTO
@@ -216,12 +206,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	proposal := proposals[0]
 
 	connectOptions := getConnectOptions(cr)
-	consumerParams := connection.ConsumerParams{
-		ConsumerID:            identity.FromAddress(cr.ConsumerID),
-		ConnectionConfig:      cr.ConsumerOptions.ConnectionConfig,
-		SessionCreationParams: cr.ConsumerOptions.SessionCreationParams,
-	}
-	err = ce.manager.Connect(consumerParams, proposal, connectOptions)
+	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), proposal, connectOptions)
 
 	if err != nil {
 		switch err {

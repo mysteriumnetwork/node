@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 )
 
 const (
@@ -54,50 +55,55 @@ type WireguardTunnelSetup interface {
 // OverrideWireguardConnection overrides default wireguard connection implementation to more mobile adapted one
 func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTunnelSetup) {
 	wireguard.Bootstrap()
-	mobNode.di.ConnectionRegistry.Register(wireguard.ServiceType, func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-
-		var config wireguard.ServiceConfig
-		err := json.Unmarshal(options.SessionConfig, &config)
+	mobNode.di.ConnectionRegistry.Register(wireguard.ServiceType, func(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+		privateKey, err := endpoint.GeneratePrivateKey()
 		if err != nil {
 			return nil, err
 		}
 
-		var consumerKey wireguard.ConsumerPrivateKey
-		if err := json.Unmarshal(options.ConsumerConfig, &consumerKey); err != nil {
-			return nil, err
-		}
-		config.Consumer.PrivateKey = consumerKey.PrivateKey
+		deviceFactory := func(options connection.ConnectOptions) (*device.DeviceApi, error) {
+			var config wireguard.ServiceConfig
+			err := json.Unmarshal(options.SessionConfig, &config)
+			if err != nil {
+				return nil, err
+			}
 
-		wgTunnelSetup.NewTunnel()
-		wgTunnelSetup.SetSessionName("wg-tun-session")
-		//TODO fetch from user connection options
-		wgTunnelSetup.AddDNS("8.8.8.8")
+			config.Consumer.PrivateKey = privateKey
 
-		//TODO this heavy linfting might go to doInit
-		tun, err := newTunnDevice(wgTunnelSetup, &config)
-		if err != nil {
-			return nil, err
+			wgTunnelSetup.NewTunnel()
+			wgTunnelSetup.SetSessionName("wg-tun-session")
+			//TODO fetch from user connection options
+			wgTunnelSetup.AddDNS("8.8.8.8")
+
+			//TODO this heavy linfting might go to doInit
+			tun, err := newTunnDevice(wgTunnelSetup, &config)
+			if err != nil {
+				return nil, err
+			}
+
+			devApi := device.UserspaceDeviceApi(tun)
+			err = setupWireguardDevice(devApi, &config)
+			if err != nil {
+				devApi.Close()
+				return nil, err
+			}
+			devApi.Boot()
+			socket, err := devApi.GetNetworkSocket()
+			if err != nil {
+				devApi.Close()
+				return nil, err
+			}
+			err = wgTunnelSetup.Protect(socket)
+			if err != nil {
+				devApi.Close()
+				return nil, err
+			}
+			return devApi, nil
 		}
 
-		devApi := device.UserspaceDeviceApi(tun)
-		err = setupWireguardDevice(devApi, &config)
-		if err != nil {
-			devApi.Close()
-			return nil, err
-		}
-		devApi.Boot()
-		socket, err := devApi.GetNetworkSocket()
-		if err != nil {
-			devApi.Close()
-			return nil, err
-		}
-		err = wgTunnelSetup.Protect(socket)
-		if err != nil {
-			devApi.Close()
-			return nil, err
-		}
 		return &wireguardConnection{
-			device:            devApi,
+			deviceFactory:     deviceFactory,
+			privKey:           privateKey,
 			stopChannel:       make(chan struct{}),
 			stateChannel:      stateChannel,
 			statisticsChannel: statisticsChannel,
@@ -105,6 +111,8 @@ func (mobNode *MobileNode) OverrideWireguardConnection(wgTunnelSetup WireguardTu
 		}, nil
 	})
 }
+
+type deviceFactory func(options connection.ConnectOptions) (*device.DeviceApi, error)
 
 func setupWireguardDevice(devApi *device.DeviceApi, config *wireguard.ServiceConfig) error {
 	err := devApi.SetListeningPort(0) //random port
@@ -182,6 +190,8 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceCo
 }
 
 type wireguardConnection struct {
+	privKey           string
+	deviceFactory     deviceFactory
 	device            *device.DeviceApi
 	wgTunnelSetup     WireguardTunnelSetup
 	stopChannel       chan struct{}
@@ -191,7 +201,13 @@ type wireguardConnection struct {
 	cleanup           func()
 }
 
-func (wg *wireguardConnection) Start() error {
+func (wg *wireguardConnection) Start(options connection.ConnectOptions) error {
+	device, err := wg.deviceFactory(options)
+	if err != nil {
+		return err
+	}
+
+	wg.device = device
 	wg.stateChannel <- connection.Connecting
 	wg.doInit()
 
@@ -212,6 +228,16 @@ func (wg *wireguardConnection) Wait() error {
 func (wg *wireguardConnection) Stop() {
 	wg.stateChannel <- connection.Disconnecting
 	close(wg.stopChannel)
+}
+
+func (wg *wireguardConnection) GetSessionConfig() (connection.SessionCreationConfig, error) {
+	publicKey, err := endpoint.PrivateKeyToPublicKey(wg.privKey)
+	if err != nil {
+		return nil, err
+	}
+	return wireguard.ConsumerPublicKey{
+		PublicKey: publicKey,
+	}, nil
 }
 
 var _ connection.Connection = &wireguardConnection{}

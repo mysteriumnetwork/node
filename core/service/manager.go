@@ -54,7 +54,9 @@ type DialogWaiterFactory func(providerID identity.Identity, serviceType string) 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
 type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator) communication.DialogHandler
 
+// NewManager creates new instance of pluggable services manager
 func NewManager(
+	identityLoader identity_selector.Handler,
 	serviceFactory ServiceFactory,
 	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,
