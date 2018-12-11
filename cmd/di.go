@@ -266,7 +266,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumApi, di.SignerFactory)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.SignerFactory)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumApi)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumApi, di.MysteriumMorqaClient)

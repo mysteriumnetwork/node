@@ -24,7 +24,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -53,9 +52,8 @@ type identityUnlockingDto struct {
 }
 
 type identitiesAPI struct {
-	idm             identity.Manager
-	mysteriumClient server.Client
-	signerFactory   identity.SignerFactory
+	idm           identity.Manager
+	signerFactory identity.SignerFactory
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -71,8 +69,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager, mystClient server.Client, signerFactory identity.SignerFactory) *identitiesAPI {
-	return &identitiesAPI{idm, mystClient, signerFactory}
+func NewIdentitiesEndpoint(idm identity.Manager, signerFactory identity.SignerFactory) *identitiesAPI {
+	return &identitiesAPI{idm, signerFactory}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -232,10 +230,9 @@ func validateCreationRequest(createReq *identityCreationDto) (errors *validation
 func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
-	mystClient server.Client,
 	signerFactory identity.SignerFactory,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, mystClient, signerFactory)
+	idmEnd := NewIdentitiesEndpoint(idm, signerFactory)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)

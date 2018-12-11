@@ -23,8 +23,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/server"
-
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
@@ -95,9 +93,8 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 }
 
 func TestProposalsEndpointList(t *testing.T) {
-	discoveryAPI := server.NewClientFake()
-	for _, proposal := range proposals {
-		discoveryAPI.RegisterProposal(proposal, nil)
+	proposalProvider := &mockProposalProvider{
+		proposals: proposals,
 	}
 
 	req, err := http.NewRequest(
@@ -108,7 +105,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(proposalProvider, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -146,11 +143,9 @@ func TestProposalsEndpointList(t *testing.T) {
 }
 
 func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
-	discoveryAPI := server.NewClientFake()
-	for _, proposal := range proposals {
-		discoveryAPI.RegisterProposal(proposal, nil)
+	proposalProvider := &mockProposalProvider{
+		proposals: proposals,
 	}
-
 	req, err := http.NewRequest(
 		http.MethodGet,
 		"/irrelevant?fetchConnectCounts=true",
@@ -159,7 +154,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(proposalProvider, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(

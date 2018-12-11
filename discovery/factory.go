@@ -22,16 +22,21 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/server"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
+
+type ProposalRegistry interface {
+	RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error
+	PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error
+	UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error
+}
 
 // Discovery structure holds discovery service state
 type Discovery struct {
 	identityRegistry            identity_registry.IdentityRegistry
 	ownIdentity                 identity.Identity
 	identityRegistration        identity_registry.RegistrationDataProvider
-	mysteriumClient             server.Client
+	proposalRegistry            ProposalRegistry
 	signerCreate                identity.SignerFactory
 	signer                      identity.Signer
 	proposal                    dto_discovery.ServiceProposal
@@ -48,13 +53,13 @@ type Discovery struct {
 func NewService(
 	identityRegistry identity_registry.IdentityRegistry,
 	identityRegistration identity_registry.RegistrationDataProvider,
-	mysteriumClient server.Client,
+	proposalRegistry ProposalRegistry,
 	signerCreate identity.SignerFactory,
 ) *Discovery {
 	return &Discovery{
 		identityRegistry:            identityRegistry,
 		identityRegistration:        identityRegistration,
-		mysteriumClient:             mysteriumClient,
+		proposalRegistry:            proposalRegistry,
 		signerCreate:                signerCreate,
 		statusChan:                  make(chan Status),
 		status:                      StatusUndefined,

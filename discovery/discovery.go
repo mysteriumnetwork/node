@@ -135,7 +135,7 @@ func (d *Discovery) registerIdentity() {
 }
 
 func (d *Discovery) registerProposal() {
-	err := d.mysteriumClient.RegisterProposal(d.proposal, d.signer)
+	err := d.proposalRegistry.RegisterProposal(d.proposal, d.signer)
 	if err != nil {
 		log.Errorf("%s Failed to register proposal, retrying after 1 min. %s", logPrefix, err.Error())
 		time.Sleep(1 * time.Minute)
@@ -147,7 +147,7 @@ func (d *Discovery) registerProposal() {
 
 func (d *Discovery) pingProposal() {
 	time.Sleep(1 * time.Minute)
-	err := d.mysteriumClient.PingProposal(d.proposal, d.signer)
+	err := d.proposalRegistry.PingProposal(d.proposal, d.signer)
 	if err != nil {
 		log.Error(logPrefix, "Failed to ping proposal: ", err)
 	}
@@ -155,7 +155,7 @@ func (d *Discovery) pingProposal() {
 }
 
 func (d *Discovery) unregisterProposal() {
-	err := d.mysteriumClient.UnregisterProposal(d.proposal, d.signer)
+	err := d.proposalRegistry.UnregisterProposal(d.proposal, d.signer)
 	if err != nil {
 		log.Error(logPrefix, "Failed to unregister proposal: ", err)
 		d.changeStatus(UnregisterProposalFailed)

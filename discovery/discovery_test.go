@@ -18,6 +18,7 @@
 package discovery
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -34,8 +35,20 @@ var (
 	}
 )
 
+func discoveryWithMockedDependencies() *Discovery {
+	return &Discovery{
+		statusChan:                  make(chan Status),
+		proposalAnnouncementStopped: &sync.WaitGroup{},
+		signerCreate: func(id identity.Identity) identity.Signer {
+			return &identity.SignerFake{}
+		},
+		identityRegistration: &identity_registry.FakeRegistrationDataProvider{},
+		proposalRegistry:     &mockedProposalRegistry{},
+	}
+}
+
 func TestStartRegistersProposal(t *testing.T) {
-	d := NewFakeDiscovery()
+	d := discoveryWithMockedDependencies()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
 	d.Start(providerID, proposal)
@@ -45,7 +58,7 @@ func TestStartRegistersProposal(t *testing.T) {
 }
 
 func TestStartRegistersIdentitySuccessfully(t *testing.T) {
-	d := NewFakeDiscovery()
+	d := discoveryWithMockedDependencies()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: true, Registered: false}
 
 	d.Start(providerID, proposal)
@@ -55,7 +68,7 @@ func TestStartRegistersIdentitySuccessfully(t *testing.T) {
 }
 
 func TestStartRegisterIdentityCancelled(t *testing.T) {
-	d := NewFakeDiscovery()
+	d := discoveryWithMockedDependencies()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: false}
 
 	d.Start(providerID, proposal)
@@ -70,7 +83,7 @@ func TestStartRegisterIdentityCancelled(t *testing.T) {
 }
 
 func TestStartStopUnregisterProposal(t *testing.T) {
-	d := NewFakeDiscovery()
+	d := discoveryWithMockedDependencies()
 	d.identityRegistry = &identity_registry.FakeRegistry{RegistrationEventExists: false, Registered: true}
 
 	d.Start(providerID, proposal)
@@ -95,3 +108,20 @@ func observeStatus(d *Discovery, status Status) Status {
 		time.Sleep(10 * time.Millisecond)
 	}
 }
+
+type mockedProposalRegistry struct {
+}
+
+func (mockedProposalRegistry) RegisterProposal(proposal dto.ServiceProposal, signer identity.Signer) error {
+	return nil
+}
+
+func (mockedProposalRegistry) PingProposal(proposal dto.ServiceProposal, signer identity.Signer) error {
+	return nil
+}
+
+func (mockedProposalRegistry) UnregisterProposal(proposal dto.ServiceProposal, signer identity.Signer) error {
+	return nil
+}
+
+var _ ProposalRegistry = &mockedProposalRegistry{}

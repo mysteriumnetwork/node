@@ -100,8 +100,8 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	}
 	ipResolver := ip.NewResolverFake("123.123.123.123")
 
-	mystAPI := getMockProposalProviderWithSpecifiedProposal("node1", "noop")
-	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper, mystAPI)
+	mockedProposalProvider := getMockProposalProviderWithSpecifiedProposal("node1", "noop")
+	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper, mockedProposalProvider)
 
 	tests := []struct {
 		method         string
@@ -156,7 +156,7 @@ func TestDisconnectingState(t *testing.T) {
 		SessionID: "",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -178,7 +178,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 		SessionID: "",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -200,7 +200,7 @@ func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 		State: connection.Connecting,
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -223,7 +223,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 		SessionID: "My-super-session",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -243,7 +243,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
 
@@ -262,7 +262,7 @@ func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
 
@@ -333,7 +333,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 func TestDeleteCallsDisconnect(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodDelete, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -347,7 +347,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 func TestGetIPEndpointSucceeds(t *testing.T) {
 	manager := fakeManager{}
 	ipResolver := ip.NewResolverFake("123.123.123.123")
-	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, &mockProposalProvider{})
 	resp := httptest.NewRecorder()
 
 	connEndpoint.GetIP(resp, nil, nil)
@@ -365,7 +365,7 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	manager := fakeManager{}
 	ipResolver := ip.NewResolverFakeFailing(errors.New("fake error"))
-	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, &mockProposalProvider{})
 	resp := httptest.NewRecorder()
 
 	connEndpoint.GetIP(resp, nil, nil)
@@ -387,7 +387,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	}
 
 	manager := fakeManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, mystClient)
+	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, &mockProposalProvider{})
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)
@@ -408,7 +408,7 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 	}
 
 	manager := fakeManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, mystClient)
+	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, &mockProposalProvider{})
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)
@@ -456,7 +456,7 @@ func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 	manager := fakeManager{}
 	manager.onDisconnectReturn = connection.ErrNoConnection
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mystClient)
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, &mockProposalProvider{})
 
 	req := httptest.NewRequest(
 		http.MethodDelete,
@@ -481,8 +481,8 @@ func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncount
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
-	mystAPI := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mystAPI)
+	mockProposalProvider := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mockProposalProvider)
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -509,7 +509,7 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mystClient)
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, &mockProposalProvider{proposals: make([]dto.ServiceProposal, 0)})
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
