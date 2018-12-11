@@ -38,8 +38,8 @@ func TestDialogWaiter_Factory(t *testing.T) {
 
 	waiter := NewDialogWaiter(address, signer, &mockedIdentityRegistry{})
 	assert.NotNil(t, waiter)
-	assert.Equal(t, address, waiter.myAddress)
-	assert.Equal(t, signer, waiter.mySigner)
+	assert.Equal(t, address, waiter.address)
+	assert.Equal(t, signer, waiter.signer)
 }
 
 func TestDialogWaiter_ServeDialogs(t *testing.T) {
@@ -132,11 +132,11 @@ func TestDialogWaiter_ServeDialogsRejectUnregisteredConsumers(t *testing.T) {
 	)
 }
 
-func dialogServe(connection nats.Connection, mySigner identity.Signer) (waiter *dialogWaiter, handler *dialogHandler) {
-	myTopic := "my-topic"
+func dialogServe(connection nats.Connection, signer identity.Signer) (waiter *dialogWaiter, handler *dialogHandler) {
+	topic := "my-topic"
 	waiter = &dialogWaiter{
-		myAddress: discovery.NewAddressWithConnection(connection, myTopic),
-		mySigner:  mySigner,
+		address: discovery.NewAddressWithConnection(connection, topic),
+		signer:  signer,
 		identityRegistry: &mockedIdentityRegistry{
 			anyIdentityRegistered: true,
 		},
