@@ -212,7 +212,7 @@
   revision = "58046073cbffe2f25d425fe1331102f55cf719de"
 
 [[projects]]
-  digest = "1:6b8e93147538bc08659ddbd98480d0bf72998a8b0fdf33bc642df223fb43a600"
+  digest = "1:4844cd16e4e3e1a539256c5a253907066367c75fd623ed93da4264516d7876a4"
   name = "github.com/mysteriumnetwork/go-openvpn"
   packages = [
     "openvpn",
@@ -227,8 +227,8 @@
     "openvpn3",
   ]
   pruneopts = "T"
-  revision = "751efacae2ee8432b9964ec78667dc4368b76419"
-  version = "0.0.10"
+  revision = "ccc1e8d005c9fd5adfeee432af5c3ad2c0f68d9d"
+  version = "0.0.11"
 
 [[projects]]
   digest = "1:a034b3c95c40d7a083083f4cad8c1a2ad1459c7e9962130477a9d1f4265e7dd9"
