@@ -31,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
@@ -80,15 +79,17 @@ func (ssk *StubStatisticsTracker) GetSessionDuration() time.Duration {
 	return ssk.duration
 }
 
-func getMockMystAPIWithProposal(providerID, serviceType string) *server.ClientFake {
-	mystAPI := server.NewClientFake()
-	mystAPI.RegisterProposal(dto.ServiceProposal{
+func getMockProposalProviderWithSpecifiedProposal(providerID, serviceType string) ProposalProvider {
+	sampleProposal := dto.ServiceProposal{
 		ID:                1,
 		ServiceType:       serviceType,
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        providerID,
-	}, nil)
-	return mystAPI
+	}
+
+	return &mockProposalProvider{
+		proposals: []dto.ServiceProposal{sampleProposal},
+	}
 }
 
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
@@ -99,7 +100,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	}
 	ipResolver := ip.NewResolverFake("123.123.123.123")
 
-	mystAPI := getMockMystAPIWithProposal("node1", "noop")
+	mystAPI := getMockProposalProviderWithSpecifiedProposal("node1", "noop")
 	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper, mystAPI)
 
 	tests := []struct {
@@ -283,8 +284,8 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	mystAPI := getMockMystAPIWithProposal("required-node", "openvpn")
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystAPI)
+	proposalProvider := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, proposalProvider)
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -307,7 +308,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	mystAPI := getMockMystAPIWithProposal("required-node", "noop")
+	mystAPI := getMockProposalProviderWithSpecifiedProposal("required-node", "noop")
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystAPI)
 	req := httptest.NewRequest(
 		http.MethodPut,
@@ -426,7 +427,7 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrAlreadyExists
 
-	mystAPI := getMockMystAPIWithProposal("required-node", "openvpn")
+	mystAPI := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mystAPI)
 
 	req := httptest.NewRequest(
@@ -480,7 +481,7 @@ func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncount
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
-	mystAPI := getMockMystAPIWithProposal("required-node", "openvpn")
+	mystAPI := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mystAPI)
 	req := httptest.NewRequest(
 		http.MethodPut,

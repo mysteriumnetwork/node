@@ -22,7 +22,6 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/server/metrics"
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -99,14 +98,18 @@ func mapProposalsToRes(
 	return proposalsResArry
 }
 
+type ProposalProvider interface {
+	FindProposals(providerID string, serviceType string) ([]dto_discovery.ServiceProposal, error)
+}
+
 type proposalsEndpoint struct {
-	mysteriumClient      server.Client
+	proposalProvider     ProposalProvider
 	mysteriumMorqaClient metrics.QualityOracle
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(mc server.Client, morqaClient metrics.QualityOracle) *proposalsEndpoint {
-	return &proposalsEndpoint{mc, morqaClient}
+func NewProposalsEndpoint(proposalProvider ProposalProvider, morqaClient metrics.QualityOracle) *proposalsEndpoint {
+	return &proposalsEndpoint{proposalProvider, morqaClient}
 }
 
 // swagger:operation GET /proposals Proposal listProposals
@@ -136,7 +139,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 	providerID := req.URL.Query().Get("providerId")
 	serviceType := req.URL.Query().Get("serviceType")
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
-	proposals, err := pe.mysteriumClient.FindProposals(providerID, serviceType)
+	proposals, err := pe.proposalProvider.FindProposals(providerID, serviceType)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -152,8 +155,8 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, mc server.Client, morqaClient metrics.QualityOracle) {
-	pe := NewProposalsEndpoint(mc, morqaClient)
+func AddRoutesForProposals(router *httprouter.Router, proposalProvider ProposalProvider, morqaClient metrics.QualityOracle) {
+	pe := NewProposalsEndpoint(proposalProvider, morqaClient)
 	router.GET("/proposals", pe.List)
 }
 

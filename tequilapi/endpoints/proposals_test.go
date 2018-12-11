@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/server"
+
 	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
@@ -50,9 +51,9 @@ var proposals = []dto_discovery.ServiceProposal{
 }
 
 func TestProposalsEndpointListByNodeId(t *testing.T) {
-	discoveryAPI := server.NewClientFake()
-	for _, proposal := range proposals {
-		discoveryAPI.RegisterProposal(proposal, nil)
+	mockProposalProvider := &mockProposalProvider{
+		//we assume that underling component does correct filtering
+		proposals: []dto_discovery.ServiceProposal{proposals[0]},
 	}
 
 	req, err := http.NewRequest(
@@ -67,7 +68,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(mockProposalProvider, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -90,6 +91,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
+	assert.Equal(t, "0xProviderId", mockProposalProvider.recordedProviderId)
 }
 
 func TestProposalsEndpointList(t *testing.T) {
@@ -221,3 +223,17 @@ func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
 	}
 	return nil
 }
+
+type mockProposalProvider struct {
+	recordedProviderId  string
+	recordedServiceType string
+	proposals           []dto_discovery.ServiceProposal
+}
+
+func (mpp *mockProposalProvider) FindProposals(providerID string, serviceType string) ([]dto_discovery.ServiceProposal, error) {
+	mpp.recordedProviderId = providerID
+	mpp.recordedServiceType = serviceType
+	return mpp.proposals, nil
+}
+
+var _ ProposalProvider = &mockProposalProvider{}
