@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"encoding/json"
-	"errors"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
@@ -46,12 +45,6 @@ type identityList struct {
 // swagger:model IdentityCreationDTO
 type identityCreationDto struct {
 	Passphrase *string `json:"passphrase"`
-}
-
-// swagger:model IdentityRegistrationDTO
-type identityRegistrationDto struct {
-	// value true means register, false - unregister which in not implemented yet
-	Registered bool `json:"registered"`
 }
 
 // swagger:model IdentityUnlockingDTO
@@ -152,59 +145,6 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 	utils.WriteAsJSON(idDto, resp)
 }
 
-// swagger:operation PUT /identities/{id}/registration Identity registerIdentity
-// ---
-// summary: Registers identity
-// description: Registers existing identity with Discovery API
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity stored in keystore
-//   type: string
-//   required: true
-// - in: body
-//   name: body
-//   description: Parameter in body (registered) required for registering identity
-//   schema:
-//     $ref: "#/definitions/IdentityRegistrationDTO"
-// responses:
-//   202:
-//     description: Identity registered
-//   400:
-//     description: Bad request
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   501:
-//     description: Not implemented
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	id := identity.FromAddress(params.ByName("id"))
-	registerReq, err := toRegisterRequest(request)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
-		return
-	}
-
-	err = validateRegistrationRequest(registerReq)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusNotImplemented)
-		return
-	}
-
-	err = endpoint.mysteriumClient.RegisterIdentity(id, endpoint.signerFactory(id))
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-
-	resp.WriteHeader(http.StatusAccepted)
-}
-
 // swagger:operation PUT /identities/{id}/unlock Identity unlockIdentity
 // ---
 // summary: Unlocks identity
@@ -272,19 +212,6 @@ func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, er
 	return
 }
 
-func toRegisterRequest(req *http.Request) (isRegisterReq identityRegistrationDto, err error) {
-	isRegisterReq = identityRegistrationDto{}
-	err = json.NewDecoder(req.Body).Decode(&isRegisterReq)
-	return
-}
-
-func validateRegistrationRequest(regReq identityRegistrationDto) (err error) {
-	if regReq.Registered == false {
-		err = errors.New("Unregister not supported")
-	}
-	return
-}
-
 func validateUnlockRequest(unlockReq identityUnlockingDto) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
 	if unlockReq.Passphrase == nil {
@@ -311,6 +238,5 @@ func AddRoutesForIdentities(
 	idmEnd := NewIdentitiesEndpoint(idm, mystClient, signerFactory)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
-	router.PUT("/identities/:id/registration", idmEnd.Register)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 }

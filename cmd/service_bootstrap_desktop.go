@@ -84,7 +84,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	identityHandler := identity_selector.NewHandler(
 		di.IdentityManager,
-		di.MysteriumClient,
+		di.MysteriumApi,
 		identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)
@@ -121,7 +121,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			di.ServiceRegistry.Create,
 			newDialogWaiter,
 			newDialogHandler,
-			discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumClient, di.SignerFactory),
+			discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumApi, di.SignerFactory),
 		)
 	}
 

@@ -70,7 +70,7 @@ type Dependencies struct {
 	Node *node.Node
 
 	NetworkDefinition    metadata.NetworkDefinition
-	MysteriumClient      server.Client
+	MysteriumApi         *server.MysteriumApi
 	MysteriumMorqaClient metrics.QualityOracle
 	EtherClient          *ethclient.Client
 
@@ -247,7 +247,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
 	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
 		di.StatisticsTracker,
-		di.MysteriumClient,
+		di.MysteriumApi,
 		di.SignerFactory,
 		di.LocationOriginal.Get,
 		time.Minute,
@@ -266,10 +266,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumClient, di.SignerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumClient)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.MysteriumApi, di.SignerFactory)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumApi)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
-	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumClient, di.MysteriumMorqaClient)
+	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumApi, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
@@ -325,7 +325,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.NetworkDefinition = network
-	di.MysteriumClient = server.NewClient(network.DiscoveryAPIAddress)
+	di.MysteriumApi = server.NewClient(network.DiscoveryAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)

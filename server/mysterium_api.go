@@ -50,21 +50,21 @@ func newHTTPTransport(requestTimeout time.Duration) HTTPTransport {
 	}
 }
 
-type mysteriumAPI struct {
+type MysteriumApi struct {
 	http                HTTPTransport
 	discoveryAPIAddress string
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
-func NewClient(discoveryAPIAddress string) Client {
-	return &mysteriumAPI{
+func NewClient(discoveryAPIAddress string) *MysteriumApi {
+	return &MysteriumApi{
 		newHTTPTransport(1 * time.Minute),
 		discoveryAPIAddress,
 	}
 }
 
 // RegisterIdentity registers given identity to discovery service
-func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
+func (mApi *MysteriumApi) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "identities", dto.CreateIdentityRequest{
 		Identity: id.Address,
 	}, signer)
@@ -80,7 +80,7 @@ func (mApi *mysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 }
 
 // RegisterProposal registers service proposal to discovery service
-func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+func (mApi *MysteriumApi) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", dto.NodeRegisterRequest{
 		ServiceProposal: proposal,
 	}, signer)
@@ -97,7 +97,7 @@ func (mApi *mysteriumAPI) RegisterProposal(proposal dto_discovery.ServiceProposa
 }
 
 // UnregisterProposal unregisters a service proposal when client disconnects
-func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+func (mApi *MysteriumApi) UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "unregister_proposal", dto.ProposalUnregisterRequest{
 		ProviderID:  proposal.ProviderID,
 		ServiceType: proposal.ServiceType,
@@ -116,7 +116,7 @@ func (mApi *mysteriumAPI) UnregisterProposal(proposal dto_discovery.ServicePropo
 }
 
 // PingProposal pings service proposal as being alive
-func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
+func (mApi *MysteriumApi) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
 		NodeKey:     proposal.ProviderID,
 		ServiceType: proposal.ServiceType,
@@ -133,7 +133,7 @@ func (mApi *mysteriumAPI) PingProposal(proposal dto_discovery.ServiceProposal, s
 }
 
 // FindProposals fetches currently active service proposals from discovery
-func (mApi *mysteriumAPI) FindProposals(providerID string, serviceType string) ([]dto_discovery.ServiceProposal, error) {
+func (mApi *MysteriumApi) FindProposals(providerID string, serviceType string) ([]dto_discovery.ServiceProposal, error) {
 	values := url.Values{}
 	if providerID != "" {
 		values.Set("node_key", providerID)
@@ -160,7 +160,7 @@ func (mApi *mysteriumAPI) FindProposals(providerID string, serviceType string) (
 }
 
 // SendSessionStats sends session statistics
-func (mApi *mysteriumAPI) SendSessionStats(sessionID session.ID, sessionStats dto.SessionStats, signer identity.Signer) error {
+func (mApi *MysteriumApi) SendSessionStats(sessionID session.ID, sessionStats dto.SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionID)
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
 	if err != nil {
@@ -175,7 +175,7 @@ func (mApi *mysteriumAPI) SendSessionStats(sessionID session.ID, sessionStats dt
 	return nil
 }
 
-func (mApi *mysteriumAPI) doRequest(req *http.Request) error {
+func (mApi *MysteriumApi) doRequest(req *http.Request) error {
 	resp, err := mApi.http.Do(req)
 	if err != nil {
 		log.Error(mysteriumAPILogPrefix, err)
@@ -186,7 +186,7 @@ func (mApi *mysteriumAPI) doRequest(req *http.Request) error {
 	return ParseResponseError(resp)
 }
 
-func (mApi *mysteriumAPI) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
+func (mApi *MysteriumApi) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
 	resp, err := mApi.http.Do(req)
 	if err != nil {
 		log.Error(mysteriumAPILogPrefix, err)

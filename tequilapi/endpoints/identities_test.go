@@ -41,45 +41,6 @@ var (
 	fakeSignerFactory = func(id identity.Identity) identity.Signer { return nil } //it works in this case - it's passed to fake myst client
 )
 
-func TestRegisterExistingIdentityRequest(t *testing.T) {
-	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
-	req, err := http.NewRequest(
-		http.MethodPut,
-		identityUrl,
-		bytes.NewBufferString(`{"registered": false}`),
-	)
-
-	assert.Nil(t, err)
-	resp := httptest.NewRecorder()
-
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Register
-	handlerFunc(resp, req, nil)
-
-	assert.Equal(t, http.StatusNotImplemented, resp.Code)
-	assert.JSONEq(
-		t,
-		`{"message": "Unregister not supported"}`,
-		resp.Body.String(),
-	)
-}
-
-func TestRegisterIdentitySuccess(t *testing.T) {
-	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
-	req, err := http.NewRequest(
-		http.MethodPut,
-		identityUrl,
-		bytes.NewBufferString(`{"registered": true}`),
-	)
-
-	assert.Nil(t, err)
-	resp := httptest.NewRecorder()
-
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, mystClient, fakeSignerFactory).Register
-	handlerFunc(resp, req, nil)
-
-	assert.Equal(t, http.StatusAccepted, resp.Code)
-}
-
 func TestUnlockIdentitySuccess(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()

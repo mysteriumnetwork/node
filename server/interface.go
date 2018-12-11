@@ -26,8 +26,6 @@ import (
 // TODO this interface should slowly decay into smaller interfaces defined on caller side
 // example - statistics reporter
 type Client interface {
-	RegisterIdentity(id identity.Identity, signer identity.Signer) (err error)
-
 	FindProposals(providerID string, serviceType string) (proposals []dto_discovery.ServiceProposal, err error)
 	RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
 	UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) (err error)
