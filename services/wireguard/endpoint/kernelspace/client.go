@@ -92,16 +92,16 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 
 func (c *client) up(iface string, ipAddr net.IPNet) error {
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
-		if err := ipExec("link", "add", "dev", iface, "type", "wireguard"); err != nil {
+		if err := suExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
 			return err
 		}
 	}
 
-	if err := ipExec("address", "replace", "dev", iface, ipAddr.String()); err != nil {
+	if err := suExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
 		return err
 	}
 
-	return ipExec("link", "set", "dev", iface, "up")
+	return suExec("ip", "link", "set", "dev", iface, "up")
 }
 
 func (c *client) addRoute(iface string, endpoint net.UDPAddr) error {
@@ -110,13 +110,13 @@ func (c *client) addRoute(iface string, endpoint net.UDPAddr) error {
 		return err
 	}
 
-	if err := ipExec("route", "replace", endpoint.IP.String(), "via", gw.String()); err != nil {
+	if err := suExec("ip", "route", "replace", endpoint.IP.String(), "via", gw.String()); err != nil {
 		return err
 	}
-	if err := ipExec("route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
+	if err := suExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
 		return err
 	}
-	return ipExec("route", "replace", "128.0.0.0/1", "dev", iface)
+	return suExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
 }
 
 func (c *client) Close() error {
@@ -126,12 +126,12 @@ func (c *client) Close() error {
 	}
 
 	if len(d.Peers) > 0 && d.Peers[0].Endpoint != nil {
-		if err := ipExec("route", "del", d.Peers[0].Endpoint.IP.String()); err != nil {
+		if err := suExec("ip", "route", "del", d.Peers[0].Endpoint.IP.String()); err != nil {
 			return err
 		}
 	}
 
-	if err := ipExec("link", "del", "dev", c.iface); err != nil {
+	if err := suExec("ip", "link", "del", "dev", c.iface); err != nil {
 		return err
 	}
 	return c.wgClient.Close()
@@ -167,9 +167,9 @@ func stringToKey(key string) (wgtypes.Key, error) {
 	return wgtypes.NewKey(k)
 }
 
-func ipExec(args ...string) error {
-	if err := exec.Command("ip", args...).Run(); err != nil {
-		return fmt.Errorf("'ip %v': %v", strings.Join(args, " "), err)
+func suExec(args ...string) error {
+	if out, err := exec.Command("sudo", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("'sudo %v': %v output: %s", strings.Join(args, " "), err, out)
 	}
 	return nil
 }
