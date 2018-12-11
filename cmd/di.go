@@ -43,11 +43,11 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/metrics"
+	"github.com/mysteriumnetwork/node/market/metrics/oracle"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/mysteriumnetwork/node/server"
-	"github.com/mysteriumnetwork/node/server/metrics"
-	"github.com/mysteriumnetwork/node/server/metrics/oracle"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
@@ -70,7 +70,7 @@ type Dependencies struct {
 	Node *node.Node
 
 	NetworkDefinition    metadata.NetworkDefinition
-	MysteriumApi         *server.MysteriumApi
+	MysteriumAPI         *mysterium.MysteriumAPI
 	MysteriumMorqaClient metrics.QualityOracle
 	EtherClient          *ethclient.Client
 
@@ -232,7 +232,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
-	dialogFactory := func(consumerID, providerID identity.Identity, contact dto_discovery.Contact) (communication.Dialog, error) {
+	dialogFactory := func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
 		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID))
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
@@ -247,7 +247,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
 	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
 		di.StatisticsTracker,
-		di.MysteriumApi,
+		di.MysteriumAPI,
 		di.SignerFactory,
 		di.LocationOriginal.Get,
 		time.Minute,
@@ -267,9 +267,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.SignerFactory)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumApi)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
-	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumApi, di.MysteriumMorqaClient)
+	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
@@ -279,7 +279,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 }
 
 func newSessionManagerFactory(
-	proposal dto_discovery.ServiceProposal,
+	proposal market.ServiceProposal,
 	configProvider session.ConfigProvider,
 	sessionStorage *session.StorageMemory,
 	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
@@ -325,7 +325,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.NetworkDefinition = network
-	di.MysteriumApi = server.NewClient(network.DiscoveryAPIAddress)
+	di.MysteriumAPI = mysterium.NewClient(network.DiscoveryAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)

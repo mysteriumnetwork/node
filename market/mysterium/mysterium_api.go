@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package server
+package mysterium
 
 import (
 	"fmt"
@@ -25,9 +25,8 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/requests"
-	"github.com/mysteriumnetwork/node/server/dto"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -50,22 +49,23 @@ func newHTTPTransport(requestTimeout time.Duration) HTTPTransport {
 	}
 }
 
-type MysteriumApi struct {
+// MysteriumAPI provides access to mysterium owned central discovery service
+type MysteriumAPI struct {
 	http                HTTPTransport
 	discoveryAPIAddress string
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
-func NewClient(discoveryAPIAddress string) *MysteriumApi {
-	return &MysteriumApi{
+func NewClient(discoveryAPIAddress string) *MysteriumAPI {
+	return &MysteriumAPI{
 		newHTTPTransport(1 * time.Minute),
 		discoveryAPIAddress,
 	}
 }
 
 // RegisterIdentity registers given identity to discovery service
-func (mApi *MysteriumApi) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "identities", dto.CreateIdentityRequest{
+func (mApi *MysteriumAPI) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "identities", CreateIdentityRequest{
 		Identity: id.Address,
 	}, signer)
 	if err != nil {
@@ -80,8 +80,8 @@ func (mApi *MysteriumApi) RegisterIdentity(id identity.Identity, signer identity
 }
 
 // RegisterProposal registers service proposal to discovery service
-func (mApi *MysteriumApi) RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", dto.NodeRegisterRequest{
+func (mApi *MysteriumAPI) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", NodeRegisterRequest{
 		ServiceProposal: proposal,
 	}, signer)
 	if err != nil {
@@ -97,8 +97,8 @@ func (mApi *MysteriumApi) RegisterProposal(proposal dto_discovery.ServiceProposa
 }
 
 // UnregisterProposal unregisters a service proposal when client disconnects
-func (mApi *MysteriumApi) UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "unregister_proposal", dto.ProposalUnregisterRequest{
+func (mApi *MysteriumAPI) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "unregister_proposal", ProposalUnregisterRequest{
 		ProviderID:  proposal.ProviderID,
 		ServiceType: proposal.ServiceType,
 	}, signer)
@@ -116,8 +116,8 @@ func (mApi *MysteriumApi) UnregisterProposal(proposal dto_discovery.ServicePropo
 }
 
 // PingProposal pings service proposal as being alive
-func (mApi *MysteriumApi) PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error {
-	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", dto.NodeStatsRequest{
+func (mApi *MysteriumAPI) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
+	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "ping_proposal", NodeStatsRequest{
 		NodeKey:     proposal.ProviderID,
 		ServiceType: proposal.ServiceType,
 	}, signer)
@@ -133,7 +133,7 @@ func (mApi *MysteriumApi) PingProposal(proposal dto_discovery.ServiceProposal, s
 }
 
 // FindProposals fetches currently active service proposals from discovery
-func (mApi *MysteriumApi) FindProposals(providerID string, serviceType string) ([]dto_discovery.ServiceProposal, error) {
+func (mApi *MysteriumAPI) FindProposals(providerID string, serviceType string) ([]market.ServiceProposal, error) {
 	values := url.Values{}
 	if providerID != "" {
 		values.Set("node_key", providerID)
@@ -148,7 +148,7 @@ func (mApi *MysteriumApi) FindProposals(providerID string, serviceType string) (
 		return nil, err
 	}
 
-	var proposalsResponse dto.ProposalsResponse
+	var proposalsResponse ProposalsResponse
 	err = mApi.doRequestAndParseResponse(req, &proposalsResponse)
 	if err != nil {
 		return nil, err
@@ -160,7 +160,7 @@ func (mApi *MysteriumApi) FindProposals(providerID string, serviceType string) (
 }
 
 // SendSessionStats sends session statistics
-func (mApi *MysteriumApi) SendSessionStats(sessionID session.ID, sessionStats dto.SessionStats, signer identity.Signer) error {
+func (mApi *MysteriumAPI) SendSessionStats(sessionID session.ID, sessionStats SessionStats, signer identity.Signer) error {
 	path := fmt.Sprintf("sessions/%s/stats", sessionID)
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, path, sessionStats, signer)
 	if err != nil {
@@ -175,7 +175,7 @@ func (mApi *MysteriumApi) SendSessionStats(sessionID session.ID, sessionStats dt
 	return nil
 }
 
-func (mApi *MysteriumApi) doRequest(req *http.Request) error {
+func (mApi *MysteriumAPI) doRequest(req *http.Request) error {
 	resp, err := mApi.http.Do(req)
 	if err != nil {
 		log.Error(mysteriumAPILogPrefix, err)
@@ -186,7 +186,7 @@ func (mApi *MysteriumApi) doRequest(req *http.Request) error {
 	return ParseResponseError(resp)
 }
 
-func (mApi *MysteriumApi) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
+func (mApi *MysteriumAPI) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
 	resp, err := mApi.http.Do(req)
 	if err != nil {
 		log.Error(mysteriumAPILogPrefix, err)
@@ -203,7 +203,7 @@ func (mApi *MysteriumApi) doRequestAndParseResponse(req *http.Request, responseV
 	return ParseResponseJSON(resp, responseValue)
 }
 
-func supportedProposalsOnly(proposals []dto_discovery.ServiceProposal) (supported []dto_discovery.ServiceProposal) {
+func supportedProposalsOnly(proposals []market.ServiceProposal) (supported []market.ServiceProposal) {
 	for _, proposal := range proposals {
 		if proposal.IsSupported() {
 			supported = append(supported, proposal)

@@ -42,8 +42,6 @@ fi
 MESSAGES_ERROR=`golint --set_exit_status --min_confidence=1 ${ARGUMENTS} 2>/dev/null`
 MESSAGES_RECONFIGURE=()
 
-check_uncleaned_package "github.com/mysteriumnetwork/node/identity" 6
-check_uncleaned_package "github.com/mysteriumnetwork/node/tequilapi" 10
 check_uncleaned_package "github.com/mysteriumnetwork/node/money" 4
 
 MESSAGES_ERROR_COUNT=`echo -n "${MESSAGES_ERROR}" | grep -c '^'`

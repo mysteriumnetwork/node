@@ -15,20 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package discovery
+package registry
 
 import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
+// ProposalRegistry defines methods for proposal lifecycle - registration, keeping up to date, removal
 type ProposalRegistry interface {
-	RegisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error
-	PingProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error
-	UnregisterProposal(proposal dto_discovery.ServiceProposal, signer identity.Signer) error
+	RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
+	PingProposal(proposal market.ServiceProposal, signer identity.Signer) error
+	UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
 }
 
 // Discovery structure holds discovery service state
@@ -39,7 +40,7 @@ type Discovery struct {
 	proposalRegistry            ProposalRegistry
 	signerCreate                identity.SignerFactory
 	signer                      identity.Signer
-	proposal                    dto_discovery.ServiceProposal
+	proposal                    market.ServiceProposal
 	statusChan                  chan Status
 	status                      Status
 	proposalAnnouncementStopped *sync.WaitGroup

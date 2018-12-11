@@ -23,9 +23,9 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/market/metrics"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/requests"
-	"github.com/mysteriumnetwork/node/server"
-	"github.com/mysteriumnetwork/node/server/metrics"
 )
 
 const (
@@ -33,7 +33,7 @@ const (
 )
 
 type mysteriumMorqa struct {
-	http                 server.HTTPTransport
+	http                 mysterium.HTTPTransport
 	qualityOracleAddress string
 }
 
@@ -45,7 +45,7 @@ func NewMorqaClient(qualityOracleAddress string) metrics.QualityOracle {
 	}
 }
 
-func newHTTPTransport(requestTimeout time.Duration) server.HTTPTransport {
+func newHTTPTransport(requestTimeout time.Duration) mysterium.HTTPTransport {
 	return &http.Client{
 		Transport: &http.Transport{
 			//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
@@ -81,11 +81,11 @@ func (m *mysteriumMorqa) doRequestAndParseResponse(req *http.Request, responseVa
 	}
 	defer resp.Body.Close()
 
-	err = server.ParseResponseError(resp)
+	err = mysterium.ParseResponseError(resp)
 	if err != nil {
 		log.Error(mysteriumMorqaLogPrefix, err)
 		return err
 	}
 
-	return server.ParseResponseJSON(resp, responseValue)
+	return mysterium.ParseResponseJSON(resp, responseValue)
 }

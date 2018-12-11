@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -81,7 +81,7 @@ func TestConsumeLowAmount(t *testing.T) {
 	err := json.Unmarshal(jsonRequest, &request)
 	assert.Nil(t, err)
 
-	proposal := dto.ServiceProposal{
+	proposal := market.ServiceProposal{
 		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{999999999},
 	}
@@ -96,7 +96,7 @@ func TestConsumeLowBalance(t *testing.T) {
 	err := json.Unmarshal(jsonRequest, &request)
 	assert.Nil(t, err)
 
-	proposal := dto.ServiceProposal{
+	proposal := market.ServiceProposal{
 		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{1},
 	}
@@ -112,7 +112,7 @@ func TestConsume(t *testing.T) {
 	err := json.Unmarshal(jsonRequest, &request)
 	assert.Nil(t, err)
 
-	proposal := dto.ServiceProposal{
+	proposal := market.ServiceProposal{
 		ProviderID:    "0x1526273ac60cdebfa2aece92da3261ecb564763a",
 		PaymentMethod: fakePayment{1},
 	}

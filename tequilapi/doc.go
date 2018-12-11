@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Tequila API
+// Package tequilapi Tequila API
 //
 // The purpose of this documentation is to provide developers an insight of how to
 // interact with Mysterium Node via Tequila API.

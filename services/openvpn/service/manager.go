@@ -27,8 +27,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -42,7 +42,7 @@ type ServerConfigFactory func(*tls.Primitives) *openvpn_service.ServerConfig
 type ServerFactory func(*openvpn_service.ServerConfig) openvpn.Process
 
 // ProposalFactory prepares service proposal during runtime
-type ProposalFactory func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal
+type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
 // SessionConfigProviderFactory initiates ConfigProvider instance during runtime
 type SessionConfigProviderFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigProvider
@@ -63,7 +63,7 @@ type Manager struct {
 
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (
-	proposal dto_discovery.ServiceProposal,
+	proposal market.ServiceProposal,
 	sessionConfigProvider session.ConfigProvider,
 	err error,
 ) {
@@ -94,7 +94,7 @@ func (manager *Manager) Start(providerID identity.Identity) (
 		err = service.ErrorLocation
 		return
 	}
-	currentLocation := dto_discovery.Location{Country: currentCountry}
+	currentLocation := market.Location{Country: currentCountry}
 	log.Info(logPrefix, "Country detected: ", currentCountry)
 
 	caSubject := pkix.Name{

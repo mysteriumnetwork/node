@@ -25,8 +25,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	server_dto "github.com/mysteriumnetwork/node/server/dto"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,7 +36,7 @@ var mockStateEvent = connection.StateEvent{
 	SessionInfo: connection.SessionInfo{
 		ConsumerID: identity.FromAddress("0x000"),
 		SessionID:  session.ID("test"),
-		Proposal: dto.ServiceProposal{
+		Proposal: market.ServiceProposal{
 			ServiceType: "just a test",
 		},
 	},
@@ -105,7 +105,7 @@ type mockRemoteSender struct {
 	called chan bool
 }
 
-func (mrs *mockRemoteSender) SendSessionStats(id session.ID, stats server_dto.SessionStats, signer identity.Signer) error {
+func (mrs *mockRemoteSender) SendSessionStats(id session.ID, stats mysterium.SessionStats, signer identity.Signer) error {
 	mrs.called <- true
 	return nil
 }
@@ -116,4 +116,4 @@ func newMockRemoteSender() *mockRemoteSender {
 	}
 }
 
-var _ RemoteReporter = &mockRemoteSender{}
+var _ Reporter = &mockRemoteSender{}

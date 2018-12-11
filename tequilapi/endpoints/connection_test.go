@@ -26,12 +26,11 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,7 +44,7 @@ type fakeManager struct {
 	requestedServiceType string
 }
 
-func (fm *fakeManager) Connect(consumerID identity.Identity, proposal dto.ServiceProposal, options connection.ConnectParams) error {
+func (fm *fakeManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
 	fm.requestedConsumer = consumerID
 	fm.requestedProvider = identity.FromAddress(proposal.ProviderID)
 	fm.requestedServiceType = proposal.ServiceType
@@ -80,7 +79,7 @@ func (ssk *StubStatisticsTracker) GetSessionDuration() time.Duration {
 }
 
 func getMockProposalProviderWithSpecifiedProposal(providerID, serviceType string) ProposalProvider {
-	sampleProposal := dto.ServiceProposal{
+	sampleProposal := market.ServiceProposal{
 		ID:                1,
 		ServiceType:       serviceType,
 		ServiceDefinition: TestServiceDefinition{},
@@ -88,7 +87,7 @@ func getMockProposalProviderWithSpecifiedProposal(providerID, serviceType string
 	}
 
 	return &mockProposalProvider{
-		proposals: []dto.ServiceProposal{sampleProposal},
+		proposals: []market.ServiceProposal{sampleProposal},
 	}
 }
 
@@ -509,7 +508,7 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, &mockProposalProvider{proposals: make([]dto.ServiceProposal, 0)})
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, &mockProposalProvider{proposals: make([]market.ServiceProposal, 0)})
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",

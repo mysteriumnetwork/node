@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package discovery
+package registry
 
 import (
 	"sync"
@@ -24,13 +24,13 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	providerID = identity.FromAddress("my-identity")
-	proposal   = dto.ServiceProposal{
+	proposal   = market.ServiceProposal{
 		ProviderID: providerID.Address,
 	}
 )
@@ -112,15 +112,15 @@ func observeStatus(d *Discovery, status Status) Status {
 type mockedProposalRegistry struct {
 }
 
-func (mockedProposalRegistry) RegisterProposal(proposal dto.ServiceProposal, signer identity.Signer) error {
+func (mockedProposalRegistry) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	return nil
 }
 
-func (mockedProposalRegistry) PingProposal(proposal dto.ServiceProposal, signer identity.Signer) error {
+func (mockedProposalRegistry) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	return nil
 }
 
-func (mockedProposalRegistry) UnregisterProposal(proposal dto.ServiceProposal, signer identity.Signer) error {
+func (mockedProposalRegistry) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	return nil
 }
 

@@ -24,7 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/identity"
-	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	node_session "github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 )
@@ -44,7 +44,7 @@ var (
 		SessionInfo: connection.SessionInfo{
 			SessionID:  sessionID,
 			ConsumerID: consumerID,
-			Proposal: discovery_dto.ServiceProposal{
+			Proposal: market.ServiceProposal{
 				ServiceDefinition: stubLocation,
 				ServiceType:       serviceType,
 				ProviderID:        providerID.Address,
@@ -150,4 +150,4 @@ func (sr *StubRetriever) Retrieve() consumer.SessionStatistics {
 
 type StubServiceDefinition struct{}
 
-func (fs *StubServiceDefinition) GetLocation() discovery_dto.Location { return discovery_dto.Location{} }
+func (fs *StubServiceDefinition) GetLocation() market.Location { return market.Location{} }

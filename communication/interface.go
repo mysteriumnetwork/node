@@ -19,7 +19,7 @@ package communication
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 // DialogWaiter defines server which:
@@ -27,7 +27,7 @@ import (
 //   - negotiates with Dialog initiator
 //   - finally creates Dialog, when it is accepted
 type DialogWaiter interface {
-	Start() (dto_discovery.Contact, error)
+	Start() (market.Contact, error)
 	Stop() error
 	ServeDialogs(DialogHandler) error
 }
@@ -41,7 +41,7 @@ type DialogHandler interface {
 //   - initiates Dialog requests to network
 //   - creates Dialog, when it is negotiated
 type DialogEstablisher interface {
-	EstablishDialog(peerID identity.Identity, peerContact dto_discovery.Contact) (Dialog, error)
+	EstablishDialog(peerID identity.Identity, peerContact market.Contact) (Dialog, error)
 }
 
 // Dialog represent established connection between 2 peers in network.

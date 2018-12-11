@@ -17,14 +17,14 @@
 
 package noop
 
-import discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+import "github.com/mysteriumnetwork/node/market"
 
 // FakePromiseEngine do nothing. It required for the temporary --experiment-promise-check flag.
 // TODO it should be removed once --experiment-promise-check will be deleted.
 type FakePromiseEngine struct{}
 
 // Start fakes promise engine start
-func (*FakePromiseEngine) Start(_ discovery_dto.ServiceProposal) error {
+func (*FakePromiseEngine) Start(_ market.ServiceProposal) error {
 	return nil
 }
 

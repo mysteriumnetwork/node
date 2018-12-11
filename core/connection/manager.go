@@ -27,7 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -58,7 +58,7 @@ type Creator func(ConnectOptions, StateChannel, StatisticsChannel) (Connection, 
 type SessionInfo struct {
 	SessionID  session.ID
 	ConsumerID identity.Identity
-	Proposal   dto.ServiceProposal
+	Proposal   market.ServiceProposal
 }
 
 // Publisher is responsible for publishing given events
@@ -98,7 +98,7 @@ func NewManager(
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID identity.Identity, proposal dto.ServiceProposal, params ConnectParams) (err error) {
+func (manager *connectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	if manager.status.State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -122,7 +122,7 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 	return err
 }
 
-func (manager *connectionManager) startConnection(consumerID identity.Identity, proposal dto.ServiceProposal, params ConnectParams) (err error) {
+func (manager *connectionManager) startConnection(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	manager.mutex.Lock()
 	cancelCtx := manager.cleanConnection
 	manager.mutex.Unlock()

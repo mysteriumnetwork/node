@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 )
@@ -70,7 +70,7 @@ func TestNewAddressFromHostAndID(t *testing.T) {
 }
 
 func TestNewAddressForContact(t *testing.T) {
-	address, err := NewAddressForContact(dto_discovery.Contact{
+	address, err := NewAddressForContact(market.Contact{
 		Type: "nats/v1",
 		Definition: ContactNATSV1{
 			Topic:           "123456",
@@ -90,7 +90,7 @@ func TestNewAddressForContact(t *testing.T) {
 }
 
 func TestNewAddressForContact_UnknownType(t *testing.T) {
-	address, err := NewAddressForContact(dto_discovery.Contact{
+	address, err := NewAddressForContact(market.Contact{
 		Type: "natc/v1",
 	})
 
@@ -101,7 +101,7 @@ func TestNewAddressForContact_UnknownType(t *testing.T) {
 func TestNewAddressForContact_UnknownDefinition(t *testing.T) {
 	type badDefinition struct{}
 
-	address, err := NewAddressForContact(dto_discovery.Contact{
+	address, err := NewAddressForContact(market.Contact{
 		Type:       "nats/v1",
 		Definition: badDefinition{},
 	})
@@ -145,7 +145,7 @@ func TestAddress_GetContact(t *testing.T) {
 
 	assert.Equal(
 		t,
-		dto_discovery.Contact{
+		market.Contact{
 			Type: "nats/v1",
 			Definition: ContactNATSV1{
 				Topic:           "123456",

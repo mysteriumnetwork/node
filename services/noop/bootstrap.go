@@ -20,14 +20,14 @@ package noop
 import (
 	"encoding/json"
 
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 // Bootstrap is called on program initialization time and registers various deserializers related to noop service
 func Bootstrap() {
-	dto_discovery.RegisterServiceDefinitionUnserializer(
+	market.RegisterServiceDefinitionUnserializer(
 		ServiceType,
-		func(rawDefinition *json.RawMessage) (dto_discovery.ServiceDefinition, error) {
+		func(rawDefinition *json.RawMessage) (market.ServiceDefinition, error) {
 			var definition ServiceDefinition
 			err := json.Unmarshal(*rawDefinition, &definition)
 
@@ -35,9 +35,9 @@ func Bootstrap() {
 		},
 	)
 
-	dto_discovery.RegisterPaymentMethodUnserializer(
+	market.RegisterPaymentMethodUnserializer(
 		PaymentMethodNoop,
-		func(rawDefinition *json.RawMessage) (dto_discovery.PaymentMethod, error) {
+		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
 			var method PaymentNoop
 			err := json.Unmarshal(*rawDefinition, &method)
 

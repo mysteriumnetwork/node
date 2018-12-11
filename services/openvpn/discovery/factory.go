@@ -21,18 +21,18 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/datasize"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 )
 
 // NewServiceProposalWithLocation creates service proposal description for openvpn service
 func NewServiceProposalWithLocation(
-	serviceLocation dto_discovery.Location,
+	serviceLocation market.Location,
 	protocol string,
-) dto_discovery.ServiceProposal {
-	return dto_discovery.ServiceProposal{
+) market.ServiceProposal {
+	return market.ServiceProposal{
 		ServiceType: openvpn.ServiceType,
 		ServiceDefinition: dto.ServiceDefinition{
 			Location:          serviceLocation,

@@ -15,13 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package dto
+package market
 
-// SessionStats mapped to json structure
-type SessionStats struct {
-	BytesSent       uint64 `json:"bytes_sent"`
-	BytesReceived   uint64 `json:"bytes_received"`
-	ProviderID      string `json:"provider_id"`
-	ConsumerCountry string `json:"consumer_country"`
-	ServiceType     string `json:"service_type"`
+// Location struct represents geographic location of service provider
+type Location struct {
+	Country string `json:"country,omitempty"`
+	City    string `json:"city,omitempty"`
+	// Autonomous System Number http://www.whatismyip.cx/
+	ASN string `json:"asn,omitempty"`
 }

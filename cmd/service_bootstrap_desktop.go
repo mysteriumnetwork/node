@@ -26,14 +26,14 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/proposals/registry"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
-	wireguard "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
@@ -84,7 +84,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	identityHandler := identity_selector.NewHandler(
 		di.IdentityManager,
-		di.MysteriumApi,
+		di.MysteriumAPI,
 		identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
 		di.SignerFactory,
 	)
@@ -104,7 +104,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			di.IdentityRegistry,
 		), nil
 	}
-	newDialogHandler := func(proposal dto_discovery.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
+	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigProvider) communication.DialogHandler {
 		promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
 			if nodeOptions.ExperimentPromiseCheck {
 				return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
@@ -121,7 +121,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			di.ServiceRegistry.Create,
 			newDialogWaiter,
 			newDialogHandler,
-			discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumApi, di.SignerFactory),
+			registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory),
 		)
 	}
 

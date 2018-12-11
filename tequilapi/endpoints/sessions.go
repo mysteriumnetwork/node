@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
+// SessionsDTO defines session list representable as json
 // swagger:model SessionsDTO
 type SessionsDTO struct {
 	Sessions []sessionDTO `json:"sessions"`

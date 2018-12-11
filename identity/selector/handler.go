@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
+// IdentityRegistry exposes identity registration method
 type IdentityRegistry interface {
 	RegisterIdentity(identity.Identity, identity.Signer) error
 }

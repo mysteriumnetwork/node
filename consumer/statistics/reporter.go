@@ -27,7 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server/dto"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -44,8 +44,10 @@ type Retriever interface {
 	Retrieve() consumer.SessionStatistics
 }
 
-type RemoteReporter interface {
-	SendSessionStats(session.ID, dto.SessionStats, identity.Signer) error
+// Reporter defines method for sending stats outside
+// TODO probably bad naming needs improvement or better definition of our statistics server
+type Reporter interface {
+	SendSessionStats(session.ID, mysterium.SessionStats, identity.Signer) error
 }
 
 // SessionStatisticsReporter sends session stats to remote API server with a fixed sendInterval.
@@ -55,7 +57,7 @@ type SessionStatisticsReporter struct {
 
 	signerFactory       identity.SignerFactory
 	statisticsRetriever Retriever
-	remoteReporter      RemoteReporter
+	remoteReporter      Reporter
 
 	sendInterval time.Duration
 	done         chan struct{}
@@ -65,7 +67,7 @@ type SessionStatisticsReporter struct {
 }
 
 // NewSessionStatisticsReporter function creates new session stats sender by given options
-func NewSessionStatisticsReporter(statisticsRetriever Retriever, remoteReporter RemoteReporter, signerFactory identity.SignerFactory, locationDetector LocationDetector, interval time.Duration) *SessionStatisticsReporter {
+func NewSessionStatisticsReporter(statisticsRetriever Retriever, remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector LocationDetector, interval time.Duration) *SessionStatisticsReporter {
 	return &SessionStatisticsReporter{
 		locationDetector:    locationDetector,
 		signerFactory:       signerFactory,
@@ -132,7 +134,7 @@ func (sr *SessionStatisticsReporter) send(serviceType, providerID, country strin
 	sessionStats := sr.statisticsRetriever.Retrieve()
 	return sr.remoteReporter.SendSessionStats(
 		sessionID,
-		dto.SessionStats{
+		mysterium.SessionStats{
 			ServiceType:     serviceType,
 			BytesSent:       sessionStats.BytesSent,
 			BytesReceived:   sessionStats.BytesReceived,

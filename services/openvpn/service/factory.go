@@ -27,8 +27,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
@@ -58,7 +58,7 @@ func NewManager(
 }
 
 func newProposalFactory(serviceOptions Options) ProposalFactory {
-	return func(currentLocation dto_discovery.Location) dto_discovery.ServiceProposal {
+	return func(currentLocation market.Location) market.ServiceProposal {
 		return openvpn_discovery.NewServiceProposalWithLocation(currentLocation, serviceOptions.OpenvpnProtocol)
 	}
 }

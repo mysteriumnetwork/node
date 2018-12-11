@@ -23,17 +23,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 type TestServiceDefinition struct{}
 
-func (service TestServiceDefinition) GetLocation() dto_discovery.Location {
-	return dto_discovery.Location{ASN: "LT", Country: "Lithuania", City: "Vilnius"}
+func (service TestServiceDefinition) GetLocation() market.Location {
+	return market.Location{ASN: "LT", Country: "Lithuania", City: "Vilnius"}
 }
 
-var proposals = []dto_discovery.ServiceProposal{
+var serviceProposals = []market.ServiceProposal{
 	{
 		ID:                1,
 		ServiceType:       "testprotocol",
@@ -51,7 +51,7 @@ var proposals = []dto_discovery.ServiceProposal{
 func TestProposalsEndpointListByNodeId(t *testing.T) {
 	mockProposalProvider := &mockProposalProvider{
 		//we assume that underling component does correct filtering
-		proposals: []dto_discovery.ServiceProposal{proposals[0]},
+		proposals: []market.ServiceProposal{serviceProposals[0]},
 	}
 
 	req, err := http.NewRequest(
@@ -94,7 +94,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 
 func TestProposalsEndpointList(t *testing.T) {
 	proposalProvider := &mockProposalProvider{
-		proposals: proposals,
+		proposals: serviceProposals,
 	}
 
 	req, err := http.NewRequest(
@@ -144,7 +144,7 @@ func TestProposalsEndpointList(t *testing.T) {
 
 func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	proposalProvider := &mockProposalProvider{
-		proposals: proposals,
+		proposals: serviceProposals,
 	}
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -203,7 +203,7 @@ type mysteriumMorqaFake struct{}
 
 // ProposalsMetrics returns a list of proposals connection metrics
 func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
-	for _, proposal := range proposals {
+	for _, proposal := range serviceProposals {
 		return []json.RawMessage{json.RawMessage(`{
 			"proposalID": {
 				"providerID": "` + proposal.ProviderID + `",
@@ -222,10 +222,10 @@ func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
 type mockProposalProvider struct {
 	recordedProviderId  string
 	recordedServiceType string
-	proposals           []dto_discovery.ServiceProposal
+	proposals           []market.ServiceProposal
 }
 
-func (mpp *mockProposalProvider) FindProposals(providerID string, serviceType string) ([]dto_discovery.ServiceProposal, error) {
+func (mpp *mockProposalProvider) FindProposals(providerID string, serviceType string) ([]market.ServiceProposal, error) {
 	mpp.recordedProviderId = providerID
 	mpp.recordedServiceType = serviceType
 	return mpp.proposals, nil

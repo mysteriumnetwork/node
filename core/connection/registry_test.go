@@ -21,8 +21,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/consumer"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
-
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,7 +58,7 @@ func TestRegistry_CreateConnection_NonExisting(t *testing.T) {
 
 func TestRegistry_CreateConnection_Existing(t *testing.T) {
 	connectOptions := ConnectOptions{
-		Proposal: dto.ServiceProposal{ServiceType: "fake-service"},
+		Proposal: market.ServiceProposal{ServiceType: "fake-service"},
 	}
 
 	registry := Registry{

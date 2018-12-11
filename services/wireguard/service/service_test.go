@@ -27,9 +27,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/stretchr/testify/assert"
 )
@@ -56,10 +56,10 @@ func Test_Manager_Start(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Exactly(
 		t,
-		dto_discovery.ServiceProposal{
+		market.ServiceProposal{
 			ServiceType: "wireguard",
 			ServiceDefinition: wg.ServiceDefinition{
-				Location: dto_discovery.Location{Country: "LT"},
+				Location: market.Location{Country: "LT"},
 			},
 			PaymentMethodType: "WG",
 			PaymentMethod: wg.Payment{

@@ -22,8 +22,8 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/server/metrics"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/metrics"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -71,7 +71,7 @@ type proposalRes struct {
 	Metrics json.RawMessage `json:"metrics,omitempty"`
 }
 
-func proposalToRes(p dto_discovery.ServiceProposal) proposalRes {
+func proposalToRes(p market.ServiceProposal) proposalRes {
 	return proposalRes{
 		ID:          p.ID,
 		ProviderID:  p.ProviderID,
@@ -87,8 +87,8 @@ func proposalToRes(p dto_discovery.ServiceProposal) proposalRes {
 }
 
 func mapProposalsToRes(
-	proposalArry []dto_discovery.ServiceProposal,
-	f func(dto_discovery.ServiceProposal) proposalRes,
+	proposalArry []market.ServiceProposal,
+	f func(market.ServiceProposal) proposalRes,
 	metrics func(proposalRes) proposalRes,
 ) []proposalRes {
 	proposalsResArry := make([]proposalRes, len(proposalArry))
@@ -98,8 +98,9 @@ func mapProposalsToRes(
 	return proposalsResArry
 }
 
+// ProposalProvider allows to fetch proposals by specified params
 type ProposalProvider interface {
-	FindProposals(providerID string, serviceType string) ([]dto_discovery.ServiceProposal, error)
+	FindProposals(providerID string, serviceType string) ([]market.ServiceProposal, error)
 }
 
 type proposalsEndpoint struct {

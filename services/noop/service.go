@@ -25,8 +25,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -52,13 +52,13 @@ type Manager struct {
 }
 
 // Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
+func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigProvider, error) {
 	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
 		return nil, nil
 	}
 
 	if manager.isStarted {
-		return dto_discovery.ServiceProposal{}, sessionConfigProvider, ErrAlreadyStarted
+		return market.ServiceProposal{}, sessionConfigProvider, ErrAlreadyStarted
 	}
 
 	manager.process.Add(1)
@@ -67,18 +67,18 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 
 	publicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
-		return dto_discovery.ServiceProposal{}, sessionConfigProvider, err
+		return market.ServiceProposal{}, sessionConfigProvider, err
 	}
 
 	country, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
-		return dto_discovery.ServiceProposal{}, sessionConfigProvider, err
+		return market.ServiceProposal{}, sessionConfigProvider, err
 	}
 
-	proposal := dto_discovery.ServiceProposal{
+	proposal := market.ServiceProposal{
 		ServiceType: ServiceType,
 		ServiceDefinition: ServiceDefinition{
-			Location: dto_discovery.Location{Country: country},
+			Location: market.Location{Country: country},
 		},
 		PaymentMethodType: PaymentMethodNoop,
 		PaymentMethod: PaymentNoop{

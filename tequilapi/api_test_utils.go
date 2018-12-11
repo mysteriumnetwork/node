@@ -26,17 +26,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type TestClient interface {
-	Get(path string) *http.Response
-}
-
 type testClient struct {
 	t       *testing.T
 	baseURL string
 }
 
 // NewTestClient returns client for making test requests
-func NewTestClient(t *testing.T, address string) TestClient {
+func NewTestClient(t *testing.T, address string) *testClient {
 	return &testClient{
 		t,
 		fmt.Sprintf("http://%s", address),

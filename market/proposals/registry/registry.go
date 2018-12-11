@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package discovery
+package registry
 
 import (
 	"time"
@@ -23,7 +23,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 // Status describes stage of proposal registration
@@ -45,7 +45,7 @@ const (
 const logPrefix = "[discovery] "
 
 // Start launches discovery service
-func (d *Discovery) Start(ownIdentity identity.Identity, proposal dto_discovery.ServiceProposal) {
+func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
 	d.RLock()
 	defer d.RUnlock()
 

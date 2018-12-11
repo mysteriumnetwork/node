@@ -20,7 +20,7 @@ package promise
 import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 var (
@@ -35,13 +35,13 @@ type Storer interface {
 
 // Consumer process promise-requests
 type Consumer struct {
-	proposal dto.ServiceProposal
+	proposal market.ServiceProposal
 	balance  identity.Balance
 	storage  Storer
 }
 
 // NewConsumer creates new instance of the promise consumer
-func NewConsumer(proposal dto.ServiceProposal, balance identity.Balance, storage Storer) *Consumer {
+func NewConsumer(proposal market.ServiceProposal, balance identity.Balance, storage Storer) *Consumer {
 	return &Consumer{
 		proposal: proposal,
 		balance:  balance,

@@ -17,17 +17,15 @@
 
 package dto
 
-import (
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
-)
+import "github.com/mysteriumnetwork/node/market"
 
 // ServiceDefinition structure represents various service parameters
 type ServiceDefinition struct {
 	// Approximate information on location where the service is provided from
-	Location dto_discovery.Location `json:"location"`
+	Location market.Location `json:"location"`
 
 	// Approximate information on location where the tunnelled traffic will originate from
-	LocationOriginate dto_discovery.Location `json:"location_originate"`
+	LocationOriginate market.Location `json:"location_originate"`
 
 	// Available per session bandwidth
 	SessionBandwidth Bandwidth `json:"session_bandwidth,omitempty"`
@@ -37,6 +35,6 @@ type ServiceDefinition struct {
 }
 
 // GetLocation returns geographic location of service definition provider
-func (service ServiceDefinition) GetLocation() dto_discovery.Location {
+func (service ServiceDefinition) GetLocation() market.Location {
 	return service.Location
 }

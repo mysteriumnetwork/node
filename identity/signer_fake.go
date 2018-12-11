@@ -17,10 +17,13 @@
 
 package identity
 
+// SignerFake represents fake signer for testing purposes
+// TODO each caller (or use case) must use its own mocked signer in testing
 type SignerFake struct {
 	ErrorMock error
 }
 
+// Sign signs provided slice of bytes and returns Signature result or error
 func (signer *SignerFake) Sign(message []byte) (Signature, error) {
 	if signer.ErrorMock != nil {
 		return Signature{}, signer.ErrorMock

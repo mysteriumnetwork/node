@@ -24,9 +24,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/session"
@@ -54,25 +54,25 @@ type Manager struct {
 }
 
 // Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
+func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigProvider, error) {
 	if err := manager.connectionEndpoint.Start(nil); err != nil {
-		return dto_discovery.ServiceProposal{}, nil, err
+		return market.ServiceProposal{}, nil, err
 	}
 	config, err := manager.connectionEndpoint.Config()
 	if err != nil {
-		return dto_discovery.ServiceProposal{}, nil, err
+		return market.ServiceProposal{}, nil, err
 	}
 
 	outboundIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
-		return dto_discovery.ServiceProposal{}, nil, err
+		return market.ServiceProposal{}, nil, err
 	}
 	manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: config.Consumer.IPAddress.String(),
 		TargetIP:      outboundIP,
 	})
 	if err := manager.natService.Start(); err != nil {
-		return dto_discovery.ServiceProposal{}, nil, err
+		return market.ServiceProposal{}, nil, err
 	}
 
 	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
@@ -101,21 +101,21 @@ func (manager *Manager) Start(providerID identity.Identity) (dto_discovery.Servi
 
 	publicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
-		return dto_discovery.ServiceProposal{}, nil, err
+		return market.ServiceProposal{}, nil, err
 	}
 
 	country, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
-		return dto_discovery.ServiceProposal{}, nil, err
+		return market.ServiceProposal{}, nil, err
 	}
 
 	manager.wg.Add(1)
 	log.Info(logPrefix, "Wireguard service started successfully")
 
-	proposal := dto_discovery.ServiceProposal{
+	proposal := market.ServiceProposal{
 		ServiceType: wg.ServiceType,
 		ServiceDefinition: wg.ServiceDefinition{
-			Location: dto_discovery.Location{Country: country},
+			Location: market.Location{Country: country},
 		},
 		PaymentMethodType: wg.PaymentMethod,
 		PaymentMethod: wg.Payment{
