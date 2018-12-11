@@ -77,7 +77,10 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 			return err
 		}
 		if endpoint != nil {
-			if err := c.addRoute(iface, *endpoint); err != nil {
+			if err := c.excludeRoute(*endpoint); err != nil {
+				return err
+			}
+			if err := c.addDefaultRoute(iface); err != nil {
 				return err
 			}
 		}
@@ -104,15 +107,16 @@ func (c *client) up(iface string, ipAddr net.IPNet) error {
 	return suExec("ip", "link", "set", "dev", iface, "up")
 }
 
-func (c *client) addRoute(iface string, endpoint net.UDPAddr) error {
+func (c *client) excludeRoute(endpoint net.UDPAddr) error {
 	gw, err := gateway.DiscoverGateway()
 	if err != nil {
 		return err
 	}
 
-	if err := suExec("ip", "route", "replace", endpoint.IP.String(), "via", gw.String()); err != nil {
-		return err
-	}
+	return suExec("ip", "route", "replace", endpoint.IP.String(), "via", gw.String())
+}
+
+func (c *client) addDefaultRoute(iface string) error {
 	if err := suExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
 		return err
 	}
