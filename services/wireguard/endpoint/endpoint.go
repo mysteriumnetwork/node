@@ -28,6 +28,7 @@ import (
 type wgClient interface {
 	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
 	ConfigureRoutes(iface string, ip net.IP) error
+	DestroyDevice(name string) error
 	AddPeer(name string, peer wg.PeerInfo) error
 	Close() error
 }
@@ -45,6 +46,8 @@ type connectionEndpoint struct {
 // Start starts and configure wireguard network interface for providing service.
 // If config is nil, required options will be generated automatically.
 func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
+	ce.cleanWildInterfaces()
+
 	ce.iface = ce.resourceAllocator.AllocateInterface()
 	ce.endpoint.Port = ce.resourceAllocator.AllocatePort()
 	if ce.ipResolver != nil {
@@ -113,6 +116,21 @@ func (ce *connectionEndpoint) Stop() error {
 	}
 
 	return ce.resourceAllocator.ReleaseInterface(ce.iface)
+}
+
+func (ce *connectionEndpoint) cleanWildInterfaces() error {
+	ifaces, err := ce.resourceAllocator.WildInterfaces()
+	if err != nil {
+		return err
+	}
+
+	for _, iface := range ifaces {
+		if err := ce.wgClient.DestroyDevice(iface.Name); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type deviceConfig struct {

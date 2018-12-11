@@ -20,6 +20,7 @@ package kernelspace
 import (
 	"encoding/base64"
 	"net"
+	"os/exec"
 
 	"github.com/jackpal/gateway"
 	"github.com/mdlayher/wireguardctrl"
@@ -82,6 +83,10 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
+func (c *client) DestroyDevice(name string) error {
+	return exec.Command("ip", "link", "del", "dev", name).Run()
+}
+
 func (c *client) up(iface string, ipAddr net.IPNet) error {
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
 		if err := utils.SudoExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
@@ -120,18 +125,7 @@ func addDefaultRoute(iface string) error {
 }
 
 func (c *client) Close() error {
-	d, err := c.wgClient.Device(c.iface)
-	if err != nil || d.Name != c.iface {
-		return err
-	}
-
-	if len(d.Peers) > 0 && d.Peers[0].Endpoint != nil {
-		if err := utils.SudoExec("ip", "route", "del", d.Peers[0].Endpoint.IP.String()); err != nil {
-			return err
-		}
-	}
-
-	if err := utils.SudoExec("ip", "link", "del", "dev", c.iface); err != nil {
+	if err := c.DestroyDevice(c.iface); err != nil {
 		return err
 	}
 	return c.wgClient.Close()

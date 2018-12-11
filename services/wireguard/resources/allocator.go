@@ -26,7 +26,7 @@ import (
 	"sync"
 )
 
-const prefix = "myst"
+const interfacePrefix = "myst"
 
 // Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.
@@ -46,6 +46,32 @@ func NewAllocator() Allocator {
 	}
 }
 
+// WildInterfaces returns a list of abandoned interfaces that exist in the system,
+// but was not allocated by the Allocator.
+func (a *Allocator) WildInterfaces() ([]net.Interface, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]net.Interface, 0)
+	for _, iface := range ifaces {
+		if strings.HasPrefix(iface.Name, interfacePrefix) {
+			ifaceID, err := strconv.Atoi(strings.TrimPrefix(iface.Name, interfacePrefix))
+			if err == nil {
+				if _, ok := a.Ifaces[ifaceID]; !ok {
+					list = append(list, iface)
+				}
+			}
+		}
+	}
+
+	return list, nil
+}
+
 // AllocateInterface provides available name for the wireguard network interface.
 func (a *Allocator) AllocateInterface() string {
 	a.mu.Lock()
@@ -54,7 +80,7 @@ func (a *Allocator) AllocateInterface() string {
 	for i := 0; i < 255; i++ {
 		if _, ok := a.Ifaces[i]; !ok {
 			a.Ifaces[i] = struct{}{}
-			return fmt.Sprintf("%s%d", prefix, i)
+			return fmt.Sprintf("%s%d", interfacePrefix, i)
 		}
 	}
 
@@ -99,7 +125,7 @@ func (a *Allocator) ReleaseInterface(iface string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	i, err := strconv.Atoi(strings.TrimPrefix(iface, prefix))
+	i, err := strconv.Atoi(strings.TrimPrefix(iface, interfacePrefix))
 	if err != nil {
 		return err
 	}
