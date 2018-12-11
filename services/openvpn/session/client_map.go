@@ -33,7 +33,8 @@ type SessionMap interface {
 
 // clientMap extends current sessions with client id metadata from Openvpn
 type clientMap struct {
-	sessions         SessionMap
+	sessions SessionMap
+	// TODO: use clientID to kill OpenVPN session (client-kill {clientID}) when promise processor instructs so
 	sessionClientIDs map[session.ID]int
 	sessionMapLock   sync.Mutex
 }
@@ -45,10 +46,7 @@ func (cm *clientMap) FindClientSession(clientID int, id session.ID) (session.Ses
 		return session.Session{}, false, errors.New("no underlying session exists, possible break-in attempt")
 	}
 
-	sessionClientID, clientIDExist := cm.sessionClientIDs[id]
-	if clientIDExist && clientID != sessionClientID {
-		return sessionInstance, false, errors.New("provided clientID does not mach active clientID")
-	}
+	_, clientIDExist := cm.sessionClientIDs[id]
 
 	return sessionInstance, clientIDExist, nil
 }
