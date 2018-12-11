@@ -17,9 +17,50 @@
 
 package dto
 
-import "github.com/mysteriumnetwork/node/money"
+import (
+	"encoding/json"
 
+	"github.com/mysteriumnetwork/node/money"
+)
+
+// PaymentMethod is a interface for all types of payment methods
 type PaymentMethod interface {
 	// Service price per unit of metering
 	GetPrice() money.Money
+}
+
+// UnsupportedPaymentMethod represents payment method which is unknown to node (i.e. not registered)
+type UnsupportedPaymentMethod struct {
+}
+
+// GetPrice always panics for UnsupportedPaymentMethod and should not be called
+func (UnsupportedPaymentMethod) GetPrice() money.Money {
+	//this should never be called
+	panic("not supported")
+}
+
+var _ PaymentMethod = UnsupportedPaymentMethod{}
+
+// PaymentMethodUnserializer is function type which takes raw json message and returns deserialized payment method
+type PaymentMethodUnserializer func(*json.RawMessage) (PaymentMethod, error)
+
+// service payment method unserializer registry
+//TODO same idea as for contact global map
+var paymentMethodMap = make(map[string]PaymentMethodUnserializer)
+
+// RegisterPaymentMethodUnserializer registers unserializer for specified payment method type
+func RegisterPaymentMethodUnserializer(paymentMethod string, unserializer func(*json.RawMessage) (PaymentMethod, error)) {
+	paymentMethodMap[paymentMethod] = unserializer
+}
+
+func unserializePaymentMethod(paymentMethod string, message *json.RawMessage) PaymentMethod {
+	method, ok := paymentMethodMap[paymentMethod]
+	if !ok {
+		return UnsupportedPaymentMethod{}
+	}
+	pm, err := method(message)
+	if err != nil {
+		return UnsupportedPaymentMethod{}
+	}
+	return pm
 }

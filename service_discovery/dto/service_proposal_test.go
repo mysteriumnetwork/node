@@ -51,17 +51,21 @@ func Test_ServiceProposal_SetProviderContact(t *testing.T) {
 	)
 }
 
-type mockServiceDefinition struct{}
+type mockServiceDefinition struct {
+}
 
 func (service mockServiceDefinition) GetLocation() Location {
 	return Location{}
 }
 
-type mockPaymentMethod struct{}
+type mockPaymentMethod struct {
+}
 
 func (method mockPaymentMethod) GetPrice() money.Money {
 	return money.Money{}
 }
+
+type mockContact struct{}
 
 func init() {
 	RegisterServiceDefinitionUnserializer(
@@ -74,6 +78,11 @@ func init() {
 		"mock_payment",
 		func(rawDefinition *json.RawMessage) (PaymentMethod, error) {
 			return paymentMethod, nil
+		},
+	)
+	RegisterContactUnserializer("mock_contact",
+		func(rawMessage *json.RawMessage) (ContactDefinition, error) {
+			return mockContact{}, nil
 		},
 	)
 }
@@ -115,7 +124,9 @@ func Test_ServiceProposal_Unserialize(t *testing.T) {
 		"payment_method_type": "mock_payment",
 		"payment_method": {},
 		"provider_id": "node",
-		"provider_contacts": []
+		"provider_contacts": [
+			{ "type" : "mock_contact" , "definition" : {}}
+		]
 	}`)
 
 	var actual ServiceProposal
@@ -130,9 +141,15 @@ func Test_ServiceProposal_Unserialize(t *testing.T) {
 		PaymentMethodType: "mock_payment",
 		PaymentMethod:     paymentMethod,
 		ProviderID:        "node",
-		ProviderContacts:  ContactList{},
+		ProviderContacts: ContactList{
+			Contact{
+				Type:       "mock_contact",
+				Definition: mockContact{},
+			},
+		},
 	}
 	assert.Equal(t, expected, actual)
+	assert.True(t, actual.IsSupported())
 }
 
 func Test_ServiceProposal_UnserializeUnknownService(t *testing.T) {
@@ -146,7 +163,7 @@ func Test_ServiceProposal_UnserializeUnknownService(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, "unknown", actual.ServiceType)
-	assert.Nil(t, actual.ServiceDefinition)
+	assert.IsType(t, UnsupportedServiceDefinition{}, actual.ServiceDefinition)
 }
 
 func Test_ServiceProposal_UnserializeUnknownPaymentMethod(t *testing.T) {
@@ -160,7 +177,7 @@ func Test_ServiceProposal_UnserializeUnknownPaymentMethod(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, "unknown", actual.PaymentMethodType)
-	assert.Nil(t, actual.PaymentMethod)
+	assert.IsType(t, UnsupportedPaymentMethod{}, actual.PaymentMethod)
 }
 
 func Test_ServiceProposal_RegisterPaymentMethodUnserializer(t *testing.T) {

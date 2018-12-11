@@ -153,9 +153,10 @@ func (mApi *mysteriumAPI) FindProposals(providerID string, serviceType string) (
 	if err != nil {
 		return nil, err
 	}
-
-	log.Info(mysteriumAPILogPrefix, "Proposals fetched: ", len(proposalsResponse.Proposals))
-	return proposalsResponse.Proposals, nil
+	total := len(proposalsResponse.Proposals)
+	supported := supportedProposalsOnly(proposalsResponse.Proposals)
+	log.Info(mysteriumAPILogPrefix, "Total proposals: ", total, " supported: ", len(supported))
+	return supported, nil
 }
 
 // SendSessionStats sends session statistics
@@ -200,4 +201,13 @@ func (mApi *mysteriumAPI) doRequestAndParseResponse(req *http.Request, responseV
 	}
 
 	return ParseResponseJSON(resp, responseValue)
+}
+
+func supportedProposalsOnly(proposals []dto_discovery.ServiceProposal) (supported []dto_discovery.ServiceProposal) {
+	for _, proposal := range proposals {
+		if proposal.IsSupported() {
+			supported = append(supported, proposal)
+		}
+	}
+	return
 }
