@@ -17,29 +17,130 @@
 
 package resources
 
-import "net"
+import (
+	"errors"
+	"fmt"
+	"net"
+	"strconv"
+	"strings"
+	"sync"
+)
+
+const prefix = "myst"
 
 // Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.
-type Allocator struct{}
+type Allocator struct {
+	Ifaces      map[int]struct{}
+	IPAddresses map[int]struct{}
+	Port        map[int]struct{}
+	mu          sync.Mutex
+}
+
+func NewAllocator() Allocator {
+	return Allocator{
+		Ifaces:      make(map[int]struct{}),
+		IPAddresses: make(map[int]struct{}),
+		Port:        make(map[int]struct{}),
+	}
+}
 
 // AllocateInterface provides available name for the wireguard network interface.
-func (a *Allocator) AllocateInterface() string { return "myst0" }
+func (a *Allocator) AllocateInterface() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	for i := 0; i < 255; i++ {
+		if _, ok := a.Ifaces[i]; !ok {
+			a.Ifaces[i] = struct{}{}
+			return fmt.Sprintf("%s%d", prefix, i)
+		}
+	}
+
+	return ""
+}
 
 // AllocateIPNet provides available IP address for the wireguard connection.
 func (a *Allocator) AllocateIPNet() net.IPNet {
-	_, subnet, _ := net.ParseCIDR("10.182.47.0/24")
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	var s string
+	for i := 0; i < 255; i++ {
+		if _, ok := a.IPAddresses[i]; !ok {
+			a.IPAddresses[i] = struct{}{}
+			s = fmt.Sprintf("10.182.%d.0/24", i)
+			break
+		}
+	}
+
+	_, subnet, _ := net.ParseCIDR(s)
 	return *subnet
 }
 
 // AllocatePort provides available UDP port for the wireguard endpoint.
-func (a *Allocator) AllocatePort() int { return 52820 }
+func (a *Allocator) AllocatePort() int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	for i := 52820; i < 53000; i++ {
+		if _, ok := a.IPAddresses[i]; !ok {
+			a.IPAddresses[i] = struct{}{}
+			return i
+		}
+	}
+
+	return 52820
+}
 
 // ReleaseInterface releases name for the wireguard network interface.
-func (a *Allocator) ReleaseInterface(string) error { return nil }
+func (a *Allocator) ReleaseInterface(iface string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	i, err := strconv.Atoi(strings.TrimPrefix(iface, prefix))
+	if err != nil {
+		return err
+	}
+
+	if _, ok := a.Ifaces[i]; !ok {
+		return errors.New("Allocated interface not found")
+	}
+
+	delete(a.Ifaces, i)
+	return nil
+}
 
 // ReleaseIPNet releases IP address.
-func (a *Allocator) ReleaseIPNet(ip net.IPNet) error { return nil }
+func (a *Allocator) ReleaseIPNet(ip net.IPNet) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	s := ip.String()
+	s = strings.TrimPrefix(s, "10.182.")
+	s = strings.TrimSuffix(s, ".2/24")
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+
+	if _, ok := a.IPAddresses[i]; !ok {
+		return errors.New("Allocated interface not found")
+	}
+
+	delete(a.IPAddresses, i)
+	return nil
+}
 
 // ReleasePort releases UDP port.
-func (a *Allocator) ReleasePort(port int) error { return nil }
+func (a *Allocator) ReleasePort(port int) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if _, ok := a.Ifaces[port]; !ok {
+		return errors.New("Allocated interface not found")
+	}
+
+	delete(a.Ifaces, port)
+	return nil
+}

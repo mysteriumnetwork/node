@@ -71,34 +71,37 @@ func (manager *Manager) ConsumeConfig(publicKey json.RawMessage) error {
 		return err
 	}
 
+	if err := manager.connectionEndpoint.Start(nil); err != nil {
+		return err
+	}
+
 	if err := manager.connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
 		return err
 	}
-	return nil
-}
 
-// Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
-	if err := manager.connectionEndpoint.Start(nil); err != nil {
-		return market.ServiceProposal{}, nil, err
-	}
 	config, err := manager.connectionEndpoint.Config()
 	if err != nil {
-		return market.ServiceProposal{}, nil, err
+		return err
 	}
 
 	outboundIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
-		return market.ServiceProposal{}, nil, err
+		return err
 	}
+
 	manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: config.Consumer.IPAddress.String(),
 		TargetIP:      outboundIP,
 	})
 	if err := manager.natService.Start(); err != nil {
-		return market.ServiceProposal{}, nil, err
+		return err
 	}
 
+	return nil
+}
+
+// Start starts service - does not block
+func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
 	publicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
 		return market.ServiceProposal{}, nil, err

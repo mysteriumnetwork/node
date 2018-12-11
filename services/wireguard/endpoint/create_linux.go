@@ -36,7 +36,7 @@ func NewConnectionEndpoint(ipResolver ip.Resolver) (wg.ConnectionEndpoint, error
 	return &connectionEndpoint{
 		wgClient:          wgClient,
 		ipResolver:        ipResolver,
-		resourceAllocator: resources.Allocator{},
+		resourceAllocator: resources.NewAllocator(),
 	}, nil
 }
 
