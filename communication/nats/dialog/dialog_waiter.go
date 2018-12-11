@@ -33,8 +33,8 @@ import (
 // NewDialogWaiter constructs new DialogWaiter which works through NATS connection.
 func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer, identityRegistry registry.IdentityRegistry) *dialogWaiter {
 	return &dialogWaiter{
-		myAddress:        address,
-		mySigner:         signer,
+		address:          address,
+		signer:           signer,
 		dialogs:          make([]communication.Dialog, 0),
 		identityRegistry: identityRegistry,
 	}
@@ -43,8 +43,8 @@ func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer, ide
 const waiterLogPrefix = "[NATS.DialogWaiter] "
 
 type dialogWaiter struct {
-	myAddress        *discovery.AddressNATS
-	mySigner         identity.Signer
+	address          *discovery.AddressNATS
+	signer           identity.Signer
 	dialogs          []communication.Dialog
 	identityRegistry registry.IdentityRegistry
 
@@ -53,14 +53,14 @@ type dialogWaiter struct {
 
 // Start registers dialogWaiter with broker (NATS) service
 func (waiter *dialogWaiter) Start() (dto_discovery.Contact, error) {
-	log.Info(waiterLogPrefix, "Connecting to: ", waiter.myAddress.GetContact())
+	log.Info(waiterLogPrefix, "Connecting to: ", waiter.address.GetContact())
 
-	err := waiter.myAddress.Connect()
+	err := waiter.address.Connect()
 	if err != nil {
-		return dto_discovery.Contact{}, fmt.Errorf("failed to start my connection with: %v", waiter.myAddress.GetContact())
+		return dto_discovery.Contact{}, fmt.Errorf("failed to start my connection with: %v", waiter.address.GetContact())
 	}
 
-	return waiter.myAddress.GetContact(), nil
+	return waiter.address.GetContact(), nil
 }
 
 // Stop disconnects dialogWaiter from broker (NATS) service
@@ -71,7 +71,7 @@ func (waiter *dialogWaiter) Stop() error {
 	for _, dialog := range waiter.dialogs {
 		dialog.Close()
 	}
-	waiter.myAddress.Disconnect()
+	waiter.address.Disconnect()
 	return nil
 }
 
@@ -90,6 +90,11 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		}
 
 		peerID := identity.FromAddress(request.PeerID)
+		for _, d := range waiter.dialogs {
+			if d.PeerID() == peerID {
+				return &responseOK, nil
+			}
+		}
 
 		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecForPeer(peerID))
 		err = dialogHandler.Handle(dialog)
@@ -106,29 +111,28 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		return &responseOK, nil
 	}
 
-	myCodec := NewCodecSecured(communication.NewCodecJSON(), waiter.mySigner, identity.NewVerifierSigned())
-	myReceiver := nats.NewReceiver(waiter.myAddress.GetConnection(), myCodec, waiter.myAddress.GetTopic())
+	codec := NewCodecSecured(communication.NewCodecJSON(), waiter.signer, identity.NewVerifierSigned())
+	receiver := nats.NewReceiver(waiter.address.GetConnection(), codec, waiter.address.GetTopic())
 
-	subscribeError := myReceiver.Respond(&dialogCreateConsumer{createDialog})
-	return subscribeError
+	return receiver.Respond(&dialogCreateConsumer{createDialog})
 }
 
 func (waiter *dialogWaiter) newCodecForPeer(peerID identity.Identity) *codecSecured {
 
 	return NewCodecSecured(
 		communication.NewCodecJSON(),
-		waiter.mySigner,
+		waiter.signer,
 		identity.NewVerifierIdentity(peerID),
 	)
 }
 
 func (waiter *dialogWaiter) newDialogToPeer(peerID identity.Identity, peerCodec *codecSecured) *dialog {
-	subTopic := waiter.myAddress.GetTopic() + "." + peerID.Address
+	subTopic := waiter.address.GetTopic() + "." + peerID.Address
 
 	return &dialog{
 		peerID:   peerID,
-		Sender:   nats.NewSender(waiter.myAddress.GetConnection(), peerCodec, subTopic),
-		Receiver: nats.NewReceiver(waiter.myAddress.GetConnection(), peerCodec, subTopic),
+		Sender:   nats.NewSender(waiter.address.GetConnection(), peerCodec, subTopic),
+		Receiver: nats.NewReceiver(waiter.address.GetConnection(), peerCodec, subTopic),
 	}
 }
 
