@@ -37,6 +37,7 @@ type Allocator struct {
 	mu          sync.Mutex
 }
 
+// NewAllocator creates new resource pool for wireguard connection.
 func NewAllocator() Allocator {
 	return Allocator{
 		Ifaces:      make(map[int]struct{}),
