@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/session"
 )
@@ -34,12 +35,12 @@ type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, 
 var errSessionWrapperNotStarted = errors.New("session wrapper not started")
 
 type sessionWrapper struct {
-	session        *openvpn3.Session
-	sessionFactory openvpn3SessionFactory
+	session       *openvpn3.Session
+	createSession openvpn3SessionFactory
 }
 
 func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
-	session, err := wrapper.sessionFactory(options)
+	session, err := wrapper.createSession(options)
 	if err != nil {
 		return err
 	}
@@ -61,7 +62,7 @@ func (wrapper *sessionWrapper) Wait() error {
 	return errSessionWrapperNotStarted
 }
 
-func (wrapper *sessionWrapper) GetSessionConfig() (connection.SessionCreationConfig, error) {
+func (wrapper *sessionWrapper) GetConfig() (connection.ConsumerConfig, error) {
 	return nil, nil
 }
 
@@ -142,50 +143,64 @@ func (st *sessionTracker) handleState(stateEvent connection.StateEvent) {
 	}
 }
 
+// OpenvpnConnectionFactory is the connection factory for openvpn
+type OpenvpnConnectionFactory struct {
+	sessionTracker *sessionTracker
+	signerFactory  identity.SignerFactory
+	tunnelSetup    Openvpn3TunnelSetup
+}
+
+// Create creates a new openvpn connection
+func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, error) {
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
+		if err != nil {
+			return nil, err
+		}
+
+		profileContent, err := vpnClientConfig.ToConfigFileContent()
+		if err != nil {
+			return nil, err
+		}
+
+		config := openvpn3.NewConfig(profileContent)
+		config.GuiVersion = "govpn 0.1"
+		config.CompressionMode = "asym"
+		config.ConnTimeout = 0 //essentially means - reconnect forever (but can always stopped with disconnect)
+
+		signer := ocf.signerFactory(options.ConsumerID)
+
+		username, password, err := session.SignatureCredentialsProvider(options.SessionID, signer)()
+		if err != nil {
+			return nil, err
+		}
+
+		credentials := openvpn3.UserCredentials{
+			Username: username,
+			Password: password,
+		}
+
+		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), ocf.tunnelSetup)
+		ocf.sessionTracker.sessionCreated(session)
+		return session, nil
+	}
+	return &sessionWrapper{
+		createSession: sessionFactory,
+	}, nil
+}
+
 // OverrideOpenvpnConnection replaces default openvpn connection factory with mobile related one returning session that can be reconnected
 func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelSetup) ReconnectableSession {
 	openvpn.Bootstrap()
 
 	st := &sessionTracker{}
-
+	factory := &OpenvpnConnectionFactory{
+		sessionTracker: st,
+		signerFactory:  mobNode.di.SignerFactory,
+		tunnelSetup:    tunnelSetup,
+	}
 	mobNode.di.EventBus.Subscribe(connection.StateEventTopic, st.handleState)
 
-	mobNode.di.ConnectionRegistry.Register("openvpn", func(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-		sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, error) {
-			vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
-			if err != nil {
-				return nil, err
-			}
-
-			profileContent, err := vpnClientConfig.ToConfigFileContent()
-			if err != nil {
-				return nil, err
-			}
-
-			config := openvpn3.NewConfig(profileContent)
-			config.GuiVersion = "govpn 0.1"
-			config.CompressionMode = "asym"
-			config.ConnTimeout = 0 //essentially means - reconnect forever (but can always stopped with disconnect)
-
-			signer := mobNode.di.SignerFactory(options.ConsumerID)
-
-			username, password, err := session.SignatureCredentialsProvider(options.SessionID, signer)()
-			if err != nil {
-				return nil, err
-			}
-
-			credentials := openvpn3.UserCredentials{
-				Username: username,
-				Password: password,
-			}
-
-			session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), tunnelSetup)
-			st.sessionCreated(session)
-			return session, nil
-		}
-		return &sessionWrapper{
-			sessionFactory: sessionFactory,
-		}, nil
-	})
+	mobNode.di.ConnectionRegistry.Register("openvpn", factory)
 	return st
 }

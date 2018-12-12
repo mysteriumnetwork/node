@@ -61,8 +61,8 @@ func (c *Client) Stop() {
 	}
 }
 
-// GetSessionConfig returns the consumer-side configuration. In openvpn case - it doesn't return anything
-func (c *Client) GetSessionConfig() (connection.SessionCreationConfig, error) {
+// GetConfig returns the consumer-side configuration. In openvpn case - it doesn't return anything
+func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 	return nil, nil
 }
 

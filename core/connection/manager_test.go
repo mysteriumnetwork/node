@@ -79,7 +79,7 @@ func (tc *testContext) SetupTest() {
 	}
 	tc.fakeConnectionFactory = &connectionFactoryFake{
 		mockError: nil,
-		mockConnection: &connectionFake{
+		mockConnection: &connectionMock{
 			nil,
 			[]fakeState{
 				processStarted,

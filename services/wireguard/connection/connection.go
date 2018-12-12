@@ -76,13 +76,13 @@ func (c *Connection) Wait() error {
 	return nil
 }
 
-// GetSessionConfig returns the consumer configuration for session creation
-func (c *Connection) GetSessionConfig() (connection.SessionCreationConfig, error) {
+// GetConfig returns the consumer configuration for session creation
+func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 	publicKey, err := endpoint.PrivateKeyToPublicKey(c.config.Consumer.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	return wg.ConsumerPublicKey{
+	return wg.ConsumerConfig{
 		PublicKey: publicKey,
 	}, nil
 }

@@ -27,9 +27,6 @@ import (
 // DialogCreator creates new dialog between consumer and provider, using given contact information
 type DialogCreator func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error)
 
-// SessionCreationConfig are the parameters that get sent to the provider
-type SessionCreationConfig interface{}
-
 // ConsumerConfig are the parameters used for the initiation of connection
 type ConsumerConfig interface{}
 
@@ -38,7 +35,7 @@ type Connection interface {
 	Start(ConnectOptions) error
 	Wait() error
 	Stop()
-	GetSessionConfig() (SessionCreationConfig, error)
+	GetConfig() (ConsumerConfig, error)
 }
 
 // StateChannel is the channel we receive state change events on

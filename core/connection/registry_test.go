@@ -27,12 +27,16 @@ import (
 var _ Creator = (&Registry{}).CreateConnection
 
 var (
-	connectionMock    = &connectionFake{}
-	connectionFactory = func(stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
-		return connectionMock, nil
-	}
 	serviceType = "serviceType"
 )
+
+type factoryMock struct {
+	connectionMock Connection
+}
+
+func (fm *factoryMock) Create(stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
+	return fm.connectionMock, nil
+}
 
 func TestRegistry_Factory(t *testing.T) {
 	registry := NewRegistry()
@@ -44,7 +48,9 @@ func TestRegistry_Register(t *testing.T) {
 		creators: map[string]Factory{},
 	}
 
-	registry.Register(serviceType, connectionFactory)
+	registry.Register(serviceType, &factoryMock{
+		connectionMock: &connectionMock{},
+	})
 	assert.Len(t, registry.creators, 1)
 }
 
@@ -57,13 +63,16 @@ func TestRegistry_CreateConnection_NonExisting(t *testing.T) {
 }
 
 func TestRegistry_CreateConnection_Existing(t *testing.T) {
+	mock := &connectionMock{}
 	registry := Registry{
 		creators: map[string]Factory{
-			"fake-service": connectionFactory,
+			"fake-service": &factoryMock{
+				connectionMock: mock,
+			},
 		},
 	}
 
 	connection, err := registry.CreateConnection("fake-service", make(chan State), make(chan consumer.SessionStatistics))
 	assert.NoError(t, err)
-	assert.Equal(t, connectionMock, connection)
+	assert.Equal(t, mock, connection)
 }

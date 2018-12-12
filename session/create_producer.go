@@ -45,10 +45,15 @@ func (producer *createProducer) Produce() (requestPtr interface{}) {
 }
 
 // RequestSessionCreate requests session creation and returns session DTO
-func RequestSessionCreate(sender communication.Sender, proposalID int, config json.RawMessage) (sessionID ID, sessionConfig json.RawMessage, err error) {
+func RequestSessionCreate(sender communication.Sender, proposalID int, config interface{}) (sessionID ID, sessionConfig json.RawMessage, err error) {
+	sessionCreateConfigJSON, err := json.Marshal(config)
+	if err != nil {
+		return
+	}
+
 	responsePtr, err := sender.Request(&createProducer{
 		ProposalID: proposalID,
-		Config:     config,
+		Config:     sessionCreateConfigJSON,
 	})
 	if err != nil {
 		return

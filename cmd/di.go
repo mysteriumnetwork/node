@@ -151,7 +151,7 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 		di.LocationOriginal,
 		di.SignerFactory,
 	)
-	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory.CreateConnection)
+	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory)
 }
 
 func (di *Dependencies) registerNoopConnection() {

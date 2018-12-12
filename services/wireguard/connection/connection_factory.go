@@ -23,19 +23,25 @@ import (
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 )
 
+// Factory is the wireguard connection factory
+type Factory struct{}
+
+// Create creates a new wireguard connenction
+func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+	privateKey, err := endpoint.GeneratePrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	config := wg.ServiceConfig{}
+	config.Consumer.PrivateKey = privateKey
+
+	return &Connection{
+		stateChannel: stateChannel,
+		config:       config,
+	}, nil
+}
+
 // NewConnectionCreator creates wireguard connections
 func NewConnectionCreator() connection.Factory {
-	return func(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-		privateKey, err := endpoint.GeneratePrivateKey()
-		if err != nil {
-			return nil, err
-		}
-		config := wg.ServiceConfig{}
-		config.Consumer.PrivateKey = privateKey
-
-		return &Connection{
-			stateChannel: stateChannel,
-			config:       config,
-		}, nil
-	}
+	return &Factory{}
 }

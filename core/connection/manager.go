@@ -19,7 +19,6 @@ package connection
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"sync"
 
@@ -153,17 +152,12 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		return err
 	}
 
-	sessionCreateConfig, err := connection.GetSessionConfig()
+	sessionCreateConfig, err := connection.GetConfig()
 	if err != nil {
 		return err
 	}
 
-	sessionCreateConfigJSON, err := json.Marshal(sessionCreateConfig)
-	if err != nil {
-		return err
-	}
-
-	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfigJSON)
+	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig)
 	if err != nil {
 		return err
 	}

@@ -65,7 +65,7 @@ func (c *Connection) Stop() {
 	close(c.stateChannel)
 }
 
-// GetSessionConfig returns the consumer configuration for session creation
-func (c *Connection) GetSessionConfig() (connection.SessionCreationConfig, error) {
+// GetConfig returns the consumer configuration for session creation
+func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 	return nil, nil
 }

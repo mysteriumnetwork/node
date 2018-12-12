@@ -65,7 +65,7 @@ func (manager *Manager) ProvideConfig() (session.ServiceConfiguration, error) {
 
 // ConsumeConfig takes in the provided config and adds it to the wg device
 func (manager *Manager) ConsumeConfig(publicKey json.RawMessage) error {
-	key := &wg.ConsumerPublicKey{}
+	key := &wg.ConsumerConfig{}
 	err := json.Unmarshal(publicKey, key)
 	if err != nil {
 		return err

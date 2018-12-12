@@ -73,8 +73,8 @@ type PeerInfo interface {
 	PublicKey() string
 }
 
-// ConsumerPublicKey is used for sending the public key from consumer to provider
-type ConsumerPublicKey struct {
+// ConsumerConfig is used for sending the public key from consumer to provider
+type ConsumerConfig struct {
 	PublicKey string
 }
 
