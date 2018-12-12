@@ -74,14 +74,7 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 		if err != nil {
 			return err
 		}
-		if endpoint != nil {
-			if err := c.excludeRoute(*endpoint); err != nil {
-				return err
-			}
-			if err := c.addDefaultRoute(iface); err != nil {
-				return err
-			}
-		}
+
 		deviceConfig.Peers = []wgtypes.PeerConfig{{
 			Endpoint:   endpoint,
 			PublicKey:  publicKey,
@@ -105,16 +98,23 @@ func (c *client) up(iface string, ipAddr net.IPNet) error {
 	return utils.SuExec("ip", "link", "set", "dev", iface, "up")
 }
 
-func (c *client) excludeRoute(endpoint net.UDPAddr) error {
+func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
+	if err := excludeRoute(ip); err != nil {
+		return err
+	}
+	return addDefaultRoute(iface)
+}
+
+func excludeRoute(ip net.IP) error {
 	gw, err := gateway.DiscoverGateway()
 	if err != nil {
 		return err
 	}
 
-	return utils.SuExec("ip", "route", "replace", endpoint.IP.String(), "via", gw.String())
+	return utils.SuExec("ip", "route", "replace", ip.String(), "via", gw.String())
 }
 
-func (c *client) addDefaultRoute(iface string) error {
+func addDefaultRoute(iface string) error {
 	if err := utils.SuExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
 		return err
 	}
