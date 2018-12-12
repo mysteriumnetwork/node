@@ -22,12 +22,12 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/datasize"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	locationUS = dto_discovery.Location{
+	locationUS = market.Location{
 		Country: "US",
 	}
 	protocol = "tcp"

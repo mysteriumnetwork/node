@@ -25,8 +25,8 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 const endpoint = "promise-create"
@@ -78,7 +78,7 @@ func (sp *SignedPromise) Send(sender communication.Sender) error {
 // Validate check signed promise to be valid. It checks signature, benefiter address.
 // Also it compares the promised amount to be enough for the proposal.
 // And finally it checks that issuer have enough balance to issue the promice.
-func (sp *SignedPromise) Validate(proposal dto.ServiceProposal, balance identity.Balance) error {
+func (sp *SignedPromise) Validate(proposal market.ServiceProposal, balance identity.Balance) error {
 	receivedPromise, err := json.Marshal(sp.Promise)
 	if err != nil {
 		return err

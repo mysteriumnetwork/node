@@ -72,22 +72,6 @@ func (client *Client) NewIdentity(passphrase string) (id IdentityDTO, err error)
 	return id, err
 }
 
-// RegisterIdentity registers given identity
-func (client *Client) RegisterIdentity(address string) (err error) {
-	payload := struct {
-		Registered bool `json:"registered"`
-	}{
-		true,
-	}
-	response, err := client.http.Put("identities/"+address+"/registration", payload)
-	if err != nil {
-		return
-	}
-	defer response.Body.Close()
-
-	return nil
-}
-
 // IdentityRegistrationStatus returns information of identity needed to register it on blockchain
 func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDataDTO, error) {
 	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})

@@ -23,18 +23,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/server"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 type TestServiceDefinition struct{}
 
-func (service TestServiceDefinition) GetLocation() dto_discovery.Location {
-	return dto_discovery.Location{ASN: "LT", Country: "Lithuania", City: "Vilnius"}
+func (service TestServiceDefinition) GetLocation() market.Location {
+	return market.Location{ASN: "LT", Country: "Lithuania", City: "Vilnius"}
 }
 
-var proposals = []dto_discovery.ServiceProposal{
+var serviceProposals = []market.ServiceProposal{
 	{
 		ID:                1,
 		ServiceType:       "testprotocol",
@@ -50,9 +49,9 @@ var proposals = []dto_discovery.ServiceProposal{
 }
 
 func TestProposalsEndpointListByNodeId(t *testing.T) {
-	discoveryAPI := server.NewClientFake()
-	for _, proposal := range proposals {
-		discoveryAPI.RegisterProposal(proposal, nil)
+	mockProposalProvider := &mockProposalProvider{
+		//we assume that underling component does correct filtering
+		proposals: []market.ServiceProposal{serviceProposals[0]},
 	}
 
 	req, err := http.NewRequest(
@@ -67,7 +66,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(mockProposalProvider, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -90,12 +89,12 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
+	assert.Equal(t, "0xProviderId", mockProposalProvider.recordedProviderId)
 }
 
 func TestProposalsEndpointList(t *testing.T) {
-	discoveryAPI := server.NewClientFake()
-	for _, proposal := range proposals {
-		discoveryAPI.RegisterProposal(proposal, nil)
+	proposalProvider := &mockProposalProvider{
+		proposals: serviceProposals,
 	}
 
 	req, err := http.NewRequest(
@@ -106,7 +105,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(proposalProvider, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -144,11 +143,9 @@ func TestProposalsEndpointList(t *testing.T) {
 }
 
 func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
-	discoveryAPI := server.NewClientFake()
-	for _, proposal := range proposals {
-		discoveryAPI.RegisterProposal(proposal, nil)
+	proposalProvider := &mockProposalProvider{
+		proposals: serviceProposals,
 	}
-
 	req, err := http.NewRequest(
 		http.MethodGet,
 		"/irrelevant?fetchConnectCounts=true",
@@ -157,7 +154,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(discoveryAPI, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(proposalProvider, &mysteriumMorqaFake{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -206,7 +203,7 @@ type mysteriumMorqaFake struct{}
 
 // ProposalsMetrics returns a list of proposals connection metrics
 func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
-	for _, proposal := range proposals {
+	for _, proposal := range serviceProposals {
 		return []json.RawMessage{json.RawMessage(`{
 			"proposalID": {
 				"providerID": "` + proposal.ProviderID + `",
@@ -221,3 +218,17 @@ func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
 	}
 	return nil
 }
+
+type mockProposalProvider struct {
+	recordedProviderId  string
+	recordedServiceType string
+	proposals           []market.ServiceProposal
+}
+
+func (mpp *mockProposalProvider) FindProposals(providerID string, serviceType string) ([]market.ServiceProposal, error) {
+	mpp.recordedProviderId = providerID
+	mpp.recordedServiceType = serviceType
+	return mpp.proposals, nil
+}
+
+var _ ProposalProvider = &mockProposalProvider{}

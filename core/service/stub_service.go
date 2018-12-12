@@ -19,7 +19,7 @@ package service
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -29,8 +29,8 @@ type serviceFake struct {
 	onStartReturnError error
 }
 
-func (service *serviceFake) Start(identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error) {
-	return dto_discovery.ServiceProposal{}, nil, service.onStartReturnError
+func (service *serviceFake) Start(identity.Identity) (market.ServiceProposal, session.ConfigProvider, error) {
+	return market.ServiceProposal{}, nil, service.onStartReturnError
 }
 
 func (service *serviceFake) Wait() error {

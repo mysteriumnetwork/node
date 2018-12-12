@@ -15,26 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package discovery
+package registry
 
 import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	"github.com/mysteriumnetwork/node/server"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
+
+// ProposalRegistry defines methods for proposal lifecycle - registration, keeping up to date, removal
+type ProposalRegistry interface {
+	RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
+	PingProposal(proposal market.ServiceProposal, signer identity.Signer) error
+	UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
+}
 
 // Discovery structure holds discovery service state
 type Discovery struct {
 	identityRegistry            identity_registry.IdentityRegistry
 	ownIdentity                 identity.Identity
 	identityRegistration        identity_registry.RegistrationDataProvider
-	mysteriumClient             server.Client
+	proposalRegistry            ProposalRegistry
 	signerCreate                identity.SignerFactory
 	signer                      identity.Signer
-	proposal                    dto_discovery.ServiceProposal
+	proposal                    market.ServiceProposal
 	statusChan                  chan Status
 	status                      Status
 	proposalAnnouncementStopped *sync.WaitGroup
@@ -48,13 +54,13 @@ type Discovery struct {
 func NewService(
 	identityRegistry identity_registry.IdentityRegistry,
 	identityRegistration identity_registry.RegistrationDataProvider,
-	mysteriumClient server.Client,
+	proposalRegistry ProposalRegistry,
 	signerCreate identity.SignerFactory,
 ) *Discovery {
 	return &Discovery{
 		identityRegistry:            identityRegistry,
 		identityRegistration:        identityRegistration,
-		mysteriumClient:             mysteriumClient,
+		proposalRegistry:            proposalRegistry,
 		signerCreate:                signerCreate,
 		statusChan:                  make(chan Status),
 		status:                      StatusUndefined,

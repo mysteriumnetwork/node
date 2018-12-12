@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package discovery
+package registry
 
 import (
 	"time"
@@ -23,7 +23,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 // Status describes stage of proposal registration
@@ -45,7 +45,7 @@ const (
 const logPrefix = "[discovery] "
 
 // Start launches discovery service
-func (d *Discovery) Start(ownIdentity identity.Identity, proposal dto_discovery.ServiceProposal) {
+func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
 	d.RLock()
 	defer d.RUnlock()
 
@@ -135,7 +135,7 @@ func (d *Discovery) registerIdentity() {
 }
 
 func (d *Discovery) registerProposal() {
-	err := d.mysteriumClient.RegisterProposal(d.proposal, d.signer)
+	err := d.proposalRegistry.RegisterProposal(d.proposal, d.signer)
 	if err != nil {
 		log.Errorf("%s Failed to register proposal, retrying after 1 min. %s", logPrefix, err.Error())
 		time.Sleep(1 * time.Minute)
@@ -147,7 +147,7 @@ func (d *Discovery) registerProposal() {
 
 func (d *Discovery) pingProposal() {
 	time.Sleep(1 * time.Minute)
-	err := d.mysteriumClient.PingProposal(d.proposal, d.signer)
+	err := d.proposalRegistry.PingProposal(d.proposal, d.signer)
 	if err != nil {
 		log.Error(logPrefix, "Failed to ping proposal: ", err)
 	}
@@ -155,7 +155,7 @@ func (d *Discovery) pingProposal() {
 }
 
 func (d *Discovery) unregisterProposal() {
-	err := d.mysteriumClient.UnregisterProposal(d.proposal, d.signer)
+	err := d.proposalRegistry.UnregisterProposal(d.proposal, d.signer)
 	if err != nil {
 		log.Error(logPrefix, "Failed to unregister proposal: ", err)
 		d.changeStatus(UnregisterProposalFailed)

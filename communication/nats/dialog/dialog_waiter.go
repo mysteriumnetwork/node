@@ -27,7 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 // NewDialogWaiter constructs new DialogWaiter which works through NATS connection.
@@ -52,12 +52,12 @@ type dialogWaiter struct {
 }
 
 // Start registers dialogWaiter with broker (NATS) service
-func (waiter *dialogWaiter) Start() (dto_discovery.Contact, error) {
+func (waiter *dialogWaiter) Start() (market.Contact, error) {
 	log.Info(waiterLogPrefix, "Connecting to: ", waiter.address.GetContact())
 
 	err := waiter.address.Connect()
 	if err != nil {
-		return dto_discovery.Contact{}, fmt.Errorf("failed to start my connection with: %v", waiter.address.GetContact())
+		return market.Contact{}, fmt.Errorf("failed to start my connection with: %v", waiter.address.GetContact())
 	}
 
 	return waiter.address.GetContact(), nil

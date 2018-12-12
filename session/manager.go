@@ -22,7 +22,7 @@ import (
 	"sync"
 
 	"github.com/mysteriumnetwork/node/identity"
-	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 var (
@@ -47,7 +47,7 @@ type SaveCallback func(Session)
 // Provider checks promises from consumer and signs them also.
 // Provider clears promises from consumer.
 type PromiseProcessor interface {
-	Start(discovery_dto.ServiceProposal) error
+	Start(proposal market.ServiceProposal) error
 	Stop() error
 }
 
@@ -60,7 +60,7 @@ type Storage interface {
 
 // NewManager returns new session Manager
 func NewManager(
-	currentProposal discovery_dto.ServiceProposal,
+	currentProposal market.ServiceProposal,
 	idGenerator IDGenerator,
 	configProvider ConfigProvider,
 	sessionStorage Storage,
@@ -79,7 +79,7 @@ func NewManager(
 
 // Manager knows how to start and provision session
 type Manager struct {
-	currentProposal  discovery_dto.ServiceProposal
+	currentProposal  market.ServiceProposal
 	generateID       IDGenerator
 	provideConfig    ConfigProvider
 	sessionStorage   Storage

@@ -21,13 +21,13 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
-	discovery_dto "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	currentProposalID = 68
-	currentProposal   = discovery_dto.ServiceProposal{
+	currentProposal   = market.ServiceProposal{
 		ID: currentProposalID,
 	}
 	expectedID      = ID("mocked-id")
@@ -51,10 +51,10 @@ func generateSessionID() (ID, error) {
 
 type fakePromiseProcessor struct {
 	started  bool
-	proposal discovery_dto.ServiceProposal
+	proposal market.ServiceProposal
 }
 
-func (processor *fakePromiseProcessor) Start(proposal discovery_dto.ServiceProposal) error {
+func (processor *fakePromiseProcessor) Start(proposal market.ServiceProposal) error {
 	processor.started = true
 	processor.proposal = proposal
 	return nil

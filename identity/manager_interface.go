@@ -17,6 +17,8 @@
 
 package identity
 
+// Manager interface exposes identity management methods
+// TODO this interface must decay into caller specific smaller interfaces
 type Manager interface {
 	CreateNewIdentity(passphrase string) (Identity, error)
 	GetIdentities() []Identity

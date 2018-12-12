@@ -25,7 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 // NewDialogEstablisher constructs new DialogEstablisher which works thru NATS connection.
@@ -34,7 +34,7 @@ func NewDialogEstablisher(ID identity.Identity, signer identity.Signer) *dialogE
 	return &dialogEstablisher{
 		ID:     ID,
 		Signer: signer,
-		peerAddressFactory: func(contact dto_discovery.Contact) (*discovery.AddressNATS, error) {
+		peerAddressFactory: func(contact market.Contact) (*discovery.AddressNATS, error) {
 			address, err := discovery.NewAddressForContact(contact)
 			if err == nil {
 				err = address.Connect()
@@ -50,12 +50,12 @@ const establisherLogPrefix = "[NATS.DialogEstablisher] "
 type dialogEstablisher struct {
 	ID                 identity.Identity
 	Signer             identity.Signer
-	peerAddressFactory func(contact dto_discovery.Contact) (*discovery.AddressNATS, error)
+	peerAddressFactory func(contact market.Contact) (*discovery.AddressNATS, error)
 }
 
 func (establisher *dialogEstablisher) EstablishDialog(
 	peerID identity.Identity,
-	peerContact dto_discovery.Contact,
+	peerContact market.Contact,
 ) (communication.Dialog, error) {
 
 	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", peerContact))

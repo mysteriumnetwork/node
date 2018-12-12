@@ -20,7 +20,7 @@ package openvpn
 import (
 	"encoding/json"
 
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	dto_openvpn "github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 )
 
@@ -29,9 +29,9 @@ const ServiceType = "openvpn"
 
 // Bootstrap is called on program initialization time and registers various deserializers related to OpenVPN service
 func Bootstrap() {
-	dto_discovery.RegisterServiceDefinitionUnserializer(
+	market.RegisterServiceDefinitionUnserializer(
 		ServiceType,
-		func(rawDefinition *json.RawMessage) (dto_discovery.ServiceDefinition, error) {
+		func(rawDefinition *json.RawMessage) (market.ServiceDefinition, error) {
 			var definition dto_openvpn.ServiceDefinition
 			err := json.Unmarshal(*rawDefinition, &definition)
 
@@ -39,9 +39,9 @@ func Bootstrap() {
 		},
 	)
 
-	dto_discovery.RegisterPaymentMethodUnserializer(
+	market.RegisterPaymentMethodUnserializer(
 		dto_openvpn.PaymentMethodPerTime,
-		func(rawDefinition *json.RawMessage) (dto_discovery.PaymentMethod, error) {
+		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
 			var method dto_openvpn.PaymentPerTime
 			err := json.Unmarshal(*rawDefinition, &method)
 
@@ -49,9 +49,9 @@ func Bootstrap() {
 		},
 	)
 
-	dto_discovery.RegisterPaymentMethodUnserializer(
+	market.RegisterPaymentMethodUnserializer(
 		dto_openvpn.PaymentMethodPerBytes,
-		func(rawDefinition *json.RawMessage) (dto_discovery.PaymentMethod, error) {
+		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
 			var method dto_openvpn.PaymentPerBytes
 			err := json.Unmarshal(*rawDefinition, &method)
 

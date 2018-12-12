@@ -22,7 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	node_session "github.com/mysteriumnetwork/node/session"
 )
 
@@ -34,7 +34,7 @@ const (
 )
 
 // NewHistory creates a new session history datapoint
-func NewHistory(sessionID node_session.ID, proposal dto.ServiceProposal) *History {
+func NewHistory(sessionID node_session.ID, proposal market.ServiceProposal) *History {
 	return &History{
 		SessionID:       sessionID,
 		ProviderID:      identity.FromAddress(proposal.ProviderID),

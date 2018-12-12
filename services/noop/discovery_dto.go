@@ -18,8 +18,8 @@
 package noop
 
 import (
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 // ServiceType indicates "noop" service type
@@ -28,11 +28,11 @@ const ServiceType = "noop"
 // ServiceDefinition structure represents "noop" service parameters
 type ServiceDefinition struct {
 	// Approximate information on location where the service is provided from
-	Location dto_discovery.Location `json:"location"`
+	Location market.Location `json:"location"`
 }
 
 // GetLocation returns geographic location of service definition provider
-func (service ServiceDefinition) GetLocation() dto_discovery.Location {
+func (service ServiceDefinition) GetLocation() market.Location {
 	return service.Location
 }
 

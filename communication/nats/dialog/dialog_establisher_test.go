@@ -24,7 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,7 +57,7 @@ func TestDialogEstablisher_EstablishDialog(t *testing.T) {
 	signer := &identity.SignerFake{}
 	establisher := mockEstablisher(myID, connection, signer)
 
-	dialogInstance, err := establisher.EstablishDialog(peerID, dto_discovery.Contact{})
+	dialogInstance, err := establisher.EstablishDialog(peerID, market.Contact{})
 	defer dialogInstance.Close()
 	assert.NoError(t, err)
 	assert.NotNil(t, dialogInstance)
@@ -94,7 +94,7 @@ func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
 
 	establisher := mockEstablisher(myID, connection, &identity.SignerFake{})
 
-	dialogInstance, err := establisher.EstablishDialog(peerID, dto_discovery.Contact{})
+	dialogInstance, err := establisher.EstablishDialog(peerID, market.Contact{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "dialog creation error. failed to unpack response 'peer-topic.dialog-create'. invalid message signature ")
 	assert.Nil(t, dialogInstance)
@@ -106,7 +106,7 @@ func mockEstablisher(ID identity.Identity, connection nats.Connection, signer id
 	return &dialogEstablisher{
 		ID:     ID,
 		Signer: signer,
-		peerAddressFactory: func(contact dto_discovery.Contact) (*discovery.AddressNATS, error) {
+		peerAddressFactory: func(contact market.Contact) (*discovery.AddressNATS, error) {
 			return discovery.NewAddressWithConnection(connection, peerTopic), nil
 		},
 	}

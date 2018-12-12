@@ -88,8 +88,7 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client) teq
 		return len(proposals) == 1, stateErr
 	})
 	if err != nil {
-		assert.Error(t, err)
-		assert.FailNow(t, "Exactly one proposal is expected - something is not right!")
+		assert.FailNowf(t, "Exactly one proposal is expected - something is not right!", "Error was: %v", err)
 	}
 
 	seelog.Info("Selected proposal is: ", proposals[0])

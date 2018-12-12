@@ -24,7 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 const issuerLogPrefix = "[promise-issuer] "
@@ -36,7 +36,7 @@ type PromiseIssuer struct {
 	signer   identity.Signer
 
 	// these are populated by Start at runtime
-	proposal dto.ServiceProposal
+	proposal market.ServiceProposal
 }
 
 // NewPromiseIssuer creates instance of the promise issuer
@@ -45,7 +45,7 @@ func NewPromiseIssuer(issuerID identity.Identity, dialog communication.Dialog, s
 }
 
 // Start issuing promises for given service proposal
-func (issuer *PromiseIssuer) Start(proposal dto.ServiceProposal) error {
+func (issuer *PromiseIssuer) Start(proposal market.ServiceProposal) error {
 	issuer.proposal = proposal
 
 	if err := issuer.sendNewPromise(); err != nil {

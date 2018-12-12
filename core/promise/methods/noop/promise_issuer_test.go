@@ -25,14 +25,14 @@ import (
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	providerID = identity.FromAddress("provider-id")
-	proposal   = dto.ServiceProposal{
+	proposal   = market.ServiceProposal{
 		ProviderID:    providerID.Address,
 		PaymentMethod: fakePaymentMethod{},
 	}

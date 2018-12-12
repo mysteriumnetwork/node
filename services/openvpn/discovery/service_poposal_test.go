@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	dto_openvpn "github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/stretchr/testify/assert"
@@ -37,21 +37,21 @@ func Test_ServiceProposal_UnserializeServiceDefinition(t *testing.T) {
 		"service_definition": {}
 	}`)
 
-	var actual dto_discovery.ServiceProposal
+	var actual market.ServiceProposal
 	err := json.Unmarshal(jsonData, &actual)
 	assert.NoError(t, err)
 
-	expected := dto_discovery.ServiceProposal{
+	expected := market.ServiceProposal{
 		ServiceType:       "openvpn",
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
-		PaymentMethod:     dto_discovery.UnsupportedPaymentMethod{},
-		ProviderContacts:  dto_discovery.ContactList{},
+		PaymentMethod:     market.UnsupportedPaymentMethod{},
+		ProviderContacts:  market.ContactList{},
 	}
 	assert.Equal(t, expected, actual)
 }
 
 func Test_ServiceProposal_SerializeServiceDefinition(t *testing.T) {
-	sp := dto_discovery.ServiceProposal{
+	sp := market.ServiceProposal{
 		ServiceType:       "openvpn",
 		ServiceDefinition: dto_openvpn.ServiceDefinition{},
 	}
@@ -81,7 +81,7 @@ func Test_ServiceProposal_UnserializePerTimePaymentMethod(t *testing.T) {
 		"payment_method": {}
 	}`)
 
-	var actual dto_discovery.ServiceProposal
+	var actual market.ServiceProposal
 	err := json.Unmarshal(jsonData, &actual)
 
 	assert.Nil(t, err)

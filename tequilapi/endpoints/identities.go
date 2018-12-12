@@ -21,11 +21,9 @@ import (
 	"net/http"
 
 	"encoding/json"
-	"errors"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -48,21 +46,14 @@ type identityCreationDto struct {
 	Passphrase *string `json:"passphrase"`
 }
 
-// swagger:model IdentityRegistrationDTO
-type identityRegistrationDto struct {
-	// value true means register, false - unregister which in not implemented yet
-	Registered bool `json:"registered"`
-}
-
 // swagger:model IdentityUnlockingDTO
 type identityUnlockingDto struct {
 	Passphrase *string `json:"passphrase"`
 }
 
 type identitiesAPI struct {
-	idm             identity.Manager
-	mysteriumClient server.Client
-	signerFactory   identity.SignerFactory
+	idm           identity.Manager
+	signerFactory identity.SignerFactory
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -78,8 +69,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager, mystClient server.Client, signerFactory identity.SignerFactory) *identitiesAPI {
-	return &identitiesAPI{idm, mystClient, signerFactory}
+func NewIdentitiesEndpoint(idm identity.Manager, signerFactory identity.SignerFactory) *identitiesAPI {
+	return &identitiesAPI{idm, signerFactory}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -152,59 +143,6 @@ func (endpoint *identitiesAPI) Create(resp http.ResponseWriter, request *http.Re
 	utils.WriteAsJSON(idDto, resp)
 }
 
-// swagger:operation PUT /identities/{id}/registration Identity registerIdentity
-// ---
-// summary: Registers identity
-// description: Registers existing identity with Discovery API
-// parameters:
-// - name: id
-//   in: path
-//   description: Identity stored in keystore
-//   type: string
-//   required: true
-// - in: body
-//   name: body
-//   description: Parameter in body (registered) required for registering identity
-//   schema:
-//     $ref: "#/definitions/IdentityRegistrationDTO"
-// responses:
-//   202:
-//     description: Identity registered
-//   400:
-//     description: Bad request
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-//   501:
-//     description: Not implemented
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Register(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	id := identity.FromAddress(params.ByName("id"))
-	registerReq, err := toRegisterRequest(request)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
-		return
-	}
-
-	err = validateRegistrationRequest(registerReq)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusNotImplemented)
-		return
-	}
-
-	err = endpoint.mysteriumClient.RegisterIdentity(id, endpoint.signerFactory(id))
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-
-	resp.WriteHeader(http.StatusAccepted)
-}
-
 // swagger:operation PUT /identities/{id}/unlock Identity unlockIdentity
 // ---
 // summary: Unlocks identity
@@ -272,19 +210,6 @@ func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, er
 	return
 }
 
-func toRegisterRequest(req *http.Request) (isRegisterReq identityRegistrationDto, err error) {
-	isRegisterReq = identityRegistrationDto{}
-	err = json.NewDecoder(req.Body).Decode(&isRegisterReq)
-	return
-}
-
-func validateRegistrationRequest(regReq identityRegistrationDto) (err error) {
-	if regReq.Registered == false {
-		err = errors.New("Unregister not supported")
-	}
-	return
-}
-
 func validateUnlockRequest(unlockReq identityUnlockingDto) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
 	if unlockReq.Passphrase == nil {
@@ -305,12 +230,10 @@ func validateCreationRequest(createReq *identityCreationDto) (errors *validation
 func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
-	mystClient server.Client,
 	signerFactory identity.SignerFactory,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, mystClient, signerFactory)
+	idmEnd := NewIdentitiesEndpoint(idm, signerFactory)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
-	router.PUT("/identities/:id/registration", idmEnd.Register)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 }

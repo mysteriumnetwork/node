@@ -17,8 +17,11 @@
 
 package identity
 
+// VerifierFake represents fake signature verifier useful for testing
+// TODO each caller must use its own mocked verifier instead of global one
 type VerifierFake struct{}
 
+// Verify given message and signature by returning true on success
 func (verifier *VerifierFake) Verify(message []byte, signature Signature) bool {
 	signatureExpected := messageFakeHash(message)
 	return signature.EqualsTo(SignatureBytes(signatureExpected))

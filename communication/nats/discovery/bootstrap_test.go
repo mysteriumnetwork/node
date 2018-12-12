@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,14 +45,14 @@ func TestServiceProposalUnserializeNatsContact(t *testing.T) {
 		]
 	}`)
 
-	var actual dto_discovery.ServiceProposal
+	var actual market.ServiceProposal
 	err := json.Unmarshal(jsonData, &actual)
 
 	assert.Nil(t, err)
 	assert.Len(t, actual.ProviderContacts, 1)
 	assert.Exactly(
 		t,
-		dto_discovery.Contact{
+		market.Contact{
 			Type: TypeContactNATSV1,
 			Definition: ContactNATSV1{
 				Topic: "test-topic",

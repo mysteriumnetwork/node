@@ -22,10 +22,10 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
-	"github.com/mysteriumnetwork/node/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/proposals/registry"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -43,7 +43,7 @@ type ServiceFactory func(Options) (Service, error)
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
-	Start(providerID identity.Identity) (dto_discovery.ServiceProposal, session.ConfigProvider, error)
+	Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigProvider, error)
 	Wait() error
 	Stop() error
 }
@@ -52,7 +52,7 @@ type Service interface {
 type DialogWaiterFactory func(providerID identity.Identity, serviceType string) (communication.DialogWaiter, error)
 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
-type DialogHandlerFactory func(dto_discovery.ServiceProposal, session.ConfigProvider) communication.DialogHandler
+type DialogHandlerFactory func(market.ServiceProposal, session.ConfigProvider) communication.DialogHandler
 
 // NewManager creates new instance of pluggable services manager
 func NewManager(
@@ -60,7 +60,7 @@ func NewManager(
 	serviceFactory ServiceFactory,
 	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,
-	discoveryService *discovery.Discovery,
+	discoveryService *registry.Discovery,
 ) *Manager {
 	return &Manager{
 		identityHandler:      identityLoader,
@@ -82,7 +82,7 @@ type Manager struct {
 	serviceFactory ServiceFactory
 	service        Service
 
-	discovery *discovery.Discovery
+	discovery *registry.Discovery
 }
 
 // Start starts service - does not block

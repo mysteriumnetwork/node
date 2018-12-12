@@ -26,7 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -46,11 +46,11 @@ type testContext struct {
 var (
 	myID                  = identity.FromAddress("identity-1")
 	activeProviderID      = identity.FromAddress("fake-node-1")
-	activeProviderContact = dto.Contact{}
+	activeProviderContact = market.Contact{}
 	activeServiceType     = "fake-service"
-	activeProposal        = dto.ServiceProposal{
+	activeProposal        = market.ServiceProposal{
 		ProviderID:        activeProviderID.Address,
-		ProviderContacts:  []dto.Contact{activeProviderContact},
+		ProviderContacts:  []market.Contact{activeProviderContact},
 		ServiceType:       activeServiceType,
 		ServiceDefinition: &fakeServiceDefinition{},
 	}
@@ -63,7 +63,7 @@ func (tc *testContext) SetupTest() {
 
 	tc.stubPublisher = NewStubPublisher()
 	tc.fakeDialog = &fakeDialog{sessionID: establishedSessionID}
-	dialogCreator := func(consumer, provider identity.Identity, contact dto.Contact) (communication.Dialog, error) {
+	dialogCreator := func(consumer, provider identity.Identity, contact market.Contact) (communication.Dialog, error) {
 		tc.RLock()
 		defer tc.RUnlock()
 		return tc.fakeDialog, nil
@@ -298,4 +298,4 @@ func waitABit() {
 
 type fakeServiceDefinition struct{}
 
-func (fs *fakeServiceDefinition) GetLocation() dto.Location { return dto.Location{} }
+func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.Location{} }

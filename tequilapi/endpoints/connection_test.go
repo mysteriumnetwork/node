@@ -26,13 +26,11 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +44,7 @@ type fakeManager struct {
 	requestedServiceType string
 }
 
-func (fm *fakeManager) Connect(consumerID identity.Identity, proposal dto.ServiceProposal, options connection.ConnectParams) error {
+func (fm *fakeManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
 	fm.requestedConsumer = consumerID
 	fm.requestedProvider = identity.FromAddress(proposal.ProviderID)
 	fm.requestedServiceType = proposal.ServiceType
@@ -80,15 +78,17 @@ func (ssk *StubStatisticsTracker) GetSessionDuration() time.Duration {
 	return ssk.duration
 }
 
-func getMockMystAPIWithProposal(providerID, serviceType string) *server.ClientFake {
-	mystAPI := server.NewClientFake()
-	mystAPI.RegisterProposal(dto.ServiceProposal{
+func getMockProposalProviderWithSpecifiedProposal(providerID, serviceType string) ProposalProvider {
+	sampleProposal := market.ServiceProposal{
 		ID:                1,
 		ServiceType:       serviceType,
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        providerID,
-	}, nil)
-	return mystAPI
+	}
+
+	return &mockProposalProvider{
+		proposals: []market.ServiceProposal{sampleProposal},
+	}
 }
 
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
@@ -99,8 +99,8 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	}
 	ipResolver := ip.NewResolverFake("123.123.123.123")
 
-	mystAPI := getMockMystAPIWithProposal("node1", "noop")
-	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper, mystAPI)
+	mockedProposalProvider := getMockProposalProviderWithSpecifiedProposal("node1", "noop")
+	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper, mockedProposalProvider)
 
 	tests := []struct {
 		method         string
@@ -155,7 +155,7 @@ func TestDisconnectingState(t *testing.T) {
 		SessionID: "",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -177,7 +177,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 		SessionID: "",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -199,7 +199,7 @@ func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 		State: connection.Connecting,
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -222,7 +222,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 		SessionID: "My-super-session",
 	}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -242,7 +242,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
 
@@ -261,7 +261,7 @@ func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
 
@@ -283,8 +283,8 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	mystAPI := getMockMystAPIWithProposal("required-node", "openvpn")
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystAPI)
+	proposalProvider := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, proposalProvider)
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -307,7 +307,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	mystAPI := getMockMystAPIWithProposal("required-node", "noop")
+	mystAPI := getMockProposalProviderWithSpecifiedProposal("required-node", "noop")
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystAPI)
 	req := httptest.NewRequest(
 		http.MethodPut,
@@ -332,7 +332,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 func TestDeleteCallsDisconnect(t *testing.T) {
 	fakeManager := fakeManager{}
 
-	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodDelete, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
@@ -346,7 +346,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 func TestGetIPEndpointSucceeds(t *testing.T) {
 	manager := fakeManager{}
 	ipResolver := ip.NewResolverFake("123.123.123.123")
-	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, &mockProposalProvider{})
 	resp := httptest.NewRecorder()
 
 	connEndpoint.GetIP(resp, nil, nil)
@@ -364,7 +364,7 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	manager := fakeManager{}
 	ipResolver := ip.NewResolverFakeFailing(errors.New("fake error"))
-	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, mystClient)
+	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, &mockProposalProvider{})
 	resp := httptest.NewRecorder()
 
 	connEndpoint.GetIP(resp, nil, nil)
@@ -386,7 +386,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 	}
 
 	manager := fakeManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, mystClient)
+	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, &mockProposalProvider{})
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)
@@ -407,7 +407,7 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 	}
 
 	manager := fakeManager{}
-	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, mystClient)
+	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, &mockProposalProvider{})
 
 	resp := httptest.NewRecorder()
 	connEndpoint.GetStatistics(resp, nil, nil)
@@ -426,7 +426,7 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrAlreadyExists
 
-	mystAPI := getMockMystAPIWithProposal("required-node", "openvpn")
+	mystAPI := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mystAPI)
 
 	req := httptest.NewRequest(
@@ -455,7 +455,7 @@ func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 	manager := fakeManager{}
 	manager.onDisconnectReturn = connection.ErrNoConnection
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mystClient)
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, &mockProposalProvider{})
 
 	req := httptest.NewRequest(
 		http.MethodDelete,
@@ -480,8 +480,8 @@ func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncount
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
-	mystAPI := getMockMystAPIWithProposal("required-node", "openvpn")
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mystAPI)
+	mockProposalProvider := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mockProposalProvider)
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
@@ -508,7 +508,7 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 	manager := fakeManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
-	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, mystClient)
+	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, &mockProposalProvider{proposals: make([]market.ServiceProposal, 0)})
 	req := httptest.NewRequest(
 		http.MethodPut,
 		"/irrelevant",

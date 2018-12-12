@@ -20,13 +20,12 @@ package noop
 import (
 	"errors"
 	"testing"
-
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,10 +50,10 @@ func Test_Manager_Start(t *testing.T) {
 
 	assert.Exactly(
 		t,
-		dto_discovery.ServiceProposal{
+		market.ServiceProposal{
 			ServiceType: "noop",
 			ServiceDefinition: ServiceDefinition{
-				Location: dto_discovery.Location{Country: "LT"},
+				Location: market.Location{Country: "LT"},
 			},
 
 			PaymentMethodType: "NOOP",

@@ -21,12 +21,16 @@ import (
 	"errors"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
 )
+
+// IdentityRegistry exposes identity registration method
+type IdentityRegistry interface {
+	RegisterIdentity(identity.Identity, identity.Signer) error
+}
 
 type handler struct {
 	manager       identity.Manager
-	identityAPI   server.Client
+	registry      IdentityRegistry
 	cache         identity.IdentityCacheInterface
 	signerFactory identity.SignerFactory
 }
@@ -34,13 +38,13 @@ type handler struct {
 //NewHandler creates new identity handler used by node
 func NewHandler(
 	manager identity.Manager,
-	identityAPI server.Client,
+	registry IdentityRegistry,
 	cache identity.IdentityCacheInterface,
 	signerFactory identity.SignerFactory,
 ) Handler {
 	return &handler{
 		manager:       manager,
-		identityAPI:   identityAPI,
+		registry:      registry,
 		cache:         cache,
 		signerFactory: signerFactory,
 	}
@@ -84,7 +88,7 @@ func (h *handler) UseNew(passphrase string) (id identity.Identity, err error) {
 		return
 	}
 
-	if err = h.identityAPI.RegisterIdentity(id, h.signerFactory(id)); err != nil {
+	if err = h.registry.RegisterIdentity(id, h.signerFactory(id)); err != nil {
 		return
 	}
 

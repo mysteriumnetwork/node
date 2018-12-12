@@ -20,14 +20,14 @@ package wireguard
 import (
 	"encoding/json"
 
-	discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 // Bootstrap is called on program initialization time and registers various deserializers related to wireguard service
 func Bootstrap() {
-	discovery.RegisterServiceDefinitionUnserializer(
+	market.RegisterServiceDefinitionUnserializer(
 		ServiceType,
-		func(rawDefinition *json.RawMessage) (discovery.ServiceDefinition, error) {
+		func(rawDefinition *json.RawMessage) (market.ServiceDefinition, error) {
 			var definition ServiceDefinition
 			err := json.Unmarshal(*rawDefinition, &definition)
 
@@ -36,9 +36,9 @@ func Bootstrap() {
 	)
 
 	// TODO per time or per bytes payment methods should be defined here
-	discovery.RegisterPaymentMethodUnserializer(
+	market.RegisterPaymentMethodUnserializer(
 		PaymentMethod,
-		func(rawDefinition *json.RawMessage) (discovery.PaymentMethod, error) {
+		func(rawDefinition *json.RawMessage) (market.PaymentMethod, error) {
 			var method Payment
 			err := json.Unmarshal(*rawDefinition, &method)
 

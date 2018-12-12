@@ -27,7 +27,7 @@ import (
 type tequilapiTestSuite struct {
 	suite.Suite
 	server APIServer
-	client TestClient
+	client *testClient
 }
 
 func (testSuite *tequilapiTestSuite) SetupSuite() {

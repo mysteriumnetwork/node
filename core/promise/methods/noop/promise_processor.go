@@ -26,8 +26,8 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
 )
 
 const (
@@ -68,7 +68,7 @@ type PromiseProcessor struct {
 }
 
 // Start processing promises for given service proposal
-func (processor *PromiseProcessor) Start(proposal dto.ServiceProposal) error {
+func (processor *PromiseProcessor) Start(proposal market.ServiceProposal) error {
 	// TODO: replace static value with some real data
 	processor.lastPromise = promise.Promise{
 		Amount: money.NewMoney(10, money.CURRENCY_MYST),

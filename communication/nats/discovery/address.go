@@ -22,9 +22,10 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/market"
+
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/identity"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	nats_lib "github.com/nats-io/go-nats"
 )
 
@@ -60,7 +61,7 @@ func NewAddressFromHostAndID(uri string, myID identity.Identity, serviceType str
 }
 
 // NewAddressForContact extracts NATS address from given contact structure
-func NewAddressForContact(contact dto_discovery.Contact) (*AddressNATS, error) {
+func NewAddressForContact(contact market.Contact) (*AddressNATS, error) {
 	if contact.Type != TypeContactNATSV1 {
 		return nil, fmt.Errorf("invalid contact type: %s", contact.Type)
 	}
@@ -127,8 +128,8 @@ func (address *AddressNATS) GetTopic() string {
 }
 
 // GetContact serializes current address to Contact structure.
-func (address *AddressNATS) GetContact() dto_discovery.Contact {
-	return dto_discovery.Contact{
+func (address *AddressNATS) GetContact() market.Contact {
+	return market.Contact{
 		Type: TypeContactNATSV1,
 		Definition: ContactNATSV1{
 			Topic:           address.topic,

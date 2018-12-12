@@ -18,18 +18,15 @@
 package statistics
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"sync/atomic"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/server"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 )
@@ -39,7 +36,7 @@ var mockStateEvent = connection.StateEvent{
 	SessionInfo: connection.SessionInfo{
 		ConsumerID: identity.FromAddress("0x000"),
 		SessionID:  session.ID("test"),
-		Proposal: dto.ServiceProposal{
+		Proposal: market.ServiceProposal{
 			ServiceType: "just a test",
 		},
 	},
@@ -56,57 +53,38 @@ func mockLocationDetector() location.Location {
 }
 
 func TestStatisticsReporterStartsAndStops(t *testing.T) {
-	var counter int64
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt64(&counter, 1)
-	}))
-	defer ts.Close()
-
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	mysteriumClient := server.NewClient(ts.URL)
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Minute)
+	mockSender := newMockRemoteSender()
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, mockLocationDetector, time.Minute)
 
 	reporter.ConsumeStateEvent(mockStateEvent)
 
 	reporter.start(mockStateEvent.SessionInfo.ConsumerID, mockStateEvent.SessionInfo.Proposal.ServiceType, mockStateEvent.SessionInfo.Proposal.ProviderID, mockStateEvent.SessionInfo.SessionID)
-	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 0 }))
-	assert.True(t, reporter.started)
 	reporter.stop()
 
-	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) == 1 }))
+	assert.NoError(t, waitForChannel(mockSender.called, time.Millisecond*200))
 	assert.False(t, reporter.started)
 }
 
 func TestStatisticsReporterInterval(t *testing.T) {
-	var counter int64
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt64(&counter, 1)
-	}))
-	defer ts.Close()
-
-	mysteriumClient := server.NewClient(ts.URL)
+	mockSender := newMockRemoteSender()
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, mockLocationDetector, time.Nanosecond)
 
 	reporter.ConsumeStateEvent(mockStateEvent)
 
 	reporter.start(mockStateEvent.SessionInfo.ConsumerID, mockStateEvent.SessionInfo.Proposal.ServiceType, mockStateEvent.SessionInfo.Proposal.ProviderID, mockStateEvent.SessionInfo.SessionID)
-	assert.NoError(t, waitFor(func() bool { return atomic.LoadInt64(&counter) > 3 }))
+	assert.NoError(t, waitForChannel(mockSender.called, time.Millisecond*200))
 
 	reporter.stop()
 }
 
 func TestStatisticsReporterConsumeStateEvent(t *testing.T) {
-	var counter int64
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt64(&counter, 1)
-	}))
-	defer ts.Close()
-
-	mysteriumClient := server.NewClient(ts.URL)
+	mockSender := newMockRemoteSender()
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mysteriumClient, mockSignerFactory, mockLocationDetector, time.Nanosecond)
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, mockLocationDetector, time.Nanosecond)
 	reporter.ConsumeStateEvent(mockStateEvent)
+	<-mockSender.called
 	assert.True(t, reporter.started)
 	copy := mockStateEvent
 	copy.State = connection.Disconnecting
@@ -114,12 +92,28 @@ func TestStatisticsReporterConsumeStateEvent(t *testing.T) {
 	assert.False(t, reporter.started)
 }
 
-func waitFor(f func() bool) error {
-	timeout := time.Now().Add(time.Second)
-	for time.Now().Before(timeout) {
-		if f() {
-			return nil
-		}
+func waitForChannel(ch chan bool, duration time.Duration) error {
+	select {
+	case <-ch:
+		return nil
+	case <-time.After(duration):
+		return errors.New("timed out waiting for channel")
 	}
-	return fmt.Errorf("Failed to wait for expected result")
 }
+
+type mockRemoteSender struct {
+	called chan bool
+}
+
+func (mrs *mockRemoteSender) SendSessionStats(id session.ID, stats mysterium.SessionStats, signer identity.Signer) error {
+	mrs.called <- true
+	return nil
+}
+
+func newMockRemoteSender() *mockRemoteSender {
+	return &mockRemoteSender{
+		called: make(chan bool),
+	}
+}
+
+var _ Reporter = &mockRemoteSender{}

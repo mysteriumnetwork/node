@@ -24,7 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -33,7 +33,7 @@ type fakePromiseIssuer struct {
 	stopCalled  bool
 }
 
-func (issuer *fakePromiseIssuer) Start(proposal dto.ServiceProposal) error {
+func (issuer *fakePromiseIssuer) Start(proposal market.ServiceProposal) error {
 	issuer.startCalled = true
 	return nil
 }

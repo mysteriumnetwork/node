@@ -21,14 +21,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	locationLTTelia = dto_discovery.Location{"LT", "Vilnius", "AS8764"}
+	locationLTTelia = market.Location{"LT", "Vilnius", "AS8764"}
 	protocol        = "tcp"
 )
 
@@ -37,7 +37,7 @@ func Test_NewServiceProposalWithLocation(t *testing.T) {
 
 	assert.Exactly(
 		t,
-		dto_discovery.ServiceProposal{
+		market.ServiceProposal{
 			ServiceType: "openvpn",
 			ServiceDefinition: dto.ServiceDefinition{
 				Location:          locationLTTelia,

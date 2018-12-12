@@ -20,14 +20,14 @@ package discovery
 import (
 	"encoding/json"
 
-	dto_discovery "github.com/mysteriumnetwork/node/service_discovery/dto"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 // Bootstrap loads NATS discovery package into the overall system
 func Bootstrap() {
-	dto_discovery.RegisterContactUnserializer(
+	market.RegisterContactUnserializer(
 		TypeContactNATSV1,
-		func(rawDefinition *json.RawMessage) (dto_discovery.ContactDefinition, error) {
+		func(rawDefinition *json.RawMessage) (market.ContactDefinition, error) {
 			var contact ContactNATSV1
 			err := json.Unmarshal(*rawDefinition, &contact)
 
