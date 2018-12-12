@@ -131,7 +131,7 @@ func (a *Allocator) ReleaseInterface(iface string) error {
 	}
 
 	if _, ok := a.Ifaces[i]; !ok {
-		return errors.New("Allocated interface not found")
+		return errors.New("allocated interface not found")
 	}
 
 	delete(a.Ifaces, i)
@@ -139,20 +139,18 @@ func (a *Allocator) ReleaseInterface(iface string) error {
 }
 
 // ReleaseIPNet releases IP address.
-func (a *Allocator) ReleaseIPNet(ip net.IPNet) error {
+func (a *Allocator) ReleaseIPNet(ipnet net.IPNet) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	s := ip.String()
-	s = strings.TrimPrefix(s, "10.182.")
-	s = strings.TrimSuffix(s, ".2/24")
-	i, err := strconv.Atoi(s)
-	if err != nil {
-		return err
+	ip4 := ipnet.IP.To4()
+	if len(ip4) != net.IPv4len {
+		return errors.New("allocated subnet not found")
 	}
 
+	i := int(ip4[2])
 	if _, ok := a.IPAddresses[i]; !ok {
-		return errors.New("Allocated interface not found")
+		return errors.New("allocated subnet not found")
 	}
 
 	delete(a.IPAddresses, i)
@@ -165,7 +163,7 @@ func (a *Allocator) ReleasePort(port int) error {
 	defer a.mu.Unlock()
 
 	if _, ok := a.Ifaces[port]; !ok {
-		return errors.New("Allocated interface not found")
+		return errors.New("allocated port not found")
 	}
 
 	delete(a.Ifaces, port)
