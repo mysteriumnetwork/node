@@ -33,9 +33,9 @@ func SplitCommand(command string, commandArguments string) *exec.Cmd {
 	return exec.Command(command, trimmedArgs...)
 }
 
-// SuExec executes external command with a sudo privileges.
+// SudoExec executes external command with a sudo privileges.
 // It returns an combined stderr and stdout output and exit code in case of error.
-func SuExec(args ...string) error {
+func SudoExec(args ...string) error {
 	if out, err := exec.Command("sudo", args...).CombinedOutput(); err != nil {
 		return fmt.Errorf("'sudo %v': %v output: %s", strings.Join(args, " "), err, out)
 	}

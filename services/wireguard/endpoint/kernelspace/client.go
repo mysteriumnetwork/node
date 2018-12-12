@@ -86,16 +86,16 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 
 func (c *client) up(iface string, ipAddr net.IPNet) error {
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
-		if err := utils.SuExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
+		if err := utils.SudoExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
 			return err
 		}
 	}
 
-	if err := utils.SuExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
+	if err := utils.SudoExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
 		return err
 	}
 
-	return utils.SuExec("ip", "link", "set", "dev", iface, "up")
+	return utils.SudoExec("ip", "link", "set", "dev", iface, "up")
 }
 
 func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
@@ -111,14 +111,14 @@ func excludeRoute(ip net.IP) error {
 		return err
 	}
 
-	return utils.SuExec("ip", "route", "replace", ip.String(), "via", gw.String())
+	return utils.SudoExec("ip", "route", "replace", ip.String(), "via", gw.String())
 }
 
 func addDefaultRoute(iface string) error {
-	if err := utils.SuExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
+	if err := utils.SudoExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
 		return err
 	}
-	return utils.SuExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
+	return utils.SudoExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
 }
 
 func (c *client) Close() error {
@@ -128,12 +128,12 @@ func (c *client) Close() error {
 	}
 
 	if len(d.Peers) > 0 && d.Peers[0].Endpoint != nil {
-		if err := utils.SuExec("ip", "route", "del", d.Peers[0].Endpoint.IP.String()); err != nil {
+		if err := utils.SudoExec("ip", "route", "del", d.Peers[0].Endpoint.IP.String()); err != nil {
 			return err
 		}
 	}
 
-	if err := utils.SuExec("ip", "link", "del", "dev", c.iface); err != nil {
+	if err := utils.SudoExec("ip", "link", "del", "dev", c.iface); err != nil {
 		return err
 	}
 	return c.wgClient.Close()
