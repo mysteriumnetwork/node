@@ -73,22 +73,22 @@ func (a *Allocator) WildInterfaces() ([]net.Interface, error) {
 }
 
 // AllocateInterface provides available name for the wireguard network interface.
-func (a *Allocator) AllocateInterface() string {
+func (a *Allocator) AllocateInterface() (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
 	for i := 0; i < 255; i++ {
 		if _, ok := a.Ifaces[i]; !ok {
 			a.Ifaces[i] = struct{}{}
-			return fmt.Sprintf("%s%d", interfacePrefix, i)
+			return fmt.Sprintf("%s%d", interfacePrefix, i), nil
 		}
 	}
 
-	return ""
+	return "", errors.New("no more unused interfaces")
 }
 
 // AllocateIPNet provides available IP address for the wireguard connection.
-func (a *Allocator) AllocateIPNet() net.IPNet {
+func (a *Allocator) AllocateIPNet() (net.IPNet, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -101,23 +101,23 @@ func (a *Allocator) AllocateIPNet() net.IPNet {
 		}
 	}
 
-	_, subnet, _ := net.ParseCIDR(s)
-	return *subnet
+	_, subnet, err := net.ParseCIDR(s)
+	return *subnet, err
 }
 
 // AllocatePort provides available UDP port for the wireguard endpoint.
-func (a *Allocator) AllocatePort() int {
+func (a *Allocator) AllocatePort() (int, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
 	for i := 52820; i < 53000; i++ {
 		if _, ok := a.IPAddresses[i]; !ok {
 			a.IPAddresses[i] = struct{}{}
-			return i
+			return i, nil
 		}
 	}
 
-	return 52820
+	return 0, errors.New("no more unused ports")
 }
 
 // ReleaseInterface releases name for the wireguard network interface.

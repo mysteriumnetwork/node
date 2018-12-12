@@ -48,8 +48,19 @@ type connectionEndpoint struct {
 func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	ce.cleanWildInterfaces()
 
-	ce.iface = ce.resourceAllocator.AllocateInterface()
-	ce.endpoint.Port = ce.resourceAllocator.AllocatePort()
+	iface, err := ce.resourceAllocator.AllocateInterface()
+	if err != nil {
+		return err
+	}
+
+	port, err := ce.resourceAllocator.AllocatePort()
+	if err != nil {
+		return err
+	}
+
+	ce.iface = iface
+	ce.endpoint.Port = port
+
 	if ce.ipResolver != nil {
 		publicIP, err := ce.ipResolver.GetPublicIP()
 		if err != nil {
@@ -63,7 +74,11 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		if err != nil {
 			return err
 		}
-		ce.ipAddr = ce.resourceAllocator.AllocateIPNet()
+		ipAddr, err := ce.resourceAllocator.AllocateIPNet()
+		if err != nil {
+			return err
+		}
+		ce.ipAddr = ipAddr
 		ce.ipAddr.IP = providerIP(ce.ipAddr)
 		ce.privateKey = privateKey
 	} else {
