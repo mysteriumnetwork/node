@@ -67,20 +67,18 @@ func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, ipAddr ne
 }
 
 func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
-	var deviceConfig wgtypes.Config
-	if peer != nil {
-		endpoint := peer.Endpoint()
-		publicKey, err := stringToKey(peer.PublicKey())
-		if err != nil {
-			return err
-		}
-
-		deviceConfig.Peers = []wgtypes.PeerConfig{{
-			Endpoint:   endpoint,
-			PublicKey:  publicKey,
-			AllowedIPs: allowedIPs,
-		}}
+	endpoint := peer.Endpoint()
+	publicKey, err := stringToKey(peer.PublicKey())
+	if err != nil {
+		return err
 	}
+
+	var deviceConfig wgtypes.Config
+	deviceConfig.Peers = []wgtypes.PeerConfig{{
+		Endpoint:   endpoint,
+		PublicKey:  publicKey,
+		AllowedIPs: allowedIPs,
+	}}
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
