@@ -33,7 +33,7 @@ const interfacePrefix = "myst"
 type Allocator struct {
 	Ifaces      map[int]struct{}
 	IPAddresses map[int]struct{}
-	Port        map[int]struct{}
+	Ports       map[int]struct{}
 	mu          sync.Mutex
 }
 
@@ -42,7 +42,7 @@ func NewAllocator() Allocator {
 	return Allocator{
 		Ifaces:      make(map[int]struct{}),
 		IPAddresses: make(map[int]struct{}),
-		Port:        make(map[int]struct{}),
+		Ports:       make(map[int]struct{}),
 	}
 }
 
@@ -111,8 +111,8 @@ func (a *Allocator) AllocatePort() (int, error) {
 	defer a.mu.Unlock()
 
 	for i := 52820; i < 53000; i++ {
-		if _, ok := a.IPAddresses[i]; !ok {
-			a.IPAddresses[i] = struct{}{}
+		if _, ok := a.Ports[i]; !ok {
+			a.Ports[i] = struct{}{}
 			return i, nil
 		}
 	}
@@ -162,10 +162,10 @@ func (a *Allocator) ReleasePort(port int) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if _, ok := a.Ifaces[port]; !ok {
+	if _, ok := a.Ports[port]; !ok {
 		return errors.New("allocated port not found")
 	}
 
-	delete(a.Ifaces, port)
+	delete(a.Ports, port)
 	return nil
 }

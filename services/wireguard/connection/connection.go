@@ -99,7 +99,7 @@ func (c *Connection) Stop() {
 	c.stateChannel <- connection.Disconnecting
 
 	if err := c.connectionEndpoint.Stop(); err != nil {
-		log.Error(logPrefix, "Failed to close wireguard connection", err)
+		log.Error(logPrefix, "Failed to close wireguard connection: ", err)
 	}
 
 	c.stateChannel <- connection.NotConnected
