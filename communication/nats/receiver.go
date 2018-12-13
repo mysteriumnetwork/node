@@ -73,12 +73,12 @@ func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) er
 	receiver.mu.Lock()
 	defer receiver.mu.Unlock()
 
-	subs, err := receiver.connection.Subscribe(messageTopic, messageHandler)
+	subscription, err := receiver.connection.Subscribe(messageTopic, messageHandler)
 	if err != nil {
 		err = fmt.Errorf("failed subscribe message '%s'. %s", messageTopic, err)
 		return err
 	}
-	receiver.subs[messageTopic] = subs
+	receiver.subs[messageTopic] = subscription
 	return nil
 }
 
@@ -134,19 +134,19 @@ func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) er
 	receiver.mu.Lock()
 	defer receiver.mu.Unlock()
 
-	if subs, ok := receiver.subs[requestTopic]; ok && subs.IsValid() {
+	if subscription, ok := receiver.subs[requestTopic]; ok && subscription.IsValid() {
 		log.Debug(receiverLogPrefix, fmt.Sprintf("Already subscribed to '%s' topic", requestTopic))
 		return nil
 	}
 
 	log.Debug(receiverLogPrefix, fmt.Sprintf("Request '%s' topic has been subscribed to", requestTopic))
 
-	subs, err := receiver.connection.Subscribe(requestTopic, messageHandler)
+	subscription, err := receiver.connection.Subscribe(requestTopic, messageHandler)
 	if err != nil {
 		err = fmt.Errorf("failed subscribe request '%s'. %s", requestTopic, err)
 		return err
 	}
 
-	receiver.subs[requestTopic] = subs
+	receiver.subs[requestTopic] = subscription
 	return nil
 }
