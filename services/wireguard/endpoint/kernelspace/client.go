@@ -19,6 +19,7 @@ package kernelspace
 
 import (
 	"encoding/base64"
+	"fmt"
 	"net"
 	"os/exec"
 
@@ -125,10 +126,17 @@ func addDefaultRoute(iface string) error {
 }
 
 func (c *client) Close() error {
-	if err := c.DestroyDevice(c.iface); err != nil {
-		return err
+	destroyErr := c.DestroyDevice(c.iface)
+	closeErr := c.wgClient.Close()
+
+	if closeErr != nil && destroyErr == nil {
+		return closeErr
+	} else if closeErr == nil && destroyErr != nil {
+		return destroyErr
+	} else if closeErr != nil && destroyErr != nil {
+		return fmt.Errorf("failed to close wireguard client %v; failed to destroy wireguard device: %v", closeErr, destroyErr)
 	}
-	return c.wgClient.Close()
+	return nil
 }
 
 // GeneratePrivateKey creates new wireguard private key
