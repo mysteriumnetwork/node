@@ -158,6 +158,7 @@ jobs:
         file_glob: true
         file: build/package/*
         skip_cleanup: true
+        overwrite: true
         api_key: "$GIT_RELEASES_API_KEY"
         on:
           tags: true
