@@ -18,6 +18,7 @@
 package session
 
 import (
+	"encoding/json"
 	"errors"
 	"sync"
 
@@ -37,8 +38,17 @@ var (
 // IDGenerator defines method for session id generation
 type IDGenerator func() (ID, error)
 
+// ConfigNegotiator is able to handle config negotiations
+type ConfigNegotiator interface {
+	ProvideConfig() (ServiceConfiguration, error)
+	ConsumeConfig(json.RawMessage) error
+}
+
 // ConfigProvider provides session config for remote client
 type ConfigProvider func() (ServiceConfiguration, error)
+
+// ConfigConsumer provides clients session configuration for the provider
+type ConfigConsumer func(json.RawMessage) error
 
 // SaveCallback stores newly started sessions
 type SaveCallback func(Session)

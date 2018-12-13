@@ -21,18 +21,22 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/consumer"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
 var _ Creator = (&Registry{}).CreateConnection
 
 var (
-	connectionMock    = &connectionFake{}
-	connectionFactory = func(connectionParams ConnectOptions, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
-		return connectionMock, nil
-	}
+	serviceType = "serviceType"
 )
+
+type factoryMock struct {
+	connectionMock Connection
+}
+
+func (fm *factoryMock) Create(stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
+	return fm.connectionMock, nil
+}
 
 func TestRegistry_Factory(t *testing.T) {
 	registry := NewRegistry()
@@ -41,33 +45,34 @@ func TestRegistry_Factory(t *testing.T) {
 
 func TestRegistry_Register(t *testing.T) {
 	registry := Registry{
-		creators: map[string]Creator{},
+		creators: map[string]Factory{},
 	}
 
-	registry.Register("any", connectionFactory)
+	registry.Register(serviceType, &factoryMock{
+		connectionMock: &connectionMock{},
+	})
 	assert.Len(t, registry.creators, 1)
 }
 
 func TestRegistry_CreateConnection_NonExisting(t *testing.T) {
 	registry := &Registry{}
 
-	connection, err := registry.CreateConnection(ConnectOptions{}, make(chan State), make(chan consumer.SessionStatistics))
+	connection, err := registry.CreateConnection(serviceType, make(chan State), make(chan consumer.SessionStatistics))
 	assert.Equal(t, ErrUnsupportedServiceType, err)
 	assert.Nil(t, connection)
 }
 
 func TestRegistry_CreateConnection_Existing(t *testing.T) {
-	connectOptions := ConnectOptions{
-		Proposal: market.ServiceProposal{ServiceType: "fake-service"},
-	}
-
+	mock := &connectionMock{}
 	registry := Registry{
-		creators: map[string]Creator{
-			"fake-service": connectionFactory,
+		creators: map[string]Factory{
+			"fake-service": &factoryMock{
+				connectionMock: mock,
+			},
 		},
 	}
 
-	connection, err := registry.CreateConnection(connectOptions, make(chan State), make(chan consumer.SessionStatistics))
+	connection, err := registry.CreateConnection("fake-service", make(chan State), make(chan consumer.SessionStatistics))
 	assert.NoError(t, err)
-	assert.Equal(t, connectionMock, connection)
+	assert.Equal(t, mock, connection)
 }

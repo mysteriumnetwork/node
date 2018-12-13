@@ -18,6 +18,7 @@
 package connection
 
 import (
+	"encoding/json"
 	"sync"
 
 	log "github.com/cihub/seelog"
@@ -38,7 +39,14 @@ type Connection struct {
 }
 
 // Start establish wireguard connection to the service provider.
-func (c *Connection) Start() (err error) {
+func (c *Connection) Start(options connection.ConnectOptions) (err error) {
+	var config wg.ServiceConfig
+	if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
+		return err
+	}
+	c.config.Provider = config.Provider
+	c.config.Consumer.IPAddress = config.Consumer.IPAddress
+
 	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(nil)
 	if err != nil {
 		return err
@@ -66,6 +74,17 @@ func (c *Connection) Start() (err error) {
 func (c *Connection) Wait() error {
 	c.connection.Wait()
 	return nil
+}
+
+// GetConfig returns the consumer configuration for session creation
+func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
+	publicKey, err := endpoint.PrivateKeyToPublicKey(c.config.Consumer.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	return wg.ConsumerConfig{
+		PublicKey: publicKey,
+	}, nil
 }
 
 // Stop stops wireguard connection and closes connection endpoint.

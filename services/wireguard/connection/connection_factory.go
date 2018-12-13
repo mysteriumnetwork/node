@@ -18,23 +18,30 @@
 package connection
 
 import (
-	"encoding/json"
-
 	"github.com/mysteriumnetwork/node/core/connection"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 )
 
-// NewConnectionCreator creates wireguard connections
-func NewConnectionCreator() connection.Creator {
-	return func(options connection.ConnectOptions, stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-		var config wg.ServiceConfig
-		if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
-			return nil, err
-		}
+// Factory is the wireguard connection factory
+type Factory struct{}
 
-		return &Connection{
-			stateChannel: stateChannel,
-			config:       config,
-		}, nil
+// Create creates a new wireguard connenction
+func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
+	privateKey, err := endpoint.GeneratePrivateKey()
+	if err != nil {
+		return nil, err
 	}
+	config := wg.ServiceConfig{}
+	config.Consumer.PrivateKey = privateKey
+
+	return &Connection{
+		stateChannel: stateChannel,
+		config:       config,
+	}, nil
+}
+
+// NewConnectionCreator creates wireguard connections
+func NewConnectionCreator() connection.Factory {
+	return &Factory{}
 }

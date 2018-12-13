@@ -39,13 +39,13 @@ type fakeManager struct {
 	onDisconnectReturn   error
 	onStatusReturn       connection.ConnectionStatus
 	disconnectCount      int
-	requestedConsumer    identity.Identity
+	requestedConsumerID  identity.Identity
 	requestedProvider    identity.Identity
 	requestedServiceType string
 }
 
 func (fm *fakeManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
-	fm.requestedConsumer = consumerID
+	fm.requestedConsumerID = consumerID
 	fm.requestedProvider = identity.FromAddress(proposal.ProviderID)
 	fm.requestedServiceType = proposal.ServiceType
 	return fm.onConnectReturn
@@ -299,7 +299,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
-	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumer)
+	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumerID)
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
 	assert.Equal(t, "openvpn", fakeManager.requestedServiceType)
 }
@@ -324,7 +324,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
-	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumer)
+	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumerID)
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
 	assert.Equal(t, "noop", fakeManager.requestedServiceType)
 }

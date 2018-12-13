@@ -18,6 +18,7 @@
 package service
 
 import (
+	"encoding/json"
 	"sync"
 
 	log "github.com/cihub/seelog"
@@ -28,7 +29,6 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -53,8 +53,32 @@ type Manager struct {
 	natService         nat.NATService
 }
 
+// ProvideConfig provides the config for consumer
+func (manager *Manager) ProvideConfig() (session.ServiceConfiguration, error) {
+	config, err := manager.connectionEndpoint.Config()
+	if err != nil {
+		return wg.ServiceConfig{}, err
+	}
+
+	return config, nil
+}
+
+// ConsumeConfig takes in the provided config and adds it to the wg device
+func (manager *Manager) ConsumeConfig(publicKey json.RawMessage) error {
+	key := &wg.ConsumerConfig{}
+	err := json.Unmarshal(publicKey, key)
+	if err != nil {
+		return err
+	}
+
+	if err := manager.connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigProvider, error) {
+func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
 	if err := manager.connectionEndpoint.Start(nil); err != nil {
 		return market.ServiceProposal{}, nil, err
 	}
@@ -73,30 +97,6 @@ func (manager *Manager) Start(providerID identity.Identity) (market.ServicePropo
 	})
 	if err := manager.natService.Start(); err != nil {
 		return market.ServiceProposal{}, nil, err
-	}
-
-	sessionConfigProvider := func() (session.ServiceConfiguration, error) {
-		privateKey, err := endpoint.GeneratePrivateKey()
-		if err != nil {
-			return wg.ServiceConfig{}, err
-		}
-
-		publicKey, err := endpoint.PrivateKeyToPublicKey(privateKey)
-		if err != nil {
-			return wg.ServiceConfig{}, err
-		}
-
-		if err := manager.connectionEndpoint.AddPeer(publicKey, nil); err != nil {
-			return wg.ServiceConfig{}, err
-		}
-
-		config, err := manager.connectionEndpoint.Config()
-		if err != nil {
-			return wg.ServiceConfig{}, err
-		}
-
-		config.Consumer.PrivateKey = privateKey
-		return config, nil
 	}
 
 	publicIP, err := manager.ipResolver.GetPublicIP()
@@ -123,7 +123,7 @@ func (manager *Manager) Start(providerID identity.Identity) (market.ServicePropo
 		},
 	}
 
-	return proposal, sessionConfigProvider, nil
+	return proposal, manager, nil
 }
 
 // Wait blocks until service is stopped.

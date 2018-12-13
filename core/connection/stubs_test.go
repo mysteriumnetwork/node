@@ -129,10 +129,10 @@ const (
 
 type connectionFactoryFake struct {
 	mockError      error
-	mockConnection *connectionFake
+	mockConnection *connectionMock
 }
 
-func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptions, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
+func (cff *connectionFactoryFake) CreateConnection(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
 	//each test can set this value to simulate connection creation error, this flag is reset BEFORE each test
 	if cff.mockError != nil {
 		return nil, cff.mockError
@@ -157,7 +157,7 @@ func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptio
 	cff.mockConnection.StateCallback(stateCallback)
 
 	// we copy the values over, so that the factory always returns a new instance of connection
-	copy := connectionFake{
+	copy := connectionMock{
 		onStartReportStates: cff.mockConnection.onStartReportStates,
 		onStartReturnError:  cff.mockConnection.onStartReturnError,
 		onStopReportStates:  cff.mockConnection.onStopReportStates,
@@ -169,7 +169,7 @@ func (cff *connectionFactoryFake) CreateConnection(connectionParams ConnectOptio
 	return &copy, nil
 }
 
-type connectionFake struct {
+type connectionMock struct {
 	onStartReturnError  error
 	onStartReportStates []fakeState
 	onStopReportStates  []fakeState
@@ -179,7 +179,11 @@ type connectionFake struct {
 	sync.RWMutex
 }
 
-func (foc *connectionFake) Start() error {
+func (foc *connectionMock) GetConfig() (ConsumerConfig, error) {
+	return nil, nil
+}
+
+func (foc *connectionMock) Start(connectionParams ConnectOptions) error {
 	foc.RLock()
 	defer foc.RUnlock()
 
@@ -194,26 +198,26 @@ func (foc *connectionFake) Start() error {
 	return nil
 }
 
-func (foc *connectionFake) Wait() error {
+func (foc *connectionMock) Wait() error {
 	foc.fakeProcess.Wait()
 	return nil
 }
 
-func (foc *connectionFake) Stop() {
+func (foc *connectionMock) Stop() {
 	for _, fakeState := range foc.onStopReportStates {
 		foc.reportState(fakeState)
 	}
 	foc.fakeProcess.Done()
 }
 
-func (foc *connectionFake) reportState(state fakeState) {
+func (foc *connectionMock) reportState(state fakeState) {
 	foc.RLock()
 	defer foc.RUnlock()
 
 	foc.stateCallback(state)
 }
 
-func (foc *connectionFake) StateCallback(callback func(state fakeState)) {
+func (foc *connectionMock) StateCallback(callback func(state fakeState)) {
 	foc.Lock()
 	defer foc.Unlock()
 

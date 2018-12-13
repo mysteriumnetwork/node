@@ -73,6 +73,16 @@ type PeerInfo interface {
 	PublicKey() string
 }
 
+// ConsumerConfig is used for sending the public key from consumer to provider
+type ConsumerConfig struct {
+	PublicKey string
+}
+
+// ConsumerPrivateKey represents the private part of the consumer key
+type ConsumerPrivateKey struct {
+	PrivateKey string
+}
+
 // ServiceConfig represent a Wireguard service provider configuration that will be passed to the consumer for establishing a connection.
 type ServiceConfig struct {
 	Provider struct {
@@ -80,7 +90,7 @@ type ServiceConfig struct {
 		Endpoint  net.UDPAddr
 	}
 	Consumer struct {
-		PrivateKey string // TODO peer private key should be generated on consumer side
+		PrivateKey string `json:"-"`
 		IPAddress  net.IPNet
 	}
 }
@@ -105,8 +115,7 @@ func (s ServiceConfig) MarshalJSON() ([]byte, error) {
 			s.Provider.Endpoint.String(),
 		},
 		consumer{
-			s.Consumer.PrivateKey,
-			s.Consumer.IPAddress.String(),
+			IPAddress: s.Consumer.IPAddress.String(),
 		},
 	})
 }
@@ -141,7 +150,6 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 
 	s.Provider.Endpoint = *endpoint
 	s.Provider.PublicKey = config.Provider.PublicKey
-	s.Consumer.PrivateKey = config.Consumer.PrivateKey
 	s.Consumer.IPAddress = *ipnet
 	s.Consumer.IPAddress.IP = ip
 

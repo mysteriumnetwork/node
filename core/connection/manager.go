@@ -47,12 +47,7 @@ var (
 )
 
 // Creator creates new connection by given options and uses state channel to report state changes
-// Given options:
-//  - session,
-//  - consumer identity
-//  - service provider identity
-//  - service proposal
-type Creator func(ConnectOptions, StateChannel, StatisticsChannel) (Connection, error)
+type Creator func(serviceType string, stateChannnel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
@@ -149,7 +144,20 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 	cancel = append(cancel, func() { dialog.Close() })
 
-	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID)
+	stateChannel := make(chan State, 10)
+	statisticsChannel := make(chan consumer.SessionStatistics, 10)
+
+	connection, err := manager.newConnection(proposal.ServiceType, stateChannel, statisticsChannel)
+	if err != nil {
+		return err
+	}
+
+	sessionCreateConfig, err := connection.GetConfig()
+	if err != nil {
+		return err
+	}
+
+	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig)
 	if err != nil {
 		return err
 	}
@@ -170,9 +178,6 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 	cancel = append(cancel, func() { promiseIssuer.Stop() })
 
-	stateChannel := make(chan State, 10)
-	statisticsChannel := make(chan consumer.SessionStatistics, 10)
-
 	connectOptions := ConnectOptions{
 		SessionID:     sessionID,
 		SessionConfig: sessionConfig,
@@ -181,12 +186,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		Proposal:      proposal,
 	}
 
-	connection, err := manager.newConnection(connectOptions, stateChannel, statisticsChannel)
-	if err != nil {
-		return err
-	}
-
-	if err = connection.Start(); err != nil {
+	if err = connection.Start(connectOptions); err != nil {
 		return err
 	}
 	cancel = append(cancel, connection.Stop)
