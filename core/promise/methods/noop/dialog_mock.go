@@ -54,9 +54,7 @@ func (fd *fakeDialog) Receive(consumer communication.MessageConsumer) error {
 func (fd *fakeDialog) Respond(consumer communication.RequestConsumer) error {
 	return nil
 }
-func (fd *fakeDialog) Unsubscribe() error {
-	return nil
-}
+func (fd *fakeDialog) Unsubscribe() {}
 
 func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
 	fd.sendMutex.Lock()

@@ -69,12 +69,10 @@ func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) er
 
 type sessionDestroyer struct {
 	destroyer   Destroyer
-	unsubscribe func() error
+	unsubscribe func()
 }
 
 func (sd *sessionDestroyer) Destroy(consumerID identity.Identity, sessionID string) error {
-	if err := sd.unsubscribe(); err != nil {
-		return err
-	}
+	sd.unsubscribe()
 	return sd.destroyer.Destroy(consumerID, sessionID)
 }
