@@ -19,6 +19,7 @@ package nats
 
 import (
 	"fmt"
+	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
@@ -35,6 +36,7 @@ func NewReceiver(connection Connection, codec communication.Codec, topic string)
 		connection:   connection,
 		codec:        codec,
 		messageTopic: topic + ".",
+		subs:         make(map[string]*nats.Subscription),
 	}
 }
 
@@ -42,10 +44,12 @@ type receiverNATS struct {
 	connection   Connection
 	codec        communication.Codec
 	messageTopic string
+
+	mu   sync.Mutex
+	subs map[string]*nats.Subscription
 }
 
 func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) error {
-
 	messageTopic := receiver.messageTopic + string(consumer.GetMessageEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
@@ -66,13 +70,28 @@ func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) er
 		}
 	}
 
-	_, err := receiver.connection.Subscribe(messageTopic, messageHandler)
+	receiver.mu.Lock()
+	defer receiver.mu.Unlock()
+
+	subscription, err := receiver.connection.Subscribe(messageTopic, messageHandler)
 	if err != nil {
 		err = fmt.Errorf("failed subscribe message '%s'. %s", messageTopic, err)
 		return err
 	}
-
+	receiver.subs[messageTopic] = subscription
 	return nil
+}
+
+func (receiver *receiverNATS) Unsubscribe() {
+	receiver.mu.Lock()
+	defer receiver.mu.Unlock()
+
+	for topic, s := range receiver.subs {
+		if err := s.Unsubscribe(); err != nil {
+			log.Error(receiverLogPrefix, "failed to unsubscribed from topic: ", topic)
+		}
+		log.Info(receiverLogPrefix, topic, " unsubscribed")
+	}
 }
 
 func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) error {
@@ -111,17 +130,22 @@ func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) er
 		}
 	}
 
+	receiver.mu.Lock()
+	defer receiver.mu.Unlock()
+
+	if subscription, ok := receiver.subs[requestTopic]; ok && subscription.IsValid() {
+		log.Debug(receiverLogPrefix, fmt.Sprintf("Already subscribed to '%s' topic", requestTopic))
+		return nil
+	}
+
 	log.Debug(receiverLogPrefix, fmt.Sprintf("Request '%s' topic has been subscribed to", requestTopic))
 
-	_, err := receiver.connection.Subscribe(requestTopic, messageHandler)
-	// TODO: nats.Subscription.Unsubscribe() should be called when topic is no longer needed
-	//  session-create and session-destroy topic should be cleared after session-destroy message is received
-	//    or session timeouts (promise processor detects session timeout)
-	// scope of "session-create topic deduplication #533"
+	subscription, err := receiver.connection.Subscribe(requestTopic, messageHandler)
 	if err != nil {
 		err = fmt.Errorf("failed subscribe request '%s'. %s", requestTopic, err)
 		return err
 	}
 
+	receiver.subs[requestTopic] = subscription
 	return nil
 }

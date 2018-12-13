@@ -59,6 +59,7 @@ type Dialog interface {
 type Receiver interface {
 	Receive(consumer MessageConsumer) error
 	Respond(consumer RequestConsumer) error
+	Unsubscribe()
 }
 
 // Sender represents interface for:

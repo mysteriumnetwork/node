@@ -21,9 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-
 	"net"
+	"net/http"
 	"time"
 
 	log "github.com/cihub/seelog"

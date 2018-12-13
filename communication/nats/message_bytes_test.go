@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,6 +78,7 @@ func TestMessageBytesReceive(t *testing.T) {
 	receiver := &receiverNATS{
 		connection: connection,
 		codec:      communication.NewCodecBytes(),
+		subs:       make(map[string]*nats.Subscription),
 	}
 
 	consumer := &bytesMessageConsumer{messageReceived: make(chan interface{})}

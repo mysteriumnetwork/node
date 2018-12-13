@@ -33,9 +33,9 @@ type managerDestroyFake struct {
 func TestDestroyConsumer_Success(t *testing.T) {
 	mockDestroyer := &managerDestroyFake{
 		returnSession: Session{
-			"some-session-id",
-			fakeSessionConfig{"string-param", 123},
-			identity.FromAddress("123"),
+			ID:         "some-session-id",
+			Config:     fakeSessionConfig{"string-param", 123},
+			ConsumerID: identity.FromAddress("123"),
 		},
 	}
 	consumer := destroyConsumer{

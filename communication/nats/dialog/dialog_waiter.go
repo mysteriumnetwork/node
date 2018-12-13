@@ -90,12 +90,6 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		}
 
 		peerID := identity.FromAddress(request.PeerID)
-		for _, d := range waiter.dialogs {
-			if d.PeerID() == peerID {
-				return &responseOK, nil
-			}
-		}
-
 		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecForPeer(peerID))
 		err = dialogHandler.Handle(dialog)
 		if err != nil {
