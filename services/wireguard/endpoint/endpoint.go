@@ -18,12 +18,16 @@
 package endpoint
 
 import (
+	"fmt"
 	"net"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
+
+const logPrefix = "[wireguard-connection-endpoint] "
 
 type wgClient interface {
 	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
@@ -143,8 +147,9 @@ func (ce *connectionEndpoint) cleanAbandonedInterfaces() error {
 
 	for _, iface := range ifaces {
 		if err := ce.wgClient.DestroyDevice(iface.Name); err != nil {
-			return err
+			log.Warn(logPrefix, fmt.Sprintf("failed to destroy abandoned interface: %s, error: %v", iface.Name, err))
 		}
+		log.Info(logPrefix, "abandoned interface destroyed: ", iface.Name)
 	}
 
 	return nil
