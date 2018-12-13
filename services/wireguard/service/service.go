@@ -29,76 +29,86 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
+	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 const logPrefix = "[service-wireguard] "
 
 // NewManager creates new instance of Wireguard service
-func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver, connectionEndpoint wg.ConnectionEndpoint) *Manager {
+func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
+	resourceAllocator := resources.NewAllocator()
 	return &Manager{
-		locationResolver:   locationResolver,
-		ipResolver:         ipResolver,
-		connectionEndpoint: connectionEndpoint,
-		natService:         nat.NewService(),
+		locationResolver: locationResolver,
+		ipResolver:       ipResolver,
+		natService:       nat.NewService(),
+
+		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
+			return endpoint.NewConnectionEndpoint(ipResolver, &resourceAllocator)
+		},
 	}
 }
 
-// Manager represents entrypoint for Wireguard service.
+// Manager represents an instance of Wireguard service
 type Manager struct {
-	locationResolver   location.Resolver
-	ipResolver         ip.Resolver
-	connectionEndpoint wg.ConnectionEndpoint
-	wg                 sync.WaitGroup
-	natService         nat.NATService
+	locationResolver location.Resolver
+	ipResolver       ip.Resolver
+	wg               sync.WaitGroup
+	natService       nat.NATService
+
+	connectionEndpointFactory func() (wg.ConnectionEndpoint, error)
 }
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig() (session.ServiceConfiguration, error) {
-	config, err := manager.connectionEndpoint.Config()
+func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, error) {
+	key := &wg.ConsumerConfig{}
+	err := json.Unmarshal(publicKey, key)
 	if err != nil {
-		return wg.ServiceConfig{}, err
+		return nil, err
+	}
+
+	connectionEndpoint, err := manager.connectionEndpointFactory()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := connectionEndpoint.Start(nil); err != nil {
+		return nil, err
+	}
+
+	if err := connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
+		return nil, err
+	}
+
+	config, err := connectionEndpoint.Config()
+	if err != nil {
+		return nil, err
+	}
+
+	outboundIP, err := manager.ipResolver.GetOutboundIP()
+	if err != nil {
+		return nil, err
+	}
+
+	manager.natService.Add(nat.RuleForwarding{
+		SourceAddress: config.Consumer.IPAddress.String(),
+		TargetIP:      outboundIP,
+	})
+	if err := manager.natService.Start(); err != nil {
+		return nil, err
 	}
 
 	return config, nil
 }
 
 // ConsumeConfig takes in the provided config and adds it to the wg device
-func (manager *Manager) ConsumeConfig(publicKey json.RawMessage) error {
-	key := &wg.ConsumerConfig{}
-	err := json.Unmarshal(publicKey, key)
-	if err != nil {
-		return err
-	}
-
-	if err := manager.connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
-		return err
-	}
+func (manager *Manager) ConsumeConfig() error {
 	return nil
 }
 
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
-	if err := manager.connectionEndpoint.Start(nil); err != nil {
-		return market.ServiceProposal{}, nil, err
-	}
-	config, err := manager.connectionEndpoint.Config()
-	if err != nil {
-		return market.ServiceProposal{}, nil, err
-	}
-
-	outboundIP, err := manager.ipResolver.GetOutboundIP()
-	if err != nil {
-		return market.ServiceProposal{}, nil, err
-	}
-	manager.natService.Add(nat.RuleForwarding{
-		SourceAddress: config.Consumer.IPAddress.String(),
-		TargetIP:      outboundIP,
-	})
-	if err := manager.natService.Start(); err != nil {
-		return market.ServiceProposal{}, nil, err
-	}
-
 	publicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
 		return market.ServiceProposal{}, nil, err
@@ -136,9 +146,6 @@ func (manager *Manager) Wait() error {
 func (manager *Manager) Stop() error {
 	manager.wg.Done()
 	manager.natService.Stop()
-	if err := manager.connectionEndpoint.Stop(); err != nil {
-		return err
-	}
 
 	log.Info(logPrefix, "Wireguard service stopped")
 	return nil

@@ -280,7 +280,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 func newSessionManagerFactory(
 	proposal market.ServiceProposal,
-	configProvider session.ConfigProvider,
 	sessionStorage *session.StorageMemory,
 	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
 ) session.ManagerFactory {
@@ -288,7 +287,6 @@ func newSessionManagerFactory(
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
-			configProvider,
 			sessionStorage,
 			promiseHandler(dialog),
 		)

@@ -55,11 +55,8 @@ type Manager struct {
 type negotiator struct {
 }
 
-func (n *negotiator) ProvideConfig() (session.ServiceConfiguration, error) {
+func (n *negotiator) ProvideConfig(cfg json.RawMessage) (session.ServiceConfiguration, error) {
 	return nil, nil
-}
-func (n *negotiator) ConsumeConfig(cfg json.RawMessage) error {
-	return nil
 }
 
 // Start starts service - does not block

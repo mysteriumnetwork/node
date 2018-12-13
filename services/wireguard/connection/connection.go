@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
+	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
 const logPrefix = "[connection-wireguard] "
@@ -47,7 +48,8 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	c.config.Provider = config.Provider
 	c.config.Consumer.IPAddress = config.Consumer.IPAddress
 
-	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(nil)
+	resourceAllocator := resources.NewAllocator()
+	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(nil, &resourceAllocator)
 	if err != nil {
 		return err
 	}
@@ -99,7 +101,7 @@ func (c *Connection) Stop() {
 	c.stateChannel <- connection.Disconnecting
 
 	if err := c.connectionEndpoint.Stop(); err != nil {
-		log.Error(logPrefix, "Failed to close wireguard connection", err)
+		log.Error(logPrefix, "Failed to close wireguard connection: ", err)
 	}
 
 	c.stateChannel <- connection.NotConnected

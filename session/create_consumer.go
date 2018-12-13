@@ -28,12 +28,12 @@ import (
 type createConsumer struct {
 	sessionCreator Creator
 	peerID         identity.Identity
-	configConsumer ConfigConsumer
+	configProvider ConfigProvider
 }
 
 // Creator defines method for session creation
 type Creator interface {
-	Create(consumerID identity.Identity, proposalID int) (Session, error)
+	Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (Session, error)
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
@@ -51,12 +51,12 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
-	err = consumer.configConsumer(request.Config)
+	config, err := consumer.configProvider(request.Config)
 	if err != nil {
 		return responseInternalError, err
 	}
 
-	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId)
+	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId, config)
 	switch err {
 	case nil:
 		return responseWithSession(sessionInstance), nil

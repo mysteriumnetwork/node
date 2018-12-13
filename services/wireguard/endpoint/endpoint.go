@@ -18,16 +18,21 @@
 package endpoint
 
 import (
+	"fmt"
 	"net"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
+const logPrefix = "[wireguard-connection-endpoint] "
+
 type wgClient interface {
 	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
 	ConfigureRoutes(iface string, ip net.IP) error
+	DestroyDevice(name string) error
 	AddPeer(name string, peer wg.PeerInfo) error
 	Close() error
 }
@@ -38,15 +43,30 @@ type connectionEndpoint struct {
 	ipAddr            net.IPNet
 	endpoint          net.UDPAddr
 	ipResolver        ip.Resolver
-	resourceAllocator resources.Allocator
+	resourceAllocator *resources.Allocator
 	wgClient          wgClient
 }
 
 // Start starts and configure wireguard network interface for providing service.
 // If config is nil, required options will be generated automatically.
 func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
-	ce.iface = ce.resourceAllocator.AllocateInterface()
-	ce.endpoint.Port = ce.resourceAllocator.AllocatePort()
+	if err := ce.cleanAbandonedInterfaces(); err != nil {
+		return err
+	}
+
+	iface, err := ce.resourceAllocator.AllocateInterface()
+	if err != nil {
+		return err
+	}
+
+	port, err := ce.resourceAllocator.AllocatePort()
+	if err != nil {
+		return err
+	}
+
+	ce.iface = iface
+	ce.endpoint.Port = port
+
 	if ce.ipResolver != nil {
 		publicIP, err := ce.ipResolver.GetPublicIP()
 		if err != nil {
@@ -60,7 +80,11 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		if err != nil {
 			return err
 		}
-		ce.ipAddr = ce.resourceAllocator.AllocateIPNet()
+		ipAddr, err := ce.resourceAllocator.AllocateIPNet()
+		if err != nil {
+			return err
+		}
+		ce.ipAddr = ipAddr
 		ce.ipAddr.IP = providerIP(ce.ipAddr)
 		ce.privateKey = privateKey
 	} else {
@@ -113,6 +137,22 @@ func (ce *connectionEndpoint) Stop() error {
 	}
 
 	return ce.resourceAllocator.ReleaseInterface(ce.iface)
+}
+
+func (ce *connectionEndpoint) cleanAbandonedInterfaces() error {
+	ifaces, err := ce.resourceAllocator.AbandonedInterfaces()
+	if err != nil {
+		return err
+	}
+
+	for _, iface := range ifaces {
+		if err := ce.wgClient.DestroyDevice(iface.Name); err != nil {
+			log.Warn(logPrefix, fmt.Sprintf("failed to destroy abandoned interface: %s, error: %v", iface.Name, err))
+		}
+		log.Info(logPrefix, "abandoned interface destroyed: ", iface.Name)
+	}
+
+	return nil
 }
 
 type deviceConfig struct {

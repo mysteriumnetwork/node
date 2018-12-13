@@ -40,15 +40,11 @@ type IDGenerator func() (ID, error)
 
 // ConfigNegotiator is able to handle config negotiations
 type ConfigNegotiator interface {
-	ProvideConfig() (ServiceConfiguration, error)
-	ConsumeConfig(json.RawMessage) error
+	ProvideConfig(consumerKey json.RawMessage) (ServiceConfiguration, error)
 }
 
 // ConfigProvider provides session config for remote client
-type ConfigProvider func() (ServiceConfiguration, error)
-
-// ConfigConsumer provides clients session configuration for the provider
-type ConfigConsumer func(json.RawMessage) error
+type ConfigProvider func(consumerKey json.RawMessage) (ServiceConfiguration, error)
 
 // SaveCallback stores newly started sessions
 type SaveCallback func(Session)
@@ -72,14 +68,12 @@ type Storage interface {
 func NewManager(
 	currentProposal market.ServiceProposal,
 	idGenerator IDGenerator,
-	configProvider ConfigProvider,
 	sessionStorage Storage,
 	promiseProcessor PromiseProcessor,
 ) *Manager {
 	return &Manager{
 		currentProposal:  currentProposal,
 		generateID:       idGenerator,
-		provideConfig:    configProvider,
 		sessionStorage:   sessionStorage,
 		promiseProcessor: promiseProcessor,
 
@@ -99,7 +93,7 @@ type Manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -108,7 +102,7 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int) (se
 		return
 	}
 
-	sessionInstance, err = manager.createSession(consumerID)
+	sessionInstance, err = manager.createSession(consumerID, config)
 	if err != nil {
 		return
 	}
@@ -147,12 +141,12 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	return nil
 }
 
-func (manager *Manager) createSession(consumerID identity.Identity) (sessionInstance Session, err error) {
+func (manager *Manager) createSession(consumerID identity.Identity, config ServiceConfiguration) (sessionInstance Session, err error) {
 	sessionInstance.ID, err = manager.generateID()
 	if err != nil {
 		return
 	}
 	sessionInstance.ConsumerID = consumerID
-	sessionInstance.Config, err = manager.provideConfig()
+	sessionInstance.Config = config
 	return
 }

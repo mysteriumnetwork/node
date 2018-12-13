@@ -27,7 +27,7 @@ import (
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
-func NewConnectionEndpoint(ipResolver ip.Resolver) (wg.ConnectionEndpoint, error) {
+func NewConnectionEndpoint(ipResolver ip.Resolver, resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
 	wgClient, err := kernelspace.NewWireguardClient()
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func NewConnectionEndpoint(ipResolver ip.Resolver) (wg.ConnectionEndpoint, error
 	return &connectionEndpoint{
 		wgClient:          wgClient,
 		ipResolver:        ipResolver,
-		resourceAllocator: resources.Allocator{},
+		resourceAllocator: resourceAllocator,
 	}, nil
 }
 

@@ -18,6 +18,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"net"
 	"testing"
@@ -38,7 +39,7 @@ var (
 	providerID = identity.FromAddress("provider-id")
 )
 
-var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{}, &fakeConnectionEndpoint{})
+var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{})
 var locationResolverStub = &fakeLocationResolver{
 	err: nil,
 	res: "LT",
@@ -71,7 +72,7 @@ func Test_Manager_Start(t *testing.T) {
 		},
 		proposal,
 	)
-	sessionConfig, err := sessionConfigProvider.ProvideConfig()
+	sessionConfig, err := sessionConfigProvider.ProvideConfig(json.RawMessage(`{"PublicKey": "gZfkZArbw9lqfl4Yzr1Kv3nqGlhe/ynH9KKRbzPFMGk="}`))
 	assert.NoError(t, err)
 	assert.NotNil(t, sessionConfig)
 }
@@ -161,10 +162,12 @@ func (fce *fakeConnectionEndpoint) ConfigureRoutes(_ net.IP) error         { ret
 
 func newManagerStub(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
 	return &Manager{
-		locationResolver:   locationResolver,
-		ipResolver:         ipResolver,
-		connectionEndpoint: connectionEndpointStub,
-		natService:         &serviceFake{},
+		locationResolver: locationResolver,
+		ipResolver:       ipResolver,
+		natService:       &serviceFake{},
+		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
+			return connectionEndpointStub, nil
+		},
 	}
 }
 
