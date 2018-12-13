@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
-	"os/exec"
 
 	"github.com/jackpal/gateway"
 	"github.com/mdlayher/wireguardctrl"
@@ -85,7 +84,7 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 }
 
 func (c *client) DestroyDevice(name string) error {
-	return exec.Command("ip", "link", "del", "dev", name).Run()
+	return utils.SudoExec("ip", "link", "del", "dev", name)
 }
 
 func (c *client) up(iface string, ipAddr net.IPNet) error {
