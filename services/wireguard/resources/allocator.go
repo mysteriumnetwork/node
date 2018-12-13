@@ -46,9 +46,9 @@ func NewAllocator() Allocator {
 	}
 }
 
-// WildInterfaces returns a list of abandoned interfaces that exist in the system,
+// AbandonedInterfaces returns a list of abandoned interfaces that exist in the system,
 // but was not allocated by the Allocator.
-func (a *Allocator) WildInterfaces() ([]net.Interface, error) {
+func (a *Allocator) AbandonedInterfaces() ([]net.Interface, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 

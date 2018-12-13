@@ -46,7 +46,9 @@ type connectionEndpoint struct {
 // Start starts and configure wireguard network interface for providing service.
 // If config is nil, required options will be generated automatically.
 func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
-	ce.cleanWildInterfaces()
+	if err := ce.cleanAbandonedInterfaces(); err != nil {
+		return err
+	}
 
 	iface, err := ce.resourceAllocator.AllocateInterface()
 	if err != nil {
@@ -133,8 +135,8 @@ func (ce *connectionEndpoint) Stop() error {
 	return ce.resourceAllocator.ReleaseInterface(ce.iface)
 }
 
-func (ce *connectionEndpoint) cleanWildInterfaces() error {
-	ifaces, err := ce.resourceAllocator.WildInterfaces()
+func (ce *connectionEndpoint) cleanAbandonedInterfaces() error {
+	ifaces, err := ce.resourceAllocator.AbandonedInterfaces()
 	if err != nil {
 		return err
 	}
