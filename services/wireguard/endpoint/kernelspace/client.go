@@ -20,11 +20,12 @@ package kernelspace
 import (
 	"encoding/base64"
 	"net"
-	"os/exec"
 
+	"github.com/jackpal/gateway"
 	"github.com/mdlayher/wireguardctrl"
 	"github.com/mdlayher/wireguardctrl/wgtypes"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 var allowedIPs = []net.IPNet{
@@ -66,38 +67,71 @@ func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, ipAddr ne
 }
 
 func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
-	var deviceConfig wgtypes.Config
-	if peer != nil {
-		endpoint := peer.Endpoint()
-		publicKey, err := stringToKey(peer.PublicKey())
-		if err != nil {
-			return err
-		}
-		deviceConfig.Peers = []wgtypes.PeerConfig{{
-			Endpoint:   endpoint,
-			PublicKey:  publicKey,
-			AllowedIPs: allowedIPs,
-		}}
+	endpoint := peer.Endpoint()
+	publicKey, err := stringToKey(peer.PublicKey())
+	if err != nil {
+		return err
 	}
+
+	var deviceConfig wgtypes.Config
+	deviceConfig.Peers = []wgtypes.PeerConfig{{
+		Endpoint:   endpoint,
+		PublicKey:  publicKey,
+		AllowedIPs: allowedIPs,
+	}}
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
 func (c *client) up(iface string, ipAddr net.IPNet) error {
 	if d, err := c.wgClient.Device(iface); err != nil || d.Name != iface {
-		if err := exec.Command("ip", "link", "add", "dev", iface, "type", "wireguard").Run(); err != nil {
+		if err := utils.SudoExec("ip", "link", "add", "dev", iface, "type", "wireguard"); err != nil {
 			return err
 		}
 	}
 
-	if err := exec.Command("ip", "address", "replace", "dev", iface, ipAddr.String()).Run(); err != nil {
+	if err := utils.SudoExec("ip", "address", "replace", "dev", iface, ipAddr.String()); err != nil {
 		return err
 	}
 
-	return exec.Command("ip", "link", "set", "dev", iface, "up").Run()
+	return utils.SudoExec("ip", "link", "set", "dev", iface, "up")
+}
+
+func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
+	if err := excludeRoute(ip); err != nil {
+		return err
+	}
+	return addDefaultRoute(iface)
+}
+
+func excludeRoute(ip net.IP) error {
+	gw, err := gateway.DiscoverGateway()
+	if err != nil {
+		return err
+	}
+
+	return utils.SudoExec("ip", "route", "replace", ip.String(), "via", gw.String())
+}
+
+func addDefaultRoute(iface string) error {
+	if err := utils.SudoExec("ip", "route", "replace", "0.0.0.0/1", "dev", iface); err != nil {
+		return err
+	}
+	return utils.SudoExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
 }
 
 func (c *client) Close() error {
-	if err := exec.Command("ip", "link", "del", "dev", c.iface).Run(); err != nil {
+	d, err := c.wgClient.Device(c.iface)
+	if err != nil || d.Name != c.iface {
+		return err
+	}
+
+	if len(d.Peers) > 0 && d.Peers[0].Endpoint != nil {
+		if err := utils.SudoExec("ip", "route", "del", d.Peers[0].Endpoint.IP.String()); err != nil {
+			return err
+		}
+	}
+
+	if err := utils.SudoExec("ip", "link", "del", "dev", c.iface); err != nil {
 		return err
 	}
 	return c.wgClient.Close()

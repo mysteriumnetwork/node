@@ -18,6 +18,7 @@
 package utils
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -30,4 +31,13 @@ func SplitCommand(command string, commandArguments string) *exec.Cmd {
 		trimmedArgs = append(trimmedArgs, strings.TrimSpace(arg))
 	}
 	return exec.Command(command, trimmedArgs...)
+}
+
+// SudoExec executes external command with a sudo privileges.
+// It returns an combined stderr and stdout output and exit code in case of error.
+func SudoExec(args ...string) error {
+	if out, err := exec.Command("sudo", args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("'sudo %v': %v output: %s", strings.Join(args, " "), err, out)
+	}
+	return nil
 }

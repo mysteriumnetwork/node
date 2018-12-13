@@ -27,6 +27,7 @@ import (
 
 type wgClient interface {
 	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
+	ConfigureRoutes(iface string, ip net.IP) error
 	AddPeer(name string, peer wg.PeerInfo) error
 	Close() error
 }
@@ -91,6 +92,10 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	config.Consumer.IPAddress = ce.ipAddr
 	config.Consumer.IPAddress.IP = consumerIP(ce.ipAddr)
 	return config, nil
+}
+
+func (ce *connectionEndpoint) ConfigureRoutes(ip net.IP) error {
+	return ce.wgClient.ConfigureRoutes(ce.iface, ip)
 }
 
 // Stop closes wireguard client and destroys wireguard network interface.

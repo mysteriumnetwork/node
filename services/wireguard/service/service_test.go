@@ -157,6 +157,7 @@ func (fce *fakeConnectionEndpoint) Stop() error                            { ret
 func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { return nil }
 func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
 func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }
+func (fce *fakeConnectionEndpoint) ConfigureRoutes(_ net.IP) error         { return nil }
 
 func newManagerStub(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
 	return &Manager{

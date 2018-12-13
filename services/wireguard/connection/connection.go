@@ -66,6 +66,13 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		c.connection.Done()
 		return err
 	}
+
+	if err := c.connectionEndpoint.ConfigureRoutes(c.config.Provider.Endpoint.IP); err != nil {
+		c.stateChannel <- connection.NotConnected
+		c.connection.Done()
+		return err
+	}
+
 	c.stateChannel <- connection.Connected
 	return nil
 }
