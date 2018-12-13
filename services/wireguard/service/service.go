@@ -50,7 +50,7 @@ func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Man
 	}
 }
 
-// Manager represents entrypoint for Wireguard service.
+// Manager represents an instance of Wireguard service
 type Manager struct {
 	locationResolver location.Resolver
 	ipResolver       ip.Resolver
