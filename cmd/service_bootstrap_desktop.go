@@ -34,7 +34,6 @@ import (
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
-	wireguard_endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -70,11 +69,7 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 
 func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
-		connectionEndpoint, err := wireguard_endpoint.NewConnectionEndpoint(di.IPResolver)
-		if err != nil {
-			return nil, err
-		}
-		return wireguard_service.NewManager(di.LocationResolver, di.IPResolver, connectionEndpoint), nil
+		return wireguard_service.NewManager(di.LocationResolver, di.IPResolver), nil
 	})
 
 	di.ServiceRunner.Register(wireguard.ServiceType)
@@ -111,8 +106,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			}
 			return &promise_noop.FakePromiseEngine{}
 		}
-		sessionManagerFactory := newSessionManagerFactory(proposal, configProvider.ProvideConfig, di.ServiceSessionStorage, promiseHandler)
-		return session.NewDialogHandler(sessionManagerFactory, configProvider.ConsumeConfig)
+		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, promiseHandler)
+		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig)
 	}
 
 	runnableServiceFactory := func() service.RunnableService {

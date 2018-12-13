@@ -39,7 +39,7 @@ type connectionEndpoint struct {
 	ipAddr            net.IPNet
 	endpoint          net.UDPAddr
 	ipResolver        ip.Resolver
-	resourceAllocator resources.Allocator
+	resourceAllocator *resources.Allocator
 	wgClient          wgClient
 }
 

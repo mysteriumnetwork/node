@@ -112,13 +112,8 @@ type OpenvpnConfigNegotiator struct {
 	vpnConfig openvpn_service.VPNConfig
 }
 
-// ConsumeConfig doesn't do anything on the openvpn side, since it's not required here
-func (ocn *OpenvpnConfigNegotiator) ConsumeConfig(json.RawMessage) error {
-	return nil
-}
-
 // ProvideConfig returns the config for user
-func (ocn *OpenvpnConfigNegotiator) ProvideConfig() (session.ServiceConfiguration, error) {
+func (ocn *OpenvpnConfigNegotiator) ProvideConfig(json.RawMessage) (session.ServiceConfiguration, error) {
 	return &ocn.vpnConfig, nil
 }
 
@@ -126,7 +121,7 @@ func vpnServerIP(serviceOptions Options, outboundIP, publicIP string) string {
 	//TODO public ip could be overridden by arg nodeOptions if needed
 	if publicIP != outboundIP {
 		log.Warnf(
-			`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s]. 
+			`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s].
 You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 			publicIP,
 			outboundIP,

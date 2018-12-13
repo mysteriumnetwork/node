@@ -27,8 +27,8 @@ import (
 )
 
 var (
-	mockConsumer = func(json.RawMessage) error {
-		return nil
+	mockConsumer = func(json.RawMessage) (ServiceConfiguration, error) {
+		return nil, nil
 	}
 )
 
@@ -43,7 +43,7 @@ func TestConsumer_Success(t *testing.T) {
 	consumer := createConsumer{
 		sessionCreator: mockManager,
 		peerID:         identity.FromAddress("peer-id"),
-		configConsumer: mockConsumer,
+		configProvider: mockConsumer,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -72,7 +72,7 @@ func TestConsumer_ErrorInvalidProposal(t *testing.T) {
 	}
 	consumer := createConsumer{
 		sessionCreator: mockManager,
-		configConsumer: mockConsumer,
+		configProvider: mockConsumer,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -88,7 +88,7 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 	}
 	consumer := createConsumer{
 		sessionCreator: mockManager,
-		configConsumer: mockConsumer,
+		configProvider: mockConsumer,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -107,7 +107,7 @@ type managerFake struct {
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID identity.Identity, proposalID int) (Session, error) {
+func (manager *managerFake) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (Session, error) {
 	manager.lastConsumerID = consumerID
 	manager.lastProposalID = proposalID
 	return manager.returnSession, manager.returnError
