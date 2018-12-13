@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,6 +37,7 @@ func TestReceiverNew(t *testing.T) {
 			connection:   connection,
 			codec:        codec,
 			messageTopic: "custom.",
+			subs:         make(map[string]*nats.Subscription),
 		},
 		NewReceiver(connection, codec, "custom"),
 	)

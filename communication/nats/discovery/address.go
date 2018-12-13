@@ -22,10 +22,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/mysteriumnetwork/node/market"
-
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	nats_lib "github.com/nats-io/go-nats"
 )
 

@@ -20,7 +20,6 @@ package noop
 import (
 	"errors"
 	"sync"
-
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
@@ -53,6 +52,9 @@ func (fd *fakeDialog) Receive(consumer communication.MessageConsumer) error {
 	return nil
 }
 func (fd *fakeDialog) Respond(consumer communication.RequestConsumer) error {
+	return nil
+}
+func (fd *fakeDialog) Unsubscribe() error {
 	return nil
 }
 

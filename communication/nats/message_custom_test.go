@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -92,6 +93,7 @@ func TestMessageCustomReceive(t *testing.T) {
 	receiver := &receiverNATS{
 		connection: connection,
 		codec:      communication.NewCodecJSON(),
+		subs:       make(map[string]*nats.Subscription),
 	}
 
 	consumer := &customMessageConsumer{messageReceived: make(chan interface{})}
