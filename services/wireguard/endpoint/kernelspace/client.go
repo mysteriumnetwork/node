@@ -19,9 +19,9 @@ package kernelspace
 
 import (
 	"encoding/base64"
-	"fmt"
 	"net"
 
+	log "github.com/cihub/seelog"
 	"github.com/jackpal/gateway"
 	"github.com/mdlayher/wireguardctrl"
 	"github.com/mdlayher/wireguardctrl/wgtypes"
@@ -124,17 +124,25 @@ func addDefaultRoute(iface string) error {
 	return utils.SudoExec("ip", "route", "replace", "128.0.0.0/1", "dev", iface)
 }
 
-func (c *client) Close() error {
-	destroyErr := c.DestroyDevice(c.iface)
-	closeErr := c.wgClient.Close()
+func (c *client) Close() (err error) {
+	var errs []error
+	defer func() {
+		for i := range errs {
+			log.Error("failed to close wireguard kernelspace client: ", errs[i])
+			if err == nil {
+				err = errs[i]
+			}
+		}
+	}()
 
-	if closeErr != nil && destroyErr == nil {
-		return closeErr
-	} else if closeErr == nil && destroyErr != nil {
-		return destroyErr
-	} else if closeErr != nil && destroyErr != nil {
-		return fmt.Errorf("failed to close wireguard client %v; failed to destroy wireguard device: %v", closeErr, destroyErr)
+	if err := c.DestroyDevice(c.iface); err != nil {
+		errs = append(errs, err)
 	}
+
+	if err := c.wgClient.Close(); err != nil {
+		errs = append(errs, err)
+	}
+
 	return nil
 }
 
