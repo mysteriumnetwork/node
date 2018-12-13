@@ -72,7 +72,7 @@ func Test_Manager_Start(t *testing.T) {
 		},
 		proposal,
 	)
-	sessionConfig, err := sessionConfigProvider.ProvideConfig(json.RawMessage(`{"PublicKey": "gZfkZArbw9lqfl4Yzr1Kv3nqGlhe/ynH9KKRbzPFMGk="}`))
+	sessionConfig, _, err := sessionConfigProvider.ProvideConfig(json.RawMessage(`{"PublicKey": "gZfkZArbw9lqfl4Yzr1Kv3nqGlhe/ynH9KKRbzPFMGk="}`))
 	assert.NoError(t, err)
 	assert.NotNil(t, sessionConfig)
 }
