@@ -35,9 +35,9 @@ var (
 func TestConsumer_Success(t *testing.T) {
 	mockManager := &managerFake{
 		returnSession: Session{
-			"new-id",
-			fakeSessionConfig{"string-param", 123},
-			identity.FromAddress("123"),
+			ID:         "new-id",
+			Config:     fakeSessionConfig{"string-param", 123},
+			ConsumerID: identity.FromAddress("123"),
 		},
 	}
 	consumer := createConsumer{

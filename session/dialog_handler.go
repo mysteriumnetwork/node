@@ -19,6 +19,7 @@ package session
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 // ManagerFactory initiates session Manager instance during runtime
@@ -57,8 +58,23 @@ func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) er
 
 	return dialog.Respond(
 		&destroyConsumer{
-			SessionDestroyer: handler.sessionManagerFactory(dialog),
-			PeerID:           dialog.PeerID(),
+			SessionDestroyer: &sessionDestroyer{
+				destroyer:   handler.sessionManagerFactory(dialog),
+				unsubscribe: dialog.Unsubscribe,
+			},
+			PeerID: dialog.PeerID(),
 		},
 	)
+}
+
+type sessionDestroyer struct {
+	destroyer   Destroyer
+	unsubscribe func() error
+}
+
+func (sd *sessionDestroyer) Destroy(consumerID identity.Identity, sessionID string) error {
+	if err := sd.unsubscribe(); err != nil {
+		return err
+	}
+	return sd.destroyer.Destroy(consumerID, sessionID)
 }
