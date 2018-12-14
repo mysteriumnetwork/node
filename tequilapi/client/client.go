@@ -168,6 +168,21 @@ func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
 	return healthcheck, err
 }
 
+// ProposalsByType fetches proposals by given type
+func (client *Client) ProposalsByType(serviceType string) ([]ProposalDTO, error) {
+	queryParams := url.Values{}
+	queryParams.Add("serviceType", serviceType)
+	response, err := client.http.Get("proposals", queryParams)
+	if err != nil {
+		return []ProposalDTO{}, err
+	}
+	defer response.Body.Close()
+
+	var proposals ProposalList
+	err = parseResponseJSON(response, &proposals)
+	return proposals.Proposals, err
+}
+
 // Proposals returns all available proposals for services
 func (client *Client) Proposals() ([]ProposalDTO, error) {
 	response, err := client.http.Get("proposals", url.Values{})
