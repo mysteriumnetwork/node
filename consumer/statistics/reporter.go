@@ -39,9 +39,10 @@ var ErrSessionNotStarted = errors.New("session not started")
 // LocationDetector detects the country for session stats
 type LocationDetector func() location.Location
 
-// Retriever allows for retrieval of statistics
-type Retriever interface {
+// StatsTracker allows for retrieval and resetting of statistics
+type StatsTracker interface {
 	Retrieve() consumer.SessionStatistics
+	Reset()
 }
 
 // Reporter defines method for sending stats outside
@@ -55,9 +56,9 @@ type Reporter interface {
 type SessionStatisticsReporter struct {
 	locationDetector LocationDetector
 
-	signerFactory       identity.SignerFactory
-	statisticsRetriever Retriever
-	remoteReporter      Reporter
+	signerFactory     identity.SignerFactory
+	statisticsTracker StatsTracker
+	remoteReporter    Reporter
 
 	sendInterval time.Duration
 	done         chan struct{}
@@ -67,12 +68,12 @@ type SessionStatisticsReporter struct {
 }
 
 // NewSessionStatisticsReporter function creates new session stats sender by given options
-func NewSessionStatisticsReporter(statisticsRetriever Retriever, remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector LocationDetector, interval time.Duration) *SessionStatisticsReporter {
+func NewSessionStatisticsReporter(statisticsTracker StatsTracker, remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector LocationDetector, interval time.Duration) *SessionStatisticsReporter {
 	return &SessionStatisticsReporter{
-		locationDetector:    locationDetector,
-		signerFactory:       signerFactory,
-		statisticsRetriever: statisticsRetriever,
-		remoteReporter:      remoteReporter,
+		locationDetector:  locationDetector,
+		signerFactory:     signerFactory,
+		statisticsTracker: statisticsTracker,
+		remoteReporter:    remoteReporter,
 
 		sendInterval: interval,
 		done:         make(chan struct{}),
@@ -101,6 +102,8 @@ func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, service
 				} else {
 					log.Debug(statsSenderLogPrefix, "Final stats sent")
 				}
+				// reset the stats in preparation for a new session
+				sr.statisticsTracker.Reset()
 				return
 			case <-time.After(sr.sendInterval):
 				if err := sr.send(serviceType, providerID, country, sessionID, signer); err != nil {
@@ -131,7 +134,7 @@ func (sr *SessionStatisticsReporter) stop() {
 }
 
 func (sr *SessionStatisticsReporter) send(serviceType, providerID, country string, sessionID session.ID, signer identity.Signer) error {
-	sessionStats := sr.statisticsRetriever.Retrieve()
+	sessionStats := sr.statisticsTracker.Retrieve()
 	return sr.remoteReporter.SendSessionStats(
 		sessionID,
 		mysterium.SessionStats{

@@ -44,6 +44,11 @@ func (sst *SessionStatisticsTracker) Retrieve() consumer.SessionStatistics {
 	return sst.sessionStats
 }
 
+// Reset resets session stats to 0
+func (sst *SessionStatisticsTracker) Reset() {
+	sst.sessionStats = consumer.SessionStatistics{}
+}
+
 // MarkSessionStart marks current time as session start time for statistics
 func (sst *SessionStatisticsTracker) markSessionStart() {
 	time := sst.timeGetter()
