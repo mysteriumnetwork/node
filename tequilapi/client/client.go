@@ -253,3 +253,43 @@ func (client *Client) GetSessions() (endpoints.SessionsDTO, error) {
 	err = parseResponseJSON(response, &sessions)
 	return sessions, err
 }
+
+// filterSessionsByType removes all sessions of irrelevant types
+func filterSessionsByType(serviceType string, sessions endpoints.SessionsDTO) endpoints.SessionsDTO {
+	matches := 0
+	for _, s := range sessions.Sessions {
+		if s.ServiceType == serviceType {
+			sessions.Sessions[matches] = s
+			matches++
+		}
+	}
+	sessions.Sessions = sessions.Sessions[:matches]
+	return sessions
+}
+
+// filterSessionsByStatus removes all sessions with non matching status
+func filterSessionsByStatus(status string, sessions endpoints.SessionsDTO) endpoints.SessionsDTO {
+	matches := 0
+	for _, s := range sessions.Sessions {
+		if s.Status == status {
+			sessions.Sessions[matches] = s
+			matches++
+		}
+	}
+	sessions.Sessions = sessions.Sessions[:matches]
+	return sessions
+}
+
+// GetSessionsByType returns sessions from history filtered by type
+func (client *Client) GetSessionsByType(serviceType string) (endpoints.SessionsDTO, error) {
+	sessions, err := client.GetSessions()
+	sessions = filterSessionsByType(serviceType, sessions)
+	return sessions, err
+}
+
+// GetSessionsByStatus returns sessions from history filtered by their status
+func (client *Client) GetSessionsByStatus(status string) (endpoints.SessionsDTO, error) {
+	sessions, err := client.GetSessions()
+	sessions = filterSessionsByStatus(status, sessions)
+	return sessions, err
+}

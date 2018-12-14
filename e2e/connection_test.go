@@ -99,28 +99,6 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, ser
 	return proposals[0]
 }
 
-// filterSessionsByType removes all sessions of irrelevant types
-func filterSessionsByType(serviceType string, sessions endpoints.SessionsDTO) endpoints.SessionsDTO {
-	matches := 0
-	for _, s := range sessions.Sessions {
-		if s.ServiceType == serviceType {
-			sessions.Sessions[matches] = s
-			matches++
-		}
-	}
-	sessions.Sessions = sessions.Sessions[:matches]
-	return sessions
-}
-
-func getSessionsByType(tequilapi *tequilapi_client.Client, serviceType string) (endpoints.SessionsDTO, error) {
-	sessionsDTO, err := tequilapi.GetSessions()
-	if err != nil {
-		return sessionsDTO, err
-	}
-	sessionsDTO = filterSessionsByType(serviceType, sessionsDTO)
-	return sessionsDTO, nil
-}
-
 func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, serviceType string, proposal tequilapi_client.ProposalDTO) {
 	err := topUpAccount(consumerID)
 	assert.Nil(t, err)
@@ -156,7 +134,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	seelog.Info("Changed consumer IP: ", vpnIP)
 
 	// sessions history should be created after connect
-	sessionsDTO, err := getSessionsByType(tequilapi, serviceType)
+	sessionsDTO, err := tequilapi.GetSessionsByType(serviceType)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
@@ -180,7 +158,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.NoError(t, err)
 
 	// sessions history should be updated after disconnect
-	sessionsDTO, err = getSessionsByType(tequilapi, serviceType)
+	sessionsDTO, err = tequilapi.GetSessionsByType(serviceType)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))

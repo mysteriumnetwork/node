@@ -32,6 +32,7 @@ type SessionsDTO struct {
 	Sessions []SessionDTO `json:"sessions"`
 }
 
+// SessionDTO represents the session object
 // swagger:model SessionDTO
 type SessionDTO struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
