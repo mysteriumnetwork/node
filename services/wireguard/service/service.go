@@ -61,34 +61,34 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, error) {
+func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	key := &wg.ConsumerConfig{}
 	err := json.Unmarshal(publicKey, key)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	connectionEndpoint, err := manager.connectionEndpointFactory()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err := connectionEndpoint.Start(nil); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err := connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	config, err := connectionEndpoint.Config()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	outboundIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	manager.natService.Add(nat.RuleForwarding{
@@ -96,15 +96,10 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		TargetIP:      outboundIP,
 	})
 	if err := manager.natService.Start(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return config, nil
-}
-
-// ConsumeConfig takes in the provided config and adds it to the wg device
-func (manager *Manager) ConsumeConfig() error {
-	return nil
+	return config, connectionEndpoint.Stop, nil
 }
 
 // Start starts service - does not block

@@ -40,14 +40,14 @@ type IDGenerator func() (ID, error)
 
 // ConfigNegotiator is able to handle config negotiations
 type ConfigNegotiator interface {
-	ProvideConfig(consumerKey json.RawMessage) (ServiceConfiguration, error)
+	ProvideConfig(consumerKey json.RawMessage) (ServiceConfiguration, DestroyCallback, error)
 }
 
 // ConfigProvider provides session config for remote client
-type ConfigProvider func(consumerKey json.RawMessage) (ServiceConfiguration, error)
+type ConfigProvider func(consumerKey json.RawMessage) (ServiceConfiguration, DestroyCallback, error)
 
-// SaveCallback stores newly started sessions
-type SaveCallback func(Session)
+// DestroyCallback cleanups session
+type DestroyCallback func() error
 
 // PromiseProcessor processes promises at provider side.
 // Provider checks promises from consumer and signs them also.
@@ -93,7 +93,7 @@ type Manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration, destroyCallback DestroyCallback) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -112,6 +112,7 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 		return
 	}
 
+	sessionInstance.DestroyCallback = destroyCallback
 	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
 }
@@ -138,6 +139,9 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 
 	manager.sessionStorage.Remove(ID(sessionID))
 
+	if sessionInstance.DestroyCallback != nil {
+		return sessionInstance.DestroyCallback()
+	}
 	return nil
 }
 

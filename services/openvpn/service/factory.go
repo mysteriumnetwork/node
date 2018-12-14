@@ -113,8 +113,8 @@ type OpenvpnConfigNegotiator struct {
 }
 
 // ProvideConfig returns the config for user
-func (ocn *OpenvpnConfigNegotiator) ProvideConfig(json.RawMessage) (session.ServiceConfiguration, error) {
-	return &ocn.vpnConfig, nil
+func (ocn *OpenvpnConfigNegotiator) ProvideConfig(json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+	return &ocn.vpnConfig, nil, nil
 }
 
 func vpnServerIP(serviceOptions Options, outboundIP, publicIP string) string {

@@ -65,7 +65,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, &fakePromiseProcessor{})
 
-	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig)
+	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig, nil)
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedSession, sessionInstance)
 }
@@ -74,7 +74,7 @@ func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, &fakePromiseProcessor{})
 
-	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), 69, expectedSessionConfig)
+	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), 69, expectedSessionConfig, nil)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Exactly(t, Session{}, sessionInstance)
 }
@@ -84,7 +84,7 @@ func TestManager_Create_StartsPromiseProcessor(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, promiseProcessor)
 
-	_, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig)
+	_, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig, nil)
 	assert.NoError(t, err)
 	assert.True(t, promiseProcessor.started)
 	assert.Exactly(t, currentProposal, promiseProcessor.proposal)

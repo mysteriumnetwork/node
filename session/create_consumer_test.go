@@ -27,8 +27,8 @@ import (
 )
 
 var (
-	mockConsumer = func(json.RawMessage) (ServiceConfiguration, error) {
-		return nil, nil
+	mockConsumer = func(json.RawMessage) (ServiceConfiguration, DestroyCallback, error) {
+		return nil, nil, nil
 	}
 )
 
@@ -107,7 +107,7 @@ type managerFake struct {
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (Session, error) {
+func (manager *managerFake) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration, destroyCallback DestroyCallback) (Session, error) {
 	manager.lastConsumerID = consumerID
 	manager.lastProposalID = proposalID
 	return manager.returnSession, manager.returnError

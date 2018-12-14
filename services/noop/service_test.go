@@ -67,7 +67,7 @@ func Test_Manager_Start(t *testing.T) {
 		proposal,
 	)
 
-	sessionConfig, err := sessionConfigProvider.ProvideConfig(nil)
+	sessionConfig, _, err := sessionConfigProvider.ProvideConfig(nil)
 	assert.NoError(t, err)
 	assert.Nil(t, sessionConfig)
 }
