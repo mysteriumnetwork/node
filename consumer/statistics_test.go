@@ -22,11 +22,14 @@ import (
 	"testing"
 )
 
-func TestSessionStatistics_DiffWithNew(t *testing.T) {
-	exampleStats := SessionStatistics{
+var (
+	exampleStats = SessionStatistics{
 		BytesReceived: 1,
 		BytesSent:     2,
 	}
+)
+
+func TestSessionStatistics_DiffWithNew(t *testing.T) {
 	tests := []struct {
 		name string
 		old  SessionStatistics
@@ -60,6 +63,32 @@ func TestSessionStatistics_DiffWithNew(t *testing.T) {
 			ss := tt.old
 			if got := ss.DiffWithNew(tt.new); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SessionStatistics.DiffWithNew() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAddUpStatistics(t *testing.T) {
+	tests := []struct {
+		name  string
+		stats SessionStatistics
+		diff  SessionStatistics
+		want  SessionStatistics
+	}{
+		{
+			name:  "adds up stats correctly",
+			diff:  exampleStats,
+			stats: exampleStats,
+			want: SessionStatistics{
+				BytesReceived: 2,
+				BytesSent:     4,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := AddUpStatistics(tt.stats, tt.diff); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("AddUpStatistics() = %v, want %v", got, tt.want)
 			}
 		})
 	}
