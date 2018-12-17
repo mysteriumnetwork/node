@@ -148,17 +148,17 @@ func (sr *SessionStatisticsReporter) send(serviceType, providerID, country strin
 	)
 }
 
-// ConsumeStateEvent handles the connection state changes
-func (sr *SessionStatisticsReporter) ConsumeStateEvent(stateEvent connection.StateEvent) {
-	switch stateEvent.State {
-	case connection.Disconnecting:
+// ConsumeSessionEvent handles the session state changes
+func (sr *SessionStatisticsReporter) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
+	switch sessionEvent.Status {
+	case connection.SessionStatusEnded:
 		sr.stop()
-	case connection.Connected:
+	case connection.SessionStatusCreated:
 		sr.start(
-			stateEvent.SessionInfo.ConsumerID,
-			stateEvent.SessionInfo.Proposal.ServiceType,
-			stateEvent.SessionInfo.Proposal.ProviderID,
-			stateEvent.SessionInfo.SessionID,
+			sessionEvent.SessionInfo.ConsumerID,
+			sessionEvent.SessionInfo.Proposal.ServiceType,
+			sessionEvent.SessionInfo.Proposal.ProviderID,
+			sessionEvent.SessionInfo.SessionID,
 		)
 	}
 }

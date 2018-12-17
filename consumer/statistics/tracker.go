@@ -29,6 +29,7 @@ type TimeGetter func() time.Time
 
 // SessionStatisticsTracker keeps the session stats safe and sound
 type SessionStatisticsTracker struct {
+	lastStats    consumer.SessionStatistics
 	sessionStats consumer.SessionStatistics
 	timeGetter   TimeGetter
 	sessionStart *time.Time
@@ -69,17 +70,36 @@ func (sst *SessionStatisticsTracker) markSessionEnd() {
 	sst.sessionStart = nil
 }
 
-// ConsumeStatisticsEvent handles the connection statistics changes
-func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(stats consumer.SessionStatistics) {
-	sst.sessionStats = stats
+// calcStatDiff takes in the old and the new values of statistics, returns the calculated delta
+func (sst *SessionStatisticsTracker) calcStatDiff(old, new uint64) (res uint64) {
+	if old > new {
+		return new
+	}
+	return new - old
 }
 
-// ConsumeStateEvent handles the connection state changes
-func (sst *SessionStatisticsTracker) ConsumeStateEvent(stateEvent connection.StateEvent) {
-	switch stateEvent.State {
-	case connection.Disconnecting:
+// GetStatisticsDiff calculates the difference in bytes between the old stats and new
+func (sst *SessionStatisticsTracker) GetStatisticsDiff(old, new consumer.SessionStatistics) consumer.SessionStatistics {
+	return consumer.SessionStatistics{
+		BytesSent:     sst.calcStatDiff(old.BytesSent, new.BytesSent),
+		BytesReceived: sst.calcStatDiff(old.BytesReceived, new.BytesReceived),
+	}
+}
+
+// ConsumeStatisticsEvent handles the connection statistics changes
+func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(stats consumer.SessionStatistics) {
+	diff := sst.GetStatisticsDiff(sst.lastStats, stats)
+	sst.sessionStats.BytesReceived += diff.BytesReceived
+	sst.sessionStats.BytesSent += diff.BytesSent
+	sst.lastStats = stats
+}
+
+// ConsumeSessionEvent handles the session state changes
+func (sst *SessionStatisticsTracker) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
+	switch sessionEvent.Status {
+	case connection.SessionStatusEnded:
 		sst.markSessionEnd()
-	case connection.Connected:
+	case connection.SessionStatusCreated:
 		sst.markSessionStart()
 	}
 }
