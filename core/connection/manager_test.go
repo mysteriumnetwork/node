@@ -253,6 +253,35 @@ func (tc *testContext) Test_PromiseIssuer_OnConnectErrorIsStopped() {
 	assert.True(tc.T(), tc.fakePromiseIssuer.stopCalled)
 }
 
+func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
+	tc.stubPublisher.Clear()
+
+	tc.fakeConnectionFactory.mockConnection.onStartReturnError = errors.New("fatal connection error")
+	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	assert.Error(tc.T(), err)
+
+	history := tc.stubPublisher.GetEventHistory()
+
+	found := false
+
+	for _, v := range history {
+		if v.calledWithTopic == SessionEventTopic {
+			event := v.calledWithArgs[0].(SessionEvent)
+			if event.Status == SessionEndedStatus {
+				found = true
+
+				assert.Equal(tc.T(), SessionEndedStatus, event.Status)
+				assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
+				assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
+				assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
+				assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
+			}
+		}
+	}
+
+	assert.True(tc.T(), found)
+}
+
 func (tc *testContext) Test_ManagerPublishesEvents() {
 	tc.stubPublisher.Clear()
 
@@ -266,7 +295,7 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	waitABit()
 
 	history := tc.stubPublisher.GetEventHistory()
-	assert.Len(tc.T(), history, 2)
+	assert.Len(tc.T(), history, 3)
 
 	for _, v := range history {
 		if v.calledWithTopic == StatisticsEventTopic {
@@ -277,6 +306,14 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 		if v.calledWithTopic == StateEventTopic {
 			event := v.calledWithArgs[0].(StateEvent)
 			assert.Equal(tc.T(), Connected, event.State)
+			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
+			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
+			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
+			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
+		}
+		if v.calledWithTopic == SessionEventTopic {
+			event := v.calledWithArgs[0].(SessionEvent)
+			assert.Equal(tc.T(), SessionCreatedStatus, event.Status)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)

@@ -171,6 +171,18 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		Proposal:   proposal,
 	}
 
+	manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
+		Status:      SessionCreatedStatus,
+		SessionInfo: manager.sessionInfo,
+	})
+
+	cancel = append(cancel, func() {
+		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
+			Status:      SessionEndedStatus,
+			SessionInfo: manager.sessionInfo,
+		})
+	})
+
 	promiseIssuer := manager.newPromiseIssuer(consumerID, dialog)
 	err = promiseIssuer.Start(proposal)
 	if err != nil {

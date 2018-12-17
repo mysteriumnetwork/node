@@ -209,15 +209,15 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 func (di *Dependencies) subscribeEventConsumers() error {
 	// state events
-	err := di.EventBus.Subscribe(connection.StateEventTopic, di.StatisticsTracker.ConsumeStateEvent)
+	err := di.EventBus.Subscribe(connection.SessionEventTopic, di.StatisticsTracker.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(connection.StateEventTopic, di.StatisticsReporter.ConsumeStateEvent)
+	err = di.EventBus.Subscribe(connection.SessionEventTopic, di.StatisticsReporter.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(connection.StateEventTopic, di.SessionStorage.ConsumeStateEvent)
+	err = di.EventBus.Subscribe(connection.SessionEventTopic, di.SessionStorage.ConsumeSessionEvent)
 	if err != nil {
 		return err
 	}

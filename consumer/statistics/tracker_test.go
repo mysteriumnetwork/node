@@ -67,20 +67,62 @@ func TestStopSessionResetsSessionDuration(t *testing.T) {
 	assert.Equal(t, time.Duration(0), statisticsTracker.GetSessionDuration())
 }
 
-func TestStatisticsTrackerConsumeStateEventConnected(t *testing.T) {
+func TestStatisticsTrackerConsumeSessionEventCreated(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	statisticsTracker.ConsumeStateEvent(connection.StateEvent{
-		State: connection.Connected,
+	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
+		Status: connection.SessionCreatedStatus,
 	})
 	assert.NotNil(t, statisticsTracker.sessionStart)
 }
 
-func TestStatisticsTrackerConsumeStateEventDisconnected(t *testing.T) {
+func TestStatisticsTrackerConsumeSessionEventEnded(t *testing.T) {
 	now := time.Now()
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	statisticsTracker.sessionStart = &now
-	statisticsTracker.ConsumeStateEvent(connection.StateEvent{
-		State: connection.Disconnecting,
+	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
+		Status: connection.SessionEndedStatus,
 	})
 	assert.Nil(t, statisticsTracker.sessionStart)
+}
+
+func TestConsumeStatisticsEventChain(t *testing.T) {
+	sst := &SessionStatisticsTracker{
+		timeGetter: time.Now,
+	}
+	stats := consumer.SessionStatistics{
+		BytesReceived: 1,
+		BytesSent:     1,
+	}
+	sst.ConsumeStatisticsEvent(stats)
+
+	assert.EqualValues(t, stats, sst.lastStats)
+	assert.EqualValues(t, stats, sst.sessionStats)
+
+	sst.ConsumeStatisticsEvent(stats)
+	assert.EqualValues(t, stats, sst.lastStats)
+	assert.EqualValues(t, stats, sst.sessionStats)
+
+	updatedStats := consumer.SessionStatistics{
+		BytesReceived: 2,
+		BytesSent:     2,
+	}
+
+	sst.ConsumeStatisticsEvent(updatedStats)
+	assert.EqualValues(t, updatedStats, sst.lastStats)
+	assert.EqualValues(t, updatedStats, sst.sessionStats)
+
+	statsAfterChain := consumer.SessionStatistics{
+		BytesReceived: 3,
+		BytesSent:     3,
+	}
+
+	// Simulate a reconnect now stats wise
+	sst.ConsumeStatisticsEvent(stats)
+	assert.EqualValues(t, stats, sst.lastStats)
+	assert.EqualValues(t, statsAfterChain, sst.sessionStats)
+
+	// Simulate no change in stats
+	sst.ConsumeStatisticsEvent(stats)
+	assert.EqualValues(t, stats, sst.lastStats)
+	assert.EqualValues(t, statsAfterChain, sst.sessionStats)
 }
