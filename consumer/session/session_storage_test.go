@@ -39,8 +39,8 @@ var (
 	providerID  = identity.FromAddress("providerID")
 	serviceType = "serviceType"
 
-	mockPayload = connection.StateEvent{
-		State: connection.Connected,
+	mockPayload = connection.SessionEvent{
+		Status: connection.SessionStatusCreated,
 		SessionInfo: connection.SessionInfo{
 			SessionID:  sessionID,
 			ConsumerID: consumerID,
@@ -73,24 +73,24 @@ func TestSessionStorageGetAllReturnsError(t *testing.T) {
 	assert.Nil(t, sessions)
 }
 
-func TestSessionStorageConsumeEventDisconnectingOK(t *testing.T) {
+func TestSessionStorageConsumeEventEndedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
 	storage := NewSessionStorage(storer, stubRetriever)
-	storage.ConsumeStateEvent(connection.StateEvent{
-		State: connection.Disconnecting,
+	storage.ConsumeSessionEvent(connection.SessionEvent{
+		Status: connection.SessionStatusEnded,
 	})
 	assert.True(t, storer.UpdateCalled)
 }
 
-func TestSessionStorageConsumeEventDisconnectingErrors(t *testing.T) {
+func TestSessionStorageConsumeEventEndedErrors(t *testing.T) {
 	storer := &StubSessionStorer{
 		UpdateError: errMock,
 	}
 
 	storage := NewSessionStorage(storer, stubRetriever)
 	assert.NotPanics(t, func() {
-		storage.ConsumeStateEvent(connection.StateEvent{State: connection.Disconnecting})
+		storage.ConsumeSessionEvent(connection.SessionEvent{Status: connection.SessionStatusEnded})
 	})
 
 	assert.True(t, storer.UpdateCalled)
@@ -100,7 +100,7 @@ func TestSessionStorageConsumeEventConnectedOK(t *testing.T) {
 	storer := &StubSessionStorer{}
 
 	storage := NewSessionStorage(storer, stubRetriever)
-	storage.ConsumeStateEvent(mockPayload)
+	storage.ConsumeSessionEvent(mockPayload)
 	assert.True(t, storer.SaveCalled)
 }
 
@@ -110,7 +110,7 @@ func TestSessionStorageConsumeEventConnectedError(t *testing.T) {
 	}
 	storage := NewSessionStorage(storer, stubRetriever)
 	assert.NotPanics(t, func() {
-		storage.ConsumeStateEvent(mockPayload)
+		storage.ConsumeSessionEvent(mockPayload)
 	})
 	assert.True(t, storer.SaveCalled)
 }

@@ -18,6 +18,7 @@
 package statistics
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -67,20 +68,116 @@ func TestStopSessionResetsSessionDuration(t *testing.T) {
 	assert.Equal(t, time.Duration(0), statisticsTracker.GetSessionDuration())
 }
 
-func TestStatisticsTrackerConsumeStateEventConnected(t *testing.T) {
+func TestStatisticsTrackerConsumeSessionEventCreated(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	statisticsTracker.ConsumeStateEvent(connection.StateEvent{
-		State: connection.Connected,
+	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
+		Status: connection.SessionStatusCreated,
 	})
 	assert.NotNil(t, statisticsTracker.sessionStart)
 }
 
-func TestStatisticsTrackerConsumeStateEventDisconnected(t *testing.T) {
+func TestStatisticsTrackerConsumeSessionEventEnded(t *testing.T) {
 	now := time.Now()
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	statisticsTracker.sessionStart = &now
-	statisticsTracker.ConsumeStateEvent(connection.StateEvent{
-		State: connection.Disconnecting,
+	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
+		Status: connection.SessionStatusEnded,
 	})
 	assert.Nil(t, statisticsTracker.sessionStart)
+}
+
+func TestSessionStatisticsTracker_GetStatisticsDiff(t *testing.T) {
+	exampleStats := consumer.SessionStatistics{
+		BytesReceived: 1,
+		BytesSent:     2,
+	}
+	type args struct {
+		old consumer.SessionStatistics
+		new consumer.SessionStatistics
+	}
+	tests := []struct {
+		name string
+		args args
+		want consumer.SessionStatistics
+	}{
+		{
+			name: "calculates statistics correctly if they are continuous",
+			args: args{
+				old: consumer.SessionStatistics{},
+				new: exampleStats,
+			},
+			want: exampleStats,
+		},
+		{
+			name: "calculates statistics correctly if they are not continuous",
+			args: args{
+				old: consumer.SessionStatistics{
+					BytesReceived: 5,
+					BytesSent:     6,
+				},
+				new: exampleStats,
+			},
+			want: exampleStats,
+		},
+		{
+			name: "returns zeros on no change",
+			args: args{
+				old: exampleStats,
+				new: exampleStats,
+			},
+			want: consumer.SessionStatistics{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sst := &SessionStatisticsTracker{
+				timeGetter: time.Now,
+			}
+			if got := sst.GetStatisticsDiff(tt.args.old, tt.args.new); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SessionStatisticsTracker.GetStatisticsDiff() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConsumeStatisticsEventChain(t *testing.T) {
+	sst := &SessionStatisticsTracker{
+		timeGetter: time.Now,
+	}
+	stats := consumer.SessionStatistics{
+		BytesReceived: 1,
+		BytesSent:     1,
+	}
+	sst.ConsumeStatisticsEvent(stats)
+
+	assert.EqualValues(t, stats, sst.lastStats)
+	assert.EqualValues(t, stats, sst.sessionStats)
+
+	sst.ConsumeStatisticsEvent(stats)
+	assert.EqualValues(t, stats, sst.lastStats)
+	assert.EqualValues(t, stats, sst.sessionStats)
+
+	updatedStats := consumer.SessionStatistics{
+		BytesReceived: 2,
+		BytesSent:     2,
+	}
+
+	sst.ConsumeStatisticsEvent(updatedStats)
+	assert.EqualValues(t, updatedStats, sst.lastStats)
+	assert.EqualValues(t, updatedStats, sst.sessionStats)
+
+	statsAfterChain := consumer.SessionStatistics{
+		BytesReceived: 3,
+		BytesSent:     3,
+	}
+
+	// Simulate a reconnect now stats wise
+	sst.ConsumeStatisticsEvent(stats)
+	assert.EqualValues(t, stats, sst.lastStats)
+	assert.EqualValues(t, statsAfterChain, sst.sessionStats)
+
+	// Simulate no change in stats
+	sst.ConsumeStatisticsEvent(stats)
+	assert.EqualValues(t, stats, sst.lastStats)
+	assert.EqualValues(t, statsAfterChain, sst.sessionStats)
 }

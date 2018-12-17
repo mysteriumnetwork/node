@@ -23,10 +23,25 @@ const (
 	StateEventTopic = "State"
 	// StatisticsEventTopic represents the connection stats topic
 	StatisticsEventTopic = "Statistics"
+	// SessionEventTopic represents the session event
+	SessionEventTopic = "Session"
 )
 
 // StateEvent is the struct we'll emit on a StateEvent topic event
 type StateEvent struct {
 	State       State
+	SessionInfo SessionInfo
+}
+
+const (
+	// SessionStatusCreated represents a session creation event
+	SessionStatusCreated = "Created"
+	// SessionStatusEnded represents a session end
+	SessionStatusEnded = "Ended"
+)
+
+// SessionEvent represents a session related event
+type SessionEvent struct {
+	Status      string
 	SessionInfo SessionInfo
 }
