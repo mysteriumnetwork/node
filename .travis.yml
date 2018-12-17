@@ -168,7 +168,7 @@ jobs:
       - docker load -i build/docker/myst_ubuntu.tgz
       - docker load -i build/docker/tequilapi_redoc.tgz
       - bin/release_docker $TRAVIS_TAG
-      - if [[ $TRAVIS_TAG != *-rc ]] && [[ $TRAVIS_TAG != *-dev ]]; then bin/release_docker latest; fi
+      - if [[ $TRAVIS_TAG != *-rc* ]] && [[ $TRAVIS_TAG != *-dev ]]; then bin/release_docker latest; fi
       name: "Pushing release to hub.docker.com"
     - script:
       - bin/s3 sync s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts build/package
