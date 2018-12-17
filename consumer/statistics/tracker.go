@@ -72,9 +72,7 @@ func (sst *SessionStatisticsTracker) markSessionEnd() {
 
 // ConsumeStatisticsEvent handles the connection statistics changes
 func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(stats consumer.SessionStatistics) {
-	diff := sst.lastStats.DiffWithNew(stats)
-	sst.sessionStats.BytesReceived += diff.BytesReceived
-	sst.sessionStats.BytesSent += diff.BytesSent
+	sst.sessionStats = consumer.AddUpStatistics(sst.sessionStats, sst.lastStats.DiffWithNew(stats))
 	sst.lastStats = stats
 }
 
