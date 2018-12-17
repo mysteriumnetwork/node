@@ -18,7 +18,6 @@
 package statistics
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -71,7 +70,7 @@ func TestStopSessionResetsSessionDuration(t *testing.T) {
 func TestStatisticsTrackerConsumeSessionEventCreated(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
-		Status: connection.SessionStatusCreated,
+		Status: connection.SessionCreatedStatus,
 	})
 	assert.NotNil(t, statisticsTracker.sessionStart)
 }
@@ -81,63 +80,9 @@ func TestStatisticsTrackerConsumeSessionEventEnded(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	statisticsTracker.sessionStart = &now
 	statisticsTracker.ConsumeSessionEvent(connection.SessionEvent{
-		Status: connection.SessionStatusEnded,
+		Status: connection.SessionEndedStatus,
 	})
 	assert.Nil(t, statisticsTracker.sessionStart)
-}
-
-func TestSessionStatisticsTracker_GetStatisticsDiff(t *testing.T) {
-	exampleStats := consumer.SessionStatistics{
-		BytesReceived: 1,
-		BytesSent:     2,
-	}
-	type args struct {
-		old consumer.SessionStatistics
-		new consumer.SessionStatistics
-	}
-	tests := []struct {
-		name string
-		args args
-		want consumer.SessionStatistics
-	}{
-		{
-			name: "calculates statistics correctly if they are continuous",
-			args: args{
-				old: consumer.SessionStatistics{},
-				new: exampleStats,
-			},
-			want: exampleStats,
-		},
-		{
-			name: "calculates statistics correctly if they are not continuous",
-			args: args{
-				old: consumer.SessionStatistics{
-					BytesReceived: 5,
-					BytesSent:     6,
-				},
-				new: exampleStats,
-			},
-			want: exampleStats,
-		},
-		{
-			name: "returns zeros on no change",
-			args: args{
-				old: exampleStats,
-				new: exampleStats,
-			},
-			want: consumer.SessionStatistics{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			sst := &SessionStatisticsTracker{
-				timeGetter: time.Now,
-			}
-			if got := sst.GetStatisticsDiff(tt.args.old, tt.args.new); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SessionStatisticsTracker.GetStatisticsDiff() = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }
 
 func TestConsumeStatisticsEventChain(t *testing.T) {

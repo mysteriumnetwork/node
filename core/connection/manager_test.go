@@ -267,10 +267,10 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 	for _, v := range history {
 		if v.calledWithTopic == SessionEventTopic {
 			event := v.calledWithArgs[0].(SessionEvent)
-			if event.Status == SessionStatusEnded {
+			if event.Status == SessionEndedStatus {
 				found = true
 
-				assert.Equal(tc.T(), SessionStatusEnded, event.Status)
+				assert.Equal(tc.T(), SessionEndedStatus, event.Status)
 				assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 				assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 				assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
@@ -313,7 +313,7 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 		}
 		if v.calledWithTopic == SessionEventTopic {
 			event := v.calledWithArgs[0].(SessionEvent)
-			assert.Equal(tc.T(), SessionStatusCreated, event.Status)
+			assert.Equal(tc.T(), SessionCreatedStatus, event.Status)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
