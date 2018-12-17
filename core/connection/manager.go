@@ -172,13 +172,13 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 
 	manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
-		Status:      SessionStatusCreated,
+		Status:      SessionCreatedStatus,
 		SessionInfo: manager.sessionInfo,
 	})
 
 	cancel = append(cancel, func() {
 		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
-			Status:      SessionStatusEnded,
+			Status:      SessionEndedStatus,
 			SessionInfo: manager.sessionInfo,
 		})
 	})

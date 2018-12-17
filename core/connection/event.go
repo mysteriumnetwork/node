@@ -34,10 +34,10 @@ type StateEvent struct {
 }
 
 const (
-	// SessionStatusCreated represents a session creation event
-	SessionStatusCreated = "Created"
-	// SessionStatusEnded represents a session end
-	SessionStatusEnded = "Ended"
+	// SessionCreatedStatus represents a session creation event
+	SessionCreatedStatus = "Created"
+	// SessionEndedStatus represents a session end
+	SessionEndedStatus = "Ended"
 )
 
 // SessionEvent represents a session related event
