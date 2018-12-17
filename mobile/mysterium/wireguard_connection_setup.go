@@ -155,7 +155,7 @@ func setupWireguardDevice(devApi *device.DeviceApi, config *wireguard.ServiceCon
 		PublicKey:       device.NoisePublicKey(peerPubKeyArr),
 		RemoteEndpoint:  endpoint,
 		KeepAlivePeriod: 20,
-		//all traffic through this peer (unfortunatelly 0.0.0.0/0 didn't work as it was treated as ipv6)
+		//all traffic through this peer (unfortunately 0.0.0.0/0 didn't work as it was treated as ipv6)
 		AllowedIPs: []string{"0.0.0.0/1", "128.0.0.0/1"},
 	})
 	return err

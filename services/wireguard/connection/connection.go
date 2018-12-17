@@ -18,8 +18,9 @@
 package connection
 
 import (
+	"context"
 	"encoding/json"
-	"sync"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -33,8 +34,11 @@ const logPrefix = "[connection-wireguard] "
 
 // Connection which does wireguard tunneling.
 type Connection struct {
-	connection   sync.WaitGroup
-	stateChannel connection.StateChannel
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	stateChannel      connection.StateChannel
+	statisticsChannel connection.StatisticsChannel
 
 	config             wg.ServiceConfig
 	connectionEndpoint wg.ConnectionEndpoint
@@ -55,26 +59,28 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return err
 	}
 
-	c.connection.Add(1)
+	c.ctx, c.cancel = context.WithCancel(context.Background())
 	c.stateChannel <- connection.Connecting
 
 	if err := c.connectionEndpoint.Start(&c.config); err != nil {
 		c.stateChannel <- connection.NotConnected
-		c.connection.Done()
+		c.cancel()
 		return err
 	}
 
 	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {
 		c.stateChannel <- connection.NotConnected
-		c.connection.Done()
+		c.cancel()
 		return err
 	}
 
 	if err := c.connectionEndpoint.ConfigureRoutes(c.config.Provider.Endpoint.IP); err != nil {
 		c.stateChannel <- connection.NotConnected
-		c.connection.Done()
+		c.cancel()
 		return err
 	}
+
+	go c.runPeriodically(time.Second)
 
 	c.stateChannel <- connection.Connected
 	return nil
@@ -82,8 +88,8 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 // Wait blocks until wireguard connection not stopped.
 func (c *Connection) Wait() error {
-	c.connection.Wait()
-	return nil
+	<-c.ctx.Done()
+	return c.ctx.Err()
 }
 
 // GetConfig returns the consumer configuration for session creation
@@ -106,6 +112,23 @@ func (c *Connection) Stop() {
 	}
 
 	c.stateChannel <- connection.NotConnected
-	c.connection.Done()
+	c.cancel()
 	close(c.stateChannel)
+}
+
+func (c *Connection) runPeriodically(duration time.Duration) {
+	for {
+		select {
+		case <-time.After(duration):
+			stats, err := c.connectionEndpoint.PeerStats()
+			if err != nil {
+				log.Error(logPrefix, "failed to receive peer stats: ", err)
+				break
+			}
+			c.statisticsChannel <- stats
+
+		case <-c.ctx.Done():
+			return
+		}
+	}
 }

@@ -19,12 +19,14 @@ package kernelspace
 
 import (
 	"encoding/base64"
+	"errors"
 	"net"
 
 	log "github.com/cihub/seelog"
 	"github.com/jackpal/gateway"
 	"github.com/mdlayher/wireguardctrl"
 	"github.com/mdlayher/wireguardctrl/wgtypes"
+	"github.com/mysteriumnetwork/node/consumer"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/utils"
 )
@@ -81,6 +83,22 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 		AllowedIPs: allowedIPs,
 	}}
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
+}
+
+func (c *client) PeerStats() (consumer.SessionStatistics, error) {
+	d, err := c.wgClient.Device(c.iface)
+	if err != nil || d.Name != c.iface {
+		return consumer.SessionStatistics{}, err
+	}
+
+	if len(d.Peers) != 1 {
+		return consumer.SessionStatistics{}, errors.New("exactly 1 peer expected")
+	}
+
+	return consumer.SessionStatistics{
+		BytesReceived: uint64(d.Peers[0].ReceiveBytes),
+		BytesSent:     uint64(d.Peers[0].TransmitBytes),
+	}, nil
 }
 
 func (c *client) DestroyDevice(name string) error {
