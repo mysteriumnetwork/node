@@ -18,10 +18,19 @@
 package identity
 
 import (
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
+const keystoreLogPrefix = "[Keystore] "
+
 // NewKeystoreFilesystem create new keystore, which keeps keys in filesystem
-func NewKeystoreFilesystem(directory string) *keystore.KeyStore {
+func NewKeystoreFilesystem(directory string, lightweight bool) *keystore.KeyStore {
+	if lightweight {
+		log.Trace(keystoreLogPrefix, "Using lightweight keystore")
+		return keystore.NewKeyStore(directory, keystore.LightScryptN, keystore.LightScryptN)
+	}
+
+	log.Trace(keystoreLogPrefix, "Using heavyweight keystore")
 	return keystore.NewKeyStore(directory, keystore.StandardScryptN, keystore.StandardScryptP)
 }

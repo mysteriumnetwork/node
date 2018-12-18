@@ -34,7 +34,18 @@ var (
 		Usage: "Port for listening incoming api requests",
 		Value: 4050,
 	}
+	keystoreLightweightFlag = cli.BoolFlag{
+		Name:  "keystore.lightweight",
+		Usage: "Determines the scrypt memory complexity. If set to true, will use 4MB blocks instead of the standard 256MB ones",
+	}
 )
+
+// ParseKeystoreFlags parses the keystore options for node
+func ParseKeystoreFlags(ctx *cli.Context) node.OptionsKeystore {
+	return node.OptionsKeystore{
+		UseLightweight: ctx.GlobalBool(keystoreLightweightFlag.Name),
+	}
+}
 
 // RegisterFlagsNode function register node flags to flag list
 func RegisterFlagsNode(flags *[]cli.Flag) error {
@@ -42,7 +53,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		return err
 	}
 
-	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag)
+	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag, keystoreLightweightFlag)
 
 	RegisterFlagsNetwork(flags)
 	openvpn_core.RegisterFlags(flags)
@@ -54,14 +65,16 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 // ParseFlagsNode function fills in node options from CLI context
 func ParseFlagsNode(ctx *cli.Context) node.Options {
 	return node.Options{
-		ParseFlagsDirectory(ctx),
+		Directories: ParseFlagsDirectory(ctx),
 
-		ctx.GlobalString(tequilapiAddressFlag.Name),
-		ctx.GlobalInt(tequilapiPortFlag.Name),
+		TequilapiAddress: ctx.GlobalString(tequilapiAddressFlag.Name),
+		TequilapiPort:    ctx.GlobalInt(tequilapiPortFlag.Name),
 
-		wrapper{nodeOptions: openvpn_core.ParseFlags(ctx)},
-		ParseFlagsLocation(ctx),
-		ParseFlagsNetwork(ctx),
+		Keystore: ParseKeystoreFlags(ctx),
+
+		Openvpn:        wrapper{nodeOptions: openvpn_core.ParseFlags(ctx)},
+		Location:       ParseFlagsLocation(ctx),
+		OptionsNetwork: ParseFlagsNetwork(ctx),
 	}
 }
 
