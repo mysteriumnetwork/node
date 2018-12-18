@@ -164,6 +164,8 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
 	se = sessionsDTO.Sessions[0]
 
+	assert.Equal(t, "Completed", se.Status)
+
 	// call the custom asserter for the given service type
 	serviceTypeAssertionMap[serviceType](t, se)
 }
@@ -171,25 +173,17 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 type sessionAsserter func(t *testing.T, session endpoints.SessionDTO)
 
 var serviceTypeAssertionMap = map[string]sessionAsserter{
-	"openvpn":   assertOpenvpn,
-	"noop":      assertNoop,
-	"wireguard": assertWireguard,
+	"openvpn":   assertStatsNotZero,
+	"noop":      assertStatsZero,
+	"wireguard": assertStatsZero,
 }
 
-func assertOpenvpn(t *testing.T, session endpoints.SessionDTO) {
+func assertStatsNotZero(t *testing.T, session endpoints.SessionDTO) {
 	assert.NotEqual(t, uint64(0), session.BytesSent)
 	assert.NotEqual(t, uint64(0), session.BytesReceived)
-	assert.Equal(t, "Completed", session.Status)
 }
 
-func assertNoop(t *testing.T, session endpoints.SessionDTO) {
+func assertStatsZero(t *testing.T, session endpoints.SessionDTO) {
 	assert.Equal(t, uint64(0), session.BytesSent)
 	assert.Equal(t, uint64(0), session.BytesReceived)
-	assert.Equal(t, "Completed", session.Status)
-}
-
-func assertWireguard(t *testing.T, session endpoints.SessionDTO) {
-	assert.Equal(t, uint64(0), session.BytesSent)
-	assert.Equal(t, uint64(0), session.BytesReceived)
-	assert.Equal(t, "Completed", session.Status)
 }
