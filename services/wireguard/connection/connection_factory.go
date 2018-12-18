@@ -36,6 +36,7 @@ func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel
 	config.Consumer.PrivateKey = privateKey
 
 	return &Connection{
+		stopChannel:       make(chan struct{}),
 		stateChannel:      stateChannel,
 		statisticsChannel: statisticsChannel,
 		config:            config,

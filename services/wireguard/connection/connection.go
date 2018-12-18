@@ -18,8 +18,8 @@
 package connection
 
 import (
-	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -34,8 +34,8 @@ const logPrefix = "[connection-wireguard] "
 
 // Connection which does wireguard tunneling.
 type Connection struct {
-	ctx    context.Context
-	cancel context.CancelFunc
+	connection  sync.WaitGroup
+	stopChannel chan struct{}
 
 	stateChannel      connection.StateChannel
 	statisticsChannel connection.StatisticsChannel
@@ -59,24 +59,24 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return err
 	}
 
-	c.ctx, c.cancel = context.WithCancel(context.Background())
+	c.connection.Add(1)
 	c.stateChannel <- connection.Connecting
 
 	if err := c.connectionEndpoint.Start(&c.config); err != nil {
 		c.stateChannel <- connection.NotConnected
-		c.cancel()
+		c.connection.Done()
 		return err
 	}
 
 	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {
 		c.stateChannel <- connection.NotConnected
-		c.cancel()
+		c.connection.Done()
 		return err
 	}
 
 	if err := c.connectionEndpoint.ConfigureRoutes(c.config.Provider.Endpoint.IP); err != nil {
 		c.stateChannel <- connection.NotConnected
-		c.cancel()
+		c.connection.Done()
 		return err
 	}
 
@@ -88,8 +88,8 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 // Wait blocks until wireguard connection not stopped.
 func (c *Connection) Wait() error {
-	<-c.ctx.Done()
-	return c.ctx.Err()
+	c.connection.Wait()
+	return nil
 }
 
 // GetConfig returns the consumer configuration for session creation
@@ -112,7 +112,8 @@ func (c *Connection) Stop() {
 	}
 
 	c.stateChannel <- connection.NotConnected
-	c.cancel()
+	c.connection.Done()
+	close(c.stopChannel)
 	close(c.stateChannel)
 	close(c.statisticsChannel)
 }
@@ -128,7 +129,7 @@ func (c *Connection) runPeriodically(duration time.Duration) {
 			}
 			c.statisticsChannel <- stats
 
-		case <-c.ctx.Done():
+		case <-c.stopChannel:
 			return
 		}
 	}
