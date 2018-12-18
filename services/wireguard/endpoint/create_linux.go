@@ -31,16 +31,7 @@ import (
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
 func NewConnectionEndpoint(ipResolver ip.Resolver, resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
-	var wgClient wgClient
-	var err error
-
-	if isKernelSpaceSupported() {
-		wgClient, err = kernelspace.NewWireguardClient()
-	} else {
-		log.Info("Wireguard kernel space is not supported. Switching to user space implementation.")
-		wgClient, err = userspace.NewWireguardClient()
-	}
-
+	wgClient, err := getWGClient()
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +41,15 @@ func NewConnectionEndpoint(ipResolver ip.Resolver, resourceAllocator *resources.
 		ipResolver:        ipResolver,
 		resourceAllocator: resourceAllocator,
 	}, nil
+}
+
+func getWGClient() (wgClient wgClient, err error) {
+	if isKernelSpaceSupported() {
+		return kernelspace.NewWireguardClient()
+	}
+
+	log.Info("Wireguard kernel space is not supported. Switching to user space implementation.")
+	return userspace.NewWireguardClient()
 }
 
 func isKernelSpaceSupported() bool {
