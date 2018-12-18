@@ -66,17 +66,17 @@ func (repo *Storage) GetAll() ([]History, error) {
 	return sessions, nil
 }
 
-// ConsumeStateEvent consumes the connection state change events
-func (repo *Storage) ConsumeStateEvent(stateEvent connection.StateEvent) {
-	switch stateEvent.State {
-	case connection.Disconnecting:
-		repo.handleDisconnectingEvent(stateEvent.SessionInfo.SessionID)
-	case connection.Connected:
-		repo.handleConnectedEvent(stateEvent.SessionInfo)
+// ConsumeSessionEvent consumes the session state change events
+func (repo *Storage) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
+	switch sessionEvent.Status {
+	case connection.SessionEndedStatus:
+		repo.handleEndedEvent(sessionEvent.SessionInfo.SessionID)
+	case connection.SessionCreatedStatus:
+		repo.handleCreatedEvent(sessionEvent.SessionInfo)
 	}
 }
 
-func (repo *Storage) handleDisconnectingEvent(sessionID session.ID) {
+func (repo *Storage) handleEndedEvent(sessionID session.ID) {
 	updatedSession := &History{
 		SessionID: sessionID,
 		Updated:   time.Now().UTC(),
@@ -91,7 +91,7 @@ func (repo *Storage) handleDisconnectingEvent(sessionID session.ID) {
 	}
 }
 
-func (repo *Storage) handleConnectedEvent(sessionInfo connection.SessionInfo) {
+func (repo *Storage) handleCreatedEvent(sessionInfo connection.SessionInfo) {
 	se := NewHistory(
 		sessionInfo.SessionID,
 		sessionInfo.Proposal,

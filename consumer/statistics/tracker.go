@@ -29,6 +29,7 @@ type TimeGetter func() time.Time
 
 // SessionStatisticsTracker keeps the session stats safe and sound
 type SessionStatisticsTracker struct {
+	lastStats    consumer.SessionStatistics
 	sessionStats consumer.SessionStatistics
 	timeGetter   TimeGetter
 	sessionStart *time.Time
@@ -71,15 +72,16 @@ func (sst *SessionStatisticsTracker) markSessionEnd() {
 
 // ConsumeStatisticsEvent handles the connection statistics changes
 func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(stats consumer.SessionStatistics) {
-	sst.sessionStats = stats
+	sst.sessionStats = consumer.AddUpStatistics(sst.sessionStats, sst.lastStats.DiffWithNew(stats))
+	sst.lastStats = stats
 }
 
-// ConsumeStateEvent handles the connection state changes
-func (sst *SessionStatisticsTracker) ConsumeStateEvent(stateEvent connection.StateEvent) {
-	switch stateEvent.State {
-	case connection.Disconnecting:
+// ConsumeSessionEvent handles the session state changes
+func (sst *SessionStatisticsTracker) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
+	switch sessionEvent.Status {
+	case connection.SessionEndedStatus:
 		sst.markSessionEnd()
-	case connection.Connected:
+	case connection.SessionCreatedStatus:
 		sst.markSessionStart()
 	}
 }
