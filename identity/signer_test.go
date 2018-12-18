@@ -24,7 +24,7 @@ import (
 )
 
 func TestSigningMessageWithUnlockedAccount(t *testing.T) {
-	ks := NewKeystoreFilesystem("test_data")
+	ks := NewKeystoreFilesystem("test_data", true)
 
 	manager := NewIdentityManager(ks)
 	err := manager.Unlock("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68", "")

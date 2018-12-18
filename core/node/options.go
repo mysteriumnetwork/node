@@ -31,7 +31,14 @@ type Options struct {
 	TequilapiAddress string
 	TequilapiPort    int
 
+	Keystore OptionsKeystore
+
 	Openvpn  Openvpn
 	Location OptionsLocation
 	OptionsNetwork
+}
+
+// OptionsKeystore stores the keystore configuration
+type OptionsKeystore struct {
+	UseLightweight bool
 }

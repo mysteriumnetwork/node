@@ -123,7 +123,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	di.bootstrapIdentityComponents(nodeOptions.Directories)
+	di.bootstrapIdentityComponents(nodeOptions)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapNodeComponents(nodeOptions)
 
@@ -343,8 +343,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	return nil
 }
 
-func (di *Dependencies) bootstrapIdentityComponents(directories node.OptionsDirectory) {
-	di.Keystore = identity.NewKeystoreFilesystem(directories.Keystore)
+func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
+	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, options.Keystore.UseLightweight)
 	di.IdentityManager = identity.NewIdentityManager(di.Keystore)
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
