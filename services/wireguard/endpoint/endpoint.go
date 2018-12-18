@@ -24,6 +24,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
@@ -76,7 +77,7 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	}
 
 	if config == nil {
-		privateKey, err := GeneratePrivateKey()
+		privateKey, err := key.GeneratePrivateKey()
 		if err != nil {
 			return err
 		}
@@ -105,7 +106,7 @@ func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr) e
 
 // Config provides wireguard service configuration for the current connection endpoint.
 func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
-	publicKey, err := PrivateKeyToPublicKey(ce.privateKey)
+	publicKey, err := key.PrivateKeyToPublicKey(ce.privateKey)
 	if err != nil {
 		return wg.ServiceConfig{}, err
 	}

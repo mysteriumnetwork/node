@@ -146,28 +146,6 @@ func (c *client) Close() (err error) {
 	return nil
 }
 
-// GeneratePrivateKey creates new wireguard private key
-func GeneratePrivateKey() (string, error) {
-	key, err := wgtypes.GeneratePrivateKey()
-	if err != nil {
-		return "", err
-	}
-	return key.String(), nil
-}
-
-// PrivateKeyToPublicKey generates wireguard public key from private key
-func PrivateKeyToPublicKey(key string) (string, error) {
-	k, err := base64.StdEncoding.DecodeString(key)
-	if err != nil {
-		return "", err
-	}
-	privateKey, err := wgtypes.NewKey(k)
-	if err != nil {
-		return "", err
-	}
-	return privateKey.PublicKey().String(), nil
-}
-
 func stringToKey(key string) (wgtypes.Key, error) {
 	k, err := base64.StdEncoding.DecodeString(key)
 	if err != nil {

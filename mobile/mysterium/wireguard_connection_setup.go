@@ -30,7 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
+	"github.com/mysteriumnetwork/node/services/wireguard/key"
 )
 
 const (
@@ -59,7 +59,7 @@ type WireguardConnectionFactory struct {
 
 // Create creates a new wireguard connection
 func (wcf *WireguardConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-	privateKey, err := endpoint.GeneratePrivateKey()
+	privateKey, err := key.GeneratePrivateKey()
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +242,7 @@ func (wg *wireguardConnection) Stop() {
 }
 
 func (wg *wireguardConnection) GetConfig() (connection.ConsumerConfig, error) {
-	publicKey, err := endpoint.PrivateKeyToPublicKey(wg.privKey)
+	publicKey, err := key.PrivateKeyToPublicKey(wg.privKey)
 	if err != nil {
 		return nil, err
 	}
