@@ -54,6 +54,10 @@ func getWGClient() (wgClient wgClient, err error) {
 
 func isKernelSpaceSupported() bool {
 	err := utils.SudoExec("ip", "link", "add", "iswgsupported", "type", "wireguard")
+	if err != nil {
+		log.Debug(logPrefix, "failed to create wireguard network interface", err)
+	}
+
 	_ = utils.SudoExec("ip", "link", "del", "iswgsupported")
 	return err == nil
 }
