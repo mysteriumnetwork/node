@@ -87,7 +87,7 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 
 func (c *client) PeerStats() (consumer.SessionStatistics, error) {
 	d, err := c.wgClient.Device(c.iface)
-	if err != nil || d.Name != c.iface {
+	if err != nil {
 		return consumer.SessionStatistics{}, err
 	}
 

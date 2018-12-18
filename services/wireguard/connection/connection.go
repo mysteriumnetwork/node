@@ -114,6 +114,7 @@ func (c *Connection) Stop() {
 	c.stateChannel <- connection.NotConnected
 	c.cancel()
 	close(c.stateChannel)
+	close(c.statisticsChannel)
 }
 
 func (c *Connection) runPeriodically(duration time.Duration) {
