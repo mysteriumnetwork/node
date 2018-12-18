@@ -54,6 +54,6 @@ func NewConnectionEndpoint(ipResolver ip.Resolver, resourceAllocator *resources.
 
 func isKernelSpaceSupported() bool {
 	err := utils.SudoExec("ip", "link", "add", "iswgsupported", "type", "wireguard")
-	utils.SudoExec("ip", "link", "del", "iswgsupported")
+	_ = utils.SudoExec("ip", "link", "del", "iswgsupported")
 	return err == nil
 }
