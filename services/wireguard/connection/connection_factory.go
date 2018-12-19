@@ -20,7 +20,7 @@ package connection
 import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
-	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
+	"github.com/mysteriumnetwork/node/services/wireguard/key"
 )
 
 // Factory is the wireguard connection factory
@@ -28,7 +28,7 @@ type Factory struct{}
 
 // Create creates a new wireguard connenction
 func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-	privateKey, err := endpoint.GeneratePrivateKey()
+	privateKey, err := key.GeneratePrivateKey()
 	if err != nil {
 		return nil, err
 	}

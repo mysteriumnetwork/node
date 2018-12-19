@@ -19,6 +19,9 @@ package userspace
 
 import (
 	"errors"
+	"net"
+
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
 type client struct{}
@@ -26,4 +29,12 @@ type client struct{}
 // NewWireguardClient creates new wireguard user space client.
 func NewWireguardClient() (*client, error) {
 	return nil, errors.New("Not implemented")
+}
+
+func (c *client) ConfigureRoutes(iface string, ip net.IP) error { return nil }
+func (c *client) DestroyDevice(name string) error               { return nil }
+func (c *client) AddPeer(name string, peer wg.PeerInfo) error   { return nil }
+func (c *client) Close() error                                  { return nil }
+func (c *client) ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error {
+	return nil
 }

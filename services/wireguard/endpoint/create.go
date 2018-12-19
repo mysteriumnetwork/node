@@ -24,23 +24,10 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
 func NewConnectionEndpoint(ipResolver ip.Resolver, resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
 	return nil, errors.New("Not implemented")
-}
-
-// GeneratePrivateKey creates new wireguard private key
-func GeneratePrivateKey() (string, error) {
-	// TODO these should get reused in kernelspace
-	return key.GeneratePrivateKey()
-}
-
-// PrivateKeyToPublicKey generates wireguard public key from private key
-func PrivateKeyToPublicKey(privateKey string) (string, error) {
-	// TODO these should get reused in kernelspace
-	return key.PrivateKeyToPublicKey(privateKey)
 }

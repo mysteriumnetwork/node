@@ -20,15 +20,18 @@
 package endpoint
 
 import (
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
 func NewConnectionEndpoint(ipResolver ip.Resolver, resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
-	wgClient, err := kernelspace.NewWireguardClient()
+	wgClient, err := getWGClient()
 	if err != nil {
 		return nil, err
 	}
@@ -40,12 +43,21 @@ func NewConnectionEndpoint(ipResolver ip.Resolver, resourceAllocator *resources.
 	}, nil
 }
 
-// GeneratePrivateKey creates new wireguard private key
-func GeneratePrivateKey() (string, error) {
-	return kernelspace.GeneratePrivateKey()
+func getWGClient() (wgClient wgClient, err error) {
+	if isKernelSpaceSupported() {
+		return kernelspace.NewWireguardClient()
+	}
+
+	log.Info("Wireguard kernel space is not supported. Switching to user space implementation.")
+	return userspace.NewWireguardClient()
 }
 
-// PrivateKeyToPublicKey generates wireguard public key from private key
-func PrivateKeyToPublicKey(key string) (string, error) {
-	return kernelspace.PrivateKeyToPublicKey(key)
+func isKernelSpaceSupported() bool {
+	err := utils.SudoExec("ip", "link", "add", "iswgsupported", "type", "wireguard")
+	if err != nil {
+		log.Debug(logPrefix, "failed to create wireguard network interface", err)
+	}
+
+	_ = utils.SudoExec("ip", "link", "del", "iswgsupported")
+	return err == nil
 }
