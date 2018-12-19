@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,8 +47,12 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 
 	t.Run("ConsumerConnectFlow", func(t *testing.T) {
-		proposal := consumerPicksProposal(t, tequilapiConsumer)
-		consumerConnectFlow(t, tequilapiConsumer, consumerID, proposal)
+		for serviceType := range serviceTypeAssertionMap {
+			t.Run(serviceType, func(t *testing.T) {
+				proposal := consumerPicksProposal(t, tequilapiConsumer, serviceType)
+				consumerConnectFlow(t, tequilapiConsumer, consumerID, serviceType, proposal)
+			})
+		}
 	})
 }
 
@@ -81,21 +85,21 @@ func identityRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 }
 
 // expect exactly one proposal
-func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client) tequilapi_client.ProposalDTO {
+func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, serviceType string) tequilapi_client.ProposalDTO {
 	var proposals []tequilapi_client.ProposalDTO
 	err := waitForCondition(func() (state bool, stateErr error) {
-		proposals, stateErr = tequilapi.Proposals()
+		proposals, stateErr = tequilapi.ProposalsByType(serviceType)
 		return len(proposals) == 1, stateErr
 	})
 	if err != nil {
 		assert.FailNowf(t, "Exactly one proposal is expected - something is not right!", "Error was: %v", err)
 	}
 
-	seelog.Info("Selected proposal is: ", proposals[0])
+	seelog.Info("Selected proposal is: ", proposals[0], ", ServiceType:", serviceType)
 	return proposals[0]
 }
 
-func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID string, proposal tequilapi_client.ProposalDTO) {
+func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, serviceType string, proposal tequilapi_client.ProposalDTO) {
 	err := topUpAccount(consumerID)
 	assert.Nil(t, err)
 
@@ -103,9 +107,9 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", connectionStatus.Status)
 
-	nonVpnIp, err := tequilapi.GetIP()
+	nonVpnIP, err := tequilapi.GetIP()
 	assert.NoError(t, err)
-	seelog.Info("Original consumer IP: ", nonVpnIp)
+	seelog.Info("Original consumer IP: ", nonVpnIP)
 
 	err = waitForCondition(func() (bool, error) {
 		status, err := tequilapi.Status()
@@ -113,7 +117,10 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, "openvpn", endpoints.ConnectOptions{true})
+	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, serviceType, endpoints.ConnectOptions{
+		DisableKillSwitch: true,
+	})
+
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {
@@ -122,20 +129,21 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	vpnIp, err := tequilapi.GetIP()
+	vpnIP, err := tequilapi.GetIP()
 	assert.NoError(t, err)
-	seelog.Info("Changed consumer IP: ", vpnIp)
+	seelog.Info("Changed consumer IP: ", vpnIP)
 
 	// sessions history should be created after connect
-	sessionsDTO, err := tequilapi.GetSessions()
+	sessionsDTO, err := tequilapi.GetSessionsByType(serviceType)
 	assert.NoError(t, err)
+
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
 	se := sessionsDTO.Sessions[0]
 	assert.Equal(t, uint64(0), se.Duration)
 	assert.Equal(t, uint64(0), se.BytesSent)
 	assert.Equal(t, uint64(0), se.BytesReceived)
 	assert.Equal(t, "e2e-land", se.ProviderCountry)
-	assert.Equal(t, "openvpn", se.ServiceType)
+	assert.Equal(t, serviceType, se.ServiceType)
 	assert.Equal(t, proposal.ProviderID, se.ProviderID)
 	assert.Equal(t, connectionStatus.SessionID, se.SessionID)
 	assert.Equal(t, "New", se.Status)
@@ -150,11 +158,32 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.NoError(t, err)
 
 	// sessions history should be updated after disconnect
-	sessionsDTO, err = tequilapi.GetSessions()
+	sessionsDTO, err = tequilapi.GetSessionsByType(serviceType)
 	assert.NoError(t, err)
+
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
 	se = sessionsDTO.Sessions[0]
-	assert.NotEqual(t, uint64(0), se.BytesSent)
-	assert.NotEqual(t, uint64(0), se.BytesReceived)
+
 	assert.Equal(t, "Completed", se.Status)
+
+	// call the custom asserter for the given service type
+	serviceTypeAssertionMap[serviceType](t, se)
+}
+
+type sessionAsserter func(t *testing.T, session endpoints.SessionDTO)
+
+var serviceTypeAssertionMap = map[string]sessionAsserter{
+	"openvpn":   assertStatsNotZero,
+	"noop":      assertStatsZero,
+	"wireguard": assertStatsZero,
+}
+
+func assertStatsNotZero(t *testing.T, session endpoints.SessionDTO) {
+	assert.NotEqual(t, uint64(0), session.BytesSent)
+	assert.NotEqual(t, uint64(0), session.BytesReceived)
+}
+
+func assertStatsZero(t *testing.T, session endpoints.SessionDTO) {
+	assert.Equal(t, uint64(0), session.BytesSent)
+	assert.Equal(t, uint64(0), session.BytesReceived)
 }
