@@ -43,6 +43,7 @@ $dockerComposeCmd run go-runner \
 if [ ! $? -eq 0 ]
 then
     print_error "Tests failed"
+    cat e2e_tests.log
     cleanup $projectName
     exit 1
 fi
