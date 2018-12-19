@@ -30,12 +30,13 @@ echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --passw
 
 while test $# -gt 0; do
     VERSION_TAG=$1; shift;
+    BUILD_VERSION=${BUILD_VERSION:-latest}
     printf "Creating Docker Hub release '$VERSION_TAG' ..\n" \
 
     docker_release_image myst:alpine mysteriumnetwork/myst:${VERSION_TAG}
     docker_release_image myst:alpine mysteriumnetwork/myst:${VERSION_TAG}-alpine
     docker_release_image myst:ubuntu mysteriumnetwork/myst:${VERSION_TAG}-ubuntu
-    docker_release_image tequilapi mysteriumnetwork/documentation:${VERSION_TAG}
+    docker_release_image tequilapi:${BUILD_VERSION} mysteriumnetwork/documentation:${VERSION_TAG}
 done
 
 print_success "Docker Hub releases created!"
