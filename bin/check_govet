@@ -20,6 +20,10 @@ if [ -z "$ARGUMENTS" ]; then
 fi
 
 go vet -composites=false ${ARGUMENTS}
+if [ $? -ne 0 ] ; then
+    print_error "Files are not compliant to go vet."
+    exit 1
+fi
 
 print_success "All files are compliant to go vet."
 exit 0
