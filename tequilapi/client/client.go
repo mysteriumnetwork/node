@@ -168,6 +168,21 @@ func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
 	return healthcheck, err
 }
 
+// ProposalsByType fetches proposals by given type
+func (client *Client) ProposalsByType(serviceType string) ([]ProposalDTO, error) {
+	queryParams := url.Values{}
+	queryParams.Add("serviceType", serviceType)
+	response, err := client.http.Get("proposals", queryParams)
+	if err != nil {
+		return []ProposalDTO{}, err
+	}
+	defer response.Body.Close()
+
+	var proposals ProposalList
+	err = parseResponseJSON(response, &proposals)
+	return proposals.Proposals, err
+}
+
 // Proposals returns all available proposals for services
 func (client *Client) Proposals() ([]ProposalDTO, error) {
 	response, err := client.http.Get("proposals", url.Values{})
@@ -236,5 +251,45 @@ func (client *Client) GetSessions() (endpoints.SessionsDTO, error) {
 	defer response.Body.Close()
 
 	err = parseResponseJSON(response, &sessions)
+	return sessions, err
+}
+
+// filterSessionsByType removes all sessions of irrelevant types
+func filterSessionsByType(serviceType string, sessions endpoints.SessionsDTO) endpoints.SessionsDTO {
+	matches := 0
+	for _, s := range sessions.Sessions {
+		if s.ServiceType == serviceType {
+			sessions.Sessions[matches] = s
+			matches++
+		}
+	}
+	sessions.Sessions = sessions.Sessions[:matches]
+	return sessions
+}
+
+// filterSessionsByStatus removes all sessions with non matching status
+func filterSessionsByStatus(status string, sessions endpoints.SessionsDTO) endpoints.SessionsDTO {
+	matches := 0
+	for _, s := range sessions.Sessions {
+		if s.Status == status {
+			sessions.Sessions[matches] = s
+			matches++
+		}
+	}
+	sessions.Sessions = sessions.Sessions[:matches]
+	return sessions
+}
+
+// GetSessionsByType returns sessions from history filtered by type
+func (client *Client) GetSessionsByType(serviceType string) (endpoints.SessionsDTO, error) {
+	sessions, err := client.GetSessions()
+	sessions = filterSessionsByType(serviceType, sessions)
+	return sessions, err
+}
+
+// GetSessionsByStatus returns sessions from history filtered by their status
+func (client *Client) GetSessionsByStatus(status string) (endpoints.SessionsDTO, error) {
+	sessions, err := client.GetSessions()
+	sessions = filterSessionsByStatus(status, sessions)
 	return sessions, err
 }

@@ -29,11 +29,12 @@ import (
 // SessionsDTO defines session list representable as json
 // swagger:model SessionsDTO
 type SessionsDTO struct {
-	Sessions []sessionDTO `json:"sessions"`
+	Sessions []SessionDTO `json:"sessions"`
 }
 
-// swagger:model sessionDTO
-type sessionDTO struct {
+// SessionDTO represents the session object
+// swagger:model SessionDTO
+type SessionDTO struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	SessionID string `json:"sessionId"`
 
@@ -107,8 +108,8 @@ func AddRoutesForSession(router *httprouter.Router, sessionStorage sessionStorag
 	router.GET("/sessions", sessionsEndpoint.List)
 }
 
-func toHistoryView(se session.History) sessionDTO {
-	return sessionDTO{
+func toHistoryView(se session.History) SessionDTO {
+	return SessionDTO{
 		SessionID:       string(se.SessionID),
 		ProviderID:      se.ProviderID.Address,
 		ServiceType:     se.ServiceType,
@@ -121,8 +122,8 @@ func toHistoryView(se session.History) sessionDTO {
 	}
 }
 
-func mapSessions(sessions []session.History, f func(session.History) sessionDTO) []sessionDTO {
-	dtoArray := make([]sessionDTO, len(sessions))
+func mapSessions(sessions []session.History, f func(session.History) SessionDTO) []SessionDTO {
+	dtoArray := make([]SessionDTO, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = f(se)
 	}
