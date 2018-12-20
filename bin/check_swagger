@@ -1,11 +1,13 @@
 #!/bin/bash
 
 # Checks whether swagger spec at "tequilapi.json" is valid against swagger specification 2.0.
-
 source bin/helpers/output.sh
 
 # generate tequilapi.json
 bin/swagger_generate
+if [ $? -ne 0 ]; then
+    print_error "Swagger generation failed"
+fi
 
 # validate
 spec_file="tequilapi.json"
@@ -21,4 +23,3 @@ fi
 
 print_success "Swagger specification is valid."
 exit 0
-
