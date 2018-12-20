@@ -21,6 +21,7 @@ import (
 	"errors"
 	"net"
 
+	"github.com/mysteriumnetwork/node/consumer"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
@@ -35,6 +36,9 @@ func (c *client) ConfigureRoutes(iface string, ip net.IP) error { return nil }
 func (c *client) DestroyDevice(name string) error               { return nil }
 func (c *client) AddPeer(name string, peer wg.PeerInfo) error   { return nil }
 func (c *client) Close() error                                  { return nil }
+func (c *client) PeerStats() (consumer.SessionStatistics, error) {
+	return consumer.SessionStatistics{}, nil
+}
 func (c *client) ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error {
 	return nil
 }
