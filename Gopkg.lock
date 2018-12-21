@@ -248,19 +248,18 @@
   version = "0.0.12"
 
 [[projects]]
-  digest = "1:a034b3c95c40d7a083083f4cad8c1a2ad1459c7e9962130477a9d1f4265e7dd9"
+  digest = "1:0b33731a325482b0a1c34cc3edd1308d6d45fbd4041560f56bd97ca8ea732b95"
   name = "github.com/mysteriumnetwork/payments"
   packages = [
     "cli/helpers",
+    "contracts/abigen",
     "identity",
-    "mysttoken/generated",
-    "promises/generated",
+    "mysttoken",
     "registry",
-    "registry/generated",
   ]
   pruneopts = "UT"
-  revision = "aa5433b55f76b3e4746947a5cfd2c3a45ddc3066"
-  version = "0.0.6-beta"
+  revision = "b92116b8fe468219d5676d68c78d68e1a5f94120"
+  version = "v0.0.8-experimental"
 
 [[projects]]
   digest = "1:fef11ce7bad787dad351a3f7da701223dbbcec519877152d18228ef9c2c28b71"
@@ -590,9 +589,9 @@
     "github.com/mysteriumnetwork/go-openvpn/openvpn/tls",
     "github.com/mysteriumnetwork/go-openvpn/openvpn3",
     "github.com/mysteriumnetwork/payments/cli/helpers",
+    "github.com/mysteriumnetwork/payments/contracts/abigen",
     "github.com/mysteriumnetwork/payments/identity",
-    "github.com/mysteriumnetwork/payments/mysttoken/generated",
-    "github.com/mysteriumnetwork/payments/promises/generated",
+    "github.com/mysteriumnetwork/payments/mysttoken",
     "github.com/mysteriumnetwork/payments/registry",
     "github.com/mysteriumnetwork/payments/registry/generated",
     "github.com/mysteriumnetwork/wireguard-go/device",

@@ -34,8 +34,8 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/payments/cli/helpers"
-	mysttoken "github.com/mysteriumnetwork/payments/mysttoken/generated"
-	registry "github.com/mysteriumnetwork/payments/registry/generated"
+	"github.com/mysteriumnetwork/payments/contracts/abigen"
+	"github.com/mysteriumnetwork/payments/mysttoken"
 )
 
 var (
@@ -54,7 +54,7 @@ type CliWallet struct {
 	txOpts           *bind.TransactOpts
 	Owner            common.Address
 	backend          *ethclient.Client
-	identityRegistry registry.IdentityRegistryTransactorSession
+	identityRegistry abigen.IdentityPromisesTransactorSession
 	tokens           mysttoken.MystTokenTransactorSession
 	ks               *keystore.KeyStore
 }
@@ -180,7 +180,7 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 
 	tokensContract, err := mysttoken.NewMystTokenTransactor(tokenAddress, ehtClient)
 
-	paymentsContract, err := registry.NewIdentityRegistryTransactor(paymentsAddress, ehtClient)
+	paymentsContract, err := abigen.NewIdentityPromisesTransactor(paymentsAddress, ehtClient)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 			Contract:     tokensContract,
 			TransactOpts: *transactor,
 		},
-		identityRegistry: registry.IdentityRegistryTransactorSession{
+		identityRegistry: abigen.IdentityPromisesTransactorSession{
 			Contract:     paymentsContract,
 			TransactOpts: *transactor,
 		},

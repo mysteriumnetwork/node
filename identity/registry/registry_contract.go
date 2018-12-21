@@ -25,26 +25,26 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/payments/registry/generated"
+	"github.com/mysteriumnetwork/payments/contracts/abigen"
 )
 
 const logPrefix = "[registry] "
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
 func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryAddress common.Address) (*contractRegistry, error) {
-	contract, err := generated.NewIdentityRegistryCaller(registryAddress, contractBackend)
+	contract, err := abigen.NewIdentityPromisesCaller(registryAddress, contractBackend)
 	if err != nil {
 		return nil, err
 	}
 
-	contractSession := &generated.IdentityRegistryCallerSession{
+	contractSession := &abigen.IdentityPromisesCallerSession{
 		Contract: contract,
 		CallOpts: bind.CallOpts{
 			Pending: false, //we want to find out true registration status - not pending transactions
 		},
 	}
 
-	filterer, err := generated.NewIdentityRegistryFilterer(registryAddress, contractBackend)
+	filterer, err := abigen.NewIdentityPromisesFilterer(registryAddress, contractBackend)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +56,8 @@ func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryA
 }
 
 type contractRegistry struct {
-	contractSession *generated.IdentityRegistryCallerSession
-	filterer        *generated.IdentityRegistryFilterer
+	contractSession *abigen.IdentityPromisesCallerSession
+	filterer        *abigen.IdentityPromisesFilterer
 }
 
 func (registry *contractRegistry) IsRegistered(id identity.Identity) (bool, error) {

@@ -28,8 +28,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/payments/cli/helpers"
-	mysttoken "github.com/mysteriumnetwork/payments/mysttoken/generated"
-	promises "github.com/mysteriumnetwork/payments/promises/generated"
+	"github.com/mysteriumnetwork/payments/contracts/abigen"
+	"github.com/mysteriumnetwork/payments/mysttoken"
 )
 
 func main() {
@@ -58,7 +58,7 @@ func main() {
 	fmt.Println("Token: ", mystTokenAddress.String())
 
 	transactor.Nonce = big.NewInt(int64(tx.Nonce() + 1))
-	paymentsAddress, tx, _, err := promises.DeployIdentityPromises(transactor, client, mystTokenAddress, big.NewInt(100))
+	paymentsAddress, tx, _, err := abigen.DeployIdentityPromises(transactor, client, mystTokenAddress, big.NewInt(100))
 	checkError("Deploy payments", err)
 	checkTxStatus(client, tx)
 
