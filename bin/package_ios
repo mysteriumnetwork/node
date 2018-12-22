@@ -32,7 +32,7 @@ xgo \
 
 me=`whoami`
 sudo chown -R $me ${DIR_FRAMEWORK}
-cp -vp bin/package/ios/Info.plist ${DIR_FRAMEWORK}/Versions/A/Resources/Info.plist
+cp -vp bin/package/ios/Info.plist ${DIR_FRAMEWORK}/Info.plist
 
 (cd ${DIR_TEMP} && zip -r - .) > ${PACKAGE_FILE}
 rm -rf ${DIR_TEMP}
