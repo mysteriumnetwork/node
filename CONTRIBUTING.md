@@ -42,7 +42,7 @@ git remote add upstream https://github.com/mysteriumnetwork/node.git
 ```
 
 For bonus points add a git alias and a shell alias to do the syncing.  Edit
-`~/.gitconfig and add
+`~/.gitconfig` and add
 ```bash
 [alias]
 	pu = !"git fetch origin -v; git fetch upstream -v; git merge upstream/master"
@@ -50,7 +50,7 @@ For bonus points add a git alias and a shell alias to do the syncing.  Edit
 
 Then define a shell alias
 ```bash
-alias sync-repo='git pu; git push
+alias sync-repo='git pu; git push'
 ```
 
 Now any time you are on master branch (for any project you set up like this) you
