@@ -104,7 +104,7 @@ bin/run_consumer cli
 » proposals
 
 # Connect to a server
-» connect <consumer-identity> <provider-identity> <protocol>
+» connect <consumer-identity> <provider-identity> <protocol [openvpn|wireguard]>
 ```
 
 ## Generate Tequila API documentation from client source code
