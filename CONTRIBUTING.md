@@ -8,6 +8,8 @@ Mysterium Network Node is written in Golang, if you want to hack on it you will
 need a functional go dev environment.  See official golang documentation for how
 to https://golang.org/doc/install
 
+to set correctly the GOPATH environment variable check this out: (https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-18-04) 
+
 * **Step 1.** Get project dependencies
 
 Install openvpn
