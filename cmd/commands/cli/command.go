@@ -325,7 +325,7 @@ func (c *cliApp) ip() {
 }
 
 func (c *cliApp) help() {
-	info("Mysterium CLI tequilapi commands:")
+	info("Mysterium CLI tequilapi commands with some JF mods:")
 	fmt.Println(c.completer.Tree("  "))
 }
 
