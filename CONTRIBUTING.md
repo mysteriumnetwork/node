@@ -106,17 +106,29 @@ bin/run_consumer cli
 » proposals
 
 # Connect to a server
-» connect <consumer-identity> <provider-identity> <protocol [openvpn|wireguard]>
+» connect <consumer-identity> <provider-identity> <protocol:(openvpn|wireguard)>
+```
+
+## Run everything
+
+set the same port for consumer and producer, then run in two separate terminal windows:
+
+```bash
+1) bin/build && bin/run_provider
+
+2) bin/build && bin/run_consumer cli
 ```
 
 ## Generate Tequila API documentation from client source code
 
 * **Step 1.** Install go-swagger
+
 ```bash
 go get github.com/go-swagger/go-swagger/cmd/swagger/
 ```
 
 * **Step 2.** Generate specification:
+
 ```bash
 bin/swagger_generate
 ```
