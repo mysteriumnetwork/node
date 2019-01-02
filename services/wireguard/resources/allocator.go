@@ -26,10 +26,7 @@ import (
 	"sync"
 )
 
-const (
-	interfacePrefix = "myst"
-	maxResources    = 255
-)
+const maxResources = 255
 
 // Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.
@@ -80,9 +77,20 @@ func (a *Allocator) AllocateInterface() (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+
+OUTER:
 	for i := 0; i < maxResources; i++ {
 		if _, ok := a.Ifaces[i]; !ok {
 			a.Ifaces[i] = struct{}{}
+			for _, iface := range ifaces {
+				if iface.Name == fmt.Sprintf("%s%d", interfacePrefix, i) {
+					continue OUTER
+				}
+			}
 			return fmt.Sprintf("%s%d", interfacePrefix, i), nil
 		}
 	}

@@ -1,5 +1,3 @@
-// +build !linux linux,android
-
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
@@ -17,21 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package endpoint
+package resources
 
-import (
-	"github.com/mysteriumnetwork/node/core/ip"
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
-	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
-	"github.com/mysteriumnetwork/node/services/wireguard/resources"
-)
-
-// NewConnectionEndpoint creates new wireguard connection endpoint.
-func NewConnectionEndpoint(ipResolver ip.Resolver, resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
-	client, err := userspace.NewWireguardClient()
-	return &connectionEndpoint{
-		wgClient:          client,
-		ipResolver:        ipResolver,
-		resourceAllocator: resourceAllocator,
-	}, err
-}
+const interfacePrefix = "utun"
