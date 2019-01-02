@@ -20,6 +20,7 @@
 package cmd
 
 import (
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -37,8 +38,9 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/prometheus/common/log"
 )
+
+const logPrefix = "[service bootstrap] "
 
 // BootstrapServices loads all the components required for running services
 func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {

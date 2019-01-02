@@ -157,20 +157,3 @@ func (c *Connection) waitHandshake() error {
 		}
 	}
 }
-
-func (c *Connection) runPeriodically(duration time.Duration) {
-	for {
-		select {
-		case <-time.After(duration):
-			stats, err := c.connectionEndpoint.PeerStats()
-			if err != nil {
-				log.Error(logPrefix, "failed to receive peer stats: ", err)
-				break
-			}
-			c.statisticsChannel <- stats
-
-		case <-c.stopChannel:
-			return
-		}
-	}
-}

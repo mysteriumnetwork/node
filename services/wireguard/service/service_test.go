@@ -40,7 +40,7 @@ var (
 	providerID = identity.FromAddress("provider-id")
 )
 
-var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{})
+var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{}, nil)
 var locationResolverStub = &fakeLocationResolver{
 	err: nil,
 	res: "LT",

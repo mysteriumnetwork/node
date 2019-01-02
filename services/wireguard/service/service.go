@@ -109,10 +109,6 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
-	if err := manager.natService.Enable(); err != nil {
-		return market.ServiceProposal{}, nil, err
-	}
-
 	publicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
 		return market.ServiceProposal{}, nil, err
