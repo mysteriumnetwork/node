@@ -25,6 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
@@ -111,7 +112,7 @@ func (ce *connectionEndpoint) PeerStats() (stats consumer.SessionStatistics, las
 
 // Config provides wireguard service configuration for the current connection endpoint.
 func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
-	publicKey, err := PrivateKeyToPublicKey(ce.privateKey)
+	publicKey, err := key.PrivateKeyToPublicKey(ce.privateKey)
 	if err != nil {
 		return wg.ServiceConfig{}, err
 	}

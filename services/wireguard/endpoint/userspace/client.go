@@ -25,9 +25,13 @@ import (
 	"git.zx2c4.com/wireguard-go/device"
 	"git.zx2c4.com/wireguard-go/tun"
 	"github.com/mysteriumnetwork/node/consumer"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
-type client struct{}
+type client struct {
+	tun    tun.TUNDevice
+	devAPI *device.DeviceApi
+}
 
 // NewWireguardClient creates new wireguard user space client.
 func NewWireguardClient() (*client, error) {

@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
+	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/pkg/errors"
 )
@@ -101,7 +102,7 @@ func (c *Connection) Wait() error {
 
 // GetConfig returns the consumer configuration for session creation
 func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
-	publicKey, err := endpoint.PrivateKeyToPublicKey(c.config.Consumer.PrivateKey)
+	publicKey, err := key.PrivateKeyToPublicKey(c.config.Consumer.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
