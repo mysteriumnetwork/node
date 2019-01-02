@@ -18,8 +18,9 @@
 package service
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -29,12 +30,8 @@ type serviceFake struct {
 	onStartReturnError error
 }
 
-func (service *serviceFake) Start(identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
-	return market.ServiceProposal{}, nil, service.onStartReturnError
-}
-
-func (service *serviceFake) Wait() error {
-	return nil
+func (service *serviceFake) Start(identity.Identity) error {
+	return service.onStartReturnError
 }
 
 func (service *serviceFake) Stop() error {
@@ -43,4 +40,8 @@ func (service *serviceFake) Stop() error {
 
 func (service *serviceFake) GetType() string {
 	return "fake"
+}
+
+func (service *serviceFake) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+	return struct{}{}, func() error { return nil }, nil
 }

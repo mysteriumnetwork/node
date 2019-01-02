@@ -23,8 +23,6 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -37,51 +35,38 @@ const logPrefix = "[service-noop] "
 var ErrAlreadyStarted = errors.New("Service already started")
 
 // NewManager creates new instance of Noop service
-func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
-	return &Manager{
-		locationResolver: locationResolver,
-		ipResolver:       ipResolver,
-	}
+func NewManager() *Manager {
+	return &Manager{}
 }
 
 // Manager represents entrypoint for Noop service
 type Manager struct {
-	process          sync.WaitGroup
-	locationResolver location.Resolver
-	ipResolver       ip.Resolver
-	isStarted        bool
+	process sync.WaitGroup
 }
 
-type negotiator struct {
-}
-
-func (n *negotiator) ProvideConfig(cfg json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+// ProvideConfig provides the session configuration
+func (manager *Manager) ProvideConfig(cfg json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	return nil, nil, nil
 }
 
-// Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
-	configNegotiator := &negotiator{}
-
-	if manager.isStarted {
-		return market.ServiceProposal{}, configNegotiator, ErrAlreadyStarted
-	}
-
+// Start starts service - does block
+func (manager *Manager) Start(providerID identity.Identity) error {
 	manager.process.Add(1)
-	manager.isStarted = true
 	log.Info(logPrefix, "Noop service started successfully")
+	manager.process.Wait()
+	return nil
+}
 
-	publicIP, err := manager.ipResolver.GetPublicIP()
-	if err != nil {
-		return market.ServiceProposal{}, configNegotiator, err
-	}
+// Stop stops service
+func (manager *Manager) Stop() error {
+	manager.process.Done()
+	log.Info(logPrefix, "Noop service stopped")
+	return nil
+}
 
-	country, err := manager.locationResolver.ResolveCountry(publicIP)
-	if err != nil {
-		return market.ServiceProposal{}, configNegotiator, err
-	}
-
-	proposal := market.ServiceProposal{
+// GetProposal returns the proposal for NOOP service for given country
+func GetProposal(country string) market.ServiceProposal {
+	return market.ServiceProposal{
 		ServiceType: ServiceType,
 		ServiceDefinition: ServiceDefinition{
 			Location: market.Location{Country: country},
@@ -91,27 +76,4 @@ func (manager *Manager) Start(providerID identity.Identity) (market.ServicePropo
 			Price: money.NewMoney(0, money.CURRENCY_MYST),
 		},
 	}
-
-	return proposal, configNegotiator, nil
-}
-
-// Wait blocks until service is stopped
-func (manager *Manager) Wait() error {
-	if !manager.isStarted {
-		return nil
-	}
-	manager.process.Wait()
-	return nil
-}
-
-// Stop stops service
-func (manager *Manager) Stop() error {
-	if !manager.isStarted {
-		return nil
-	}
-
-	manager.process.Done()
-	manager.isStarted = false
-	log.Info(logPrefix, "Noop service stopped")
-	return nil
 }

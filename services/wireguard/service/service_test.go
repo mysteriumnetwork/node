@@ -19,15 +19,11 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 	"net"
 	"testing"
 	"time"
 
 	"github.com/mysteriumnetwork/node/consumer"
-	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
-	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -38,30 +34,20 @@ import (
 
 var (
 	providerID = identity.FromAddress("provider-id")
+	pubIP      = "127.0.0.1"
+	outIP      = "127.0.0.1"
+	country    = "LT"
 )
-
-var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{})
-var locationResolverStub = &fakeLocationResolver{
-	err: nil,
-	res: "LT",
-}
-var ipresolverStub = &fakeIPResolver{
-	publicIPRes: "127.0.0.1",
-	publicErr:   nil,
-}
 
 var connectionEndpointStub = &fakeConnectionEndpoint{}
 
-func Test_Manager_Start(t *testing.T) {
-	manager := newManagerStub(locationResolverStub, ipresolverStub)
-	proposal, sessionConfigProvider, err := manager.Start(providerID)
-	assert.NoError(t, err)
+func Test_GetProposal(t *testing.T) {
 	assert.Exactly(
 		t,
 		market.ServiceProposal{
 			ServiceType: "wireguard",
 			ServiceDefinition: wg.ServiceDefinition{
-				Location: market.Location{Country: "LT"},
+				Location: market.Location{Country: country},
 			},
 			PaymentMethodType: "WG",
 			PaymentMethod: wg.Payment{
@@ -71,86 +57,39 @@ func Test_Manager_Start(t *testing.T) {
 				},
 			},
 		},
-		proposal,
+		GetProposal(country),
 	)
-	sessionConfig, _, err := sessionConfigProvider.ProvideConfig(json.RawMessage(`{"PublicKey": "gZfkZArbw9lqfl4Yzr1Kv3nqGlhe/ynH9KKRbzPFMGk="}`))
+}
+
+func Test_Manager_Start(t *testing.T) {
+	manager := newManagerStub(pubIP, outIP, country)
+
+	go func() {
+		err := manager.Start(providerID)
+		assert.NoError(t, err)
+	}()
+
+	sessionConfig, _, err := manager.ProvideConfig(json.RawMessage(`{"PublicKey": "gZfkZArbw9lqfl4Yzr1Kv3nqGlhe/ynH9KKRbzPFMGk="}`))
 	assert.NoError(t, err)
 	assert.NotNil(t, sessionConfig)
 }
 
-func Test_Manager_Start_IPResolverErrs(t *testing.T) {
-	fakeErr := errors.New("some error")
-	ipResStub := &fakeIPResolver{
-		publicIPRes: "127.0.0.1",
-		publicErr:   fakeErr,
-	}
-	manager := newManagerStub(locationResolverStub, ipResStub)
-	_, _, err := manager.Start(providerID)
-	assert.Equal(t, fakeErr, err)
-}
-
-func Test_Manager_Start_LocResolverErrs(t *testing.T) {
-	fakeErr := errors.New("some error")
-	locResStub := &fakeLocationResolver{
-		res: "LT",
-		err: fakeErr,
-	}
-	manager := newManagerStub(locResStub, ipresolverStub)
-
-	_, _, err := manager.Start(providerID)
-	assert.Equal(t, fakeErr, err)
-}
-
-func Test_Manager_Wait(t *testing.T) {
-	manager := newManagerStub(locationResolverStub, ipresolverStub)
-
-	manager.Start(providerID)
-	go func() {
-		manager.Wait()
-		assert.Fail(t, "Wait should be blocking")
-	}()
-	waitABit()
-}
-
 func Test_Manager_Stop(t *testing.T) {
-	manager := newManagerStub(locationResolverStub, ipresolverStub)
-	manager.Start(providerID)
+	manager := newManagerStub(pubIP, outIP, country)
 
+	go func() {
+		err := manager.Start(providerID)
+		assert.NoError(t, err)
+	}()
+
+	waitABit()
 	err := manager.Stop()
 	assert.NoError(t, err)
-
-	// Wait should not block after stopping
-	manager.Wait()
 }
 
 // usually time.Sleep call gives a chance for other goroutines to kick in important when testing async code
 func waitABit() {
 	time.Sleep(10 * time.Millisecond)
-}
-
-type fakeLocationResolver struct {
-	err error
-	res string
-}
-
-// ResolveCountry performs a fake resolution
-func (fr *fakeLocationResolver) ResolveCountry(ip string) (string, error) {
-	return fr.res, fr.err
-}
-
-type fakeIPResolver struct {
-	publicIPRes   string
-	publicErr     error
-	outboundIPRes string
-	outboundErr   error
-}
-
-func (fir *fakeIPResolver) GetPublicIP() (string, error) {
-	return fir.publicIPRes, fir.publicErr
-}
-
-func (fir *fakeIPResolver) GetOutboundIP() (string, error) {
-	return fir.outboundIPRes, fir.outboundErr
 }
 
 type fakeConnectionEndpoint struct{}
@@ -164,11 +103,12 @@ func (fce *fakeConnectionEndpoint) PeerStats() (consumer.SessionStatistics, erro
 	return consumer.SessionStatistics{}, nil
 }
 
-func newManagerStub(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
+func newManagerStub(pub, out, country string) *Manager {
 	return &Manager{
-		locationResolver: locationResolver,
-		ipResolver:       ipResolver,
-		natService:       &serviceFake{},
+		currentLocation: country,
+		publicIP:        pub,
+		outboundIP:      out,
+		natService:      &serviceFake{},
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return connectionEndpointStub, nil
 		},

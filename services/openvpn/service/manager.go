@@ -18,14 +18,12 @@
 package service
 
 import (
-	"crypto/x509/pkix"
+	"encoding/json"
+	"errors"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
-	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
-	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
@@ -49,38 +47,25 @@ type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outbound
 
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	ipResolver       ip.Resolver
-	natService       nat.NATService
-	locationResolver location.Resolver
-	proposalFactory  ProposalFactory
+	natService nat.NATService
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 
-	vpnServerConfigFactory ServerConfigFactory
-	vpnServerFactory       ServerFactory
-	vpnServer              openvpn.Process
+	vpnServerConfigFactory   ServerConfigFactory
+	vpnServiceConfigProvider session.ConfigNegotiator
+	vpnServerFactory         ServerFactory
+	vpnServer                openvpn.Process
+
+	publicIP        string
+	outboundIP      string
+	currentLocation string
 }
 
 // Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (
-	proposal market.ServiceProposal,
-	sessionConfigNegotiator session.ConfigNegotiator,
-	err error,
-) {
-	publicIP, err := manager.ipResolver.GetPublicIP()
-	if err != nil {
-		return
-	}
-
-	// if for some reason we will need truly external IP, use GetPublicIP()
-	outboundIP, err := manager.ipResolver.GetOutboundIP()
-	if err != nil {
-		return
-	}
-
+func (manager *Manager) Start(providerID identity.Identity) (err error) {
 	manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
-		TargetIP:      outboundIP,
+		TargetIP:      manager.outboundIP,
 	})
 
 	err = manager.natService.Start()
@@ -88,45 +73,19 @@ func (manager *Manager) Start(providerID identity.Identity) (
 		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
 	}
 
-	currentCountry, err := manager.locationResolver.ResolveCountry(publicIP)
-	if err != nil {
-		log.Warn(logPrefix, "Failed to detect service country. ", err)
-		err = service.ErrorLocation
-		return
-	}
-	currentLocation := market.Location{Country: currentCountry}
-	log.Info(logPrefix, "Country detected: ", currentCountry)
-
-	caSubject := pkix.Name{
-		Country:            []string{currentCountry},
-		Organization:       []string{"Mysterium Network"},
-		OrganizationalUnit: []string{"Mysterium Team"},
-	}
-	serverCertSubject := pkix.Name{
-		Country:            []string{currentCountry},
-		Organization:       []string{"Mysterium node operator company"},
-		OrganizationalUnit: []string{"Node operator team"},
-		CommonName:         providerID.Address,
-	}
-
-	primitives, err := tls.NewTLSPrimitives(caSubject, serverCertSubject)
+	primitives, err := primitiveFactory(manager.currentLocation, providerID.Address)
 	if err != nil {
 		return
 	}
+
+	manager.vpnServiceConfigProvider = manager.sessionConfigNegotiatorFactory(primitives, manager.outboundIP, manager.publicIP)
 
 	vpnServerConfig := manager.vpnServerConfigFactory(primitives)
 	manager.vpnServer = manager.vpnServerFactory(vpnServerConfig)
+
 	if err = manager.vpnServer.Start(); err != nil {
 		return
 	}
-
-	proposal = manager.proposalFactory(currentLocation)
-	sessionConfigNegotiator = manager.sessionConfigNegotiatorFactory(primitives, outboundIP, publicIP)
-	return
-}
-
-// Wait blocks until service is stopped
-func (manager *Manager) Wait() error {
 	return manager.vpnServer.Wait()
 }
 
@@ -141,6 +100,16 @@ func (manager *Manager) Stop() error {
 	}
 
 	return nil
+}
+
+// ProvideConfig provides the configuration to end consumer
+func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+	if manager.vpnServiceConfigProvider == nil {
+		log.Info(logPrefix, "Config provider not initialized")
+		return nil, nil, errors.New("Config provider not initialized")
+	}
+
+	return manager.vpnServiceConfigProvider.ProvideConfig(publicKey)
 }
 
 func vpnStateCallback(state openvpn.State) {
