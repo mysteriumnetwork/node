@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,10 +46,11 @@ func addDefaultRoute(iface string) error {
 }
 
 func peerIP(subnet net.IPNet) net.IP {
-	if subnet.IP[len(subnet.IP)-1] == byte(1) {
-		subnet.IP[len(subnet.IP)-1] = byte(2)
+	lastOctetID := len(subnet.IP) - 1
+	if subnet.IP[lastOctetID] == byte(1) {
+		subnet.IP[lastOctetID] = byte(2)
 	} else {
-		subnet.IP[len(subnet.IP)-1] = byte(1)
+		subnet.IP[lastOctetID] = byte(1)
 	}
 	return subnet.IP
 }

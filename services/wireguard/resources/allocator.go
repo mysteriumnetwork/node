@@ -82,15 +82,13 @@ func (a *Allocator) AllocateInterface() (string, error) {
 		return "", err
 	}
 
-OUTER:
 	for i := 0; i < maxResources; i++ {
 		if _, ok := a.Ifaces[i]; !ok {
 			a.Ifaces[i] = struct{}{}
-			for _, iface := range ifaces {
-				if iface.Name == fmt.Sprintf("%s%d", interfacePrefix, i) {
-					continue OUTER
-				}
+			if interfaceExists(ifaces, fmt.Sprintf("%s%d", interfacePrefix, i)) {
+				continue
 			}
+
 			return fmt.Sprintf("%s%d", interfacePrefix, i), nil
 		}
 	}
@@ -179,4 +177,13 @@ func (a *Allocator) ReleasePort(port int) error {
 
 	delete(a.Ports, port)
 	return nil
+}
+
+func interfaceExists(ifaces []net.Interface, name string) bool {
+	for _, iface := range ifaces {
+		if iface.Name == name {
+			return true
+		}
+	}
+	return false
 }

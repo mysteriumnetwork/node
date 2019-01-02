@@ -101,8 +101,8 @@ func (c *client) PeerStats() (consumer.SessionStatistics, error) {
 	peers, err := c.devAPI.Peers()
 	if err != nil {
 		return consumer.SessionStatistics{}, nil
-
 	}
+
 	if len(peers) != 1 {
 		return consumer.SessionStatistics{}, errors.New("exactly 1 peer expected")
 	}
@@ -120,11 +120,10 @@ func (c *client) DestroyDevice(name string) error {
 
 func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
 	decoded, err := base64.StdEncoding.DecodeString(s)
-	if len(decoded) != 32 {
-		err = errors.New("unexpected key size")
-	}
 	if err != nil {
-		return
+		return res, err
+	} else if len(decoded) != 32 {
+		return res, errors.New("unexpected key size")
 	}
 
 	copy(res[:], decoded)
