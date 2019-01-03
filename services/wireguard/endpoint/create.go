@@ -20,14 +20,18 @@
 package endpoint
 
 import (
-	"errors"
-
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
 func NewConnectionEndpoint(ipResolver ip.Resolver, resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
-	return nil, errors.New("Not implemented")
+	client, err := userspace.NewWireguardClient()
+	return &connectionEndpoint{
+		wgClient:          client,
+		ipResolver:        ipResolver,
+		resourceAllocator: resourceAllocator,
+	}, err
 }

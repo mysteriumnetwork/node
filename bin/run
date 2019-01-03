@@ -6,4 +6,5 @@ sudo ./build/myst/myst \
    --localnet \
    --tequilapi.address=127.0.0.1 \
    --tequilapi.port=4051 \
+   --keystore.lightweight \
    $@
