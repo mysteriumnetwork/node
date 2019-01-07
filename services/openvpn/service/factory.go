@@ -53,7 +53,7 @@ func NewManager(
 		ipResolver:                     ipResolver,
 		natService:                     natService,
 		proposalFactory:                newProposalFactory(serviceOptions),
-		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(serviceOptions),
+		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
 		vpnServerFactory:               newServerFactory(nodeOptions, sessionValidator),
 	}
@@ -92,9 +92,9 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 }
 
 // newSessionConfigNegotiatorFactory returns function generating session config for remote client
-func newSessionConfigNegotiatorFactory(serviceOptions Options) SessionConfigNegotiatorFactory {
+func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options) SessionConfigNegotiatorFactory {
 	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigNegotiator {
-		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP)
+		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP, networkOptions.Localnet)
 		return &OpenvpnConfigNegotiator{
 			vpnConfig: openvpn_service.VPNConfig{
 				RemoteIP:        serverIP,
@@ -117,21 +117,30 @@ func (ocn *OpenvpnConfigNegotiator) ProvideConfig(json.RawMessage) (session.Serv
 	return &ocn.vpnConfig, nil, nil
 }
 
-func vpnServerIP(serviceOptions Options, outboundIP, publicIP string) string {
+func vpnServerIP(serviceOptions Options, outboundIP, publicIP string, isLocalnet bool) string {
 	//TODO public ip could be overridden by arg nodeOptions if needed
-	if publicIP != outboundIP {
-		log.Warnf(
-			`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s].
-You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
-			publicIP,
-			outboundIP,
-			publicIP,
-			serviceOptions.OpenvpnPort,
-			outboundIP,
-			serviceOptions.OpenvpnPort,
-		)
-
+	if publicIP == outboundIP {
+		return publicIP
 	}
 
+	if isLocalnet {
+		log.Warnf(
+			`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s].
+Since it's localnet, will use %v for openvpn service`, publicIP,
+			outboundIP,
+			outboundIP)
+		return outboundIP
+	}
+
+	log.Warnf(
+		`WARNING: It seems that publicly visible ip: [%s] does not match your local machines ip: [%s].
+You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
+		publicIP,
+		outboundIP,
+		publicIP,
+		serviceOptions.OpenvpnPort,
+		outboundIP,
+		serviceOptions.OpenvpnPort,
+	)
 	return publicIP
 }
