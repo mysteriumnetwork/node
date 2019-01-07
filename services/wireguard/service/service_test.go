@@ -61,11 +61,11 @@ func Test_GetProposal(t *testing.T) {
 	)
 }
 
-func Test_Manager_Start(t *testing.T) {
+func Test_Manager_Serve(t *testing.T) {
 	manager := newManagerStub(pubIP, outIP, country)
 
 	go func() {
-		err := manager.Start(providerID)
+		err := manager.Serve(providerID)
 		assert.NoError(t, err)
 	}()
 
@@ -78,7 +78,7 @@ func Test_Manager_Stop(t *testing.T) {
 	manager := newManagerStub(pubIP, outIP, country)
 
 	go func() {
-		err := manager.Start(providerID)
+		err := manager.Serve(providerID)
 		assert.NoError(t, err)
 	}()
 

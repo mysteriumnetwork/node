@@ -61,8 +61,8 @@ type Manager struct {
 	currentLocation string
 }
 
-// Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (err error) {
+// Serve starts service - does block
+func (manager *Manager) Serve(providerID identity.Identity) (err error) {
 	manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      manager.outboundIP,

@@ -41,7 +41,7 @@ type ServiceFactory func(Options) (Service, market.ServiceProposal, error)
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
-	Start(providerID identity.Identity) error
+	Serve(providerID identity.Identity) error
 	Stop() error
 	ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error)
 }
@@ -115,7 +115,7 @@ func (manager *Manager) Start(options Options) (err error) {
 
 	manager.discovery.Start(providerID, proposal)
 
-	err = manager.service.Start(providerID)
+	err = manager.service.Serve(providerID)
 	manager.discovery.Wait()
 	return err
 }

@@ -64,10 +64,10 @@ func Test_Manager_ProvideConfig(t *testing.T) {
 	assert.Nil(t, cb)
 }
 
-func Test_Manager_Start_Stop(t *testing.T) {
+func Test_Manager_Serve_Stop(t *testing.T) {
 	manager := NewManager()
 	go func() {
-		err := manager.Start(providerID)
+		err := manager.Serve(providerID)
 		assert.NoError(t, err)
 	}()
 

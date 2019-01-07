@@ -99,8 +99,8 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 	return config, connectionEndpoint.Stop, nil
 }
 
-// Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) error {
+// Serve starts service - does block
+func (manager *Manager) Serve(providerID identity.Identity) error {
 	manager.wg.Add(1)
 	log.Info(logPrefix, "Wireguard service started successfully")
 

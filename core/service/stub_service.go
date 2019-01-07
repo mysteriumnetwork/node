@@ -30,7 +30,7 @@ type serviceFake struct {
 	onStartReturnError error
 }
 
-func (service *serviceFake) Start(identity.Identity) error {
+func (service *serviceFake) Serve(identity.Identity) error {
 	return service.onStartReturnError
 }
 

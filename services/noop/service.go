@@ -49,8 +49,8 @@ func (manager *Manager) ProvideConfig(cfg json.RawMessage) (session.ServiceConfi
 	return nil, nil, nil
 }
 
-// Start starts service - does block
-func (manager *Manager) Start(providerID identity.Identity) error {
+// Serve starts service - does block
+func (manager *Manager) Serve(providerID identity.Identity) error {
 	manager.process.Add(1)
 	log.Info(logPrefix, "Noop service started successfully")
 	manager.process.Wait()
