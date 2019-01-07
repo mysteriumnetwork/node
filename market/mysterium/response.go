@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/pkg/errors"
 )
 
 // ParseResponseError checks the respose for correctness and return error if it is invalid
@@ -32,7 +34,7 @@ func ParseResponseError(response *http.Response) (err error) {
 		if response.Body != nil {
 			errorMsg, err = ioutil.ReadAll(response.Body)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "server response invalid")
 			}
 		}
 
