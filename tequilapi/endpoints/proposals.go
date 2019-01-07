@@ -122,11 +122,14 @@ func NewProposalsEndpoint(proposalProvider ProposalProvider, morqaClient metrics
 //     name: providerId
 //     description: id of provider proposals
 //     type: string
-// parameters:
 //   - in: query
 //     name: serviceType
 //     description: the service type of the proposal
 //     type: string
+//   - in: query
+//     name: fetchConnectCounts
+//     description: if set to true, fetches the connection success metrics for nodes. False by default.
+//     type: boolean
 // responses:
 //   200:
 //     description: List of proposals
