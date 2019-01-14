@@ -119,6 +119,14 @@ set the same port for consumer and producer, then run in two separate terminal w
 2) bin/build && bin/run_consumer cli
 ```
 
+## Dev in IntelliJ GoLand
+
+set the `gopath` for the IDE in settings, then run a new build configuration with `github.com/mysteriumnetwork/node/cmd/mysterium_node` as package and add the following parameters into the program arguments field: 
+```
+--tequilapi.address=127.0.0.1 --tequilapi.port=4052 cli
+```
+and you will get the interactive console like in a normal terminal
+
 ## Generate Tequila API documentation from client source code
 
 * **Step 1.** Install go-swagger
