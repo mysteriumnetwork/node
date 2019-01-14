@@ -18,7 +18,6 @@
 package noop
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -33,27 +32,16 @@ var (
 	providerID = identity.FromAddress("provider-id")
 )
 
-var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{})
-var locationResolverStub = &fakeLocationResolver{
-	err: nil,
-	res: "LT",
-}
-var ipresolverStub = &fakeIPResolver{
-	publicIPRes: "127.0.0.1",
-	publicErr:   nil,
-}
+var _ service.Service = NewManager()
 
-func Test_Manager_Start(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub)
-	proposal, sessionConfigProvider, err := manager.Start(providerID)
-	assert.NoError(t, err)
-
+func Test_GetProposal(t *testing.T) {
+	country := "LT"
 	assert.Exactly(
 		t,
 		market.ServiceProposal{
 			ServiceType: "noop",
 			ServiceDefinition: ServiceDefinition{
-				Location: market.Location{Country: "LT"},
+				Location: market.Location{Country: country},
 			},
 
 			PaymentMethodType: "NOOP",
@@ -64,94 +52,26 @@ func Test_Manager_Start(t *testing.T) {
 				},
 			},
 		},
-		proposal,
+		GetProposal(country),
 	)
+}
 
-	sessionConfig, _, err := sessionConfigProvider.ProvideConfig(nil)
+func Test_Manager_ProvideConfig(t *testing.T) {
+	manager := NewManager()
+	sessionConfig, cb, err := manager.ProvideConfig(nil)
 	assert.NoError(t, err)
 	assert.Nil(t, sessionConfig)
+	assert.Nil(t, cb)
 }
 
-func Test_Manager_Start_IPResolverErrs(t *testing.T) {
-	fakeErr := errors.New("some error")
-	ipResStub := &fakeIPResolver{
-		publicIPRes: "127.0.0.1",
-		publicErr:   fakeErr,
-	}
-	manager := NewManager(locationResolverStub, ipResStub)
-	_, _, err := manager.Start(providerID)
-	assert.Equal(t, fakeErr, err)
-}
-
-func Test_Manager_Start_LocResolverErrs(t *testing.T) {
-	fakeErr := errors.New("some error")
-	locResStub := &fakeLocationResolver{
-		res: "LT",
-		err: fakeErr,
-	}
-	manager := NewManager(locResStub, ipresolverStub)
-	_, _, err := manager.Start(providerID)
-	assert.Equal(t, fakeErr, err)
-}
-
-func Test_Manager_MultipleStarts(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub)
-	_, _, err := manager.Start(providerID)
-	assert.Nil(t, err)
-	_, _, err = manager.Start(providerID)
-	assert.NotNil(t, err)
-	assert.Equal(t, ErrAlreadyStarted, err)
-}
-
-func Test_Manager_Wait(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub)
-	manager.Start(providerID)
-
+func Test_Manager_Serve_Stop(t *testing.T) {
+	manager := NewManager()
 	go func() {
-		manager.Wait()
-		assert.Fail(t, "Wait should be blocking")
+		err := manager.Serve(providerID)
+		assert.NoError(t, err)
 	}()
 
-	waitABit()
-}
-
-func Test_Manager_Stop(t *testing.T) {
-	manager := NewManager(locationResolverStub, ipresolverStub)
-	manager.Start(providerID)
-
+	time.Sleep(time.Millisecond * 10)
 	err := manager.Stop()
 	assert.NoError(t, err)
-
-	// Wait should not block after stopping
-	manager.Wait()
-}
-
-// usually time.Sleep call gives a chance for other goroutines to kick in important when testing async code
-func waitABit() {
-	time.Sleep(10 * time.Millisecond)
-}
-
-type fakeLocationResolver struct {
-	err error
-	res string
-}
-
-// ResolveCountry performs a fake resolution
-func (fr *fakeLocationResolver) ResolveCountry(ip string) (string, error) {
-	return fr.res, fr.err
-}
-
-type fakeIPResolver struct {
-	publicIPRes   string
-	publicErr     error
-	outbountIPRes string
-	outbountErr   error
-}
-
-func (fir *fakeIPResolver) GetPublicIP() (string, error) {
-	return fir.publicIPRes, fir.publicErr
-}
-
-func (fir *fakeIPResolver) GetOutboundIP() (string, error) {
-	return fir.outbountIPRes, fir.outbountErr
 }

@@ -18,9 +18,9 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -28,8 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/market/proposals/registry"
 	"github.com/mysteriumnetwork/node/session"
 )
-
-const logPrefix = "[service-manager] "
 
 var (
 	// ErrorLocation error indicates that action (i.e. disconnect)
@@ -39,13 +37,13 @@ var (
 )
 
 // ServiceFactory initiates instance which is able to serve connections
-type ServiceFactory func(Options) (Service, error)
+type ServiceFactory func(Options) (Service, market.ServiceProposal, error)
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
-	Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error)
-	Wait() error
+	Serve(providerID identity.Identity) error
 	Stop() error
+	ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error)
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
@@ -93,14 +91,13 @@ func (manager *Manager) Start(options Options) (err error) {
 		return err
 	}
 
-	manager.service, err = manager.serviceFactory(options)
+	service, proposal, err := manager.serviceFactory(options)
 	if err != nil {
 		return err
 	}
-	proposal, sessionConfigProvider, err := manager.service.Start(providerID)
-	if err != nil {
-		return err
-	}
+
+	manager.service = service
+
 	manager.dialogWaiter, err = manager.dialogWaiterFactory(providerID, proposal.ServiceType)
 	if err != nil {
 		return err
@@ -111,22 +108,16 @@ func (manager *Manager) Start(options Options) (err error) {
 	}
 	proposal.SetProviderContact(providerID, providerContact)
 
-	dialogHandler := manager.dialogHandlerFactory(proposal, sessionConfigProvider)
+	dialogHandler := manager.dialogHandlerFactory(proposal, service)
 	if err = manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}
 
 	manager.discovery.Start(providerID, proposal)
-	return nil
-}
 
-// Wait blocks until service is stopped
-func (manager *Manager) Wait() error {
-	log.Info(logPrefix, "Waiting for discovery service to finish")
+	err = manager.service.Serve(providerID)
 	manager.discovery.Wait()
-
-	log.Info(logPrefix, "Waiting for service to finish")
-	return manager.service.Wait()
+	return err
 }
 
 // Kill stops service

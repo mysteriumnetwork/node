@@ -18,6 +18,7 @@
 package service
 
 import (
+	"crypto/x509/pkix"
 	"encoding/json"
 
 	log "github.com/cihub/seelog"
@@ -25,14 +26,10 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
-	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
-	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -41,27 +38,22 @@ import (
 func NewManager(
 	nodeOptions node.Options,
 	serviceOptions Options,
-	ipResolver ip.Resolver,
-	locationResolver location.Resolver,
+	publicIP string,
+	outboundIP string,
+	currentLocation string,
 	sessionMap openvpn_session.SessionMap,
 ) *Manager {
 	natService := nat.NewService()
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 
 	return &Manager{
-		locationResolver:               locationResolver,
-		ipResolver:                     ipResolver,
+		publicIP:                       publicIP,
+		outboundIP:                     outboundIP,
+		currentLocation:                currentLocation,
 		natService:                     natService,
-		proposalFactory:                newProposalFactory(serviceOptions),
 		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
 		vpnServerFactory:               newServerFactory(nodeOptions, sessionValidator),
-	}
-}
-
-func newProposalFactory(serviceOptions Options) ProposalFactory {
-	return func(currentLocation market.Location) market.ServiceProposal {
-		return openvpn_discovery.NewServiceProposalWithLocation(currentLocation, serviceOptions.OpenvpnProtocol)
 	}
 }
 
@@ -143,4 +135,23 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 		serviceOptions.OpenvpnPort,
 	)
 	return publicIP
+}
+
+// primitiveFactory takes in the country and providerID and forms the tls primitives out of it
+func primitiveFactory(currentCountry, providerID string) (*tls.Primitives, error) {
+	log.Info(logPrefix, "Country detected: ", currentCountry)
+
+	caSubject := pkix.Name{
+		Country:            []string{currentCountry},
+		Organization:       []string{"Mysterium Network"},
+		OrganizationalUnit: []string{"Mysterium Team"},
+	}
+	serverCertSubject := pkix.Name{
+		Country:            []string{currentCountry},
+		Organization:       []string{"Mysterium node operator company"},
+		OrganizationalUnit: []string{"Node operator team"},
+		CommonName:         providerID,
+	}
+
+	return tls.NewTLSPrimitives(caSubject, serverCertSubject)
 }

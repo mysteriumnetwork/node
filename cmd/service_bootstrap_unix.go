@@ -22,6 +22,7 @@ package cmd
 import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 )
@@ -38,8 +39,13 @@ func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
 }
 
 func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
-	di.ServiceRegistry.Register(wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
-		return wireguard_service.NewManager(di.LocationResolver, di.IPResolver), nil
+	di.ServiceRegistry.Register(wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+		location, err := di.resolveIPsAndLocation()
+		if err != nil {
+			return nil, market.ServiceProposal{}, err
+		}
+
+		return wireguard_service.NewManager(location.PubIP, location.OutIP, location.Country), wireguard_service.GetProposal(location.Country), nil
 	})
 
 	di.ServiceRunner.Register(wireguard.ServiceType)
