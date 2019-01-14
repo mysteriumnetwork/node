@@ -7,6 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func Test_NotStartedTrackerElapsedReturnsZeroValue(t *testing.T) {
+	tt := NewTracker(func() time.Time { return time.Unix(10, 10) })
+
+	assert.Equal(t, 0*time.Second, tt.Elapsed())
+}
+
 func Test_ElapsedReturnsCorrectValue(t *testing.T) {
 	mockedClock := newMockedTime(
 		[]time.Time{
@@ -19,7 +25,7 @@ func Test_ElapsedReturnsCorrectValue(t *testing.T) {
 	tt.StartTracking()
 	elapsed := tt.Elapsed()
 
-	assert.Equal(t, time.Second*3, elapsed)
+	assert.Equal(t, 3*time.Second, elapsed)
 }
 
 func newMockedTime(timeValues []time.Time) func() time.Time {
