@@ -54,7 +54,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	c.config.Consumer.IPAddress = config.Consumer.IPAddress
 
 	resourceAllocator := resources.NewAllocator()
-	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(nil, &resourceAllocator)
+	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint("", &resourceAllocator)
 	if err != nil {
 		return err
 	}

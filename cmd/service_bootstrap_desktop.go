@@ -20,6 +20,7 @@
 package cmd
 
 import (
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -32,47 +33,73 @@ import (
 	"github.com/mysteriumnetwork/node/market/proposals/registry"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
+	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
-	"github.com/mysteriumnetwork/node/services/wireguard"
-	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 )
 
-// BootstrapServices loads all the components required for running services
-func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
-	di.bootstrapServiceComponents(nodeOptions)
+const logPrefix = "[service bootstrap] "
 
-	di.bootstrapServiceOpenvpn(nodeOptions)
-	di.bootstrapServiceNoop(nodeOptions)
-	di.bootstrapServiceWireguard(nodeOptions)
+type locationInfo struct {
+	OutIP   string
+	PubIP   string
+	Country string
+}
 
-	return nil
+func (di *Dependencies) resolveIPsAndLocation() (loc locationInfo, err error) {
+	pubIP, err := di.IPResolver.GetPublicIP()
+	if err != nil {
+		return
+	}
+	loc.PubIP = pubIP
+
+	outboundIP, err := di.IPResolver.GetOutboundIP()
+	if err != nil {
+		return
+	}
+	loc.OutIP = outboundIP
+
+	currentCountry, err := di.LocationResolver.ResolveCountry(pubIP)
+	if err != nil {
+		log.Warn(logPrefix, "Failed to detect service country. ", err)
+		err = service.ErrorLocation
+		return
+	}
+	loc.Country = currentCountry
+
+	log.Info(logPrefix, "Detected service country: ", loc.Country)
+	return
 }
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
-	createService := func(serviceOptions service.Options) (service.Service, error) {
-		transportOptions := serviceOptions.Options.(openvpn_service.Options)
-		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, di.ServiceSessionStorage), nil
-	}
-	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
+	createService := func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+		location, err := di.resolveIPsAndLocation()
+		if err != nil {
+			return nil, market.ServiceProposal{}, err
+		}
 
+		currentLocation := market.Location{Country: location.Country}
+		transportOptions := serviceOptions.Options.(openvpn_service.Options)
+
+		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.OpenvpnProtocol)
+		return openvpn_service.NewManager(nodeOptions, transportOptions, location.PubIP, location.OutIP, location.Country, di.ServiceSessionStorage), proposal, nil
+	}
+
+	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 	di.ServiceRunner.Register(service_openvpn.ServiceType)
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
-	di.ServiceRegistry.Register(service_noop.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
-		return service_noop.NewManager(di.LocationResolver, di.IPResolver), nil
+	di.ServiceRegistry.Register(service_noop.ServiceType, func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+		location, err := di.resolveIPsAndLocation()
+		if err != nil {
+			return nil, market.ServiceProposal{}, err
+		}
+
+		return service_noop.NewManager(), service_noop.GetProposal(location.Country), nil
 	})
 
 	di.ServiceRunner.Register(service_noop.ServiceType)
-}
-
-func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
-	di.ServiceRegistry.Register(wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
-		return wireguard_service.NewManager(di.LocationResolver, di.IPResolver), nil
-	})
-
-	di.ServiceRunner.Register(wireguard.ServiceType)
 }
 
 // bootstrapServiceComponents initiates ServiceManager dependency
