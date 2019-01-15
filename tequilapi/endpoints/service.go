@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -31,11 +32,15 @@ type serviceStatusResponse struct {
 }
 
 // ServiceEndpoint struct represents /service resource and it's sub-resources
-type ServiceEndpoint struct{}
+type ServiceEndpoint struct {
+	serviceManager *service.Manager
+}
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint() *ServiceEndpoint {
-	return &ServiceEndpoint{}
+func NewServiceEndpoint(serviceManager *service.Manager) *ServiceEndpoint {
+	return &ServiceEndpoint{
+		serviceManager: serviceManager,
+	}
 }
 
 // Status returns status of service
@@ -57,7 +62,7 @@ func (se *ServiceEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ h
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router) {
-	serviceEndpoint := NewServiceEndpoint()
+func AddRoutesForService(router *httprouter.Router, serviceManager *service.Manager) {
+	serviceEndpoint := NewServiceEndpoint(serviceManager)
 	router.GET("/service", serviceEndpoint.Status)
 }

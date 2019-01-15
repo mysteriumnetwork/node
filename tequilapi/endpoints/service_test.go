@@ -24,12 +24,13 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := httprouter.New()
-	AddRoutesForService(router)
+	AddRoutesForService(router, &service.Manager{})
 
 	tests := []struct {
 		method         string

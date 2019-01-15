@@ -34,7 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type fakeManager struct {
+type fakeConnectionManager struct {
 	onConnectReturn      error
 	onDisconnectReturn   error
 	onStatusReturn       connection.Status
@@ -44,24 +44,24 @@ type fakeManager struct {
 	requestedServiceType string
 }
 
-func (fm *fakeManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
+func (fm *fakeConnectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
 	fm.requestedConsumerID = consumerID
 	fm.requestedProvider = identity.FromAddress(proposal.ProviderID)
 	fm.requestedServiceType = proposal.ServiceType
 	return fm.onConnectReturn
 }
 
-func (fm *fakeManager) Status() connection.Status {
+func (fm *fakeConnectionManager) Status() connection.Status {
 
 	return fm.onStatusReturn
 }
 
-func (fm *fakeManager) Disconnect() error {
+func (fm *fakeConnectionManager) Disconnect() error {
 	fm.disconnectCount++
 	return fm.onDisconnectReturn
 }
 
-func (fm *fakeManager) Wait() error {
+func (fm *fakeConnectionManager) Wait() error {
 	return nil
 }
 
@@ -93,7 +93,7 @@ func getMockProposalProviderWithSpecifiedProposal(providerID, serviceType string
 
 func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	router := httprouter.New()
-	fakeManager := fakeManager{}
+	fakeManager := fakeConnectionManager{}
 	statsKeeper := &StubStatisticsTracker{
 		duration: time.Minute,
 	}
@@ -149,7 +149,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 }
 
 func TestDisconnectingState(t *testing.T) {
-	var fakeManager = fakeManager{}
+	var fakeManager = fakeConnectionManager{}
 	fakeManager.onStatusReturn = connection.Status{
 		State:     connection.Disconnecting,
 		SessionID: "",
@@ -171,7 +171,7 @@ func TestDisconnectingState(t *testing.T) {
 }
 
 func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
-	var fakeManager = fakeManager{}
+	var fakeManager = fakeConnectionManager{}
 	fakeManager.onStatusReturn = connection.Status{
 		State:     connection.NotConnected,
 		SessionID: "",
@@ -194,7 +194,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 }
 
 func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
-	var fakeManager = fakeManager{}
+	var fakeManager = fakeConnectionManager{}
 	fakeManager.onStatusReturn = connection.Status{
 		State: connection.Connecting,
 	}
@@ -216,7 +216,7 @@ func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 }
 
 func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
-	var fakeManager = fakeManager{}
+	var fakeManager = fakeConnectionManager{}
 	fakeManager.onStatusReturn = connection.Status{
 		State:     connection.Connected,
 		SessionID: "My-super-session",
@@ -240,7 +240,7 @@ func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 }
 
 func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
-	fakeManager := fakeManager{}
+	fakeManager := fakeConnectionManager{}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
@@ -259,7 +259,7 @@ func TestPutReturns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 }
 
 func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
-	fakeManager := fakeManager{}
+	fakeManager := fakeConnectionManager{}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
@@ -281,7 +281,7 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 }
 
 func TestPutWithValidBodyCreatesConnection(t *testing.T) {
-	fakeManager := fakeManager{}
+	fakeManager := fakeConnectionManager{}
 
 	proposalProvider := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, proposalProvider)
@@ -305,7 +305,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 }
 
 func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
-	fakeManager := fakeManager{}
+	fakeManager := fakeConnectionManager{}
 
 	mystAPI := getMockProposalProviderWithSpecifiedProposal("required-node", "noop")
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, mystAPI)
@@ -330,7 +330,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 }
 
 func TestDeleteCallsDisconnect(t *testing.T) {
-	fakeManager := fakeManager{}
+	fakeManager := fakeConnectionManager{}
 
 	connEndpoint := NewConnectionEndpoint(&fakeManager, nil, nil, &mockProposalProvider{})
 	req := httptest.NewRequest(http.MethodDelete, "/irrelevant", nil)
@@ -344,7 +344,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 }
 
 func TestGetIPEndpointSucceeds(t *testing.T) {
-	manager := fakeManager{}
+	manager := fakeConnectionManager{}
 	ipResolver := ip.NewResolverFake("123.123.123.123")
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, &mockProposalProvider{})
 	resp := httptest.NewRecorder()
@@ -362,7 +362,7 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 }
 
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
-	manager := fakeManager{}
+	manager := fakeConnectionManager{}
 	ipResolver := ip.NewResolverFakeFailing(errors.New("fake error"))
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, &mockProposalProvider{})
 	resp := httptest.NewRecorder()
@@ -385,7 +385,7 @@ func TestGetStatisticsEndpointReturnsStatistics(t *testing.T) {
 		stats:    consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
 	}
 
-	manager := fakeManager{}
+	manager := fakeConnectionManager{}
 	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, &mockProposalProvider{})
 
 	resp := httptest.NewRecorder()
@@ -406,7 +406,7 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 		stats: consumer.SessionStatistics{BytesSent: 1, BytesReceived: 2},
 	}
 
-	manager := fakeManager{}
+	manager := fakeConnectionManager{}
 	connEndpoint := NewConnectionEndpoint(&manager, nil, statsKeeper, &mockProposalProvider{})
 
 	resp := httptest.NewRecorder()
@@ -423,7 +423,7 @@ func TestGetStatisticsEndpointReturnsStatisticsWhenSessionIsNotStarted(t *testin
 }
 
 func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
-	manager := fakeManager{}
+	manager := fakeConnectionManager{}
 	manager.onConnectReturn = connection.ErrAlreadyExists
 
 	mystAPI := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
@@ -452,7 +452,7 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 }
 
 func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
-	manager := fakeManager{}
+	manager := fakeConnectionManager{}
 	manager.onDisconnectReturn = connection.ErrNoConnection
 
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, &mockProposalProvider{})
@@ -477,7 +477,7 @@ func TestDisconnectReturnsConflictStatusIfConnectionDoesNotExist(t *testing.T) {
 }
 
 func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncountered(t *testing.T) {
-	manager := fakeManager{}
+	manager := fakeConnectionManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
 	mockProposalProvider := getMockProposalProviderWithSpecifiedProposal("required-node", "openvpn")
@@ -505,7 +505,7 @@ func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncount
 }
 
 func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
-	manager := fakeManager{}
+	manager := fakeConnectionManager{}
 	manager.onConnectReturn = connection.ErrConnectionCancelled
 
 	connectionEndpoint := NewConnectionEndpoint(&manager, nil, nil, &mockProposalProvider{proposals: make([]market.ServiceProposal, 0)})
