@@ -40,6 +40,7 @@ var (
 var (
 	consumerTequilapiHost = flag.String("consumer.tequilapi-host", "localhost", "Specify Tequilapi host for consumer")
 	consumerTequilapiPort = flag.Int("consumer.tequilapi-port", 4050, "Specify Tequilapi port for consumer")
+	consumerServices      = flag.String("consumer.services", "openvpn,noop,wireguard", "Comma separated list of services to try and use")
 )
 
 func newTequilapiConsumer() *tequilapi_client.Client {

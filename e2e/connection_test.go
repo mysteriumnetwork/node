@@ -18,6 +18,7 @@
 package e2e
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/cihub/seelog"
@@ -37,7 +38,11 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	tequilapiConsumer := newTequilapiConsumer()
 
 	t.Run("ProviderRegistersIdentityFlow", func(t *testing.T) {
-		identityRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
+		registrationData, err := tequilapiProvider.IdentityRegistrationStatus(providerID)
+		assert.NoError(t, err)
+		if !registrationData.Registered {
+			identityRegistrationFlow(t, tequilapiProvider, providerID, providerPassphrase)
+		}
 	})
 
 	var consumerID string
@@ -47,11 +52,14 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 	})
 
 	t.Run("ConsumerConnectFlow", func(t *testing.T) {
-		for serviceType := range serviceTypeAssertionMap {
-			t.Run(serviceType, func(t *testing.T) {
-				proposal := consumerPicksProposal(t, tequilapiConsumer, serviceType)
-				consumerConnectFlow(t, tequilapiConsumer, consumerID, serviceType, proposal)
-			})
+		servicesInFlag := strings.Split(*consumerServices, ",")
+		for _, serviceType := range servicesInFlag {
+			if _, ok := serviceTypeAssertionMap[serviceType]; ok {
+				t.Run(serviceType, func(t *testing.T) {
+					proposal := consumerPicksProposal(t, tequilapiConsumer, serviceType)
+					consumerConnectFlow(t, tequilapiConsumer, consumerID, serviceType, proposal)
+				})
+			}
 		}
 	})
 }
