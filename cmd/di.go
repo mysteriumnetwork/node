@@ -48,10 +48,13 @@ import (
 	"github.com/mysteriumnetwork/node/market/metrics/oracle"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -291,11 +294,24 @@ func newSessionManagerFactory(
 	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
+		providerBalanceTrackerFactory := func() *balance.ProviderBalanceTracker {
+			timeTracker := session.NewTracker(time.Now)
+			// TODO: set the time and proper payment info
+			payment := dto.PaymentPerTime{
+				Price: money.Money{
+					Currency: money.CURRENCY_MYST,
+					Amount:   uint64(10),
+				},
+				Duration: time.Minute,
+			}
+			return balance.NewProviderBalanceTracker(balance.NewBalanceSender(dialog), &timeTracker, session.AmountCalc{PaymentDef: payment}, time.Second*10, uint64(1000))
+		}
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
 			sessionStorage,
 			promiseHandler(dialog),
+			providerBalanceTrackerFactory,
 		)
 	}
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/balance"
 )
 
 const managerLogPrefix = "[connection-manager] "
@@ -153,6 +154,21 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 
 	sessionCreateConfig, err := connection.GetConfig()
+	if err != nil {
+		return err
+	}
+
+	bl := balance.NewBalanceListener()
+
+	go func() {
+		for b := range bl.Listen() {
+			// TODO: do something with the balance
+			log.Info("BAlANCE RECEIVED", b)
+		}
+		log.Info("Not listening for more balance")
+	}()
+
+	err = dialog.Receive(bl.GetConsumer())
 	if err != nil {
 		return err
 	}
