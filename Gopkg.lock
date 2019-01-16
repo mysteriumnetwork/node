@@ -248,7 +248,7 @@
   version = "0.0.12"
 
 [[projects]]
-  digest = "1:0b33731a325482b0a1c34cc3edd1308d6d45fbd4041560f56bd97ca8ea732b95"
+  digest = "1:9524f4ecf45b24711abcced1567e456a430de28bb649727be1dd6032e8b89b13"
   name = "github.com/mysteriumnetwork/payments"
   packages = [
     "cli/helpers",
@@ -257,7 +257,7 @@
     "mysttoken",
     "registry",
   ]
-  pruneopts = "UT"
+  pruneopts = "T"
   revision = "b92116b8fe468219d5676d68c78d68e1a5f94120"
   version = "v0.0.8-experimental"
 

@@ -77,6 +77,10 @@
     name = "github.com/mysteriumnetwork/go-openvpn"
     unused-packages = false
 
+  [[prune.project]]
+    name = "github.com/mysteriumnetwork/payments"
+    unused-packages = false
+
 
 [[constraint]]
   name = "github.com/urfave/cli"
