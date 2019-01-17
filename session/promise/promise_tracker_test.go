@@ -12,15 +12,15 @@ import (
 	"github.com/mysteriumnetwork/payments/promises"
 )
 
-func TestCurrentStatePromiseWithAddedAmountIsIssued(t *testing.T) {
-	issuer := mockedIssuer{}
-	consumer := identity.Identity{"0x1111111111111"}
-	provider := identity.Identity{"0x2222222222222"}
-	initialState := PromiseState{
-		seq:    1,
-		amount: 100,
-	}
+var issuer = mockedIssuer{}
+var consumer = identity.Identity{"0x1111111111111"}
+var provider = identity.Identity{"0x2222222222222"}
+var initialState = State{
+	seq:    1,
+	amount: 100,
+}
 
+func TestCurrentStatePromiseWithAddedAmountIsIssued(t *testing.T) {
 	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
 	p, err := tracker.IssuePromiseWithAddedAmount(200)
 	assert.NoError(t, err)
@@ -36,6 +36,40 @@ func TestCurrentStatePromiseWithAddedAmountIsIssued(t *testing.T) {
 		},
 		p.Promise,
 	)
+}
+
+func TestCurrentStateIsAlignedWithConsumer(t *testing.T) {
+	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
+
+	assert.NoError(t, tracker.AlignStateWithProvider(State{seq: 1, amount: 100}))
+
+	p, err := tracker.IssuePromiseWithAddedAmount(100)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(200), p.Promise.Amount)
+	assert.Equal(t, int64(1), p.Promise.SeqNo)
+}
+
+func TestBiggerConsumerAmountIsRejected(t *testing.T) {
+	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
+
+	assert.Equal(t, UnexpectedAmount, tracker.AlignStateWithProvider(State{seq: 1, amount: 200}))
+}
+
+func TestSmallerConsumerAmountIsRejected(t *testing.T) {
+	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
+
+	assert.Equal(t, UnexpectedAmount, tracker.AlignStateWithProvider(State{seq: 1, amount: 0}))
+}
+
+func TestIncreasedSeqNumberIsAccepted(t *testing.T) {
+	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
+
+	assert.NoError(t, tracker.AlignStateWithProvider(State{seq: 2, amount: 0}))
+
+	p, err := tracker.IssuePromiseWithAddedAmount(59)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(59), p.Promise.Amount)
+	assert.Equal(t, int64(2), p.Promise.SeqNo)
 }
 
 type mockedIssuer struct {
