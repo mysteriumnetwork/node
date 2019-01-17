@@ -66,7 +66,12 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 			}()
 		}
 
-		return responseWithSession(sessionInstance), nil
+		// TODO: the last promise info should also be loaded here somehow
+		lastPromise := LastPromise{
+			SequenceID: 1,
+			Amount:     0,
+		}
+		return responseWithSession(sessionInstance, lastPromise), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
 	default:
@@ -74,7 +79,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	}
 }
 
-func responseWithSession(sessionInstance Session) CreateResponse {
+func responseWithSession(sessionInstance Session, lp LastPromise) CreateResponse {
 	serializedConfig, err := json.Marshal(sessionInstance.Config)
 	if err != nil {
 		// Failed to serialize session
@@ -88,5 +93,6 @@ func responseWithSession(sessionInstance Session) CreateResponse {
 			ID:     sessionInstance.ID,
 			Config: serializedConfig,
 		},
+		LastPromise: &lp,
 	}
 }
