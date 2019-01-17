@@ -1,4 +1,4 @@
-package balance
+package promise
 
 import (
 	"github.com/mysteriumnetwork/node/communication"
