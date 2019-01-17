@@ -294,7 +294,7 @@ func newSessionManagerFactory(
 	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
-		providerBalanceTrackerFactory := func() *balance.ProviderBalanceTracker {
+		providerBalanceTrackerFactory := func() session.BalanceKeeper {
 			timeTracker := session.NewTracker(time.Now)
 			// TODO: set the time and proper payment info
 			payment := dto.PaymentPerTime{

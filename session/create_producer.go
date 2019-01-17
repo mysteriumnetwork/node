@@ -25,8 +25,9 @@ import (
 )
 
 type createProducer struct {
-	ProposalID int
-	Config     json.RawMessage
+	ProposalID   int
+	Config       json.RawMessage
+	ConsumerInfo *ConsumerInfo
 }
 
 func (producer *createProducer) GetRequestEndpoint() communication.RequestEndpoint {
@@ -39,21 +40,23 @@ func (producer *createProducer) NewResponse() (responsePtr interface{}) {
 
 func (producer *createProducer) Produce() (requestPtr interface{}) {
 	return &CreateRequest{
-		ProposalId: producer.ProposalID,
-		Config:     producer.Config,
+		ProposalId:   producer.ProposalID,
+		Config:       producer.Config,
+		ConsumerInfo: producer.ConsumerInfo,
 	}
 }
 
 // RequestSessionCreate requests session creation and returns session DTO
-func RequestSessionCreate(sender communication.Sender, proposalID int, config interface{}) (sessionID ID, sessionConfig json.RawMessage, err error) {
+func RequestSessionCreate(sender communication.Sender, proposalID int, config interface{}, ci ConsumerInfo) (sessionID ID, sessionConfig json.RawMessage, err error) {
 	sessionCreateConfigJSON, err := json.Marshal(config)
 	if err != nil {
 		return
 	}
 
 	responsePtr, err := sender.Request(&createProducer{
-		ProposalID: proposalID,
-		Config:     sessionCreateConfigJSON,
+		ProposalID:   proposalID,
+		Config:       sessionCreateConfigJSON,
+		ConsumerInfo: &ci,
 	})
 	if err != nil {
 		return

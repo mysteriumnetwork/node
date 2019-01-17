@@ -24,7 +24,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/session/balance"
 )
 
 var (
@@ -71,7 +70,7 @@ func NewManager(
 	idGenerator IDGenerator,
 	sessionStorage Storage,
 	promiseProcessor PromiseProcessor,
-	balanceTrackerFactory func() *balance.ProviderBalanceTracker,
+	balanceTrackerFactory func() BalanceKeeper,
 ) *Manager {
 	return &Manager{
 		currentProposal:       currentProposal,
@@ -90,7 +89,7 @@ type Manager struct {
 	generateID            IDGenerator
 	sessionStorage        Storage
 	promiseProcessor      PromiseProcessor
-	balanceTrackerFactory func() *balance.ProviderBalanceTracker
+	balanceTrackerFactory func() BalanceKeeper
 
 	creationLock sync.Mutex
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 )
@@ -158,7 +159,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		return err
 	}
 
-	bl := balance.NewBalanceListener()
+	bl := balance.NewListener()
 
 	go func() {
 		for b := range bl.Listen() {
@@ -173,7 +174,13 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		return err
 	}
 
-	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig)
+	consumerInfo := session.ConsumerInfo{
+		// TODO: once we're supporting payments from another identity make the changes accordingly
+		IssuerID:          consumerID,
+		MystClientVersion: metadata.VersionAsString(),
+	}
+
+	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
 	if err != nil {
 		return err
 	}

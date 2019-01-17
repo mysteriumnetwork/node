@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 const endpointSessionCreate = communication.RequestEndpoint("session-create")
@@ -32,8 +33,9 @@ var (
 
 // CreateRequest structure represents message from service consumer to initiate session for given proposal id
 type CreateRequest struct {
-	ProposalId int             `json:"proposal_id"`
-	Config     json.RawMessage `json:"config"`
+	ProposalId   int             `json:"proposal_id"`
+	Config       json.RawMessage `json:"config"`
+	ConsumerInfo *ConsumerInfo   `json:"consumer_info,omitempty"`
 }
 
 // CreateResponse structure represents service provider response to given session request from consumer
@@ -47,4 +49,10 @@ type CreateResponse struct {
 type SessionDto struct {
 	ID     ID              `json:"id"`
 	Config json.RawMessage `json:"config"`
+}
+
+// ConsumerInfo represents the consumer related information
+type ConsumerInfo struct {
+	MystClientVersion string
+	IssuerID          identity.Identity
 }
