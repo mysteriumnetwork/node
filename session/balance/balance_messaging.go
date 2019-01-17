@@ -18,7 +18,6 @@ type BalanceMessage struct {
 }
 
 const endpointBalance = "session-balance"
-const requestEndpointBalance = communication.RequestEndpoint(endpointBalance)
 const messageEndpointBalance = communication.MessageEndpoint(endpointBalance)
 
 type BalanceSender struct {
@@ -32,7 +31,7 @@ func NewBalanceSender(sender communication.Sender) *BalanceSender {
 }
 
 func (bs *BalanceSender) Send(bm BalanceMessage) error {
-	_, err := bs.sender.Request(&balanceMessageProducer{BalanceMessage: bm})
+	err := bs.sender.Send(&balanceMessageProducer{BalanceMessage: bm})
 	return err
 }
 
@@ -85,8 +84,8 @@ type balanceMessageProducer struct {
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
-func (bmp *balanceMessageProducer) GetRequestEndpoint() communication.RequestEndpoint {
-	return requestEndpointBalance
+func (bmp *balanceMessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
+	return messageEndpointBalance
 }
 
 func (bmp *balanceMessageProducer) Produce() (requestPtr interface{}) {
@@ -96,5 +95,5 @@ func (bmp *balanceMessageProducer) Produce() (requestPtr interface{}) {
 }
 
 func (bmp *balanceMessageProducer) NewResponse() (responsePtr interface{}) {
-	return &BalanceResponse{}
+	return nil
 }
