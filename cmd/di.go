@@ -55,6 +55,8 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
+	session_payment "github.com/mysteriumnetwork/node/session/payment"
+	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -294,7 +296,7 @@ func newSessionManagerFactory(
 	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
-		providerBalanceTrackerFactory := func() session.BalanceKeeper {
+		providerBalanceTrackerFactory := func() session.PaymentOrchestrator {
 			timeTracker := session.NewTracker(time.Now)
 			// TODO: set the time and proper payment info
 			payment := dto.PaymentPerTime{
@@ -304,7 +306,13 @@ func newSessionManagerFactory(
 				},
 				Duration: time.Minute,
 			}
-			return balance.NewProviderBalanceTracker(balance.NewBalanceSender(dialog), &timeTracker, session.AmountCalc{PaymentDef: payment}, time.Second*10, uint64(1000))
+			amountCalc := session.AmountCalc{PaymentDef: payment}
+			sender := balance.NewBalanceSender(dialog)
+			listener := promise.NewPromiseListener()
+			dialog.Receive(listener.GetConsumer())
+			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 100)
+
+			return session_payment.NewProviderPaymentOrchestrator(sender, tracker, listener, time.Second*5, time.Second*1, &promise.NoopValidator{})
 		}
 		return session.NewManager(
 			proposal,

@@ -20,7 +20,6 @@ package balance
 import (
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/money"
 )
 
@@ -55,9 +54,8 @@ type ProviderBalanceTracker struct {
 }
 
 // NewProviderBalanceTracker returns a new instance of the providerBalanceTracker
-func NewProviderBalanceTracker(sender PeerSender, timeKeeper TimeKeeper, amountCalculator AmountCalculator, period time.Duration, initialBalance uint64) *ProviderBalanceTracker {
+func NewProviderBalanceTracker(timeKeeper TimeKeeper, amountCalculator AmountCalculator, period time.Duration, initialBalance uint64) *ProviderBalanceTracker {
 	return &ProviderBalanceTracker{
-		sender:           sender,
 		timeKeeper:       timeKeeper,
 		period:           period,
 		amountCalculator: amountCalculator,
@@ -72,44 +70,12 @@ func (pbt *ProviderBalanceTracker) calculateBalance() {
 	pbt.balance = pbt.totalPromised - cost.Amount
 }
 
-func (pbt *ProviderBalanceTracker) periodicSend() error {
-	for {
-		select {
-		case <-pbt.stop:
-			return nil
-		case <-time.After(pbt.period):
-			pbt.calculateBalance()
-			// TODO: Maybe retry a couple of times?
-			err := pbt.sendMessage()
-			if err != nil {
-				log.Error(balanceTrackerPrefix, "Balance tracker failed to send the balance message")
-				log.Error(balanceTrackerPrefix, err)
-			}
-			// TODO: destroy session/connection if balance negative? or should we bubble the error and let the caller be responsible for this?
-			// TODO: wait for response here on the promise topic
-		}
-	}
-}
-
-func (pbt *ProviderBalanceTracker) sendMessage() error {
-	return pbt.sender.Send(pbt.getBalanceMessage())
-}
-
-func (pbt *ProviderBalanceTracker) getBalanceMessage() Message {
+// GetBalance returns the balance message
+func (pbt *ProviderBalanceTracker) GetBalance() Message {
+	pbt.calculateBalance()
 	// TODO: sequence ID should come here, somehow
 	return Message{
 		SequenceID: 0,
 		Balance:    pbt.balance,
 	}
-}
-
-// Track starts tracking the balance and sending it to the consumer
-func (pbt *ProviderBalanceTracker) Track() error {
-	pbt.timeKeeper.StartTracking()
-	return pbt.periodicSend()
-}
-
-// Stop stops the balance tracker
-func (pbt *ProviderBalanceTracker) Stop() {
-	pbt.stop <- struct{}{}
 }

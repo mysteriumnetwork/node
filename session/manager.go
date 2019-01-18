@@ -70,14 +70,14 @@ func NewManager(
 	idGenerator IDGenerator,
 	sessionStorage Storage,
 	promiseProcessor PromiseProcessor,
-	balanceTrackerFactory func() BalanceKeeper,
+	paymentOrchestratorFactory func() PaymentOrchestrator,
 ) *Manager {
 	return &Manager{
-		currentProposal:       currentProposal,
-		generateID:            idGenerator,
-		sessionStorage:        sessionStorage,
-		promiseProcessor:      promiseProcessor,
-		balanceTrackerFactory: balanceTrackerFactory,
+		currentProposal:            currentProposal,
+		generateID:                 idGenerator,
+		sessionStorage:             sessionStorage,
+		promiseProcessor:           promiseProcessor,
+		paymentOrchestratorFactory: paymentOrchestratorFactory,
 
 		creationLock: sync.Mutex{},
 	}
@@ -85,11 +85,11 @@ func NewManager(
 
 // Manager knows how to start and provision session
 type Manager struct {
-	currentProposal       market.ServiceProposal
-	generateID            IDGenerator
-	sessionStorage        Storage
-	promiseProcessor      PromiseProcessor
-	balanceTrackerFactory func() BalanceKeeper
+	currentProposal            market.ServiceProposal
+	generateID                 IDGenerator
+	sessionStorage             Storage
+	promiseProcessor           PromiseProcessor
+	paymentOrchestratorFactory func() PaymentOrchestrator
 
 	creationLock sync.Mutex
 }
@@ -112,18 +112,20 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 	sessionInstance.Done = make(chan struct{})
 	sessionInstance.Config = config
 
-	sessionInstance.BalanceKeeper = manager.balanceTrackerFactory()
+	sessionInstance.PaymentOrchestrator = manager.paymentOrchestratorFactory()
 
 	err = manager.promiseProcessor.Start(manager.currentProposal)
 	if err != nil {
 		return
 	}
 
+	errChan := sessionInstance.PaymentOrchestrator.Start()
 	go func() {
-		err := sessionInstance.BalanceKeeper.Track()
-		if err != nil {
-			// TODO: log and handle and destroy session?
-			// manager.Destroy(consumerID, string(sessionInstance.ID))
+		for err := range errChan {
+			if err != nil {
+				// TODO: log and handle and destroy session?
+				// manager.Destroy(consumerID, string(sessionInstance.ID))
+			}
 		}
 	}()
 
@@ -151,7 +153,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 		return err
 	}
 
-	sessionInstance.BalanceKeeper.Stop()
+	sessionInstance.PaymentOrchestrator.Stop()
 
 	manager.sessionStorage.Remove(ID(sessionID))
 	close(sessionInstance.Done)

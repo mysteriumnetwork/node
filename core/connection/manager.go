@@ -22,6 +22,8 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/mysteriumnetwork/payments/promises"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
@@ -31,6 +33,8 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
+	"github.com/mysteriumnetwork/node/session/payment"
+	"github.com/mysteriumnetwork/node/session/promise"
 )
 
 const managerLogPrefix = "[connection-manager] "
@@ -119,6 +123,20 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 	return err
 }
 
+type MockPromiseTracker struct {
+	promiseToReturn promises.IssuedPromise
+	errToReturn     error
+}
+
+func (mpt *MockPromiseTracker) AlignStateWithProvider(providerState promise.State) {
+	// in this case we just do nothing really
+	return
+}
+
+func (mpt *MockPromiseTracker) IssuePromiseWithAddedAmount(amountToAdd int64) (promises.IssuedPromise, error) {
+	return promises.IssuedPromise{}, nil
+}
+
 func (manager *connectionManager) startConnection(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	manager.mutex.Lock()
 	cancelCtx := manager.cleanConnection
@@ -160,19 +178,20 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 
 	bl := balance.NewListener()
-
-	go func() {
-		for b := range bl.Listen() {
-			// TODO: do something with the balance
-			log.Info("BAlANCE RECEIVED", b)
-		}
-		log.Info("Not listening for more balance")
-	}()
-
+	ps := promise.NewPromiseSender(dialog)
+	orch := payment.NewConsumerPaymentOrchestrator(bl, ps, &MockPromiseTracker{})
 	err = dialog.Receive(bl.GetConsumer())
 	if err != nil {
 		return err
 	}
+
+	errorChan := orch.Start()
+
+	go func() {
+		for v := range errorChan {
+			log.Error("channeling error", v)
+		}
+	}()
 
 	consumerInfo := session.ConsumerInfo{
 		// TODO: once we're supporting payments from another identity make the changes accordingly

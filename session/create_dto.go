@@ -38,6 +38,11 @@ type CreateRequest struct {
 	ConsumerInfo *ConsumerInfo   `json:"consumer_info,omitempty"`
 }
 
+type PaymentInfo struct {
+	LastPromise LastPromise `json:"lastPromise"`
+	FreeCredit  uint64      `json:"freeCredit"`
+}
+
 // LastPromise represents the last known promise to the provider
 // If the seqid and amount are 0 - there's no known info
 type LastPromise struct {
@@ -51,7 +56,7 @@ type CreateResponse struct {
 	Message string     `json:"message"`
 	Session SessionDto `json:"session"`
 	// Keeping this as a pointer for maximum backwards compatibility
-	LastPromise *LastPromise `json:"lastPromise,omitempty"`
+	PaymentInfo *PaymentInfo `json:"paymentInfo,omitempty"`
 }
 
 // SessionDto structure represents session information data within session creation response (session id and configuration options for underlying service type)

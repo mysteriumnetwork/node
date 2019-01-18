@@ -30,7 +30,7 @@ type Request struct {
 // Message shows the balance and the current sequence id(of the promise)
 type Message struct {
 	Balance    uint64 `json:"balance"`
-	SequenceID uint32 `json:"sequenceID"`
+	SequenceID uint64 `json:"sequenceID"`
 }
 
 const endpointBalance = "session-balance"

@@ -22,18 +22,19 @@ import "github.com/mysteriumnetwork/node/identity"
 // ID represents session id type
 type ID string
 
-type BalanceKeeper interface {
-	Track() error
+// PaymentOrchestrator is responsible for interacting with the consumer in regards to payments
+type PaymentOrchestrator interface {
+	Start() <-chan error
 	Stop()
 }
 
 // Session structure holds all required information about current session between service consumer and provider
 type Session struct {
-	ID            ID
-	Config        ServiceConfiguration
-	ConsumerID    identity.Identity
-	Done          chan struct{}
-	BalanceKeeper BalanceKeeper
+	ID                  ID
+	Config              ServiceConfiguration
+	ConsumerID          identity.Identity
+	Done                chan struct{}
+	PaymentOrchestrator PaymentOrchestrator
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party
