@@ -76,12 +76,14 @@ func NewManager(
 	idGenerator IDGenerator,
 	sessionStorage Storage,
 	balanceTrackerFactory BalanceTrackerFactory,
+	natPingerChan func() chan json.RawMessage,
 ) *Manager {
 	return &Manager{
 		currentProposal:       currentProposal,
 		generateID:            idGenerator,
 		sessionStorage:        sessionStorage,
 		balanceTrackerFactory: balanceTrackerFactory,
+		natPingerChan:         natPingerChan,
 
 		creationLock: sync.Mutex{},
 	}
@@ -93,12 +95,14 @@ type Manager struct {
 	generateID            IDGenerator
 	sessionStorage        Storage
 	balanceTrackerFactory BalanceTrackerFactory
+	provideConfig         ConfigProvider
+	natPingerChan         func() chan json.RawMessage
 
 	creationLock sync.Mutex
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int, config ServiceConfiguration, requestConfig json.RawMessage) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -113,6 +117,7 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	}
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.Done = make(chan struct{})
+	sessionInstance.Config = config
 
 	balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)
 	if err != nil {
@@ -136,6 +141,15 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 		}
 	}()
 
+	// start NAT pinger here, do not block - configuration should be returned to consumer
+	// start NAT pinger, get hole punched, launch service.
+	//  on session-destroy - shutdown service and wait for session-create
+	// TODO: We might want to start a separate openvpn daemon if node is behind the NAT
+
+	// We need to know that session creation is already in-progress here
+
+	// postpone vpnServer start until NAT hole is punched
+	manager.notifyNATPinger(requestConfig)
 	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
 }
@@ -159,4 +173,8 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	close(sessionInstance.Done)
 
 	return nil
+}
+
+func (manager *Manager) notifyNATPinger(requestConfig json.RawMessage) {
+	manager.natPingerChan() <- requestConfig
 }

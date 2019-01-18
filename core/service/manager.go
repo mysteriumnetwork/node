@@ -43,6 +43,12 @@ type Service interface {
 	ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error)
 }
 
+// NATPinger
+type NATPinger interface {
+	Bind(options Options) error
+	WaitForHole() error
+}
+
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
 type DialogWaiterFactory func(providerID identity.Identity, serviceType string) (communication.DialogWaiter, error)
 
@@ -52,12 +58,16 @@ type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator)
 // DiscoveryFactory initiates instance which is able announce service discoverability
 type DiscoveryFactory func() *discovery_registry.Discovery
 
+// WaitForNATHole blocks until NAT hole is punched towards consumer through local NAT
+type WaitForNATHole func() error
+
 // NewManager creates new instance of pluggable instances manager
 func NewManager(
 	serviceRegistry *Registry,
 	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
+	natPinger NATPinger,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -65,6 +75,7 @@ func NewManager(
 		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
+		natPinger:            natPinger,
 	}
 }
 
@@ -77,6 +88,8 @@ type Manager struct {
 	servicePool     *Pool
 
 	discoveryFactory DiscoveryFactory
+
+	natPinger NATPinger
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -120,6 +133,10 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 
 	go func() {
+		// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
+		manager.natPinger.Bind(options)
+		manager.natPinger.WaitForHole()
+
 		instance.state = Running
 		err = service.Serve(providerID)
 		instance.state = NotRunning

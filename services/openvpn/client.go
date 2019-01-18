@@ -18,10 +18,10 @@
 package openvpn
 
 import (
-	"errors"
-
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/pkg/errors"
 )
 
 // ErrProcessNotStarted represents the error we return when the process is not started yet
@@ -34,6 +34,7 @@ type processFactory func(options connection.ConnectOptions) (openvpn.Process, er
 type Client struct {
 	process        openvpn.Process
 	processFactory processFactory
+	ipResolver     ip.Resolver
 }
 
 // Start starts the connection
@@ -61,9 +62,19 @@ func (c *Client) Stop() {
 	}
 }
 
-// GetConfig returns the consumer-side configuration. In openvpn case - it doesn't return anything
+// GetConfig returns the consumer-side configuration.
 func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
-	return nil, nil
+	// TODO: we might want to perform this check only for nodes behind nat
+	ip, err := c.ipResolver.GetPublicIP()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get consumer config")
+	}
+	return ConsumerConfig{
+		// TODO: randomly generated port should get here
+		// consumer should have lport: 1194 port set.
+		Port: 50221,
+		IP:   ip,
+	}, nil
 }
 
 //VPNConfig structure represents VPN configuration options for given session

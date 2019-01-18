@@ -26,9 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 )
 
-// ServiceType indicates "wireguard" service type
-const ServiceType = "wireguard"
-
 // ServiceDefinition structure represents "wireguard" service parameters
 type ServiceDefinition struct {
 	// Approximate information on location where the service is provided from

@@ -72,7 +72,7 @@ func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, 
 	return state.NewMiddleware(stateCallback)
 }
 
-// Create creates a new openvpnn connection
+// Create creates a new openvpn connection
 func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 	procFactory := func(options connection.ConnectOptions) (openvpn.Process, error) {
 		vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory)

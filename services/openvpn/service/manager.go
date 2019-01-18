@@ -52,6 +52,7 @@ type Manager struct {
 	releasePorts func()
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
+	consumerConfig                 openvpn_service.ConsumerConfig
 
 	vpnServerConfigFactory   ServerConfigFactory
 	vpnServiceConfigProvider session.ConfigNegotiator
@@ -104,14 +105,19 @@ func (m *Manager) Stop() (err error) {
 	return nil
 }
 
-// ProvideConfig provides the configuration to end consumer
-func (m *Manager) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+// ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
+func (m *Manager) ProvideConfig(config json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	if m.vpnServiceConfigProvider == nil {
 		log.Info(logPrefix, "Config provider not initialized")
 		return nil, nil, errors.New("Config provider not initialized")
 	}
-
-	return m.vpnServiceConfigProvider.ProvideConfig(publicKey)
+	var c openvpn_service.ConsumerConfig
+	error := json.Unmarshal(config, c)
+	if error != nil {
+		return nil, nil, errors.Wrap(error, "parsing consumer config failed")
+	}
+	m.consumerConfig = c
+	return m.vpnServiceConfigProvider.ProvideConfig(config)
 }
 
 func vpnStateCallback(state openvpn.State) {

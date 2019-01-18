@@ -35,7 +35,9 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort int) {
 	c.SetFlag("auth-nocache")
 	c.SetParam("remote", serverIP)
 	c.SetPort(serverPort)
-	c.SetFlag("nobind")
+	// TODO: generate client local port randomly from least used ports
+	//  if port is taken on a client machine, next attempt would use the other port
+	c.SetParam("lport", "50221")
 	c.SetParam("remote-cert-tls", "server")
 	c.SetFlag("auth-user-pass")
 	c.SetFlag("management-query-passwords")
