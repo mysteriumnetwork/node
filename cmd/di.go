@@ -308,11 +308,12 @@ func newSessionManagerFactory(
 			}
 			amountCalc := session.AmountCalc{PaymentDef: payment}
 			sender := balance.NewBalanceSender(dialog)
-			listener := promise.NewPromiseListener()
+			promiseChan := make(chan promise.PromiseMessage, 1)
+			listener := promise.NewPromiseListener(promiseChan)
 			dialog.Receive(listener.GetConsumer())
 			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 100)
 
-			return session_payment.NewProviderPaymentOrchestrator(sender, tracker, listener, time.Second*5, time.Second*1, &promise.NoopValidator{})
+			return session_payment.NewProviderPaymentOrchestrator(sender, tracker, promiseChan, time.Second*5, time.Second*1, &promise.NoopValidator{})
 		}
 		return session.NewManager(
 			proposal,

@@ -177,9 +177,10 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		return err
 	}
 
-	bl := balance.NewListener()
+	messageChan := make(chan balance.Message, 1)
+	bl := balance.NewListener(messageChan)
 	ps := promise.NewPromiseSender(dialog)
-	orch := payment.NewConsumerPaymentOrchestrator(bl, ps, &MockPromiseTracker{})
+	orch := payment.NewConsumerPaymentOrchestrator(messageChan, ps, &MockPromiseTracker{})
 	err = dialog.Receive(bl.GetConsumer())
 	if err != nil {
 		return err

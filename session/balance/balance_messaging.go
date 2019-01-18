@@ -60,17 +60,12 @@ type Listener struct {
 }
 
 // NewListener returns a new instance of the balance listener
-func NewListener() *Listener {
+func NewListener(messageChan chan Message) *Listener {
 	return &Listener{
 		balanceMessageConsumer: &balanceMessageConsumer{
-			queue: make(chan Message, 1),
+			queue: messageChan,
 		},
 	}
-}
-
-// Listen returns a read only channel where all the balance messages will be sent to
-func (bl *Listener) Listen() <-chan Message {
-	return bl.balanceMessageConsumer.queue
 }
 
 // GetConsumer returns the underlying balance message consumer. Mostly here for the communication to work.

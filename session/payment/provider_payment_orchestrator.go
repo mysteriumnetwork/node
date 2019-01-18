@@ -33,11 +33,6 @@ type BalanceTracker interface {
 	GetBalance() balance.Message
 }
 
-// PeerPromiseReceiver receives promises from peer
-type PeerPromiseReceiver interface {
-	Listen() <-chan promise.PromiseMessage
-}
-
 // PromiseValidator validates given promise
 type PromiseValidator interface {
 	Validate(promise.PromiseMessage) bool
@@ -56,31 +51,31 @@ var ErrPromiseValidationFailed = errors.New("Promise validation failed")
 
 // ProviderPaymentOrchestrator orchestrates the ping pong of balance sent to consumer -> promise received from consumer flow
 type ProviderPaymentOrchestrator struct {
-	stop                chan struct{}
-	peerBalanceSender   PeerBalanceSender
-	balanceTracker      BalanceTracker
-	peerPromiseReceiver PeerPromiseReceiver
-	period              time.Duration
-	promiseWaitTimeout  time.Duration
-	promiseValidator    PromiseValidator
+	stop               chan struct{}
+	peerBalanceSender  PeerBalanceSender
+	balanceTracker     BalanceTracker
+	promiseChan        chan promise.PromiseMessage
+	period             time.Duration
+	promiseWaitTimeout time.Duration
+	promiseValidator   PromiseValidator
 }
 
 // NewProviderPaymentOrchestrator creates a new instance of provider payment orchestrator
 func NewProviderPaymentOrchestrator(
 	peerBalanceSender PeerBalanceSender,
 	balanceTracker BalanceTracker,
-	peerPromiseReceiver PeerPromiseReceiver,
+	promiseChan chan promise.PromiseMessage,
 	period time.Duration,
 	promiseWaitTimeout time.Duration,
 	promiseValidator PromiseValidator) *ProviderPaymentOrchestrator {
 	return &ProviderPaymentOrchestrator{
-		stop:                make(chan struct{}, 1),
-		peerBalanceSender:   peerBalanceSender,
-		balanceTracker:      balanceTracker,
-		peerPromiseReceiver: peerPromiseReceiver,
-		period:              period,
-		promiseWaitTimeout:  promiseWaitTimeout,
-		promiseValidator:    promiseValidator,
+		stop:               make(chan struct{}, 1),
+		peerBalanceSender:  peerBalanceSender,
+		balanceTracker:     balanceTracker,
+		promiseChan:        promiseChan,
+		period:             period,
+		promiseWaitTimeout: promiseWaitTimeout,
+		promiseValidator:   promiseValidator,
 	}
 }
 
@@ -88,7 +83,6 @@ func NewProviderPaymentOrchestrator(
 // The channel is closed when the orchestrator is stopped.
 func (ppo *ProviderPaymentOrchestrator) Start() <-chan error {
 	ch := make(chan error, 1)
-	listenChannel := ppo.peerPromiseReceiver.Listen()
 
 	go func() {
 		defer close(ch)
@@ -98,7 +92,7 @@ func (ppo *ProviderPaymentOrchestrator) Start() <-chan error {
 				return
 			case <-time.After(ppo.period):
 				ppo.sendBalance(ch)
-				ppo.receivePromiseOrTimeout(listenChannel, ch)
+				ppo.receivePromiseOrTimeout(ch)
 			}
 		}
 	}()
@@ -115,9 +109,9 @@ func (ppo *ProviderPaymentOrchestrator) sendBalance(ch chan error) {
 	}
 }
 
-func (ppo *ProviderPaymentOrchestrator) receivePromiseOrTimeout(listenChannel <-chan promise.PromiseMessage, errorChan chan error) {
+func (ppo *ProviderPaymentOrchestrator) receivePromiseOrTimeout(errorChan chan error) {
 	select {
-	case pm := <-listenChannel:
+	case pm := <-ppo.promiseChan:
 		log.Info("Promise received", pm)
 		if !ppo.promiseValidator.Validate(pm) {
 			errorChan <- ErrPromiseValidationFailed

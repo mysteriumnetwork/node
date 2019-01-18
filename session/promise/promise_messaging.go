@@ -37,16 +37,12 @@ type PromiseListener struct {
 	promiseMessageConsumer *promiseMessageConsumer
 }
 
-func NewPromiseListener() *PromiseListener {
+func NewPromiseListener(promiseChan chan PromiseMessage) *PromiseListener {
 	return &PromiseListener{
 		promiseMessageConsumer: &promiseMessageConsumer{
-			queue: make(chan PromiseMessage, 1),
+			queue: promiseChan,
 		},
 	}
-}
-
-func (pl *PromiseListener) Listen() <-chan PromiseMessage {
-	return pl.promiseMessageConsumer.queue
 }
 
 func (pl *PromiseListener) GetConsumer() *promiseMessageConsumer {

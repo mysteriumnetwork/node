@@ -26,11 +26,6 @@ import (
 	"github.com/mysteriumnetwork/payments/promises"
 )
 
-// PeerBalanceReceiver receives balance from peer
-type PeerBalanceReceiver interface {
-	Listen() <-chan balance.Message
-}
-
 // PeerPromiseSender knows how to send a promise message to the peer
 type PeerPromiseSender interface {
 	Send(promise.PromiseMessage) error
@@ -43,19 +38,19 @@ type PromiseTracker interface {
 
 // ConsumerPaymentOrchestrator orchestrates the ping pong of balance received from provider -> promise sent to provider flow
 type ConsumerPaymentOrchestrator struct {
-	stop                chan struct{}
-	peerBalanceReceiver PeerBalanceReceiver
-	peerPromiseSender   PeerPromiseSender
-	promiseTracker      PromiseTracker
+	stop              chan struct{}
+	balanceChan       chan balance.Message
+	peerPromiseSender PeerPromiseSender
+	promiseTracker    PromiseTracker
 }
 
 // NewConsumerPaymentOrchestrator returns a new instnace of consumer payment orchestrator
-func NewConsumerPaymentOrchestrator(peerBalanceReceiver PeerBalanceReceiver, peerPromiseSender PeerPromiseSender, promiseTracker PromiseTracker) *ConsumerPaymentOrchestrator {
+func NewConsumerPaymentOrchestrator(balanceChan chan balance.Message, peerPromiseSender PeerPromiseSender, promiseTracker PromiseTracker) *ConsumerPaymentOrchestrator {
 	return &ConsumerPaymentOrchestrator{
-		stop:                make(chan struct{}, 1),
-		peerBalanceReceiver: peerBalanceReceiver,
-		peerPromiseSender:   peerPromiseSender,
-		promiseTracker:      promiseTracker,
+		stop:              make(chan struct{}, 1),
+		balanceChan:       balanceChan,
+		peerPromiseSender: peerPromiseSender,
+		promiseTracker:    promiseTracker,
 	}
 }
 
@@ -63,7 +58,6 @@ func NewConsumerPaymentOrchestrator(peerBalanceReceiver PeerBalanceReceiver, pee
 // The channel is closed when the orchestrator is stopped.
 func (cpo *ConsumerPaymentOrchestrator) Start() <-chan error {
 	ch := make(chan error, 1)
-	listenChannel := cpo.peerBalanceReceiver.Listen()
 
 	go func() {
 		defer close(ch)
@@ -71,7 +65,7 @@ func (cpo *ConsumerPaymentOrchestrator) Start() <-chan error {
 			select {
 			case <-cpo.stop:
 				return
-			case balance := <-listenChannel:
+			case balance := <-cpo.balanceChan:
 				cpo.promiseTracker.AlignStateWithProvider(promise.State{
 					// TODO: figure out the int64/uint64 mess
 					Seq:    int64(balance.SequenceID),
