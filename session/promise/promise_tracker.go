@@ -48,6 +48,7 @@ func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 		t.current.amount = 0
 		return nil
 	}
+	// TODO safe math anyone?
 	if providerState.amount > t.current.amount {
 		return UnexpectedAmount
 	}
