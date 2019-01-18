@@ -16,8 +16,8 @@ type Issuer interface {
 
 // State defines current state of promise data (seq number and amount)
 type State struct {
-	seq    int64
-	amount int64
+	Seq    int64
+	Amount int64
 }
 
 // ConsumerTracker tracks and issues promises from consumer perspective, also validates states coming from service provider
@@ -40,19 +40,19 @@ func NewConsumerTracker(initial State, consumer, provider identity.Identity, iss
 var UnexpectedAmount = errors.New("unexpected amount")
 
 func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
-	if providerState.seq > t.current.seq {
+	if providerState.Seq > t.current.Seq {
 		// new promise request
-		t.current.seq = providerState.seq
+		t.current.Seq = providerState.Seq
 		// ignore provider state value as new promise amount is always zero,
 		// if provider tries to trick us to send more than expected it will be caught on next align
-		t.current.amount = 0
+		t.current.Amount = 0
 		return nil
 	}
 	// TODO safe math anyone?
-	if providerState.amount > t.current.amount {
+	if providerState.Amount > t.current.Amount {
 		return UnexpectedAmount
 	}
-	if providerState.amount < t.current.amount {
+	if providerState.Amount < t.current.Amount {
 		return UnexpectedAmount
 	}
 
@@ -66,8 +66,8 @@ func (t *ConsumerTracker) IssuePromiseWithAddedAmount(amountToAdd int64) (promis
 			ConsumerAddress: common.HexToAddress(t.consumer.Address),
 		},
 		Receiver: common.HexToAddress(t.receiver.Address),
-		Amount:   t.current.amount + amountToAdd,
-		SeqNo:    t.current.seq,
+		Amount:   t.current.Amount + amountToAdd,
+		SeqNo:    t.current.Seq,
 	}
 	return t.issuer.Issue(promise)
 }

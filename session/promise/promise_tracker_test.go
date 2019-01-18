@@ -16,8 +16,8 @@ var issuer = mockedIssuer{}
 var consumer = identity.Identity{"0x1111111111111"}
 var provider = identity.Identity{"0x2222222222222"}
 var initialState = State{
-	seq:    1,
-	amount: 100,
+	Seq:    1,
+	Amount: 100,
 }
 
 func TestCurrentStatePromiseWithAddedAmountIsIssued(t *testing.T) {
@@ -41,7 +41,7 @@ func TestCurrentStatePromiseWithAddedAmountIsIssued(t *testing.T) {
 func TestCurrentStateIsAlignedWithConsumer(t *testing.T) {
 	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
 
-	assert.NoError(t, tracker.AlignStateWithProvider(State{seq: 1, amount: 100}))
+	assert.NoError(t, tracker.AlignStateWithProvider(State{Seq: 1, Amount: 100}))
 
 	p, err := tracker.IssuePromiseWithAddedAmount(100)
 	assert.NoError(t, err)
@@ -52,19 +52,19 @@ func TestCurrentStateIsAlignedWithConsumer(t *testing.T) {
 func TestBiggerConsumerAmountIsRejected(t *testing.T) {
 	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
 
-	assert.Equal(t, UnexpectedAmount, tracker.AlignStateWithProvider(State{seq: 1, amount: 200}))
+	assert.Equal(t, UnexpectedAmount, tracker.AlignStateWithProvider(State{Seq: 1, Amount: 200}))
 }
 
 func TestSmallerConsumerAmountIsRejected(t *testing.T) {
 	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
 
-	assert.Equal(t, UnexpectedAmount, tracker.AlignStateWithProvider(State{seq: 1, amount: 0}))
+	assert.Equal(t, UnexpectedAmount, tracker.AlignStateWithProvider(State{Seq: 1, Amount: 0}))
 }
 
 func TestIncreasedSeqNumberIsAccepted(t *testing.T) {
 	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
 
-	assert.NoError(t, tracker.AlignStateWithProvider(State{seq: 2, amount: 0}))
+	assert.NoError(t, tracker.AlignStateWithProvider(State{Seq: 2, Amount: 0}))
 
 	p, err := tracker.IssuePromiseWithAddedAmount(59)
 	assert.NoError(t, err)
