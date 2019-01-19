@@ -25,8 +25,20 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
+
+type fakeServiceManager struct {
+}
+
+func (fm *fakeServiceManager) Start(providerID identity.Identity, serviceType string, options service.Options) (err error) {
+	return nil
+}
+
+func (fm *fakeServiceManager) Kill() error {
+	return nil
+}
 
 func TestAddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := httprouter.New()
@@ -41,7 +53,7 @@ func TestAddRoutesForServiceAddsRoutes(t *testing.T) {
 	}{
 		{
 			http.MethodGet, "/service", "",
-			http.StatusOK, `{"status": ""}`,
+			http.StatusOK, `{"status": "NotRunning"}`,
 		},
 	}
 
@@ -57,4 +69,22 @@ func TestAddRoutesForServiceAddsRoutes(t *testing.T) {
 			assert.Equal(t, "", resp.Body.String())
 		}
 	}
+}
+
+func TestNotRunningStateIsReturnedWhenNotStarted(t *testing.T) {
+	serviceEndpoint := NewServiceEndpoint(&fakeServiceManager{})
+
+	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
+	resp := httptest.NewRecorder()
+
+	serviceEndpoint.Status(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+            "status" : "NotRunning"
+        }`,
+		resp.Body.String(),
+	)
 }

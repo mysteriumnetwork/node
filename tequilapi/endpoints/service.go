@@ -22,6 +22,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -33,11 +34,11 @@ type serviceStatusResponse struct {
 
 // ServiceEndpoint struct represents /service resource and it's sub-resources
 type ServiceEndpoint struct {
-	serviceManager *service.Manager
+	serviceManager ServiceManager
 }
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager *service.Manager) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager: serviceManager,
 	}
@@ -55,8 +56,7 @@ func NewServiceEndpoint(serviceManager *service.Manager) *ServiceEndpoint {
 //       "$ref": "#/definitions/ServiceStatusDTO"
 func (se *ServiceEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	statusResponse := serviceStatusResponse{
-		// TODO Create constants for service running states
-		Status: "",
+		Status: string(service.NotRunning),
 	}
 	utils.WriteAsJSON(statusResponse, resp)
 }
@@ -65,4 +65,9 @@ func (se *ServiceEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ h
 func AddRoutesForService(router *httprouter.Router, serviceManager *service.Manager) {
 	serviceEndpoint := NewServiceEndpoint(serviceManager)
 	router.GET("/service", serviceEndpoint.Status)
+}
+
+type ServiceManager interface {
+	Start(providerID identity.Identity, serviceType string, options service.Options) (err error)
+	Kill() error
 }
