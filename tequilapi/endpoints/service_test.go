@@ -55,6 +55,10 @@ func TestAddRoutesForServiceAddsRoutes(t *testing.T) {
 			http.MethodGet, "/service", "",
 			http.StatusOK, `{"status": "NotRunning"}`,
 		},
+		{
+			http.MethodPut, "/service", `{"providerId": "node1", "serviceType": "noop"}`,
+			http.StatusCreated, `{"status": "Running"}`,
+		},
 	}
 
 	for _, test := range tests {
@@ -71,7 +75,7 @@ func TestAddRoutesForServiceAddsRoutes(t *testing.T) {
 	}
 }
 
-func TestNotRunningStateIsReturnedWhenNotStarted(t *testing.T) {
+func Test_ServiceStatus_NotRunningStateIsReturnedWhenNotStarted(t *testing.T) {
 	serviceEndpoint := NewServiceEndpoint(&fakeServiceManager{})
 
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
@@ -85,6 +89,45 @@ func TestNotRunningStateIsReturnedWhenNotStarted(t *testing.T) {
 		`{
             "status" : "NotRunning"
         }`,
+		resp.Body.String(),
+	)
+}
+
+func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
+	serviceEndpoint := NewServiceEndpoint(&fakeServiceManager{})
+
+	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
+	resp := httptest.NewRecorder()
+
+	serviceEndpoint.Create(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message" : "invalid character 'a' looking for beginning of value"
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
+	serviceEndpoint := NewServiceEndpoint(&fakeServiceManager{})
+
+	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
+	resp := httptest.NewRecorder()
+
+	serviceEndpoint.Create(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	assert.JSONEq(t,
+		`{
+			"message" : "validation_error",
+			"errors" : {
+				"providerId" : [ {"code" : "required" , "message" : "Field is required" } ],
+				"serviceType" : [ {"code" : "required" , "message" : "Field is required" } ]
+			}
+		}`,
 		resp.Body.String(),
 	)
 }
