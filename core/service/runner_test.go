@@ -19,7 +19,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -53,55 +52,6 @@ func (mf *mockFactory) serviceFactory() RunnableService {
 
 func wait() {
 	time.Sleep(time.Millisecond * 5)
-}
-
-func Test_RunnerErrsOnNonExistantService(t *testing.T) {
-	m := &mockFactory{}
-	runner := NewRunner(m.serviceFactory)
-	sType := "service"
-	err := runner.StartServiceByType(sType, Options{})
-	assert.Error(t, err)
-	assert.Equal(t, fmt.Sprintf("unknown service type %q", sType), err.Error())
-}
-
-func Test_RunnerErrsOnStart(t *testing.T) {
-	fakeErr := errors.New("error")
-
-	m := &mockFactory{MockRunnable: &MockRunnable{
-		startErr: fakeErr,
-	}}
-	sType := "test"
-
-	runner := NewRunner(m.serviceFactory)
-	runner.Register(sType)
-	go func() {
-		wait()
-		errs := runner.KillAll()
-		assert.Len(t, errs, 0)
-	}()
-
-	err := runner.StartServiceByType(sType, Options{})
-	assert.Error(t, err)
-	assert.Equal(t, fakeErr, err)
-}
-
-func Test_RunnerBubblesErrors(t *testing.T) {
-	fakeErr := errors.New("error")
-	m := &mockFactory{MockRunnable: &MockRunnable{
-		startErr: fakeErr,
-	}}
-	sType := "test"
-
-	runner := NewRunner(m.serviceFactory)
-	runner.Register(sType)
-	go func() {
-		wait()
-		errs := runner.KillAll()
-		assert.Len(t, errs, 0)
-	}()
-	err := runner.StartServiceByType(sType, Options{})
-	assert.NotNil(t, err)
-	assert.Equal(t, fakeErr, err)
 }
 
 func Test_RunnerKillReturnsErrors(t *testing.T) {

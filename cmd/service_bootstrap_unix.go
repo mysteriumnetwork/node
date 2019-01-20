@@ -47,6 +47,4 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 		return wireguard_service.NewManager(location.PubIP, location.OutIP, location.Country, di.NATService), wireguard_service.GetProposal(location.Country), nil
 	})
-
-	di.ServiceRunner.Register(wireguard.ServiceType)
 }

@@ -84,9 +84,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.OpenvpnProtocol)
 		return openvpn_service.NewManager(nodeOptions, transportOptions, location.PubIP, location.OutIP, location.Country, di.ServiceSessionStorage, di.NATService), proposal, nil
 	}
-
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
-	di.ServiceRunner.Register(service_openvpn.ServiceType)
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
@@ -98,8 +96,6 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 
 		return service_noop.NewManager(), service_noop.GetProposal(location.Country), nil
 	})
-
-	di.ServiceRunner.Register(service_noop.ServiceType)
 }
 
 // bootstrapServiceComponents initiates ServiceManager dependency
