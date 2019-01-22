@@ -32,7 +32,7 @@ type PeerPromiseSender interface {
 }
 
 type PromiseTracker interface {
-	AlignStateWithProvider(providerState promise.State)
+	AlignStateWithProvider(providerState promise.State) error
 	IssuePromiseWithAddedAmount(amountToAdd int64) (promises.IssuedPromise, error)
 }
 
@@ -57,24 +57,29 @@ func NewConsumerPaymentOrchestrator(balanceChan chan balance.Message, peerPromis
 // Start starts the payment orchestrator. Returns a read only channel that indicates if any errors are encountered.
 // The channel is closed when the orchestrator is stopped.
 func (cpo *ConsumerPaymentOrchestrator) Start() <-chan error {
-	ch := make(chan error, 1)
+	errorChannel := make(chan error, 1)
 
 	go func() {
-		defer close(ch)
+		defer close(errorChannel)
 		for {
 			select {
 			case <-cpo.stop:
 				return
 			case balance := <-cpo.balanceChan:
-				cpo.promiseTracker.AlignStateWithProvider(promise.State{
+				err := cpo.promiseTracker.AlignStateWithProvider(promise.State{
 					// TODO: figure out the int64/uint64 mess
 					Seq:    int64(balance.SequenceID),
 					Amount: int64(balance.Balance),
 				})
+				if err != nil {
+					errorChannel <- err
+					return
+				}
 				// TODO: figure out the int64/uint64 mess
 				issuedPromise, err := cpo.promiseTracker.IssuePromiseWithAddedAmount(int64(balance.Balance))
 				if err != nil {
-					ch <- err
+					errorChannel <- err
+					return
 				}
 				err = cpo.peerPromiseSender.Send(promise.PromiseMessage{
 					Amount:     uint64(issuedPromise.Promise.Amount),
@@ -82,13 +87,14 @@ func (cpo *ConsumerPaymentOrchestrator) Start() <-chan error {
 					Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),
 				})
 				if err != nil {
-					ch <- err
+					errorChannel <- err
+					return
 				}
 			}
 		}
 	}()
 
-	return ch
+	return errorChannel
 }
 
 // Stop stops the payment orchestrator

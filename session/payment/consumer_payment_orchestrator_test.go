@@ -60,9 +60,9 @@ type MockPromiseTracker struct {
 	errToReturn     error
 }
 
-func (mpt *MockPromiseTracker) AlignStateWithProvider(providerState promise.State) {
+func (mpt *MockPromiseTracker) AlignStateWithProvider(providerState promise.State) error {
 	// in this case we just do nothing really
-	return
+	return nil
 }
 
 func (mpt *MockPromiseTracker) IssuePromiseWithAddedAmount(amountToAdd int64) (promises.IssuedPromise, error) {
