@@ -42,27 +42,19 @@ func (mr *MockRunnable) Kill() error {
 	return mr.killErr
 }
 
-type mockFactory struct {
-	MockRunnable *MockRunnable
-}
-
-func (mf *mockFactory) serviceFactory() RunnableService {
-	return mf.MockRunnable
-}
-
 func wait() {
 	time.Sleep(time.Millisecond * 5)
 }
 
 func Test_RunnerKillReturnsErrors(t *testing.T) {
 	fakeErr := errors.New("error")
-	m := &mockFactory{MockRunnable: &MockRunnable{
-		killErr: fakeErr,
-	}}
 	sType := "test"
+	sInstance := &MockRunnable{
+		killErr: fakeErr,
+	}
 
-	runner := NewRunner(m.serviceFactory)
-	runner.Register(sType)
+	runner := NewRunner()
+	runner.Register(sType, sInstance)
 
 	go func() {
 		wait()

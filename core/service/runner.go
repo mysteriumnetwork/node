@@ -27,26 +27,21 @@ type RunnableService interface {
 	Kill() error
 }
 
-// RunnableServiceFactory creates a new runnable service instance
-type RunnableServiceFactory func() RunnableService
-
 // Runner is responsible for starting the provided service managers
 type Runner struct {
-	serviceFactory  RunnableServiceFactory
 	serviceManagers map[string]RunnableService
 }
 
 // NewRunner returns a new instance of runner with the runnable services
-func NewRunner(factory RunnableServiceFactory) *Runner {
+func NewRunner() *Runner {
 	return &Runner{
-		serviceFactory:  factory,
 		serviceManagers: make(map[string]RunnableService),
 	}
 }
 
 // Register registers a service as a candidate for running
-func (sr *Runner) Register(serviceType string) {
-	sr.serviceManagers[serviceType] = sr.serviceFactory()
+func (sr *Runner) Register(serviceType string, service RunnableService) {
+	sr.serviceManagers[serviceType] = service
 }
 
 // StartServiceByType starts a manager of the given service type if it has one. The method blocks.
