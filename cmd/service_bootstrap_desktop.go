@@ -131,15 +131,11 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig)
 	}
 
-	runnableServiceFactory := func() service.RunnableService {
-		return service.NewManager(
-			identityHandler,
-			di.ServiceRegistry.Create,
-			newDialogWaiter,
-			newDialogHandler,
-			registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory),
-		)
-	}
-
-	di.ServiceRunner = service.NewRunner(runnableServiceFactory)
+	di.ServiceManager = service.NewManager(
+		identityHandler,
+		di.ServiceRegistry.Create,
+		newDialogWaiter,
+		newDialogHandler,
+		registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory),
+	)
 }

@@ -60,12 +60,26 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		Usage:     "Starts and publishes services on Mysterium Network",
 		ArgsUsage: "comma separated list of services to start",
 		Action: func(ctx *cli.Context) error {
-			arg := ctx.Args().Get(0)
-			if arg == "" {
-				return runServices(ctx, &di, licenseCommandName, serviceTypesEnabled)
+			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
+				printTermWarning(licenseCommandName)
+				os.Exit(2)
 			}
-			serviceTypes := strings.Split(arg, ",")
-			return runServices(ctx, &di, licenseCommandName, serviceTypes)
+
+			nodeOptions := cmd.ParseFlagsNode(ctx)
+			if err := di.Bootstrap(nodeOptions); err != nil {
+				return err
+			}
+			if err := di.BootstrapServices(nodeOptions); err != nil {
+				return err
+			}
+
+			serviceTypes := serviceTypesEnabled
+			arg := ctx.Args().Get(0)
+			if arg != "" {
+				serviceTypes = strings.Split(arg, ",")
+			}
+
+			return runServices(ctx, &di, serviceTypes)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
@@ -77,26 +91,13 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	return command
 }
 
-func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName string, serviceTypes []string) error {
-	if !ctx.Bool(agreedTermsConditionsFlag.Name) {
-		printTermWarning(licenseCommandName)
-		os.Exit(2)
-	}
-
+func runServices(ctx *cli.Context, di *cmd.Dependencies, serviceTypes []string) error {
 	// We need a small buffer for the error channel as we'll have quite a few concurrent reporters
 	// The buffer size is determined as follows:
 	// 1 for the signal callback
 	// 1 for the node.Wait()
 	// 1 for each of the services
 	errorChannel := make(chan error, 2+len(serviceTypes))
-
-	nodeOptions := cmd.ParseFlagsNode(ctx)
-	if err := di.Bootstrap(nodeOptions); err != nil {
-		return err
-	}
-	if err := di.BootstrapServices(nodeOptions); err != nil {
-		return err
-	}
 
 	go func() { errorChannel <- di.Node.Wait() }()
 
@@ -105,9 +106,7 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName stri
 		if err != nil {
 			return err
 		}
-		go func(serviceType string) {
-			errorChannel <- di.ServiceRunner.StartServiceByType(serviceType, options)
-		}(serviceType)
+		go func() { errorChannel <- di.ServiceManager.Start(options) }()
 	}
 
 	cmd.RegisterSignalCallback(func() { errorChannel <- nil })

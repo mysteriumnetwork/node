@@ -83,7 +83,9 @@ type Manager struct {
 	discovery *registry.Discovery
 }
 
-// Start starts service - does not block
+// Start starts a service of the given service type if it has one. The method blocks.
+// It passes the options to the start method of the service.
+// If an error occurs in the underlying service, the error is then returned.
 func (manager *Manager) Start(options Options) (err error) {
 	loadIdentity := identity_selector.NewLoader(manager.identityHandler, options.Identity, options.Passphrase)
 	providerID, err := loadIdentity()
@@ -95,7 +97,6 @@ func (manager *Manager) Start(options Options) (err error) {
 	if err != nil {
 		return err
 	}
-
 	manager.service = service
 
 	manager.dialogWaiter, err = manager.dialogWaiterFactory(providerID, proposal.ServiceType)
