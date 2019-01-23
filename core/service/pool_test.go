@@ -19,49 +19,51 @@ package service
 
 import (
 	"errors"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-type MockRunnable struct {
-	killErr  error
-	startErr error
-	wg       sync.WaitGroup
+type mockService struct {
+	killErr error
 }
 
-func (mr *MockRunnable) Start(options Options) (err error) {
-	mr.wg.Add(1)
-	return mr.startErr
-}
-
-func (mr *MockRunnable) Kill() error {
-	mr.wg.Done()
+func (mr *mockService) Stop() error {
 	return mr.killErr
 }
 
-func wait() {
-	time.Sleep(time.Millisecond * 5)
+func Test_Pool_NewPool(t *testing.T) {
+	pool := NewPool()
+	assert.Len(t, pool.services, 0)
 }
 
-func Test_RunnerKillReturnsErrors(t *testing.T) {
-	fakeErr := errors.New("error")
-	sType := "test"
-	sInstance := &MockRunnable{
-		killErr: fakeErr,
+func Test_Pool_Add(t *testing.T) {
+	service := &mockService{}
+
+	pool := NewPool()
+	pool.Add(service)
+
+	assert.Len(t, pool.services, 1)
+}
+
+func Test_Pool_StopAllSuccess(t *testing.T) {
+	service := &mockService{}
+
+	pool := NewPool()
+	pool.Add(service)
+
+	err := pool.StopAll()
+	assert.NoError(t, err)
+}
+
+func Test_Pool_StopAllDoesNotStopOneService(t *testing.T) {
+	service := &mockService{
+		killErr: errors.New("I dont want to stop"),
 	}
 
-	runner := NewRunner()
-	runner.Register(sType, sInstance)
+	pool := NewPool()
+	pool.Add(service)
 
-	go func() {
-		wait()
-		errs := runner.KillAll()
-		assert.Len(t, errs, 1)
-		assert.Equal(t, fakeErr, errs[0])
-	}()
-	err := runner.StartServiceByType(sType, Options{})
-	assert.Nil(t, err)
+	err := pool.StopAll()
+	assert.EqualError(t, err, "Some services did not stop: I dont want to stop")
 }

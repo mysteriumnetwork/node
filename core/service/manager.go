@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/proposals/registry"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 var (
@@ -63,6 +64,7 @@ func NewManager(
 	return &Manager{
 		identityHandler:      identityLoader,
 		serviceFactory:       serviceFactory,
+		servicePool:          NewPool(),
 		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
 		discovery:            discoveryService,
@@ -78,7 +80,7 @@ type Manager struct {
 	dialogHandlerFactory DialogHandlerFactory
 
 	serviceFactory ServiceFactory
-	service        Service
+	servicePool    *Pool
 
 	discovery *registry.Discovery
 }
@@ -97,7 +99,6 @@ func (manager *Manager) Start(options Options) (err error) {
 	if err != nil {
 		return err
 	}
-	manager.service = service
 
 	manager.dialogWaiter, err = manager.dialogWaiterFactory(providerID, proposal.ServiceType)
 	if err != nil {
@@ -116,30 +117,31 @@ func (manager *Manager) Start(options Options) (err error) {
 
 	manager.discovery.Start(providerID, proposal)
 
-	err = manager.service.Serve(providerID)
+	err = service.Serve(providerID)
+	if err != nil {
+		return err
+	}
+	manager.servicePool.Add(service)
+
 	manager.discovery.Wait()
 	return err
 }
 
 // Kill stops service
 func (manager *Manager) Kill() error {
-	var errDialogWaiter, errService error
+	errStop := utils.ErrorCollection{}
 
 	if manager.discovery != nil {
 		manager.discovery.Stop()
 	}
 	if manager.dialogWaiter != nil {
-		errDialogWaiter = manager.dialogWaiter.Stop()
+		if err := manager.dialogWaiter.Stop(); err != nil {
+			errStop.Add(err)
+		}
 	}
-	if manager.service != nil {
-		errService = manager.service.Stop()
+	if err := manager.servicePool.StopAll(); err != nil {
+		errStop.Add(err)
 	}
 
-	if errDialogWaiter != nil {
-		return errDialogWaiter
-	}
-	if errService != nil {
-		return errService
-	}
-	return nil
+	return errStop.Error()
 }
