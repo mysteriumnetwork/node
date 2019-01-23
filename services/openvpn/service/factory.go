@@ -30,7 +30,6 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/nat"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
@@ -42,7 +41,8 @@ func NewManager(
 	serviceOptions Options,
 	location location.ServiceLocationInfo,
 	sessionMap openvpn_session.SessionMap,
-	natService nat.NATService,
+	natService NATService,
+	natPinger NATPinger,
 	mapPort func() (releasePortMapping func()),
 ) *Manager {
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
@@ -55,6 +55,8 @@ func NewManager(
 		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
 		vpnServerFactory:               newServerFactory(nodeOptions, sessionValidator),
+		natPinger:                      natPinger,
+		serviceOptions:                 serviceOptions,
 		serviceOptions:                 serviceOptions,
 		mapPort:                        mapPort,
 	}

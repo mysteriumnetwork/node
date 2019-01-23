@@ -45,11 +45,18 @@ type ProposalFactory func(currentLocation market.Location) market.ServiceProposa
 // SessionConfigNegotiatorFactory initiates ConfigProvider instance during runtime
 type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigNegotiator
 
+// NATPinger
+type NATPinger interface {
+	BindProducer(port int) error
+	WaitForHole() error
+}
+
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
 	natService   nat.NATService
 	mapPort      func() (releasePortMapping func())
 	releasePorts func()
+	natPinger    NATPinger
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 	consumerConfig                 openvpn_service.ConsumerConfig
@@ -87,10 +94,13 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	vpnServerConfig := m.vpnServerConfigFactory(primitives)
 	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
+	// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
+	m.natPinger.BindProducer(m.serviceOptions.OpenvpnPort)
+	m.natPinger.WaitForHole()
+
 	if err = m.vpnServer.Start(); err != nil {
 		return
 	}
-
 	return m.vpnServer.Wait()
 }
 
@@ -112,7 +122,7 @@ func (m *Manager) ProvideConfig(config json.RawMessage) (session.ServiceConfigur
 		return nil, nil, errors.New("Config provider not initialized")
 	}
 	var c openvpn_service.ConsumerConfig
-	error := json.Unmarshal(config, c)
+	error := json.Unmarshal(config, &c)
 	if error != nil {
 		return nil, nil, errors.Wrap(error, "parsing consumer config failed")
 	}

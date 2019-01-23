@@ -45,7 +45,7 @@ type Service interface {
 
 // NATPinger
 type NATPinger interface {
-	Bind(options Options) error
+	BindProducer(port int) error
 	WaitForHole() error
 }
 
@@ -133,10 +133,6 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 
 	go func() {
-		// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
-		manager.natPinger.Bind(options)
-		manager.natPinger.WaitForHole()
-
 		instance.state = Running
 		err = service.Serve(providerID)
 		instance.state = NotRunning

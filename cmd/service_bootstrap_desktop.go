@@ -123,7 +123,8 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		}
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.OpenvpnProtocol)
-		return openvpn_service.NewManager(nodeOptions, transportOptions, location, di.ServiceSessionStorage, di.NATService, mapPort), proposal, nil
+		natService := nat.NewService()
+		return openvpn_service.NewManager(nodeOptions, transportOptions, location, di.ServiceSessionStorage, natService, mapPort, di.NATPinger), proposal, nil
 	}
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 }

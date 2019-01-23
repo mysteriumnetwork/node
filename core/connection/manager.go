@@ -19,12 +19,14 @@ package connection
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -49,7 +51,7 @@ var (
 )
 
 // Creator creates new connection by given options and uses state channel to report state changes
-type Creator func(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
+type Creator func(serviceType string, stateChannnel StateChannel, statisticsChannel StatisticsChannel, resolver ip.Resolver) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
@@ -61,6 +63,11 @@ type SessionInfo struct {
 // Publisher is responsible for publishing given events
 type Publisher interface {
 	Publish(topic string, args ...interface{})
+}
+
+type NATPinger interface {
+	BindConsumer(config ConsumerConfig) error
+	PingProvider(messages json.RawMessage) error
 }
 
 // PaymentIssuer handles the payments for service
@@ -78,6 +85,7 @@ type connectionManager struct {
 	paymentIssuerFactory PaymentIssuerFactory
 	newConnection        Creator
 	eventPublisher       Publisher
+	natPinger            NATPinger
 
 	//these are populated by Connect at runtime
 	ctx         context.Context
@@ -96,6 +104,7 @@ func NewManager(
 	paymentIssuerFactory PaymentIssuerFactory,
 	connectionCreator Creator,
 	eventPublisher Publisher,
+	natPinger NATPinger,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:            dialogCreator,
@@ -103,11 +112,12 @@ func NewManager(
 		newConnection:        connectionCreator,
 		status:               statusNotConnected(),
 		eventPublisher:       eventPublisher,
+		natPinger:            natPinger,
 		cleanup:              make([]func() error, 0),
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
+func (manager *connectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams, resolver ip.Resolver) (err error) {
 	if manager.Status().State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -131,7 +141,7 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 	stateChannel := make(chan State, 10)
 	statisticsChannel := make(chan consumer.SessionStatistics, 10)
 
-	connection, err := manager.newConnection(proposal.ServiceType, stateChannel, statisticsChannel)
+	connection, err := manager.newConnection(proposal.ServiceType, stateChannel, statisticsChannel, resolver)
 	if err != nil {
 		return err
 	}
@@ -209,6 +219,16 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 	}
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
+	if err != nil {
+		return session.SessionDto{}, nil, err
+	}
+
+	err = manager.natPinger.BindConsumer(sessionCreateConfig)
+	if err != nil {
+		return session.SessionDto{}, nil, err
+	}
+
+	err = manager.natPinger.PingProvider(paymentInfo)
 	if err != nil {
 		return session.SessionDto{}, nil, err
 	}

@@ -69,7 +69,7 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get consumer config")
 	}
-	return ConsumerConfig{
+	return &ConsumerConfig{
 		// TODO: randomly generated port should get here
 		// consumer should have lport: 1194 port set.
 		Port: 50221,

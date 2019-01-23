@@ -20,6 +20,7 @@ package connection
 import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -57,7 +58,7 @@ type PromiseIssuerCreator func(issuerID identity.Identity, dialog communication.
 // Manager interface provides methods to manage connection
 type Manager interface {
 	// Connect creates new connection from given consumer to provider, reports error if connection already exists
-	Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) error
+	Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams, resolver ip.Resolver) error
 	// Status queries current status of connection
 	Status() Status
 	// Disconnect closes established connection, reports error if no connection

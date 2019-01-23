@@ -38,7 +38,10 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort int) {
 	// TODO: generate client local port randomly from least used ports
 	//  if port is taken on a client machine, next attempt would use the other port
 	c.SetParam("lport", "50221")
-	c.SetParam("remote-cert-tls", "server")
+	c.SetFlag("float")
+	//c.SetParam("remote-cert-tls", "server")
+	// more on this: https://www.v13.gr/blog/?p=386
+	c.SetParam("remote-cert-ku", "84")
 	c.SetFlag("auth-user-pass")
 	c.SetFlag("management-query-passwords")
 }

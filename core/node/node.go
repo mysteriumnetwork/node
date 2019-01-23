@@ -26,7 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 )
 
-type StartNATPing func() error
+type StartNATPing func()
 
 // NewNode function creates new Mysterium node by given options
 func NewNode(
@@ -82,10 +82,7 @@ func (node *Node) Start() error {
 
 	log.Infof("Api started on: %v", address)
 
-	err = node.startNATPing()
-	if err != nil {
-		return err
-	}
+	go node.startNATPing()
 
 	return nil
 }
