@@ -85,20 +85,20 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
-func (c *client) PeerStats() (consumer.SessionStatistics, error) {
+func (c *client) PeerStats() (stats consumer.SessionStatistics, lastHandshake int, err error) {
 	d, err := c.wgClient.Device(c.iface)
 	if err != nil {
-		return consumer.SessionStatistics{}, err
+		return consumer.SessionStatistics{}, 0, err
 	}
 
 	if len(d.Peers) != 1 {
-		return consumer.SessionStatistics{}, errors.New("exactly 1 peer expected")
+		return consumer.SessionStatistics{}, 0, errors.New("exactly 1 peer expected")
 	}
 
 	return consumer.SessionStatistics{
 		BytesReceived: uint64(d.Peers[0].ReceiveBytes),
 		BytesSent:     uint64(d.Peers[0].TransmitBytes),
-	}, nil
+	}, int(d.Peers[0].LastHandshakeTime.Unix()), nil
 }
 
 func (c *client) DestroyDevice(name string) error {

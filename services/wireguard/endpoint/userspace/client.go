@@ -97,21 +97,20 @@ func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
 	return addDefaultRoute(iface)
 }
 
-func (c *client) PeerStats() (consumer.SessionStatistics, error) {
+func (c *client) PeerStats() (stats consumer.SessionStatistics, lastHandshake int, err error) {
 	peers, err := c.devAPI.Peers()
 	if err != nil {
-		return consumer.SessionStatistics{}, nil
+		return consumer.SessionStatistics{}, 0, nil
 	}
 
 	if len(peers) != 1 {
-		return consumer.SessionStatistics{}, errors.New("exactly 1 peer expected")
+		return consumer.SessionStatistics{}, 0, errors.New("exactly 1 peer expected")
 	}
 
 	return consumer.SessionStatistics{
 		BytesSent:     peers[0].Stats.Sent,
 		BytesReceived: peers[0].Stats.Received,
-	}, nil
-
+	}, peers[0].LastHanshake, nil
 }
 
 func (c *client) DestroyDevice(name string) error {

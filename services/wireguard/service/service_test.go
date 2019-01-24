@@ -99,8 +99,8 @@ func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { ret
 func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
 func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }
 func (fce *fakeConnectionEndpoint) ConfigureRoutes(_ net.IP) error         { return nil }
-func (fce *fakeConnectionEndpoint) PeerStats() (consumer.SessionStatistics, error) {
-	return consumer.SessionStatistics{}, nil
+func (fce *fakeConnectionEndpoint) PeerStats() (consumer.SessionStatistics, int, error) {
+	return consumer.SessionStatistics{}, 1, nil
 }
 
 func newManagerStub(pub, out, country string) *Manager {
