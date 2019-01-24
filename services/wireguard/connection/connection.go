@@ -20,12 +20,14 @@ package connection
 import (
 	"encoding/json"
 	"sync"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[connection-wireguard] "
@@ -75,6 +77,14 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return err
 	}
 
+	if err := c.waitHandshake(); err != nil {
+		c.stateChannel <- connection.NotConnected
+		c.connection.Done()
+		return errors.Wrap(err, "failed to wait peer handshake")
+	}
+
+	go c.runPeriodically(time.Second)
+
 	c.stateChannel <- connection.Connected
 	return nil
 }
@@ -107,4 +117,40 @@ func (c *Connection) Stop() {
 	c.stateChannel <- connection.NotConnected
 	c.connection.Done()
 	close(c.stateChannel)
+	close(c.statisticsChannel)
+}
+
+func (c *Connection) runPeriodically(duration time.Duration) {
+	for {
+		select {
+		case <-time.After(duration):
+			stats, _, err := c.connectionEndpoint.PeerStats()
+			if err != nil {
+				log.Error(logPrefix, "failed to receive peer stats: ", err)
+				break
+			}
+			c.statisticsChannel <- stats
+
+		case <-c.stopChannel:
+			return
+		}
+	}
+}
+
+func (c *Connection) waitHandshake() error {
+	for {
+		select {
+		case <-time.After(100 * time.Millisecond):
+			_, lastHandshake, err := c.connectionEndpoint.PeerStats()
+			if err != nil {
+				return err
+			}
+			if lastHandshake != 0 {
+				return nil
+			}
+
+		case <-c.stopChannel:
+			return errors.New("stop received")
+		}
+	}
 }

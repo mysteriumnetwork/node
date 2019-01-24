@@ -22,6 +22,7 @@ import (
 	"net"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -34,6 +35,7 @@ type wgClient interface {
 	ConfigureRoutes(iface string, ip net.IP) error
 	DestroyDevice(name string) error
 	AddPeer(name string, peer wg.PeerInfo) error
+	PeerStats() (stats consumer.SessionStatistics, lastHandshake int, err error)
 	Close() error
 }
 
@@ -101,6 +103,10 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 // AddPeer adds new wireguard peer to the wireguard network interface.
 func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr) error {
 	return ce.wgClient.AddPeer(ce.iface, peerInfo{endpoint, publicKey})
+}
+
+func (ce *connectionEndpoint) PeerStats() (stats consumer.SessionStatistics, lastHandshake int, err error) {
+	return ce.wgClient.PeerStats()
 }
 
 // Config provides wireguard service configuration for the current connection endpoint.
