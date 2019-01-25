@@ -28,44 +28,13 @@ import (
 )
 
 type MockPeerBalanceSender struct {
-	mockError     error
-	chanToWriteTo chan balance.Message
+	mockError       error
+	balanceMessages chan balance.Message
 }
 
 func (mpbs *MockPeerBalanceSender) Send(b balance.Message) error {
-	if mpbs.chanToWriteTo != nil {
-		mpbs.chanToWriteTo <- b
-	}
+	mpbs.balanceMessages <- b
 	return mpbs.mockError
-}
-
-type MockPeerPromiseReceiver struct {
-	lastBalance    balance.Message
-	balanceChannel chan balance.Message
-	promiseChannel chan promise.PromiseMessage
-}
-
-func NewMockPeerPromiseReceiver() *MockPeerPromiseReceiver {
-	mpr := &MockPeerPromiseReceiver{
-		balanceChannel: make(chan balance.Message, 1),
-		promiseChannel: make(chan promise.PromiseMessage, 1),
-	}
-	go mpr.acceptBalances()
-	return mpr
-}
-
-func (mppr *MockPeerPromiseReceiver) acceptBalances() {
-	for v := range mppr.balanceChannel {
-		mppr.lastBalance = v
-		mppr.promiseChannel <- promise.PromiseMessage{
-			SequenceID: v.SequenceID,
-			Signature:  "test",
-		}
-	}
-}
-
-func (mppr *MockPeerPromiseReceiver) Listen() <-chan promise.PromiseMessage {
-	return mppr.promiseChannel
 }
 
 type MockBalanceTracker struct {
@@ -85,22 +54,21 @@ func (mpv *MockPromiseValidator) Validate(promise.PromiseMessage) bool {
 }
 
 var (
-	PromiseReceiver = NewMockPeerPromiseReceiver()
-	BalanceSender   = &MockPeerBalanceSender{chanToWriteTo: PromiseReceiver.balanceChannel}
-	MBT             = &MockBalanceTracker{balanceMessage: balance.Message{Balance: 0, SequenceID: 1}}
-	MPV             = &MockPromiseValidator{isValid: true}
+	promiseChannel = make(chan promise.PromiseMessage)
+	BalanceSender  = &MockPeerBalanceSender{balanceMessages: make(chan balance.Message)}
+	MBT            = &MockBalanceTracker{balanceMessage: balance.Message{Balance: 0, SequenceID: 1}}
+	MPV            = &MockPromiseValidator{isValid: true}
 )
 
 func NewMockProviderOrchestrator() *ProviderPaymentOrchestrator {
-	return &ProviderPaymentOrchestrator{
-		stop:                make(chan struct{}, 1),
-		period:              time.Millisecond * 1,
-		promiseWaitTimeout:  time.Millisecond * 1,
-		peerBalanceSender:   BalanceSender,
-		peerPromiseReceiver: PromiseReceiver,
-		balanceTracker:      MBT,
-		promiseValidator:    MPV,
-	}
+	return NewProviderPaymentOrchestrator(
+		BalanceSender,
+		MBT,
+		promiseChannel,
+		time.Millisecond*1,
+		time.Millisecond*1,
+		MPV,
+	)
 }
 
 func Test_ProviderPaymentOchestratorStartStop(t *testing.T) {
@@ -119,7 +87,7 @@ func Test_ProviderPaymentOchestratorSendsBalance(t *testing.T) {
 	_ = orch.Start()
 
 	time.Sleep(time.Millisecond * 2)
-	assert.Exactly(t, balance.Message{SequenceID: 1, Balance: 0}, PromiseReceiver.lastBalance)
+	assert.Exactly(t, balance.Message{SequenceID: 1, Balance: 0}, <-BalanceSender.balanceMessages)
 }
 
 func Test_ProviderPaymentOchestratorSendsBalance_Timeouts(t *testing.T) {
@@ -129,6 +97,9 @@ func Test_ProviderPaymentOchestratorSendsBalance_Timeouts(t *testing.T) {
 	// add a shorter timeout
 	orch.promiseWaitTimeout = time.Nanosecond
 	ch := orch.Start()
+
+	//consume message but never respond
+	<-BalanceSender.balanceMessages
 
 	for v := range ch {
 		assert.Equal(t, ErrPromiseWaitTimeout, v)
@@ -146,6 +117,13 @@ func Test_ProviderPaymentOchestratorInvalidPromise(t *testing.T) {
 	}()
 
 	ch := orch.Start()
+
+	<-BalanceSender.balanceMessages
+	promiseChannel <- promise.PromiseMessage{
+		Amount:     100,
+		SequenceID: 1,
+		Signature:  "0x1111",
+	}
 
 	for v := range ch {
 		assert.Equal(t, ErrPromiseValidationFailed, v)

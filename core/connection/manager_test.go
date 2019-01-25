@@ -62,10 +62,10 @@ func (tc *testContext) SetupTest() {
 	defer tc.Unlock()
 
 	tc.stubPublisher = NewStubPublisher()
-	tc.fakeDialog = &fakeDialog{sessionID: establishedSessionID}
 	dialogCreator := func(consumer, provider identity.Identity, contact market.Contact) (communication.Dialog, error) {
-		tc.RLock()
-		defer tc.RUnlock()
+		tc.Lock()
+		defer tc.Unlock()
+		tc.fakeDialog = &fakeDialog{sessionID: establishedSessionID}
 		return tc.fakeDialog, nil
 	}
 

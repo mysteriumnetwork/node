@@ -28,21 +28,6 @@ import (
 	"github.com/mysteriumnetwork/payments/promises"
 )
 
-type MockPeerBalanceReceiver struct {
-	balanceChannel chan balance.Message
-}
-
-func NewMockPeerBalanceReceiver() *MockPeerBalanceReceiver {
-	mpbr := &MockPeerBalanceReceiver{
-		balanceChannel: make(chan balance.Message, 1),
-	}
-	return mpbr
-}
-
-func (mpbr *MockPeerBalanceReceiver) Listen() <-chan balance.Message {
-	return mpbr.balanceChannel
-}
-
 type MockPeerPromiseSender struct {
 	mockError     error
 	chanToWriteTo chan promise.PromiseMessage
@@ -70,7 +55,7 @@ func (mpt *MockPromiseTracker) IssuePromiseWithAddedAmount(amountToAdd int64) (p
 }
 
 var (
-	balanceReceiver = NewMockPeerBalanceReceiver()
+	balanceChannel  = make(chan balance.Message, 1)
 	promiseToReturn = promises.IssuedPromise{
 		Promise: promises.Promise{
 			SeqNo:  1,
@@ -82,12 +67,11 @@ var (
 )
 
 func NewTestConsumerPaymentOrchestrator() *ConsumerPaymentOrchestrator {
-	return &ConsumerPaymentOrchestrator{
-		stop:                make(chan struct{}, 1),
-		peerBalanceReceiver: balanceReceiver,
-		peerPromiseSender:   promiseSender,
-		promiseTracker:      promiseTracker,
-	}
+	return NewConsumerPaymentOrchestrator(
+		balanceChannel,
+		promiseSender,
+		promiseTracker,
+	)
 }
 
 func Test_ConsumerPaymentOrchestrator_Start_Stop(t *testing.T) {
@@ -105,7 +89,7 @@ func Test_ConsumerPaymentOrchestrator_SendsPromiseOnBalance(t *testing.T) {
 	cpo := NewTestConsumerPaymentOrchestrator()
 	_ = cpo.Start()
 	defer cpo.Stop()
-	balanceReceiver.balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
+	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
 	for v := range promiseSender.chanToWriteTo {
 		assert.Exactly(t, promise.PromiseMessage{SequenceID: 1, Amount: 0, Signature: "0x"}, v)
 		break
@@ -121,7 +105,7 @@ func Test_ConsumerPaymentOrchestrator_ReportsIssuingErrors(t *testing.T) {
 	defer func() { promiseTracker.errToReturn = nil }()
 	promiseTracker.errToReturn = err
 
-	balanceReceiver.balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
+	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
 	for v := range ch {
 		assert.Equal(t, err, v)
 		break
@@ -137,7 +121,7 @@ func Test_ConsumerPaymentOrchestrator_ReportsSendingErrors(t *testing.T) {
 	defer func() { promiseSender.mockError = nil }()
 	promiseSender.mockError = err
 
-	balanceReceiver.balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
+	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
 	for v := range ch {
 		assert.Equal(t, err, v)
 		break

@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mysteriumnetwork/node/session/promise/validators"
+
 	"github.com/asaskevich/EventBus"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -313,7 +315,7 @@ func newSessionManagerFactory(
 			dialog.Receive(listener.GetConsumer())
 			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 100)
 
-			return session_payment.NewProviderPaymentOrchestrator(sender, tracker, promiseChan, time.Second*5, time.Second*1, &promise.NoopValidator{})
+			return session_payment.NewProviderPaymentOrchestrator(sender, tracker, promiseChan, time.Second*5, time.Second*1, &validators.NoopValidator{})
 		}
 		return session.NewManager(
 			proposal,

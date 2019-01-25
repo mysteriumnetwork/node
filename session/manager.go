@@ -112,14 +112,14 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 	sessionInstance.Done = make(chan struct{})
 	sessionInstance.Config = config
 
-	sessionInstance.PaymentOrchestrator = manager.paymentOrchestratorFactory()
-
 	err = manager.promiseProcessor.Start(manager.currentProposal)
 	if err != nil {
 		return
 	}
 
-	errChan := sessionInstance.PaymentOrchestrator.Start()
+	//TODO: either remove promise processor or this
+	paymentOrchestrator := manager.paymentOrchestratorFactory()
+	errChan := paymentOrchestrator.Start()
 	go func() {
 		for err := range errChan {
 			if err != nil {
@@ -127,6 +127,11 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 				// manager.Destroy(consumerID, string(sessionInstance.ID))
 			}
 		}
+	}()
+
+	go func() {
+		<-sessionInstance.Done
+		paymentOrchestrator.Stop()
 	}()
 
 	manager.sessionStorage.Add(sessionInstance)
@@ -152,8 +157,6 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	if err != nil {
 		return err
 	}
-
-	sessionInstance.PaymentOrchestrator.Stop()
 
 	manager.sessionStorage.Remove(ID(sessionID))
 	close(sessionInstance.Done)

@@ -65,17 +65,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 				destroyCallback()
 			}()
 		}
-
-		// TODO: the last promise info should also be loaded here somehow
-		lastPromise := LastPromise{
-			SequenceID: 1,
-			Amount:     0,
-		}
-		pi := PaymentInfo{
-			LastPromise: lastPromise,
-			FreeCredit:  100,
-		}
-		return responseWithSession(sessionInstance, pi), nil
+		return responseWithSession(sessionInstance, nil), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
 	default:
@@ -83,7 +73,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	}
 }
 
-func responseWithSession(sessionInstance Session, pi PaymentInfo) CreateResponse {
+func responseWithSession(sessionInstance Session, pi *PaymentInfo) CreateResponse {
 	serializedConfig, err := json.Marshal(sessionInstance.Config)
 	if err != nil {
 		// Failed to serialize session
@@ -97,6 +87,6 @@ func responseWithSession(sessionInstance Session, pi PaymentInfo) CreateResponse
 			ID:     sessionInstance.ID,
 			Config: serializedConfig,
 		},
-		PaymentInfo: &pi,
+		PaymentInfo: pi,
 	}
 }
