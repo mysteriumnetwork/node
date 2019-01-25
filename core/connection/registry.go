@@ -17,11 +17,9 @@
 
 package connection
 
-import "github.com/mysteriumnetwork/node/core/ip"
-
 // Factory represents a connection constructor
 type Factory interface {
-	Create(stateChannel StateChannel, statisticsChannel StatisticsChannel, resolver ip.Resolver) (Connection, error)
+	Create(stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
 }
 
 // Registry holds of all plugable connections
@@ -42,11 +40,11 @@ func (registry *Registry) Register(serviceType string, creator Factory) {
 }
 
 // CreateConnection create plugable connection
-func (registry *Registry) CreateConnection(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel, resolver ip.Resolver) (Connection, error) {
+func (registry *Registry) CreateConnection(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error) {
 	factory, exists := registry.creators[serviceType]
 	if !exists {
 		return nil, ErrUnsupportedServiceType
 	}
 
-	return factory.Create(stateChannel, statisticsChannel, resolver)
+	return factory.Create(stateChannel, statisticsChannel)
 }

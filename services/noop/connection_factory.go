@@ -19,14 +19,13 @@ package noop
 
 import (
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/ip"
 )
 
 // ConnectionFactory is the noop connection factory
 type ConnectionFactory struct{}
 
 // Create creates a new noop connnection
-func (cf *ConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel, resolver ip.Resolver) (connection.Connection, error) {
+func (cf *ConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 	return &Connection{
 		stateChannel: stateChannel,
 	}, nil

@@ -23,27 +23,30 @@ import (
 	"net"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
-	"golang.org/x/net/ipv4"
-
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/pkg/errors"
+	"golang.org/x/net/ipv4"
 )
 
-const prefix = "[ NATPinger ] "
-const pingInterval = 100
+const prefix = "[NATPinger] "
+const pingInterval = 200
 
+type ConfigParser interface {
+	Parse(config json.RawMessage) (ip string, port int, err error)
+}
+
+// Pinger represents NAT pinger structure
 type Pinger struct {
 	localPort     int
 	pingTarget    chan json.RawMessage
 	pingReceived  chan bool
 	pingCancelled chan bool
+	eventsTracker *EventsTracker
+	configParser  ConfigParser
 }
 
-func NewPingerFactory() *Pinger {
+// NewPingerFactory returns Pinger instance
+func NewPingerFactory(tracker *EventsTracker, parser ConfigParser) *Pinger {
 	target := make(chan json.RawMessage)
 	received := make(chan bool)
 	cancel := make(chan bool)
@@ -51,23 +54,32 @@ func NewPingerFactory() *Pinger {
 		pingTarget:    target,
 		pingReceived:  received,
 		pingCancelled: cancel,
+		eventsTracker: tracker,
+		configParser:  parser,
 	}
 }
 
+// Start starts NAT pinger and waits for pingTarget to ping
 func (p *Pinger) Start() {
 	log.Info(prefix, "Starting a NAT pinger")
 	for {
 		select {
 		case dst := <-p.pingTarget:
-			IP, port, err := parseConsumerConfig(dst)
+			IP, port, err := p.configParser.Parse(dst)
+			log.Infof("%s ping target received: IP: %v, port: %v", prefix, IP, port)
+			if port == 0 {
+				// client did not sent its port to ping to, attempting with service start
+				p.pingReceived <- true
+				continue
+			}
 			conn, err := p.getConnection(IP, port)
 			if err != nil {
 				log.Error(errors.Wrap(err, "failed to get connection"))
-				return
+				continue
 			}
 			go p.ping(conn)
 			time.Sleep(pingInterval * time.Millisecond)
-			p.pingReceiverPlain(conn)
+			p.pingReceiver(conn)
 			p.pingReceived <- true
 			log.Info(prefix, "ping received, waiting for a new connection")
 			conn.Close()
@@ -77,21 +89,22 @@ func (p *Pinger) Start() {
 	return
 }
 
-func (p *Pinger) PingProvider(sessionConfig json.RawMessage) error {
+// PingProvider pings provider determined by destination provided in sessionConfig
+func (p *Pinger) PingProvider(ip string, port int) error {
 	log.Info(prefix, "NAT pinging to provider")
 
-	spew.Dump(sessionConfig)
-	ip, port, err := parseProviderConfig(sessionConfig)
 	conn, err := p.getConnection(ip, port)
 	if err != nil {
 		return errors.Wrap(err, "failed to get connection")
 	}
 
+	//let provider ping first
+	time.Sleep(20 * time.Millisecond)
 	go p.ping(conn)
 	time.Sleep(pingInterval * time.Millisecond)
-	p.pingReceiverPlain(conn)
+	p.pingReceiver(conn)
 	// wait for provider to startup
-	time.Sleep(4 * time.Second)
+	time.Sleep(3 * time.Second)
 	conn.Close()
 
 	return nil
@@ -124,26 +137,6 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 	return nil
 }
 
-func parseConsumerConfig(config json.RawMessage) (IP string, port int, err error) {
-	var c openvpn.ConsumerConfig
-	err = json.Unmarshal(config, &c)
-	if err != nil {
-		return "", 0, errors.Wrap(err, "parsing consumer address:port failed")
-	}
-	return c.IP, c.Port, nil
-}
-
-func parseProviderConfig(sessionConfig json.RawMessage) (IP string, port int, err error) {
-	var vpnConfig openvpn.VPNConfig
-	err = json.Unmarshal(sessionConfig, &vpnConfig)
-	log.Infof(prefix, "Provider Config: %v", vpnConfig)
-	spew.Dump(vpnConfig)
-	if err != nil {
-		return "", 0, errors.Wrap(err, "parsing provider address:port failed")
-	}
-	return vpnConfig.RemoteIP, vpnConfig.RemotePort, nil
-}
-
 func (p *Pinger) getConnection(ip string, port int) (*net.UDPConn, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
 	if err != nil {
@@ -153,44 +146,38 @@ func (p *Pinger) getConnection(ip string, port int) (*net.UDPConn, error) {
 	log.Info(prefix, "remote socket: ", udpAddr.String())
 
 	conn, err := net.DialUDP("udp", &net.UDPAddr{Port: p.localPort}, udpAddr)
-
-	log.Info(prefix, "local socket: ", conn.LocalAddr().String())
-
 	if err != nil {
 		return nil, err
 	}
+
+	log.Info(prefix, "local socket: ", conn.LocalAddr().String())
+
 	return conn, nil
 }
 
+// PingTargetChan returns a channel which relays ping target address data
 func (p *Pinger) PingTargetChan() chan json.RawMessage {
 	return p.pingTarget
 }
 
-func (p *Pinger) BindProducer(port int) error {
-	/*
-		// TODO: parse service options and bind to localport
-		openvpnConfig, ok := options.Options.(openvpn_service.Options)
-		if ok {
-			p.localPort = openvpnConfig.OpenvpnPort
-		} else {
-			return errors.New("Failed to use producer config")
-		}
-	*/
+// BindProvider binds local port from which Pinger will start its pinging
+func (p *Pinger) BindProvider(port int) {
+	log.Info(prefix, "provided bind port: ", port)
 	p.localPort = port
-	return nil
 }
 
-func (p *Pinger) BindConsumer(config connection.ConsumerConfig) error {
-	openvpnConfig, ok := config.(*openvpn.ConsumerConfig)
-	if ok {
-		p.localPort = openvpnConfig.Port
-	} else {
-		return errors.New("Failed to use consumer config")
-	}
-	return nil
+// BindPort gets port from session creation config and binds Pinger port to ping from
+func (p *Pinger) BindPort(port int) {
+	p.localPort = port
 }
 
+// WaitForHole waits while ping from remote peer is received
 func (p *Pinger) WaitForHole() error {
+	// TODO: check if three is a nat to punch
+	if p.eventsTracker.WaitForEvent() == EventSuccess {
+		return nil
+	}
+	log.Info(prefix, "waiting for NAT pin-hole")
 	_, ok := <-p.pingReceived
 	if ok == false {
 		return errors.New("NATPinger channel has been closed")
@@ -198,7 +185,7 @@ func (p *Pinger) WaitForHole() error {
 	return nil
 }
 
-func (p *Pinger) pingReceiverPlain(conn *net.UDPConn) {
+func (p *Pinger) pingReceiver(conn *net.UDPConn) {
 	for {
 		var buf [512]byte
 		n, err := conn.Read(buf[0:])

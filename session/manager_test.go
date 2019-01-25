@@ -18,6 +18,7 @@
 package session
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -63,9 +64,13 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
+	natPingerChan := func() chan json.RawMessage { return make(chan json.RawMessage, 1) }
+	lastSessionShutdown := make(chan bool)
 
-	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPingerChan, lastSessionShutdown)
+
+	requestConfig := json.RawMessage{}
+	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, requestConfig)
 	expectedResult.Done = sessionInstance.Done
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedResult, sessionInstance)
@@ -73,9 +78,13 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
+	natPingerChan := func() chan json.RawMessage { return make(chan json.RawMessage, 1) }
+	lastSessionShutdown := make(chan bool)
 
-	sessionInstance, err := manager.Create(consumerID, consumerID, 69)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPingerChan, lastSessionShutdown)
+
+	requestConfig := json.RawMessage{}
+	sessionInstance, err := manager.Create(consumerID, consumerID, 69, nil, requestConfig)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Exactly(t, Session{}, sessionInstance)
 }

@@ -43,9 +43,9 @@ type Service interface {
 	ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error)
 }
 
-// NATPinger
+// NATPinger defines Pinger interface for Provider
 type NATPinger interface {
-	BindProducer(port int) error
+	BindProvider(port int)
 	WaitForHole() error
 }
 

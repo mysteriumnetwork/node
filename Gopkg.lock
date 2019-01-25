@@ -593,6 +593,7 @@
     "github.com/asdine/storm",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
+    "github.com/davecgh/go-spew/spew",
     "github.com/ethereum/go-ethereum/accounts",
     "github.com/ethereum/go-ethereum/accounts/abi/bind",
     "github.com/ethereum/go-ethereum/accounts/keystore",
@@ -635,6 +636,7 @@
     "github.com/stretchr/testify/suite",
     "github.com/urfave/cli",
     "golang.org/x/crypto/curve25519",
+    "golang.org/x/net/ipv4",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

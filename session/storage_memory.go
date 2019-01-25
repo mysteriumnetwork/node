@@ -46,6 +46,9 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 // Find returns underlying session instance
 func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	sessionInstance, found := storage.sessionMap[id]
+	if found && (1 == len(storage.sessionMap)) {
+		sessionInstance.Last = true
+	}
 	return sessionInstance, found
 }
 

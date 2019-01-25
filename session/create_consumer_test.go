@@ -141,7 +141,7 @@ type managerFake struct {
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID, issuerID identity.Identity, proposalID int) (Session, error) {
+func (manager *managerFake) Create(consumerID, issuerID identity.Identity, proposalID int, config ServiceConfiguration, requestConfig json.RawMessage) (Session, error) {
 	manager.lastConsumerID = consumerID
 	manager.lastIssuerID = issuerID
 	manager.lastProposalID = proposalID

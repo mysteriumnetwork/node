@@ -69,7 +69,8 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 					location.OutIP,
 					"UDP",
 					port,
-					"Myst node wireguard(tm) port mapping")
+					"Myst node wireguard(tm) port mapping",
+					di.EventBus)
 			}
 
 			return wireguard_service.NewManager(location, di.NATService, mapPort, wgOptions),
@@ -119,12 +120,13 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 				location.OutIP,
 				transportOptions.OpenvpnProtocol,
 				transportOptions.OpenvpnPort,
-				"Myst node OpenVPN port mapping")
+				"Myst node OpenVPN port mapping",
+				di.EventBus)
 		}
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.OpenvpnProtocol)
 		natService := nat.NewService()
-		return openvpn_service.NewManager(nodeOptions, transportOptions, location, di.ServiceSessionStorage, natService, mapPort, di.NATPinger), proposal, nil
+		return openvpn_service.NewManager(nodeOptions, transportOptions, location, di.ServiceSessionStorage, natService, di.NATPinger, mapPort, di.LastSessionShutdown, di.NATTracker), proposal, nil
 	}
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 }
@@ -165,7 +167,13 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator) communication.DialogHandler {
-		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, di.PromiseStorage, nodeOptions, di.NATPinger.PingTargetChan)
+		sessionManagerFactory := newSessionManagerFactory(
+			proposal, di.ServiceSessionStorage,
+			di.PromiseStorage,
+			nodeOptions,
+			di.NATPinger.PingTargetChan,
+			di.LastSessionShutdown,
+			di.NATTracker)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage)
 	}
 	newDiscovery := func() *registry.Discovery {

@@ -18,6 +18,8 @@
 package openvpn
 
 import (
+	"github.com/cihub/seelog"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -28,22 +30,36 @@ import (
 var ErrProcessNotStarted = errors.New("process not started yet")
 
 // processFactory creates a new openvpn process
-type processFactory func(options connection.ConnectOptions) (openvpn.Process, error)
+type processFactory func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error)
 
 // Client takes in the openvpn process and works with it
 type Client struct {
 	process        openvpn.Process
 	processFactory processFactory
 	ipResolver     ip.Resolver
+	natPinger      connection.NATPinger
+	publicIP       string
 }
 
 // Start starts the connection
 func (c *Client) Start(options connection.ConnectOptions) error {
-	proc, err := c.processFactory(options)
+	seelog.Info("starting connection")
+	proc, clientConfig, err := c.processFactory(options)
+	seelog.Info("client config factory error: ", err)
+	spew.Dump(clientConfig)
+	seelog.Flush()
 	if err != nil {
 		return err
 	}
 	c.process = proc
+	seelog.Infof("client config: %v", clientConfig)
+
+	c.natPinger.BindPort(clientConfig.LocalPort)
+	err = c.natPinger.PingProvider(clientConfig.vpnNConfig.RemoteIP, clientConfig.vpnNConfig.RemotePort)
+	if err != nil {
+		return err
+	}
+
 	return c.process.Start()
 }
 
@@ -64,14 +80,15 @@ func (c *Client) Stop() {
 
 // GetConfig returns the consumer-side configuration.
 func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
-	// TODO: we might want to perform this check only for nodes behind nat
 	ip, err := c.ipResolver.GetPublicIP()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get consumer config")
 	}
+	c.publicIP = ip
 	return &ConsumerConfig{
-		// TODO: randomly generated port should get here
-		// consumer should have lport: 1194 port set.
+		// TODO: since GetConfig is executed before Start we cannot access VPNConfig structure yet
+		// TODO skip sending port here, since provider generates port for consumer in VPNConfig
+		//Port: c.vpnClientConfig.LocalPort,
 		Port: 50221,
 		IP:   ip,
 	}, nil
@@ -81,6 +98,7 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 type VPNConfig struct {
 	RemoteIP        string `json:"remote"`
 	RemotePort      int    `json:"port"`
+	LocalPort       int    `json:"lport"`
 	RemoteProtocol  string `json:"protocol"`
 	TLSPresharedKey string `json:"TLSPresharedKey"`
 	CACertificate   string `json:"CACertificate"`

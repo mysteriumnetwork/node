@@ -22,6 +22,8 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/nat/traversal"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -70,6 +72,10 @@ type Storage interface {
 // BalanceTrackerFactory returns a new instance of balance tracker
 type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (BalanceTracker, error)
 
+type NATEventGetter interface {
+	LastEvent() traversal.Event
+}
+
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal market.ServiceProposal,
@@ -77,6 +83,8 @@ func NewManager(
 	sessionStorage Storage,
 	balanceTrackerFactory BalanceTrackerFactory,
 	natPingerChan func() chan json.RawMessage,
+	lastSessionShutdown chan bool,
+	natEventGetter NATEventGetter,
 ) *Manager {
 	return &Manager{
 		currentProposal:       currentProposal,
@@ -84,6 +92,8 @@ func NewManager(
 		sessionStorage:        sessionStorage,
 		balanceTrackerFactory: balanceTrackerFactory,
 		natPingerChan:         natPingerChan,
+		lastSessionShutdown:   lastSessionShutdown,
+		natEventGetter:        natEventGetter,
 
 		creationLock: sync.Mutex{},
 	}
@@ -97,6 +107,8 @@ type Manager struct {
 	balanceTrackerFactory BalanceTrackerFactory
 	provideConfig         ConfigProvider
 	natPingerChan         func() chan json.RawMessage
+	lastSessionShutdown   chan bool
+	natEventGetter        NATEventGetter
 
 	creationLock sync.Mutex
 }
@@ -167,6 +179,15 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 
 	if sessionInstance.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
+	}
+
+	if sessionInstance.Last {
+		log.Info("attempting to stop service")
+		if manager.natEventGetter.LastEvent() == traversal.EventFailure {
+			log.Info("last session destroy requested - stopping service executable")
+			manager.lastSessionShutdown <- true
+			log.Info("executable shutdown on last session triggered")
+		}
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))

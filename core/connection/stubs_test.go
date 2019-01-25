@@ -289,3 +289,12 @@ func (fd *fakeDialog) Request(producer communication.RequestProducer) (responseP
 	}
 	return nil, ErrUnknownRequest
 }
+
+type NATPingerFake struct{}
+
+func (NATPingerFake) BindPort(port int) {
+}
+
+func (NATPingerFake) PingProvider(ip string, port int) error {
+	return nil
+}

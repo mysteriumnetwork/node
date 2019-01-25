@@ -209,7 +209,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	proposal := proposals[0]
 
 	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), proposal, connectOptions, ce.ipResolver)
+	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), proposal, connectOptions)
 
 	if err != nil {
 		switch err {

@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/ip"
+
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
@@ -42,6 +44,7 @@ type testContext struct {
 	MockPaymentIssuer     *MockPaymentIssuer
 	stubPublisher         *StubPublisher
 	mockStatistics        consumer.SessionStatistics
+	fakeResolver          ip.Resolver
 	sync.RWMutex
 }
 
@@ -112,6 +115,8 @@ func (tc *testContext) SetupTest() {
 		mockPaymentFactory,
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
+		NATPingerFake{},
+		ip.NewResolverFake("1.1.1.1"),
 	)
 }
 

@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 )
 
+// StartNATPing starts NAT pinging service
 type StartNATPing func()
 
 // NewNode function creates new Mysterium node by given options

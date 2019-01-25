@@ -25,7 +25,8 @@ import (
 
 var (
 	sessionExisting = Session{
-		ID: ID("mocked-id"),
+		ID:   ID("mocked-id"),
+		Last: true,
 	}
 )
 

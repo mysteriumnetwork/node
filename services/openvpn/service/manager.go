@@ -20,6 +20,8 @@ package service
 import (
 	"encoding/json"
 
+	"github.com/mysteriumnetwork/node/nat/traversal"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
@@ -45,18 +47,23 @@ type ProposalFactory func(currentLocation market.Location) market.ServiceProposa
 // SessionConfigNegotiatorFactory initiates ConfigProvider instance during runtime
 type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigNegotiator
 
-// NATPinger
+// NATPinger defined Pinger interface for Provider
 type NATPinger interface {
-	BindProducer(port int) error
+	BindProvider(port int)
 	WaitForHole() error
+}
+
+type NATEventGetter interface {
+	LastEvent() traversal.Event
 }
 
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	natService   nat.NATService
-	mapPort      func() (releasePortMapping func())
-	releasePorts func()
-	natPinger    NATPinger
+	natService     nat.NATService
+	mapPort        func() (releasePortMapping func())
+	releasePorts   func()
+	natPinger      NATPinger
+	natEventGetter NATEventGetter
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 	consumerConfig                 openvpn_service.ConsumerConfig
@@ -95,19 +102,26 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
 	// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
-	m.natPinger.BindProducer(m.serviceOptions.OpenvpnPort)
-	m.natPinger.WaitForHole()
+	m.natPinger.BindProvider(m.serviceOptions.OpenvpnPort)
 
-	if err = m.vpnServer.Start(); err != nil {
-		return
+	for {
+		m.natPinger.WaitForHole()
+
+		log.Info(logPrefix, "starting openvpn server")
+		if err = m.vpnServer.Start(); err != nil {
+			return
+		}
+		log.Info(logPrefix, "openvpn server waiting")
+		m.vpnServer.Wait()
+		log.Info(logPrefix, "openvpn server after waiting")
 	}
-	return m.vpnServer.Wait()
+	return
 }
 
 // Stop stops service
 func (m *Manager) Stop() (err error) {
+	log.Info(logPrefix, "stopping openvpn service manager")
 	m.releasePorts()
-
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
 	}

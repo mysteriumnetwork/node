@@ -19,7 +19,6 @@ package connection
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"sync"
 
@@ -51,7 +50,7 @@ var (
 )
 
 // Creator creates new connection by given options and uses state channel to report state changes
-type Creator func(serviceType string, stateChannnel StateChannel, statisticsChannel StatisticsChannel, resolver ip.Resolver) (Connection, error)
+type Creator func(serviceType string, stateChannnel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
@@ -66,8 +65,8 @@ type Publisher interface {
 }
 
 type NATPinger interface {
-	BindConsumer(config ConsumerConfig) error
-	PingProvider(messages json.RawMessage) error
+	BindPort(port int)
+	PingProvider(ip string, port int) error
 }
 
 // PaymentIssuer handles the payments for service
@@ -86,6 +85,7 @@ type connectionManager struct {
 	newConnection        Creator
 	eventPublisher       Publisher
 	natPinger            NATPinger
+	resolver             ip.Resolver
 
 	//these are populated by Connect at runtime
 	ctx         context.Context
@@ -105,6 +105,7 @@ func NewManager(
 	connectionCreator Creator,
 	eventPublisher Publisher,
 	natPinger NATPinger,
+	resolver ip.Resolver,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:            dialogCreator,
@@ -114,10 +115,11 @@ func NewManager(
 		eventPublisher:       eventPublisher,
 		natPinger:            natPinger,
 		cleanup:              make([]func() error, 0),
+		resolver:             resolver,
 	}
 }
 
-func (manager *connectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams, resolver ip.Resolver) (err error) {
+func (manager *connectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
 	if manager.Status().State != NotConnected {
 		return ErrAlreadyExists
 	}
@@ -141,7 +143,7 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 	stateChannel := make(chan State, 10)
 	statisticsChannel := make(chan consumer.SessionStatistics, 10)
 
-	connection, err := manager.newConnection(proposal.ServiceType, stateChannel, statisticsChannel, resolver)
+	connection, err := manager.newConnection(proposal.ServiceType, stateChannel, statisticsChannel)
 	if err != nil {
 		return err
 	}
@@ -219,16 +221,6 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 	}
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
-	if err != nil {
-		return session.SessionDto{}, nil, err
-	}
-
-	err = manager.natPinger.BindConsumer(sessionCreateConfig)
-	if err != nil {
-		return session.SessionDto{}, nil, err
-	}
-
-	err = manager.natPinger.PingProvider(paymentInfo)
 	if err != nil {
 		return session.SessionDto{}, nil, err
 	}

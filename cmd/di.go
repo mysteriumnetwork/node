@@ -22,6 +22,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mysteriumnetwork/node/nat/traversal/config"
+
 	"github.com/mysteriumnetwork/node/nat/traversal"
 
 	"github.com/asaskevich/EventBus"
@@ -117,7 +119,9 @@ type Dependencies struct {
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 
-	NATPinger *traversal.Pinger
+	NATPinger           *traversal.Pinger
+	NATTracker          *traversal.EventsTracker
+	LastSessionShutdown chan bool
 }
 
 // Bootstrap initiates all container dependencies
@@ -145,10 +149,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapIdentityComponents(nodeOptions)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
-	di.bootstrapNATComponents()
 
+	di.bootstrapNATComponents()
 	di.bootstrapServices(nodeOptions)
-	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapNodeComponents(nodeOptions)
 
 	di.registerConnections(nodeOptions)
@@ -174,6 +177,9 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 		nodeOptions.Directories.Runtime,
 		di.LocationOriginal,
 		di.SignerFactory,
+		di.LastSessionShutdown,
+		di.IPResolver,
+		di.NATPinger,
 	)
 	di.ConnectionRegistry.Register(service_openvpn.ServiceType, connectionFactory)
 }
@@ -258,6 +264,12 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 
+	// NAT events
+	err = di.EventBus.Subscribe(traversal.EventTopic, di.NATTracker.ConsumeNATEvent)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -286,6 +298,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 		di.NATPinger,
+		di.IPResolver,
 	)
 
 	router := tequilapi.NewAPIRouter()
@@ -311,6 +324,8 @@ func newSessionManagerFactory(
 	promiseStorage session_payment.PromiseStorage,
 	nodeOptions node.Options,
 	natPingerChan func() chan json.RawMessage,
+	lastSessionShutdown chan bool,
+	natTracker *traversal.EventsTracker,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.BalanceTracker, error) {
@@ -348,6 +363,8 @@ func newSessionManagerFactory(
 			sessionStorage,
 			providerBalanceTrackerFactory,
 			natPingerChan,
+			lastSessionShutdown,
+			natTracker,
 		)
 	}
 }
@@ -427,6 +444,9 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
 }
 
-func (di *Dependencies) bootstrapNATComponents() {
-	di.NATPinger = traversal.NewPingerFactory()
+func (di *Dependencies) bootstrapNATComponents() error {
+	di.NATTracker = traversal.NewEventsTracker()
+	di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
+	di.LastSessionShutdown = make(chan bool)
+	return nil
 }
