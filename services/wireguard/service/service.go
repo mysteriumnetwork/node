@@ -91,19 +91,25 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		return nil, nil, err
 	}
 
-	manager.natService.Add(nat.RuleForwarding{
-		SourceAddress: config.Consumer.IPAddress.String(),
-		TargetIP:      outboundIP,
-	})
-	if err := manager.natService.Start(); err != nil {
-		return nil, nil, err
+	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: outboundIP}
+	manager.natService.Add(natRule)
+
+	destroy := func() error {
+		if err := manager.natService.Del(natRule); err != nil {
+			log.Error(logPrefix, "failed to delete NAT forwarding rule: ", err)
+		}
+		return connectionEndpoint.Stop()
 	}
 
-	return config, connectionEndpoint.Stop, nil
+	return config, destroy, nil
 }
 
 // Start starts service - does not block
 func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
+	if err := manager.natService.Enable(); err != nil {
+		return market.ServiceProposal{}, nil, err
+	}
+
 	publicIP, err := manager.ipResolver.GetPublicIP()
 	if err != nil {
 		return market.ServiceProposal{}, nil, err
@@ -140,8 +146,7 @@ func (manager *Manager) Wait() error {
 // Stop stops service.
 func (manager *Manager) Stop() error {
 	manager.wg.Done()
-	manager.natService.Stop()
 
 	log.Info(logPrefix, "Wireguard service stopped")
-	return nil
+	return manager.natService.Disable()
 }

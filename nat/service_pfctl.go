@@ -23,33 +23,47 @@ import (
 	"net"
 	"os/exec"
 	"strings"
+	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/utils"
 )
 
 type servicePFCtl struct {
-	rules     []RuleForwarding
+	mu        sync.Mutex
+	rules     map[RuleForwarding]struct{}
 	ipForward serviceIPForward
 }
 
-func (service *servicePFCtl) Add(rule RuleForwarding) {
-	service.rules = append(service.rules, rule)
+func (service *servicePFCtl) Add(rule RuleForwarding) error {
+	service.mu.Lock()
+	service.rules[rule] = struct{}{}
+	service.mu.Unlock()
+
+	return service.enableRules()
 }
 
-func (service *servicePFCtl) Start() error {
+func (service *servicePFCtl) Del(rule RuleForwarding) error {
+	service.mu.Lock()
+	delete(service.rules, rule)
+	service.mu.Unlock()
+
+	return service.enableRules()
+}
+
+func (service *servicePFCtl) Enable() error {
 	err := service.ipForward.Enable()
 	if err != nil {
 		log.Warn(natLogPrefix, "Failed to enable IP forwarding: ", err)
 	}
 
-	service.clearStaleRules()
-	return service.enableRules()
+	return err
 }
 
-func (service *servicePFCtl) Stop() {
+func (service *servicePFCtl) Disable() error {
 	service.disableRules()
 	service.ipForward.Disable()
+	return nil
 }
 
 func ifaceByAddress(ipAddress string) (string, error) {
@@ -73,7 +87,9 @@ func ifaceByAddress(ipAddress string) (string, error) {
 }
 
 func (service *servicePFCtl) enableRules() error {
-	for _, rule := range service.rules {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	for rule := range service.rules {
 		iface, err := ifaceByAddress(rule.TargetIP)
 		if err != nil {
 			return err
@@ -106,8 +122,4 @@ func (service *servicePFCtl) disableRules() {
 	}
 
 	log.Info(natLogPrefix, "NAT rules cleared")
-}
-
-func (service *servicePFCtl) clearStaleRules() {
-	service.disableRules()
 }

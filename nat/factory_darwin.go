@@ -27,5 +27,6 @@ func NewService() NATService {
 			CommandDisable: exec.Command("/usr/sbin/sysctl", "-w", "net.inet.ip.forwarding=0"),
 			CommandRead:    exec.Command("/usr/sbin/sysctl", "-n", "net.inet.ip.forwarding"),
 		},
+		rules: make(map[RuleForwarding]struct{}),
 	}
 }

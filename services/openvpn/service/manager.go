@@ -78,15 +78,15 @@ func (manager *Manager) Start(providerID identity.Identity) (
 		return
 	}
 
+	err = manager.natService.Enable()
+	if err != nil {
+		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
+	}
+
 	manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      outboundIP,
 	})
-
-	err = manager.natService.Start()
-	if err != nil {
-		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
-	}
 
 	currentCountry, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
@@ -131,16 +131,16 @@ func (manager *Manager) Wait() error {
 }
 
 // Stop stops service
-func (manager *Manager) Stop() error {
+func (manager *Manager) Stop() (err error) {
 	if manager.natService != nil {
-		manager.natService.Stop()
+		err = manager.natService.Disable()
 	}
 
 	if manager.vpnServer != nil {
 		manager.vpnServer.Stop()
 	}
 
-	return nil
+	return err
 }
 
 func vpnStateCallback(state openvpn.State) {

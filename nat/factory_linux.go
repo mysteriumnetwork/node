@@ -27,5 +27,6 @@ func NewService() NATService {
 			CommandDisable: exec.Command("sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=0"),
 			CommandRead:    exec.Command("/sbin/sysctl", "-n", "net.ipv4.ip_forward"),
 		},
+		rules: make(map[RuleForwarding]struct{}),
 	}
 }
