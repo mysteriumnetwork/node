@@ -85,7 +85,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	if err := c.waitHandshake(); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
-		return errors.Wrap(err, "failed to wait peer handshake")
+		return errors.Wrap(err, "failed while waiting for a peer handshake")
 	}
 
 	go c.runPeriodically(time.Second)
