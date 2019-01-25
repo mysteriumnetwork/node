@@ -310,7 +310,7 @@ func (wg *wireguardConnection) waitHandshake() error {
 		case <-time.After(100 * time.Millisecond):
 			peers, err := wg.device.Peers()
 			if err != nil {
-				return errors.Wrap(err, "failed to wait peer handshake")
+				return errors.Wrap(err, "failed while waiting for a peer handshake")
 			}
 			if len(peers) != 1 {
 				return errors.Wrap(errors.New("exactly 1 peer expected"), "failed to wait peer handshake")
