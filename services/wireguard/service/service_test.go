@@ -116,6 +116,7 @@ func newManagerStub(pub, out, country string) *Manager {
 
 type serviceFake struct{}
 
-func (service *serviceFake) Add(rule nat.RuleForwarding) {}
-func (service *serviceFake) Start() error                { return nil }
-func (service *serviceFake) Stop()                       {}
+func (service *serviceFake) Add(rule nat.RuleForwarding) error { return nil }
+func (service *serviceFake) Del(rule nat.RuleForwarding) error { return nil }
+func (service *serviceFake) Enable() error                     { return nil }
+func (service *serviceFake) Disable() error                    { return nil }

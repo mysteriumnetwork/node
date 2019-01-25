@@ -63,15 +63,15 @@ type Manager struct {
 
 // Serve starts service - does block
 func (manager *Manager) Serve(providerID identity.Identity) (err error) {
+	err = manager.natService.Enable()
+	if err != nil {
+		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
+	}
+
 	manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      manager.outboundIP,
 	})
-
-	err = manager.natService.Start()
-	if err != nil {
-		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
-	}
 
 	primitives, err := primitiveFactory(manager.currentLocation, providerID.Address)
 	if err != nil {
@@ -90,16 +90,16 @@ func (manager *Manager) Serve(providerID identity.Identity) (err error) {
 }
 
 // Stop stops service
-func (manager *Manager) Stop() error {
+func (manager *Manager) Stop() (err error) {
 	if manager.natService != nil {
-		manager.natService.Stop()
+		err = manager.natService.Disable()
 	}
 
 	if manager.vpnServer != nil {
 		manager.vpnServer.Stop()
 	}
 
-	return nil
+	return err
 }
 
 // ProvideConfig provides the configuration to end consumer
