@@ -83,10 +83,13 @@ func (manager *Manager) Start(providerID identity.Identity) (
 		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
 	}
 
-	manager.natService.Add(nat.RuleForwarding{
+	err = manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      outboundIP,
 	})
+	if err != nil {
+		log.Warn(logPrefix, "failed to add NAT forwarding rule: ", err)
+	}
 
 	currentCountry, err := manager.locationResolver.ResolveCountry(publicIP)
 	if err != nil {
