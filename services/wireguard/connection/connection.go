@@ -19,6 +19,7 @@ package connection
 
 import (
 	"encoding/json"
+	"net"
 	"sync"
 	"time"
 
@@ -138,6 +139,8 @@ func (c *Connection) runPeriodically(duration time.Duration) {
 }
 
 func (c *Connection) waitHandshake() error {
+	// We need to send any packet to initialize handshake process
+	_, _ = net.DialTimeout("tcp", "8.8.8.8:53", 100*time.Millisecond)
 	for {
 		select {
 		case <-time.After(100 * time.Millisecond):
