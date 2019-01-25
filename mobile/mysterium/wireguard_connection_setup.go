@@ -313,7 +313,7 @@ func (wg *wireguardConnection) waitHandshake() error {
 				return errors.Wrap(err, "failed while waiting for a peer handshake")
 			}
 			if len(peers) != 1 {
-				return errors.Wrap(errors.New("exactly 1 peer expected"), "failed to wait peer handshake")
+				return errors.Wrap(errors.New("exactly 1 peer expected"), "failed while waiting for a peer handshake")
 			}
 			if peers[0].LastHanshake != 0 {
 				return nil
