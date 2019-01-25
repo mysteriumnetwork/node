@@ -307,7 +307,7 @@ func (wg *wireguardConnection) waitHandshake() error {
 	_, _ = net.DialTimeout("tcp", "8.8.8.8:53", 100*time.Millisecond)
 	for {
 		select {
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(20 * time.Millisecond):
 			peers, err := wg.device.Peers()
 			if err != nil {
 				return errors.Wrap(err, "failed while waiting for a peer handshake")
