@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[service-wireguard] "
@@ -87,8 +88,11 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 	if err != nil {
 		return nil, nil, err
 	}
+
 	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: manager.outboundIP}
-	manager.natService.Add(natRule)
+	if err := manager.natService.Add(natRule); err != nil {
+		return nil, nil, errors.Wrap(err, "failed to add NAT forwarding rule")
+	}
 
 	destroy := func() error {
 		if err := manager.natService.Del(natRule); err != nil {

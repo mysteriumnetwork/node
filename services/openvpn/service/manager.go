@@ -19,7 +19,6 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -29,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[service-openvpn] "
@@ -68,10 +68,13 @@ func (manager *Manager) Serve(providerID identity.Identity) (err error) {
 		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
 	}
 
-	manager.natService.Add(nat.RuleForwarding{
+	err = manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      manager.outboundIP,
 	})
+	if err != nil {
+		return errors.Wrap(err, "failed to add NAT forwarding rule")
+	}
 
 	primitives, err := primitiveFactory(manager.currentLocation, providerID.Address)
 	if err != nil {
