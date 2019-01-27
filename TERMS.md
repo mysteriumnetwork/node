@@ -6,7 +6,7 @@
 
 SHORT VERSION IN HUMAN LANGUAGE:
 
-* Mysterium Platform and Mysterion Software is still in its development (alpha) stage. We will do our best to develop it further, but we cannot guarantee this.
+* Mysterium Platform and Mysterium Software is still in its development (alpha) stage. We will do our best to develop it further, but we cannot guarantee this.
 
 * You will join our network and act as an exit node for others.
 
@@ -26,7 +26,7 @@ FULL VERSION:
 
 1. **ACCEPTANCE OF TERMS**
 
-These terms and conditions (the "Terms") is a binding legal agreement between you and NetSys Inc. (“Mysterium Networks” or “we”) that governs your participation in the early open alpha testing program (the “Program”) of the Mysterium network (the “Network”) and the alpha version of the Mysterion Node software (the “Software”). Mysterium Network and Software hereinafter may be referred jointly to as the “Mysterium Platform Open Alpha”. 
+These terms and conditions (the "Terms") is a binding legal agreement between you and NetSys Inc. (“Mysterium Networks” or “we”) that governs your participation in the early open alpha testing program (the “Program”) of the Mysterium network (the “Network”) and the alpha version of the Mysterium Node software (the “Software”). Mysterium Network and Software hereinafter may be referred jointly to as the “Mysterium Platform Open Alpha”. 
 
 Your enrolment and participation in the Program and access to and use of the Mysterium Platform Open Alpha is subject to these Terms. By participating in the Program or installing or using the Software you are fully accepting the terms, conditions and disclaimers contained in this document and all policies and guidelines that are incorporated by reference. If you do not accept these terms and conditions you must immediately stop using the Mysterium Platform Open Alpha. You shall not enroll into the Program or use the Mysterium Platform Open Alpha for any purpose that is unlawful or prohibited by these Terms and legal requirements. 
 

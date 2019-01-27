@@ -1,0 +1,106 @@
+version: '3'
+services:
+
+  #'external' IP detection
+  ipify:
+    image: owlab/ipify
+    expose:
+    - 3000
+
+  myst-provider-0.5:
+    image: mysteriumnetwork/myst:0.5
+    depends_on:
+      - broker
+      - discovery
+      - ipify
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 1194
+      - 4050
+    volumes:
+      - ../../e2e/myst-provider:/var/lib/mysterium-node
+    command: >
+      --ipify-url=http://ipify:3000
+      --location.country=e2e-land
+      --experiment-identity-check
+      --experiment-promise-check
+      --localnet
+      --broker-address=broker
+      --discovery-address=http://discovery/v1
+      --ether.client.rpc=http://geth:8545
+      service openvpn,noop,wireguard
+      --agreed-terms-and-conditions
+      --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
+      --identity.passphrase=localprovider
+      --openvpn.port=3000
+
+  myst-consumer-0.5:
+    image: mysteriumnetwork/myst:0.5
+    depends_on:
+      - broker
+      - discovery
+      - ipify
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 4050
+    command: >
+      --ipify-url=http://ipify:3000
+      --experiment-identity-check
+      --experiment-promise-check
+      --localnet
+      --discovery-address=http://discovery/v1
+      --ether.client.rpc=http://geth:8545
+      daemon
+
+  myst-provider-local:
+    build:
+      context: ../..
+      dockerfile: bin/docker/alpine/Dockerfile
+    depends_on:
+      - broker
+      - discovery
+      - ipify
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 1194
+      - 4050
+    volumes:
+      - ../../e2e/myst-provider:/var/lib/mysterium-node
+    command: >
+      --ipify-url=http://ipify:3000
+      --location.country=e2e-land
+      --experiment-identity-check
+      --experiment-promise-check
+      --localnet
+      --broker-address=broker
+      --discovery-address=http://discovery/v1
+      --ether.client.rpc=http://geth:8545
+      service openvpn,noop,wireguard
+      --agreed-terms-and-conditions
+      --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
+      --identity.passphrase=localprovider
+      --openvpn.port=3000
+
+  myst-consumer-local:
+    build:
+      context: ../..
+      dockerfile: bin/docker/alpine/Dockerfile
+    depends_on:
+      - broker
+      - discovery
+      - ipify
+    cap_add:
+      - NET_ADMIN
+    expose:
+      - 4050
+    command: >
+      --ipify-url=http://ipify:3000
+      --experiment-identity-check
+      --experiment-promise-check
+      --localnet
+      --discovery-address=http://discovery/v1
+      --ether.client.rpc=http://geth:8545
+      daemon

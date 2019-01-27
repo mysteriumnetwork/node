@@ -17,9 +17,7 @@ setupDockerComposeCmd() {
     dockerComposeCmd="docker-compose ${projectFiles[@]} -p $projectName"
 }
 
-setup () {
-
-    setupDockerComposeCmd "$@"
+setupInfra () {
     echo "Setting up: $projectName"
 
     ${dockerComposeCmd} run geth init genesis.json
@@ -79,7 +77,12 @@ setup () {
         cleanup "$@"
         exit 1
     fi
+}
 
+setup () {
+    setupDockerComposeCmd "$@"
+    
+    setupInfra "$@"
 }
 
 cleanup () {
