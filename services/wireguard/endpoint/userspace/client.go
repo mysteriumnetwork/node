@@ -21,10 +21,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"net"
+	"time"
 
 	"git.zx2c4.com/wireguard-go/device"
 	"git.zx2c4.com/wireguard-go/tun"
-	"github.com/mysteriumnetwork/node/consumer"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
@@ -97,21 +97,21 @@ func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
 	return addDefaultRoute(iface)
 }
 
-func (c *client) PeerStats() (consumer.SessionStatistics, error) {
+func (c *client) PeerStats() (wg.Stats, error) {
 	peers, err := c.devAPI.Peers()
 	if err != nil {
-		return consumer.SessionStatistics{}, nil
+		return wg.Stats{}, nil
 	}
 
 	if len(peers) != 1 {
-		return consumer.SessionStatistics{}, errors.New("exactly 1 peer expected")
+		return wg.Stats{}, errors.New("exactly 1 peer expected")
 	}
 
-	return consumer.SessionStatistics{
+	return wg.Stats{
 		BytesSent:     peers[0].Stats.Sent,
 		BytesReceived: peers[0].Stats.Received,
+		LastHandshake: time.Unix(int64(peers[0].LastHanshake), 0),
 	}, nil
-
 }
 
 func (c *client) DestroyDevice(name string) error {

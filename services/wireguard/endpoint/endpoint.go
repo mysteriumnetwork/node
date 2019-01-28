@@ -22,7 +22,6 @@ import (
 	"net"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/consumer"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -35,7 +34,7 @@ type wgClient interface {
 	ConfigureRoutes(iface string, ip net.IP) error
 	DestroyDevice(name string) error
 	AddPeer(name string, peer wg.PeerInfo) error
-	PeerStats() (consumer.SessionStatistics, error)
+	PeerStats() (wg.Stats, error)
 	Close() error
 }
 
@@ -98,7 +97,7 @@ func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr) e
 	return ce.wgClient.AddPeer(ce.iface, peerInfo{endpoint, publicKey})
 }
 
-func (ce *connectionEndpoint) PeerStats() (consumer.SessionStatistics, error) {
+func (ce *connectionEndpoint) PeerStats() (wg.Stats, error) {
 	return ce.wgClient.PeerStats()
 }
 

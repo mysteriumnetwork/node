@@ -19,15 +19,18 @@ package connection
 
 import (
 	"encoding/json"
+	"net"
 	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[connection-wireguard] "
@@ -80,6 +83,12 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return err
 	}
 
+	if err := c.waitHandshake(); err != nil {
+		c.stateChannel <- connection.NotConnected
+		c.connection.Done()
+		return errors.Wrap(err, "failed while waiting for a peer handshake")
+	}
+
 	go c.runPeriodically(time.Second)
 
 	c.stateChannel <- connection.Connected
@@ -127,10 +136,33 @@ func (c *Connection) runPeriodically(duration time.Duration) {
 				log.Error(logPrefix, "failed to receive peer stats: ", err)
 				break
 			}
-			c.statisticsChannel <- stats
+			c.statisticsChannel <- consumer.SessionStatistics{
+				BytesSent:     stats.BytesSent,
+				BytesReceived: stats.BytesReceived,
+			}
 
 		case <-c.stopChannel:
 			return
+		}
+	}
+}
+
+func (c *Connection) waitHandshake() error {
+	// We need to send any packet to initialize handshake process
+	_, _ = net.DialTimeout("tcp", "8.8.8.8:53", 100*time.Millisecond)
+	for {
+		select {
+		case <-time.After(100 * time.Millisecond):
+			stats, err := c.connectionEndpoint.PeerStats()
+			if err != nil {
+				return err
+			}
+			if !stats.LastHandshake.IsZero() {
+				return nil
+			}
+
+		case <-c.stopChannel:
+			return errors.New("stop received")
 		}
 	}
 }

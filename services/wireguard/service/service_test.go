@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -99,8 +98,8 @@ func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { ret
 func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
 func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }
 func (fce *fakeConnectionEndpoint) ConfigureRoutes(_ net.IP) error         { return nil }
-func (fce *fakeConnectionEndpoint) PeerStats() (consumer.SessionStatistics, error) {
-	return consumer.SessionStatistics{}, nil
+func (fce *fakeConnectionEndpoint) PeerStats() (wg.Stats, error) {
+	return wg.Stats{LastHandshake: time.Now()}, nil
 }
 
 func newManagerStub(pub, out, country string) *Manager {
