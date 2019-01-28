@@ -2,6 +2,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/mysteriumnetwork/node)](https://goreportcard.com/report/github.com/mysteriumnetwork/node)
 [![Build Status](https://travis-ci.org/mysteriumnetwork/node.svg?branch=master)](https://travis-ci.org/mysteriumnetwork/node)
+[![pullreminders](https://pullreminders.com/badge.svg)](https://pullreminders.com?ref=badge)
 
 Cross-platform software to run a node in Mysterium Network. It contains Mysterium server (node), 
 client API (tequila API) and client-cli (console client) for Mysterium Network.

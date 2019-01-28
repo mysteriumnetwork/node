@@ -63,6 +63,10 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 
 		Openvpn: embeddedLibCheck{},
 
+		Keystore: node.OptionsKeystore{
+			UseLightweight: true,
+		},
+
 		Location: node.OptionsLocation{
 			IpifyUrl: "https://api.ipify.org/",
 			Country:  "LT",

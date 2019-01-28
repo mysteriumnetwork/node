@@ -23,7 +23,6 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
-	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -43,9 +42,9 @@ type wgClient interface {
 type connectionEndpoint struct {
 	iface             string
 	privateKey        string
+	publicIP          string
 	ipAddr            net.IPNet
 	endpoint          net.UDPAddr
-	ipResolver        ip.Resolver
 	resourceAllocator *resources.Allocator
 	wgClient          wgClient
 }
@@ -69,14 +68,7 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 
 	ce.iface = iface
 	ce.endpoint.Port = port
-
-	if ce.ipResolver != nil {
-		publicIP, err := ce.ipResolver.GetPublicIP()
-		if err != nil {
-			return err
-		}
-		ce.endpoint.IP = net.ParseIP(publicIP)
-	}
+	ce.endpoint.IP = net.ParseIP(ce.publicIP)
 
 	if config == nil {
 		privateKey, err := key.GeneratePrivateKey()

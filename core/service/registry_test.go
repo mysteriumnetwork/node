@@ -20,15 +20,18 @@ package service
 import (
 	"testing"
 
+	"github.com/mysteriumnetwork/node/market"
+
 	"github.com/stretchr/testify/assert"
 )
 
 var _ ServiceFactory = (&Registry{}).Create
 
 var (
+	proposalMock   = market.ServiceProposal{}
 	serviceMock    = &serviceFake{}
-	serviceFactory = func(options Options) (Service, error) {
-		return serviceMock, nil
+	serviceFactory = func(options Options) (Service, market.ServiceProposal, error) {
+		return serviceMock, proposalMock, nil
 	}
 )
 
@@ -49,9 +52,10 @@ func TestRegistry_Register(t *testing.T) {
 func TestRegistry_Create_NonExisting(t *testing.T) {
 	registry := &Registry{}
 
-	service, err := registry.Create(Options{})
+	service, proposal, err := registry.Create(Options{})
 	assert.Equal(t, ErrUnsupportedServiceType, err)
 	assert.Nil(t, service)
+	assert.Equal(t, proposalMock, proposal)
 }
 
 func TestRegistry_Create_Existing(t *testing.T) {
@@ -61,9 +65,10 @@ func TestRegistry_Create_Existing(t *testing.T) {
 		},
 	}
 
-	service, err := registry.Create(Options{
+	service, proposal, err := registry.Create(Options{
 		Type: "fake-service",
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, serviceMock, service)
+	assert.Equal(t, proposalMock, proposal)
 }

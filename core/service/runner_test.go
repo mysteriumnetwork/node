@@ -29,7 +29,6 @@ import (
 
 type MockRunnable struct {
 	killErr  error
-	waitErr  error
 	startErr error
 	wg       sync.WaitGroup
 }
@@ -37,11 +36,6 @@ type MockRunnable struct {
 func (mr *MockRunnable) Start(options Options) (err error) {
 	mr.wg.Add(1)
 	return mr.startErr
-}
-
-func (mr *MockRunnable) Wait() error {
-	mr.wg.Wait()
-	return mr.waitErr
 }
 
 func (mr *MockRunnable) Kill() error {
@@ -94,7 +88,7 @@ func Test_RunnerErrsOnStart(t *testing.T) {
 func Test_RunnerBubblesErrors(t *testing.T) {
 	fakeErr := errors.New("error")
 	m := &mockFactory{MockRunnable: &MockRunnable{
-		waitErr: fakeErr,
+		startErr: fakeErr,
 	}}
 	sType := "test"
 

@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+
+source bin/localnet/functions.sh
+
+function printResults {
+    echo "-----------------------------------------"
+    for res in "${result[@]}"
+    do
+        printf '%s\n' "$res"
+    done
+    echo "-----------------------------------------"
+}
+
+if [ -n "$TRAVIS" ]
+then
+    echo "Travis detected, installing wireguard kernel module"
+    sudo add-apt-repository -y ppa:wireguard/wireguard && \
+    sudo apt-get update && \
+    sudo apt-get install -y linux-headers-$(uname -r) && \
+    sudo apt-get install -y wireguard
+    if [ ! $? -eq 0 ]
+    then
+        print_error "Failed to install WG kernel module"
+        exit 1
+    fi
+fi
+
+projectName="node_e2e_compatibility_test"
+projectFiles=("e2e/compatibility-matrix/docker-compose.yml")
+
+consumerVersions=(0.5 local)
+providerVersions=(0.5 local)
+errorOccured=0
+result=()
+
+setupDockerComposeCmd $projectName ${projectFiles[@]}
+$dockerComposeCmd logs -f > e2e_tests.log &
+
+# Provider loop
+for i in "${providerVersions[@]}"
+do
+    # Consumer loop
+    for j in "${consumerVersions[@]}"
+    do
+        echo "RUNNING E2E COMPATIBILITY FOR CONSUMER $j vs PROVIDER $i"
+        setupInfra $projectName ${projectFiles[@]}
+
+        $dockerComposeCmd up -d myst-provider-$i myst-consumer-$j ipify
+        if [ ! $? -eq 0 ]
+        then
+            print_error "Image building failed"
+            cleanup $projectName
+            exit 1
+        fi
+
+        # this indicates which services the consumer will use in its test suite
+        consumerServices="openvpn,noop,wireguard"
+        # on versions older than 0.5 we don't have noop and wireguard, only openvpn
+        if [ $(echo "$j < 0.5" | bc -l) == 1 ] && [ "$j" != "local" ]; then
+            consumerServices="openvpn"
+        fi
+
+        $dockerComposeCmd run go-runner \
+            go test -v ./e2e/... -args \
+            --deployer.keystore-directory=../bin/localnet/deployer/keystore \
+            --deployer.address=0xa754f0d31411d88e46aed455fa79b9fced122497 \
+            --deployer.passphrase `cat bin/localnet/deployer/local_acc_password.txt` \
+            --provider.tequilapi-host=myst-provider-$i \
+            --provider.tequilapi-port=4050 \
+            --consumer.tequilapi-host=myst-consumer-$j \
+            --consumer.tequilapi-port=4050 \
+            --geth.url=http://geth:8545 \
+            --consumer.services=$consumerServices
+        if [ ! $? -eq 0 ]; then
+            print_error "Tests failed"
+            sleep 150
+            errorOccured=1
+            result+=("Consumer $i Provider $j: FAIL!")
+        else
+            print_success "Tests passed"
+            result+=("Consumer $i Provider $j: SUCCESS!")
+        fi
+
+        $dockerComposeCmd down
+    done
+done
+
+if [ $errorOccured = 1 ]; then
+    cleanup $projectName
+    print_error "Test suite failed"
+    printResults
+    exit 1
+else
+    cleanup $projectName
+    print_success "Test suite passed"
+    printResults
+    exit 0
+fi

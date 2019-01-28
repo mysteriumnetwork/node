@@ -22,8 +22,6 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -37,27 +35,31 @@ import (
 const logPrefix = "[service-wireguard] "
 
 // NewManager creates new instance of Wireguard service
-func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
+func NewManager(publicIP, outIP, country string) *Manager {
 	resourceAllocator := resources.NewAllocator()
 	return &Manager{
-		locationResolver: locationResolver,
-		ipResolver:       ipResolver,
-		natService:       nat.NewService(),
+		natService: nat.NewService(),
+
+		publicIP:        publicIP,
+		outboundIP:      outIP,
+		currentLocation: country,
 
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(ipResolver, &resourceAllocator)
+			return endpoint.NewConnectionEndpoint(publicIP, &resourceAllocator)
 		},
 	}
 }
 
 // Manager represents an instance of Wireguard service
 type Manager struct {
-	locationResolver location.Resolver
-	ipResolver       ip.Resolver
-	wg               sync.WaitGroup
-	natService       nat.NATService
+	wg         sync.WaitGroup
+	natService nat.NATService
 
 	connectionEndpointFactory func() (wg.ConnectionEndpoint, error)
+
+	publicIP        string
+	outboundIP      string
+	currentLocation string
 }
 
 // ProvideConfig provides the config for consumer
@@ -86,14 +88,9 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		return nil, nil, err
 	}
 
-	outboundIP, err := manager.ipResolver.GetOutboundIP()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: config.Consumer.IPAddress.String(),
-		TargetIP:      outboundIP,
+		TargetIP:      manager.outboundIP,
 	})
 	if err := manager.natService.Start(); err != nil {
 		return nil, nil, err
@@ -102,22 +99,18 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 	return config, connectionEndpoint.Stop, nil
 }
 
-// Start starts service - does not block
-func (manager *Manager) Start(providerID identity.Identity) (market.ServiceProposal, session.ConfigNegotiator, error) {
-	publicIP, err := manager.ipResolver.GetPublicIP()
-	if err != nil {
-		return market.ServiceProposal{}, nil, err
-	}
-
-	country, err := manager.locationResolver.ResolveCountry(publicIP)
-	if err != nil {
-		return market.ServiceProposal{}, nil, err
-	}
-
+// Serve starts service - does block
+func (manager *Manager) Serve(providerID identity.Identity) error {
 	manager.wg.Add(1)
 	log.Info(logPrefix, "Wireguard service started successfully")
 
-	proposal := market.ServiceProposal{
+	manager.wg.Wait()
+	return nil
+}
+
+// GetProposal returns the proposal for wireguard service
+func GetProposal(country string) market.ServiceProposal {
+	return market.ServiceProposal{
 		ServiceType: wg.ServiceType,
 		ServiceDefinition: wg.ServiceDefinition{
 			Location: market.Location{Country: country},
@@ -127,14 +120,6 @@ func (manager *Manager) Start(providerID identity.Identity) (market.ServicePropo
 			Price: money.NewMoney(0, money.CURRENCY_MYST),
 		},
 	}
-
-	return proposal, manager, nil
-}
-
-// Wait blocks until service is stopped.
-func (manager *Manager) Wait() error {
-	manager.wg.Wait()
-	return nil
 }
 
 // Stop stops service.

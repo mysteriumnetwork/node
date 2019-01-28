@@ -24,7 +24,6 @@ import (
 // RunnableService represents a runnable service
 type RunnableService interface {
 	Start(options Options) (err error)
-	Wait() error
 	Kill() error
 }
 
@@ -58,11 +57,7 @@ func (sr *Runner) StartServiceByType(serviceType string, options Options) error 
 		return fmt.Errorf("unknown service type %q", serviceType)
 	}
 
-	if err := sr.serviceManagers[serviceType].Start(options); err != nil {
-		return err
-	}
-
-	return sr.serviceManagers[serviceType].Wait()
+	return sr.serviceManagers[serviceType].Start(options)
 }
 
 // KillAll kills all service managers
