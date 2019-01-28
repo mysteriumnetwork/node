@@ -24,6 +24,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
@@ -130,12 +131,15 @@ func (c *Connection) runPeriodically(duration time.Duration) {
 	for {
 		select {
 		case <-time.After(duration):
-			stats, _, err := c.connectionEndpoint.PeerStats()
+			stats, err := c.connectionEndpoint.PeerStats()
 			if err != nil {
 				log.Error(logPrefix, "failed to receive peer stats: ", err)
 				break
 			}
-			c.statisticsChannel <- stats
+			c.statisticsChannel <- consumer.SessionStatistics{
+				BytesSent:     stats.BytesSent,
+				BytesReceived: stats.BytesReceived,
+			}
 
 		case <-c.stopChannel:
 			return
@@ -149,11 +153,11 @@ func (c *Connection) waitHandshake() error {
 	for {
 		select {
 		case <-time.After(100 * time.Millisecond):
-			_, lastHandshake, err := c.connectionEndpoint.PeerStats()
+			stats, err := c.connectionEndpoint.PeerStats()
 			if err != nil {
 				return err
 			}
-			if lastHandshake != 0 {
+			if !stats.LastHandshake.IsZero() {
 				return nil
 			}
 

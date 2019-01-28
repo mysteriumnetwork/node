@@ -26,7 +26,6 @@ import (
 	"github.com/jackpal/gateway"
 	"github.com/mdlayher/wireguardctrl"
 	"github.com/mdlayher/wireguardctrl/wgtypes"
-	"github.com/mysteriumnetwork/node/consumer"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/utils"
 )
@@ -85,20 +84,21 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
-func (c *client) PeerStats() (stats consumer.SessionStatistics, lastHandshake int, err error) {
+func (c *client) PeerStats() (wg.Stats, error) {
 	d, err := c.wgClient.Device(c.iface)
 	if err != nil {
-		return consumer.SessionStatistics{}, 0, err
+		return wg.Stats{}, err
 	}
 
 	if len(d.Peers) != 1 {
-		return consumer.SessionStatistics{}, 0, errors.New("exactly 1 peer expected")
+		return wg.Stats{}, errors.New("exactly 1 peer expected")
 	}
 
-	return consumer.SessionStatistics{
+	return wg.Stats{
 		BytesReceived: uint64(d.Peers[0].ReceiveBytes),
 		BytesSent:     uint64(d.Peers[0].TransmitBytes),
-	}, int(d.Peers[0].LastHandshakeTime.Unix()), nil
+		LastHandshake: d.Peers[0].LastHandshakeTime,
+	}, nil
 }
 
 func (c *client) DestroyDevice(name string) error {
