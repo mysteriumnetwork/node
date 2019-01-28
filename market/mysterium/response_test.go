@@ -19,6 +19,7 @@ package mysterium
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -46,7 +47,6 @@ type testResponse struct {
 }
 
 func TestHttpResponseBodyIsParsedCorrectly(t *testing.T) {
-
 	req, err := requests.NewGetRequest(testRequestAPIURL, "path", nil)
 	assert.NoError(t, err)
 
@@ -62,5 +62,20 @@ func TestHttpResponseBodyIsParsedCorrectly(t *testing.T) {
 	err = ParseResponseJSON(response, &testDto)
 	assert.NoError(t, err)
 	assert.Equal(t, testResponse{"abc"}, testDto)
+}
 
+func TestHttpNonJSONResponseErrorIsParsedCorrectly(t *testing.T) {
+	req, err := requests.NewGetRequest(testRequestAPIURL, "path", nil)
+	assert.NoError(t, err)
+
+	errorMsg := "<html><body><h1>403 Forbidden</h1></body></html>"
+	response := &http.Response{
+		StatusCode: 403,
+		Request:    req,
+		Body:       ioutil.NopCloser(bytes.NewBufferString(errorMsg)),
+	}
+
+	err = ParseResponseError(response)
+	expectedErr := fmt.Errorf("server response invalid: %s (%s) error message: %s", response.Status, response.Request.URL, errorMsg)
+	assert.Error(t, expectedErr, err)
 }
