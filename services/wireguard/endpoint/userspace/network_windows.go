@@ -49,7 +49,7 @@ func excludeRoute(ip net.IP) error {
 func addDefaultRoute(name string) error {
 	id, gw, err := interfaceInfo(name)
 	if err != nil {
-		return errors.Wrap(err, "failed to get interfaces info")
+		return errors.Wrap(err, "failed to get info of interface: " + name)
 	}
 
 	if out, err := exec.Command("powershell", "-Command", "route add 0.0.0.0/1 "+gw+" if "+id).CombinedOutput(); err != nil {
