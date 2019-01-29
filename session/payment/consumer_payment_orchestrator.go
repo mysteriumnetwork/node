@@ -54,47 +54,36 @@ func NewConsumerPaymentOrchestrator(balanceChan chan balance.Message, peerPromis
 	}
 }
 
-// Start starts the payment orchestrator. Returns a read only channel that indicates if any errors are encountered.
-// The channel is closed when the orchestrator is stopped.
-func (cpo *ConsumerPaymentOrchestrator) Start() <-chan error {
-	errorChannel := make(chan error, 1)
-
-	go func() {
-		defer close(errorChannel)
-		for {
-			select {
-			case <-cpo.stop:
-				return
-			case balance := <-cpo.balanceChan:
-				err := cpo.promiseTracker.AlignStateWithProvider(promise.State{
-					// TODO: figure out the int64/uint64 mess
-					Seq:    int64(balance.SequenceID),
-					Amount: int64(balance.Balance),
-				})
-				if err != nil {
-					errorChannel <- err
-					return
-				}
+// Start starts the payment orchestrator. Blocks.
+func (cpo *ConsumerPaymentOrchestrator) Start() error {
+	for {
+		select {
+		case <-cpo.stop:
+			return nil
+		case balance := <-cpo.balanceChan:
+			err := cpo.promiseTracker.AlignStateWithProvider(promise.State{
 				// TODO: figure out the int64/uint64 mess
-				issuedPromise, err := cpo.promiseTracker.IssuePromiseWithAddedAmount(int64(balance.Balance))
-				if err != nil {
-					errorChannel <- err
-					return
-				}
-				err = cpo.peerPromiseSender.Send(promise.PromiseMessage{
-					Amount:     uint64(issuedPromise.Promise.Amount),
-					SequenceID: uint64(issuedPromise.Promise.SeqNo),
-					Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),
-				})
-				if err != nil {
-					errorChannel <- err
-					return
-				}
+				Seq:    int64(balance.SequenceID),
+				Amount: int64(balance.Balance),
+			})
+			if err != nil {
+				return err
+			}
+			// TODO: figure out the int64/uint64 mess
+			issuedPromise, err := cpo.promiseTracker.IssuePromiseWithAddedAmount(int64(balance.Balance))
+			if err != nil {
+				return err
+			}
+			err = cpo.peerPromiseSender.Send(promise.PromiseMessage{
+				Amount:     uint64(issuedPromise.Promise.Amount),
+				SequenceID: uint64(issuedPromise.Promise.SeqNo),
+				Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),
+			})
+			if err != nil {
+				return err
 			}
 		}
-	}()
-
-	return errorChannel
+	}
 }
 
 // Stop stops the payment orchestrator

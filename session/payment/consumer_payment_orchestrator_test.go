@@ -20,6 +20,7 @@ package payment
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -66,28 +67,27 @@ var (
 	promiseTracker = &MockPromiseTracker{promiseToReturn: promiseToReturn, errToReturn: nil}
 )
 
-func NewTestConsumerPaymentOrchestrator() *ConsumerPaymentOrchestrator {
+func NewTestConsumerPaymentOrchestrator(bm chan balance.Message, ps PeerPromiseSender, pt PromiseTracker) *ConsumerPaymentOrchestrator {
 	return NewConsumerPaymentOrchestrator(
-		balanceChannel,
-		promiseSender,
-		promiseTracker,
+		bm,
+		ps,
+		pt,
 	)
 }
 
 func Test_ConsumerPaymentOrchestrator_Start_Stop(t *testing.T) {
-	cpo := NewTestConsumerPaymentOrchestrator()
-	ch := cpo.Start()
-
-	cpo.Stop()
-
-	// read from channel to assert it is closed, test will timeout if we can't stop
-	for range ch {
-	}
+	cpo := NewTestConsumerPaymentOrchestrator(balanceChannel, promiseSender, promiseTracker)
+	go func() {
+		time.Sleep(time.Nanosecond * 10)
+		cpo.Stop()
+	}()
+	err := cpo.Start()
+	assert.Nil(t, err)
 }
 
 func Test_ConsumerPaymentOrchestrator_SendsPromiseOnBalance(t *testing.T) {
-	cpo := NewTestConsumerPaymentOrchestrator()
-	_ = cpo.Start()
+	cpo := NewTestConsumerPaymentOrchestrator(balanceChannel, promiseSender, promiseTracker)
+	go func() { cpo.Start() }()
 	defer cpo.Stop()
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
 	for v := range promiseSender.chanToWriteTo {
@@ -97,33 +97,29 @@ func Test_ConsumerPaymentOrchestrator_SendsPromiseOnBalance(t *testing.T) {
 }
 
 func Test_ConsumerPaymentOrchestrator_ReportsIssuingErrors(t *testing.T) {
-	cpo := NewTestConsumerPaymentOrchestrator()
-	ch := cpo.Start()
-	defer cpo.Stop()
-
+	customTracker := *promiseTracker
 	err := errors.New("issuing failed")
-	defer func() { promiseTracker.errToReturn = nil }()
-	promiseTracker.errToReturn = err
+	customTracker.errToReturn = err
+	cpo := NewTestConsumerPaymentOrchestrator(balanceChannel, promiseSender, &customTracker)
+
+	go func() {
+		err := cpo.Start()
+		assert.Equal(t, customTracker.errToReturn, err)
+	}()
 
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
-	for v := range ch {
-		assert.Equal(t, err, v)
-		break
-	}
 }
 
 func Test_ConsumerPaymentOrchestrator_ReportsSendingErrors(t *testing.T) {
-	cpo := NewTestConsumerPaymentOrchestrator()
-	ch := cpo.Start()
-	defer cpo.Stop()
-
+	customSender := *promiseSender
 	err := errors.New("sending failed")
-	defer func() { promiseSender.mockError = nil }()
-	promiseSender.mockError = err
+	customSender.mockError = err
+
+	cpo := NewTestConsumerPaymentOrchestrator(balanceChannel, &customSender, promiseTracker)
+	go func() {
+		err := cpo.Start()
+		assert.Equal(t, customSender.mockError, err)
+	}()
 
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
-	for v := range ch {
-		assert.Equal(t, err, v)
-		break
-	}
 }

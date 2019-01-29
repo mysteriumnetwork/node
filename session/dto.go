@@ -24,7 +24,7 @@ type ID string
 
 // PaymentOrchestrator is responsible for interacting with the consumer in regards to payments
 type PaymentOrchestrator interface {
-	Start() <-chan error
+	Start() error
 	Stop()
 }
 

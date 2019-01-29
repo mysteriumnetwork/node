@@ -73,18 +73,18 @@ func NewMockProviderOrchestrator() *ProviderPaymentOrchestrator {
 
 func Test_ProviderPaymentOchestratorStartStop(t *testing.T) {
 	orch := NewMockProviderOrchestrator()
-	ch := orch.Start()
-	orch.Stop()
-
-	// read from channel to assert it is closed, test will timeout if we can't stop
-	for range ch {
-	}
+	go func() {
+		time.Sleep(time.Nanosecond * 10)
+		orch.Stop()
+	}()
+	err := orch.Start()
+	assert.Nil(t, err)
 }
 
 func Test_ProviderPaymentOchestratorSendsBalance(t *testing.T) {
 	orch := NewMockProviderOrchestrator()
 	defer orch.Stop()
-	_ = orch.Start()
+	go func() { _ = orch.Start() }()
 
 	time.Sleep(time.Millisecond * 2)
 	assert.Exactly(t, balance.Message{SequenceID: 1, Balance: 0}, <-BalanceSender.balanceMessages)
@@ -96,37 +96,30 @@ func Test_ProviderPaymentOchestratorSendsBalance_Timeouts(t *testing.T) {
 
 	// add a shorter timeout
 	orch.promiseWaitTimeout = time.Nanosecond
-	ch := orch.Start()
+	go func() {
+		err := orch.Start()
+		assert.Equal(t, ErrPromiseWaitTimeout, err)
+	}()
 
 	//consume message but never respond
 	<-BalanceSender.balanceMessages
-
-	for v := range ch {
-		assert.Equal(t, ErrPromiseWaitTimeout, v)
-		break
-	}
 }
 
 func Test_ProviderPaymentOchestratorInvalidPromise(t *testing.T) {
+	MPV.isValid = false
 	orch := NewMockProviderOrchestrator()
 	defer orch.Stop()
 
-	MPV.isValid = false
-	defer func() {
+	go func() {
+		err := orch.Start()
+		assert.Equal(t, ErrPromiseValidationFailed, err)
 		MPV.isValid = true
 	}()
-
-	ch := orch.Start()
 
 	<-BalanceSender.balanceMessages
 	promiseChannel <- promise.PromiseMessage{
 		Amount:     100,
 		SequenceID: 1,
 		Signature:  "0x1111",
-	}
-
-	for v := range ch {
-		assert.Equal(t, ErrPromiseValidationFailed, v)
-		break
 	}
 }

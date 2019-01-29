@@ -119,13 +119,12 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 
 	//TODO: either remove promise processor or this
 	paymentOrchestrator := manager.paymentOrchestratorFactory()
-	errChan := paymentOrchestrator.Start()
 	go func() {
-		for err := range errChan {
-			if err != nil {
-				// TODO: log and handle and destroy session?
-				// manager.Destroy(consumerID, string(sessionInstance.ID))
-			}
+		err := paymentOrchestrator.Start()
+		if err != nil {
+			// TODO: log
+			// TODO: destroy session even if there is no error
+			// TODO: fix this once the channel is here
 		}
 	}()
 

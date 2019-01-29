@@ -62,11 +62,11 @@ func (processor *fakePromiseProcessor) Stop() error {
 }
 
 type mockPaymentOrchestrator struct {
-	errChan chan error
+	errorToReturn error
 }
 
-func (m mockPaymentOrchestrator) Start() <-chan error {
-	return m.errChan
+func (m mockPaymentOrchestrator) Start() error {
+	return m.errorToReturn
 }
 
 func (m mockPaymentOrchestrator) Stop() {

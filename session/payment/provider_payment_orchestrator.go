@@ -79,48 +79,46 @@ func NewProviderPaymentOrchestrator(
 	}
 }
 
-// Start starts the payment orchestrator. Returns a read only channel that indicates if any errors are encountered.
-// The channel is closed when the orchestrator is stopped.
-func (ppo *ProviderPaymentOrchestrator) Start() <-chan error {
-	ch := make(chan error, 1)
-
-	go func() {
-		defer close(ch)
-		for {
-			select {
-			case <-ppo.stop:
-				return
-			case <-time.After(ppo.period):
-				ppo.sendBalance(ch)
-				ppo.receivePromiseOrTimeout(ch)
+// Start starts the payment orchestrator. Blocks.
+func (ppo *ProviderPaymentOrchestrator) Start() error {
+	for {
+		select {
+		case <-ppo.stop:
+			return nil
+		case <-time.After(ppo.period):
+			err := ppo.sendBalance()
+			if err != nil {
+				return err
+			}
+			err = ppo.receivePromiseOrTimeout()
+			if err != nil {
+				return err
 			}
 		}
-	}()
-
-	return ch
-}
-
-func (ppo *ProviderPaymentOrchestrator) sendBalance(ch chan error) {
-	balance := ppo.balanceTracker.GetBalance()
-	// TODO: Maybe retry a couple of times?
-	err := ppo.peerBalanceSender.Send(balance)
-	if err != nil {
-		ch <- err
 	}
 }
 
-func (ppo *ProviderPaymentOrchestrator) receivePromiseOrTimeout(errorChan chan error) {
+func (ppo *ProviderPaymentOrchestrator) sendBalance() error {
+	balance := ppo.balanceTracker.GetBalance()
+	// TODO: Maybe retry a couple of times?
+	err := ppo.peerBalanceSender.Send(balance)
+	return err
+}
+
+func (ppo *ProviderPaymentOrchestrator) receivePromiseOrTimeout() error {
 	select {
 	case pm := <-ppo.promiseChan:
 		log.Info("Promise received", pm)
 		if !ppo.promiseValidator.Validate(pm) {
-			errorChan <- ErrPromiseValidationFailed
+			log.Info("Promise not valid", pm)
+			return ErrPromiseValidationFailed
 		}
 		// TODO: Save the promise
 		// TODO: Change balance
 	case <-time.After(ppo.promiseWaitTimeout):
-		errorChan <- ErrPromiseWaitTimeout
+		return ErrPromiseWaitTimeout
 	}
+	return nil
 }
 
 // Stop stops the payment orchestrator

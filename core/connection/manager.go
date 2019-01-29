@@ -186,11 +186,13 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		return err
 	}
 
-	errorChan := orch.Start()
+	cancel = append(cancel, func() { orch.Stop() })
 
 	go func() {
-		for v := range errorChan {
-			log.Error("channeling error", v)
+		err := orch.Start()
+		if err != nil {
+			log.Error(managerLogPrefix, "channeling error: ", err)
+			// TODO: disconnect here
 		}
 	}()
 
