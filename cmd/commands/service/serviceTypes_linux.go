@@ -37,12 +37,3 @@ var (
 		service_wireguard.ServiceType: parseWireguardFlags,
 	}
 )
-
-// parseWireguardFlags function fills in wireguard service options from CLI context
-func parseWireguardFlags(ctx *cli.Context) service.Options {
-	return service.Options{
-		Identity:   ctx.String(identityFlag.Name),
-		Passphrase: ctx.String(identityPassphraseFlag.Name),
-		Type:       service_wireguard.ServiceType,
-	}
-}

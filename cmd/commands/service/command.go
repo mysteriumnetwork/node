@@ -29,6 +29,7 @@ import (
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/urfave/cli"
 )
 
@@ -153,6 +154,13 @@ func parseNoopFlags(ctx *cli.Context) service.Options {
 		Identity:   ctx.String(identityFlag.Name),
 		Passphrase: ctx.String(identityPassphraseFlag.Name),
 		Type:       service_noop.ServiceType,
+	}
+}
+
+// parseWireguardFlags function fills in wireguard service options from CLI context
+func parseWireguardFlags(_ *cli.Context) service.Options {
+	return service.Options{
+		Type: service_wireguard.ServiceType,
 	}
 }
 
