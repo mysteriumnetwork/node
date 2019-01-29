@@ -27,6 +27,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const logPrefix = "[wireguard-windows] "
+
 func assignIP(iface string, subnet net.IPNet) error {
 	out, err := exec.Command("powershell", "-Command", "netsh interface ip set address name=\""+iface+"\" source=static "+subnet.String()).CombinedOutput()
 	return errors.Wrap(err, string(out))
