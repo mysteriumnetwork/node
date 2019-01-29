@@ -60,12 +60,15 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId, config)
 	switch err {
 	case nil:
-		go func() {
-			<-sessionInstance.Stop
-			if err := destroyCallback(); err != nil {
-				log.Error("Failed to execute destroy callback: ", err)
-			}
-		}()
+		if destroyCallback != nil {
+			go func() {
+				<-sessionInstance.Stop
+				if err := destroyCallback(); err != nil {
+					log.Error("Failed to execute destroy callback: ", err)
+				}
+			}()
+		}
+
 		return responseWithSession(sessionInstance), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
