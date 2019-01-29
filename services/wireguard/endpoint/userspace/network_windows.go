@@ -22,7 +22,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/cihub/seelog"
 	"github.com/jackpal/gateway"
 	"github.com/pkg/errors"
 )

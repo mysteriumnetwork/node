@@ -22,9 +22,9 @@ import (
 	"net"
 	"time"
 
-	"git.zx2c4.com/wireguard-go/device"
-	"git.zx2c4.com/wireguard-go/tun"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/wireguard-go/device"
+	"github.com/mysteriumnetwork/wireguard-go/tun"
 	"github.com/pkg/errors"
 )
 

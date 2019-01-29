@@ -23,8 +23,8 @@ import (
 	"net"
 	"os"
 
-	"git.zx2c4.com/wireguard-go/device"
-	"git.zx2c4.com/wireguard-go/tun"
+	"github.com/mysteriumnetwork/wireguard-go/device"
+	"github.com/mysteriumnetwork/wireguard-go/tun"
 	"github.com/pkg/errors"
 	"github.com/songgao/water"
 )
