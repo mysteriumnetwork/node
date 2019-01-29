@@ -4,12 +4,13 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
-// PromiseRequest structure represents message from service consumer to send a promise
-type PromiseRequest struct {
-	PromiseMessage PromiseMessage `json:"promiseMessage"`
+// Request structure represents message from service consumer to send a promise
+type Request struct {
+	Message Message `json:"promiseMessage"`
 }
 
-type PromiseMessage struct {
+// Message is the payload we send to the provider
+type Message struct {
 	Amount     uint64 `json:"amount"`
 	SequenceID uint64 `json:"sequenceID"`
 	Signature  string `json:"signature"`
@@ -18,76 +19,83 @@ type PromiseMessage struct {
 const endpointPromise = "session-promise"
 const messageEndpointPromise = communication.MessageEndpoint(endpointPromise)
 
-type PromiseSender struct {
+// Sender is responsible for sending the promise messages
+type Sender struct {
 	sender communication.Sender
 }
 
-func NewPromiseSender(sender communication.Sender) *PromiseSender {
-	return &PromiseSender{
+// NewSender returns a new instance of promise sender
+func NewSender(sender communication.Sender) *Sender {
+	return &Sender{
 		sender: sender,
 	}
 }
 
-func (ps *PromiseSender) Send(pm PromiseMessage) error {
-	err := ps.sender.Send(&promiseMessageProducer{PromiseMessage: pm})
+// Send send the given promise message
+func (ps *Sender) Send(pm Message) error {
+	err := ps.sender.Send(&MessageProducer{Message: pm})
 	return err
 }
 
-type PromiseListener struct {
-	promiseMessageConsumer *promiseMessageConsumer
+// Listener listens for promise messages
+type Listener struct {
+	MessageConsumer *MessageConsumer
 }
 
-func NewPromiseListener(promiseChan chan PromiseMessage) *PromiseListener {
-	return &PromiseListener{
-		promiseMessageConsumer: &promiseMessageConsumer{
+// NewListener returns a new instance of promise listener
+func NewListener(promiseChan chan Message) *Listener {
+	return &Listener{
+		MessageConsumer: &MessageConsumer{
 			queue: promiseChan,
 		},
 	}
 }
 
-func (pl *PromiseListener) GetConsumer() *promiseMessageConsumer {
-	return pl.promiseMessageConsumer
+// GetConsumer gets the underlying consumer from the listener
+func (pl *Listener) GetConsumer() *MessageConsumer {
+	return pl.MessageConsumer
 }
 
 // Consume handles requests from endpoint and replies with response
-func (pmc *promiseMessageConsumer) Consume(requestPtr interface{}) (err error) {
-	request := requestPtr.(*PromiseRequest)
-	pmc.queue <- request.PromiseMessage
+func (pmc *MessageConsumer) Consume(requestPtr interface{}) (err error) {
+	request := requestPtr.(*Request)
+	pmc.queue <- request.Message
 	return nil
 }
 
 // Dialog boilerplate below, please ignore
 
-type promiseMessageConsumer struct {
-	queue chan PromiseMessage
+// MessageConsumer is responsible for consuming the messages
+type MessageConsumer struct {
+	queue chan Message
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
-func (pmc *promiseMessageConsumer) GetMessageEndpoint() communication.MessageEndpoint {
+func (pmc *MessageConsumer) GetMessageEndpoint() communication.MessageEndpoint {
 	return messageEndpointPromise
 }
 
-// NewRequest creates struct where request from endpoint will be serialized
-func (pmc *promiseMessageConsumer) NewMessage() (requestPtr interface{}) {
-	return &PromiseRequest{}
+// NewMessage creates struct where request from endpoint will be serialized
+func (pmc *MessageConsumer) NewMessage() (requestPtr interface{}) {
+	return &Request{}
 }
 
-// promiseMessageProducer
-type promiseMessageProducer struct {
-	PromiseMessage PromiseMessage
+// MessageProducer
+type MessageProducer struct {
+	Message Message
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
-func (pmp *promiseMessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
+func (pmp *MessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
 	return messageEndpointPromise
 }
 
-func (pmp *promiseMessageProducer) Produce() (requestPtr interface{}) {
-	return &PromiseRequest{
-		PromiseMessage: pmp.PromiseMessage,
+func (pmp *MessageProducer) Produce() (requestPtr interface{}) {
+	return &Request{
+		Message: pmp.Message,
 	}
 }
 
-func (pmp *promiseMessageProducer) NewResponse() (responsePtr interface{}) {
+func (pmp *MessageProducer) NewResponse() (responsePtr interface{}) {
 	return nil
 }

@@ -49,12 +49,12 @@ type MockPromiseValidator struct {
 	isValid bool
 }
 
-func (mpv *MockPromiseValidator) Validate(promise.PromiseMessage) bool {
+func (mpv *MockPromiseValidator) Validate(promise.Message) bool {
 	return mpv.isValid
 }
 
 var (
-	promiseChannel = make(chan promise.PromiseMessage)
+	promiseChannel = make(chan promise.Message)
 	BalanceSender  = &MockPeerBalanceSender{balanceMessages: make(chan balance.Message)}
 	MBT            = &MockBalanceTracker{balanceMessage: balance.Message{Balance: 0, SequenceID: 1}}
 	MPV            = &MockPromiseValidator{isValid: true}
@@ -117,7 +117,7 @@ func Test_ProviderPaymentOchestratorInvalidPromise(t *testing.T) {
 	}()
 
 	<-BalanceSender.balanceMessages
-	promiseChannel <- promise.PromiseMessage{
+	promiseChannel <- promise.Message{
 		Amount:     100,
 		SequenceID: 1,
 		Signature:  "0x1111",

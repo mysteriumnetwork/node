@@ -35,7 +35,7 @@ type BalanceTracker interface {
 
 // PromiseValidator validates given promise
 type PromiseValidator interface {
-	Validate(promise.PromiseMessage) bool
+	Validate(promise.Message) bool
 }
 
 // PeerBalanceSender knows how to send a balance message to the peer
@@ -54,7 +54,7 @@ type SessionBalance struct {
 	stop               chan struct{}
 	peerBalanceSender  PeerBalanceSender
 	balanceTracker     BalanceTracker
-	promiseChan        chan promise.PromiseMessage
+	promiseChan        chan promise.Message
 	period             time.Duration
 	promiseWaitTimeout time.Duration
 	promiseValidator   PromiseValidator
@@ -64,7 +64,7 @@ type SessionBalance struct {
 func NewSessionBalance(
 	peerBalanceSender PeerBalanceSender,
 	balanceTracker BalanceTracker,
-	promiseChan chan promise.PromiseMessage,
+	promiseChan chan promise.Message,
 	period time.Duration,
 	promiseWaitTimeout time.Duration,
 	promiseValidator PromiseValidator) *SessionBalance {

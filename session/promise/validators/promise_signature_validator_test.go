@@ -37,7 +37,7 @@ func TestPromiseSignatureValidatorReturnsTrueForReceivedValidMessage(t *testing.
 	assert.NoError(t, err)
 
 	//a message is sent over the network
-	promiseMessage := promise.PromiseMessage{
+	promiseMessage := promise.Message{
 		Amount:     uint64(issuedPromise.Amount),
 		SequenceID: uint64(issuedPromise.SeqNo),
 		Signature:  hexutil.Encode(issuedPromise.IssuerSignature),

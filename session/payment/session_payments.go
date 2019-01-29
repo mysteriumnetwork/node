@@ -28,7 +28,7 @@ import (
 
 // PeerPromiseSender knows how to send a promise message to the peer
 type PeerPromiseSender interface {
-	Send(promise.PromiseMessage) error
+	Send(promise.Message) error
 }
 
 // PromiseTracker keeps track of promises
@@ -75,7 +75,7 @@ func (cpo *SessionPayments) Start() error {
 			if err != nil {
 				return err
 			}
-			err = cpo.peerPromiseSender.Send(promise.PromiseMessage{
+			err = cpo.peerPromiseSender.Send(promise.Message{
 				Amount:     uint64(issuedPromise.Promise.Amount),
 				SequenceID: uint64(issuedPromise.Promise.SeqNo),
 				Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),

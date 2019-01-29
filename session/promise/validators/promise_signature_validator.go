@@ -12,7 +12,7 @@ type IssuedPromiseValidator struct {
 	issuer   common.Address
 }
 
-func (ipv *IssuedPromiseValidator) Validate(promiseMsg promise.PromiseMessage) bool {
+func (ipv *IssuedPromiseValidator) Validate(promiseMsg promise.Message) bool {
 	issuedPromise := promises.IssuedPromise{
 		Promise: promises.Promise{
 			Extra: promise.ExtraData{

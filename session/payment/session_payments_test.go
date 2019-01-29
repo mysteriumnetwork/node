@@ -31,10 +31,10 @@ import (
 
 type MockPeerPromiseSender struct {
 	mockError     error
-	chanToWriteTo chan promise.PromiseMessage
+	chanToWriteTo chan promise.Message
 }
 
-func (mpps *MockPeerPromiseSender) Send(p promise.PromiseMessage) error {
+func (mpps *MockPeerPromiseSender) Send(p promise.Message) error {
 	if mpps.chanToWriteTo != nil {
 		mpps.chanToWriteTo <- p
 	}
@@ -63,7 +63,7 @@ var (
 			Amount: 0,
 		},
 	}
-	promiseSender  = &MockPeerPromiseSender{chanToWriteTo: make(chan promise.PromiseMessage, 1)}
+	promiseSender  = &MockPeerPromiseSender{chanToWriteTo: make(chan promise.Message, 1)}
 	promiseTracker = &MockPromiseTracker{promiseToReturn: promiseToReturn, errToReturn: nil}
 )
 
@@ -91,7 +91,7 @@ func Test_SessionPayments_SendsPromiseOnBalance(t *testing.T) {
 	defer cpo.Stop()
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
 	for v := range promiseSender.chanToWriteTo {
-		assert.Exactly(t, promise.PromiseMessage{SequenceID: 1, Amount: 0, Signature: "0x"}, v)
+		assert.Exactly(t, promise.Message{SequenceID: 1, Amount: 0, Signature: "0x"}, v)
 		break
 	}
 }

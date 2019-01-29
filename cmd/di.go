@@ -264,7 +264,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		}
 
 		bl := balance.NewListener(messageChan)
-		ps := promise.NewPromiseSender(dialog)
+		ps := promise.NewSender(dialog)
 		issuer := issuers.NewLocalIssuer(di.SignerFactory(consumer))
 		tracker := promise.NewConsumerTracker(initialState, consumer, provider, issuer)
 		payments := session_payment.NewSessionPayments(messageChan, ps, tracker)
@@ -329,8 +329,8 @@ func newSessionManagerFactory(
 			}
 			amountCalc := session.AmountCalc{PaymentDef: payment}
 			sender := balance.NewBalanceSender(dialog)
-			promiseChan := make(chan promise.PromiseMessage, 1)
-			listener := promise.NewPromiseListener(promiseChan)
+			promiseChan := make(chan promise.Message, 1)
+			listener := promise.NewListener(promiseChan)
 			dialog.Receive(listener.GetConsumer())
 
 			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 100)
