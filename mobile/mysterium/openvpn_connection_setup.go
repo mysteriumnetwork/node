@@ -21,7 +21,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/cihub/seelog"
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -73,6 +73,8 @@ func channelToCallbacks(stateChannel connection.StateChannel, statisticsChannel 
 	}
 }
 
+const openvpn3Log = "[Openvpn3]"
+
 type channelToCallbacksAdapter struct {
 	stateChannel      connection.StateChannel
 	statisticsChannel connection.StatisticsChannel
@@ -88,19 +90,25 @@ func (adapter channelToCallbacksAdapter) OnEvent(event openvpn3.Event) {
 		adapter.stateChannel <- connection.Disconnecting
 		adapter.stateChannel <- connection.NotConnected
 		close(adapter.stateChannel)
+		close(adapter.statisticsChannel)
 	default:
-		seelog.Infof("Unhandled event: %+v", event)
+		log.Infof("%v Unhandled event: %+v", openvpn3Log, event)
 	}
 }
 
 func (channelToCallbacksAdapter) Log(text string) {
-	seelog.Infof("Log: %+v", text)
+	log.Infof("%v Log: %+v", openvpn3Log, text)
 }
 
 func (adapter channelToCallbacksAdapter) OnStats(openvpnStats openvpn3.Statistics) {
-	adapter.statisticsChannel <- consumer.SessionStatistics{
+	sessionStats := consumer.SessionStatistics{
 		BytesSent:     uint64(openvpnStats.BytesOut),
 		BytesReceived: uint64(openvpnStats.BytesIn),
+	}
+	select {
+	case adapter.statisticsChannel <- sessionStats:
+	default:
+		log.Warn(openvpn3Log, " Statistics dropped. Channel full")
 	}
 }
 

@@ -203,6 +203,8 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 	cancel = append(cancel, connection.Stop)
 
+	//consume statistics right after start - openvpn3 will publish them even before connected state
+	go manager.consumeStats(statisticsChannel)
 	err = manager.waitForConnectedState(stateChannel, sessionID)
 	if err != nil {
 		return err
@@ -214,7 +216,6 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		firewall.NewKillSwitch().Enable()
 	}
 
-	go manager.consumeStats(statisticsChannel)
 	go manager.consumeConnectionStates(stateChannel)
 	go connectionWaiter(connection, dialog, promiseIssuer)
 	return nil
