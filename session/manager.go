@@ -85,7 +85,6 @@ func NewManager(
 type Manager struct {
 	currentProposal  market.ServiceProposal
 	generateID       IDGenerator
-	provideConfig    ConfigProvider
 	sessionStorage   Storage
 	promiseProcessor PromiseProcessor
 
@@ -93,7 +92,7 @@ type Manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration, destroyCallback DestroyCallback) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -102,17 +101,19 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 		return
 	}
 
-	sessionInstance, err = manager.createSession(consumerID, config)
+	sessionInstance.ID, err = manager.generateID()
 	if err != nil {
 		return
 	}
+	sessionInstance.ConsumerID = consumerID
+	sessionInstance.Stop = make(chan struct{})
+	sessionInstance.Config = config
 
 	err = manager.promiseProcessor.Start(manager.currentProposal)
 	if err != nil {
 		return
 	}
 
-	sessionInstance.DestroyCallback = destroyCallback
 	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
 }
@@ -138,19 +139,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))
+	close(sessionInstance.Stop)
 
-	if sessionInstance.DestroyCallback != nil {
-		return sessionInstance.DestroyCallback()
-	}
 	return nil
-}
-
-func (manager *Manager) createSession(consumerID identity.Identity, config ServiceConfiguration) (sessionInstance Session, err error) {
-	sessionInstance.ID, err = manager.generateID()
-	if err != nil {
-		return
-	}
-	sessionInstance.ConsumerID = consumerID
-	sessionInstance.Config = config
-	return
 }

@@ -20,6 +20,7 @@ package session
 import (
 	"encoding/json"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 )
@@ -33,7 +34,7 @@ type createConsumer struct {
 
 // Creator defines method for session creation
 type Creator interface {
-	Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration, destroyCallback DestroyCallback) (Session, error)
+	Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (Session, error)
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
@@ -56,9 +57,15 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		return responseInternalError, err
 	}
 
-	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId, config, destroyCallback)
+	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId, config)
 	switch err {
 	case nil:
+		go func() {
+			<-sessionInstance.Stop
+			if err := destroyCallback(); err != nil {
+				log.Error("Failed to execute destroy callback: ", err)
+			}
+		}()
 		return responseWithSession(sessionInstance), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
