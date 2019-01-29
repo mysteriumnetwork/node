@@ -24,13 +24,13 @@ import (
 	"sync"
 	"time"
 
-	"git.zx2c4.com/wireguard-go/device"
-	"git.zx2c4.com/wireguard-go/tun"
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
+	"github.com/mysteriumnetwork/wireguard-go/device"
+	"github.com/mysteriumnetwork/wireguard-go/tun"
 	"github.com/pkg/errors"
 )
 

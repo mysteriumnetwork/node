@@ -1,4 +1,4 @@
-// +build windows
+// +build !windows
 
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
@@ -17,18 +17,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package userspace
 
 import (
-	"github.com/mysteriumnetwork/node/core/node"
+	"net"
+
+	"github.com/mysteriumnetwork/wireguard-go/device"
+	"github.com/mysteriumnetwork/wireguard-go/tun"
+	"github.com/pkg/errors"
 )
 
-// BootstrapServices loads all the components required for running services
-func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
-	di.bootstrapServiceComponents(nodeOptions)
-
-	di.bootstrapServiceOpenvpn(nodeOptions)
-	di.bootstrapServiceNoop(nodeOptions)
-
-	return nil
+// CreateTUN creates native TUN device for wireguard.
+func CreateTUN(name string, subnet net.IPNet) (tunDevice tun.TUNDevice, err error) {
+	if tunDevice, err = tun.CreateTUN(name, device.DefaultMTU); err != nil {
+		return nil, errors.Wrap(err, "failed to create TUN device")
+	}
+	if err = assignIP(name, subnet); err != nil {
+		return nil, errors.Wrap(err, "failed to assign IP address")
+	}
+	return tunDevice, nil
 }

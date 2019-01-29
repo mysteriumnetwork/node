@@ -51,7 +51,7 @@ type Connection struct {
 func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	var config wg.ServiceConfig
 	if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal connection config")
 	}
 	c.config.Provider = config.Provider
 	c.config.Consumer.IPAddress = config.Consumer.IPAddress
@@ -59,7 +59,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	resourceAllocator := resources.NewAllocator()
 	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint("", &resourceAllocator)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create new connection endpoint")
 	}
 
 	c.connection.Add(1)
@@ -68,19 +68,19 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	if err := c.connectionEndpoint.Start(&c.config); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
-		return err
+		return errors.Wrap(err, "failed to start connection endpoint")
 	}
 
 	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
-		return err
+		return errors.Wrap(err, "failed to add peer to the connection endpoint")
 	}
 
 	if err := c.connectionEndpoint.ConfigureRoutes(c.config.Provider.Endpoint.IP); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
-		return err
+		return errors.Wrap(err, "failed to configure routes for connection endpoint")
 	}
 
 	if err := c.waitHandshake(); err != nil {
