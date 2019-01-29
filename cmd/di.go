@@ -38,7 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
@@ -58,7 +57,9 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
+	payments_noop "github.com/mysteriumnetwork/node/session/payment/noop"
 	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/mysteriumnetwork/node/session/promise/issuers"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -251,11 +252,24 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
-	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
-		if nodeOptions.ExperimentPromiseCheck {
-			return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
+	paymentIssuerFactory := func(
+		initialState promise.State,
+		messageChan chan balance.Message,
+		dialog communication.Dialog,
+		consumer, provider identity.Identity) (connection.PaymentManager, error) {
+		// if the flag aint set, just return a noop balance tracker
+		// it's not even a session balance tracker, but we don't really care here as long as it does nothing
+		if !nodeOptions.ExperimentPromiseCheck {
+			return payments_noop.NewSessionBalance(), nil
 		}
-		return &promise_noop.FakePromiseEngine{}
+
+		bl := balance.NewListener(messageChan)
+		ps := promise.NewPromiseSender(dialog)
+		issuer := issuers.NewLocalIssuer(di.SignerFactory(consumer))
+		tracker := promise.NewConsumerTracker(initialState, consumer, provider, issuer)
+		payments := session_payment.NewSessionPayments(messageChan, ps, tracker)
+		err := dialog.Receive(bl.GetConsumer())
+		return payments, err
 	}
 
 	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
@@ -273,7 +287,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		promiseIssuerFactory,
+		paymentIssuerFactory,
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 	)
@@ -295,10 +309,15 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 func newSessionManagerFactory(
 	proposal market.ServiceProposal,
 	sessionStorage *session.StorageMemory,
-	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
+	nodeOptions node.Options,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func() session.PaymentOrchestrator {
+			// if the flag aint set, just return a noop balance tracker
+			if !nodeOptions.ExperimentPromiseCheck {
+				return payments_noop.NewSessionBalance()
+			}
+
 			timeTracker := session.NewTracker(time.Now)
 			// TODO: set the time and proper payment info
 			payment := dto.PaymentPerTime{
@@ -313,6 +332,7 @@ func newSessionManagerFactory(
 			promiseChan := make(chan promise.PromiseMessage, 1)
 			listener := promise.NewPromiseListener(promiseChan)
 			dialog.Receive(listener.GetConsumer())
+
 			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 100)
 
 			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, &validators.NoopValidator{})
@@ -321,7 +341,6 @@ func newSessionManagerFactory(
 			proposal,
 			session.GenerateUUID,
 			sessionStorage,
-			promiseHandler(dialog),
 			providerBalanceTrackerFactory,
 		)
 	}

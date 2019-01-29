@@ -4,9 +4,9 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 )
 
-// DestroyRequest structure represents message from service consumer to destroy session for given session id
+// PromiseRequest structure represents message from service consumer to send a promise
 type PromiseRequest struct {
-	PromiseMessage PromiseMessage `json:"balanceMessage"`
+	PromiseMessage PromiseMessage `json:"promiseMessage"`
 }
 
 type PromiseMessage struct {
@@ -84,7 +84,7 @@ func (pmp *promiseMessageProducer) GetMessageEndpoint() communication.MessageEnd
 
 func (pmp *promiseMessageProducer) Produce() (requestPtr interface{}) {
 	return &PromiseRequest{
-		PromiseMessage: PromiseMessage{},
+		PromiseMessage: pmp.PromiseMessage,
 	}
 }
 

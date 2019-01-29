@@ -25,7 +25,6 @@ import (
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/node"
-	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -132,13 +131,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator) communication.DialogHandler {
-		promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
-			if nodeOptions.ExperimentPromiseCheck {
-				return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
-			}
-			return &promise_noop.FakePromiseEngine{}
-		}
-		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, promiseHandler)
+		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, nodeOptions)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig)
 	}
 

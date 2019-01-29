@@ -69,14 +69,12 @@ func NewManager(
 	currentProposal market.ServiceProposal,
 	idGenerator IDGenerator,
 	sessionStorage Storage,
-	promiseProcessor PromiseProcessor,
 	paymentOrchestratorFactory func() PaymentOrchestrator,
 ) *Manager {
 	return &Manager{
 		currentProposal:            currentProposal,
 		generateID:                 idGenerator,
 		sessionStorage:             sessionStorage,
-		promiseProcessor:           promiseProcessor,
 		paymentOrchestratorFactory: paymentOrchestratorFactory,
 
 		creationLock: sync.Mutex{},
@@ -88,7 +86,6 @@ type Manager struct {
 	currentProposal            market.ServiceProposal
 	generateID                 IDGenerator
 	sessionStorage             Storage
-	promiseProcessor           PromiseProcessor
 	paymentOrchestratorFactory func() PaymentOrchestrator
 
 	creationLock sync.Mutex
@@ -111,11 +108,6 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.Done = make(chan struct{})
 	sessionInstance.Config = config
-
-	err = manager.promiseProcessor.Start(manager.currentProposal)
-	if err != nil {
-		return
-	}
 
 	//TODO: either remove promise processor or this
 	paymentOrchestrator := manager.paymentOrchestratorFactory()
@@ -150,11 +142,6 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 
 	if sessionInstance.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
-	}
-
-	err := manager.promiseProcessor.Stop()
-	if err != nil {
-		return err
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))

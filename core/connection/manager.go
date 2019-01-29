@@ -22,8 +22,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/mysteriumnetwork/payments/promises"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
@@ -33,7 +31,6 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
-	"github.com/mysteriumnetwork/node/session/payment"
 	"github.com/mysteriumnetwork/node/session/promise"
 )
 
@@ -67,12 +64,21 @@ type Publisher interface {
 	Publish(topic string, args ...interface{})
 }
 
+// PaymentManager handles the payments for service
+type PaymentManager interface {
+	Start() error
+	Stop()
+}
+
+// PaymentManagerFactory creates a new payment manager from the given params
+type PaymentManagerFactory func(initialState promise.State, messageChan chan balance.Message, dialog communication.Dialog, consumer, provider identity.Identity) (PaymentManager, error)
+
 type connectionManager struct {
 	//these are passed on creation
-	newDialog        DialogCreator
-	newPromiseIssuer PromiseIssuerCreator
-	newConnection    Creator
-	eventPublisher   Publisher
+	newDialog             DialogCreator
+	paymentManagerFactory PaymentManagerFactory
+	newConnection         Creator
+	eventPublisher        Publisher
 
 	//these are populated by Connect at runtime
 	ctx             context.Context
@@ -85,17 +91,17 @@ type connectionManager struct {
 // NewManager creates connection manager with given dependencies
 func NewManager(
 	dialogCreator DialogCreator,
-	promiseIssuerCreator PromiseIssuerCreator,
+	paymentManagerFactory PaymentManagerFactory,
 	connectionCreator Creator,
 	eventPublisher Publisher,
 ) *connectionManager {
 	return &connectionManager{
-		newDialog:        dialogCreator,
-		newPromiseIssuer: promiseIssuerCreator,
-		newConnection:    connectionCreator,
-		status:           statusNotConnected(),
-		cleanConnection:  warnOnClean,
-		eventPublisher:   eventPublisher,
+		newDialog:             dialogCreator,
+		paymentManagerFactory: paymentManagerFactory,
+		newConnection:         connectionCreator,
+		status:                statusNotConnected(),
+		cleanConnection:       warnOnClean,
+		eventPublisher:        eventPublisher,
 	}
 }
 
@@ -121,20 +127,6 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 		return ErrConnectionCancelled
 	}
 	return err
-}
-
-type MockPromiseTracker struct {
-	promiseToReturn promises.IssuedPromise
-	errToReturn     error
-}
-
-func (mpt *MockPromiseTracker) AlignStateWithProvider(providerState promise.State) error {
-	// in this case we just do nothing really
-	return nil
-}
-
-func (mpt *MockPromiseTracker) IssuePromiseWithAddedAmount(amountToAdd int64) (promises.IssuedPromise, error) {
-	return promises.IssuedPromise{}, nil
 }
 
 func (manager *connectionManager) startConnection(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
@@ -178,23 +170,16 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 
 	messageChan := make(chan balance.Message, 1)
-	bl := balance.NewListener(messageChan)
-	ps := promise.NewPromiseSender(dialog)
-	orch := payment.NewSessionPayments(messageChan, ps, &MockPromiseTracker{})
-	err = dialog.Receive(bl.GetConsumer())
+
+	// TODO: load initial promise state
+	payments, err := manager.paymentManagerFactory(promise.State{}, messageChan, dialog, consumerID, providerID)
 	if err != nil {
 		return err
 	}
 
-	cancel = append(cancel, func() { orch.Stop() })
+	cancel = append(cancel, func() { payments.Stop() })
 
-	go func() {
-		err := orch.Start()
-		if err != nil {
-			log.Error(managerLogPrefix, "channeling error: ", err)
-			// TODO: disconnect here
-		}
-	}()
+	go manager.payForService(payments)
 
 	consumerInfo := session.ConsumerInfo{
 		// TODO: once we're supporting payments from another identity make the changes accordingly
@@ -228,13 +213,6 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		})
 	})
 
-	promiseIssuer := manager.newPromiseIssuer(consumerID, dialog)
-	err = promiseIssuer.Start(proposal)
-	if err != nil {
-		return err
-	}
-	cancel = append(cancel, func() { promiseIssuer.Stop() })
-
 	connectOptions := ConnectOptions{
 		SessionID:     sessionID,
 		SessionConfig: sessionConfig,
@@ -262,7 +240,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 
 	go manager.consumeConnectionStates(stateChannel)
-	go connectionWaiter(connection, dialog, promiseIssuer)
+	go connectionWaiter(connection, dialog)
 	return nil
 }
 
@@ -284,11 +262,22 @@ func (manager *connectionManager) Disconnect() error {
 	return nil
 }
 
+func (manager *connectionManager) payForService(payments PaymentManager) {
+	err := payments.Start()
+	if err != nil {
+		log.Error(managerLogPrefix, "payment error: ", err)
+		err = manager.Disconnect()
+		if err != nil {
+			log.Error(managerLogPrefix, "could not disconnect gracefully:", err)
+		}
+	}
+}
+
 func warnOnClean() {
 	log.Warn(managerLogPrefix, "Trying to close when there is nothing to close. Possible bug or race condition")
 }
 
-func connectionWaiter(connection Connection, dialog communication.Dialog, promiseIssuer PromiseIssuer) {
+func connectionWaiter(connection Connection, dialog communication.Dialog) {
 	err := connection.Wait()
 	if err != nil {
 		log.Warn(managerLogPrefix, "Connection exited with error: ", err)
@@ -296,7 +285,6 @@ func connectionWaiter(connection Connection, dialog communication.Dialog, promis
 		log.Info(managerLogPrefix, "Connection exited")
 	}
 
-	promiseIssuer.Stop()
 	dialog.Close()
 }
 

@@ -45,22 +45,6 @@ func generateSessionID() (ID, error) {
 	return expectedID, nil
 }
 
-type fakePromiseProcessor struct {
-	started  bool
-	proposal market.ServiceProposal
-}
-
-func (processor *fakePromiseProcessor) Start(proposal market.ServiceProposal) error {
-	processor.started = true
-	processor.proposal = proposal
-	return nil
-}
-
-func (processor *fakePromiseProcessor) Stop() error {
-	processor.started = false
-	return nil
-}
-
 type mockPaymentOrchestrator struct {
 	errorToReturn error
 }
@@ -81,7 +65,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, &fakePromiseProcessor{}, mockPaymentOrchestratorFactory)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockPaymentOrchestratorFactory)
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig)
 	expectedResult.Done = sessionInstance.Done
@@ -91,20 +75,9 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, &fakePromiseProcessor{}, mockPaymentOrchestratorFactory)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockPaymentOrchestratorFactory)
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), 69, expectedSessionConfig)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Exactly(t, Session{}, sessionInstance)
-}
-
-func TestManager_Create_StartsPromiseProcessor(t *testing.T) {
-	promiseProcessor := &fakePromiseProcessor{}
-	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, promiseProcessor, mockPaymentOrchestratorFactory)
-
-	_, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig)
-	assert.NoError(t, err)
-	assert.True(t, promiseProcessor.started)
-	assert.Exactly(t, currentProposal, promiseProcessor.proposal)
 }

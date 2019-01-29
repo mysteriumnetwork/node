@@ -28,6 +28,8 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/balance"
+	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -37,7 +39,7 @@ type testContext struct {
 	fakeConnectionFactory *connectionFactoryFake
 	connManager           *connectionManager
 	fakeDialog            *fakeDialog
-	fakePromiseIssuer     *fakePromiseIssuer
+	mockPaymentManager    *MockPaymentManager
 	stubPublisher         *StubPublisher
 	mockStatistics        consumer.SessionStatistics
 	sync.RWMutex
@@ -69,10 +71,13 @@ func (tc *testContext) SetupTest() {
 		return tc.fakeDialog, nil
 	}
 
-	tc.fakePromiseIssuer = &fakePromiseIssuer{}
-	promiseIssuerFactory := func(_ identity.Identity, _ communication.Dialog) PromiseIssuer {
-		return tc.fakePromiseIssuer
+	mockPaymentFactory := func(initialState promise.State, messageChan chan balance.Message, dialog communication.Dialog, consumer, provider identity.Identity) (PaymentManager, error) {
+		tc.mockPaymentManager = &MockPaymentManager{
+			stopChan: make(chan struct{}),
+		}
+		return tc.mockPaymentManager, nil
 	}
+
 	tc.mockStatistics = consumer.SessionStatistics{
 		BytesReceived: 10,
 		BytesSent:     20,
@@ -103,7 +108,7 @@ func (tc *testContext) SetupTest() {
 
 	tc.connManager = NewManager(
 		dialogCreator,
-		promiseIssuerFactory,
+		mockPaymentFactory,
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
 	)
@@ -240,17 +245,17 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfConnectionExitsDuringConne
 	assert.Equal(tc.T(), ErrConnectionFailed, err)
 }
 
-func (tc *testContext) Test_PromiseIssuer_WhenManagerMadeConnectionIsStarted() {
+func (tc *testContext) Test_PaymentManager_WhenManagerMadeConnectionIsStarted() {
 	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
-	assert.True(tc.T(), tc.fakePromiseIssuer.startCalled)
+	assert.True(tc.T(), tc.mockPaymentManager.StartCalled())
 }
 
-func (tc *testContext) Test_PromiseIssuer_OnConnectErrorIsStopped() {
+func (tc *testContext) Test_PaymentManager_OnConnectErrorIsStopped() {
 	tc.fakeConnectionFactory.mockConnection.onStartReturnError = errors.New("fatal connection error")
 	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
 	assert.Error(tc.T(), err)
-	assert.True(tc.T(), tc.fakePromiseIssuer.stopCalled)
+	assert.True(tc.T(), tc.mockPaymentManager.StopCalled())
 }
 
 func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
@@ -335,3 +340,40 @@ func waitABit() {
 type fakeServiceDefinition struct{}
 
 func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.Location{} }
+
+type MockPaymentManager struct {
+	startCalled bool
+	stopCalled  bool
+	MockError   error
+	stopChan    chan struct{}
+	sync.Mutex
+}
+
+func (mpm *MockPaymentManager) Start() error {
+	mpm.Lock()
+	mpm.startCalled = true
+	mpm.Unlock()
+	select {
+	case <-mpm.stopChan:
+		return mpm.MockError
+	}
+}
+
+func (mpm *MockPaymentManager) StartCalled() bool {
+	mpm.Lock()
+	defer mpm.Unlock()
+	return mpm.startCalled
+}
+
+func (mpm *MockPaymentManager) StopCalled() bool {
+	mpm.Lock()
+	defer mpm.Unlock()
+	return mpm.stopCalled
+}
+
+func (mpm *MockPaymentManager) Stop() {
+	mpm.Lock()
+	defer mpm.Unlock()
+	mpm.stopCalled = true
+	close(mpm.stopChan)
+}

@@ -25,29 +25,8 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
-
-type fakePromiseIssuer struct {
-	sync.Mutex
-	startCalled bool
-	stopCalled  bool
-}
-
-func (issuer *fakePromiseIssuer) Start(proposal market.ServiceProposal) error {
-	issuer.Lock()
-	defer issuer.Unlock()
-	issuer.startCalled = true
-	return nil
-}
-
-func (issuer *fakePromiseIssuer) Stop() error {
-	issuer.Lock()
-	defer issuer.Unlock()
-	issuer.stopCalled = true
-	return nil
-}
 
 // StubPublisherEvent represents the event in publishers history
 type StubPublisherEvent struct {
