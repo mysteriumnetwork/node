@@ -49,8 +49,8 @@ var ErrPromiseWaitTimeout = errors.New("Did not get a new promise")
 // ErrPromiseValidationFailed indicates that an invalid promise was sent
 var ErrPromiseValidationFailed = errors.New("Promise validation failed")
 
-// ProviderPaymentOrchestrator orchestrates the ping pong of balance sent to consumer -> promise received from consumer flow
-type ProviderPaymentOrchestrator struct {
+// SessionBalance orchestrates the ping pong of balance sent to consumer -> promise received from consumer flow
+type SessionBalance struct {
 	stop               chan struct{}
 	peerBalanceSender  PeerBalanceSender
 	balanceTracker     BalanceTracker
@@ -60,15 +60,15 @@ type ProviderPaymentOrchestrator struct {
 	promiseValidator   PromiseValidator
 }
 
-// NewProviderPaymentOrchestrator creates a new instance of provider payment orchestrator
-func NewProviderPaymentOrchestrator(
+// NewSessionBalance creates a new instance of provider payment orchestrator
+func NewSessionBalance(
 	peerBalanceSender PeerBalanceSender,
 	balanceTracker BalanceTracker,
 	promiseChan chan promise.PromiseMessage,
 	period time.Duration,
 	promiseWaitTimeout time.Duration,
-	promiseValidator PromiseValidator) *ProviderPaymentOrchestrator {
-	return &ProviderPaymentOrchestrator{
+	promiseValidator PromiseValidator) *SessionBalance {
+	return &SessionBalance{
 		stop:               make(chan struct{}, 1),
 		peerBalanceSender:  peerBalanceSender,
 		balanceTracker:     balanceTracker,
@@ -80,7 +80,7 @@ func NewProviderPaymentOrchestrator(
 }
 
 // Start starts the payment orchestrator. Blocks.
-func (ppo *ProviderPaymentOrchestrator) Start() error {
+func (ppo *SessionBalance) Start() error {
 	for {
 		select {
 		case <-ppo.stop:
@@ -98,14 +98,14 @@ func (ppo *ProviderPaymentOrchestrator) Start() error {
 	}
 }
 
-func (ppo *ProviderPaymentOrchestrator) sendBalance() error {
+func (ppo *SessionBalance) sendBalance() error {
 	balance := ppo.balanceTracker.GetBalance()
 	// TODO: Maybe retry a couple of times?
 	err := ppo.peerBalanceSender.Send(balance)
 	return err
 }
 
-func (ppo *ProviderPaymentOrchestrator) receivePromiseOrTimeout() error {
+func (ppo *SessionBalance) receivePromiseOrTimeout() error {
 	select {
 	case pm := <-ppo.promiseChan:
 		log.Info("Promise received", pm)
@@ -122,6 +122,6 @@ func (ppo *ProviderPaymentOrchestrator) receivePromiseOrTimeout() error {
 }
 
 // Stop stops the payment orchestrator
-func (ppo *ProviderPaymentOrchestrator) Stop() {
+func (ppo *SessionBalance) Stop() {
 	ppo.stop <- struct{}{}
 }

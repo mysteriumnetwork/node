@@ -60,8 +60,8 @@ var (
 	MPV            = &MockPromiseValidator{isValid: true}
 )
 
-func NewMockProviderOrchestrator() *ProviderPaymentOrchestrator {
-	return NewProviderPaymentOrchestrator(
+func NewMockSessionBalance() *SessionBalance {
+	return NewSessionBalance(
 		BalanceSender,
 		MBT,
 		promiseChannel,
@@ -72,7 +72,7 @@ func NewMockProviderOrchestrator() *ProviderPaymentOrchestrator {
 }
 
 func Test_ProviderPaymentOchestratorStartStop(t *testing.T) {
-	orch := NewMockProviderOrchestrator()
+	orch := NewMockSessionBalance()
 	go func() {
 		time.Sleep(time.Nanosecond * 10)
 		orch.Stop()
@@ -82,7 +82,7 @@ func Test_ProviderPaymentOchestratorStartStop(t *testing.T) {
 }
 
 func Test_ProviderPaymentOchestratorSendsBalance(t *testing.T) {
-	orch := NewMockProviderOrchestrator()
+	orch := NewMockSessionBalance()
 	defer orch.Stop()
 	go func() { _ = orch.Start() }()
 
@@ -91,7 +91,7 @@ func Test_ProviderPaymentOchestratorSendsBalance(t *testing.T) {
 }
 
 func Test_ProviderPaymentOchestratorSendsBalance_Timeouts(t *testing.T) {
-	orch := NewMockProviderOrchestrator()
+	orch := NewMockSessionBalance()
 	defer orch.Stop()
 
 	// add a shorter timeout
@@ -107,7 +107,7 @@ func Test_ProviderPaymentOchestratorSendsBalance_Timeouts(t *testing.T) {
 
 func Test_ProviderPaymentOchestratorInvalidPromise(t *testing.T) {
 	MPV.isValid = false
-	orch := NewMockProviderOrchestrator()
+	orch := NewMockSessionBalance()
 	defer orch.Stop()
 
 	go func() {

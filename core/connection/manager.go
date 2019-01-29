@@ -180,7 +180,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	messageChan := make(chan balance.Message, 1)
 	bl := balance.NewListener(messageChan)
 	ps := promise.NewPromiseSender(dialog)
-	orch := payment.NewConsumerPaymentOrchestrator(messageChan, ps, &MockPromiseTracker{})
+	orch := payment.NewSessionPayments(messageChan, ps, &MockPromiseTracker{})
 	err = dialog.Receive(bl.GetConsumer())
 	if err != nil {
 		return err

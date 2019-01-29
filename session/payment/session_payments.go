@@ -31,22 +31,23 @@ type PeerPromiseSender interface {
 	Send(promise.PromiseMessage) error
 }
 
+// PromiseTracker keeps track of promises
 type PromiseTracker interface {
 	AlignStateWithProvider(providerState promise.State) error
 	IssuePromiseWithAddedAmount(amountToAdd int64) (promises.IssuedPromise, error)
 }
 
-// ConsumerPaymentOrchestrator orchestrates the ping pong of balance received from provider -> promise sent to provider flow
-type ConsumerPaymentOrchestrator struct {
+// SessionPayments orchestrates the ping pong of balance received from provider -> promise sent to provider flow
+type SessionPayments struct {
 	stop              chan struct{}
 	balanceChan       chan balance.Message
 	peerPromiseSender PeerPromiseSender
 	promiseTracker    PromiseTracker
 }
 
-// NewConsumerPaymentOrchestrator returns a new instnace of consumer payment orchestrator
-func NewConsumerPaymentOrchestrator(balanceChan chan balance.Message, peerPromiseSender PeerPromiseSender, promiseTracker PromiseTracker) *ConsumerPaymentOrchestrator {
-	return &ConsumerPaymentOrchestrator{
+// NewSessionPayments returns a new instnace of consumer payment orchestrator
+func NewSessionPayments(balanceChan chan balance.Message, peerPromiseSender PeerPromiseSender, promiseTracker PromiseTracker) *SessionPayments {
+	return &SessionPayments{
 		stop:              make(chan struct{}, 1),
 		balanceChan:       balanceChan,
 		peerPromiseSender: peerPromiseSender,
@@ -55,7 +56,7 @@ func NewConsumerPaymentOrchestrator(balanceChan chan balance.Message, peerPromis
 }
 
 // Start starts the payment orchestrator. Blocks.
-func (cpo *ConsumerPaymentOrchestrator) Start() error {
+func (cpo *SessionPayments) Start() error {
 	for {
 		select {
 		case <-cpo.stop:
@@ -87,6 +88,6 @@ func (cpo *ConsumerPaymentOrchestrator) Start() error {
 }
 
 // Stop stops the payment orchestrator
-func (cpo *ConsumerPaymentOrchestrator) Stop() {
+func (cpo *SessionPayments) Stop() {
 	cpo.stop <- struct{}{}
 }

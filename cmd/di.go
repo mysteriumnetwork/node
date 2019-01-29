@@ -315,7 +315,7 @@ func newSessionManagerFactory(
 			dialog.Receive(listener.GetConsumer())
 			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 100)
 
-			return session_payment.NewProviderPaymentOrchestrator(sender, tracker, promiseChan, time.Second*5, time.Second*1, &validators.NoopValidator{})
+			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, &validators.NoopValidator{})
 		}
 		return session.NewManager(
 			proposal,

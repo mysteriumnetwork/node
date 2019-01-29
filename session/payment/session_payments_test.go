@@ -67,16 +67,16 @@ var (
 	promiseTracker = &MockPromiseTracker{promiseToReturn: promiseToReturn, errToReturn: nil}
 )
 
-func NewTestConsumerPaymentOrchestrator(bm chan balance.Message, ps PeerPromiseSender, pt PromiseTracker) *ConsumerPaymentOrchestrator {
-	return NewConsumerPaymentOrchestrator(
+func NewTestSessionPayments(bm chan balance.Message, ps PeerPromiseSender, pt PromiseTracker) *SessionPayments {
+	return NewSessionPayments(
 		bm,
 		ps,
 		pt,
 	)
 }
 
-func Test_ConsumerPaymentOrchestrator_Start_Stop(t *testing.T) {
-	cpo := NewTestConsumerPaymentOrchestrator(balanceChannel, promiseSender, promiseTracker)
+func Test_SessionPayments_Start_Stop(t *testing.T) {
+	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker)
 	go func() {
 		time.Sleep(time.Nanosecond * 10)
 		cpo.Stop()
@@ -85,8 +85,8 @@ func Test_ConsumerPaymentOrchestrator_Start_Stop(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_ConsumerPaymentOrchestrator_SendsPromiseOnBalance(t *testing.T) {
-	cpo := NewTestConsumerPaymentOrchestrator(balanceChannel, promiseSender, promiseTracker)
+func Test_SessionPayments_SendsPromiseOnBalance(t *testing.T) {
+	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker)
 	go func() { cpo.Start() }()
 	defer cpo.Stop()
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
@@ -96,11 +96,11 @@ func Test_ConsumerPaymentOrchestrator_SendsPromiseOnBalance(t *testing.T) {
 	}
 }
 
-func Test_ConsumerPaymentOrchestrator_ReportsIssuingErrors(t *testing.T) {
+func Test_SessionPayments_ReportsIssuingErrors(t *testing.T) {
 	customTracker := *promiseTracker
 	err := errors.New("issuing failed")
 	customTracker.errToReturn = err
-	cpo := NewTestConsumerPaymentOrchestrator(balanceChannel, promiseSender, &customTracker)
+	cpo := NewTestSessionPayments(balanceChannel, promiseSender, &customTracker)
 
 	go func() {
 		err := cpo.Start()
@@ -110,12 +110,12 @@ func Test_ConsumerPaymentOrchestrator_ReportsIssuingErrors(t *testing.T) {
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
 }
 
-func Test_ConsumerPaymentOrchestrator_ReportsSendingErrors(t *testing.T) {
+func Test_SessionPayments_ReportsSendingErrors(t *testing.T) {
 	customSender := *promiseSender
 	err := errors.New("sending failed")
 	customSender.mockError = err
 
-	cpo := NewTestConsumerPaymentOrchestrator(balanceChannel, &customSender, promiseTracker)
+	cpo := NewTestSessionPayments(balanceChannel, &customSender, promiseTracker)
 	go func() {
 		err := cpo.Start()
 		assert.Equal(t, customSender.mockError, err)
