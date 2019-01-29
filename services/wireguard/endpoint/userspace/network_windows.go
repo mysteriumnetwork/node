@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"strconv"
 
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/jackpal/gateway"
 	"github.com/pkg/errors"
 )
@@ -49,7 +50,7 @@ func excludeRoute(ip net.IP) error {
 func addDefaultRoute(name string) error {
 	id, gw, err := interfaceInfo(name)
 	if err != nil {
-		return errors.Wrap(err, "failed to get info of interface: " + name)
+		return errors.Wrap(err, "failed to get info of interface: "+name)
 	}
 
 	if out, err := exec.Command("powershell", "-Command", "route add 0.0.0.0/1 "+gw+" if "+id).CombinedOutput(); err != nil {
@@ -61,6 +62,8 @@ func addDefaultRoute(name string) error {
 }
 
 func destroyDevice(name string) error {
+	// Windows implementation is using single device that are reused for the future needs.
+	// Nothing to destroy here.
 	return nil
 }
 
@@ -77,7 +80,11 @@ func interfaceInfo(name string) (id, gw string, err error) {
 
 	var ipv4 net.IP
 	for _, addr := range addrs {
-		ip, _, _ := net.ParseCIDR(addr.String())
+		ip, _, err := net.ParseCIDR(addr.String())
+		if err != nil {
+			log.Error(logPrefix, "failed to parse an interface IP address: ", err)
+		}
+
 		if ip.To4() == nil {
 			continue
 		}
