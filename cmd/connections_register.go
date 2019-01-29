@@ -1,4 +1,4 @@
-// +build !android,!windows
+// +build !android
 
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.

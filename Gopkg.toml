@@ -95,10 +95,13 @@
   name = "github.com/mdlayher/wireguardctrl"
 
 [[constraint]]
-  name = "git.zx2c4.com/wireguard-go"
-  revision = "5acb51d173e2938591471974e53d5262f8adfa51"
-  source = "github.com/mysteriumnetwork/wireguard-go"
+  name = "github.com/mysteriumnetwork/wireguard-go"
+  revision = "c8073c70e944fe656f5854b347e2e2687356043b"
 
 [[constraint]]
   name = "github.com/jackpal/gateway"
   version = "1.0.5"
+
+[[constraint]]
+  revision = "f6122f5b2fbd92ace9b2819f0be4148be5690a1f"
+  name = "github.com/songgao/water"

@@ -2,22 +2,6 @@
 
 
 [[projects]]
-  digest = "1:4e1df3cf0f1c77f0fb23aee3832e0565ad6adc8636b3a38a6b828f6babd636b0"
-  name = "git.zx2c4.com/wireguard-go"
-  packages = [
-    "device",
-    "ratelimiter",
-    "replay",
-    "rwcancel",
-    "tai64n",
-    "tun",
-    "xchacha20poly1305",
-  ]
-  pruneopts = "UT"
-  revision = "5acb51d173e2938591471974e53d5262f8adfa51"
-  source = "github.com/mysteriumnetwork/wireguard-go"
-
-[[projects]]
   digest = "1:7d191fd0c54ff370eaf6116a14dafe2a328df487baea280699f597aae858d00d"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
@@ -254,6 +238,21 @@
   version = "0.0.6-beta"
 
 [[projects]]
+  digest = "1:fef11ce7bad787dad351a3f7da701223dbbcec519877152d18228ef9c2c28b71"
+  name = "github.com/mysteriumnetwork/wireguard-go"
+  packages = [
+    "device",
+    "ratelimiter",
+    "replay",
+    "rwcancel",
+    "tai64n",
+    "tun",
+    "xchacha20poly1305",
+  ]
+  pruneopts = "UT"
+  revision = "c8073c70e944fe656f5854b347e2e2687356043b"
+
+[[projects]]
   digest = "1:0923946dc9acc1aeb0cdee47c1bf85cb7662562ecb2ddae1f73bbd34c322ecfe"
   name = "github.com/nats-io/go-nats"
   packages = [
@@ -298,6 +297,14 @@
   revision = "c65b2f87fee37d1c7854c9164a450713c28d50cd"
 
 [[projects]]
+  digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
+
+[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -320,6 +327,13 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "15587285ef6b6e7a3f657e2e00f9f271883bcf22"
+
+[[projects]]
+  digest = "1:b30ae084771993f574cd6416fd83352f48de2b873d51bc938b6d259fca3605a5"
+  name = "github.com/songgao/water"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f6122f5b2fbd92ace9b2819f0be4148be5690a1f"
 
 [[projects]]
   digest = "1:5110e3d4f130772fd39e6ce8208ad1955b242ccfcc8ad9d158857250579c82f4"
@@ -402,12 +416,13 @@
 
 [[projects]]
   branch = "release-branch.go1.11"
-  digest = "1:ada3f6483b5d87199a41dfccf9e9965019d2c26ef9b199c58ab12bc57a9823cd"
+  digest = "1:95eb3c3a4aeb757c723d0133273f47d2f93fb78c4963e343df6bf052a3d290b8"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
     "unix",
     "windows",
+    "windows/registry",
   ]
   pruneopts = "UT"
   revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
@@ -491,8 +506,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "git.zx2c4.com/wireguard-go/device",
-    "git.zx2c4.com/wireguard-go/tun",
     "github.com/asaskevich/EventBus",
     "github.com/asdine/storm",
     "github.com/chzyer/readline",
@@ -527,8 +540,12 @@
     "github.com/mysteriumnetwork/payments/promises/generated",
     "github.com/mysteriumnetwork/payments/registry",
     "github.com/mysteriumnetwork/payments/registry/generated",
+    "github.com/mysteriumnetwork/wireguard-go/device",
+    "github.com/mysteriumnetwork/wireguard-go/tun",
     "github.com/nats-io/go-nats",
     "github.com/oschwald/geoip2-golang",
+    "github.com/pkg/errors",
+    "github.com/songgao/water",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/suite",
     "github.com/urfave/cli",

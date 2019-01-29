@@ -1,4 +1,4 @@
-// +build windows
+// +build !darwin
 
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
@@ -17,13 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package resources
 
-import (
-	"github.com/mysteriumnetwork/node/core/node"
-)
-
-func (di *Dependencies) registerConnections(nodeOptions node.Options) {
-	di.registerOpenvpnConnection(nodeOptions)
-	di.registerNoopConnection()
-}
+const interfacePrefix = "myst"
