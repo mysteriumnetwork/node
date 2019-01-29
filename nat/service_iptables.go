@@ -18,68 +18,79 @@
 package nat
 
 import (
+	"sync"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/pkg/errors"
 )
 
 const natLogPrefix = "[nat] "
 
 type serviceIPTables struct {
-	rules     []RuleForwarding
+	mu        sync.Mutex
+	rules     map[RuleForwarding]struct{}
 	ipForward serviceIPForward
 }
 
-func (service *serviceIPTables) Add(rule RuleForwarding) {
-	service.rules = append(service.rules, rule)
+func (service *serviceIPTables) Add(rule RuleForwarding) error {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+
+	if _, ok := service.rules[rule]; ok {
+		return errors.New("rule already exists")
+	}
+	service.rules[rule] = struct{}{}
+
+	err := iptables("append", rule)
+	return errors.Wrap(err, "failed to add NAT forwarding rule")
 }
 
-func (service *serviceIPTables) Start() error {
+func (service *serviceIPTables) Del(rule RuleForwarding) error {
+	if err := iptables("delete", rule); err != nil {
+		return err
+	}
+
+	service.mu.Lock()
+	defer service.mu.Unlock()
+
+	delete(service.rules, rule)
+	return nil
+}
+
+func (service *serviceIPTables) Enable() error {
 	err := service.ipForward.Enable()
 	if err != nil {
 		log.Warn(natLogPrefix, "Failed to enable IP forwarding: ", err)
 	}
-
-	service.clearStaleRules()
-	return service.enableRules()
+	return err
 }
 
-func (service *serviceIPTables) Stop() {
-	service.disableRules()
+func (service *serviceIPTables) Disable() (err error) {
 	service.ipForward.Disable()
+
+	service.mu.Lock()
+	defer service.mu.Unlock()
+
+	for rule := range service.rules {
+		if delErr := iptables("delete", rule); delErr != nil && err == nil {
+			err = delErr
+		}
+	}
+	return err
 }
 
-func (service *serviceIPTables) enableRules() error {
-	for _, rule := range service.rules {
-		arguments := "/sbin/iptables --table nat --append POSTROUTING --source " +
-			rule.SourceAddress + " ! --destination " +
-			rule.SourceAddress + " --jump SNAT --to " +
-			rule.TargetIP
-		cmd := utils.SplitCommand("sudo", arguments)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			log.Warn("Failed to create ip forwarding rule: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-			return err
-		}
-
-		log.Info(natLogPrefix, "Forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
+func iptables(action string, rule RuleForwarding) error {
+	arguments := "/sbin/iptables --table nat --" + action + " POSTROUTING --source " +
+		rule.SourceAddress + " ! --destination " +
+		rule.SourceAddress + " --jump SNAT --to " +
+		rule.TargetIP
+	cmd := utils.SplitCommand("sudo", arguments)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		log.Warn("Failed to "+action+" ip forwarding rule: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		return errors.Wrap(err, string(output))
 	}
+
+	log.Info(natLogPrefix, "Action '"+action+"' applied for forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
 	return nil
-}
-
-func (service *serviceIPTables) disableRules() {
-	for _, rule := range service.rules {
-		arguments := "/sbin/iptables --table nat --delete POSTROUTING --source " +
-			rule.SourceAddress + " ! --destination " +
-			rule.SourceAddress + " --jump SNAT --to " +
-			rule.TargetIP
-		cmd := utils.SplitCommand("sudo", arguments)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			log.Warn("Failed to delete ip forwarding rule: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-		} else {
-			log.Info(natLogPrefix, "Stopped forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
-		}
-	}
-}
-
-func (service *serviceIPTables) clearStaleRules() {
-	service.disableRules()
 }

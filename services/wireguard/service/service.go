@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[service-wireguard] "
@@ -88,19 +89,27 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		return nil, nil, err
 	}
 
-	manager.natService.Add(nat.RuleForwarding{
-		SourceAddress: config.Consumer.IPAddress.String(),
-		TargetIP:      manager.outboundIP,
-	})
-	if err := manager.natService.Start(); err != nil {
-		return nil, nil, err
+	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: manager.outboundIP}
+	if err := manager.natService.Add(natRule); err != nil {
+		return nil, nil, errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	return config, connectionEndpoint.Stop, nil
+	destroy := func() error {
+		if err := manager.natService.Del(natRule); err != nil {
+			log.Error(logPrefix, "failed to delete NAT forwarding rule: ", err)
+		}
+		return connectionEndpoint.Stop()
+	}
+
+	return config, destroy, nil
 }
 
 // Serve starts service - does block
 func (manager *Manager) Serve(providerID identity.Identity) error {
+	if err := manager.natService.Enable(); err != nil {
+		return err
+	}
+
 	manager.wg.Add(1)
 	log.Info(logPrefix, "Wireguard service started successfully")
 
@@ -125,8 +134,7 @@ func GetProposal(country string) market.ServiceProposal {
 // Stop stops service.
 func (manager *Manager) Stop() error {
 	manager.wg.Done()
-	manager.natService.Stop()
 
 	log.Info(logPrefix, "Wireguard service stopped")
-	return nil
+	return manager.natService.Disable()
 }

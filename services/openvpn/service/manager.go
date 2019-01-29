@@ -19,7 +19,6 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -29,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[service-openvpn] "
@@ -63,14 +63,17 @@ type Manager struct {
 
 // Serve starts service - does block
 func (manager *Manager) Serve(providerID identity.Identity) (err error) {
-	manager.natService.Add(nat.RuleForwarding{
+	err = manager.natService.Enable()
+	if err != nil {
+		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
+	}
+
+	err = manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      manager.outboundIP,
 	})
-
-	err = manager.natService.Start()
 	if err != nil {
-		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
+		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
 	primitives, err := primitiveFactory(manager.currentLocation, providerID.Address)
@@ -90,16 +93,16 @@ func (manager *Manager) Serve(providerID identity.Identity) (err error) {
 }
 
 // Stop stops service
-func (manager *Manager) Stop() error {
+func (manager *Manager) Stop() (err error) {
 	if manager.natService != nil {
-		manager.natService.Stop()
+		err = manager.natService.Disable()
 	}
 
 	if manager.vpnServer != nil {
 		manager.vpnServer.Stop()
 	}
 
-	return nil
+	return err
 }
 
 // ProvideConfig provides the configuration to end consumer

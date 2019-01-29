@@ -19,9 +19,10 @@ package nat
 
 // NATService describes fake nat service for darwin
 type NATService interface {
-	Add(rule RuleForwarding)
-	Start() error
-	Stop()
+	Enable() error
+	Add(rule RuleForwarding) error
+	Del(rule RuleForwarding) error
+	Disable() error
 }
 
 // RuleForwarding describes fake nat rule
