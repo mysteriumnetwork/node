@@ -25,6 +25,8 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
+const logPrefixCreateConsumer = "[session-create-consumer] "
+
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
 	sessionCreator Creator
@@ -64,7 +66,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 			go func() {
 				<-sessionInstance.Stop
 				if err := destroyCallback(); err != nil {
-					log.Error("Failed to execute destroy callback: ", err)
+					log.Error(logPrefixCreateConsumer, "Failed to execute destroy callback: ", err)
 				}
 			}()
 		}
