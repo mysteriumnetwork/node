@@ -33,7 +33,7 @@ type createConsumer struct {
 
 // Creator defines method for session creation
 type Creator interface {
-	Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration, destroyCallback DestroyCallback) (Session, error)
+	Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (Session, error)
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
@@ -56,9 +56,16 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		return responseInternalError, err
 	}
 
-	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId, config, destroyCallback)
+	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId, config)
 	switch err {
 	case nil:
+		if destroyCallback != nil {
+			go func() {
+				<-sessionInstance.Done
+				destroyCallback()
+			}()
+		}
+
 		return responseWithSession(sessionInstance), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil

@@ -24,10 +24,10 @@ type ID string
 
 // Session structure holds all required information about current session between service consumer and provider
 type Session struct {
-	ID              ID
-	Config          ServiceConfiguration
-	ConsumerID      identity.Identity
-	DestroyCallback DestroyCallback
+	ID         ID
+	Config     ServiceConfiguration
+	ConsumerID identity.Identity
+	Done       chan struct{}
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party
