@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
@@ -74,7 +75,7 @@ func (manager *Manager) Serve(providerID identity.Identity) (err error) {
 	}
 
 	if manager.outboundIP != manager.publicIP {
-		manager.mapperQuit = nat.PortMapping(
+		manager.mapperQuit = mapping.PortMapping(
 			manager.serviceOptions.OpenvpnProtocol,
 			manager.serviceOptions.OpenvpnPort,
 			"Myst node openvpn port mapping")

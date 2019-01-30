@@ -1,5 +1,3 @@
-package nat
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -17,6 +15,8 @@ package nat
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+package mapping
+
 import (
 	"time"
 
@@ -24,7 +24,7 @@ import (
 	portmap "github.com/ethereum/go-ethereum/p2p/nat"
 )
 
-const logPrefix = "[nat] "
+const logPrefix = "[port mapping] "
 
 const (
 	mapTimeout        = 20 * time.Minute
@@ -51,20 +51,13 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 	refresh := time.NewTimer(mapUpdateInterval)
 	defer func() {
 		refresh.Stop()
-		log.Debug(logPrefix, "Deleting port mapping")
-		m.DeleteMapping(protocol, extPort, intPort)
-	}()
-	if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
-		log.Debugf("%s, Couldn't add port mapping: %v, retrying with permanent lease", logPrefix, err)
-		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
-			// some gateways support only permanent leases
-			log.Debug(logPrefix, "Couldn't add port mapping: ", err)
-		} else {
-			log.Info(logPrefix, "Mapped network port: ", extPort)
+		log.Debug(logPrefix, "Deleting port mapping for port: ", extPort)
+
+		if err := m.DeleteMapping(protocol, extPort, intPort); err != nil {
+			log.Debug(logPrefix, "Couldn't delete port mapping: ", err)
 		}
-	} else {
-		log.Info(logPrefix, "Mapped network port")
-	}
+	}()
+	addMapping(m, protocol, extPort, intPort, name)
 	for {
 		select {
 		case _, ok := <-c:
@@ -72,15 +65,22 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 				return
 			}
 		case <-refresh.C:
-			log.Trace(logPrefix, "Refreshing port mapping")
-			if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
-				log.Debugf("%s, Couldn't add port mapping: %v, retrying with permanent lease", logPrefix, err)
-				if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
-					// some gateways support only permanent leases
-					log.Debug(logPrefix, "Couldn't add port mapping: ", err)
-				}
-			}
+			addMapping(m, protocol, extPort, intPort, name)
 			refresh.Reset(mapUpdateInterval)
 		}
+	}
+}
+
+func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name string) {
+	if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
+		log.Debugf("%s, Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
+		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
+			// some gateways support only permanent leases
+			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
+		} else {
+			log.Info(logPrefix, "Mapped network port: ", extPort)
+		}
+	} else {
+		log.Info(logPrefix, "Mapped network port:", extPort)
 	}
 }
