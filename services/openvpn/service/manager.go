@@ -48,8 +48,8 @@ type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outbound
 
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	natService nat.NATService
-	mapperQuit chan struct{}
+	natService   nat.NATService
+	releasePorts func()
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 
@@ -75,7 +75,7 @@ func (manager *Manager) Serve(providerID identity.Identity) (err error) {
 	}
 
 	if manager.outboundIP != manager.publicIP {
-		manager.mapperQuit = mapping.PortMapping(
+		manager.releasePorts = mapping.PortMapping(
 			manager.serviceOptions.OpenvpnProtocol,
 			manager.serviceOptions.OpenvpnPort,
 			"Myst node openvpn port mapping")
@@ -100,7 +100,7 @@ func (manager *Manager) Serve(providerID identity.Identity) (err error) {
 
 // Stop stops service
 func (manager *Manager) Stop() (err error) {
-	close(manager.mapperQuit)
+	manager.releasePorts()
 
 	if manager.vpnServer != nil {
 		manager.vpnServer.Stop()

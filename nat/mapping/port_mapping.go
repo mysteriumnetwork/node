@@ -33,7 +33,7 @@ const (
 
 // PortMapping maps given port of given protocol from external IP on a gateway to local machine internal IP
 // 'name' denotes rule name added on a gateway.
-func PortMapping(protocol string, port int, name string) chan struct{} {
+func PortMapping(protocol string, port int, name string) func() {
 	mapperQuit := make(chan struct{})
 	go mapPort(portmap.Any(),
 		mapperQuit,
@@ -42,7 +42,7 @@ func PortMapping(protocol string, port int, name string) chan struct{} {
 		port,
 		name)
 
-	return mapperQuit
+	return func() { close(mapperQuit) }
 }
 
 // mapPort adds a port mapping on m and keeps it alive until c is closed.
