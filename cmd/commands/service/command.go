@@ -24,7 +24,10 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/identity"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/urfave/cli"
@@ -71,13 +74,12 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				return err
 			}
 
-			serviceTypes := serviceTypesEnabled
-			arg := ctx.Args().Get(0)
-			if arg != "" {
-				serviceTypes = strings.Split(arg, ",")
+			providerID, err := unlockIdentity(ctx, &di, nodeOptions)
+			if err != nil {
+				return err
 			}
 
-			return runServices(ctx, &di, serviceTypes)
+			return runServices(ctx, &di, providerID)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
@@ -89,7 +91,27 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	return command
 }
 
-func runServices(ctx *cli.Context, di *cmd.Dependencies, serviceTypes []string) error {
+func unlockIdentity(ctx *cli.Context, di *cmd.Dependencies, nodeOptions node.Options) (identity.Identity, error) {
+	identityOptions := parseFlags(ctx)
+
+	identityHandler := identity_selector.NewHandler(
+		di.IdentityManager,
+		di.MysteriumAPI,
+		identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
+		di.SignerFactory,
+	)
+	loadIdentity := identity_selector.NewLoader(identityHandler, identityOptions.Identity, identityOptions.Passphrase)
+
+	return loadIdentity()
+}
+
+func runServices(ctx *cli.Context, di *cmd.Dependencies, providerID identity.Identity) error {
+	serviceTypes := serviceTypesEnabled
+	arg := ctx.Args().Get(0)
+	if arg != "" {
+		serviceTypes = strings.Split(arg, ",")
+	}
+
 	// We need a small buffer for the error channel as we'll have quite a few concurrent reporters
 	// The buffer size is determined as follows:
 	// 1 for the signal callback
@@ -99,13 +121,12 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, serviceTypes []string) 
 
 	go func() { errorChannel <- di.Node.Wait() }()
 
-	optionIdentity := parseFlags(ctx)
 	for _, serviceType := range serviceTypes {
 		options, err := parseFlagsByServiceType(ctx, serviceType)
 		if err != nil {
 			return err
 		}
-		go func() { errorChannel <- di.ServiceManager.Start(optionIdentity, serviceType, options) }()
+		go func() { errorChannel <- di.ServiceManager.Start(providerID, serviceType, options) }()
 	}
 
 	cmd.RegisterSignalCallback(func() { errorChannel <- nil })

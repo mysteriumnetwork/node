@@ -23,7 +23,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/proposals/registry"
 	"github.com/mysteriumnetwork/node/session"
@@ -55,14 +54,12 @@ type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator)
 
 // NewManager creates new instance of pluggable services manager
 func NewManager(
-	identityLoader identity_selector.Handler,
 	serviceFactory ServiceFactory,
 	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryService *registry.Discovery,
 ) *Manager {
 	return &Manager{
-		identityHandler:      identityLoader,
 		serviceFactory:       serviceFactory,
 		servicePool:          NewPool(),
 		dialogWaiterFactory:  dialogWaiterFactory,
@@ -73,8 +70,6 @@ func NewManager(
 
 // Manager entrypoint which knows how to start pluggable Mysterium services
 type Manager struct {
-	identityHandler identity_selector.Handler
-
 	dialogWaiterFactory  DialogWaiterFactory
 	dialogWaiter         communication.DialogWaiter
 	dialogHandlerFactory DialogHandlerFactory
@@ -88,14 +83,8 @@ type Manager struct {
 // Start starts a service of the given service type if it has one. The method blocks.
 // It passes the options to the start method of the service.
 // If an error occurs in the underlying service, the error is then returned.
-func (manager *Manager) Start(optionsIdentity OptionsIdentity, serviceType string, serviceOptions Options) (err error) {
-	loadIdentity := identity_selector.NewLoader(manager.identityHandler, optionsIdentity.Identity, optionsIdentity.Passphrase)
-	providerID, err := loadIdentity()
-	if err != nil {
-		return err
-	}
-
-	service, proposal, err := manager.serviceFactory(serviceType, serviceOptions)
+func (manager *Manager) Start(providerID identity.Identity, serviceType string, options Options) (err error) {
+	service, proposal, err := manager.serviceFactory(serviceType, options)
 	if err != nil {
 		return err
 	}
