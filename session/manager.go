@@ -47,7 +47,7 @@ type ConfigNegotiator interface {
 type ConfigProvider func(consumerKey json.RawMessage) (ServiceConfiguration, DestroyCallback, error)
 
 // DestroyCallback cleanups session
-type DestroyCallback func() error
+type DestroyCallback func()
 
 // PromiseProcessor processes promises at provider side.
 // Provider checks promises from consumer and signs them also.

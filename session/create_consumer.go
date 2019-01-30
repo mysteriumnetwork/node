@@ -20,7 +20,6 @@ package session
 import (
 	"encoding/json"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 )
@@ -65,9 +64,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		if destroyCallback != nil {
 			go func() {
 				<-sessionInstance.Stop
-				if err := destroyCallback(); err != nil {
-					log.Error(logPrefixCreateConsumer, "Failed to execute destroy callback: ", err)
-				}
+				destroyCallback()
 			}()
 		}
 

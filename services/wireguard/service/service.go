@@ -94,11 +94,13 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		return nil, nil, errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	destroy := func() error {
+	destroy := func() {
 		if err := manager.natService.Del(natRule); err != nil {
 			log.Error(logPrefix, "failed to delete NAT forwarding rule: ", err)
 		}
-		return connectionEndpoint.Stop()
+		if err := connectionEndpoint.Stop(); err != nil {
+			log.Error(logPrefix, "failed to stop connection endpoint: ", err)
+		}
 	}
 
 	return config, destroy, nil

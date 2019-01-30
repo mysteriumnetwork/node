@@ -43,5 +43,5 @@ func (service *serviceFake) GetType() string {
 }
 
 func (service *serviceFake) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
-	return struct{}{}, func() error { return nil }, nil
+	return struct{}{}, func() {}, nil
 }
