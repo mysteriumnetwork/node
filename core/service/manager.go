@@ -38,7 +38,7 @@ var (
 )
 
 // ServiceFactory initiates instance which is able to serve connections
-type ServiceFactory func(Options) (Service, market.ServiceProposal, error)
+type ServiceFactory func(serviceType string, options Options) (Service, market.ServiceProposal, error)
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
@@ -88,14 +88,14 @@ type Manager struct {
 // Start starts a service of the given service type if it has one. The method blocks.
 // It passes the options to the start method of the service.
 // If an error occurs in the underlying service, the error is then returned.
-func (manager *Manager) Start(options Options) (err error) {
-	loadIdentity := identity_selector.NewLoader(manager.identityHandler, options.Identity, options.Passphrase)
+func (manager *Manager) Start(optionsIdentity OptionsIdentity, serviceType string, serviceOptions Options) (err error) {
+	loadIdentity := identity_selector.NewLoader(manager.identityHandler, optionsIdentity.Identity, optionsIdentity.Passphrase)
 	providerID, err := loadIdentity()
 	if err != nil {
 		return err
 	}
 
-	service, proposal, err := manager.serviceFactory(options)
+	service, proposal, err := manager.serviceFactory(serviceType, serviceOptions)
 	if err != nil {
 		return err
 	}

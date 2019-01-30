@@ -39,11 +39,11 @@ func (registry *Registry) Register(serviceType string, creator ServiceFactory) {
 }
 
 // Create creates pluggable service
-func (registry *Registry) Create(options Options) (Service, market.ServiceProposal, error) {
-	createService, exists := registry.factories[options.Type]
+func (registry *Registry) Create(serviceType string, options Options) (Service, market.ServiceProposal, error) {
+	createService, exists := registry.factories[serviceType]
 	if !exists {
 		return nil, market.ServiceProposal{}, ErrUnsupportedServiceType
 	}
 
-	return createService(options)
+	return createService(serviceType, options)
 }

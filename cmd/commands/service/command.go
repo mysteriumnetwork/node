@@ -26,10 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
-	service_noop "github.com/mysteriumnetwork/node/services/noop"
-	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
-	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/urfave/cli"
 )
 
@@ -102,12 +99,13 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, serviceTypes []string) 
 
 	go func() { errorChannel <- di.Node.Wait() }()
 
+	optionIdentity := parseFlags(ctx)
 	for _, serviceType := range serviceTypes {
 		options, err := parseFlagsByServiceType(ctx, serviceType)
 		if err != nil {
 			return err
 		}
-		go func() { errorChannel <- di.ServiceManager.Start(options) }()
+		go func() { errorChannel <- di.ServiceManager.Start(optionIdentity, serviceType, options) }()
 	}
 
 	cmd.RegisterSignalCallback(func() { errorChannel <- nil })
@@ -131,37 +129,19 @@ func registerFlags(flags *[]cli.Flag) {
 	openvpn_service.RegisterFlags(flags)
 }
 
+// parseFlags function fills in service command options from CLI context
+func parseFlags(ctx *cli.Context) service.OptionsIdentity {
+	return service.OptionsIdentity{
+		Identity:   ctx.String(identityFlag.Name),
+		Passphrase: ctx.String(identityPassphraseFlag.Name),
+	}
+}
+
 func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, error) {
 	if f, ok := serviceTypesFlagsParser[serviceType]; ok {
 		return f(ctx), nil
 	}
-	return service.Options{}, fmt.Errorf("Unknown service type: %q", serviceType)
-}
-
-// parseOpenvpnFlags function fills in openvpn options from CLI context
-func parseOpenvpnFlags(ctx *cli.Context) service.Options {
-	return service.Options{
-		Identity:   ctx.String(identityFlag.Name),
-		Passphrase: ctx.String(identityPassphraseFlag.Name),
-		Type:       service_openvpn.ServiceType,
-		Options:    openvpn_service.ParseFlags(ctx),
-	}
-}
-
-// parseNoopFlags function fills in noop service options from CLI context
-func parseNoopFlags(ctx *cli.Context) service.Options {
-	return service.Options{
-		Identity:   ctx.String(identityFlag.Name),
-		Passphrase: ctx.String(identityPassphraseFlag.Name),
-		Type:       service_noop.ServiceType,
-	}
-}
-
-// parseWireguardFlags function fills in wireguard service options from CLI context
-func parseWireguardFlags(_ *cli.Context) service.Options {
-	return service.Options{
-		Type: service_wireguard.ServiceType,
-	}
+	return service.OptionsIdentity{}, fmt.Errorf("unknown service type: %q", serviceType)
 }
 
 func printTermWarning(licenseCommandName string) {

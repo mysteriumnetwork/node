@@ -1,7 +1,5 @@
-// +build windows linux,android
-
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,18 +19,13 @@ package service
 
 import (
 	"github.com/mysteriumnetwork/node/core/service"
-	service_noop "github.com/mysteriumnetwork/node/services/noop"
-	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
-	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/urfave/cli"
 )
 
-var (
-	serviceTypesAvailable = []string{"openvpn", "noop"}
-	serviceTypesEnabled   = []string{"openvpn", "noop"}
+// Options describes options which are required to start Noop service
+type Options struct{}
 
-	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
-		service_noop.ServiceType:    service_noop.ParseFlags,
-		service_openvpn.ServiceType: openvpn_service.ParseFlags,
-	}
-)
+// ParseFlags function fills in Openvpn options from CLI context
+func ParseFlags(_ *cli.Context) service.Options {
+	return Options{}
+}

@@ -39,12 +39,15 @@ func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
 }
 
 func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
-	di.ServiceRegistry.Register(wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-		location, err := di.resolveIPsAndLocation()
-		if err != nil {
-			return nil, market.ServiceProposal{}, err
-		}
+	di.ServiceRegistry.Register(
+		wireguard.ServiceType,
+		func(_ string, serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+			location, err := di.resolveIPsAndLocation()
+			if err != nil {
+				return nil, market.ServiceProposal{}, err
+			}
 
-		return wireguard_service.NewManager(location.PubIP, location.OutIP, location.Country, di.NATService), wireguard_service.GetProposal(location.Country), nil
-	})
+			return wireguard_service.NewManager(location.PubIP, location.OutIP, location.Country, di.NATService), wireguard_service.GetProposal(location.Country), nil
+		},
+	)
 }
