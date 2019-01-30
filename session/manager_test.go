@@ -68,7 +68,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, &fakePromiseProcessor{})
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig)
-	expectedResult.Stop = sessionInstance.Stop
+	expectedResult.Done = sessionInstance.Done
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedResult, sessionInstance)
 }

@@ -106,7 +106,7 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 		return
 	}
 	sessionInstance.ConsumerID = consumerID
-	sessionInstance.Stop = make(chan struct{})
+	sessionInstance.Done = make(chan struct{})
 	sessionInstance.Config = config
 
 	err = manager.promiseProcessor.Start(manager.currentProposal)
@@ -139,7 +139,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))
-	close(sessionInstance.Stop)
+	close(sessionInstance.Done)
 
 	return nil
 }

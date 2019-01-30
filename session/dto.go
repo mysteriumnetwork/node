@@ -27,7 +27,7 @@ type Session struct {
 	ID         ID
 	Config     ServiceConfiguration
 	ConsumerID identity.Identity
-	Stop       chan struct{}
+	Done       chan struct{}
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party

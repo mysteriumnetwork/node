@@ -63,7 +63,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	case nil:
 		if destroyCallback != nil {
 			go func() {
-				<-sessionInstance.Stop
+				<-sessionInstance.Done
 				destroyCallback()
 			}()
 		}
