@@ -24,8 +24,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-const logPrefixCreateConsumer = "[session-create-consumer] "
-
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
 	sessionCreator Creator
