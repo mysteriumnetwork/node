@@ -31,6 +31,7 @@ import (
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/proposals/registry"
+	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
@@ -82,7 +83,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		transportOptions := serviceOptions.Options.(openvpn_service.Options)
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.OpenvpnProtocol)
-		return openvpn_service.NewManager(nodeOptions, transportOptions, location.PubIP, location.OutIP, location.Country, di.ServiceSessionStorage), proposal, nil
+		return openvpn_service.NewManager(nodeOptions, transportOptions, location.PubIP, location.OutIP, location.Country, di.ServiceSessionStorage, di.NATService), proposal, nil
 	}
 
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
@@ -111,6 +112,10 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		di.SignerFactory,
 	)
 
+	di.NATService = nat.NewService()
+	if err := di.NATService.Enable(); err != nil {
+		log.Warn(logPrefix, "Failed to enable NAT forwarding: ", err)
+	}
 	di.ServiceRegistry = service.NewRegistry()
 	di.ServiceSessionStorage = session.NewStorageMemory()
 

@@ -36,10 +36,10 @@ import (
 const logPrefix = "[service-wireguard] "
 
 // NewManager creates new instance of Wireguard service
-func NewManager(publicIP, outIP, country string) *Manager {
+func NewManager(publicIP, outIP, country string, natService nat.NATService) *Manager {
 	resourceAllocator := resources.NewAllocator()
 	return &Manager{
-		natService: nat.NewService(),
+		natService: natService,
 
 		publicIP:        publicIP,
 		outboundIP:      outIP,
@@ -106,10 +106,6 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 
 // Serve starts service - does block
 func (manager *Manager) Serve(providerID identity.Identity) error {
-	if err := manager.natService.Enable(); err != nil {
-		return err
-	}
-
 	manager.wg.Add(1)
 	log.Info(logPrefix, "Wireguard service started successfully")
 
@@ -136,5 +132,5 @@ func (manager *Manager) Stop() error {
 	manager.wg.Done()
 
 	log.Info(logPrefix, "Wireguard service stopped")
-	return manager.natService.Disable()
+	return nil
 }
