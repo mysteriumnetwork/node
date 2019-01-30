@@ -107,7 +107,7 @@ type managerFake struct {
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration, destroyCallback DestroyCallback) (Session, error) {
+func (manager *managerFake) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (Session, error) {
 	manager.lastConsumerID = consumerID
 	manager.lastProposalID = proposalID
 	return manager.returnSession, manager.returnError
