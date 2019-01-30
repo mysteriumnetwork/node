@@ -32,7 +32,7 @@ const (
 )
 
 // PortMapping maps given port of given protocol from external IP on a gateway to local machine internal IP
-//  'name' denotes rule name added on a gateway
+// 'name' denotes rule name added on a gateway.
 func PortMapping(protocol string, port int, name string) chan struct{} {
 	mapperQuit := make(chan struct{})
 	go mapPort(portmap.Any(),
@@ -55,7 +55,7 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 		m.DeleteMapping(protocol, extPort, intPort)
 	}()
 	if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
-		log.Debugf("%s, Couldn't add port mapping: %v, %s", logPrefix, err, "retrying with permanent lease")
+		log.Debugf("%s, Couldn't add port mapping: %v, retrying with permanent lease", logPrefix, err)
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
 			log.Debug(logPrefix, "Couldn't add port mapping: ", err)
@@ -74,7 +74,7 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 		case <-refresh.C:
 			log.Trace(logPrefix, "Refreshing port mapping")
 			if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
-				log.Debugf("%s, Couldn't add port mapping: %v, %s", logPrefix, err, "retrying with permanent lease")
+				log.Debugf("%s, Couldn't add port mapping: %v, retrying with permanent lease", logPrefix, err)
 				if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 					// some gateways support only permanent leases
 					log.Debug(logPrefix, "Couldn't add port mapping: ", err)
