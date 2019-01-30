@@ -38,12 +38,12 @@ import (
 const logPrefix = "[service-wireguard] "
 
 // NewManager creates new instance of Wireguard service
-func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
+func NewManager(locationResolver location.Resolver, ipResolver ip.Resolver, natService nat.NATService) *Manager {
 	resourceAllocator := resources.NewAllocator()
 	return &Manager{
 		locationResolver: locationResolver,
 		ipResolver:       ipResolver,
-		natService:       nat.NewService(),
+		natService:       natService,
 
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return endpoint.NewConnectionEndpoint(ipResolver, &resourceAllocator)
@@ -151,5 +151,5 @@ func (manager *Manager) Stop() error {
 	manager.wg.Done()
 
 	log.Info(logPrefix, "Wireguard service stopped")
-	return manager.natService.Disable()
+	return nil
 }

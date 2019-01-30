@@ -135,15 +135,11 @@ func (manager *Manager) Wait() error {
 
 // Stop stops service
 func (manager *Manager) Stop() (err error) {
-	if manager.natService != nil {
-		err = manager.natService.Disable()
-	}
-
 	if manager.vpnServer != nil {
 		manager.vpnServer.Stop()
 	}
 
-	return err
+	return nil
 }
 
 func vpnStateCallback(state openvpn.State) {
