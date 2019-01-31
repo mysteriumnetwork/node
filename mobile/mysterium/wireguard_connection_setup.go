@@ -242,6 +242,7 @@ func (wg *wireguardConnection) Wait() error {
 
 func (wg *wireguardConnection) Stop() {
 	wg.stateChannel <- connection.Disconnecting
+	wg.updateStatistics()
 	close(wg.stopChannel)
 }
 
