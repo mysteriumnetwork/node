@@ -22,8 +22,8 @@ import "github.com/mysteriumnetwork/node/identity"
 // ID represents session id type
 type ID string
 
-// PaymentOrchestrator is responsible for interacting with the consumer in regards to payments
-type PaymentOrchestrator interface {
+// BalanceTracker is responsible for interacting with the consumer in regards to payments
+type BalanceTracker interface {
 	Start() error
 	Stop()
 }

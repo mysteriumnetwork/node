@@ -23,7 +23,6 @@ import (
 	"errors"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
 )
@@ -108,9 +107,7 @@ func (ppo *SessionBalance) sendBalance() error {
 func (ppo *SessionBalance) receivePromiseOrTimeout() error {
 	select {
 	case pm := <-ppo.promiseChan:
-		log.Info("Promise received", pm)
 		if !ppo.promiseValidator.Validate(pm) {
-			log.Info("Promise not valid", pm)
 			return ErrPromiseValidationFailed
 		}
 		// TODO: Save the promise

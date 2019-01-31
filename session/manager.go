@@ -64,18 +64,21 @@ type Storage interface {
 	Remove(id ID)
 }
 
+// BalanceTrackerFactory returns a new instance of balance tracker
+type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) BalanceTracker
+
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal market.ServiceProposal,
 	idGenerator IDGenerator,
 	sessionStorage Storage,
-	paymentOrchestratorFactory func() PaymentOrchestrator,
+	balanceTrackerFactory BalanceTrackerFactory,
 ) *Manager {
 	return &Manager{
-		currentProposal:            currentProposal,
-		generateID:                 idGenerator,
-		sessionStorage:             sessionStorage,
-		paymentOrchestratorFactory: paymentOrchestratorFactory,
+		currentProposal:       currentProposal,
+		generateID:            idGenerator,
+		sessionStorage:        sessionStorage,
+		balanceTrackerFactory: balanceTrackerFactory,
 
 		creationLock: sync.Mutex{},
 	}
@@ -83,10 +86,10 @@ func NewManager(
 
 // Manager knows how to start and provision session
 type Manager struct {
-	currentProposal            market.ServiceProposal
-	generateID                 IDGenerator
-	sessionStorage             Storage
-	paymentOrchestratorFactory func() PaymentOrchestrator
+	currentProposal       market.ServiceProposal
+	generateID            IDGenerator
+	sessionStorage        Storage
+	balanceTrackerFactory BalanceTrackerFactory
 
 	creationLock sync.Mutex
 }
@@ -109,10 +112,10 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 	sessionInstance.Done = make(chan struct{})
 	sessionInstance.Config = config
 
-	//TODO: either remove promise processor or this
-	paymentOrchestrator := manager.paymentOrchestratorFactory()
+	// TODO: pass in the issuer ID instead of the consumer ID
+	balanceTracker := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), consumerID)
 	go func() {
-		err := paymentOrchestrator.Start()
+		err := balanceTracker.Start()
 		if err != nil {
 			// TODO: log
 			// TODO: destroy session even if there is no error
@@ -122,7 +125,7 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 
 	go func() {
 		<-sessionInstance.Done
-		paymentOrchestrator.Stop()
+		balanceTracker.Stop()
 	}()
 
 	manager.sessionStorage.Add(sessionInstance)

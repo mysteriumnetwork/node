@@ -45,27 +45,27 @@ func generateSessionID() (ID, error) {
 	return expectedID, nil
 }
 
-type mockPaymentOrchestrator struct {
+type mockBalanceTracker struct {
 	errorToReturn error
 }
 
-func (m mockPaymentOrchestrator) Start() error {
+func (m mockBalanceTracker) Start() error {
 	return m.errorToReturn
 }
 
-func (m mockPaymentOrchestrator) Stop() {
+func (m mockBalanceTracker) Stop() {
 
 }
 
-func mockPaymentOrchestratorFactory() PaymentOrchestrator {
-	return &mockPaymentOrchestrator{}
+func mockBalanceTrackerFactory(consumer, provider, issuer identity.Identity) BalanceTracker {
+	return &mockBalanceTracker{}
 }
 
 func TestManager_Create_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockPaymentOrchestratorFactory)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig)
 	expectedResult.Done = sessionInstance.Done
@@ -75,7 +75,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockPaymentOrchestratorFactory)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
 
 	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), 69, expectedSessionConfig)
 	assert.Exactly(t, err, ErrorInvalidProposal)

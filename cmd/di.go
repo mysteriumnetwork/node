@@ -312,7 +312,7 @@ func newSessionManagerFactory(
 	nodeOptions node.Options,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
-		providerBalanceTrackerFactory := func() session.PaymentOrchestrator {
+		providerBalanceTrackerFactory := func(consumer, provider, issuer identity.Identity) session.BalanceTracker {
 			// if the flag aint set, just return a noop balance tracker
 			if !nodeOptions.ExperimentPromiseCheck {
 				return payments_noop.NewSessionBalance()
@@ -334,8 +334,8 @@ func newSessionManagerFactory(
 			dialog.Receive(listener.GetConsumer())
 
 			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 100)
-
-			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, &validators.NoopValidator{})
+			validator := validators.NewIssuedPromiseValidator(consumer, provider, issuer)
+			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator)
 		}
 		return session.NewManager(
 			proposal,
