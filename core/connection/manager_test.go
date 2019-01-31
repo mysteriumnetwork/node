@@ -247,6 +247,7 @@ func (tc *testContext) TestConnectMethodReturnsErrorIfConnectionExitsDuringConne
 
 func (tc *testContext) Test_PaymentManager_WhenManagerMadeConnectionIsStarted() {
 	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	waitABit()
 	assert.NoError(tc.T(), err)
 	assert.True(tc.T(), tc.mockPaymentManager.StartCalled())
 }

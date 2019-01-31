@@ -227,6 +227,9 @@ func (fd *fakeDialog) PeerID() identity.Identity {
 }
 
 func (fd *fakeDialog) assertNotClosed() {
+	fd.RLock()
+	defer fd.RUnlock()
+
 	if fd.closed {
 		panic("Incorrect dialog handling! dialog was closed already")
 	}
