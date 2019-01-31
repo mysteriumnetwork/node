@@ -29,16 +29,23 @@ import (
 )
 
 type fakePromiseIssuer struct {
+	sync.Mutex
 	startCalled bool
 	stopCalled  bool
 }
 
 func (issuer *fakePromiseIssuer) Start(proposal market.ServiceProposal) error {
+	issuer.Lock()
+	defer issuer.Unlock()
+
 	issuer.startCalled = true
 	return nil
 }
 
 func (issuer *fakePromiseIssuer) Stop() error {
+	issuer.Lock()
+	defer issuer.Unlock()
+
 	issuer.stopCalled = true
 	return nil
 }
