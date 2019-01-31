@@ -67,8 +67,8 @@ const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
 var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
-	"type 'license warranty'",
-	"type 'license conditions'",
+	"type 'license --warranty'",
+	"type 'license --conditions'",
 ))
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
