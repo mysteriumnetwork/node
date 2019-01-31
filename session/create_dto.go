@@ -38,6 +38,7 @@ type CreateRequest struct {
 	ConsumerInfo *ConsumerInfo   `json:"consumer_info,omitempty"`
 }
 
+// PaymentInfo represents the payment information that the provider has about the consumer
 type PaymentInfo struct {
 	LastPromise LastPromise `json:"lastPromise"`
 	FreeCredit  uint64      `json:"freeCredit"`

@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package promise
 
 import (
@@ -28,6 +45,7 @@ type ConsumerTracker struct {
 	issuer   Issuer
 }
 
+// NewConsumerTracker returns the consumer side tracker for promises
 func NewConsumerTracker(initial State, consumer, provider identity.Identity, issuer Issuer) *ConsumerTracker {
 	return &ConsumerTracker{
 		current:  initial,
@@ -37,8 +55,10 @@ func NewConsumerTracker(initial State, consumer, provider identity.Identity, iss
 	}
 }
 
-var UnexpectedAmount = errors.New("unexpected amount")
+// ErrUnexpectedAmount represents an error that occurs when we get an amount that's not aligned with our current understanding
+var ErrUnexpectedAmount = errors.New("unexpected amount")
 
+// AlignStateWithProvider aligns the consumers world with the providers
 func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 	if providerState.Seq > t.current.Seq {
 		// new promise request
@@ -50,15 +70,16 @@ func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 	}
 	// TODO safe math anyone?
 	if providerState.Amount > t.current.Amount {
-		return UnexpectedAmount
+		return ErrUnexpectedAmount
 	}
 	if providerState.Amount < t.current.Amount {
-		return UnexpectedAmount
+		return ErrUnexpectedAmount
 	}
 
 	return nil
 }
 
+// IssuePromiseWithAddedAmount issues a promise with the amount added to the promise
 func (t *ConsumerTracker) IssuePromiseWithAddedAmount(amountToAdd int64) (promises.IssuedPromise, error) {
 
 	promise := promises.Promise{
