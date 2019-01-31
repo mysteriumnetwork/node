@@ -33,6 +33,9 @@ const ServiceType = "wireguard"
 type ServiceDefinition struct {
 	// Approximate information on location where the service is provided from
 	Location market.Location `json:"location"`
+
+	// Approximate information on location where the tunnelled traffic will originate from
+	LocationOriginate market.Location `json:"location_originate"`
 }
 
 // GetLocation returns geographic location of service definition provider

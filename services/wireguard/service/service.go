@@ -120,7 +120,8 @@ func GetProposal(country string) market.ServiceProposal {
 	return market.ServiceProposal{
 		ServiceType: wg.ServiceType,
 		ServiceDefinition: wg.ServiceDefinition{
-			Location: market.Location{Country: country},
+			Location:          market.Location{Country: country},
+			LocationOriginate: market.Location{Country: country},
 		},
 		PaymentMethodType: wg.PaymentMethod,
 		PaymentMethod: wg.Payment{
