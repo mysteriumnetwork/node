@@ -22,6 +22,7 @@ import (
 	"errors"
 	"sync"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -34,6 +35,8 @@ var (
 	// ErrorWrongSessionOwner returned when consumer tries to destroy session that does not belongs to him
 	ErrorWrongSessionOwner = errors.New("wrong session owner")
 )
+
+const managerLogPrefix = "[session-manager] "
 
 // IDGenerator defines method for session id generation
 type IDGenerator func() (ID, error)
@@ -95,7 +98,7 @@ type Manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -110,22 +113,25 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 	}
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.Done = make(chan struct{})
-	sessionInstance.Config = config
 
 	// TODO: pass in the issuer ID instead of the consumer ID
 	balanceTracker := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), consumerID)
-	go func() {
-		err := balanceTracker.Start()
-		if err != nil {
-			// TODO: log
-			// TODO: destroy session even if there is no error
-			// TODO: fix this once the channel is here
-		}
-	}()
 
+	// stop the balance tracker once the session is finished
 	go func() {
 		<-sessionInstance.Done
 		balanceTracker.Stop()
+	}()
+
+	go func() {
+		err := balanceTracker.Start()
+		if err != nil {
+			log.Error(managerLogPrefix, "balance tracker error: ", err)
+			destroyErr := manager.Destroy(consumerID, string(sessionInstance.ID))
+			if destroyErr != nil {
+				log.Error(managerLogPrefix, "session cleanup failed: ", err)
+			}
+		}
 	}()
 
 	manager.sessionStorage.Add(sessionInstance)

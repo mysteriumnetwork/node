@@ -33,7 +33,7 @@ type createConsumer struct {
 
 // Creator defines method for session creation
 type Creator interface {
-	Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (Session, error)
+	Create(consumerID identity.Identity, proposalID int) (Session, error)
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
@@ -56,7 +56,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		return responseInternalError, err
 	}
 
-	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId, config)
+	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId)
 	switch err {
 	case nil:
 		if destroyCallback != nil {
@@ -65,7 +65,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 				destroyCallback()
 			}()
 		}
-		return responseWithSession(sessionInstance, nil), nil
+		return responseWithSession(sessionInstance, config, nil), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
 	default:
@@ -73,8 +73,8 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	}
 }
 
-func responseWithSession(sessionInstance Session, pi *PaymentInfo) CreateResponse {
-	serializedConfig, err := json.Marshal(sessionInstance.Config)
+func responseWithSession(sessionInstance Session, config ServiceConfiguration, pi *PaymentInfo) CreateResponse {
+	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		// Failed to serialize session
 		// TODO Cant expose error to response, some logging should be here

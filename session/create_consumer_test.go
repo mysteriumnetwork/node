@@ -27,8 +27,9 @@ import (
 )
 
 var (
+	config       = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
 	mockConsumer = func(json.RawMessage) (ServiceConfiguration, DestroyCallback, error) {
-		return nil, nil, nil
+		return config, nil, nil
 	}
 )
 
@@ -36,7 +37,6 @@ func TestConsumer_Success(t *testing.T) {
 	mockManager := &managerFake{
 		returnSession: Session{
 			ID:         "new-id",
-			Config:     fakeSessionConfig{"string-param", 123},
 			ConsumerID: identity.FromAddress("123"),
 		},
 	}
@@ -59,7 +59,7 @@ func TestConsumer_Success(t *testing.T) {
 			Success: true,
 			Session: SessionDto{
 				ID:     "new-id",
-				Config: []byte(`{"Param1":"string-param","Param2":123}`),
+				Config: config,
 			},
 		},
 		sessionResponse,
@@ -107,7 +107,7 @@ type managerFake struct {
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (Session, error) {
+func (manager *managerFake) Create(consumerID identity.Identity, proposalID int) (Session, error) {
 	manager.lastConsumerID = consumerID
 	manager.lastProposalID = proposalID
 	return manager.returnSession, manager.returnError

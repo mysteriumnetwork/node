@@ -34,7 +34,6 @@ func TestDestroyConsumer_Success(t *testing.T) {
 	mockDestroyer := &managerDestroyFake{
 		returnSession: Session{
 			ID:         "some-session-id",
-			Config:     fakeSessionConfig{"string-param", 123},
 			ConsumerID: identity.FromAddress("123"),
 		},
 	}
