@@ -24,7 +24,8 @@ type ServiceDefinition struct {
 	// Approximate information on location where the service is provided from
 	Location market.Location `json:"location"`
 
-	// Approximate information on location where the tunnelled traffic will originate from
+	// Approximate information on location where the actual tunnelled traffic will originate from.
+	// This is used by providers having their own means of setting tunnels to other remote exit points.
 	LocationOriginate market.Location `json:"location_originate"`
 
 	// Available per session bandwidth
