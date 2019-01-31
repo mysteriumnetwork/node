@@ -98,17 +98,44 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 	assert.Exactly(t, responseInternalError, sessionResponse)
 }
 
+func TestConsumer_UsesIssuerID(t *testing.T) {
+	mockManager := &managerFake{
+		returnSession: Session{
+			ID:         "new-id",
+			ConsumerID: identity.FromAddress("123"),
+		},
+	}
+	consumer := createConsumer{
+		sessionCreator: mockManager,
+		peerID:         identity.FromAddress("peer-id"),
+		configProvider: mockConsumer,
+	}
+
+	issuerID := identity.FromAddress("some-peer-id")
+	request := consumer.NewRequest().(*CreateRequest)
+	request.ProposalId = 101
+	request.ConsumerInfo = &ConsumerInfo{
+		IssuerID: issuerID,
+	}
+
+	_, err := consumer.Consume(request)
+	assert.Nil(t, err)
+	assert.Equal(t, issuerID, mockManager.lastIssuerID)
+}
+
 // managerFake represents fake Manager usually useful in tests
 type managerFake struct {
 	lastConsumerID identity.Identity
+	lastIssuerID   identity.Identity
 	lastProposalID int
 	returnSession  Session
 	returnError    error
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID identity.Identity, proposalID int) (Session, error) {
+func (manager *managerFake) Create(consumerID, issuerID identity.Identity, proposalID int) (Session, error) {
 	manager.lastConsumerID = consumerID
+	manager.lastIssuerID = issuerID
 	manager.lastProposalID = proposalID
 	return manager.returnSession, manager.returnError
 }

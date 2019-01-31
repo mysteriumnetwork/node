@@ -98,7 +98,7 @@ type Manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -114,8 +114,7 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int) (se
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.Done = make(chan struct{})
 
-	// TODO: pass in the issuer ID instead of the consumer ID
-	balanceTracker := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), consumerID)
+	balanceTracker := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)
 
 	// stop the balance tracker once the session is finished
 	go func() {

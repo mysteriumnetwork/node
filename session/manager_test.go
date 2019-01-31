@@ -30,10 +30,12 @@ var (
 	currentProposal   = market.ServiceProposal{
 		ID: currentProposalID,
 	}
+	consumerID = identity.FromAddress("deadbeef")
+
 	expectedID      = ID("mocked-id")
 	expectedSession = Session{
 		ID:         expectedID,
-		ConsumerID: identity.FromAddress("deadbeef"),
+		ConsumerID: consumerID,
 	}
 	lastSession Session
 )
@@ -66,7 +68,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
 
-	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID)
+	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID)
 	expectedResult.Done = sessionInstance.Done
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedResult, sessionInstance)
@@ -76,7 +78,7 @@ func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
 
-	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), 69)
+	sessionInstance, err := manager.Create(consumerID, consumerID, 69)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Exactly(t, Session{}, sessionInstance)
 }
