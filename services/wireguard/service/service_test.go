@@ -46,7 +46,8 @@ func Test_GetProposal(t *testing.T) {
 		market.ServiceProposal{
 			ServiceType: "wireguard",
 			ServiceDefinition: wg.ServiceDefinition{
-				Location: market.Location{Country: country},
+				Location:          market.Location{Country: country},
+				LocationOriginate: market.Location{Country: country},
 			},
 			PaymentMethodType: "WG",
 			PaymentMethod: wg.Payment{
