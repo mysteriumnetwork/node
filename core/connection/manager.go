@@ -127,8 +127,8 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		manager.cleanConnection = func() {
 			manager.status = statusDisconnecting()
 			cancelCtx()
-			for _, f := range cancel {
-				f()
+			for i := range cancel { // Cancelling in a reverse order to keep correct workflow.
+				cancel[len(cancel)-i-1]()
 			}
 		}
 		if err != nil {

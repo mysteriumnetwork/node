@@ -115,6 +115,7 @@ func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
 // Stop stops wireguard connection and closes connection endpoint.
 func (c *Connection) Stop() {
 	c.stateChannel <- connection.Disconnecting
+	c.sendStats()
 
 	if err := c.connectionEndpoint.Stop(); err != nil {
 		log.Error(logPrefix, "Failed to close wireguard connection: ", err)
@@ -131,19 +132,23 @@ func (c *Connection) runPeriodically(duration time.Duration) {
 	for {
 		select {
 		case <-time.After(duration):
-			stats, err := c.connectionEndpoint.PeerStats()
-			if err != nil {
-				log.Error(logPrefix, "failed to receive peer stats: ", err)
-				break
-			}
-			c.statisticsChannel <- consumer.SessionStatistics{
-				BytesSent:     stats.BytesSent,
-				BytesReceived: stats.BytesReceived,
-			}
+			c.sendStats()
 
 		case <-c.stopChannel:
 			return
 		}
+	}
+}
+
+func (c *Connection) sendStats() {
+	stats, err := c.connectionEndpoint.PeerStats()
+	if err != nil {
+		log.Error(logPrefix, "failed to receive peer stats: ", err)
+		return
+	}
+	c.statisticsChannel <- consumer.SessionStatistics{
+		BytesSent:     stats.BytesSent,
+		BytesReceived: stats.BytesReceived,
 	}
 }
 
