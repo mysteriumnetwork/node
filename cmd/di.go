@@ -259,7 +259,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		consumer, provider identity.Identity) (connection.PaymentManager, error) {
 		// if the flag aint set, just return a noop balance tracker
 		// it's not even a session balance tracker, but we don't really care here as long as it does nothing
-		if !nodeOptions.ExperimentPromiseCheck {
+		if !nodeOptions.ExperimentPayments {
 			return payments_noop.NewSessionBalance(), nil
 		}
 
@@ -314,7 +314,7 @@ func newSessionManagerFactory(
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumer, provider, issuer identity.Identity) session.BalanceTracker {
 			// if the flag aint set, just return a noop balance tracker
-			if !nodeOptions.ExperimentPromiseCheck {
+			if !nodeOptions.ExperimentPayments {
 				return payments_noop.NewSessionBalance()
 			}
 
