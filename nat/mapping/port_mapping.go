@@ -48,25 +48,19 @@ func PortMapping(protocol string, port int, name string) func() {
 // mapPort adds a port mapping on m and keeps it alive until c is closed.
 // This function is typically invoked in its own goroutine.
 func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, intPort int, name string) {
-	refresh := time.NewTimer(mapUpdateInterval)
 	defer func() {
-		refresh.Stop()
 		log.Debug(logPrefix, "Deleting port mapping for port: ", extPort)
 
 		if err := m.DeleteMapping(protocol, extPort, intPort); err != nil {
 			log.Debug(logPrefix, "Couldn't delete port mapping: ", err)
 		}
 	}()
-	addMapping(m, protocol, extPort, intPort, name)
 	for {
+		addMapping(m, protocol, extPort, intPort, name)
 		select {
-		case _, ok := <-c:
-			if !ok {
-				return
-			}
-		case <-refresh.C:
-			addMapping(m, protocol, extPort, intPort, name)
-			refresh.Reset(mapUpdateInterval)
+		case <-c:
+			return
+		case <-time.After(mapUpdateInterval):
 		}
 	}
 }
@@ -77,10 +71,7 @@ func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
 			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
-		} else {
-			log.Info(logPrefix, "Mapped network port: ", extPort)
 		}
-	} else {
-		log.Info(logPrefix, "Mapped network port:", extPort)
 	}
+	log.Info(logPrefix, "Mapped network port:", extPort)
 }
