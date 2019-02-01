@@ -5,5 +5,7 @@ sudo ./bin/run \
     --runtime-dir=./build/myst/provider \
     --tequilapi.address=127.0.0.1 \
     --tequilapi.port=4052 \
+    --keystore.lightweight \
+    --localnet \
     service --agreed-terms-and-conditions \
     $@
