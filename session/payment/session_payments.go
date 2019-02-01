@@ -45,10 +45,10 @@ type SessionPayments struct {
 	promiseTracker    PromiseTracker
 }
 
-// NewSessionPayments returns a new instnace of consumer payment orchestrator
+// NewSessionPayments returns a new instance of consumer payment orchestrator
 func NewSessionPayments(balanceChan chan balance.Message, peerPromiseSender PeerPromiseSender, promiseTracker PromiseTracker) *SessionPayments {
 	return &SessionPayments{
-		stop:              make(chan struct{}, 1),
+		stop:              make(chan struct{}),
 		balanceChan:       balanceChan,
 		peerPromiseSender: peerPromiseSender,
 		promiseTracker:    promiseTracker,
@@ -89,5 +89,5 @@ func (cpo *SessionPayments) Start() error {
 
 // Stop stops the payment orchestrator
 func (cpo *SessionPayments) Stop() {
-	cpo.stop <- struct{}{}
+	close(cpo.stop)
 }

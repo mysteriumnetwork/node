@@ -20,15 +20,13 @@ package validators
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/promises"
 	"github.com/mysteriumnetwork/payments/test_utils"
-
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 var payerKey, _ = crypto.ToECDSA(common.FromHex("0x0b4eef4e99796ebfffe5046488525cd906ebc87b30f86ca6bd21b19dc2b319db"))

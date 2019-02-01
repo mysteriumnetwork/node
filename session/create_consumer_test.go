@@ -47,7 +47,7 @@ func TestConsumer_Success(t *testing.T) {
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
-	request.ProposalId = 101
+	request.ProposalID = 101
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
@@ -113,7 +113,7 @@ func TestConsumer_UsesIssuerID(t *testing.T) {
 
 	issuerID := identity.FromAddress("some-peer-id")
 	request := consumer.NewRequest().(*CreateRequest)
-	request.ProposalId = 101
+	request.ProposalID = 101
 	request.ConsumerInfo = &ConsumerInfo{
 		IssuerID: issuerID,
 	}

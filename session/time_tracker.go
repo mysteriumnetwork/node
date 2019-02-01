@@ -22,7 +22,6 @@ import "time"
 // TimeTracker tracks elapsed time from the beginning of the session
 // it's passive (no internal go routines) and simply encapsulates time operation: now - startOfSession expressed as duration
 type TimeTracker struct {
-	started   bool
 	startTime time.Time
 	getTime   func() time.Time
 }
@@ -36,13 +35,12 @@ func NewTracker(getTime func() time.Time) TimeTracker {
 
 // StartTracking starts tracking the time
 func (tt *TimeTracker) StartTracking() {
-	tt.started = true
 	tt.startTime = tt.getTime()
 }
 
 // Elapsed gets the total duration of time that has passed since we've started
 func (tt TimeTracker) Elapsed() time.Duration {
-	if !tt.started {
+	if tt.startTime.IsZero() {
 		return 0 * time.Second
 	}
 	return tt.getTime().Sub(tt.startTime)

@@ -43,10 +43,10 @@ type PeerBalanceSender interface {
 }
 
 // ErrPromiseWaitTimeout indicates that we waited for a promise long enough, but with no result
-var ErrPromiseWaitTimeout = errors.New("Did not get a new promise")
+var ErrPromiseWaitTimeout = errors.New("did not get a new promise")
 
 // ErrPromiseValidationFailed indicates that an invalid promise was sent
-var ErrPromiseValidationFailed = errors.New("Promise validation failed")
+var ErrPromiseValidationFailed = errors.New("promise validation failed")
 
 // SessionBalance orchestrates the ping pong of balance sent to consumer -> promise received from consumer flow
 type SessionBalance struct {
@@ -68,7 +68,7 @@ func NewSessionBalance(
 	promiseWaitTimeout time.Duration,
 	promiseValidator PromiseValidator) *SessionBalance {
 	return &SessionBalance{
-		stop:               make(chan struct{}, 1),
+		stop:               make(chan struct{}),
 		peerBalanceSender:  peerBalanceSender,
 		balanceTracker:     balanceTracker,
 		promiseChan:        promiseChan,
@@ -100,8 +100,7 @@ func (ppo *SessionBalance) Start() error {
 func (ppo *SessionBalance) sendBalance() error {
 	balance := ppo.balanceTracker.GetBalance()
 	// TODO: Maybe retry a couple of times?
-	err := ppo.peerBalanceSender.Send(balance)
-	return err
+	return ppo.peerBalanceSender.Send(balance)
 }
 
 func (ppo *SessionBalance) receivePromiseOrTimeout() error {
@@ -120,5 +119,5 @@ func (ppo *SessionBalance) receivePromiseOrTimeout() error {
 
 // Stop stops the payment orchestrator
 func (ppo *SessionBalance) Stop() {
-	ppo.stop <- struct{}{}
+	close(ppo.stop)
 }

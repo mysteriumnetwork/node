@@ -354,10 +354,8 @@ func (mpm *MockPaymentManager) Start() error {
 	mpm.Lock()
 	mpm.startCalled = true
 	mpm.Unlock()
-	select {
-	case <-mpm.stopChan:
-		return mpm.MockError
-	}
+	<-mpm.stopChan
+	return mpm.MockError
 }
 
 func (mpm *MockPaymentManager) StartCalled() bool {

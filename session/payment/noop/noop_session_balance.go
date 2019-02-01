@@ -18,7 +18,7 @@
 // Package noop contains the non operational payment and balance trackers
 package noop
 
-// SessionBalance doesnt really track the balance
+// SessionBalance doesn't really track the balance
 type SessionBalance struct {
 	stopChan chan struct{}
 }
@@ -32,12 +32,8 @@ func NewSessionBalance() *SessionBalance {
 
 // Start starts the noop session balance tracker
 func (nsb *SessionBalance) Start() error {
-	for {
-		select {
-		case <-nsb.stopChan:
-			return nil
-		}
-	}
+	<-nsb.stopChan
+	return nil
 }
 
 // Stop stops the noop session balance tracker

@@ -38,7 +38,7 @@ func NewLocalIssuer(signer identity.Signer) *LocalIssuer {
 	}
 }
 
-// Issue issues thet given promise
+// Issue issues the given promise
 func (li LocalIssuer) Issue(promise promises.Promise) (promises.IssuedPromise, error) {
 	signed, err := promises.SignByPayer(&promise, li.paymentsSigner)
 	if err != nil {

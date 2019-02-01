@@ -87,7 +87,7 @@ func Test_SessionPayments_Start_Stop(t *testing.T) {
 
 func Test_SessionPayments_SendsPromiseOnBalance(t *testing.T) {
 	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker)
-	go func() { cpo.Start() }()
+	go cpo.Start()
 	defer cpo.Stop()
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
 	for v := range promiseSender.chanToWriteTo {

@@ -37,10 +37,7 @@ var (
 		ID:         expectedID,
 		ConsumerID: consumerID,
 	}
-	lastSession Session
 )
-
-const expectedSessionConfig = "config_string"
 
 func generateSessionID() (ID, error) {
 	return expectedID, nil
@@ -58,8 +55,8 @@ func (m mockBalanceTracker) Stop() {
 
 }
 
-func mockBalanceTrackerFactory(consumer, provider, issuer identity.Identity) BalanceTracker {
-	return &mockBalanceTracker{}
+func mockBalanceTrackerFactory(consumer, provider, issuer identity.Identity) (BalanceTracker, error) {
+	return &mockBalanceTracker{}, nil
 }
 
 func TestManager_Create_StoresSession(t *testing.T) {

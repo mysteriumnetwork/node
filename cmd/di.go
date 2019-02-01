@@ -21,8 +21,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mysteriumnetwork/node/session/promise/validators"
-
 	"github.com/asaskevich/EventBus"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -60,6 +58,7 @@ import (
 	payments_noop "github.com/mysteriumnetwork/node/session/payment/noop"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/node/session/promise/issuers"
+	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -257,7 +256,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		messageChan chan balance.Message,
 		dialog communication.Dialog,
 		consumer, provider identity.Identity) (connection.PaymentManager, error) {
-		// if the flag aint set, just return a noop balance tracker
+		// if the flag ain't set, just return a noop balance tracker
 		// it's not even a session balance tracker, but we don't really care here as long as it does nothing
 		if !nodeOptions.ExperimentPayments {
 			return payments_noop.NewSessionBalance(), nil
@@ -312,10 +311,10 @@ func newSessionManagerFactory(
 	nodeOptions node.Options,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
-		providerBalanceTrackerFactory := func(consumer, provider, issuer identity.Identity) session.BalanceTracker {
-			// if the flag aint set, just return a noop balance tracker
+		providerBalanceTrackerFactory := func(consumer, provider, issuer identity.Identity) (session.BalanceTracker, error) {
+			// if the flag ain't set, just return a noop balance tracker
 			if !nodeOptions.ExperimentPayments {
-				return payments_noop.NewSessionBalance()
+				return payments_noop.NewSessionBalance(), nil
 			}
 
 			timeTracker := session.NewTracker(time.Now)
@@ -331,11 +330,15 @@ func newSessionManagerFactory(
 			sender := balance.NewBalanceSender(dialog)
 			promiseChan := make(chan promise.Message, 1)
 			listener := promise.NewListener(promiseChan)
-			dialog.Receive(listener.GetConsumer())
+			err := dialog.Receive(listener.GetConsumer())
+			if err != nil {
+				return nil, err
+			}
 
+			// TODO: the ints and times here need to be passed in as well, or defined as constants
 			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 100)
 			validator := validators.NewIssuedPromiseValidator(consumer, provider, issuer)
-			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator)
+			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator), nil
 		}
 		return session.NewManager(
 			proposal,

@@ -84,7 +84,7 @@ func Test_ProviderPaymentOchestratorStartStop(t *testing.T) {
 func Test_ProviderPaymentOchestratorSendsBalance(t *testing.T) {
 	orch := NewMockSessionBalance()
 	defer orch.Stop()
-	go func() { _ = orch.Start() }()
+	go orch.Start()
 
 	time.Sleep(time.Millisecond * 2)
 	assert.Exactly(t, balance.Message{SequenceID: 1, Balance: 0}, <-BalanceSender.balanceMessages)

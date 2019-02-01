@@ -40,7 +40,7 @@ func (producer *createProducer) NewResponse() (responsePtr interface{}) {
 
 func (producer *createProducer) Produce() (requestPtr interface{}) {
 	return &CreateRequest{
-		ProposalId:   producer.ProposalID,
+		ProposalID:   producer.ProposalID,
 		Config:       producer.Config,
 		ConsumerInfo: producer.ConsumerInfo,
 	}

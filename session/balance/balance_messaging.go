@@ -41,7 +41,7 @@ type Sender struct {
 	sender communication.Sender
 }
 
-// NewBalanceSender returns a new instance of the balance sennder
+// NewBalanceSender returns a new instance of the balance sender
 func NewBalanceSender(sender communication.Sender) *Sender {
 	return &Sender{
 		sender: sender,
@@ -50,8 +50,7 @@ func NewBalanceSender(sender communication.Sender) *Sender {
 
 // Send sends the given balance message
 func (bs *Sender) Send(bm Message) error {
-	err := bs.sender.Send(&balanceMessageProducer{BalanceMessage: bm})
-	return err
+	return bs.sender.Send(&balanceMessageProducer{BalanceMessage: bm})
 }
 
 // Listener listens for balance messages

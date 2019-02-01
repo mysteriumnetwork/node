@@ -61,7 +61,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		issuerID = request.ConsumerInfo.IssuerID
 	}
 
-	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalId)
+	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID)
 	switch err {
 	case nil:
 		if destroyCallback != nil {

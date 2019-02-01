@@ -30,10 +30,9 @@ type BalanceTracker interface {
 
 // Session structure holds all required information about current session between service consumer and provider
 type Session struct {
-	ID              ID
-	ConsumerID      identity.Identity
-	Done            chan struct{}
-	DestroyCallback DestroyCallback
+	ID         ID
+	ConsumerID identity.Identity
+	Done       chan struct{}
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party

@@ -68,7 +68,7 @@ type Storage interface {
 }
 
 // BalanceTrackerFactory returns a new instance of balance tracker
-type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) BalanceTracker
+type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (BalanceTracker, error)
 
 // NewManager returns new session Manager
 func NewManager(
@@ -114,7 +114,10 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.Done = make(chan struct{})
 
-	balanceTracker := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)
+	balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)
+	if err != nil {
+		return
+	}
 
 	// stop the balance tracker once the session is finished
 	go func() {

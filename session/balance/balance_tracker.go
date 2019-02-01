@@ -23,8 +23,6 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 )
 
-const balanceTrackerPrefix = "[balance-tracker] "
-
 // PeerSender knows how to send a balance message to the peer
 type PeerSender interface {
 	Send(Message) error
@@ -36,14 +34,13 @@ type TimeKeeper interface {
 	Elapsed() time.Duration
 }
 
-// AmountCalculator is able to deduce the amount required for payment from a given duraiton
+// AmountCalculator is able to deduce the amount required for payment from a given duration
 type AmountCalculator interface {
 	TotalAmount(duration time.Duration) money.Money
 }
 
 // ProviderBalanceTracker is responsible for tracking the balance on the provider side
 type ProviderBalanceTracker struct {
-	sender           PeerSender
 	timeKeeper       TimeKeeper
 	amountCalculator AmountCalculator
 	period           time.Duration

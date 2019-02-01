@@ -179,6 +179,9 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 	transactor := helpers.CreateNewKeystoreTransactor(ks, &ownerAcc)
 
 	tokensContract, err := mysttoken.NewMystTokenTransactor(tokenAddress, ehtClient)
+	if err != nil {
+		return nil, err
+	}
 
 	paymentsContract, err := abigen.NewIdentityPromisesTransactor(paymentsAddress, ehtClient)
 	if err != nil {

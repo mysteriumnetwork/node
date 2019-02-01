@@ -50,8 +50,7 @@ func NewSender(sender communication.Sender) *Sender {
 
 // Send send the given promise message
 func (ps *Sender) Send(pm Message) error {
-	err := ps.sender.Send(&MessageProducer{Message: pm})
-	return err
+	return ps.sender.Send(&MessageProducer{Message: pm})
 }
 
 // Listener listens for promise messages
