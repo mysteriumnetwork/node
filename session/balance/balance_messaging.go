@@ -108,7 +108,7 @@ func (bmp *balanceMessageProducer) GetMessageEndpoint() communication.MessageEnd
 // Produce produces a request message
 func (bmp *balanceMessageProducer) Produce() (requestPtr interface{}) {
 	return &Request{
-		BalanceMessage: Message{},
+		BalanceMessage: bmp.BalanceMessage,
 	}
 }
 

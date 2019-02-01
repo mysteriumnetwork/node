@@ -336,7 +336,7 @@ func newSessionManagerFactory(
 			}
 
 			// TODO: the ints and times here need to be passed in as well, or defined as constants
-			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 100)
+			tracker := balance.NewProviderBalanceTracker(&timeTracker, amountCalc, time.Second*5, 0)
 			validator := validators.NewIssuedPromiseValidator(consumer, provider, issuer)
 			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator), nil
 		}
