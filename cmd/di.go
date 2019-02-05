@@ -39,6 +39,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
+	"github.com/mysteriumnetwork/node/events"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -99,6 +100,7 @@ type Dependencies struct {
 	StatisticsTracker  *statistics.SessionStatisticsTracker
 	StatisticsReporter *statistics.SessionStatisticsReporter
 	SessionStorage     *consumer_session.Storage
+	EventsSender       *events.Sender
 
 	EventBus EventBus.Bus
 
@@ -363,6 +365,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	di.NetworkDefinition = network
 	di.MysteriumAPI = mysterium.NewClient(network.DiscoveryAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
+	eventsTransport := events.NewELKTransport(network.ELKAddress, 10*time.Second)
+	di.EventsSender = &events.Sender{Transport: eventsTransport}
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
