@@ -1,18 +1,16 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>network.mysterium</groupId>
-  <artifactId>test</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <artifactId>mobile-node</artifactId>
+  <version>0.0.0-SNAPSHOT</version>
   <packaging>aar</packaging>
 
   <name>Mysterium Network Android SDK</name>
   <description>Android port of the Mysterium Node for decentralised VPN built on blockchain</description>
   <url>https://github.com/mysteriumnetwork/node</url>
-  <inceptionYear>2018</inceptionYear>
 
   <licenses>
     <license>
@@ -36,6 +34,18 @@
       <properties>
         <picUrl>https://secure.gravatar.com/avatar/e8806698d22818032c58eb1a2a097255</picUrl>
       </properties>
+    </developer>
+    <developer>
+      <id>MysteriumTeam</id>
+      <name>Mysterium Team</name>
+      <email>core-services@mysterium.network</email>
+      <url>https://mysterium.network/about/team/</url>
+      <organization>Mysterium Network</organization>
+      <organizationUrl>https://mysterium.network</organizationUrl>
+      <roles>
+        <role>Core team</role>
+      </roles>
+      <timezone>Europe/Vilnius</timezone>
     </developer>
   </developers>
 
