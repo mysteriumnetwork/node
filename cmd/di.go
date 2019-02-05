@@ -74,7 +74,7 @@ type Storage interface {
 	Close() error
 }
 
-// Dependencies is DI container for top level components which is reusedin several places
+// Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
 

@@ -66,10 +66,10 @@ and `make dep-ensure` to install `dep` and to get dependencies).  Happy hacking!
 ```bash
 
 # Start node in provider role
-bin/build && bin/run_provider
+make build && bin/run_provider
 
 # Start node in consumer role
-bin/build && bin/run_consumer
+make build && bin/run_consumer
 ```
 
 ## Running Node as interactive demo:
