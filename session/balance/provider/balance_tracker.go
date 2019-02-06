@@ -15,17 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package balance
+package provider
 
 import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/session/balance"
 )
 
 // PeerSender knows how to send a balance message to the peer
 type PeerSender interface {
-	Send(Message) error
+	Send(balance.Message) error
 }
 
 // TimeKeeper keeps track of time for payments
@@ -39,8 +40,8 @@ type AmountCalculator interface {
 	TotalAmount(duration time.Duration) money.Money
 }
 
-// ProviderBalanceTracker is responsible for tracking the balance on the provider side
-type ProviderBalanceTracker struct {
+// BalanceTracker is responsible for tracking the balance on the provider side
+type BalanceTracker struct {
 	timeKeeper       TimeKeeper
 	amountCalculator AmountCalculator
 	period           time.Duration
@@ -50,9 +51,9 @@ type ProviderBalanceTracker struct {
 	stop          chan struct{}
 }
 
-// NewProviderBalanceTracker returns a new instance of the providerBalanceTracker
-func NewProviderBalanceTracker(timeKeeper TimeKeeper, amountCalculator AmountCalculator, period time.Duration, initialBalance uint64) *ProviderBalanceTracker {
-	return &ProviderBalanceTracker{
+// NewBalanceTracker returns a new instance of the providerBalanceTracker
+func NewBalanceTracker(timeKeeper TimeKeeper, amountCalculator AmountCalculator, period time.Duration, initialBalance uint64) *BalanceTracker {
+	return &BalanceTracker{
 		timeKeeper:       timeKeeper,
 		period:           period,
 		amountCalculator: amountCalculator,
@@ -62,17 +63,17 @@ func NewProviderBalanceTracker(timeKeeper TimeKeeper, amountCalculator AmountCal
 	}
 }
 
-func (pbt *ProviderBalanceTracker) calculateBalance() {
-	cost := pbt.amountCalculator.TotalAmount(pbt.timeKeeper.Elapsed())
-	pbt.balance = pbt.totalPromised - cost.Amount
+func (bt *BalanceTracker) calculateBalance() {
+	cost := bt.amountCalculator.TotalAmount(bt.timeKeeper.Elapsed())
+	bt.balance = bt.totalPromised - cost.Amount
 }
 
 // GetBalance returns the balance message
-func (pbt *ProviderBalanceTracker) GetBalance() Message {
-	pbt.calculateBalance()
+func (bt *BalanceTracker) GetBalance() balance.Message {
+	bt.calculateBalance()
 	// TODO: sequence ID should come here, somehow
-	return Message{
+	return balance.Message{
 		SequenceID: 0,
-		Balance:    pbt.balance,
+		Balance:    bt.balance,
 	}
 }
