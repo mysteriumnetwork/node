@@ -15,18 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package events
+package metrics
 
 import "time"
 
-// CreateSender creates events sender with appropriate transport
-func CreateSender(disableStatistics bool, elkAddress string) *Sender {
-	var eventsTransport Transport
-	if disableStatistics {
-		eventsTransport = NewNoopTransport()
+// CreateSender creates metrics sender with appropriate transport
+func CreateSender(disableMetrics bool, metricsAddress string) *Sender {
+	var transport Transport
+	if disableMetrics {
+		transport = NewNoopTransport()
 	} else {
-		eventsTransport = NewELKTransport(elkAddress, 10*time.Second)
+		transport = NewELKTransport(metricsAddress, 10*time.Second)
 	}
 
-	return &Sender{Transport: eventsTransport}
+	return &Sender{Transport: transport}
 }

@@ -27,7 +27,7 @@ type NetworkDefinition struct {
 	BrokerAddress           string
 	EtherClientRPC          string
 	QualityOracle           string
-	ELKAddress              string
+	MetricsAddress          string
 	PaymentsContractAddress common.Address
 }
 

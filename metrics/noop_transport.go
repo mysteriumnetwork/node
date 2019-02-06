@@ -15,9 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package events
+package metrics
 
-// NewNoopTransport creates transport which ignores requests to send events
+// NewNoopTransport creates transport which ignores requests to send metrics
 func NewNoopTransport() Transport {
 	return &noopTransport{}
 }

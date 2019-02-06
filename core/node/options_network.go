@@ -33,6 +33,6 @@ type OptionsNetwork struct {
 
 	QualityOracle string
 
-	DisableStatistics bool
-	StatisticsAddress string
+	DisableMetrics bool
+	MetricsAddress string
 }

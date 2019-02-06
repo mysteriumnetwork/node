@@ -39,15 +39,15 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
-	"github.com/mysteriumnetwork/node/events"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/metrics"
+	market_metrics "github.com/mysteriumnetwork/node/market/metrics"
 	"github.com/mysteriumnetwork/node/market/metrics/oracle"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
@@ -81,7 +81,7 @@ type Dependencies struct {
 
 	NetworkDefinition    metadata.NetworkDefinition
 	MysteriumAPI         *mysterium.MysteriumAPI
-	MysteriumMorqaClient metrics.QualityOracle
+	MysteriumMorqaClient market_metrics.QualityOracle
 	EtherClient          *ethclient.Client
 
 	NATService           nat.NATService
@@ -100,7 +100,7 @@ type Dependencies struct {
 	StatisticsTracker  *statistics.SessionStatisticsTracker
 	StatisticsReporter *statistics.SessionStatisticsReporter
 	SessionStorage     *consumer_session.Storage
-	EventsSender       *events.Sender
+	MetricsSender      *metrics.Sender
 
 	EventBus EventBus.Bus
 
@@ -362,15 +362,15 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 		network.EtherClientRPC = options.EtherClientRPC
 	}
 
-	if options.StatisticsAddress != metadata.DefaultNetwork.ELKAddress {
-		network.ELKAddress = options.StatisticsAddress
+	if options.MetricsAddress != metadata.DefaultNetwork.MetricsAddress {
+		network.MetricsAddress = options.MetricsAddress
 	}
 
 	di.NetworkDefinition = network
 	di.MysteriumAPI = mysterium.NewClient(network.DiscoveryAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
-	di.EventsSender = events.CreateSender(options.DisableStatistics, network.ELKAddress)
+	di.MetricsSender = metrics.CreateSender(options.DisableMetrics, network.MetricsAddress)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
