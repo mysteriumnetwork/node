@@ -45,13 +45,13 @@ RepoID=$(mvn nexus-staging:rc-list \
     | awk '/networkmysterium-/ {id=$2} END{print id}')
 
 mvn nexus-staging:rc-close \
-    -settings=bin/package/android/mvn.settings
+    -settings=bin/package/android/mvn.settings \
     -DnexusUrl=https://oss.sonatype.org \
     -DserverId=ossrh \
-    -DstagingRepositoryId=$RepoID \
+    -DstagingRepositoryId=$RepoID
 
 mvn nexus-staging:rc-release \
-    -settings=bin/package/android/mvn.settings
+    -settings=bin/package/android/mvn.settings \
     -DnexusUrl=https://oss.sonatype.org \
     -DserverId=ossrh \
-    -DstagingRepositoryId=$RepoID \
+    -DstagingRepositoryId=$RepoID
