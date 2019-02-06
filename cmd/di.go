@@ -372,7 +372,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 
 	var eventsTransport events.Transport
 	if options.DisableStatistics {
-		eventsTransport = events.NewNilTransport()
+		eventsTransport = events.NewNoopTransport()
 	} else {
 		eventsTransport = events.NewELKTransport(network.ELKAddress, 10*time.Second)
 	}

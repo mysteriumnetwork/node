@@ -17,14 +17,14 @@
 
 package events
 
-// NewNilTransport creates transport which ignores requests to send events
-func NewNilTransport() Transport {
-	return &nilTransport{}
+// NewNoopTransport creates transport which ignores requests to send events
+func NewNoopTransport() Transport {
+	return &noopTransport{}
 }
 
-type nilTransport struct {
+type noopTransport struct {
 }
 
-func (transport *nilTransport) sendEvent(event event) error {
+func (transport *noopTransport) sendEvent(event event) error {
 	return nil
 }
