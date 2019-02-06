@@ -26,6 +26,9 @@ import (
 // RoleProvider indicates that event was sent from service provider
 const RoleProvider = "provider"
 
+const appName = "myst"
+const startupEventName = "startup"
+
 // Sender builds events and sends them using given transport
 type Sender struct {
 	Transport Transport
@@ -34,6 +37,22 @@ type Sender struct {
 // Transport allows sending events
 type Transport interface {
 	sendEvent(event) error
+}
+
+type event struct {
+	Application applicationInfo `json:"application"`
+	EventName   string          `json:"eventName"`
+	CreatedAt   int64           `json:"createdAt"`
+	Context     interface{}     `json:"context"`
+}
+
+type applicationInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+type startupContext struct {
+	Role string `json:"role"`
 }
 
 // SendStartupEvent sends startup event
@@ -53,22 +72,3 @@ func (sender *Sender) sendEvent(event event) {
 		}
 	}()
 }
-
-type event struct {
-	Application applicationInfo `json:"application"`
-	EventName   string          `json:"eventName"`
-	CreatedAt   int64           `json:"createdAt"`
-	Context     interface{}     `json:"context"`
-}
-
-type applicationInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
-type startupContext struct {
-	Role string `json:"role"`
-}
-
-const appName = "myst"
-const startupEventName = "startup"

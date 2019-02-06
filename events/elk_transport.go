@@ -29,17 +29,17 @@ import (
 )
 
 // NewELKTransport creates transport allowing to send events to ELK through HTTP
-func NewELKTransport(elkUrl string, timeout time.Duration) Transport {
-	return &elkTransport{http: newMysteriumHTTPTransport(timeout), elkUrl: elkUrl}
+func NewELKTransport(elkURL string, timeout time.Duration) Transport {
+	return &elkTransport{http: newMysteriumHTTPTransport(timeout), elkURL: elkURL}
 }
 
 type elkTransport struct {
 	http   mysterium.HTTPTransport
-	elkUrl string
+	elkURL string
 }
 
 func (transport *elkTransport) sendEvent(event event) error {
-	req, err := requests.NewPostRequest(transport.elkUrl, "/", event)
+	req, err := requests.NewPostRequest(transport.elkURL, "/", event)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (transport *elkTransport) sendEvent(event event) error {
 		return fmt.Errorf("unexpected response body: %v", body)
 	}
 
-	return err
+	return nil
 }
 
 func newMysteriumHTTPTransport(timeout time.Duration) mysterium.HTTPTransport {
