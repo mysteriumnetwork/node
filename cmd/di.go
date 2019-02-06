@@ -55,9 +55,9 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
+	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
 	payments_noop "github.com/mysteriumnetwork/node/session/payment/noop"
 	"github.com/mysteriumnetwork/node/session/promise"
-	"github.com/mysteriumnetwork/node/session/promise/issuers"
 	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
@@ -251,26 +251,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
-	paymentIssuerFactory := func(
-		initialState promise.State,
-		messageChan chan balance.Message,
-		dialog communication.Dialog,
-		consumer, provider identity.Identity) (connection.PaymentManager, error) {
-		// if the flag ain't set, just return a noop balance tracker
-		// it's not even a session balance tracker, but we don't really care here as long as it does nothing
-		if !nodeOptions.ExperimentPayments {
-			return payments_noop.NewSessionBalance(), nil
-		}
-
-		bl := balance.NewListener(messageChan)
-		ps := promise.NewSender(dialog)
-		issuer := issuers.NewLocalIssuer(di.SignerFactory(consumer))
-		tracker := promise.NewConsumerTracker(initialState, consumer, provider, issuer)
-		payments := session_payment.NewSessionPayments(messageChan, ps, tracker)
-		err := dialog.Receive(bl.GetConsumer())
-		return payments, err
-	}
-
 	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
 	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
 		di.StatisticsTracker,
@@ -286,7 +266,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		paymentIssuerFactory,
+		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 	)
