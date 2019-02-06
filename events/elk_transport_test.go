@@ -64,6 +64,7 @@ func TestELKTransport_SendEvent_WithUnexpectedStatus(t *testing.T) {
 	invoked := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "something not cool happened")
 		invoked = true
 	}))
 
@@ -72,7 +73,7 @@ func TestELKTransport_SendEvent_WithUnexpectedStatus(t *testing.T) {
 	err := transport.sendEvent(event{})
 
 	assert.True(t, invoked)
-	assert.EqualError(t, err, "Unexpected elk response status: 500 Internal Server Error")
+	assert.EqualError(t, err, "unexpected elk response status: 500 Internal Server Error, body: something not cool happened")
 }
 
 func TestELKTransport_SendEvent_WithUnexpectedResponse(t *testing.T) {
@@ -87,5 +88,5 @@ func TestELKTransport_SendEvent_WithUnexpectedResponse(t *testing.T) {
 	err := transport.sendEvent(event{})
 
 	assert.True(t, invoked)
-	assert.EqualError(t, err, "Unexpected response body: bad")
+	assert.EqualError(t, err, "unexpected response body: bad")
 }

@@ -18,7 +18,7 @@
 package events
 
 import (
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -49,18 +49,18 @@ func (transport *elkTransport) sendEvent(event event) error {
 		return err
 	}
 
-	if response.StatusCode != 200 {
-		return errors.New("Unexpected elk response status: " + response.Status)
-	}
-
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while reading elk response body: %v", err)
+	}
+	body := string(bodyBytes)
+
+	if response.StatusCode != 200 {
+		return fmt.Errorf("unexpected elk response status: %v, body: %v", response.Status, body)
 	}
 
-	body := string(bodyBytes)
 	if strings.ToUpper(body) != "OK" {
-		return errors.New("Unexpected response body: " + body)
+		return fmt.Errorf("unexpected response body: %v", body)
 	}
 
 	return err
