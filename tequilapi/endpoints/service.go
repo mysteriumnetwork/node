@@ -132,11 +132,34 @@ func (ce *ServiceEndpoint) Create(resp http.ResponseWriter, req *http.Request, p
 	ce.Status(resp, req, params)
 }
 
+// Kill stops service
+// swagger:operation DELETE /service Service killService
+// ---
+// summary: Stops service
+// description: Stops current service
+// responses:
+//   202:
+//     description: Service Stopped
+//   409:
+//     description: Conflict. No service exists
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (ce *ServiceEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	ce.serviceState = service.NotRunning
+
+	resp.WriteHeader(http.StatusAccepted)
+}
+
 // AddRoutesForService adds service routes to given router
 func AddRoutesForService(router *httprouter.Router, serviceManager *service.Manager) {
 	serviceEndpoint := NewServiceEndpoint(serviceManager)
 	router.GET("/service", serviceEndpoint.Status)
 	router.PUT("/service", serviceEndpoint.Create)
+	router.DELETE("/service", serviceEndpoint.Kill)
 }
 
 func toServiceRequest(req *http.Request) (*serviceRequest, error) {
