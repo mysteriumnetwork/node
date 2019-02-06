@@ -39,7 +39,7 @@ type testContext struct {
 	fakeConnectionFactory *connectionFactoryFake
 	connManager           *connectionManager
 	fakeDialog            *fakeDialog
-	mockPaymentManager    *MockPaymentManager
+	MockPaymentIssuer     *MockPaymentIssuer
 	stubPublisher         *StubPublisher
 	mockStatistics        consumer.SessionStatistics
 	sync.RWMutex
@@ -71,11 +71,11 @@ func (tc *testContext) SetupTest() {
 		return tc.fakeDialog, nil
 	}
 
-	mockPaymentFactory := func(initialState promise.State, messageChan chan balance.Message, dialog communication.Dialog, consumer, provider identity.Identity) (PaymentManager, error) {
-		tc.mockPaymentManager = &MockPaymentManager{
+	mockPaymentFactory := func(initialState promise.State, messageChan chan balance.Message, dialog communication.Dialog, consumer, provider identity.Identity) (PaymentIssuer, error) {
+		tc.MockPaymentIssuer = &MockPaymentIssuer{
 			stopChan: make(chan struct{}),
 		}
-		return tc.mockPaymentManager, nil
+		return tc.MockPaymentIssuer, nil
 	}
 
 	tc.mockStatistics = consumer.SessionStatistics{
@@ -249,14 +249,14 @@ func (tc *testContext) Test_PaymentManager_WhenManagerMadeConnectionIsStarted() 
 	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
 	waitABit()
 	assert.NoError(tc.T(), err)
-	assert.True(tc.T(), tc.mockPaymentManager.StartCalled())
+	assert.True(tc.T(), tc.MockPaymentIssuer.StartCalled())
 }
 
 func (tc *testContext) Test_PaymentManager_OnConnectErrorIsStopped() {
 	tc.fakeConnectionFactory.mockConnection.onStartReturnError = errors.New("fatal connection error")
 	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
 	assert.Error(tc.T(), err)
-	assert.True(tc.T(), tc.mockPaymentManager.StopCalled())
+	assert.True(tc.T(), tc.MockPaymentIssuer.StopCalled())
 }
 
 func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
@@ -342,7 +342,7 @@ type fakeServiceDefinition struct{}
 
 func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.Location{} }
 
-type MockPaymentManager struct {
+type MockPaymentIssuer struct {
 	startCalled bool
 	stopCalled  bool
 	MockError   error
@@ -350,7 +350,7 @@ type MockPaymentManager struct {
 	sync.Mutex
 }
 
-func (mpm *MockPaymentManager) Start() error {
+func (mpm *MockPaymentIssuer) Start() error {
 	mpm.Lock()
 	mpm.startCalled = true
 	mpm.Unlock()
@@ -358,19 +358,19 @@ func (mpm *MockPaymentManager) Start() error {
 	return mpm.MockError
 }
 
-func (mpm *MockPaymentManager) StartCalled() bool {
+func (mpm *MockPaymentIssuer) StartCalled() bool {
 	mpm.Lock()
 	defer mpm.Unlock()
 	return mpm.startCalled
 }
 
-func (mpm *MockPaymentManager) StopCalled() bool {
+func (mpm *MockPaymentIssuer) StopCalled() bool {
 	mpm.Lock()
 	defer mpm.Unlock()
 	return mpm.stopCalled
 }
 
-func (mpm *MockPaymentManager) Stop() {
+func (mpm *MockPaymentIssuer) Stop() {
 	mpm.Lock()
 	defer mpm.Unlock()
 	mpm.stopCalled = true

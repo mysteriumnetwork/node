@@ -37,7 +37,7 @@ func Test_CorrectMoneyValueIsReturnedForTotalAmount(t *testing.T) {
 		},
 	}
 
-	elapsed := time.Minute*3 + time.Second*15
+	elapsed := 3*time.Minute + 25*time.Second
 
 	totalAmount := aCalc.TotalAmount(elapsed)
 

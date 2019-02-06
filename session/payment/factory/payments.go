@@ -35,7 +35,7 @@ func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.S
 	initialState promise.State,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
-	consumer, provider identity.Identity) (connection.PaymentManager, error) {
+	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 	if !nodeOptions.ExperimentPayments {
 		return noopPaymentIssuerFactory
 	}
@@ -45,7 +45,7 @@ func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.S
 func noopPaymentIssuerFactory(initialState promise.State,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
-	consumer, provider identity.Identity) (connection.PaymentManager, error) {
+	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 	return noop.NewSessionBalance(), nil
 
 }
@@ -54,12 +54,12 @@ func paymentIssuerFactory(signerFactory identity.SignerFactory) func(
 	initialState promise.State,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
-	consumer, provider identity.Identity) (connection.PaymentManager, error) {
+	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 	return func(
 		initialState promise.State,
 		messageChan chan balance.Message,
 		dialog communication.Dialog,
-		consumer, provider identity.Identity) (connection.PaymentManager, error) {
+		consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 
 		bl := balance.NewListener(messageChan)
 		ps := promise.NewSender(dialog)

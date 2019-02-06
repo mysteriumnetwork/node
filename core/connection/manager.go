@@ -64,21 +64,21 @@ type Publisher interface {
 	Publish(topic string, args ...interface{})
 }
 
-// PaymentManager handles the payments for service
-type PaymentManager interface {
+// PaymentIssuer handles the payments for service
+type PaymentIssuer interface {
 	Start() error
 	Stop()
 }
 
-// PaymentManagerFactory creates a new payment manager from the given params
-type PaymentManagerFactory func(initialState promise.State, messageChan chan balance.Message, dialog communication.Dialog, consumer, provider identity.Identity) (PaymentManager, error)
+// PaymentIssuerFactory creates a new payment issuer from the given params
+type PaymentIssuerFactory func(initialState promise.State, messageChan chan balance.Message, dialog communication.Dialog, consumer, provider identity.Identity) (PaymentIssuer, error)
 
 type connectionManager struct {
 	//these are passed on creation
-	newDialog             DialogCreator
-	paymentManagerFactory PaymentManagerFactory
-	newConnection         Creator
-	eventPublisher        Publisher
+	newDialog            DialogCreator
+	paymentIssuerFactory PaymentIssuerFactory
+	newConnection        Creator
+	eventPublisher       Publisher
 
 	//these are populated by Connect at runtime
 	ctx             context.Context
@@ -91,17 +91,17 @@ type connectionManager struct {
 // NewManager creates connection manager with given dependencies
 func NewManager(
 	dialogCreator DialogCreator,
-	paymentManagerFactory PaymentManagerFactory,
+	paymentIssuerFactory PaymentIssuerFactory,
 	connectionCreator Creator,
 	eventPublisher Publisher,
 ) *connectionManager {
 	return &connectionManager{
-		newDialog:             dialogCreator,
-		paymentManagerFactory: paymentManagerFactory,
-		newConnection:         connectionCreator,
-		status:                statusNotConnected(),
-		cleanConnection:       warnOnClean,
-		eventPublisher:        eventPublisher,
+		newDialog:            dialogCreator,
+		paymentIssuerFactory: paymentIssuerFactory,
+		newConnection:        connectionCreator,
+		status:               statusNotConnected(),
+		cleanConnection:      warnOnClean,
+		eventPublisher:       eventPublisher,
 	}
 }
 
@@ -172,7 +172,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	messageChan := make(chan balance.Message, 1)
 
 	// TODO: load initial promise state
-	payments, err := manager.paymentManagerFactory(promise.State{}, messageChan, dialog, consumerID, providerID)
+	payments, err := manager.paymentIssuerFactory(promise.State{}, messageChan, dialog, consumerID, providerID)
 	if err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func (manager *connectionManager) Disconnect() error {
 	return nil
 }
 
-func (manager *connectionManager) payForService(payments PaymentManager) {
+func (manager *connectionManager) payForService(payments PaymentIssuer) {
 	err := payments.Start()
 	if err != nil {
 		log.Error(managerLogPrefix, "payment error: ", err)
