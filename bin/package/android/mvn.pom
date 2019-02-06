@@ -27,15 +27,6 @@
 
   <developers>
     <developer>
-      <id>waldz</id>
-      <name>Valdas Petrulis</name>
-      <email>valdas@mysterium.network</email>
-      <url>https://github.com/Waldz</url>
-      <properties>
-        <picUrl>https://secure.gravatar.com/avatar/e8806698d22818032c58eb1a2a097255</picUrl>
-      </properties>
-    </developer>
-    <developer>
       <id>MysteriumTeam</id>
       <name>Mysterium Team</name>
       <email>core-services@mysterium.network</email>
