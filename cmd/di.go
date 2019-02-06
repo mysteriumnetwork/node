@@ -370,13 +370,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	di.MysteriumAPI = mysterium.NewClient(network.DiscoveryAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
-	var eventsTransport events.Transport
-	if options.DisableStatistics {
-		eventsTransport = events.NewNoopTransport()
-	} else {
-		eventsTransport = events.NewELKTransport(network.ELKAddress, 10*time.Second)
-	}
-	di.EventsSender = &events.Sender{Transport: eventsTransport}
+	di.EventsSender = events.CreateSender(options.DisableStatistics, network.ELKAddress)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
