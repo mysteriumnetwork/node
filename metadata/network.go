@@ -41,7 +41,8 @@ var TestnetDefinition = NetworkDefinition{
 	common.HexToAddress("0xbe5F9CCea12Df756bF4a5Baf4c29A10c3ee7C83B"),
 }
 
-// LocalnetDefinition defines parameters for local network (expects discovery, broker, morqa and elk services on localhost)
+// LocalnetDefinition defines parameters for local network
+// Expects discovery, broker, morqa and ElasticSearch services on localhost
 var LocalnetDefinition = NetworkDefinition{
 	"http://localhost/v1",
 	"localhost",

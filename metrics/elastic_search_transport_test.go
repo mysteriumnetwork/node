@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestELKTransport_SendEvent_Success(t *testing.T) {
+func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 	invoked := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buffer := new(bytes.Buffer)
@@ -49,7 +49,7 @@ func TestELKTransport_SendEvent_Success(t *testing.T) {
 		invoked = true
 	}))
 
-	transport := NewELKTransport(server.URL, time.Second)
+	transport := NewElasticSearchTransport(server.URL, time.Second)
 
 	app := applicationInfo{Name: "test app", Version: "test version"}
 	event := event{Application: app}
@@ -60,7 +60,7 @@ func TestELKTransport_SendEvent_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestELKTransport_SendEvent_WithUnexpectedStatus(t *testing.T) {
+func TestElasticSearchTransport_SendEvent_WithUnexpectedStatus(t *testing.T) {
 	invoked := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -68,22 +68,22 @@ func TestELKTransport_SendEvent_WithUnexpectedStatus(t *testing.T) {
 		invoked = true
 	}))
 
-	transport := NewELKTransport(server.URL, time.Second)
+	transport := NewElasticSearchTransport(server.URL, time.Second)
 
 	err := transport.sendEvent(event{})
 
 	assert.True(t, invoked)
-	assert.EqualError(t, err, "unexpected elk response status: 500 Internal Server Error, body: something not cool happened")
+	assert.EqualError(t, err, "unexpected response status: 500 Internal Server Error, body: something not cool happened")
 }
 
-func TestELKTransport_SendEvent_WithUnexpectedResponse(t *testing.T) {
+func TestElasticSearchTransport_SendEvent_WithUnexpectedResponse(t *testing.T) {
 	invoked := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "bad")
 		invoked = true
 	}))
 
-	transport := NewELKTransport(server.URL, time.Second)
+	transport := NewElasticSearchTransport(server.URL, time.Second)
 
 	err := transport.sendEvent(event{})
 

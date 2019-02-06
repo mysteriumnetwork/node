@@ -25,7 +25,7 @@ func CreateSender(disableMetrics bool, metricsAddress string) *Sender {
 	if disableMetrics {
 		transport = NewNoopTransport()
 	} else {
-		transport = NewELKTransport(metricsAddress, 10*time.Second)
+		transport = NewElasticSearchTransport(metricsAddress, 10*time.Second)
 	}
 
 	return &Sender{Transport: transport}

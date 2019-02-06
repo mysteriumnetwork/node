@@ -28,18 +28,18 @@ import (
 	"github.com/mysteriumnetwork/node/requests"
 )
 
-// NewELKTransport creates transport allowing to send events to ELK through HTTP
-func NewELKTransport(elkURL string, timeout time.Duration) Transport {
-	return &elkTransport{http: newMysteriumHTTPTransport(timeout), elkURL: elkURL}
+// NewElasticSearchTransport creates transport allowing to send events to ElasticSearch through HTTP
+func NewElasticSearchTransport(url string, timeout time.Duration) Transport {
+	return &elasticSearchTransport{http: newMysteriumHTTPTransport(timeout), url: url}
 }
 
-type elkTransport struct {
-	http   mysterium.HTTPTransport
-	elkURL string
+type elasticSearchTransport struct {
+	http mysterium.HTTPTransport
+	url  string
 }
 
-func (transport *elkTransport) sendEvent(event event) error {
-	req, err := requests.NewPostRequest(transport.elkURL, "/", event)
+func (transport *elasticSearchTransport) sendEvent(event event) error {
+	req, err := requests.NewPostRequest(transport.url, "/", event)
 	if err != nil {
 		return err
 	}
@@ -51,12 +51,12 @@ func (transport *elkTransport) sendEvent(event event) error {
 
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return fmt.Errorf("error while reading elk response body: %v", err)
+		return fmt.Errorf("error while reading response body: %v", err)
 	}
 	body := string(bodyBytes)
 
 	if response.StatusCode != 200 {
-		return fmt.Errorf("unexpected elk response status: %v, body: %v", response.Status, body)
+		return fmt.Errorf("unexpected response status: %v, body: %v", response.Status, body)
 	}
 
 	if strings.ToUpper(body) != "OK" {
