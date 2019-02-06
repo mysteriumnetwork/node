@@ -19,7 +19,6 @@ package events
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -40,7 +39,6 @@ type elkTransport struct {
 }
 
 func (transport *elkTransport) sendEvent(event event) error {
-	fmt.Printf("Sending event %v\n", event)
 	req, err := requests.NewPostRequest(transport.elkUrl, "/", event)
 	if err != nil {
 		return err
@@ -76,16 +74,4 @@ func newMysteriumHTTPTransport(timeout time.Duration) mysterium.HTTPTransport {
 		},
 		Timeout: timeout,
 	}
-}
-
-type event struct {
-	Application applicationInfo `json:"application"`
-	EventName   string          `json:"eventName"`
-	CreatedAt   int64           `json:"createdAt"`
-	Context     interface{}     `json:"context"`
-}
-
-type applicationInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
 }

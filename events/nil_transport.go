@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,24 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package events
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Testnet  bool
-	Localnet bool
+// NewNilTransport creates transport which ignores requests to send events
+func NewNilTransport() Transport {
+	return &nilTransport{}
+}
 
-	ExperimentIdentityCheck bool
-	ExperimentPayments      bool
+type nilTransport struct {
+}
 
-	DiscoveryAPIAddress string
-	BrokerAddress       string
-
-	EtherClientRPC       string
-	EtherPaymentsAddress string
-
-	QualityOracle string
-
-	DisableStatistics bool
-	StatisticsAddress string
+func (transport *nilTransport) sendEvent(event event) error {
+	return nil
 }

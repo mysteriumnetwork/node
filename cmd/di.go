@@ -362,10 +362,20 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 		network.EtherClientRPC = options.EtherClientRPC
 	}
 
+	if options.StatisticsAddress != metadata.DefaultNetwork.ELKAddress {
+		network.ELKAddress = options.StatisticsAddress
+	}
+
 	di.NetworkDefinition = network
 	di.MysteriumAPI = mysterium.NewClient(network.DiscoveryAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
-	eventsTransport := events.NewELKTransport(network.ELKAddress, 10*time.Second)
+
+	var eventsTransport events.Transport
+	if options.DisableStatistics {
+		eventsTransport = events.NewNilTransport()
+	} else {
+		eventsTransport = events.NewELKTransport(network.ELKAddress, 10*time.Second)
+	}
 	di.EventsSender = &events.Sender{Transport: eventsTransport}
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)

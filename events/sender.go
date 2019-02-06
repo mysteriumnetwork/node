@@ -54,6 +54,18 @@ func (sender *Sender) sendEvent(event event) {
 	}()
 }
 
+type event struct {
+	Application applicationInfo `json:"application"`
+	EventName   string          `json:"eventName"`
+	CreatedAt   int64           `json:"createdAt"`
+	Context     interface{}     `json:"context"`
+}
+
+type applicationInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 type startupContext struct {
 	Role string `json:"role"`
 }

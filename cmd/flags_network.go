@@ -70,6 +70,16 @@ var (
 		Usage: "Address of the quality oracle service",
 		Value: metadata.DefaultNetwork.QualityOracle,
 	}
+
+	statisticsDisableFlag = cli.BoolFlag{
+		Name:  "statistics.disable",
+		Usage: "Opt-out from sending usage statistics",
+	}
+	statisticsAddressFlag = cli.StringFlag{
+		Name:  "statistics.address",
+		Usage: "Address of statistics service",
+		Value: metadata.DefaultNetwork.ELKAddress,
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -82,6 +92,8 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		discoveryAddressFlag, brokerAddressFlag,
 		etherRPCFlag, etherContractPaymentsFlag,
 		qualityOracleFlag,
+		statisticsAddressFlag,
+		statisticsDisableFlag,
 	)
 }
 
@@ -101,5 +113,7 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ctx.GlobalString(etherContractPaymentsFlag.Name),
 
 		ctx.GlobalString(qualityOracleFlag.Name),
+		ctx.GlobalBool(statisticsDisableFlag.Name),
+		ctx.GlobalString(statisticsAddressFlag.Name),
 	}
 }
