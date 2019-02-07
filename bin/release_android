@@ -35,7 +35,7 @@ mvn gpg:sign-and-deploy-file -e -X \
     -Dfile=build/package/Mysterium.aar
 
 if [ "$VERSION" == "0.0.0-SNAPSHOT" ]; then
-    exit 0
+    exit 0 # For snapshot versions, we don't need to do extra release steps. Stopping here.
 fi
 
 RepoID=$(mvn nexus-staging:rc-list \
