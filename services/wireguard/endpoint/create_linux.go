@@ -24,6 +24,8 @@ import (
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/kernelspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/mysteriumnetwork/node/utils"
+	"github.com/prometheus/common/log"
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
@@ -45,7 +47,12 @@ func GeneratePrivateKey() (string, error) {
 	return kernelspace.GeneratePrivateKey()
 }
 
-// PrivateKeyToPublicKey generates wireguard public key from private key
-func PrivateKeyToPublicKey(key string) (string, error) {
-	return kernelspace.PrivateKeyToPublicKey(key)
+func isKernelSpaceSupported() bool {
+	err := utils.SudoExec("ip", "link", "add", "iswgsupported", "type", "wireguard")
+	if err != nil {
+		log.Debug(logPrefix, "failed to create wireguard network interface: ", err)
+	}
+
+	_ = utils.SudoExec("ip", "link", "del", "iswgsupported")
+	return err == nil
 }

@@ -20,6 +20,7 @@
 package cmd
 
 import (
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -30,6 +31,7 @@ import (
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/proposals/registry"
+	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
@@ -37,6 +39,8 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 )
+
+const logPrefix = "[service bootstrap] "
 
 // BootstrapServices loads all the components required for running services
 func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
@@ -52,7 +56,7 @@ func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 	createService := func(serviceOptions service.Options) (service.Service, error) {
 		transportOptions := serviceOptions.Options.(openvpn_service.Options)
-		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, di.ServiceSessionStorage), nil
+		return openvpn_service.NewManager(nodeOptions, transportOptions, di.IPResolver, di.LocationResolver, di.ServiceSessionStorage, di.NATService), nil
 	}
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 
@@ -69,7 +73,7 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 
 func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(wireguard.ServiceType, func(serviceOptions service.Options) (service.Service, error) {
-		return wireguard_service.NewManager(di.LocationResolver, di.IPResolver), nil
+		return wireguard_service.NewManager(di.LocationResolver, di.IPResolver, di.NATService), nil
 	})
 
 	di.ServiceRunner.Register(wireguard.ServiceType)
@@ -84,6 +88,10 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		di.SignerFactory,
 	)
 
+	di.NATService = nat.NewService()
+	if err := di.NATService.Enable(); err != nil {
+		log.Warn(logPrefix, "Failed to enable NAT forwarding: ", err)
+	}
 	di.ServiceRegistry = service.NewRegistry()
 	di.ServiceSessionStorage = session.NewStorageMemory()
 

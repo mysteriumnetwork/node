@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -39,7 +40,7 @@ var (
 	providerID = identity.FromAddress("provider-id")
 )
 
-var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{})
+var _ service.Service = NewManager(&fakeLocationResolver{}, &fakeIPResolver{}, nil)
 var locationResolverStub = &fakeLocationResolver{
 	err: nil,
 	res: "LT",
@@ -159,6 +160,9 @@ func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { ret
 func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
 func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }
 func (fce *fakeConnectionEndpoint) ConfigureRoutes(_ net.IP) error         { return nil }
+func (fce *fakeConnectionEndpoint) PeerStats() (consumer.SessionStatistics, int, error) {
+	return consumer.SessionStatistics{}, 1, nil
+}
 
 func newManagerStub(locationResolver location.Resolver, ipResolver ip.Resolver) *Manager {
 	return &Manager{
@@ -173,6 +177,7 @@ func newManagerStub(locationResolver location.Resolver, ipResolver ip.Resolver) 
 
 type serviceFake struct{}
 
-func (service *serviceFake) Add(rule nat.RuleForwarding) {}
-func (service *serviceFake) Start() error                { return nil }
-func (service *serviceFake) Stop()                       {}
+func (service *serviceFake) Add(rule nat.RuleForwarding) error { return nil }
+func (service *serviceFake) Del(rule nat.RuleForwarding) error { return nil }
+func (service *serviceFake) Enable() error                     { return nil }
+func (service *serviceFake) Disable() error                    { return nil }

@@ -19,21 +19,28 @@ package connection
 
 import (
 	"encoding/json"
+	"net"
 	"sync"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
+	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[connection-wireguard] "
 
 // Connection which does wireguard tunneling.
 type Connection struct {
-	connection   sync.WaitGroup
-	stateChannel connection.StateChannel
+	connection  sync.WaitGroup
+	stopChannel chan struct{}
+
+	stateChannel      connection.StateChannel
+	statisticsChannel connection.StatisticsChannel
 
 	config             wg.ServiceConfig
 	connectionEndpoint wg.ConnectionEndpoint
@@ -75,6 +82,14 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return err
 	}
 
+	if err := c.waitHandshake(); err != nil {
+		c.stateChannel <- connection.NotConnected
+		c.connection.Done()
+		return errors.Wrap(err, "failed to wait peer handshake")
+	}
+
+	go c.runPeriodically(time.Second)
+
 	c.stateChannel <- connection.Connected
 	return nil
 }
@@ -87,7 +102,7 @@ func (c *Connection) Wait() error {
 
 // GetConfig returns the consumer configuration for session creation
 func (c *Connection) GetConfig() (connection.ConsumerConfig, error) {
-	publicKey, err := endpoint.PrivateKeyToPublicKey(c.config.Consumer.PrivateKey)
+	publicKey, err := key.PrivateKeyToPublicKey(c.config.Consumer.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -106,5 +121,44 @@ func (c *Connection) Stop() {
 
 	c.stateChannel <- connection.NotConnected
 	c.connection.Done()
+	close(c.stopChannel)
 	close(c.stateChannel)
+	close(c.statisticsChannel)
+}
+
+func (c *Connection) runPeriodically(duration time.Duration) {
+	for {
+		select {
+		case <-time.After(duration):
+			stats, _, err := c.connectionEndpoint.PeerStats()
+			if err != nil {
+				log.Error(logPrefix, "failed to receive peer stats: ", err)
+				break
+			}
+			c.statisticsChannel <- stats
+
+		case <-c.stopChannel:
+			return
+		}
+	}
+}
+
+func (c *Connection) waitHandshake() error {
+	// We need to send any packet to initialize handshake process
+	_, _ = net.DialTimeout("tcp", "8.8.8.8:53", 100*time.Millisecond)
+	for {
+		select {
+		case <-time.After(100 * time.Millisecond):
+			_, lastHandshake, err := c.connectionEndpoint.PeerStats()
+			if err != nil {
+				return err
+			}
+			if lastHandshake != 0 {
+				return nil
+			}
+
+		case <-c.stopChannel:
+			return errors.New("stop received")
+		}
+	}
 }

@@ -48,6 +48,7 @@ import (
 	"github.com/mysteriumnetwork/node/market/metrics/oracle"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
@@ -74,6 +75,7 @@ type Dependencies struct {
 	MysteriumMorqaClient metrics.QualityOracle
 	EtherClient          *ethclient.Client
 
+	NATService           nat.NATService
 	Storage              Storage
 	Keystore             *keystore.KeyStore
 	IdentityManager      identity.Manager
@@ -174,6 +176,11 @@ func (di *Dependencies) Shutdown() (err error) {
 	if di.ServiceRunner != nil {
 		runnerErrs := di.ServiceRunner.KillAll()
 		errs = append(errs, runnerErrs...)
+	}
+	if di.NATService != nil {
+		if err := di.NATService.Disable(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	if di.Node != nil {

@@ -26,7 +26,7 @@ import (
 // Factory is the wireguard connection factory
 type Factory struct{}
 
-// Create creates a new wireguard connenction
+// Create creates a new wireguard connection
 func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 	privateKey, err := endpoint.GeneratePrivateKey()
 	if err != nil {
@@ -36,8 +36,10 @@ func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel
 	config.Consumer.PrivateKey = privateKey
 
 	return &Connection{
-		stateChannel: stateChannel,
-		config:       config,
+		stopChannel:       make(chan struct{}),
+		stateChannel:      stateChannel,
+		statisticsChannel: statisticsChannel,
+		config:            config,
 	}, nil
 }
 

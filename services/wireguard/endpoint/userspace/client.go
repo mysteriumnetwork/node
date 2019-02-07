@@ -18,12 +18,114 @@
 package userspace
 
 import (
+	"encoding/base64"
 	"errors"
+	"net"
+
+	"git.zx2c4.com/wireguard-go/device"
+	"git.zx2c4.com/wireguard-go/tun"
+	"github.com/mysteriumnetwork/node/consumer"
+	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
-type client struct{}
+type client struct {
+	tun    tun.TUNDevice
+	devAPI *device.DeviceApi
+}
 
 // NewWireguardClient creates new wireguard user space client.
 func NewWireguardClient() (*client, error) {
-	return nil, errors.New("Not implemented")
+	return &client{}, nil
+}
+
+func (c *client) ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) (err error) {
+	if c.tun, err = tun.CreateTUN(name, device.DefaultMTU); err != nil {
+		return err
+	}
+	if err := assignIP(name, subnet); err != nil {
+		return err
+	}
+
+	c.devAPI = device.UserspaceDeviceApi(c.tun)
+	if err := c.devAPI.SetListeningPort(uint16(config.ListenPort())); err != nil {
+		return err
+	}
+
+	key, err := base64stringTo32ByteArray(config.PrivateKey())
+	if err != nil {
+		return err
+	}
+
+	if err := c.devAPI.SetPrivateKey(device.NoisePrivateKey(key)); err != nil {
+		return err
+	}
+
+	c.devAPI.Boot()
+	return nil
+}
+
+func (c *client) AddPeer(name string, peer wg.PeerInfo) error {
+	key, err := base64stringTo32ByteArray(peer.PublicKey())
+	if err != nil {
+		return err
+	}
+
+	extPeer := device.ExternalPeer{
+		PublicKey:  device.NoisePublicKey(key),
+		AllowedIPs: []string{"0.0.0.0/0"},
+	}
+
+	if ep := peer.Endpoint(); ep != nil {
+		extPeer.RemoteEndpoint, err = device.CreateEndpoint(ep.String())
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.devAPI.AddPeer(extPeer)
+}
+
+func (c *client) Close() error {
+	c.devAPI.Close() // c.devAPI.Close() closes c.tun too
+	return nil
+}
+
+func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
+	if err := excludeRoute(ip); err != nil {
+		return err
+	}
+	return addDefaultRoute(iface)
+}
+
+func (c *client) PeerStats() (stats consumer.SessionStatistics, lastHandshake int, err error) {
+	peers, err := c.devAPI.Peers()
+	if err != nil {
+		return consumer.SessionStatistics{}, 0, nil
+	}
+
+	if len(peers) != 1 {
+		return consumer.SessionStatistics{}, 0, errors.New("exactly 1 peer expected")
+	}
+
+	return consumer.SessionStatistics{
+		BytesSent:     peers[0].Stats.Sent,
+		BytesReceived: peers[0].Stats.Received,
+	}, peers[0].LastHanshake, nil
+}
+
+func (c *client) DestroyDevice(name string) error {
+	return destroyDevice(name)
+}
+
+func base64stringTo32ByteArray(s string) (res [32]byte, err error) {
+	decoded, err := base64.StdEncoding.DecodeString(s)
+	if len(decoded) != 32 {
+		err = errors.New("unexpected key size")
+	}
+	if err != nil {
+		return
+	}
+
+	copy(res[:], decoded)
+	return
 }
