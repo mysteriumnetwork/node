@@ -51,7 +51,7 @@ func (mpt *MockPromiseTracker) AlignStateWithProvider(providerState promise.Stat
 	return nil
 }
 
-func (mpt *MockPromiseTracker) IssuePromiseWithAddedAmount(amountToAdd int64) (promises.IssuedPromise, error) {
+func (mpt *MockPromiseTracker) ExtendPromise(amountToAdd int64) (promises.IssuedPromise, error) {
 	return mpt.promiseToReturn, mpt.errToReturn
 }
 

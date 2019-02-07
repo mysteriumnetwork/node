@@ -79,8 +79,8 @@ func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 	return nil
 }
 
-// IssuePromiseWithAddedAmount issues a promise with the amount added to the promise
-func (t *ConsumerTracker) IssuePromiseWithAddedAmount(amountToAdd int64) (promises.IssuedPromise, error) {
+// ExtendPromise issues a promise with the amount added to the promise
+func (t *ConsumerTracker) ExtendPromise(amountToAdd int64) (promises.IssuedPromise, error) {
 
 	promise := promises.Promise{
 		Extra: ExtraData{

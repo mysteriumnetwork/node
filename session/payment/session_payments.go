@@ -34,7 +34,7 @@ type PeerPromiseSender interface {
 // PromiseTracker keeps track of promises
 type PromiseTracker interface {
 	AlignStateWithProvider(providerState promise.State) error
-	IssuePromiseWithAddedAmount(amountToAdd int64) (promises.IssuedPromise, error)
+	ExtendPromise(amountToAdd int64) (promises.IssuedPromise, error)
 }
 
 // SessionPayments orchestrates the ping pong of balance received from provider -> promise sent to provider flow
@@ -71,7 +71,7 @@ func (cpo *SessionPayments) Start() error {
 				return err
 			}
 			// TODO: figure out the int64/uint64 mess
-			issuedPromise, err := cpo.promiseTracker.IssuePromiseWithAddedAmount(int64(balance.Balance))
+			issuedPromise, err := cpo.promiseTracker.ExtendPromise(int64(balance.Balance))
 			if err != nil {
 				return err
 			}

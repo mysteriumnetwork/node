@@ -36,7 +36,7 @@ var initialState = State{
 
 func TestCurrentStatePromiseWithAddedAmountIsIssued(t *testing.T) {
 	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
-	p, err := tracker.IssuePromiseWithAddedAmount(200)
+	p, err := tracker.ExtendPromise(200)
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
@@ -57,7 +57,7 @@ func TestCurrentStateIsAlignedWithConsumer(t *testing.T) {
 
 	assert.NoError(t, tracker.AlignStateWithProvider(State{Seq: 1, Amount: 100}))
 
-	p, err := tracker.IssuePromiseWithAddedAmount(100)
+	p, err := tracker.ExtendPromise(100)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(200), p.Promise.Amount)
 	assert.Equal(t, int64(1), p.Promise.SeqNo)
@@ -80,7 +80,7 @@ func TestIncreasedSeqNumberIsAccepted(t *testing.T) {
 
 	assert.NoError(t, tracker.AlignStateWithProvider(State{Seq: 2, Amount: 0}))
 
-	p, err := tracker.IssuePromiseWithAddedAmount(59)
+	p, err := tracker.ExtendPromise(59)
 	assert.NoError(t, err)
 	assert.Equal(t, int64(59), p.Promise.Amount)
 	assert.Equal(t, int64(2), p.Promise.SeqNo)
