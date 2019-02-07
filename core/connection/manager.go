@@ -137,7 +137,6 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	var cancel []func()
 	defer func() {
 		manager.cleanConnection = func() {
-			manager.status = statusDisconnecting()
 			cancelCtx()
 			for i := range cancel { // Cancelling in a reverse order to keep correct workflow.
 				cancel[len(cancel)-i-1]()
@@ -145,7 +144,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		}
 		if err != nil {
 			log.Info(managerLogPrefix, "Cancelling connection initiation")
-			defer manager.cleanConnection()
+			_ = manager.Disconnect()
 		}
 	}()
 
@@ -240,7 +239,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 
 	go manager.consumeConnectionStates(stateChannel)
-	go connectionWaiter(connection, dialog)
+	go manager.connectionWaiter(connection)
 	return nil
 }
 
@@ -252,13 +251,17 @@ func (manager *connectionManager) Status() Status {
 }
 
 func (manager *connectionManager) Disconnect() error {
-	manager.mutex.RLock()
-	defer manager.mutex.RUnlock()
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
 
 	if manager.status.State == NotConnected {
 		return ErrNoConnection
 	}
+
+	manager.status = statusDisconnecting()
 	manager.cleanConnection()
+	manager.status = statusNotConnected()
+
 	return nil
 }
 
@@ -277,7 +280,7 @@ func warnOnClean() {
 	log.Warn(managerLogPrefix, "Trying to close when there is nothing to close. Possible bug or race condition")
 }
 
-func connectionWaiter(connection Connection, dialog communication.Dialog) {
+func (manager *connectionManager) connectionWaiter(connection Connection) {
 	err := connection.Wait()
 	if err != nil {
 		log.Warn(managerLogPrefix, "Connection exited with error: ", err)
@@ -285,7 +288,7 @@ func connectionWaiter(connection Connection, dialog communication.Dialog) {
 		log.Info(managerLogPrefix, "Connection exited")
 	}
 
-	dialog.Close()
+	_ = manager.Disconnect()
 }
 
 func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State, sessionID session.ID) error {
@@ -314,11 +317,8 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 		manager.onStateChanged(state)
 	}
 
-	manager.mutex.Lock()
-	defer manager.mutex.Unlock()
-
-	manager.status = statusNotConnected()
 	log.Debug(managerLogPrefix, "State updater stopCalled")
+	_ = manager.Disconnect()
 }
 
 func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) {
