@@ -54,7 +54,7 @@ type SessionBalance struct {
 	peerBalanceSender  PeerBalanceSender
 	balanceTracker     BalanceTracker
 	promiseChan        chan promise.Message
-	period             time.Duration
+	chargePeriod       time.Duration
 	promiseWaitTimeout time.Duration
 	promiseValidator   PromiseValidator
 }
@@ -64,7 +64,7 @@ func NewSessionBalance(
 	peerBalanceSender PeerBalanceSender,
 	balanceTracker BalanceTracker,
 	promiseChan chan promise.Message,
-	period time.Duration,
+	chargePeriod time.Duration,
 	promiseWaitTimeout time.Duration,
 	promiseValidator PromiseValidator) *SessionBalance {
 	return &SessionBalance{
@@ -72,7 +72,7 @@ func NewSessionBalance(
 		peerBalanceSender:  peerBalanceSender,
 		balanceTracker:     balanceTracker,
 		promiseChan:        promiseChan,
-		period:             period,
+		chargePeriod:       chargePeriod,
 		promiseWaitTimeout: promiseWaitTimeout,
 		promiseValidator:   promiseValidator,
 	}
@@ -84,7 +84,7 @@ func (ppo *SessionBalance) Start() error {
 		select {
 		case <-ppo.stop:
 			return nil
-		case <-time.After(ppo.period):
+		case <-time.After(ppo.chargePeriod):
 			err := ppo.sendBalance()
 			if err != nil {
 				return err
@@ -99,7 +99,6 @@ func (ppo *SessionBalance) Start() error {
 
 func (ppo *SessionBalance) sendBalance() error {
 	balance := ppo.balanceTracker.GetBalance()
-	// TODO: Maybe retry a couple of times?
 	return ppo.peerBalanceSender.Send(balance)
 }
 

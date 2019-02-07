@@ -44,7 +44,6 @@ type AmountCalculator interface {
 type BalanceTracker struct {
 	timeKeeper       TimeKeeper
 	amountCalculator AmountCalculator
-	period           time.Duration
 
 	totalPromised uint64
 	balance       uint64
@@ -52,10 +51,9 @@ type BalanceTracker struct {
 }
 
 // NewBalanceTracker returns a new instance of the providerBalanceTracker
-func NewBalanceTracker(timeKeeper TimeKeeper, amountCalculator AmountCalculator, period time.Duration, initialBalance uint64) *BalanceTracker {
+func NewBalanceTracker(timeKeeper TimeKeeper, amountCalculator AmountCalculator, initialBalance uint64) *BalanceTracker {
 	return &BalanceTracker{
 		timeKeeper:       timeKeeper,
-		period:           period,
 		amountCalculator: amountCalculator,
 		totalPromised:    initialBalance,
 
