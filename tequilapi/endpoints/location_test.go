@@ -32,14 +32,14 @@ import (
 )
 
 type fakeManagerForLocation struct {
-	onStatusReturn connection.ConnectionStatus
+	onStatusReturn connection.Status
 }
 
 func (fm *fakeManagerForLocation) Connect(consumerID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
 	return nil
 }
 
-func (fm *fakeManagerForLocation) Status() connection.ConnectionStatus {
+func (fm *fakeManagerForLocation) Status() connection.Status {
 	return fm.onStatusReturn
 }
 
@@ -49,7 +49,7 @@ func (fm *fakeManagerForLocation) Disconnect() error {
 
 func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 	fakeManager := fakeManagerForLocation{}
-	fakeManager.onStatusReturn = connection.ConnectionStatus{
+	fakeManager.onStatusReturn = connection.Status{
 		State: connection.Connected,
 	}
 
@@ -95,7 +95,7 @@ func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 
 func TestGetLocationWhenConnected(t *testing.T) {
 	fakeManager := fakeManager{}
-	fakeManager.onStatusReturn = connection.ConnectionStatus{
+	fakeManager.onStatusReturn = connection.Status{
 		State: connection.Connected,
 	}
 
@@ -135,7 +135,7 @@ func TestGetLocationWhenNotConnected(t *testing.T) {
 	for _, state := range states {
 
 		fakeManager := fakeManager{}
-		fakeManager.onStatusReturn = connection.ConnectionStatus{
+		fakeManager.onStatusReturn = connection.Status{
 			State: state,
 		}
 

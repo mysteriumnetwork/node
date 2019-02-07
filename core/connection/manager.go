@@ -47,7 +47,7 @@ var (
 )
 
 // Creator creates new connection by given options and uses state channel to report state changes
-type Creator func(serviceType string, stateChannnel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
+type Creator func(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
@@ -71,7 +71,7 @@ type connectionManager struct {
 	//these are populated by Connect at runtime
 	ctx             context.Context
 	mutex           sync.RWMutex
-	status          ConnectionStatus
+	status          Status
 	sessionInfo     SessionInfo
 	cleanConnection func()
 }
@@ -221,7 +221,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	return nil
 }
 
-func (manager *connectionManager) Status() ConnectionStatus {
+func (manager *connectionManager) Status() Status {
 	manager.mutex.RLock()
 	defer manager.mutex.RUnlock()
 
@@ -305,7 +305,7 @@ func (manager *connectionManager) onStateChanged(state State) {
 
 	switch state {
 	case Connected:
-		manager.status = statusConnected(manager.sessionInfo.SessionID)
+		manager.status = statusConnected(manager.sessionInfo.SessionID, manager.sessionInfo.Proposal)
 	case Reconnecting:
 		manager.status = statusReconnecting()
 	}

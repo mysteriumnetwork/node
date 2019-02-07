@@ -21,8 +21,9 @@ import "fmt"
 
 // StatusDTO holds connection status and session id
 type StatusDTO struct {
-	Status    string `json:"status"`
-	SessionID string `json:"sessionId"`
+	Status    string      `json:"status"`
+	SessionID string      `json:"sessionId"`
+	Proposal  ProposalDTO `json:"proposal"`
 }
 
 // StatisticsDTO holds statistics about connection
