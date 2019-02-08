@@ -17,7 +17,10 @@
 
 package connection
 
-import "github.com/mysteriumnetwork/node/session"
+import (
+	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/session"
+)
 
 // State represents list of possible connection states
 type State string
@@ -37,28 +40,29 @@ const (
 	Unknown = State("Unknown")
 )
 
-// ConnectionStatus holds connection state and session id of the connnection
-type ConnectionStatus struct {
+// Status holds connection state, session id and proposal of the connection
+type Status struct {
 	State     State
 	SessionID session.ID
+	Proposal  market.ServiceProposal
 }
 
-func statusConnecting() ConnectionStatus {
-	return ConnectionStatus{Connecting, ""}
+func statusConnecting() Status {
+	return Status{State: Connecting}
 }
 
-func statusConnected(sessionID session.ID) ConnectionStatus {
-	return ConnectionStatus{Connected, sessionID}
+func statusConnected(sessionID session.ID, proposal market.ServiceProposal) Status {
+	return Status{Connected, sessionID, proposal}
 }
 
-func statusNotConnected() ConnectionStatus {
-	return ConnectionStatus{NotConnected, ""}
+func statusNotConnected() Status {
+	return Status{State: NotConnected}
 }
 
-func statusReconnecting() ConnectionStatus {
-	return ConnectionStatus{Reconnecting, ""}
+func statusReconnecting() Status {
+	return Status{State: Reconnecting}
 }
 
-func statusDisconnecting() ConnectionStatus {
-	return ConnectionStatus{Disconnecting, ""}
+func statusDisconnecting() Status {
+	return Status{State: Disconnecting}
 }

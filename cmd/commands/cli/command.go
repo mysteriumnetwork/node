@@ -257,6 +257,7 @@ func (c *cliApp) status() {
 		if err != nil {
 			warn(err)
 		} else {
+			info("Proposal:", status.Proposal)
 			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
 			info("Bytes sent:", statistics.BytesSent)
 			info("Bytes received:", statistics.BytesReceived)
