@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+// Package noop contains the non operational payment and balance trackers
+package noop
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Testnet  bool
-	Localnet bool
+// SessionBalance doesn't really track the balance
+type SessionBalance struct {
+	stopChan chan struct{}
+}
 
-	ExperimentIdentityCheck bool
-	ExperimentPayments      bool
+// NewSessionBalance returns a noop session balance tracker
+func NewSessionBalance() *SessionBalance {
+	return &SessionBalance{
+		stopChan: make(chan struct{}),
+	}
+}
 
-	DiscoveryAPIAddress string
-	BrokerAddress       string
+// Start starts the noop session balance tracker
+func (nsb *SessionBalance) Start() error {
+	<-nsb.stopChan
+	return nil
+}
 
-	EtherClientRPC       string
-	EtherPaymentsAddress string
-
-	QualityOracle string
+// Stop stops the noop session balance tracker
+func (nsb *SessionBalance) Stop() {
+	close(nsb.stopChan)
 }

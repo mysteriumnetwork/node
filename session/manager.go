@@ -22,6 +22,7 @@ import (
 	"errors"
 	"sync"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -34,6 +35,8 @@ var (
 	// ErrorWrongSessionOwner returned when consumer tries to destroy session that does not belongs to him
 	ErrorWrongSessionOwner = errors.New("wrong session owner")
 )
+
+const managerLogPrefix = "[session-manager] "
 
 // IDGenerator defines method for session id generation
 type IDGenerator func() (ID, error)
@@ -64,18 +67,21 @@ type Storage interface {
 	Remove(id ID)
 }
 
+// BalanceTrackerFactory returns a new instance of balance tracker
+type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (BalanceTracker, error)
+
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal market.ServiceProposal,
 	idGenerator IDGenerator,
 	sessionStorage Storage,
-	promiseProcessor PromiseProcessor,
+	balanceTrackerFactory BalanceTrackerFactory,
 ) *Manager {
 	return &Manager{
-		currentProposal:  currentProposal,
-		generateID:       idGenerator,
-		sessionStorage:   sessionStorage,
-		promiseProcessor: promiseProcessor,
+		currentProposal:       currentProposal,
+		generateID:            idGenerator,
+		sessionStorage:        sessionStorage,
+		balanceTrackerFactory: balanceTrackerFactory,
 
 		creationLock: sync.Mutex{},
 	}
@@ -83,16 +89,16 @@ func NewManager(
 
 // Manager knows how to start and provision session
 type Manager struct {
-	currentProposal  market.ServiceProposal
-	generateID       IDGenerator
-	sessionStorage   Storage
-	promiseProcessor PromiseProcessor
+	currentProposal       market.ServiceProposal
+	generateID            IDGenerator
+	sessionStorage        Storage
+	balanceTrackerFactory BalanceTrackerFactory
 
 	creationLock sync.Mutex
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -107,12 +113,28 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 	}
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.Done = make(chan struct{})
-	sessionInstance.Config = config
 
-	err = manager.promiseProcessor.Start(manager.currentProposal)
+	balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)
 	if err != nil {
 		return
 	}
+
+	// stop the balance tracker once the session is finished
+	go func() {
+		<-sessionInstance.Done
+		balanceTracker.Stop()
+	}()
+
+	go func() {
+		err := balanceTracker.Start()
+		if err != nil {
+			log.Error(managerLogPrefix, "balance tracker error: ", err)
+			destroyErr := manager.Destroy(consumerID, string(sessionInstance.ID))
+			if destroyErr != nil {
+				log.Error(managerLogPrefix, "session cleanup failed: ", err)
+			}
+		}
+	}()
 
 	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
@@ -131,11 +153,6 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 
 	if sessionInstance.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
-	}
-
-	err := manager.promiseProcessor.Stop()
-	if err != nil {
-		return err
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))

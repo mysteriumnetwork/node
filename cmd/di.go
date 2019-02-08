@@ -36,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
@@ -48,10 +47,19 @@ import (
 	"github.com/mysteriumnetwork/node/market/metrics/oracle"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/balance"
+	balance_provider "github.com/mysteriumnetwork/node/session/balance/provider"
+	session_payment "github.com/mysteriumnetwork/node/session/payment"
+	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
+	payments_noop "github.com/mysteriumnetwork/node/session/payment/noop"
+	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -244,13 +252,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
-	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
-		if nodeOptions.ExperimentPromiseCheck {
-			return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
-		}
-		return &promise_noop.FakePromiseEngine{}
-	}
-
 	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
 	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
 		di.StatisticsTracker,
@@ -266,7 +267,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		promiseIssuerFactory,
+		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 	)
@@ -288,14 +289,43 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 func newSessionManagerFactory(
 	proposal market.ServiceProposal,
 	sessionStorage *session.StorageMemory,
-	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
+	nodeOptions node.Options,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
+		providerBalanceTrackerFactory := func(consumer, provider, issuer identity.Identity) (session.BalanceTracker, error) {
+			// if the flag ain't set, just return a noop balance tracker
+			if !nodeOptions.ExperimentPayments {
+				return payments_noop.NewSessionBalance(), nil
+			}
+
+			timeTracker := session.NewTracker(time.Now)
+			// TODO: set the time and proper payment info
+			payment := dto.PaymentPerTime{
+				Price: money.Money{
+					Currency: money.CURRENCY_MYST,
+					Amount:   uint64(10),
+				},
+				Duration: time.Minute,
+			}
+			amountCalc := session.AmountCalc{PaymentDef: payment}
+			sender := balance.NewBalanceSender(dialog)
+			promiseChan := make(chan promise.Message, 1)
+			listener := promise.NewListener(promiseChan)
+			err := dialog.Receive(listener.GetConsumer())
+			if err != nil {
+				return nil, err
+			}
+
+			// TODO: the ints and times here need to be passed in as well, or defined as constants
+			tracker := balance_provider.NewBalanceTracker(&timeTracker, amountCalc, 0)
+			validator := validators.NewIssuedPromiseValidator(consumer, provider, issuer)
+			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator), nil
+		}
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
 			sessionStorage,
-			promiseHandler(dialog),
+			providerBalanceTrackerFactory,
 		)
 	}
 }

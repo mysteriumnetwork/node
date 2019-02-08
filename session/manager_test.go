@@ -30,44 +30,42 @@ var (
 	currentProposal   = market.ServiceProposal{
 		ID: currentProposalID,
 	}
+	consumerID = identity.FromAddress("deadbeef")
+
 	expectedID      = ID("mocked-id")
 	expectedSession = Session{
 		ID:         expectedID,
-		Config:     expectedSessionConfig,
-		ConsumerID: identity.FromAddress("deadbeef"),
+		ConsumerID: consumerID,
 	}
-	lastSession Session
 )
-
-const expectedSessionConfig = "config_string"
 
 func generateSessionID() (ID, error) {
 	return expectedID, nil
 }
 
-type fakePromiseProcessor struct {
-	started  bool
-	proposal market.ServiceProposal
+type mockBalanceTracker struct {
+	errorToReturn error
 }
 
-func (processor *fakePromiseProcessor) Start(proposal market.ServiceProposal) error {
-	processor.started = true
-	processor.proposal = proposal
-	return nil
+func (m mockBalanceTracker) Start() error {
+	return m.errorToReturn
 }
 
-func (processor *fakePromiseProcessor) Stop() error {
-	processor.started = false
-	return nil
+func (m mockBalanceTracker) Stop() {
+
+}
+
+func mockBalanceTrackerFactory(consumer, provider, issuer identity.Identity) (BalanceTracker, error) {
+	return &mockBalanceTracker{}, nil
 }
 
 func TestManager_Create_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, &fakePromiseProcessor{})
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
 
-	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig)
+	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID)
 	expectedResult.Done = sessionInstance.Done
 	assert.NoError(t, err)
 	assert.Exactly(t, expectedResult, sessionInstance)
@@ -75,20 +73,9 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, &fakePromiseProcessor{})
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
 
-	sessionInstance, err := manager.Create(identity.FromAddress("deadbeef"), 69, expectedSessionConfig)
+	sessionInstance, err := manager.Create(consumerID, consumerID, 69)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Exactly(t, Session{}, sessionInstance)
-}
-
-func TestManager_Create_StartsPromiseProcessor(t *testing.T) {
-	promiseProcessor := &fakePromiseProcessor{}
-	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, promiseProcessor)
-
-	_, err := manager.Create(identity.FromAddress("deadbeef"), currentProposalID, expectedSessionConfig)
-	assert.NoError(t, err)
-	assert.True(t, promiseProcessor.started)
-	assert.Exactly(t, currentProposal, promiseProcessor.proposal)
 }

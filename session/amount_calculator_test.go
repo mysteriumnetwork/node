@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package session
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Testnet  bool
-	Localnet bool
+import (
+	"testing"
+	"time"
 
-	ExperimentIdentityCheck bool
-	ExperimentPayments      bool
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/stretchr/testify/assert"
+)
 
-	DiscoveryAPIAddress string
-	BrokerAddress       string
+func Test_CorrectMoneyValueIsReturnedForTotalAmount(t *testing.T) {
+	aCalc := AmountCalc{
+		PaymentDef: dto.PaymentPerTime{
+			Duration: time.Minute,
+			Price: money.Money{
+				Amount:   100,
+				Currency: money.CURRENCY_MYST,
+			},
+		},
+	}
 
-	EtherClientRPC       string
-	EtherPaymentsAddress string
+	elapsed := 3*time.Minute + 25*time.Second
 
-	QualityOracle string
+	totalAmount := aCalc.TotalAmount(elapsed)
+
+	assert.Equal(t, uint64(300), totalAmount.Amount)
 }

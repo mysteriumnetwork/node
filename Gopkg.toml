@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/payments"
-  version = "0.0.6-beta"
+  version = "0.0.8-experimental"
 
 [[constraint]]
   name = "github.com/chzyer/readline"
@@ -75,6 +75,10 @@
 
   [[prune.project]]
     name = "github.com/mysteriumnetwork/go-openvpn"
+    unused-packages = false
+
+  [[prune.project]]
+    name = "github.com/mysteriumnetwork/payments"
     unused-packages = false
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package promise
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Testnet  bool
-	Localnet bool
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/mysteriumnetwork/payments/promises"
+)
 
-	ExperimentIdentityCheck bool
-	ExperimentPayments      bool
-
-	DiscoveryAPIAddress string
-	BrokerAddress       string
-
-	EtherClientRPC       string
-	EtherPaymentsAddress string
-
-	QualityOracle string
+// ExtraData represents the extra data in the promise
+type ExtraData struct {
+	ConsumerAddress common.Address
 }
+
+// Hash returns the hash of the extra data
+func (extra ExtraData) Hash() []byte {
+	return crypto.Keccak256(extra.ConsumerAddress.Bytes())
+}
+
+var _ promises.ExtraData = ExtraData{}

@@ -21,34 +21,12 @@ import (
 	"errors"
 	"sync"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
-
-type fakePromiseIssuer struct {
-	sync.Mutex
-	startCalled bool
-	stopCalled  bool
-}
-
-func (issuer *fakePromiseIssuer) Start(proposal market.ServiceProposal) error {
-	issuer.Lock()
-	defer issuer.Unlock()
-
-	issuer.startCalled = true
-	return nil
-}
-
-func (issuer *fakePromiseIssuer) Stop() error {
-	issuer.Lock()
-	defer issuer.Unlock()
-
-	issuer.stopCalled = true
-	return nil
-}
 
 // StubPublisherEvent represents the event in publishers history
 type StubPublisherEvent struct {
@@ -231,6 +209,8 @@ func (foc *connectionMock) StateCallback(callback func(state fakeState)) {
 	foc.stateCallback = callback
 }
 
+const fakeDialogLog = "[fake dialog] "
+
 type fakeDialog struct {
 	peerID    identity.Identity
 	sessionID session.ID
@@ -246,29 +226,45 @@ func (fd *fakeDialog) PeerID() identity.Identity {
 	return fd.peerID
 }
 
+func (fd *fakeDialog) assertNotClosed() {
+	fd.RLock()
+	defer fd.RUnlock()
+
+	if fd.closed {
+		panic("Incorrect dialog handling! dialog was closed already")
+	}
+}
+
 func (fd *fakeDialog) Close() error {
 	fd.Lock()
 	defer fd.Unlock()
 
 	fd.closed = true
+	log.Info(fakeDialogLog, "Dialog closed")
 	return nil
 }
 
 func (fd *fakeDialog) Receive(consumer communication.MessageConsumer) error {
+	fd.assertNotClosed()
 	return nil
 }
 func (fd *fakeDialog) Respond(consumer communication.RequestConsumer) error {
+	fd.assertNotClosed()
 	return nil
 }
-func (fd *fakeDialog) Unsubscribe() {}
+func (fd *fakeDialog) Unsubscribe() {
+	fd.assertNotClosed()
+}
 
 func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
+	fd.assertNotClosed()
 	return nil
 }
 
 var ErrUnknownRequest = errors.New("unknown request")
 
 func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
+	fd.assertNotClosed()
 	if producer.GetRequestEndpoint() == communication.RequestEndpoint("session-destroy") {
 		return &session.DestroyResponse{
 				Success: true,

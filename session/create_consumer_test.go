@@ -27,8 +27,9 @@ import (
 )
 
 var (
+	config       = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
 	mockConsumer = func(json.RawMessage) (ServiceConfiguration, DestroyCallback, error) {
-		return nil, nil, nil
+		return config, nil, nil
 	}
 )
 
@@ -36,7 +37,6 @@ func TestConsumer_Success(t *testing.T) {
 	mockManager := &managerFake{
 		returnSession: Session{
 			ID:         "new-id",
-			Config:     fakeSessionConfig{"string-param", 123},
 			ConsumerID: identity.FromAddress("123"),
 		},
 	}
@@ -47,7 +47,7 @@ func TestConsumer_Success(t *testing.T) {
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
-	request.ProposalId = 101
+	request.ProposalID = 101
 	sessionResponse, err := consumer.Consume(request)
 
 	assert.NoError(t, err)
@@ -59,7 +59,7 @@ func TestConsumer_Success(t *testing.T) {
 			Success: true,
 			Session: SessionDto{
 				ID:     "new-id",
-				Config: []byte(`{"Param1":"string-param","Param2":123}`),
+				Config: config,
 			},
 		},
 		sessionResponse,
@@ -98,17 +98,44 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 	assert.Exactly(t, responseInternalError, sessionResponse)
 }
 
+func TestConsumer_UsesIssuerID(t *testing.T) {
+	mockManager := &managerFake{
+		returnSession: Session{
+			ID:         "new-id",
+			ConsumerID: identity.FromAddress("123"),
+		},
+	}
+	consumer := createConsumer{
+		sessionCreator: mockManager,
+		peerID:         identity.FromAddress("peer-id"),
+		configProvider: mockConsumer,
+	}
+
+	issuerID := identity.FromAddress("some-peer-id")
+	request := consumer.NewRequest().(*CreateRequest)
+	request.ProposalID = 101
+	request.ConsumerInfo = &ConsumerInfo{
+		IssuerID: issuerID,
+	}
+
+	_, err := consumer.Consume(request)
+	assert.Nil(t, err)
+	assert.Equal(t, issuerID, mockManager.lastIssuerID)
+}
+
 // managerFake represents fake Manager usually useful in tests
 type managerFake struct {
 	lastConsumerID identity.Identity
+	lastIssuerID   identity.Identity
 	lastProposalID int
 	returnSession  Session
 	returnError    error
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration) (Session, error) {
+func (manager *managerFake) Create(consumerID, issuerID identity.Identity, proposalID int) (Session, error) {
 	manager.lastConsumerID = consumerID
+	manager.lastIssuerID = issuerID
 	manager.lastProposalID = proposalID
 	return manager.returnSession, manager.returnError
 }
