@@ -25,7 +25,7 @@ import (
 // Options describes options which are required to start Noop service
 type Options struct{}
 
-// ParseFlags function fills in Openvpn options from CLI context
+// ParseFlags function fills in Noop options from CLI context
 func ParseFlags(_ *cli.Context) service.Options {
 	return Options{}
 }

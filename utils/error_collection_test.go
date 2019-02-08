@@ -52,28 +52,28 @@ func Test_ErrorCollector_Add(t *testing.T) {
 
 func Test_ErrorCollector_String(t *testing.T) {
 	err := ErrorCollection{}
-	assert.Equal(t, `ErrorCollection: `, err.String())
+	assert.Equal(t, "ErrorCollection: ", err.String())
 
 	err = ErrorCollection{}
 	err.Add(errorFirst)
-	assert.Equal(t, `ErrorCollection: First`, err.String())
+	assert.Equal(t, "ErrorCollection: First", err.String())
 
 	err = ErrorCollection{}
 	err.Add(errorFirst, errorSecond)
-	assert.Equal(t, `ErrorCollection: First, Second`, err.String())
+	assert.Equal(t, "ErrorCollection: First, Second", err.String())
 }
 
 func Test_ErrorCollector_Stringf(t *testing.T) {
 	err := ErrorCollection{}
-	assert.Equal(t, `Failed! `, err.Stringf("Failed! %s", ". "))
+	assert.Equal(t, "Failed! ", err.Stringf("Failed! %s", ". "))
 
 	err = ErrorCollection{}
 	err.Add(errorFirst)
-	assert.Equal(t, `Failed! First`, err.Stringf("Failed! %s", ". "))
+	assert.Equal(t, "Failed! First", err.Stringf("Failed! %s", ". "))
 
 	err = ErrorCollection{}
 	err.Add(errorFirst, errorSecond)
-	assert.Equal(t, `Failed! First. Second`, err.Stringf("Failed! %s", ". "))
+	assert.Equal(t, "Failed! First. Second", err.Stringf("Failed! %s", ". "))
 }
 
 func Test_ErrorCollector_Error(t *testing.T) {
@@ -82,11 +82,11 @@ func Test_ErrorCollector_Error(t *testing.T) {
 
 	err = ErrorCollection{}
 	err.Add(errorFirst)
-	assert.EqualError(t, err.Error(), `ErrorCollection: First`)
+	assert.EqualError(t, err.Error(), "ErrorCollection: First")
 
 	err = ErrorCollection{}
 	err.Add(errorFirst, errorSecond)
-	assert.EqualError(t, err.Error(), `ErrorCollection: First, Second`)
+	assert.EqualError(t, err.Error(), "ErrorCollection: First, Second")
 }
 
 func Test_ErrorCollector_Errorf(t *testing.T) {
@@ -95,9 +95,9 @@ func Test_ErrorCollector_Errorf(t *testing.T) {
 
 	err = ErrorCollection{}
 	err.Add(errorFirst)
-	assert.EqualError(t, err.Errorf("Failed! %s", ". "), `Failed! First`)
+	assert.EqualError(t, err.Errorf("Failed! %s", ". "), "Failed! First")
 
 	err = ErrorCollection{}
 	err.Add(errorFirst, errorSecond)
-	assert.EqualError(t, err.Errorf("Failed! %s", ". "), `Failed! First. Second`)
+	assert.EqualError(t, err.Errorf("Failed! %s", ". "), "Failed! First. Second")
 }

@@ -40,7 +40,7 @@ func (ec *ErrorCollection) String() string {
 	return ec.Stringf("ErrorCollection: %s", ", ")
 }
 
-// Stringf concatenates collection to single string with item formation
+// Stringf returns a string representation of the underlying errors with the given format
 func (ec *ErrorCollection) Stringf(format, errorDelimiter string) string {
 	errorStrings := make([]string, 0)
 	for _, err := range *ec {

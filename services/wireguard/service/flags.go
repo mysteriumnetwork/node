@@ -22,10 +22,10 @@ import (
 	"github.com/urfave/cli"
 )
 
-// Options describes options which are required to start Noop service
+// Options describes options which are required to start Wireguard service
 type Options struct{}
 
-// ParseFlags function fills in Openvpn options from CLI context
+// ParseFlags function fills in Wireguard options from CLI context
 func ParseFlags(_ *cli.Context) service.Options {
 	return Options{}
 }
