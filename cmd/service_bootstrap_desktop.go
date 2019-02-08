@@ -100,7 +100,7 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	)
 }
 
-// bootstrapServiceComponents initiates ServiceManager dependency
+// bootstrapServiceComponents initiates ServicesManager dependency
 func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	di.NATService = nat.NewService()
 	if err := di.NATService.Enable(); err != nil {
@@ -126,7 +126,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig)
 	}
 
-	di.ServiceManager = service.NewManager(
+	di.ServicesManager = service.NewManager(
 		di.ServiceRegistry.Create,
 		newDialogWaiter,
 		newDialogHandler,

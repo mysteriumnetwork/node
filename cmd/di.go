@@ -105,7 +105,7 @@ type Dependencies struct {
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
 
-	ServiceManager        *service.Manager
+	ServicesManager       *service.Manager
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 }
@@ -181,8 +181,8 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}()
 
-	if di.ServiceManager != nil {
-		if err := di.ServiceManager.Kill(); err != nil {
+	if di.ServicesManager != nil {
+		if err := di.ServicesManager.Kill(); err != nil {
 			errs = append(errs, err)
 		}
 	}
