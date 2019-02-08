@@ -36,9 +36,6 @@ var (
 	ErrUnsupportedServiceType = errors.New("unsupported service type")
 )
 
-// ServiceFactory initiates instance which is able to serve connections
-type ServiceFactory func(serviceType string, options Options) (Service, market.ServiceProposal, error)
-
 // Service interface represents pluggable Mysterium service
 type Service interface {
 	Serve(providerID identity.Identity) error
@@ -54,13 +51,13 @@ type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator)
 
 // NewManager creates new instance of pluggable services manager
 func NewManager(
-	serviceFactory ServiceFactory,
+	serviceRegistry *Registry,
 	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryService *registry.Discovery,
 ) *Manager {
 	return &Manager{
-		serviceFactory:       serviceFactory,
+		serviceRegistry:      serviceRegistry,
 		servicePool:          NewPool(),
 		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
@@ -74,8 +71,8 @@ type Manager struct {
 	dialogWaiter         communication.DialogWaiter
 	dialogHandlerFactory DialogHandlerFactory
 
-	serviceFactory ServiceFactory
-	servicePool    *Pool
+	serviceRegistry *Registry
+	servicePool     *Pool
 
 	discovery *registry.Discovery
 }
@@ -84,7 +81,7 @@ type Manager struct {
 // It passes the options to the start method of the service.
 // If an error occurs in the underlying service, the error is then returned.
 func (manager *Manager) Start(providerID identity.Identity, serviceType string, options Options) (err error) {
-	service, proposal, err := manager.serviceFactory(serviceType, options)
+	service, proposal, err := manager.serviceRegistry.Create(serviceType, options)
 	if err != nil {
 		return err
 	}

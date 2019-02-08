@@ -71,7 +71,7 @@ func (di *Dependencies) resolveIPsAndLocation() (loc locationInfo, err error) {
 }
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
-	createService := func(_ string, serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+	createService := func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
 		location, err := di.resolveIPsAndLocation()
 		if err != nil {
 			return nil, market.ServiceProposal{}, err
@@ -89,7 +89,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		service_noop.ServiceType,
-		func(_ string, serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
 			location, err := di.resolveIPsAndLocation()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
@@ -127,7 +127,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	}
 
 	di.ServicesManager = service.NewManager(
-		di.ServiceRegistry.Create,
+		di.ServiceRegistry,
 		newDialogWaiter,
 		newDialogHandler,
 		registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory),

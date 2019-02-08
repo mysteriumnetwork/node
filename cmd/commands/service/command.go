@@ -154,7 +154,7 @@ func (c *serviceCommand) runServices(ctx *cli.Context, providerID identity.Ident
 }
 
 func (c *serviceCommand) runService(providerID identity.Identity, serviceType string, options service.Options) {
-	err := c.di.ServiceManager.Start(providerID, serviceType, options)
+	err := c.di.ServicesManager.Start(providerID, serviceType, options)
 	if err == service.ErrorLocation {
 		printLocationWarning("myst")
 	}

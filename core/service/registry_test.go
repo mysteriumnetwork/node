@@ -25,8 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var _ ServiceFactory = (&Registry{}).Create
-
 var (
 	proposalMock = market.ServiceProposal{}
 	serviceMock  = &serviceFake{}
@@ -42,7 +40,7 @@ func TestRegistry_Register(t *testing.T) {
 
 	registry.Register(
 		"any",
-		func(serviceType string, options Options) (Service, market.ServiceProposal, error) {
+		func(options Options) (Service, market.ServiceProposal, error) {
 			return serviceMock, proposalMock, nil
 		},
 	)
@@ -61,7 +59,7 @@ func TestRegistry_Create_NonExisting(t *testing.T) {
 func TestRegistry_Create_Existing(t *testing.T) {
 	registry := mockRegistryWith(
 		"fake-service",
-		func(_ string, options Options) (Service, market.ServiceProposal, error) {
+		func(options Options) (Service, market.ServiceProposal, error) {
 			return serviceMock, proposalMock, nil
 		},
 	)
@@ -76,7 +74,7 @@ func TestRegistry_Create_BubblesErrors(t *testing.T) {
 	fakeErr := errors.New("I am broken")
 	registry := mockRegistryWith(
 		"broken-service",
-		func(_ string, options Options) (Service, market.ServiceProposal, error) {
+		func(options Options) (Service, market.ServiceProposal, error) {
 			return nil, proposalMock, fakeErr
 		},
 	)
@@ -89,13 +87,13 @@ func TestRegistry_Create_BubblesErrors(t *testing.T) {
 
 func mockRegistryEmpty() *Registry {
 	return &Registry{
-		factories: map[string]ServiceFactory{},
+		factories: map[string]RegistryFactory{},
 	}
 }
 
-func mockRegistryWith(serviceType string, serviceFactory ServiceFactory) *Registry {
+func mockRegistryWith(serviceType string, serviceFactory RegistryFactory) *Registry {
 	return &Registry{
-		factories: map[string]ServiceFactory{
+		factories: map[string]RegistryFactory{
 			serviceType: serviceFactory,
 		},
 	}

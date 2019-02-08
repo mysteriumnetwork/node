@@ -156,6 +156,17 @@
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
+  digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = "UT"
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
+
+[[projects]]
   digest = "1:c00cc6d95a674b4b923ac069d364445043bc67836e9bd8aeff8440cfbe6a2cc7"
   name = "github.com/huin/goupnp"
   packages = [
@@ -170,17 +181,6 @@
   pruneopts = "UT"
   revision = "656e61dfadd241c7cbdd22a023fa81ecb6860ea8"
   version = "v1.0.0"
-  
-[[projects]]
-  digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
-  name = "github.com/hashicorp/golang-lru"
-  packages = [
-    ".",
-    "simplelru",
-  ]
-  pruneopts = "UT"
-  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
-  version = "v0.5.0"
 
 [[projects]]
   digest = "1:b352ae8b1a77cc6b48fc8e314e34a522cfc76d6ca3a06c93b29c9cde5de6771e"
@@ -630,10 +630,9 @@
     "github.com/mysteriumnetwork/payments/mysttoken",
     "github.com/mysteriumnetwork/payments/promises",
     "github.com/mysteriumnetwork/payments/registry",
-    "github.com/mysteriumnetwork/payments/registry/generated",
+    "github.com/mysteriumnetwork/payments/test_utils",
     "github.com/mysteriumnetwork/wireguard-go/device",
     "github.com/mysteriumnetwork/wireguard-go/tun",
-    "github.com/mysteriumnetwork/payments/test_utils",
     "github.com/nats-io/go-nats",
     "github.com/oschwald/geoip2-golang",
     "github.com/pkg/errors",
