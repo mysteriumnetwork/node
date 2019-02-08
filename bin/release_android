@@ -1,11 +1,11 @@
 #!/bin/bash
 
 ###########################################################################
-# Uploads all created Android artifacts to the Bintray and JCenter
-# - https://bintray.com/mysterium/Node
+# Uploads all created Android artifacts to the Sonatype and Maven Central
+# - https://search.maven.org/search?q=g:network.mysterium
 #
 # Usage:
-#> bin/release_android <VERSION> <BINTRAY_USER_NAME> <BINTRAY_API_TOKEN>
+#> bin/release_android_sonatype <VERSION>
 
 set -e
 
@@ -17,22 +17,41 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-USER=$2
-if [ -z "$USER" ]; then
-    print_error "Missing Bintray API user"
-    exit 1
+URL="https://oss.sonatype.org/service/local/staging/deploy/maven2"
+
+if [ "$VERSION" == "0.0.0-dev" ]; then
+    VERSION="0.0.0-SNAPSHOT"
+    URL=https://oss.sonatype.org/content/repositories/snapshots
 fi
 
-TOKEN=$3
-if [ -z "$TOKEN" ]; then
-    print_error "Missing Bintray API token"
-    exit 1
+sed -i -E "s|<version>.+</version>|<version>$VERSION</version>|g" bin/package/android/mvn.pom
+
+mvn gpg:sign-and-deploy-file -e -X \
+    -settings=bin/package/android/mvn.settings \
+    -Durl=$URL \
+    -DrepositoryId=ossrh \
+    -Dgpg.keyname=336826E2222A0B29 \
+    -DpomFile=bin/package/android/mvn.pom \
+    -Dfile=build/package/Mysterium.aar
+
+if [ "$VERSION" == "0.0.0-SNAPSHOT" ]; then
+    exit 0 # For snapshot versions, we don't need to do extra release steps. Stopping here.
 fi
 
-sed -i -E "s|<version>.+</version>|<version>$VERSION</version>|g" bin/package/android/pom.xml
+RepoID=$(mvn nexus-staging:rc-list \
+    -settings=bin/package/android/mvn.settings \
+    -DnexusUrl=https://oss.sonatype.org/ \
+    -DserverId=ossrh \
+    | awk '/networkmysterium-/ {id=$2} END{print id}')
 
-URL=https://api.bintray.com/content/mysterium/Node/mobile-node/$VERSION/mysterium/network/mobile-node/$VERSION
+mvn nexus-staging:rc-close \
+    -settings=bin/package/android/mvn.settings \
+    -DnexusUrl=https://oss.sonatype.org \
+    -DserverId=ossrh \
+    -DstagingRepositoryId=$RepoID
 
-curl -T bin/package/android/pom.xml         -u$USER:$TOKEN "$URL/mobile-node-$VERSION.pom?override=1&publish=1"
-curl -T build/package/Mysterium.aar         -u$USER:$TOKEN "$URL/mobile-node-$VERSION.aar?override=1&publish=1"
-curl -T build/package/Mysterium-sources.jar -u$USER:$TOKEN "$URL/mobile-node-$VERSION-sources.jar?override=1&publish=1"
+mvn nexus-staging:rc-release \
+    -settings=bin/package/android/mvn.settings \
+    -DnexusUrl=https://oss.sonatype.org \
+    -DserverId=ossrh \
+    -DstagingRepositoryId=$RepoID
