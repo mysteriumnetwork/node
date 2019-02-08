@@ -1,7 +1,7 @@
-// +build !android,!windows
+// +build windows
 
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,17 +21,14 @@ package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/services/wireguard"
-	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 )
 
-func (di *Dependencies) registerConnections(nodeOptions node.Options) {
-	di.registerOpenvpnConnection(nodeOptions)
-	di.registerNoopConnection()
-	di.registerWireguardConnection()
-}
+// BootstrapServices loads all the components required for running services
+func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
+	di.bootstrapServiceComponents(nodeOptions)
 
-func (di *Dependencies) registerWireguardConnection() {
-	wireguard.Bootstrap()
-	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator())
+	di.bootstrapServiceOpenvpn(nodeOptions)
+	di.bootstrapServiceNoop(nodeOptions)
+
+	return nil
 }
