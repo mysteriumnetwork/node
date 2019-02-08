@@ -25,6 +25,7 @@ import (
 )
 
 var (
+	errorNone   error
 	errorFirst  = errors.New("First")
 	errorSecond = errors.New("Second")
 )
@@ -40,6 +41,11 @@ func Test_ErrorCollector_Add(t *testing.T) {
 
 	err = ErrorCollection{}
 	err.Add(errorFirst, errorSecond)
+	assert.Len(t, err, 2)
+	assert.Equal(t, ErrorCollection([]error{errorFirst, errorSecond}), err)
+
+	err = ErrorCollection{}
+	err.Add(errorFirst, errorNone, errorSecond)
 	assert.Len(t, err, 2)
 	assert.Equal(t, ErrorCollection([]error{errorFirst, errorSecond}), err)
 }

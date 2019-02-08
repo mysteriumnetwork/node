@@ -121,13 +121,9 @@ func (manager *Manager) Kill() error {
 		manager.discovery.Stop()
 	}
 	if manager.dialogWaiter != nil {
-		if err := manager.dialogWaiter.Stop(); err != nil {
-			errStop.Add(err)
-		}
+		errStop.Add(manager.dialogWaiter.Stop())
 	}
-	if err := manager.servicePool.StopAll(); err != nil {
-		errStop.Add(err)
-	}
+	errStop.Add(manager.servicePool.StopAll())
 
 	return errStop.Error()
 }

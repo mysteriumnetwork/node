@@ -28,7 +28,11 @@ type ErrorCollection []error
 
 // Add puts given error to collection
 func (ec *ErrorCollection) Add(errors ...error) {
-	*ec = append(*ec, errors...)
+	for _, err := range errors {
+		if err != nil {
+			*ec = append(*ec, err)
+		}
+	}
 }
 
 // String concatenates collection to single string

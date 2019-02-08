@@ -45,9 +45,7 @@ func (sr *Pool) Add(service RunnableService) {
 func (sr *Pool) StopAll() error {
 	errStop := utils.ErrorCollection{}
 	for _, service := range sr.services {
-		if err := service.Stop(); err != nil {
-			errStop.Add(err)
-		}
+		errStop.Add(service.Stop())
 	}
 
 	return errStop.Errorf("Some services did not stop: %v", ". ")
