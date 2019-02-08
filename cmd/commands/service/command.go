@@ -19,12 +19,13 @@ package service
 
 import (
 	"fmt"
+
 	"os"
+
 	"strings"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
-	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -74,12 +75,16 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				return err
 			}
 
-			providerID, err := unlockIdentity(ctx, &di, nodeOptions)
-			if err != nil {
-				return err
+			cmdService := &serviceCommand{
+				identityHandler: identity_selector.NewHandler(
+					di.IdentityManager,
+					di.MysteriumAPI,
+					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
+					di.SignerFactory,
+				),
+				di: &di,
 			}
-
-			return runServices(ctx, &di, providerID)
+			return cmdService.Run(ctx)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
@@ -91,25 +96,24 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	return command
 }
 
-func unlockIdentity(ctx *cli.Context, di *cmd.Dependencies, nodeOptions node.Options) (identity.Identity, error) {
-	identityOptions := parseFlags(ctx)
-
-	identityHandler := identity_selector.NewHandler(
-		di.IdentityManager,
-		di.MysteriumAPI,
-		identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
-		di.SignerFactory,
-	)
-	loadIdentity := identity_selector.NewLoader(identityHandler, identityOptions.Identity, identityOptions.Passphrase)
-
-	return loadIdentity()
+// serviceCommand represent entrypoint for service command with top level components
+type serviceCommand struct {
+	identityHandler identity_selector.Handler
+	di              *cmd.Dependencies
+	runErrors       chan error
 }
 
-func runServices(ctx *cli.Context, di *cmd.Dependencies, providerID identity.Identity) error {
+// Run runs a command
+func (c *serviceCommand) Run(ctx *cli.Context) (err error) {
 	serviceTypes := serviceTypesEnabled
 	arg := ctx.Args().Get(0)
 	if arg != "" {
 		serviceTypes = strings.Split(arg, ",")
+	}
+
+	providerID, err := c.unlockIdentity(ctx)
+	if err != nil {
+		return err
 	}
 
 	// We need a small buffer for the error channel as we'll have quite a few concurrent reporters
@@ -117,28 +121,45 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, providerID identity.Ide
 	// 1 for the signal callback
 	// 1 for the node.Wait()
 	// 1 for each of the services
-	errorChannel := make(chan error, 2+len(serviceTypes))
+	c.runErrors = make(chan error, 2+len(serviceTypes))
+	go c.runNode(ctx)
+	c.runServices(ctx, providerID, serviceTypes)
 
-	go func() { errorChannel <- di.Node.Wait() }()
+	cmd.RegisterSignalCallback(func() { c.runErrors <- nil })
 
+	return <-c.runErrors
+}
+
+func (c *serviceCommand) unlockIdentity(ctx *cli.Context) (identity.Identity, error) {
+	identityOptions := parseFlags(ctx)
+	loadIdentity := identity_selector.NewLoader(c.identityHandler, identityOptions.Identity, identityOptions.Passphrase)
+
+	return loadIdentity()
+}
+
+func (c *serviceCommand) runNode(ctx *cli.Context) {
+	c.runErrors <- c.di.Node.Wait()
+}
+
+func (c *serviceCommand) runServices(ctx *cli.Context, providerID identity.Identity, serviceTypes []string) error {
 	for _, serviceType := range serviceTypes {
 		options, err := parseFlagsByServiceType(ctx, serviceType)
 		if err != nil {
 			return err
 		}
-		go func() { errorChannel <- di.ServiceManager.Start(providerID, serviceType, options) }()
+		go c.runService(providerID, serviceType, options)
 	}
 
-	cmd.RegisterSignalCallback(func() { errorChannel <- nil })
+	return nil
+}
 
-	err := <-errorChannel
-	switch err {
-	case service.ErrorLocation:
+func (c *serviceCommand) runService(providerID identity.Identity, serviceType string, options service.Options) {
+	err := c.di.ServiceManager.Start(providerID, serviceType, options)
+	if err == service.ErrorLocation {
 		printLocationWarning("myst")
-		return nil
-	default:
-		return err
 	}
+
+	c.runErrors <- err
 }
 
 // registerFlags function register service flags to flag list
