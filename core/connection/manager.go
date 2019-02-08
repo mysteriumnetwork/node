@@ -140,7 +140,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		}
 		if err != nil {
 			log.Info(managerLogPrefix, "Cancelling connection initiation", err)
-			_ = manager.Disconnect()
+			logDisconnectError(manager.Disconnect())
 		}
 	}()
 
@@ -290,7 +290,7 @@ func (manager *connectionManager) connectionWaiter(connection Connection) {
 		log.Info(managerLogPrefix, "Connection exited")
 	}
 
-	_ = manager.Disconnect()
+	logDisconnectError(manager.Disconnect())
 }
 
 func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State, sessionID session.ID) error {
@@ -320,7 +320,7 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 	}
 
 	log.Debug(managerLogPrefix, "State updater stopCalled")
-	_ = manager.Disconnect()
+	logDisconnectError(manager.Disconnect())
 }
 
 func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) {
@@ -340,5 +340,11 @@ func (manager *connectionManager) onStateChanged(state State) {
 		manager.setStatus(statusConnected(manager.sessionInfo.SessionID, manager.sessionInfo.Proposal))
 	case Reconnecting:
 		manager.setStatus(statusReconnecting())
+	}
+}
+
+func logDisconnectError(err error) {
+	if err != nil && err != ErrNoConnection {
+		log.Error(managerLogPrefix, "Disconnect error", err)
 	}
 }
