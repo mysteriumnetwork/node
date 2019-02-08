@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>network.mysterium</groupId>
+  <artifactId>mobile-node</artifactId>
+  <version>${VERSION}</version>
+  <packaging>aar</packaging>
+
+  <name>Mysterium Network Android SDK</name>
+  <description>Android port of the Mysterium Node for decentralised VPN built on blockchain</description>
+  <url>https://github.com/mysteriumnetwork/node</url>
+
+  <licenses>
+    <license>
+      <name>GNU Lesser General Public License, Version 3.0</name>
+      <url>https://www.gnu.org/licenses/lgpl-3.0.en.html</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>Mysterium Network</name>
+    <url>https://mysterium.network</url>
+  </organization>
+
+  <developers>
+    <developer>
+      <id>MysteriumTeam</id>
+      <name>Mysterium Team</name>
+      <email>core-services@mysterium.network</email>
+      <url>https://mysterium.network/about/team/</url>
+      <organization>Mysterium Network</organization>
+      <organizationUrl>https://mysterium.network</organizationUrl>
+      <roles>
+        <role>Core team</role>
+      </roles>
+      <timezone>Europe/Vilnius</timezone>
+    </developer>
+  </developers>
+
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/mysteriumnetwork/node/issues</url>
+  </issueManagement>
+
+  <scm>
+    <connection>https://github.com/mysteriumnetwork/node.git</connection>
+    <developerConnection>https://github.com/mysteriumnetwork/node.git</developerConnection>
+    <url>https://github.com/mysteriumnetwork/node</url>
+  </scm>
+</project>
