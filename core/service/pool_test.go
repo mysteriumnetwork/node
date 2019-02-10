@@ -34,36 +34,48 @@ func (mr *mockService) Stop() error {
 
 func Test_Pool_NewPool(t *testing.T) {
 	pool := NewPool()
-	assert.Len(t, pool.services, 0)
+	assert.Len(t, pool.instances, 0)
 }
 
 func Test_Pool_Add(t *testing.T) {
-	service := &mockService{}
+	instance := &Instance{}
 
 	pool := NewPool()
-	pool.Add(service)
+	pool.Add(instance)
 
-	assert.Len(t, pool.services, 1)
+	assert.Len(t, pool.instances, 1)
 }
 
 func Test_Pool_StopAllSuccess(t *testing.T) {
-	service := &mockService{}
+	instance := &Instance{
+		service: &mockService{},
+	}
 
 	pool := NewPool()
-	pool.Add(service)
+	pool.Add(instance)
 
 	err := pool.StopAll()
 	assert.NoError(t, err)
 }
 
-func Test_Pool_StopAllDoesNotStopOneService(t *testing.T) {
-	service := &mockService{
-		killErr: errors.New("I dont want to stop"),
-	}
+func Test_Pool_StopDoesNotStop(t *testing.T) {
+	service := &mockService{killErr: errors.New("I dont want to stop")}
+	instance := &Instance{service: service}
 
 	pool := NewPool()
-	pool.Add(service)
+	pool.Add(instance)
+
+	err := pool.Stop(instance)
+	assert.EqualError(t, err, "ErrorCollection(I dont want to stop)")
+}
+
+func Test_Pool_StopAllDoesNotStopOneInstance(t *testing.T) {
+	service := &mockService{killErr: errors.New("I dont want to stop")}
+	instance := &Instance{service: service}
+
+	pool := NewPool()
+	pool.Add(instance)
 
 	err := pool.StopAll()
-	assert.EqualError(t, err, "Some services did not stop: I dont want to stop")
+	assert.EqualError(t, err, "Some instances did not stop: ErrorCollection(I dont want to stop)")
 }

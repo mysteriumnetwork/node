@@ -125,11 +125,13 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, nodeOptions)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig)
 	}
-
+	newDiscovery := func() *registry.Discovery {
+		return registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory)
+	}
 	di.ServicesManager = service.NewManager(
 		di.ServiceRegistry,
 		newDialogWaiter,
 		newDialogHandler,
-		registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory),
+		newDiscovery,
 	)
 }

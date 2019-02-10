@@ -18,17 +18,28 @@
 package service
 
 import (
+	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/market"
+	discovery_registry "github.com/mysteriumnetwork/node/market/proposals/registry"
 	"github.com/mysteriumnetwork/node/utils"
 )
+
+// Pool is responsible for supervising running instances
+type Pool struct {
+	instances []*Instance
+}
+
+// Instance represents a run service
+type Instance struct {
+	service      RunnableService
+	proposal     market.ServiceProposal
+	dialogWaiter communication.DialogWaiter
+	discovery    *discovery_registry.Discovery
+}
 
 // RunnableService represents a runnable service
 type RunnableService interface {
 	Stop() error
-}
-
-// Pool is responsible for supervising running services
-type Pool struct {
-	services []RunnableService
 }
 
 // NewPool returns a empty service pool
@@ -36,17 +47,33 @@ func NewPool() *Pool {
 	return &Pool{}
 }
 
-// Add registers a service to running services pool
-func (sr *Pool) Add(service RunnableService) {
-	sr.services = append(sr.services, service)
+// Add registers a service to running instances pool
+func (sr *Pool) Add(instance *Instance) {
+	sr.instances = append(sr.instances, instance)
 }
 
-// StopAll kills all running services
-func (sr *Pool) StopAll() error {
+// Stop kills all sub-resources of instance
+func (sr *Pool) Stop(instance *Instance) error {
 	errStop := utils.ErrorCollection{}
-	for _, service := range sr.services {
-		errStop.Add(service.Stop())
+	if instance.discovery != nil {
+		instance.discovery.Stop()
+	}
+	if instance.dialogWaiter != nil {
+		errStop.Add(instance.dialogWaiter.Stop())
+	}
+	if instance.service != nil {
+		errStop.Add(instance.service.Stop())
 	}
 
-	return errStop.Errorf("Some services did not stop: %v", ". ")
+	return errStop.Errorf("ErrorCollection(%s)", ", ")
+}
+
+// StopAll kills all running instances
+func (sr *Pool) StopAll() error {
+	errStop := utils.ErrorCollection{}
+	for _, instance := range sr.instances {
+		errStop.Add(sr.Stop(instance))
+	}
+
+	return errStop.Errorf("Some instances did not stop: %v", ". ")
 }
