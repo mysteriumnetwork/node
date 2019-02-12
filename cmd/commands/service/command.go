@@ -19,9 +19,7 @@ package service
 
 import (
 	"fmt"
-
 	"os"
-
 	"strings"
 
 	"github.com/mysteriumnetwork/node/cmd"

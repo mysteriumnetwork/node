@@ -117,7 +117,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	})
 
 	discovery.Wait()
-	return err
+	return nil
 }
 
 // Kill stops service
