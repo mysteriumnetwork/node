@@ -25,27 +25,27 @@ import (
 )
 
 type mockEventsTransport struct {
-	sentEvent    chan event
-	mockResponse chan error
+	sentEvent    event
+	mockResponse error
 }
 
-func buildMockEventsTransport() *mockEventsTransport {
-	return &mockEventsTransport{sentEvent: make(chan event), mockResponse: make(chan error)}
+func buildMockEventsTransport(mockResponse error) *mockEventsTransport {
+	return &mockEventsTransport{mockResponse: mockResponse}
 }
 
 func (transport *mockEventsTransport) sendEvent(event event) error {
-	transport.sentEvent <- event
-	return <-transport.mockResponse
+	transport.sentEvent = event
+	return transport.mockResponse
 }
 
-func TestSender_SendStartupEvent_SendsEventWithoutBlocking(t *testing.T) {
-	mockTransport := buildMockEventsTransport()
+func TestSender_SendStartupEvent_SendsToTransport(t *testing.T) {
+	mockTransport := buildMockEventsTransport(nil)
 	sender := &Sender{Transport: mockTransport}
 
-	sender.SendStartupEvent("test role", "test version")
+	err := sender.SendStartupEvent("test role", "test version")
+	assert.NoError(t, err)
 
-	sentEvent := <-mockTransport.sentEvent
-	mockTransport.mockResponse <- nil
+	sentEvent := mockTransport.sentEvent
 
 	assert.Equal(t, "startup", sentEvent.EventName)
 	assert.Equal(t, applicationInfo{Name: "myst", Version: "test version"}, sentEvent.Application)
@@ -53,14 +53,15 @@ func TestSender_SendStartupEvent_SendsEventWithoutBlocking(t *testing.T) {
 	assert.NotZero(t, sentEvent.CreatedAt)
 }
 
-func TestSender_SendStartupEvent_IgnoresTransportErrors(t *testing.T) {
-	mockTransport := buildMockEventsTransport()
+func TestSender_SendStartupEvent_ReturnsTransportErrors(t *testing.T) {
+	mockTransport := buildMockEventsTransport(nil)
+	mockTransport.mockResponse = errors.New("mock error")
 	sender := &Sender{Transport: mockTransport}
 
-	sender.SendStartupEvent("test role", "test version")
+	err := sender.SendStartupEvent("test role", "test version")
+	assert.Error(t, err)
 
-	sentEvent := <-mockTransport.sentEvent
-	mockTransport.mockResponse <- errors.New("mock error")
+	sentEvent := mockTransport.sentEvent
 
 	assert.NotNil(t, sentEvent)
 }

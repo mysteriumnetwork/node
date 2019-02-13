@@ -19,8 +19,6 @@ package metrics
 
 import (
 	"time"
-
-	log "github.com/cihub/seelog"
 )
 
 // RoleProvider indicates that event was sent from service provider
@@ -56,19 +54,9 @@ type startupContext struct {
 }
 
 // SendStartupEvent sends startup event
-func (sender *Sender) SendStartupEvent(role, version string) {
+func (sender *Sender) SendStartupEvent(role, version string) error {
 	appInfo := applicationInfo{Name: appName, Version: version}
 	event := event{Application: appInfo, EventName: startupEventName, Context: startupContext{Role: role}, CreatedAt: time.Now().Unix()}
 
-	sender.sendEvent(event)
-}
-
-func (sender *Sender) sendEvent(event event) {
-	go func() {
-		err := sender.Transport.sendEvent(event)
-
-		if err != nil {
-			log.Warnf("sending event failed: %v", err)
-		}
-	}()
+	return sender.Transport.sendEvent(event)
 }

@@ -141,7 +141,12 @@ func (c *serviceCommand) runNode(ctx *cli.Context) {
 }
 
 func (c *serviceCommand) runServices(ctx *cli.Context, providerID identity.Identity, serviceTypes []string) error {
-	c.di.MetricsSender.SendStartupEvent(metrics.RoleProvider, metadata.VersionAsString())
+	go func() {
+		err := c.di.MetricsSender.SendStartupEvent(metrics.RoleProvider, metadata.VersionAsString())
+		if err != nil {
+			fmt.Errorf("failed to send startup event: %v", err)
+		}
+	}()
 
 	for _, serviceType := range serviceTypes {
 		options, err := parseFlagsByServiceType(ctx, serviceType)
