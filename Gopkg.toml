@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/payments"
-  version = "0.0.8-experimental"
+  version = "0.0.9"
 
 [[constraint]]
   name = "github.com/chzyer/readline"

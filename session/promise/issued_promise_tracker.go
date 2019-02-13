@@ -33,8 +33,8 @@ type Issuer interface {
 
 // State defines current state of promise data (seq number and amount)
 type State struct {
-	Seq    int64
-	Amount int64
+	Seq    uint64
+	Amount uint64
 }
 
 // ConsumerTracker tracks and issues promises from consumer perspective, also validates states coming from service provider
@@ -80,7 +80,7 @@ func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 }
 
 // ExtendPromise issues a promise with the amount added to the promise
-func (t *ConsumerTracker) ExtendPromise(amountToAdd int64) (promises.IssuedPromise, error) {
+func (t *ConsumerTracker) ExtendPromise(amountToAdd uint64) (promises.IssuedPromise, error) {
 
 	promise := promises.Promise{
 		Extra: ExtraData{
