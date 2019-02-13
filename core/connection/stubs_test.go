@@ -149,6 +149,7 @@ func (cff *connectionFactoryFake) CreateConnection(serviceType string, stateChan
 		stateCallback:       cff.mockConnection.stateCallback,
 		onStartReportStats:  cff.mockConnection.onStartReportStats,
 		fakeProcess:         sync.WaitGroup{},
+		stopBlock:           cff.mockConnection.stopBlock,
 	}
 
 	return &copy, nil
@@ -161,6 +162,7 @@ type connectionMock struct {
 	stateCallback       func(state fakeState)
 	onStartReportStats  consumer.SessionStatistics
 	fakeProcess         sync.WaitGroup
+	stopBlock           chan struct{}
 	sync.RWMutex
 }
 
@@ -191,6 +193,9 @@ func (foc *connectionMock) Wait() error {
 func (foc *connectionMock) Stop() {
 	for _, fakeState := range foc.onStopReportStates {
 		foc.reportState(fakeState)
+	}
+	if foc.stopBlock != nil {
+		<-foc.stopBlock
 	}
 	foc.fakeProcess.Done()
 }

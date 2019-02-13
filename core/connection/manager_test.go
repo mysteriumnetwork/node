@@ -102,6 +102,7 @@ func (tc *testContext) SetupTest() {
 			nil,
 			tc.mockStatistics,
 			sync.WaitGroup{},
+			nil,
 			sync.RWMutex{},
 		},
 	}
@@ -145,16 +146,29 @@ func (tc *testContext) TestStatusReportsConnectingWhenConnectionIsInProgress() {
 	tc.connManager.Disconnect()
 }
 
-func (tc *testContext) TestStatusReportsDisconnectingThenNotConnected() {
+func (tc *testContext) TestStatusReportsNotConnected() {
 	tc.fakeConnectionFactory.mockConnection.onStopReportStates = []fakeState{}
+	tc.fakeConnectionFactory.mockConnection.stopBlock = make(chan struct{})
+	defer func() {
+		tc.fakeConnectionFactory.mockConnection.stopBlock = nil
+	}()
+
 	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
 	assert.NoError(tc.T(), err)
 	assert.Equal(tc.T(), statusConnected(establishedSessionID, activeProposal), tc.connManager.Status())
 
-	assert.NoError(tc.T(), tc.connManager.Disconnect())
+	go func() {
+		assert.NoError(tc.T(), tc.connManager.Disconnect())
+	}()
+
+	waitABit()
 	assert.Equal(tc.T(), statusDisconnecting(), tc.connManager.Status())
+
+	tc.fakeConnectionFactory.mockConnection.stopBlock <- struct{}{}
+
 	tc.fakeConnectionFactory.mockConnection.reportState(exitingState)
 	tc.fakeConnectionFactory.mockConnection.reportState(processExited)
+
 	waitABit()
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
 }

@@ -82,10 +82,12 @@ type connectionManager struct {
 
 	//these are populated by Connect at runtime
 	ctx             context.Context
-	mutex           sync.RWMutex
 	status          Status
+	statusLock      sync.RWMutex
 	sessionInfo     SessionInfo
 	cleanConnection func()
+
+	discoLock sync.Mutex
 }
 
 // NewManager creates connection manager with given dependencies
@@ -106,19 +108,15 @@ func NewManager(
 }
 
 func (manager *connectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
-	if manager.status.State != NotConnected {
+	if manager.Status().State != NotConnected {
 		return ErrAlreadyExists
 	}
 
-	manager.mutex.Lock()
 	manager.ctx, manager.cleanConnection = context.WithCancel(context.Background())
-	manager.status = statusConnecting()
-	manager.mutex.Unlock()
+	manager.setStatus(statusConnecting())
 	defer func() {
 		if err != nil {
-			manager.mutex.Lock()
-			manager.status = statusNotConnected()
-			manager.mutex.Unlock()
+			manager.setStatus(statusNotConnected())
 		}
 	}()
 
@@ -130,22 +128,19 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 }
 
 func (manager *connectionManager) startConnection(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
-	manager.mutex.Lock()
 	cancelCtx := manager.cleanConnection
-	manager.mutex.Unlock()
 
 	var cancel []func()
 	defer func() {
 		manager.cleanConnection = func() {
-			manager.status = statusDisconnecting()
 			cancelCtx()
 			for i := range cancel { // Cancelling in a reverse order to keep correct workflow.
 				cancel[len(cancel)-i-1]()
 			}
 		}
 		if err != nil {
-			log.Info(managerLogPrefix, "Cancelling connection initiation")
-			defer manager.cleanConnection()
+			log.Info(managerLogPrefix, "Cancelling connection initiation", err)
+			logDisconnectError(manager.Disconnect())
 		}
 	}()
 
@@ -240,25 +235,35 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	}
 
 	go manager.consumeConnectionStates(stateChannel)
-	go connectionWaiter(connection, dialog)
+	go manager.connectionWaiter(connection)
 	return nil
 }
 
 func (manager *connectionManager) Status() Status {
-	manager.mutex.RLock()
-	defer manager.mutex.RUnlock()
+	manager.statusLock.RLock()
+	defer manager.statusLock.RUnlock()
 
 	return manager.status
 }
 
-func (manager *connectionManager) Disconnect() error {
-	manager.mutex.RLock()
-	defer manager.mutex.RUnlock()
+func (manager *connectionManager) setStatus(cs Status) {
+	manager.statusLock.Lock()
+	manager.status = cs
+	manager.statusLock.Unlock()
+}
 
-	if manager.status.State == NotConnected {
+func (manager *connectionManager) Disconnect() error {
+	manager.discoLock.Lock()
+	defer manager.discoLock.Unlock()
+
+	if manager.Status().State == NotConnected {
 		return ErrNoConnection
 	}
+
+	manager.setStatus(statusDisconnecting())
 	manager.cleanConnection()
+	manager.setStatus(statusNotConnected())
+
 	return nil
 }
 
@@ -277,7 +282,7 @@ func warnOnClean() {
 	log.Warn(managerLogPrefix, "Trying to close when there is nothing to close. Possible bug or race condition")
 }
 
-func connectionWaiter(connection Connection, dialog communication.Dialog) {
+func (manager *connectionManager) connectionWaiter(connection Connection) {
 	err := connection.Wait()
 	if err != nil {
 		log.Warn(managerLogPrefix, "Connection exited with error: ", err)
@@ -285,7 +290,7 @@ func connectionWaiter(connection Connection, dialog communication.Dialog) {
 		log.Info(managerLogPrefix, "Connection exited")
 	}
 
-	dialog.Close()
+	logDisconnectError(manager.Disconnect())
 }
 
 func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State, sessionID session.ID) error {
@@ -314,11 +319,8 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 		manager.onStateChanged(state)
 	}
 
-	manager.mutex.Lock()
-	defer manager.mutex.Unlock()
-
-	manager.status = statusNotConnected()
 	log.Debug(managerLogPrefix, "State updater stopCalled")
+	logDisconnectError(manager.Disconnect())
 }
 
 func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) {
@@ -328,9 +330,6 @@ func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer
 }
 
 func (manager *connectionManager) onStateChanged(state State) {
-	manager.mutex.Lock()
-	defer manager.mutex.Unlock()
-
 	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
 		State:       state,
 		SessionInfo: manager.sessionInfo,
@@ -338,8 +337,14 @@ func (manager *connectionManager) onStateChanged(state State) {
 
 	switch state {
 	case Connected:
-		manager.status = statusConnected(manager.sessionInfo.SessionID, manager.sessionInfo.Proposal)
+		manager.setStatus(statusConnected(manager.sessionInfo.SessionID, manager.sessionInfo.Proposal))
 	case Reconnecting:
-		manager.status = statusReconnecting()
+		manager.setStatus(statusReconnecting())
+	}
+}
+
+func logDisconnectError(err error) {
+	if err != nil && err != ErrNoConnection {
+		log.Error(managerLogPrefix, "Disconnect error", err)
 	}
 }

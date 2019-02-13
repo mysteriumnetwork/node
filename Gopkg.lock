@@ -281,7 +281,7 @@
   version = "0.0.12"
 
 [[projects]]
-  digest = "1:9524f4ecf45b24711abcced1567e456a430de28bb649727be1dd6032e8b89b13"
+  digest = "1:111a4696a6e9f09a794109477249f227373c852fd97d038c2d2a730126360754"
   name = "github.com/mysteriumnetwork/payments"
   packages = [
     "cli/helpers",
@@ -293,8 +293,8 @@
     "test_utils",
   ]
   pruneopts = "T"
-  revision = "b92116b8fe468219d5676d68c78d68e1a5f94120"
-  version = "v0.0.8-experimental"
+  revision = "14920d2c37553da50361d892915979301525b178"
+  version = "v0.0.9"
 
 [[projects]]
   digest = "1:fef11ce7bad787dad351a3f7da701223dbbcec519877152d18228ef9c2c28b71"
