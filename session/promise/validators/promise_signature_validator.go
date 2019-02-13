@@ -47,8 +47,8 @@ func (ipv *IssuedPromiseValidator) Validate(promiseMsg promise.Message) bool {
 			Extra: promise.ExtraData{
 				ConsumerAddress: ipv.consumer,
 			},
-			Amount:   int64(promiseMsg.Amount),
-			SeqNo:    int64(promiseMsg.SequenceID),
+			Amount:   promiseMsg.Amount,
+			SeqNo:    promiseMsg.SequenceID,
 			Receiver: ipv.receiver,
 		},
 		IssuerSignature: common.FromHex(promiseMsg.Signature),

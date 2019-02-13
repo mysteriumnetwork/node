@@ -59,8 +59,8 @@ func TestCurrentStateIsAlignedWithConsumer(t *testing.T) {
 
 	p, err := tracker.ExtendPromise(100)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(200), p.Promise.Amount)
-	assert.Equal(t, int64(1), p.Promise.SeqNo)
+	assert.Equal(t, uint64(200), p.Promise.Amount)
+	assert.Equal(t, uint64(1), p.Promise.SeqNo)
 }
 
 func TestBiggerConsumerAmountIsRejected(t *testing.T) {
@@ -82,8 +82,8 @@ func TestIncreasedSeqNumberIsAccepted(t *testing.T) {
 
 	p, err := tracker.ExtendPromise(59)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(59), p.Promise.Amount)
-	assert.Equal(t, int64(2), p.Promise.SeqNo)
+	assert.Equal(t, uint64(59), p.Promise.Amount)
+	assert.Equal(t, uint64(2), p.Promise.SeqNo)
 }
 
 type mockedIssuer struct {
