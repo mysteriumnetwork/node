@@ -48,6 +48,7 @@ func (transport *elasticSearchTransport) sendEvent(event event) error {
 	if err != nil {
 		return err
 	}
+	defer response.Body.Close()
 
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
