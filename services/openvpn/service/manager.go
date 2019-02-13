@@ -65,58 +65,63 @@ type Manager struct {
 }
 
 // Serve starts service - does block
-func (manager *Manager) Serve(providerID identity.Identity) (err error) {
-	err = manager.natService.Add(nat.RuleForwarding{
+func (m *Manager) Serve(providerID identity.Identity) (err error) {
+	err = m.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
-		TargetIP:      manager.outboundIP,
+		TargetIP:      m.outboundIP,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	if manager.outboundIP != manager.publicIP {
-		manager.releasePorts = mapping.PortMapping(
-			manager.serviceOptions.OpenvpnProtocol,
-			manager.serviceOptions.OpenvpnPort,
-			"Myst node openvpn port mapping")
-	}
+	m.mapPort()
 
-	primitives, err := primitiveFactory(manager.currentLocation, providerID.Address)
+	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
 	if err != nil {
 		return
 	}
 
-	manager.vpnServiceConfigProvider = manager.sessionConfigNegotiatorFactory(primitives, manager.outboundIP, manager.publicIP)
+	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP)
 
-	vpnServerConfig := manager.vpnServerConfigFactory(primitives)
-	manager.vpnServer = manager.vpnServerFactory(vpnServerConfig)
+	vpnServerConfig := m.vpnServerConfigFactory(primitives)
+	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
-	if err = manager.vpnServer.Start(); err != nil {
+	if err = m.vpnServer.Start(); err != nil {
 		return
 	}
 
-	return manager.vpnServer.Wait()
+	return m.vpnServer.Wait()
 }
 
 // Stop stops service
-func (manager *Manager) Stop() (err error) {
-	manager.releasePorts()
+func (m *Manager) Stop() (err error) {
+	m.releasePorts()
 
-	if manager.vpnServer != nil {
-		manager.vpnServer.Stop()
+	if m.vpnServer != nil {
+		m.vpnServer.Stop()
 	}
 
 	return nil
 }
 
+func (m *Manager) mapPort() {
+	if m.outboundIP != m.publicIP {
+		m.releasePorts = mapping.PortMapping(
+			m.serviceOptions.OpenvpnProtocol,
+			m.serviceOptions.OpenvpnPort,
+			"Myst node openvpn port mapping")
+	}
+	m.releasePorts = func() {}
+}
+
 // ProvideConfig provides the configuration to end consumer
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
-	if manager.vpnServiceConfigProvider == nil {
+func (m *Manager) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+	if m.vpnServiceConfigProvider == nil {
 		log.Info(logPrefix, "Config provider not initialized")
 		return nil, nil, errors.New("Config provider not initialized")
 	}
 
-	return manager.vpnServiceConfigProvider.ProvideConfig(publicKey)
+	return m.vpnServiceConfigProvider.ProvideConfig(publicKey)
 }
 
 func vpnStateCallback(state openvpn.State) {

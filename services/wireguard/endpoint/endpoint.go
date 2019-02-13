@@ -22,12 +22,14 @@ import (
 	"net"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 )
 
 const logPrefix = "[wireguard-connection-endpoint] "
+const connectDelayForPortMap = 2000
 
 type wgClient interface {
 	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
@@ -39,13 +41,16 @@ type wgClient interface {
 }
 
 type connectionEndpoint struct {
-	iface             string
-	privateKey        string
-	publicIP          string
-	ipAddr            net.IPNet
-	endpoint          net.UDPAddr
-	resourceAllocator *resources.Allocator
-	wgClient          wgClient
+	iface              string
+	privateKey         string
+	publicIP           string
+	outboundIP         string
+	ipAddr             net.IPNet
+	endpoint           net.UDPAddr
+	resourceAllocator  *resources.Allocator
+	wgClient           wgClient
+	releasePortMapping func()
+	connectDelay       int // connect delay in milliseconds
 }
 
 // Start starts and configure wireguard network interface for providing service.
@@ -70,6 +75,9 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	ce.endpoint.IP = net.ParseIP(ce.publicIP)
 
 	if config == nil {
+		// nil config mean its a provider Start
+		ce.mapPort(port)
+
 		privateKey, err := key.GeneratePrivateKey()
 		if err != nil {
 			return err
@@ -90,6 +98,18 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	deviceConfig.listenPort = ce.endpoint.Port
 	deviceConfig.privateKey = ce.privateKey
 	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.ipAddr)
+}
+
+func (ce *connectionEndpoint) mapPort(port int) {
+	if ce.outboundIP != ce.publicIP {
+		ce.connectDelay = connectDelayForPortMap
+		ce.releasePortMapping = mapping.PortMapping(
+			"UDP",
+			port,
+			"Myst node wireguard port mapping")
+		return
+	}
+	ce.releasePortMapping = func() {}
 }
 
 // AddPeer adds new wireguard peer to the wireguard network interface.
@@ -113,6 +133,7 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	config.Provider.Endpoint = ce.endpoint
 	config.Consumer.IPAddress = ce.ipAddr
 	config.Consumer.IPAddress.IP = consumerIP(ce.ipAddr)
+	config.Consumer.ConnectDelay = ce.connectDelay
 	return config, nil
 }
 
@@ -122,6 +143,8 @@ func (ce *connectionEndpoint) ConfigureRoutes(ip net.IP) error {
 
 // Stop closes wireguard client and destroys wireguard network interface.
 func (ce *connectionEndpoint) Stop() error {
+	ce.releasePortMapping()
+
 	if err := ce.wgClient.Close(); err != nil {
 		return err
 	}

@@ -29,16 +29,18 @@ import (
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
-func NewConnectionEndpoint(publicIP string, resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
+func NewConnectionEndpoint(publicIP, outIP string, resourceAllocator *resources.Allocator) (wg.ConnectionEndpoint, error) {
 	wgClient, err := getWGClient()
 	if err != nil {
 		return nil, err
 	}
 
 	return &connectionEndpoint{
-		wgClient:          wgClient,
-		publicIP:          publicIP,
-		resourceAllocator: resourceAllocator,
+		wgClient:           wgClient,
+		publicIP:           publicIP,
+		outboundIP:         outIP,
+		resourceAllocator:  resourceAllocator,
+		releasePortMapping: func() {},
 	}, nil
 }
 

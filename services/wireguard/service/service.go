@@ -46,7 +46,7 @@ func NewManager(publicIP, outIP, country string, natService nat.NATService) *Man
 		currentLocation: country,
 
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(publicIP, &resourceAllocator)
+			return endpoint.NewConnectionEndpoint(publicIP, outIP, &resourceAllocator)
 		},
 	}
 }

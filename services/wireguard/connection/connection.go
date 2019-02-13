@@ -57,7 +57,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	c.config.Consumer.IPAddress = config.Consumer.IPAddress
 
 	resourceAllocator := resources.NewAllocator()
-	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint("", &resourceAllocator)
+	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint("", "", &resourceAllocator)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new connection endpoint")
 	}
@@ -69,6 +69,11 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
 		return errors.Wrap(err, "failed to start connection endpoint")
+	}
+
+	if config.Consumer.ConnectDelay > 0 {
+		log.Infof("%s delaying connect for %v milliseconds", logPrefix, config.Consumer.ConnectDelay)
+		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
 	}
 
 	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {

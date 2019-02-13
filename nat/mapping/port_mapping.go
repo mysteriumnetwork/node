@@ -71,6 +71,7 @@ func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
 			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
+			return
 		}
 	}
 	log.Info(logPrefix, "Mapped network port:", extPort)
