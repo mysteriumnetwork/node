@@ -43,10 +43,11 @@ import (
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/metrics"
+	market_metrics "github.com/mysteriumnetwork/node/market/metrics"
 	"github.com/mysteriumnetwork/node/market/metrics/oracle"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
@@ -74,13 +75,13 @@ type Storage interface {
 	Close() error
 }
 
-// Dependencies is DI container for top level components which is reusedin several places
+// Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
 
 	NetworkDefinition    metadata.NetworkDefinition
 	MysteriumAPI         *mysterium.MysteriumAPI
-	MysteriumMorqaClient metrics.QualityOracle
+	MysteriumMorqaClient market_metrics.QualityOracle
 	EtherClient          *ethclient.Client
 
 	NATService           nat.NATService
@@ -283,8 +284,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
+	metricsSender := metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, metricsSender)
 }
 
 func newSessionManagerFactory(

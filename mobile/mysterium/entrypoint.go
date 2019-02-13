@@ -61,6 +61,9 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		TequilapiAddress: "127.0.0.1",
 		TequilapiPort:    4050,
 
+		DisableMetrics: false,
+		MetricsAddress: "http://metrics.mysterium.network:8091",
+
 		Openvpn: embeddedLibCheck{},
 
 		Keystore: node.OptionsKeystore{

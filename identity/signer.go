@@ -25,7 +25,7 @@ import (
 // SignerFactory callback returning Signer
 type SignerFactory func(id Identity) Signer
 
-// Signer interface signifies an ability ti sign a message
+// Signer interface signifies an ability to sign a message
 type Signer interface {
 	Sign(message []byte) (Signature, error)
 }
