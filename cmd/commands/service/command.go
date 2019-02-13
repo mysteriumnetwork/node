@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/mysteriumnetwork/node/metrics"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/urfave/cli"
 )
@@ -141,13 +140,6 @@ func (c *serviceCommand) runNode(ctx *cli.Context) {
 }
 
 func (c *serviceCommand) runServices(ctx *cli.Context, providerID identity.Identity, serviceTypes []string) error {
-	go func() {
-		err := c.di.MetricsSender.SendStartupEvent(metrics.RoleProvider, metadata.VersionAsString())
-		if err != nil {
-			fmt.Errorf("failed to send startup event: %v", err)
-		}
-	}()
-
 	for _, serviceType := range serviceTypes {
 		options, err := parseFlagsByServiceType(ctx, serviceType)
 		if err != nil {

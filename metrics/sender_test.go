@@ -42,14 +42,13 @@ func TestSender_SendStartupEvent_SendsToTransport(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	sender := &Sender{Transport: mockTransport}
 
-	err := sender.SendStartupEvent("test role", "test version")
+	err := sender.SendStartupEvent("test version")
 	assert.NoError(t, err)
 
 	sentEvent := mockTransport.sentEvent
 
 	assert.Equal(t, "startup", sentEvent.EventName)
 	assert.Equal(t, applicationInfo{Name: "myst", Version: "test version"}, sentEvent.Application)
-	assert.Equal(t, startupContext{Role: "test role"}, sentEvent.Context)
 	assert.NotZero(t, sentEvent.CreatedAt)
 }
 
@@ -58,7 +57,7 @@ func TestSender_SendStartupEvent_ReturnsTransportErrors(t *testing.T) {
 	mockTransport.mockResponse = errors.New("mock error")
 	sender := &Sender{Transport: mockTransport}
 
-	err := sender.SendStartupEvent("test role", "test version")
+	err := sender.SendStartupEvent("test version")
 	assert.Error(t, err)
 
 	sentEvent := mockTransport.sentEvent

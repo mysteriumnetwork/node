@@ -21,9 +21,6 @@ import (
 	"time"
 )
 
-// RoleProvider indicates that event was sent from service provider
-const RoleProvider = "provider"
-
 const appName = "myst"
 const startupEventName = "startup"
 
@@ -49,14 +46,10 @@ type applicationInfo struct {
 	Version string `json:"version"`
 }
 
-type startupContext struct {
-	Role string `json:"role"`
-}
-
 // SendStartupEvent sends startup event
-func (sender *Sender) SendStartupEvent(role, version string) error {
+func (sender *Sender) SendStartupEvent(version string) error {
 	appInfo := applicationInfo{Name: appName, Version: version}
-	event := event{Application: appInfo, EventName: startupEventName, Context: startupContext{Role: role}, CreatedAt: time.Now().Unix()}
+	event := event{Application: appInfo, EventName: startupEventName, CreatedAt: time.Now().Unix()}
 
 	return sender.Transport.sendEvent(event)
 }

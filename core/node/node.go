@@ -21,6 +21,8 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/tequilapi"
 )
 
@@ -29,11 +31,13 @@ func NewNode(
 	connectionManager connection.Manager,
 	tequilapiServer tequilapi.APIServer,
 	originalLocationCache location.Cache,
+	metricsSender *metrics.Sender,
 ) *Node {
 	return &Node{
 		connectionManager:     connectionManager,
 		httpAPIServer:         tequilapiServer,
 		originalLocationCache: originalLocationCache,
+		metricsSender:         metricsSender,
 	}
 }
 
@@ -42,10 +46,18 @@ type Node struct {
 	connectionManager     connection.Manager
 	httpAPIServer         tequilapi.APIServer
 	originalLocationCache location.Cache
+	metricsSender         *metrics.Sender
 }
 
 // Start starts Mysterium node (Tequilapi service, fetches location)
 func (node *Node) Start() error {
+	go func() {
+		err := node.metricsSender.SendStartupEvent(metadata.VersionAsString())
+		if err != nil {
+			log.Warn("Failed to send startup event: ", err)
+		}
+	}()
+
 	originalLocation, err := node.originalLocationCache.RefreshAndGet()
 	if err != nil {
 		log.Warn("Failed to detect original country: ", err)

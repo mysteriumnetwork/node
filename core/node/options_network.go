@@ -32,7 +32,4 @@ type OptionsNetwork struct {
 	EtherPaymentsAddress string
 
 	QualityOracle string
-
-	DisableMetrics bool
-	MetricsAddress string
 }

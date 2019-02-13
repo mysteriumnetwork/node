@@ -100,7 +100,6 @@ type Dependencies struct {
 	StatisticsTracker  *statistics.SessionStatisticsTracker
 	StatisticsReporter *statistics.SessionStatisticsReporter
 	SessionStorage     *consumer_session.Storage
-	MetricsSender      *metrics.Sender
 
 	EventBus EventBus.Bus
 
@@ -285,8 +284,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
+	metricsSender := metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, metricsSender)
 }
 
 func newSessionManagerFactory(
@@ -362,15 +362,9 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 		network.EtherClientRPC = options.EtherClientRPC
 	}
 
-	if options.MetricsAddress != metadata.DefaultNetwork.MetricsAddress {
-		network.MetricsAddress = options.MetricsAddress
-	}
-
 	di.NetworkDefinition = network
 	di.MysteriumAPI = mysterium.NewClient(network.DiscoveryAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
-
-	di.MetricsSender = metrics.CreateSender(options.DisableMetrics, network.MetricsAddress)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
