@@ -17,13 +17,11 @@
 
 package service
 
-// Options describes options which are required to start a service
-type Options struct {
+// OptionsIdentity describes identity which is required to start a service
+type OptionsIdentity struct {
 	Identity   string
 	Passphrase string
-	Type       string
-	Options    TransportOptions
 }
 
-// TransportOptions represents any type of options for plugable service
-type TransportOptions interface{}
+// Options represents any type of options for pluggable service
+type Options interface{}

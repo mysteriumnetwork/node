@@ -54,7 +54,7 @@ var (
 		Value: metadata.DefaultNetwork.BrokerAddress,
 	}
 
-	etherRpcFlag = cli.StringFlag{
+	etherRPCFlag = cli.StringFlag{
 		Name:  "ether.client.rpc",
 		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
@@ -80,7 +80,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		identityCheckFlag,
 		paymentCheckFlag,
 		discoveryAddressFlag, brokerAddressFlag,
-		etherRpcFlag, etherContractPaymentsFlag,
+		etherRPCFlag, etherContractPaymentsFlag,
 		qualityOracleFlag,
 	)
 }
@@ -97,7 +97,7 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ctx.GlobalString(discoveryAddressFlag.Name),
 		ctx.GlobalString(brokerAddressFlag.Name),
 
-		ctx.GlobalString(etherRpcFlag.Name),
+		ctx.GlobalString(etherRPCFlag.Name),
 		ctx.GlobalString(etherContractPaymentsFlag.Name),
 
 		ctx.GlobalString(qualityOracleFlag.Name),

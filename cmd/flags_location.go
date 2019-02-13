@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	ipifyUrlFlag = cli.StringFlag{
+	ipifyURLFlag = cli.StringFlag{
 		Name:  "ipify-url",
 		Usage: "Address (URL form) of ipify service",
 		Value: "https://api.ipify.org/",
@@ -43,13 +43,13 @@ var (
 
 // RegisterFlagsLocation function register location flags to flag list
 func RegisterFlagsLocation(flags *[]cli.Flag) {
-	*flags = append(*flags, ipifyUrlFlag, locationDatabaseFlag, LocationCountryFlag)
+	*flags = append(*flags, ipifyURLFlag, locationDatabaseFlag, LocationCountryFlag)
 }
 
 // ParseFlagsLocation function fills in location options from CLI context
 func ParseFlagsLocation(ctx *cli.Context) node.OptionsLocation {
 	return node.OptionsLocation{
-		IpifyUrl:   ctx.GlobalString(ipifyUrlFlag.Name),
+		IpifyUrl:   ctx.GlobalString(ipifyURLFlag.Name),
 		ExternalDb: ctx.GlobalString(locationDatabaseFlag.Name),
 		Country:    ctx.GlobalString(LocationCountryFlag.Name),
 	}

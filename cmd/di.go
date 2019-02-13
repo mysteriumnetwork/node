@@ -105,7 +105,7 @@ type Dependencies struct {
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
 
-	ServiceRunner         *service.Runner
+	ServicesManager       *service.Manager
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 }
@@ -181,9 +181,10 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}()
 
-	if di.ServiceRunner != nil {
-		runnerErrs := di.ServiceRunner.KillAll()
-		errs = append(errs, runnerErrs...)
+	if di.ServicesManager != nil {
+		if err := di.ServicesManager.Kill(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	if di.NATService != nil {
 		if err := di.NATService.Disable(); err != nil {

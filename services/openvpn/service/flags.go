@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/urfave/cli"
 )
 
@@ -46,7 +47,7 @@ func RegisterFlags(flags *[]cli.Flag) {
 }
 
 // ParseFlags function fills in Openvpn options from CLI context
-func ParseFlags(ctx *cli.Context) Options {
+func ParseFlags(ctx *cli.Context) service.Options {
 	return Options{
 		OpenvpnProtocol: ctx.String(protocolFlag.Name),
 		OpenvpnPort:     ctx.Int(portFlag.Name),
