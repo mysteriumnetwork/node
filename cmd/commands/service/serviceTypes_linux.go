@@ -23,7 +23,9 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/urfave/cli"
 )
 
@@ -32,17 +34,8 @@ var (
 	serviceTypesEnabled   = []string{"openvpn", "noop"}
 
 	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
-		service_noop.ServiceType:      parseNoopFlags,
-		service_openvpn.ServiceType:   parseOpenvpnFlags,
-		service_wireguard.ServiceType: parseWireguardFlags,
+		service_noop.ServiceType:      service_noop.ParseFlags,
+		service_openvpn.ServiceType:   openvpn_service.ParseFlags,
+		service_wireguard.ServiceType: wireguard_service.ParseFlags,
 	}
 )
-
-// parseWireguardFlags function fills in wireguard service options from CLI context
-func parseWireguardFlags(ctx *cli.Context) service.Options {
-	return service.Options{
-		Identity:   ctx.String(identityFlag.Name),
-		Passphrase: ctx.String(identityPassphraseFlag.Name),
-		Type:       service_wireguard.ServiceType,
-	}
-}

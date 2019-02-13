@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/urfave/cli"
 )
 
@@ -31,7 +32,7 @@ var (
 	serviceTypesEnabled   = []string{"openvpn", "noop"}
 
 	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
-		service_noop.ServiceType:    parseNoopFlags,
-		service_openvpn.ServiceType: parseOpenvpnFlags,
+		service_noop.ServiceType:    service_noop.ParseFlags,
+		service_openvpn.ServiceType: openvpn_service.ParseFlags,
 	}
 )

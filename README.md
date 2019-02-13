@@ -47,6 +47,7 @@ For possible issues while running a node refer to our [FAQ](https://github.com/m
 * [travis](https://travis-ci.org/) - Travis continuous integration tool
 * [docker](https://www.docker.com/what-docker) - Containerize applications
 * [openvpn](https://openvpn.net) - Solid VPN solution
+* [wireguard](https://www.wireguard.com/) - extremely simple yet fast and modern VPN
 
 ## Contributing
 

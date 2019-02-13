@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -47,7 +46,8 @@ func Test_GetProposal(t *testing.T) {
 		market.ServiceProposal{
 			ServiceType: "wireguard",
 			ServiceDefinition: wg.ServiceDefinition{
-				Location: market.Location{Country: country},
+				Location:          market.Location{Country: country},
+				LocationOriginate: market.Location{Country: country},
 			},
 			PaymentMethodType: "WG",
 			PaymentMethod: wg.Payment{
@@ -99,8 +99,8 @@ func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { ret
 func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
 func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }
 func (fce *fakeConnectionEndpoint) ConfigureRoutes(_ net.IP) error         { return nil }
-func (fce *fakeConnectionEndpoint) PeerStats() (consumer.SessionStatistics, error) {
-	return consumer.SessionStatistics{}, nil
+func (fce *fakeConnectionEndpoint) PeerStats() (wg.Stats, error) {
+	return wg.Stats{LastHandshake: time.Now()}, nil
 }
 
 func newManagerStub(pub, out, country string) *Manager {
@@ -117,6 +117,7 @@ func newManagerStub(pub, out, country string) *Manager {
 
 type serviceFake struct{}
 
-func (service *serviceFake) Add(rule nat.RuleForwarding) {}
-func (service *serviceFake) Start() error                { return nil }
-func (service *serviceFake) Stop()                       {}
+func (service *serviceFake) Add(rule nat.RuleForwarding) error { return nil }
+func (service *serviceFake) Del(rule nat.RuleForwarding) error { return nil }
+func (service *serviceFake) Enable() error                     { return nil }
+func (service *serviceFake) Disable() error                    { return nil }

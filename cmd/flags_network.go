@@ -38,9 +38,9 @@ var (
 		Usage: "Enables experimental identity check",
 	}
 
-	promiseCheckFlag = cli.BoolFlag{
-		Name:  "experiment-promise-check",
-		Usage: "Enables experimental promises check",
+	paymentCheckFlag = cli.BoolFlag{
+		Name:  "experiment-payments",
+		Usage: "Enables experimental payments check",
 	}
 
 	discoveryAddressFlag = cli.StringFlag{
@@ -54,7 +54,7 @@ var (
 		Value: metadata.DefaultNetwork.BrokerAddress,
 	}
 
-	etherRpcFlag = cli.StringFlag{
+	etherRPCFlag = cli.StringFlag{
 		Name:  "ether.client.rpc",
 		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
@@ -78,9 +78,9 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		*flags,
 		testFlag, localnetFlag,
 		identityCheckFlag,
-		promiseCheckFlag,
+		paymentCheckFlag,
 		discoveryAddressFlag, brokerAddressFlag,
-		etherRpcFlag, etherContractPaymentsFlag,
+		etherRPCFlag, etherContractPaymentsFlag,
 		qualityOracleFlag,
 	)
 }
@@ -92,12 +92,12 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ctx.GlobalBool(localnetFlag.Name),
 
 		ctx.GlobalBool(identityCheckFlag.Name),
-		ctx.GlobalBool(promiseCheckFlag.Name),
+		ctx.GlobalBool(paymentCheckFlag.Name),
 
 		ctx.GlobalString(discoveryAddressFlag.Name),
 		ctx.GlobalString(brokerAddressFlag.Name),
 
-		ctx.GlobalString(etherRpcFlag.Name),
+		ctx.GlobalString(etherRPCFlag.Name),
 		ctx.GlobalString(etherContractPaymentsFlag.Name),
 
 		ctx.GlobalString(qualityOracleFlag.Name),

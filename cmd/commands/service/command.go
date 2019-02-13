@@ -25,9 +25,9 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/identity"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
-	service_noop "github.com/mysteriumnetwork/node/services/noop"
-	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/urfave/cli"
 )
@@ -60,12 +60,29 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		Usage:     "Starts and publishes services on Mysterium Network",
 		ArgsUsage: "comma separated list of services to start",
 		Action: func(ctx *cli.Context) error {
-			arg := ctx.Args().Get(0)
-			if arg == "" {
-				return runServices(ctx, &di, licenseCommandName, serviceTypesEnabled)
+			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
+				printTermWarning(licenseCommandName)
+				os.Exit(2)
 			}
-			serviceTypes := strings.Split(arg, ",")
-			return runServices(ctx, &di, licenseCommandName, serviceTypes)
+
+			nodeOptions := cmd.ParseFlagsNode(ctx)
+			if err := di.Bootstrap(nodeOptions); err != nil {
+				return err
+			}
+			if err := di.BootstrapServices(nodeOptions); err != nil {
+				return err
+			}
+
+			cmdService := &serviceCommand{
+				identityHandler: identity_selector.NewHandler(
+					di.IdentityManager,
+					di.MysteriumAPI,
+					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
+					di.SignerFactory,
+				),
+				di: &di,
+			}
+			return cmdService.Run(ctx)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
@@ -77,10 +94,24 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	return command
 }
 
-func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName string, serviceTypes []string) error {
-	if !ctx.Bool(agreedTermsConditionsFlag.Name) {
-		printTermWarning(licenseCommandName)
-		os.Exit(2)
+// serviceCommand represent entrypoint for service command with top level components
+type serviceCommand struct {
+	identityHandler identity_selector.Handler
+	di              *cmd.Dependencies
+	runErrors       chan error
+}
+
+// Run runs a command
+func (c *serviceCommand) Run(ctx *cli.Context) (err error) {
+	serviceTypes := serviceTypesEnabled
+	arg := ctx.Args().Get(0)
+	if arg != "" {
+		serviceTypes = strings.Split(arg, ",")
+	}
+
+	providerID, err := c.unlockIdentity(ctx)
+	if err != nil {
+		return err
 	}
 
 	// We need a small buffer for the error channel as we'll have quite a few concurrent reporters
@@ -88,38 +119,45 @@ func runServices(ctx *cli.Context, di *cmd.Dependencies, licenseCommandName stri
 	// 1 for the signal callback
 	// 1 for the node.Wait()
 	// 1 for each of the services
-	errorChannel := make(chan error, 2+len(serviceTypes))
+	c.runErrors = make(chan error, 2+len(serviceTypes))
+	go c.runNode(ctx)
+	c.runServices(ctx, providerID, serviceTypes)
 
-	nodeOptions := cmd.ParseFlagsNode(ctx)
-	if err := di.Bootstrap(nodeOptions); err != nil {
-		return err
-	}
-	if err := di.BootstrapServices(nodeOptions); err != nil {
-		return err
-	}
+	cmd.RegisterSignalCallback(func() { c.runErrors <- nil })
 
-	go func() { errorChannel <- di.Node.Wait() }()
+	return <-c.runErrors
+}
 
+func (c *serviceCommand) unlockIdentity(ctx *cli.Context) (identity.Identity, error) {
+	identityOptions := parseFlags(ctx)
+	loadIdentity := identity_selector.NewLoader(c.identityHandler, identityOptions.Identity, identityOptions.Passphrase)
+
+	return loadIdentity()
+}
+
+func (c *serviceCommand) runNode(ctx *cli.Context) {
+	c.runErrors <- c.di.Node.Wait()
+}
+
+func (c *serviceCommand) runServices(ctx *cli.Context, providerID identity.Identity, serviceTypes []string) error {
 	for _, serviceType := range serviceTypes {
 		options, err := parseFlagsByServiceType(ctx, serviceType)
 		if err != nil {
 			return err
 		}
-		go func(serviceType string) {
-			errorChannel <- di.ServiceRunner.StartServiceByType(serviceType, options)
-		}(serviceType)
+		go c.runService(providerID, serviceType, options)
 	}
 
-	cmd.RegisterSignalCallback(func() { errorChannel <- nil })
+	return nil
+}
 
-	err := <-errorChannel
-	switch err {
-	case service.ErrorLocation:
+func (c *serviceCommand) runService(providerID identity.Identity, serviceType string, options service.Options) {
+	err := c.di.ServicesManager.Start(providerID, serviceType, options)
+	if err == service.ErrorLocation {
 		printLocationWarning("myst")
-		return nil
-	default:
-		return err
 	}
+
+	c.runErrors <- err
 }
 
 // registerFlags function register service flags to flag list
@@ -131,30 +169,19 @@ func registerFlags(flags *[]cli.Flag) {
 	openvpn_service.RegisterFlags(flags)
 }
 
+// parseFlags function fills in service command options from CLI context
+func parseFlags(ctx *cli.Context) service.OptionsIdentity {
+	return service.OptionsIdentity{
+		Identity:   ctx.String(identityFlag.Name),
+		Passphrase: ctx.String(identityPassphraseFlag.Name),
+	}
+}
+
 func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Options, error) {
 	if f, ok := serviceTypesFlagsParser[serviceType]; ok {
 		return f(ctx), nil
 	}
-	return service.Options{}, fmt.Errorf("Unknown service type: %q", serviceType)
-}
-
-// parseOpenvpnFlags function fills in openvpn options from CLI context
-func parseOpenvpnFlags(ctx *cli.Context) service.Options {
-	return service.Options{
-		Identity:   ctx.String(identityFlag.Name),
-		Passphrase: ctx.String(identityPassphraseFlag.Name),
-		Type:       service_openvpn.ServiceType,
-		Options:    openvpn_service.ParseFlags(ctx),
-	}
-}
-
-// parseNoopFlags function fills in noop service options from CLI context
-func parseNoopFlags(ctx *cli.Context) service.Options {
-	return service.Options{
-		Identity:   ctx.String(identityFlag.Name),
-		Passphrase: ctx.String(identityPassphraseFlag.Name),
-		Type:       service_noop.ServiceType,
-	}
+	return service.OptionsIdentity{}, fmt.Errorf("unknown service type: %q", serviceType)
 }
 
 func printTermWarning(licenseCommandName string) {

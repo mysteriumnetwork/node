@@ -25,12 +25,11 @@ import (
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/node"
-	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/proposals/registry"
+	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
@@ -79,38 +78,34 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		}
 
 		currentLocation := market.Location{Country: location.Country}
-		transportOptions := serviceOptions.Options.(openvpn_service.Options)
+		transportOptions := serviceOptions.(openvpn_service.Options)
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.OpenvpnProtocol)
-		return openvpn_service.NewManager(nodeOptions, transportOptions, location.PubIP, location.OutIP, location.Country, di.ServiceSessionStorage), proposal, nil
+		return openvpn_service.NewManager(nodeOptions, transportOptions, location.PubIP, location.OutIP, location.Country, di.ServiceSessionStorage, di.NATService), proposal, nil
 	}
-
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
-	di.ServiceRunner.Register(service_openvpn.ServiceType)
 }
 
 func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
-	di.ServiceRegistry.Register(service_noop.ServiceType, func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-		location, err := di.resolveIPsAndLocation()
-		if err != nil {
-			return nil, market.ServiceProposal{}, err
-		}
+	di.ServiceRegistry.Register(
+		service_noop.ServiceType,
+		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+			location, err := di.resolveIPsAndLocation()
+			if err != nil {
+				return nil, market.ServiceProposal{}, err
+			}
 
-		return service_noop.NewManager(), service_noop.GetProposal(location.Country), nil
-	})
-
-	di.ServiceRunner.Register(service_noop.ServiceType)
+			return service_noop.NewManager(), service_noop.GetProposal(location.Country), nil
+		},
+	)
 }
 
-// bootstrapServiceComponents initiates ServiceManager dependency
+// bootstrapServiceComponents initiates ServicesManager dependency
 func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
-	identityHandler := identity_selector.NewHandler(
-		di.IdentityManager,
-		di.MysteriumAPI,
-		identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
-		di.SignerFactory,
-	)
-
+	di.NATService = nat.NewService()
+	if err := di.NATService.Enable(); err != nil {
+		log.Warn(logPrefix, "Failed to enable NAT forwarding: ", err)
+	}
 	di.ServiceRegistry = service.NewRegistry()
 	di.ServiceSessionStorage = session.NewStorageMemory()
 
@@ -127,25 +122,16 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator) communication.DialogHandler {
-		promiseHandler := func(dialog communication.Dialog) session.PromiseProcessor {
-			if nodeOptions.ExperimentPromiseCheck {
-				return promise_noop.NewPromiseProcessor(dialog, identity.NewBalance(di.EtherClient), di.Storage)
-			}
-			return &promise_noop.FakePromiseEngine{}
-		}
-		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, promiseHandler)
+		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, nodeOptions)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig)
 	}
-
-	runnableServiceFactory := func() service.RunnableService {
-		return service.NewManager(
-			identityHandler,
-			di.ServiceRegistry.Create,
-			newDialogWaiter,
-			newDialogHandler,
-			registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory),
-		)
+	newDiscovery := func() *registry.Discovery {
+		return registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory)
 	}
-
-	di.ServiceRunner = service.NewRunner(runnableServiceFactory)
+	di.ServicesManager = service.NewManager(
+		di.ServiceRegistry,
+		newDialogWaiter,
+		newDialogHandler,
+		newDiscovery,
+	)
 }

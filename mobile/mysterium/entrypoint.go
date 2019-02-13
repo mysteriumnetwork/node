@@ -61,6 +61,9 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		TequilapiAddress: "127.0.0.1",
 		TequilapiPort:    4050,
 
+		DisableMetrics: false,
+		MetricsAddress: "http://metrics.mysterium.network:8091",
+
 		Openvpn: embeddedLibCheck{},
 
 		Keystore: node.OptionsKeystore{
@@ -69,7 +72,6 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 
 		Location: node.OptionsLocation{
 			IpifyUrl: "https://api.ipify.org/",
-			Country:  "LT",
 		},
 
 		OptionsNetwork: node.OptionsNetwork(*optionsNetwork),
@@ -86,7 +88,7 @@ func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
 		Testnet:                 true,
 		ExperimentIdentityCheck: false,
-		ExperimentPromiseCheck:  false,
+		ExperimentPayments:      false,
 		DiscoveryAPIAddress:     metadata.TestnetDefinition.DiscoveryAPIAddress,
 		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
 		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,

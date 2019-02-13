@@ -20,17 +20,18 @@ package mysterium
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
+	"net"
 	"sync"
 	"time"
 
-	"git.zx2c4.com/wireguard-go/device"
-	"git.zx2c4.com/wireguard-go/tun"
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
+	"github.com/mysteriumnetwork/wireguard-go/device"
+	"github.com/mysteriumnetwork/wireguard-go/tun"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -204,31 +205,34 @@ type wireguardConnection struct {
 	privKey           string
 	deviceFactory     deviceFactory
 	device            *device.DeviceApi
-	wgTunnelSetup     WireguardTunnelSetup
 	stopChannel       chan struct{}
 	stateChannel      connection.StateChannel
 	statisticsChannel connection.StatisticsChannel
 	stopCompleted     *sync.WaitGroup
-	cleanup           func()
 }
 
 func (wg *wireguardConnection) Start(options connection.ConnectOptions) error {
 	device, err := wg.deviceFactory(options)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to start wireguard connection")
 	}
 
 	wg.device = device
 	wg.stateChannel <- connection.Connecting
-	wg.doInit()
+
+	if err := wg.doInit(); err != nil {
+		return errors.Wrap(err, "failed to start wireguard connection")
+	}
 
 	wg.stateChannel <- connection.Connected
 	return nil
 }
 
-func (wg *wireguardConnection) doInit() {
+func (wg *wireguardConnection) doInit() error {
 	wg.stopCompleted.Add(1)
 	go wg.runPeriodically(time.Second)
+
+	return wg.waitHandshake()
 }
 
 func (wg *wireguardConnection) Wait() error {
@@ -238,6 +242,7 @@ func (wg *wireguardConnection) Wait() error {
 
 func (wg *wireguardConnection) Stop() {
 	wg.stateChannel <- connection.Disconnecting
+	wg.updateStatistics()
 	close(wg.stopChannel)
 }
 
@@ -294,6 +299,30 @@ func (wg *wireguardConnection) runPeriodically(duration time.Duration) {
 		case <-wg.stopChannel:
 			wg.doCleanup()
 			return
+		}
+	}
+}
+
+func (wg *wireguardConnection) waitHandshake() error {
+	// We need to send any packet to initialize handshake process
+	_, _ = net.DialTimeout("tcp", "8.8.8.8:53", 100*time.Millisecond)
+	for {
+		select {
+		case <-time.After(20 * time.Millisecond):
+			peers, err := wg.device.Peers()
+			if err != nil {
+				return errors.Wrap(err, "failed while waiting for a peer handshake")
+			}
+			if len(peers) != 1 {
+				return errors.Wrap(errors.New("exactly 1 peer expected"), "failed while waiting for a peer handshake")
+			}
+			if peers[0].LastHanshake != 0 {
+				return nil
+			}
+
+		case <-wg.stopChannel:
+			wg.doCleanup()
+			return errors.New("stop received")
 		}
 	}
 }

@@ -23,9 +23,8 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
-	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/proposals/registry"
+	discovery_registry "github.com/mysteriumnetwork/node/market/proposals/registry"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -35,9 +34,6 @@ var (
 	// ErrUnsupportedServiceType indicates that manager tried to create an unsupported service type
 	ErrUnsupportedServiceType = errors.New("unsupported service type")
 )
-
-// ServiceFactory initiates instance which is able to serve connections
-type ServiceFactory func(Options) (Service, market.ServiceProposal, error)
 
 // Service interface represents pluggable Mysterium service
 type Service interface {
@@ -52,93 +48,79 @@ type DialogWaiterFactory func(providerID identity.Identity, serviceType string) 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
 type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator) communication.DialogHandler
 
-// NewManager creates new instance of pluggable services manager
+// DiscoveryFactory initiates instance which is able announce service discoverability
+type DiscoveryFactory func() *discovery_registry.Discovery
+
+// NewManager creates new instance of pluggable instances manager
 func NewManager(
-	identityLoader identity_selector.Handler,
-	serviceFactory ServiceFactory,
+	serviceRegistry *Registry,
 	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,
-	discoveryService *registry.Discovery,
+	discoveryFactory DiscoveryFactory,
 ) *Manager {
 	return &Manager{
-		identityHandler:      identityLoader,
-		serviceFactory:       serviceFactory,
+		serviceRegistry:      serviceRegistry,
+		servicePool:          NewPool(),
 		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
-		discovery:            discoveryService,
+		discoveryFactory:     discoveryFactory,
 	}
 }
 
-// Manager entrypoint which knows how to start pluggable Mysterium services
+// Manager entrypoint which knows how to start pluggable Mysterium instances
 type Manager struct {
-	identityHandler identity_selector.Handler
-
 	dialogWaiterFactory  DialogWaiterFactory
-	dialogWaiter         communication.DialogWaiter
 	dialogHandlerFactory DialogHandlerFactory
 
-	serviceFactory ServiceFactory
-	service        Service
+	serviceRegistry *Registry
+	servicePool     *Pool
 
-	discovery *registry.Discovery
+	discoveryFactory DiscoveryFactory
 }
 
-// Start starts service - does not block
-func (manager *Manager) Start(options Options) (err error) {
-	loadIdentity := identity_selector.NewLoader(manager.identityHandler, options.Identity, options.Passphrase)
-	providerID, err := loadIdentity()
+// Start starts an instance of the given service type if knows one in service registry. The method blocks.
+// It passes the options to the start method of the service.
+// If an error occurs in the underlying service, the error is then returned.
+func (manager *Manager) Start(providerID identity.Identity, serviceType string, options Options) (err error) {
+	service, proposal, err := manager.serviceRegistry.Create(serviceType, options)
 	if err != nil {
 		return err
 	}
 
-	service, proposal, err := manager.serviceFactory(options)
+	dialogWaiter, err := manager.dialogWaiterFactory(providerID, proposal.ServiceType)
 	if err != nil {
 		return err
 	}
-
-	manager.service = service
-
-	manager.dialogWaiter, err = manager.dialogWaiterFactory(providerID, proposal.ServiceType)
-	if err != nil {
-		return err
-	}
-	providerContact, err := manager.dialogWaiter.Start()
+	providerContact, err := dialogWaiter.Start()
 	if err != nil {
 		return err
 	}
 	proposal.SetProviderContact(providerID, providerContact)
 
 	dialogHandler := manager.dialogHandlerFactory(proposal, service)
-	if err = manager.dialogWaiter.ServeDialogs(dialogHandler); err != nil {
+	if err = dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return err
 	}
 
-	manager.discovery.Start(providerID, proposal)
+	discovery := manager.discoveryFactory()
+	discovery.Start(providerID, proposal)
 
-	err = manager.service.Serve(providerID)
-	manager.discovery.Wait()
-	return err
+	err = service.Serve(providerID)
+	if err != nil {
+		return err
+	}
+	manager.servicePool.Add(&Instance{
+		service:      service,
+		proposal:     proposal,
+		dialogWaiter: dialogWaiter,
+		discovery:    discovery,
+	})
+
+	discovery.Wait()
+	return nil
 }
 
 // Kill stops service
 func (manager *Manager) Kill() error {
-	var errDialogWaiter, errService error
-
-	if manager.discovery != nil {
-		manager.discovery.Stop()
-	}
-	if manager.dialogWaiter != nil {
-		errDialogWaiter = manager.dialogWaiter.Stop()
-	}
-	if manager.service != nil {
-		errService = manager.service.Stop()
-	}
-
-	if errDialogWaiter != nil {
-		return errDialogWaiter
-	}
-	if errService != nil {
-		return errService
-	}
-	return nil
+	return manager.servicePool.StopAll()
 }

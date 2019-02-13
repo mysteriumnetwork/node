@@ -33,7 +33,7 @@ type createConsumer struct {
 
 // Creator defines method for session creation
 type Creator interface {
-	Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration, destroyCallback DestroyCallback) (Session, error)
+	Create(consumerID, issuerID identity.Identity, proposalID int) (Session, error)
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
@@ -56,10 +56,21 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		return responseInternalError, err
 	}
 
-	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, request.ProposalId, config, destroyCallback)
+	issuerID := consumer.peerID
+	if request.ConsumerInfo != nil {
+		issuerID = request.ConsumerInfo.IssuerID
+	}
+
+	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID)
 	switch err {
 	case nil:
-		return responseWithSession(sessionInstance), nil
+		if destroyCallback != nil {
+			go func() {
+				<-sessionInstance.Done
+				destroyCallback()
+			}()
+		}
+		return responseWithSession(sessionInstance, config, nil), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
 	default:
@@ -67,8 +78,8 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	}
 }
 
-func responseWithSession(sessionInstance Session) CreateResponse {
-	serializedConfig, err := json.Marshal(sessionInstance.Config)
+func responseWithSession(sessionInstance Session, config ServiceConfiguration, pi *PaymentInfo) CreateResponse {
+	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		// Failed to serialize session
 		// TODO Cant expose error to response, some logging should be here
@@ -81,5 +92,6 @@ func responseWithSession(sessionInstance Session) CreateResponse {
 			ID:     sessionInstance.ID,
 			Config: serializedConfig,
 		},
+		PaymentInfo: pi,
 	}
 }

@@ -19,13 +19,13 @@ package userspace
 
 import (
 	"encoding/base64"
-	"errors"
 	"net"
+	"time"
 
-	"git.zx2c4.com/wireguard-go/device"
-	"git.zx2c4.com/wireguard-go/tun"
-	"github.com/mysteriumnetwork/node/consumer"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
+	"github.com/mysteriumnetwork/wireguard-go/device"
+	"github.com/mysteriumnetwork/wireguard-go/tun"
+	"github.com/pkg/errors"
 )
 
 type client struct {
@@ -39,25 +39,22 @@ func NewWireguardClient() (*client, error) {
 }
 
 func (c *client) ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) (err error) {
-	if c.tun, err = tun.CreateTUN(name, device.DefaultMTU); err != nil {
-		return err
-	}
-	if err := assignIP(name, subnet); err != nil {
-		return err
+	if c.tun, err = CreateTUN(name, subnet); err != nil {
+		return errors.Wrap(err, "failed to create TUN device")
 	}
 
 	c.devAPI = device.UserspaceDeviceApi(c.tun)
 	if err := c.devAPI.SetListeningPort(uint16(config.ListenPort())); err != nil {
-		return err
+		return errors.Wrap(err, "failed to set listening port")
 	}
 
 	key, err := base64stringTo32ByteArray(config.PrivateKey())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to parse private key from config")
 	}
 
 	if err := c.devAPI.SetPrivateKey(device.NoisePrivateKey(key)); err != nil {
-		return err
+		return errors.Wrap(err, "failed to set private key to userspace device API")
 	}
 
 	c.devAPI.Boot()
@@ -72,7 +69,7 @@ func (c *client) AddPeer(name string, peer wg.PeerInfo) error {
 
 	extPeer := device.ExternalPeer{
 		PublicKey:  device.NoisePublicKey(key),
-		AllowedIPs: []string{"0.0.0.0/0"},
+		AllowedIPs: []string{"0.0.0.0/0", "::/0"},
 	}
 
 	if ep := peer.Endpoint(); ep != nil {
@@ -97,21 +94,21 @@ func (c *client) ConfigureRoutes(iface string, ip net.IP) error {
 	return addDefaultRoute(iface)
 }
 
-func (c *client) PeerStats() (consumer.SessionStatistics, error) {
+func (c *client) PeerStats() (wg.Stats, error) {
 	peers, err := c.devAPI.Peers()
 	if err != nil {
-		return consumer.SessionStatistics{}, nil
+		return wg.Stats{}, nil
 	}
 
 	if len(peers) != 1 {
-		return consumer.SessionStatistics{}, errors.New("exactly 1 peer expected")
+		return wg.Stats{}, errors.New("exactly 1 peer expected")
 	}
 
-	return consumer.SessionStatistics{
+	return wg.Stats{
 		BytesSent:     peers[0].Stats.Sent,
 		BytesReceived: peers[0].Stats.Received,
+		LastHandshake: time.Unix(int64(peers[0].LastHanshake), 0),
 	}, nil
-
 }
 
 func (c *client) DestroyDevice(name string) error {

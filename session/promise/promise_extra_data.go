@@ -1,5 +1,3 @@
-// +build windows
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -17,18 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package promise
 
 import (
-	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/mysteriumnetwork/payments/promises"
 )
 
-// BootstrapServices loads all the components required for running services
-func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
-	di.bootstrapServiceComponents(nodeOptions)
-
-	di.bootstrapServiceOpenvpn(nodeOptions)
-	di.bootstrapServiceNoop(nodeOptions)
-
-	return nil
+// ExtraData represents the extra data in the promise
+type ExtraData struct {
+	ConsumerAddress common.Address
 }
+
+// Hash returns the hash of the extra data
+func (extra ExtraData) Hash() []byte {
+	return crypto.Keccak256(extra.ConsumerAddress.Bytes())
+}
+
+var _ promises.ExtraData = ExtraData{}

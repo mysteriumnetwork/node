@@ -33,7 +33,6 @@ var (
 	identityExisting = identity.FromAddress("deadbeef")
 	sessionExisting  = session.Session{
 		ID:         session.ID(sessionExistingString),
-		Config:     "config_string",
 		ConsumerID: identityExisting,
 	}
 )

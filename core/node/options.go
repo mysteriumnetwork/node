@@ -31,6 +31,9 @@ type Options struct {
 	TequilapiAddress string
 	TequilapiPort    int
 
+	DisableMetrics bool
+	MetricsAddress string
+
 	Keystore OptionsKeystore
 
 	Openvpn  Openvpn

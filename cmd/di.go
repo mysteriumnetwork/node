@@ -36,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
-	promise_noop "github.com/mysteriumnetwork/node/core/promise/methods/noop"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
@@ -44,13 +43,24 @@ import (
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/metrics"
+	market_metrics "github.com/mysteriumnetwork/node/market/metrics"
 	"github.com/mysteriumnetwork/node/market/metrics/oracle"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/metrics"
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/balance"
+	balance_provider "github.com/mysteriumnetwork/node/session/balance/provider"
+	session_payment "github.com/mysteriumnetwork/node/session/payment"
+	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
+	payments_noop "github.com/mysteriumnetwork/node/session/payment/noop"
+	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
@@ -65,15 +75,16 @@ type Storage interface {
 	Close() error
 }
 
-// Dependencies is DI container for top level components which is reusedin several places
+// Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
 
 	NetworkDefinition    metadata.NetworkDefinition
 	MysteriumAPI         *mysterium.MysteriumAPI
-	MysteriumMorqaClient metrics.QualityOracle
+	MysteriumMorqaClient market_metrics.QualityOracle
 	EtherClient          *ethclient.Client
 
+	NATService           nat.NATService
 	Storage              Storage
 	Keystore             *keystore.KeyStore
 	IdentityManager      identity.Manager
@@ -95,7 +106,7 @@ type Dependencies struct {
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
 
-	ServiceRunner         *service.Runner
+	ServicesManager       *service.Manager
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 }
@@ -171,9 +182,15 @@ func (di *Dependencies) Shutdown() (err error) {
 		}
 	}()
 
-	if di.ServiceRunner != nil {
-		runnerErrs := di.ServiceRunner.KillAll()
-		errs = append(errs, runnerErrs...)
+	if di.ServicesManager != nil {
+		if err := di.ServicesManager.Kill(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if di.NATService != nil {
+		if err := di.NATService.Disable(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	if di.Node != nil {
@@ -237,13 +254,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		return dialogEstablisher.EstablishDialog(providerID, contact)
 	}
 
-	promiseIssuerFactory := func(issuerID identity.Identity, dialog communication.Dialog) connection.PromiseIssuer {
-		if nodeOptions.ExperimentPromiseCheck {
-			return promise_noop.NewPromiseIssuer(issuerID, dialog, di.SignerFactory(issuerID))
-		}
-		return &promise_noop.FakePromiseEngine{}
-	}
-
 	di.StatisticsTracker = statistics.NewSessionStatisticsTracker(time.Now)
 	di.StatisticsReporter = statistics.NewSessionStatisticsReporter(
 		di.StatisticsTracker,
@@ -259,7 +269,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		promiseIssuerFactory,
+		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 	)
@@ -274,21 +284,51 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
+	metricsSender := metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, metricsSender)
 }
 
 func newSessionManagerFactory(
 	proposal market.ServiceProposal,
 	sessionStorage *session.StorageMemory,
-	promiseHandler func(dialog communication.Dialog) session.PromiseProcessor,
+	nodeOptions node.Options,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
+		providerBalanceTrackerFactory := func(consumer, provider, issuer identity.Identity) (session.BalanceTracker, error) {
+			// if the flag ain't set, just return a noop balance tracker
+			if !nodeOptions.ExperimentPayments {
+				return payments_noop.NewSessionBalance(), nil
+			}
+
+			timeTracker := session.NewTracker(time.Now)
+			// TODO: set the time and proper payment info
+			payment := dto.PaymentPerTime{
+				Price: money.Money{
+					Currency: money.CURRENCY_MYST,
+					Amount:   uint64(10),
+				},
+				Duration: time.Minute,
+			}
+			amountCalc := session.AmountCalc{PaymentDef: payment}
+			sender := balance.NewBalanceSender(dialog)
+			promiseChan := make(chan promise.Message, 1)
+			listener := promise.NewListener(promiseChan)
+			err := dialog.Receive(listener.GetConsumer())
+			if err != nil {
+				return nil, err
+			}
+
+			// TODO: the ints and times here need to be passed in as well, or defined as constants
+			tracker := balance_provider.NewBalanceTracker(&timeTracker, amountCalc, 0)
+			validator := validators.NewIssuedPromiseValidator(consumer, provider, issuer)
+			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator), nil
+		}
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
 			sessionStorage,
-			promiseHandler(dialog),
+			providerBalanceTrackerFactory,
 		)
 	}
 }

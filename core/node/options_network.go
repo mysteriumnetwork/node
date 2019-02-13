@@ -23,7 +23,7 @@ type OptionsNetwork struct {
 	Localnet bool
 
 	ExperimentIdentityCheck bool
-	ExperimentPromiseCheck  bool
+	ExperimentPayments      bool
 
 	DiscoveryAPIAddress string
 	BrokerAddress       string

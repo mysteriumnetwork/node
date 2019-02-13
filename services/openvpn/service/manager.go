@@ -19,7 +19,6 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -27,8 +26,10 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[service-openvpn] "
@@ -47,7 +48,8 @@ type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outbound
 
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	natService nat.NATService
+	natService   nat.NATService
+	releasePorts func()
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 
@@ -59,18 +61,24 @@ type Manager struct {
 	publicIP        string
 	outboundIP      string
 	currentLocation string
+	serviceOptions  Options
 }
 
 // Serve starts service - does block
 func (manager *Manager) Serve(providerID identity.Identity) (err error) {
-	manager.natService.Add(nat.RuleForwarding{
+	err = manager.natService.Add(nat.RuleForwarding{
 		SourceAddress: "10.8.0.0/24",
 		TargetIP:      manager.outboundIP,
 	})
-
-	err = manager.natService.Start()
 	if err != nil {
-		log.Warn(logPrefix, "received nat service error: ", err, " trying to proceed.")
+		return errors.Wrap(err, "failed to add NAT forwarding rule")
+	}
+
+	if manager.outboundIP != manager.publicIP {
+		manager.releasePorts = mapping.PortMapping(
+			manager.serviceOptions.OpenvpnProtocol,
+			manager.serviceOptions.OpenvpnPort,
+			"Myst node openvpn port mapping")
 	}
 
 	primitives, err := primitiveFactory(manager.currentLocation, providerID.Address)
@@ -86,14 +94,13 @@ func (manager *Manager) Serve(providerID identity.Identity) (err error) {
 	if err = manager.vpnServer.Start(); err != nil {
 		return
 	}
+
 	return manager.vpnServer.Wait()
 }
 
 // Stop stops service
-func (manager *Manager) Stop() error {
-	if manager.natService != nil {
-		manager.natService.Stop()
-	}
+func (manager *Manager) Stop() (err error) {
+	manager.releasePorts()
 
 	if manager.vpnServer != nil {
 		manager.vpnServer.Stop()

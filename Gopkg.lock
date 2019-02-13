@@ -2,22 +2,6 @@
 
 
 [[projects]]
-  digest = "1:4e1df3cf0f1c77f0fb23aee3832e0565ad6adc8636b3a38a6b828f6babd636b0"
-  name = "git.zx2c4.com/wireguard-go"
-  packages = [
-    "device",
-    "ratelimiter",
-    "replay",
-    "rwcancel",
-    "tai64n",
-    "tun",
-    "xchacha20poly1305",
-  ]
-  pruneopts = "UT"
-  revision = "5acb51d173e2938591471974e53d5262f8adfa51"
-  source = "github.com/mysteriumnetwork/wireguard-go"
-
-[[projects]]
   digest = "1:7d191fd0c54ff370eaf6116a14dafe2a328df487baea280699f597aae858d00d"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
@@ -93,6 +77,14 @@
   revision = "504e848d77ea4752b3057b8fb46da0e7f746ccf3"
 
 [[projects]]
+  digest = "1:edb569dd02419a41ddd98768cc0e7aec922ef19dae139731e5ca750afcf6f4c5"
+  name = "github.com/edsrzf/mmap-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "188cc3b666ba704534fa4f96e9e61f21f1e1ba7c"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:d670c508dc01984c721d0d968936412e3edcd8ca58caf82fcfd0df9044013a0f"
   name = "github.com/ethereum/go-ethereum"
   packages = [
@@ -100,20 +92,35 @@
     "accounts",
     "accounts/abi",
     "accounts/abi/bind",
+    "accounts/abi/bind/backends",
     "accounts/keystore",
     "common",
+    "common/bitutil",
     "common/hexutil",
     "common/math",
     "common/mclock",
+    "consensus",
+    "consensus/ethash",
+    "consensus/misc",
+    "core",
+    "core/bloombits",
+    "core/rawdb",
+    "core/state",
     "core/types",
+    "core/vm",
     "crypto",
+    "crypto/bn256",
+    "crypto/bn256/cloudflare",
+    "crypto/bn256/google",
     "crypto/secp256k1",
     "crypto/sha3",
+    "eth/filters",
     "ethclient",
     "ethdb",
     "event",
     "log",
     "metrics",
+    "p2p/nat",
     "p2p/netutil",
     "params",
     "rlp",
@@ -149,12 +156,47 @@
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
+  digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = "UT"
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
+
+[[projects]]
+  digest = "1:c00cc6d95a674b4b923ac069d364445043bc67836e9bd8aeff8440cfbe6a2cc7"
+  name = "github.com/huin/goupnp"
+  packages = [
+    ".",
+    "dcps/internetgateway1",
+    "dcps/internetgateway2",
+    "httpu",
+    "scpd",
+    "soap",
+    "ssdp",
+  ]
+  pruneopts = "UT"
+  revision = "656e61dfadd241c7cbdd22a023fa81ecb6860ea8"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:b352ae8b1a77cc6b48fc8e314e34a522cfc76d6ca3a06c93b29c9cde5de6771e"
   name = "github.com/jackpal/gateway"
   packages = ["."]
   pruneopts = "UT"
   revision = "cbcf4e3f3baee7952fc386c8b2534af4d267c875"
   version = "v1.0.5"
+
+[[projects]]
+  digest = "1:32b82e71cf24f8b78323e0d7903c4b90278486283965aa2a19b1ea13763b8f34"
+  name = "github.com/jackpal/go-nat-pmp"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c9cfead9f2a36ddf3daa40ba269aa7f4bbba6b62"
+  version = "v1.0.1"
 
 [[projects]]
   digest = "1:ccfa094742ce1c97fd3f6481e1bf98f3d9862510eee2bc0eb56e2745396bd330"
@@ -239,19 +281,35 @@
   version = "0.0.12"
 
 [[projects]]
-  digest = "1:a034b3c95c40d7a083083f4cad8c1a2ad1459c7e9962130477a9d1f4265e7dd9"
+  digest = "1:111a4696a6e9f09a794109477249f227373c852fd97d038c2d2a730126360754"
   name = "github.com/mysteriumnetwork/payments"
   packages = [
     "cli/helpers",
+    "contracts/abigen",
     "identity",
-    "mysttoken/generated",
-    "promises/generated",
+    "mysttoken",
+    "promises",
     "registry",
-    "registry/generated",
+    "test_utils",
+  ]
+  pruneopts = "T"
+  revision = "14920d2c37553da50361d892915979301525b178"
+  version = "v0.0.9"
+
+[[projects]]
+  digest = "1:fef11ce7bad787dad351a3f7da701223dbbcec519877152d18228ef9c2c28b71"
+  name = "github.com/mysteriumnetwork/wireguard-go"
+  packages = [
+    "device",
+    "ratelimiter",
+    "replay",
+    "rwcancel",
+    "tai64n",
+    "tun",
+    "xchacha20poly1305",
   ]
   pruneopts = "UT"
-  revision = "aa5433b55f76b3e4746947a5cfd2c3a45ddc3066"
-  version = "0.0.6-beta"
+  revision = "c8073c70e944fe656f5854b347e2e2687356043b"
 
 [[projects]]
   digest = "1:0923946dc9acc1aeb0cdee47c1bf85cb7662562ecb2ddae1f73bbd34c322ecfe"
@@ -298,6 +356,14 @@
   revision = "c65b2f87fee37d1c7854c9164a450713c28d50cd"
 
 [[projects]]
+  digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
+
+[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -320,6 +386,13 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "15587285ef6b6e7a3f657e2e00f9f271883bcf22"
+
+[[projects]]
+  digest = "1:b30ae084771993f574cd6416fd83352f48de2b873d51bc938b6d259fca3605a5"
+  name = "github.com/songgao/water"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f6122f5b2fbd92ace9b2819f0be4148be5690a1f"
 
 [[projects]]
   digest = "1:5110e3d4f130772fd39e6ce8208ad1955b242ccfcc8ad9d158857250579c82f4"
@@ -370,7 +443,7 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:c4296eee6926c02ba1b130e41e59e38ae088eb8afb4177a1e20cbe8c61781dd1"
+  digest = "1:4071d9e8724146d99c9feaa5c74a1d113ff4df76b4bb769ce2d41719999cb684"
   name = "golang.org/x/crypto"
   packages = [
     "blake2s",
@@ -380,6 +453,7 @@
     "internal/subtle",
     "pbkdf2",
     "poly1305",
+    "ripemd160",
     "scrypt",
   ]
   pruneopts = "UT"
@@ -387,10 +461,13 @@
 
 [[projects]]
   branch = "release-branch.go1.11"
-  digest = "1:8f2aed8be0d0a5771da9df6a0bf28ffe8534643b97caf6c51c1dabb4a47d80c3"
+  digest = "1:7545d2e03cb4691b887fa2f1666ec3d757ffbf6adf8f8413a9ea96dd84808327"
   name = "golang.org/x/net"
   packages = [
     "bpf",
+    "html",
+    "html/atom",
+    "html/charset",
     "internal/iana",
     "internal/socket",
     "ipv4",
@@ -402,15 +479,42 @@
 
 [[projects]]
   branch = "release-branch.go1.11"
-  digest = "1:ada3f6483b5d87199a41dfccf9e9965019d2c26ef9b199c58ab12bc57a9823cd"
+  digest = "1:95eb3c3a4aeb757c723d0133273f47d2f93fb78c4963e343df6bf052a3d290b8"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
     "unix",
     "windows",
+    "windows/registry",
   ]
   pruneopts = "UT"
   revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
+
+[[projects]]
+  digest = "1:aa4d6967a3237f8367b6bf91503964a77183ecf696f1273e8ad3551bb4412b5f"
+  name = "golang.org/x/text"
+  packages = [
+    "encoding",
+    "encoding/charmap",
+    "encoding/htmlindex",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/japanese",
+    "encoding/korean",
+    "encoding/simplifiedchinese",
+    "encoding/traditionalchinese",
+    "encoding/unicode",
+    "internal/gen",
+    "internal/tag",
+    "internal/utf8internal",
+    "language",
+    "runes",
+    "transform",
+    "unicode/cldr",
+  ]
+  pruneopts = "UT"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
   digest = "1:a05bd2d296bc727082abcb63ff52615b4dcc6219d8b61e99fd83d605dc779a18"
@@ -491,8 +595,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "git.zx2c4.com/wireguard-go/device",
-    "git.zx2c4.com/wireguard-go/tun",
     "github.com/asaskevich/EventBus",
     "github.com/asdine/storm",
     "github.com/chzyer/readline",
@@ -505,6 +607,7 @@
     "github.com/ethereum/go-ethereum/core/types",
     "github.com/ethereum/go-ethereum/crypto",
     "github.com/ethereum/go-ethereum/ethclient",
+    "github.com/ethereum/go-ethereum/p2p/nat",
     "github.com/ethereum/go-ethereum/params",
     "github.com/gofrs/uuid",
     "github.com/jackpal/gateway",
@@ -522,13 +625,18 @@
     "github.com/mysteriumnetwork/go-openvpn/openvpn/tls",
     "github.com/mysteriumnetwork/go-openvpn/openvpn3",
     "github.com/mysteriumnetwork/payments/cli/helpers",
+    "github.com/mysteriumnetwork/payments/contracts/abigen",
     "github.com/mysteriumnetwork/payments/identity",
-    "github.com/mysteriumnetwork/payments/mysttoken/generated",
-    "github.com/mysteriumnetwork/payments/promises/generated",
+    "github.com/mysteriumnetwork/payments/mysttoken",
+    "github.com/mysteriumnetwork/payments/promises",
     "github.com/mysteriumnetwork/payments/registry",
-    "github.com/mysteriumnetwork/payments/registry/generated",
+    "github.com/mysteriumnetwork/payments/test_utils",
+    "github.com/mysteriumnetwork/wireguard-go/device",
+    "github.com/mysteriumnetwork/wireguard-go/tun",
     "github.com/nats-io/go-nats",
     "github.com/oschwald/geoip2-golang",
+    "github.com/pkg/errors",
+    "github.com/songgao/water",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/suite",
     "github.com/urfave/cli",

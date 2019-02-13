@@ -42,8 +42,8 @@ func NewManager(
 	outboundIP string,
 	currentLocation string,
 	sessionMap openvpn_session.SessionMap,
+	natService nat.NATService,
 ) *Manager {
-	natService := nat.NewService()
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 
 	return &Manager{
@@ -54,6 +54,7 @@ func NewManager(
 		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
 		vpnServerFactory:               newServerFactory(nodeOptions, sessionValidator),
+		serviceOptions:                 serviceOptions,
 	}
 }
 

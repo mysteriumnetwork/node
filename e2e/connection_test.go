@@ -183,7 +183,7 @@ type sessionAsserter func(t *testing.T, session endpoints.SessionDTO)
 var serviceTypeAssertionMap = map[string]sessionAsserter{
 	"openvpn":   assertStatsNotZero,
 	"noop":      assertStatsZero,
-	"wireguard": assertStatsZero,
+	"wireguard": assertStatsNotZero,
 }
 
 func assertStatsNotZero(t *testing.T, session endpoints.SessionDTO) {

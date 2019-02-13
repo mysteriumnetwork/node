@@ -22,12 +22,17 @@ import "github.com/mysteriumnetwork/node/identity"
 // ID represents session id type
 type ID string
 
+// BalanceTracker is responsible for interacting with the consumer in regards to payments
+type BalanceTracker interface {
+	Start() error
+	Stop()
+}
+
 // Session structure holds all required information about current session between service consumer and provider
 type Session struct {
-	ID              ID
-	Config          ServiceConfiguration
-	ConsumerID      identity.Identity
-	DestroyCallback DestroyCallback
+	ID         ID
+	ConsumerID identity.Identity
+	Done       chan struct{}
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party

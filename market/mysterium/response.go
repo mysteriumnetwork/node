@@ -22,24 +22,24 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/pkg/errors"
 )
 
-type errorResponse struct {
-	Error string `json:"error"`
-}
-
 // ParseResponseError checks the respose for correctness and return error if it is invalid
-func ParseResponseError(response *http.Response) error {
+func ParseResponseError(response *http.Response) (err error) {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		var error errorResponse
+		var errorMsg []byte
 
-		err := ParseResponseJSON(response, &error)
-		if err != nil {
-			return err
+		if response.Body != nil {
+			errorMsg, err = ioutil.ReadAll(response.Body)
+			if err != nil {
+				return errors.Wrap(err, "server response invalid")
+			}
 		}
 
 		return fmt.Errorf("server response invalid: %s (%s) error message: %s",
-			response.Status, response.Request.URL, error.Error)
+			response.Status, response.Request.URL, errorMsg)
 	}
 	return nil
 }
@@ -55,10 +55,5 @@ func ParseResponseJSON(response *http.Response, dto interface{}) error {
 		return err
 	}
 
-	err = json.Unmarshal(responseJSON, dto)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return json.Unmarshal(responseJSON, dto)
 }

@@ -67,8 +67,8 @@ const identityDefaultPassphrase = ""
 const statusConnected = "Connected"
 
 var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
-	"type 'license warranty'",
-	"type 'license conditions'",
+	"type 'license --warranty'",
+	"type 'license --conditions'",
 ))
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
@@ -257,6 +257,7 @@ func (c *cliApp) status() {
 		if err != nil {
 			warn(err)
 		} else {
+			info("Proposal:", status.Proposal)
 			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
 			info("Bytes sent:", statistics.BytesSent)
 			info("Bytes received:", statistics.BytesReceived)

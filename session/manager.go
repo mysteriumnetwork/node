@@ -22,6 +22,7 @@ import (
 	"errors"
 	"sync"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -35,6 +36,8 @@ var (
 	ErrorWrongSessionOwner = errors.New("wrong session owner")
 )
 
+const managerLogPrefix = "[session-manager] "
+
 // IDGenerator defines method for session id generation
 type IDGenerator func() (ID, error)
 
@@ -47,7 +50,7 @@ type ConfigNegotiator interface {
 type ConfigProvider func(consumerKey json.RawMessage) (ServiceConfiguration, DestroyCallback, error)
 
 // DestroyCallback cleanups session
-type DestroyCallback func() error
+type DestroyCallback func()
 
 // PromiseProcessor processes promises at provider side.
 // Provider checks promises from consumer and signs them also.
@@ -64,18 +67,21 @@ type Storage interface {
 	Remove(id ID)
 }
 
+// BalanceTrackerFactory returns a new instance of balance tracker
+type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (BalanceTracker, error)
+
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal market.ServiceProposal,
 	idGenerator IDGenerator,
 	sessionStorage Storage,
-	promiseProcessor PromiseProcessor,
+	balanceTrackerFactory BalanceTrackerFactory,
 ) *Manager {
 	return &Manager{
-		currentProposal:  currentProposal,
-		generateID:       idGenerator,
-		sessionStorage:   sessionStorage,
-		promiseProcessor: promiseProcessor,
+		currentProposal:       currentProposal,
+		generateID:            idGenerator,
+		sessionStorage:        sessionStorage,
+		balanceTrackerFactory: balanceTrackerFactory,
 
 		creationLock: sync.Mutex{},
 	}
@@ -83,17 +89,16 @@ func NewManager(
 
 // Manager knows how to start and provision session
 type Manager struct {
-	currentProposal  market.ServiceProposal
-	generateID       IDGenerator
-	provideConfig    ConfigProvider
-	sessionStorage   Storage
-	promiseProcessor PromiseProcessor
+	currentProposal       market.ServiceProposal
+	generateID            IDGenerator
+	sessionStorage        Storage
+	balanceTrackerFactory BalanceTrackerFactory
 
 	creationLock sync.Mutex
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, proposalID int, config ServiceConfiguration, destroyCallback DestroyCallback) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -102,17 +107,35 @@ func (manager *Manager) Create(consumerID identity.Identity, proposalID int, con
 		return
 	}
 
-	sessionInstance, err = manager.createSession(consumerID, config)
+	sessionInstance.ID, err = manager.generateID()
+	if err != nil {
+		return
+	}
+	sessionInstance.ConsumerID = consumerID
+	sessionInstance.Done = make(chan struct{})
+
+	balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)
 	if err != nil {
 		return
 	}
 
-	err = manager.promiseProcessor.Start(manager.currentProposal)
-	if err != nil {
-		return
-	}
+	// stop the balance tracker once the session is finished
+	go func() {
+		<-sessionInstance.Done
+		balanceTracker.Stop()
+	}()
 
-	sessionInstance.DestroyCallback = destroyCallback
+	go func() {
+		err := balanceTracker.Start()
+		if err != nil {
+			log.Error(managerLogPrefix, "balance tracker error: ", err)
+			destroyErr := manager.Destroy(consumerID, string(sessionInstance.ID))
+			if destroyErr != nil {
+				log.Error(managerLogPrefix, "session cleanup failed: ", err)
+			}
+		}
+	}()
+
 	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
 }
@@ -132,25 +155,8 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 		return ErrorWrongSessionOwner
 	}
 
-	err := manager.promiseProcessor.Stop()
-	if err != nil {
-		return err
-	}
-
 	manager.sessionStorage.Remove(ID(sessionID))
+	close(sessionInstance.Done)
 
-	if sessionInstance.DestroyCallback != nil {
-		return sessionInstance.DestroyCallback()
-	}
 	return nil
-}
-
-func (manager *Manager) createSession(consumerID identity.Identity, config ServiceConfiguration) (sessionInstance Session, err error) {
-	sessionInstance.ID, err = manager.generateID()
-	if err != nil {
-		return
-	}
-	sessionInstance.ConsumerID = consumerID
-	sessionInstance.Config = config
-	return
 }

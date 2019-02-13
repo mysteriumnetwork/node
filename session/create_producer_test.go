@@ -45,7 +45,7 @@ type fakeSessionConfig struct {
 
 func TestProducer_RequestSessionCreate(t *testing.T) {
 	sender := &fakeSender{}
-	sid, config, err := RequestSessionCreate(sender, 123, []byte{})
+	sid, config, err := RequestSessionCreate(sender, 123, []byte{}, ConsumerInfo{})
 	assert.NoError(t, err)
 	assert.Exactly(t, succesfullSessionID, sid)
 	assert.Exactly(t, succesfullSessionConfig, config)

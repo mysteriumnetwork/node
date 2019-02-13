@@ -20,8 +20,8 @@ package wireguard
 import (
 	"encoding/json"
 	"net"
+	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 )
@@ -33,6 +33,10 @@ const ServiceType = "wireguard"
 type ServiceDefinition struct {
 	// Approximate information on location where the service is provided from
 	Location market.Location `json:"location"`
+
+	// Approximate information on location where the actual tunnelled traffic will originate from.
+	// This is used by providers having their own means of setting tunnels to other remote exit points.
+	LocationOriginate market.Location `json:"location_originate"`
 }
 
 // GetLocation returns geographic location of service definition provider
@@ -58,7 +62,7 @@ func (method Payment) GetPrice() money.Money {
 type ConnectionEndpoint interface {
 	Start(config *ServiceConfig) error
 	AddPeer(publicKey string, endpoint *net.UDPAddr) error
-	PeerStats() (consumer.SessionStatistics, error)
+	PeerStats() (Stats, error)
 	ConfigureRoutes(ip net.IP) error
 	Config() (ServiceConfig, error)
 	Stop() error
@@ -74,6 +78,13 @@ type DeviceConfig interface {
 type PeerInfo interface {
 	Endpoint() *net.UDPAddr
 	PublicKey() string
+}
+
+// Stats represents wireguard peer statistics information.
+type Stats struct {
+	BytesSent     uint64
+	BytesReceived uint64
+	LastHandshake time.Time
 }
 
 // ConsumerConfig is used for sending the public key from consumer to provider

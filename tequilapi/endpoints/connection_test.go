@@ -37,7 +37,7 @@ import (
 type fakeManager struct {
 	onConnectReturn      error
 	onDisconnectReturn   error
-	onStatusReturn       connection.ConnectionStatus
+	onStatusReturn       connection.Status
 	disconnectCount      int
 	requestedConsumerID  identity.Identity
 	requestedProvider    identity.Identity
@@ -51,7 +51,7 @@ func (fm *fakeManager) Connect(consumerID identity.Identity, proposal market.Ser
 	return fm.onConnectReturn
 }
 
-func (fm *fakeManager) Status() connection.ConnectionStatus {
+func (fm *fakeManager) Status() connection.Status {
 
 	return fm.onStatusReturn
 }
@@ -150,7 +150,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 
 func TestDisconnectingState(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = connection.ConnectionStatus{
+	fakeManager.onStatusReturn = connection.Status{
 		State:     connection.Disconnecting,
 		SessionID: "",
 	}
@@ -172,7 +172,7 @@ func TestDisconnectingState(t *testing.T) {
 
 func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = connection.ConnectionStatus{
+	fakeManager.onStatusReturn = connection.Status{
 		State:     connection.NotConnected,
 		SessionID: "",
 	}
@@ -195,7 +195,7 @@ func TestNotConnectedStateIsReturnedWhenNoConnection(t *testing.T) {
 
 func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = connection.ConnectionStatus{
+	fakeManager.onStatusReturn = connection.Status{
 		State: connection.Connecting,
 	}
 
@@ -217,7 +217,7 @@ func TestStateConnectingIsReturnedWhenIsConnectionInProgress(t *testing.T) {
 
 func TestConnectedStateAndSessionIdIsReturnedWhenIsConnected(t *testing.T) {
 	var fakeManager = fakeManager{}
-	fakeManager.onStatusReturn = connection.ConnectionStatus{
+	fakeManager.onStatusReturn = connection.Status{
 		State:     connection.Connected,
 		SessionID: "My-super-session",
 	}
