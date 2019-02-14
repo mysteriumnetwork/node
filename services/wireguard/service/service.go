@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/core/location"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -36,17 +38,17 @@ import (
 const logPrefix = "[service-wireguard] "
 
 // NewManager creates new instance of Wireguard service
-func NewManager(publicIP, outIP, country string, natService nat.NATService) *Manager {
+func NewManager(location location.ServiceLocationInfo, natService nat.NATService, portMap func(port int) (releasePortMapping func())) *Manager {
 	resourceAllocator := resources.NewAllocator()
 	return &Manager{
 		natService: natService,
 
-		publicIP:        publicIP,
-		outboundIP:      outIP,
-		currentLocation: country,
+		publicIP:        location.PubIP,
+		outboundIP:      location.OutIP,
+		currentLocation: location.OutIP,
 
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(publicIP, outIP, &resourceAllocator)
+			return endpoint.NewConnectionEndpoint(location, &resourceAllocator, portMap)
 		},
 	}
 }

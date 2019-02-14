@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/mysteriumnetwork/node/core/location"
+
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/nat/mapping"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -43,13 +44,13 @@ type wgClient interface {
 type connectionEndpoint struct {
 	iface              string
 	privateKey         string
-	publicIP           string
-	outboundIP         string
+	location           location.ServiceLocationInfo
 	ipAddr             net.IPNet
 	endpoint           net.UDPAddr
 	resourceAllocator  *resources.Allocator
 	wgClient           wgClient
 	releasePortMapping func()
+	mapPort            func(port int) (releasePortMapping func())
 	connectDelay       int // connect delay in milliseconds
 }
 
@@ -72,12 +73,14 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 
 	ce.iface = iface
 	ce.endpoint.Port = port
-	ce.endpoint.IP = net.ParseIP(ce.publicIP)
+	ce.endpoint.IP = net.ParseIP(ce.location.PubIP)
 
 	if config == nil {
 		// nil config mean its a provider Start
-		ce.mapPort(port)
-
+		ce.releasePortMapping = ce.mapPort(port)
+		if ce.location.OutIP != ce.location.PubIP {
+			ce.connectDelay = connectDelayForPortMap
+		}
 		privateKey, err := key.GeneratePrivateKey()
 		if err != nil {
 			return err
@@ -98,18 +101,6 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	deviceConfig.listenPort = ce.endpoint.Port
 	deviceConfig.privateKey = ce.privateKey
 	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.ipAddr)
-}
-
-func (ce *connectionEndpoint) mapPort(port int) {
-	if ce.outboundIP != ce.publicIP {
-		ce.connectDelay = connectDelayForPortMap
-		ce.releasePortMapping = mapping.PortMapping(
-			"UDP",
-			port,
-			"Myst node wireguard port mapping")
-		return
-	}
-	ce.releasePortMapping = func() {}
 }
 
 // AddPeer adds new wireguard peer to the wireguard network interface.

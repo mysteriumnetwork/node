@@ -24,12 +24,14 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/proposals/registry"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
@@ -39,13 +41,7 @@ import (
 
 const logPrefix = "[service bootstrap] "
 
-type locationInfo struct {
-	OutIP   string
-	PubIP   string
-	Country string
-}
-
-func (di *Dependencies) resolveIPsAndLocation() (loc locationInfo, err error) {
+func (di *Dependencies) resolveIPsAndLocation() (loc location.ServiceLocationInfo, err error) {
 	pubIP, err := di.IPResolver.GetPublicIP()
 	if err != nil {
 		return
@@ -80,8 +76,18 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		currentLocation := market.Location{Country: location.Country}
 		transportOptions := serviceOptions.(openvpn_service.Options)
 
+		mapPort := func() func() {
+			if location.OutIP != location.PubIP {
+				return mapping.PortMapping(
+					transportOptions.OpenvpnProtocol,
+					transportOptions.OpenvpnPort,
+					"Myst node openvpn port mapping")
+			}
+			return func() {}
+		}
+
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.OpenvpnProtocol)
-		return openvpn_service.NewManager(nodeOptions, transportOptions, location.PubIP, location.OutIP, location.Country, di.ServiceSessionStorage, di.NATService), proposal, nil
+		return openvpn_service.NewManager(nodeOptions, transportOptions, location, di.ServiceSessionStorage, di.NATService, mapPort), proposal, nil
 	}
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 }

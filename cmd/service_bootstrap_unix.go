@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 )
@@ -47,7 +48,17 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				return nil, market.ServiceProposal{}, err
 			}
 
-			return wireguard_service.NewManager(location.PubIP, location.OutIP, location.Country, di.NATService), wireguard_service.GetProposal(location.Country), nil
+			mapPort := func(port int) func() {
+				if location.OutIP != location.PubIP {
+					return mapping.PortMapping(
+						"UDP",
+						port,
+						"Myst node wireguard port mapping")
+				}
+				return func() {}
+			}
+
+			return wireguard_service.NewManager(location, di.NATService, mapPort), wireguard_service.GetProposal(location.Country), nil
 		},
 	)
 }

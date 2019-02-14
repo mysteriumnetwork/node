@@ -26,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/mapping"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
@@ -49,6 +48,7 @@ type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outbound
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
 	natService   nat.NATService
+	mapPort      func() (releasePortMapping func())
 	releasePorts func()
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
@@ -74,7 +74,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	m.mapPort()
+	m.releasePorts = m.mapPort()
 
 	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
 	if err != nil {
@@ -102,16 +102,6 @@ func (m *Manager) Stop() (err error) {
 	}
 
 	return nil
-}
-
-func (m *Manager) mapPort() {
-	if m.outboundIP != m.publicIP {
-		m.releasePorts = mapping.PortMapping(
-			m.serviceOptions.OpenvpnProtocol,
-			m.serviceOptions.OpenvpnPort,
-			"Myst node openvpn port mapping")
-	}
-	m.releasePorts = func() {}
 }
 
 // ProvideConfig provides the configuration to end consumer

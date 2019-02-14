@@ -21,6 +21,8 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 
+	"github.com/mysteriumnetwork/node/core/location"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
@@ -38,23 +40,23 @@ import (
 func NewManager(
 	nodeOptions node.Options,
 	serviceOptions Options,
-	publicIP string,
-	outboundIP string,
-	currentLocation string,
+	location location.ServiceLocationInfo,
 	sessionMap openvpn_session.SessionMap,
 	natService nat.NATService,
+	mapPort func() (releasePortMapping func()),
 ) *Manager {
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 
 	return &Manager{
-		publicIP:                       publicIP,
-		outboundIP:                     outboundIP,
-		currentLocation:                currentLocation,
+		publicIP:                       location.PubIP,
+		outboundIP:                     location.OutIP,
+		currentLocation:                location.Country,
 		natService:                     natService,
 		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
 		vpnServerFactory:               newServerFactory(nodeOptions, sessionValidator),
 		serviceOptions:                 serviceOptions,
+		mapPort:                        mapPort,
 	}
 }
 
