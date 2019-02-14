@@ -109,7 +109,7 @@ func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request,
 }
 
 // ServiceStart starts requested service on the node.
-// swagger:operation POST /service Service serviceStart
+// swagger:operation POST /services Service serviceStart
 // ---
 // summary: Starts service
 // description: Provider starts serving new service to consumers
@@ -121,7 +121,7 @@ func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request,
 //       $ref: "#/definitions/ServiceRequestDTO"
 // responses:
 //   201:
-//     description: Service started
+//     description: Initiates service start
 //     schema:
 //       "$ref": "#/definitions/ServiceInfoDTO"
 //   400:
@@ -164,13 +164,13 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 }
 
 // ServiceStop stops service on the node.
-// swagger:operation DELETE /service/:id Service serviceStop
+// swagger:operation DELETE /services/:id Service serviceStop
 // ---
 // summary: Stops service
-// description: Stops current service
+// description: Initiates service stop
 // responses:
 //   202:
-//     description: Service Stopped
+//     description: Service Stop initiated
 //   404:
 //     description: No service exists
 //     schema:
