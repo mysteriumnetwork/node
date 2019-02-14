@@ -68,7 +68,8 @@ type proposalRes struct {
 	ServiceDefinition serviceDefinitionRes `json:"serviceDefinition"`
 
 	// Metrics of the service
-	Metrics json.RawMessage `json:"metrics,omitempty"`
+	// example: {"success": 1, "fail": 2, "timeout": 3}
+	Metrics []byte `json:"metrics,omitempty"`
 }
 
 func proposalToRes(p market.ServiceProposal) proposalRes {
