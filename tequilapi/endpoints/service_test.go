@@ -52,12 +52,12 @@ func TestAddRoutesForServiceAddsRoutes(t *testing.T) {
 		expectedJSON   string
 	}{
 		{
-			http.MethodGet, "/service", "",
-			http.StatusOK, `{"status": "NotRunning"}`,
+			http.MethodGet, "/services", "",
+			http.StatusOK, `[{"proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"NotRunning","options":{"protocol":"","port":0}},{"proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"NotRunning","options":{"protocol":"","port":0}}]`,
 		},
 		{
-			http.MethodPut, "/service", `{"providerId": "node1", "serviceType": "noop"}`,
-			http.StatusCreated, `{"status": "Running"}`,
+			http.MethodPost, "/services", `{"providerId": "node1", "serviceType": "noop"}`,
+			http.StatusCreated, `{"proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"Running","options":{"protocol":"","port":0}}`,
 		},
 	}
 
@@ -86,9 +86,7 @@ func Test_ServiceStatus_NotRunningStateIsReturnedWhenNotStarted(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(
 		t,
-		`{
-            "status" : "NotRunning"
-        }`,
+		`{"proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"NotRunning","options":{"protocol":"","port":0}}`,
 		resp.Body.String(),
 	)
 }
@@ -99,7 +97,7 @@ func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.Create(resp, req, httprouter.Params{})
+	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
 
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 	assert.JSONEq(
@@ -117,7 +115,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.Create(resp, req, httprouter.Params{})
+	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(t,

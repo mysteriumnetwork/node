@@ -33,13 +33,13 @@ type serviceRequest struct {
 	// provider identity
 	// required: true
 	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"provider_id"`
+	ProviderID string `json:"providerId"`
 
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: false
 	// default: openvpn
 	// example: openvpn
-	ServiceType string `json:"service_type"`
+	ServiceType string `json:"serviceType"`
 }
 
 // swagger:model ServiceListDTO
@@ -193,7 +193,6 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 	router.POST("/services", serviceEndpoint.ServiceStart)
 	router.GET("/services/:id", serviceEndpoint.ServiceGet)
 	router.DELETE("/services/:id", serviceEndpoint.ServiceStop)
-
 }
 
 func toServiceRequest(req *http.Request) (*serviceRequest, error) {
@@ -224,6 +223,7 @@ func validateServiceRequest(cr *serviceRequest) *validation.FieldErrorMap {
 	return errors
 }
 
+// ServiceManager represents service manager that will be used for manipulation node services.
 type ServiceManager interface {
 	Start(providerID identity.Identity, serviceType string, options service.Options) (err error)
 	Kill() error
