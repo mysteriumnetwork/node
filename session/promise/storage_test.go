@@ -57,7 +57,7 @@ func Test_Storage_IssuesOneForUnknownID(t *testing.T) {
 	assert.Equal(t, firstPromiseID, stored[0].SequenceID)
 	assert.Nil(t, stored[0].Message)
 	assert.False(t, stored[0].AddedAt.IsZero())
-	assert.False(t, stored[0].UpdatedAt.IsZero())
+	assert.True(t, stored[0].UpdatedAt.IsZero())
 }
 
 func Test_Storage_UpdatesPromise(t *testing.T) {
@@ -73,7 +73,10 @@ func Test_Storage_UpdatesPromise(t *testing.T) {
 		Amount: 1,
 	}
 
-	err = s.Update(id, 1, msg)
+	err = s.Update(id, StoredPromise{
+		SequenceID: 1,
+		Message:    msg,
+	})
 	assert.Nil(t, err)
 
 	promise, err := s.getPromiseByID(id, 1)
@@ -84,7 +87,9 @@ func Test_Storage_UpdatesPromise(t *testing.T) {
 func Test_Storage_UpdateErrsOnNonExistingPromise(t *testing.T) {
 	ms := newMockStorage(nil)
 	s := NewStorage(ms)
-	err := s.Update(id, 1, nil)
+	err := s.Update(id, StoredPromise{
+		SequenceID: 1,
+	})
 	assert.Equal(t, errNotFound, err)
 }
 
@@ -93,7 +98,10 @@ func Test_Storage_Store(t *testing.T) {
 	s := NewStorage(ms)
 
 	mockMsg := Message{}
-	err := s.Store(id, 1, &mockMsg)
+	err := s.Store(id, StoredPromise{
+		SequenceID: 1,
+		Message:    &mockMsg,
+	})
 	assert.Nil(t, err)
 
 	lp, err := s.getLastPromise(id)
@@ -101,7 +109,7 @@ func Test_Storage_Store(t *testing.T) {
 	assert.Equal(t, uint64(1), lp.SequenceID)
 	assert.Equal(t, mockMsg, *lp.Message)
 	assert.False(t, lp.AddedAt.IsZero())
-	assert.False(t, lp.UpdatedAt.IsZero())
+	assert.True(t, lp.UpdatedAt.IsZero())
 }
 
 func Test_Storage_IssuesSecondForKnownID(t *testing.T) {
@@ -116,7 +124,9 @@ func Test_Storage_GetAllKnownIssuers_GetsKnownIdentities(t *testing.T) {
 	ms := newMockStorage(&mock)
 	s := NewStorage(ms)
 	id2 := identity.FromAddress("0x1")
-	err := s.Store(id2, 1, nil)
+	err := s.Store(id2, StoredPromise{
+		SequenceID: 1,
+	})
 	assert.Nil(t, err)
 
 	issuers := s.GetAllKnownIssuers()

@@ -62,10 +62,11 @@ func NewStorage(storage Storer) *Storage {
 
 // StoredPromise is a representation of a promise in storage. It stores the message that the consumer sent,
 type StoredPromise struct {
-	SequenceID uint64 `storm:"id"`
-	Message    *Message
-	AddedAt    time.Time
-	UpdatedAt  time.Time
+	SequenceID       uint64 `storm:"id"`
+	Message          *Message
+	AddedAt          time.Time
+	UpdatedAt        time.Time
+	UnconsumedAmount uint64
 }
 
 // GetNewSeqIDForIssuer returns a new sequenceID for the provided issuer.
@@ -76,7 +77,9 @@ func (s *Storage) GetNewSeqIDForIssuer(issuerID identity.Identity) (uint64, erro
 	lastPromise, err := s.getLastPromise(issuerID)
 	if err != nil && err.Error() == errBoltNotFound.Error() {
 		// we do not have a previous history with the issuer, ask for a promise no1, store it
-		err := s.store(issuerID, firstPromiseID, nil)
+		err := s.store(issuerID, StoredPromise{
+			SequenceID: firstPromiseID,
+		})
 		if err != nil {
 			return 0, err
 		}
@@ -86,34 +89,40 @@ func (s *Storage) GetNewSeqIDForIssuer(issuerID identity.Identity) (uint64, erro
 	}
 
 	newID := lastPromise.SequenceID + 1
-	err = s.store(issuerID, newID, nil)
+	err = s.store(issuerID, StoredPromise{
+		SequenceID: newID,
+	})
 	return newID, err
 }
 
 // Store allows for storing of arbitrary promise.
-func (s *Storage) Store(issuerID identity.Identity, sequenceID uint64, message *Message) error {
+func (s *Storage) Store(issuerID identity.Identity, sp StoredPromise) error {
 	s.Lock()
 	defer s.Unlock()
-	return s.store(issuerID, sequenceID, message)
+	return s.store(issuerID, sp)
 }
 
 // Update updates a promise in the DB
-func (s *Storage) Update(issuerID identity.Identity, sequenceID uint64, msg *Message) error {
+func (s *Storage) Update(issuerID identity.Identity, sp StoredPromise) error {
 	s.Lock()
 	defer s.Unlock()
 
 	// The storage layers update doesn't really care if the promise exists, it will just insert a new one.
 	// In this case - we'll want to make sure we don't update something that does not exist
-	_, err := s.getPromiseByID(issuerID, sequenceID)
+	_, err := s.getPromiseByID(issuerID, sp.SequenceID)
 	if err != nil {
 		return err
 	}
 
-	promiseToUpdate := StoredPromise{
-		SequenceID: sequenceID,
-		Message:    msg,
-	}
-	return s.update(issuerID, promiseToUpdate)
+	return s.update(issuerID, sp)
+}
+
+// GetLastPromise fetches the last promise for the provider
+func (s *Storage) GetLastPromise(issuerID identity.Identity) (StoredPromise, error) {
+	s.Lock()
+	defer s.Unlock()
+	promise, err := s.getLastPromise(issuerID)
+	return promise, err
 }
 
 // GetAllKnownIssuers returns a list of known issuer addresses
@@ -162,15 +171,9 @@ func (s *Storage) update(issuerID identity.Identity, promise StoredPromise) erro
 	return s.storage.Update(getBucketNameFromIssuer(issuerID), &promise)
 }
 
-func (s *Storage) store(issuerID identity.Identity, seqID uint64, msg *Message) error {
-	currentTime := time.Now().UTC()
-	promiseToStore := StoredPromise{
-		AddedAt:    currentTime,
-		UpdatedAt:  currentTime,
-		SequenceID: seqID,
-		Message:    msg,
-	}
-	return s.storage.Store(getBucketNameFromIssuer(issuerID), &promiseToStore)
+func (s *Storage) store(issuerID identity.Identity, sp StoredPromise) error {
+	sp.AddedAt = time.Now().UTC()
+	return s.storage.Store(getBucketNameFromIssuer(issuerID), &sp)
 }
 
 func getBucketNameFromIssuer(issuerID identity.Identity) string {
