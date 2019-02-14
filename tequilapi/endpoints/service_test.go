@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ func Test_ServiceStatus_NotRunningStateIsReturnedWhenNotStarted(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.Status(resp, req, httprouter.Params{})
+	serviceEndpoint.ServiceGet(resp, req, httprouter.Params{})
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,19 +33,31 @@ type serviceRequest struct {
 	// provider identity
 	// required: true
 	// example: 0x0000000000000000000000000000000000000002
-	ProviderID string `json:"providerId"`
+	ProviderID string `json:"provider_id"`
 
-	// service type. Possible values are "openvpn" and "noop"
+	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: false
 	// default: openvpn
 	// example: openvpn
-	ServiceType string `json:"serviceType"`
+	ServiceType string `json:"service_type"`
 }
 
-// swagger:model ServiceStatusDTO
-type serviceResponse struct {
+// swagger:model ServiceListDTO
+type serviceList []serviceInfo
+
+// swagger:model ServiceInfoDTO
+type serviceInfo struct {
+	Proposal proposalRes `json:"proposal"`
 	// example: Running
-	Status string `json:"status"`
+	Status  string         `json:"status"`
+	Options serviceOptions `json:"options"`
+}
+
+type serviceOptions struct {
+	// example: UDP
+	Protocol string `json:"protocol"`
+	// example: 1190
+	Port int `json:"port"`
 }
 
 // ServiceEndpoint struct represents /service resource and it's sub-resources
@@ -62,37 +74,56 @@ func NewServiceEndpoint(serviceManager ServiceManager) *ServiceEndpoint {
 	}
 }
 
-// Status returns status of service
-// swagger:operation GET /service Service serviceStatus
+// ServiceList provides a list of running services on the node.
+// swagger:operation GET /services Service serviceList
 // ---
-// summary: Returns service status
-// description: Returns status of current service
+// summary: List of services
+// description: ServiceList provides a list of running services on the node.
 // responses:
 //   200:
-//     description: Status
+//     description: List of running services
 //     schema:
-//       "$ref": "#/definitions/ServiceStatusDTO"
-func (se *ServiceEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	statusResponse := toServiceResponse(se.serviceState)
+//       "$ref": "#/definitions/ServiceListDTO"
+func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+	statusResponse := toServiceListResponse(se.serviceState)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
-// Create starts new service
-// swagger:operation PUT /service Service createService
+// ServiceGet provides info for requested service on the node.
+// swagger:operation GET /services/:id Service serviceGet
 // ---
-// summary: Starts starts service
+// summary: Information about service
+// description: ServiceGet provides info for requested service on the node.
+// responses:
+//   200:
+//     description: Service detailed information
+//     schema:
+//       "$ref": "#/definitions/ServiceInfoDTO"
+//   404:
+//     description: Service not found
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+	statusResponse := toServiceInfoResponse(se.serviceState)
+	utils.WriteAsJSON(statusResponse, resp)
+}
+
+// ServiceStart starts requested service on the node.
+// swagger:operation POST /service Service serviceStart
+// ---
+// summary: Starts service
 // description: Provider starts serving new service to consumers
 // parameters:
 //   - in: body
 //     name: body
-//     description: Parameters in body (providerId) required for starting new service
+//     description: Parameters in body (providerID) required for starting new service
 //     schema:
 //       $ref: "#/definitions/ServiceRequestDTO"
 // responses:
 //   201:
 //     description: Service started
 //     schema:
-//       "$ref": "#/definitions/ServiceStatusDTO"
+//       "$ref": "#/definitions/ServiceInfoDTO"
 //   400:
 //     description: Bad request
 //     schema:
@@ -113,7 +144,7 @@ func (se *ServiceEndpoint) Status(resp http.ResponseWriter, _ *http.Request, _ h
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ce *ServiceEndpoint) Create(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	sr, err := toServiceRequest(req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
@@ -126,40 +157,43 @@ func (ce *ServiceEndpoint) Create(resp http.ResponseWriter, req *http.Request, p
 		return
 	}
 
-	ce.serviceState = service.Running
+	se.serviceState = service.Running
 
 	resp.WriteHeader(http.StatusCreated)
-	ce.Status(resp, req, params)
+	se.ServiceGet(resp, req, params)
 }
 
-// Kill stops service
-// swagger:operation DELETE /service Service killService
+// ServiceStop stops service on the node.
+// swagger:operation DELETE /service/:id Service serviceStop
 // ---
 // summary: Stops service
 // description: Stops current service
 // responses:
 //   202:
 //     description: Service Stopped
-//   409:
-//     description: Conflict. No service exists
+//   404:
+//     description: No service exists
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (ce *ServiceEndpoint) Kill(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	ce.serviceState = service.NotRunning
+func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+	se.serviceState = service.NotRunning
 
 	resp.WriteHeader(http.StatusAccepted)
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager *service.Manager) {
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager) {
 	serviceEndpoint := NewServiceEndpoint(serviceManager)
-	router.GET("/service", serviceEndpoint.Status)
-	router.PUT("/service", serviceEndpoint.Create)
-	router.DELETE("/service", serviceEndpoint.Kill)
+
+	router.GET("/services", serviceEndpoint.ServiceList)
+	router.POST("/services", serviceEndpoint.ServiceStart)
+	router.GET("/services/:id", serviceEndpoint.ServiceGet)
+	router.DELETE("/services/:id", serviceEndpoint.ServiceStop)
+
 }
 
 func toServiceRequest(req *http.Request) (*serviceRequest, error) {
@@ -169,10 +203,14 @@ func toServiceRequest(req *http.Request) (*serviceRequest, error) {
 	return &serviceRequest, err
 }
 
-func toServiceResponse(state service.State) serviceResponse {
-	return serviceResponse{
+func toServiceInfoResponse(state service.State) serviceInfo {
+	return serviceInfo{
 		Status: string(state),
 	}
+}
+
+func toServiceListResponse(state service.State) serviceList {
+	return serviceList{{Status: string(state)}, {Status: string(state)}}
 }
 
 func validateServiceRequest(cr *serviceRequest) *validation.FieldErrorMap {
