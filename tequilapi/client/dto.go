@@ -103,3 +103,34 @@ type SignatureDTO struct {
 	S string `json:"s"`
 	V uint8  `json:"v"`
 }
+
+// ConnectOptions copied from tequilapi endpoint
+type ConnectOptions struct {
+	DisableKillSwitch bool `json:"killSwitch"`
+}
+
+// SessionsDTO copied from tequilapi endpoint
+type SessionsDTO struct {
+	Sessions []SessionDTO `json:"sessions"`
+}
+
+// SessionDTO copied from tequilapi endpoint
+type SessionDTO struct {
+	SessionID string `json:"sessionId"`
+
+	ProviderID string `json:"providerId"`
+
+	ServiceType string `json:"serviceType"`
+
+	ProviderCountry string `json:"providerCountry"`
+
+	DateStarted string `json:"dateStarted"`
+
+	BytesSent uint64 `json:"bytesSent"`
+
+	BytesReceived uint64 `json:"bytesReceived"`
+
+	Duration uint64 `json:"duration"`
+
+	Status string `json:"status"`
+}

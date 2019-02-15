@@ -21,8 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-
-	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 )
 
 // NewClient returns a new instance of Client
@@ -86,12 +84,12 @@ func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDa
 }
 
 // Connect initiates a new connection to a host identified by providerID
-func (client *Client) Connect(consumerID, providerID, serviceType string, options endpoints.ConnectOptions) (status StatusDTO, err error) {
+func (client *Client) Connect(consumerID, providerID, serviceType string, options ConnectOptions) (status StatusDTO, err error) {
 	payload := struct {
-		Identity    string                   `json:"consumerId"`
-		ProviderID  string                   `json:"providerId"`
-		ServiceType string                   `json:"serviceType"`
-		Options     endpoints.ConnectOptions `json:"connectOptions"`
+		Identity    string         `json:"consumerId"`
+		ProviderID  string         `json:"providerId"`
+		ServiceType string         `json:"serviceType"`
+		Options     ConnectOptions `json:"connectOptions"`
 	}{
 		Identity:    consumerID,
 		ProviderID:  providerID,
@@ -242,8 +240,8 @@ func (client *Client) Stop() error {
 }
 
 // GetSessions returns all sessions from history
-func (client *Client) GetSessions() (endpoints.SessionsDTO, error) {
-	sessions := endpoints.SessionsDTO{}
+func (client *Client) GetSessions() (SessionsDTO, error) {
+	sessions := SessionsDTO{}
 	response, err := client.http.Get("sessions", url.Values{})
 	if err != nil {
 		return sessions, err
@@ -255,7 +253,7 @@ func (client *Client) GetSessions() (endpoints.SessionsDTO, error) {
 }
 
 // filterSessionsByType removes all sessions of irrelevant types
-func filterSessionsByType(serviceType string, sessions endpoints.SessionsDTO) endpoints.SessionsDTO {
+func filterSessionsByType(serviceType string, sessions SessionsDTO) SessionsDTO {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.ServiceType == serviceType {
@@ -268,7 +266,7 @@ func filterSessionsByType(serviceType string, sessions endpoints.SessionsDTO) en
 }
 
 // filterSessionsByStatus removes all sessions with non matching status
-func filterSessionsByStatus(status string, sessions endpoints.SessionsDTO) endpoints.SessionsDTO {
+func filterSessionsByStatus(status string, sessions SessionsDTO) SessionsDTO {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.Status == status {
@@ -281,14 +279,14 @@ func filterSessionsByStatus(status string, sessions endpoints.SessionsDTO) endpo
 }
 
 // GetSessionsByType returns sessions from history filtered by type
-func (client *Client) GetSessionsByType(serviceType string) (endpoints.SessionsDTO, error) {
+func (client *Client) GetSessionsByType(serviceType string) (SessionsDTO, error) {
 	sessions, err := client.GetSessions()
 	sessions = filterSessionsByType(serviceType, sessions)
 	return sessions, err
 }
 
 // GetSessionsByStatus returns sessions from history filtered by their status
-func (client *Client) GetSessionsByStatus(status string) (endpoints.SessionsDTO, error) {
+func (client *Client) GetSessionsByStatus(status string) (SessionsDTO, error) {
 	sessions, err := client.GetSessions()
 	sessions = filterSessionsByStatus(status, sessions)
 	return sessions, err
