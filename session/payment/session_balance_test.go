@@ -54,7 +54,7 @@ func NewMockSessionBalance(mpv *MockPromiseValidator, mps *MockPromiseStorage, m
 	)
 }
 
-func Test_ProviderPaymentOchestratorStartStop(t *testing.T) {
+func Test_SessionBalanceStartStop(t *testing.T) {
 	orch := NewMockSessionBalance(MPV, MPS, MBT)
 	go func() {
 		orch.Stop()
@@ -63,7 +63,7 @@ func Test_ProviderPaymentOchestratorStartStop(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_ProviderPaymentOchestratorSendsBalance(t *testing.T) {
+func Test_SessionBalanceSendsBalance(t *testing.T) {
 	orch := NewMockSessionBalance(MPV, MPS, MBT)
 	defer orch.Stop()
 	go orch.Start()
@@ -71,7 +71,7 @@ func Test_ProviderPaymentOchestratorSendsBalance(t *testing.T) {
 	assert.Exactly(t, balance.Message{SequenceID: 1, Balance: 0}, <-BalanceSender.balanceMessages)
 }
 
-func Test_ProviderPaymentOchestratorSendsBalance_Timeouts(t *testing.T) {
+func Test_SessionBalanceSendsBalance_Timeouts(t *testing.T) {
 	orch := NewMockSessionBalance(MPV, MPS, MBT)
 	defer orch.Stop()
 
@@ -89,7 +89,7 @@ func Test_ProviderPaymentOchestratorSendsBalance_Timeouts(t *testing.T) {
 	<-testDone
 }
 
-func Test_ProviderPaymentOchestratorInvalidPromise(t *testing.T) {
+func Test_SessionBalanceInvalidPromise(t *testing.T) {
 	mpv := *MPV
 	mpv.isValid = false
 

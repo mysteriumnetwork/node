@@ -31,7 +31,7 @@ const firstPromiseID = uint64(1)
 
 var (
 	// ErrPromiseNotFound represents the error we return when trying to update a non existing promise
-	ErrPromiseNotFound = errors.New("Promise not found")
+	ErrPromiseNotFound = errors.New("promise not found")
 	// errBoltNotFound represents the bolts not found error
 	errBoltNotFound = errors.New("not found")
 )
@@ -60,7 +60,7 @@ func NewStorage(storage Storer) *Storage {
 	}
 }
 
-// StoredPromise is a representation of a promise in storage. It stores the message that the consumer sent,
+// StoredPromise is a representation of a promise in storage. It stores the message that the consumer sent.
 type StoredPromise struct {
 	SequenceID       uint64 `storm:"id"`
 	Message          *Message

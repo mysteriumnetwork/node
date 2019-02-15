@@ -34,7 +34,7 @@ var (
 	id       = identity.FromAddress("0x0")
 	timeMock = time.Now()
 	mock     = map[string][]StoredPromise{
-		getBucketNameFromIssuer(id): []StoredPromise{
+		getBucketNameFromIssuer(id): {
 			{
 				SequenceID: 1,
 				AddedAt:    timeMock,
@@ -131,8 +131,18 @@ func Test_Storage_GetAllKnownIssuers_GetsKnownIdentities(t *testing.T) {
 
 	issuers := s.GetAllKnownIssuers()
 	assert.Len(t, issuers, 2)
-	assert.Equal(t, id, issuers[0])
-	assert.Equal(t, id2, issuers[1])
+
+	assert.True(t, containsIdentity(issuers, id))
+	assert.True(t, containsIdentity(issuers, id2))
+}
+
+func containsIdentity(s []identity.Identity, e identity.Identity) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
 
 func Test_Storage_GetAllKnownIssuers_ReturnsEmptyIdentityList(t *testing.T) {
