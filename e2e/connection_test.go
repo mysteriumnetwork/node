@@ -23,7 +23,6 @@ import (
 
 	"github.com/cihub/seelog"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
-	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -125,7 +124,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, serviceType, endpoints.ConnectOptions{
+	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, serviceType, tequilapi_client.ConnectOptions{
 		DisableKillSwitch: true,
 	})
 
@@ -178,7 +177,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	serviceTypeAssertionMap[serviceType](t, se)
 }
 
-type sessionAsserter func(t *testing.T, session endpoints.SessionDTO)
+type sessionAsserter func(t *testing.T, session tequilapi_client.SessionDTO)
 
 var serviceTypeAssertionMap = map[string]sessionAsserter{
 	"openvpn":   assertStatsNotZero,
@@ -186,12 +185,12 @@ var serviceTypeAssertionMap = map[string]sessionAsserter{
 	"wireguard": assertStatsNotZero,
 }
 
-func assertStatsNotZero(t *testing.T, session endpoints.SessionDTO) {
+func assertStatsNotZero(t *testing.T, session tequilapi_client.SessionDTO) {
 	assert.NotEqual(t, uint64(0), session.BytesSent)
 	assert.NotEqual(t, uint64(0), session.BytesReceived)
 }
 
-func assertStatsZero(t *testing.T, session endpoints.SessionDTO) {
+func assertStatsZero(t *testing.T, session tequilapi_client.SessionDTO) {
 	assert.Equal(t, uint64(0), session.BytesSent)
 	assert.Equal(t, uint64(0), session.BytesReceived)
 }
