@@ -77,13 +77,12 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		transportOptions := serviceOptions.(openvpn_service.Options)
 
 		mapPort := func() func() {
-			if location.OutIP != location.PubIP {
-				return mapping.PortMapping(
-					transportOptions.OpenvpnProtocol,
-					transportOptions.OpenvpnPort,
-					"Myst node openvpn port mapping")
-			}
-			return func() {}
+			return mapping.GetPortMappingFunc(
+				location.PubIP,
+				location.OutIP,
+				transportOptions.OpenvpnProtocol,
+				transportOptions.OpenvpnPort,
+				"Myst node OpenVPN port mapping")
 		}
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.OpenvpnProtocol)

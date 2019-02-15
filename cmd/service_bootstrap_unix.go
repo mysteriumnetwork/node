@@ -48,17 +48,19 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 				return nil, market.ServiceProposal{}, err
 			}
 
+			wgOptions := serviceOptions.(wireguard_service.Options)
+
 			mapPort := func(port int) func() {
-				if location.OutIP != location.PubIP {
-					return mapping.PortMapping(
-						"UDP",
-						port,
-						"Myst node wireguard port mapping")
-				}
-				return func() {}
+				return mapping.GetPortMappingFunc(
+					location.PubIP,
+					location.OutIP,
+					"UDP",
+					port,
+					"Myst node wireguard(tm) port mapping")
 			}
 
-			return wireguard_service.NewManager(location, di.NATService, mapPort), wireguard_service.GetProposal(location.Country), nil
+			return wireguard_service.NewManager(location, di.NATService, mapPort, wgOptions),
+				wireguard_service.GetProposal(location.Country), nil
 		},
 	)
 }

@@ -38,7 +38,12 @@ import (
 const logPrefix = "[service-wireguard] "
 
 // NewManager creates new instance of Wireguard service
-func NewManager(location location.ServiceLocationInfo, natService nat.NATService, portMap func(port int) (releasePortMapping func())) *Manager {
+func NewManager(
+	location location.ServiceLocationInfo,
+	natService nat.NATService,
+	portMap func(port int) (releasePortMapping func()),
+	options Options) *Manager {
+
 	resourceAllocator := resources.NewAllocator()
 	return &Manager{
 		natService: natService,
@@ -48,7 +53,7 @@ func NewManager(location location.ServiceLocationInfo, natService nat.NATService
 		currentLocation: location.OutIP,
 
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(location, &resourceAllocator, portMap)
+			return endpoint.NewConnectionEndpoint(location, &resourceAllocator, portMap, options.ConnectDelay)
 		},
 	}
 }

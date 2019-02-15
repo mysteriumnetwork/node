@@ -27,7 +27,12 @@ import (
 )
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
-func NewConnectionEndpoint(location location.ServiceLocationInfo, resourceAllocator *resources.Allocator, portMap func(port int) (releasePortMapping func())) (wg.ConnectionEndpoint, error) {
+func NewConnectionEndpoint(
+	location location.ServiceLocationInfo,
+	resourceAllocator *resources.Allocator,
+	portMap func(port int) (releasePortMapping func()),
+	connectDelay int) (wg.ConnectionEndpoint, error) {
+
 	client, err := userspace.NewWireguardClient()
 	return &connectionEndpoint{
 		wgClient:           client,
@@ -35,5 +40,6 @@ func NewConnectionEndpoint(location location.ServiceLocationInfo, resourceAlloca
 		resourceAllocator:  resourceAllocator,
 		mapPort:            portMap,
 		releasePortMapping: func() {},
+		connectDelay:       connectDelay,
 	}, err
 }

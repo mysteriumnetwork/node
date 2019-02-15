@@ -30,7 +30,6 @@ import (
 )
 
 const logPrefix = "[wireguard-connection-endpoint] "
-const connectDelayForPortMap = 2000
 
 type wgClient interface {
 	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
@@ -78,9 +77,6 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	if config == nil {
 		// nil config mean its a provider Start
 		ce.releasePortMapping = ce.mapPort(port)
-		if ce.location.OutIP != ce.location.PubIP {
-			ce.connectDelay = connectDelayForPortMap
-		}
 		privateKey, err := key.GeneratePrivateKey()
 		if err != nil {
 			return err
@@ -124,7 +120,9 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	config.Provider.Endpoint = ce.endpoint
 	config.Consumer.IPAddress = ce.ipAddr
 	config.Consumer.IPAddress.IP = consumerIP(ce.ipAddr)
-	config.Consumer.ConnectDelay = ce.connectDelay
+	if ce.location.OutIP != ce.location.PubIP {
+		config.Consumer.ConnectDelay = ce.connectDelay
+	}
 	return config, nil
 }
 

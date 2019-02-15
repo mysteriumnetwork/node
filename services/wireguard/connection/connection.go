@@ -64,7 +64,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return func() {}
 	}
 
-	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(location.ServiceLocationInfo{}, &resourceAllocator, fakePortMapper)
+	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(location.ServiceLocationInfo{}, &resourceAllocator, fakePortMapper, 0)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new connection endpoint")
 	}
