@@ -26,6 +26,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/location"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
@@ -57,7 +58,13 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	c.config.Consumer.IPAddress = config.Consumer.IPAddress
 
 	resourceAllocator := resources.NewAllocator()
-	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint("", &resourceAllocator)
+
+	// We do not need port mapping for consumer, since it initiates the session
+	fakePortMapper := func(port int) (releasePortMapping func()) {
+		return func() {}
+	}
+
+	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(location.ServiceLocationInfo{}, &resourceAllocator, fakePortMapper, 0)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new connection endpoint")
 	}
@@ -69,6 +76,12 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
 		return errors.Wrap(err, "failed to start connection endpoint")
+	}
+
+	// Provider requests to delay consumer connection since it might be in a process of setting up NAT traversal for given consumer
+	if config.Consumer.ConnectDelay > 0 {
+		log.Infof("%s delaying connect for %v milliseconds", logPrefix, config.Consumer.ConnectDelay)
+		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
 	}
 
 	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {

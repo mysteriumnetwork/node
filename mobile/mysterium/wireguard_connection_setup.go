@@ -37,7 +37,7 @@ import (
 const (
 	//taken from android-wireguard project
 	androidTunMtu = 1280
-	tag           = "[wg connection] "
+	logPrefix     = "[wg connection] "
 )
 
 // WireguardTunnelSetup exposes api for caller to implement external tunnel setup
@@ -190,12 +190,12 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceCo
 	if err != nil {
 		return nil, err
 	}
-	log.Info(tag, "Tun value is: ", fd)
+	log.Info(logPrefix, "Tun value is: ", fd)
 	tun, err := newDeviceFromFd(fd)
 	if err == nil {
 		//non-fatal
 		name, nameErr := tun.Name()
-		log.Info(tag, "Name value: ", name, " Possible error: ", nameErr)
+		log.Info(logPrefix, "Name value: ", name, " Possible error: ", nameErr)
 	}
 
 	return tun, err
@@ -212,6 +212,11 @@ type wireguardConnection struct {
 }
 
 func (wg *wireguardConnection) Start(options connection.ConnectOptions) error {
+	var config wireguard.ServiceConfig
+	if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
+		return errors.Wrap(err, "failed to unmarshal connection config")
+	}
+
 	device, err := wg.deviceFactory(options)
 	if err != nil {
 		return errors.Wrap(err, "failed to start wireguard connection")
@@ -219,6 +224,11 @@ func (wg *wireguardConnection) Start(options connection.ConnectOptions) error {
 
 	wg.device = device
 	wg.stateChannel <- connection.Connecting
+
+	if config.Consumer.ConnectDelay > 0 {
+		log.Infof("%s delaying connect for %v milliseconds", logPrefix, config.Consumer.ConnectDelay)
+		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
+	}
 
 	if err := wg.doInit(); err != nil {
 		return errors.Wrap(err, "failed to start wireguard connection")
@@ -262,7 +272,7 @@ func (wg *wireguardConnection) updateStatistics() {
 	var err error
 	defer func() {
 		if err != nil {
-			log.Error(tag, "Error updating statistics: ", err)
+			log.Error(logPrefix, "Error updating statistics: ", err)
 		}
 	}()
 

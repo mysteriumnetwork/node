@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/mysteriumnetwork/node/core/location"
+
 	log "github.com/cihub/seelog"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
@@ -39,13 +41,16 @@ type wgClient interface {
 }
 
 type connectionEndpoint struct {
-	iface             string
-	privateKey        string
-	publicIP          string
-	ipAddr            net.IPNet
-	endpoint          net.UDPAddr
-	resourceAllocator *resources.Allocator
-	wgClient          wgClient
+	iface              string
+	privateKey         string
+	location           location.ServiceLocationInfo
+	ipAddr             net.IPNet
+	endpoint           net.UDPAddr
+	resourceAllocator  *resources.Allocator
+	wgClient           wgClient
+	releasePortMapping func()
+	mapPort            func(port int) (releasePortMapping func())
+	connectDelay       int // connect delay in milliseconds
 }
 
 // Start starts and configure wireguard network interface for providing service.
@@ -67,9 +72,11 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 
 	ce.iface = iface
 	ce.endpoint.Port = port
-	ce.endpoint.IP = net.ParseIP(ce.publicIP)
+	ce.endpoint.IP = net.ParseIP(ce.location.PubIP)
 
 	if config == nil {
+		// nil config mean its a provider Start
+		ce.releasePortMapping = ce.mapPort(port)
 		privateKey, err := key.GeneratePrivateKey()
 		if err != nil {
 			return err
@@ -113,6 +120,9 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	config.Provider.Endpoint = ce.endpoint
 	config.Consumer.IPAddress = ce.ipAddr
 	config.Consumer.IPAddress.IP = consumerIP(ce.ipAddr)
+	if ce.location.OutIP != ce.location.PubIP {
+		config.Consumer.ConnectDelay = ce.connectDelay
+	}
 	return config, nil
 }
 
@@ -122,6 +132,8 @@ func (ce *connectionEndpoint) ConfigureRoutes(ip net.IP) error {
 
 // Stop closes wireguard client and destroys wireguard network interface.
 func (ce *connectionEndpoint) Stop() error {
+	ce.releasePortMapping()
+
 	if err := ce.wgClient.Close(); err != nil {
 		return err
 	}
