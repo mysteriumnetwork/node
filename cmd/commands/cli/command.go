@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/metadata"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
-	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
 )
@@ -181,7 +180,7 @@ func (c *cliApp) connect(argsString string) {
 		}
 	}
 
-	connectOptions := endpoints.ConnectOptions{DisableKillSwitch: disableKill}
+	connectOptions := tequilapi_client.ConnectOptions{DisableKillSwitch: disableKill}
 
 	if consumerID == "new" {
 		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)
