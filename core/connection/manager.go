@@ -166,32 +166,37 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 
 	messageChan := make(chan balance.Message, 1)
 
-	// TODO: load initial promise state
-	payments, err := manager.paymentIssuerFactory(promise.State{}, messageChan, dialog, consumerID, providerID)
-	if err != nil {
-		return err
-	}
-
-	cancel = append(cancel, func() { payments.Stop() })
-
-	go manager.payForService(payments)
-
 	consumerInfo := session.ConsumerInfo{
 		// TODO: once we're supporting payments from another identity make the changes accordingly
 		IssuerID:          consumerID,
 		MystClientVersion: metadata.VersionAsString(),
 	}
 
-	sessionID, sessionConfig, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
+	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
 	if err != nil {
 		return err
 	}
 
-	cancel = append(cancel, func() { session.RequestSessionDestroy(dialog, sessionID) })
+	cancel = append(cancel, func() { session.RequestSessionDestroy(dialog, s.ID) })
+
+	var promiseState promise.State
+	if paymentInfo != nil {
+		promiseState.Amount = paymentInfo.LastPromise.Amount
+		promiseState.Seq = paymentInfo.LastPromise.SequenceID
+	}
+
+	payments, err := manager.paymentIssuerFactory(promiseState, messageChan, dialog, consumerID, providerID)
+	if err != nil {
+		return err
+	}
+
+	cancel = append(cancel, payments.Stop)
+
+	go manager.payForService(payments)
 
 	// set the session info for future use
 	manager.sessionInfo = SessionInfo{
-		SessionID:  sessionID,
+		SessionID:  s.ID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
 	}
@@ -209,8 +214,8 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 	})
 
 	connectOptions := ConnectOptions{
-		SessionID:     sessionID,
-		SessionConfig: sessionConfig,
+		SessionID:     s.ID,
+		SessionConfig: s.Config,
 		ConsumerID:    consumerID,
 		ProviderID:    providerID,
 		Proposal:      proposal,
@@ -223,7 +228,7 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 
 	//consume statistics right after start - openvpn3 will publish them even before connected state
 	go manager.consumeStats(statisticsChannel)
-	err = manager.waitForConnectedState(stateChannel, sessionID)
+	err = manager.waitForConnectedState(stateChannel, s.ID)
 	if err != nil {
 		return err
 	}

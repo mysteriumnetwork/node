@@ -20,15 +20,25 @@ package session
 import (
 	"encoding/json"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/promise"
 )
+
+const consumerLogPrefix = "[session-create-consumer] "
+
+// PromiseLoader loads the last known promise info for the given consumer
+type PromiseLoader interface {
+	GetLastPromise(issuerID identity.Identity) (promise.StoredPromise, error)
+}
 
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
 	sessionCreator Creator
 	peerID         identity.Identity
 	configProvider ConfigProvider
+	promiseLoader  PromiseLoader
 }
 
 // Creator defines method for session creation
@@ -70,12 +80,31 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 				destroyCallback()
 			}()
 		}
-		return responseWithSession(sessionInstance, config, nil), nil
+		return responseWithSession(sessionInstance, config, consumer.loadPaymentInfo(issuerID)), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
 	default:
 		return responseInternalError, nil
 	}
+}
+
+func (consumer *createConsumer) loadPaymentInfo(issuerID identity.Identity) *PaymentInfo {
+	sp, err := consumer.promiseLoader.GetLastPromise(issuerID)
+	if err != nil {
+		log.Trace(consumerLogPrefix, "could not load promise info, defaulting to nil payment info", err)
+		return nil
+	}
+	pi := &PaymentInfo{
+		LastPromise: LastPromise{
+			SequenceID: sp.SequenceID,
+		},
+		FreeCredit: sp.UnconsumedAmount,
+	}
+	if sp.Message != nil {
+		pi.LastPromise.Amount = sp.Message.Amount
+		log.Trace(consumerLogPrefix, "payment info loaded")
+	}
+	return pi
 }
 
 func responseWithSession(sessionInstance Session, config ServiceConfiguration, pi *PaymentInfo) CreateResponse {

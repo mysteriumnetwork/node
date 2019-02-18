@@ -36,7 +36,7 @@ func TestProducer_RequestSessionDestroy(t *testing.T) {
 	assert.NoError(t, err)
 
 	destroySender := &fakeDestroySender{}
-	err = RequestSessionDestroy(destroySender, sid)
+	err = RequestSessionDestroy(destroySender, sid.ID)
 	assert.NoError(t, err)
 }
 

@@ -47,7 +47,7 @@ func (producer *createProducer) Produce() (requestPtr interface{}) {
 }
 
 // RequestSessionCreate requests session creation and returns session DTO
-func RequestSessionCreate(sender communication.Sender, proposalID int, config interface{}, ci ConsumerInfo) (sessionID ID, sessionConfig json.RawMessage, err error) {
+func RequestSessionCreate(sender communication.Sender, proposalID int, config interface{}, ci ConsumerInfo) (session SessionDto, pi *PaymentInfo, err error) {
 	sessionCreateConfigJSON, err := json.Marshal(config)
 	if err != nil {
 		return
@@ -68,7 +68,12 @@ func RequestSessionCreate(sender communication.Sender, proposalID int, config in
 		return
 	}
 
-	sessionID = response.Session.ID
-	sessionConfig = response.Session.Config
+	session = SessionDto{
+		ID:     response.Session.ID,
+		Config: response.Session.Config,
+	}
+	if response.PaymentInfo != nil {
+		pi = response.PaymentInfo
+	}
 	return
 }

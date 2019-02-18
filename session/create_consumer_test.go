@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,6 +31,11 @@ var (
 	config       = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
 	mockConsumer = func(json.RawMessage) (ServiceConfiguration, DestroyCallback, error) {
 		return config, nil, nil
+	}
+	mockID = identity.FromAddress("0x0")
+	errMpl = errors.New("test")
+	mpl    = &mockPromiseLoader{
+		errorToReturn: errMpl,
 	}
 )
 
@@ -44,6 +50,7 @@ func TestConsumer_Success(t *testing.T) {
 		sessionCreator: mockManager,
 		peerID:         identity.FromAddress("peer-id"),
 		configProvider: mockConsumer,
+		promiseLoader:  mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -73,6 +80,7 @@ func TestConsumer_ErrorInvalidProposal(t *testing.T) {
 	consumer := createConsumer{
 		sessionCreator: mockManager,
 		configProvider: mockConsumer,
+		promiseLoader:  mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -89,6 +97,7 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 	consumer := createConsumer{
 		sessionCreator: mockManager,
 		configProvider: mockConsumer,
+		promiseLoader:  mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -109,6 +118,7 @@ func TestConsumer_UsesIssuerID(t *testing.T) {
 		sessionCreator: mockManager,
 		peerID:         identity.FromAddress("peer-id"),
 		configProvider: mockConsumer,
+		promiseLoader:  mpl,
 	}
 
 	issuerID := identity.FromAddress("some-peer-id")
@@ -121,6 +131,61 @@ func TestConsumer_UsesIssuerID(t *testing.T) {
 	_, err := consumer.Consume(request)
 	assert.Nil(t, err)
 	assert.Equal(t, issuerID, mockManager.lastIssuerID)
+}
+
+func TestConsumer_loadPaymentInfo_NilOnError(t *testing.T) {
+	mockManager := &managerFake{}
+	consumer := createConsumer{
+		sessionCreator: mockManager,
+		configProvider: mockConsumer,
+		promiseLoader:  mpl,
+	}
+	pi := consumer.loadPaymentInfo(mockID)
+	assert.Nil(t, pi)
+}
+
+func TestConsumer_loadPaymentInfo_ZeroAmountOnNoMessage(t *testing.T) {
+	mplCopy := *mpl
+	mplCopy.errorToReturn = nil
+	mplCopy.promiseToReturn = promise.StoredPromise{
+		SequenceID:       10,
+		UnconsumedAmount: 0,
+	}
+	mockManager := &managerFake{}
+	consumer := createConsumer{
+		sessionCreator: mockManager,
+		configProvider: mockConsumer,
+		promiseLoader:  &mplCopy,
+	}
+	pi := consumer.loadPaymentInfo(mockID)
+	assert.NotNil(t, pi)
+	assert.Equal(t, mplCopy.promiseToReturn.SequenceID, pi.LastPromise.SequenceID)
+	assert.Equal(t, uint64(0), pi.LastPromise.Amount)
+	assert.Equal(t, mplCopy.promiseToReturn.UnconsumedAmount, pi.FreeCredit)
+}
+
+func TestConsumer_loadPaymentInfo_LoadsProperInfo(t *testing.T) {
+	mplCopy := *mpl
+	mplCopy.errorToReturn = nil
+	mplCopy.promiseToReturn = promise.StoredPromise{
+		SequenceID:       10,
+		UnconsumedAmount: 200,
+		Message: &promise.Message{
+			Amount:     300,
+			SequenceID: 10,
+		},
+	}
+	mockManager := &managerFake{}
+	consumer := createConsumer{
+		sessionCreator: mockManager,
+		configProvider: mockConsumer,
+		promiseLoader:  &mplCopy,
+	}
+	pi := consumer.loadPaymentInfo(mockID)
+	assert.NotNil(t, pi)
+	assert.Equal(t, mplCopy.promiseToReturn.SequenceID, pi.LastPromise.SequenceID)
+	assert.Equal(t, mplCopy.promiseToReturn.Message.Amount, pi.LastPromise.Amount)
+	assert.Equal(t, mplCopy.promiseToReturn.UnconsumedAmount, pi.FreeCredit)
 }
 
 // managerFake represents fake Manager usually useful in tests
@@ -143,4 +208,13 @@ func (manager *managerFake) Create(consumerID, issuerID identity.Identity, propo
 // Destroy fake destroy function
 func (manager *managerFake) Destroy(consumerID identity.Identity, sessionID string) error {
 	return nil
+}
+
+type mockPromiseLoader struct {
+	promiseToReturn promise.StoredPromise
+	errorToReturn   error
+}
+
+func (mpl *mockPromiseLoader) GetLastPromise(identity.Identity) (promise.StoredPromise, error) {
+	return mpl.promiseToReturn, mpl.errorToReturn
 }
