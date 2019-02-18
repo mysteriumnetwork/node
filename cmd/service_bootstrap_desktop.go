@@ -127,7 +127,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator) communication.DialogHandler {
-		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, nodeOptions)
+		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, di.PromiseStorage, nodeOptions)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig)
 	}
 	newDiscovery := func() *registry.Discovery {

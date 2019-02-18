@@ -18,6 +18,7 @@
 package provider
 
 import (
+	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/money"
@@ -47,7 +48,8 @@ type BalanceTracker struct {
 
 	totalPromised uint64
 	balance       uint64
-	stop          chan struct{}
+
+	sync.Mutex
 }
 
 // NewBalanceTracker returns a new instance of the providerBalanceTracker
@@ -56,22 +58,30 @@ func NewBalanceTracker(timeKeeper TimeKeeper, amountCalculator AmountCalculator,
 		timeKeeper:       timeKeeper,
 		amountCalculator: amountCalculator,
 		totalPromised:    initialBalance,
-
-		stop: make(chan struct{}),
 	}
 }
 
 func (bt *BalanceTracker) calculateBalance() {
+	bt.Lock()
+	defer bt.Unlock()
 	cost := bt.amountCalculator.TotalAmount(bt.timeKeeper.Elapsed())
 	bt.balance = bt.totalPromised - cost.Amount
 }
 
-// GetBalance returns the balance message
-func (bt *BalanceTracker) GetBalance() balance.Message {
+// GetBalance returns the current balance
+func (bt *BalanceTracker) GetBalance() uint64 {
 	bt.calculateBalance()
-	// TODO: sequence ID should come here, somehow
-	return balance.Message{
-		SequenceID: 0,
-		Balance:    bt.balance,
-	}
+	return bt.balance
+}
+
+// Start starts keeping track of time for balance
+func (bt *BalanceTracker) Start() {
+	bt.timeKeeper.StartTracking()
+}
+
+// Add increases the current balance by the given amount
+func (bt *BalanceTracker) Add(amount uint64) {
+	bt.Lock()
+	defer bt.Unlock()
+	bt.totalPromised += amount
 }

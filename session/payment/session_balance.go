@@ -21,15 +21,26 @@ package payment
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
 )
 
+// PromiseStorage stores the promises and issues new sequenceID's
+type PromiseStorage interface {
+	GetNewSeqIDForIssuer(issuerID identity.Identity) (uint64, error)
+	Update(issuerID identity.Identity, promise promise.StoredPromise) error
+	GetLastPromise(issuerID identity.Identity) (promise.StoredPromise, error)
+}
+
 // BalanceTracker keeps track of current balance
 type BalanceTracker interface {
-	GetBalance() balance.Message
+	GetBalance() uint64
+	Start()
+	Add(amount uint64)
 }
 
 // PromiseValidator validates given promise
@@ -57,6 +68,10 @@ type SessionBalance struct {
 	chargePeriod       time.Duration
 	promiseWaitTimeout time.Duration
 	promiseValidator   PromiseValidator
+	promiseStorage     PromiseStorage
+	issuer             identity.Identity
+
+	sequenceID uint64
 }
 
 // NewSessionBalance creates a new instance of provider payment orchestrator
@@ -66,7 +81,9 @@ func NewSessionBalance(
 	promiseChan chan promise.Message,
 	chargePeriod time.Duration,
 	promiseWaitTimeout time.Duration,
-	promiseValidator PromiseValidator) *SessionBalance {
+	promiseValidator PromiseValidator,
+	promiseStorage PromiseStorage,
+	issuer identity.Identity) *SessionBalance {
 	return &SessionBalance{
 		stop:               make(chan struct{}),
 		peerBalanceSender:  peerBalanceSender,
@@ -75,21 +92,30 @@ func NewSessionBalance(
 		chargePeriod:       chargePeriod,
 		promiseWaitTimeout: promiseWaitTimeout,
 		promiseValidator:   promiseValidator,
+		promiseStorage:     promiseStorage,
+		issuer:             issuer,
 	}
 }
 
 // Start starts the payment orchestrator. Blocks.
-func (ppo *SessionBalance) Start() error {
+func (sb *SessionBalance) Start() error {
+	lastPromise, err := sb.loadInitialPromiseState()
+	if err != nil {
+		return err
+	}
+
+	sb.startBalanceTracker(lastPromise)
+
 	for {
 		select {
-		case <-ppo.stop:
+		case <-sb.stop:
 			return nil
-		case <-time.After(ppo.chargePeriod):
-			err := ppo.sendBalance()
+		case <-time.After(sb.chargePeriod):
+			err := sb.sendBalance()
 			if err != nil {
 				return err
 			}
-			err = ppo.receivePromiseOrTimeout()
+			err = sb.receivePromiseOrTimeout()
 			if err != nil {
 				return err
 			}
@@ -97,26 +123,98 @@ func (ppo *SessionBalance) Start() error {
 	}
 }
 
-func (ppo *SessionBalance) sendBalance() error {
-	balance := ppo.balanceTracker.GetBalance()
-	return ppo.peerBalanceSender.Send(balance)
+func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, error) {
+	lastPromise, err := sb.promiseStorage.GetLastPromise(sb.issuer)
+	if err != nil {
+		// if an error occurs when fetching the last promise, issue a new id
+		sb.sequenceID, err = sb.promiseStorage.GetNewSeqIDForIssuer(sb.issuer)
+		return lastPromise, err
+	}
+	sb.sequenceID = lastPromise.SequenceID
+	return lastPromise, nil
 }
 
-func (ppo *SessionBalance) receivePromiseOrTimeout() error {
+func (sb *SessionBalance) startBalanceTracker(lastPromise promise.StoredPromise) {
+	amountToAdd := lastPromise.UnconsumedAmount
+
+	sb.balanceTracker.Add(amountToAdd)
+	sb.balanceTracker.Start()
+}
+
+func (sb *SessionBalance) sendBalance() error {
+	currentBalance := sb.balanceTracker.GetBalance()
+	p, err := sb.promiseStorage.GetLastPromise(sb.issuer)
+	if err != nil {
+		return err
+	}
+
+	// if we're ever in a situation where the unconsumed amount is zero, but the balance is not - something is definitely not right
+	if p.UnconsumedAmount == 0 && currentBalance != 0 {
+		return fmt.Errorf("unconsumed amount is 0, while balance is %v", currentBalance)
+	}
+
+	err = sb.promiseStorage.Update(sb.issuer, promise.StoredPromise{
+		SequenceID:       p.SequenceID,
+		UnconsumedAmount: currentBalance,
+		Message:          p.Message,
+		AddedAt:          p.AddedAt,
+	})
+	if err != nil {
+		return err
+	}
+
+	// TODO: figure out when to get a new sequenceID
+	return sb.peerBalanceSender.Send(balance.Message{
+		Balance:    currentBalance,
+		SequenceID: sb.sequenceID,
+	})
+}
+
+func (sb *SessionBalance) calculateAmountToAdd(pm promise.Message, p promise.StoredPromise) uint64 {
+	var amountToSubtract uint64
+	if p.Message != nil {
+		amountToSubtract = p.Message.Amount
+	}
+	amountToAdd := pm.Amount - amountToSubtract
+	return amountToAdd
+}
+
+func (sb *SessionBalance) storePromiseAndUpdateBalance(pm promise.Message) error {
+	p, err := sb.promiseStorage.GetLastPromise(sb.issuer)
+	if err != nil {
+		return err
+	}
+	amount := sb.calculateAmountToAdd(pm, p)
+	sb.balanceTracker.Add(amount)
+
+	err = sb.promiseStorage.Update(sb.issuer, promise.StoredPromise{
+		SequenceID:       pm.SequenceID,
+		Message:          &pm,
+		UnconsumedAmount: p.UnconsumedAmount + amount,
+		AddedAt:          p.AddedAt,
+	})
+	return err
+}
+
+func (sb *SessionBalance) receivePromiseOrTimeout() error {
 	select {
-	case pm := <-ppo.promiseChan:
-		if !ppo.promiseValidator.Validate(pm) {
+	case pm := <-sb.promiseChan:
+		if !sb.promiseValidator.Validate(pm) {
 			return ErrPromiseValidationFailed
 		}
-		// TODO: Save the promise
-		// TODO: Change balance
-	case <-time.After(ppo.promiseWaitTimeout):
+
+		// TODO: check for consumer sending fishy sequenceIDs and amounts
+		err := sb.storePromiseAndUpdateBalance(pm)
+		if err != nil {
+			return err
+		}
+	case <-time.After(sb.promiseWaitTimeout):
 		return ErrPromiseWaitTimeout
 	}
 	return nil
 }
 
 // Stop stops the payment orchestrator
-func (ppo *SessionBalance) Stop() {
-	close(ppo.stop)
+func (sb *SessionBalance) Stop() {
+	close(sb.stop)
 }

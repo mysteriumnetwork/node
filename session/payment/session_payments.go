@@ -69,7 +69,12 @@ func (cpo *SessionPayments) Start() error {
 			if err != nil {
 				return err
 			}
-			issuedPromise, err := cpo.promiseTracker.ExtendPromise(balance.Balance)
+			var amountToExtend uint64
+			if balance.Balance == 0 {
+				// TODO: this should probably not be hardcoded.
+				amountToExtend = 100
+			}
+			issuedPromise, err := cpo.promiseTracker.ExtendPromise(amountToExtend)
 			if err != nil {
 				return err
 			}
