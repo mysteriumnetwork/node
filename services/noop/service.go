@@ -73,7 +73,7 @@ func GetProposal(country string) market.ServiceProposal {
 		},
 		PaymentMethodType: PaymentMethodNoop,
 		PaymentMethod: PaymentNoop{
-			Price: money.NewMoney(0, money.CURRENCY_MYST),
+			Price: money.NewMoney(0, money.CurrencyMyst),
 		},
 	}
 }

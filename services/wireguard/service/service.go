@@ -132,7 +132,7 @@ func GetProposal(country string) market.ServiceProposal {
 		},
 		PaymentMethodType: wg.PaymentMethod,
 		PaymentMethod: wg.Payment{
-			Price: money.NewMoney(0, money.CURRENCY_MYST),
+			Price: money.NewMoney(0, money.CurrencyMyst),
 		},
 	}
 }

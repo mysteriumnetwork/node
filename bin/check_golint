@@ -14,25 +14,6 @@
 
 source bin/helpers/output.sh
 
-check_uncleaned_package () {
-    PACKAGE=$1
-    PACKAGE_MESSAGES_MAX=$2
-
-    PACKAGE_MESSAGES=`echo "${MESSAGES_ERROR}" | grep "${PACKAGE}"`
-    PACKAGE_MESSAGES_COUNT=`echo -n "${PACKAGE_MESSAGES}" | grep -c '^'`
-    if [ ${PACKAGE_MESSAGES_COUNT} -gt 0 ]; then
-	print_warning "[warning] ${PACKAGE_MESSAGES_COUNT} messages in '${PACKAGE}': \n${PACKAGE_MESSAGES}\n"
-    fi
-
-    MESSAGES_ERROR=`echo -n "${MESSAGES_ERROR}" | grep -v "${PACKAGE}"`
-    if [ ${PACKAGE_MESSAGES_COUNT} -eq 0 ]; then
-        MESSAGES_RECONFIGURE+=("Congratulations! Cleaned all errors in package '${PACKAGE}'")
-    elif [ ${PACKAGE_MESSAGES_COUNT} -lt ${PACKAGE_MESSAGES_MAX} ]; then
-        MESSAGES_RECONFIGURE+=("Congratulations! Decreased ${PACKAGE_MESSAGES_MAX}->${PACKAGE_MESSAGES_COUNT} errors in package '${PACKAGE}'")
-    elif [ ${PACKAGE_MESSAGES_COUNT} -gt ${PACKAGE_MESSAGES_MAX} ]; then
-        MESSAGES_RECONFIGURE+=("Sad :(. Increased ${PACKAGE_MESSAGES_MAX}->${PACKAGE_MESSAGES_COUNT} errors in package '${PACKAGE}'")
-    fi
-}
 
 ARGUMENTS=$@
 if [ -z "$ARGUMENTS" ]; then
@@ -41,8 +22,6 @@ fi
 
 MESSAGES_ERROR=`golint --set_exit_status --min_confidence=1 ${ARGUMENTS} 2>/dev/null`
 MESSAGES_RECONFIGURE=()
-
-check_uncleaned_package "github.com/mysteriumnetwork/node/money" 4
 
 MESSAGES_ERROR_COUNT=`echo -n "${MESSAGES_ERROR}" | grep -c '^'`
 if [ ${MESSAGES_ERROR_COUNT} -gt 0 ]; then

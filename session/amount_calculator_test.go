@@ -32,7 +32,7 @@ func Test_CorrectMoneyValueIsReturnedForTotalAmount(t *testing.T) {
 			Duration: time.Minute,
 			Price: money.Money{
 				Amount:   100,
-				Currency: money.CURRENCY_MYST,
+				Currency: money.CurrencyMyst,
 			},
 		},
 	}
