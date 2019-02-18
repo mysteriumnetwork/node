@@ -23,9 +23,26 @@ import (
 )
 
 // Options describes options which are required to start Wireguard service
-type Options struct{}
+type Options struct {
+	ConnectDelay int
+}
+
+var (
+	delayFlag = cli.IntFlag{
+		Name:  "connect.delay",
+		Usage: "Consumer is delayed by specified time (2000 millisec default) if provider is behind NAT",
+		Value: 2000,
+	}
+)
+
+// RegisterFlags function register Wireguard flags to flag list
+func RegisterFlags(flags *[]cli.Flag) {
+	*flags = append(*flags, delayFlag)
+}
 
 // ParseFlags function fills in Wireguard options from CLI context
-func ParseFlags(_ *cli.Context) service.Options {
-	return Options{}
+func ParseFlags(ctx *cli.Context) service.Options {
+	return Options{
+		ConnectDelay: ctx.Int(delayFlag.Name),
+	}
 }

@@ -31,6 +31,14 @@ const (
 	mapUpdateInterval = 15 * time.Minute
 )
 
+// GetPortMappingFunc returns PortMapping function if service is behind NAT
+func GetPortMappingFunc(pubIP, outIP, protocol string, port int, description string) func() {
+	if pubIP != outIP {
+		return PortMapping(protocol, port, description)
+	}
+	return func() {}
+}
+
 // PortMapping maps given port of given protocol from external IP on a gateway to local machine internal IP
 // 'name' denotes rule name added on a gateway.
 func PortMapping(protocol string, port int, name string) func() {
@@ -71,6 +79,7 @@ func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
 			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
+			return
 		}
 	}
 	log.Info(logPrefix, "Mapped network port:", extPort)
