@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,6 +57,21 @@ func (b *Bolt) Delete(bucket string, data interface{}) error {
 // Update allows to update the struct in the given bucket
 func (b *Bolt) Update(bucket string, object interface{}) error {
 	return b.db.From(bucket).Update(object)
+}
+
+// GetOneByField returns an object from the given bucket by the given field
+func (b *Bolt) GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error {
+	return b.db.From(bucket).One(fieldName, key, to)
+}
+
+// GetLast returns the last entry in the bucket
+func (b *Bolt) GetLast(bucket string, to interface{}) error {
+	return b.db.From(bucket).Select().Reverse().First(to)
+}
+
+// GetBuckets returns a list of buckets
+func (b *Bolt) GetBuckets() []string {
+	return b.db.Bucket()
 }
 
 // Close closes database

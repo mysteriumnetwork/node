@@ -72,6 +72,9 @@ type Storage interface {
 	Delete(issuer string, data interface{}) error
 	Update(bucket string, object interface{}) error
 	GetAllFrom(bucket string, data interface{}) error
+	GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error
+	GetLast(bucket string, to interface{}) error
+	GetBuckets() []string
 	Close() error
 }
 
@@ -87,6 +90,7 @@ type Dependencies struct {
 	NATService           nat.NATService
 	Storage              Storage
 	Keystore             *keystore.KeyStore
+	PromiseStorage       *promise.Storage
 	IdentityManager      identity.Manager
 	SignerFactory        identity.SignerFactory
 	IdentityRegistry     identity_registry.IdentityRegistry
@@ -263,7 +267,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		time.Minute,
 	)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
-
+	di.PromiseStorage = promise.NewStorage(di.Storage)
 	di.EventBus = EventBus.New()
 
 	di.ConnectionRegistry = connection.NewRegistry()
@@ -292,6 +296,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 func newSessionManagerFactory(
 	proposal market.ServiceProposal,
 	sessionStorage *session.StorageMemory,
+	promiseStorage session_payment.PromiseStorage,
 	nodeOptions node.Options,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
@@ -322,7 +327,7 @@ func newSessionManagerFactory(
 			// TODO: the ints and times here need to be passed in as well, or defined as constants
 			tracker := balance_provider.NewBalanceTracker(&timeTracker, amountCalc, 0)
 			validator := validators.NewIssuedPromiseValidator(consumer, provider, issuer)
-			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator), nil
+			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator, promiseStorage, issuer), nil
 		}
 		return session.NewManager(
 			proposal,

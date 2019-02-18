@@ -68,7 +68,6 @@ func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 		t.current.Amount = 0
 		return nil
 	}
-	// TODO safe math anyone?
 	if providerState.Amount > t.current.Amount {
 		return ErrUnexpectedAmount
 	}
@@ -81,7 +80,6 @@ func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 
 // ExtendPromise issues a promise with the amount added to the promise
 func (t *ConsumerTracker) ExtendPromise(amountToAdd uint64) (promises.IssuedPromise, error) {
-
 	promise := promises.Promise{
 		Extra: ExtraData{
 			ConsumerAddress: common.HexToAddress(t.consumer.Address),
@@ -90,5 +88,6 @@ func (t *ConsumerTracker) ExtendPromise(amountToAdd uint64) (promises.IssuedProm
 		Amount:   t.current.Amount + amountToAdd,
 		SeqNo:    t.current.Seq,
 	}
+	t.current.Amount += amountToAdd
 	return t.issuer.Issue(promise)
 }

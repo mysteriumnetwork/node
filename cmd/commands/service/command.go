@@ -29,6 +29,7 @@ import (
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/urfave/cli"
 )
 
@@ -167,6 +168,7 @@ func registerFlags(flags *[]cli.Flag) {
 		identityFlag, identityPassphraseFlag,
 	)
 	openvpn_service.RegisterFlags(flags)
+	wireguard_service.RegisterFlags(flags)
 }
 
 // parseFlags function fills in service command options from CLI context
