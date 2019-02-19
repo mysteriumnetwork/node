@@ -71,7 +71,7 @@ type PromiseProcessor struct {
 func (processor *PromiseProcessor) Start(proposal market.ServiceProposal) error {
 	// TODO: replace static value with some real data
 	processor.lastPromise = promise.Promise{
-		Amount: money.NewMoney(10, money.CURRENCY_MYST),
+		Amount: money.NewMoney(10, money.CurrencyMyst),
 	}
 
 	consumer := promise.NewConsumer(proposal, processor.balance, processor.storage)

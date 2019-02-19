@@ -17,8 +17,10 @@
 
 package money
 
+// Currency represents a supported currency
 type Currency string
 
 const (
-	CURRENCY_MYST = Currency("MYST")
+	// CurrencyMyst is the myst token currency representation
+	CurrencyMyst = Currency("MYST")
 )

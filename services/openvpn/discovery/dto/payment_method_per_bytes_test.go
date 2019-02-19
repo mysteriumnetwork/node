@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	price = money.NewMoney(0.5, money.CURRENCY_MYST)
+	price = money.NewMoney(0.5, money.CurrencyMyst)
 )
 
 func TestPaymentMethodPerBytesSerialize(t *testing.T) {
