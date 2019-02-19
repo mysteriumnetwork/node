@@ -47,6 +47,8 @@ type serviceList []serviceInfo
 
 // swagger:model ServiceInfoDTO
 type serviceInfo struct {
+	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
+	ID       string      `json:"id"`
 	Proposal proposalRes `json:"proposal"`
 	// example: Running
 	Status  string         `json:"status"`
@@ -105,6 +107,11 @@ func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	statusResponse := toServiceInfoResponse(se.serviceState)
+	statusResponse.ID = params.ByName("id")
+	if statusResponse.ID != "6ba7b810-9dad-11d1-80b4-00c04fd430c8" && statusResponse.ID != "7037d6f6-1b92-4513-8cb4-8fd1a944b996" {
+		utils.SendErrorMessage(resp, "Service not found", http.StatusNotFound)
+		return
+	}
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -160,7 +167,9 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	se.serviceState = service.Running
 
 	resp.WriteHeader(http.StatusCreated)
-	se.ServiceGet(resp, req, params)
+	statusResponse := toServiceInfoResponse(se.serviceState)
+	statusResponse.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+	utils.WriteAsJSON(statusResponse, resp)
 }
 
 // ServiceStop stops service on the node.
@@ -179,7 +188,11 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
+	if params.ByName("id") != "6ba7b810-9dad-11d1-80b4-00c04fd430c8" && params.ByName("id") != "7037d6f6-1b92-4513-8cb4-8fd1a944b996" {
+		utils.SendErrorMessage(resp, "Service not found", http.StatusNotFound)
+		return
+	}
 	se.serviceState = service.NotRunning
 
 	resp.WriteHeader(http.StatusAccepted)
@@ -209,7 +222,10 @@ func toServiceInfoResponse(state service.State) serviceInfo {
 }
 
 func toServiceListResponse(state service.State) serviceList {
-	return serviceList{{Status: string(state)}, {Status: string(state)}}
+	return serviceList{
+		{ID: "6ba7b810-9dad-11d1-80b4-00c04fd430c8", Status: string(state)},
+		{ID: "7037d6f6-1b92-4513-8cb4-8fd1a944b996", Status: string(state)},
+	}
 }
 
 func validateServiceRequest(cr *serviceRequest) *validation.FieldErrorMap {

@@ -53,11 +53,11 @@ func TestAddRoutesForServiceAddsRoutes(t *testing.T) {
 	}{
 		{
 			http.MethodGet, "/services", "",
-			http.StatusOK, `[{"proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"NotRunning","options":{"protocol":"","port":0}},{"proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"NotRunning","options":{"protocol":"","port":0}}]`,
+			http.StatusOK, `[{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"NotRunning","options":{"protocol":"","port":0}},{"id":"7037d6f6-1b92-4513-8cb4-8fd1a944b996","proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"NotRunning","options":{"protocol":"","port":0}}]`,
 		},
 		{
 			http.MethodPost, "/services", `{"providerId": "node1", "serviceType": "noop"}`,
-			http.StatusCreated, `{"proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"Running","options":{"protocol":"","port":0}}`,
+			http.StatusCreated, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"Running","options":{"protocol":"","port":0}}`,
 		},
 	}
 
@@ -81,12 +81,12 @@ func Test_ServiceStatus_NotRunningStateIsReturnedWhenNotStarted(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	serviceEndpoint.ServiceGet(resp, req, httprouter.Params{})
+	serviceEndpoint.ServiceGet(resp, req, httprouter.Params{{Key: "id", Value: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"}})
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(
 		t,
-		`{"proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"NotRunning","options":{"protocol":"","port":0}}`,
+		`{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":0,"providerId":"","serviceType":"","serviceDefinition":{"locationOriginate":{"asn":""}}},"status":"NotRunning","options":{"protocol":"","port":0}}`,
 		resp.Body.String(),
 	)
 }
