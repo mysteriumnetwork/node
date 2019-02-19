@@ -31,7 +31,7 @@ func Test_BalanceTracker(t *testing.T) {
 	mockTime := time.Second
 	mockMoney := money.Money{
 		Amount:   1,
-		Currency: money.CURRENCY_MYST,
+		Currency: money.CurrencyMyst,
 	}
 	mtk := &mockTimeKeeper{elapsed: mockTime}
 	mac := &mockAmountCalculator{toReturn: mockMoney}

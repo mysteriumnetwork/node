@@ -312,7 +312,7 @@ func newSessionManagerFactory(
 			// TODO: set the time and proper payment info
 			payment := dto.PaymentPerTime{
 				Price: money.Money{
-					Currency: money.CURRENCY_MYST,
+					Currency: money.CurrencyMyst,
 					Amount:   uint64(10),
 				},
 				Duration: time.Minute,

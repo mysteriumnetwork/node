@@ -21,11 +21,13 @@ import (
 	"fmt"
 )
 
+// Money holds the currency type and amount
 type Money struct {
 	Amount   uint64   `json:"amount,omitempty"`
 	Currency Currency `json:"currency,omitempty"`
 }
 
+// NewMoney returns a new instance of Money
 func NewMoney(amount float64, currency Currency) Money {
 	return Money{uint64(amount * 100000000), currency}
 }
