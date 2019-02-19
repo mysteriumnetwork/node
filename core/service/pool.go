@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
 	discovery_registry "github.com/mysteriumnetwork/node/market/proposals/registry"
@@ -31,11 +32,14 @@ type Pool struct {
 
 // Instance represents a run service
 type Instance struct {
+	id           ID
 	service      RunnableService
 	proposal     market.ServiceProposal
 	dialogWaiter communication.DialogWaiter
 	discovery    *discovery_registry.Discovery
 }
+
+type ID string
 
 // RunnableService represents a runnable service
 type RunnableService interface {
@@ -48,12 +52,22 @@ func NewPool() *Pool {
 }
 
 // Add registers a service to running instances pool
-func (sr *Pool) Add(instance *Instance) {
-	sr.instances = append(sr.instances, instance)
+func (p *Pool) Add(instance *Instance) {
+	p.instances = append(p.instances, instance)
+}
+
+// Del removes a service from running instances pool
+func (p *Pool) Del(instance *Instance) {
+	for i, item := range p.instances {
+		if instance == item {
+			p.instances = append(p.instances[:i], p.instances[i+1:]...)
+			return
+		}
+	}
 }
 
 // Stop kills all sub-resources of instance
-func (sr *Pool) Stop(instance *Instance) error {
+func (p *Pool) Stop(instance *Instance) error {
 	errStop := utils.ErrorCollection{}
 	if instance.discovery != nil {
 		instance.discovery.Stop()
@@ -65,15 +79,36 @@ func (sr *Pool) Stop(instance *Instance) error {
 		errStop.Add(instance.service.Stop())
 	}
 
+	p.Del(instance)
 	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
 
 // StopAll kills all running instances
-func (sr *Pool) StopAll() error {
+func (p *Pool) StopAll() error {
 	errStop := utils.ErrorCollection{}
-	for _, instance := range sr.instances {
-		errStop.Add(sr.Stop(instance))
+	for _, instance := range p.instances {
+		errStop.Add(p.Stop(instance))
 	}
 
 	return errStop.Errorf("Some instances did not stop: %v", ". ")
+}
+
+func (p *Pool) List() []*Instance {
+	return p.instances
+}
+
+func (i *Instance) Proposal() market.ServiceProposal {
+	return i.proposal
+}
+
+func (i *Instance) ID() ID {
+	return i.id
+}
+
+func generateID() (ID, error) {
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return ID(""), err
+	}
+	return ID(uid.String()), nil
 }

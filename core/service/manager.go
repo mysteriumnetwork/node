@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -78,49 +79,69 @@ type Manager struct {
 	discoveryFactory DiscoveryFactory
 }
 
-// Start starts an instance of the given service type if knows one in service registry. The method blocks.
+// Start starts an instance of the given service type if knows one in service registry.
 // It passes the options to the start method of the service.
 // If an error occurs in the underlying service, the error is then returned.
-func (manager *Manager) Start(providerID identity.Identity, serviceType string, options Options) (err error) {
+func (manager *Manager) Start(providerID identity.Identity, serviceType string, options Options) (instance Instance, err error) {
 	service, proposal, err := manager.serviceRegistry.Create(serviceType, options)
 	if err != nil {
-		return err
+		return Instance{}, err
 	}
 
 	dialogWaiter, err := manager.dialogWaiterFactory(providerID, proposal.ServiceType)
 	if err != nil {
-		return err
+		return Instance{}, err
 	}
 	providerContact, err := dialogWaiter.Start()
 	if err != nil {
-		return err
+		return Instance{}, err
 	}
 	proposal.SetProviderContact(providerID, providerContact)
 
 	dialogHandler := manager.dialogHandlerFactory(proposal, service)
 	if err = dialogWaiter.ServeDialogs(dialogHandler); err != nil {
-		return err
+		return Instance{}, err
 	}
 
 	discovery := manager.discoveryFactory()
 	discovery.Start(providerID, proposal)
 
-	err = service.Serve(providerID)
+	id, err := generateID()
 	if err != nil {
-		return err
+		return Instance{}, err
 	}
-	manager.servicePool.Add(&Instance{
+
+	instance = Instance{
+		id:           id,
 		service:      service,
 		proposal:     proposal,
 		dialogWaiter: dialogWaiter,
 		discovery:    discovery,
-	})
+	}
 
-	discovery.Wait()
-	return nil
+	manager.servicePool.Add(&instance)
+
+	go func() {
+		err = service.Serve(providerID)
+		if err != nil {
+			log.Error("Service serve failed: ", err)
+		}
+
+		discovery.Wait()
+	}()
+	return instance, nil
 }
 
-// Kill stops service
+func (manager *Manager) List() []*Instance {
+	return manager.servicePool.List()
+}
+
+// Kill stops all services
 func (manager *Manager) Kill() error {
 	return manager.servicePool.StopAll()
+}
+
+// Stop stops the service
+func (manager *Manager) Stop(instance *Instance) error {
+	return manager.servicePool.Stop(instance)
 }

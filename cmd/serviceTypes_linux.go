@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/core/service"

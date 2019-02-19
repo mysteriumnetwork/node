@@ -1,7 +1,5 @@
-// +build windows linux,android
-
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,22 +15,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package cmd
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/core/service"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/urfave/cli"
 )
 
 var (
-	serviceTypesAvailable = []string{"openvpn", "noop"}
+	serviceTypesAvailable = []string{"openvpn", "wireguard", "noop"}
 	serviceTypesEnabled   = []string{"openvpn", "noop"}
 
 	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
-		service_noop.ServiceType:    service_noop.ParseFlags,
-		service_openvpn.ServiceType: openvpn_service.ParseFlags,
+		service_noop.ServiceType:      service_noop.ParseCLIFlags,
+		service_openvpn.ServiceType:   openvpn_service.ParseCLIFlags,
+		service_wireguard.ServiceType: wireguard_service.ParseCLIFlags,
+	}
+
+	serviceTypesRequestParser = map[string]func(request json.RawMessage) (service.Options, error){
+		service_noop.ServiceType:      service_noop.ParseJSONOptions,
+		service_openvpn.ServiceType:   openvpn_service.ParseJSONOptions,
+		service_wireguard.ServiceType: wireguard_service.ParseJSONOptions,
 	}
 )
