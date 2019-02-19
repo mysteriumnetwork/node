@@ -67,30 +67,34 @@ type StoredPromise struct {
 	AddedAt          time.Time
 	UpdatedAt        time.Time
 	UnconsumedAmount uint64
+	ConsumerID       identity.Identity
+	Receiver         identity.Identity
+	Cleared          bool
 }
 
 // GetNewSeqIDForIssuer returns a new sequenceID for the provided issuer.
 // The operation is atomic and thread safe.
-func (s *Storage) GetNewSeqIDForIssuer(issuerID identity.Identity) (uint64, error) {
+func (s *Storage) GetNewSeqIDForIssuer(consumer, receiver, issuer identity.Identity) (uint64, error) {
 	s.Lock()
 	defer s.Unlock()
-	lastPromise, err := s.getLastPromise(issuerID)
+	lastPromise, err := s.getLastPromise(issuer)
 	if err != nil && err.Error() == errBoltNotFound.Error() {
 		// we do not have a previous history with the issuer, ask for a promise no1, store it
-		err := s.store(issuerID, StoredPromise{
+		err := s.store(issuer, StoredPromise{
 			SequenceID: firstPromiseID,
+			ConsumerID: consumer,
+			Receiver:   receiver,
 		})
-		if err != nil {
-			return 0, err
-		}
-		return firstPromiseID, nil
+		return firstPromiseID, err
 	} else if err != nil {
 		return 0, err
 	}
 
 	newID := lastPromise.SequenceID + 1
-	err = s.store(issuerID, StoredPromise{
+	err = s.store(issuer, StoredPromise{
 		SequenceID: newID,
+		ConsumerID: consumer,
+		Receiver:   receiver,
 	})
 	return newID, err
 }
