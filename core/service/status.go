@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,28 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package money
+package service
 
-import (
-	"fmt"
+// State represents list of possible service states
+type State string
+
+const (
+	// NotRunning means no service exists
+	NotRunning = State("NotRunning")
+	// Starting means that service is started but not yet fully established
+	Starting = State("Starting")
+	// Running means that fully established service exists
+	Running = State("Running")
 )
-
-// Money holds the currency type and amount
-type Money struct {
-	Amount   uint64   `json:"amount,omitempty"`
-	Currency Currency `json:"currency,omitempty"`
-}
-
-// NewMoney returns a new instance of Money
-func NewMoney(amount float64, currency Currency) Money {
-	return Money{uint64(amount * 100000000), currency}
-}
-
-// String converts struct to string
-func (value *Money) String() string {
-	return fmt.Sprintf(
-		"%d%s",
-		value.Amount,
-		value.Currency,
-	)
-}

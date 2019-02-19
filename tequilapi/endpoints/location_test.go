@@ -94,7 +94,7 @@ func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 }
 
 func TestGetLocationWhenConnected(t *testing.T) {
-	fakeManager := fakeManager{}
+	fakeManager := mockConnectionManager{}
 	fakeManager.onStatusReturn = connection.Status{
 		State: connection.Connected,
 	}
@@ -134,7 +134,7 @@ func TestGetLocationWhenNotConnected(t *testing.T) {
 
 	for _, state := range states {
 
-		fakeManager := fakeManager{}
+		fakeManager := mockConnectionManager{}
 		fakeManager.onStatusReturn = connection.Status{
 			State: state,
 		}

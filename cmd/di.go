@@ -285,6 +285,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)
+	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager)
+
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
@@ -310,7 +312,7 @@ func newSessionManagerFactory(
 			// TODO: set the time and proper payment info
 			payment := dto.PaymentPerTime{
 				Price: money.Money{
-					Currency: money.CURRENCY_MYST,
+					Currency: money.CurrencyMyst,
 					Amount:   uint64(10),
 				},
 				Duration: time.Minute,

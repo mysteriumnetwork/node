@@ -53,7 +53,7 @@ func TestPromiseProcessor_Start_SendsBalanceMessages(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Exactly(
 		t,
-		promise.BalanceMessage{1, true, money.NewMoney(10, money.CURRENCY_MYST)},
+		promise.BalanceMessage{1, true, money.NewMoney(10, money.CurrencyMyst)},
 		lastMessage,
 	)
 }
