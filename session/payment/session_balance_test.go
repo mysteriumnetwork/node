@@ -129,7 +129,7 @@ func Test_SessionBalance_LoadInitialPromiseState_WithExistingPromise(t *testing.
 
 func Test_SessionBalance_LoadInitialPromiseState_WithoutExistingPromise(t *testing.T) {
 	mps := *MPS
-	mps.lastPromiseError = errors.New("test")
+	mps.lastPromiseError = errBoltNotFound
 	mps.promiseToReturn = promise.StoredPromise{}
 	orch := NewMockSessionBalance(MPV, &mps, MBT)
 	promise, err := orch.loadInitialPromiseState()

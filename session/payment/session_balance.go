@@ -61,6 +61,9 @@ var ErrPromiseWaitTimeout = errors.New("did not get a new promise")
 // ErrPromiseValidationFailed indicates that an invalid promise was sent
 var ErrPromiseValidationFailed = errors.New("promise validation failed")
 
+// errBoltNotFound indicates that bolt did not find a record
+var errBoltNotFound = errors.New("not found")
+
 // SessionBalance orchestrates the ping pong of balance sent to consumer -> promise received from consumer flow
 type SessionBalance struct {
 	stop               chan struct{}
@@ -132,9 +135,12 @@ func (sb *SessionBalance) Start() error {
 func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, error) {
 	lastPromise, err := sb.promiseStorage.GetLastPromise(sb.issuer)
 	if err != nil {
-		// if an error occurs when fetching the last promise, issue a new id
-		lastPromise.SequenceID, err = sb.promiseStorage.GetNewSeqIDForIssuer(sb.consumer, sb.receiver, sb.issuer)
-		sb.sequenceID = lastPromise.SequenceID
+		if err.Error() == errBoltNotFound.Error() {
+			// if not found, issue a new sequenceID
+			lastPromise.SequenceID, err = sb.promiseStorage.GetNewSeqIDForIssuer(sb.consumer, sb.receiver, sb.issuer)
+			sb.sequenceID = lastPromise.SequenceID
+			return lastPromise, err
+		}
 		return lastPromise, err
 	}
 
@@ -153,7 +159,7 @@ func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, erro
 	if lastPromise.ConsumerID != sb.consumer {
 		consumerPromise, err := sb.findPromiseForConsumer()
 		if err != nil {
-			if err == errNoPromiseForConsumer {
+			if err.Error() == errNoPromiseForConsumer.Error() {
 				lastPromise.SequenceID, err = sb.promiseStorage.GetNewSeqIDForIssuer(sb.consumer, sb.receiver, sb.issuer)
 				sb.sequenceID = lastPromise.SequenceID
 				return lastPromise, err
