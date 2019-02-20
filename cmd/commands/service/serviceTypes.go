@@ -15,11 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package service
 
 import (
-	"encoding/json"
-
 	"github.com/mysteriumnetwork/node/core/service"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
@@ -30,18 +28,11 @@ import (
 )
 
 var (
-	serviceTypesAvailable = []string{"openvpn", "wireguard", "noop"}
-	serviceTypesEnabled   = []string{"openvpn", "noop"}
+	serviceTypes = []string{"openvpn", "wireguard", "noop"}
 
 	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
-		service_noop.ServiceType:      service_noop.ParseCLIFlags,
-		service_openvpn.ServiceType:   openvpn_service.ParseCLIFlags,
-		service_wireguard.ServiceType: wireguard_service.ParseCLIFlags,
-	}
-
-	serviceTypesRequestParser = map[string]func(request json.RawMessage) (service.Options, error){
-		service_noop.ServiceType:      service_noop.ParseJSONOptions,
-		service_openvpn.ServiceType:   openvpn_service.ParseJSONOptions,
-		service_wireguard.ServiceType: wireguard_service.ParseJSONOptions,
+		service_noop.ServiceType:      service_noop.ParseFlags,
+		service_openvpn.ServiceType:   openvpn_service.ParseFlags,
+		service_wireguard.ServiceType: wireguard_service.ParseFlags,
 	}
 )

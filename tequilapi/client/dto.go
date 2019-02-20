@@ -17,7 +17,10 @@
 
 package client
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // StatusDTO holds connection status and session id
 type StatusDTO struct {
@@ -42,6 +45,7 @@ type ProposalList struct {
 type ProposalDTO struct {
 	ID                int                  `json:"id"`
 	ProviderID        string               `json:"providerId"`
+	ServiceType       string               `json:"serviceType"`
 	ServiceDefinition ServiceDefinitionDTO `json:"serviceDefinition"`
 }
 
@@ -116,21 +120,24 @@ type SessionsDTO struct {
 
 // SessionDTO copied from tequilapi endpoint
 type SessionDTO struct {
-	SessionID string `json:"sessionId"`
-
-	ProviderID string `json:"providerId"`
-
-	ServiceType string `json:"serviceType"`
-
+	SessionID       string `json:"sessionId"`
+	ProviderID      string `json:"providerId"`
+	ServiceType     string `json:"serviceType"`
 	ProviderCountry string `json:"providerCountry"`
+	DateStarted     string `json:"dateStarted"`
+	BytesSent       uint64 `json:"bytesSent"`
+	BytesReceived   uint64 `json:"bytesReceived"`
+	Duration        uint64 `json:"duration"`
+	Status          string `json:"status"`
+}
 
-	DateStarted string `json:"dateStarted"`
+// Services represents a list of running services on the node.
+type Services []Service
 
-	BytesSent uint64 `json:"bytesSent"`
-
-	BytesReceived uint64 `json:"bytesReceived"`
-
-	Duration uint64 `json:"duration"`
-
-	Status string `json:"status"`
+// Service represents a service information.
+type Service struct {
+	ID       string          `json:"id"`
+	Status   string          `json:"status"`
+	Proposal ProposalDTO     `json:"proposal"`
+	Options  json.RawMessage `json:"options"`
 }

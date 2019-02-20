@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,35 +24,28 @@ import (
 	"github.com/urfave/cli"
 )
 
-// Options describes options which are required to start Openvpn service
+// Options describes options which are required to start Wireguard service
 type Options struct {
-	OpenvpnProtocol string `json:"protocol"`
-	OpenvpnPort     int    `json:"port"`
+	ConnectDelay int `json:"connectDelay"`
 }
 
 var (
-	protocolFlag = cli.StringFlag{
-		Name:  "openvpn.proto",
-		Usage: "Openvpn protocol to use. Options: { udp, tcp }",
-		Value: "udp",
-	}
-	portFlag = cli.IntFlag{
-		Name:  "openvpn.port",
-		Usage: "Openvpn port to use. Default 1194",
-		Value: 1194,
+	delayFlag = cli.IntFlag{
+		Name:  "connect.delay",
+		Usage: "Consumer is delayed by specified time (2000 millisec default) if provider is behind NAT",
+		Value: 2000,
 	}
 )
 
-// RegisterFlags function register Openvpn flags to flag list
+// RegisterFlags function register Wireguard flags to flag list
 func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, protocolFlag, portFlag)
+	*flags = append(*flags, delayFlag)
 }
 
-// ParseCLIFlags function fills in Openvpn options from CLI context
-func ParseCLIFlags(ctx *cli.Context) service.Options {
+// ParseFlags function fills in Wireguard options from CLI context
+func ParseFlags(ctx *cli.Context) service.Options {
 	return Options{
-		OpenvpnProtocol: ctx.String(protocolFlag.Name),
-		OpenvpnPort:     ctx.Int(portFlag.Name),
+		ConnectDelay: ctx.Int(delayFlag.Name),
 	}
 }
 

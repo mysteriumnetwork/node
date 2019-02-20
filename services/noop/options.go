@@ -27,8 +27,8 @@ import (
 // Options describes options which are required to start Noop service
 type Options struct{}
 
-// ParseCLIFlags function fills in Noop options from CLI context
-func ParseCLIFlags(_ *cli.Context) service.Options {
+// ParseFlags function fills in Noop options from CLI context
+func ParseFlags(_ *cli.Context) service.Options {
 	return Options{}
 }
 

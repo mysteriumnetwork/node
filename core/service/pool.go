@@ -25,20 +25,7 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 )
 
-// Pool is responsible for supervising running instances
-type Pool struct {
-	instances []*Instance
-}
-
-// Instance represents a run service
-type Instance struct {
-	id           ID
-	service      RunnableService
-	proposal     market.ServiceProposal
-	dialogWaiter communication.DialogWaiter
-	discovery    *discovery_registry.Discovery
-}
-
+// ID represent unique identifier of the running service.
 type ID string
 
 // RunnableService represents a runnable service
@@ -46,28 +33,37 @@ type RunnableService interface {
 	Stop() error
 }
 
+// Pool is responsible for supervising running instances
+type Pool struct {
+	instances map[ID]*Instance
+}
+
 // NewPool returns a empty service pool
 func NewPool() *Pool {
-	return &Pool{}
-}
-
-// Add registers a service to running instances pool
-func (p *Pool) Add(instance *Instance) {
-	p.instances = append(p.instances, instance)
-}
-
-// Del removes a service from running instances pool
-func (p *Pool) Del(instance *Instance) {
-	for i, item := range p.instances {
-		if instance == item {
-			p.instances = append(p.instances[:i], p.instances[i+1:]...)
-			return
-		}
+	return &Pool{
+		instances: make(map[ID]*Instance),
 	}
 }
 
+// Add registers a service to running instances pool
+func (p *Pool) Add(instance *Instance) (ID, error) {
+	id, err := generateID()
+	if err != nil {
+		return id, err
+	}
+
+	p.instances[id] = instance
+	return id, nil
+}
+
+// Del removes a service from running instances pool
+func (p *Pool) Del(id ID) {
+	delete(p.instances, id)
+}
+
 // Stop kills all sub-resources of instance
-func (p *Pool) Stop(instance *Instance) error {
+func (p *Pool) Stop(id ID) error {
+	instance := p.instances[id]
 	errStop := utils.ErrorCollection{}
 	if instance.discovery != nil {
 		instance.discovery.Stop()
@@ -79,30 +75,47 @@ func (p *Pool) Stop(instance *Instance) error {
 		errStop.Add(instance.service.Stop())
 	}
 
-	p.Del(instance)
+	p.Del(id)
 	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
 
 // StopAll kills all running instances
 func (p *Pool) StopAll() error {
 	errStop := utils.ErrorCollection{}
-	for _, instance := range p.instances {
-		errStop.Add(p.Stop(instance))
+	for id := range p.instances {
+		errStop.Add(p.Stop(id))
 	}
 
 	return errStop.Errorf("Some instances did not stop: %v", ". ")
 }
 
-func (p *Pool) List() []*Instance {
+// List returns all running service instances.
+func (p *Pool) List() map[ID]*Instance {
 	return p.instances
 }
 
+// Instance returns service instance by the requested id.
+func (p *Pool) Instance(id ID) *Instance {
+	return p.instances[id]
+}
+
+// Instance represents a run service
+type Instance struct {
+	state        State
+	service      RunnableService
+	proposal     market.ServiceProposal
+	dialogWaiter communication.DialogWaiter
+	discovery    *discovery_registry.Discovery
+}
+
+// Proposal returns service proposal of the running service instance.
 func (i *Instance) Proposal() market.ServiceProposal {
 	return i.proposal
 }
 
-func (i *Instance) ID() ID {
-	return i.id
+// State returns the service instance state.
+func (i *Instance) State() State {
+	return i.state
 }
 
 func generateID() (ID, error) {
