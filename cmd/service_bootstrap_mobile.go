@@ -1,4 +1,4 @@
-// +build !darwin,!windows,!linux
+// +build linux,android
 
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
