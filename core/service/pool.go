@@ -99,6 +99,17 @@ func (p *Pool) Instance(id ID) *Instance {
 	return p.instances[id]
 }
 
+// NewInstance creates new instance of the service.
+func NewInstance(service RunnableService, proposal market.ServiceProposal, dialog communication.DialogWaiter, discovery *discovery_registry.Discovery) *Instance {
+	return &Instance{
+		state:        NotRunning,
+		service:      service,
+		proposal:     proposal,
+		dialogWaiter: dialog,
+		discovery:    discovery,
+	}
+}
+
 // Instance represents a run service
 type Instance struct {
 	state        State

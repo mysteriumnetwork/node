@@ -270,7 +270,8 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInf
 	}
 }
 
-func toServiceListResponse(instances map[service.ID]*service.Instance) (res serviceList) {
+func toServiceListResponse(instances map[service.ID]*service.Instance) serviceList {
+	res := make([]serviceInfo, 0)
 	for id, instance := range instances {
 		res = append(res, serviceInfo{
 			ID:       string(id),
