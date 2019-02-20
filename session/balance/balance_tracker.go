@@ -15,20 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package provider
+package balance
 
 import (
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/session/balance"
 )
-
-// PeerSender knows how to send a balance message to the peer
-type PeerSender interface {
-	Send(balance.Message) error
-}
 
 // TimeKeeper keeps track of time for payments
 type TimeKeeper interface {
