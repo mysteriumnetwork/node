@@ -124,7 +124,6 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
 
 	assert.Error(tc.T(), tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
-	assert.True(tc.T(), tc.fakeDialog.closed)
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {

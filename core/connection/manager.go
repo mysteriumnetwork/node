@@ -81,11 +81,12 @@ type connectionManager struct {
 	eventPublisher       Publisher
 
 	//these are populated by Connect at runtime
-	ctx             context.Context
-	status          Status
-	statusLock      sync.RWMutex
-	sessionInfo     SessionInfo
-	cleanConnection func()
+	ctx         context.Context
+	status      Status
+	statusLock  sync.RWMutex
+	sessionInfo SessionInfo
+	cleanup     []func()
+	cancel      func()
 
 	discoLock sync.Mutex
 }
@@ -102,8 +103,8 @@ func NewManager(
 		paymentIssuerFactory: paymentIssuerFactory,
 		newConnection:        connectionCreator,
 		status:               statusNotConnected(),
-		cleanConnection:      warnOnClean,
 		eventPublisher:       eventPublisher,
+		cleanup:              make([]func(), 0),
 	}
 }
 
@@ -112,7 +113,8 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 		return ErrAlreadyExists
 	}
 
-	manager.ctx, manager.cleanConnection = context.WithCancel(context.Background())
+	manager.ctx, manager.cancel = context.WithCancel(context.Background())
+
 	manager.setStatus(statusConnecting())
 	defer func() {
 		if err != nil {
@@ -120,36 +122,12 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 		}
 	}()
 
-	err = manager.startConnection(consumerID, proposal, params)
-	if err == context.Canceled {
-		return ErrConnectionCancelled
-	}
-	return err
-}
-
-func (manager *connectionManager) startConnection(consumerID identity.Identity, proposal market.ServiceProposal, params ConnectParams) (err error) {
-	cancelCtx := manager.cleanConnection
-
-	var cancel []func()
-	defer func() {
-		manager.cleanConnection = func() {
-			cancelCtx()
-			for i := range cancel { // Cancelling in a reverse order to keep correct workflow.
-				cancel[len(cancel)-i-1]()
-			}
-		}
-		if err != nil {
-			log.Info(managerLogPrefix, "Cancelling connection initiation", err)
-			logDisconnectError(manager.Disconnect())
-		}
-	}()
-
 	providerID := identity.FromAddress(proposal.ProviderID)
-	dialog, err := manager.newDialog(consumerID, providerID, proposal.ProviderContacts[0])
+
+	dialog, err := manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
 	}
-	cancel = append(cancel, func() { dialog.Close() })
 
 	stateChannel := make(chan State, 10)
 	statisticsChannel := make(chan consumer.SessionStatistics, 10)
@@ -159,12 +137,66 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		return err
 	}
 
-	sessionCreateConfig, err := connection.GetConfig()
+	sessionDTO, paymentInfo, err := manager.createSession(connection, dialog, consumerID, proposal)
 	if err != nil {
 		return err
 	}
 
+	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID)
+	if err != nil {
+		return err
+	}
+
+	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, stateChannel, statisticsChannel)
+	if err == context.Canceled {
+		return ErrConnectionCancelled
+	}
+	return err
+}
+
+func (manager *connectionManager) launchPayments(paymentInfo *session.PaymentInfo, dialog communication.Dialog, consumerID, providerID identity.Identity) error {
+	var promiseState promise.State
+	if paymentInfo != nil {
+		promiseState.Amount = paymentInfo.LastPromise.Amount
+		promiseState.Seq = paymentInfo.LastPromise.SequenceID
+	}
+
 	messageChan := make(chan balance.Message, 1)
+
+	payments, err := manager.paymentIssuerFactory(promiseState, messageChan, dialog, consumerID, providerID)
+	if err != nil {
+		return err
+	}
+
+	manager.cleanup = append(manager.cleanup, payments.Stop)
+
+	go manager.payForService(payments)
+	return nil
+}
+
+func (manager *connectionManager) cleanConnection() {
+	manager.cancel()
+	for i := len(manager.cleanup) - 1; i > 0; i-- {
+		manager.cleanup[i]()
+	}
+	manager.cleanup = make([]func(), 0)
+}
+
+func (manager *connectionManager) createDialog(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
+	dialog, err := manager.newDialog(consumerID, providerID, contact)
+	if err != nil {
+		return nil, err
+	}
+
+	manager.cleanup = append(manager.cleanup, func() { dialog.Close() })
+	return dialog, err
+}
+
+func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, *session.PaymentInfo, error) {
+	sessionCreateConfig, err := c.GetConfig()
+	if err != nil {
+		return session.SessionDto{}, nil, err
+	}
 
 	consumerInfo := session.ConsumerInfo{
 		// TODO: once we're supporting payments from another identity make the changes accordingly
@@ -174,25 +206,10 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
 	if err != nil {
-		return err
+		return session.SessionDto{}, nil, err
 	}
 
-	cancel = append(cancel, func() { session.RequestSessionDestroy(dialog, s.ID) })
-
-	var promiseState promise.State
-	if paymentInfo != nil {
-		promiseState.Amount = paymentInfo.LastPromise.Amount
-		promiseState.Seq = paymentInfo.LastPromise.SequenceID
-	}
-
-	payments, err := manager.paymentIssuerFactory(promiseState, messageChan, dialog, consumerID, providerID)
-	if err != nil {
-		return err
-	}
-
-	cancel = append(cancel, payments.Stop)
-
-	go manager.payForService(payments)
+	manager.cleanup = append(manager.cleanup, func() { session.RequestSessionDestroy(dialog, s.ID) })
 
 	// set the session info for future use
 	manager.sessionInfo = SessionInfo{
@@ -206,29 +223,48 @@ func (manager *connectionManager) startConnection(consumerID identity.Identity, 
 		SessionInfo: manager.sessionInfo,
 	})
 
-	cancel = append(cancel, func() {
+	manager.cleanup = append(manager.cleanup, func() {
 		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
 			Status:      SessionEndedStatus,
 			SessionInfo: manager.sessionInfo,
 		})
 	})
 
+	return s, paymentInfo, nil
+}
+
+func (manager *connectionManager) startConnection(
+	connection Connection,
+	consumerID identity.Identity,
+	proposal market.ServiceProposal,
+	params ConnectParams,
+	sessionDTO session.SessionDto,
+	stateChannel chan State,
+	statisticsChannel chan consumer.SessionStatistics) (err error) {
+
+	defer func() {
+		if err != nil {
+			log.Info(managerLogPrefix, "Cancelling connection initiation", err)
+			logDisconnectError(manager.Disconnect())
+		}
+	}()
+
 	connectOptions := ConnectOptions{
-		SessionID:     s.ID,
-		SessionConfig: s.Config,
+		SessionID:     sessionDTO.ID,
+		SessionConfig: sessionDTO.Config,
 		ConsumerID:    consumerID,
-		ProviderID:    providerID,
+		ProviderID:    identity.FromAddress(proposal.ProviderID),
 		Proposal:      proposal,
 	}
 
 	if err = connection.Start(connectOptions); err != nil {
 		return err
 	}
-	cancel = append(cancel, connection.Stop)
+	manager.cleanup = append(manager.cleanup, connection.Stop)
 
 	//consume statistics right after start - openvpn3 will publish them even before connected state
 	go manager.consumeStats(statisticsChannel)
-	err = manager.waitForConnectedState(stateChannel, s.ID)
+	err = manager.waitForConnectedState(stateChannel, sessionDTO.ID)
 	if err != nil {
 		return err
 	}
