@@ -19,6 +19,7 @@ package payment
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/session/balance"
@@ -43,51 +44,91 @@ type SessionPayments struct {
 	balanceChan       chan balance.Message
 	peerPromiseSender PeerPromiseSender
 	promiseTracker    PromiseTracker
+	balanceTracker    BalanceTracker
 }
 
 // NewSessionPayments returns a new instance of consumer payment orchestrator
-func NewSessionPayments(balanceChan chan balance.Message, peerPromiseSender PeerPromiseSender, promiseTracker PromiseTracker) *SessionPayments {
+func NewSessionPayments(balanceChan chan balance.Message, peerPromiseSender PeerPromiseSender, promiseTracker PromiseTracker, balanceTracker BalanceTracker) *SessionPayments {
 	return &SessionPayments{
 		stop:              make(chan struct{}),
 		balanceChan:       balanceChan,
 		peerPromiseSender: peerPromiseSender,
 		promiseTracker:    promiseTracker,
+		balanceTracker:    balanceTracker,
 	}
 }
 
+// balanceDifferenceThreshold determines the threshold where we'll cancel the session if there's a missmatch larger than the threshold provided between the provider and the consumer balances
+const balanceDifferenceThreshold uint64 = 20
+
+// ErrBalanceMissmatch represents an erro that occurs when balances do not match
+var ErrBalanceMissmatch = errors.New("balance missmatch")
+
 // Start starts the payment orchestrator. Blocks.
 func (cpo *SessionPayments) Start() error {
+	cpo.balanceTracker.Start()
 	for {
 		select {
 		case <-cpo.stop:
 			return nil
 		case balance := <-cpo.balanceChan:
-			err := cpo.promiseTracker.AlignStateWithProvider(promise.State{
-				Seq:    balance.SequenceID,
-				Amount: balance.Balance,
-			})
+			err := cpo.validateBalanceDifference(balance.Balance)
 			if err != nil {
 				return err
 			}
-			var amountToExtend uint64
-			if balance.Balance == 0 {
-				// TODO: this should probably not be hardcoded.
-				amountToExtend = 100
-			}
-			issuedPromise, err := cpo.promiseTracker.ExtendPromise(amountToExtend)
-			if err != nil {
-				return err
-			}
-			err = cpo.peerPromiseSender.Send(promise.Message{
-				Amount:     issuedPromise.Promise.Amount,
-				SequenceID: issuedPromise.Promise.SeqNo,
-				Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),
-			})
+
+			err = cpo.issuePromise(balance)
 			if err != nil {
 				return err
 			}
 		}
 	}
+}
+
+func (cpo *SessionPayments) issuePromise(balance balance.Message) error {
+	err := cpo.promiseTracker.AlignStateWithProvider(promise.State{
+		Seq:    balance.SequenceID,
+		Amount: balance.Balance,
+	})
+	if err != nil {
+		return err
+	}
+
+	var amountToExtend uint64
+	if balance.Balance == 0 {
+		// TODO: this should probably not be hardcoded.
+		amountToExtend = 100
+	}
+	issuedPromise, err := cpo.promiseTracker.ExtendPromise(amountToExtend)
+	if err != nil {
+		return err
+	}
+	err = cpo.peerPromiseSender.Send(promise.Message{
+		Amount:     issuedPromise.Promise.Amount,
+		SequenceID: issuedPromise.Promise.SeqNo,
+		Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),
+	})
+	if err != nil {
+		return err
+	}
+	cpo.balanceTracker.Add(amountToExtend)
+	return nil
+}
+
+func (cpo *SessionPayments) validateBalanceDifference(balance uint64) error {
+	myBalance := cpo.balanceTracker.GetBalance()
+	diff := calculateBalanceDifference(balance, myBalance)
+	if diff >= balanceDifferenceThreshold {
+		return ErrBalanceMissmatch
+	}
+	return nil
+}
+
+func calculateBalanceDifference(yourBalance, myBalance uint64) uint64 {
+	if yourBalance > myBalance {
+		return yourBalance - myBalance
+	}
+	return myBalance - yourBalance
 }
 
 // Stop stops the payment orchestrator

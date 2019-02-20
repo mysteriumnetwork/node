@@ -65,18 +65,20 @@ var (
 	}
 	promiseSender  = &MockPeerPromiseSender{chanToWriteTo: make(chan promise.Message, 1)}
 	promiseTracker = &MockPromiseTracker{promiseToReturn: promiseToReturn, errToReturn: nil}
+	balanceTracker = &MockBalanceTracker{balanceToReturn: 0}
 )
 
-func NewTestSessionPayments(bm chan balance.Message, ps PeerPromiseSender, pt PromiseTracker) *SessionPayments {
+func NewTestSessionPayments(bm chan balance.Message, ps PeerPromiseSender, pt PromiseTracker, bt BalanceTracker) *SessionPayments {
 	return NewSessionPayments(
 		bm,
 		ps,
 		pt,
+		bt,
 	)
 }
 
 func Test_SessionPayments_Start_Stop(t *testing.T) {
-	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker)
+	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker, balanceTracker)
 	go func() {
 		time.Sleep(time.Nanosecond * 10)
 		cpo.Stop()
@@ -86,7 +88,7 @@ func Test_SessionPayments_Start_Stop(t *testing.T) {
 }
 
 func Test_SessionPayments_SendsPromiseOnBalance(t *testing.T) {
-	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker)
+	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker, balanceTracker)
 	go cpo.Start()
 	defer cpo.Stop()
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
@@ -100,14 +102,17 @@ func Test_SessionPayments_ReportsIssuingErrors(t *testing.T) {
 	customTracker := *promiseTracker
 	err := errors.New("issuing failed")
 	customTracker.errToReturn = err
-	cpo := NewTestSessionPayments(balanceChannel, promiseSender, &customTracker)
+	cpo := NewTestSessionPayments(balanceChannel, promiseSender, &customTracker, balanceTracker)
 
+	testDone := make(chan struct{})
 	go func() {
 		err := cpo.Start()
 		assert.Equal(t, customTracker.errToReturn, err)
+		testDone <- struct{}{}
 	}()
 
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
+	<-testDone
 }
 
 func Test_SessionPayments_ReportsSendingErrors(t *testing.T) {
@@ -115,11 +120,29 @@ func Test_SessionPayments_ReportsSendingErrors(t *testing.T) {
 	err := errors.New("sending failed")
 	customSender.mockError = err
 
-	cpo := NewTestSessionPayments(balanceChannel, &customSender, promiseTracker)
+	testDone := make(chan struct{})
+
+	cpo := NewTestSessionPayments(balanceChannel, &customSender, promiseTracker, balanceTracker)
 	go func() {
 		err := cpo.Start()
 		assert.Equal(t, customSender.mockError, err)
+		testDone <- struct{}{}
 	}()
 
 	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
+	<-testDone
+}
+
+func Test_SessionPayments_ErrsOnBalanceMissmatch(t *testing.T) {
+	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker, balanceTracker)
+	testDone := make(chan struct{})
+
+	go func() {
+		err := cpo.Start()
+		assert.Equal(t, ErrBalanceMissmatch, err)
+		testDone <- struct{}{}
+	}()
+
+	balanceChannel <- balance.Message{Balance: 100, SequenceID: 1}
+	<-testDone
 }

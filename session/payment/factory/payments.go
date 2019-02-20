@@ -18,10 +18,14 @@
 package factory
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/payment"
 	"github.com/mysteriumnetwork/node/session/payment/noop"
@@ -32,7 +36,8 @@ import (
 
 // PaymentIssuerFactoryFunc returns a factory for payment issuer. It will be noop if the experimental payment flag is not set
 func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.SignerFactory) func(
-	initialState promise.State,
+	initialState promise.PaymentInfo,
+	paymentDefinition dto.PaymentPerTime,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
@@ -42,7 +47,8 @@ func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.S
 	return paymentIssuerFactory(signerFactory)
 }
 
-func noopPaymentIssuerFactory(initialState promise.State,
+func noopPaymentIssuerFactory(initialState promise.PaymentInfo,
+	paymentDefinition dto.PaymentPerTime,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
@@ -51,12 +57,14 @@ func noopPaymentIssuerFactory(initialState promise.State,
 }
 
 func paymentIssuerFactory(signerFactory identity.SignerFactory) func(
-	initialState promise.State,
+	initialState promise.PaymentInfo,
+	paymentDefinition dto.PaymentPerTime,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 	return func(
-		initialState promise.State,
+		initialState promise.PaymentInfo,
+		paymentDefinition dto.PaymentPerTime,
 		messageChan chan balance.Message,
 		dialog communication.Dialog,
 		consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
@@ -64,8 +72,15 @@ func paymentIssuerFactory(signerFactory identity.SignerFactory) func(
 		bl := balance.NewListener(messageChan)
 		ps := promise.NewSender(dialog)
 		issuer := issuers.NewLocalIssuer(signerFactory(consumer))
-		tracker := promise.NewConsumerTracker(initialState, consumer, provider, issuer)
-		payments := payment.NewSessionPayments(messageChan, ps, tracker)
+		tracker := promise.NewConsumerTracker(promise.State{
+			Seq:    initialState.LastPromise.SequenceID,
+			Amount: initialState.LastPromise.Amount,
+		}, consumer, provider, issuer)
+		timeTracker := session.NewTracker(time.Now)
+		amountCalc := session.AmountCalc{PaymentDef: paymentDefinition}
+
+		balanceTracker := balance.NewBalanceTracker(&timeTracker, amountCalc, initialState.FreeCredit)
+		payments := payment.NewSessionPayments(messageChan, ps, tracker, balanceTracker)
 		err := dialog.Receive(bl.GetConsumer())
 		return payments, errors.Wrap(err, "fail to receive from consumer")
 	}

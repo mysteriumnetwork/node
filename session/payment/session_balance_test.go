@@ -35,7 +35,7 @@ var (
 	consumer            = identity.FromAddress("0x00")
 	receiver            = identity.FromAddress("0x000")
 	BalanceSender       = &MockPeerBalanceSender{balanceMessages: make(chan balance.Message)}
-	MBT                 = &MockBalanceTracker{balanceMessage: balance.Message{Balance: 0, SequenceID: 1}}
+	MBT                 = &MockBalanceTracker{balanceToReturn: 0}
 	MPV                 = &MockPromiseValidator{isValid: true}
 	mockPromiseToReturn = promise.StoredPromise{
 		SequenceID: 1,
@@ -268,13 +268,13 @@ func (mpbs *MockPeerBalanceSender) Send(b balance.Message) error {
 }
 
 type MockBalanceTracker struct {
-	balanceMessage balance.Message
-	amountAdded    uint64
-	startCalled    bool
+	balanceToReturn uint64
+	amountAdded     uint64
+	startCalled     bool
 }
 
 func (mbt *MockBalanceTracker) GetBalance() uint64 {
-	return mbt.balanceMessage.Balance
+	return mbt.balanceToReturn
 }
 
 func (mbt *MockBalanceTracker) Add(amount uint64) {
