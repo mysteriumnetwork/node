@@ -71,7 +71,7 @@ and `make dep-ensure` to install `dep` and to get dependencies).  Happy hacking!
 make build && bin/run_provider
 
 # Start node in consumer role
-make build && bin/run_consumer
+make build && bin/run_consumer cli
 ```
 
 ## Running Node as interactive demo:
@@ -109,23 +109,40 @@ bin/run_consumer cli
 » connect <consumer-identity> <provider-identity> <protocol:(openvpn|wireguard)>
 ```
 
-## Run everything
-
-set the same port for consumer and producer, then run in two separate terminal windows:
-
-```bash
-1) bin/build && bin/run_provider
-
-2) bin/build && bin/run_consumer cli
-```
-
-## Dev in IntelliJ GoLand
+## Info
 
 set the `gopath` for the IDE in settings, then run a new build configuration with `github.com/mysteriumnetwork/node/cmd/mysterium_node` as package and add the following parameters into the program arguments field: 
 ```
 --tequilapi.address=127.0.0.1 --tequilapi.port=4052 cli
 ```
 and you will get the interactive console like in a normal terminal
+
+ - IMPORTANTE! per impostare la GOPATH eseguire come primo comando in ogni finestra: source ~/.profile
+ - path repo: cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/
+
+ - costruzione LOCALNET:
+   - stoppare container precedenti se ci sono: docker stop localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1
+   - eliminarli: docker rm localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1
+   - pulire tutto: docker system prune
+   - comando finale: bin/localnet/setup.sh
+   - se appare il token e payment allora tutto ok
+
+ - avvio PROVIDER
+   - make build && bin/run_provider
+
+ - avvio CONSUMER
+   - make build && bin/run_consumer cli
+
+
+SETUP: source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && docker stop localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1 && docker rm localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1;  yes | docker system prune; bin/localnet/setup.sh;
+
+PROVIDER: source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && make build && bin/run_provider;
+
+CONSUMER: source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && make build && bin/run_consumer cli;
+
+
+### IntellJ GoLand
+per compilare e runnare il programma creare una configurazione Go Build ed avviare file cmd/mysterium_node/mysterium_node.go, aggiungere `--tequilapi.address=127.0.0.1 --tequilapi.port=4052 cli` per avviare la cli in localnet
 
 ## Generate Tequila API documentation from client source code
 
