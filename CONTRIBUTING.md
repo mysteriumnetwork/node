@@ -118,27 +118,27 @@ set the `gopath` for the IDE in settings, then run a new build configuration wit
 and you will get the interactive console like in a normal terminal
 
  - IMPORTANTE! per impostare la GOPATH eseguire come primo comando in ogni finestra: source ~/.profile
- - path repo: cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/
+ - path repo: `cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/`
 
  - costruzione LOCALNET:
-   - stoppare container precedenti se ci sono: docker stop localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1
-   - eliminarli: docker rm localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1
-   - pulire tutto: docker system prune
-   - comando finale: bin/localnet/setup.sh
+   - stoppare container precedenti se ci sono: `docker stop localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1`
+   - eliminarli: `docker rm localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1`
+   - pulire tutto: `docker system prune`
+   - comando finale: `bin/localnet/setup.sh`
    - se appare il token e payment allora tutto ok
 
  - avvio PROVIDER
-   - make build && bin/run_provider
+   - `make build && bin/run_provider`
 
  - avvio CONSUMER
-   - make build && bin/run_consumer cli
+   - `make build && bin/run_consumer cli`
 
 
-SETUP: source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && docker stop localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1 && docker rm localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1;  yes | docker system prune; bin/localnet/setup.sh;
+SETUP: `source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && docker stop localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1 && docker rm localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1;  yes | docker system prune; bin/localnet/setup.sh;`
 
-PROVIDER: source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && make build && bin/run_provider;
+PROVIDER: `source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && make build && bin/run_provider;`
 
-CONSUMER: source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && make build && bin/run_consumer cli;
+CONSUMER: `source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && make build && bin/run_consumer cli;`
 
 
 ### IntellJ GoLand
