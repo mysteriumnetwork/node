@@ -19,6 +19,7 @@ package promise
 
 import (
 	"errors"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -74,16 +75,16 @@ type StoredPromise struct {
 
 // GetNewSeqIDForIssuer returns a new sequenceID for the provided issuer.
 // The operation is atomic and thread safe.
-func (s *Storage) GetNewSeqIDForIssuer(consumer, receiver, issuer identity.Identity) (uint64, error) {
+func (s *Storage) GetNewSeqIDForIssuer(consumerID, receiverID, issuerID identity.Identity) (uint64, error) {
 	s.Lock()
 	defer s.Unlock()
-	lastPromise, err := s.getLastPromise(issuer)
+	lastPromise, err := s.getLastPromise(issuerID)
 	if err != nil && err.Error() == errBoltNotFound.Error() {
 		// we do not have a previous history with the issuer, ask for a promise no1, store it
-		err := s.store(issuer, StoredPromise{
+		err := s.store(issuerID, StoredPromise{
 			SequenceID: firstPromiseID,
-			ConsumerID: consumer,
-			Receiver:   receiver,
+			ConsumerID: consumerID,
+			Receiver:   receiverID,
 		})
 		return firstPromiseID, err
 	} else if err != nil {
@@ -91,10 +92,10 @@ func (s *Storage) GetNewSeqIDForIssuer(consumer, receiver, issuer identity.Ident
 	}
 
 	newID := lastPromise.SequenceID + 1
-	err = s.store(issuer, StoredPromise{
+	err = s.store(issuerID, StoredPromise{
 		SequenceID: newID,
-		ConsumerID: consumer,
-		Receiver:   receiver,
+		ConsumerID: consumerID,
+		Receiver:   receiverID,
 	})
 	return newID, err
 }
@@ -144,6 +145,45 @@ func (s *Storage) GetAllKnownIssuers() []identity.Identity {
 	}
 
 	return res
+}
+
+var errNoPromiseForConsumer = errors.New("no promise for consumer")
+
+// FindPromiseForConsumer returns the last known promise for the issuer/consumer combo
+// It checks if any promises match, and if they do checks to see if any later promises have been cleared.FindPromiseForConsumer
+func (s *Storage) FindPromiseForConsumer(issuerID, consumerID identity.Identity) (StoredPromise, error) {
+	s.Lock()
+	defer s.Unlock()
+	promises, err := s.getAllPromisesForIssuer(issuerID)
+	if err != nil {
+		return StoredPromise{}, err
+	}
+
+	// sort by sequenceID, descending
+	sort.Slice(promises, func(i, j int) bool {
+		return promises[i].SequenceID > promises[j].SequenceID
+	})
+
+	// Iterate from the last promise to the first
+	for i := 0; i < len(promises); i++ {
+		// if we find a cleared promise, it means we've done our job here - we'll need to issue a new id
+		if promises[i].Cleared {
+			return StoredPromise{}, errNoPromiseForConsumer
+		}
+		// otherwise, we're free to extend
+		if promises[i].ConsumerID == consumerID {
+			return promises[i], nil
+		}
+	}
+
+	return StoredPromise{}, errNoPromiseForConsumer
+}
+
+func (s *Storage) sortPromisesDesc(promises []StoredPromise) {
+	// sort by sequenceID, descending
+	sort.Slice(promises, func(i, j int) bool {
+		return promises[i].SequenceID > promises[j].SequenceID
+	})
 }
 
 // GetAllPromisesFromIssuer fetches all the promises known for the given issuer

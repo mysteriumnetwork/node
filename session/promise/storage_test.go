@@ -215,6 +215,83 @@ func Test_Storage_DoesAtomicIncrementsUnderConcurrentLoad(t *testing.T) {
 	}
 }
 
+func Test_FindPromiseForConsumer_ErrsOnEmptySlice(t *testing.T) {
+	ms := newMockStorage(nil)
+	s := NewStorage(ms)
+	_, err := s.FindPromiseForConsumer(issuerID, identity.FromAddress("0x000"))
+	assert.Equal(t, errNoPromiseForConsumer, err)
+}
+
+func Test_FindPromiseForConsumer_ErrsOnNoConsumerPromise(t *testing.T) {
+	mock := map[string][]StoredPromise{
+		getBucketNameFromIssuer(issuerID): {
+			{
+				SequenceID: 1,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+			},
+			{
+				SequenceID: 2,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+			},
+		},
+	}
+	ms := newMockStorage(&mock)
+	s := NewStorage(ms)
+	_, err := s.FindPromiseForConsumer(issuerID, identity.FromAddress("0x000"))
+	assert.Equal(t, errNoPromiseForConsumer, err)
+}
+
+func Test_FindPromiseForConsumer_FindsConsumer(t *testing.T) {
+	consumerID := identity.FromAddress("0x000")
+	mock := map[string][]StoredPromise{
+		getBucketNameFromIssuer(issuerID): {
+			{
+				SequenceID: 1,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+				ConsumerID: consumerID,
+			},
+			{
+				SequenceID: 2,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+			},
+		},
+	}
+	ms := newMockStorage(&mock)
+	s := NewStorage(ms)
+	pr, err := s.FindPromiseForConsumer(issuerID, consumerID)
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(1), pr.SequenceID)
+	assert.Equal(t, consumerID, pr.ConsumerID)
+}
+
+func Test_FindPromiseForConsumer_FindsClearerd(t *testing.T) {
+	consumerID := identity.FromAddress("0x000")
+	mock := map[string][]StoredPromise{
+		getBucketNameFromIssuer(issuerID): {
+			{
+				SequenceID: 1,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+				ConsumerID: consumerID,
+			},
+			{
+				SequenceID: 2,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+				Cleared:    true,
+			},
+		},
+	}
+	ms := newMockStorage(&mock)
+	s := NewStorage(ms)
+	_, err := s.FindPromiseForConsumer(issuerID, consumerID)
+	assert.Equal(t, errNoPromiseForConsumer, err)
+}
+
 func Test_MockStorage(t *testing.T) {
 	ms := newMockStorage(nil)
 

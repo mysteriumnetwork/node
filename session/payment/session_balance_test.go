@@ -153,6 +153,7 @@ func Test_SessionBalance_LoadInitialPromiseState_WithDifferentConsumer_IssuesNew
 		},
 		mps.promiseToReturn,
 	}
+	mps.promiseForConsumerError = errNoPromiseForConsumer
 	orch := NewMockSessionBalance(MPV, &mps, MBT)
 	promise, err := orch.loadInitialPromiseState()
 	assert.Nil(t, err)
@@ -174,6 +175,7 @@ func Test_SessionBalance_LoadInitialPromiseState_WithDifferentConsumer_TakesOld(
 		},
 		mps.promiseToReturn,
 	}
+	mps.promiseForConsumerToReturn = mps.promisesToReturn[0]
 	orch := NewMockSessionBalance(MPV, &mps, MBT)
 	promise, err := orch.loadInitialPromiseState()
 	assert.Nil(t, err)
@@ -224,83 +226,18 @@ func Test_SessionBalance_CalculateAmountToAdd(t *testing.T) {
 
 }
 
-func Test_SessionBalance_findPromiseForConsumer_BubblesErrors(t *testing.T) {
-	mpsCopy := *MPS
-	mpsCopy.promisesToReturnError = errors.New("test")
-	orch := NewMockSessionBalance(MPV, &mpsCopy, MBT)
-	_, err := orch.findPromiseForConsumer()
-	assert.Equal(t, mpsCopy.promisesToReturnError, err)
-}
-
-func Test_SessionBalance_findPromiseForConsumer_ErrsOnEmptySlice(t *testing.T) {
-	mpsCopy := *MPS
-	mpsCopy.promisesToReturn = []promise.StoredPromise{}
-	orch := NewMockSessionBalance(MPV, &mpsCopy, MBT)
-	_, err := orch.findPromiseForConsumer()
-	assert.Equal(t, errNoPromiseForConsumer, err)
-}
-
-func Test_SessionBalance_findPromiseForConsumer_ErrsOnNoConsumerPromise(t *testing.T) {
-	mpsCopy := *MPS
-	mpsCopy.promisesToReturn = []promise.StoredPromise{
-		{
-			SequenceID: 1,
-		},
-		{
-			SequenceID: 2,
-		},
-	}
-	orch := NewMockSessionBalance(MPV, &mpsCopy, MBT)
-	_, err := orch.findPromiseForConsumer()
-	assert.Equal(t, errNoPromiseForConsumer, err)
-}
-
-func Test_SessionBalance_findPromiseForConsumer_FindsConsumer(t *testing.T) {
-	mpsCopy := *MPS
-	consumerPromise := promise.StoredPromise{
-		SequenceID: 1,
-		ConsumerID: consumer,
-	}
-	mpsCopy.promisesToReturn = []promise.StoredPromise{
-		consumerPromise,
-		{
-			SequenceID: 2,
-		},
-	}
-	orch := NewMockSessionBalance(MPV, &mpsCopy, MBT)
-	p, err := orch.findPromiseForConsumer()
-	assert.Nil(t, err)
-	assert.Exactly(t, consumerPromise, p)
-}
-
-func Test_SessionBalance_findPromiseForConsumer_FindsClearerd(t *testing.T) {
-	mpsCopy := *MPS
-	consumerPromise := promise.StoredPromise{
-		SequenceID: 1,
-		ConsumerID: consumer,
-	}
-	mpsCopy.promisesToReturn = []promise.StoredPromise{
-		consumerPromise,
-		{
-			SequenceID: 2,
-			Cleared:    true,
-		},
-	}
-	orch := NewMockSessionBalance(MPV, &mpsCopy, MBT)
-	_, err := orch.findPromiseForConsumer()
-	assert.Equal(t, errNoPromiseForConsumer, err)
-}
-
 type MockPromiseStorage struct {
-	promiseToReturn       promise.StoredPromise
-	promisesToReturn      []promise.StoredPromise
-	promisesToReturnError error
-	newIDerror            error
-	updateError           error
-	lastPromiseError      error
+	promiseToReturn            promise.StoredPromise
+	promisesToReturn           []promise.StoredPromise
+	promiseForConsumerToReturn promise.StoredPromise
+	promiseForConsumerError    error
+	promisesToReturnError      error
+	newIDerror                 error
+	updateError                error
+	lastPromiseError           error
 }
 
-func (mps *MockPromiseStorage) GetNewSeqIDForIssuer(consumer, receiver, issuer identity.Identity) (uint64, error) {
+func (mps *MockPromiseStorage) GetNewSeqIDForIssuer(consumerID, receiverID, issuerID identity.Identity) (uint64, error) {
 	return mps.promiseToReturn.SequenceID + 1, mps.newIDerror
 }
 
@@ -314,6 +251,10 @@ func (mps *MockPromiseStorage) GetLastPromise(issuerID identity.Identity) (promi
 
 func (mps *MockPromiseStorage) GetAllPromisesFromIssuer(issuerID identity.Identity) ([]promise.StoredPromise, error) {
 	return mps.promisesToReturn, mps.promisesToReturnError
+}
+
+func (mps *MockPromiseStorage) FindPromiseForConsumer(issuerID, consumerID identity.Identity) (promise.StoredPromise, error) {
+	return mps.promiseForConsumerToReturn, mps.promiseForConsumerError
 }
 
 type MockPeerBalanceSender struct {

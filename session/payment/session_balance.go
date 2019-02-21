@@ -22,7 +22,6 @@ package payment
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -32,10 +31,11 @@ import (
 
 // PromiseStorage stores the promises and issues new sequenceID's
 type PromiseStorage interface {
-	GetNewSeqIDForIssuer(consumer, receiver, issuer identity.Identity) (uint64, error)
+	GetNewSeqIDForIssuer(consumerID, receiverID, issuerID identity.Identity) (uint64, error)
 	Update(issuerID identity.Identity, promise promise.StoredPromise) error
 	GetLastPromise(issuerID identity.Identity) (promise.StoredPromise, error)
 	GetAllPromisesFromIssuer(issuerID identity.Identity) ([]promise.StoredPromise, error)
+	FindPromiseForConsumer(issuerID, consumerID identity.Identity) (promise.StoredPromise, error)
 }
 
 // BalanceTracker keeps track of current balance
@@ -64,6 +64,9 @@ var ErrPromiseValidationFailed = errors.New("promise validation failed")
 // errBoltNotFound indicates that bolt did not find a record
 var errBoltNotFound = errors.New("not found")
 
+// errNoPromiseForConsumer represents the error when the storage layer is unable to find a promise for the given consumer
+var errNoPromiseForConsumer = errors.New("no promise for consumer")
+
 // SessionBalance orchestrates the ping pong of balance sent to consumer -> promise received from consumer flow
 type SessionBalance struct {
 	stop               chan struct{}
@@ -74,9 +77,9 @@ type SessionBalance struct {
 	promiseWaitTimeout time.Duration
 	promiseValidator   PromiseValidator
 	promiseStorage     PromiseStorage
-	issuer             identity.Identity
-	consumer           identity.Identity
-	receiver           identity.Identity
+	issuerID           identity.Identity
+	consumerID         identity.Identity
+	receiverID         identity.Identity
 
 	sequenceID uint64
 }
@@ -90,7 +93,7 @@ func NewSessionBalance(
 	promiseWaitTimeout time.Duration,
 	promiseValidator PromiseValidator,
 	promiseStorage PromiseStorage,
-	consumer, receiver, issuer identity.Identity) *SessionBalance {
+	consumerID, receiverID, issuerID identity.Identity) *SessionBalance {
 	return &SessionBalance{
 		stop:               make(chan struct{}),
 		peerBalanceSender:  peerBalanceSender,
@@ -100,9 +103,9 @@ func NewSessionBalance(
 		promiseWaitTimeout: promiseWaitTimeout,
 		promiseValidator:   promiseValidator,
 		promiseStorage:     promiseStorage,
-		consumer:           consumer,
-		receiver:           receiver,
-		issuer:             issuer,
+		consumerID:         consumerID,
+		receiverID:         receiverID,
+		issuerID:           issuerID,
 	}
 }
 
@@ -133,11 +136,11 @@ func (sb *SessionBalance) Start() error {
 }
 
 func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, error) {
-	lastPromise, err := sb.promiseStorage.GetLastPromise(sb.issuer)
+	lastPromise, err := sb.promiseStorage.GetLastPromise(sb.issuerID)
 	if err != nil {
 		if err.Error() == errBoltNotFound.Error() {
 			// if not found, issue a new sequenceID
-			lastPromise.SequenceID, err = sb.promiseStorage.GetNewSeqIDForIssuer(sb.consumer, sb.receiver, sb.issuer)
+			lastPromise.SequenceID, err = sb.promiseStorage.GetNewSeqIDForIssuer(sb.consumerID, sb.receiverID, sb.issuerID)
 			sb.sequenceID = lastPromise.SequenceID
 			return lastPromise, err
 		}
@@ -156,11 +159,11 @@ func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, erro
 
 	TODO: This could turn out to be expensive, and we might just want to skip this check and issue a new ID instead.
 	*/
-	if lastPromise.ConsumerID != sb.consumer {
-		consumerPromise, err := sb.findPromiseForConsumer()
+	if lastPromise.ConsumerID != sb.consumerID {
+		consumerPromise, err := sb.promiseStorage.FindPromiseForConsumer(sb.issuerID, sb.consumerID)
 		if err != nil {
 			if err.Error() == errNoPromiseForConsumer.Error() {
-				lastPromise.SequenceID, err = sb.promiseStorage.GetNewSeqIDForIssuer(sb.consumer, sb.receiver, sb.issuer)
+				lastPromise.SequenceID, err = sb.promiseStorage.GetNewSeqIDForIssuer(sb.consumerID, sb.receiverID, sb.issuerID)
 				sb.sequenceID = lastPromise.SequenceID
 				return lastPromise, err
 			}
@@ -174,34 +177,6 @@ func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, erro
 	return lastPromise, nil
 }
 
-var errNoPromiseForConsumer = errors.New("no promise for consumer")
-
-func (sb *SessionBalance) findPromiseForConsumer() (promise.StoredPromise, error) {
-	promises, err := sb.promiseStorage.GetAllPromisesFromIssuer(sb.issuer)
-	if err != nil {
-		return promise.StoredPromise{}, err
-	}
-
-	// sort by sequenceID, descending
-	sort.Slice(promises, func(i, j int) bool {
-		return promises[i].SequenceID > promises[j].SequenceID
-	})
-
-	// Iterate from the last promise to the first
-	for i := 0; i < len(promises); i++ {
-		// if we find a cleared promise, it means we've done our job here - we'll need to issue a new id
-		if promises[i].Cleared {
-			return promise.StoredPromise{}, errNoPromiseForConsumer
-		}
-		// otherwise, we're free to extend
-		if promises[i].ConsumerID == sb.consumer {
-			return promises[i], nil
-		}
-	}
-
-	return promise.StoredPromise{}, errNoPromiseForConsumer
-}
-
 func (sb *SessionBalance) startBalanceTracker(lastPromise promise.StoredPromise) {
 	amountToAdd := lastPromise.UnconsumedAmount
 
@@ -211,7 +186,7 @@ func (sb *SessionBalance) startBalanceTracker(lastPromise promise.StoredPromise)
 
 func (sb *SessionBalance) sendBalance() error {
 	currentBalance := sb.balanceTracker.GetBalance()
-	p, err := sb.promiseStorage.GetLastPromise(sb.issuer)
+	p, err := sb.promiseStorage.GetLastPromise(sb.issuerID)
 	if err != nil {
 		return err
 	}
@@ -221,7 +196,7 @@ func (sb *SessionBalance) sendBalance() error {
 		return fmt.Errorf("unconsumed amount is 0, while balance is %v", currentBalance)
 	}
 
-	err = sb.promiseStorage.Update(sb.issuer, promise.StoredPromise{
+	err = sb.promiseStorage.Update(sb.issuerID, promise.StoredPromise{
 		SequenceID:       p.SequenceID,
 		UnconsumedAmount: currentBalance,
 		Message:          p.Message,
@@ -248,7 +223,7 @@ func (sb *SessionBalance) calculateAmountToAdd(pm promise.Message, p promise.Sto
 }
 
 func (sb *SessionBalance) storePromiseAndUpdateBalance(pm promise.Message) error {
-	p, err := sb.promiseStorage.GetLastPromise(sb.issuer)
+	p, err := sb.promiseStorage.GetLastPromise(sb.issuerID)
 	if err != nil {
 		return err
 	}
@@ -257,7 +232,7 @@ func (sb *SessionBalance) storePromiseAndUpdateBalance(pm promise.Message) error
 
 	p.Message = &pm
 	p.UnconsumedAmount += amount
-	err = sb.promiseStorage.Update(sb.issuer, p)
+	err = sb.promiseStorage.Update(sb.issuerID, p)
 	return err
 }
 
