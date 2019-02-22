@@ -159,10 +159,7 @@ func (s *Storage) FindPromiseForConsumer(issuerID, consumerID identity.Identity)
 		return StoredPromise{}, err
 	}
 
-	// sort by sequenceID, descending
-	sort.Slice(promises, func(i, j int) bool {
-		return promises[i].SequenceID > promises[j].SequenceID
-	})
+	sortPromisesDesc(promises)
 
 	// Iterate from the last promise to the first
 	for i := 0; i < len(promises); i++ {
@@ -179,7 +176,7 @@ func (s *Storage) FindPromiseForConsumer(issuerID, consumerID identity.Identity)
 	return StoredPromise{}, errNoPromiseForConsumer
 }
 
-func (s *Storage) sortPromisesDesc(promises []StoredPromise) {
+func sortPromisesDesc(promises []StoredPromise) {
 	// sort by sequenceID, descending
 	sort.Slice(promises, func(i, j int) bool {
 		return promises[i].SequenceID > promises[j].SequenceID
