@@ -18,6 +18,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -137,6 +138,7 @@ func (c *cliApp) handleActions(line string) {
 		{command: "license", handler: c.license},
 		{command: "registration", handler: c.registration},
 		{command: "proposals", handler: c.proposals},
+		{command: "service", handler: c.service},
 	}
 
 	for _, cmd := range staticCmds {
@@ -159,20 +161,107 @@ func (c *cliApp) handleActions(line string) {
 	}
 }
 
-func (c *cliApp) connect(argsString string) {
-	options := strings.Fields(argsString)
+func (c *cliApp) service(argsString string) {
+	var action, providerID, serviceType, id string
+	var options json.RawMessage
 
-	if len(options) < 3 {
+	help := func() {
+		fmt.Println("service <action> [args]")
+		fmt.Println("	start	<ProviderID> <ServiceType> [options]")
+		fmt.Println("	stop	<ServiceID>")
+		fmt.Println("	list")
+		fmt.Println("	get	<ServiceID>")
+		fmt.Println("")
+		fmt.Println(`example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn {"port":1190, "protocol":"UDP"}`)
+	}
+
+	args := strings.Fields(argsString)
+	if len(args) == 0 {
+		help()
+		return
+	}
+
+	action = args[0]
+	switch action {
+	case "start":
+		if len(args) < 3 {
+			help()
+			return
+		}
+
+		providerID, serviceType = args[1], args[2]
+		if len(args) > 3 {
+			options = json.RawMessage(strings.Join(args[3:], " "))
+		}
+
+		service, err := c.tequilapi.ServiceStart(providerID, serviceType, options)
+		if err != nil {
+			info("Failed to start service: ", err)
+			return
+		}
+
+		status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
+
+	case "stop":
+		if len(args) < 2 {
+			help()
+			return
+		}
+
+		id = args[1]
+		if err := c.tequilapi.ServiceStop(id); err != nil {
+			info("Failed to stop service: ", err)
+			return
+		}
+
+		status("Stopping", "ID: "+id)
+
+	case "list":
+		services, err := c.tequilapi.Services()
+		if err != nil {
+			info("Failed to get list of services: ", err)
+			return
+		}
+
+		for _, service := range services {
+			status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
+		}
+
+	case "get":
+		if len(args) < 2 {
+			help()
+			return
+		}
+
+		id = args[1]
+		service, err := c.tequilapi.Service(id)
+		if err != nil {
+			info("Failed to get service info: ", err)
+			return
+		}
+
+		status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
+
+	default:
+		info(fmt.Sprintf("Unknown action provided: %s", action))
+		help()
+	}
+}
+
+func (c *cliApp) connect(argsString string) {
+	args := strings.Fields(argsString)
+
+	if len(args) < 3 {
 		info("Please type in the provider identity. Connect <consumer-identity> <provider-identity> <service-type> [disable-kill-switch]")
 		return
 	}
 
-	consumerID, providerID, serviceType := options[0], options[1], options[2]
+	consumerID, providerID, serviceType := args[0], args[1], args[2]
 
 	var disableKill bool
 	var err error
-	if len(options) > 3 {
-		disableKillStr := options[3]
+	if len(args) > 3 {
+		disableKillStr := args[3]
 		disableKill, err = strconv.ParseBool(disableKillStr)
 		if err != nil {
 			info("Please use true / false for <disable-kill-switch>")
@@ -481,6 +570,18 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 					getProposalOptionList(proposals),
 				),
 			),
+		),
+		readline.PcItem(
+			"service",
+			readline.PcItem("start", readline.PcItemDynamic(
+				getIdentityOptionList(tequilapi),
+				readline.PcItem("noop"),
+				readline.PcItem("openvpn"),
+				readline.PcItem("wireguard"),
+			)),
+			readline.PcItem("stop"),
+			readline.PcItem("list"),
+			readline.PcItem("get"),
 		),
 		readline.PcItem(
 			"identities",

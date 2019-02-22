@@ -267,9 +267,7 @@ func (client *Client) Services() (services Services, err error) {
 
 // Service returns a service information by the requested id.
 func (client *Client) Service(id string) (service Service, err error) {
-	queryParams := url.Values{}
-	queryParams.Add("id", id)
-	response, err := client.http.Get("services", queryParams)
+	response, err := client.http.Get("services/"+id, url.Values{})
 	if err != nil {
 		return service, err
 	}
