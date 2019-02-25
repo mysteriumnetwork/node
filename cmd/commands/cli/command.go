@@ -162,10 +162,7 @@ func (c *cliApp) handleActions(line string) {
 }
 
 func (c *cliApp) service(argsString string) {
-	var action, providerID, serviceType, id string
-	var options json.RawMessage
-
-	help := func() {
+	printHelp := func() {
 		fmt.Println("service <action> [args]")
 		fmt.Println("	start	<ProviderID> <ServiceType> [options]")
 		fmt.Println("	stop	<ServiceID>")
@@ -177,75 +174,82 @@ func (c *cliApp) service(argsString string) {
 
 	args := strings.Fields(argsString)
 	if len(args) == 0 {
-		help()
+		printHelp()
 		return
 	}
 
-	action = args[0]
+	action := args[0]
 	switch action {
 	case "start":
 		if len(args) < 3 {
-			help()
+			printHelp()
 			return
 		}
-
-		providerID, serviceType = args[1], args[2]
-		if len(args) > 3 {
-			options = json.RawMessage(strings.Join(args[3:], " "))
-		}
-
-		service, err := c.tequilapi.ServiceStart(providerID, serviceType, options)
-		if err != nil {
-			info("Failed to start service: ", err)
-			return
-		}
-
-		status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
-
+		c.serviceStart(args[1], args[2], args[3:]...)
 	case "stop":
 		if len(args) < 2 {
-			help()
+			printHelp()
 			return
 		}
-
-		id = args[1]
-		if err := c.tequilapi.ServiceStop(id); err != nil {
-			info("Failed to stop service: ", err)
-			return
-		}
-
-		status("Stopping", "ID: "+id)
-
-	case "list":
-		services, err := c.tequilapi.Services()
-		if err != nil {
-			info("Failed to get list of services: ", err)
-			return
-		}
-
-		for _, service := range services {
-			status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
-		}
-
+		c.serviceStop(args[1])
 	case "get":
 		if len(args) < 2 {
-			help()
+			printHelp()
 			return
 		}
-
-		id = args[1]
-		service, err := c.tequilapi.Service(id)
-		if err != nil {
-			info("Failed to get service info: ", err)
-			return
-		}
-
-		status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
-
+		c.serviceGet(args[1])
+	case "list":
+		c.serviceList()
 	default:
 		info(fmt.Sprintf("Unknown action provided: %s", action))
-		help()
+		printHelp()
 	}
+}
+
+func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
+	var options json.RawMessage
+	if len(args) > 0 {
+		options = json.RawMessage(strings.Join(args[3:], " "))
+	}
+
+	service, err := c.tequilapi.ServiceStart(providerID, serviceType, options)
+	if err != nil {
+		info("Failed to start service: ", err)
+		return
+	}
+
+	status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
+}
+
+func (c *cliApp) serviceStop(id string) {
+	if err := c.tequilapi.ServiceStop(id); err != nil {
+		info("Failed to stop service: ", err)
+		return
+	}
+
+	status("Stopping", "ID: "+id)
+}
+
+func (c *cliApp) serviceList() {
+	services, err := c.tequilapi.Services()
+	if err != nil {
+		info("Failed to get list of services: ", err)
+		return
+	}
+
+	for _, service := range services {
+		status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
+	}
+}
+
+func (c *cliApp) serviceGet(id string) {
+	service, err := c.tequilapi.Service(id)
+	if err != nil {
+		info("Failed to get service info: ", err)
+		return
+	}
+
+	status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
 }
 
 func (c *cliApp) connect(argsString string) {
