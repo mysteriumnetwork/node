@@ -20,7 +20,6 @@ package session
 import (
 	"encoding/json"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/promise"
@@ -30,7 +29,7 @@ const consumerLogPrefix = "[session-create-consumer] "
 
 // PromiseLoader loads the last known promise info for the given consumer
 type PromiseLoader interface {
-	GetLastPromise(issuerID identity.Identity) (promise.StoredPromise, error)
+	LoadPaymentInfo(issuerID identity.Identity) *promise.PaymentInfo
 }
 
 // createConsumer processes session create requests from communication channel.
@@ -80,7 +79,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 				destroyCallback()
 			}()
 		}
-		return responseWithSession(sessionInstance, config, consumer.loadPaymentInfo(issuerID)), nil
+		return responseWithSession(sessionInstance, config, consumer.promiseLoader.LoadPaymentInfo(issuerID)), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
 	default:
@@ -88,26 +87,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	}
 }
 
-func (consumer *createConsumer) loadPaymentInfo(issuerID identity.Identity) *PaymentInfo {
-	sp, err := consumer.promiseLoader.GetLastPromise(issuerID)
-	if err != nil {
-		log.Trace(consumerLogPrefix, "could not load promise info, defaulting to nil payment info", err)
-		return nil
-	}
-	pi := &PaymentInfo{
-		LastPromise: LastPromise{
-			SequenceID: sp.SequenceID,
-		},
-		FreeCredit: sp.UnconsumedAmount,
-	}
-	if sp.Message != nil {
-		pi.LastPromise.Amount = sp.Message.Amount
-		log.Trace(consumerLogPrefix, "payment info loaded")
-	}
-	return pi
-}
-
-func responseWithSession(sessionInstance Session, config ServiceConfiguration, pi *PaymentInfo) CreateResponse {
+func responseWithSession(sessionInstance Session, config ServiceConfiguration, pi *promise.PaymentInfo) CreateResponse {
 	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		// Failed to serialize session

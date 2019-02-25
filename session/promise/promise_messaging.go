@@ -33,6 +33,19 @@ type Message struct {
 	Signature  string `json:"signature"`
 }
 
+// PaymentInfo represents the payment information that the provider has about the consumer
+type PaymentInfo struct {
+	LastPromise LastPromise `json:"lastPromise"`
+	FreeCredit  uint64      `json:"freeCredit"`
+}
+
+// LastPromise represents the last known promise to the provider
+// If the seqid and amount are 0 - there's no known info
+type LastPromise struct {
+	SequenceID uint64 `json:"sequenceID"`
+	Amount     uint64 `json:"amount"`
+}
+
 const endpointPromise = "session-promise"
 const messageEndpointPromise = communication.MessageEndpoint(endpointPromise)
 
