@@ -39,7 +39,7 @@ services:
 
   #private blockchain with single miner and single node
   geth:
-    image: mysteriumnetwork/geth:1.8.12
+    image: mysteriumnetwork/geth:1.8.23
     expose:
       - 8545
     volumes:
