@@ -67,7 +67,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				os.Exit(2)
 			}
 
-			errorChannel := make(chan error, 3)
+			errorChannel := make(chan error)
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			if err := di.Bootstrap(nodeOptions); err != nil {
 				return err
