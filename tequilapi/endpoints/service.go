@@ -45,6 +45,8 @@ type serviceRequest struct {
 	// example: openvpn
 	ServiceType string `json:"serviceType"`
 
+	// service options. Every service has a unique list of allowed options.
+	// required: false
 	Options json.RawMessage `json:"options"`
 }
 
@@ -201,7 +203,6 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 
 	resp.WriteHeader(http.StatusCreated)
 	statusResponse := toServiceInfoResponse(id, instance)
-	statusResponse.Status = string(service.Starting)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -265,7 +266,7 @@ func toServiceRequest(req *http.Request) (sr serviceRequest, err error) {
 func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInfo {
 	return serviceInfo{
 		ID:       string(id),
-		Status:   string(service.Running),
+		Status:   string(instance.State()),
 		Proposal: proposalToRes(instance.Proposal()),
 	}
 }
@@ -273,11 +274,7 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInf
 func toServiceListResponse(instances map[service.ID]*service.Instance) serviceList {
 	res := make([]serviceInfo, 0)
 	for id, instance := range instances {
-		res = append(res, serviceInfo{
-			ID:       string(id),
-			Status:   string(instance.State()),
-			Proposal: proposalToRes(instance.Proposal()),
-		})
+		res = append(res, toServiceInfoResponse(id, instance))
 	}
 	return res
 }

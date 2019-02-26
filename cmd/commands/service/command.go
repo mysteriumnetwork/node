@@ -25,6 +25,8 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/identity"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
@@ -75,8 +77,12 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
 
 			cmdService := &serviceCommand{
+				identityHandler: identity_selector.NewHandler(
+					di.IdentityManager,
+					di.MysteriumAPI,
+					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
+					di.SignerFactory),
 				tequilapi: client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
-				runErrors: errorChannel,
 			}
 
 			go func() {
@@ -97,8 +103,9 @@ func NewCommand(licenseCommandName string) *cli.Command {
 
 // serviceCommand represent entrypoint for service command with top level components
 type serviceCommand struct {
-	tequilapi *client.Client
-	runErrors chan error
+	identityHandler identity_selector.Handler
+	tequilapi       *client.Client
+	runErrors       chan error
 }
 
 // Run runs a command
@@ -108,9 +115,8 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		serviceTypes = strings.Split(arg, ",")
 	}
 
-	identityOptions := parseFlags(ctx)
-
-	if err := sc.unlockIdentity(identityOptions); err != nil {
+	identity, err := sc.unlockIdentity(parseFlags(ctx))
+	if err != nil {
 		return err
 	}
 
@@ -120,17 +126,16 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	// 1 for the node.Wait()
 	// 1 for each of the services
 	sc.runErrors = make(chan error, 2+len(serviceTypes))
-	if err := sc.runServices(ctx, identityOptions.Identity, serviceTypes); err != nil {
+	if err := sc.runServices(ctx, identity.Address, serviceTypes); err != nil {
 		return err
 	}
-
-	cmd.RegisterSignalCallback(func() { sc.runErrors <- nil })
 
 	return <-sc.runErrors
 }
 
-func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) error {
-	return sc.tequilapi.Unlock(identityOptions.Identity, identityOptions.Passphrase)
+func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (identity.Identity, error) {
+	loadIdentity := identity_selector.NewLoader(sc.identityHandler, identityOptions.Identity, identityOptions.Passphrase)
+	return loadIdentity()
 }
 
 func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {

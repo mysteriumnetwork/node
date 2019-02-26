@@ -41,13 +41,13 @@ func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType st
 func (sm *mockServiceManager) Stop(id service.ID) error { return nil }
 func (sm *mockServiceManager) Service(id service.ID) *service.Instance {
 	if id == "6ba7b810-9dad-11d1-80b4-00c04fd430c8" {
-		return service.NewInstance(nil, serviceProposals[0], nil, nil)
+		return service.NewInstance(service.Running, nil, serviceProposals[0], nil, nil)
 	}
 	return nil
 }
 func (sm *mockServiceManager) List() map[service.ID]*service.Instance {
 	return map[service.ID]*service.Instance{
-		"11111111-9dad-11d1-80b4-00c04fd430c0": service.NewInstance(nil, serviceProposals[0], nil, nil),
+		"11111111-9dad-11d1-80b4-00c04fd430c0": service.NewInstance(service.NotRunning, nil, serviceProposals[0], nil, nil),
 	}
 }
 func (sm *mockServiceManager) Kill() error { return nil }
@@ -78,7 +78,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		},
 		{
 			http.MethodPost, "/services", `{"providerId": "node1", "serviceType": "testprotocol"}`,
-			http.StatusCreated, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Starting","options":{"protocol":"","port":0}}`,
+			http.StatusCreated, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running","options":{"protocol":"","port":0}}`,
 		},
 		{
 			http.MethodGet, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",

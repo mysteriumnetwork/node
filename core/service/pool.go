@@ -100,9 +100,9 @@ func (p *Pool) Instance(id ID) *Instance {
 }
 
 // NewInstance creates new instance of the service.
-func NewInstance(service RunnableService, proposal market.ServiceProposal, dialog communication.DialogWaiter, discovery *discovery_registry.Discovery) *Instance {
+func NewInstance(state State, service RunnableService, proposal market.ServiceProposal, dialog communication.DialogWaiter, discovery *discovery_registry.Discovery) *Instance {
 	return &Instance{
-		state:        NotRunning,
+		state:        state,
 		service:      service,
 		proposal:     proposal,
 		dialogWaiter: dialog,
