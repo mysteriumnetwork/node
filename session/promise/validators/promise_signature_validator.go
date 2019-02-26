@@ -32,11 +32,11 @@ type IssuedPromiseValidator struct {
 }
 
 // NewIssuedPromiseValidator return a new instance of IssuedPromiseValidator
-func NewIssuedPromiseValidator(consumer, receiver, issuer identity.Identity) *IssuedPromiseValidator {
+func NewIssuedPromiseValidator(consumerID, receiverID, issuerID identity.Identity) *IssuedPromiseValidator {
 	return &IssuedPromiseValidator{
-		consumer: common.HexToAddress(consumer.Address),
-		receiver: common.HexToAddress(receiver.Address),
-		issuer:   common.HexToAddress(issuer.Address),
+		consumer: common.HexToAddress(consumerID.Address),
+		receiver: common.HexToAddress(receiverID.Address),
+		issuer:   common.HexToAddress(issuerID.Address),
 	}
 }
 
