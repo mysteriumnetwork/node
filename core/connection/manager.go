@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
@@ -85,7 +84,7 @@ type connectionManager struct {
 	status      Status
 	statusLock  sync.RWMutex
 	sessionInfo SessionInfo
-	cleanup     []func()
+	cleanup     []func() error
 	cancel      func()
 
 	discoLock sync.Mutex
@@ -104,7 +103,7 @@ func NewManager(
 		newConnection:        connectionCreator,
 		status:               statusNotConnected(),
 		eventPublisher:       eventPublisher,
-		cleanup:              make([]func(), 0),
+		cleanup:              make([]func() error, 0),
 	}
 }
 
@@ -154,7 +153,7 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 	return err
 }
 
-func (manager *connectionManager) launchPayments(paymentInfo *session.PaymentInfo, dialog communication.Dialog, consumerID, providerID identity.Identity) error {
+func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID identity.Identity) error {
 	var promiseState promise.State
 	if paymentInfo != nil {
 		promiseState.Amount = paymentInfo.LastPromise.Amount
@@ -168,7 +167,10 @@ func (manager *connectionManager) launchPayments(paymentInfo *session.PaymentInf
 		return err
 	}
 
-	manager.cleanup = append(manager.cleanup, payments.Stop)
+	manager.cleanup = append(manager.cleanup, func() error {
+		payments.Stop()
+		return nil
+	})
 
 	go manager.payForService(payments)
 	return nil
@@ -177,9 +179,12 @@ func (manager *connectionManager) launchPayments(paymentInfo *session.PaymentInf
 func (manager *connectionManager) cleanConnection() {
 	manager.cancel()
 	for i := len(manager.cleanup) - 1; i > 0; i-- {
-		manager.cleanup[i]()
+		err := manager.cleanup[i]()
+		if err != nil {
+			log.Warn(managerLogPrefix, "cleanup error:", err)
+		}
 	}
-	manager.cleanup = make([]func(), 0)
+	manager.cleanup = make([]func() error, 0)
 }
 
 func (manager *connectionManager) createDialog(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
@@ -188,11 +193,11 @@ func (manager *connectionManager) createDialog(consumerID, providerID identity.I
 		return nil, err
 	}
 
-	manager.cleanup = append(manager.cleanup, func() { dialog.Close() })
+	manager.cleanup = append(manager.cleanup, dialog.Close)
 	return dialog, err
 }
 
-func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, *session.PaymentInfo, error) {
+func (manager *connectionManager) createSession(c Connection, dialog communication.Dialog, consumerID identity.Identity, proposal market.ServiceProposal) (session.SessionDto, *promise.PaymentInfo, error) {
 	sessionCreateConfig, err := c.GetConfig()
 	if err != nil {
 		return session.SessionDto{}, nil, err
@@ -200,8 +205,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 
 	consumerInfo := session.ConsumerInfo{
 		// TODO: once we're supporting payments from another identity make the changes accordingly
-		IssuerID:          consumerID,
-		MystClientVersion: metadata.VersionAsString(),
+		IssuerID: consumerID,
 	}
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)
@@ -209,7 +213,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		return session.SessionDto{}, nil, err
 	}
 
-	manager.cleanup = append(manager.cleanup, func() { session.RequestSessionDestroy(dialog, s.ID) })
+	manager.cleanup = append(manager.cleanup, func() error { return session.RequestSessionDestroy(dialog, s.ID) })
 
 	// set the session info for future use
 	manager.sessionInfo = SessionInfo{
@@ -223,11 +227,12 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		SessionInfo: manager.sessionInfo,
 	})
 
-	manager.cleanup = append(manager.cleanup, func() {
+	manager.cleanup = append(manager.cleanup, func() error {
 		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
 			Status:      SessionEndedStatus,
 			SessionInfo: manager.sessionInfo,
 		})
+		return nil
 	})
 
 	return s, paymentInfo, nil
@@ -260,7 +265,10 @@ func (manager *connectionManager) startConnection(
 	if err = connection.Start(connectOptions); err != nil {
 		return err
 	}
-	manager.cleanup = append(manager.cleanup, connection.Stop)
+	manager.cleanup = append(manager.cleanup, func() error {
+		connection.Stop()
+		return nil
+	})
 
 	//consume statistics right after start - openvpn3 will publish them even before connected state
 	go manager.consumeStats(statisticsChannel)

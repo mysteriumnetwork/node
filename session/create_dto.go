@@ -56,6 +56,5 @@ type SessionDto struct {
 
 // ConsumerInfo represents the consumer related information
 type ConsumerInfo struct {
-	MystClientVersion string            `json:"mystClientVersion"`
-	IssuerID          identity.Identity `json:"issuerID"`
+	IssuerID identity.Identity `json:"issuerID"`
 }
