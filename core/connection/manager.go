@@ -249,7 +249,7 @@ func (manager *connectionManager) startConnection(
 
 	defer func() {
 		if err != nil {
-			log.Info(managerLogPrefix, "Cancelling connection initiation", err)
+			log.Info(managerLogPrefix, "Cancelling connection initiation: ", err)
 			logDisconnectError(manager.Disconnect())
 		}
 	}()

@@ -224,6 +224,8 @@ func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutErro
 
 func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
 	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{}
+	tc.fakeConnectionFactory.mockConnection.onStopReportStates = []fakeState{}
+
 	connectWaiter := &sync.WaitGroup{}
 	connectWaiter.Add(1)
 	var err error
