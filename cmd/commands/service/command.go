@@ -77,12 +77,13 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
 
 			cmdService := &serviceCommand{
+				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
+				errorChannel: errorChannel,
 				identityHandler: identity_selector.NewHandler(
 					di.IdentityManager,
 					di.MysteriumAPI,
 					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
 					di.SignerFactory),
-				tequilapi: client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 			}
 
 			go func() {
@@ -105,7 +106,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 type serviceCommand struct {
 	identityHandler identity_selector.Handler
 	tequilapi       *client.Client
-	runErrors       chan error
+	errorChannel    chan error
 }
 
 // Run runs a command
@@ -120,17 +121,11 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		return err
 	}
 
-	// We need a small buffer for the error channel as we'll have quite a few concurrent reporters
-	// The buffer size is determined as follows:
-	// 1 for the signal callback
-	// 1 for the node.Wait()
-	// 1 for each of the services
-	sc.runErrors = make(chan error, 2+len(serviceTypes))
 	if err := sc.runServices(ctx, identity.Address, serviceTypes); err != nil {
 		return err
 	}
 
-	return <-sc.runErrors
+	return <-sc.errorChannel
 }
 
 func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (identity.Identity, error) {
@@ -153,7 +148,7 @@ func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, servi
 func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options) {
 	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options)
 	if err != nil {
-		sc.runErrors <- err
+		sc.errorChannel <- err
 	}
 }
 
