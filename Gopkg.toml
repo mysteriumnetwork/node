@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/payments"
-  version = "0.0.9"
+  version = "0.0.10"
 
 [[constraint]]
   name = "github.com/chzyer/readline"
@@ -39,7 +39,7 @@
 
 [[constraint]]
   name = "github.com/ethereum/go-ethereum"
-  version = "=1.8.14"
+  version = "=1.8.23"
 
 [[constraint]]
   name = "github.com/julienschmidt/httprouter"

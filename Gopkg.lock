@@ -2,6 +2,17 @@
 
 
 [[projects]]
+  digest = "1:f96ba6ecca7ba87b1dddd70ae38cfc4ce5ea844f58d1f728e121d2e29cdfb8a2"
+  name = "github.com/allegro/bigcache"
+  packages = [
+    ".",
+    "queue",
+  ]
+  pruneopts = "UT"
+  revision = "84a0ff3f153cbd7e280a19029a864bb04b504e62"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:7d191fd0c54ff370eaf6116a14dafe2a328df487baea280699f597aae858d00d"
   name = "github.com/aristanetworks/goarista"
   packages = ["monotime"]
@@ -85,7 +96,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:d670c508dc01984c721d0d968936412e3edcd8ca58caf82fcfd0df9044013a0f"
+  digest = "1:1530d06761f464b62ab3dfc2fa5b16303901d87ff219100a1447ba216d2e52be"
   name = "github.com/ethereum/go-ethereum"
   packages = [
     ".",
@@ -99,6 +110,7 @@
     "common/hexutil",
     "common/math",
     "common/mclock",
+    "common/prque",
     "consensus",
     "consensus/ethash",
     "consensus/misc",
@@ -113,7 +125,6 @@
     "crypto/bn256/cloudflare",
     "crypto/bn256/google",
     "crypto/secp256k1",
-    "crypto/sha3",
     "eth/filters",
     "ethclient",
     "ethdb",
@@ -128,8 +139,8 @@
     "trie",
   ]
   pruneopts = "T"
-  revision = "316fc7ecfc10d06603f1358c1f4c1020ec36dd2a"
-  version = "v1.8.14"
+  revision = "c942700427557e3ff6de3aaf6b916e2f056c1ec2"
+  version = "v1.8.23"
 
 [[projects]]
   digest = "1:c4a2528ccbcabf90f9f3c464a5fc9e302d592861bbfd0b7135a7de8a943d0406"
@@ -281,7 +292,7 @@
   version = "0.0.12"
 
 [[projects]]
-  digest = "1:111a4696a6e9f09a794109477249f227373c852fd97d038c2d2a730126360754"
+  digest = "1:8a20b209f06b19844908cf0367975d0966d6c188e5381ebd9327d6cd5d2ab990"
   name = "github.com/mysteriumnetwork/payments"
   packages = [
     "cli/helpers",
@@ -293,8 +304,8 @@
     "test_utils",
   ]
   pruneopts = "T"
-  revision = "14920d2c37553da50361d892915979301525b178"
-  version = "v0.0.9"
+  revision = "c60d83ad4ee5bf2da3f68bee2d6d4ecbf795fce1"
+  version = "v0.0.10"
 
 [[projects]]
   digest = "1:fef11ce7bad787dad351a3f7da701223dbbcec519877152d18228ef9c2c28b71"
@@ -372,12 +383,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:0e7708c7ab04e5f4f93f639ef54b1389e9424c6519a8ff29eaf1ba629098c431"
+  digest = "1:31d83d1b1c288073c91abadee3caec87de2a1fb5dbe589039264a802e67a26b8"
   name = "github.com/rjeczalik/notify"
   packages = ["."]
   pruneopts = "UT"
-  revision = "4e54e7fd043e865c50bda93359fb78813a8d165b"
+  revision = "69d839f37b13a8cb7a78366f7633a4071cb43be7"
+  version = "v0.9.2"
 
 [[projects]]
   branch = "master"
@@ -443,7 +454,8 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:4071d9e8724146d99c9feaa5c74a1d113ff4df76b4bb769ce2d41719999cb684"
+  branch = "master"
+  digest = "1:3dc732e0737c3cb9099cec1f9d945744da3ad6caacea81c46c92d936eb6daf15"
   name = "golang.org/x/crypto"
   packages = [
     "blake2s",
@@ -455,9 +467,10 @@
     "poly1305",
     "ripemd160",
     "scrypt",
+    "sha3",
   ]
   pruneopts = "UT"
-  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
+  revision = "7f87c0fbb88b590338857bcb720678c2583d4dea"
 
 [[projects]]
   branch = "release-branch.go1.11"
@@ -517,17 +530,6 @@
   version = "v0.3.0"
 
 [[projects]]
-  digest = "1:a05bd2d296bc727082abcb63ff52615b4dcc6219d8b61e99fd83d605dc779a18"
-  name = "golang.org/x/tools"
-  packages = [
-    "go/ast/astutil",
-    "imports",
-    "internal/fastwalk",
-  ]
-  pruneopts = "UT"
-  revision = "27709f6afec43b6c6d899bd199bf0f39c731216c"
-
-[[projects]]
   digest = "1:e626376fab8608a972d47e91b3c1bbbddaecaf1d42b82be6dcc52d10a7557893"
   name = "gopkg.in/VividCortex/ewma.v1"
   packages = ["."]
@@ -550,14 +552,6 @@
   pruneopts = "UT"
   revision = "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4"
   version = "v1.7.0"
-
-[[projects]]
-  branch = "v2"
-  digest = "1:0a2f4b974a413866afa1b41130d756643841fb9ad661b81c9a6dd9f1364ed19f"
-  name = "gopkg.in/karalabe/cookiejar.v2"
-  packages = ["collections/prque"]
-  pruneopts = "UT"
-  revision = "8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57"
 
 [[projects]]
   digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
