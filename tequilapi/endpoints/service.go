@@ -194,7 +194,10 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	}
 
 	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.ServiceType, options)
-	if err != nil {
+	if err == service.ErrorLocation {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	} else if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
