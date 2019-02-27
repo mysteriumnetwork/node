@@ -18,14 +18,16 @@
 package service
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/urfave/cli"
 )
 
 // Options describes options which are required to start Openvpn service
 type Options struct {
-	OpenvpnProtocol string
-	OpenvpnPort     int
+	OpenvpnProtocol string `json:"protocol"`
+	OpenvpnPort     int    `json:"port"`
 }
 
 var (
@@ -52,4 +54,11 @@ func ParseFlags(ctx *cli.Context) service.Options {
 		OpenvpnProtocol: ctx.String(protocolFlag.Name),
 		OpenvpnPort:     ctx.Int(portFlag.Name),
 	}
+}
+
+// ParseJSONOptions function fills in Openvpn options from JSON request
+func ParseJSONOptions(request json.RawMessage) (service.Options, error) {
+	var opts Options
+	err := json.Unmarshal(request, &opts)
+	return opts, err
 }

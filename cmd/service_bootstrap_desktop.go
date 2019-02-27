@@ -36,10 +36,47 @@ import (
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 const logPrefix = "[service bootstrap] "
+
+// bootstrapServices loads all the components required for running services
+func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
+	di.bootstrapServiceComponents(nodeOptions)
+
+	di.bootstrapServiceOpenvpn(nodeOptions)
+	di.bootstrapServiceNoop(nodeOptions)
+	di.bootstrapServiceWireguard(nodeOptions)
+}
+
+func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
+	di.ServiceRegistry.Register(
+		wireguard.ServiceType,
+		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+			location, err := di.resolveIPsAndLocation()
+			if err != nil {
+				return nil, market.ServiceProposal{}, err
+			}
+
+			wgOptions := serviceOptions.(wireguard_service.Options)
+
+			mapPort := func(port int) func() {
+				return mapping.GetPortMappingFunc(
+					location.PubIP,
+					location.OutIP,
+					"UDP",
+					port,
+					"Myst node wireguard(tm) port mapping")
+			}
+
+			return wireguard_service.NewManager(location, di.NATService, mapPort, wgOptions),
+				wireguard_service.GetProposal(location.Country), nil
+		},
+	)
+}
 
 func (di *Dependencies) resolveIPsAndLocation() (loc location.ServiceLocationInfo, err error) {
 	pubIP, err := di.IPResolver.GetPublicIP()

@@ -140,6 +140,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapIdentityComponents(nodeOptions)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
+
+	di.bootstrapServices(nodeOptions)
 	di.bootstrapNodeComponents(nodeOptions)
 
 	di.registerConnections(nodeOptions)
@@ -285,7 +287,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)
-	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager)
+	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 

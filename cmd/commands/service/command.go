@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
+	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/urfave/cli"
 )
 
@@ -66,24 +67,30 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				os.Exit(2)
 			}
 
+			errorChannel := make(chan error)
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			if err := di.Bootstrap(nodeOptions); err != nil {
 				return err
 			}
-			if err := di.BootstrapServices(nodeOptions); err != nil {
-				return err
-			}
+			go func() { errorChannel <- di.Node.Wait() }()
+
+			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
 
 			cmdService := &serviceCommand{
+				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
+				errorChannel: errorChannel,
 				identityHandler: identity_selector.NewHandler(
 					di.IdentityManager,
 					di.MysteriumAPI,
 					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
-					di.SignerFactory,
-				),
-				di: &di,
+					di.SignerFactory),
 			}
-			return cmdService.Run(ctx)
+
+			go func() {
+				errorChannel <- cmdService.Run(ctx)
+			}()
+
+			return <-errorChannel
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
@@ -98,67 +105,51 @@ func NewCommand(licenseCommandName string) *cli.Command {
 // serviceCommand represent entrypoint for service command with top level components
 type serviceCommand struct {
 	identityHandler identity_selector.Handler
-	di              *cmd.Dependencies
-	runErrors       chan error
+	tequilapi       *client.Client
+	errorChannel    chan error
 }
 
 // Run runs a command
-func (c *serviceCommand) Run(ctx *cli.Context) (err error) {
-	serviceTypes := serviceTypesEnabled
+func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	arg := ctx.Args().Get(0)
 	if arg != "" {
 		serviceTypes = strings.Split(arg, ",")
 	}
 
-	providerID, err := c.unlockIdentity(ctx)
+	identity, err := sc.unlockIdentity(parseFlags(ctx))
 	if err != nil {
 		return err
 	}
 
-	// We need a small buffer for the error channel as we'll have quite a few concurrent reporters
-	// The buffer size is determined as follows:
-	// 1 for the signal callback
-	// 1 for the node.Wait()
-	// 1 for each of the services
-	c.runErrors = make(chan error, 2+len(serviceTypes))
-	go c.runNode(ctx)
-	c.runServices(ctx, providerID, serviceTypes)
+	if err := sc.runServices(ctx, identity.Address, serviceTypes); err != nil {
+		return err
+	}
 
-	cmd.RegisterSignalCallback(func() { c.runErrors <- nil })
-
-	return <-c.runErrors
+	return <-sc.errorChannel
 }
 
-func (c *serviceCommand) unlockIdentity(ctx *cli.Context) (identity.Identity, error) {
-	identityOptions := parseFlags(ctx)
-	loadIdentity := identity_selector.NewLoader(c.identityHandler, identityOptions.Identity, identityOptions.Passphrase)
-
+func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (identity.Identity, error) {
+	loadIdentity := identity_selector.NewLoader(sc.identityHandler, identityOptions.Identity, identityOptions.Passphrase)
 	return loadIdentity()
 }
 
-func (c *serviceCommand) runNode(ctx *cli.Context) {
-	c.runErrors <- c.di.Node.Wait()
-}
-
-func (c *serviceCommand) runServices(ctx *cli.Context, providerID identity.Identity, serviceTypes []string) error {
+func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {
 	for _, serviceType := range serviceTypes {
 		options, err := parseFlagsByServiceType(ctx, serviceType)
 		if err != nil {
 			return err
 		}
-		go c.runService(providerID, serviceType, options)
+		go sc.runService(providerID, serviceType, options)
 	}
 
 	return nil
 }
 
-func (c *serviceCommand) runService(providerID identity.Identity, serviceType string, options service.Options) {
-	err := c.di.ServicesManager.Start(providerID, serviceType, options)
-	if err == service.ErrorLocation {
-		printLocationWarning("myst")
+func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options) {
+	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options)
+	if err != nil {
+		sc.errorChannel <- err
 	}
-
-	c.runErrors <- err
 }
 
 // registerFlags function register service flags to flag list
@@ -194,14 +185,4 @@ func printTermWarning(licenseCommandName string) {
 	fmt.Println()
 
 	fmt.Println("If you agree with these Terms & Conditions, run program again with '--agreed-terms-and-conditions' flag")
-}
-
-func printLocationWarning(executableName string) {
-	fmt.Printf(
-		"Automatic location detection failed. Enter country manually by running program again with '%s %s --%s=US' flag",
-		executableName,
-		serviceCommandName,
-		cmd.LocationCountryFlag.Name,
-	)
-	fmt.Println()
 }

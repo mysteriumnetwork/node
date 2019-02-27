@@ -18,6 +18,7 @@
 package client
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -250,6 +251,71 @@ func (client *Client) GetSessions() (SessionsDTO, error) {
 
 	err = parseResponseJSON(response, &sessions)
 	return sessions, err
+}
+
+// Services returns all running services.
+func (client *Client) Services() (services Services, err error) {
+	response, err := client.http.Get("services", url.Values{})
+	if err != nil {
+		return services, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &services)
+	return services, err
+}
+
+// Service returns a service information by the requested id.
+func (client *Client) Service(id string) (service Service, err error) {
+	queryParams := url.Values{}
+	queryParams.Add("id", id)
+	response, err := client.http.Get("services", queryParams)
+	if err != nil {
+		return service, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &service)
+	return service, err
+}
+
+// ServiceStart starts an instance of the service.
+func (client *Client) ServiceStart(providerID, serviceType string, options interface{}) (service Service, err error) {
+	opts, err := json.Marshal(options)
+	if err != nil {
+		return service, err
+	}
+
+	payload := struct {
+		ProviderID  string          `json:"providerID"`
+		ServiceType string          `json:"serviceType"`
+		Options     json.RawMessage `json:"options"`
+	}{
+		providerID,
+		serviceType,
+		opts,
+	}
+
+	response, err := client.http.Post("services", payload)
+	if err != nil {
+		return service, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &service)
+	return service, err
+}
+
+// ServiceStop stops the running service instance by the requested id.
+func (client *Client) ServiceStop(id string) error {
+	path := fmt.Sprintf("services/%s", id)
+	response, err := client.http.Delete(path, nil)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
 }
 
 // filterSessionsByType removes all sessions of irrelevant types

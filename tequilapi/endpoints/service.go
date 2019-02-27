@@ -35,11 +35,19 @@ type serviceRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"providerId"`
 
+	// provider identity passphrase
+	// required: true
+	Passphrase string `json:"passphrase"`
+
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: false
 	// default: openvpn
 	// example: openvpn
 	ServiceType string `json:"serviceType"`
+
+	// service options. Every service has a unique list of allowed options.
+	// required: false
+	Options json.RawMessage `json:"options"`
 }
 
 // swagger:model ServiceListDTO
@@ -65,14 +73,14 @@ type serviceOptions struct {
 // ServiceEndpoint struct represents /service resource and it's sub-resources
 type ServiceEndpoint struct {
 	serviceManager ServiceManager
-	serviceState   service.State
+	optionsParser  map[string]func(json.RawMessage) (service.Options, error)
 }
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]func(json.RawMessage) (service.Options, error)) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager: serviceManager,
-		serviceState:   service.NotRunning,
+		optionsParser:  optionsParser,
 	}
 }
 
@@ -87,7 +95,8 @@ func NewServiceEndpoint(serviceManager ServiceManager) *ServiceEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ServiceListDTO"
 func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	statusResponse := toServiceListResponse(se.serviceState)
+	instances := se.serviceManager.List()
+	statusResponse := toServiceListResponse(instances)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -106,12 +115,15 @@ func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
-	statusResponse := toServiceInfoResponse(se.serviceState)
-	statusResponse.ID = params.ByName("id")
-	if statusResponse.ID != "6ba7b810-9dad-11d1-80b4-00c04fd430c8" && statusResponse.ID != "7037d6f6-1b92-4513-8cb4-8fd1a944b996" {
-		utils.SendErrorMessage(resp, "Service not found", http.StatusNotFound)
+	id := service.ID(params.ByName("id"))
+	service := se.serviceManager.Service(id)
+
+	if service == nil {
+		utils.SendErrorMessage(resp, "Requested service not found", http.StatusNotFound)
 		return
 	}
+
+	statusResponse := toServiceInfoResponse(id, service)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -164,11 +176,36 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	se.serviceState = service.Running
+	optionsParser, ok := se.optionsParser[sr.ServiceType]
+	if !ok {
+		utils.SendErrorMessage(resp, "Invalid service type", http.StatusBadRequest)
+		return
+	}
+
+	options, err := optionsParser(sr.Options)
+	if err != nil {
+		utils.SendErrorMessage(resp, "Invalid options", http.StatusBadRequest)
+		return
+	}
+
+	if se.isAlreadyRunning(sr) {
+		utils.SendErrorMessage(resp, "Service already running", http.StatusConflict)
+		return
+	}
+
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.ServiceType, options)
+	if err == service.ErrorLocation {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	} else if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	instance := se.serviceManager.Service(id)
 
 	resp.WriteHeader(http.StatusCreated)
-	statusResponse := toServiceInfoResponse(se.serviceState)
-	statusResponse.ID = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+	statusResponse := toServiceInfoResponse(id, instance)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -189,18 +226,34 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
-	if params.ByName("id") != "6ba7b810-9dad-11d1-80b4-00c04fd430c8" && params.ByName("id") != "7037d6f6-1b92-4513-8cb4-8fd1a944b996" {
+	id := service.ID(params.ByName("id"))
+	service := se.serviceManager.Service(id)
+
+	if service == nil {
 		utils.SendErrorMessage(resp, "Service not found", http.StatusNotFound)
 		return
 	}
-	se.serviceState = service.NotRunning
 
+	if err := se.serviceManager.Stop(id); err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
+	for _, instance := range se.serviceManager.List() {
+		proposal := instance.Proposal()
+		if proposal.ProviderID == sr.ProviderID && proposal.ServiceType == sr.ServiceType {
+			return true
+		}
+	}
+	return false
+}
+
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager) {
-	serviceEndpoint := NewServiceEndpoint(serviceManager)
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]func(json.RawMessage) (service.Options, error)) {
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
 	router.POST("/services", serviceEndpoint.ServiceStart)
@@ -208,32 +261,33 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 	router.DELETE("/services/:id", serviceEndpoint.ServiceStop)
 }
 
-func toServiceRequest(req *http.Request) (*serviceRequest, error) {
-	var serviceRequest = serviceRequest{}
-	err := json.NewDecoder(req.Body).Decode(&serviceRequest)
-
-	return &serviceRequest, err
+func toServiceRequest(req *http.Request) (sr serviceRequest, err error) {
+	err = json.NewDecoder(req.Body).Decode(&sr)
+	return sr, err
 }
 
-func toServiceInfoResponse(state service.State) serviceInfo {
+func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInfo {
 	return serviceInfo{
-		Status: string(state),
+		ID:       string(id),
+		Status:   string(instance.State()),
+		Proposal: proposalToRes(instance.Proposal()),
 	}
 }
 
-func toServiceListResponse(state service.State) serviceList {
-	return serviceList{
-		{ID: "6ba7b810-9dad-11d1-80b4-00c04fd430c8", Status: string(state)},
-		{ID: "7037d6f6-1b92-4513-8cb4-8fd1a944b996", Status: string(state)},
+func toServiceListResponse(instances map[service.ID]*service.Instance) serviceList {
+	res := make([]serviceInfo, 0)
+	for id, instance := range instances {
+		res = append(res, toServiceInfoResponse(id, instance))
 	}
+	return res
 }
 
-func validateServiceRequest(cr *serviceRequest) *validation.FieldErrorMap {
+func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 	errors := validation.NewErrorMap()
-	if len(cr.ProviderID) == 0 {
+	if len(sr.ProviderID) == 0 {
 		errors.ForField("providerId").AddError("required", "Field is required")
 	}
-	if cr.ServiceType == "" {
+	if sr.ServiceType == "" {
 		errors.ForField("serviceType").AddError("required", "Field is required")
 	}
 	return errors
@@ -241,6 +295,9 @@ func validateServiceRequest(cr *serviceRequest) *validation.FieldErrorMap {
 
 // ServiceManager represents service manager that will be used for manipulation node services.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, options service.Options) (err error)
+	Start(providerID identity.Identity, serviceType string, options service.Options) (service.ID, error)
+	Stop(id service.ID) error
+	Service(id service.ID) *service.Instance
 	Kill() error
+	List() map[service.ID]*service.Instance
 }

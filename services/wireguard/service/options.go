@@ -18,13 +18,15 @@
 package service
 
 import (
+	"encoding/json"
+
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/urfave/cli"
 )
 
 // Options describes options which are required to start Wireguard service
 type Options struct {
-	ConnectDelay int
+	ConnectDelay int `json:"connectDelay"`
 }
 
 var (
@@ -45,4 +47,11 @@ func ParseFlags(ctx *cli.Context) service.Options {
 	return Options{
 		ConnectDelay: ctx.Int(delayFlag.Name),
 	}
+}
+
+// ParseJSONOptions function fills in Openvpn options from JSON request
+func ParseJSONOptions(request json.RawMessage) (service.Options, error) {
+	var opts Options
+	err := json.Unmarshal(request, &opts)
+	return opts, err
 }

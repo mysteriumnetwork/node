@@ -1,4 +1,4 @@
-// +build !darwin,!windows,!linux
+// +build linux,android
 
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
@@ -20,15 +20,10 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/mysteriumnetwork/node/core/node"
 )
 
-// ErrServiceStartingUnsupported represents the error when this entrypoint is used in an unsupported OS
-var ErrServiceStartingUnsupported = errors.New("running of services is not supported on your OS")
-
-// BootstrapServices loads all the components required for running services
-func (di *Dependencies) BootstrapServices(nodeOptions node.Options) error {
-	return ErrServiceStartingUnsupported
+// bootstrapServices loads all the components required for running services
+func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
+	// Running services on mobile is not supported, nothing to bootstrap.
 }

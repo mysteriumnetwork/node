@@ -90,7 +90,7 @@ func (mApi *MysteriumAPI) RegisterProposal(proposal market.ServiceProposal, sign
 
 	err = mApi.doRequest(req)
 	if err == nil {
-		log.Info(mysteriumAPILogPrefix, "Proposal registered for node: ", proposal.ProviderID)
+		log.Info(mysteriumAPILogPrefix, "Proposal registered for node: ", proposal.ProviderID, " service type: ", proposal.ServiceType)
 	}
 
 	return err

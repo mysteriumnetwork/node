@@ -63,9 +63,10 @@ func Test_Pool_StopDoesNotStop(t *testing.T) {
 	instance := &Instance{service: service}
 
 	pool := NewPool()
-	pool.Add(instance)
+	id, err := pool.Add(instance)
+	assert.Nil(t, err)
 
-	err := pool.Stop(instance)
+	err = pool.Stop(id)
 	assert.EqualError(t, err, "ErrorCollection(I dont want to stop)")
 }
 
