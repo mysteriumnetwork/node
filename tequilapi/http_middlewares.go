@@ -24,26 +24,49 @@ import (
 
 type corsHandler struct {
 	originalHandler http.Handler
+	corsConfig      CorsConfig
+}
+
+// CorsConfig allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting only specific domains
+type CorsConfig struct {
+	DefaultTrustedOrigin  string
+	AllowedOriginSuffixes []string
 }
 
 func (wrapper corsHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if isPreflightCorsRequest(req) {
-		generatePreflightResponse(req, resp)
+		generatePreflightResponse(req, resp, wrapper.corsConfig)
 		return
 	}
 
-	allowAllCorsActions(resp)
+	allowSpecifiedCorsActions(resp, req, wrapper.corsConfig)
 	wrapper.originalHandler.ServeHTTP(resp, req)
 }
 
 // ApplyCors wraps original handler by adding cors headers to response BEFORE original ServeHTTP method is called
-func ApplyCors(original http.Handler) http.Handler {
-	return corsHandler{original}
+func ApplyCors(original http.Handler, corsConfig CorsConfig) http.Handler {
+	return corsHandler{originalHandler: original, corsConfig: corsConfig}
 }
 
-func allowAllCorsActions(resp http.ResponseWriter) {
-	resp.Header().Set("Access-Control-Allow-Origin", "*")
+func allowSpecifiedCorsActions(resp http.ResponseWriter, req *http.Request, corsConfig CorsConfig) {
+	requestOrigin := req.Header.Get("Origin")
+	allowedOrigin := requestOrigin
+	if !isOriginAllowed(requestOrigin, corsConfig.AllowedOriginSuffixes) {
+		trustedOrigin := corsConfig.DefaultTrustedOrigin
+		allowedOrigin = trustedOrigin
+	}
+
+	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+}
+
+func isOriginAllowed(origin string, allowedOriginSuffixes []string) bool {
+	for _, allowedSuffix := range allowedOriginSuffixes {
+		if strings.HasSuffix(origin, allowedSuffix) {
+			return true
+		}
+	}
+	return false
 }
 
 func isPreflightCorsRequest(req *http.Request) bool {
@@ -53,8 +76,8 @@ func isPreflightCorsRequest(req *http.Request) bool {
 	return isOptionsMethod && containsOriginHeader && containsAccessControlRequestMethod
 }
 
-func generatePreflightResponse(req *http.Request, resp http.ResponseWriter) {
-	allowAllCorsActions(resp)
+func generatePreflightResponse(req *http.Request, resp http.ResponseWriter, corsConfig CorsConfig) {
+	allowSpecifiedCorsActions(resp, req, corsConfig)
 	//allow all headers which were defined in preflight request
 	for _, headerValue := range req.Header["Access-Control-Request-Headers"] {
 		resp.Header().Add("Access-Control-Allow-Headers", headerValue)

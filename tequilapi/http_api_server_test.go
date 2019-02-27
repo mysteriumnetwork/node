@@ -25,7 +25,7 @@ import (
 )
 
 func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
-	server := NewServer("localhost", 31337, nil)
+	server := NewServer("localhost", 31337, nil, CorsConfig{})
 
 	assert.NoError(t, server.StartServing())
 
@@ -40,6 +40,6 @@ func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
 }
 
 func TestStopBeforeStartingListeningDoesNotCausePanic(t *testing.T) {
-	server := NewServer("", 12345, nil)
+	server := NewServer("", 12345, nil, CorsConfig{})
 	server.Stop()
 }

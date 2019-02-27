@@ -291,7 +291,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
-	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
+	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router, corsConfig)
 	metricsSender := metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
 
 	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, metricsSender)
@@ -415,4 +415,9 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 
 	di.LocationDetector = location.NewDetector(di.IPResolver, di.LocationResolver)
 	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
+}
+
+var corsConfig = tequilapi.CorsConfig{
+	DefaultTrustedOrigin:  "https://mysterium.network",
+	AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
 }

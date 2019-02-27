@@ -25,19 +25,53 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCorsHeadersAreAppliedToResponse(t *testing.T) {
-	req, err := http.NewRequest(http.MethodGet, "/not-important", nil)
-	assert.NoError(t, err)
+var testCorsConfig = CorsConfig{
+	DefaultTrustedOrigin:  "https://mysterium.network",
+	AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
+}
 
-	respRecorder := httptest.NewRecorder()
+func TestCorsHeadersAreAppliedToResponseWithAllowedOrigins(t *testing.T) {
+	tests := []struct {
+		origin   string
+		expected string
+	}{
+		{
+			origin:   "http://localhost",
+			expected: "http://localhost",
+		},
+		{
+			origin:   "https://wallet.mysterium.network",
+			expected: "https://wallet.mysterium.network",
+		},
+		{
+			origin:   "https://mysterium.network",
+			expected: "https://mysterium.network",
+		},
+		{
+			origin:   "https://any-future-subdomain.mysterium.network",
+			expected: "https://any-future-subdomain.mysterium.network",
+		},
+		{
+			origin:   "http://some-bad-people.com",
+			expected: "https://mysterium.network",
+		},
+	}
 
-	mock := &mockedHTTPHandler{}
+	for _, tt := range tests {
+		req, err := http.NewRequest(http.MethodGet, "/not-important", nil)
+		req.Header.Add("Origin", tt.origin)
+		assert.NoError(t, err)
 
-	ApplyCors(mock).ServeHTTP(respRecorder, req)
+		respRecorder := httptest.NewRecorder()
 
-	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Origin"))
-	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
-	assert.True(t, mock.wasCalled)
+		mock := &mockedHTTPHandler{}
+
+		ApplyCors(mock, testCorsConfig).ServeHTTP(respRecorder, req)
+
+		assert.Equal(t, tt.expected, respRecorder.Header().Get("Access-Control-Allow-Origin"))
+		assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
+		assert.True(t, mock.wasCalled)
+	}
 }
 
 func TestPreflightCorsCheckIsHandled(t *testing.T) {
@@ -51,7 +85,7 @@ func TestPreflightCorsCheckIsHandled(t *testing.T) {
 
 	mock := &mockedHTTPHandler{}
 
-	ApplyCors(mock).ServeHTTP(respRecorder, req)
+	ApplyCors(mock, testCorsConfig).ServeHTTP(respRecorder, req)
 
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Origin"))
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
@@ -70,7 +104,7 @@ func TestDeleteCorsPreflightCheckIsHandledCorrectly(t *testing.T) {
 
 	mock := &mockedHTTPHandler{}
 
-	ApplyCors(mock).ServeHTTP(respRecorder, req)
+	ApplyCors(mock, testCorsConfig).ServeHTTP(respRecorder, req)
 
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Origin"))
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))

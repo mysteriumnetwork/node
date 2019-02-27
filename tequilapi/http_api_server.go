@@ -41,10 +41,10 @@ type apiServer struct {
 }
 
 // NewServer creates http api server for given address port and http handler
-func NewServer(address string, port int, handler http.Handler) APIServer {
+func NewServer(address string, port int, handler http.Handler, corsConfig CorsConfig) APIServer {
 	server := apiServer{
 		make(chan error, 1),
-		DisableCaching(ApplyCors(handler)),
+		DisableCaching(ApplyCors(handler, corsConfig)),
 		fmt.Sprintf("%s:%d", address, port),
 		nil}
 	return &server
