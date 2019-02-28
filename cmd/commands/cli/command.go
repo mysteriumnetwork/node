@@ -18,7 +18,8 @@
 package cli
 
 import (
-	"encoding/json"
+	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -27,7 +28,13 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/services/noop"
+	"github.com/mysteriumnetwork/node/services/openvpn"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
@@ -167,9 +174,9 @@ func (c *cliApp) service(argsString string) {
 		fmt.Println("	start	<ProviderID> <ServiceType> [options]")
 		fmt.Println("	stop	<ServiceID>")
 		fmt.Println("	list")
-		fmt.Println("	get	<ServiceID>")
+		fmt.Println("	status	<ServiceID>")
 		fmt.Println("")
-		fmt.Println(`example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn {"port":1190, "protocol":"UDP"}`)
+		fmt.Println("example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --openvpn.port=1194 --openvpn.proto=UDP")
 	}
 
 	args := strings.Fields(argsString)
@@ -192,7 +199,7 @@ func (c *cliApp) service(argsString string) {
 			return
 		}
 		c.serviceStop(args[1])
-	case "get":
+	case "status":
 		if len(args) < 2 {
 			printHelp()
 			return
@@ -207,12 +214,13 @@ func (c *cliApp) service(argsString string) {
 }
 
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
-	var options json.RawMessage
-	if len(args) > 0 {
-		options = json.RawMessage(strings.Join(args[3:], " "))
+	opts, err := parseServiceOptions(serviceType, args...)
+	if err != nil {
+		info("Failed to parse service options:", err)
+		return
 	}
 
-	service, err := c.tequilapi.ServiceStart(providerID, serviceType, options)
+	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts)
 	if err != nil {
 		info("Failed to start service: ", err)
 		return
@@ -233,7 +241,7 @@ func (c *cliApp) serviceStop(id string) {
 func (c *cliApp) serviceList() {
 	services, err := c.tequilapi.Services()
 	if err != nil {
-		info("Failed to get list of services: ", err)
+		info("Failed to get a list of services: ", err)
 		return
 	}
 
@@ -585,7 +593,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			)),
 			readline.PcItem("stop"),
 			readline.PcItem("list"),
-			readline.PcItem("get"),
+			readline.PcItem("status"),
 		),
 		readline.PcItem(
 			"identities",
@@ -618,4 +626,32 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			),
 		),
 	)
+}
+
+func parseServiceOptions(serviceType string, args ...string) (service.Options, error) {
+	var flags []cli.Flag
+	openvpn_service.RegisterFlags(&flags)
+	wireguard_service.RegisterFlags(&flags)
+
+	set := flag.NewFlagSet("", flag.ContinueOnError)
+	for _, f := range flags {
+		f.Apply(set)
+	}
+
+	if err := set.Parse(args); err != nil {
+		return nil, err
+	}
+
+	ctx := cli.NewContext(nil, set, nil)
+
+	switch serviceType {
+	case noop.ServiceType:
+		return noop.ParseFlags(ctx), nil
+	case wireguard.ServiceType:
+		return wireguard_service.ParseFlags(ctx), nil
+	case openvpn.ServiceType:
+		return openvpn_service.ParseFlags(ctx), nil
+	}
+
+	return nil, errors.New("service type not found")
 }
