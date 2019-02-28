@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
+	"github.com/pkg/errors"
 )
 
 // swagger:model ServiceRequestDTO
@@ -47,7 +48,7 @@ type serviceRequest struct {
 
 	// service options. Every service has a unique list of allowed options.
 	// required: false
-	Options json.RawMessage `json:"options"`
+	Options interface{} `json:"options"`
 }
 
 // swagger:model ServiceListDTO
@@ -73,11 +74,14 @@ type serviceOptions struct {
 // ServiceEndpoint struct represents /service resource and it's sub-resources
 type ServiceEndpoint struct {
 	serviceManager ServiceManager
-	optionsParser  map[string]func(json.RawMessage) (service.Options, error)
+	optionsParser  map[string]ServiceOptionsParser
 }
 
+// ServiceOptionsParser parses request to service specific options
+type ServiceOptionsParser func(json.RawMessage) (service.Options, error)
+
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]func(json.RawMessage) (service.Options, error)) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager: serviceManager,
 		optionsParser:  optionsParser,
@@ -164,7 +168,7 @@ func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request,
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	sr, err := toServiceRequest(req)
+	sr, err := se.toServiceRequest(req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -176,24 +180,12 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	optionsParser, ok := se.optionsParser[sr.ServiceType]
-	if !ok {
-		utils.SendErrorMessage(resp, "Invalid service type", http.StatusBadRequest)
-		return
-	}
-
-	options, err := optionsParser(sr.Options)
-	if err != nil {
-		utils.SendErrorMessage(resp, "Invalid options", http.StatusBadRequest)
-		return
-	}
-
 	if se.isAlreadyRunning(sr) {
 		utils.SendErrorMessage(resp, "Service already running", http.StatusConflict)
 		return
 	}
 
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.ServiceType, options)
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.ServiceType, sr.Options)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -252,7 +244,7 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]func(json.RawMessage) (service.Options, error)) {
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) {
 	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
@@ -261,9 +253,34 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 	router.DELETE("/services/:id", serviceEndpoint.ServiceStop)
 }
 
-func toServiceRequest(req *http.Request) (sr serviceRequest, err error) {
-	err = json.NewDecoder(req.Body).Decode(&sr)
-	return sr, err
+func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (sr serviceRequest, err error) {
+	var jsonData struct {
+		ProviderID  string           `json:"providerId"`
+		ServiceType string           `json:"serviceType"`
+		Options     *json.RawMessage `json:"options"`
+	}
+	if err = json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
+		return
+	}
+
+	sr.ProviderID = jsonData.ProviderID
+	sr.ServiceType = jsonData.ServiceType
+
+	if jsonData.Options != nil {
+		optionsParser, ok := se.optionsParser[sr.ServiceType]
+		if !ok {
+			err = errors.New("Invalid service type")
+			return
+		}
+
+		sr.Options, err = optionsParser(*jsonData.Options)
+		if err != nil {
+			err = errors.New("Invalid options")
+			return
+		}
+	}
+
+	return sr, nil
 }
 
 func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInfo {

@@ -52,7 +52,7 @@ func (sm *mockServiceManager) List() map[service.ID]*service.Instance {
 }
 func (sm *mockServiceManager) Kill() error { return nil }
 
-var fakeOptionsParser = map[string]func(json.RawMessage) (service.Options, error){
+var fakeOptionsParser = map[string]ServiceOptionsParser{
 	"testprotocol": func(opts json.RawMessage) (service.Options, error) {
 		return nil, nil
 	},

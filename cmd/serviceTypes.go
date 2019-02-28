@@ -18,18 +18,16 @@
 package cmd
 
 import (
-	"encoding/json"
-
-	"github.com/mysteriumnetwork/node/core/service"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	service_wireguard "github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
+	"github.com/mysteriumnetwork/node/tequilapi/endpoints"
 )
 
 var (
-	serviceTypesRequestParser = map[string]func(request json.RawMessage) (service.Options, error){
+	serviceTypesRequestParser = map[string]endpoints.ServiceOptionsParser{
 		service_noop.ServiceType:      service_noop.ParseJSONOptions,
 		service_openvpn.ServiceType:   openvpn_service.ParseJSONOptions,
 		service_wireguard.ServiceType: wireguard_service.ParseJSONOptions,
