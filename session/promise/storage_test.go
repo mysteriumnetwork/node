@@ -164,6 +164,48 @@ func Test_Storage_GetAllPromisesForIssuer_ReturnsEmptyPromiseList(t *testing.T) 
 	assert.Len(t, res, 0)
 }
 
+func Test_LoadPaymentInfo_EmptyOnError(t *testing.T) {
+	ms := newMockStorage(nil)
+	s := NewStorage(ms)
+	pi := s.LoadPaymentInfo(issuerID)
+	assert.Equal(t, &PaymentInfo{}, pi)
+}
+
+func Test_LoadPaymentInfo_ZeroAmountOnNoMessage(t *testing.T) {
+	ms := newMockStorage(&mock)
+	s := NewStorage(ms)
+	pi := s.LoadPaymentInfo(issuerID)
+	assert.Equal(t, &PaymentInfo{
+		LastPromise: LastPromise{
+			SequenceID: 1,
+			Amount:     0,
+		},
+		FreeCredit: 0,
+	}, pi)
+}
+
+func Test_LoadPaymentInfo_LoadsProperInfo(t *testing.T) {
+	newMock := map[string][]StoredPromise{
+		getBucketNameFromIssuer(issuerID): {
+			{
+				SequenceID: 10,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+				Message: &Message{
+					Amount: 300,
+				},
+				UnconsumedAmount: 200,
+			},
+		},
+	}
+	ms := newMockStorage(&newMock)
+	s := NewStorage(ms)
+	pi := s.LoadPaymentInfo(issuerID)
+	assert.Equal(t, uint64(10), pi.LastPromise.SequenceID)
+	assert.Equal(t, uint64(300), pi.LastPromise.Amount)
+	assert.Equal(t, uint64(200), pi.FreeCredit)
+}
+
 func Test_Storage_GetAllPromisesForIssuer_GetsAllPromises(t *testing.T) {
 	ms := newMockStorage(&mock)
 	s := NewStorage(ms)
@@ -378,10 +420,11 @@ func newMockStorage(mocks *map[string][]StoredPromise) *mockStorage {
 			inMemStorage: make(map[string][]StoredPromise),
 		}
 	}
-
 	copied := make(map[string][]StoredPromise, len(*mocks))
 	for k, v := range *mocks {
-		copied[k] = v
+		values := make([]StoredPromise, len(v))
+		copy(values, v)
+		copied[k] = values
 	}
 	return &mockStorage{
 		inMemStorage: copied,

@@ -45,10 +45,11 @@ type fakeSessionConfig struct {
 
 func TestProducer_RequestSessionCreate(t *testing.T) {
 	sender := &fakeSender{}
-	sid, config, err := RequestSessionCreate(sender, 123, []byte{}, ConsumerInfo{})
+	sessionData, paymentInfo, err := RequestSessionCreate(sender, 123, []byte{}, ConsumerInfo{})
 	assert.NoError(t, err)
-	assert.Exactly(t, succesfullSessionID, sid)
-	assert.Exactly(t, succesfullSessionConfig, config)
+	assert.Exactly(t, succesfullSessionID, sessionData.ID)
+	assert.Exactly(t, succesfullSessionConfig, sessionData.Config)
+	assert.Nil(t, paymentInfo)
 }
 
 type fakeSender struct {

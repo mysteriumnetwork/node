@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/promise"
 )
 
 const endpointSessionCreate = communication.RequestEndpoint("session-create")
@@ -38,26 +39,13 @@ type CreateRequest struct {
 	ConsumerInfo *ConsumerInfo   `json:"consumer_info,omitempty"`
 }
 
-// PaymentInfo represents the payment information that the provider has about the consumer
-type PaymentInfo struct {
-	LastPromise LastPromise `json:"lastPromise"`
-	FreeCredit  uint64      `json:"freeCredit"`
-}
-
-// LastPromise represents the last known promise to the provider
-// If the seqid and amount are 0 - there's no known info
-type LastPromise struct {
-	SequenceID uint64 `json:"sequenceID"`
-	Amount     uint64 `json:"amount"`
-}
-
 // CreateResponse structure represents service provider response to given session request from consumer
 type CreateResponse struct {
 	Success bool       `json:"success"`
 	Message string     `json:"message"`
 	Session SessionDto `json:"session"`
 	// Keeping this as a pointer for maximum backwards compatibility
-	PaymentInfo *PaymentInfo `json:"paymentInfo,omitempty"`
+	PaymentInfo *promise.PaymentInfo `json:"paymentInfo,omitempty"`
 }
 
 // SessionDto structure represents session information data within session creation response (session id and configuration options for underlying service type)
@@ -68,6 +56,5 @@ type SessionDto struct {
 
 // ConsumerInfo represents the consumer related information
 type ConsumerInfo struct {
-	MystClientVersion string            `json:"mystClientVersion"`
-	IssuerID          identity.Identity `json:"issuerID"`
+	IssuerID identity.Identity `json:"issuerID"`
 }

@@ -124,7 +124,6 @@ func (tc *testContext) TestOnConnectErrorStatusIsNotConnected() {
 
 	assert.Error(tc.T(), tc.connManager.Connect(consumerID, activeProposal, ConnectParams{}))
 	assert.Equal(tc.T(), statusNotConnected(), tc.connManager.Status())
-	assert.True(tc.T(), tc.fakeDialog.closed)
 }
 
 func (tc *testContext) TestWhenManagerMadeConnectionStatusReturnsConnectedStateAndSessionId() {
@@ -225,6 +224,8 @@ func (tc *testContext) TestStatusIsConnectedWhenConnectCommandReturnsWithoutErro
 
 func (tc *testContext) TestConnectingInProgressCanBeCanceled() {
 	tc.fakeConnectionFactory.mockConnection.onStartReportStates = []fakeState{}
+	tc.fakeConnectionFactory.mockConnection.onStopReportStates = []fakeState{}
+
 	connectWaiter := &sync.WaitGroup{}
 	connectWaiter.Add(1)
 	var err error
