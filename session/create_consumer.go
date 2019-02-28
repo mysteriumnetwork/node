@@ -29,7 +29,7 @@ const consumerLogPrefix = "[session-create-consumer] "
 
 // PromiseLoader loads the last known promise info for the given consumer
 type PromiseLoader interface {
-	LoadPaymentInfo(issuerID identity.Identity) *promise.PaymentInfo
+	LoadPaymentInfo(issuerID, consumerID identity.Identity) *promise.PaymentInfo
 }
 
 // createConsumer processes session create requests from communication channel.
@@ -79,7 +79,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 				destroyCallback()
 			}()
 		}
-		return responseWithSession(sessionInstance, config, consumer.promiseLoader.LoadPaymentInfo(issuerID)), nil
+		return responseWithSession(sessionInstance, config, consumer.promiseLoader.LoadPaymentInfo(issuerID, consumer.peerID)), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
 	default:

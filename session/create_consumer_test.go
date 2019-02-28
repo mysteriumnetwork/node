@@ -157,6 +157,6 @@ type mockPromiseLoader struct {
 	paymentInfoToReturn *promise.PaymentInfo
 }
 
-func (mpl *mockPromiseLoader) LoadPaymentInfo(identity.Identity) *promise.PaymentInfo {
+func (mpl *mockPromiseLoader) LoadPaymentInfo(issuerID, consumerID identity.Identity) *promise.PaymentInfo {
 	return mpl.paymentInfoToReturn
 }

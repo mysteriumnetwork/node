@@ -156,6 +156,12 @@ var errNoPromiseForConsumer = errors.New("no promise for consumer")
 func (s *Storage) FindPromiseForConsumer(issuerID, consumerID identity.Identity) (StoredPromise, error) {
 	s.Lock()
 	defer s.Unlock()
+	return s.findPromiseForConsumer(issuerID, consumerID)
+}
+
+// FindPromiseForConsumer returns the last known promise for the issuer/consumer combo
+// It checks if any promises match, and if they do checks to see if any later promises have been cleared.FindPromiseForConsumer
+func (s *Storage) findPromiseForConsumer(issuerID, consumerID identity.Identity) (StoredPromise, error) {
 	promises, err := s.getAllPromisesForIssuer(issuerID)
 	if err != nil {
 		return StoredPromise{}, err
@@ -193,14 +199,36 @@ func (s *Storage) GetAllPromisesFromIssuer(issuerID identity.Identity) ([]Stored
 }
 
 // LoadPaymentInfo returns the last know payment information for issuer
-func (s *Storage) LoadPaymentInfo(issuerID identity.Identity) *PaymentInfo {
+func (s *Storage) LoadPaymentInfo(issuerID, consumerID identity.Identity) *PaymentInfo {
 	s.Lock()
 	defer s.Unlock()
-	sp, err := s.getLastPromise(issuerID)
-	if err != nil {
-		log.Trace(promiseLogPrefix, "could not load promise info, defaulting to zero payment info", err)
-		return &PaymentInfo{}
+
+	defaultPaymentInfo := &PaymentInfo{
+		LastPromise: LastPromise{
+			SequenceID: 1,
+		},
+		FreeCredit: 0,
 	}
+
+	sp, err := s.findPromiseForConsumer(issuerID, consumerID)
+	if err != nil {
+		if err == errNoPromiseForConsumer {
+			lastPromise, lastPromiseErr := s.getLastPromise(issuerID)
+			if lastPromiseErr != nil {
+				log.Trace(promiseLogPrefix, "could not load promise info, defaulting to zero payment info ", lastPromiseErr)
+				return defaultPaymentInfo
+			}
+
+			newID := lastPromise.SequenceID + 1
+			log.Trace(promiseLogPrefix, "found payments for other consumers, will issue promiseID ", newID)
+			defaultPaymentInfo.LastPromise.SequenceID = newID
+			return defaultPaymentInfo
+		}
+
+		log.Trace(promiseLogPrefix, "could not load promise info, defaulting to zero payment info ", err)
+		return defaultPaymentInfo
+	}
+
 	pi := &PaymentInfo{
 		LastPromise: LastPromise{
 			SequenceID: sp.SequenceID,

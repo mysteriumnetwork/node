@@ -41,6 +41,7 @@ var (
 				SequenceID: 1,
 				AddedAt:    timeMock,
 				UpdatedAt:  timeMock,
+				ConsumerID: consumerID,
 			},
 		},
 	}
@@ -167,14 +168,19 @@ func Test_Storage_GetAllPromisesForIssuer_ReturnsEmptyPromiseList(t *testing.T) 
 func Test_LoadPaymentInfo_EmptyOnError(t *testing.T) {
 	ms := newMockStorage(nil)
 	s := NewStorage(ms)
-	pi := s.LoadPaymentInfo(issuerID)
-	assert.Equal(t, &PaymentInfo{}, pi)
+	pi := s.LoadPaymentInfo(issuerID, consumerID)
+	assert.Equal(t, &PaymentInfo{
+		LastPromise: LastPromise{
+			SequenceID: 1,
+			Amount:     0,
+		},
+	}, pi)
 }
 
 func Test_LoadPaymentInfo_ZeroAmountOnNoMessage(t *testing.T) {
 	ms := newMockStorage(&mock)
 	s := NewStorage(ms)
-	pi := s.LoadPaymentInfo(issuerID)
+	pi := s.LoadPaymentInfo(issuerID, consumerID)
 	assert.Equal(t, &PaymentInfo{
 		LastPromise: LastPromise{
 			SequenceID: 1,
@@ -195,15 +201,51 @@ func Test_LoadPaymentInfo_LoadsProperInfo(t *testing.T) {
 					Amount: 300,
 				},
 				UnconsumedAmount: 200,
+				ConsumerID:       consumerID,
 			},
 		},
 	}
 	ms := newMockStorage(&newMock)
 	s := NewStorage(ms)
-	pi := s.LoadPaymentInfo(issuerID)
+	pi := s.LoadPaymentInfo(issuerID, consumerID)
 	assert.Equal(t, uint64(10), pi.LastPromise.SequenceID)
 	assert.Equal(t, uint64(300), pi.LastPromise.Amount)
 	assert.Equal(t, uint64(200), pi.FreeCredit)
+}
+
+func Test_LoadPaymentInfo_WithPreviousConsumersIssuesNewID(t *testing.T) {
+	newMock := map[string][]StoredPromise{
+		getBucketNameFromIssuer(issuerID): {
+			{
+				SequenceID: 10,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+				Message: &Message{
+					Amount: 300,
+				},
+				UnconsumedAmount: 200,
+			},
+			{
+				SequenceID: 11,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+				Message: &Message{
+					Amount: 300,
+				},
+				UnconsumedAmount: 200,
+			},
+		},
+	}
+
+	ms := newMockStorage(&newMock)
+	s := NewStorage(ms)
+	pi := s.LoadPaymentInfo(issuerID, consumerID)
+	assert.Equal(t, &PaymentInfo{
+		LastPromise: LastPromise{
+			SequenceID: 12,
+			Amount:     0,
+		},
+	}, pi)
 }
 
 func Test_Storage_GetAllPromisesForIssuer_GetsAllPromises(t *testing.T) {

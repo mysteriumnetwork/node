@@ -61,7 +61,7 @@ func NewSessionPayments(balanceChan chan balance.Message, peerPromiseSender Peer
 // balanceDifferenceThreshold determines the threshold where we'll cancel the session if there's a missmatch larger than the threshold provided between the provider and the consumer balances
 const balanceDifferenceThreshold uint64 = 20
 
-// ErrBalanceMissmatch represents an erro that occurs when balances do not match
+// ErrBalanceMissmatch represents an error that occurs when balances do not match
 var ErrBalanceMissmatch = errors.New("balance missmatch")
 
 // Start starts the payment orchestrator. Blocks.
