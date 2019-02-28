@@ -42,6 +42,14 @@ import (
 
 const cliCommandName = "cli"
 
+const serviceHelp = `service <action> [args]
+	start	<ProviderID> <ServiceType> [options]
+	stop	<ServiceID>
+	list
+	status	<ServiceID>
+
+	example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --openvpn.port=1194 --openvpn.proto=UDP`
+
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
 	return &cli.Command{
@@ -169,19 +177,9 @@ func (c *cliApp) handleActions(line string) {
 }
 
 func (c *cliApp) service(argsString string) {
-	printHelp := func() {
-		fmt.Println("service <action> [args]")
-		fmt.Println("	start	<ProviderID> <ServiceType> [options]")
-		fmt.Println("	stop	<ServiceID>")
-		fmt.Println("	list")
-		fmt.Println("	status	<ServiceID>")
-		fmt.Println("")
-		fmt.Println("example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --openvpn.port=1194 --openvpn.proto=UDP")
-	}
-
 	args := strings.Fields(argsString)
 	if len(args) == 0 {
-		printHelp()
+		fmt.Println(serviceHelp)
 		return
 	}
 
@@ -189,19 +187,19 @@ func (c *cliApp) service(argsString string) {
 	switch action {
 	case "start":
 		if len(args) < 3 {
-			printHelp()
+			fmt.Println(serviceHelp)
 			return
 		}
 		c.serviceStart(args[1], args[2], args[3:]...)
 	case "stop":
 		if len(args) < 2 {
-			printHelp()
+			fmt.Println(serviceHelp)
 			return
 		}
 		c.serviceStop(args[1])
 	case "status":
 		if len(args) < 2 {
-			printHelp()
+			fmt.Println(serviceHelp)
 			return
 		}
 		c.serviceGet(args[1])
@@ -209,7 +207,7 @@ func (c *cliApp) service(argsString string) {
 		c.serviceList()
 	default:
 		info(fmt.Sprintf("Unknown action provided: %s", action))
-		printHelp()
+		fmt.Println(serviceHelp)
 	}
 }
 
@@ -226,7 +224,10 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 		return
 	}
 
-	status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
+	status(service.Status,
+		"ID: "+service.ID,
+		"ProviderID: "+service.Proposal.ProviderID,
+		"ServiceType: "+service.Proposal.ServiceType)
 }
 
 func (c *cliApp) serviceStop(id string) {
@@ -246,7 +247,10 @@ func (c *cliApp) serviceList() {
 	}
 
 	for _, service := range services {
-		status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
+		status(service.Status,
+			"ID: "+service.ID,
+			"ProviderID: "+service.Proposal.ProviderID,
+			"ServiceType: "+service.Proposal.ServiceType)
 	}
 }
 
@@ -257,7 +261,10 @@ func (c *cliApp) serviceGet(id string) {
 		return
 	}
 
-	status(service.Status, "ID: "+service.ID, "ProviderID: "+service.Proposal.ProviderID, "ServiceType: "+service.Proposal.ServiceType)
+	status(service.Status,
+		"ID: "+service.ID,
+		"ProviderID: "+service.Proposal.ProviderID,
+		"ServiceType: "+service.Proposal.ServiceType)
 }
 
 func (c *cliApp) connect(argsString string) {
