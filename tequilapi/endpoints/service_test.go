@@ -74,15 +74,15 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 	}{
 		{
 			http.MethodGet, "/services", "",
-			http.StatusOK, `[{"id":"11111111-9dad-11d1-80b4-00c04fd430c0","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"NotRunning","options":{"protocol":"","port":0}}]`,
+			http.StatusOK, `[{"id":"11111111-9dad-11d1-80b4-00c04fd430c0","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"NotRunning"}]`,
 		},
 		{
 			http.MethodPost, "/services", `{"providerId": "node1", "serviceType": "testprotocol"}`,
-			http.StatusCreated, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running","options":{"protocol":"","port":0}}`,
+			http.StatusCreated, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running"}`,
 		},
 		{
 			http.MethodGet, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",
-			http.StatusOK, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running","options":{"protocol":"","port":0}}`,
+			http.StatusOK, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running"}`,
 		},
 		{
 			http.MethodDelete, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",
@@ -117,7 +117,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 		strings.NewReader(`{
 			"serviceType": "openvpn",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"options": {"openvpnPort": 1123, "openvpnProtocol": "UDP"}
+			"options": {"openvpnPort": 1123, "openvpnProtocol": "udp"}
 		}`),
 	)
 	resp := httptest.NewRecorder()
@@ -146,7 +146,7 @@ func Test_ServiceStartInvalidOptions(t *testing.T) {
 		strings.NewReader(`{
 			"serviceType": "errorprotocol",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"options": {"openvpnPort": 1123, "openvpnProtocol": "UDP"}
+			"options": {"openvpnPort": 1123, "openvpnProtocol": "udp"}
 		}`),
 	)
 	resp := httptest.NewRecorder()
@@ -175,7 +175,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 		strings.NewReader(`{
 			"serviceType": "testprotocol",
 			"providerId": "0xProviderId",
-			"options": {"openvpnPort": 1123, "openvpnProtocol": "UDP"}
+			"options": {"openvpnPort": 1123, "openvpnProtocol": "udp"}
 		}`),
 	)
 	resp := httptest.NewRecorder()
@@ -214,6 +214,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 		t,
 		`{
 			"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+			"status": "Running",
 			"proposal": {
 				"id": 1,
 				"providerId": "0xProviderId",
@@ -225,9 +226,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 						"city": "Vilnius"
 					}
 				}
-			},
-			"status": "Running",
-			"options": {"protocol": "", "port": 0}
+			}
 		}`,
 		resp.Body.String(),
 	)

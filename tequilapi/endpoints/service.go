@@ -35,18 +35,14 @@ type serviceRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"providerId"`
 
-	// provider identity passphrase
-	// required: true
-	Passphrase string `json:"passphrase"`
-
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
-	// required: false
-	// default: openvpn
+	// required: true
 	// example: openvpn
 	ServiceType string `json:"serviceType"`
 
 	// service options. Every service has a unique list of allowed options.
 	// required: false
+	// example: {"port": 1123, "protocol": "udp"}
 	Options interface{} `json:"options"`
 }
 
@@ -56,18 +52,12 @@ type serviceList []serviceInfo
 // swagger:model ServiceInfoDTO
 type serviceInfo struct {
 	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-	ID       string      `json:"id"`
-	Proposal proposalRes `json:"proposal"`
-	// example: Running
-	Status  string         `json:"status"`
-	Options serviceOptions `json:"options"`
-}
+	ID string `json:"id"`
 
-type serviceOptions struct {
-	// example: UDP
-	Protocol string `json:"protocol"`
-	// example: 1190
-	Port int `json:"port"`
+	Proposal proposalRes `json:"proposal"`
+
+	// example: Running
+	Status string `json:"status"`
 }
 
 // ServiceEndpoint struct represents /service resource and it's sub-resources
@@ -126,14 +116,14 @@ func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	id := service.ID(params.ByName("id"))
-	service := se.serviceManager.Service(id)
 
-	if service == nil {
-		utils.SendErrorMessage(resp, "Requested service not found", http.StatusNotFound)
+	serviceInstance := se.serviceManager.Service(id)
+	if serviceInstance == nil {
+		utils.SendErrorMessage(resp, "Requested serviceInstance not found", http.StatusNotFound)
 		return
 	}
 
-	statusResponse := toServiceInfoResponse(id, service)
+	statusResponse := toServiceInfoResponse(id, serviceInstance)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -165,10 +155,6 @@ func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request,
 //     description: Parameters validation error
 //     schema:
 //       "$ref": "#/definitions/ValidationErrorDTO"
-//   499:
-//     description: Service was cancelled
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -225,9 +211,9 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	id := service.ID(params.ByName("id"))
-	service := se.serviceManager.Service(id)
 
-	if service == nil {
+	serviceInstance := se.serviceManager.Service(id)
+	if serviceInstance == nil {
 		utils.SendErrorMessage(resp, "Service not found", http.StatusNotFound)
 		return
 	}
@@ -236,6 +222,7 @@ func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+
 	resp.WriteHeader(http.StatusAccepted)
 }
 
