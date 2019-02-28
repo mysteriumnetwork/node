@@ -111,15 +111,28 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 func Test_ServiceStartInvalidType(t *testing.T) {
 	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
-	req := httptest.NewRequest(http.MethodGet, "/irrelevant", strings.NewReader(`{"serviceType":"openvpn","providerId":"0x9edf75f870d87d2d1a69f0d950a99984ae955ee0","options":{"openvpnPort":1123,"openvpnProtocol":"UDP"}}`))
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		strings.NewReader(`{
+			"serviceType": "openvpn",
+			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"options": {"openvpnPort": 1123, "openvpnProtocol": "UDP"}
+		}`),
+	)
 	resp := httptest.NewRecorder()
 
 	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
 
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
 		t,
-		`{"message":"Invalid service type"}`,
+		`{
+			"message": "validation_error",
+			"errors": {
+				"serviceType": [ {"code": "invalid", "message": "Invalid service type"} ]
+			}
+		}`,
 		resp.Body.String(),
 	)
 }
@@ -127,15 +140,28 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 func Test_ServiceStartInvalidOptions(t *testing.T) {
 	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
-	req := httptest.NewRequest(http.MethodGet, "/irrelevant", strings.NewReader(`{"serviceType":"errorprotocol","providerId":"0x9edf75f870d87d2d1a69f0d950a99984ae955ee0","options":{"openvpnPort":1123,"openvpnProtocol":"UDP"}}`))
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		strings.NewReader(`{
+			"serviceType": "errorprotocol",
+			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"options": {"openvpnPort": 1123, "openvpnProtocol": "UDP"}
+		}`),
+	)
 	resp := httptest.NewRecorder()
 
 	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
 
-	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
 		t,
-		`{"message":"Invalid options"}`,
+		`{
+			"message": "validation_error",
+			"errors": {
+				"options": [ {"code": "invalid", "message": "Invalid options" } ]
+			}
+		}`,
 		resp.Body.String(),
 	)
 }
@@ -143,7 +169,15 @@ func Test_ServiceStartInvalidOptions(t *testing.T) {
 func Test_ServiceStartAlreadyRunning(t *testing.T) {
 	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
-	req := httptest.NewRequest(http.MethodGet, "/irrelevant", strings.NewReader(`{"serviceType":"testprotocol","providerId":"0xProviderId","options":{"openvpnPort":1123,"openvpnProtocol":"UDP"}}`))
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		strings.NewReader(`{
+			"serviceType": "testprotocol",
+			"providerId": "0xProviderId",
+			"options": {"openvpnPort": 1123, "openvpnProtocol": "UDP"}
+		}`),
+	)
 	resp := httptest.NewRecorder()
 
 	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
@@ -178,7 +212,23 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(
 		t,
-		`{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running","options":{"protocol":"","port":0}}`,
+		`{
+			"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+			"proposal": {
+				"id": 1,
+				"providerId": "0xProviderId",
+				"serviceType": "testprotocol",
+				"serviceDefinition": {
+					"locationOriginate": {
+						"asn": "LT",
+						"country": "Lithuania",
+						"city": "Vilnius"
+					}
+				}
+			},
+			"status": "Running",
+			"options": {"protocol": "", "port": 0}
+		}`,
 		resp.Body.String(),
 	)
 }
@@ -194,7 +244,7 @@ func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"message" : "invalid character 'a' looking for beginning of value"
+			"message": "invalid character 'a' looking for beginning of value"
 		}`,
 		resp.Body.String(),
 	)
@@ -211,10 +261,10 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(t,
 		`{
-			"message" : "validation_error",
-			"errors" : {
-				"providerId" : [ {"code" : "required" , "message" : "Field is required" } ],
-				"serviceType" : [ {"code" : "required" , "message" : "Field is required" } ]
+			"message": "validation_error",
+			"errors": {
+				"providerId": [ {"code": "required", "message": "Field is required"} ],
+				"serviceType": [ {"code": "required", "message": "Field is required"} ]
 			}
 		}`,
 		resp.Body.String(),

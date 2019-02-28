@@ -26,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
-	"github.com/pkg/errors"
 )
 
 // swagger:model ServiceRequestDTO
@@ -79,6 +78,13 @@ type ServiceEndpoint struct {
 
 // ServiceOptionsParser parses request to service specific options
 type ServiceOptionsParser func(json.RawMessage) (service.Options, error)
+
+var (
+	// serviceTypeInvalid represents service type which is unknown to node
+	serviceTypeInvalid = "<invalid>"
+	// serviceOptionsInvalid represents service options which is unknown to node (i.e. invalid structure for given type)
+	serviceOptionsInvalid struct{}
+)
 
 // NewServiceEndpoint creates and returns service endpoint
 func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) *ServiceEndpoint {
@@ -253,34 +259,53 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 	router.DELETE("/services/:id", serviceEndpoint.ServiceStop)
 }
 
-func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (sr serviceRequest, err error) {
+func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	var jsonData struct {
 		ProviderID  string           `json:"providerId"`
 		ServiceType string           `json:"serviceType"`
 		Options     *json.RawMessage `json:"options"`
 	}
-	if err = json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
-		return
+	if err := json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
+		return serviceRequest{}, err
 	}
 
-	sr.ProviderID = jsonData.ProviderID
-	sr.ServiceType = jsonData.ServiceType
-
-	if jsonData.Options != nil {
-		optionsParser, ok := se.optionsParser[sr.ServiceType]
-		if !ok {
-			err = errors.New("Invalid service type")
-			return
-		}
-
-		sr.Options, err = optionsParser(*jsonData.Options)
-		if err != nil {
-			err = errors.New("Invalid options")
-			return
-		}
+	sr := serviceRequest{
+		ProviderID:  jsonData.ProviderID,
+		ServiceType: se.toServiceType(jsonData.ServiceType),
+		Options:     se.toServiceOptions(jsonData.ServiceType, jsonData.Options),
 	}
-
 	return sr, nil
+}
+
+func (se *ServiceEndpoint) toServiceType(value string) string {
+	if value == "" {
+		return ""
+	}
+
+	_, ok := se.optionsParser[value]
+	if !ok {
+		return serviceTypeInvalid
+	}
+
+	return value
+}
+
+func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawMessage) service.Options {
+	if value == nil {
+		return nil
+	}
+
+	optionsParser, ok := se.optionsParser[serviceType]
+	if !ok {
+		return nil
+	}
+
+	options, err := optionsParser(*value)
+	if err != nil {
+		return serviceOptionsInvalid
+	}
+
+	return options
 }
 
 func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInfo {
@@ -306,6 +331,12 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 	}
 	if sr.ServiceType == "" {
 		errors.ForField("serviceType").AddError("required", "Field is required")
+	}
+	if sr.ServiceType == serviceTypeInvalid {
+		errors.ForField("serviceType").AddError("invalid", "Invalid service type")
+	}
+	if sr.Options == serviceOptionsInvalid {
+		errors.ForField("options").AddError("invalid", "Invalid options")
 	}
 	return errors
 }
