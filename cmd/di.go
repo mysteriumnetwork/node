@@ -419,5 +419,5 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 
 var corsConfig = tequilapi.CorsConfig{
 	DefaultTrustedOrigin:  "https://mysterium.network",
-	AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
+	AllowedOriginSuffixes: []string{"wallet.mysterium.network", "wallet-dev.mysterium.network", "localhost"},
 }

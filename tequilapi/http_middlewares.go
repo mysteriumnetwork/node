@@ -52,8 +52,7 @@ func allowSpecifiedCorsActions(resp http.ResponseWriter, req *http.Request, cors
 	requestOrigin := req.Header.Get("Origin")
 	allowedOrigin := requestOrigin
 	if !isOriginAllowed(requestOrigin, corsConfig.AllowedOriginSuffixes) {
-		trustedOrigin := corsConfig.DefaultTrustedOrigin
-		allowedOrigin = trustedOrigin
+		allowedOrigin = corsConfig.DefaultTrustedOrigin
 	}
 
 	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
