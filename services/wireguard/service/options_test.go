@@ -15,21 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package noop
+package service
 
 import (
 	"encoding/json"
+	"testing"
 
-	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/urfave/cli"
+	"github.com/stretchr/testify/assert"
 )
 
-// ParseFlags function fills in Noop options from CLI context
-func ParseFlags(_ *cli.Context) service.Options {
-	return nil
+func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
+	options, err := ParseJSONOptions(nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, Options{}, options)
 }
 
-// ParseJSONOptions function fills in Noop options from JSON request
-func ParseJSONOptions(_ *json.RawMessage) (service.Options, error) {
-	return nil, nil
+func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
+	request := json.RawMessage(`{"connectDelay": 3000}`)
+	options, err := ParseJSONOptions(&request)
+
+	assert.NoError(t, err)
+	assert.Equal(t, Options{3000}, options)
 }

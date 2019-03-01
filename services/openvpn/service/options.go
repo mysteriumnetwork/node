@@ -57,8 +57,12 @@ func ParseFlags(ctx *cli.Context) service.Options {
 }
 
 // ParseJSONOptions function fills in Openvpn options from JSON request
-func ParseJSONOptions(request json.RawMessage) (service.Options, error) {
+func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
+	if request == nil {
+		return Options{}, nil
+	}
+
 	var opts Options
-	err := json.Unmarshal(request, &opts)
+	err := json.Unmarshal(*request, &opts)
 	return opts, err
 }
