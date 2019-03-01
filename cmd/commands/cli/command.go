@@ -18,6 +18,8 @@
 package cli
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -26,13 +28,27 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
+	"github.com/mysteriumnetwork/node/services/noop"
+	"github.com/mysteriumnetwork/node/services/openvpn"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/urfave/cli"
 )
 
 const cliCommandName = "cli"
+
+const serviceHelp = `service <action> [args]
+	start	<ProviderID> <ServiceType> [options]
+	stop	<ServiceID>
+	list
+	status	<ServiceID>
+
+	example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --openvpn.port=1194 --openvpn.proto=UDP`
 
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
@@ -137,6 +153,7 @@ func (c *cliApp) handleActions(line string) {
 		{command: "license", handler: c.license},
 		{command: "registration", handler: c.registration},
 		{command: "proposals", handler: c.proposals},
+		{command: "service", handler: c.service},
 	}
 
 	for _, cmd := range staticCmds {
@@ -159,20 +176,111 @@ func (c *cliApp) handleActions(line string) {
 	}
 }
 
-func (c *cliApp) connect(argsString string) {
-	options := strings.Fields(argsString)
+func (c *cliApp) service(argsString string) {
+	args := strings.Fields(argsString)
+	if len(args) == 0 {
+		fmt.Println(serviceHelp)
+		return
+	}
 
-	if len(options) < 3 {
+	action := args[0]
+	switch action {
+	case "start":
+		if len(args) < 3 {
+			fmt.Println(serviceHelp)
+			return
+		}
+		c.serviceStart(args[1], args[2], args[3:]...)
+	case "stop":
+		if len(args) < 2 {
+			fmt.Println(serviceHelp)
+			return
+		}
+		c.serviceStop(args[1])
+	case "status":
+		if len(args) < 2 {
+			fmt.Println(serviceHelp)
+			return
+		}
+		c.serviceGet(args[1])
+	case "list":
+		c.serviceList()
+	default:
+		info(fmt.Sprintf("Unknown action provided: %s", action))
+		fmt.Println(serviceHelp)
+	}
+}
+
+func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
+	opts, err := parseServiceOptions(serviceType, args...)
+	if err != nil {
+		info("Failed to parse service options:", err)
+		return
+	}
+
+	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts)
+	if err != nil {
+		info("Failed to start service: ", err)
+		return
+	}
+
+	status(service.Status,
+		"ID: "+service.ID,
+		"ProviderID: "+service.Proposal.ProviderID,
+		"ServiceType: "+service.Proposal.ServiceType)
+}
+
+func (c *cliApp) serviceStop(id string) {
+	if err := c.tequilapi.ServiceStop(id); err != nil {
+		info("Failed to stop service: ", err)
+		return
+	}
+
+	status("Stopping", "ID: "+id)
+}
+
+func (c *cliApp) serviceList() {
+	services, err := c.tequilapi.Services()
+	if err != nil {
+		info("Failed to get a list of services: ", err)
+		return
+	}
+
+	for _, service := range services {
+		status(service.Status,
+			"ID: "+service.ID,
+			"ProviderID: "+service.Proposal.ProviderID,
+			"ServiceType: "+service.Proposal.ServiceType)
+	}
+}
+
+func (c *cliApp) serviceGet(id string) {
+	service, err := c.tequilapi.Service(id)
+	if err != nil {
+		info("Failed to get service info: ", err)
+		return
+	}
+
+	status(service.Status,
+		"ID: "+service.ID,
+		"ProviderID: "+service.Proposal.ProviderID,
+		"ServiceType: "+service.Proposal.ServiceType)
+}
+
+func (c *cliApp) connect(argsString string) {
+	args := strings.Fields(argsString)
+
+	if len(args) < 3 {
 		info("Please type in the provider identity. Connect <consumer-identity> <provider-identity> <service-type> [disable-kill-switch]")
 		return
 	}
 
-	consumerID, providerID, serviceType := options[0], options[1], options[2]
+	consumerID, providerID, serviceType := args[0], args[1], args[2]
 
 	var disableKill bool
 	var err error
-	if len(options) > 3 {
-		disableKillStr := options[3]
+	if len(args) > 3 {
+		disableKillStr := args[3]
 		disableKill, err = strconv.ParseBool(disableKillStr)
 		if err != nil {
 			info("Please use true / false for <disable-kill-switch>")
@@ -483,6 +591,18 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			),
 		),
 		readline.PcItem(
+			"service",
+			readline.PcItem("start", readline.PcItemDynamic(
+				getIdentityOptionList(tequilapi),
+				readline.PcItem("noop"),
+				readline.PcItem("openvpn"),
+				readline.PcItem("wireguard"),
+			)),
+			readline.PcItem("stop"),
+			readline.PcItem("list"),
+			readline.PcItem("status"),
+		),
+		readline.PcItem(
 			"identities",
 			readline.PcItem("new"),
 			readline.PcItem("list"),
@@ -513,4 +633,32 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			),
 		),
 	)
+}
+
+func parseServiceOptions(serviceType string, args ...string) (service.Options, error) {
+	var flags []cli.Flag
+	openvpn_service.RegisterFlags(&flags)
+	wireguard_service.RegisterFlags(&flags)
+
+	set := flag.NewFlagSet("", flag.ContinueOnError)
+	for _, f := range flags {
+		f.Apply(set)
+	}
+
+	if err := set.Parse(args); err != nil {
+		return nil, err
+	}
+
+	ctx := cli.NewContext(nil, set, nil)
+
+	switch serviceType {
+	case noop.ServiceType:
+		return noop.ParseFlags(ctx), nil
+	case wireguard.ServiceType:
+		return wireguard_service.ParseFlags(ctx), nil
+	case openvpn.ServiceType:
+		return openvpn_service.ParseFlags(ctx), nil
+	}
+
+	return nil, errors.New("service type not found")
 }
