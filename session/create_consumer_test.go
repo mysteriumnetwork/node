@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,6 +32,9 @@ var (
 	mockConsumer = func(json.RawMessage) (ServiceConfiguration, DestroyCallback, error) {
 		return config, nil, nil
 	}
+	mockID = identity.FromAddress("0x0")
+	errMpl = errors.New("test")
+	mpl    = &mockPromiseLoader{}
 )
 
 func TestConsumer_Success(t *testing.T) {
@@ -44,6 +48,7 @@ func TestConsumer_Success(t *testing.T) {
 		sessionCreator: mockManager,
 		peerID:         identity.FromAddress("peer-id"),
 		configProvider: mockConsumer,
+		promiseLoader:  mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -73,6 +78,7 @@ func TestConsumer_ErrorInvalidProposal(t *testing.T) {
 	consumer := createConsumer{
 		sessionCreator: mockManager,
 		configProvider: mockConsumer,
+		promiseLoader:  mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -89,6 +95,7 @@ func TestConsumer_ErrorFatal(t *testing.T) {
 	consumer := createConsumer{
 		sessionCreator: mockManager,
 		configProvider: mockConsumer,
+		promiseLoader:  mpl,
 	}
 
 	request := consumer.NewRequest().(*CreateRequest)
@@ -109,6 +116,7 @@ func TestConsumer_UsesIssuerID(t *testing.T) {
 		sessionCreator: mockManager,
 		peerID:         identity.FromAddress("peer-id"),
 		configProvider: mockConsumer,
+		promiseLoader:  mpl,
 	}
 
 	issuerID := identity.FromAddress("some-peer-id")
@@ -143,4 +151,12 @@ func (manager *managerFake) Create(consumerID, issuerID identity.Identity, propo
 // Destroy fake destroy function
 func (manager *managerFake) Destroy(consumerID identity.Identity, sessionID string) error {
 	return nil
+}
+
+type mockPromiseLoader struct {
+	paymentInfoToReturn *promise.PaymentInfo
+}
+
+func (mpl *mockPromiseLoader) LoadPaymentInfo(identity.Identity) *promise.PaymentInfo {
+	return mpl.paymentInfoToReturn
 }

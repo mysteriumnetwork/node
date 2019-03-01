@@ -24,11 +24,13 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 )
 
 const promiseBucketPrefix = "stored-promise-"
 const firstPromiseID = uint64(1)
+const promiseLogPrefix = "[promise-storage] "
 
 var (
 	// ErrPromiseNotFound represents the error we return when trying to update a non existing promise
@@ -188,6 +190,29 @@ func (s *Storage) GetAllPromisesFromIssuer(issuerID identity.Identity) ([]Stored
 	s.Lock()
 	defer s.Unlock()
 	return s.getAllPromisesForIssuer(issuerID)
+}
+
+// LoadPaymentInfo returns the last know payment information for issuer
+func (s *Storage) LoadPaymentInfo(issuerID identity.Identity) *PaymentInfo {
+	s.Lock()
+	defer s.Unlock()
+	sp, err := s.getLastPromise(issuerID)
+	if err != nil {
+		log.Trace(promiseLogPrefix, "could not load promise info, defaulting to zero payment info", err)
+		return &PaymentInfo{}
+	}
+	pi := &PaymentInfo{
+		LastPromise: LastPromise{
+			SequenceID: sp.SequenceID,
+		},
+		FreeCredit: sp.UnconsumedAmount,
+	}
+
+	if sp.Message != nil {
+		pi.LastPromise.Amount = sp.Message.Amount
+		log.Trace(promiseLogPrefix, "payment info loaded")
+	}
+	return pi
 }
 
 func (s *Storage) getPromiseByID(issuerID identity.Identity, sequenceID uint64) (StoredPromise, error) {

@@ -22,13 +22,22 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/promise"
 )
+
+const consumerLogPrefix = "[session-create-consumer] "
+
+// PromiseLoader loads the last known promise info for the given consumer
+type PromiseLoader interface {
+	LoadPaymentInfo(issuerID identity.Identity) *promise.PaymentInfo
+}
 
 // createConsumer processes session create requests from communication channel.
 type createConsumer struct {
 	sessionCreator Creator
 	peerID         identity.Identity
 	configProvider ConfigProvider
+	promiseLoader  PromiseLoader
 }
 
 // Creator defines method for session creation
@@ -70,7 +79,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 				destroyCallback()
 			}()
 		}
-		return responseWithSession(sessionInstance, config, nil), nil
+		return responseWithSession(sessionInstance, config, consumer.promiseLoader.LoadPaymentInfo(issuerID)), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
 	default:
@@ -78,7 +87,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	}
 }
 
-func responseWithSession(sessionInstance Session, config ServiceConfiguration, pi *PaymentInfo) CreateResponse {
+func responseWithSession(sessionInstance Session, config ServiceConfiguration, pi *promise.PaymentInfo) CreateResponse {
 	serializedConfig, err := json.Marshal(config)
 	if err != nil {
 		// Failed to serialize session
