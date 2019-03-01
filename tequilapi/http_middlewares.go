@@ -27,10 +27,9 @@ type corsHandler struct {
 	corsConfig      CorsConfig
 }
 
-// CorsConfig allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting only specific domains
-type CorsConfig struct {
-	DefaultTrustedOrigin  string
-	AllowedOriginSuffixes []string
+// CorsConfig resolves allowed origin
+type CorsConfig interface {
+	AllowedOrigin(requestOrigin string) string
 }
 
 func (wrapper corsHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
@@ -50,22 +49,10 @@ func ApplyCors(original http.Handler, corsConfig CorsConfig) http.Handler {
 
 func allowSpecifiedCorsActions(resp http.ResponseWriter, req *http.Request, corsConfig CorsConfig) {
 	requestOrigin := req.Header.Get("Origin")
-	allowedOrigin := requestOrigin
-	if !isOriginAllowed(requestOrigin, corsConfig.AllowedOriginSuffixes) {
-		allowedOrigin = corsConfig.DefaultTrustedOrigin
-	}
+	allowedOrigin := corsConfig.AllowedOrigin(requestOrigin)
 
 	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-}
-
-func isOriginAllowed(origin string, allowedOriginSuffixes []string) bool {
-	for _, allowedSuffix := range allowedOriginSuffixes {
-		if strings.HasSuffix(origin, allowedSuffix) {
-			return true
-		}
-	}
-	return false
 }
 
 func isPreflightCorsRequest(req *http.Request) bool {
