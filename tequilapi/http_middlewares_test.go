@@ -30,48 +30,20 @@ var testCorsConfig = WhitelistedCorsConfig{
 	AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
 }
 
-func TestCorsHeadersAreAppliedToResponseWithAllowedOrigins(t *testing.T) {
-	tests := []struct {
-		origin   string
-		expected string
-	}{
-		{
-			origin:   "http://localhost",
-			expected: "http://localhost",
-		},
-		{
-			origin:   "https://wallet.mysterium.network",
-			expected: "https://wallet.mysterium.network",
-		},
-		{
-			origin:   "https://mysterium.network",
-			expected: "https://mysterium.network",
-		},
-		{
-			origin:   "https://any-future-subdomain.mysterium.network",
-			expected: "https://any-future-subdomain.mysterium.network",
-		},
-		{
-			origin:   "http://some-bad-people.com",
-			expected: "https://mysterium.network",
-		},
-	}
+func TestCorsHeadersAreAppliedToResponse(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "/not-important", nil)
+	req.Header.Add("Origin", "https://wallet.mysterium.network")
+	assert.NoError(t, err)
 
-	for _, tt := range tests {
-		req, err := http.NewRequest(http.MethodGet, "/not-important", nil)
-		req.Header.Add("Origin", tt.origin)
-		assert.NoError(t, err)
+	respRecorder := httptest.NewRecorder()
 
-		respRecorder := httptest.NewRecorder()
+	mock := &mockedHTTPHandler{}
 
-		mock := &mockedHTTPHandler{}
+	ApplyCors(mock, testCorsConfig).ServeHTTP(respRecorder, req)
 
-		ApplyCors(mock, testCorsConfig).ServeHTTP(respRecorder, req)
-
-		assert.Equal(t, tt.expected, respRecorder.Header().Get("Access-Control-Allow-Origin"))
-		assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
-		assert.True(t, mock.wasCalled)
-	}
+	assert.Equal(t, "https://wallet.mysterium.network", respRecorder.Header().Get("Access-Control-Allow-Origin"))
+	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
+	assert.True(t, mock.wasCalled)
 }
 
 func TestPreflightCorsCheckIsHandled(t *testing.T) {
