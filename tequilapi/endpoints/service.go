@@ -71,7 +71,7 @@ type ServiceOptionsParser func(json.RawMessage) (service.Options, error)
 
 var (
 	// serviceTypeInvalid represents service type which is unknown to node
-	serviceTypeInvalid = "<invalid>"
+	serviceTypeInvalid = "<unknown>"
 	// serviceOptionsInvalid represents service options which is unknown to node (i.e. invalid structure for given type)
 	serviceOptionsInvalid struct{}
 )
@@ -96,6 +96,7 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 //       "$ref": "#/definitions/ServiceListDTO"
 func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	instances := se.serviceManager.List()
+
 	statusResponse := toServiceListResponse(instances)
 	utils.WriteAsJSON(statusResponse, resp)
 }
@@ -117,13 +118,13 @@ func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request
 func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	id := service.ID(params.ByName("id"))
 
-	serviceInstance := se.serviceManager.Service(id)
-	if serviceInstance == nil {
-		utils.SendErrorMessage(resp, "Requested serviceInstance not found", http.StatusNotFound)
+	instance := se.serviceManager.Service(id)
+	if instance == nil {
+		utils.SendErrorMessage(resp, "Requested service not found", http.StatusNotFound)
 		return
 	}
 
-	statusResponse := toServiceInfoResponse(id, serviceInstance)
+	statusResponse := toServiceInfoResponse(id, instance)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -212,8 +213,8 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	id := service.ID(params.ByName("id"))
 
-	serviceInstance := se.serviceManager.Service(id)
-	if serviceInstance == nil {
+	instance := se.serviceManager.Service(id)
+	if instance == nil {
 		utils.SendErrorMessage(resp, "Service not found", http.StatusNotFound)
 		return
 	}
