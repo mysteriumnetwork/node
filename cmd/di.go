@@ -137,6 +137,8 @@ type Dependencies struct {
 	NATPinger           NatPinger
 	NATTracker          NatEventTracker
 	LastSessionShutdown chan struct{}
+
+	MetricsSender *metrics.Sender
 }
 
 // Bootstrap initiates all container dependencies
@@ -309,6 +311,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.IPResolver,
 	)
 
+	di.MetricsSender = metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
+
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager)
@@ -323,9 +327,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router, corsPolicy)
-	metricsSender := metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, metricsSender, di.NATPinger)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, di.MetricsSender, di.NATPinger)
 }
 
 func newSessionManagerFactory(

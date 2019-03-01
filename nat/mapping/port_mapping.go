@@ -24,6 +24,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	portmap "github.com/ethereum/go-ethereum/p2p/nat"
+	"github.com/mysteriumnetwork/node/metrics"
 )
 
 const logPrefix = "[port mapping] "
@@ -39,16 +40,16 @@ type Publisher interface {
 }
 
 // GetPortMappingFunc returns PortMapping function if service is behind NAT
-func GetPortMappingFunc(pubIP, outIP, protocol string, port int, description string, publisher Publisher) func() {
+func GetPortMappingFunc(pubIP, outIP, protocol string, port int, description string, publisher Publisher, metricsSender *metrics.Sender) func() {
 	if pubIP != outIP {
-		return PortMapping(protocol, port, description, publisher)
+		return PortMapping(protocol, port, description, publisher, metricsSender)
 	}
 	return func() {}
 }
 
 // PortMapping maps given port of given protocol from external IP on a gateway to local machine internal IP
 // 'name' denotes rule name added on a gateway.
-func PortMapping(protocol string, port int, name string, publisher Publisher) func() {
+func PortMapping(protocol string, port int, name string, publisher Publisher, metricsSender *metrics.Sender) func() {
 	mapperQuit := make(chan struct{})
 	go mapPort(portmap.Any(),
 		mapperQuit,
@@ -56,14 +57,15 @@ func PortMapping(protocol string, port int, name string, publisher Publisher) fu
 		port,
 		port,
 		name,
-		publisher)
+		publisher,
+		metricsSender)
 
 	return func() { close(mapperQuit) }
 }
 
 // mapPort adds a port mapping on m and keeps it alive until c is closed.
 // This function is typically invoked in its own goroutine.
-func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, intPort int, name string, publisher Publisher) {
+func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, intPort int, name string, publisher Publisher, metricsSender *metrics.Sender) {
 	defer func() {
 		log.Debug(logPrefix, "Deleting port mapping for port: ", extPort)
 
@@ -72,7 +74,14 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 		}
 	}()
 	for {
-		addMapping(m, protocol, extPort, intPort, name, publisher)
+		err := addMapping(m, protocol, extPort, intPort, name, publisher)
+		if err != nil {
+			log.Infof("%s, Mapping for port %d failed: %s", logPrefix, extPort, err)
+			metricsSender.SendNATMappingResultEvent(false)
+		} else {
+			log.Info("%s, Mapped network port: %d", logPrefix, extPort)
+			metricsSender.SendNATMappingResultEvent(true)
+		}
 		select {
 		case <-c:
 			return
@@ -81,16 +90,17 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 	}
 }
 
-func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name string, publisher Publisher) {
+func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name string, publisher Publisher) error {
 	if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
 		log.Debugf("%s, Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
 			publisher.Publish(traversal.EventTopic, traversal.EventFailure)
 			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
-			return
+			return err
 		}
 	}
 	publisher.Publish(traversal.EventTopic, traversal.EventSuccess)
 	log.Info(logPrefix, "Mapped network port:", extPort)
+	return nil
 }
