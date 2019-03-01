@@ -23,7 +23,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWhitelistedCorsConfig_AllowedOrigin_ReturnsSameOrDefaultOrigin(t *testing.T) {
+func TestWhitelistingCorsPolicy_AllowedOrigin_ReturnsSameOrDefaultOrigin(t *testing.T) {
+	var policy = WhitelistingCorsPolicy{
+		DefaultTrustedOrigin:  "https://mysterium.network",
+		AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
+	}
+
 	tests := []struct {
 		requested       string
 		expectedAllowed string
@@ -51,11 +56,7 @@ func TestWhitelistedCorsConfig_AllowedOrigin_ReturnsSameOrDefaultOrigin(t *testi
 	}
 
 	for _, tt := range tests {
-		var testCorsConfig = WhitelistedCorsConfig{
-			DefaultTrustedOrigin:  "https://mysterium.network",
-			AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
-		}
-		allowed := testCorsConfig.AllowedOrigin(tt.requested)
+		allowed := policy.AllowedOrigin(tt.requested)
 		assert.Equal(t, tt.expectedAllowed, allowed)
 	}
 }

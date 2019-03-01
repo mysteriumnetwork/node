@@ -25,7 +25,7 @@ import (
 )
 
 func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
-	server := NewServer("localhost", 31337, nil, WhitelistedCorsConfig{})
+	server := NewServer("localhost", 31337, nil, WhitelistingCorsPolicy{})
 
 	assert.NoError(t, server.StartServing())
 
@@ -40,6 +40,6 @@ func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
 }
 
 func TestStopBeforeStartingListeningDoesNotCausePanic(t *testing.T) {
-	server := NewServer("", 12345, nil, WhitelistedCorsConfig{})
+	server := NewServer("", 12345, nil, WhitelistingCorsPolicy{})
 	server.Stop()
 }

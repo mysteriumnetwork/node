@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testCorsConfig = WhitelistedCorsConfig{
+var testCorsPolicy = WhitelistingCorsPolicy{
 	DefaultTrustedOrigin:  "https://mysterium.network",
 	AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
 }
@@ -39,7 +39,7 @@ func TestCorsHeadersAreAppliedToResponse(t *testing.T) {
 
 	mock := &mockedHTTPHandler{}
 
-	ApplyCors(mock, testCorsConfig).ServeHTTP(respRecorder, req)
+	ApplyCors(mock, testCorsPolicy).ServeHTTP(respRecorder, req)
 
 	assert.Equal(t, "https://wallet.mysterium.network", respRecorder.Header().Get("Access-Control-Allow-Origin"))
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
@@ -57,7 +57,7 @@ func TestPreflightCorsCheckIsHandled(t *testing.T) {
 
 	mock := &mockedHTTPHandler{}
 
-	ApplyCors(mock, testCorsConfig).ServeHTTP(respRecorder, req)
+	ApplyCors(mock, testCorsPolicy).ServeHTTP(respRecorder, req)
 
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Origin"))
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
@@ -76,7 +76,7 @@ func TestDeleteCorsPreflightCheckIsHandledCorrectly(t *testing.T) {
 
 	mock := &mockedHTTPHandler{}
 
-	ApplyCors(mock, testCorsConfig).ServeHTTP(respRecorder, req)
+	ApplyCors(mock, testCorsPolicy).ServeHTTP(respRecorder, req)
 
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Origin"))
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))

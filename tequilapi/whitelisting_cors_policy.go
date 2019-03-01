@@ -19,23 +19,23 @@ package tequilapi
 
 import "strings"
 
-// WhitelistedCorsConfig allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting only specific domains
-type WhitelistedCorsConfig struct {
+// WhitelistingCorsPolicy allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting only specific domains
+type WhitelistingCorsPolicy struct {
 	DefaultTrustedOrigin  string
 	AllowedOriginSuffixes []string
 }
 
 // AllowedOrigin returns the same request origin if it is allowed, or default origin if it is not allowed
-func (cors WhitelistedCorsConfig) AllowedOrigin(requestOrigin string) string {
-	allowedOrigin := requestOrigin
-	if !cors.isOriginAllowed(requestOrigin, cors.AllowedOriginSuffixes) {
-		allowedOrigin = cors.DefaultTrustedOrigin
+func (policy WhitelistingCorsPolicy) AllowedOrigin(requestOrigin string) string {
+	if policy.isOriginAllowed(requestOrigin) {
+		return requestOrigin
 	}
-	return allowedOrigin
+
+	return policy.DefaultTrustedOrigin
 }
 
-func (cors WhitelistedCorsConfig) isOriginAllowed(origin string, allowedOriginSuffixes []string) bool {
-	for _, allowedSuffix := range allowedOriginSuffixes {
+func (policy WhitelistingCorsPolicy) isOriginAllowed(origin string) bool {
+	for _, allowedSuffix := range policy.AllowedOriginSuffixes {
 		if strings.HasSuffix(origin, allowedSuffix) {
 			return true
 		}

@@ -31,7 +31,7 @@ type tequilapiTestSuite struct {
 }
 
 func (testSuite *tequilapiTestSuite) SetupSuite() {
-	testSuite.server = NewServer("localhost", 0, NewAPIRouter(), WhitelistedCorsConfig{})
+	testSuite.server = NewServer("localhost", 0, NewAPIRouter(), WhitelistingCorsPolicy{})
 
 	assert.NoError(testSuite.T(), testSuite.server.StartServing())
 	address, err := testSuite.server.Address()
