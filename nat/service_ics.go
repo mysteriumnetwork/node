@@ -1,4 +1,4 @@
-//// +build windows
+// +build windows
 
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
@@ -115,22 +115,32 @@ func (nat *serviceICS) Del(rule RuleForwarding) error {
 }
 
 // Disable disables internet connection sharing for the public interface.
-func (nat *serviceICS) Disable() error {
+func (nat *serviceICS) Disable() (resErr error) {
 	for iface, rule := range nat.ifaces {
 		if err := nat.Del(rule); err != nil {
 			log.Errorf("%s Failed to cleanup internet connection sharing for '%s' interface: %v", natLogPrefix, iface, err)
+			if resErr != nil {
+				resErr = err
+			}
 		}
 	}
 
-	// TODO we should cleanup as much as possible, not failing after errors.
 	_, err := powerShell("Set-Service -Name RemoteAccess -StartupType " + nat.remoteAccessStatus)
 	if err != nil {
-		return errors.Wrap(err, "failed to revert RemoteAccess service startup type")
+		err = errors.Wrap(err, "failed to revert RemoteAccess service startup type")
+		log.Errorf("%s %v", natLogPrefix, err)
+		if resErr != nil {
+			resErr = err
+		}
 	}
 
 	ifaceName, err := getPublicInterfaceName()
 	if err != nil {
-		return errors.Wrap(err, "failed to get public interface name")
+		err = errors.Wrap(err, "failed to get public interface name")
+		log.Errorf("%s %v", natLogPrefix, err)
+		if resErr != nil {
+			resErr = err
+		}
 	}
 
 	_, err = powerShell(`regsvr32 /s hnetcfg.dll;
@@ -138,8 +148,15 @@ func (nat *serviceICS) Disable() error {
 		$c = $netShare.EnumEveryConnection |? { $netShare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
 		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
 		$config.DisableSharing()`)
+	if err != nil {
+		err = errors.Wrap(err, "failed to disable internet connection sharing")
+		log.Errorf("%s %v", natLogPrefix, err)
+		if resErr != nil {
+			resErr = err
+		}
+	}
 
-	return errors.Wrap(err, "failed to disable internet connection sharing")
+	return resErr
 }
 
 func getInterfaceBySubnet(subnet string) (string, error) {
