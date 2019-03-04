@@ -35,19 +35,15 @@ type serviceRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"providerId"`
 
-	// provider identity passphrase
-	// required: true
-	Passphrase string `json:"passphrase"`
-
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
-	// required: false
-	// default: openvpn
+	// required: true
 	// example: openvpn
 	ServiceType string `json:"serviceType"`
 
 	// service options. Every service has a unique list of allowed options.
 	// required: false
-	Options json.RawMessage `json:"options"`
+	// example: {"port": 1123, "protocol": "udp"}
+	Options interface{} `json:"options"`
 }
 
 // swagger:model ServiceListDTO
@@ -56,28 +52,32 @@ type serviceList []serviceInfo
 // swagger:model ServiceInfoDTO
 type serviceInfo struct {
 	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-	ID       string      `json:"id"`
-	Proposal proposalRes `json:"proposal"`
-	// example: Running
-	Status  string         `json:"status"`
-	Options serviceOptions `json:"options"`
-}
+	ID string `json:"id"`
 
-type serviceOptions struct {
-	// example: UDP
-	Protocol string `json:"protocol"`
-	// example: 1190
-	Port int `json:"port"`
+	Proposal proposalRes `json:"proposal"`
+
+	// example: Running
+	Status string `json:"status"`
 }
 
 // ServiceEndpoint struct represents /service resource and it's sub-resources
 type ServiceEndpoint struct {
 	serviceManager ServiceManager
-	optionsParser  map[string]func(json.RawMessage) (service.Options, error)
+	optionsParser  map[string]ServiceOptionsParser
 }
 
+// ServiceOptionsParser parses request to service specific options
+type ServiceOptionsParser func(json.RawMessage) (service.Options, error)
+
+var (
+	// serviceTypeInvalid represents service type which is unknown to node
+	serviceTypeInvalid = "<unknown>"
+	// serviceOptionsInvalid represents service options which is unknown to node (i.e. invalid structure for given type)
+	serviceOptionsInvalid struct{}
+)
+
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]func(json.RawMessage) (service.Options, error)) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager: serviceManager,
 		optionsParser:  optionsParser,
@@ -96,6 +96,7 @@ func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]
 //       "$ref": "#/definitions/ServiceListDTO"
 func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	instances := se.serviceManager.List()
+
 	statusResponse := toServiceListResponse(instances)
 	utils.WriteAsJSON(statusResponse, resp)
 }
@@ -116,14 +117,14 @@ func (se *ServiceEndpoint) ServiceList(resp http.ResponseWriter, _ *http.Request
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	id := service.ID(params.ByName("id"))
-	service := se.serviceManager.Service(id)
 
-	if service == nil {
+	instance := se.serviceManager.Service(id)
+	if instance == nil {
 		utils.SendErrorMessage(resp, "Requested service not found", http.StatusNotFound)
 		return
 	}
 
-	statusResponse := toServiceInfoResponse(id, service)
+	statusResponse := toServiceInfoResponse(id, instance)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -155,16 +156,12 @@ func (se *ServiceEndpoint) ServiceGet(resp http.ResponseWriter, _ *http.Request,
 //     description: Parameters validation error
 //     schema:
 //       "$ref": "#/definitions/ValidationErrorDTO"
-//   499:
-//     description: Service was cancelled
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	sr, err := toServiceRequest(req)
+	sr, err := se.toServiceRequest(req)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -176,24 +173,12 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	optionsParser, ok := se.optionsParser[sr.ServiceType]
-	if !ok {
-		utils.SendErrorMessage(resp, "Invalid service type", http.StatusBadRequest)
-		return
-	}
-
-	options, err := optionsParser(sr.Options)
-	if err != nil {
-		utils.SendErrorMessage(resp, "Invalid options", http.StatusBadRequest)
-		return
-	}
-
 	if se.isAlreadyRunning(sr) {
 		utils.SendErrorMessage(resp, "Service already running", http.StatusConflict)
 		return
 	}
 
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.ServiceType, options)
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.ServiceType, sr.Options)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -227,9 +212,9 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request, params httprouter.Params) {
 	id := service.ID(params.ByName("id"))
-	service := se.serviceManager.Service(id)
 
-	if service == nil {
+	instance := se.serviceManager.Service(id)
+	if instance == nil {
 		utils.SendErrorMessage(resp, "Service not found", http.StatusNotFound)
 		return
 	}
@@ -238,6 +223,7 @@ func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+
 	resp.WriteHeader(http.StatusAccepted)
 }
 
@@ -252,7 +238,7 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]func(json.RawMessage) (service.Options, error)) {
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) {
 	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
@@ -261,9 +247,53 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 	router.DELETE("/services/:id", serviceEndpoint.ServiceStop)
 }
 
-func toServiceRequest(req *http.Request) (sr serviceRequest, err error) {
-	err = json.NewDecoder(req.Body).Decode(&sr)
-	return sr, err
+func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
+	var jsonData struct {
+		ProviderID  string           `json:"providerId"`
+		ServiceType string           `json:"serviceType"`
+		Options     *json.RawMessage `json:"options"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
+		return serviceRequest{}, err
+	}
+
+	sr := serviceRequest{
+		ProviderID:  jsonData.ProviderID,
+		ServiceType: se.toServiceType(jsonData.ServiceType),
+		Options:     se.toServiceOptions(jsonData.ServiceType, jsonData.Options),
+	}
+	return sr, nil
+}
+
+func (se *ServiceEndpoint) toServiceType(value string) string {
+	if value == "" {
+		return ""
+	}
+
+	_, ok := se.optionsParser[value]
+	if !ok {
+		return serviceTypeInvalid
+	}
+
+	return value
+}
+
+func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawMessage) service.Options {
+	if value == nil {
+		return nil
+	}
+
+	optionsParser, ok := se.optionsParser[serviceType]
+	if !ok {
+		return nil
+	}
+
+	options, err := optionsParser(*value)
+	if err != nil {
+		return serviceOptionsInvalid
+	}
+
+	return options
 }
 
 func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInfo {
@@ -289,6 +319,12 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 	}
 	if sr.ServiceType == "" {
 		errors.ForField("serviceType").AddError("required", "Field is required")
+	}
+	if sr.ServiceType == serviceTypeInvalid {
+		errors.ForField("serviceType").AddError("invalid", "Invalid service type")
+	}
+	if sr.Options == serviceOptionsInvalid {
+		errors.ForField("options").AddError("invalid", "Invalid options")
 	}
 	return errors
 }
