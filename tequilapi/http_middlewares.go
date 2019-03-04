@@ -24,25 +24,34 @@ import (
 
 type corsHandler struct {
 	originalHandler http.Handler
+	corsPolicy      CorsPolicy
+}
+
+// CorsPolicy resolves allowed origin
+type CorsPolicy interface {
+	AllowedOrigin(requestOrigin string) string
 }
 
 func (wrapper corsHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if isPreflightCorsRequest(req) {
-		generatePreflightResponse(req, resp)
+		generatePreflightResponse(req, resp, wrapper.corsPolicy)
 		return
 	}
 
-	allowAllCorsActions(resp)
+	allowCorsActions(resp, req, wrapper.corsPolicy)
 	wrapper.originalHandler.ServeHTTP(resp, req)
 }
 
 // ApplyCors wraps original handler by adding cors headers to response BEFORE original ServeHTTP method is called
-func ApplyCors(original http.Handler) http.Handler {
-	return corsHandler{original}
+func ApplyCors(original http.Handler, corsPolicy CorsPolicy) http.Handler {
+	return corsHandler{originalHandler: original, corsPolicy: corsPolicy}
 }
 
-func allowAllCorsActions(resp http.ResponseWriter) {
-	resp.Header().Set("Access-Control-Allow-Origin", "*")
+func allowCorsActions(resp http.ResponseWriter, req *http.Request, corsPolicy CorsPolicy) {
+	requestOrigin := req.Header.Get("Origin")
+	allowedOrigin := corsPolicy.AllowedOrigin(requestOrigin)
+
+	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 }
 
@@ -53,8 +62,8 @@ func isPreflightCorsRequest(req *http.Request) bool {
 	return isOptionsMethod && containsOriginHeader && containsAccessControlRequestMethod
 }
 
-func generatePreflightResponse(req *http.Request, resp http.ResponseWriter) {
-	allowAllCorsActions(resp)
+func generatePreflightResponse(req *http.Request, resp http.ResponseWriter, corsPolicy CorsPolicy) {
+	allowCorsActions(resp, req, corsPolicy)
 	//allow all headers which were defined in preflight request
 	for _, headerValue := range req.Header["Access-Control-Request-Headers"] {
 		resp.Header().Add("Access-Control-Allow-Headers", headerValue)
