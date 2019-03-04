@@ -67,7 +67,7 @@ type ServiceEndpoint struct {
 }
 
 // ServiceOptionsParser parses request to service specific options
-type ServiceOptionsParser func(json.RawMessage) (service.Options, error)
+type ServiceOptionsParser func(*json.RawMessage) (service.Options, error)
 
 var (
 	// serviceTypeInvalid represents service type which is unknown to node
@@ -279,16 +279,12 @@ func (se *ServiceEndpoint) toServiceType(value string) string {
 }
 
 func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawMessage) service.Options {
-	if value == nil {
-		return nil
-	}
-
 	optionsParser, ok := se.optionsParser[serviceType]
 	if !ok {
 		return nil
 	}
 
-	options, err := optionsParser(*value)
+	options, err := optionsParser(value)
 	if err != nil {
 		return serviceOptionsInvalid
 	}
