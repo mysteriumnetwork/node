@@ -77,10 +77,10 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 		err := addMapping(m, protocol, extPort, intPort, name, publisher)
 		if err != nil {
 			log.Infof("%s, Mapping for port %d failed: %s", logPrefix, extPort, err)
-			metricsSender.SendNATMappingResultEvent(false)
+			metricsSender.SendNATMappingFailEvent(err)
 		} else {
 			log.Info("%s, Mapped network port: %d", logPrefix, extPort)
-			metricsSender.SendNATMappingResultEvent(true)
+			metricsSender.SendNATMappingSuccessEvent()
 		}
 		select {
 		case <-c:

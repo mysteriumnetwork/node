@@ -61,25 +61,48 @@ func TestSender_SendStartupEvent_ReturnsTransportErrors(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestSender_SendNATMappingResultEvent_SendsToTransport(t *testing.T) {
+func TestSender_SendNATMappingSuccessEvent_SendsToTransport(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	sender := &Sender{Transport: mockTransport, ApplicationVersion: "test version"}
 
-	err := sender.SendNATMappingResultEvent(true)
+	err := sender.SendNATMappingSuccessEvent()
 	assert.NoError(t, err)
 
 	sentEvent := mockTransport.sentEvent
-	assert.Equal(t, "nat_mapping_result", sentEvent.EventName)
+	assert.Equal(t, "nat_mapping_success", sentEvent.EventName)
 	assert.Equal(t, applicationInfo{Name: "myst", Version: "test version"}, sentEvent.Application)
 	assert.NotZero(t, sentEvent.CreatedAt)
-	assert.Equal(t, natMappingResultContext{success: true}, sentEvent.Context)
 }
 
-func TestSender_SendNATMappingResultEvent_ReturnsTransportErrors(t *testing.T) {
+func TestSender_SendNATMappingSuccessEvent_ReturnsTransportErrors(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	mockTransport.mockResponse = errors.New("mock error")
 	sender := &Sender{Transport: mockTransport, ApplicationVersion: "test version"}
 
-	error := sender.SendNATMappingResultEvent(true)
+	error := sender.SendNATMappingSuccessEvent()
+	assert.Error(t, error)
+}
+
+func TestSender_SendNATMappingFailEvent_SendsToTransport(t *testing.T) {
+	mockTransport := buildMockEventsTransport(nil)
+	sender := &Sender{Transport: mockTransport, ApplicationVersion: "test version"}
+
+	mockError := errors.New("mock nat mapping error")
+	err := sender.SendNATMappingFailEvent(mockError)
+	assert.NoError(t, err)
+
+	sentEvent := mockTransport.sentEvent
+	assert.Equal(t, "nat_mapping_fail", sentEvent.EventName)
+	assert.Equal(t, applicationInfo{Name: "myst", Version: "test version"}, sentEvent.Application)
+	assert.NotZero(t, sentEvent.CreatedAt)
+	assert.Equal(t, natMappingFailContext{error: "mock nat mapping error"}, sentEvent.Context)
+}
+
+func TestSender_SendNATMappingFailEvent_ReturnsTransportErrors(t *testing.T) {
+	mockTransport := buildMockEventsTransport(nil)
+	mockTransport.mockResponse = errors.New("mock error")
+	sender := &Sender{Transport: mockTransport, ApplicationVersion: "test version"}
+
+	error := sender.SendNATMappingFailEvent(errors.New("mock nat mapping error"))
 	assert.Error(t, error)
 }

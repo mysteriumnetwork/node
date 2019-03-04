@@ -23,7 +23,8 @@ import (
 
 const appName = "myst"
 const startupEventName = "startup"
-const natMappingResultEventName = "nat_mapping_result"
+const natMappingSuccessEventName = "nat_mapping_success"
+const natMappingFailEventName = "nat_mapping_fail"
 
 // Sender builds events and sends them using given transport
 type Sender struct {
@@ -48,8 +49,8 @@ type applicationInfo struct {
 	Version string `json:"version"`
 }
 
-type natMappingResultContext struct {
-	success bool
+type natMappingFailContext struct {
+	error string
 }
 
 // SendStartupEvent sends startup event
@@ -57,10 +58,15 @@ func (sender *Sender) SendStartupEvent() error {
 	return sender.sendEvent(startupEventName, nil)
 }
 
-// SendNATMappingResultEvent sends event about NAT mapping result, either successful or unsuccessful
-func (sender *Sender) SendNATMappingResultEvent(success bool) error {
-	context := natMappingResultContext{success: success}
-	return sender.sendEvent(natMappingResultEventName, context)
+// SendNATMappingSuccessEvent sends event about successful NAT mapping
+func (sender *Sender) SendNATMappingSuccessEvent() error {
+	return sender.sendEvent(natMappingSuccessEventName, nil)
+}
+
+// SendNATMappingFailEvent sends event about failed NAT mapping
+func (sender *Sender) SendNATMappingFailEvent(err error) error {
+	context := natMappingFailContext{error: err.Error()}
+	return sender.sendEvent(natMappingFailEventName, context)
 }
 
 func (sender *Sender) sendEvent(eventName string, context interface{}) error {
