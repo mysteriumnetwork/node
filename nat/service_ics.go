@@ -24,12 +24,15 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
+	log "github.com/cihub/seelog"
 	"github.com/pkg/errors"
 )
 
 type serviceICS struct {
-	ifaces             map[string]struct{} // list in internal interfaces with enabled internet connection sharing
+	mu                 sync.Mutex
+	ifaces             map[string]RuleForwarding // list in internal interfaces with enabled internet connection sharing
 	remoteAccessStatus string
 }
 
@@ -75,8 +78,15 @@ func (nat *serviceICS) Add(rule RuleForwarding) error {
 		$c = $netShare.EnumEveryConnection |? { $netShare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
 		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
 		$config.EnableSharing(1)`)
+	if err != nil {
+		return errors.Wrap(err, "failed to enable internet connection sharing for internal interface")
+	}
 
-	return errors.Wrap(err, "failed to enable internet connection sharing for internal interface")
+	nat.mu.Lock()
+	defer nat.mu.Unlock()
+	nat.ifaces[ifaceName] = rule
+
+	return nil
 }
 
 // Del disables internet connection sharing for the local interface.
@@ -92,13 +102,26 @@ func (nat *serviceICS) Del(rule RuleForwarding) error {
 		$c = $netShare.EnumEveryConnection |? { $netShare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
 		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
 		$config.DisableSharing()`)
+	if err != nil {
 
-	return errors.Wrap(err, "failed to disable internet connection sharing for internal interface")
+		return errors.Wrap(err, "failed to disable internet connection sharing for internal interface")
+	}
+
+	nat.mu.Lock()
+	defer nat.mu.Unlock()
+	delete(nat.ifaces, ifaceName)
+
+	return nil
 }
 
 // Disable disables internet connection sharing for the public interface.
 func (nat *serviceICS) Disable() error {
-	// TODO stop internet connection sharing on all enabled interfaces (nat.ifaces).
+	for iface, rule := range nat.ifaces {
+		if err := nat.Del(rule); err != nil {
+			log.Errorf("%s Failed to cleanup internet connection sharing for '%s' interface: %v", natLogPrefix, iface, err)
+		}
+	}
+
 	// TODO we should cleanup as much as possible, not failing after errors.
 	_, err := powerShell("Set-Service -Name RemoteAccess -StartupType " + nat.remoteAccessStatus)
 	if err != nil {
