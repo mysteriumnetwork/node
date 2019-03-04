@@ -72,10 +72,9 @@ func paymentIssuerFactory(signerFactory identity.SignerFactory) func(
 		bl := balance.NewListener(messageChan)
 		ps := promise.NewSender(dialog)
 		issuer := issuers.NewLocalIssuer(signerFactory(consumer))
-		tracker := promise.NewConsumerTracker(promise.State{
-			Seq:    initialState.LastPromise.SequenceID,
-			Amount: initialState.LastPromise.Amount,
-		}, consumer, provider, issuer)
+
+		promiseState := mapInitialStateToPromiseState(initialState)
+		tracker := promise.NewConsumerTracker(promiseState, consumer, provider, issuer)
 		timeTracker := session.NewTracker(time.Now)
 		amountCalc := session.AmountCalc{PaymentDef: paymentDefinition}
 
@@ -83,5 +82,12 @@ func paymentIssuerFactory(signerFactory identity.SignerFactory) func(
 		payments := payment.NewSessionPayments(messageChan, ps, tracker, balanceTracker)
 		err := dialog.Receive(bl.GetConsumer())
 		return payments, errors.Wrap(err, "fail to receive from consumer")
+	}
+}
+
+func mapInitialStateToPromiseState(initialState promise.PaymentInfo) promise.State {
+	return promise.State{
+		Seq:    initialState.LastPromise.SequenceID,
+		Amount: initialState.LastPromise.Amount,
 	}
 }
