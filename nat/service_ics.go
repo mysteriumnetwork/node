@@ -1,4 +1,4 @@
-// +build windows
+//// +build windows
 
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
@@ -33,103 +33,140 @@ type serviceICS struct {
 	remoteAccessStatus string
 }
 
+// Enable enables internet connection sharing for the public interface.
 func (nat *serviceICS) Enable() error {
 	status, err := powerShell("Get-Service RemoteAccess | foreach { $_.StartType }")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get RemoteAccess service startup type")
 	}
 	nat.remoteAccessStatus = string(status)
 
 	if _, err := powerShell("Set-Service -Name RemoteAccess -StartupType automatic"); err != nil {
-		return err
+		return errors.Wrap(err, "failed to set RemoteAccess service startup type to automatic")
 	}
 	if _, err := powerShell("Start-Service -Name RemoteAccess"); err != nil {
-		return err
+		return errors.Wrap(err, "failed to start RemoteAccess service")
 	}
 
 	ifaceName, err := getPublicInterfaceName()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get public interface name")
 	}
 
-	// Enable internet connection sharing for the public interface.
 	_, err = powerShell(`regsvr32 /s hnetcfg.dll;
 		$netShare = New-Object -ComObject HNetCfg.HNetShare;
 		$c = $netShare.EnumEveryConnection |? { $netShare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
 		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
 		$config.EnableSharing(0)`)
 
-	return err
+	return errors.Wrap(err, "failed to enable internet connection sharing")
 }
 
+// Add enables internet connection sharing for the local interface.
 func (nat *serviceICS) Add(rule RuleForwarding) error {
-	// Enable internet connection sharing for the local interface.
-	// TODO detect interface name from the rule.
 	// TODO firewall rule configuration should be added here for new connections.
-	ifaceName := "myst1"
+	ifaceName, err := getInterfaceBySubnet(rule.SourceAddress)
+	if err != nil {
+		return errors.Wrap(err, "failed to get public interface name")
+	}
 
-	_, err := powerShell(`regsvr32 /s hnetcfg.dll;
-	$netShare = New-Object -ComObject HNetCfg.HNetShare;
-	$c = $netShare.EnumEveryConnection |? { $netShare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
-	$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
-	$config.EnableSharing(1)`)
-
-	return err
-}
-
-func (nat *serviceICS) Del(rule RuleForwarding) error {
-	// Disable internet connection sharing for the local interface.
-	// TODO detect interace name from the rule.
-	// TODO firewall rule configuration should be added here for cleaning up unused connections.
-	ifaceName := "myst1"
-
-	_, err := powerShell(`regsvr32 /s hnetcfg.dll;
+	_, err = powerShell(`regsvr32 /s hnetcfg.dll;
 		$netShare = New-Object -ComObject HNetCfg.HNetShare;
 		$c = $netShare.EnumEveryConnection |? { $netShare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
 		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
-		$config.DisableSharing()`)
+		$config.EnableSharing(1)`)
 
-	return err
+	return errors.Wrap(err, "failed to enable internet connection sharing for internal interface")
 }
 
-func (nat *serviceICS) Disable() error {
-	// TODO stop internet connection sharing on all enabled interfaces (nat.ifaces).
-	// TODO we should cleanup as much as possible, not failing after errors.
-	_, err := powerShell("Set-Service -Name RemoteAccess -StartupType " + nat.remoteAccessStatus)
+// Del disables internet connection sharing for the local interface.
+func (nat *serviceICS) Del(rule RuleForwarding) error {
+	// TODO firewall rule configuration should be added here for cleaning up unused connections.
+	ifaceName, err := getInterfaceBySubnet(rule.SourceAddress)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to find suitable interface")
 	}
 
-	ifaceName, err := getPublicInterfaceName()
-	if err != nil {
-		return err
-	}
-
-	// Disable internet connection sharing for the public interface.
 	_, err = powerShell(`regsvr32 /s hnetcfg.dll;
 		$netShare = New-Object -ComObject HNetCfg.HNetShare;
 		$c = $netShare.EnumEveryConnection |? { $netShare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
 		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
 		$config.DisableSharing()`)
 
-	return err
+	return errors.Wrap(err, "failed to disable internet connection sharing for internal interface")
+}
+
+// Disable disables internet connection sharing for the public interface.
+func (nat *serviceICS) Disable() error {
+	// TODO stop internet connection sharing on all enabled interfaces (nat.ifaces).
+	// TODO we should cleanup as much as possible, not failing after errors.
+	_, err := powerShell("Set-Service -Name RemoteAccess -StartupType " + nat.remoteAccessStatus)
+	if err != nil {
+		return errors.Wrap(err, "failed to revert RemoteAccess service startup type")
+	}
+
+	ifaceName, err := getPublicInterfaceName()
+	if err != nil {
+		return errors.Wrap(err, "failed to get public interface name")
+	}
+
+	_, err = powerShell(`regsvr32 /s hnetcfg.dll;
+		$netShare = New-Object -ComObject HNetCfg.HNetShare;
+		$c = $netShare.EnumEveryConnection |? { $netShare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
+		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
+		$config.DisableSharing()`)
+
+	return errors.Wrap(err, "failed to disable internet connection sharing")
+}
+
+func getInterfaceBySubnet(subnet string) (string, error) {
+	_, ipnet, err := net.ParseCIDR(subnet)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to parse subnet from request")
+	}
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get a list of network interfaces")
+	}
+
+	for _, iface := range ifaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return "", errors.Wrap(err, "failed to get list of interface addresses")
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			if ipnet.Contains(ip) {
+				return iface.Name, nil
+			}
+		}
+	}
+	return "", errors.New("interface not found")
 }
 
 func getPublicInterfaceName() (string, error) {
 	out, err := powerShell(`Get-WmiObject -Class Win32_IP4RouteTable | where { $_.destination -eq '0.0.0.0' -and $_.mask -eq '0.0.0.0'} | foreach { $_.InterfaceIndex }`)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to get interface from the default route")
 	}
 
 	ifaceID, err := strconv.Atoi(strings.TrimSpace(string(out)))
 	if err != nil {
-		return "", err
-
+		return "", errors.Wrap(err, "failed to parse interface ID")
 	}
 
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to get a list of network interfaces")
 	}
 
 	for _, iface := range ifaces {
