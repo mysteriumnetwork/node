@@ -33,7 +33,7 @@ import (
 type PromiseStorage interface {
 	GetNewSeqIDForIssuer(consumerID, receiverID, issuerID identity.Identity) (uint64, error)
 	Update(issuerID identity.Identity, promise promise.StoredPromise) error
-	FindPromiseForConsumer(issuerID, consumerID identity.Identity) (promise.StoredPromise, error)
+	FindPromiseForConsumer(consumerID, receiverID, issuerID identity.Identity) (promise.StoredPromise, error)
 }
 
 // BalanceTracker keeps track of current balance
@@ -134,7 +134,7 @@ func (sb *SessionBalance) Start() error {
 }
 
 func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, error) {
-	lastPromise, err := sb.promiseStorage.FindPromiseForConsumer(sb.issuerID, sb.consumerID)
+	lastPromise, err := sb.promiseStorage.FindPromiseForConsumer(sb.consumerID, sb.receiverID, sb.issuerID)
 	if err != nil {
 		if err.Error() == errBoltNotFound.Error() || err.Error() == errNoPromiseForConsumer.Error() {
 			// if not found, issue a new sequenceID
@@ -161,7 +161,7 @@ func (sb *SessionBalance) startBalanceTracker(lastPromise promise.StoredPromise)
 
 func (sb *SessionBalance) sendBalance() error {
 	currentBalance := sb.balanceTracker.GetBalance()
-	p, err := sb.promiseStorage.FindPromiseForConsumer(sb.issuerID, sb.consumerID)
+	p, err := sb.promiseStorage.FindPromiseForConsumer(sb.consumerID, sb.receiverID, sb.issuerID)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func (sb *SessionBalance) calculateAmountToAdd(pm promise.Message, p promise.Sto
 }
 
 func (sb *SessionBalance) storePromiseAndUpdateBalance(pm promise.Message) error {
-	p, err := sb.promiseStorage.FindPromiseForConsumer(sb.issuerID, sb.consumerID)
+	p, err := sb.promiseStorage.FindPromiseForConsumer(sb.consumerID, sb.receiverID, sb.issuerID)
 	if err != nil {
 		return err
 	}

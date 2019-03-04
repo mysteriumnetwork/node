@@ -210,7 +210,7 @@ func (mps *MockPromiseStorage) Update(issuerID identity.Identity, p promise.Stor
 	return mps.updateError
 }
 
-func (mps *MockPromiseStorage) FindPromiseForConsumer(issuerID, consumerID identity.Identity) (promise.StoredPromise, error) {
+func (mps *MockPromiseStorage) FindPromiseForConsumer(consumerID, receiverID, issuerID identity.Identity) (promise.StoredPromise, error) {
 	return mps.promiseForConsumerToReturn, mps.promiseForConsumerError
 }
 

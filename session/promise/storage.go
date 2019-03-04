@@ -80,6 +80,10 @@ type StoredPromise struct {
 func (s *Storage) GetNewSeqIDForIssuer(consumerID, receiverID, issuerID identity.Identity) (uint64, error) {
 	s.Lock()
 	defer s.Unlock()
+	return s.getNewSeqIDForIssuer(consumerID, receiverID, issuerID)
+}
+
+func (s *Storage) getNewSeqIDForIssuer(consumerID, receiverID, issuerID identity.Identity) (uint64, error) {
 	lastPromise, err := s.getLastPromise(issuerID)
 	if err != nil && err.Error() == errBoltNotFound.Error() {
 		// we do not have a previous history with the issuer, ask for a promise no1, store it
@@ -153,15 +157,15 @@ var errNoPromiseForConsumer = errors.New("no promise for consumer")
 
 // FindPromiseForConsumer returns the last known promise for the issuer/consumer combo
 // It checks if any promises match, and if they do checks to see if any later promises have been cleared.FindPromiseForConsumer
-func (s *Storage) FindPromiseForConsumer(issuerID, consumerID identity.Identity) (StoredPromise, error) {
+func (s *Storage) FindPromiseForConsumer(consumerID, receiverID, issuerID identity.Identity) (StoredPromise, error) {
 	s.Lock()
 	defer s.Unlock()
-	return s.findPromiseForConsumer(issuerID, consumerID)
+	return s.findPromiseForConsumer(consumerID, receiverID, issuerID)
 }
 
 // FindPromiseForConsumer returns the last known promise for the issuer/consumer combo
 // It checks if any promises match, and if they do checks to see if any later promises have been cleared.FindPromiseForConsumer
-func (s *Storage) findPromiseForConsumer(issuerID, consumerID identity.Identity) (StoredPromise, error) {
+func (s *Storage) findPromiseForConsumer(consumerID, receiverID, issuerID identity.Identity) (StoredPromise, error) {
 	promises, err := s.getAllPromisesForIssuer(issuerID)
 	if err != nil {
 		return StoredPromise{}, err
@@ -175,8 +179,8 @@ func (s *Storage) findPromiseForConsumer(issuerID, consumerID identity.Identity)
 		if promises[i].Cleared {
 			return StoredPromise{}, errNoPromiseForConsumer
 		}
-		// otherwise, we're free to extend
-		if promises[i].ConsumerID == consumerID {
+		// otherwise, we're free to extend if the receiver matches
+		if promises[i].ConsumerID == consumerID && promises[i].Receiver == receiverID {
 			return promises[i], nil
 		}
 	}
@@ -199,7 +203,7 @@ func (s *Storage) GetAllPromisesFromIssuer(issuerID identity.Identity) ([]Stored
 }
 
 // LoadPaymentInfo returns the last know payment information for issuer
-func (s *Storage) LoadPaymentInfo(issuerID, consumerID identity.Identity) *PaymentInfo {
+func (s *Storage) LoadPaymentInfo(consumerID, receiverID, issuerID identity.Identity) *PaymentInfo {
 	s.Lock()
 	defer s.Unlock()
 
@@ -210,21 +214,20 @@ func (s *Storage) LoadPaymentInfo(issuerID, consumerID identity.Identity) *Payme
 		FreeCredit: 0,
 	}
 
-	sp, err := s.findPromiseForConsumer(issuerID, consumerID)
-	if err != nil {
-		if err == errNoPromiseForConsumer {
-			lastPromise, lastPromiseErr := s.getLastPromise(issuerID)
-			if lastPromiseErr != nil {
-				log.Trace(promiseLogPrefix, "could not load promise info, defaulting to zero payment info ", lastPromiseErr)
-				return defaultPaymentInfo
-			}
-
-			newID := lastPromise.SequenceID + 1
-			log.Trace(promiseLogPrefix, "found payments for other consumers, will issue promiseID ", newID)
-			defaultPaymentInfo.LastPromise.SequenceID = newID
+	sp, err := s.findPromiseForConsumer(consumerID, receiverID, issuerID)
+	if err == errNoPromiseForConsumer {
+		seq, err := s.getNewSeqIDForIssuer(consumerID, receiverID, issuerID)
+		if err != nil {
+			log.Trace(promiseLogPrefix, "could not get new sequenceID ", err)
 			return defaultPaymentInfo
 		}
 
+		log.Trace(promiseLogPrefix, "found payments for other consumers, will issue promiseID ", seq)
+		defaultPaymentInfo.LastPromise.SequenceID = seq
+		return defaultPaymentInfo
+	}
+
+	if err != nil {
 		log.Trace(promiseLogPrefix, "could not load promise info, defaulting to zero payment info ", err)
 		return defaultPaymentInfo
 	}
