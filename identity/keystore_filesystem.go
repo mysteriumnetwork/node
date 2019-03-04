@@ -28,7 +28,7 @@ const keystoreLogPrefix = "[Keystore] "
 func NewKeystoreFilesystem(directory string, lightweight bool) *keystore.KeyStore {
 	if lightweight {
 		log.Trace(keystoreLogPrefix, "Using lightweight keystore")
-		return keystore.NewKeyStore(directory, keystore.LightScryptN, keystore.LightScryptN)
+		return keystore.NewKeyStore(directory, keystore.LightScryptN, keystore.LightScryptP)
 	}
 
 	log.Trace(keystoreLogPrefix, "Using heavyweight keystore")
