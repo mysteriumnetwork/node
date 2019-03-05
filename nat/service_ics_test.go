@@ -123,7 +123,9 @@ func Test_parseErrorOnGetPublicInterfaceName(t *testing.T) {
 }
 
 func Test_getPublicInterfaceName(t *testing.T) {
-	sh := mockPowerShell{output: []byte("1234567890")}
+	sh := mockPowerShell{commands: map[string]mockShellResult{
+		"Get-WmiObject -Class Win32_IP4RouteTable | where { $_.destination -eq '0.0.0.0' -and $_.mask -eq '0.0.0.0'} | foreach { $_.InterfaceIndex }": {[]byte("1234567890"), nil},
+	}}
 	ics := mockedICS(sh.exec)
 	_, err := ics.getPublicInterfaceName()
 	assert.EqualError(t, err, "interface not found")
@@ -283,23 +285,13 @@ type mockShellResult struct {
 }
 
 type mockPowerShell struct {
-	output   []byte
 	err      error
 	commands map[string]mockShellResult
 }
 
 func (sh *mockPowerShell) exec(cmd string) ([]byte, error) {
-	if sh.err != nil {
-		return nil, sh.err
-	}
-
-	if sh.output != nil {
-		return sh.output, nil
-	}
-
 	if c, ok := sh.commands[cmd]; ok {
 		return c.output, c.err
 	}
-
-	return nil, nil
+	return nil, sh.err
 }
