@@ -285,9 +285,9 @@ func (client *Client) ServiceStart(providerID, serviceType string, options inter
 	}
 
 	payload := struct {
-		ProviderID  string          `json:"providerID"`
-		ServiceType string          `json:"serviceType"`
-		Options     json.RawMessage `json:"options"`
+		ProviderID string          `json:"providerID"`
+		Type       string          `json:"type"`
+		Options    json.RawMessage `json:"options"`
 	}{
 		providerID,
 		serviceType,

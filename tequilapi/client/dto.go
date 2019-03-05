@@ -138,7 +138,7 @@ type ServiceListDTO []ServiceInfoDTO
 type ServiceInfoDTO struct {
 	ID          string          `json:"id"`
 	ProviderID  string          `json:"providerId"`
-	ServiceType string          `json:"serviceType"`
+	ServiceType string          `json:"type"`
 	Options     json.RawMessage `json:"options"`
 	Status      string          `json:"status"`
 	Proposal    ProposalDTO     `json:"proposal"`

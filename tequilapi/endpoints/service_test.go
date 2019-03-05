@@ -94,7 +94,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			`[{
 				"id": "11111111-9dad-11d1-80b4-00c04fd430c0",
 				"providerId": "0xProviderId",
-				"serviceType": "testprotocol",
+				"type": "testprotocol",
 				"options": {"foo": "bar"},
 				"status": "NotRunning",
 				"proposal": {
@@ -110,12 +110,12 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		{
 			http.MethodPost,
 			"/services",
-			`{"providerId": "node1", "serviceType": "testprotocol"}`,
+			`{"providerId": "node1", "type": "testprotocol"}`,
 			http.StatusCreated,
 			`{
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
 				"providerId": "0xProviderId",
-				"serviceType": "testprotocol",
+				"type": "testprotocol",
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
@@ -136,7 +136,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 			`{
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
 				"providerId": "0xProviderId",
-				"serviceType": "testprotocol",
+				"type": "testprotocol",
 				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
@@ -180,7 +180,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 		http.MethodGet,
 		"/irrelevant",
 		strings.NewReader(`{
-			"serviceType": "openvpn",
+			"type": "openvpn",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
 			"options": {}
 		}`),
@@ -195,7 +195,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 		`{
 			"message": "validation_error",
 			"errors": {
-				"serviceType": [ {"code": "invalid", "message": "Invalid service type"} ]
+				"type": [ {"code": "invalid", "message": "Invalid service type"} ]
 			}
 		}`,
 		resp.Body.String(),
@@ -209,7 +209,7 @@ func Test_ServiceStartInvalidOptions(t *testing.T) {
 		http.MethodGet,
 		"/irrelevant",
 		strings.NewReader(`{
-			"serviceType": "errorprotocol",
+			"type": "errorprotocol",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
 			"options": {}
 		}`),
@@ -238,7 +238,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 		http.MethodGet,
 		"/irrelevant",
 		strings.NewReader(`{
-			"serviceType": "testprotocol",
+			"type": "testprotocol",
 			"providerId": "0xProviderId",
 			"options": {}
 		}`),
@@ -280,7 +280,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 		`{
 			"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8",
 			"providerId": "0xProviderId",
-			"serviceType": "testprotocol",
+			"type": "testprotocol",
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
@@ -331,7 +331,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 			"message": "validation_error",
 			"errors": {
 				"providerId": [ {"code": "required", "message": "Field is required"} ],
-				"serviceType": [ {"code": "required", "message": "Field is required"} ]
+				"type": [ {"code": "required", "message": "Field is required"} ]
 			}
 		}`,
 		resp.Body.String(),
