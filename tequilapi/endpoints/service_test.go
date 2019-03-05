@@ -28,10 +28,24 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
-var mockServiceID = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+var (
+	mockServiceID      = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+	mockServiceOptions = struct {
+		Foo string `json:"foo"`
+	}{"bar"}
+	mockProposal = market.ServiceProposal{
+		ID:                1,
+		ServiceType:       "testprotocol",
+		ServiceDefinition: TestServiceDefinition{},
+		ProviderID:        "0xProviderId",
+	}
+	mockServiceRunning = service.NewInstance(service.Running, mockServiceOptions, nil, mockProposal, nil, nil)
+	mockServiceStopped = service.NewInstance(service.NotRunning, mockServiceOptions, nil, mockProposal, nil, nil)
+)
 
 type mockServiceManager struct{}
 
@@ -41,13 +55,13 @@ func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType st
 func (sm *mockServiceManager) Stop(id service.ID) error { return nil }
 func (sm *mockServiceManager) Service(id service.ID) *service.Instance {
 	if id == "6ba7b810-9dad-11d1-80b4-00c04fd430c8" {
-		return service.NewInstance(service.Running, nil, serviceProposals[0], nil, nil)
+		return mockServiceRunning
 	}
 	return nil
 }
 func (sm *mockServiceManager) List() map[service.ID]*service.Instance {
 	return map[service.ID]*service.Instance{
-		"11111111-9dad-11d1-80b4-00c04fd430c0": service.NewInstance(service.NotRunning, nil, serviceProposals[0], nil, nil),
+		"11111111-9dad-11d1-80b4-00c04fd430c0": mockServiceStopped,
 	}
 }
 func (sm *mockServiceManager) Kill() error { return nil }
@@ -81,6 +95,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"id": "11111111-9dad-11d1-80b4-00c04fd430c0",
 				"providerId": "0xProviderId",
 				"serviceType": "testprotocol",
+				"options": {"foo": "bar"},
 				"status": "NotRunning",
 				"proposal": {
 					"id": 1,
@@ -101,6 +116,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
 				"providerId": "0xProviderId",
 				"serviceType": "testprotocol",
+				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
 					"id": 1,
@@ -121,6 +137,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
 				"providerId": "0xProviderId",
 				"serviceType": "testprotocol",
+				"options": {"foo": "bar"},
 				"status": "Running",
 				"proposal": {
 					"id": 1,
@@ -165,7 +182,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 		strings.NewReader(`{
 			"serviceType": "openvpn",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"options": {"openvpnPort": 1123, "openvpnProtocol": "udp"}
+			"options": {}
 		}`),
 	)
 	resp := httptest.NewRecorder()
@@ -194,7 +211,7 @@ func Test_ServiceStartInvalidOptions(t *testing.T) {
 		strings.NewReader(`{
 			"serviceType": "errorprotocol",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"options": {"openvpnPort": 1123, "openvpnProtocol": "udp"}
+			"options": {}
 		}`),
 	)
 	resp := httptest.NewRecorder()
@@ -223,7 +240,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 		strings.NewReader(`{
 			"serviceType": "testprotocol",
 			"providerId": "0xProviderId",
-			"options": {"openvpnPort": 1123, "openvpnProtocol": "udp"}
+			"options": {}
 		}`),
 	)
 	resp := httptest.NewRecorder()
@@ -264,6 +281,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 			"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8",
 			"providerId": "0xProviderId",
 			"serviceType": "testprotocol",
+			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
 				"id": 1,

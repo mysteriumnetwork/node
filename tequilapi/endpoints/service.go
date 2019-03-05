@@ -62,6 +62,10 @@ type serviceInfo struct {
 	// example: openvpn
 	ServiceType string `json:"serviceType"`
 
+	// options with which service was started. Every service has a unique list of allowed options.
+	// example: {"port": 1123, "protocol": "udp"}
+	Options interface{} `json:"options"`
+
 	// example: Running
 	Status string `json:"status"`
 
@@ -306,6 +310,7 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInf
 		ID:          string(id),
 		ProviderID:  proposal.ProviderID,
 		ServiceType: proposal.ServiceType,
+		Options:     instance.ServiceOptions(),
 		Status:      string(instance.State()),
 		Proposal:    proposalToRes(instance.Proposal()),
 	}

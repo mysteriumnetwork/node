@@ -107,11 +107,12 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	discovery.Start(providerID, proposal)
 
 	instance := Instance{
-		state:        Starting,
-		service:      service,
-		proposal:     proposal,
-		dialogWaiter: dialogWaiter,
-		discovery:    discovery,
+		state:          Starting,
+		serviceOptions: options,
+		service:        service,
+		proposal:       proposal,
+		dialogWaiter:   dialogWaiter,
+		discovery:      discovery,
 	}
 
 	id, err = manager.servicePool.Add(&instance)
