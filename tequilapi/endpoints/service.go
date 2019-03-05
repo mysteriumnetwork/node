@@ -54,10 +54,18 @@ type serviceInfo struct {
 	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
 	ID string `json:"id"`
 
-	Proposal proposalRes `json:"proposal"`
+	// provider identity
+	// example: 0x0000000000000000000000000000000000000002
+	ProviderID string `json:"providerId"`
+
+	// service type. Possible values are "openvpn", "wireguard" and "noop"
+	// example: openvpn
+	ServiceType string `json:"serviceType"`
 
 	// example: Running
 	Status string `json:"status"`
+
+	Proposal proposalRes `json:"proposal"`
 }
 
 // ServiceEndpoint struct represents /service resource and it's sub-resources
@@ -293,10 +301,13 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 }
 
 func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInfo {
+	proposal := instance.Proposal()
 	return serviceInfo{
-		ID:       string(id),
-		Status:   string(instance.State()),
-		Proposal: proposalToRes(instance.Proposal()),
+		ID:          string(id),
+		ProviderID:  proposal.ProviderID,
+		ServiceType: proposal.ServiceType,
+		Status:      string(instance.State()),
+		Proposal:    proposalToRes(instance.Proposal()),
 	}
 }
 

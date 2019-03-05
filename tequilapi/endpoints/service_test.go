@@ -73,16 +73,64 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		expectedJSON   string
 	}{
 		{
-			http.MethodGet, "/services", "",
-			http.StatusOK, `[{"id":"11111111-9dad-11d1-80b4-00c04fd430c0","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"NotRunning"}]`,
+			http.MethodGet,
+			"/services",
+			"",
+			http.StatusOK,
+			`[{
+				"id": "11111111-9dad-11d1-80b4-00c04fd430c0",
+				"providerId": "0xProviderId",
+				"serviceType": "testprotocol",
+				"status": "NotRunning",
+				"proposal": {
+					"id": 1,
+					"providerId": "0xProviderId",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+					}
+				}
+			}]`,
 		},
 		{
-			http.MethodPost, "/services", `{"providerId": "node1", "serviceType": "testprotocol"}`,
-			http.StatusCreated, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running"}`,
+			http.MethodPost,
+			"/services",
+			`{"providerId": "node1", "serviceType": "testprotocol"}`,
+			http.StatusCreated,
+			`{
+				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+				"providerId": "0xProviderId",
+				"serviceType": "testprotocol",
+				"status": "Running",
+				"proposal": {
+					"id": 1,
+					"providerId": "0xProviderId",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+					}
+				}
+			}`,
 		},
 		{
-			http.MethodGet, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",
-			http.StatusOK, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running"}`,
+			http.MethodGet,
+			"/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+			"",
+			http.StatusOK,
+			`{
+				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+				"providerId": "0xProviderId",
+				"serviceType": "testprotocol",
+				"status": "Running",
+				"proposal": {
+					"id": 1,
+					"providerId": "0xProviderId",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+					}
+				}
+			}`,
 		},
 		{
 			http.MethodDelete, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",
@@ -214,6 +262,8 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 		t,
 		`{
 			"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+			"providerId": "0xProviderId",
+			"serviceType": "testprotocol",
 			"status": "Running",
 			"proposal": {
 				"id": 1,

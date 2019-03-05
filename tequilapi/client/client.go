@@ -253,8 +253,8 @@ func (client *Client) GetSessions() (SessionsDTO, error) {
 	return sessions, err
 }
 
-// Services returns all running services.
-func (client *Client) Services() (services Services, err error) {
+// Services returns all running services
+func (client *Client) Services() (services ServiceListDTO, err error) {
 	response, err := client.http.Get("services", url.Values{})
 	if err != nil {
 		return services, err
@@ -265,8 +265,8 @@ func (client *Client) Services() (services Services, err error) {
 	return services, err
 }
 
-// Service returns a service information by the requested id.
-func (client *Client) Service(id string) (service Service, err error) {
+// Service returns a service information by the requested id
+func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 	response, err := client.http.Get("services/"+id, url.Values{})
 	if err != nil {
 		return service, err
@@ -278,7 +278,7 @@ func (client *Client) Service(id string) (service Service, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(providerID, serviceType string, options interface{}) (service Service, err error) {
+func (client *Client) ServiceStart(providerID, serviceType string, options interface{}) (service ServiceInfoDTO, err error) {
 	opts, err := json.Marshal(options)
 	if err != nil {
 		return service, err
