@@ -26,8 +26,8 @@ import (
 
 // Options describes options which are required to start Openvpn service
 type Options struct {
-	OpenvpnProtocol string `json:"protocol"`
-	OpenvpnPort     int    `json:"port"`
+	Protocol string `json:"protocol"`
+	Port     int    `json:"port"`
 }
 
 const (
@@ -56,16 +56,16 @@ func RegisterFlags(flags *[]cli.Flag) {
 // ParseFlags function fills in Openvpn options from CLI context
 func ParseFlags(ctx *cli.Context) service.Options {
 	return Options{
-		OpenvpnProtocol: ctx.String(protocolFlag.Name),
-		OpenvpnPort:     ctx.Int(portFlag.Name),
+		Protocol: ctx.String(protocolFlag.Name),
+		Port:     ctx.Int(portFlag.Name),
 	}
 }
 
 // ParseJSONOptions function fills in Openvpn options from JSON request
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
 	opts := Options{
-		OpenvpnProtocol: protocolDefaultValue,
-		OpenvpnPort:     portDefaultValue,
+		Protocol: protocolDefaultValue,
+		Port:     portDefaultValue,
 	}
 
 	if request == nil {
