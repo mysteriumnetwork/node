@@ -51,9 +51,23 @@ type identityUnlockingDto struct {
 	Passphrase *string `json:"passphrase"`
 }
 
+// swagger:model PayoutInfoDTO
+type payoutInfoDto struct {
+	// in Ethereum address format
+	// required: true
+	// example: 0x000000000000000000000000000000000000000a
+	EthAddress *string `json:"eth_address"`
+}
+
 type identitiesAPI struct {
-	idm           identity.Manager
-	signerFactory identity.SignerFactory
+	idm                identity.Manager
+	signerFactory      identity.SignerFactory
+	payoutInfoRegistry PayoutInfoRegistry
+}
+
+// PayoutInfoRegistry allows to register payout info
+type PayoutInfoRegistry interface {
+	CreatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -69,8 +83,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager, signerFactory identity.SignerFactory) *identitiesAPI {
-	return &identitiesAPI{idm, signerFactory}
+func NewIdentitiesEndpoint(idm identity.Manager, signerFactory identity.SignerFactory, payoutInfoRegistry PayoutInfoRegistry) *identitiesAPI {
+	return &identitiesAPI{idm, signerFactory, payoutInfoRegistry}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -195,6 +209,59 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+// swagger:operation PUT /identities/{id}/payout Identity createPayoutInfo
+// ---
+// summary: Registers payout address
+// description: Registers payout address for identity
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity stored in keystore
+//   type: string
+//   required: true
+// - in: body
+//   name: body
+//   description: Parameter in body (eth_address) is required
+//   schema:
+//     $ref: "#/definitions/PayoutInfoDTO"
+// responses:
+//   202:
+//     description: Identity registered
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   501:
+//     description: Not implemented
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) CreatePayoutInfo(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := identity.FromAddress(params.ByName("id"))
+	payoutInfoReq, err := toPayoutInfoRequest(request)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	errorMap := validatePayoutInfoRequest(payoutInfoReq)
+	if errorMap.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errorMap)
+		return
+	}
+
+	err = endpoint.payoutInfoRegistry.CreatePayoutInfo(id, *payoutInfoReq.EthAddress, endpoint.signerFactory(id))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+}
+
 func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 	var identityCreationReq = &identityCreationDto{}
 	err := json.NewDecoder(req.Body).Decode(&identityCreationReq)
@@ -208,6 +275,12 @@ func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, er
 	isUnlockingReq = identityUnlockingDto{}
 	err = json.NewDecoder(req.Body).Decode(&isUnlockingReq)
 	return
+}
+
+func toPayoutInfoRequest(req *http.Request) (*payoutInfoDto, error) {
+	var payoutReq = &payoutInfoDto{}
+	err := json.NewDecoder(req.Body).Decode(&payoutReq)
+	return payoutReq, err
 }
 
 func validateUnlockRequest(unlockReq identityUnlockingDto) (errors *validation.FieldErrorMap) {
@@ -226,14 +299,25 @@ func validateCreationRequest(createReq *identityCreationDto) (errors *validation
 	return
 }
 
+func validatePayoutInfoRequest(req *payoutInfoDto) (errors *validation.FieldErrorMap) {
+	errors = validation.NewErrorMap()
+	if req.EthAddress == nil {
+		errors.ForField("eth_address").AddError("required", "Field is required")
+	}
+	// TODO: implement validation of eth address
+	return
+}
+
 //AddRoutesForIdentities creates /identities endpoint on tequilapi service
 func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
 	signerFactory identity.SignerFactory,
+	payoutInfoRegistry PayoutInfoRegistry,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, signerFactory)
+	idmEnd := NewIdentitiesEndpoint(idm, signerFactory, payoutInfoRegistry)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
+	router.POST("/identities/:id/payout", idmEnd.CreatePayoutInfo)
 }
