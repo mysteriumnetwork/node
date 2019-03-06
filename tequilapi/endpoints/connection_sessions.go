@@ -26,15 +26,15 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-// SessionsDTO defines session list representable as json
-// swagger:model SessionsDTO
-type SessionsDTO struct {
-	Sessions []SessionDTO `json:"sessions"`
+// connectionSessionsList defines session list representable as json
+// swagger:model ConnectionSessionListDTO
+type connectionSessionsList struct {
+	Sessions []connectionSession `json:"sessions"`
 }
 
-// SessionDTO represents the session object
-// swagger:model SessionDTO
-type SessionDTO struct {
+// connectionSession represents the session object
+// swagger:model ConnectionSessionDTO
+type connectionSession struct {
 	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
 	SessionID string `json:"sessionId"`
 
@@ -64,22 +64,22 @@ type SessionDTO struct {
 	Status string `json:"status"`
 }
 
-type sessionsEndpoint struct {
-	sessionStorage sessionStorageGet
-}
-
-type sessionStorageGet interface {
+type connectionSessionStorage interface {
 	GetAll() ([]session.History, error)
 }
 
-// NewSessionsEndpoint creates and returns sessions endpoint
-func NewSessionsEndpoint(sessionStorage sessionStorageGet) *sessionsEndpoint {
-	return &sessionsEndpoint{
+type connectionSessionsEndpoint struct {
+	sessionStorage connectionSessionStorage
+}
+
+// NewConnectionSessionsEndpoint creates and returns sessions endpoint
+func NewConnectionSessionsEndpoint(sessionStorage connectionSessionStorage) *connectionSessionsEndpoint {
+	return &connectionSessionsEndpoint{
 		sessionStorage: sessionStorage,
 	}
 }
 
-// swagger:operation GET /sessions Session listSessions
+// swagger:operation GET /sessions ConnectionSessions listSessions
 // ---
 // summary: Returns sessions history
 // description: Returns list of sessions history
@@ -87,29 +87,29 @@ func NewSessionsEndpoint(sessionStorage sessionStorageGet) *sessionsEndpoint {
 //   200:
 //     description: List of sessions
 //     schema:
-//       "$ref": "#/definitions/SessionsDTO"
+//       "$ref": "#/definitions/ConnectionSessionListDTO"
 //   500:
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *sessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *connectionSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	sessions, err := endpoint.sessionStorage.GetAll()
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	sessionsSerializable := SessionsDTO{Sessions: mapSessions(sessions, toHistoryView)}
+	sessionsSerializable := connectionSessionsList{Sessions: mapConnectionSessions(sessions, connectionSessionToDto)}
 	utils.WriteAsJSON(sessionsSerializable, resp)
 }
 
-// AddRoutesForSession attaches sessions endpoints to router
-func AddRoutesForSession(router *httprouter.Router, sessionStorage sessionStorageGet) {
-	sessionsEndpoint := NewSessionsEndpoint(sessionStorage)
-	router.GET("/sessions", sessionsEndpoint.List)
+// AddRoutesForConnectionSessions attaches sessions endpoints to router
+func AddRoutesForConnectionSessions(router *httprouter.Router, sessionStorage connectionSessionStorage) {
+	sessionsEndpoint := NewConnectionSessionsEndpoint(sessionStorage)
+	router.GET("/connection-sessions", sessionsEndpoint.List)
 }
 
-func toHistoryView(se session.History) SessionDTO {
-	return SessionDTO{
+func connectionSessionToDto(se session.History) connectionSession {
+	return connectionSession{
 		SessionID:       string(se.SessionID),
 		ProviderID:      se.ProviderID.Address,
 		ServiceType:     se.ServiceType,
@@ -122,8 +122,8 @@ func toHistoryView(se session.History) SessionDTO {
 	}
 }
 
-func mapSessions(sessions []session.History, f func(session.History) SessionDTO) []SessionDTO {
-	dtoArray := make([]SessionDTO, len(sessions))
+func mapConnectionSessions(sessions []session.History, f func(session.History) connectionSession) []connectionSession {
+	dtoArray := make([]connectionSession, len(sessions))
 	for i, se := range sessions {
 		dtoArray[i] = f(se)
 	}

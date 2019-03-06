@@ -240,16 +240,30 @@ func (client *Client) Stop() error {
 	return nil
 }
 
-// GetSessions returns all sessions from history
-func (client *Client) GetSessions() (SessionsDTO, error) {
-	sessions := SessionsDTO{}
-	response, err := client.http.Get("sessions", url.Values{})
+// ConnectionSessions returns all sessions from history
+func (client *Client) ConnectionSessions() (ConnectionSessionListDTO, error) {
+	sessions := ConnectionSessionListDTO{}
+	response, err := client.http.Get("connection-sessions", url.Values{})
 	if err != nil {
 		return sessions, err
 	}
 	defer response.Body.Close()
 
 	err = parseResponseJSON(response, &sessions)
+	return sessions, err
+}
+
+// ConnectionSessionsByType returns sessions from history filtered by type
+func (client *Client) ConnectionSessionsByType(serviceType string) (ConnectionSessionListDTO, error) {
+	sessions, err := client.ConnectionSessions()
+	sessions = filterSessionsByType(serviceType, sessions)
+	return sessions, err
+}
+
+// ConnectionSessionsByStatus returns sessions from history filtered by their status
+func (client *Client) ConnectionSessionsByStatus(status string) (ConnectionSessionListDTO, error) {
+	sessions, err := client.ConnectionSessions()
+	sessions = filterSessionsByStatus(status, sessions)
 	return sessions, err
 }
 
@@ -317,7 +331,7 @@ func (client *Client) ServiceStop(id string) error {
 }
 
 // filterSessionsByType removes all sessions of irrelevant types
-func filterSessionsByType(serviceType string, sessions SessionsDTO) SessionsDTO {
+func filterSessionsByType(serviceType string, sessions ConnectionSessionListDTO) ConnectionSessionListDTO {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.ServiceType == serviceType {
@@ -330,7 +344,7 @@ func filterSessionsByType(serviceType string, sessions SessionsDTO) SessionsDTO 
 }
 
 // filterSessionsByStatus removes all sessions with non matching status
-func filterSessionsByStatus(status string, sessions SessionsDTO) SessionsDTO {
+func filterSessionsByStatus(status string, sessions ConnectionSessionListDTO) ConnectionSessionListDTO {
 	matches := 0
 	for _, s := range sessions.Sessions {
 		if s.Status == status {
@@ -340,18 +354,4 @@ func filterSessionsByStatus(status string, sessions SessionsDTO) SessionsDTO {
 	}
 	sessions.Sessions = sessions.Sessions[:matches]
 	return sessions
-}
-
-// GetSessionsByType returns sessions from history filtered by type
-func (client *Client) GetSessionsByType(serviceType string) (SessionsDTO, error) {
-	sessions, err := client.GetSessions()
-	sessions = filterSessionsByType(serviceType, sessions)
-	return sessions, err
-}
-
-// GetSessionsByStatus returns sessions from history filtered by their status
-func (client *Client) GetSessionsByStatus(status string) (SessionsDTO, error) {
-	sessions, err := client.GetSessions()
-	sessions = filterSessionsByStatus(status, sessions)
-	return sessions, err
 }
