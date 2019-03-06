@@ -28,7 +28,7 @@ func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
 	options, err := ParseJSONOptions(nil)
 
 	assert.NoError(t, err)
-	assert.Equal(t, Options{protocolDefaultValue, portDefaultValue}, options)
+	assert.Equal(t, defaultOptions, options)
 }
 
 func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
@@ -36,7 +36,7 @@ func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
 	options, err := ParseJSONOptions(&request)
 
 	assert.NoError(t, err)
-	assert.Equal(t, Options{protocolDefaultValue, portDefaultValue}, options)
+	assert.Equal(t, defaultOptions, options)
 }
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {

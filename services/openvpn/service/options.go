@@ -30,21 +30,20 @@ type Options struct {
 	Port     int    `json:"port"`
 }
 
-const (
-	protocolDefaultValue = "udp"
-	portDefaultValue     = 1194
-)
-
 var (
 	protocolFlag = cli.StringFlag{
 		Name:  "openvpn.proto",
 		Usage: "Openvpn protocol to use. Options: { udp, tcp }",
-		Value: protocolDefaultValue,
+		Value: defaultOptions.Protocol,
 	}
 	portFlag = cli.IntFlag{
 		Name:  "openvpn.port",
 		Usage: "Openvpn port to use. Default 1194",
-		Value: portDefaultValue,
+		Value: defaultOptions.Port,
+	}
+	defaultOptions = Options{
+		Protocol: "udp",
+		Port:     1194,
 	}
 )
 
@@ -63,15 +62,11 @@ func ParseFlags(ctx *cli.Context) service.Options {
 
 // ParseJSONOptions function fills in Openvpn options from JSON request
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
-	opts := Options{
-		Protocol: protocolDefaultValue,
-		Port:     portDefaultValue,
-	}
-
 	if request == nil {
-		return opts, nil
+		return defaultOptions, nil
 	}
 
+	opts := defaultOptions
 	err := json.Unmarshal(*request, &opts)
 	return opts, err
 }
