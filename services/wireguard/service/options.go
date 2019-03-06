@@ -29,11 +29,15 @@ type Options struct {
 	ConnectDelay int `json:"connectDelay"`
 }
 
+const (
+	defaultDelayValue = 2000
+)
+
 var (
 	delayFlag = cli.IntFlag{
 		Name:  "connect.delay",
 		Usage: "Consumer is delayed by specified time (2000 millisec default) if provider is behind NAT",
-		Value: 2000,
+		Value: defaultDelayValue,
 	}
 )
 
@@ -51,11 +55,14 @@ func ParseFlags(ctx *cli.Context) service.Options {
 
 // ParseJSONOptions function fills in Openvpn options from JSON request
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
-	if request == nil {
-		return Options{}, nil
+	opts := Options{
+		ConnectDelay: defaultDelayValue,
 	}
 
-	var opts Options
+	if request == nil {
+		return opts, nil
+	}
+
 	err := json.Unmarshal(*request, &opts)
 	return opts, err
 }
