@@ -138,7 +138,7 @@ func Test_errorGettingServiceStartTypeOnEnable(t *testing.T) {
 
 	ics := mockedICS(sh.exec)
 	err := ics.Enable()
-	assert.EqualError(t, err, "failed to get RemoteAccess service startup type: expected error")
+	assert.EqualError(t, err, "failed to Enable RemoteAccess service: failed to get RemoteAccess service startup type: expected error")
 }
 
 func Test_errorSettingServiceStartTypeOnEnable(t *testing.T) {
@@ -148,7 +148,7 @@ func Test_errorSettingServiceStartTypeOnEnable(t *testing.T) {
 
 	ics := mockedICS(sh.exec)
 	err := ics.Enable()
-	assert.EqualError(t, err, "failed to set RemoteAccess service startup type to automatic: expected error")
+	assert.EqualError(t, err, "failed to Enable RemoteAccess service: failed to set RemoteAccess service startup type to automatic: expected error")
 }
 
 func Test_errorStartingServiceOnEnable(t *testing.T) {
@@ -158,7 +158,7 @@ func Test_errorStartingServiceOnEnable(t *testing.T) {
 
 	ics := mockedICS(sh.exec)
 	err := ics.Enable()
-	assert.EqualError(t, err, "failed to start RemoteAccess service: expected error")
+	assert.EqualError(t, err, "failed to Enable RemoteAccess service: failed to start RemoteAccess service: expected error")
 }
 
 func Test_errorGettingPublicInterfaceOnEnable(t *testing.T) {

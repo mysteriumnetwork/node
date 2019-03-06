@@ -43,17 +43,8 @@ type serviceICS struct {
 
 // Enable enables internet connection sharing for the public interface.
 func (nat *serviceICS) Enable() error {
-	status, err := nat.powerShell("Get-Service RemoteAccess | foreach { $_.StartType }")
-	if err != nil {
-		return errors.Wrap(err, "failed to get RemoteAccess service startup type")
-	}
-	nat.remoteAccessStatus = string(status)
-
-	if _, err := nat.powerShell("Set-Service -Name RemoteAccess -StartupType automatic"); err != nil {
-		return errors.Wrap(err, "failed to set RemoteAccess service startup type to automatic")
-	}
-	if _, err := nat.powerShell("Start-Service -Name RemoteAccess"); err != nil {
-		return errors.Wrap(err, "failed to start RemoteAccess service")
+	if err := nat.enableRemoteAccessService(); err != nil {
+		return errors.Wrap(err, "failed to Enable RemoteAccess service")
 	}
 
 	ifaceName, err := nat.getPublicInterfaceName()
@@ -63,6 +54,21 @@ func (nat *serviceICS) Enable() error {
 
 	err = nat.applySharingConfig(enablePublicSharing, ifaceName)
 	return errors.Wrap(err, "failed to enable internet connection sharing")
+}
+
+func (nat *serviceICS) enableRemoteAccessService() error {
+	status, err := nat.powerShell("Get-Service RemoteAccess | foreach { $_.StartType }")
+	if err != nil {
+		return errors.Wrap(err, "failed to get RemoteAccess service startup type")
+	}
+	nat.remoteAccessStatus = string(status)
+
+	if _, err := nat.powerShell("Set-Service -Name RemoteAccess -StartupType automatic"); err != nil {
+		return errors.Wrap(err, "failed to set RemoteAccess service startup type to automatic")
+	}
+
+	_, err = nat.powerShell("Start-Service -Name RemoteAccess")
+	return errors.Wrap(err, "failed to start RemoteAccess service")
 }
 
 // Add enables internet connection sharing for the local interface.
