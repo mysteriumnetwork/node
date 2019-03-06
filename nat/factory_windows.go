@@ -17,6 +17,10 @@
 
 package nat
 
+// NewService returns Windows OS specific NAT service based on Internet Connection Sharing (ICS).
 func NewService() NATService {
-	return &serviceFake{}
+	return &serviceICS{
+		powerShell: powerShell,
+		ifaces:     make(map[string]RuleForwarding),
+	}
 }
