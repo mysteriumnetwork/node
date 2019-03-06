@@ -34,9 +34,9 @@ import (
 
 var (
 	mockServiceID      = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
-	mockServiceOptions = struct {
-		Foo string `json:"foo"`
-	}{"bar"}
+	mockServiceOptions = fancyServiceOptions{
+		Foo: "bar",
+	}
 	mockProposal = market.ServiceProposal{
 		ID:                1,
 		ServiceType:       "testprotocol",
@@ -46,6 +46,10 @@ var (
 	mockServiceRunning = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil)
 	mockServiceStopped = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil)
 )
+
+type fancyServiceOptions struct {
+	Foo string `json:"foo"`
+}
 
 type mockServiceManager struct{}
 
@@ -202,7 +206,36 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 	)
 }
 
-func Test_ServiceStartInvalidOptions(t *testing.T) {
+func Test_ServiceStart_InvalidType(t *testing.T) {
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		strings.NewReader(`{
+			"type": "openvpn",
+			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"options": {}
+		}`),
+	)
+	resp := httptest.NewRecorder()
+
+	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message": "validation_error",
+			"errors": {
+				"type": [ {"code": "invalid", "message": "Invalid service type"} ]
+			}
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func Test_ServiceStart_InvalidOptions(t *testing.T) {
 	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(
