@@ -19,12 +19,10 @@ package metrics
 
 import (
 	"time"
-
-	"github.com/mysteriumnetwork/node/metadata"
 )
 
-// CreateSender creates metrics sender with appropriate transport
-func CreateSender(disableMetrics bool, metricsAddress string) *Sender {
+// NewSender creates metrics sender with appropriate transport
+func NewSender(disableMetrics bool, metricsAddress, applicationVersion string) *Sender {
 	var transport Transport
 	if disableMetrics {
 		transport = NewNoopTransport()
@@ -32,5 +30,5 @@ func CreateSender(disableMetrics bool, metricsAddress string) *Sender {
 		transport = NewElasticSearchTransport(metricsAddress, 10*time.Second)
 	}
 
-	return &Sender{Transport: transport, ApplicationVersion: metadata.VersionAsString()}
+	return &Sender{Transport: transport, ApplicationVersion: applicationVersion}
 }

@@ -311,7 +311,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.IPResolver,
 	)
 
-	di.MetricsSender = metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
+	applicationVersion := metadata.VersionAsString()
+	di.MetricsSender = metrics.NewSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress, applicationVersion)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
