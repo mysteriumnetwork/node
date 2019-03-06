@@ -38,7 +38,7 @@ type serviceRequest struct {
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: true
 	// example: openvpn
-	ServiceType string `json:"serviceType"`
+	Type string `json:"type"`
 
 	// service options. Every service has a unique list of allowed options.
 	// required: false
@@ -54,10 +54,22 @@ type serviceInfo struct {
 	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
 	ID string `json:"id"`
 
-	Proposal proposalRes `json:"proposal"`
+	// provider identity
+	// example: 0x0000000000000000000000000000000000000002
+	ProviderID string `json:"providerId"`
+
+	// service type. Possible values are "openvpn", "wireguard" and "noop"
+	// example: openvpn
+	Type string `json:"type"`
+
+	// options with which service was started. Every service has a unique list of allowed options.
+	// example: {"port": 1123, "protocol": "udp"}
+	Options interface{} `json:"options"`
 
 	// example: Running
 	Status string `json:"status"`
+
+	Proposal proposalRes `json:"proposal"`
 }
 
 // ServiceEndpoint struct represents /service resource and it's sub-resources
@@ -178,7 +190,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.ServiceType, sr.Options)
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, sr.Options)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -230,7 +242,7 @@ func (se *ServiceEndpoint) ServiceStop(resp http.ResponseWriter, _ *http.Request
 func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 	for _, instance := range se.serviceManager.List() {
 		proposal := instance.Proposal()
-		if proposal.ProviderID == sr.ProviderID && proposal.ServiceType == sr.ServiceType {
+		if proposal.ProviderID == sr.ProviderID && proposal.ServiceType == sr.Type {
 			return true
 		}
 	}
@@ -249,18 +261,18 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	var jsonData struct {
-		ProviderID  string           `json:"providerId"`
-		ServiceType string           `json:"serviceType"`
-		Options     *json.RawMessage `json:"options"`
+		ProviderID string           `json:"providerId"`
+		Type       string           `json:"type"`
+		Options    *json.RawMessage `json:"options"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
 		return serviceRequest{}, err
 	}
 
 	sr := serviceRequest{
-		ProviderID:  jsonData.ProviderID,
-		ServiceType: se.toServiceType(jsonData.ServiceType),
-		Options:     se.toServiceOptions(jsonData.ServiceType, jsonData.Options),
+		ProviderID: jsonData.ProviderID,
+		Type:       se.toServiceType(jsonData.Type),
+		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
 	}
 	return sr, nil
 }
@@ -293,10 +305,14 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 }
 
 func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInfo {
+	proposal := instance.Proposal()
 	return serviceInfo{
-		ID:       string(id),
-		Status:   string(instance.State()),
-		Proposal: proposalToRes(instance.Proposal()),
+		ID:         string(id),
+		ProviderID: proposal.ProviderID,
+		Type:       proposal.ServiceType,
+		Options:    instance.Options(),
+		Status:     string(instance.State()),
+		Proposal:   proposalToRes(instance.Proposal()),
 	}
 }
 
@@ -313,11 +329,11 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 	if len(sr.ProviderID) == 0 {
 		errors.ForField("providerId").AddError("required", "Field is required")
 	}
-	if sr.ServiceType == "" {
-		errors.ForField("serviceType").AddError("required", "Field is required")
+	if sr.Type == "" {
+		errors.ForField("type").AddError("required", "Field is required")
 	}
-	if sr.ServiceType == serviceTypeInvalid {
-		errors.ForField("serviceType").AddError("invalid", "Invalid service type")
+	if sr.Type == serviceTypeInvalid {
+		errors.ForField("type").AddError("invalid", "Invalid service type")
 	}
 	if sr.Options == serviceOptionsInvalid {
 		errors.ForField("options").AddError("invalid", "Invalid options")

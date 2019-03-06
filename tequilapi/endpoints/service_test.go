@@ -28,10 +28,28 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
-var mockServiceID = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+var (
+	mockServiceID      = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+	mockServiceOptions = fancyServiceOptions{
+		Foo: "bar",
+	}
+	mockProposal = market.ServiceProposal{
+		ID:                1,
+		ServiceType:       "testprotocol",
+		ServiceDefinition: TestServiceDefinition{},
+		ProviderID:        "0xProviderId",
+	}
+	mockServiceRunning = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil)
+	mockServiceStopped = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil)
+)
+
+type fancyServiceOptions struct {
+	Foo string `json:"foo"`
+}
 
 type mockServiceManager struct{}
 
@@ -41,13 +59,13 @@ func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType st
 func (sm *mockServiceManager) Stop(id service.ID) error { return nil }
 func (sm *mockServiceManager) Service(id service.ID) *service.Instance {
 	if id == "6ba7b810-9dad-11d1-80b4-00c04fd430c8" {
-		return service.NewInstance(service.Running, nil, serviceProposals[0], nil, nil)
+		return mockServiceRunning
 	}
 	return nil
 }
 func (sm *mockServiceManager) List() map[service.ID]*service.Instance {
 	return map[service.ID]*service.Instance{
-		"11111111-9dad-11d1-80b4-00c04fd430c0": service.NewInstance(service.NotRunning, nil, serviceProposals[0], nil, nil),
+		"11111111-9dad-11d1-80b4-00c04fd430c0": mockServiceStopped,
 	}
 }
 func (sm *mockServiceManager) Kill() error { return nil }
@@ -73,16 +91,67 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 		expectedJSON   string
 	}{
 		{
-			http.MethodGet, "/services", "",
-			http.StatusOK, `[{"id":"11111111-9dad-11d1-80b4-00c04fd430c0","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"NotRunning"}]`,
+			http.MethodGet,
+			"/services",
+			"",
+			http.StatusOK,
+			`[{
+				"id": "11111111-9dad-11d1-80b4-00c04fd430c0",
+				"providerId": "0xProviderId",
+				"type": "testprotocol",
+				"options": {"foo": "bar"},
+				"status": "NotRunning",
+				"proposal": {
+					"id": 1,
+					"providerId": "0xProviderId",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+					}
+				}
+			}]`,
 		},
 		{
-			http.MethodPost, "/services", `{"providerId": "node1", "serviceType": "testprotocol"}`,
-			http.StatusCreated, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running"}`,
+			http.MethodPost,
+			"/services",
+			`{"providerId": "node1", "type": "testprotocol"}`,
+			http.StatusCreated,
+			`{
+				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+				"providerId": "0xProviderId",
+				"type": "testprotocol",
+				"options": {"foo": "bar"},
+				"status": "Running",
+				"proposal": {
+					"id": 1,
+					"providerId": "0xProviderId",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+					}
+				}
+			}`,
 		},
 		{
-			http.MethodGet, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",
-			http.StatusOK, `{"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","proposal":{"id":1,"providerId":"0xProviderId","serviceType":"testprotocol","serviceDefinition":{"locationOriginate":{"asn":"LT","country":"Lithuania","city":"Vilnius"}}},"status":"Running"}`,
+			http.MethodGet,
+			"/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+			"",
+			http.StatusOK,
+			`{
+				"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+				"providerId": "0xProviderId",
+				"type": "testprotocol",
+				"options": {"foo": "bar"},
+				"status": "Running",
+				"proposal": {
+					"id": 1,
+					"providerId": "0xProviderId",
+					"serviceType": "testprotocol",
+					"serviceDefinition": {
+						"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+					}
+				}
+			}`,
 		},
 		{
 			http.MethodDelete, "/services/6ba7b810-9dad-11d1-80b4-00c04fd430c8", "",
@@ -115,9 +184,9 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 		http.MethodGet,
 		"/irrelevant",
 		strings.NewReader(`{
-			"serviceType": "openvpn",
+			"type": "openvpn",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"options": {"openvpnPort": 1123, "openvpnProtocol": "udp"}
+			"options": {}
 		}`),
 	)
 	resp := httptest.NewRecorder()
@@ -130,23 +199,52 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 		`{
 			"message": "validation_error",
 			"errors": {
-				"serviceType": [ {"code": "invalid", "message": "Invalid service type"} ]
+				"type": [ {"code": "invalid", "message": "Invalid service type"} ]
 			}
 		}`,
 		resp.Body.String(),
 	)
 }
 
-func Test_ServiceStartInvalidOptions(t *testing.T) {
+func Test_ServiceStart_InvalidType(t *testing.T) {
 	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
 		"/irrelevant",
 		strings.NewReader(`{
-			"serviceType": "errorprotocol",
+			"type": "openvpn",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"options": {"openvpnPort": 1123, "openvpnProtocol": "udp"}
+			"options": {}
+		}`),
+	)
+	resp := httptest.NewRecorder()
+
+	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message": "validation_error",
+			"errors": {
+				"type": [ {"code": "invalid", "message": "Invalid service type"} ]
+			}
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func Test_ServiceStart_InvalidOptions(t *testing.T) {
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		strings.NewReader(`{
+			"type": "errorprotocol",
+			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"options": {}
 		}`),
 	)
 	resp := httptest.NewRecorder()
@@ -173,9 +271,9 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 		http.MethodGet,
 		"/irrelevant",
 		strings.NewReader(`{
-			"serviceType": "testprotocol",
+			"type": "testprotocol",
 			"providerId": "0xProviderId",
-			"options": {"openvpnPort": 1123, "openvpnProtocol": "udp"}
+			"options": {}
 		}`),
 	)
 	resp := httptest.NewRecorder()
@@ -214,6 +312,9 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 		t,
 		`{
 			"id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+			"providerId": "0xProviderId",
+			"type": "testprotocol",
+			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
 				"id": 1,
@@ -263,7 +364,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 			"message": "validation_error",
 			"errors": {
 				"providerId": [ {"code": "required", "message": "Field is required"} ],
-				"serviceType": [ {"code": "required", "message": "Field is required"} ]
+				"type": [ {"code": "required", "message": "Field is required"} ]
 			}
 		}`,
 		resp.Body.String(),

@@ -227,7 +227,7 @@ func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
 	status(service.Status,
 		"ID: "+service.ID,
 		"ProviderID: "+service.Proposal.ProviderID,
-		"ServiceType: "+service.Proposal.ServiceType)
+		"Type: "+service.Proposal.ServiceType)
 }
 
 func (c *cliApp) serviceStop(id string) {
@@ -250,7 +250,7 @@ func (c *cliApp) serviceList() {
 		status(service.Status,
 			"ID: "+service.ID,
 			"ProviderID: "+service.Proposal.ProviderID,
-			"ServiceType: "+service.Proposal.ServiceType)
+			"Type: "+service.Proposal.ServiceType)
 	}
 }
 
@@ -264,7 +264,7 @@ func (c *cliApp) serviceGet(id string) {
 	status(service.Status,
 		"ID: "+service.ID,
 		"ProviderID: "+service.Proposal.ProviderID,
-		"ServiceType: "+service.Proposal.ServiceType)
+		"Type: "+service.Proposal.ServiceType)
 }
 
 func (c *cliApp) connect(argsString string) {

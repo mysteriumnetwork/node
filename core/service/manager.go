@@ -88,7 +88,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		return id, err
 	}
 
-	dialogWaiter, err := manager.dialogWaiterFactory(providerID, proposal.ServiceType)
+	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType)
 	if err != nil {
 		return id, err
 	}
@@ -108,6 +108,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 	instance := Instance{
 		state:        Starting,
+		options:      options,
 		service:      service,
 		proposal:     proposal,
 		dialogWaiter: dialogWaiter,
