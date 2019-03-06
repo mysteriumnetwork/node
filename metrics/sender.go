@@ -50,7 +50,7 @@ type applicationInfo struct {
 }
 
 type natMappingFailContext struct {
-	error string
+	errorMessage string
 }
 
 // SendStartupEvent sends startup event
@@ -65,7 +65,7 @@ func (sender *Sender) SendNATMappingSuccessEvent() error {
 
 // SendNATMappingFailEvent sends event about failed NAT mapping
 func (sender *Sender) SendNATMappingFailEvent(err error) error {
-	context := natMappingFailContext{error: err.Error()}
+	context := natMappingFailContext{errorMessage: err.Error()}
 	return sender.sendEvent(natMappingFailEventName, context)
 }
 

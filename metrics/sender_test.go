@@ -95,7 +95,7 @@ func TestSender_SendNATMappingFailEvent_SendsToTransport(t *testing.T) {
 	assert.Equal(t, "nat_mapping_fail", sentEvent.EventName)
 	assert.Equal(t, applicationInfo{Name: "myst", Version: "test version"}, sentEvent.Application)
 	assert.NotZero(t, sentEvent.CreatedAt)
-	assert.Equal(t, natMappingFailContext{error: "mock nat mapping error"}, sentEvent.Context)
+	assert.Equal(t, natMappingFailContext{errorMessage: "mock nat mapping error"}, sentEvent.Context)
 }
 
 func TestSender_SendNATMappingFailEvent_ReturnsTransportErrors(t *testing.T) {
