@@ -15,21 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Package tequilapi Tequila API
-//
-// The purpose of this documentation is to provide developers an insight of how to
-// interact with Mysterium Node via Tequila API.
-// This should demonstrate all the possible API calls with described parameters and responses.
-//
-//   Host: 127.0.0.1:4050
-//
-//   Consumes:
-//   - application/json
-//
-//   Produces:
-//   - application/json
-//
-//   Version: dev
-//
-// swagger:meta
 package tequilapi
+
+func NewMysteriumCorsPolicy() CorsPolicy {
+	return WhitelistingCorsPolicy{
+		DefaultTrustedOrigin:  "https://mysterium.network",
+		AllowedOriginSuffixes: []string{"wallet(-dev)?\\.mysterium\\.network$", "localhost(:\\d+)?$"},
+	}
+}

@@ -17,7 +17,11 @@
 
 package tequilapi
 
-import "strings"
+import (
+	"regexp"
+
+	"github.com/ethereum/go-ethereum/log"
+)
 
 // WhitelistingCorsPolicy allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting only specific domains
 type WhitelistingCorsPolicy struct {
@@ -36,7 +40,11 @@ func (policy WhitelistingCorsPolicy) AllowedOrigin(requestOrigin string) string 
 
 func (policy WhitelistingCorsPolicy) isOriginAllowed(origin string) bool {
 	for _, allowedSuffix := range policy.AllowedOriginSuffixes {
-		if strings.HasSuffix(origin, allowedSuffix) {
+		match, err := regexp.MatchString(allowedSuffix, origin)
+		if err != nil {
+			log.Warn("Failed to check regexp for origin", err)
+		}
+		if match {
 			return true
 		}
 	}
