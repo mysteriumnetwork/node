@@ -18,7 +18,7 @@
 package tequilapi
 
 func NewMysteriumCorsPolicy() CorsPolicy {
-	return WhitelistingCorsPolicy{
+	return RegexpCorsPolicy{
 		DefaultTrustedOrigin:  "https://mysterium.network",
 		AllowedOriginSuffixes: []string{"wallet(-dev)?\\.mysterium\\.network$", "localhost(:\\d+)?$"},
 	}

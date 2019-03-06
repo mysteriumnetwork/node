@@ -23,14 +23,14 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-// WhitelistingCorsPolicy allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting only specific domains
-type WhitelistingCorsPolicy struct {
+// RegexpCorsPolicy allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting domains by regexp
+type RegexpCorsPolicy struct {
 	DefaultTrustedOrigin  string
 	AllowedOriginSuffixes []string
 }
 
 // AllowedOrigin returns the same request origin if it is allowed, or default origin if it is not allowed
-func (policy WhitelistingCorsPolicy) AllowedOrigin(requestOrigin string) string {
+func (policy RegexpCorsPolicy) AllowedOrigin(requestOrigin string) string {
 	if policy.isOriginAllowed(requestOrigin) {
 		return requestOrigin
 	}
@@ -38,7 +38,7 @@ func (policy WhitelistingCorsPolicy) AllowedOrigin(requestOrigin string) string 
 	return policy.DefaultTrustedOrigin
 }
 
-func (policy WhitelistingCorsPolicy) isOriginAllowed(origin string) bool {
+func (policy RegexpCorsPolicy) isOriginAllowed(origin string) bool {
 	for _, allowedSuffix := range policy.AllowedOriginSuffixes {
 		match, err := regexp.MatchString(allowedSuffix, origin)
 		if err != nil {

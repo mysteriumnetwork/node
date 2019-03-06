@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWhitelistingCorsPolicy_AllowedOrigin_ReturnsSameOrDefaultOrigin(t *testing.T) {
-	var policy = WhitelistingCorsPolicy{
+func TestRegexpCorsPolicy_AllowedOrigin_ReturnsSameOrDefaultOrigin(t *testing.T) {
+	var policy = RegexpCorsPolicy{
 		DefaultTrustedOrigin:  "default",
 		AllowedOriginSuffixes: []string{"^full-match$", "end-match$"},
 	}
