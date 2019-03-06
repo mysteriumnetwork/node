@@ -35,13 +35,15 @@ var (
 	consumer            = identity.FromAddress("0x00")
 	receiver            = identity.FromAddress("0x000")
 	BalanceSender       = &MockPeerBalanceSender{balanceMessages: make(chan balance.Message)}
-	MBT                 = &MockBalanceTracker{balanceMessage: balance.Message{Balance: 0, SequenceID: 1}}
+	MBT                 = &MockBalanceTracker{balanceToReturn: 0}
 	MPV                 = &MockPromiseValidator{isValid: true}
 	mockPromiseToReturn = promise.StoredPromise{
 		SequenceID: 1,
 		ConsumerID: consumer,
 	}
-	MPS = &MockPromiseStorage{promiseToReturn: mockPromiseToReturn}
+	MPS = &MockPromiseStorage{
+		promiseForConsumerToReturn: mockPromiseToReturn,
+	}
 )
 
 func NewMockSessionBalance(mpv *MockPromiseValidator, mps *MockPromiseStorage, mbt *MockBalanceTracker) *SessionBalance {
@@ -123,14 +125,14 @@ func Test_SessionBalance_LoadInitialPromiseState_WithExistingPromise(t *testing.
 	orch := NewMockSessionBalance(MPV, MPS, MBT)
 	promise, err := orch.loadInitialPromiseState()
 	assert.Nil(t, err)
-	assert.Equal(t, MPS.promiseToReturn, promise)
-	assert.Equal(t, MPS.promiseToReturn.SequenceID, orch.sequenceID)
+	assert.Equal(t, MPS.promiseForConsumerToReturn, promise)
+	assert.Equal(t, MPS.promiseForConsumerToReturn.SequenceID, orch.sequenceID)
 }
 
 func Test_SessionBalance_LoadInitialPromiseState_WithoutExistingPromise(t *testing.T) {
 	mps := *MPS
-	mps.lastPromiseError = errBoltNotFound
-	mps.promiseToReturn = promise.StoredPromise{}
+	mps.promiseForConsumerError = errBoltNotFound
+	mps.promiseForConsumerToReturn = promise.StoredPromise{}
 	orch := NewMockSessionBalance(MPV, &mps, MBT)
 	promise, err := orch.loadInitialPromiseState()
 	assert.Nil(t, err)
@@ -139,19 +141,8 @@ func Test_SessionBalance_LoadInitialPromiseState_WithoutExistingPromise(t *testi
 
 func Test_SessionBalance_LoadInitialPromiseState_WithDifferentConsumer_IssuesNew(t *testing.T) {
 	mps := *MPS
-	mps.promiseToReturn = promise.StoredPromise{
+	mps.promiseForConsumerToReturn = promise.StoredPromise{
 		SequenceID: 3,
-	}
-	mps.promisesToReturn = []promise.StoredPromise{
-		promise.StoredPromise{
-			SequenceID: 1,
-			ConsumerID: consumer,
-		},
-		promise.StoredPromise{
-			SequenceID: 2,
-			Cleared:    true,
-		},
-		mps.promiseToReturn,
 	}
 	mps.promiseForConsumerError = errNoPromiseForConsumer
 	orch := NewMockSessionBalance(MPV, &mps, MBT)
@@ -160,35 +151,13 @@ func Test_SessionBalance_LoadInitialPromiseState_WithDifferentConsumer_IssuesNew
 	assert.Equal(t, uint64(4), promise.SequenceID)
 }
 
-func Test_SessionBalance_LoadInitialPromiseState_WithDifferentConsumer_TakesOld(t *testing.T) {
-	mps := *MPS
-	mps.promiseToReturn = promise.StoredPromise{
-		SequenceID: 3,
-	}
-	mps.promisesToReturn = []promise.StoredPromise{
-		promise.StoredPromise{
-			SequenceID: 1,
-			ConsumerID: consumer,
-		},
-		promise.StoredPromise{
-			SequenceID: 2,
-		},
-		mps.promiseToReturn,
-	}
-	mps.promiseForConsumerToReturn = mps.promisesToReturn[0]
-	orch := NewMockSessionBalance(MPV, &mps, MBT)
-	promise, err := orch.loadInitialPromiseState()
-	assert.Nil(t, err)
-	assert.Equal(t, uint64(1), promise.SequenceID)
-}
-
 func Test_SessionBalance_LoadInitialPromiseState_BubblesErrors(t *testing.T) {
 	mps := *MPS
-	mps.lastPromiseError = errors.New("test")
-	mps.newIDerror = mps.lastPromiseError
+	mps.promiseForConsumerError = errors.New("test")
+	mps.newIDerror = mps.promiseForConsumerError
 	orch := NewMockSessionBalance(MPV, &mps, MBT)
 	_, err := orch.loadInitialPromiseState()
-	assert.Equal(t, mps.lastPromiseError, err)
+	assert.Equal(t, mps.promiseForConsumerError, err)
 }
 
 func Test_SessionBalance_StartBalanceTracker_AddsUnconsumedAmount(t *testing.T) {
@@ -227,33 +196,21 @@ func Test_SessionBalance_CalculateAmountToAdd(t *testing.T) {
 }
 
 type MockPromiseStorage struct {
-	promiseToReturn            promise.StoredPromise
-	promisesToReturn           []promise.StoredPromise
 	promiseForConsumerToReturn promise.StoredPromise
 	promiseForConsumerError    error
-	promisesToReturnError      error
 	newIDerror                 error
 	updateError                error
-	lastPromiseError           error
 }
 
 func (mps *MockPromiseStorage) GetNewSeqIDForIssuer(consumerID, receiverID, issuerID identity.Identity) (uint64, error) {
-	return mps.promiseToReturn.SequenceID + 1, mps.newIDerror
+	return mps.promiseForConsumerToReturn.SequenceID + 1, mps.newIDerror
 }
 
 func (mps *MockPromiseStorage) Update(issuerID identity.Identity, p promise.StoredPromise) error {
 	return mps.updateError
 }
 
-func (mps *MockPromiseStorage) GetLastPromise(issuerID identity.Identity) (promise.StoredPromise, error) {
-	return mps.promiseToReturn, mps.lastPromiseError
-}
-
-func (mps *MockPromiseStorage) GetAllPromisesFromIssuer(issuerID identity.Identity) ([]promise.StoredPromise, error) {
-	return mps.promisesToReturn, mps.promisesToReturnError
-}
-
-func (mps *MockPromiseStorage) FindPromiseForConsumer(issuerID, consumerID identity.Identity) (promise.StoredPromise, error) {
+func (mps *MockPromiseStorage) FindPromiseForConsumer(consumerID, receiverID, issuerID identity.Identity) (promise.StoredPromise, error) {
 	return mps.promiseForConsumerToReturn, mps.promiseForConsumerError
 }
 
@@ -268,13 +225,13 @@ func (mpbs *MockPeerBalanceSender) Send(b balance.Message) error {
 }
 
 type MockBalanceTracker struct {
-	balanceMessage balance.Message
-	amountAdded    uint64
-	startCalled    bool
+	balanceToReturn uint64
+	amountAdded     uint64
+	startCalled     bool
 }
 
 func (mbt *MockBalanceTracker) GetBalance() uint64 {
-	return mbt.balanceMessage.Balance
+	return mbt.balanceToReturn
 }
 
 func (mbt *MockBalanceTracker) Add(amount uint64) {
