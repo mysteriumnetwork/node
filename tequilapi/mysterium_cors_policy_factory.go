@@ -17,6 +17,7 @@
 
 package tequilapi
 
+// NewMysteriumCorsPolicy builds cors policy for Mysterium wallet and local applications
 func NewMysteriumCorsPolicy() CorsPolicy {
 	return RegexpCorsPolicy{
 		DefaultTrustedOrigin:  "https://mysterium.network",
