@@ -310,7 +310,7 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInf
 		ID:         string(id),
 		ProviderID: proposal.ProviderID,
 		Type:       proposal.ServiceType,
-		Options:    instance.ServiceOptions(),
+		Options:    instance.Options(),
 		Status:     string(instance.State()),
 		Proposal:   proposalToRes(instance.Proposal()),
 	}

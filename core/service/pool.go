@@ -101,36 +101,36 @@ func (p *Pool) Instance(id ID) *Instance {
 
 // NewInstance creates new instance of the service.
 func NewInstance(
+	options Options,
 	state State,
-	serviceOptions Options,
 	service RunnableService,
 	proposal market.ServiceProposal,
 	dialog communication.DialogWaiter,
 	discovery *discovery_registry.Discovery,
 ) *Instance {
 	return &Instance{
-		state:          state,
-		serviceOptions: serviceOptions,
-		service:        service,
-		proposal:       proposal,
-		dialogWaiter:   dialog,
-		discovery:      discovery,
+		options:      options,
+		state:        state,
+		service:      service,
+		proposal:     proposal,
+		dialogWaiter: dialog,
+		discovery:    discovery,
 	}
 }
 
 // Instance represents a run service
 type Instance struct {
-	state          State
-	serviceOptions Options
-	service        RunnableService
-	proposal       market.ServiceProposal
-	dialogWaiter   communication.DialogWaiter
-	discovery      *discovery_registry.Discovery
+	state        State
+	options      Options
+	service      RunnableService
+	proposal     market.ServiceProposal
+	dialogWaiter communication.DialogWaiter
+	discovery    *discovery_registry.Discovery
 }
 
-// ServiceOptions returns options used to start service
-func (i *Instance) ServiceOptions() Options {
-	return i.serviceOptions
+// Options returns options used to start service
+func (i *Instance) Options() Options {
+	return i.options
 }
 
 // Proposal returns service proposal of the running service instance.

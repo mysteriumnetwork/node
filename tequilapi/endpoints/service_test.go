@@ -43,8 +43,8 @@ var (
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        "0xProviderId",
 	}
-	mockServiceRunning = service.NewInstance(service.Running, mockServiceOptions, nil, mockProposal, nil, nil)
-	mockServiceStopped = service.NewInstance(service.NotRunning, mockServiceOptions, nil, mockProposal, nil, nil)
+	mockServiceRunning = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil)
+	mockServiceStopped = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil)
 )
 
 type mockServiceManager struct{}
