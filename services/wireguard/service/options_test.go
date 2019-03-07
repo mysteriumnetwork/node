@@ -28,7 +28,15 @@ func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
 	options, err := ParseJSONOptions(nil)
 
 	assert.NoError(t, err)
-	assert.Equal(t, Options{}, options)
+	assert.Equal(t, defaultOptions, options)
+}
+
+func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
+	request := json.RawMessage(`{}`)
+	options, err := ParseJSONOptions(&request)
+
+	assert.NoError(t, err)
+	assert.Equal(t, defaultOptions, options)
 }
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
