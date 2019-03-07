@@ -18,6 +18,9 @@
 package service
 
 import (
+	"errors"
+	"sync"
+
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
@@ -36,6 +39,7 @@ type RunnableService interface {
 // Pool is responsible for supervising running instances
 type Pool struct {
 	instances map[ID]*Instance
+	sync.Mutex
 }
 
 // NewPool returns a empty service pool
@@ -47,6 +51,9 @@ func NewPool() *Pool {
 
 // Add registers a service to running instances pool
 func (p *Pool) Add(instance *Instance) (ID, error) {
+	p.Lock()
+	defer p.Unlock()
+
 	id, err := generateID()
 	if err != nil {
 		return id, err
@@ -58,12 +65,31 @@ func (p *Pool) Add(instance *Instance) (ID, error) {
 
 // Del removes a service from running instances pool
 func (p *Pool) Del(id ID) {
+	p.Lock()
+	defer p.Unlock()
+	p.del(id)
+}
+
+func (p *Pool) del(id ID) {
 	delete(p.instances, id)
 }
 
+// ErrNoSuchInstance represents the error when we're stopping an instance that does not exist
+var ErrNoSuchInstance = errors.New("no such instance")
+
 // Stop kills all sub-resources of instance
 func (p *Pool) Stop(id ID) error {
-	instance := p.instances[id]
+	p.Lock()
+	defer p.Unlock()
+	return p.stop(id)
+}
+
+func (p *Pool) stop(id ID) error {
+	instance, ok := p.instances[id]
+	if !ok {
+		return ErrNoSuchInstance
+	}
+
 	errStop := utils.ErrorCollection{}
 	if instance.discovery != nil {
 		instance.discovery.Stop()
@@ -75,15 +101,17 @@ func (p *Pool) Stop(id ID) error {
 		errStop.Add(instance.service.Stop())
 	}
 
-	p.Del(id)
+	p.del(id)
 	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
 
 // StopAll kills all running instances
 func (p *Pool) StopAll() error {
+	p.Lock()
+	defer p.Unlock()
 	errStop := utils.ErrorCollection{}
 	for id := range p.instances {
-		errStop.Add(p.Stop(id))
+		errStop.Add(p.stop(id))
 	}
 
 	return errStop.Errorf("Some instances did not stop: %v", ". ")
@@ -91,11 +119,15 @@ func (p *Pool) StopAll() error {
 
 // List returns all running service instances.
 func (p *Pool) List() map[ID]*Instance {
+	p.Lock()
+	defer p.Unlock()
 	return p.instances
 }
 
 // Instance returns service instance by the requested id.
 func (p *Pool) Instance(id ID) *Instance {
+	p.Lock()
+	defer p.Unlock()
 	return p.instances[id]
 }
 
@@ -125,7 +157,7 @@ type Instance struct {
 	service      RunnableService
 	proposal     market.ServiceProposal
 	dialogWaiter communication.DialogWaiter
-	discovery    *discovery_registry.Discovery
+	discovery    DiscoveryService
 }
 
 // Options returns options used to start service
