@@ -95,7 +95,9 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 
 // Stop stops service
 func (m *Manager) Stop() (err error) {
-	m.releasePorts()
+	if m.releasePorts != nil {
+		m.releasePorts()
+	}
 
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
