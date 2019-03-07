@@ -18,8 +18,6 @@
 package promise
 
 import (
-	"errors"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/promises"
@@ -55,9 +53,6 @@ func NewConsumerTracker(initial State, consumer, provider identity.Identity, iss
 	}
 }
 
-// ErrUnexpectedAmount represents an error that occurs when we get an amount that's not aligned with our current understanding
-var ErrUnexpectedAmount = errors.New("unexpected amount")
-
 // AlignStateWithProvider aligns the consumers world with the providers
 func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 	if providerState.Seq > t.current.Seq {
@@ -67,12 +62,6 @@ func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 		// if provider tries to trick us to send more than expected it will be caught on next align
 		t.current.Amount = 0
 		return nil
-	}
-	if providerState.Amount > t.current.Amount {
-		return ErrUnexpectedAmount
-	}
-	if providerState.Amount < t.current.Amount {
-		return ErrUnexpectedAmount
 	}
 
 	return nil

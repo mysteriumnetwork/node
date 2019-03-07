@@ -41,6 +41,8 @@ var (
 				SequenceID: 1,
 				AddedAt:    timeMock,
 				UpdatedAt:  timeMock,
+				ConsumerID: consumerID,
+				Receiver:   receiverID,
 			},
 		},
 	}
@@ -167,14 +169,19 @@ func Test_Storage_GetAllPromisesForIssuer_ReturnsEmptyPromiseList(t *testing.T) 
 func Test_LoadPaymentInfo_EmptyOnError(t *testing.T) {
 	ms := newMockStorage(nil)
 	s := NewStorage(ms)
-	pi := s.LoadPaymentInfo(issuerID)
-	assert.Equal(t, &PaymentInfo{}, pi)
+	pi := s.LoadPaymentInfo(issuerID, receiverID, consumerID)
+	assert.Equal(t, &PaymentInfo{
+		LastPromise: LastPromise{
+			SequenceID: 1,
+			Amount:     0,
+		},
+	}, pi)
 }
 
 func Test_LoadPaymentInfo_ZeroAmountOnNoMessage(t *testing.T) {
 	ms := newMockStorage(&mock)
 	s := NewStorage(ms)
-	pi := s.LoadPaymentInfo(issuerID)
+	pi := s.LoadPaymentInfo(issuerID, receiverID, consumerID)
 	assert.Equal(t, &PaymentInfo{
 		LastPromise: LastPromise{
 			SequenceID: 1,
@@ -195,15 +202,84 @@ func Test_LoadPaymentInfo_LoadsProperInfo(t *testing.T) {
 					Amount: 300,
 				},
 				UnconsumedAmount: 200,
+				ConsumerID:       consumerID,
+				Receiver:         receiverID,
 			},
 		},
 	}
 	ms := newMockStorage(&newMock)
 	s := NewStorage(ms)
-	pi := s.LoadPaymentInfo(issuerID)
+	pi := s.LoadPaymentInfo(consumerID, receiverID, issuerID)
 	assert.Equal(t, uint64(10), pi.LastPromise.SequenceID)
 	assert.Equal(t, uint64(300), pi.LastPromise.Amount)
 	assert.Equal(t, uint64(200), pi.FreeCredit)
+}
+
+func Test_LoadPaymentInfo_WithPreviousConsumersIssuesNewID(t *testing.T) {
+	newMock := map[string][]StoredPromise{
+		getBucketNameFromIssuer(issuerID): {
+			{
+				SequenceID: 10,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+				Message: &Message{
+					Amount: 300,
+				},
+				UnconsumedAmount: 200,
+				ConsumerID:       receiverID,
+				Receiver:         receiverID,
+			},
+			{
+				SequenceID: 11,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+				Message: &Message{
+					Amount: 300,
+				},
+				UnconsumedAmount: 200,
+				ConsumerID:       issuerID,
+				Receiver:         receiverID,
+			},
+		},
+	}
+
+	ms := newMockStorage(&newMock)
+	s := NewStorage(ms)
+	pi := s.LoadPaymentInfo(consumerID, receiverID, issuerID)
+	assert.Equal(t, &PaymentInfo{
+		LastPromise: LastPromise{
+			SequenceID: 12,
+			Amount:     0,
+		},
+	}, pi)
+}
+
+func Test_LoadPaymentInfo_NextIfReceiversDontMatch(t *testing.T) {
+	newMock := map[string][]StoredPromise{
+		getBucketNameFromIssuer(issuerID): {
+			{
+				SequenceID: 10,
+				AddedAt:    timeMock,
+				UpdatedAt:  timeMock,
+				Message: &Message{
+					Amount: 300,
+				},
+				UnconsumedAmount: 200,
+				ConsumerID:       consumerID,
+				Receiver:         issuerID,
+			},
+		},
+	}
+
+	ms := newMockStorage(&newMock)
+	s := NewStorage(ms)
+	pi := s.LoadPaymentInfo(consumerID, receiverID, issuerID)
+	assert.Equal(t, &PaymentInfo{
+		LastPromise: LastPromise{
+			SequenceID: 11,
+			Amount:     0,
+		},
+	}, pi)
 }
 
 func Test_Storage_GetAllPromisesForIssuer_GetsAllPromises(t *testing.T) {
@@ -260,7 +336,7 @@ func Test_Storage_DoesAtomicIncrementsUnderConcurrentLoad(t *testing.T) {
 func Test_FindPromiseForConsumer_ErrsOnEmptySlice(t *testing.T) {
 	ms := newMockStorage(nil)
 	s := NewStorage(ms)
-	_, err := s.FindPromiseForConsumer(issuerID, identity.FromAddress("0x000"))
+	_, err := s.FindPromiseForConsumer(issuerID, receiverID, identity.FromAddress("0x000"))
 	assert.Equal(t, errNoPromiseForConsumer, err)
 }
 
@@ -281,7 +357,7 @@ func Test_FindPromiseForConsumer_ErrsOnNoConsumerPromise(t *testing.T) {
 	}
 	ms := newMockStorage(&mock)
 	s := NewStorage(ms)
-	_, err := s.FindPromiseForConsumer(issuerID, identity.FromAddress("0x000"))
+	_, err := s.FindPromiseForConsumer(identity.FromAddress("0x000"), receiverID, issuerID)
 	assert.Equal(t, errNoPromiseForConsumer, err)
 }
 
@@ -294,6 +370,7 @@ func Test_FindPromiseForConsumer_FindsConsumer(t *testing.T) {
 				AddedAt:    timeMock,
 				UpdatedAt:  timeMock,
 				ConsumerID: consumerID,
+				Receiver:   receiverID,
 			},
 			{
 				SequenceID: 2,
@@ -304,7 +381,7 @@ func Test_FindPromiseForConsumer_FindsConsumer(t *testing.T) {
 	}
 	ms := newMockStorage(&mock)
 	s := NewStorage(ms)
-	pr, err := s.FindPromiseForConsumer(issuerID, consumerID)
+	pr, err := s.FindPromiseForConsumer(consumerID, receiverID, issuerID)
 	assert.Nil(t, err)
 	assert.Equal(t, uint64(1), pr.SequenceID)
 	assert.Equal(t, consumerID, pr.ConsumerID)
@@ -330,7 +407,7 @@ func Test_FindPromiseForConsumer_FindsClearerd(t *testing.T) {
 	}
 	ms := newMockStorage(&mock)
 	s := NewStorage(ms)
-	_, err := s.FindPromiseForConsumer(issuerID, consumerID)
+	_, err := s.FindPromiseForConsumer(issuerID, receiverID, consumerID)
 	assert.Equal(t, errNoPromiseForConsumer, err)
 }
 
