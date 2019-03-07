@@ -41,7 +41,6 @@ func (mock *mockPayoutInfoRegistry) UpdatePayoutInfo(id identity.Identity, ethAd
 
 var mockSignerFactory = func(id identity.Identity) identity.Signer { return nil }
 
-/*
 func TestUpdatePayoutInfoWithoutAddress(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req, err := http.NewRequest(
@@ -61,13 +60,13 @@ func TestUpdatePayoutInfoWithoutAddress(t *testing.T) {
 		`{
 			"message": "validation_error",
 			"errors" : {
-				"eth_address": [ {"code" : "required" , "message" : "Field is required" } ]
+				"ethAddress": [ {"code" : "required" , "message" : "Field is required" } ]
 			}
 		}`,
 		resp.Body.String(),
 	)
 }
-*/
+
 func TestUpdatePayoutInfo(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	req, err := http.NewRequest(

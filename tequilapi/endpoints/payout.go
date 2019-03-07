@@ -113,7 +113,7 @@ func toPayoutInfoRequest(req *http.Request) (*payoutInfo, error) {
 func validatePayoutInfoRequest(req *payoutInfo) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
 	if req.EthAddress == nil {
-		errors.ForField("eth_address").AddError("required", "Field is required")
+		errors.ForField("ethAddress").AddError("required", "Field is required")
 	}
 	// TODO: implement validation of eth address
 	return
