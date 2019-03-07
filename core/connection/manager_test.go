@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
@@ -38,7 +39,7 @@ type testContext struct {
 	suite.Suite
 	fakeConnectionFactory *connectionFactoryFake
 	connManager           *connectionManager
-	fakeDialog            *fakeDialog
+	mockDialog            *mockDialog
 	MockPaymentIssuer     *MockPaymentIssuer
 	stubPublisher         *StubPublisher
 	mockStatistics        consumer.SessionStatistics
@@ -57,6 +58,7 @@ var (
 		ServiceDefinition: &fakeServiceDefinition{},
 	}
 	establishedSessionID = session.ID("session-100")
+	paymentInfo          *promise.PaymentInfo
 )
 
 func (tc *testContext) SetupTest() {
@@ -67,13 +69,22 @@ func (tc *testContext) SetupTest() {
 	dialogCreator := func(consumer, provider identity.Identity, contact market.Contact) (communication.Dialog, error) {
 		tc.Lock()
 		defer tc.Unlock()
-		tc.fakeDialog = &fakeDialog{sessionID: establishedSessionID}
-		return tc.fakeDialog, nil
+		tc.mockDialog = &mockDialog{
+			sessionID:   establishedSessionID,
+			paymentInfo: paymentInfo,
+		}
+		return tc.mockDialog, nil
 	}
 
-	mockPaymentFactory := func(initialState promise.State, messageChan chan balance.Message, dialog communication.Dialog, consumer, provider identity.Identity) (PaymentIssuer, error) {
+	mockPaymentFactory := func(initialState promise.PaymentInfo,
+		paymentDefinition dto.PaymentPerTime,
+		messageChan chan balance.Message,
+		dialog communication.Dialog,
+		consumer, provider identity.Identity) (PaymentIssuer, error) {
 		tc.MockPaymentIssuer = &MockPaymentIssuer{
-			stopChan: make(chan struct{}),
+			initialState:      initialState,
+			paymentDefinition: paymentDefinition,
+			stopChan:          make(chan struct{}),
 		}
 		return tc.MockPaymentIssuer, nil
 	}
@@ -303,6 +314,22 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 	assert.True(tc.T(), found)
 }
 
+func (tc *testContext) Test_ManagerSetsPaymentInfo() {
+	defer func() {
+		paymentInfo = nil
+	}()
+	paymentInfo = &promise.PaymentInfo{
+		LastPromise: promise.LastPromise{
+			SequenceID: 1,
+			Amount:     200,
+		},
+		FreeCredit: 100,
+	}
+	err := tc.connManager.Connect(consumerID, activeProposal, ConnectParams{})
+	assert.Nil(tc.T(), err)
+	assert.Exactly(tc.T(), *paymentInfo, tc.MockPaymentIssuer.initialState)
+}
+
 func (tc *testContext) Test_ManagerPublishesEvents() {
 	tc.stubPublisher.Clear()
 
@@ -358,10 +385,12 @@ type fakeServiceDefinition struct{}
 func (fs *fakeServiceDefinition) GetLocation() market.Location { return market.Location{} }
 
 type MockPaymentIssuer struct {
-	startCalled bool
-	stopCalled  bool
-	MockError   error
-	stopChan    chan struct{}
+	initialState      promise.PaymentInfo
+	paymentDefinition dto.PaymentPerTime
+	startCalled       bool
+	stopCalled        bool
+	MockError         error
+	stopChan          chan struct{}
 	sync.Mutex
 }
 
