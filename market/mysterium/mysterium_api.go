@@ -79,11 +79,10 @@ func (mApi *MysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 	return err
 }
 
-// CreatePayoutInfo registers given payout info next to identity to discovery service
-func (mApi *MysteriumAPI) CreatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error {
+// UpdatePayoutInfo registers given payout info next to identity to discovery service
+func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error {
 	path := fmt.Sprintf("identities/%s/payout", id.Address)
-	requestBody := CreatePayoutInfoRequest{
-		Identity:   id.Address,
+	requestBody := UpdatePayoutInfoRequest{
 		EthAddress: ethAddress,
 	}
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, path, requestBody, signer)

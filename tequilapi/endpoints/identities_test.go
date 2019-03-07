@@ -30,17 +30,6 @@ import (
 
 const identityUrl = "/irrelevant"
 
-type mockPayoutInfoRegistry struct {
-	recordedId         identity.Identity
-	recordedEthAddress string
-}
-
-func (mock *mockPayoutInfoRegistry) CreatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error {
-	mock.recordedId = id
-	mock.recordedEthAddress = ethAddress
-	return nil
-}
-
 var (
 	existingIdentities = []identity.Identity{
 		{"0x000000000000000000000000000000000000000a"},
@@ -61,7 +50,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 	params := httprouter.Params{{"id", "1234abcd"}}
 	assert.Nil(t, err)
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, nil).Unlock
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Unlock
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
@@ -81,7 +70,7 @@ func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 	params := httprouter.Params{{"id", "1234abcd"}}
 	assert.Nil(t, err)
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, nil).Unlock
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Unlock
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
@@ -97,7 +86,7 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, nil).Unlock
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Unlock
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
@@ -126,7 +115,7 @@ func TestUnlockFailure(t *testing.T) {
 
 	mockIdm.MarkUnlockToFail()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, nil).Unlock
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Unlock
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusForbidden, resp.Code)
@@ -146,7 +135,7 @@ func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, nil).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Create
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
@@ -163,7 +152,7 @@ func TestCreateNewIdentityNoPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, nil).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Create
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
@@ -190,7 +179,7 @@ func TestCreateNewIdentity(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, nil).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Create
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -207,7 +196,7 @@ func TestListIdentities(t *testing.T) {
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, nil).List
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -220,50 +209,4 @@ func TestListIdentities(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
-}
-
-func TestRegisterPayoutAddressWithoutAddress(t *testing.T) {
-	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
-	req, err := http.NewRequest(
-		http.MethodPut,
-		identityUrl,
-		bytes.NewBufferString(`{}`),
-	)
-	assert.NoError(t, err)
-
-	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, nil).CreatePayoutInfo
-	handlerFunc(resp, req, nil)
-
-	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
-	assert.JSONEq(
-		t,
-		`{
-			"message": "validation_error",
-			"errors" : {
-				"eth_address": [ {"code" : "required" , "message" : "Field is required" } ]
-			}
-		}`,
-		resp.Body.String(),
-	)
-}
-
-func TestRegisterPayoutAddress(t *testing.T) {
-	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
-	req, err := http.NewRequest(
-		http.MethodPost,
-		identityUrl,
-		bytes.NewBufferString(`{"eth_address": "1234payout"}`),
-	)
-	assert.NoError(t, err)
-
-	resp := httptest.NewRecorder()
-	mockPayoutInfoRegistry := &mockPayoutInfoRegistry{}
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory, mockPayoutInfoRegistry).CreatePayoutInfo
-	params := httprouter.Params{{"id", "1234abcd"}}
-	handlerFunc(resp, req, params)
-
-	assert.Equal(t, "1234abcd", mockPayoutInfoRegistry.recordedId.Address)
-	assert.Equal(t, "1234payout", mockPayoutInfoRegistry.recordedEthAddress)
-	assert.Equal(t, http.StatusOK, resp.Code)
 }

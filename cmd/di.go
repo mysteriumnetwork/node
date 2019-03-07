@@ -281,12 +281,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.SignerFactory)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
+	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 

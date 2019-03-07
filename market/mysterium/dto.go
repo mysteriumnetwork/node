@@ -24,9 +24,8 @@ type CreateIdentityRequest struct {
 	Identity string `json:"identity"`
 }
 
-// CreatePayoutInfoRequest represents JSON request for creating payout info request
-type CreatePayoutInfoRequest struct {
-	Identity   string `json:"identity"`
+// UpdatePayoutInfoRequest represents JSON request for creating payout info request
+type UpdatePayoutInfoRequest struct {
 	EthAddress string `json:"payout_eth_address"`
 }
 
