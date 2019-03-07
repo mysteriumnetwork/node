@@ -23,10 +23,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWhitelistingCorsPolicy_AllowedOrigin_ReturnsSameOrDefaultOrigin(t *testing.T) {
-	var policy = WhitelistingCorsPolicy{
-		DefaultTrustedOrigin:  "https://mysterium.network",
-		AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
+func TestRegexpCorsPolicy_AllowedOrigin_ReturnsSameOrDefaultOrigin(t *testing.T) {
+	var policy = RegexpCorsPolicy{
+		DefaultTrustedOrigin:  "default",
+		AllowedOriginSuffixes: []string{"^full-match$", "end-match$"},
 	}
 
 	tests := []struct {
@@ -34,24 +34,20 @@ func TestWhitelistingCorsPolicy_AllowedOrigin_ReturnsSameOrDefaultOrigin(t *test
 		expectedAllowed string
 	}{
 		{
-			requested:       "http://localhost",
-			expectedAllowed: "http://localhost",
+			requested:       "full-match",
+			expectedAllowed: "full-match",
 		},
 		{
-			requested:       "https://wallet.mysterium.network",
-			expectedAllowed: "https://wallet.mysterium.network",
+			requested:       "a-full-match",
+			expectedAllowed: "default",
 		},
 		{
-			requested:       "https://mysterium.network",
-			expectedAllowed: "https://mysterium.network",
+			requested:       "end-match",
+			expectedAllowed: "end-match",
 		},
 		{
-			requested:       "https://any-future-subdomain.mysterium.network",
-			expectedAllowed: "https://any-future-subdomain.mysterium.network",
-		},
-		{
-			requested:       "http://some-bad-people.com",
-			expectedAllowed: "https://mysterium.network",
+			requested:       "the-end-match",
+			expectedAllowed: "the-end-match",
 		},
 	}
 

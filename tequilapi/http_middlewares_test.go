@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testCorsPolicy = WhitelistingCorsPolicy{
+var testCorsPolicy = RegexpCorsPolicy{
 	DefaultTrustedOrigin:  "https://mysterium.network",
 	AllowedOriginSuffixes: []string{"mysterium.network", "localhost"},
 }
