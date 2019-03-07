@@ -50,8 +50,7 @@ type identityUnlockingDto struct {
 }
 
 type identitiesAPI struct {
-	idm           identity.Manager
-	signerFactory identity.SignerFactory
+	idm identity.Manager
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -67,8 +66,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager, signerFactory identity.SignerFactory) *identitiesAPI {
-	return &identitiesAPI{idm, signerFactory}
+func NewIdentitiesEndpoint(idm identity.Manager) *identitiesAPI {
+	return &identitiesAPI{idm}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -228,9 +227,8 @@ func validateCreationRequest(createReq *identityCreationDto) (errors *validation
 func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
-	signerFactory identity.SignerFactory,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, signerFactory)
+	idmEnd := NewIdentitiesEndpoint(idm)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
