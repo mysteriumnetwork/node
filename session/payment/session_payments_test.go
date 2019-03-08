@@ -56,17 +56,19 @@ func (mpt *MockPromiseTracker) ExtendPromise(amountToAdd uint64) (promises.Issue
 }
 
 var (
-	balanceChannel  = make(chan balance.Message, 1)
 	promiseToReturn = promises.IssuedPromise{
 		Promise: promises.Promise{
 			SeqNo:  1,
 			Amount: 0,
 		},
 	}
-	promiseSender  = &MockPeerPromiseSender{chanToWriteTo: make(chan promise.Message, 1)}
 	promiseTracker = &MockPromiseTracker{promiseToReturn: promiseToReturn, errToReturn: nil}
 	balanceTracker = &MockBalanceTracker{balanceToReturn: 0}
 )
+
+func newPromiseSender() *MockPeerPromiseSender {
+	return &MockPeerPromiseSender{chanToWriteTo: make(chan promise.Message, 1)}
+}
 
 func NewTestSessionPayments(bm chan balance.Message, ps PeerPromiseSender, pt PromiseTracker, bt BalanceTracker) *SessionPayments {
 	return NewSessionPayments(
@@ -78,7 +80,7 @@ func NewTestSessionPayments(bm chan balance.Message, ps PeerPromiseSender, pt Pr
 }
 
 func Test_SessionPayments_Start_Stop(t *testing.T) {
-	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker, balanceTracker)
+	cpo := NewTestSessionPayments(make(chan balance.Message, 1), newPromiseSender(), promiseTracker, balanceTracker)
 	go func() {
 		time.Sleep(time.Nanosecond * 10)
 		cpo.Stop()
@@ -88,6 +90,8 @@ func Test_SessionPayments_Start_Stop(t *testing.T) {
 }
 
 func Test_SessionPayments_SendsPromiseOnBalance(t *testing.T) {
+	balanceChannel := make(chan balance.Message, 1)
+	promiseSender := newPromiseSender()
 	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker, balanceTracker)
 	go cpo.Start()
 	defer cpo.Stop()
@@ -99,10 +103,11 @@ func Test_SessionPayments_SendsPromiseOnBalance(t *testing.T) {
 }
 
 func Test_SessionPayments_ReportsIssuingErrors(t *testing.T) {
+	balanceChannel := make(chan balance.Message, 1)
 	customTracker := *promiseTracker
 	err := errors.New("issuing failed")
 	customTracker.errToReturn = err
-	cpo := NewTestSessionPayments(balanceChannel, promiseSender, &customTracker, balanceTracker)
+	cpo := NewTestSessionPayments(balanceChannel, newPromiseSender(), &customTracker, balanceTracker)
 
 	testDone := make(chan struct{})
 	go func() {
@@ -116,13 +121,14 @@ func Test_SessionPayments_ReportsIssuingErrors(t *testing.T) {
 }
 
 func Test_SessionPayments_ReportsSendingErrors(t *testing.T) {
-	customSender := *promiseSender
+	balanceChannel := make(chan balance.Message, 1)
+	customSender := newPromiseSender()
 	err := errors.New("sending failed")
 	customSender.mockError = err
 
 	testDone := make(chan struct{})
 
-	cpo := NewTestSessionPayments(balanceChannel, &customSender, promiseTracker, balanceTracker)
+	cpo := NewTestSessionPayments(balanceChannel, customSender, promiseTracker, balanceTracker)
 	go func() {
 		err := cpo.Start()
 		assert.Equal(t, customSender.mockError, err)
@@ -134,7 +140,8 @@ func Test_SessionPayments_ReportsSendingErrors(t *testing.T) {
 }
 
 func Test_SessionPayments_ErrsOnBalanceMissmatch(t *testing.T) {
-	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker, balanceTracker)
+	balanceChannel := make(chan balance.Message, 1)
+	cpo := NewTestSessionPayments(balanceChannel, newPromiseSender(), promiseTracker, balanceTracker)
 	testDone := make(chan struct{})
 
 	go func() {
