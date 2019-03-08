@@ -56,6 +56,21 @@ func TestStorage_Add(t *testing.T) {
 	assert.Exactly(t, sessionNew, storage.sessionMap[sessionNew.ID])
 }
 
+func TestStorage_GetAll(t *testing.T) {
+	sessionFirst := Session{ID: ID("id1")}
+	sessionSecond := Session{ID: ID("id2")}
+	storage := &StorageMemory{
+		sessionMap: map[ID]Session{
+			sessionFirst.ID:  sessionFirst,
+			sessionSecond.ID: sessionSecond,
+		},
+	}
+
+	sessions, err := storage.GetAll()
+	assert.NoError(t, err)
+	assert.Equal(t, sessions, []Session{sessionFirst, sessionSecond})
+}
+
 func TestStorage_Remove(t *testing.T) {
 	storage := mockStorage(sessionExisting)
 

@@ -43,6 +43,16 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 	storage.sessionMap[sessionInstance.ID] = sessionInstance
 }
 
+// GetAll returns all sessions in storage
+func (storage *StorageMemory) GetAll() ([]Session, error) {
+	i := 0
+	list := make([]Session, len(storage.sessionMap))
+	for _, se := range storage.sessionMap {
+		list[i] = se
+	}
+	return list, nil
+}
+
 // Find returns underlying session instance
 func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	sessionInstance, found := storage.sessionMap[id]
