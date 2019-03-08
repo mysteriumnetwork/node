@@ -48,8 +48,8 @@ func NewPostRequest(apiURI, path string, requestBody interface{}) (*http.Request
 	return newRequest(http.MethodPost, apiURI, path, bodyBytes)
 }
 
-// NewSignedPostRequest signs payload and generates http Post request
-func NewSignedPostRequest(apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
+// NewSignedRequest signs payload and generates http request
+func NewSignedRequest(httpMethod, apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
 	bodyBytes, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func NewSignedPostRequest(apiURI, path string, requestBody interface{}, signer i
 		return nil, err
 	}
 
-	req, err := newRequest(http.MethodPost, apiURI, path, bodyBytes)
+	req, err := newRequest(httpMethod, apiURI, path, bodyBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +68,16 @@ func NewSignedPostRequest(apiURI, path string, requestBody interface{}, signer i
 	req.Header.Add(authenticationHeaderName, authenticationSchemaName+" "+signature.Base64())
 
 	return req, nil
+}
+
+// NewSignedPostRequest signs payload and generates http Post request
+func NewSignedPostRequest(apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
+	return NewSignedRequest(http.MethodPost, apiURI, path, requestBody, signer)
+}
+
+// NewSignedPutRequest signs payload and generates http Put request
+func NewSignedPutRequest(apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
+	return NewSignedRequest(http.MethodPut, apiURI, path, requestBody, signer)
 }
 
 func encodeToJSON(value interface{}) ([]byte, error) {

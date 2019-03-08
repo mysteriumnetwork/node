@@ -32,7 +32,7 @@ type payoutInfo struct {
 	// in Ethereum address format
 	// required: true
 	// example: 0x000000000000000000000000000000000000000a
-	EthAddress *string `json:"ethAddress"`
+	EthAddress string `json:"ethAddress"`
 }
 
 // PayoutInfoRegistry allows to register payout info
@@ -95,7 +95,7 @@ func (endpoint *payoutAPI) UpdatePayoutInfo(resp http.ResponseWriter, request *h
 		return
 	}
 
-	err = endpoint.payoutInfoRegistry.UpdatePayoutInfo(id, *payoutInfoReq.EthAddress, endpoint.signerFactory(id))
+	err = endpoint.payoutInfoRegistry.UpdatePayoutInfo(id, payoutInfoReq.EthAddress, endpoint.signerFactory(id))
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -112,7 +112,7 @@ func toPayoutInfoRequest(req *http.Request) (*payoutInfo, error) {
 
 func validatePayoutInfoRequest(req *payoutInfo) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
-	if req.EthAddress == nil {
+	if req.EthAddress == "" {
 		errors.ForField("ethAddress").AddError("required", "Field is required")
 	}
 	// TODO: implement validation of eth address
