@@ -41,11 +41,19 @@ type serviceSession struct {
 	ConsumerID string `json:"consumerId"`
 }
 
-type serviceSessionsEndpoint struct{}
+type serviceSessionStorage interface {
+	GetAll() ([]session.Session, error)
+}
+
+type serviceSessionsEndpoint struct {
+	sessionStorage serviceSessionStorage
+}
 
 // NewServiceSessionsEndpoint creates and returns sessions endpoint
-func NewServiceSessionsEndpoint() *serviceSessionsEndpoint {
-	return &serviceSessionsEndpoint{}
+func NewServiceSessionsEndpoint(sessionStorage serviceSessionStorage) *serviceSessionsEndpoint {
+	return &serviceSessionsEndpoint{
+		sessionStorage: sessionStorage,
+	}
 }
 
 // swagger:operation GET /service/:id/sessions ServiceSessions listSessions
@@ -62,12 +70,22 @@ func NewServiceSessionsEndpoint() *serviceSessionsEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *serviceSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sessions := make([]session.Session, 0)
+	sessions, err := endpoint.sessionStorage.GetAll()
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
 
 	sessionsSerializable := serviceSessionsList{
 		Sessions: mapServiceSessions(sessions, serviceSessionToDto),
 	}
 	utils.WriteAsJSON(sessionsSerializable, resp)
+}
+
+// AddRoutesForServiceSessions attaches service sessions endpoints to router
+func AddRoutesForServiceSessions(router *httprouter.Router, sessionStorage serviceSessionStorage) {
+	sessionsEndpoint := NewServiceSessionsEndpoint(sessionStorage)
+	router.GET("/service-sessions", sessionsEndpoint.List)
 }
 
 func serviceSessionToDto(se session.Session) serviceSession {

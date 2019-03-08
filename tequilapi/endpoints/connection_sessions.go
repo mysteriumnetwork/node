@@ -98,11 +98,12 @@ func (endpoint *connectionSessionsEndpoint) List(resp http.ResponseWriter, reque
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+
 	sessionsSerializable := connectionSessionsList{Sessions: mapConnectionSessions(sessions, connectionSessionToDto)}
 	utils.WriteAsJSON(sessionsSerializable, resp)
 }
 
-// AddRoutesForConnectionSessions attaches sessions endpoints to router
+// AddRoutesForConnectionSessions attaches connection sessions endpoints to router
 func AddRoutesForConnectionSessions(router *httprouter.Router, sessionStorage connectionSessionStorage) {
 	sessionsEndpoint := NewConnectionSessionsEndpoint(sessionStorage)
 	router.GET("/connection-sessions", sessionsEndpoint.List)
