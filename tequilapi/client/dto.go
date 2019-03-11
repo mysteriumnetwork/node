@@ -143,3 +143,14 @@ type ServiceInfoDTO struct {
 	Status      string          `json:"status"`
 	Proposal    ProposalDTO     `json:"proposal"`
 }
+
+// ServiceSessionListDTO copied from tequilapi endpoint
+type ServiceSessionListDTO struct {
+	Sessions []ServiceSessionDTO `json:"sessions"`
+}
+
+// ServiceSessionDTO copied from tequilapi endpoint
+type ServiceSessionDTO struct {
+	ID         string `json:"id"`
+	ConsumerID string `json:"consumerId"`
+}

@@ -330,6 +330,19 @@ func (client *Client) ServiceStop(id string) error {
 	return nil
 }
 
+// ServiceSessions returns all currently running sessions
+func (client *Client) ServiceSessions() (ServiceSessionListDTO, error) {
+	sessions := ServiceSessionListDTO{}
+	response, err := client.http.Get("service-sessions", url.Values{})
+	if err != nil {
+		return sessions, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &sessions)
+	return sessions, err
+}
+
 // filterSessionsByType removes all sessions of irrelevant types
 func filterSessionsByType(serviceType string, sessions ConnectionSessionListDTO) ConnectionSessionListDTO {
 	matches := 0
