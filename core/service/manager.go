@@ -25,7 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	discovery_registry "github.com/mysteriumnetwork/node/market/proposals/registry"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -50,7 +49,14 @@ type DialogWaiterFactory func(providerID identity.Identity, serviceType string) 
 type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator) communication.DialogHandler
 
 // DiscoveryFactory initiates instance which is able announce service discoverability
-type DiscoveryFactory func() *discovery_registry.Discovery
+type DiscoveryFactory func() Discovery
+
+// Discovery registers the service to the discovery api periodically
+type Discovery interface {
+	Start(ownIdentity identity.Identity, proposal market.ServiceProposal)
+	Stop()
+	Wait()
+}
 
 // NewManager creates new instance of pluggable instances manager
 func NewManager(
@@ -122,14 +128,21 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 	go func() {
 		instance.state = Running
-		err = service.Serve(providerID)
+		serveErr := service.Serve(providerID)
+		if serveErr != nil {
+			log.Error("Service serve failed: ", serveErr)
+		}
+
 		instance.state = NotRunning
-		if err != nil {
-			log.Error("Service serve failed: ", err)
+
+		stopErr := manager.servicePool.Stop(id)
+		if stopErr != nil {
+			log.Error("Service stop failed: ", stopErr)
 		}
 
 		discovery.Wait()
 	}()
+
 	return id, nil
 }
 

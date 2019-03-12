@@ -19,22 +19,33 @@ package service
 
 import (
 	"encoding/json"
+	"sync"
 
+	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 var _ Service = &serviceFake{}
 
 type serviceFake struct {
+	mockProcess        chan struct{}
 	onStartReturnError error
 }
 
 func (service *serviceFake) Serve(identity.Identity) error {
+	if service.mockProcess != nil {
+		for range service.mockProcess {
+		}
+	}
 	return service.onStartReturnError
 }
 
 func (service *serviceFake) Stop() error {
+	if service.mockProcess != nil {
+		close(service.mockProcess)
+	}
 	return nil
 }
 
@@ -44,4 +55,62 @@ func (service *serviceFake) GetType() string {
 
 func (service *serviceFake) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	return struct{}{}, func() {}, nil
+}
+
+type mockDialogWaiter struct {
+	contact  market.Contact
+	stopErr  error
+	serveErr error
+	startErr error
+}
+
+func (mdw *mockDialogWaiter) Start() (market.Contact, error) {
+	return mdw.contact, mdw.startErr
+}
+
+func (mdw *mockDialogWaiter) Stop() error {
+	return mdw.stopErr
+}
+
+func (mdw *mockDialogWaiter) ServeDialogs(_ communication.DialogHandler) error {
+	return mdw.serveErr
+}
+
+// MockDialogWaiterFactory returns a new instance of communication dialog waiter.
+func MockDialogWaiterFactory(providerID identity.Identity, serviceType string) (communication.DialogWaiter, error) {
+	return &mockDialogWaiter{}, nil
+}
+
+type mockDialogHandler struct {
+}
+
+func (mdh *mockDialogHandler) Handle(communication.Dialog) error {
+	return nil
+}
+
+// MockDialogHandlerFactory creates a new mock dialog handler
+func MockDialogHandlerFactory(market.ServiceProposal, session.ConfigNegotiator) communication.DialogHandler {
+	return &mockDialogHandler{}
+}
+
+type mockDiscovery struct {
+	wg sync.WaitGroup
+}
+
+func (mds *mockDiscovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
+	mds.wg.Add(1)
+}
+func (mds *mockDiscovery) Stop() {
+	mds.wg.Done()
+}
+
+func (mds *mockDiscovery) Wait() {
+	mds.wg.Wait()
+}
+
+// MockDiscoveryFactoryFunc returns a discovery factory which in turn returns the discovery service.
+func MockDiscoveryFactoryFunc(ds Discovery) DiscoveryFactory {
+	return func() Discovery {
+		return ds
+	}
 }
