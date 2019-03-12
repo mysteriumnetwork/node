@@ -157,7 +157,7 @@ type Instance struct {
 	service      RunnableService
 	proposal     market.ServiceProposal
 	dialogWaiter communication.DialogWaiter
-	discovery    DiscoveryService
+	discovery    Discovery
 }
 
 // Options returns options used to start service

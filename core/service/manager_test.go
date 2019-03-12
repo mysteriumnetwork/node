@@ -39,8 +39,8 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		return &mockCopy, proposalMock, nil
 	})
 
-	discoveryService := mockDiscoveryService{}
-	discoveryFactory := MockDiscoveryFactoryFunc(&discoveryService)
+	discovery := mockDiscovery{}
+	discoveryFactory := MockDiscoveryFactoryFunc(&discovery)
 	manager := NewManager(
 		registry,
 		MockDialogWaiterFactory,
@@ -50,7 +50,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.Nil(t, err)
 
-	discoveryService.Wait()
+	discovery.Wait()
 	assert.Len(t, manager.servicePool.List(), 0)
 }
 
@@ -62,8 +62,8 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		return &mockCopy, proposalMock, nil
 	})
 
-	discoveryService := mockDiscoveryService{}
-	discoveryFactory := MockDiscoveryFactoryFunc(&discoveryService)
+	discovery := mockDiscovery{}
+	discoveryFactory := MockDiscoveryFactoryFunc(&discovery)
 	manager := NewManager(
 		registry,
 		MockDialogWaiterFactory,
@@ -74,6 +74,6 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 	assert.Nil(t, err)
 	err = manager.Stop(id)
 	assert.Nil(t, err)
-	discoveryService.Wait()
+	discovery.Wait()
 	assert.Len(t, manager.servicePool.List(), 0)
 }

@@ -167,7 +167,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, di.PromiseStorage, nodeOptions)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))
 	}
-	newDiscovery := func() service.DiscoveryService {
+	newDiscovery := func() service.Discovery {
 		return registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory)
 	}
 	di.ServicesManager = service.NewManager(

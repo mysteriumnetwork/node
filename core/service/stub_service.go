@@ -93,24 +93,24 @@ func MockDialogHandlerFactory(market.ServiceProposal, session.ConfigNegotiator) 
 	return &mockDialogHandler{}
 }
 
-type mockDiscoveryService struct {
+type mockDiscovery struct {
 	wg sync.WaitGroup
 }
 
-func (mds *mockDiscoveryService) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
+func (mds *mockDiscovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
 	mds.wg.Add(1)
 }
-func (mds *mockDiscoveryService) Stop() {
+func (mds *mockDiscovery) Stop() {
 	mds.wg.Done()
 }
 
-func (mds *mockDiscoveryService) Wait() {
+func (mds *mockDiscovery) Wait() {
 	mds.wg.Wait()
 }
 
 // MockDiscoveryFactoryFunc returns a discovery factory which in turn returns the discovery service.
-func MockDiscoveryFactoryFunc(ds DiscoveryService) DiscoveryFactory {
-	return func() DiscoveryService {
+func MockDiscoveryFactoryFunc(ds Discovery) DiscoveryFactory {
+	return func() Discovery {
 		return ds
 	}
 }

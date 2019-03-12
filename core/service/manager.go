@@ -49,10 +49,10 @@ type DialogWaiterFactory func(providerID identity.Identity, serviceType string) 
 type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator) communication.DialogHandler
 
 // DiscoveryFactory initiates instance which is able announce service discoverability
-type DiscoveryFactory func() DiscoveryService
+type DiscoveryFactory func() Discovery
 
-// DiscoveryService registers the service to the discovery api periodically
-type DiscoveryService interface {
+// Discovery registers the service to the discovery api periodically
+type Discovery interface {
 	Start(ownIdentity identity.Identity, proposal market.ServiceProposal)
 	Stop()
 	Wait()
