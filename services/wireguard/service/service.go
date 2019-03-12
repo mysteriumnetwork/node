@@ -59,6 +59,9 @@ type Manager struct {
 	natService       nat.NATService
 
 	connectionEndpointFactory func() (wg.ConnectionEndpoint, error)
+
+	mu   sync.Mutex // TODO this is a temporary solution to cleanup oldest used wireguard resources.
+	list []*func()  // TODO it should be removed once payment bases session cleanup implemented.
 }
 
 // ProvideConfig provides the config for consumer
@@ -68,6 +71,8 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 	if err != nil {
 		return nil, nil, err
 	}
+
+	manager.cleanOldEndpoints()
 
 	connectionEndpoint, err := manager.connectionEndpointFactory()
 	if err != nil {
@@ -104,7 +109,49 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		return connectionEndpoint.Stop()
 	}
 
-	return config, destroy, nil
+	return config, func() error { manager.once(func() { destroy() }); return nil }, nil
+}
+
+// TODO this is a temporary solution to cleanup oldest used wireguard resources.
+// TODO it should be removed once payment bases session cleanup implemented.
+func (manager *Manager) once(f func()) func() {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
+	once := sync.Once{}
+	cleanOnce := func() {
+		once.Do(f)
+	}
+	manager.list = append(manager.list, &cleanOnce)
+
+	return func() {
+		cleanOnce()
+
+		manager.mu.Lock()
+		defer manager.mu.Unlock()
+
+		for i := range manager.list {
+			if manager.list[i] == &cleanOnce {
+				manager.list = append(manager.list[0:i], manager.list[i+1:]...)
+				return
+			}
+		}
+	}
+}
+
+// TODO this is a temporary solution to cleanup oldest used wireguard resources.
+// TODO it should be removed once payment bases session cleanup implemented.
+func (manager *Manager) cleanOldEndpoints() {
+	manager.mu.Lock()
+	defer manager.mu.Unlock()
+
+	if len(manager.list) >= resources.MaxResources-1 {
+		log.Warn(logPrefix, "We have reached a maximum number of interfaces. Cleaning up oldest one.")
+
+		f := *manager.list[0]
+		f()
+		manager.list = manager.list[1:]
+	}
 }
 
 // Start starts service - does not block
