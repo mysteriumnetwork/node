@@ -99,7 +99,6 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP)
 
 	vpnServerConfig := m.vpnServerConfigFactory(primitives)
-	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
 	// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
 	m.natPinger.BindProvider(m.serviceOptions.OpenvpnPort)
@@ -108,6 +107,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		m.natPinger.WaitForHole()
 
 		log.Info(logPrefix, "starting openvpn server")
+		m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 		if err = m.vpnServer.Start(); err != nil {
 			return
 		}

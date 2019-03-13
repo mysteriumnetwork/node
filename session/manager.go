@@ -181,7 +181,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 		return ErrorWrongSessionOwner
 	}
 
-	if sessionInstance.Last {
+	if sessionInstance.Last && manager.lastSessionShutdown != nil {
 		log.Info("attempting to stop service")
 		if manager.natEventGetter.LastEvent() == traversal.EventFailure {
 			log.Info("last session destroy requested - stopping service executable")
@@ -197,5 +197,8 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 }
 
 func (manager *Manager) notifyNATPinger(requestConfig json.RawMessage) {
-	manager.natPingerChan() <- requestConfig
+	natPingerChannel := manager.natPingerChan()
+	if natPingerChannel != nil {
+		natPingerChannel <- requestConfig
+	}
 }

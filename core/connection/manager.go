@@ -50,7 +50,7 @@ var (
 )
 
 // Creator creates new connection by given options and uses state channel to report state changes
-type Creator func(serviceType string, stateChannnel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
+type Creator func(serviceType string, stateChannel StateChannel, statisticsChannel StatisticsChannel) (Connection, error)
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {

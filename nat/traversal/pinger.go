@@ -37,25 +37,30 @@ type ConfigParser interface {
 
 // Pinger represents NAT pinger structure
 type Pinger struct {
-	localPort     int
-	pingTarget    chan json.RawMessage
-	pingReceived  chan bool
-	pingCancelled chan bool
-	eventsTracker *EventsTracker
-	configParser  ConfigParser
+	localPort      int
+	pingTarget     chan json.RawMessage
+	pingReceived   chan bool
+	pingCancelled  chan bool
+	natEventWaiter NatEventWaiter
+	configParser   ConfigParser
+}
+
+// NatEventWaiter is responsible for waiting for nat events
+type NatEventWaiter interface {
+	WaitForEvent() Event
 }
 
 // NewPingerFactory returns Pinger instance
-func NewPingerFactory(tracker *EventsTracker, parser ConfigParser) *Pinger {
+func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser) *Pinger {
 	target := make(chan json.RawMessage)
 	received := make(chan bool)
 	cancel := make(chan bool)
 	return &Pinger{
-		pingTarget:    target,
-		pingReceived:  received,
-		pingCancelled: cancel,
-		eventsTracker: tracker,
-		configParser:  parser,
+		pingTarget:     target,
+		pingReceived:   received,
+		pingCancelled:  cancel,
+		natEventWaiter: waiter,
+		configParser:   parser,
 	}
 }
 
@@ -174,7 +179,7 @@ func (p *Pinger) BindPort(port int) {
 // WaitForHole waits while ping from remote peer is received
 func (p *Pinger) WaitForHole() error {
 	// TODO: check if three is a nat to punch
-	if p.eventsTracker.WaitForEvent() == EventSuccess {
+	if p.natEventWaiter.WaitForEvent() == EventSuccess {
 		return nil
 	}
 	log.Info(prefix, "waiting for NAT pin-hole")

@@ -83,6 +83,23 @@ type Storage interface {
 	Close() error
 }
 
+// NatPinger is responsible for pinging nat holes
+type NatPinger interface {
+	PingProvider(ip string, port int) error
+	PingTargetChan() chan json.RawMessage
+	BindProvider(port int)
+	BindPort(port int)
+	WaitForHole() error
+	Start()
+}
+
+// NatEventTracker is responsible for tracking nat events
+type NatEventTracker interface {
+	ConsumeNATEvent(event traversal.Event)
+	LastEvent() traversal.Event
+	WaitForEvent() traversal.Event
+}
+
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
@@ -119,8 +136,8 @@ type Dependencies struct {
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 
-	NATPinger           *traversal.Pinger
-	NATTracker          *traversal.EventsTracker
+	NATPinger           NatPinger
+	NATTracker          NatEventTracker
 	LastSessionShutdown chan bool
 }
 
@@ -150,7 +167,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapIdentityComponents(nodeOptions)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 
-	di.bootstrapNATComponents()
+	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
 	di.bootstrapNodeComponents(nodeOptions)
 
@@ -325,7 +342,7 @@ func newSessionManagerFactory(
 	nodeOptions node.Options,
 	natPingerChan func() chan json.RawMessage,
 	lastSessionShutdown chan bool,
-	natTracker *traversal.EventsTracker,
+	natTracker NatEventTracker,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.BalanceTracker, error) {
@@ -444,9 +461,15 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
 }
 
-func (di *Dependencies) bootstrapNATComponents() error {
-	di.NATTracker = traversal.NewEventsTracker()
-	di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
-	di.LastSessionShutdown = make(chan bool)
+func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
+	if options.ExperimentNATPunching {
+		di.NATTracker = traversal.NewEventsTracker()
+		di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
+		di.LastSessionShutdown = make(chan bool)
+	} else {
+		di.NATTracker = &traversal.NoopEventsTracker{}
+		di.NATPinger = &traversal.NoopPinger{}
+		di.LastSessionShutdown = nil
+	}
 	return nil
 }

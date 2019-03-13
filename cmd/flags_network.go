@@ -70,6 +70,11 @@ var (
 		Usage: "Address of the quality oracle service",
 		Value: metadata.DefaultNetwork.QualityOracle,
 	}
+
+	natPunchingFlag = cli.BoolFlag{
+		Name:  "experiment-natpunching",
+		Usage: "Enables experimental nat hole punching",
+	}
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -79,6 +84,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		testFlag, localnetFlag,
 		identityCheckFlag,
 		paymentCheckFlag,
+		natPunchingFlag,
 		discoveryAddressFlag, brokerAddressFlag,
 		etherRPCFlag, etherContractPaymentsFlag,
 		qualityOracleFlag,
@@ -93,6 +99,7 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 
 		ctx.GlobalBool(identityCheckFlag.Name),
 		ctx.GlobalBool(paymentCheckFlag.Name),
+		ctx.GlobalBool(natPunchingFlag.Name),
 
 		ctx.GlobalString(discoveryAddressFlag.Name),
 		ctx.GlobalString(brokerAddressFlag.Name),
