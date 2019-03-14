@@ -74,7 +74,7 @@ func (nat *serviceICS) enableRemoteAccessService() error {
 // Add enables internet connection sharing for the local interface.
 func (nat *serviceICS) Add(rule RuleForwarding) error {
 	// TODO firewall rule configuration should be added here for new connections.
-	ifaceName, err := getInterfaceBySubnet(rule.SourceAddress)
+	ifaceName, err := nat.getInternalInterfaceName()
 	if err != nil {
 		return errors.Wrap(err, "failed to find suitable interface")
 	}
@@ -94,7 +94,7 @@ func (nat *serviceICS) Add(rule RuleForwarding) error {
 // Del disables internet connection sharing for the local interface.
 func (nat *serviceICS) Del(rule RuleForwarding) error {
 	// TODO firewall rule configuration should be added here for cleaning up unused connections.
-	ifaceName, err := getInterfaceBySubnet(rule.SourceAddress)
+	ifaceName, err := nat.getInternalInterfaceName()
 	if err != nil {
 		return errors.Wrap(err, "failed to find suitable interface")
 	}
@@ -192,46 +192,18 @@ func (nat *serviceICS) applySharingConfig(action, ifaceName string) error {
 	return err
 }
 
-func getInterfaceBySubnet(subnet string) (string, error) {
-	_, ipnet, err := net.ParseCIDR(subnet)
+func (nat *serviceICS) getInternalInterfaceName() (string, error) {
+	out, err := nat.powerShell(`Get-WmiObject Win32_NetworkAdapter | Where-Object {$_.ServiceName -eq "tap0901"} | foreach { $_.NetConnectionID }`)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to parse subnet from request")
+		return "", errors.Wrap(err, "failed to detect internal interface name")
 	}
 
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get a list of network interfaces")
+	ifaceName := strings.TrimSpace(string(out))
+	if len(ifaceName) == 0 {
+		return "", errors.New("interface not found")
 	}
 
-	for _, iface := range ifaces {
-		addrs, err := iface.Addrs()
-		if err != nil {
-			return "", errors.Wrap(err, "failed to get list of interface addresses")
-		}
-
-		if contains(ipnet, addrs) {
-			return iface.Name, nil
-		}
-	}
-	return "", errors.New("interface not found")
-}
-
-func contains(ipnet *net.IPNet, addrs []net.Addr) bool {
-	for _, addr := range addrs {
-		var ip net.IP
-		switch v := addr.(type) {
-		case *net.IPNet:
-			ip = v.IP
-		case *net.IPAddr:
-			ip = v.IP
-		}
-
-		if ipnet.Contains(ip) {
-			return true
-		}
-	}
-
-	return false
+	return ifaceName, nil
 }
 
 func powerShell(cmd string) ([]byte, error) {
