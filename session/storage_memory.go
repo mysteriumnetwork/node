@@ -24,14 +24,16 @@ import (
 // NewStorageMemory initiates new session storage
 func NewStorageMemory() *StorageMemory {
 	return &StorageMemory{
-		sessionMap: make(map[ID]Session),
+		sessions:   make([]Session, 0),
+		sessionMap: make(map[ID]int),
 		lock:       sync.Mutex{},
 	}
 }
 
 // StorageMemory maintains a map of session id -> session
 type StorageMemory struct {
-	sessionMap map[ID]Session
+	sessions   []Session
+	sessionMap map[ID]int
 	lock       sync.Mutex
 }
 
@@ -40,23 +42,30 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	storage.sessionMap[sessionInstance.ID] = sessionInstance
+	storageId := len(storage.sessions)
+	storage.sessions = append(storage.sessions, sessionInstance)
+
+	storage.sessionMap[sessionInstance.ID] = storageId
 }
 
 // GetAll returns all sessions in storage
 func (storage *StorageMemory) GetAll() ([]Session, error) {
-	i := 0
-	list := make([]Session, len(storage.sessionMap))
-	for _, se := range storage.sessionMap {
-		list[i] = se
-	}
-	return list, nil
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+
+	return storage.sessions, nil
 }
 
 // Find returns underlying session instance
 func (storage *StorageMemory) Find(id ID) (Session, bool) {
-	sessionInstance, found := storage.sessionMap[id]
-	return sessionInstance, found
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+
+	if storageId, found := storage.sessionMap[id]; found {
+		return storage.sessions[storageId], true
+	}
+
+	return Session{}, false
 }
 
 // Remove removes given session from underlying storage
@@ -64,5 +73,8 @@ func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	delete(storage.sessionMap, id)
+	if storageId, found := storage.sessionMap[id]; found {
+		delete(storage.sessionMap, id)
+		storage.sessions = append(storage.sessions[:storageId], storage.sessions[storageId+1:]...)
+	}
 }
