@@ -35,51 +35,6 @@ func mockedICS(powerShell func(cmd string) ([]byte, error)) *serviceICS {
 	}
 }
 
-func Test_contains(t *testing.T) {
-	type args struct {
-		ipnet *net.IPNet
-		addrs []net.Addr
-	}
-
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{{name: "Subnet contains IP address",
-		args: args{
-			ipnet: &net.IPNet{net.ParseIP("10.10.10.0"), net.IPv4Mask(255, 255, 255, 0)},
-			addrs: []net.Addr{&net.IPAddr{net.ParseIP("10.10.10.11"), ""}},
-		},
-		want: true,
-	}, {name: "Subnet does not contain IP address",
-		args: args{
-			ipnet: &net.IPNet{net.ParseIP("10.10.10.0"), net.IPv4Mask(255, 255, 255, 0)},
-			addrs: []net.Addr{&net.IPAddr{net.ParseIP("11.11.11.11"), ""}},
-		},
-		want: false,
-	}, {name: "Subnet contains both valid and invalid IP addresses",
-		args: args{
-			ipnet: &net.IPNet{net.ParseIP("10.10.10.0"), net.IPv4Mask(255, 255, 255, 0)},
-			addrs: []net.Addr{&net.IPAddr{net.ParseIP("11.11.11.11"), ""}, &net.IPAddr{net.ParseIP("10.10.10.11"), ""}},
-		},
-		want: true,
-	}, {name: "Subnet contains both valid IP net",
-		args: args{
-			ipnet: &net.IPNet{net.ParseIP("10.10.10.0"), net.IPv4Mask(255, 255, 255, 0)},
-			addrs: []net.Addr{&net.IPNet{net.ParseIP("10.10.10.12"), net.IPv4Mask(255, 255, 255, 0)}},
-		},
-		want: true,
-	}}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := contains(tt.args.ipnet, tt.args.addrs); got != tt.want {
-				t.Errorf("contains() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_emptyActionForSharing(t *testing.T) {
 	sh := mockPowerShell{}
 	ics := mockedICS(sh.exec)
@@ -203,13 +158,15 @@ func Test_Enable(t *testing.T) {
 }
 
 func Test_AddDel(t *testing.T) {
-	sh := mockPowerShell{commands: map[string]mockShellResult{}}
+	sh := mockPowerShell{commands: map[string]mockShellResult{
+		`Get-WmiObject Win32_NetworkAdapter | Where-Object {$_.ServiceName -eq "tap0901"} | foreach { $_.NetConnectionID }`: {[]byte("myst0"), nil},
+	}}
 
 	ics := mockedICS(sh.exec)
 	err := ics.Add(RuleForwarding{"127.0.0.1/24", "8.8.8.8"})
 	assert.NoError(t, err)
 
-	ifaceName, err := getInterfaceBySubnet("127.0.0.1/24")
+	ifaceName, err := ics.getInternalInterfaceName()
 	assert.NoError(t, err)
 
 	_, ok := ics.ifaces[ifaceName]
