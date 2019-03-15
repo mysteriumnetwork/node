@@ -21,9 +21,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/mysteriumnetwork/node/core/location"
-
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/location"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -35,7 +34,7 @@ type wgClient interface {
 	ConfigureDevice(name string, config wg.DeviceConfig, subnet net.IPNet) error
 	ConfigureRoutes(iface string, ip net.IP) error
 	DestroyDevice(name string) error
-	AddPeer(name string, peer wg.PeerInfo) error
+	AddPeer(name string, peer wg.PeerInfo, allowedIP ...string) error
 	PeerStats() (wg.Stats, error)
 	Close() error
 }
@@ -100,8 +99,8 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 }
 
 // AddPeer adds new wireguard peer to the wireguard network interface.
-func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr) error {
-	return ce.wgClient.AddPeer(ce.iface, peerInfo{endpoint, publicKey})
+func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr, allowedIP ...string) error {
+	return ce.wgClient.AddPeer(ce.iface, peerInfo{endpoint, publicKey}, allowedIP...)
 }
 
 func (ce *connectionEndpoint) PeerStats() (wg.Stats, error) {
@@ -119,7 +118,7 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	config.Provider.PublicKey = publicKey
 	config.Provider.Endpoint = ce.endpoint
 	config.Consumer.IPAddress = ce.ipAddr
-	config.Consumer.IPAddress.IP = consumerIP(ce.ipAddr)
+	config.Consumer.IPAddress.IP = ce.consumerIP(ce.ipAddr)
 	if ce.location.OutIP != ce.location.PubIP {
 		config.Consumer.ConnectDelay = ce.connectDelay
 	}
@@ -192,10 +191,5 @@ func (p peerInfo) PublicKey() string {
 
 func providerIP(subnet net.IPNet) net.IP {
 	subnet.IP[len(subnet.IP)-1] = byte(1)
-	return subnet.IP
-}
-
-func consumerIP(subnet net.IPNet) net.IP {
-	subnet.IP[len(subnet.IP)-1] = byte(2)
 	return subnet.IP
 }

@@ -61,7 +61,7 @@ func (c *client) ConfigureDevice(name string, config wg.DeviceConfig, subnet net
 	return nil
 }
 
-func (c *client) AddPeer(name string, peer wg.PeerInfo) error {
+func (c *client) AddPeer(name string, peer wg.PeerInfo, allowedIPs ...string) error {
 	key, err := base64stringTo32ByteArray(peer.PublicKey())
 	if err != nil {
 		return err
@@ -70,6 +70,10 @@ func (c *client) AddPeer(name string, peer wg.PeerInfo) error {
 	extPeer := device.ExternalPeer{
 		PublicKey:  device.NoisePublicKey(key),
 		AllowedIPs: []string{"0.0.0.0/0", "::/0"},
+	}
+
+	if len(allowedIPs) > 0 {
+		extPeer.AllowedIPs = allowedIPs
 	}
 
 	if ep := peer.Endpoint(); ep != nil {

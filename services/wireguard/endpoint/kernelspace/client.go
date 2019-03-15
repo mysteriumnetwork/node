@@ -68,7 +68,7 @@ func (c *client) ConfigureDevice(iface string, config wg.DeviceConfig, ipAddr ne
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
-func (c *client) AddPeer(iface string, peer wg.PeerInfo) error {
+func (c *client) AddPeer(iface string, peer wg.PeerInfo, _ ...string) error {
 	endpoint := peer.Endpoint()
 	publicKey, err := stringToKey(peer.PublicKey())
 	if err != nil {

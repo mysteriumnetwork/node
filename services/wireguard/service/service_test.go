@@ -94,11 +94,11 @@ func waitABit() {
 
 type fakeConnectionEndpoint struct{}
 
-func (fce *fakeConnectionEndpoint) Stop() error                            { return nil }
-func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { return nil }
-func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
-func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }
-func (fce *fakeConnectionEndpoint) ConfigureRoutes(_ net.IP) error         { return nil }
+func (fce *fakeConnectionEndpoint) Stop() error                                         { return nil }
+func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error                     { return nil }
+func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)                   { return wg.ServiceConfig{}, nil }
+func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr, _ ...string) error { return nil }
+func (fce *fakeConnectionEndpoint) ConfigureRoutes(_ net.IP) error                      { return nil }
 func (fce *fakeConnectionEndpoint) PeerStats() (wg.Stats, error) {
 	return wg.Stats{LastHandshake: time.Now()}, nil
 }
