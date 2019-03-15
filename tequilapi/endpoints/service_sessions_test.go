@@ -34,7 +34,7 @@ import (
 var (
 	serviceSessionMock = session.Session{
 		ID:         session.ID("session1"),
-		ConsumerID: identity.FromAddress("ProviderID"),
+		ConsumerID: identity.FromAddress("consumer1"),
 	}
 )
 

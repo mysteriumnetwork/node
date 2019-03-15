@@ -64,7 +64,7 @@ func TestStorage_Add(t *testing.T) {
 			sessionExisting.ID: 0,
 			sessionNew.ID:      1,
 		},
-		storage.sessionMap,
+		storage.idToIndex,
 	)
 }
 
@@ -76,7 +76,7 @@ func TestStorage_GetAll(t *testing.T) {
 			sessionFirst,
 			sessionSecond,
 		},
-		sessionMap: map[ID]int{
+		idToIndex: map[ID]int{
 			sessionFirst.ID:  0,
 			sessionSecond.ID: 1,
 		},
@@ -92,13 +92,13 @@ func TestStorage_Remove(t *testing.T) {
 
 	storage.Remove(sessionExisting.ID)
 	assert.Len(t, storage.sessions, 0)
-	assert.Len(t, storage.sessionMap, 0)
+	assert.Len(t, storage.idToIndex, 0)
 }
 
 func mockStorage(sessionInstance Session) *StorageMemory {
 	return &StorageMemory{
 		sessions: []Session{sessionInstance},
-		sessionMap: map[ID]int{
+		idToIndex: map[ID]int{
 			sessionInstance.ID: 0,
 		},
 	}

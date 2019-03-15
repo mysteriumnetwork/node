@@ -24,17 +24,17 @@ import (
 // NewStorageMemory initiates new session storage
 func NewStorageMemory() *StorageMemory {
 	return &StorageMemory{
-		sessions:   make([]Session, 0),
-		sessionMap: make(map[ID]int),
-		lock:       sync.Mutex{},
+		sessions:  make([]Session, 0),
+		idToIndex: make(map[ID]int),
+		lock:      sync.Mutex{},
 	}
 }
 
-// StorageMemory maintains a map of session id -> session
+// StorageMemory maintains all currents sessions in memory
 type StorageMemory struct {
-	sessions   []Session
-	sessionMap map[ID]int
-	lock       sync.Mutex
+	sessions  []Session
+	idToIndex map[ID]int
+	lock      sync.Mutex
 }
 
 // Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
@@ -42,10 +42,10 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	storageId := len(storage.sessions)
+	sessionIndex := len(storage.sessions)
 	storage.sessions = append(storage.sessions, sessionInstance)
 
-	storage.sessionMap[sessionInstance.ID] = storageId
+	storage.idToIndex[sessionInstance.ID] = sessionIndex
 }
 
 // GetAll returns all sessions in storage
@@ -61,8 +61,8 @@ func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	if storageId, found := storage.sessionMap[id]; found {
-		return storage.sessions[storageId], true
+	if sessionIndex, found := storage.idToIndex[id]; found {
+		return storage.sessions[sessionIndex], true
 	}
 
 	return Session{}, false
@@ -73,8 +73,8 @@ func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	if storageId, found := storage.sessionMap[id]; found {
-		delete(storage.sessionMap, id)
-		storage.sessions = append(storage.sessions[:storageId], storage.sessions[storageId+1:]...)
+	if sessionIndex, found := storage.idToIndex[id]; found {
+		delete(storage.idToIndex, id)
+		storage.sessions = append(storage.sessions[:sessionIndex], storage.sessions[sessionIndex+1:]...)
 	}
 }
