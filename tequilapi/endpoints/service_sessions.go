@@ -56,7 +56,7 @@ func NewServiceSessionsEndpoint(sessionStorage serviceSessionStorage) *serviceSe
 	}
 }
 
-// swagger:operation GET /service/:id/sessions ServiceSessions listSessions
+// swagger:operation GET /service/:id/sessions Service serviceSessions
 // ---
 // summary: Returns current sessions
 // description: Returns list of sessions in currently running service
