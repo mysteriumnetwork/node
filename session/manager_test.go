@@ -66,9 +66,9 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
 	sessionStore := NewStorageMemory()
-	natPingerChan := func() chan json.RawMessage { return make(chan json.RawMessage, 1) }
+	natPinger := func(json.RawMessage) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPingerChan, nil, &MockNatEventTracker{})
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil, &MockNatEventTracker{})
 
 	requestConfig := json.RawMessage{}
 	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, requestConfig)
@@ -79,9 +79,9 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	natPingerChan := func() chan json.RawMessage { return make(chan json.RawMessage, 1) }
+	natPinger := func(json.RawMessage) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPingerChan, nil, &MockNatEventTracker{})
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil, &MockNatEventTracker{})
 
 	requestConfig := json.RawMessage{}
 	sessionInstance, err := manager.Create(consumerID, consumerID, 69, nil, requestConfig)

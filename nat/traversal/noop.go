@@ -32,13 +32,9 @@ func (np *NoopPinger) PingProvider(ip string, port int) error {
 	return nil
 }
 
-// PingTargetChan does nothing
-func (np *NoopPinger) PingTargetChan() chan json.RawMessage {
-	return nil
+// PingTarget does nothing
+func (np *NoopPinger) PingTarget(json.RawMessage) {
 }
-
-// BindProvider does nothing
-func (np *NoopPinger) BindProvider(port int) {}
 
 // BindPort does nothing
 func (np *NoopPinger) BindPort(port int) {}

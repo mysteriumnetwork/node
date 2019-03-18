@@ -29,7 +29,7 @@ type restartingServer struct {
 	waiter              chan (error)
 	openvpnFactory      func() openvpn.Process
 	natPinger           NATPinger
-	lastSessionShutdown chan bool
+	lastSessionShutdown chan struct{}
 }
 
 func (rs *restartingServer) Start() error {

@@ -42,9 +42,9 @@ type ProcessBasedConnectionFactory struct {
 	runtimeDirectory      string
 	originalLocationCache location.Cache
 	signerFactory         identity.SignerFactory
-	lastSessionShutdown   chan bool
+	lastSessionShutdown   chan struct{}
 	ipResolver            ip.Resolver
-	natPinger             connection.NATPinger
+	natPinger             NATPinger
 }
 
 // NewProcessBasedConnectionFactory creates a new ProcessBasedConnectionFactory
@@ -53,7 +53,7 @@ func NewProcessBasedConnectionFactory(
 	originalLocationCache location.Cache,
 	signerFactory identity.SignerFactory,
 	resolver ip.Resolver,
-	natPinger connection.NATPinger,
+	natPinger NATPinger,
 ) *ProcessBasedConnectionFactory {
 	return &ProcessBasedConnectionFactory{
 		openvpnBinary:         openvpnBinary,

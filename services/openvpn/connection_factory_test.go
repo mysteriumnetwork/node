@@ -78,7 +78,7 @@ func TestConnectionFactory_CreatesConnection(t *testing.T) {
 // MockNATPinger returns a mock nat pinger, that really doesnt do much
 type MockNATPinger struct{}
 
-// BindProvider does nothing
+// BindPort does nothing
 func (mnp *MockNATPinger) BindPort(port int) {
 
 }

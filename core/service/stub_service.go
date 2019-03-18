@@ -118,8 +118,8 @@ func MockDiscoveryFactoryFunc(ds Discovery) DiscoveryFactory {
 // MockNATPinger returns a mock nat pinger, that really doesnt do much
 type MockNATPinger struct{}
 
-// BindProvider does nothing
-func (mnp *MockNATPinger) BindProvider(port int) {
+// BindPort does nothing
+func (mnp *MockNATPinger) BindPort(port int) {
 
 }
 

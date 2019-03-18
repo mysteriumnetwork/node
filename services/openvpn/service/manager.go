@@ -49,10 +49,11 @@ type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outbound
 
 // NATPinger defined Pinger interface for Provider
 type NATPinger interface {
-	BindProvider(port int)
+	BindPort(port int)
 	WaitForHole() error
 }
 
+// NATEventGetter allows us to fetch the last known NAT event
 type NATEventGetter interface {
 	LastEvent() traversal.Event
 }
@@ -102,7 +103,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
 	// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
-	m.natPinger.BindProvider(m.serviceOptions.Port)
+	m.natPinger.BindPort(m.serviceOptions.Port)
 
 	log.Info(logPrefix, "starting openvpn server")
 	if err = m.vpnServer.Start(); err != nil {

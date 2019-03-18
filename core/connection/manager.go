@@ -67,11 +67,6 @@ type Publisher interface {
 	Publish(topic string, args ...interface{})
 }
 
-type NATPinger interface {
-	BindPort(port int)
-	PingProvider(ip string, port int) error
-}
-
 // PaymentIssuer handles the payments for service
 type PaymentIssuer interface {
 	Start() error
@@ -92,7 +87,6 @@ type connectionManager struct {
 	paymentIssuerFactory PaymentIssuerFactory
 	newConnection        Creator
 	eventPublisher       Publisher
-	natPinger            NATPinger
 	resolver             ip.Resolver
 
 	//these are populated by Connect at runtime
@@ -112,7 +106,6 @@ func NewManager(
 	paymentIssuerFactory PaymentIssuerFactory,
 	connectionCreator Creator,
 	eventPublisher Publisher,
-	natPinger NATPinger,
 	resolver ip.Resolver,
 ) *connectionManager {
 	return &connectionManager{
@@ -121,7 +114,6 @@ func NewManager(
 		newConnection:        connectionCreator,
 		status:               statusNotConnected(),
 		eventPublisher:       eventPublisher,
-		natPinger:            natPinger,
 		cleanup:              make([]func() error, 0),
 		resolver:             resolver,
 	}

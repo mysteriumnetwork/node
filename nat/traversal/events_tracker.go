@@ -23,21 +23,30 @@ import (
 	log "github.com/cihub/seelog"
 )
 
+// EventTopic the topic that traversal events are published on
 const EventTopic = "Traversal"
 
+// EventNoEvent represents an occurence where nothing really happened
 var EventNoEvent = Event{Name: ""}
+
+// EventSuccess represents a succesful NAT traversal
 var EventSuccess = Event{Name: "success"}
+
+// EventFailure represents a failed NAT traversal event
 var EventFailure = Event{Name: "failure"}
 
+// EventsTracker is able to track nat traversal events
 type EventsTracker struct {
 	lastEvent Event
 	eventChan chan Event
 }
 
+// NewEventsTracker returns a new instance of event tracker
 func NewEventsTracker() *EventsTracker {
 	return &EventsTracker{eventChan: make(chan Event, 1)}
 }
 
+// ConsumeNATEvent consumes a NAT event
 func (et *EventsTracker) ConsumeNATEvent(event Event) {
 	log.Info("got NAT event: ", event)
 	et.lastEvent = event
@@ -47,11 +56,13 @@ func (et *EventsTracker) ConsumeNATEvent(event Event) {
 	}
 }
 
+// LastEvent returns the last known event
 func (et *EventsTracker) LastEvent() Event {
 	log.Info("getting last NAT event: ", et.lastEvent)
 	return et.lastEvent
 }
 
+// WaitForEvent waits for event to occur
 func (et *EventsTracker) WaitForEvent() Event {
 	if et.lastEvent != EventNoEvent {
 		return et.lastEvent

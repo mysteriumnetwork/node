@@ -31,6 +31,7 @@ import (
 const prefix = "[NATPinger] "
 const pingInterval = 200
 
+// ConfigParser is able to parse a config from given raw json
 type ConfigParser interface {
 	Parse(config json.RawMessage) (ip string, port int, err error)
 }
@@ -39,8 +40,8 @@ type ConfigParser interface {
 type Pinger struct {
 	localPort      int
 	pingTarget     chan json.RawMessage
-	pingReceived   chan bool
-	pingCancelled  chan bool
+	pingReceived   chan struct{}
+	pingCancelled  chan struct{}
 	natEventWaiter NatEventWaiter
 	configParser   ConfigParser
 }
@@ -53,8 +54,8 @@ type NatEventWaiter interface {
 // NewPingerFactory returns Pinger instance
 func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser) *Pinger {
 	target := make(chan json.RawMessage)
-	received := make(chan bool)
-	cancel := make(chan bool)
+	received := make(chan struct{})
+	cancel := make(chan struct{})
 	return &Pinger{
 		pingTarget:     target,
 		pingReceived:   received,
@@ -74,7 +75,7 @@ func (p *Pinger) Start() {
 			log.Infof("%s ping target received: IP: %v, port: %v", prefix, IP, port)
 			if port == 0 {
 				// client did not sent its port to ping to, attempting with service start
-				p.pingReceived <- true
+				p.pingReceived <- struct{}{}
 				continue
 			}
 			conn, err := p.getConnection(IP, port)
@@ -85,13 +86,11 @@ func (p *Pinger) Start() {
 			go p.ping(conn)
 			time.Sleep(pingInterval * time.Millisecond)
 			p.pingReceiver(conn)
-			p.pingReceived <- true
+			p.pingReceived <- struct{}{}
 			log.Info(prefix, "ping received, waiting for a new connection")
 			conn.Close()
 		}
 	}
-
-	return
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
@@ -138,8 +137,6 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 			}
 		}
 	}
-
-	return nil
 }
 
 func (p *Pinger) getConnection(ip string, port int) (*net.UDPConn, error) {
@@ -160,15 +157,9 @@ func (p *Pinger) getConnection(ip string, port int) (*net.UDPConn, error) {
 	return conn, nil
 }
 
-// PingTargetChan returns a channel which relays ping target address data
-func (p *Pinger) PingTargetChan() chan json.RawMessage {
-	return p.pingTarget
-}
-
-// BindProvider binds local port from which Pinger will start its pinging
-func (p *Pinger) BindProvider(port int) {
-	log.Info(prefix, "provided bind port: ", port)
-	p.localPort = port
+// PingTarget relays ping target address data
+func (p *Pinger) PingTarget(target json.RawMessage) {
+	p.pingTarget <- target
 }
 
 // BindPort gets port from session creation config and binds Pinger port to ping from
@@ -205,7 +196,7 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn) {
 		// or wait for you pings to reach other end before closing pinger conn.
 		time.Sleep(2 * pingInterval * time.Millisecond)
 
-		p.pingCancelled <- true
+		p.pingCancelled <- struct{}{}
 
 		return
 	}

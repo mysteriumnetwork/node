@@ -32,12 +32,18 @@ var ErrProcessNotStarted = errors.New("process not started yet")
 // processFactory creates a new openvpn process
 type processFactory func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error)
 
+// NATPinger tries to punch a hole in NAT
+type NATPinger interface {
+	BindPort(port int)
+	PingProvider(ip string, port int) error
+}
+
 // Client takes in the openvpn process and works with it
 type Client struct {
 	process        openvpn.Process
 	processFactory processFactory
 	ipResolver     ip.Resolver
-	natPinger      connection.NATPinger
+	natPinger      NATPinger
 	publicIP       string
 }
 
@@ -89,8 +95,7 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 		// TODO: since GetConfig is executed before Start we cannot access VPNConfig structure yet
 		// TODO skip sending port here, since provider generates port for consumer in VPNConfig
 		//Port: c.vpnClientConfig.LocalPort,
-		Port: 50221,
-		IP:   ip,
+		IP: ip,
 	}, nil
 }
 

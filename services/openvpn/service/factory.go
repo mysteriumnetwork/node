@@ -46,7 +46,7 @@ func NewManager(
 	natService nat.NATService,
 	natPinger NATPinger,
 	mapPort func() (releasePortMapping func()),
-	lastSessionShutdown chan bool,
+	lastSessionShutdown chan struct{},
 	natEventGetter NATEventGetter,
 ) *Manager {
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
@@ -97,7 +97,7 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 	}
 }
 
-func newRestartingServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, natPinger NATPinger, lastSessionShutdown chan bool) ServerFactory {
+func newRestartingServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, natPinger NATPinger, lastSessionShutdown chan struct{}) ServerFactory {
 	return func(config *openvpn_service.ServerConfig) openvpn.Process {
 		return &restartingServer{
 			stop:   make(chan struct{}),

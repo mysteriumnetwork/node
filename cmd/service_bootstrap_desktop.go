@@ -171,7 +171,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			proposal, di.ServiceSessionStorage,
 			di.PromiseStorage,
 			nodeOptions,
-			di.NATPinger.PingTargetChan,
+			di.NATPinger.PingTarget,
 			di.LastSessionShutdown,
 			di.NATTracker)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))

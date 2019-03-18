@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package config
 
 import (
@@ -7,13 +24,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ConsumerConfigParser parses consumer configs
 type ConsumerConfigParser struct {
 }
 
+// NewConfigParser returns a new ConsumerConfigParser
 func NewConfigParser() *ConsumerConfigParser {
 	return &ConsumerConfigParser{}
 }
 
+// Parse parses the given configuration
 func (c *ConsumerConfigParser) Parse(config json.RawMessage) (ip string, port int, err error) {
 	// TODO: since we are getting json.RawMessage here and not interface{} type not sure how to handle multiple services
 	// since NATPinger is one for all services and we get config from communication channel where service type is not know yet.

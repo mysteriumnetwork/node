@@ -44,7 +44,7 @@ type Service interface {
 
 // NATPinger defines Pinger interface for Provider
 type NATPinger interface {
-	BindProvider(port int)
+	BindPort(port int)
 	WaitForHole() error
 }
 

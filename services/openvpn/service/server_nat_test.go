@@ -35,7 +35,7 @@ func Test_RestartingServerStartsAndStops(t *testing.T) {
 		waiter:              make(chan error),
 		natPinger:           &MockNATPinger{},
 		openvpnFactory:      MockOpenvpnFactory,
-		lastSessionShutdown: make(chan bool),
+		lastSessionShutdown: make(chan struct{}),
 	}
 	err := server.Start()
 	assert.Nil(t, err)
@@ -59,7 +59,7 @@ func Test_RestartingServerExitsOnOpenvpnStartFail(t *testing.T) {
 		waiter:              make(chan error),
 		natPinger:           &MockNATPinger{},
 		openvpnFactory:      factory.MockFactory,
-		lastSessionShutdown: make(chan bool),
+		lastSessionShutdown: make(chan struct{}),
 	}
 
 	err := server.Start()
@@ -82,7 +82,7 @@ func Test_RestartingServerExitsOnOpenvpnWaitFail(t *testing.T) {
 		waiter:              make(chan error),
 		natPinger:           &MockNATPinger{},
 		openvpnFactory:      factory.MockFactory,
-		lastSessionShutdown: make(chan bool),
+		lastSessionShutdown: make(chan struct{}),
 	}
 
 	err := server.Start()
@@ -107,7 +107,7 @@ func Test_ServerRestartsIfLastSession(t *testing.T) {
 		waiter:              make(chan error),
 		natPinger:           &MockNATPinger{},
 		openvpnFactory:      myCustomFactory,
-		lastSessionShutdown: make(chan bool),
+		lastSessionShutdown: make(chan struct{}),
 	}
 
 	err := server.Start()
@@ -115,9 +115,9 @@ func Test_ServerRestartsIfLastSession(t *testing.T) {
 
 	go func() {
 		time.Sleep(time.Millisecond * 10)
-		server.lastSessionShutdown <- true
+		server.lastSessionShutdown <- struct{}{}
 		time.Sleep(time.Millisecond * 10)
-		server.lastSessionShutdown <- true
+		server.lastSessionShutdown <- struct{}{}
 		time.Sleep(time.Millisecond * 10)
 		server.Stop()
 	}()
@@ -166,7 +166,7 @@ func (mop *MockOpenvpnProcess) Stop() {
 
 type MockNATPinger struct{}
 
-func (mnp *MockNATPinger) BindProvider(port int) {
+func (mnp *MockNATPinger) BindPort(port int) {
 
 }
 

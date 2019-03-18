@@ -85,8 +85,7 @@ type Storage interface {
 // NatPinger is responsible for pinging nat holes
 type NatPinger interface {
 	PingProvider(ip string, port int) error
-	PingTargetChan() chan json.RawMessage
-	BindProvider(port int)
+	PingTarget(json.RawMessage)
 	BindPort(port int)
 	WaitForHole() error
 	Start()
@@ -137,7 +136,7 @@ type Dependencies struct {
 
 	NATPinger           NatPinger
 	NATTracker          NatEventTracker
-	LastSessionShutdown chan bool
+	LastSessionShutdown chan struct{}
 }
 
 // Bootstrap initiates all container dependencies
@@ -312,7 +311,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
-		di.NATPinger,
 		di.IPResolver,
 	)
 
@@ -339,8 +337,8 @@ func newSessionManagerFactory(
 	sessionStorage *session.StorageMemory,
 	promiseStorage session_payment.PromiseStorage,
 	nodeOptions node.Options,
-	natPingerChan func() chan json.RawMessage,
-	lastSessionShutdown chan bool,
+	natPingerChan func(json.RawMessage),
+	lastSessionShutdown chan struct{},
 	natTracker NatEventTracker,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
@@ -464,7 +462,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 	if options.ExperimentNATPunching {
 		di.NATTracker = traversal.NewEventsTracker()
 		di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
-		di.LastSessionShutdown = make(chan bool)
+		di.LastSessionShutdown = make(chan struct{})
 	} else {
 		di.NATTracker = &traversal.NoopEventsTracker{}
 		di.NATPinger = &traversal.NoopPinger{}

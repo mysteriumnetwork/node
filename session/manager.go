@@ -72,6 +72,7 @@ type Storage interface {
 // BalanceTrackerFactory returns a new instance of balance tracker
 type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (BalanceTracker, error)
 
+// NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
 	LastEvent() traversal.Event
 }
@@ -82,8 +83,8 @@ func NewManager(
 	idGenerator IDGenerator,
 	sessionStorage Storage,
 	balanceTrackerFactory BalanceTrackerFactory,
-	natPingerChan func() chan json.RawMessage,
-	lastSessionShutdown chan bool,
+	natPingerChan func(json.RawMessage),
+	lastSessionShutdown chan struct{},
 	natEventGetter NATEventGetter,
 ) *Manager {
 	return &Manager{
@@ -106,8 +107,8 @@ type Manager struct {
 	sessionStorage        Storage
 	balanceTrackerFactory BalanceTrackerFactory
 	provideConfig         ConfigProvider
-	natPingerChan         func() chan json.RawMessage
-	lastSessionShutdown   chan bool
+	natPingerChan         func(json.RawMessage)
+	lastSessionShutdown   chan struct{}
 	natEventGetter        NATEventGetter
 
 	creationLock sync.Mutex
@@ -161,7 +162,7 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	// We need to know that session creation is already in-progress here
 
 	// postpone vpnServer start until NAT hole is punched
-	manager.notifyNATPinger(requestConfig)
+	manager.natPingerChan(requestConfig)
 	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
 }
@@ -185,7 +186,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 		log.Info("attempting to stop service")
 		if manager.natEventGetter.LastEvent() == traversal.EventFailure {
 			log.Info("last session destroy requested - stopping service executable")
-			manager.lastSessionShutdown <- true
+			manager.lastSessionShutdown <- struct{}{}
 			log.Info("executable shutdown on last session triggered")
 		}
 	}
@@ -194,11 +195,4 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 	close(sessionInstance.Done)
 
 	return nil
-}
-
-func (manager *Manager) notifyNATPinger(requestConfig json.RawMessage) {
-	natPingerChannel := manager.natPingerChan()
-	if natPingerChannel != nil {
-		natPingerChannel <- requestConfig
-	}
 }

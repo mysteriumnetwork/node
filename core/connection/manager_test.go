@@ -126,7 +126,6 @@ func (tc *testContext) SetupTest() {
 		mockPaymentFactory,
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
-		NATPingerFake{},
 		ip.NewResolverFake("1.1.1.1"),
 	)
 }
