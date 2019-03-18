@@ -24,17 +24,12 @@ import (
 	"github.com/urfave/cli"
 )
 
-// Options describes options which are required to start Noop service
-type Options struct{}
-
 // ParseFlags function fills in Noop options from CLI context
 func ParseFlags(_ *cli.Context) service.Options {
-	return Options{}
+	return nil
 }
 
 // ParseJSONOptions function fills in Noop options from JSON request
-func ParseJSONOptions(request json.RawMessage) (service.Options, error) {
-	var opts Options
-	err := json.Unmarshal(request, &opts)
-	return opts, err
+func ParseJSONOptions(_ *json.RawMessage) (service.Options, error) {
+	return nil, nil
 }

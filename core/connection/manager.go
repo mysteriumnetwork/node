@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
@@ -29,6 +30,8 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
@@ -76,7 +79,12 @@ type PaymentIssuer interface {
 }
 
 // PaymentIssuerFactory creates a new payment issuer from the given params
-type PaymentIssuerFactory func(initialState promise.State, messageChan chan balance.Message, dialog communication.Dialog, consumer, provider identity.Identity) (PaymentIssuer, error)
+type PaymentIssuerFactory func(
+	initialState promise.PaymentInfo,
+	paymentDefinition dto.PaymentPerTime,
+	messageChan chan balance.Message,
+	dialog communication.Dialog,
+	consumer, provider identity.Identity) (PaymentIssuer, error)
 
 type connectionManager struct {
 	//these are passed on creation
@@ -166,15 +174,24 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 }
 
 func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID identity.Identity) error {
-	var promiseState promise.State
+	var promiseState promise.PaymentInfo
 	if paymentInfo != nil {
-		promiseState.Amount = paymentInfo.LastPromise.Amount
-		promiseState.Seq = paymentInfo.LastPromise.SequenceID
+		promiseState.FreeCredit = paymentInfo.FreeCredit
+		promiseState.LastPromise = paymentInfo.LastPromise
 	}
 
 	messageChan := make(chan balance.Message, 1)
 
-	payments, err := manager.paymentIssuerFactory(promiseState, messageChan, dialog, consumerID, providerID)
+	// TODO: set the time and proper payment info
+	payment := dto.PaymentPerTime{
+		Price: money.Money{
+			Currency: money.CurrencyMyst,
+			Amount:   uint64(10),
+		},
+		Duration: time.Minute,
+	}
+
+	payments, err := manager.paymentIssuerFactory(promiseState, payment, messageChan, dialog, consumerID, providerID)
 	if err != nil {
 		return err
 	}

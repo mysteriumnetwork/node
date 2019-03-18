@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,31 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package tequilapi
+package factory
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mysteriumnetwork/node/session/promise"
 )
 
-func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
-	server := NewServer("localhost", 31337, nil, RegexpCorsPolicy{})
-
-	assert.NoError(t, server.StartServing())
-
-	address, err := server.Address()
-	assert.NoError(t, err)
-
-	port := strings.Split(address, ":")[1]
-	assert.Equal(t, "31337", port)
-
-	server.Stop()
-	server.Wait()
-}
-
-func TestStopBeforeStartingListeningDoesNotCausePanic(t *testing.T) {
-	server := NewServer("", 12345, nil, RegexpCorsPolicy{})
-	server.Stop()
+func Test_MapInitialStateToPromiseState(t *testing.T) {
+	paymentInfo := promise.PaymentInfo{
+		LastPromise: promise.LastPromise{
+			SequenceID: 2,
+			Amount:     1,
+		},
+	}
+	state := mapInitialStateToPromiseState(paymentInfo)
+	assert.Equal(t, paymentInfo.LastPromise.Amount, state.Amount)
+	assert.Equal(t, paymentInfo.LastPromise.SequenceID, state.Seq)
 }

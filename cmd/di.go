@@ -60,7 +60,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
-	balance_provider "github.com/mysteriumnetwork/node/session/balance/provider"
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
 	payments_noop "github.com/mysteriumnetwork/node/session/payment/noop"
@@ -328,7 +327,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
-	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router)
+	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
+	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router, corsPolicy)
 	metricsSender := metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
 
 	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, metricsSender, di.NATPinger.Start)
@@ -369,7 +369,7 @@ func newSessionManagerFactory(
 			}
 
 			// TODO: the ints and times here need to be passed in as well, or defined as constants
-			tracker := balance_provider.NewBalanceTracker(&timeTracker, amountCalc, 0)
+			tracker := balance.NewBalanceTracker(&timeTracker, amountCalc, 0)
 			validator := validators.NewIssuedPromiseValidator(consumerID, receiverID, issuerID)
 			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator, promiseStorage, consumerID, receiverID, issuerID), nil
 		}

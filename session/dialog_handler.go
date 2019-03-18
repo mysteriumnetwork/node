@@ -26,11 +26,12 @@ import (
 type ManagerFactory func(dialog communication.Dialog) *Manager
 
 // NewDialogHandler constructs handler which gets all incoming dialogs and starts handling them
-func NewDialogHandler(sessionManagerFactory ManagerFactory, configProvider ConfigProvider, promiseLoader PromiseLoader) *handler {
+func NewDialogHandler(sessionManagerFactory ManagerFactory, configProvider ConfigProvider, promiseLoader PromiseLoader, receiverID identity.Identity) *handler {
 	return &handler{
 		sessionManagerFactory: sessionManagerFactory,
 		configProvider:        configProvider,
 		promiseLoader:         promiseLoader,
+		receiverID:            receiverID,
 	}
 }
 
@@ -38,6 +39,7 @@ type handler struct {
 	sessionManagerFactory ManagerFactory
 	configProvider        ConfigProvider
 	promiseLoader         PromiseLoader
+	receiverID            identity.Identity
 }
 
 // Handle starts serving services in given Dialog instance
@@ -52,6 +54,7 @@ func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) er
 			peerID:         dialog.PeerID(),
 			configProvider: handler.configProvider,
 			promiseLoader:  handler.promiseLoader,
+			receiverID:     handler.receiverID,
 		},
 	)
 

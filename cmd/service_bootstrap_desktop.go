@@ -56,7 +56,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		wireguard.ServiceType,
 		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-			location, err := di.resolveIPsAndLocation()
+			locationInfo, err := di.resolveIPsAndLocation()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
@@ -65,16 +65,16 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			mapPort := func(port int) func() {
 				return mapping.GetPortMappingFunc(
-					location.PubIP,
-					location.OutIP,
+					locationInfo.PubIP,
+					locationInfo.OutIP,
 					"UDP",
 					port,
 					"Myst node wireguard(tm) port mapping",
 					di.EventBus)
 			}
 
-			return wireguard_service.NewManager(location, di.NATService, mapPort, wgOptions),
-				wireguard_service.GetProposal(location.Country), nil
+			return wireguard_service.NewManager(locationInfo, di.NATService, mapPort, wgOptions),
+				wireguard_service.GetProposal(locationInfo.Country), nil
 		},
 	)
 }
@@ -106,27 +106,27 @@ func (di *Dependencies) resolveIPsAndLocation() (loc location.ServiceLocationInf
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 	createService := func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-		location, err := di.resolveIPsAndLocation()
+		locationInfo, err := di.resolveIPsAndLocation()
 		if err != nil {
 			return nil, market.ServiceProposal{}, err
 		}
 
-		currentLocation := market.Location{Country: location.Country}
+		currentLocation := market.Location{Country: locationInfo.Country}
 		transportOptions := serviceOptions.(openvpn_service.Options)
 
 		mapPort := func() func() {
 			return mapping.GetPortMappingFunc(
-				location.PubIP,
-				location.OutIP,
-				transportOptions.OpenvpnProtocol,
-				transportOptions.OpenvpnPort,
+				locationInfo.PubIP,
+				locationInfo.OutIP,
+				transportOptions.Protocol,
+				transportOptions.Port,
 				"Myst node OpenVPN port mapping",
 				di.EventBus)
 		}
 
-		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.OpenvpnProtocol)
+		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
 		natService := nat.NewService()
-		return openvpn_service.NewManager(nodeOptions, transportOptions, location, di.ServiceSessionStorage, natService, di.NATPinger, mapPort, di.LastSessionShutdown, di.NATTracker), proposal, nil
+		return openvpn_service.NewManager(nodeOptions, transportOptions, locationInfo, di.ServiceSessionStorage, natService, di.NATPinger, mapPort, di.LastSessionShutdown, di.NATTracker), proposal, nil
 	}
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 }
@@ -135,12 +135,12 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		service_noop.ServiceType,
 		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-			location, err := di.resolveIPsAndLocation()
+			locationInfo, err := di.resolveIPsAndLocation()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
 
-			return service_noop.NewManager(), service_noop.GetProposal(location.Country), nil
+			return service_noop.NewManager(), service_noop.GetProposal(locationInfo.Country), nil
 		},
 	)
 }
@@ -174,9 +174,9 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			di.NATPinger.PingTargetChan,
 			di.LastSessionShutdown,
 			di.NATTracker)
-		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage)
+		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))
 	}
-	newDiscovery := func() *registry.Discovery {
+	newDiscovery := func() service.Discovery {
 		return registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory)
 	}
 	di.ServicesManager = service.NewManager(

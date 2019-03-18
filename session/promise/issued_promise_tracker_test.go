@@ -63,18 +63,6 @@ func TestCurrentStateIsAlignedWithConsumer(t *testing.T) {
 	assert.Equal(t, uint64(1), p.Promise.SeqNo)
 }
 
-func TestBiggerConsumerAmountIsRejected(t *testing.T) {
-	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
-
-	assert.Equal(t, ErrUnexpectedAmount, tracker.AlignStateWithProvider(State{Seq: 1, Amount: 200}))
-}
-
-func TestSmallerConsumerAmountIsRejected(t *testing.T) {
-	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
-
-	assert.Equal(t, ErrUnexpectedAmount, tracker.AlignStateWithProvider(State{Seq: 1, Amount: 0}))
-}
-
 func TestIncreasedSeqNumberIsAccepted(t *testing.T) {
 	tracker := NewConsumerTracker(initialState, consumer, provider, issuer)
 

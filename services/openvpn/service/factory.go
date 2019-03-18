@@ -80,8 +80,8 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 			nodeOptions.Directories.Config,
 			"10.8.0.0", "255.255.255.0",
 			secPrimitives,
-			serviceOptions.OpenvpnPort,
-			serviceOptions.OpenvpnProtocol,
+			serviceOptions.Port,
+			serviceOptions.Protocol,
 		)
 	}
 }
@@ -124,8 +124,8 @@ func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, servi
 			natEventGetter: natEventGetter,
 			vpnConfig: openvpn_service.VPNConfig{
 				RemoteIP:        serverIP,
-				RemotePort:      serviceOptions.OpenvpnPort,
-				RemoteProtocol:  serviceOptions.OpenvpnProtocol,
+				RemotePort:      serviceOptions.Port,
+				RemoteProtocol:  serviceOptions.Protocol,
 				TLSPresharedKey: secPrimitives.PresharedKey.ToPEMFormat(),
 				CACertificate:   secPrimitives.CertificateAuthority.ToPEMFormat(),
 			},
@@ -177,9 +177,9 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 		publicIP,
 		outboundIP,
 		publicIP,
-		serviceOptions.OpenvpnPort,
+		serviceOptions.Port,
 		outboundIP,
-		serviceOptions.OpenvpnPort,
+		serviceOptions.Port,
 	)
 	return publicIP
 }

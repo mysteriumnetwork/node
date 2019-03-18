@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,31 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package tequilapi
+package service
 
 import (
-	"strings"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
-	server := NewServer("localhost", 31337, nil, RegexpCorsPolicy{})
+func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
+	options, err := ParseJSONOptions(nil)
 
-	assert.NoError(t, server.StartServing())
-
-	address, err := server.Address()
 	assert.NoError(t, err)
-
-	port := strings.Split(address, ":")[1]
-	assert.Equal(t, "31337", port)
-
-	server.Stop()
-	server.Wait()
+	assert.Equal(t, defaultOptions, options)
 }
 
-func TestStopBeforeStartingListeningDoesNotCausePanic(t *testing.T) {
-	server := NewServer("", 12345, nil, RegexpCorsPolicy{})
-	server.Stop()
+func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
+	request := json.RawMessage(`{}`)
+	options, err := ParseJSONOptions(&request)
+
+	assert.NoError(t, err)
+	assert.Equal(t, defaultOptions, options)
+}
+
+func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
+	request := json.RawMessage(`{"connectDelay": 3000}`)
+	options, err := ParseJSONOptions(&request)
+
+	assert.NoError(t, err)
+	assert.Equal(t, Options{3000}, options)
 }

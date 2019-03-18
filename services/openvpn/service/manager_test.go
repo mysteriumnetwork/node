@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package service
 
-type serviceFake struct {
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestManager_StopNotPanic(t *testing.T) {
+	m := Manager{}
+	err := m.Stop()
+	assert.NoError(t, err)
 }
-
-func (service *serviceFake) Add(rule RuleForwarding) error { return nil }
-func (service *serviceFake) Del(rule RuleForwarding) error { return nil }
-func (service *serviceFake) Enable() error                 { return nil }
-func (service *serviceFake) Disable() error                { return nil }

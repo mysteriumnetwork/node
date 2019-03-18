@@ -26,20 +26,24 @@ import (
 
 // Options describes options which are required to start Openvpn service
 type Options struct {
-	OpenvpnProtocol string `json:"protocol"`
-	OpenvpnPort     int    `json:"port"`
+	Protocol string `json:"protocol"`
+	Port     int    `json:"port"`
 }
 
 var (
 	protocolFlag = cli.StringFlag{
 		Name:  "openvpn.proto",
 		Usage: "Openvpn protocol to use. Options: { udp, tcp }",
-		Value: "udp",
+		Value: defaultOptions.Protocol,
 	}
 	portFlag = cli.IntFlag{
 		Name:  "openvpn.port",
 		Usage: "Openvpn port to use. Default 1194",
-		Value: 1194,
+		Value: defaultOptions.Port,
+	}
+	defaultOptions = Options{
+		Protocol: "udp",
+		Port:     1194,
 	}
 )
 
@@ -51,14 +55,18 @@ func RegisterFlags(flags *[]cli.Flag) {
 // ParseFlags function fills in Openvpn options from CLI context
 func ParseFlags(ctx *cli.Context) service.Options {
 	return Options{
-		OpenvpnProtocol: ctx.String(protocolFlag.Name),
-		OpenvpnPort:     ctx.Int(portFlag.Name),
+		Protocol: ctx.String(protocolFlag.Name),
+		Port:     ctx.Int(portFlag.Name),
 	}
 }
 
 // ParseJSONOptions function fills in Openvpn options from JSON request
-func ParseJSONOptions(request json.RawMessage) (service.Options, error) {
-	var opts Options
-	err := json.Unmarshal(request, &opts)
+func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
+	if request == nil {
+		return defaultOptions, nil
+	}
+
+	opts := defaultOptions
+	err := json.Unmarshal(*request, &opts)
 	return opts, err
 }

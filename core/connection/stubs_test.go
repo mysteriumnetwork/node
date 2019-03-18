@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/promise"
 )
 
 // StubPublisherEvent represents the event in publishers history
@@ -214,62 +215,62 @@ func (foc *connectionMock) StateCallback(callback func(state fakeState)) {
 	foc.stateCallback = callback
 }
 
-const fakeDialogLog = "[fake dialog] "
+const mockDialogLog = "[fake dialog] "
 
-type fakeDialog struct {
-	peerID    identity.Identity
-	sessionID session.ID
-
-	closed bool
+type mockDialog struct {
+	peerID      identity.Identity
+	sessionID   session.ID
+	paymentInfo *promise.PaymentInfo
+	closed      bool
 	sync.RWMutex
 }
 
-func (fd *fakeDialog) PeerID() identity.Identity {
-	fd.RLock()
-	defer fd.RUnlock()
+func (md *mockDialog) PeerID() identity.Identity {
+	md.RLock()
+	defer md.RUnlock()
 
-	return fd.peerID
+	return md.peerID
 }
 
-func (fd *fakeDialog) assertNotClosed() {
-	fd.RLock()
-	defer fd.RUnlock()
+func (md *mockDialog) assertNotClosed() {
+	md.RLock()
+	defer md.RUnlock()
 
-	if fd.closed {
+	if md.closed {
 		panic("Incorrect dialog handling! dialog was closed already")
 	}
 }
 
-func (fd *fakeDialog) Close() error {
-	fd.Lock()
-	defer fd.Unlock()
+func (md *mockDialog) Close() error {
+	md.Lock()
+	defer md.Unlock()
 
-	fd.closed = true
-	log.Info(fakeDialogLog, "Dialog closed")
+	md.closed = true
+	log.Info(mockDialogLog, "Dialog closed")
 	return nil
 }
 
-func (fd *fakeDialog) Receive(consumer communication.MessageConsumer) error {
-	fd.assertNotClosed()
+func (md *mockDialog) Receive(consumer communication.MessageConsumer) error {
+	md.assertNotClosed()
 	return nil
 }
-func (fd *fakeDialog) Respond(consumer communication.RequestConsumer) error {
-	fd.assertNotClosed()
+func (md *mockDialog) Respond(consumer communication.RequestConsumer) error {
+	md.assertNotClosed()
 	return nil
 }
-func (fd *fakeDialog) Unsubscribe() {
-	fd.assertNotClosed()
+func (md *mockDialog) Unsubscribe() {
+	md.assertNotClosed()
 }
 
-func (fd *fakeDialog) Send(producer communication.MessageProducer) error {
-	fd.assertNotClosed()
+func (md *mockDialog) Send(producer communication.MessageProducer) error {
+	md.assertNotClosed()
 	return nil
 }
 
 var ErrUnknownRequest = errors.New("unknown request")
 
-func (fd *fakeDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	fd.assertNotClosed()
+func (md *mockDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
+	md.assertNotClosed()
 	if producer.GetRequestEndpoint() == communication.RequestEndpoint("session-destroy") {
 		return &session.DestroyResponse{
 				Success: true,
@@ -281,9 +282,10 @@ func (fd *fakeDialog) Request(producer communication.RequestProducer) (responseP
 		return &session.CreateResponse{
 				Success: true,
 				Session: session.SessionDto{
-					ID:     fd.sessionID,
+					ID:     md.sessionID,
 					Config: []byte("{}"),
 				},
+				PaymentInfo: md.paymentInfo,
 			},
 			nil
 	}

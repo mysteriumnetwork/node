@@ -17,29 +17,10 @@
 
 package tequilapi
 
-import (
-	"strings"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
-
-func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
-	server := NewServer("localhost", 31337, nil, RegexpCorsPolicy{})
-
-	assert.NoError(t, server.StartServing())
-
-	address, err := server.Address()
-	assert.NoError(t, err)
-
-	port := strings.Split(address, ":")[1]
-	assert.Equal(t, "31337", port)
-
-	server.Stop()
-	server.Wait()
-}
-
-func TestStopBeforeStartingListeningDoesNotCausePanic(t *testing.T) {
-	server := NewServer("", 12345, nil, RegexpCorsPolicy{})
-	server.Stop()
+// NewMysteriumCorsPolicy builds cors policy for Mysterium wallet and local applications
+func NewMysteriumCorsPolicy() CorsPolicy {
+	return RegexpCorsPolicy{
+		DefaultTrustedOrigin:  "https://mysterium.network",
+		AllowedOriginSuffixes: []string{"wallet(-dev)?\\.mysterium\\.network$", "localhost(:\\d+)?$"},
+	}
 }

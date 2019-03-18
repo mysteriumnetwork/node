@@ -131,13 +131,15 @@ type SessionDTO struct {
 	Status          string `json:"status"`
 }
 
-// Services represents a list of running services on the node.
-type Services []Service
+// ServiceListDTO represents a list of running services on the node
+type ServiceListDTO []ServiceInfoDTO
 
-// Service represents a service information.
-type Service struct {
-	ID       string          `json:"id"`
-	Status   string          `json:"status"`
-	Proposal ProposalDTO     `json:"proposal"`
-	Options  json.RawMessage `json:"options"`
+// ServiceInfoDTO represents running service information
+type ServiceInfoDTO struct {
+	ID          string          `json:"id"`
+	ProviderID  string          `json:"providerId"`
+	ServiceType string          `json:"type"`
+	Options     json.RawMessage `json:"options"`
+	Status      string          `json:"status"`
+	Proposal    ProposalDTO     `json:"proposal"`
 }
