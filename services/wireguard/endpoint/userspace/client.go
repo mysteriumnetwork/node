@@ -92,7 +92,7 @@ func (c *client) DelPeer(_ string, publicKey string) error {
 		return err
 	}
 
-	c.devAPI.DelPeer(key)
+	c.devAPI.RemovePeer(key)
 
 	return nil
 }

@@ -6,3 +6,4 @@ testdataoutput
 e2e_tests.log
 tequilapi_spec.json
 /e2e/myst-provider/db
+tequilapi.json
