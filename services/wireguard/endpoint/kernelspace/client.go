@@ -84,7 +84,7 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo, _ ...string) error {
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
-func (c *client) DelPeer(iface string, publicKey string) error {
+func (c *client) RemovePeer(iface string, publicKey string) error {
 	key, err := stringToKey(publicKey)
 	if err != nil {
 		return err

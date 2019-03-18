@@ -89,7 +89,7 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		if err := manager.resourceAllocator.ReleaseIPNet(config.Consumer.IPAddress); err != nil {
 			log.Error(logPrefix, "failed to release IP network", err)
 		}
-		if err := manager.connectionEndpoint.DelPeer(key.PublicKey); err != nil {
+		if err := manager.connectionEndpoint.RemovePeer(key.PublicKey); err != nil {
 			log.Error(logPrefix, "failed to remove peer: ", key.PublicKey, err)
 		}
 	}

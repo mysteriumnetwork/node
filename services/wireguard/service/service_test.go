@@ -98,7 +98,7 @@ func (mce *mockConnectionEndpoint) Stop() error                                 
 func (mce *mockConnectionEndpoint) Start(_ *wg.ServiceConfig) error                     { return nil }
 func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)                   { return wg.ServiceConfig{}, nil }
 func (mce *mockConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr, _ ...string) error { return nil }
-func (mce *mockConnectionEndpoint) DelPeer(_ string) error                              { return nil }
+func (mce *mockConnectionEndpoint) RemovePeer(_ string) error                           { return nil }
 func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error                      { return nil }
 func (mce *mockConnectionEndpoint) PeerStats() (wg.Stats, error) {
 	return wg.Stats{LastHandshake: time.Now()}, nil
