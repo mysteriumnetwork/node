@@ -51,6 +51,11 @@ func NewManager(
 ) *Manager {
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 
+	serverFactory := newServerFactory(nodeOptions, sessionValidator)
+	if lastSessionShutdown != nil {
+		serverFactory = newRestartingServerFactory(nodeOptions, sessionValidator, natPinger, lastSessionShutdown)
+	}
+
 	return &Manager{
 		publicIP:                       location.PubIP,
 		outboundIP:                     location.OutIP,
@@ -58,7 +63,7 @@ func NewManager(
 		natService:                     natService,
 		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions, natEventGetter),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
-		vpnServerFactory:               newServerFactory(nodeOptions, sessionValidator, lastSessionShutdown),
+		vpnServerFactory:               serverFactory,
 		natPinger:                      natPinger,
 		serviceOptions:                 serviceOptions,
 		mapPort:                        mapPort,
@@ -81,15 +86,33 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 	}
 }
 
-func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, lastSessionShutdown chan bool) ServerFactory {
+func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator) ServerFactory {
 	return func(config *openvpn_service.ServerConfig) openvpn.Process {
 		return openvpn.CreateNewProcess(
 			nodeOptions.Openvpn.BinaryPath(),
 			config.GenericConfig,
-			lastSessionShutdown,
 			auth.NewMiddleware(sessionValidator.Validate),
 			state.NewMiddleware(vpnStateCallback),
 		)
+	}
+}
+
+func newRestartingServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, natPinger NATPinger, lastSessionShutdown chan bool) ServerFactory {
+	return func(config *openvpn_service.ServerConfig) openvpn.Process {
+		return &restartingServer{
+			stop:   make(chan struct{}),
+			waiter: make(chan error),
+			openvpnFactory: func() openvpn.Process {
+				return openvpn.CreateNewProcess(
+					nodeOptions.Openvpn.BinaryPath(),
+					config.GenericConfig,
+					auth.NewMiddleware(sessionValidator.Validate),
+					state.NewMiddleware(vpnStateCallback),
+				)
+			},
+			natPinger:           natPinger,
+			lastSessionShutdown: lastSessionShutdown,
+		}
 	}
 }
 

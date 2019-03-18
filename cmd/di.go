@@ -194,7 +194,6 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 		nodeOptions.Directories.Runtime,
 		di.LocationOriginal,
 		di.SignerFactory,
-		di.LastSessionShutdown,
 		di.IPResolver,
 		di.NATPinger,
 	)
