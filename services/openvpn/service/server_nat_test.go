@@ -18,6 +18,8 @@
 package service
 
 import (
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -94,17 +96,17 @@ func Test_RestartingServerExitsOnOpenvpnWaitFail(t *testing.T) {
 }
 
 func Test_ServerRestartsIfLastSession(t *testing.T) {
-	openvpn := &MockOpenvpnProcess{
-		stop: make(chan struct{}),
+	var factoryCalls int32
+	myCustomFactory := func() openvpn.Process {
+		atomic.AddInt32(&factoryCalls, 1)
+		return MockOpenvpnFactory()
 	}
-	factory := &InjectableMockOpenvpnFactory{
-		proc: openvpn,
-	}
+
 	server := &restartingServer{
 		stop:                make(chan struct{}),
 		waiter:              make(chan error),
 		natPinger:           &MockNATPinger{},
-		openvpnFactory:      factory.MockFactory,
+		openvpnFactory:      myCustomFactory,
 		lastSessionShutdown: make(chan bool),
 	}
 
@@ -112,17 +114,18 @@ func Test_ServerRestartsIfLastSession(t *testing.T) {
 	assert.Nil(t, err)
 
 	go func() {
+		time.Sleep(time.Millisecond * 10)
 		server.lastSessionShutdown <- true
-		time.Sleep(time.Millisecond * 20)
+		time.Sleep(time.Millisecond * 10)
 		server.lastSessionShutdown <- true
-		time.Sleep(time.Millisecond * 20)
+		time.Sleep(time.Millisecond * 10)
 		server.Stop()
 	}()
 
 	err = server.Wait()
 	assert.Nil(t, err)
 
-	assert.Equal(t, 3, factory.factoryCalls)
+	assert.Equal(t, int32(3), factoryCalls)
 }
 
 type InjectableMockOpenvpnFactory struct {
@@ -145,6 +148,7 @@ type MockOpenvpnProcess struct {
 	stop       chan struct{}
 	startError error
 	waitError  error
+	once       sync.Once
 }
 
 func (mop *MockOpenvpnProcess) Start() error {
@@ -157,7 +161,7 @@ func (mop *MockOpenvpnProcess) Wait() error {
 }
 
 func (mop *MockOpenvpnProcess) Stop() {
-	mop.stop <- struct{}{}
+	mop.once.Do(func() { close(mop.stop) })
 }
 
 type MockNATPinger struct{}

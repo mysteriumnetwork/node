@@ -17,7 +17,12 @@
 
 package service
 
-import "github.com/mysteriumnetwork/go-openvpn/openvpn"
+import (
+	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn"
+)
+
+const restartingServerLogPrefix = "[nat-openvpn] "
 
 type restartingServer struct {
 	stop                chan (struct{})
@@ -30,37 +35,60 @@ type restartingServer struct {
 func (rs *restartingServer) Start() error {
 	go func() {
 		for {
-			err := rs.natPinger.WaitForHole()
-			if err != nil {
-				// currently, this is never reachable, as the nat pinger has no scenarios under which it returns a non nil error
+			waiterProcess := make(chan error)
+			holeWaiter := make(chan error)
+			log.Info(restartingServerLogPrefix, "constructing openvpn")
+			ovpn := rs.openvpnFactory()
+
+			go func() {
+				log.Info(restartingServerLogPrefix, "waiting for nat hole")
+				holeWaiter <- rs.natPinger.WaitForHole()
+			}()
+
+			// wait for the hole to be punched, or the stop to be sent
+			select {
+			case <-holeWaiter:
+				log.Info(restartingServerLogPrefix, "starting openvpn")
+				err := ovpn.Start()
+				if err != nil {
+					rs.waiter <- err
+					return
+				}
+				go func() {
+					log.Info(restartingServerLogPrefix, "waiting for openvpn")
+					waiterProcess <- ovpn.Wait()
+				}()
+			case <-rs.stop:
+				rs.stopCleanup(ovpn)
+				return
 			}
 
-			ovpn := rs.openvpnFactory()
-			err = ovpn.Start()
-			if err != nil {
-				rs.waiter <- err
-				break
-			}
-			waiter := make(chan error)
-			go func() {
-				waiter <- ovpn.Wait()
-			}()
+			// wait for stops, last session events or openvpn process exits
 			select {
-			case err = <-waiter:
+			case err := <-waiterProcess:
+				log.Info(restartingServerLogPrefix, "waiter err", err)
 				if err != nil {
 					rs.waiter <- err
 					return
 				}
 			case <-rs.stop:
-				ovpn.Stop()
-				rs.waiter <- nil
+				rs.stopCleanup(ovpn)
 				return
 			case <-rs.lastSessionShutdown:
+				log.Info(restartingServerLogPrefix, "last session called")
 				ovpn.Stop()
+				log.Info(restartingServerLogPrefix, "last session called -> returning")
 			}
 		}
 	}()
 	return nil
+}
+
+func (rs *restartingServer) stopCleanup(openvpn openvpn.Process) {
+	log.Info(restartingServerLogPrefix, "stop called")
+	openvpn.Stop()
+	rs.waiter <- nil
+	log.Info(restartingServerLogPrefix, "stopped -> returning")
 }
 
 func (rs *restartingServer) Wait() error {
@@ -68,5 +96,5 @@ func (rs *restartingServer) Wait() error {
 }
 
 func (rs *restartingServer) Stop() {
-	rs.stop <- struct{}{}
+	close(rs.stop)
 }
