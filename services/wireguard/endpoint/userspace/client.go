@@ -86,6 +86,17 @@ func (c *client) AddPeer(name string, peer wg.PeerInfo, allowedIPs ...string) er
 	return c.devAPI.AddPeer(extPeer)
 }
 
+func (c *client) DelPeer(_ string, publicKey string) error {
+	key, err := base64stringTo32ByteArray(publicKey)
+	if err != nil {
+		return err
+	}
+
+	c.devAPI.DelPeer(key)
+
+	return nil
+}
+
 func (c *client) Close() error {
 	c.devAPI.Close() // c.devAPI.Close() closes c.tun too
 	return nil

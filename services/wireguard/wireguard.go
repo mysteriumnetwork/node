@@ -62,6 +62,7 @@ func (method Payment) GetPrice() money.Money {
 type ConnectionEndpoint interface {
 	Start(config *ServiceConfig) error
 	AddPeer(publicKey string, endpoint *net.UDPAddr, allowedIPs ...string) error
+	DelPeer(publicKey string) error
 	PeerStats() (Stats, error)
 	ConfigureRoutes(ip net.IP) error
 	Config() (ServiceConfig, error)

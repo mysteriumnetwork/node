@@ -100,7 +100,7 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/wireguard-go"
-  revision = "c8073c70e944fe656f5854b347e2e2687356043b"
+  revision = "7173500d567b11699018d483e1635b6af66ecabc"
 
 [[constraint]]
   name = "github.com/jackpal/gateway"

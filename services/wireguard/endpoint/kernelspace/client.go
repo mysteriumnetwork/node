@@ -84,6 +84,18 @@ func (c *client) AddPeer(iface string, peer wg.PeerInfo, _ ...string) error {
 	return c.wgClient.ConfigureDevice(iface, deviceConfig)
 }
 
+func (c *client) DelPeer(iface string, publicKey string) error {
+	key, err := stringToKey(publicKey)
+	if err != nil {
+		return err
+	}
+
+	return c.wgClient.ConfigureDevice(iface, wgtypes.Config{Peers: []wgtypes.PeerConfig{{
+		PublicKey: key,
+		Remove:    true,
+	}}})
+}
+
 func (c *client) PeerStats() (wg.Stats, error) {
 	d, err := c.wgClient.Device(c.iface)
 	if err != nil {

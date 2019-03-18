@@ -35,6 +35,7 @@ type wgClient interface {
 	ConfigureRoutes(iface string, ip net.IP) error
 	DestroyDevice(name string) error
 	AddPeer(name string, peer wg.PeerInfo, allowedIP ...string) error
+	DelPeer(name string, publicKey string) error
 	PeerStats() (wg.Stats, error)
 	Close() error
 }
@@ -95,6 +96,7 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	var deviceConfig deviceConfig
 	deviceConfig.listenPort = ce.endpoint.Port
 	deviceConfig.privateKey = ce.privateKey
+
 	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.ipAddr)
 }
 
@@ -103,6 +105,12 @@ func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr, a
 	return ce.wgClient.AddPeer(ce.iface, peerInfo{endpoint, publicKey}, allowedIP...)
 }
 
+// DelPeer removes a wireguard peer from the wireguard network interface.
+func (ce *connectionEndpoint) DelPeer(publicKey string) error {
+	return ce.wgClient.DelPeer(ce.iface, publicKey)
+}
+
+// PeerStats returns stats information about connected peer.
 func (ce *connectionEndpoint) PeerStats() (wg.Stats, error) {
 	return ce.wgClient.PeerStats()
 }

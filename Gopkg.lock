@@ -308,7 +308,7 @@
   version = "v0.0.10"
 
 [[projects]]
-  digest = "1:fef11ce7bad787dad351a3f7da701223dbbcec519877152d18228ef9c2c28b71"
+  digest = "1:56a114418876fc3b32386f51d96aadf0298261a1d2806a3ca6d0a4d5a61fd370"
   name = "github.com/mysteriumnetwork/wireguard-go"
   packages = [
     "device",
@@ -320,7 +320,7 @@
     "xchacha20poly1305",
   ]
   pruneopts = "UT"
-  revision = "c8073c70e944fe656f5854b347e2e2687356043b"
+  revision = "7173500d567b11699018d483e1635b6af66ecabc"
 
 [[projects]]
   digest = "1:0923946dc9acc1aeb0cdee47c1bf85cb7662562ecb2ddae1f73bbd34c322ecfe"
