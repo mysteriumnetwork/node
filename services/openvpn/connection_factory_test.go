@@ -56,8 +56,7 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 }
 
 func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
-	var lastSessionShutdownFake = make(chan bool)
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, lastSessionShutdownFake, ip.NewResolverFake("1.1.1.1"))
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, ip.NewResolverFake("1.1.1.1"), &MockNATPinger{})
 	channel := make(chan connection.State)
 	statisticsChannel := make(chan consumer.SessionStatistics)
 	connectionOptions := connection.ConnectOptions{}
@@ -68,11 +67,28 @@ func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
 }
 
 func TestConnectionFactory_CreatesConnection(t *testing.T) {
-	var lastSessionShutdownFake = make(chan bool)
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, lastSessionShutdownFake, ip.NewResolverFake("1.1.1.1"))
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, ip.NewResolverFake("1.1.1.1"), &MockNATPinger{})
 	channel := make(chan connection.State)
 	statisticsChannel := make(chan consumer.SessionStatistics)
 	conn, err := factory.Create(channel, statisticsChannel)
 	assert.Nil(t, err)
 	assert.NotNil(t, conn)
+}
+
+// MockNATPinger returns a mock nat pinger, that really doesnt do much
+type MockNATPinger struct{}
+
+// BindProvider does nothing
+func (mnp *MockNATPinger) BindPort(port int) {
+
+}
+
+// PingProvider does nothing
+func (mnp *MockNATPinger) PingProvider(_ string, port int) error {
+	return nil
+}
+
+// WaitForHole returns nil
+func (mnp *MockNATPinger) WaitForHole() error {
+	return nil
 }

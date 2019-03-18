@@ -114,3 +114,16 @@ func MockDiscoveryFactoryFunc(ds Discovery) DiscoveryFactory {
 		return ds
 	}
 }
+
+// MockNATPinger returns a mock nat pinger, that really doesnt do much
+type MockNATPinger struct{}
+
+// BindProvider does nothing
+func (mnp *MockNATPinger) BindProvider(port int) {
+
+}
+
+// WaitForHole returns nil
+func (mnp *MockNATPinger) WaitForHole() error {
+	return nil
+}

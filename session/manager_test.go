@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/nat/traversal"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
@@ -65,9 +67,8 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 	sessionStore := NewStorageMemory()
 	natPingerChan := func() chan json.RawMessage { return make(chan json.RawMessage, 1) }
-	lastSessionShutdown := make(chan bool)
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPingerChan, lastSessionShutdown)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPingerChan, nil, &MockNatEventTracker{})
 
 	requestConfig := json.RawMessage{}
 	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, requestConfig)
@@ -79,12 +80,18 @@ func TestManager_Create_StoresSession(t *testing.T) {
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPingerChan := func() chan json.RawMessage { return make(chan json.RawMessage, 1) }
-	lastSessionShutdown := make(chan bool)
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPingerChan, lastSessionShutdown)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPingerChan, nil, &MockNatEventTracker{})
 
 	requestConfig := json.RawMessage{}
 	sessionInstance, err := manager.Create(consumerID, consumerID, 69, nil, requestConfig)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Exactly(t, Session{}, sessionInstance)
+}
+
+type MockNatEventTracker struct {
+}
+
+func (mnet *MockNatEventTracker) LastEvent() traversal.Event {
+	return traversal.Event{}
 }
