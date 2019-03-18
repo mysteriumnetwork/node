@@ -1,3 +1,5 @@
+//+build !windows
+
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
@@ -39,8 +41,8 @@ type Allocator struct {
 }
 
 // NewAllocator creates new resource pool for wireguard connection.
-func NewAllocator() Allocator {
-	return Allocator{
+func NewAllocator() *Allocator {
+	return &Allocator{
 		Ifaces:      make(map[int]struct{}),
 		IPAddresses: make(map[int]struct{}),
 		Ports:       make(map[int]struct{}),
@@ -154,7 +156,7 @@ func (a *Allocator) ReleaseIPNet(ipnet net.IPNet) error {
 	defer a.mu.Unlock()
 
 	ip4 := ipnet.IP.To4()
-	if len(ip4) != net.IPv4len {
+	if ip4 == nil {
 		return errors.New("allocated subnet not found")
 	}
 

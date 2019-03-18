@@ -20,7 +20,7 @@ package tequilapi
 import (
 	"regexp"
 
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/cihub/seelog"
 )
 
 // RegexpCorsPolicy allows customizing CORS (Cross-Origin Resource Sharing) behaviour - whitelisting domains by regexp

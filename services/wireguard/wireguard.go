@@ -61,7 +61,8 @@ func (method Payment) GetPrice() money.Money {
 // required for establishing connection between service provider and consumer.
 type ConnectionEndpoint interface {
 	Start(config *ServiceConfig) error
-	AddPeer(publicKey string, endpoint *net.UDPAddr) error
+	AddPeer(publicKey string, endpoint *net.UDPAddr, allowedIPs ...string) error
+	RemovePeer(publicKey string) error
 	PeerStats() (Stats, error)
 	ConfigureRoutes(ip net.IP) error
 	Config() (ServiceConfig, error)

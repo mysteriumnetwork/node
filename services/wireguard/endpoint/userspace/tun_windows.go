@@ -51,8 +51,10 @@ func CreateTUN(name string, subnet net.IPNet) (tun.TUNDevice, error) {
 		return nil, errors.Wrap(err, "failed to assign IP address")
 	}
 
-	if err := renameInterface(tunDevice.Name(), name); err != nil {
-		return nil, errors.Wrap(err, "failed to rename network interface")
+	if tunDevice.Name() != name {
+		if err := renameInterface(tunDevice.Name(), name); err != nil {
+			return nil, errors.Wrap(err, "failed to rename network interface")
+		}
 	}
 
 	return &nativeTun{
