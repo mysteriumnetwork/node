@@ -61,7 +61,7 @@ func (c *client) ConfigureDevice(name string, config wg.DeviceConfig, subnet net
 	return nil
 }
 
-func (c *client) AddPeer(name string, peer wg.PeerInfo) error {
+func (c *client) AddPeer(name string, peer wg.PeerInfo, allowedIPs ...string) error {
 	key, err := base64stringTo32ByteArray(peer.PublicKey())
 	if err != nil {
 		return err
@@ -72,6 +72,10 @@ func (c *client) AddPeer(name string, peer wg.PeerInfo) error {
 		AllowedIPs: []string{"0.0.0.0/0", "::/0"},
 	}
 
+	if len(allowedIPs) > 0 {
+		extPeer.AllowedIPs = allowedIPs
+	}
+
 	if ep := peer.Endpoint(); ep != nil {
 		extPeer.RemoteEndpoint, err = device.CreateEndpoint(ep.String())
 		if err != nil {
@@ -80,6 +84,17 @@ func (c *client) AddPeer(name string, peer wg.PeerInfo) error {
 	}
 
 	return c.devAPI.AddPeer(extPeer)
+}
+
+func (c *client) RemovePeer(_ string, publicKey string) error {
+	key, err := base64stringTo32ByteArray(publicKey)
+	if err != nil {
+		return err
+	}
+
+	c.devAPI.RemovePeer(key)
+
+	return nil
 }
 
 func (c *client) Close() error {
