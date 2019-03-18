@@ -1,5 +1,3 @@
-//+build windows
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -28,7 +26,6 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/pkg/errors"
-	"golang.org/x/sys/windows/registry"
 )
 
 const (
@@ -42,6 +39,7 @@ type serviceICS struct {
 	ifaces             map[string]RuleForwarding // list in internal interfaces with enabled internet connection sharing
 	remoteAccessStatus string
 	powerShell         func(cmd string) ([]byte, error)
+	setICSAddresses    func(ip string) error
 }
 
 // Enable enables internet connection sharing for the public interface.
@@ -83,7 +81,7 @@ func (ics *serviceICS) Add(rule RuleForwarding) error {
 	}
 
 	ip := incrementIP(ipnet.IP)
-	if err := setICSAddresses(ip.String()); err != nil {
+	if err := ics.setICSAddresses(ip.String()); err != nil {
 		return errors.Wrap(err, "failed to set ICS IP-address range")
 	}
 
@@ -217,19 +215,6 @@ func (ics *serviceICS) getInternalInterfaceName() (string, error) {
 	}
 
 	return ifaceName, nil
-}
-
-func setICSAddresses(ip string) error {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `System\CurrentControlSet\Services\SharedAccess\Parameters`, registry.QUERY_VALUE|registry.SET_VALUE)
-	if err != nil {
-		return err
-	}
-	defer k.Close()
-
-	if err := k.SetStringValue("ScopeAddress", ip); err != nil {
-		return err
-	}
-	return k.SetStringValue("ScopeAddressBackup", ip)
 }
 
 func incrementIP(ip net.IP) net.IP {
