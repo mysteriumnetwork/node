@@ -35,8 +35,7 @@ var (
 		{"0x000000000000000000000000000000000000000a"},
 		{"0x000000000000000000000000000000000000beef"},
 	}
-	newIdentity       = identity.Identity{"0x000000000000000000000000000000000000aaac"}
-	fakeSignerFactory = func(id identity.Identity) identity.Signer { return nil } //it works in this case - it's passed to fake myst client
+	newIdentity = identity.Identity{"0x000000000000000000000000000000000000aaac"}
 )
 
 func TestUnlockIdentitySuccess(t *testing.T) {
@@ -50,7 +49,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 	params := httprouter.Params{{"id", "1234abcd"}}
 	assert.Nil(t, err)
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Unlock
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).Unlock
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
@@ -70,7 +69,7 @@ func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 	params := httprouter.Params{{"id", "1234abcd"}}
 	assert.Nil(t, err)
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Unlock
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).Unlock
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
@@ -86,7 +85,7 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	assert.NoError(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Unlock
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).Unlock
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
@@ -115,7 +114,7 @@ func TestUnlockFailure(t *testing.T) {
 
 	mockIdm.MarkUnlockToFail()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Unlock
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).Unlock
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusForbidden, resp.Code)
@@ -135,7 +134,7 @@ func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).Create
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
@@ -152,7 +151,7 @@ func TestCreateNewIdentityNoPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).Create
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
@@ -179,7 +178,7 @@ func TestCreateNewIdentity(t *testing.T) {
 
 	resp := httptest.NewRecorder()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).Create
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).Create
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -196,7 +195,7 @@ func TestListIdentities(t *testing.T) {
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeSignerFactory).List
+	handlerFunc := NewIdentitiesEndpoint(mockIdm).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(

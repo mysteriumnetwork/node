@@ -24,6 +24,11 @@ type CreateIdentityRequest struct {
 	Identity string `json:"identity"`
 }
 
+// UpdatePayoutInfoRequest represents JSON request for creating payout info request
+type UpdatePayoutInfoRequest struct {
+	EthAddress string `json:"payout_eth_address"`
+}
+
 // NodeRegisterRequest represents JSON for node registration request
 type NodeRegisterRequest struct {
 	ServiceProposal market.ServiceProposal `json:"service_proposal"`

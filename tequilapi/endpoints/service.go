@@ -72,7 +72,7 @@ type serviceInfo struct {
 	Proposal proposalRes `json:"proposal"`
 }
 
-// ServiceEndpoint struct represents /service resource and it's sub-resources
+// ServiceEndpoint struct represents management of service resource and it's sub-resources
 type ServiceEndpoint struct {
 	serviceManager ServiceManager
 	optionsParser  map[string]ServiceOptionsParser
