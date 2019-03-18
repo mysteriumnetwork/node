@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/pkg/errors"
@@ -39,6 +40,7 @@ type serviceICS struct {
 	ifaces             map[string]RuleForwarding // list in internal interfaces with enabled internet connection sharing
 	remoteAccessStatus string
 	powerShell         func(cmd string) ([]byte, error)
+	ipAddrWatchdog     chan struct{}
 }
 
 // Enable enables internet connection sharing for the public interface.
@@ -52,8 +54,14 @@ func (nat *serviceICS) Enable() error {
 		return errors.Wrap(err, "failed to get public interface name")
 	}
 
-	err = nat.applySharingConfig(enablePublicSharing, ifaceName)
-	return errors.Wrap(err, "failed to enable internet connection sharing")
+	if err := nat.applySharingConfig(enablePublicSharing, ifaceName); err != nil {
+		return errors.Wrap(err, "failed to enable internet connection sharing")
+	}
+
+	nat.ipAddrWatchdog = make(chan struct{})
+	go nat.interfaceIPWatchdog()
+
+	return nil
 }
 
 func (nat *serviceICS) enableRemoteAccessService() error {
@@ -113,6 +121,11 @@ func (nat *serviceICS) Del(rule RuleForwarding) error {
 
 // Disable disables internet connection sharing for the public interface.
 func (nat *serviceICS) Disable() (resErr error) {
+	if nat.ipAddrWatchdog != nil {
+		close(nat.ipAddrWatchdog)
+		nat.ipAddrWatchdog = nil
+	}
+
 	for iface, rule := range nat.ifaces {
 		if err := nat.Del(rule); err != nil {
 			log.Errorf("%s Failed to cleanup internet connection sharing for '%s' interface: %v", natLogPrefix, iface, err)
@@ -204,6 +217,57 @@ func (nat *serviceICS) getInternalInterfaceName() (string, error) {
 	}
 
 	return ifaceName, nil
+}
+
+func (nat *serviceICS) interfaceIPWatchdog() {
+	for {
+		select {
+		case <-time.After(5 * time.Second):
+			for ifaceName, rule := range nat.ifaces {
+				_, ipnet, err := net.ParseCIDR(rule.SourceAddress)
+				if err != nil {
+					log.Warnf("%s Failed to parse IP-address: %s", natLogPrefix, rule.SourceAddress)
+					continue
+				}
+
+				incrementIP(ipnet.IP)
+				if err := nat.setInterfaceAddr(ifaceName, ipnet); err != nil {
+					log.Warnf("%s Failed to assign IP-address '%s' to interface '%d'", natLogPrefix, ipnet.String(), ifaceName)
+				}
+			}
+		case <-nat.ipAddrWatchdog:
+			return
+		}
+	}
+}
+
+func (nat *serviceICS) setInterfaceAddr(name string, subnet *net.IPNet) error {
+	iface, err := net.InterfaceByName(name)
+	if err != nil {
+		return err
+	}
+
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return err
+	}
+	for _, addr := range addrs {
+		if addr.String() == subnet.String() {
+			return nil // Interface address already assigned, nothing to do.
+		}
+	}
+
+	out, err := nat.powerShell("netsh interface ip set address name=\"" + name + "\" source=static " + subnet.String())
+	return errors.Wrap(err, string(out))
+}
+
+func incrementIP(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
 }
 
 func powerShell(cmd string) ([]byte, error) {
