@@ -86,7 +86,6 @@ func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress stri
 		EthAddress: ethAddress,
 	}
 	req, err := requests.NewSignedPutRequest(mApi.discoveryAPIAddress, path, requestBody, signer)
-
 	if err != nil {
 		return err
 	}

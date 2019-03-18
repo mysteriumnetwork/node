@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,15 +40,15 @@ type PayoutInfoRegistry interface {
 	UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error
 }
 
-type payoutAPI struct {
+type payoutEndpoint struct {
 	idm                identity.Manager
 	signerFactory      identity.SignerFactory
 	payoutInfoRegistry PayoutInfoRegistry
 }
 
-// NewPayoutEndpoint creates payout api controller used by tequilapi service
-func NewPayoutEndpoint(idm identity.Manager, signerFactory identity.SignerFactory, payoutInfoRegistry PayoutInfoRegistry) *payoutAPI {
-	return &payoutAPI{idm, signerFactory, payoutInfoRegistry}
+// NewPayoutEndpoint creates payout api endpoint
+func NewPayoutEndpoint(idm identity.Manager, signerFactory identity.SignerFactory, payoutInfoRegistry PayoutInfoRegistry) *payoutEndpoint {
+	return &payoutEndpoint{idm, signerFactory, payoutInfoRegistry}
 }
 
 // swagger:operation PUT /identities/{id}/payout Identity updatePayoutInfo
@@ -81,8 +81,9 @@ func NewPayoutEndpoint(idm identity.Manager, signerFactory identity.SignerFactor
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *payoutAPI) UpdatePayoutInfo(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (endpoint *payoutEndpoint) UpdatePayoutInfo(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
+
 	payoutInfoReq, err := toPayoutInfoRequest(request)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
