@@ -42,7 +42,7 @@ func NewManager(
 	resourceAllocator := resources.NewAllocator()
 	return &Manager{
 		natService:        natService,
-		resourceAllocator: &resourceAllocator,
+		resourceAllocator: resourceAllocator,
 		portMap:           portMap,
 		location:          location,
 		options:           options,

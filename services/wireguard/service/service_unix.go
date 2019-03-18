@@ -47,10 +47,10 @@ func NewManager(
 
 		publicIP:        location.PubIP,
 		outboundIP:      location.OutIP,
-		currentLocation: location.OutIP,
+		currentLocation: location.Country,
 
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(location, &resourceAllocator, portMap, options.ConnectDelay)
+			return endpoint.NewConnectionEndpoint(location, resourceAllocator, portMap, options.ConnectDelay)
 		},
 	}
 }

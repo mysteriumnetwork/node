@@ -35,14 +35,13 @@ type Allocator struct {
 }
 
 // NewAllocator creates new resource pool for wireguard connection.
-func NewAllocator() Allocator {
-	return Allocator{
+func NewAllocator() *Allocator {
+	return &Allocator{
 		IPAddresses: make(map[int]struct{}),
 	}
 }
 
-// AbandonedInterfaces returns a list of abandoned interfaces that exist in the system,
-// but was not allocated by the Allocator.
+// AbandonedInterfaces is not required for Windows implementation and left here just to satisfy the interface.
 func (a *Allocator) AbandonedInterfaces() ([]net.Interface, error) {
 	return nil, nil
 }
@@ -78,7 +77,7 @@ func (a *Allocator) AllocatePort() (int, error) {
 	return 52820, nil
 }
 
-// ReleaseInterface releases name for the wireguard network interface.
+// ReleaseInterface is not required for Windows implementation and left here just to satisfy the interface.
 func (a *Allocator) ReleaseInterface(iface string) error {
 	return nil
 }
@@ -89,7 +88,7 @@ func (a *Allocator) ReleaseIPNet(ipnet net.IPNet) error {
 	defer a.mu.Unlock()
 
 	ip4 := ipnet.IP.To4()
-	if len(ip4) != net.IPv4len {
+	if ip4 == nil {
 		return errors.New("allocated subnet not found")
 	}
 
@@ -102,7 +101,7 @@ func (a *Allocator) ReleaseIPNet(ipnet net.IPNet) error {
 	return nil
 }
 
-// ReleasePort releases UDP port.
+// ReleasePort is not required for Windows implementation and left here just to satisfy the interface.
 func (a *Allocator) ReleasePort(port int) error {
 	return nil
 }
