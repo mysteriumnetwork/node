@@ -39,7 +39,8 @@ type serviceICS struct {
 	ifaces             map[string]RuleForwarding // list in internal interfaces with enabled internet connection sharing
 	remoteAccessStatus string
 	powerShell         func(cmd string) ([]byte, error)
-	setICSAddresses    func(ip string) error
+	setICSAddresses    func(config map[string]string) (map[string]string, error)
+	oldICSConfig       map[string]string
 }
 
 // Enable enables internet connection sharing for the public interface.
@@ -81,7 +82,11 @@ func (ics *serviceICS) Add(rule RuleForwarding) error {
 	}
 
 	ip := incrementIP(ipnet.IP)
-	if err := ics.setICSAddresses(ip.String()); err != nil {
+	ics.oldICSConfig, err = ics.setICSAddresses(map[string]string{
+		"ScopeAddress":          ip.String(),
+		"ScopeAddressBackup":    ip.String(),
+		"StandaloneDhcpAddress": ip.String()})
+	if err != nil {
 		return errors.Wrap(err, "failed to set ICS IP-address range")
 	}
 
@@ -124,6 +129,9 @@ func (ics *serviceICS) Del(rule RuleForwarding) error {
 
 // Disable disables internet connection sharing for the public interface.
 func (ics *serviceICS) Disable() (resErr error) {
+	if _, err := ics.setICSAddresses(ics.oldICSConfig); err != nil {
+		return errors.Wrap(err, "failed to revert ICS IP-address range")
+	}
 	for iface, rule := range ics.ifaces {
 		if err := ics.Del(rule); err != nil {
 			log.Errorf("%s Failed to cleanup internet connection sharing for '%s' interface: %v", natLogPrefix, iface, err)

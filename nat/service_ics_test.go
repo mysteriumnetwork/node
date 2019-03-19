@@ -256,6 +256,6 @@ func (sh *mockPowerShell) exec(cmd string) ([]byte, error) {
 	return nil, sh.err
 }
 
-func mockICSConfig(ip string) error {
+func mockICSConfig(_map [string]string) error {
 	return nil
 }

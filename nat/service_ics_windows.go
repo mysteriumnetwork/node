@@ -21,15 +21,28 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-func setICSAddresses(ip string) error {
-	k, err := registry.OpenKey(registry.LOCAL_MACHINE, `System\CurrentControlSet\Services\SharedAccess\Parameters`, registry.QUERY_VALUE|registry.SET_VALUE)
+func setICSAddresses(config map[string]string) (map[string]string, error) {
+	key, err := registry.OpenKey(registry.LOCAL_MACHINE, `System\CurrentControlSet\Services\SharedAccess\Parameters`, registry.QUERY_VALUE|registry.SET_VALUE)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer k.Close()
+	defer key.Close()
 
-	if err := k.SetStringValue("ScopeAddress", ip); err != nil {
-		return err
+	oldValues := make(map[string]string)
+	for k, v := range config {
+		s, _, err := key.GetStringValue(k)
+		if err != nil {
+			if err == registry.ErrNotExist {
+				continue
+			}
+			return nil, err
+		}
+		oldValues[k] = s
+
+		if err := key.SetStringValue(k, v); err != nil {
+			return nil, err
+		}
 	}
-	return k.SetStringValue("ScopeAddressBackup", ip)
+
+	return oldValues, nil
 }
