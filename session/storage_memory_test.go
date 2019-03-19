@@ -33,6 +33,7 @@ func TestStorage_FindSession_Existing(t *testing.T) {
 	storage := mockStorage(sessionExisting)
 
 	sessionInstance, found := storage.Find(sessionExisting.ID)
+
 	assert.True(t, found)
 	assert.Exactly(t, sessionExisting, sessionInstance)
 }
@@ -52,21 +53,53 @@ func TestStorage_Add(t *testing.T) {
 	}
 
 	storage.Add(sessionNew)
-	assert.Len(t, storage.sessionMap, 2)
-	assert.Exactly(t, sessionNew, storage.sessionMap[sessionNew.ID])
+	assert.Exactly(
+		t,
+		[]Session{sessionExisting, sessionNew},
+		storage.sessions,
+	)
+	assert.Exactly(
+		t,
+		map[ID]int{
+			sessionExisting.ID: 0,
+			sessionNew.ID:      1,
+		},
+		storage.idToIndex,
+	)
+}
+
+func TestStorage_GetAll(t *testing.T) {
+	sessionFirst := Session{ID: ID("id1")}
+	sessionSecond := Session{ID: ID("id2")}
+	storage := &StorageMemory{
+		sessions: []Session{
+			sessionFirst,
+			sessionSecond,
+		},
+		idToIndex: map[ID]int{
+			sessionFirst.ID:  0,
+			sessionSecond.ID: 1,
+		},
+	}
+
+	sessions, err := storage.GetAll()
+	assert.NoError(t, err)
+	assert.Equal(t, sessions, []Session{sessionFirst, sessionSecond})
 }
 
 func TestStorage_Remove(t *testing.T) {
 	storage := mockStorage(sessionExisting)
 
 	storage.Remove(sessionExisting.ID)
-	assert.Len(t, storage.sessionMap, 0)
+	assert.Len(t, storage.sessions, 0)
+	assert.Len(t, storage.idToIndex, 0)
 }
 
 func mockStorage(sessionInstance Session) *StorageMemory {
 	return &StorageMemory{
-		sessionMap: map[ID]Session{
-			sessionInstance.ID: sessionInstance,
+		sessions: []Session{sessionInstance},
+		idToIndex: map[ID]int{
+			sessionInstance.ID: 0,
 		},
 	}
 }

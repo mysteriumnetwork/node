@@ -24,15 +24,17 @@ import (
 // NewStorageMemory initiates new session storage
 func NewStorageMemory() *StorageMemory {
 	return &StorageMemory{
-		sessionMap: make(map[ID]Session),
-		lock:       sync.Mutex{},
+		sessions:  make([]Session, 0),
+		idToIndex: make(map[ID]int),
+		lock:      sync.Mutex{},
 	}
 }
 
-// StorageMemory maintains a map of session id -> session
+// StorageMemory maintains all currents sessions in memory
 type StorageMemory struct {
-	sessionMap map[ID]Session
-	lock       sync.Mutex
+	sessions  []Session
+	idToIndex map[ID]int
+	lock      sync.Mutex
 }
 
 // Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
@@ -40,13 +42,30 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	storage.sessionMap[sessionInstance.ID] = sessionInstance
+	sessionIndex := len(storage.sessions)
+	storage.sessions = append(storage.sessions, sessionInstance)
+
+	storage.idToIndex[sessionInstance.ID] = sessionIndex
+}
+
+// GetAll returns all sessions in storage
+func (storage *StorageMemory) GetAll() ([]Session, error) {
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+
+	return storage.sessions, nil
 }
 
 // Find returns underlying session instance
 func (storage *StorageMemory) Find(id ID) (Session, bool) {
-	sessionInstance, found := storage.sessionMap[id]
-	return sessionInstance, found
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+
+	if sessionIndex, found := storage.idToIndex[id]; found {
+		return storage.sessions[sessionIndex], true
+	}
+
+	return Session{}, false
 }
 
 // Remove removes given session from underlying storage
@@ -54,5 +73,8 @@ func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	delete(storage.sessionMap, id)
+	if sessionIndex, found := storage.idToIndex[id]; found {
+		delete(storage.idToIndex, id)
+		storage.sessions = append(storage.sessions[:sessionIndex], storage.sessions[sessionIndex+1:]...)
+	}
 }

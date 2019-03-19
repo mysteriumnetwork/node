@@ -148,7 +148,7 @@ func (ce *ConnectionEndpoint) Status(resp http.ResponseWriter, _ *http.Request, 
 }
 
 // Create starts new connection
-// swagger:operation PUT /connection Connection createConnection
+// swagger:operation PUT /connection Connection connectionCreate
 // ---
 // summary: Starts new connection
 // description: Consumer opens connection to provider
@@ -228,7 +228,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 }
 
 // Kill stops connection
-// swagger:operation DELETE /connection Connection killConnection
+// swagger:operation DELETE /connection Connection connectionCancel
 // ---
 // summary: Stops connection
 // description: Stops current connection
@@ -258,7 +258,7 @@ func (ce *ConnectionEndpoint) Kill(resp http.ResponseWriter, req *http.Request, 
 }
 
 // GetIP responds with current ip, using its ip resolver
-// swagger:operation GET /connection/ip Location getIP
+// swagger:operation GET /connection/ip Connection connectionIP
 // ---
 // summary: Returns IP address
 // description: Returns current public IP address
@@ -290,7 +290,7 @@ func (ce *ConnectionEndpoint) GetIP(writer http.ResponseWriter, request *http.Re
 }
 
 // GetStatistics returns statistics about current connection
-// swagger:operation GET /connection/statistics Connection getStatistics
+// swagger:operation GET /connection/statistics Connection connectionStatistics
 // ---
 // summary: Returns connection statistics
 // description: Returns statistics about current connection

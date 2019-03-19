@@ -45,8 +45,9 @@ const cliCommandName = "cli"
 const serviceHelp = `service <action> [args]
 	start	<ProviderID> <ServiceType> [options]
 	stop	<ServiceID>
-	list
 	status	<ServiceID>
+	list
+	sessions
 
 	example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --openvpn.port=1194 --openvpn.proto=UDP`
 
@@ -205,6 +206,8 @@ func (c *cliApp) service(argsString string) {
 		c.serviceGet(args[1])
 	case "list":
 		c.serviceList()
+	case "sessions":
+		c.serviceSessions()
 	default:
 		info(fmt.Sprintf("Unknown action provided: %s", action))
 		fmt.Println(serviceHelp)
@@ -251,6 +254,19 @@ func (c *cliApp) serviceList() {
 			"ID: "+service.ID,
 			"ProviderID: "+service.Proposal.ProviderID,
 			"Type: "+service.Proposal.ServiceType)
+	}
+}
+
+func (c *cliApp) serviceSessions() {
+	sessions, err := c.tequilapi.ServiceSessions()
+	if err != nil {
+		info("Failed to get a list of sessions: ", err)
+		return
+	}
+
+	status("Current sessions", len(sessions.Sessions))
+	for _, session := range sessions.Sessions {
+		status("ID: "+session.ID, "ConsumerID: "+session.ConsumerID)
 	}
 }
 
@@ -601,6 +617,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			readline.PcItem("stop"),
 			readline.PcItem("list"),
 			readline.PcItem("status"),
+			readline.PcItem("sessions"),
 		),
 		readline.PcItem(
 			"identities",
