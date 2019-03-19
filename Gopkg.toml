@@ -63,7 +63,7 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/go-openvpn"
-  revision = "123097496fe71e64e9f5752127a257e3dce0631b"
+  version = "0.0.13"
 
 [prune]
   go-tests = true

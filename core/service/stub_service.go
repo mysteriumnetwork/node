@@ -127,3 +127,8 @@ func (mnp *MockNATPinger) BindPort(port int) {
 func (mnp *MockNATPinger) WaitForHole() error {
 	return nil
 }
+
+// Stop does nothing
+func (mnp *MockNATPinger) Stop() {
+
+}

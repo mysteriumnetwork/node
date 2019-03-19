@@ -19,7 +19,6 @@ package openvpn
 
 import (
 	"github.com/cihub/seelog"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -35,6 +34,7 @@ type processFactory func(options connection.ConnectOptions) (openvpn.Process, *C
 // NATPinger tries to punch a hole in NAT
 type NATPinger interface {
 	BindPort(port int)
+	Stop()
 	PingProvider(ip string, port int) error
 }
 
@@ -52,7 +52,6 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	seelog.Info("starting connection")
 	proc, clientConfig, err := c.processFactory(options)
 	seelog.Info("client config factory error: ", err)
-	spew.Dump(clientConfig)
 	seelog.Flush()
 	if err != nil {
 		return err

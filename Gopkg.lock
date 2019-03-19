@@ -289,6 +289,7 @@
   ]
   pruneopts = "T"
   revision = "123097496fe71e64e9f5752127a257e3dce0631b"
+  version = "0.0.13"
 
 [[projects]]
   digest = "1:8a20b209f06b19844908cf0367975d0966d6c188e5381ebd9327d6cd5d2ab990"
@@ -592,7 +593,6 @@
     "github.com/asdine/storm",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
-    "github.com/davecgh/go-spew/spew",
     "github.com/ethereum/go-ethereum/accounts",
     "github.com/ethereum/go-ethereum/accounts/abi/bind",
     "github.com/ethereum/go-ethereum/accounts/keystore",

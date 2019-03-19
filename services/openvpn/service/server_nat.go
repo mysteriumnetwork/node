@@ -88,6 +88,7 @@ func (rs *restartingServer) stopCleanup(openvpn openvpn.Process) {
 	log.Info(restartingServerLogPrefix, "stop called")
 	openvpn.Stop()
 	rs.waiter <- nil
+	rs.natPinger.Stop()
 	log.Info(restartingServerLogPrefix, "stopped -> returning")
 }
 

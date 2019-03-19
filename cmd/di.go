@@ -89,6 +89,7 @@ type NatPinger interface {
 	BindPort(port int)
 	WaitForHole() error
 	Start()
+	Stop()
 }
 
 // NatEventTracker is responsible for tracking nat events
@@ -329,7 +330,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router, corsPolicy)
 	metricsSender := metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, metricsSender, di.NATPinger.Start)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, metricsSender, di.NATPinger)
 }
 
 func newSessionManagerFactory(

@@ -92,3 +92,8 @@ func (mnp *MockNATPinger) PingProvider(_ string, port int) error {
 func (mnp *MockNATPinger) WaitForHole() error {
 	return nil
 }
+
+// Stop does nothing
+func (mnp *MockNATPinger) Stop() {
+
+}

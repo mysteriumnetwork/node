@@ -51,6 +51,7 @@ type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outbound
 type NATPinger interface {
 	BindPort(port int)
 	WaitForHole() error
+	Stop()
 }
 
 // NATEventGetter allows us to fetch the last known NAT event

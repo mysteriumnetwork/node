@@ -27,6 +27,11 @@ func (np *NoopPinger) Start() {
 
 }
 
+// Stop does nothing
+func (np *NoopPinger) Stop() {
+
+}
+
 // PingProvider does nothing
 func (np *NoopPinger) PingProvider(ip string, port int) error {
 	return nil
