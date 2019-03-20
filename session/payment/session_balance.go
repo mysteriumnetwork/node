@@ -142,11 +142,7 @@ func (sb *SessionBalance) sendBalanceExpectPromise() error {
 	if err != nil {
 		return err
 	}
-	err = sb.receivePromiseOrTimeout()
-	if err != nil {
-		return err
-	}
-	return nil
+	return sb.receivePromiseOrTimeout()
 }
 
 func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, error) {

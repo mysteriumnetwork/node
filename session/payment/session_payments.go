@@ -91,6 +91,8 @@ func (cpo *SessionPayments) Start() error {
 	}
 }
 
+const numberOfRetriesForSend = 5
+
 func (cpo *SessionPayments) issuePromise(balance balance.Message) error {
 	err := cpo.promiseTracker.AlignStateWithProvider(promise.State{
 		Seq:    balance.SequenceID,
@@ -116,7 +118,7 @@ func (cpo *SessionPayments) issuePromise(balance balance.Message) error {
 			SequenceID: issuedPromise.Promise.SeqNo,
 			Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),
 		})
-	}, 5, cpo.sendRetryDuration)
+	}, numberOfRetriesForSend, cpo.sendRetryDuration)
 	if err != nil {
 		return err
 	}

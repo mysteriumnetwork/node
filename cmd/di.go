@@ -275,7 +275,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory, time.Second*20),
+		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory, payment_factory.SendRetryDuration),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 	)
@@ -335,7 +335,7 @@ func newSessionManagerFactory(
 			// TODO: the ints and times here need to be passed in as well, or defined as constants
 			tracker := balance.NewBalanceTracker(&timeTracker, amountCalc, 0)
 			validator := validators.NewIssuedPromiseValidator(consumerID, receiverID, issuerID)
-			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*240, time.Second*120, validator, promiseStorage, consumerID, receiverID, issuerID), nil
+			return session_payment.NewSessionBalance(sender, tracker, promiseChan, payment_factory.BalanceSendPeriod, payment_factory.PromiseWaitTimeout, validator, promiseStorage, consumerID, receiverID, issuerID), nil
 		}
 		return session.NewManager(
 			proposal,
