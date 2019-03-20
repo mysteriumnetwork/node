@@ -20,7 +20,6 @@ services:
       --ipify-url=http://ipify:3000
       --location.country=e2e-land
       --experiment-identity-check
-      --experiment-payments
       --localnet
       --broker-address=broker
       --discovery-address=http://discovery/v1
@@ -47,7 +46,6 @@ services:
     command: >
       --ipify-url=http://ipify:3000
       --experiment-identity-check
-      --experiment-payments
       --localnet
       --discovery-address=http://discovery/v1
       --ether.client.rpc=http://geth:8545
