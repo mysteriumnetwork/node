@@ -76,6 +76,7 @@ func NewTestSessionPayments(bm chan balance.Message, ps PeerPromiseSender, pt Pr
 		ps,
 		pt,
 		bt,
+		0,
 	)
 }
 
@@ -123,6 +124,7 @@ func Test_SessionPayments_ReportsIssuingErrors(t *testing.T) {
 func Test_SessionPayments_ReportsSendingErrors(t *testing.T) {
 	balanceChannel := make(chan balance.Message, 1)
 	customSender := newPromiseSender()
+	customSender.chanToWriteTo = make(chan promise.Message, 10)
 	err := errors.New("sending failed")
 	customSender.mockError = err
 

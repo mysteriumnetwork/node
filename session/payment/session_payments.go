@@ -21,7 +21,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/promises"
@@ -45,21 +47,25 @@ type SessionPayments struct {
 	peerPromiseSender PeerPromiseSender
 	promiseTracker    PromiseTracker
 	balanceTracker    BalanceTracker
+	sendRetryDuration time.Duration
 }
 
 // NewSessionPayments returns a new instance of consumer payment orchestrator
-func NewSessionPayments(balanceChan chan balance.Message, peerPromiseSender PeerPromiseSender, promiseTracker PromiseTracker, balanceTracker BalanceTracker) *SessionPayments {
+func NewSessionPayments(balanceChan chan balance.Message, peerPromiseSender PeerPromiseSender, promiseTracker PromiseTracker, balanceTracker BalanceTracker, sendRetryDuration time.Duration) *SessionPayments {
 	return &SessionPayments{
 		stop:              make(chan struct{}),
 		balanceChan:       balanceChan,
 		peerPromiseSender: peerPromiseSender,
 		promiseTracker:    promiseTracker,
 		balanceTracker:    balanceTracker,
+		sendRetryDuration: sendRetryDuration,
 	}
 }
 
 // balanceDifferenceThreshold determines the threshold where we'll cancel the session if there's a missmatch larger than the threshold provided between the provider and the consumer balances
 const balanceDifferenceThreshold uint64 = 20
+
+const sessionPaymentsLogPrefix = "[session-payments] "
 
 // ErrBalanceMissmatch represents an error that occurs when balances do not match
 var ErrBalanceMissmatch = errors.New("balance missmatch")
@@ -103,14 +109,18 @@ func (cpo *SessionPayments) issuePromise(balance balance.Message) error {
 	if err != nil {
 		return err
 	}
-	err = cpo.peerPromiseSender.Send(promise.Message{
-		Amount:     issuedPromise.Promise.Amount,
-		SequenceID: issuedPromise.Promise.SeqNo,
-		Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),
-	})
+
+	err = cpo.sendWithRetry(func() error {
+		return cpo.peerPromiseSender.Send(promise.Message{
+			Amount:     issuedPromise.Promise.Amount,
+			SequenceID: issuedPromise.Promise.SeqNo,
+			Signature:  fmt.Sprintf("0x%v", hex.EncodeToString(issuedPromise.IssuerSignature)),
+		})
+	}, 5, cpo.sendRetryDuration)
 	if err != nil {
 		return err
 	}
+
 	cpo.balanceTracker.Add(amountToExtend)
 	return nil
 }
@@ -120,6 +130,26 @@ func (cpo *SessionPayments) validateBalanceDifference(balance uint64) error {
 	diff := calculateBalanceDifference(balance, myBalance)
 	if diff >= balanceDifferenceThreshold {
 		return ErrBalanceMissmatch
+	}
+	return nil
+}
+
+func (cpo *SessionPayments) sendWithRetry(send func() error, attempts int, delay time.Duration) error {
+	for i := 1; i <= attempts; i++ {
+		err := send()
+		if err == nil {
+			return nil
+		}
+		if i == attempts {
+			return err
+		}
+		log.Warn(sessionPaymentsLogPrefix, "sending failed ", err, " will retry...")
+
+		select {
+		case <-cpo.stop:
+			return errors.New("sending cancelled")
+		case <-time.After(delay):
+		}
 	}
 	return nil
 }

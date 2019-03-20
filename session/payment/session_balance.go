@@ -116,21 +116,37 @@ func (sb *SessionBalance) Start() error {
 
 	sb.startBalanceTracker(lastPromise)
 
+	// give the consumer a second to start up his payments before sending the first request
+	firstSend := time.After(time.Second)
+
 	for {
 		select {
-		case <-sb.stop:
-			return nil
-		case <-time.After(sb.chargePeriod):
-			err := sb.sendBalance()
+		case <-firstSend:
+			err := sb.sendBalanceExpectPromise()
 			if err != nil {
 				return err
 			}
-			err = sb.receivePromiseOrTimeout()
+		case <-sb.stop:
+			return nil
+		case <-time.After(sb.chargePeriod):
+			err := sb.sendBalanceExpectPromise()
 			if err != nil {
 				return err
 			}
 		}
 	}
+}
+
+func (sb *SessionBalance) sendBalanceExpectPromise() error {
+	err := sb.sendBalance()
+	if err != nil {
+		return err
+	}
+	err = sb.receivePromiseOrTimeout()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, error) {

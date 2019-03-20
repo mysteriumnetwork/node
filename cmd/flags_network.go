@@ -38,11 +38,6 @@ var (
 		Usage: "Enables experimental identity check",
 	}
 
-	paymentCheckFlag = cli.BoolFlag{
-		Name:  "experiment-payments",
-		Usage: "Enables experimental payments check",
-	}
-
 	discoveryAddressFlag = cli.StringFlag{
 		Name:  "discovery-address",
 		Usage: "`URL` of discovery service",
@@ -78,7 +73,6 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		*flags,
 		testFlag, localnetFlag,
 		identityCheckFlag,
-		paymentCheckFlag,
 		discoveryAddressFlag, brokerAddressFlag,
 		etherRPCFlag, etherContractPaymentsFlag,
 		qualityOracleFlag,
@@ -92,7 +86,6 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ctx.GlobalBool(localnetFlag.Name),
 
 		ctx.GlobalBool(identityCheckFlag.Name),
-		ctx.GlobalBool(paymentCheckFlag.Name),
 
 		ctx.GlobalString(discoveryAddressFlag.Name),
 		ctx.GlobalString(brokerAddressFlag.Name),

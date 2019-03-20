@@ -35,16 +35,13 @@ import (
 )
 
 // PaymentIssuerFactoryFunc returns a factory for payment issuer. It will be noop if the experimental payment flag is not set
-func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.SignerFactory) func(
+func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.SignerFactory, sendRetryDuration time.Duration) func(
 	initialState promise.PaymentInfo,
 	paymentDefinition dto.PaymentPerTime,
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
-	if !nodeOptions.ExperimentPayments {
-		return noopPaymentIssuerFactory
-	}
-	return paymentIssuerFactory(signerFactory)
+	return paymentIssuerFactory(signerFactory, sendRetryDuration)
 }
 
 func noopPaymentIssuerFactory(initialState promise.PaymentInfo,
@@ -56,7 +53,7 @@ func noopPaymentIssuerFactory(initialState promise.PaymentInfo,
 
 }
 
-func paymentIssuerFactory(signerFactory identity.SignerFactory) func(
+func paymentIssuerFactory(signerFactory identity.SignerFactory, sendRetryDuration time.Duration) func(
 	initialState promise.PaymentInfo,
 	paymentDefinition dto.PaymentPerTime,
 	messageChan chan balance.Message,
@@ -79,7 +76,7 @@ func paymentIssuerFactory(signerFactory identity.SignerFactory) func(
 		amountCalc := session.AmountCalc{PaymentDef: paymentDefinition}
 
 		balanceTracker := balance.NewBalanceTracker(&timeTracker, amountCalc, initialState.FreeCredit)
-		payments := payment.NewSessionPayments(messageChan, ps, tracker, balanceTracker)
+		payments := payment.NewSessionPayments(messageChan, ps, tracker, balanceTracker, sendRetryDuration)
 		err := dialog.Receive(bl.GetConsumer())
 		return payments, errors.Wrap(err, "fail to receive from consumer")
 	}
