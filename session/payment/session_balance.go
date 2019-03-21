@@ -22,8 +22,11 @@ package payment
 import (
 	"errors"
 	"fmt"
+	"math"
+	"sync/atomic"
 	"time"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
@@ -65,6 +68,10 @@ var errBoltNotFound = errors.New("not found")
 // errNoPromiseForConsumer represents the error when the storage layer is unable to find a promise for the given consumer
 var errNoPromiseForConsumer = errors.New("no promise for consumer")
 
+const sessionBalanceLogPrefix = "[session-balance] "
+
+const chargePeriodLeeway = time.Minute * 5
+
 // SessionBalance orchestrates the ping pong of balance sent to consumer -> promise received from consumer flow
 type SessionBalance struct {
 	stop               chan struct{}
@@ -79,7 +86,9 @@ type SessionBalance struct {
 	consumerID         identity.Identity
 	receiverID         identity.Identity
 
-	sequenceID uint64
+	sequenceID              uint64
+	notReceivedPromiseCount uint64
+	maxNotReceivedPromises  uint64
 }
 
 // NewSessionBalance creates a new instance of provider payment orchestrator
@@ -93,18 +102,23 @@ func NewSessionBalance(
 	promiseStorage PromiseStorage,
 	consumerID, receiverID, issuerID identity.Identity) *SessionBalance {
 	return &SessionBalance{
-		stop:               make(chan struct{}),
-		peerBalanceSender:  peerBalanceSender,
-		balanceTracker:     balanceTracker,
-		promiseChan:        promiseChan,
-		chargePeriod:       chargePeriod,
-		promiseWaitTimeout: promiseWaitTimeout,
-		promiseValidator:   promiseValidator,
-		promiseStorage:     promiseStorage,
-		consumerID:         consumerID,
-		receiverID:         receiverID,
-		issuerID:           issuerID,
+		stop:                   make(chan struct{}),
+		peerBalanceSender:      peerBalanceSender,
+		balanceTracker:         balanceTracker,
+		promiseChan:            promiseChan,
+		chargePeriod:           chargePeriod,
+		promiseWaitTimeout:     promiseWaitTimeout,
+		promiseValidator:       promiseValidator,
+		promiseStorage:         promiseStorage,
+		consumerID:             consumerID,
+		receiverID:             receiverID,
+		issuerID:               issuerID,
+		maxNotReceivedPromises: calculateMaxNotReceivedPromiseCount(chargePeriodLeeway, chargePeriod),
 	}
+}
+
+func calculateMaxNotReceivedPromiseCount(chargeLeeway, chargePeriod time.Duration) uint64 {
+	return uint64(math.Round(float64(chargePeriodLeeway) / float64(chargePeriod)))
 }
 
 // Start starts the payment orchestrator. Blocks.
@@ -137,12 +151,47 @@ func (sb *SessionBalance) Start() error {
 	}
 }
 
+func (sb *SessionBalance) markPromiseNotReceived() {
+	atomic.AddUint64(&sb.notReceivedPromiseCount, 1)
+}
+
+func (sb *SessionBalance) resetNotReceivedPromiseCount() {
+	atomic.SwapUint64(&sb.notReceivedPromiseCount, 0)
+}
+
+func (sb *SessionBalance) getNotReceivedPromiseCount() uint64 {
+	return atomic.LoadUint64(&sb.notReceivedPromiseCount)
+}
+
 func (sb *SessionBalance) sendBalanceExpectPromise() error {
 	err := sb.sendBalance()
 	if err != nil {
 		return err
 	}
-	return sb.receivePromiseOrTimeout()
+
+	err = sb.receivePromiseOrTimeout()
+	if err != nil {
+		handlerErr := sb.handlePromiseReceiveError(err)
+		if handlerErr != nil {
+			return err
+		}
+	} else {
+		sb.resetNotReceivedPromiseCount()
+	}
+	return nil
+}
+
+func (sb *SessionBalance) handlePromiseReceiveError(err error) error {
+	// if it's a timeout, we'll want to ignore it if we're not exceeding maxNotReceivedPromises
+	if err == ErrPromiseWaitTimeout {
+		sb.markPromiseNotReceived()
+		if sb.getNotReceivedPromiseCount() >= sb.maxNotReceivedPromises {
+			return err
+		}
+		log.Warn(sessionBalanceLogPrefix, "Failed to receive promise: ", err)
+		return nil
+	}
+	return err
 }
 
 func (sb *SessionBalance) loadInitialPromiseState() (promise.StoredPromise, error) {

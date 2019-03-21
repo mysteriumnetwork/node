@@ -34,14 +34,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SendRetryDuration is the time between sending retries for the consumer payments
-const SendRetryDuration = time.Second * 20
-
 // PromiseWaitTimeout is the time that the provider waits for the promise to arrive
-const PromiseWaitTimeout = time.Second * 120
+const PromiseWaitTimeout = time.Second * 10
 
 // BalanceSendPeriod is how often the provider will send balance messages to the consumer
-const BalanceSendPeriod = time.Second * 240
+const BalanceSendPeriod = time.Second * 20
 
 // PaymentIssuerFactoryFunc returns a factory for payment issuer. It will be noop if the experimental payment flag is not set
 func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.SignerFactory, sendRetryDuration time.Duration) func(
