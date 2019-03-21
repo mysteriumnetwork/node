@@ -275,7 +275,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory, payment_factory.SendRetryDuration),
+		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 	)
