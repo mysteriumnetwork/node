@@ -61,9 +61,6 @@ type Manager struct {
 	location location.ServiceLocationInfo
 	portMap  func(port int) (releasePortMapping func())
 	options  Options
-
-	mu   sync.Mutex // TODO this is a temporary solution to cleanup oldest used wireguard resources.
-	list []*func()  // TODO it should be removed once payment bases session cleanup implemented.
 }
 
 // ProvideConfig provides the config for consumer
@@ -73,8 +70,6 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 	if err != nil {
 		return nil, nil, err
 	}
-
-	manager.cleanOldEndpoints()
 
 	config, err := manager.connectionEndpoint.Config()
 	if err != nil {
@@ -94,7 +89,7 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		}
 	}
 
-	return config, manager.once(destroy), nil
+	return config, destroy, nil
 }
 
 // Serve starts service - does block

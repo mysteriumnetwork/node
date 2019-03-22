@@ -21,12 +21,16 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	nats_lib "github.com/nats-io/go-nats"
 )
+
+const natsLogPrefix = "[NATS] "
 
 // NewAddress creates NATS address to known host or cluster of hosts
 func NewAddress(topic string, addresses ...string) *AddressNATS {
@@ -99,6 +103,9 @@ func (address *AddressNATS) Connect() (err error) {
 	options.MaxReconnect = BrokerMaxReconnect
 	options.ReconnectWait = BrokerReconnectWait
 	options.Timeout = BrokerTimeout
+	options.PingInterval = 10 * time.Second
+	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Disconnected") }
+	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Reconnected") }
 
 	address.connection, err = options.Connect()
 	if err != nil {

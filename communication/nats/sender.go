@@ -47,7 +47,6 @@ type senderNATS struct {
 }
 
 func (sender *senderNATS) Send(producer communication.MessageProducer) error {
-
 	messageTopic := sender.messageTopic + string(producer.GetMessageEndpoint())
 
 	messageData, err := sender.codec.Pack(producer.Produce())
@@ -55,6 +54,7 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 		err = fmt.Errorf("failed to encode message '%s'. %s", messageTopic, err)
 		return err
 	}
+	checkConnection(sender.connection)
 
 	log.Debug(senderLogPrefix, fmt.Sprintf("Message '%s' sending: %s", messageTopic, messageData))
 	err = sender.connection.Publish(messageTopic, messageData)
@@ -67,7 +67,6 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 }
 
 func (sender *senderNATS) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-
 	requestTopic := sender.messageTopic + string(producer.GetRequestEndpoint())
 	responsePtr = producer.NewResponse()
 
@@ -76,6 +75,8 @@ func (sender *senderNATS) Request(producer communication.RequestProducer) (respo
 		err = fmt.Errorf("failed to pack request '%s'. %s", requestTopic, err)
 		return
 	}
+
+	checkConnection(sender.connection)
 
 	log.Debug(senderLogPrefix, fmt.Sprintf("Request '%s' sending: %s", requestTopic, requestData))
 	msg, err := sender.connection.Request(requestTopic, requestData, sender.timeoutRequest)
@@ -93,4 +94,13 @@ func (sender *senderNATS) Request(producer communication.RequestProducer) (respo
 	}
 
 	return responsePtr, nil
+}
+
+func checkConnection(conn Connection) {
+	// Flush sends ping request and tries to send all cached data.
+	// It return an error if something wrong happened. All other requests
+	// will be added to queue to be sent after reconnecting.
+	if err := conn.Flush(); err != nil {
+		log.Warn(senderLogPrefix, "Connection failed: ", err)
+	}
 }
