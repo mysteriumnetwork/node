@@ -228,6 +228,24 @@ func (client *Client) Unlock(identity, passphrase string) error {
 	return nil
 }
 
+// Payout registers payout address for identity
+func (client *Client) Payout(identity, ethAddress string) error {
+	path := fmt.Sprintf("identities/%s/payout", identity)
+	payload := struct {
+		EthAddress string `json:"ethAddress"`
+	}{
+		ethAddress,
+	}
+
+	response, err := client.http.Put(path, payload)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	return nil
+}
+
 // Stop kills mysterium client
 func (client *Client) Stop() error {
 	emptyPayload := struct{}{}
