@@ -23,6 +23,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -110,6 +111,15 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 		return err
 	}
 
+	if err := firewall.AddInboundRule("UDP", config.Provider.Endpoint.Port); err != nil {
+		return errors.Wrap(err, "failed to add firewall rule")
+	}
+	defer func() {
+		if err := firewall.RemoveInboundRule("UDP", config.Provider.Endpoint.Port); err != nil {
+			log.Error(logPrefix, "Failed to delete firewall rule for Wireguard", err)
+		}
+	}()
+
 	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: manager.location.OutIP}
 	if err := manager.natService.Add(natRule); err != nil {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
@@ -125,6 +135,8 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 // Stop stops service.
 func (manager *Manager) Stop() error {
 	manager.wg.Done()
+
+	manager.cleanup()
 
 	manager.connectionEndpoint.Stop()
 
