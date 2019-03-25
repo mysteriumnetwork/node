@@ -125,10 +125,10 @@ func TestAddress_Disconnect_AfterFailedConnect(t *testing.T) {
 }
 
 func TestAddress_GetConnection(t *testing.T) {
-	expectedConnectin := &nats.Conn{}
-	address := &AddressNATS{connection: expectedConnectin}
+	expectedConnection := connection{&nats.Conn{}}
+	address := &AddressNATS{connection: expectedConnection}
 
-	assert.Exactly(t, expectedConnectin, address.GetConnection())
+	assert.Exactly(t, expectedConnection, address.GetConnection())
 }
 
 func TestAddress_GetTopic(t *testing.T) {

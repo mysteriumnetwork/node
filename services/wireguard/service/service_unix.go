@@ -65,9 +65,6 @@ type Manager struct {
 	publicIP        string
 	outboundIP      string
 	currentLocation string
-
-	mu   sync.Mutex // TODO this is a temporary solution to cleanup oldest used wireguard resources.
-	list []*func()  // TODO it should be removed once payment bases session cleanup implemented.
 }
 
 // ProvideConfig provides the config for consumer
@@ -77,8 +74,6 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 	if err != nil {
 		return nil, nil, err
 	}
-
-	manager.cleanOldEndpoints()
 
 	connectionEndpoint, err := manager.connectionEndpointFactory()
 	if err != nil {
@@ -112,7 +107,7 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		}
 	}
 
-	return config, manager.once(destroy), nil
+	return config, destroy, nil
 }
 
 // Serve starts service - does block

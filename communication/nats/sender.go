@@ -47,13 +47,16 @@ type senderNATS struct {
 }
 
 func (sender *senderNATS) Send(producer communication.MessageProducer) error {
-
 	messageTopic := sender.messageTopic + string(producer.GetMessageEndpoint())
 
 	messageData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
 		err = fmt.Errorf("failed to encode message '%s'. %s", messageTopic, err)
 		return err
+	}
+
+	if err := sender.connection.Check(); err != nil {
+		log.Warn(senderLogPrefix, "Connection failed: ", err)
 	}
 
 	log.Debug(senderLogPrefix, fmt.Sprintf("Message '%s' sending: %s", messageTopic, messageData))
@@ -67,7 +70,6 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 }
 
 func (sender *senderNATS) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-
 	requestTopic := sender.messageTopic + string(producer.GetRequestEndpoint())
 	responsePtr = producer.NewResponse()
 
@@ -75,6 +77,10 @@ func (sender *senderNATS) Request(producer communication.RequestProducer) (respo
 	if err != nil {
 		err = fmt.Errorf("failed to pack request '%s'. %s", requestTopic, err)
 		return
+	}
+
+	if err := sender.connection.Check(); err != nil {
+		log.Warn(senderLogPrefix, "Connection failed: ", err)
 	}
 
 	log.Debug(senderLogPrefix, fmt.Sprintf("Request '%s' sending: %s", requestTopic, requestData))
