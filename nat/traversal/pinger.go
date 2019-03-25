@@ -82,12 +82,11 @@ func (p *Pinger) Start() {
 			IP, port, err := p.configParser.Parse(dst)
 			if err != nil {
 				log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", string(dst))))
-				continue
 			}
 
 			log.Infof("%s ping target received: IP: %v, port: %v", prefix, IP, port)
 			if port == 0 {
-				// client did not sent its port to ping to, attempting with service start
+				// client did not sent its port to ping to, notifying the service to start
 				p.pingReceived <- struct{}{}
 				continue
 			}
@@ -105,7 +104,12 @@ func (p *Pinger) Start() {
 				}
 			}()
 
-			time.Sleep(pingInterval * time.Millisecond)
+			select {
+			case <-p.stop:
+				return
+			case <-time.After(pingInterval * time.Millisecond):
+			}
+
 			err = p.pingReceiver(conn)
 			if err != nil {
 				log.Warn(prefix, errors.Wrap(err, "ping receiver error"))
@@ -166,14 +170,21 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 
 		case <-time.After(pingInterval * time.Millisecond):
 			log.Trace(prefix, "pinging.. ")
+			// This is the essence of the TTL based udp punching.
+			// We're slowly increasing the TTL so that the packet is held.
+			// After a few attempts we're setting the value to 128 and assuming we're through.
 			if n > 4 {
 				n = 128
 			}
 
-			ipv4.NewConn(conn).SetTTL(n)
+			err := ipv4.NewConn(conn).SetTTL(n)
+			if err != nil {
+				return errors.Wrap(err, "Pinger setting ttl")
+			}
+
 			n++
 
-			_, err := conn.Write([]byte("continuously pinging to " + conn.RemoteAddr().String()))
+			_, err = conn.Write([]byte("continuously pinging to " + conn.RemoteAddr().String()))
 			if err != nil {
 				return err
 			}
@@ -257,10 +268,13 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn) error {
 
 		// send another couple of pings to remote side, because only now we have a pinghole
 		// or wait for you pings to reach other end before closing pinger conn.
-		time.Sleep(2 * pingInterval * time.Millisecond)
-
-		p.pingCancelled <- struct{}{}
-
-		return nil
+		select {
+		case <-p.stop:
+			p.pingCancelled <- struct{}{}
+			return errors.New("NAT punch attempt cancelled")
+		case <-time.After(2 * pingInterval * time.Millisecond):
+			p.pingCancelled <- struct{}{}
+			return nil
+		}
 	}
 }
