@@ -140,7 +140,7 @@ func (conn *connectionFake) Start() {
 	go conn.queueProcessing()
 }
 
-func (conn *connectionFake) Flush() error {
+func (conn *connectionFake) Check() error {
 	return nil
 }
 

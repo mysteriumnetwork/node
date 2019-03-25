@@ -107,7 +107,8 @@ func (address *AddressNATS) Connect() (err error) {
 	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Disconnected") }
 	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Reconnected") }
 
-	address.connection, err = options.Connect()
+	conn, err := options.Connect()
+	address.connection = connection{conn}
 	if err != nil {
 		address.connection = nil
 	}
@@ -142,4 +143,15 @@ func (address *AddressNATS) GetContact() market.Contact {
 			BrokerAddresses: address.servers,
 		},
 	}
+}
+
+type connection struct {
+	*nats_lib.Conn
+}
+
+func (c connection) Check() error {
+	// Flush sends ping request and tries to send all cached data.
+	// It return an error if something wrong happened. All other requests
+	// will be added to queue to be sent after reconnecting.
+	return c.Flush()
 }
