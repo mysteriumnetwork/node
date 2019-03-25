@@ -308,7 +308,7 @@
   version = "v0.0.10"
 
 [[projects]]
-  digest = "1:fef11ce7bad787dad351a3f7da701223dbbcec519877152d18228ef9c2c28b71"
+  digest = "1:6af00f84f6fdf9a971d5447f7f74b8b1dde177dbdd2102070a91130ab08036d1"
   name = "github.com/mysteriumnetwork/wireguard-go"
   packages = [
     "device",
@@ -320,7 +320,7 @@
     "xchacha20poly1305",
   ]
   pruneopts = "UT"
-  revision = "c8073c70e944fe656f5854b347e2e2687356043b"
+  revision = "625d21fc42f3eb8912bb031763c917c7fed7372f"
 
 [[projects]]
   digest = "1:0923946dc9acc1aeb0cdee47c1bf85cb7662562ecb2ddae1f73bbd34c322ecfe"
@@ -601,7 +601,6 @@
     "github.com/ethereum/go-ethereum/core/types",
     "github.com/ethereum/go-ethereum/crypto",
     "github.com/ethereum/go-ethereum/ethclient",
-    "github.com/ethereum/go-ethereum/log",
     "github.com/ethereum/go-ethereum/p2p/nat",
     "github.com/ethereum/go-ethereum/params",
     "github.com/gofrs/uuid",
@@ -637,6 +636,7 @@
     "github.com/urfave/cli",
     "golang.org/x/crypto/curve25519",
     "golang.org/x/net/ipv4",
+    "golang.org/x/sys/windows/registry",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

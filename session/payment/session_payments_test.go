@@ -120,25 +120,6 @@ func Test_SessionPayments_ReportsIssuingErrors(t *testing.T) {
 	<-testDone
 }
 
-func Test_SessionPayments_ReportsSendingErrors(t *testing.T) {
-	balanceChannel := make(chan balance.Message, 1)
-	customSender := newPromiseSender()
-	err := errors.New("sending failed")
-	customSender.mockError = err
-
-	testDone := make(chan struct{})
-
-	cpo := NewTestSessionPayments(balanceChannel, customSender, promiseTracker, balanceTracker)
-	go func() {
-		err := cpo.Start()
-		assert.Equal(t, customSender.mockError, err)
-		testDone <- struct{}{}
-	}()
-
-	balanceChannel <- balance.Message{Balance: 0, SequenceID: 1}
-	<-testDone
-}
-
 func Test_SessionPayments_ErrsOnBalanceMissmatch(t *testing.T) {
 	balanceChannel := make(chan balance.Message, 1)
 	cpo := NewTestSessionPayments(balanceChannel, newPromiseSender(), promiseTracker, balanceTracker)

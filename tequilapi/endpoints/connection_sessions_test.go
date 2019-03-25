@@ -35,45 +35,40 @@ import (
 )
 
 var (
-	sessionID        = node_session.ID("SessionID")
-	ProviderID       = identity.FromAddress("ProviderID")
-	ServiceType      = "ServiceType"
-	ProviderCountry  = "ProviderCountry"
-	SessionStatsMock = consumer.SessionStatistics{
-		BytesReceived: 10,
-		BytesSent:     10,
-	}
-	SessionMock = session.History{
-		SessionID:       sessionID,
-		ProviderID:      ProviderID,
-		ServiceType:     ServiceType,
-		ProviderCountry: ProviderCountry,
+	connectionSessionMock = session.History{
+		SessionID:       node_session.ID("SessionID"),
+		ProviderID:      identity.FromAddress("ProviderID"),
+		ServiceType:     "ServiceType",
+		ProviderCountry: "ProviderCountry",
 		Started:         time.Now(),
 		Updated:         time.Now(),
-		DataStats:       SessionStatsMock,
+		DataStats: consumer.SessionStatistics{
+			BytesReceived: 10,
+			BytesSent:     10,
+		},
 	}
 )
 
-func TestSessionToDto(t *testing.T) {
+func Test_ConnectionSessionsEndpoint_SessionToDto(t *testing.T) {
 	value := "2010-01-01T12:00:00Z"
 	startedAt, _ := time.Parse(time.RFC3339, value)
 
-	se := SessionMock
+	se := connectionSessionMock
 	se.Started = startedAt
-	sessionDTO := toHistoryView(se)
+	sessionDTO := connectionSessionToDto(se)
 
 	assert.Equal(t, value, sessionDTO.DateStarted)
-	assert.Equal(t, string(SessionMock.SessionID), sessionDTO.SessionID)
-	assert.Equal(t, SessionMock.ProviderID.Address, sessionDTO.ProviderID)
-	assert.Equal(t, SessionMock.ServiceType, sessionDTO.ServiceType)
-	assert.Equal(t, SessionMock.ProviderCountry, sessionDTO.ProviderCountry)
-	assert.Equal(t, SessionMock.DataStats.BytesReceived, sessionDTO.BytesReceived)
-	assert.Equal(t, SessionMock.DataStats.BytesSent, sessionDTO.BytesSent)
-	assert.Equal(t, SessionMock.GetDuration(), sessionDTO.Duration)
-	assert.Equal(t, SessionMock.Status, sessionDTO.Status)
+	assert.Equal(t, string(connectionSessionMock.SessionID), sessionDTO.SessionID)
+	assert.Equal(t, connectionSessionMock.ProviderID.Address, sessionDTO.ProviderID)
+	assert.Equal(t, connectionSessionMock.ServiceType, sessionDTO.ServiceType)
+	assert.Equal(t, connectionSessionMock.ProviderCountry, sessionDTO.ProviderCountry)
+	assert.Equal(t, connectionSessionMock.DataStats.BytesReceived, sessionDTO.BytesReceived)
+	assert.Equal(t, connectionSessionMock.DataStats.BytesSent, sessionDTO.BytesSent)
+	assert.Equal(t, connectionSessionMock.GetDuration(), sessionDTO.Duration)
+	assert.Equal(t, connectionSessionMock.Status, sessionDTO.Status)
 }
 
-func TestListEndpoint(t *testing.T) {
+func Test_ConnectionSessionsEndpoint_List(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodGet,
 		"/irrelevant",
@@ -81,24 +76,24 @@ func TestListEndpoint(t *testing.T) {
 	)
 	assert.Nil(t, err)
 
-	ssm := &sessionStorageMock{
+	ssm := &connectionSessionStorageMock{
 		errToReturn: nil,
 		sessionsToReturn: []session.History{
-			SessionMock,
+			connectionSessionMock,
 		},
 	}
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewSessionsEndpoint(ssm).List
+	handlerFunc := NewConnectionSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
-	parsedResponse := &SessionsDTO{}
+	parsedResponse := &connectionSessionsList{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
-	assert.EqualValues(t, toHistoryView(SessionMock), parsedResponse.Sessions[0])
+	assert.EqualValues(t, connectionSessionToDto(connectionSessionMock), parsedResponse.Sessions[0])
 }
 
-func TestListEndpointBubblesError(t *testing.T) {
+func Test_ConnectionSessionsEndpoint_ListBubblesError(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodGet,
 		"/irrelevant",
@@ -107,13 +102,13 @@ func TestListEndpointBubblesError(t *testing.T) {
 	assert.Nil(t, err)
 
 	mockErr := errors.New("something exploded")
-	ssm := &sessionStorageMock{
+	ssm := &connectionSessionStorageMock{
 		errToReturn:      mockErr,
 		sessionsToReturn: []session.History{},
 	}
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewSessionsEndpoint(ssm).List
+	handlerFunc := NewConnectionSessionsEndpoint(ssm).List
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
@@ -123,11 +118,11 @@ func TestListEndpointBubblesError(t *testing.T) {
 	)
 }
 
-type sessionStorageMock struct {
+type connectionSessionStorageMock struct {
 	sessionsToReturn []session.History
 	errToReturn      error
 }
 
-func (ssm *sessionStorageMock) GetAll() ([]session.History, error) {
+func (ssm *connectionSessionStorageMock) GetAll() ([]session.History, error) {
 	return ssm.sessionsToReturn, ssm.errToReturn
 }

@@ -56,6 +56,7 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
+	"github.com/mysteriumnetwork/node/services/openvpn"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
@@ -317,13 +318,14 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.SignerFactory)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
+	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
-	tequilapi_endpoints.AddRoutesForSession(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
-
+	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
+	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
@@ -344,8 +346,10 @@ func newSessionManagerFactory(
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.BalanceTracker, error) {
-			// if the flag ain't set, just return a noop balance tracker
-			if !nodeOptions.ExperimentPayments {
+			// We want backwards compatibility for openvpn on desktop providers, so no payments for them.
+			// Splitting this as a separate case just for that reason.
+			// TODO: remove this one day.
+			if proposal.ServiceType == openvpn.ServiceType {
 				return payments_noop.NewSessionBalance(), nil
 			}
 
@@ -354,7 +358,7 @@ func newSessionManagerFactory(
 			payment := dto.PaymentPerTime{
 				Price: money.Money{
 					Currency: money.CurrencyMyst,
-					Amount:   uint64(10),
+					Amount:   uint64(0),
 				},
 				Duration: time.Minute,
 			}
@@ -370,7 +374,7 @@ func newSessionManagerFactory(
 			// TODO: the ints and times here need to be passed in as well, or defined as constants
 			tracker := balance.NewBalanceTracker(&timeTracker, amountCalc, 0)
 			validator := validators.NewIssuedPromiseValidator(consumerID, receiverID, issuerID)
-			return session_payment.NewSessionBalance(sender, tracker, promiseChan, time.Second*5, time.Second*1, validator, promiseStorage, consumerID, receiverID, issuerID), nil
+			return session_payment.NewSessionBalance(sender, tracker, promiseChan, payment_factory.BalanceSendPeriod, payment_factory.PromiseWaitTimeout, validator, promiseStorage, consumerID, receiverID, issuerID), nil
 		}
 		return session.NewManager(
 			proposal,

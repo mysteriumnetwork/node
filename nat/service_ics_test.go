@@ -1,3 +1,5 @@
+//+build windows
+
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -30,8 +32,9 @@ var _ NATService = &serviceICS{}
 
 func mockedICS(powerShell func(cmd string) ([]byte, error)) *serviceICS {
 	return &serviceICS{
-		powerShell: powerShell,
-		ifaces:     make(map[string]RuleForwarding),
+		powerShell:      powerShell,
+		ifaces:          make(map[string]RuleForwarding),
+		setICSAddresses: mockICSConfig,
 	}
 }
 
@@ -251,4 +254,8 @@ func (sh *mockPowerShell) exec(cmd string) ([]byte, error) {
 		return c.output, c.err
 	}
 	return nil, sh.err
+}
+
+func mockICSConfig(_map [string]string) error {
+	return nil
 }

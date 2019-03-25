@@ -38,7 +38,7 @@ var (
 	country    = "LT"
 )
 
-var connectionEndpointStub = &fakeConnectionEndpoint{}
+var connectionEndpointStub = &mockConnectionEndpoint{}
 
 func Test_GetProposal(t *testing.T) {
 	assert.Exactly(
@@ -92,14 +92,15 @@ func waitABit() {
 	time.Sleep(10 * time.Millisecond)
 }
 
-type fakeConnectionEndpoint struct{}
+type mockConnectionEndpoint struct{}
 
-func (fce *fakeConnectionEndpoint) Stop() error                            { return nil }
-func (fce *fakeConnectionEndpoint) Start(_ *wg.ServiceConfig) error        { return nil }
-func (fce *fakeConnectionEndpoint) Config() (wg.ServiceConfig, error)      { return wg.ServiceConfig{}, nil }
-func (fce *fakeConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr) error { return nil }
-func (fce *fakeConnectionEndpoint) ConfigureRoutes(_ net.IP) error         { return nil }
-func (fce *fakeConnectionEndpoint) PeerStats() (wg.Stats, error) {
+func (mce *mockConnectionEndpoint) Stop() error                                         { return nil }
+func (mce *mockConnectionEndpoint) Start(_ *wg.ServiceConfig) error                     { return nil }
+func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)                   { return wg.ServiceConfig{}, nil }
+func (mce *mockConnectionEndpoint) AddPeer(_ string, _ *net.UDPAddr, _ ...string) error { return nil }
+func (mce *mockConnectionEndpoint) RemovePeer(_ string) error                           { return nil }
+func (mce *mockConnectionEndpoint) ConfigureRoutes(_ net.IP) error                      { return nil }
+func (mce *mockConnectionEndpoint) PeerStats() (wg.Stats, error) {
 	return wg.Stats{LastHandshake: time.Now()}, nil
 }
 

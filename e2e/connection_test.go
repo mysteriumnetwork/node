@@ -141,7 +141,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	seelog.Info("Changed consumer IP: ", vpnIP)
 
 	// sessions history should be created after connect
-	sessionsDTO, err := tequilapi.GetSessionsByType(serviceType)
+	sessionsDTO, err := tequilapi.ConnectionSessionsByType(serviceType)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
@@ -165,7 +165,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.NoError(t, err)
 
 	// sessions history should be updated after disconnect
-	sessionsDTO, err = tequilapi.GetSessionsByType(serviceType)
+	sessionsDTO, err = tequilapi.ConnectionSessionsByType(serviceType)
 	assert.NoError(t, err)
 
 	assert.Equal(t, 1, len(sessionsDTO.Sessions))
@@ -177,7 +177,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	serviceTypeAssertionMap[serviceType](t, se)
 }
 
-type sessionAsserter func(t *testing.T, session tequilapi_client.SessionDTO)
+type sessionAsserter func(t *testing.T, session tequilapi_client.ConnectionSessionDTO)
 
 var serviceTypeAssertionMap = map[string]sessionAsserter{
 	"openvpn":   assertStatsNotZero,
@@ -185,12 +185,12 @@ var serviceTypeAssertionMap = map[string]sessionAsserter{
 	"wireguard": assertStatsNotZero,
 }
 
-func assertStatsNotZero(t *testing.T, session tequilapi_client.SessionDTO) {
+func assertStatsNotZero(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
 	assert.NotEqual(t, uint64(0), session.BytesSent)
 	assert.NotEqual(t, uint64(0), session.BytesReceived)
 }
 
-func assertStatsZero(t *testing.T, session tequilapi_client.SessionDTO) {
+func assertStatsZero(t *testing.T, session tequilapi_client.ConnectionSessionDTO) {
 	assert.Equal(t, uint64(0), session.BytesSent)
 	assert.Equal(t, uint64(0), session.BytesReceived)
 }

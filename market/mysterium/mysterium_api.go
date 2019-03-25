@@ -79,6 +79,24 @@ func (mApi *MysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 	return err
 }
 
+// UpdatePayoutInfo registers given payout info next to identity to discovery service
+func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error {
+	path := fmt.Sprintf("identities/%s/payout", id.Address)
+	requestBody := UpdatePayoutInfoRequest{
+		EthAddress: ethAddress,
+	}
+	req, err := requests.NewSignedPutRequest(mApi.discoveryAPIAddress, path, requestBody, signer)
+	if err != nil {
+		return err
+	}
+
+	err = mApi.doRequest(req)
+	if err == nil {
+		log.Info(mysteriumAPILogPrefix, "Payout address ", ethAddress, " registered")
+	}
+	return err
+}
+
 // RegisterProposal registers service proposal to discovery service
 func (mApi *MysteriumAPI) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", NodeRegisterRequest{

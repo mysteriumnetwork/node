@@ -1,5 +1,7 @@
+//+build !windows
+
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,13 +17,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package endpoint
 
-// NewService returns Windows OS specific NAT service based on Internet Connection Sharing (ICS).
-func NewService() NATService {
-	return &serviceICS{
-		ifaces:          make(map[string]RuleForwarding),
-		setICSAddresses: setICSAddresses,
-		powerShell:      powerShell,
-	}
+import (
+	"net"
+)
+
+func (ce *connectionEndpoint) consumerIP(subnet net.IPNet) net.IP {
+	subnet.IP[len(subnet.IP)-1] = byte(2)
+	return subnet.IP
 }

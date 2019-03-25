@@ -113,13 +113,13 @@ type ConnectOptions struct {
 	DisableKillSwitch bool `json:"killSwitch"`
 }
 
-// SessionsDTO copied from tequilapi endpoint
-type SessionsDTO struct {
-	Sessions []SessionDTO `json:"sessions"`
+// ConnectionSessionListDTO copied from tequilapi endpoint
+type ConnectionSessionListDTO struct {
+	Sessions []ConnectionSessionDTO `json:"sessions"`
 }
 
-// SessionDTO copied from tequilapi endpoint
-type SessionDTO struct {
+// ConnectionSessionDTO copied from tequilapi endpoint
+type ConnectionSessionDTO struct {
 	SessionID       string `json:"sessionId"`
 	ProviderID      string `json:"providerId"`
 	ServiceType     string `json:"serviceType"`
@@ -142,4 +142,15 @@ type ServiceInfoDTO struct {
 	Options     json.RawMessage `json:"options"`
 	Status      string          `json:"status"`
 	Proposal    ProposalDTO     `json:"proposal"`
+}
+
+// ServiceSessionListDTO copied from tequilapi endpoint
+type ServiceSessionListDTO struct {
+	Sessions []ServiceSessionDTO `json:"sessions"`
+}
+
+// ServiceSessionDTO copied from tequilapi endpoint
+type ServiceSessionDTO struct {
+	ID         string `json:"id"`
+	ConsumerID string `json:"consumerId"`
 }

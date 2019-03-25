@@ -178,7 +178,7 @@ func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInf
 	payment := dto.PaymentPerTime{
 		Price: money.Money{
 			Currency: money.CurrencyMyst,
-			Amount:   uint64(10),
+			Amount:   uint64(0),
 		},
 		Duration: time.Minute,
 	}

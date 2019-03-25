@@ -30,11 +30,9 @@ import (
 )
 
 var (
-	promiseChannel      = make(chan promise.Message)
 	issuer              = identity.FromAddress("0x0")
 	consumer            = identity.FromAddress("0x00")
 	receiver            = identity.FromAddress("0x000")
-	BalanceSender       = &MockPeerBalanceSender{balanceMessages: make(chan balance.Message)}
 	MBT                 = &MockBalanceTracker{balanceToReturn: 0}
 	MPV                 = &MockPromiseValidator{isValid: true}
 	mockPromiseToReturn = promise.StoredPromise{
@@ -46,11 +44,15 @@ var (
 	}
 )
 
-func NewMockSessionBalance(mpv *MockPromiseValidator, mps *MockPromiseStorage, mbt *MockBalanceTracker) *SessionBalance {
+func newMockPeerBalanceSender() *MockPeerBalanceSender {
+	return &MockPeerBalanceSender{balanceMessages: make(chan balance.Message)}
+}
+
+func NewMockSessionBalance(balanceSender *MockPeerBalanceSender, mpv *MockPromiseValidator, mps *MockPromiseStorage, mbt *MockBalanceTracker) *SessionBalance {
 	return NewSessionBalance(
-		BalanceSender,
+		balanceSender,
 		mbt,
-		promiseChannel,
+		make(chan promise.Message),
 		time.Millisecond*1,
 		time.Millisecond*1,
 		mpv,
@@ -61,8 +63,15 @@ func NewMockSessionBalance(mpv *MockPromiseValidator, mps *MockPromiseStorage, m
 	)
 }
 
+func Test_calculateMaxNotReceivedPromiseCount(t *testing.T) {
+	res := calculateMaxNotReceivedPromiseCount(time.Minute*5, time.Second*240)
+	assert.Equal(t, uint64(1), res)
+	res = calculateMaxNotReceivedPromiseCount(time.Minute*5, time.Second*20)
+	assert.Equal(t, uint64(15), res)
+}
+
 func Test_SessionBalanceStartStop(t *testing.T) {
-	orch := NewMockSessionBalance(MPV, MPS, MBT)
+	orch := NewMockSessionBalance(newMockPeerBalanceSender(), MPV, MPS, MBT)
 	go func() {
 		orch.Stop()
 	}()
@@ -71,19 +80,25 @@ func Test_SessionBalanceStartStop(t *testing.T) {
 }
 
 func Test_SessionBalanceSendsBalance(t *testing.T) {
-	orch := NewMockSessionBalance(MPV, MPS, MBT)
+	bs := newMockPeerBalanceSender()
+	orch := NewMockSessionBalance(bs, MPV, MPS, MBT)
 	defer orch.Stop()
 	go orch.Start()
 
-	assert.Exactly(t, balance.Message{SequenceID: 1, Balance: 0}, <-BalanceSender.balanceMessages)
+	assert.Exactly(t, balance.Message{SequenceID: 1, Balance: 0}, <-bs.balanceMessages)
 }
 
 func Test_SessionBalanceSendsBalance_Timeouts(t *testing.T) {
-	orch := NewMockSessionBalance(MPV, MPS, MBT)
+	bs := newMockPeerBalanceSender()
+	orch := NewMockSessionBalance(bs, MPV, MPS, MBT)
 	defer orch.Stop()
 
 	// add a shorter timeout
 	orch.promiseWaitTimeout = time.Nanosecond
+
+	// and define the threshold since the default is going to be way too big
+	orch.maxNotReceivedPromises = 2
+
 	testDone := make(chan struct{})
 	go func() {
 		err := orch.Start()
@@ -91,16 +106,46 @@ func Test_SessionBalanceSendsBalance_Timeouts(t *testing.T) {
 		testDone <- struct{}{}
 	}()
 
-	//consume message but never respond
-	<-BalanceSender.balanceMessages
+	<-bs.balanceMessages
+	<-bs.balanceMessages
+
 	<-testDone
+}
+
+func Test_SessionBalanceSendsBalance_DoesNotTimeoutIfReceivesAPromise(t *testing.T) {
+	bs := newMockPeerBalanceSender()
+	orch := NewMockSessionBalance(bs, MPV, MPS, MBT)
+	// define the threshold since the default is going to be way too big
+	orch.maxNotReceivedPromises = 3
+
+	testDone := make(chan struct{})
+	go func() {
+		err := orch.Start()
+		assert.Nil(t, err)
+		testDone <- struct{}{}
+	}()
+
+	<-bs.balanceMessages
+	<-bs.balanceMessages
+	orch.promiseChan <- promise.Message{
+		Amount:     100,
+		SequenceID: 1,
+		Signature:  "0x1111",
+	}
+
+	orch.Stop()
+
+	<-testDone
+	assert.Equal(t, uint64(0), orch.notReceivedPromiseCount)
 }
 
 func Test_SessionBalanceInvalidPromise(t *testing.T) {
 	mpv := *MPV
 	mpv.isValid = false
 
-	orch := NewMockSessionBalance(&mpv, MPS, MBT)
+	bs := newMockPeerBalanceSender()
+
+	orch := NewMockSessionBalance(bs, &mpv, MPS, MBT)
 	defer orch.Stop()
 
 	testDone := make(chan struct{})
@@ -110,8 +155,8 @@ func Test_SessionBalanceInvalidPromise(t *testing.T) {
 		testDone <- struct{}{}
 	}()
 
-	<-BalanceSender.balanceMessages
-	promiseChannel <- promise.Message{
+	<-bs.balanceMessages
+	orch.promiseChan <- promise.Message{
 		Amount:     100,
 		SequenceID: 1,
 		Signature:  "0x1111",
@@ -122,7 +167,7 @@ func Test_SessionBalanceInvalidPromise(t *testing.T) {
 }
 
 func Test_SessionBalance_LoadInitialPromiseState_WithExistingPromise(t *testing.T) {
-	orch := NewMockSessionBalance(MPV, MPS, MBT)
+	orch := NewMockSessionBalance(newMockPeerBalanceSender(), MPV, MPS, MBT)
 	promise, err := orch.loadInitialPromiseState()
 	assert.Nil(t, err)
 	assert.Equal(t, MPS.promiseForConsumerToReturn, promise)
@@ -133,7 +178,7 @@ func Test_SessionBalance_LoadInitialPromiseState_WithoutExistingPromise(t *testi
 	mps := *MPS
 	mps.promiseForConsumerError = errBoltNotFound
 	mps.promiseForConsumerToReturn = promise.StoredPromise{}
-	orch := NewMockSessionBalance(MPV, &mps, MBT)
+	orch := NewMockSessionBalance(newMockPeerBalanceSender(), MPV, &mps, MBT)
 	promise, err := orch.loadInitialPromiseState()
 	assert.Nil(t, err)
 	assert.Equal(t, uint64(1), promise.SequenceID)
@@ -145,7 +190,7 @@ func Test_SessionBalance_LoadInitialPromiseState_WithDifferentConsumer_IssuesNew
 		SequenceID: 3,
 	}
 	mps.promiseForConsumerError = errNoPromiseForConsumer
-	orch := NewMockSessionBalance(MPV, &mps, MBT)
+	orch := NewMockSessionBalance(newMockPeerBalanceSender(), MPV, &mps, MBT)
 	promise, err := orch.loadInitialPromiseState()
 	assert.Nil(t, err)
 	assert.Equal(t, uint64(4), promise.SequenceID)
@@ -155,21 +200,21 @@ func Test_SessionBalance_LoadInitialPromiseState_BubblesErrors(t *testing.T) {
 	mps := *MPS
 	mps.promiseForConsumerError = errors.New("test")
 	mps.newIDerror = mps.promiseForConsumerError
-	orch := NewMockSessionBalance(MPV, &mps, MBT)
+	orch := NewMockSessionBalance(newMockPeerBalanceSender(), MPV, &mps, MBT)
 	_, err := orch.loadInitialPromiseState()
 	assert.Equal(t, mps.promiseForConsumerError, err)
 }
 
 func Test_SessionBalance_StartBalanceTracker_AddsUnconsumedAmount(t *testing.T) {
 	mbt := *MBT
-	orch := NewMockSessionBalance(MPV, MPS, &mbt)
+	orch := NewMockSessionBalance(newMockPeerBalanceSender(), MPV, MPS, &mbt)
 	lp := promise.StoredPromise{UnconsumedAmount: 100}
 	orch.startBalanceTracker(lp)
 	assert.Equal(t, lp.UnconsumedAmount, mbt.amountAdded)
 }
 
 func Test_SessionBalance_CalculateAmountToAdd(t *testing.T) {
-	orch := NewMockSessionBalance(MPV, MPS, MBT)
+	orch := NewMockSessionBalance(newMockPeerBalanceSender(), MPV, MPS, MBT)
 	lp := promise.StoredPromise{}
 	msg := promise.Message{
 		Amount: 100,
