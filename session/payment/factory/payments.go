@@ -34,6 +34,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+// PromiseWaitTimeout is the time that the provider waits for the promise to arrive
+const PromiseWaitTimeout = time.Second * 10
+
+// BalanceSendPeriod is how often the provider will send balance messages to the consumer
+const BalanceSendPeriod = time.Second * 20
+
 // PaymentIssuerFactoryFunc returns a factory for payment issuer. It will be noop if the experimental payment flag is not set
 func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.SignerFactory) func(
 	initialState promise.PaymentInfo,
@@ -41,9 +47,6 @@ func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.S
 	messageChan chan balance.Message,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
-	if !nodeOptions.ExperimentPayments {
-		return noopPaymentIssuerFactory
-	}
 	return paymentIssuerFactory(signerFactory)
 }
 
