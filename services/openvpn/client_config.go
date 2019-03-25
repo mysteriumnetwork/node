@@ -27,8 +27,8 @@ import (
 // ClientConfig represents specific "openvpn as client" configuration
 type ClientConfig struct {
 	*config.GenericConfig
-	LocalPort  int
-	vpnNConfig *VPNConfig
+	LocalPort int
+	vpnConfig *VPNConfig
 }
 
 // SetClientMode adds config arguments for openvpn behave as client
@@ -96,7 +96,7 @@ func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeD
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
-	clientFileConfig.vpnNConfig = vpnConfig
+	clientFileConfig.vpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort, vpnConfig.LocalPort)
 	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)

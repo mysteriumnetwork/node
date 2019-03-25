@@ -39,9 +39,7 @@ func Test_RestartingServerStartsAndStops(t *testing.T) {
 	}
 	err := server.Start()
 	assert.Nil(t, err)
-	go func() {
-		server.Stop()
-	}()
+	server.Stop()
 	err = server.Wait()
 	assert.Nil(t, err)
 }
@@ -166,13 +164,8 @@ func (mop *MockOpenvpnProcess) Stop() {
 
 type MockNATPinger struct{}
 
-func (mnp *MockNATPinger) BindPort(port int) {
+func (mnp *MockNATPinger) BindPort(port int) {}
 
-}
+func (mnp *MockNATPinger) WaitForHole() error { return nil }
 
-func (mnp *MockNATPinger) WaitForHole() error {
-	return nil
-}
-
-func (mnp *MockNATPinger) Stop() {
-}
+func (mnp *MockNATPinger) Stop() {}

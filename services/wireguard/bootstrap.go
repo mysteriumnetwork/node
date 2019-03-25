@@ -23,9 +23,6 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// ServiceType indicates "wireguard" service type
-const ServiceType = "wireguard"
-
 // Bootstrap is called on program initialization time and registers various deserializers related to wireguard service
 func Bootstrap() {
 	market.RegisterServiceDefinitionUnserializer(

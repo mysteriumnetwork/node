@@ -20,14 +20,13 @@ package openvpn
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/ip"
-
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/management"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth"
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
@@ -42,7 +41,6 @@ type ProcessBasedConnectionFactory struct {
 	runtimeDirectory      string
 	originalLocationCache location.Cache
 	signerFactory         identity.SignerFactory
-	lastSessionShutdown   chan struct{}
 	ipResolver            ip.Resolver
 	natPinger             NATPinger
 }

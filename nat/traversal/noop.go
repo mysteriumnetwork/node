@@ -23,46 +23,31 @@ import "encoding/json"
 type NoopPinger struct{}
 
 // Start does nothing
-func (np *NoopPinger) Start() {
-
-}
+func (np *NoopPinger) Start() {}
 
 // Stop does nothing
-func (np *NoopPinger) Stop() {
-
-}
+func (np *NoopPinger) Stop() {}
 
 // PingProvider does nothing
-func (np *NoopPinger) PingProvider(ip string, port int) error {
-	return nil
-}
+func (np *NoopPinger) PingProvider(ip string, port int) error { return nil }
 
 // PingTarget does nothing
-func (np *NoopPinger) PingTarget(json.RawMessage) {
-}
+func (np *NoopPinger) PingTarget(json.RawMessage) {}
 
 // BindPort does nothing
 func (np *NoopPinger) BindPort(port int) {}
 
 // WaitForHole does nothing
-func (np *NoopPinger) WaitForHole() error {
-	return nil
-}
+func (np *NoopPinger) WaitForHole() error { return nil }
 
 // NoopEventsTracker does nothing
 type NoopEventsTracker struct{}
 
 // ConsumeNATEvent does nothing
-func (net *NoopEventsTracker) ConsumeNATEvent(event Event) {
-
-}
+func (net *NoopEventsTracker) ConsumeNATEvent(event Event) {}
 
 // LastEvent does nothing
-func (net *NoopEventsTracker) LastEvent() Event {
-	return Event{}
-}
+func (net *NoopEventsTracker) LastEvent() Event { return Event{} }
 
 // WaitForEvent does nothing
-func (net *NoopEventsTracker) WaitForEvent() Event {
-	return Event{}
-}
+func (net *NoopEventsTracker) WaitForEvent() Event { return Event{} }

@@ -64,7 +64,7 @@ type Discovery interface {
 	Wait()
 }
 
-// WaitForNATHole blocks until NAT hole is punched towards consumer through local NAT
+// WaitForNATHole blocks until NAT hole is punched towards consumer through local NAT or until hole punching failed
 type WaitForNATHole func() error
 
 // NewManager creates new instance of pluggable instances manager

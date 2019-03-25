@@ -18,7 +18,7 @@
 package openvpn
 
 import (
-	"github.com/cihub/seelog"
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -49,18 +49,17 @@ type Client struct {
 
 // Start starts the connection
 func (c *Client) Start(options connection.ConnectOptions) error {
-	seelog.Info("starting connection")
+	log.Info("starting connection")
 	proc, clientConfig, err := c.processFactory(options)
-	seelog.Info("client config factory error: ", err)
-	seelog.Flush()
+	log.Info("client config factory error: ", err)
 	if err != nil {
 		return err
 	}
 	c.process = proc
-	seelog.Infof("client config: %v", clientConfig)
+	log.Infof("client config: %v", clientConfig)
 
 	c.natPinger.BindPort(clientConfig.LocalPort)
-	err = c.natPinger.PingProvider(clientConfig.vpnNConfig.RemoteIP, clientConfig.vpnNConfig.RemotePort)
+	err = c.natPinger.PingProvider(clientConfig.vpnConfig.RemoteIP, clientConfig.vpnConfig.RemotePort)
 	if err != nil {
 		return err
 	}

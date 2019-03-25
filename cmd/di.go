@@ -22,10 +22,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mysteriumnetwork/node/nat/traversal/config"
-
-	"github.com/mysteriumnetwork/node/nat/traversal"
-
 	"github.com/asaskevich/EventBus"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -55,6 +51,8 @@ import (
 	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/nat/traversal/config"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
@@ -281,12 +279,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	}
 
 	// NAT events
-	err = di.EventBus.Subscribe(traversal.EventTopic, di.NATTracker.ConsumeNATEvent)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return di.EventBus.Subscribe(traversal.EventTopic, di.NATTracker.ConsumeNATEvent)
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
@@ -463,7 +456,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
 }
 
-func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
+func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	if options.ExperimentNATPunching {
 		di.NATTracker = traversal.NewEventsTracker()
 		di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
@@ -473,5 +466,4 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) error {
 		di.NATPinger = &traversal.NoopPinger{}
 		di.LastSessionShutdown = nil
 	}
-	return nil
 }

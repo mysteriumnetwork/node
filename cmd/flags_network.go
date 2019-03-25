@@ -68,7 +68,7 @@ var (
 
 	natPunchingFlag = cli.BoolFlag{
 		Name:  "experiment-natpunching",
-		Usage: "Enables experimental nat hole punching",
+		Usage: "Enables experimental NAT hole punching",
 	}
 )
 

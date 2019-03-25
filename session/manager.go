@@ -22,11 +22,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/nat/traversal"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 )
 
 var (

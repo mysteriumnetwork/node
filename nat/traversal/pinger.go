@@ -47,7 +47,7 @@ type Pinger struct {
 	natEventWaiter NatEventWaiter
 	configParser   ConfigParser
 	stop           chan struct{}
-	sync.Once
+	once           sync.Once
 }
 
 // NatEventWaiter is responsible for waiting for nat events
@@ -80,6 +80,11 @@ func (p *Pinger) Start() {
 			return
 		case dst := <-p.pingTarget:
 			IP, port, err := p.configParser.Parse(dst)
+			if err != nil {
+				log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", string(dst))))
+				continue
+			}
+
 			log.Infof("%s ping target received: IP: %v, port: %v", prefix, IP, port)
 			if port == 0 {
 				// client did not sent its port to ping to, attempting with service start
@@ -88,12 +93,25 @@ func (p *Pinger) Start() {
 			}
 			conn, err := p.getConnection(IP, port)
 			if err != nil {
-				log.Error(errors.Wrap(err, "failed to get connection"))
+				log.Error(prefix, errors.Wrap(err, "failed to get connection"))
 				continue
 			}
-			go p.ping(conn)
+			defer conn.Close()
+
+			go func() {
+				err := p.ping(conn)
+				if err != nil {
+					log.Warn(prefix, "Error while pinging", err)
+				}
+			}()
+
 			time.Sleep(pingInterval * time.Millisecond)
-			p.pingReceiver(conn)
+			err = p.pingReceiver(conn)
+			if err != nil {
+				log.Warn(prefix, errors.Wrap(err, "ping receiver error"))
+				continue
+			}
+
 			p.pingReceived <- struct{}{}
 			log.Info(prefix, "ping received, waiting for a new connection")
 			conn.Close()
@@ -103,7 +121,7 @@ func (p *Pinger) Start() {
 
 // Stop stops the nat pinger
 func (p *Pinger) Stop() {
-	p.Once.Do(func() { close(p.stop) })
+	p.once.Do(func() { close(p.stop) })
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
@@ -114,10 +132,18 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get connection")
 	}
+	defer conn.Close()
 
 	//let provider ping first
 	time.Sleep(20 * time.Millisecond)
-	go p.ping(conn)
+
+	go func() {
+		err := p.ping(conn)
+		if err != nil {
+			log.Warn(prefix, "Error while pinging", err)
+		}
+	}()
+
 	time.Sleep(pingInterval * time.Millisecond)
 	err = p.pingReceiver(conn)
 	if err != nil {
@@ -126,7 +152,6 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 
 	// wait for provider to startup
 	time.Sleep(3 * time.Second)
-	conn.Close()
 
 	return nil
 }
@@ -199,7 +224,7 @@ func (p *Pinger) WaitForHole() error {
 		}
 		log.Info(prefix, "waiting for NAT pin-hole")
 		_, ok := <-p.pingReceived
-		if ok == false {
+		if !ok {
 			return errors.New("NATPinger channel has been closed")
 		}
 		return nil

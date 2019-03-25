@@ -21,10 +21,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/nat/traversal"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/stretchr/testify/assert"
 )
 

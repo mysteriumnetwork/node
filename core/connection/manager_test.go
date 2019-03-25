@@ -23,10 +23,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/ip"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
@@ -126,7 +125,7 @@ func (tc *testContext) SetupTest() {
 		mockPaymentFactory,
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
-		ip.NewResolverFake("1.1.1.1"),
+		ip.NewResolverMock("1.1.1.1"),
 	)
 }
 

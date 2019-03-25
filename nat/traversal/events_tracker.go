@@ -26,16 +26,16 @@ import (
 // EventTopic the topic that traversal events are published on
 const EventTopic = "Traversal"
 
-// EventNoEvent represents an occurence where nothing really happened
+// EventNoEvent represents an occurrence where nothing really happened
 var EventNoEvent = Event{Name: ""}
 
-// EventSuccess represents a succesful NAT traversal
+// EventSuccess represents a successful NAT traversal
 var EventSuccess = Event{Name: "success"}
 
 // EventFailure represents a failed NAT traversal event
 var EventFailure = Event{Name: "failure"}
 
-// EventsTracker is able to track nat traversal events
+// EventsTracker is able to track NAT traversal events
 type EventsTracker struct {
 	lastEvent Event
 	eventChan chan Event
@@ -72,7 +72,7 @@ func (et *EventsTracker) WaitForEvent() Event {
 	return e
 }
 
-// Event represents a nat traversal related event
+// Event represents a NAT traversal related event
 type Event struct {
 	Name string
 }

@@ -20,10 +20,9 @@ package openvpn
 import (
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/ip"
-
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
@@ -56,7 +55,7 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 }
 
 func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, ip.NewResolverFake("1.1.1.1"), &MockNATPinger{})
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	channel := make(chan connection.State)
 	statisticsChannel := make(chan consumer.SessionStatistics)
 	connectionOptions := connection.ConnectOptions{}
@@ -67,7 +66,7 @@ func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
 }
 
 func TestConnectionFactory_CreatesConnection(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, ip.NewResolverFake("1.1.1.1"), &MockNATPinger{})
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	channel := make(chan connection.State)
 	statisticsChannel := make(chan consumer.SessionStatistics)
 	conn, err := factory.Create(channel, statisticsChannel)
@@ -79,21 +78,13 @@ func TestConnectionFactory_CreatesConnection(t *testing.T) {
 type MockNATPinger struct{}
 
 // BindPort does nothing
-func (mnp *MockNATPinger) BindPort(port int) {
-
-}
+func (mnp *MockNATPinger) BindPort(port int) {}
 
 // PingProvider does nothing
-func (mnp *MockNATPinger) PingProvider(_ string, port int) error {
-	return nil
-}
+func (mnp *MockNATPinger) PingProvider(_ string, port int) error { return nil }
 
 // WaitForHole returns nil
-func (mnp *MockNATPinger) WaitForHole() error {
-	return nil
-}
+func (mnp *MockNATPinger) WaitForHole() error { return nil }
 
 // Stop does nothing
-func (mnp *MockNATPinger) Stop() {
-
-}
+func (mnp *MockNATPinger) Stop() {}
