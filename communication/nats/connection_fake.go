@@ -140,6 +140,10 @@ func (conn *connectionFake) Start() {
 	go conn.queueProcessing()
 }
 
+func (conn *connectionFake) Flush() error {
+	return nil
+}
+
 func (conn *connectionFake) Close() {
 	conn.queueShutdown <- true
 }
