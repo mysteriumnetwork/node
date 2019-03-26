@@ -92,7 +92,7 @@ func (p *Pinger) Start() {
 			}
 			conn, err := p.getConnection(IP, port)
 			if err != nil {
-				log.Error(prefix, errors.Wrap(err, "failed to get connection"))
+				log.Error(prefix, "failed to get connection: ", err)
 				continue
 			}
 			defer conn.Close()
@@ -100,7 +100,7 @@ func (p *Pinger) Start() {
 			go func() {
 				err := p.ping(conn)
 				if err != nil {
-					log.Warn(prefix, "Error while pinging", err)
+					log.Warn(prefix, "Error while pinging: ", err)
 				}
 			}()
 
@@ -112,7 +112,7 @@ func (p *Pinger) Start() {
 
 			err = p.pingReceiver(conn)
 			if err != nil {
-				log.Warn(prefix, errors.Wrap(err, "ping receiver error"))
+				log.Error(prefix, "ping receiver error: ", err)
 				continue
 			}
 
@@ -144,7 +144,7 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 	go func() {
 		err := p.ping(conn)
 		if err != nil {
-			log.Warn(prefix, "Error while pinging", err)
+			log.Warn(prefix, "Error while pinging: ", err)
 		}
 	}()
 
@@ -179,7 +179,7 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 
 			err := ipv4.NewConn(conn).SetTTL(n)
 			if err != nil {
-				return errors.Wrap(err, "Pinger setting ttl")
+				return errors.Wrap(err, "pinger setting ttl failed")
 			}
 
 			n++
