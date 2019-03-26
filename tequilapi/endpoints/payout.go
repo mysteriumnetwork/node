@@ -23,6 +23,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -35,8 +36,13 @@ type payoutInfo struct {
 	EthAddress string `json:"ethAddress"`
 }
 
+type payoutInfoResponse struct {
+	EthAddress string `json:"eth_address"`
+}
+
 // PayoutInfoRegistry allows to register payout info
 type PayoutInfoRegistry interface {
+	GetPayoutInfo(id identity.Identity, signer identity.Signer) (*mysterium.PayoutInfoResponse, error)
 	UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error
 }
 
@@ -49,6 +55,20 @@ type payoutEndpoint struct {
 // NewPayoutEndpoint creates payout api endpoint
 func NewPayoutEndpoint(idm identity.Manager, signerFactory identity.SignerFactory, payoutInfoRegistry PayoutInfoRegistry) *payoutEndpoint {
 	return &payoutEndpoint{idm, signerFactory, payoutInfoRegistry}
+}
+
+func (endpoint *payoutEndpoint) GetPayoutInfo(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := identity.FromAddress(params.ByName("id"))
+	payoutInfo, err := endpoint.payoutInfoRegistry.GetPayoutInfo(id, endpoint.signerFactory(id))
+	if err != nil {
+		utils.SendError(resp, err, http.StatusNotFound)
+		return
+	}
+
+	response := &payoutInfoResponse{
+		EthAddress: payoutInfo.EthAddress,
+	}
+	utils.WriteAsJSON(response, resp)
 }
 
 // swagger:operation PUT /identities/{id}/payout Identity updatePayoutInfo
@@ -128,5 +148,6 @@ func AddRoutesForPayout(
 	payoutInfoRegistry PayoutInfoRegistry,
 ) {
 	idmEnd := NewPayoutEndpoint(idm, signerFactory, payoutInfoRegistry)
+	router.GET("/identities/:id/payout", idmEnd.GetPayoutInfo)
 	router.PUT("/identities/:id/payout", idmEnd.UpdatePayoutInfo)
 }

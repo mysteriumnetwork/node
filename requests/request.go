@@ -50,12 +50,16 @@ func NewPostRequest(apiURI, path string, requestBody interface{}) (*http.Request
 
 // NewSignedRequest signs payload and generates http request
 func NewSignedRequest(httpMethod, apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
-	bodyBytes, err := encodeToJSON(requestBody)
-	if err != nil {
-		return nil, err
+	var bodyBytes []byte = nil
+	if requestBody != nil {
+		var err error
+		bodyBytes, err = encodeToJSON(requestBody)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	signature, err := signer.Sign(bodyBytes)
+	signature, err := getBodySignature(bodyBytes, signer)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +72,11 @@ func NewSignedRequest(httpMethod, apiURI, path string, requestBody interface{}, 
 	req.Header.Add(authenticationHeaderName, authenticationSchemaName+" "+signature.Base64())
 
 	return req, nil
+}
+
+// NewSignedGetRequest signs empty message and generates http Get request
+func NewSignedGetRequest(apiURI, path string, signer identity.Signer) (*http.Request, error) {
+	return NewSignedRequest(http.MethodGet, apiURI, path, nil, signer)
 }
 
 // NewSignedPostRequest signs payload and generates http Post request
@@ -95,4 +104,13 @@ func newRequest(method, apiURI, path string, body []byte) (*http.Request, error)
 	req.Header.Set("Accept", "application/json")
 
 	return req, nil
+}
+
+func getBodySignature(bodyBytes []byte, signer identity.Signer) (identity.Signature, error) {
+	var message = bodyBytes
+	if message == nil {
+		message = []byte("")
+	}
+
+	return signer.Sign(message)
 }
