@@ -358,13 +358,9 @@ func (c *cliApp) unlock(argsString string) {
 }
 
 func (c *cliApp) payout(argsString string) {
-	const usage = "payout command:\n    set"
-	if len(argsString) == 0 {
-		info(usage)
-		return
-	}
-
 	args := strings.Fields(argsString)
+
+	const usage = "payout command:\n    set"
 	if len(args) < 1 {
 		info(usage)
 		return
@@ -372,14 +368,7 @@ func (c *cliApp) payout(argsString string) {
 
 	action := args[0]
 	switch action {
-	case "set": // Known sub-commands.
-	default:
-		warnf("Unknown sub-command '%s'\n", action)
-		fmt.Println(usage)
-		return
-	}
-
-	if action == "set" {
+	case "set":
 		payoutSignature := "payout set <identity> <ethAddress>"
 		if len(args) < 2 {
 			info("Press tab to select identity.\n", payoutSignature)
@@ -401,6 +390,11 @@ func (c *cliApp) payout(argsString string) {
 		}
 
 		success(fmt.Sprintf("Payout address %s registered.", ethAddress))
+
+	default:
+		warnf("Unknown sub-command '%s'\n", action)
+		fmt.Println(usage)
+		return
 	}
 }
 
