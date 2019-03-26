@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 )
 
@@ -176,8 +177,7 @@ func (ics *serviceICS) getPublicInterfaceName() (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get interface from the default route")
 	}
-
-	ifaceID, err := strconv.Atoi(strings.TrimSpace(string(out)))
+	ifaceID, err := strconv.Atoi(strings.TrimSpace(utils.RemoveErrorsAndBOMUTF8(string(out))))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse interface ID")
 	}
@@ -217,7 +217,7 @@ func (ics *serviceICS) getInternalInterfaceName() (string, error) {
 		return "", errors.Wrap(err, "failed to detect internal interface name")
 	}
 
-	ifaceName := strings.TrimSpace(string(out))
+	ifaceName := strings.TrimSpace(utils.RemoveErrorsAndBOMUTF8(string(out)))
 	if len(ifaceName) == 0 {
 		return "", errors.New("interface not found")
 	}
