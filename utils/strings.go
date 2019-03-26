@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nats
+package utils
 
 import (
-	"time"
-
-	"github.com/nats-io/go-nats"
+	"strings"
+	"unicode/utf8"
 )
 
-// Connection represents is publish-subscriber instance which can deliver messages
-type Connection interface {
-	Check() error
-	Publish(subject string, payload []byte) error
-	Subscribe(subject string, handler nats.MsgHandler) (*nats.Subscription, error)
-	Request(subject string, payload []byte, timeout time.Duration) (*nats.Msg, error)
-	Close()
+// RemoveErrorsAndBOMUTF8 removes the bom and rune errors from UTF8 strings
+func RemoveErrorsAndBOMUTF8(in string) string {
+	return strings.Map(func(r rune) rune {
+		if r == utf8.RuneError || r == '\uFEFF' {
+			return -1
+		}
+		return r
+	}, in)
 }

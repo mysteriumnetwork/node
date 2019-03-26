@@ -15,27 +15,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package utils
 
-import (
-	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
-	wg "github.com/mysteriumnetwork/node/services/wireguard"
-)
+import "testing"
 
-const logPrefix = "[service-wireguard] "
-
-// GetProposal returns the proposal for wireguard service
-func GetProposal(country string) market.ServiceProposal {
-	return market.ServiceProposal{
-		ServiceType: wg.ServiceType,
-		ServiceDefinition: wg.ServiceDefinition{
-			Location:          market.Location{Country: country},
-			LocationOriginate: market.Location{Country: country},
+func TestRemoveErrorsAndBOMUTF8(t *testing.T) {
+	tests := []struct {
+		name string
+		args string
+		want string
+	}{
+		{
+			name: "removes BOM",
+			args: string([]rune{'\uFEFF', '1', '2'}),
+			want: "12",
 		},
-		PaymentMethodType: wg.PaymentMethod,
-		PaymentMethod: wg.Payment{
-			Price: money.NewMoney(0, money.CurrencyMyst),
+		{
+			name: "removes error runes",
+			args: string([]rune{'1', '2', '\uFFFD'}),
+			want: "12",
 		},
+		{
+			name: "doesn't change legitimate strings",
+			args: string([]rune{'1', '2'}),
+			want: "12",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := RemoveErrorsAndBOMUTF8(tt.args); got != tt.want {
+				t.Errorf("RemoveErrorsAndBOMUTF8() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
