@@ -361,7 +361,7 @@ func (c *cliApp) payout(argsString string) {
 	args := strings.Fields(argsString)
 
 	const usage = "payout command:\n    set"
-	if len(args) < 1 {
+	if len(args) == 0 {
 		info(usage)
 		return
 	}
@@ -371,7 +371,7 @@ func (c *cliApp) payout(argsString string) {
 	case "set":
 		payoutSignature := "payout set <identity> <ethAddress>"
 		if len(args) < 2 {
-			info("Press tab to select identity.\n", payoutSignature)
+			info("Please provide identity. You can select one by pressing tab.\n", payoutSignature)
 			return
 		}
 
@@ -390,7 +390,6 @@ func (c *cliApp) payout(argsString string) {
 		}
 
 		success(fmt.Sprintf("Payout address %s registered.", ethAddress))
-
 	default:
 		warnf("Unknown sub-command '%s'\n", action)
 		fmt.Println(usage)
