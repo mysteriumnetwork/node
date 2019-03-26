@@ -79,7 +79,7 @@ func NewConnectionSessionsEndpoint(sessionStorage connectionSessionStorage) *con
 	}
 }
 
-// swagger:operation GET /sessions Connection connectionSessions
+// swagger:operation GET /connection-sessions Connection connectionSessions
 // ---
 // summary: Returns sessions history
 // description: Returns list of sessions history
