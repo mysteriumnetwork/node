@@ -136,8 +136,6 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 func (manager *Manager) Stop() error {
 	manager.wg.Done()
 
-	manager.cleanup()
-
 	manager.connectionEndpoint.Stop()
 
 	log.Info(logPrefix, "Wireguard service stopped")
