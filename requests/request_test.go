@@ -69,8 +69,8 @@ func TestPayloadIsSerializedSuccessfullyForPostMethod(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	bodyBytes := bytes.NewBuffer(nil)
-	_, err = io.Copy(bodyBytes, req.Body)
+	encodedBody := bytes.NewBuffer(nil)
+	_, err = io.Copy(encodedBody, req.Body)
 	assert.NoError(t, err)
 
 	assert.JSONEq(
@@ -78,6 +78,6 @@ func TestPayloadIsSerializedSuccessfullyForPostMethod(t *testing.T) {
 		`{
 			"value" : "abc"
 		}`,
-		bodyBytes.String(),
+		encodedBody.String(),
 	)
 }
