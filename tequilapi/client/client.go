@@ -19,7 +19,6 @@ package client
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 )
@@ -98,22 +97,9 @@ func (client *Client) Connect(consumerID, providerID, serviceType string, option
 		Options:     options,
 	}
 	response, err := client.http.Put("connection", payload)
-
-	var errorMessage struct {
-		Message string `json:"message"`
-	}
-
 	if err != nil {
-		err = parseResponseJSON(response, &errorMessage)
-		if err != nil {
-			return
-		}
-
-		err = errors.New(errorMessage.Message)
-		return
+		return StatusDTO{}, err
 	}
-	defer response.Body.Close()
-
 	err = parseResponseJSON(response, &status)
 	return status, err
 }
