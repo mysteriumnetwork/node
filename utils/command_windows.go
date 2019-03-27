@@ -25,7 +25,7 @@ import (
 func PowerShell(cmd string) ([]byte, error) {
 	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("'powershell -Command %v': %v output: %s", cmd, err, out)
+		return nil, fmt.Errorf("'powershell -Command %v': %v output: %s", cmd, err, string(out))
 	}
 	return out, nil
 }
