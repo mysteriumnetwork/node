@@ -135,6 +135,7 @@ func parseResponseError(response *http.Response) error {
 		} else {
 			message = parsedBody.Message
 		}
+		// TODO these errors are ugly long and hard to check against - consider return error structs or specific error constants
 		return fmt.Errorf("server response invalid: %s (%s). Possible error: %s", response.Status, response.Request.URL, message)
 	}
 
@@ -152,5 +153,5 @@ func parseResponseJSON(response *http.Response, dto interface{}) error {
 		return err
 	}
 
-	return nil
+	return response.Body.Close()
 }
