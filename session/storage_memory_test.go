@@ -91,7 +91,7 @@ func TestStorage_Remove(t *testing.T) {
 	assert.Len(t, storage.sessions, 0)
 }
 
-func TestStorage_RemoveLast(t *testing.T) {
+func TestStorage_RemoveNonExisting(t *testing.T) {
 	storage := &StorageMemory{
 		sessions: map[ID]Session{},
 	}

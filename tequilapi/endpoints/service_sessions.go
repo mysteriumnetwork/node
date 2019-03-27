@@ -66,10 +66,6 @@ func NewServiceSessionsEndpoint(sessionStorage serviceSessionStorage) *serviceSe
 //     description: List of sessions
 //     schema:
 //       "$ref": "#/definitions/ServiceSessionListDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *serviceSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	sessions := endpoint.sessionStorage.GetAll()
 
