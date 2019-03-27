@@ -32,7 +32,7 @@ const (
 // AddInboundRule adds new inbound rule to the platform specific firewall.
 func AddInboundRule(proto string, port int) error {
 	name := fmt.Sprintf("myst-%d:%s", port, proto)
-	cmd := fmt.Sprintf(`New-NetFirewallRule -DisplayName "%s" -Direction Inbound -LocalPort %d -Protocol %s -Action Allow`, name, port, proto)
+	cmd := fmt.Sprintf(`netsh advfirewall firewall add rule name="%s" dir=in action=allow protocol=%s localport=%d`, name, proto, port)
 
 	if inboundRuleExists(name) {
 		return nil
@@ -50,7 +50,7 @@ func AddInboundRule(proto string, port int) error {
 // RemoveInboundRule removes inbound rule from the platform specific firewall.
 func RemoveInboundRule(proto string, port int) error {
 	name := fmt.Sprintf("myst-%d:%s", port, proto)
-	cmd := fmt.Sprintf(`Remove-NetFirewallRule -DisplayName "%s"`, name)
+	cmd := fmt.Sprintf(`netsh advfirewall firewall delete rule name="%s" dir=in`, name)
 
 	if !inboundRuleExists(name) {
 		return errors.New("firewall rule not found")
@@ -66,7 +66,7 @@ func RemoveInboundRule(proto string, port int) error {
 }
 
 func inboundRuleExists(name string) bool {
-	cmd := fmt.Sprintf(`Get-NetFirewallRule -DisplayName "%s"`, name)
+	cmd := fmt.Sprintf(`netsh advfirewall firewall show rule name="%s" dir=in`, name)
 
 	if _, err := utils.PowerShell(cmd); err != nil {
 		log.Trace(firewallLogPrefix, "Failed to get firewall rule: ", err)
