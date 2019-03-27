@@ -25,6 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
@@ -43,6 +44,7 @@ type testContext struct {
 	MockPaymentIssuer     *MockPaymentIssuer
 	stubPublisher         *StubPublisher
 	mockStatistics        consumer.SessionStatistics
+	fakeResolver          ip.Resolver
 	sync.RWMutex
 }
 
@@ -123,6 +125,7 @@ func (tc *testContext) SetupTest() {
 		mockPaymentFactory,
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
+		ip.NewResolverMock("1.1.1.1"),
 	)
 }
 

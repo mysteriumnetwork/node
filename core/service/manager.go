@@ -42,6 +42,12 @@ type Service interface {
 	ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error)
 }
 
+// NATPinger defines Pinger interface for Provider
+type NATPinger interface {
+	BindPort(port int)
+	WaitForHole() error
+}
+
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
 type DialogWaiterFactory func(providerID identity.Identity, serviceType string) (communication.DialogWaiter, error)
 
@@ -58,12 +64,16 @@ type Discovery interface {
 	Wait()
 }
 
+// WaitForNATHole blocks until NAT hole is punched towards consumer through local NAT or until hole punching failed
+type WaitForNATHole func() error
+
 // NewManager creates new instance of pluggable instances manager
 func NewManager(
 	serviceRegistry *Registry,
 	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
+	natPinger NATPinger,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -71,6 +81,7 @@ func NewManager(
 		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
+		natPinger:            natPinger,
 	}
 }
 
@@ -83,6 +94,8 @@ type Manager struct {
 	servicePool     *Pool
 
 	discoveryFactory DiscoveryFactory
+
+	natPinger NATPinger
 }
 
 // Start starts an instance of the given service type if knows one in service registry.

@@ -62,7 +62,11 @@ func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	defer storage.lock.Unlock()
 
 	if sessionIndex, found := storage.idToIndex[id]; found {
-		return storage.sessions[sessionIndex], true
+		instance := storage.sessions[sessionIndex]
+		if len(storage.sessions) == 1 {
+			instance.Last = true
+		}
+		return instance, true
 	}
 
 	return Session{}, false

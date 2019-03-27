@@ -19,6 +19,7 @@ package openvpn
 
 import (
 	"encoding/json"
+	"strconv"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
 )
@@ -26,17 +27,26 @@ import (
 // ClientConfig represents specific "openvpn as client" configuration
 type ClientConfig struct {
 	*config.GenericConfig
+	LocalPort int
+	vpnConfig *VPNConfig
 }
 
 // SetClientMode adds config arguments for openvpn behave as client
-func (c *ClientConfig) SetClientMode(serverIP string, serverPort int) {
+func (c *ClientConfig) SetClientMode(serverIP string, serverPort, localPort int) {
 	c.SetFlag("client")
 	c.SetParam("script-security", "2")
 	c.SetFlag("auth-nocache")
 	c.SetParam("remote", serverIP)
 	c.SetPort(serverPort)
-	c.SetFlag("nobind")
-	c.SetParam("remote-cert-tls", "server")
+	if localPort > 0 {
+		c.SetParam("lport", strconv.Itoa(localPort))
+		c.SetFlag("float")
+		// more on this: https://www.v13.gr/blog/?p=386
+		c.SetParam("remote-cert-ku", "84")
+		c.LocalPort = localPort
+	} else {
+		c.SetParam("remote-cert-tls", "server")
+	}
 	c.SetFlag("auth-user-pass")
 	c.SetFlag("management-query-passwords")
 }
@@ -51,7 +61,7 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 }
 
 func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
-	clientConfig := ClientConfig{config.NewConfig(runtimeDir, scriptSearchPath)}
+	clientConfig := ClientConfig{config.NewConfig(runtimeDir, scriptSearchPath), 50221, nil}
 
 	clientConfig.SetDevice("tun")
 	clientConfig.SetParam("cipher", "AES-256-GCM")
@@ -86,8 +96,9 @@ func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeD
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
+	clientFileConfig.vpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
-	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort)
+	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort, vpnConfig.LocalPort)
 	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
 	clientFileConfig.SetTLSCACertificate(vpnConfig.CACertificate)
 	clientFileConfig.SetTLSCrypt(vpnConfig.TLSPresharedKey)

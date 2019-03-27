@@ -273,7 +273,7 @@
   revision = "58046073cbffe2f25d425fe1331102f55cf719de"
 
 [[projects]]
-  digest = "1:5e86f34a21001d9724849852d24a1a95b3e838c46522cd1725a19933690da8d7"
+  digest = "1:722ca4885d4c2a54e87e065857d59414791f4b3b775ad024039232a7c4832438"
   name = "github.com/mysteriumnetwork/go-openvpn"
   packages = [
     "openvpn",
@@ -288,8 +288,8 @@
     "openvpn3",
   ]
   pruneopts = "T"
-  revision = "73afdde861d9d7c0f083f139ffcdacd14900b740"
-  version = "0.0.12"
+  revision = "123097496fe71e64e9f5752127a257e3dce0631b"
+  version = "0.0.13"
 
 [[projects]]
   digest = "1:8a20b209f06b19844908cf0367975d0966d6c188e5381ebd9327d6cd5d2ab990"
@@ -635,6 +635,8 @@
     "github.com/stretchr/testify/suite",
     "github.com/urfave/cli",
     "golang.org/x/crypto/curve25519",
+    "golang.org/x/net/ipv4",
+    "golang.org/x/sys/windows/registry",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

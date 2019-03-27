@@ -64,6 +64,7 @@ func TestValidatorReturnsNilErrorOnValidVPNConfig(t *testing.T) {
 	vpnConfig := &VPNConfig{
 		"1.2.3.4",
 		10999,
+		1194,
 		"tcp",
 		tlsTestKey,
 		caCertificate,

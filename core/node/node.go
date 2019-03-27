@@ -26,18 +26,26 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 )
 
+// NatPinger allows to send nat pings as well as stop it
+type NatPinger interface {
+	Start()
+	Stop()
+}
+
 // NewNode function creates new Mysterium node by given options
 func NewNode(
 	connectionManager connection.Manager,
 	tequilapiServer tequilapi.APIServer,
 	originalLocationCache location.Cache,
 	metricsSender *metrics.Sender,
+	natPinger NatPinger,
 ) *Node {
 	return &Node{
 		connectionManager:     connectionManager,
 		httpAPIServer:         tequilapiServer,
 		originalLocationCache: originalLocationCache,
 		metricsSender:         metricsSender,
+		natPinger:             natPinger,
 	}
 }
 
@@ -47,6 +55,7 @@ type Node struct {
 	httpAPIServer         tequilapi.APIServer
 	originalLocationCache location.Cache
 	metricsSender         *metrics.Sender
+	natPinger             NatPinger
 }
 
 // Start starts Mysterium node (Tequilapi service, fetches location)
@@ -77,6 +86,8 @@ func (node *Node) Start() error {
 
 	log.Infof("Api started on: %v", address)
 
+	go node.natPinger.Start()
+
 	return nil
 }
 
@@ -101,6 +112,9 @@ func (node *Node) Kill() error {
 
 	node.httpAPIServer.Stop()
 	log.Info("Api stopped")
+
+	node.natPinger.Stop()
+	log.Info("Nat pinger stopped")
 
 	return nil
 }
