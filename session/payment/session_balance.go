@@ -70,7 +70,7 @@ var errNoPromiseForConsumer = errors.New("no promise for consumer")
 
 const sessionBalanceLogPrefix = "[session-balance] "
 
-const chargePeriodLeeway = time.Minute * 5
+const chargePeriodLeeway = time.Hour * 2
 
 // SessionBalance orchestrates the ping pong of balance sent to consumer -> promise received from consumer flow
 type SessionBalance struct {
@@ -118,7 +118,7 @@ func NewSessionBalance(
 }
 
 func calculateMaxNotReceivedPromiseCount(chargeLeeway, chargePeriod time.Duration) uint64 {
-	return uint64(math.Round(float64(chargePeriodLeeway) / float64(chargePeriod)))
+	return uint64(math.Round(float64(chargeLeeway) / float64(chargePeriod)))
 }
 
 // Start starts the payment orchestrator. Blocks.

@@ -19,7 +19,6 @@ package nat
 
 import (
 	"net"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -235,9 +234,4 @@ func incrementIP(ip net.IP) net.IP {
 		}
 	}
 	return dup
-}
-
-func powerShell(cmd string) ([]byte, error) {
-	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
-	return out, errors.Wrap(err, string(out))
 }

@@ -1,5 +1,7 @@
+//+build !windows
+
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,17 +17,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package firewall
 
-import (
-	"github.com/mysteriumnetwork/node/utils"
-)
+// AddInboundRule adds new inbound rule to the platform specific firewall.
+func AddInboundRule(proto string, port int) error {
+	// TODO adding firewall rules should be implemented for every platform.
+	return nil
+}
 
-// NewService returns Windows OS specific NAT service based on Internet Connection Sharing (ICS).
-func NewService() NATService {
-	return &serviceICS{
-		ifaces:          make(map[string]RuleForwarding),
-		setICSAddresses: setICSAddresses,
-		powerShell:      utils.PowerShell,
-	}
+// RemoveInboundRule removes inbound rule from the platform specific firewall.
+func RemoveInboundRule(proto string, port int) error {
+	// TODO adding firewall rules should be implemented for every platform.
+	return nil
 }
