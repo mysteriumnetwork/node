@@ -80,7 +80,8 @@ func TestStorage_GetAll(t *testing.T) {
 	}
 
 	sessions := storage.GetAll()
-	assert.Equal(t, []Session{sessionFirst, sessionSecond}, sessions)
+	assert.Contains(t, sessions, sessionFirst)
+	assert.Contains(t, sessions, sessionSecond)
 }
 
 func TestStorage_Remove(t *testing.T) {

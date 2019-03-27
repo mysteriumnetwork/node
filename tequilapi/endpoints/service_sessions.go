@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/session"
@@ -71,6 +72,8 @@ func NewServiceSessionsEndpoint(sessionStorage serviceSessionStorage) *serviceSe
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *serviceSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	sessions := endpoint.sessionStorage.GetAll()
+
+	sort.Slice(sessions, func(i, j int) bool { return sessions[i].CreatedAt.Before(sessions[j].CreatedAt) })
 
 	sessionsSerializable := serviceSessionsList{
 		Sessions: mapServiceSessions(sessions, serviceSessionToDto),

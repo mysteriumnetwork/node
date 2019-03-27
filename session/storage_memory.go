@@ -18,7 +18,6 @@
 package session
 
 import (
-	"sort"
 	"sync"
 )
 
@@ -58,8 +57,6 @@ func (storage *StorageMemory) GetAll() []Session {
 		sessions[i] = value
 		i++
 	}
-
-	sort.Slice(sessions, func(i, j int) bool { return sessions[i].CreatedAt.Before(sessions[j].CreatedAt) })
 	return sessions
 }
 

@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -52,9 +53,16 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	)
 	assert.Nil(t, err)
 
+	anotherSession := session.Session{
+		ID:         session.ID("session2"),
+		ConsumerID: identity.FromAddress("consumer1"),
+		CreatedAt:  time.Now(),
+	}
+
 	ssm := &serviceSessionStorageMock{
 		sessionsToReturn: []session.Session{
 			serviceSessionMock,
+			anotherSession,
 		},
 	}
 
@@ -66,6 +74,7 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
 	assert.EqualValues(t, serviceSessionToDto(serviceSessionMock), parsedResponse.Sessions[0])
+	assert.EqualValues(t, serviceSessionToDto(anotherSession), parsedResponse.Sessions[1])
 }
 
 type serviceSessionStorageMock struct {
