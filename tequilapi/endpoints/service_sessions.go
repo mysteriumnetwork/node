@@ -42,7 +42,7 @@ type serviceSession struct {
 }
 
 type serviceSessionStorage interface {
-	GetAll() ([]session.Session, error)
+	GetAll() []session.Session
 }
 
 type serviceSessionsEndpoint struct {
@@ -70,11 +70,7 @@ func NewServiceSessionsEndpoint(sessionStorage serviceSessionStorage) *serviceSe
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *serviceSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sessions, err := endpoint.sessionStorage.GetAll()
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
+	sessions := endpoint.sessionStorage.GetAll()
 
 	sessionsSerializable := serviceSessionsList{
 		Sessions: mapServiceSessions(sessions, serviceSessionToDto),

@@ -19,8 +19,6 @@ package endpoints
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -55,7 +53,6 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	assert.Nil(t, err)
 
 	ssm := &serviceSessionStorageMock{
-		errToReturn: nil,
 		sessionsToReturn: []session.Session{
 			serviceSessionMock,
 		},
@@ -71,36 +68,10 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	assert.EqualValues(t, serviceSessionToDto(serviceSessionMock), parsedResponse.Sessions[0])
 }
 
-func Test_ServiceSessionsEndpoint_ListBubblesError(t *testing.T) {
-	req, err := http.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
-		nil,
-	)
-	assert.Nil(t, err)
-
-	mockErr := errors.New("something exploded")
-	ssm := &serviceSessionStorageMock{
-		errToReturn:      mockErr,
-		sessionsToReturn: []session.Session{},
-	}
-
-	resp := httptest.NewRecorder()
-	handlerFunc := NewServiceSessionsEndpoint(ssm).List
-	handlerFunc(resp, req, nil)
-
-	assert.Equal(t, http.StatusInternalServerError, resp.Code)
-	assert.Equal(t,
-		fmt.Sprintf(`{"message":%q}%v`, mockErr.Error(), "\n"),
-		resp.Body.String(),
-	)
-}
-
 type serviceSessionStorageMock struct {
 	sessionsToReturn []session.Session
-	errToReturn      error
 }
 
-func (ssm *serviceSessionStorageMock) GetAll() ([]session.Session, error) {
-	return ssm.sessionsToReturn, ssm.errToReturn
+func (ssm *serviceSessionStorageMock) GetAll() []session.Session {
+	return ssm.sessionsToReturn
 }

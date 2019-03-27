@@ -17,7 +17,11 @@
 
 package session
 
-import "github.com/mysteriumnetwork/node/identity"
+import (
+	"time"
+
+	"github.com/mysteriumnetwork/node/identity"
+)
 
 // ID represents session id type
 type ID string
@@ -34,6 +38,7 @@ type Session struct {
 	ConsumerID identity.Identity
 	Done       chan struct{}
 	Config     ServiceConfiguration
+	CreatedAt  time.Time
 	Last       bool
 }
 

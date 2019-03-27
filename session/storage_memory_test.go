@@ -18,7 +18,9 @@
 package session
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -56,36 +58,29 @@ func TestStorage_Add(t *testing.T) {
 	storage.Add(sessionNew)
 	assert.Exactly(
 		t,
-		[]Session{sessionExisting, sessionNew},
+		map[ID]Session{sessionExisting.ID: sessionExisting, sessionNew.ID: sessionNew},
 		storage.sessions,
-	)
-	assert.Exactly(
-		t,
-		map[ID]int{
-			sessionExisting.ID: 0,
-			sessionNew.ID:      1,
-		},
-		storage.idToIndex,
 	)
 }
 
 func TestStorage_GetAll(t *testing.T) {
-	sessionFirst := Session{ID: ID("id1")}
-	sessionSecond := Session{ID: ID("id2")}
+	sessionFirst := Session{
+		ID: ID("id1"),
+	}
+	sessionSecond := Session{
+		ID:        ID("id2"),
+		CreatedAt: time.Now(),
+	}
+
 	storage := &StorageMemory{
-		sessions: []Session{
-			sessionFirst,
-			sessionSecond,
-		},
-		idToIndex: map[ID]int{
-			sessionFirst.ID:  0,
-			sessionSecond.ID: 1,
+		sessions: map[ID]Session{
+			sessionFirst.ID:  sessionFirst,
+			sessionSecond.ID: sessionSecond,
 		},
 	}
 
-	sessions, err := storage.GetAll()
-	assert.NoError(t, err)
-	assert.Equal(t, sessions, []Session{sessionFirst, sessionSecond})
+	sessions := storage.GetAll()
+	assert.Equal(t, []Session{sessionFirst, sessionSecond}, sessions)
 }
 
 func TestStorage_Remove(t *testing.T) {
@@ -93,14 +88,41 @@ func TestStorage_Remove(t *testing.T) {
 
 	storage.Remove(sessionExisting.ID)
 	assert.Len(t, storage.sessions, 0)
-	assert.Len(t, storage.idToIndex, 0)
+}
+
+func TestStorage_Remove_Does_Not_Panic(t *testing.T) {
+	id4 := ID("id4")
+	storage := mockStorage(sessionExisting)
+	sessionFirst := Session{ID: id4}
+	sessionSecond := Session{ID: ID("id3")}
+	storage.Add(sessionFirst)
+	storage.Add(sessionSecond)
+	storage.Remove(id4)
+	storage.Remove(ID("id3"))
+	assert.Len(t, storage.sessions, 1)
 }
 
 func mockStorage(sessionInstance Session) *StorageMemory {
 	return &StorageMemory{
-		sessions: []Session{sessionInstance},
-		idToIndex: map[ID]int{
-			sessionInstance.ID: 0,
-		},
+		sessions: map[ID]Session{sessionInstance.ID: sessionInstance},
 	}
+}
+
+// to avoid compiler optimizing away our bench
+var benchmarkStorageGetAllResult int
+
+func Benchmark_Storage_GetAll(b *testing.B) {
+	// Findings are as follows - with 100k sessions, we should be fine with a performance of 0.04s on my mac
+	storage := NewStorageMemory()
+	sessionsToStore := 100000
+	for i := 0; i < sessionsToStore; i++ {
+		storage.Add(Session{ID: ID(fmt.Sprintf("ID%v", i)), CreatedAt: time.Now()})
+	}
+
+	var r int
+	for n := 0; n < b.N; n++ {
+		storedValues := storage.GetAll()
+		r += len(storedValues)
+	}
+	benchmarkStorageGetAllResult = r
 }

@@ -18,23 +18,22 @@
 package session
 
 import (
+	"sort"
 	"sync"
 )
 
 // NewStorageMemory initiates new session storage
 func NewStorageMemory() *StorageMemory {
 	return &StorageMemory{
-		sessions:  make([]Session, 0),
-		idToIndex: make(map[ID]int),
-		lock:      sync.Mutex{},
+		sessions: make(map[ID]Session),
+		lock:     sync.Mutex{},
 	}
 }
 
 // StorageMemory maintains all currents sessions in memory
 type StorageMemory struct {
-	sessions  []Session
-	idToIndex map[ID]int
-	lock      sync.Mutex
+	sessions map[ID]Session
+	lock     sync.Mutex
 }
 
 // Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
@@ -42,18 +41,26 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	sessionIndex := len(storage.sessions)
-	storage.sessions = append(storage.sessions, sessionInstance)
-
-	storage.idToIndex[sessionInstance.ID] = sessionIndex
+	storage.sessions[sessionInstance.ID] = sessionInstance
 }
 
 // GetAll returns all sessions in storage
-func (storage *StorageMemory) GetAll() ([]Session, error) {
+func (storage *StorageMemory) GetAll() []Session {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	return storage.sessions, nil
+	// we're never gonna have more than 100000 sessions ongoing on a single node - performance here should not be an issue.
+	// see Benchmark_Storage_GetAll
+	sessions := make([]Session, len(storage.sessions))
+
+	i := 0
+	for _, value := range storage.sessions {
+		sessions[i] = value
+		i++
+	}
+
+	sort.Slice(sessions, func(i, j int) bool { return sessions[i].CreatedAt.Before(sessions[j].CreatedAt) })
+	return sessions
 }
 
 // Find returns underlying session instance
@@ -61,8 +68,7 @@ func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	if sessionIndex, found := storage.idToIndex[id]; found {
-		instance := storage.sessions[sessionIndex]
+	if instance, found := storage.sessions[id]; found {
 		if len(storage.sessions) == 1 {
 			instance.Last = true
 		}
@@ -77,8 +83,7 @@ func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 
-	if sessionIndex, found := storage.idToIndex[id]; found {
-		delete(storage.idToIndex, id)
-		storage.sessions = append(storage.sessions[:sessionIndex], storage.sessions[sessionIndex+1:]...)
+	if _, found := storage.sessions[id]; found {
+		delete(storage.sessions, id)
 	}
 }
