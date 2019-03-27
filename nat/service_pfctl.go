@@ -89,28 +89,31 @@ func ifaceByAddress(ipAddress string) (string, error) {
 func (service *servicePFCtl) enableRules() error {
 	service.mu.Lock()
 	defer service.mu.Unlock()
+
+	var natRule string
 	for rule := range service.rules {
 		iface, err := ifaceByAddress(rule.TargetIP)
 		if err != nil {
 			return err
 		}
-		natRule := fmt.Sprintf("nat on %v inet from %v to any -> %v", iface, rule.SourceAddress, rule.TargetIP)
-		arguments := fmt.Sprintf(`echo "%v" | /sbin/pfctl -vEf -`, natRule)
-		cmd := exec.Command(
-			"sh",
-			"-c",
-			arguments,
-		)
-
-		if output, err := cmd.CombinedOutput(); err != nil {
-			if !strings.Contains(string(output), natRule) {
-				log.Warn("Failed to create pfctl rule: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
-				return err
-			}
-		}
-
-		log.Info(natLogPrefix, "NAT rule from '", rule.SourceAddress, "' to IP: ", rule.TargetIP, " added")
+		natRule += fmt.Sprintf("nat on %v inet from %v to any -> %v\n", iface, rule.SourceAddress, rule.TargetIP)
 	}
+
+	arguments := fmt.Sprintf(`echo "%v" | /sbin/pfctl -vEf -`, natRule)
+	cmd := exec.Command(
+		"sh",
+		"-c",
+		arguments,
+	)
+
+	if output, err := cmd.CombinedOutput(); err != nil {
+		if !strings.Contains(string(output), natRule) {
+			log.Warn("Failed to create pfctl rule: ", cmd.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+			return err
+		}
+	}
+	log.Info(natLogPrefix, "NAT rules applied")
+
 	return nil
 }
 
