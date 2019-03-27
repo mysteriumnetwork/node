@@ -32,7 +32,7 @@ func NewDetector(ipResolver ip.Resolver, locationResolver Resolver) Detector {
 // NewDetectorFake constructs Detector instance with faked data
 func NewDetectorFake(ipAddress string, country string) Detector {
 	return &detector{
-		ipResolver:       ip.NewResolverFake(ipAddress),
+		ipResolver:       ip.NewResolverMock(ipAddress),
 		locationResolver: NewStaticResolver(country),
 	}
 }
@@ -40,7 +40,7 @@ func NewDetectorFake(ipAddress string, country string) Detector {
 // NewDetectorFakeFailing constructs Detector instance with faked error
 func NewDetectorFakeFailing(err error) Detector {
 	return &detector{
-		ipResolver:       ip.NewResolverFake(""),
+		ipResolver:       ip.NewResolverMock(""),
 		locationResolver: NewFailingResolver(err),
 	}
 }

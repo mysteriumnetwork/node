@@ -18,31 +18,52 @@
 package openvpn
 
 import (
-	"errors"
-
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/pkg/errors"
 )
 
 // ErrProcessNotStarted represents the error we return when the process is not started yet
 var ErrProcessNotStarted = errors.New("process not started yet")
 
 // processFactory creates a new openvpn process
-type processFactory func(options connection.ConnectOptions) (openvpn.Process, error)
+type processFactory func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error)
+
+// NATPinger tries to punch a hole in NAT
+type NATPinger interface {
+	BindPort(port int)
+	Stop()
+	PingProvider(ip string, port int) error
+}
 
 // Client takes in the openvpn process and works with it
 type Client struct {
 	process        openvpn.Process
 	processFactory processFactory
+	ipResolver     ip.Resolver
+	natPinger      NATPinger
+	publicIP       string
 }
 
 // Start starts the connection
 func (c *Client) Start(options connection.ConnectOptions) error {
-	proc, err := c.processFactory(options)
+	log.Info("starting connection")
+	proc, clientConfig, err := c.processFactory(options)
+	log.Info("client config factory error: ", err)
 	if err != nil {
 		return err
 	}
 	c.process = proc
+	log.Infof("client config: %v", clientConfig)
+
+	c.natPinger.BindPort(clientConfig.LocalPort)
+	err = c.natPinger.PingProvider(clientConfig.vpnConfig.RemoteIP, clientConfig.vpnConfig.RemotePort)
+	if err != nil {
+		return err
+	}
+
 	return c.process.Start()
 }
 
@@ -61,15 +82,27 @@ func (c *Client) Stop() {
 	}
 }
 
-// GetConfig returns the consumer-side configuration. In openvpn case - it doesn't return anything
+// GetConfig returns the consumer-side configuration.
 func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
-	return nil, nil
+	ip, err := c.ipResolver.GetPublicIP()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get consumer config")
+	}
+	c.publicIP = ip
+	return &ConsumerConfig{
+		// TODO: since GetConfig is executed before Start we cannot access VPNConfig structure yet
+		// TODO skip sending port here, since provider generates port for consumer in VPNConfig
+		//Port: c.vpnClientConfig.LocalPort,
+		Port: 50221,
+		IP:   ip,
+	}, nil
 }
 
 //VPNConfig structure represents VPN configuration options for given session
 type VPNConfig struct {
 	RemoteIP        string `json:"remote"`
 	RemotePort      int    `json:"port"`
+	LocalPort       int    `json:"lport"`
 	RemoteProtocol  string `json:"protocol"`
 	TLSPresharedKey string `json:"TLSPresharedKey"`
 	CACertificate   string `json:"CACertificate"`

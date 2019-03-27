@@ -25,6 +25,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 )
 
 var (
@@ -70,18 +71,29 @@ type Storage interface {
 // BalanceTrackerFactory returns a new instance of balance tracker
 type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (BalanceTracker, error)
 
+// NATEventGetter lets us access the last known traversal event
+type NATEventGetter interface {
+	LastEvent() traversal.Event
+}
+
 // NewManager returns new session Manager
 func NewManager(
 	currentProposal market.ServiceProposal,
 	idGenerator IDGenerator,
 	sessionStorage Storage,
 	balanceTrackerFactory BalanceTrackerFactory,
+	natPingerChan func(json.RawMessage),
+	lastSessionShutdown chan struct{},
+	natEventGetter NATEventGetter,
 ) *Manager {
 	return &Manager{
 		currentProposal:       currentProposal,
 		generateID:            idGenerator,
 		sessionStorage:        sessionStorage,
 		balanceTrackerFactory: balanceTrackerFactory,
+		natPingerChan:         natPingerChan,
+		lastSessionShutdown:   lastSessionShutdown,
+		natEventGetter:        natEventGetter,
 
 		creationLock: sync.Mutex{},
 	}
@@ -93,12 +105,16 @@ type Manager struct {
 	generateID            IDGenerator
 	sessionStorage        Storage
 	balanceTrackerFactory BalanceTrackerFactory
+	provideConfig         ConfigProvider
+	natPingerChan         func(json.RawMessage)
+	lastSessionShutdown   chan struct{}
+	natEventGetter        NATEventGetter
 
 	creationLock sync.Mutex
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int, config ServiceConfiguration, requestConfig json.RawMessage) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -113,6 +129,7 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	}
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.Done = make(chan struct{})
+	sessionInstance.Config = config
 
 	balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)
 	if err != nil {
@@ -136,6 +153,15 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 		}
 	}()
 
+	// start NAT pinger here, do not block - configuration should be returned to consumer
+	// start NAT pinger, get hole punched, launch service.
+	//  on session-destroy - shutdown service and wait for session-create
+	// TODO: We might want to start a separate openvpn daemon if node is behind the NAT
+
+	// We need to know that session creation is already in-progress here
+
+	// postpone vpnServer start until NAT hole is punched
+	manager.natPingerChan(requestConfig)
 	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
 }
@@ -153,6 +179,15 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 
 	if sessionInstance.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
+	}
+
+	if sessionInstance.Last && manager.lastSessionShutdown != nil {
+		log.Info("attempting to stop service")
+		if manager.natEventGetter.LastEvent() == traversal.EventFailure {
+			log.Info("last session destroy requested - stopping service executable")
+			manager.lastSessionShutdown <- struct{}{}
+			log.Info("executable shutdown on last session triggered")
+		}
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))

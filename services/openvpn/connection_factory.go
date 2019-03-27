@@ -26,6 +26,7 @@ import (
 	openvpn_bytescount "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
@@ -40,6 +41,8 @@ type ProcessBasedConnectionFactory struct {
 	runtimeDirectory      string
 	originalLocationCache location.Cache
 	signerFactory         identity.SignerFactory
+	ipResolver            ip.Resolver
+	natPinger             NATPinger
 }
 
 // NewProcessBasedConnectionFactory creates a new ProcessBasedConnectionFactory
@@ -47,6 +50,8 @@ func NewProcessBasedConnectionFactory(
 	openvpnBinary, configDirectory, runtimeDirectory string,
 	originalLocationCache location.Cache,
 	signerFactory identity.SignerFactory,
+	resolver ip.Resolver,
+	natPinger NATPinger,
 ) *ProcessBasedConnectionFactory {
 	return &ProcessBasedConnectionFactory{
 		openvpnBinary:         openvpnBinary,
@@ -54,6 +59,8 @@ func NewProcessBasedConnectionFactory(
 		runtimeDirectory:      runtimeDirectory,
 		originalLocationCache: originalLocationCache,
 		signerFactory:         signerFactory,
+		ipResolver:            resolver,
+		natPinger:             natPinger,
 	}
 }
 
@@ -72,12 +79,12 @@ func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, 
 	return state.NewMiddleware(stateCallback)
 }
 
-// Create creates a new openvpnn connection
+// Create creates a new openvpn connection
 func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-	procFactory := func(options connection.ConnectOptions) (openvpn.Process, error) {
+	procFactory := func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error) {
 		vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		signer := op.signerFactory(options.ConsumerID)
@@ -86,10 +93,12 @@ func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateCha
 		authMiddleware := op.newAuthMiddleware(options.SessionID, signer)
 		byteCountMiddleware := op.newBytecountMiddleware(statisticsChannel)
 		proc := openvpn.CreateNewProcess(op.openvpnBinary, vpnClientConfig.GenericConfig, stateMiddleware, byteCountMiddleware, authMiddleware)
-		return proc, nil
+		return proc, vpnClientConfig, nil
 	}
 
 	return &Client{
 		processFactory: procFactory,
+		ipResolver:     op.ipResolver,
+		natPinger:      op.natPinger,
 	}, nil
 }
