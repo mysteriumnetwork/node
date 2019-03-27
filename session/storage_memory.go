@@ -79,8 +79,5 @@ func (storage *StorageMemory) Find(id ID) (Session, bool) {
 func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
-
-	if _, found := storage.sessions[id]; found {
-		delete(storage.sessions, id)
-	}
+	delete(storage.sessions, id)
 }

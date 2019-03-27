@@ -91,6 +91,14 @@ func TestStorage_Remove(t *testing.T) {
 	assert.Len(t, storage.sessions, 0)
 }
 
+func TestStorage_RemoveLast(t *testing.T) {
+	storage := &StorageMemory{
+		sessions: map[ID]Session{},
+	}
+	storage.Remove(sessionExisting.ID)
+	assert.Len(t, storage.sessions, 0)
+}
+
 func TestStorage_Remove_Does_Not_Panic(t *testing.T) {
 	id4 := ID("id4")
 	storage := mockStorage(sessionExisting)
