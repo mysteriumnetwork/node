@@ -41,30 +41,30 @@ func NewGetRequest(apiURI, path string, params url.Values) (*http.Request, error
 
 // NewPostRequest generates http Post request
 func NewPostRequest(apiURI, path string, requestBody interface{}) (*http.Request, error) {
-	bodyBytes, err := encodeToJSON(requestBody)
+	encodedBody, err := encodeToJSON(requestBody)
 	if err != nil {
 		return nil, err
 	}
-	return newRequest(http.MethodPost, apiURI, path, bodyBytes)
+	return newRequest(http.MethodPost, apiURI, path, encodedBody)
 }
 
 // NewSignedRequest signs payload and generates http request
 func NewSignedRequest(httpMethod, apiURI, path string, requestBody interface{}, signer identity.Signer) (*http.Request, error) {
-	var bodyBytes []byte = nil
+	var encodedBody []byte = nil
 	if requestBody != nil {
 		var err error
-		bodyBytes, err = encodeToJSON(requestBody)
+		encodedBody, err = encodeToJSON(requestBody)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	signature, err := getBodySignature(bodyBytes, signer)
+	signature, err := getBodySignature(encodedBody, signer)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := newRequest(httpMethod, apiURI, path, bodyBytes)
+	req, err := newRequest(httpMethod, apiURI, path, encodedBody)
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +106,8 @@ func newRequest(method, apiURI, path string, body []byte) (*http.Request, error)
 	return req, nil
 }
 
-func getBodySignature(bodyBytes []byte, signer identity.Signer) (identity.Signature, error) {
-	var message = bodyBytes
+func getBodySignature(encodedBody []byte, signer identity.Signer) (identity.Signature, error) {
+	var message = encodedBody
 	if message == nil {
 		message = []byte("")
 	}
