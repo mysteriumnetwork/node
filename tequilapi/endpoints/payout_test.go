@@ -19,24 +19,36 @@ package endpoints
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/stretchr/testify/assert"
 )
 
 type mockPayoutInfoRegistry struct {
 	recordedID         identity.Identity
 	recordedEthAddress string
+	mockID             identity.Identity
+	mockEthAddress     string
 }
 
 func (mock *mockPayoutInfoRegistry) UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error {
 	mock.recordedID = id
 	mock.recordedEthAddress = ethAddress
 	return nil
+}
+
+func (mock *mockPayoutInfoRegistry) GetPayoutInfo(id identity.Identity, signer identity.Signer) (*mysterium.PayoutInfoResponse, error) {
+	if id.Address != mock.mockID.Address {
+		return nil, errors.New("payout info for identity is not mocked")
+	}
+
+	return &mysterium.PayoutInfoResponse{EthAddress: mock.mockEthAddress}, nil
 }
 
 var mockSignerFactory = func(id identity.Identity) identity.Signer { return nil }
@@ -85,4 +97,44 @@ func TestUpdatePayoutInfo(t *testing.T) {
 	assert.Equal(t, "1234abcd", mockPayoutInfoRegistry.recordedID.Address)
 	assert.Equal(t, "1234payout", mockPayoutInfoRegistry.recordedEthAddress)
 	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
+func TestGetPayoutInfo_ReturnsPayoutInfo(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	mockPayoutInfoRegistry := &mockPayoutInfoRegistry{mockID: existingIdentities[0], mockEthAddress: "mock eth address"}
+	handlerFunc := NewPayoutEndpoint(mockIdm, mockSignerFactory, mockPayoutInfoRegistry).GetPayoutInfo
+
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.NoError(t, err)
+	params := httprouter.Params{{"id", existingIdentities[0].Address}}
+
+	handlerFunc(resp, req, params)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(t, `{"eth_address": "mock eth address"}`, resp.Body.String())
+}
+
+func TestGetPayoutInfo_ReturnsError_WhenPayoutInfoFindingFails(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	mockPayoutInfoRegistry := &mockPayoutInfoRegistry{mockID: existingIdentities[0], mockEthAddress: "mock eth address"}
+	handlerFunc := NewPayoutEndpoint(mockIdm, mockSignerFactory, mockPayoutInfoRegistry).GetPayoutInfo
+
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.NoError(t, err)
+	params := httprouter.Params{{"id", "some other address"}}
+
+	handlerFunc(resp, req, params)
+
+	assert.Equal(t, http.StatusNotFound, resp.Code)
+	assert.JSONEq(t, `{"message": "payout info for identity is not mocked"}`, resp.Body.String())
 }

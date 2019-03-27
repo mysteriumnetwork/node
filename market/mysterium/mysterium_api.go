@@ -79,6 +79,23 @@ func (mApi *MysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 	return err
 }
 
+// GetPayoutInfo returns payout info from discovery service for identity
+func (mApi *MysteriumAPI) GetPayoutInfo(id identity.Identity, signer identity.Signer) (*PayoutInfoResponse, error) {
+	path := fmt.Sprintf("identities/%s/payout", id.Address)
+	req, err := requests.NewSignedGetRequest(mApi.discoveryAPIAddress, path, signer)
+	if err != nil {
+		return nil, err
+	}
+
+	var payoutInfoResponse PayoutInfoResponse
+	err = mApi.doRequestAndParseResponse(req, &payoutInfoResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &payoutInfoResponse, nil
+}
+
 // UpdatePayoutInfo registers given payout info next to identity to discovery service
 func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error {
 	path := fmt.Sprintf("identities/%s/payout", id.Address)
