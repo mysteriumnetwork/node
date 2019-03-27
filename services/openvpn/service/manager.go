@@ -23,6 +23,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
@@ -106,6 +107,10 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	m.natPinger.BindPort(m.serviceOptions.Port)
 
 	log.Info(logPrefix, "starting openvpn server")
+	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.serviceOptions.Port); err != nil {
+		return errors.Wrap(err, "failed to add firewall rule")
+	}
+
 	if err = m.vpnServer.Start(); err != nil {
 		return
 	}
@@ -118,6 +123,10 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 func (m *Manager) Stop() (err error) {
 	if m.releasePorts != nil {
 		m.releasePorts()
+	}
+
+	if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, m.serviceOptions.Port); err != nil {
+		log.Error(logPrefix, "Failed to delete firewall rule for OpenVPN", err)
 	}
 
 	if m.vpnServer != nil {

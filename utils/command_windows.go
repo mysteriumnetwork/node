@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,17 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package utils
 
 import (
-	"github.com/mysteriumnetwork/node/utils"
+	"fmt"
+	"os/exec"
 )
 
-// NewService returns Windows OS specific NAT service based on Internet Connection Sharing (ICS).
-func NewService() NATService {
-	return &serviceICS{
-		ifaces:          make(map[string]RuleForwarding),
-		setICSAddresses: setICSAddresses,
-		powerShell:      utils.PowerShell,
+func PowerShell(cmd string) ([]byte, error) {
+	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("'powershell -Command %v': %v output: %s", cmd, err, string(out))
 	}
+	return out, nil
 }
