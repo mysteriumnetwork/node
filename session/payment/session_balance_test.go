@@ -68,6 +68,8 @@ func Test_calculateMaxNotReceivedPromiseCount(t *testing.T) {
 	assert.Equal(t, uint64(1), res)
 	res = calculateMaxNotReceivedPromiseCount(time.Minute*5, time.Second*20)
 	assert.Equal(t, uint64(15), res)
+	res = calculateMaxNotReceivedPromiseCount(time.Hour*2, time.Second*20)
+	assert.Equal(t, uint64(360), res)
 }
 
 func Test_SessionBalanceStartStop(t *testing.T) {
