@@ -1,5 +1,7 @@
+//+build !windows
+
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,21 +17,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package firewall
 
-// OptionsNetwork describes possible parameters of network configuration
-type OptionsNetwork struct {
-	Testnet  bool
-	Localnet bool
+// AddInboundRule adds new inbound rule to the platform specific firewall.
+func AddInboundRule(proto string, port int) error {
+	// TODO adding firewall rules should be implemented for every platform.
+	return nil
+}
 
-	ExperimentIdentityCheck bool
-	ExperimentNATPunching   bool
-
-	DiscoveryAPIAddress string
-	BrokerAddress       string
-
-	EtherClientRPC       string
-	EtherPaymentsAddress string
-
-	QualityOracle string
+// RemoveInboundRule removes inbound rule from the platform specific firewall.
+func RemoveInboundRule(proto string, port int) error {
+	// TODO adding firewall rules should be implemented for every platform.
+	return nil
 }

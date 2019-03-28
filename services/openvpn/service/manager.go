@@ -23,9 +23,11 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
@@ -45,13 +47,28 @@ type ProposalFactory func(currentLocation market.Location) market.ServiceProposa
 // SessionConfigNegotiatorFactory initiates ConfigProvider instance during runtime
 type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigNegotiator
 
+// NATPinger defined Pinger interface for Provider
+type NATPinger interface {
+	BindPort(port int)
+	WaitForHole() error
+	Stop()
+}
+
+// NATEventGetter allows us to fetch the last known NAT event
+type NATEventGetter interface {
+	LastEvent() traversal.Event
+}
+
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
-	natService   nat.NATService
-	mapPort      func() (releasePortMapping func())
-	releasePorts func()
+	natService     nat.NATService
+	mapPort        func() (releasePortMapping func())
+	releasePorts   func()
+	natPinger      NATPinger
+	natEventGetter NATEventGetter
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
+	consumerConfig                 openvpn_service.ConsumerConfig
 
 	vpnServerConfigFactory   ServerConfigFactory
 	vpnServiceConfigProvider session.ConfigNegotiator
@@ -86,9 +103,18 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	vpnServerConfig := m.vpnServerConfigFactory(primitives)
 	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
+	// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
+	m.natPinger.BindPort(m.serviceOptions.Port)
+
+	log.Info(logPrefix, "starting openvpn server")
+	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.serviceOptions.Port); err != nil {
+		return errors.Wrap(err, "failed to add firewall rule")
+	}
+
 	if err = m.vpnServer.Start(); err != nil {
 		return
 	}
+	log.Info(logPrefix, "openvpn server waiting")
 
 	return m.vpnServer.Wait()
 }
@@ -99,6 +125,10 @@ func (m *Manager) Stop() (err error) {
 		m.releasePorts()
 	}
 
+	if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, m.serviceOptions.Port); err != nil {
+		log.Error(logPrefix, "Failed to delete firewall rule for OpenVPN", err)
+	}
+
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
 	}
@@ -106,14 +136,19 @@ func (m *Manager) Stop() (err error) {
 	return nil
 }
 
-// ProvideConfig provides the configuration to end consumer
-func (m *Manager) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+// ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
+func (m *Manager) ProvideConfig(config json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	if m.vpnServiceConfigProvider == nil {
 		log.Info(logPrefix, "Config provider not initialized")
 		return nil, nil, errors.New("Config provider not initialized")
 	}
-
-	return m.vpnServiceConfigProvider.ProvideConfig(publicKey)
+	var c openvpn_service.ConsumerConfig
+	error := json.Unmarshal(config, &c)
+	if error != nil {
+		return nil, nil, errors.Wrap(error, "parsing consumer config failed")
+	}
+	m.consumerConfig = c
+	return m.vpnServiceConfigProvider.ProvideConfig(config)
 }
 
 func vpnStateCallback(state openvpn.State) {

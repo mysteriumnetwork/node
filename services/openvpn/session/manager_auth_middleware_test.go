@@ -80,7 +80,7 @@ func TestMiddlewareConsumesClientIdsAntKeysWithSeveralDigits(t *testing.T) {
 	}
 
 	fas := newFakeAuthenticatorStub()
-	middleware := auth.NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
+	middleware := auth.NewMiddleware(fas.fakeAuthenticator)
 	for _, testLine := range tests {
 		consumed, err := middleware.ConsumeLine(testLine)
 		assert.NoError(t, err, testLine)
@@ -117,7 +117,7 @@ func TestSecondClientIsNotDisconnectedWhenFirstClientDisconnects(t *testing.T) {
 		CommandResult: "SUCCESS",
 	}
 
-	middleware := auth.NewMiddleware(fas.fakeAuthenticator, fas.fakeSessionCleanup)
+	middleware := auth.NewMiddleware(fas.fakeAuthenticator)
 	middleware.Start(mockMangement)
 
 	feedLinesToMiddleware(middleware, firstClientConnected)
@@ -160,7 +160,7 @@ func TestSecondClientWithTheSameCredentialsIsConnected(t *testing.T) {
 	}
 
 	fas := newFakeAuthenticatorStub()
-	middleware := auth.NewMiddleware(fas.newFakeSessionValidator, fas.fakeSessionCleanup)
+	middleware := auth.NewMiddleware(fas.newFakeSessionValidator)
 
 	mockMangement := &management.MockConnection{
 		CommandResult: "SUCCESS",

@@ -97,7 +97,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 	statsKeeper := &StubStatisticsTracker{
 		duration: time.Minute,
 	}
-	ipResolver := ip.NewResolverFake("123.123.123.123")
+	ipResolver := ip.NewResolverMock("123.123.123.123")
 
 	mockedProposalProvider := getMockProposalProviderWithSpecifiedProposal("node1", "noop")
 	AddRoutesForConnection(router, &fakeManager, ipResolver, statsKeeper, mockedProposalProvider)
@@ -345,7 +345,7 @@ func TestDeleteCallsDisconnect(t *testing.T) {
 
 func TestGetIPEndpointSucceeds(t *testing.T) {
 	manager := mockConnectionManager{}
-	ipResolver := ip.NewResolverFake("123.123.123.123")
+	ipResolver := ip.NewResolverMock("123.123.123.123")
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, &mockProposalProvider{})
 	resp := httptest.NewRecorder()
 
@@ -363,7 +363,7 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	manager := mockConnectionManager{}
-	ipResolver := ip.NewResolverFakeFailing(errors.New("fake error"))
+	ipResolver := ip.NewResolverMockFailing(errors.New("fake error"))
 	connEndpoint := NewConnectionEndpoint(&manager, ipResolver, nil, &mockProposalProvider{})
 	resp := httptest.NewRecorder()
 

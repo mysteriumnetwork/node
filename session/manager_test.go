@@ -18,10 +18,12 @@
 package session
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,19 +65,38 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
+	natPinger := func(json.RawMessage) {}
 
-	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil, &MockNatEventTracker{})
+
+	requestConfig := json.RawMessage{}
+	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, requestConfig)
 	expectedResult.Done = sessionInstance.Done
 	assert.NoError(t, err)
-	assert.Exactly(t, expectedResult, sessionInstance)
+
+	assert.Equal(t, expectedResult.Config, sessionInstance.Config)
+	assert.Equal(t, expectedResult.Last, sessionInstance.Last)
+	assert.Equal(t, expectedResult.Done, sessionInstance.Done)
+	assert.Equal(t, expectedResult.ConsumerID, sessionInstance.ConsumerID)
+	assert.Equal(t, expectedResult.ID, sessionInstance.ID)
+	assert.False(t, sessionInstance.CreatedAt.IsZero())
 }
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory)
+	natPinger := func(json.RawMessage) {}
 
-	sessionInstance, err := manager.Create(consumerID, consumerID, 69)
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil, &MockNatEventTracker{})
+
+	requestConfig := json.RawMessage{}
+	sessionInstance, err := manager.Create(consumerID, consumerID, 69, nil, requestConfig)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Exactly(t, Session{}, sessionInstance)
+}
+
+type MockNatEventTracker struct {
+}
+
+func (mnet *MockNatEventTracker) LastEvent() traversal.Event {
+	return traversal.Event{}
 }

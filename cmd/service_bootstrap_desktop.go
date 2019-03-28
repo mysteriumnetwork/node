@@ -69,7 +69,8 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 					locationInfo.OutIP,
 					"UDP",
 					port,
-					"Myst node wireguard(tm) port mapping")
+					"Myst node wireguard(tm) port mapping",
+					di.EventBus)
 			}
 
 			return wireguard_service.NewManager(locationInfo, di.NATService, mapPort, wgOptions),
@@ -119,11 +120,13 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 				locationInfo.OutIP,
 				transportOptions.Protocol,
 				transportOptions.Port,
-				"Myst node OpenVPN port mapping")
+				"Myst node OpenVPN port mapping",
+				di.EventBus)
 		}
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
-		return openvpn_service.NewManager(nodeOptions, transportOptions, locationInfo, di.ServiceSessionStorage, di.NATService, mapPort), proposal, nil
+		natService := nat.NewService()
+		return openvpn_service.NewManager(nodeOptions, transportOptions, locationInfo, di.ServiceSessionStorage, natService, di.NATPinger, mapPort, di.LastSessionShutdown, di.NATTracker), proposal, nil
 	}
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 }
@@ -164,7 +167,13 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator) communication.DialogHandler {
-		sessionManagerFactory := newSessionManagerFactory(proposal, di.ServiceSessionStorage, di.PromiseStorage, nodeOptions)
+		sessionManagerFactory := newSessionManagerFactory(
+			proposal, di.ServiceSessionStorage,
+			di.PromiseStorage,
+			nodeOptions,
+			di.NATPinger.PingTarget,
+			di.LastSessionShutdown,
+			di.NATTracker)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))
 	}
 	newDiscovery := func() service.Discovery {
@@ -175,5 +184,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		newDialogWaiter,
 		newDialogHandler,
 		newDiscovery,
+		di.NATPinger,
 	)
 }

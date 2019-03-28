@@ -37,7 +37,7 @@ func TestNewDetector(t *testing.T) {
 func TestWithIpResolverFailing(t *testing.T) {
 	ipErr := errors.New("ip DbResolver error")
 	detector := NewDetector(
-		ip.NewResolverFakeFailing(ipErr),
+		ip.NewResolverMockFailing(ipErr),
 		NewStaticResolver(""),
 	)
 
@@ -49,7 +49,7 @@ func TestWithIpResolverFailing(t *testing.T) {
 func TestWithLocationResolverFailing(t *testing.T) {
 	locationErr := errors.New("location DbResolver error")
 	detector := NewDetector(
-		ip.NewResolverFake(""),
+		ip.NewResolverMock(""),
 		NewFailingResolver(locationErr),
 	)
 

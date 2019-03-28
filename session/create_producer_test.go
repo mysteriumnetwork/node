@@ -26,14 +26,14 @@ import (
 )
 
 var (
-	succesfullSessionConfig   = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
-	succesfullSessionID       = ID("session-id")
+	successfullSessionConfig  = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
+	successfullSessionID      = ID("session-id")
 	successfulSessionResponse = &CreateResponse{
 		Success: true,
 		Message: "Everything is great!",
 		Session: SessionDto{
-			ID:     succesfullSessionID,
-			Config: succesfullSessionConfig,
+			ID:     successfullSessionID,
+			Config: successfullSessionConfig,
 		},
 	}
 )
@@ -47,8 +47,8 @@ func TestProducer_RequestSessionCreate(t *testing.T) {
 	sender := &fakeSender{}
 	sessionData, paymentInfo, err := RequestSessionCreate(sender, 123, []byte{}, ConsumerInfo{})
 	assert.NoError(t, err)
-	assert.Exactly(t, succesfullSessionID, sessionData.ID)
-	assert.Exactly(t, succesfullSessionConfig, sessionData.Config)
+	assert.Exactly(t, successfullSessionID, sessionData.ID)
+	assert.Exactly(t, successfullSessionConfig, sessionData.Config)
 	assert.Nil(t, paymentInfo)
 }
 
