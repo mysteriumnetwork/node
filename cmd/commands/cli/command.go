@@ -150,6 +150,7 @@ func (c *cliApp) handleActions(line string) {
 		{command: "connect", handler: c.connect},
 		{command: "unlock", handler: c.unlock},
 		{command: "identities", handler: c.identities},
+		{command: "payout", handler: c.payout},
 		{command: "version", handler: c.version},
 		{command: "license", handler: c.license},
 		{command: "registration", handler: c.registration},
@@ -328,9 +329,9 @@ func (c *cliApp) connect(argsString string) {
 }
 
 func (c *cliApp) unlock(argsString string) {
-	unlockSignature := "Unlock <identity> [passphrase]"
+	unlockSignature := "unlock <identity> [passphrase]"
 	if len(argsString) == 0 {
-		info("Press tab to select identity.", unlockSignature)
+		info("Press tab to select identity.\n", unlockSignature)
 		return
 	}
 
@@ -342,7 +343,7 @@ func (c *cliApp) unlock(argsString string) {
 	} else if len(args) == 2 {
 		identity, passphrase = args[0], args[1]
 	} else {
-		info("Please type in identity and optional passphrase.", unlockSignature)
+		info("Please type in identity and optional passphrase.\n", unlockSignature)
 		return
 	}
 
@@ -354,6 +355,46 @@ func (c *cliApp) unlock(argsString string) {
 	}
 
 	success(fmt.Sprintf("Identity %s unlocked.", identity))
+}
+
+func (c *cliApp) payout(argsString string) {
+	args := strings.Fields(argsString)
+
+	const usage = "payout command:\n    set"
+	if len(args) == 0 {
+		info(usage)
+		return
+	}
+
+	action := args[0]
+	switch action {
+	case "set":
+		payoutSignature := "payout set <identity> <ethAddress>"
+		if len(args) < 2 {
+			info("Please provide identity. You can select one by pressing tab.\n", payoutSignature)
+			return
+		}
+
+		var identity, ethAddress string
+		if len(args) == 3 {
+			identity, ethAddress = args[1], args[2]
+		} else {
+			info("Please type in identity and Ethereum address.\n", payoutSignature)
+			return
+		}
+
+		err := c.tequilapi.Payout(identity, ethAddress)
+		if err != nil {
+			warn(err)
+			return
+		}
+
+		success(fmt.Sprintf("Payout address %s registered.", ethAddress))
+	default:
+		warnf("Unknown sub-command '%s'\n", action)
+		fmt.Println(usage)
+		return
+	}
 }
 
 func (c *cliApp) disconnect() {
@@ -636,6 +677,14 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			"unlock",
 			readline.PcItemDynamic(
 				getIdentityOptionList(tequilapi),
+			),
+		),
+		readline.PcItem(
+			"payout",
+			readline.PcItem("set",
+				readline.PcItemDynamic(
+					getIdentityOptionList(tequilapi),
+				),
 			),
 		),
 		readline.PcItem(
