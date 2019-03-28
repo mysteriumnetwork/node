@@ -73,7 +73,13 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, requestConfig)
 	expectedResult.Done = sessionInstance.Done
 	assert.NoError(t, err)
-	assert.Exactly(t, expectedResult, sessionInstance)
+
+	assert.Equal(t, expectedResult.Config, sessionInstance.Config)
+	assert.Equal(t, expectedResult.Last, sessionInstance.Last)
+	assert.Equal(t, expectedResult.Done, sessionInstance.Done)
+	assert.Equal(t, expectedResult.ConsumerID, sessionInstance.ConsumerID)
+	assert.Equal(t, expectedResult.ID, sessionInstance.ID)
+	assert.False(t, sessionInstance.CreatedAt.IsZero())
 }
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {

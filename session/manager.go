@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
@@ -130,6 +131,7 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.Done = make(chan struct{})
 	sessionInstance.Config = config
+	sessionInstance.CreatedAt = time.Now().UTC()
 
 	balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)
 	if err != nil {

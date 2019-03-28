@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/session"
@@ -42,7 +43,7 @@ type serviceSession struct {
 }
 
 type serviceSessionStorage interface {
-	GetAll() ([]session.Session, error)
+	GetAll() []session.Session
 }
 
 type serviceSessionsEndpoint struct {
@@ -65,16 +66,10 @@ func NewServiceSessionsEndpoint(sessionStorage serviceSessionStorage) *serviceSe
 //     description: List of sessions
 //     schema:
 //       "$ref": "#/definitions/ServiceSessionListDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (endpoint *serviceSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sessions, err := endpoint.sessionStorage.GetAll()
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
+	sessions := endpoint.sessionStorage.GetAll()
+
+	sort.Slice(sessions, func(i, j int) bool { return sessions[i].CreatedAt.Before(sessions[j].CreatedAt) })
 
 	sessionsSerializable := serviceSessionsList{
 		Sessions: mapServiceSessions(sessions, serviceSessionToDto),
