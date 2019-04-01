@@ -36,10 +36,10 @@ type BalanceTracker interface {
 type Session struct {
 	ID         ID
 	ConsumerID identity.Identity
-	Done       chan struct{}
 	Config     ServiceConfiguration
 	CreatedAt  time.Time
 	Last       bool
+	done       chan struct{}
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party
