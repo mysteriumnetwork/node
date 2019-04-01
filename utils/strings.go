@@ -31,3 +31,8 @@ func RemoveErrorsAndBOMUTF8(in string) string {
 		return r
 	}, in)
 }
+
+// RemoveErrorsAndBOMUTF8Byte removes the bom and rune errors from UTF8 byte arrays
+func RemoveErrorsAndBOMUTF8Byte(in []byte) []byte {
+	return []byte(RemoveErrorsAndBOMUTF8(string(in)))
+}

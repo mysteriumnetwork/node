@@ -24,7 +24,6 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 )
 
@@ -59,11 +58,17 @@ func (ics *serviceICS) Enable() error {
 }
 
 func (ics *serviceICS) enableRemoteAccessService() error {
-	status, err := ics.powerShell("Get-Service RemoteAccess | foreach { $_.StartType }")
+	status, err := ics.powerShell(`(Get-WmiObject Win32_Service -filter "Name='RemoteAccess'").StartMode`)
 	if err != nil {
 		return errors.Wrap(err, "failed to get RemoteAccess service startup type")
 	}
-	ics.remoteAccessStatus = string(status)
+
+	statusStringified := strings.ToLower(strings.TrimSpace(string(status)))
+	if statusStringified == "auto" {
+		ics.remoteAccessStatus = "automatic"
+	} else {
+		ics.remoteAccessStatus = statusStringified
+	}
 
 	if _, err := ics.powerShell("Set-Service -Name RemoteAccess -StartupType automatic"); err != nil {
 		return errors.Wrap(err, "failed to set RemoteAccess service startup type to automatic")
@@ -176,7 +181,7 @@ func (ics *serviceICS) getPublicInterfaceName() (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get interface from the default route")
 	}
-	ifaceID, err := strconv.Atoi(strings.TrimSpace(utils.RemoveErrorsAndBOMUTF8(string(out))))
+	ifaceID, err := strconv.Atoi(strings.TrimSpace(string(out)))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse interface ID")
 	}
@@ -216,7 +221,7 @@ func (ics *serviceICS) getInternalInterfaceName() (string, error) {
 		return "", errors.Wrap(err, "failed to detect internal interface name")
 	}
 
-	ifaceName := strings.TrimSpace(utils.RemoveErrorsAndBOMUTF8(string(out)))
+	ifaceName := strings.TrimSpace(string(out))
 	if len(ifaceName) == 0 {
 		return "", errors.New("interface not found")
 	}
