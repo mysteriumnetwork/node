@@ -58,11 +58,17 @@ func (ics *serviceICS) Enable() error {
 }
 
 func (ics *serviceICS) enableRemoteAccessService() error {
-	status, err := ics.powerShell("Get-Service RemoteAccess | foreach { $_.StartType }")
+	status, err := ics.powerShell(`(Get-WmiObject Win32_Service -filter "Name='RemoteAccess'").StartMode`)
 	if err != nil {
 		return errors.Wrap(err, "failed to get RemoteAccess service startup type")
 	}
-	ics.remoteAccessStatus = string(status)
+
+	statusStringified := strings.ToLower(strings.TrimSpace(string(status)))
+	if statusStringified == "auto" {
+		ics.remoteAccessStatus = "automatic"
+	} else {
+		ics.remoteAccessStatus = statusStringified
+	}
 
 	if _, err := ics.powerShell("Set-Service -Name RemoteAccess -StartupType automatic"); err != nil {
 		return errors.Wrap(err, "failed to set RemoteAccess service startup type to automatic")

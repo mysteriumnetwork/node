@@ -22,7 +22,7 @@ import (
 	"os/exec"
 )
 
-func Powershell(cmd string) ([]byte, error) {
+func PowerShell(cmd string) ([]byte, error) {
 	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("'powershell -Command %v': %v output: %s", cmd, RemoveErrorsAndBOMUTF8(err.Error()), RemoveErrorsAndBOMUTF8Byte(out))

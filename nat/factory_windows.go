@@ -26,6 +26,6 @@ func NewService() NATService {
 	return &serviceICS{
 		ifaces:          make(map[string]RuleForwarding),
 		setICSAddresses: setICSAddresses,
-		powerShell:      utils.Powershell,
+		powerShell:      utils.PowerShell,
 	}
 }
