@@ -235,25 +235,25 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d6664486d8cf8f3053e34f388a5a17b5ca210ed2e25eb3a0d59cc3a95c31abb8"
+  digest = "1:8bc6c6b7a56ce25f3c6754c5b5ae6cc3d07c212a9d13e7bdbab1021319cbce08"
   name = "github.com/mdlayher/genetlink"
   packages = ["."]
   pruneopts = "UT"
-  revision = "e97704c1b7955246e3c4f6d9746a7b45ff3c5a26"
+  revision = "60417448a85124f4b675580ad4186e8776b27d91"
 
 [[projects]]
   branch = "master"
-  digest = "1:5752b16f826da12e814b5af1012ad8802731f85b2e397d3d3f36b02e5aabdb81"
+  digest = "1:0d53ff12870426702231bf0ec061e3b3b86642e41d8ddb87ad874ed806a06232"
   name = "github.com/mdlayher/netlink"
   packages = [
     ".",
     "nlenc",
   ]
   pruneopts = "UT"
-  revision = "2e37830c371e54b400461538ef95dae4d2d3279b"
+  revision = "258ea9dff42c0ec7540aa4b1599d09e7bfc7973b"
 
 [[projects]]
-  digest = "1:29f3af6f3b46bccbd6994c01053eebebb84b5ec2cf8e8d06ed705f4cfa643e5a"
+  digest = "1:cde3b8652a81cb1fe80b719d8f68e923ebd9c3e93340b34d1468f5b8ce050303"
   name = "github.com/mdlayher/wireguardctrl"
   packages = [
     ".",
@@ -263,7 +263,7 @@
     "wgtypes",
   ]
   pruneopts = "UT"
-  revision = "15a089393cc3b891b2181cd738347dc568a0b4b0"
+  revision = "9e6224e4f8a61e71ff42490fa333319006d884fd"
 
 [[projects]]
   digest = "1:c7354463195544b1ab3c1f1fadb41430947f5d28dfbf2cdbd38268c5717a5a03"
@@ -491,8 +491,8 @@
   revision = "c39426892332e1bb5ec0a434a079bf82f5d30c54"
 
 [[projects]]
-  branch = "release-branch.go1.11"
-  digest = "1:95eb3c3a4aeb757c723d0133273f47d2f93fb78c4963e343df6bf052a3d290b8"
+  branch = "master"
+  digest = "1:297116df11011755a577f0f2a1319aef6396031d602e12ace27657de78ab09e2"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -501,7 +501,7 @@
     "windows/registry",
   ]
   pruneopts = "UT"
-  revision = "98c5dad5d1a0e8a73845ecc8897d0bd56586511d"
+  revision = "9eb1bfa1ce65ae8a6ff3114b0aaf9a41a6cf3560"
 
 [[projects]]
   digest = "1:aa4d6967a3237f8367b6bf91503964a77183ecf696f1273e8ad3551bb4412b5f"
