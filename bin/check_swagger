@@ -7,6 +7,7 @@ source bin/helpers/output.sh
 bin/swagger_generate
 if [ $? -ne 0 ]; then
     print_error "Swagger generation failed"
+    exit 1
 fi
 
 # validate
