@@ -71,12 +71,12 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 	requestConfig := json.RawMessage{}
 	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, requestConfig)
-	expectedResult.Done = sessionInstance.Done
+	expectedResult.done = sessionInstance.done
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedResult.Config, sessionInstance.Config)
 	assert.Equal(t, expectedResult.Last, sessionInstance.Last)
-	assert.Equal(t, expectedResult.Done, sessionInstance.Done)
+	assert.Equal(t, expectedResult.done, sessionInstance.done)
 	assert.Equal(t, expectedResult.ConsumerID, sessionInstance.ConsumerID)
 	assert.Equal(t, expectedResult.ID, sessionInstance.ID)
 	assert.False(t, sessionInstance.CreatedAt.IsZero())
