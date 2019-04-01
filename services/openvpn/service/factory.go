@@ -146,7 +146,7 @@ func (ocn *OpenvpnConfigNegotiator) ProvideConfig(json.RawMessage) (session.Serv
 }
 
 func (ocn *OpenvpnConfigNegotiator) determineClientPort() int {
-	if ocn.natEventGetter.LastEvent() == traversal.EventFailure {
+	if ocn.natEventGetter.LastEvent().Name == traversal.FailureEventName {
 		// port mapping failed, assume NAT hole-punching
 		// randomize port
 		return 50221

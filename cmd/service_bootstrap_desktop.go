@@ -70,8 +70,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 					"UDP",
 					port,
 					"Myst node wireguard(tm) port mapping",
-					di.EventBus,
-					di.MetricsSender)
+					di.EventBus)
 			}
 
 			return wireguard_service.NewManager(locationInfo, di.NATService, mapPort, wgOptions),
@@ -122,8 +121,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 				transportOptions.Protocol,
 				transportOptions.Port,
 				"Myst node OpenVPN port mapping",
-				di.EventBus,
-				di.MetricsSender)
+				di.EventBus)
 		}
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)

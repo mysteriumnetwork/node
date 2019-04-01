@@ -230,7 +230,7 @@ func (p *Pinger) WaitForHole() error {
 
 	select {
 	case event := <-events:
-		if event == EventSuccess {
+		if event.Name == SuccessEventName {
 			return nil
 		}
 		log.Info(prefix, "waiting for NAT pin-hole")

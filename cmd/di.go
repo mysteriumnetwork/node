@@ -462,7 +462,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	if options.ExperimentNATPunching {
-		di.NATTracker = traversal.NewEventsTracker()
+		di.NATTracker = traversal.NewEventsTracker(di.MetricsSender)
 		di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
 		di.LastSessionShutdown = make(chan struct{})
 	} else {
