@@ -72,12 +72,7 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 		}
 	}()
 	for {
-		err := addMapping(m, protocol, extPort, intPort, name, publisher)
-		if err != nil {
-			log.Infof("%s, Mapping for port %d failed: %s", logPrefix, extPort, err)
-		} else {
-			log.Info("%s, Mapped network port: %d", logPrefix, extPort)
-		}
+		addMapping(m, protocol, extPort, intPort, name, publisher)
 		select {
 		case <-c:
 			return
@@ -86,17 +81,16 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 	}
 }
 
-func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name string, publisher Publisher) error {
+func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name string, publisher Publisher) {
 	if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
-		log.Debugf("%s, Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
+		log.Debugf("%s Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
 			publisher.Publish(traversal.EventTopic, traversal.BuildFailureEvent(err))
 			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
-			return err
+			return
 		}
 	}
 	publisher.Publish(traversal.EventTopic, traversal.BuildSuccessEvent())
-	log.Info(logPrefix, "Mapped network port:", extPort)
-	return nil
+	log.Info(logPrefix, "Mapped network port: ", extPort)
 }
