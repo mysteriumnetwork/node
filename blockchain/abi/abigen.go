@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
@@ -56,7 +57,10 @@ func main() {
 	}
 	writer := os.Stdout
 	if *output != "" {
-		writer, err = os.Create(*output)
+		if err := os.MkdirAll(*output, 0755); err != nil { // >:)
+			fmt.Println("Error creating output dir:", err.Error())
+		}
+		writer, err = os.Create(filepath.Join(*output, smartContract.ContractName+".go"))
 		if err != nil {
 			fmt.Println("Error:", err.Error())
 			os.Exit(1)
