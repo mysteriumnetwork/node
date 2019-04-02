@@ -166,6 +166,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapIdentityComponents(nodeOptions)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
+	di.bootstrapMetrics(nodeOptions)
 
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
@@ -310,9 +311,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.EventBus,
 		di.IPResolver,
 	)
-
-	applicationVersion := metadata.VersionAsString()
-	di.MetricsSender = metrics.NewSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress, applicationVersion)
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
@@ -460,13 +458,17 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
 }
 
+func (di *Dependencies) bootstrapMetrics(options node.Options) {
+	applicationVersion := metadata.VersionAsString()
+	di.MetricsSender = metrics.NewSender(options.DisableMetrics, options.MetricsAddress, applicationVersion)
+}
+
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
+	di.NATTracker = traversal.NewEventsTracker(di.MetricsSender)
 	if options.ExperimentNATPunching {
-		di.NATTracker = traversal.NewEventsTracker(di.MetricsSender)
 		di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
 		di.LastSessionShutdown = make(chan struct{})
 	} else {
-		di.NATTracker = &traversal.NoopEventsTracker{}
 		di.NATPinger = &traversal.NoopPinger{}
 		di.LastSessionShutdown = nil
 	}
