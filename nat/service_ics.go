@@ -31,7 +31,32 @@ const (
 	enablePublicSharing  = "$config.EnableSharing(0)"
 	enablePrivateSharing = "$config.EnableSharing(1)"
 	disableSharing       = "$config.DisableSharing()"
+	propsForPublic       = `$props.IsIcsPublic = 1;$props.IsIcsPrivate = 0;`
+	propsForPrivate      = `$props.IsIcsPublic = 0;$props.IsIcsPrivate = 1;`
+	propsForDisable      = `$props.IsIcsPublic = 0;$props.IsIcsPrivate = 0;`
 )
+
+func getSharingScript(ifaceName, props, action string) string {
+	return `regsvr32 /s hnetcfg.dll;
+		Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" | foreach { $_.IsIcsPublic = 0; $_.IsIcsPrivate = 0; $_.Put() };
+		$netShare = New-Object -ComObject HNetCfg.HNetShare;
+		$c = $netShare.EnumEveryConnection |? { $netshare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
+		$guid = $netShare.NetConnectionProps.Invoke($c).Guid;
+		$props = Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" -Filter "__PATH like '%$guid%'";` + props + `$props.Put();
+		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);` + action
+}
+
+func getPublicSharingScript(ifaceName string) string {
+	return getSharingScript(ifaceName, propsForPublic, enablePublicSharing)
+}
+
+func getPrivateSharingScript(ifaceName string) string {
+	return getSharingScript(ifaceName, propsForPrivate, enablePrivateSharing)
+}
+
+func getDisableSharingScript(ifaceName string) string {
+	return getSharingScript(ifaceName, propsForDisable, disableSharing)
+}
 
 type serviceICS struct {
 	mu                 sync.Mutex
@@ -53,7 +78,7 @@ func (ics *serviceICS) Enable() error {
 		return errors.Wrap(err, "failed to get public interface name")
 	}
 
-	err = ics.applySharingConfig(enablePublicSharing, ifaceName)
+	_, err = ics.powerShell(getPublicSharingScript(ifaceName))
 	return errors.Wrap(err, "failed to enable internet connection sharing")
 }
 
@@ -100,7 +125,7 @@ func (ics *serviceICS) Add(rule RuleForwarding) error {
 		return errors.Wrap(err, "failed to find suitable interface")
 	}
 
-	err = ics.applySharingConfig(enablePrivateSharing, ifaceName)
+	_, err = ics.powerShell(getPrivateSharingScript(ifaceName))
 	if err != nil {
 		return errors.Wrap(err, "failed to enable internet connection sharing for internal interface")
 	}
@@ -120,7 +145,7 @@ func (ics *serviceICS) Del(rule RuleForwarding) error {
 		return errors.Wrap(err, "failed to find suitable interface")
 	}
 
-	err = ics.applySharingConfig(disableSharing, ifaceName)
+	_, err = ics.powerShell(getDisableSharingScript(ifaceName))
 	if err != nil {
 		return errors.Wrap(err, "failed to disable internet connection sharing for internal interface")
 	}
@@ -164,7 +189,7 @@ func (ics *serviceICS) Disable() (resErr error) {
 		}
 	}
 
-	err = ics.applySharingConfig(disableSharing, ifaceName)
+	_, err = ics.powerShell(getDisableSharingScript(ifaceName))
 	if err != nil {
 		err = errors.Wrap(err, "failed to disable internet connection sharing")
 		log.Errorf("%s %v", natLogPrefix, err)
@@ -198,21 +223,6 @@ func (ics *serviceICS) getPublicInterfaceName() (string, error) {
 	}
 
 	return "", errors.New("interface not found")
-}
-
-func (ics *serviceICS) applySharingConfig(action, ifaceName string) error {
-	if len(action) == 0 {
-		return errors.New("empty action provided")
-	}
-	if len(ifaceName) == 0 {
-		return errors.New("empty interface name provided")
-	}
-
-	_, err := ics.powerShell(`regsvr32 /s hnetcfg.dll;
-		$netShare = New-Object -ComObject HNetCfg.HNetShare;
-		$c = $netShare.EnumEveryConnection |? { $netShare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
-		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);` + action)
-	return err
 }
 
 func (ics *serviceICS) getInternalInterfaceName() (string, error) {
