@@ -18,10 +18,12 @@
 package dialog
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -75,6 +77,49 @@ func TestDialogWaiter_ServeDialogs(t *testing.T) {
 		nats.NewReceiver(connection, expectedCodec, "my-topic.0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea"),
 		dialog.Receiver,
 	)
+}
+
+func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
+	connection := nats.StartConnectionFake()
+	defer connection.Close()
+
+	signer := &identity.SignerFake{}
+
+	mockedRegistry := &mockedIdentityRegistry{
+		anyIdentityRegistered: true,
+	}
+
+	handler := &dialogHandler{
+		dialogReceived: make(chan communication.Dialog),
+	}
+
+	waiter := NewDialogWaiter(discovery.NewAddressWithConnection(connection, "my-topic"), signer, mockedRegistry)
+
+	err := waiter.ServeDialogs(handler)
+	assert.NoError(t, err)
+
+	go func() {
+		dialogWait(handler)
+	}()
+
+	msg, err := connection.Request("my-topic.dialog-create", []byte(`{
+		"payload": {
+			"peer_id":"0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea",
+			"version":"v1"
+		},
+		"signature": "tl+WbYkJdXD5foaIP3bqVGFHfr6kdd5FzmJAmu1GdpINEnNR3bTto6wgEoke/Fpy4zsWOjrulDVfrc32f5ArTgA="
+	}`), 100*time.Millisecond)
+	assert.NoError(t, err)
+
+	var response struct {
+		Payload dialogCreateResponse `json:"payload"`
+	}
+
+	err = json.Unmarshal(msg.Data, &response)
+	assert.NoError(t, err)
+
+	_, err = uuid.FromString(response.Payload.Topic)
+	assert.NoError(t, err)
 }
 
 func TestDialogWaiter_ServeDialogsRejectInvalidSignature(t *testing.T) {
