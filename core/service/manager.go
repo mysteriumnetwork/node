@@ -64,6 +64,11 @@ type Discovery interface {
 	Wait()
 }
 
+// SessionStorage keeps sessions and allows removing them by proposal id
+type SessionStorage interface {
+	RemoveForProposal(proposalID int)
+}
+
 // WaitForNATHole blocks until NAT hole is punched towards consumer through local NAT or until hole punching failed
 type WaitForNATHole func() error
 
@@ -74,6 +79,7 @@ func NewManager(
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
 	natPinger NATPinger,
+	sessionStorage SessionStorage,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -82,6 +88,7 @@ func NewManager(
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
 		natPinger:            natPinger,
+		sessionStorage:       sessionStorage,
 	}
 }
 
@@ -95,7 +102,8 @@ type Manager struct {
 
 	discoveryFactory DiscoveryFactory
 
-	natPinger NATPinger
+	natPinger      NATPinger
+	sessionStorage SessionStorage
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -171,6 +179,12 @@ func (manager *Manager) Kill() error {
 
 // Stop stops the service.
 func (manager *Manager) Stop(id ID) error {
+	instance := manager.servicePool.Instance(id)
+	if instance == nil {
+		return errors.New("service not found")
+	}
+	manager.sessionStorage.RemoveForProposal(instance.proposal.ID)
+
 	return manager.servicePool.Stop(id)
 }
 

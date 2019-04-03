@@ -21,6 +21,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -47,6 +48,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&MockNATPinger{},
+		session.NewStorageMemory(),
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.Nil(t, err)
@@ -71,6 +73,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&MockNATPinger{},
+		session.NewStorageMemory(),
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.Nil(t, err)

@@ -168,7 +168,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator) communication.DialogHandler {
 		sessionManagerFactory := newSessionManagerFactory(
-			proposal, di.ServiceSessionStorage,
+			proposal,
+			di.ServiceSessionStorage,
 			di.PromiseStorage,
 			nodeOptions,
 			di.NATPinger.PingTarget,
@@ -185,5 +186,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		newDialogHandler,
 		newDiscovery,
 		di.NATPinger,
+		di.ServiceSessionStorage,
 	)
 }

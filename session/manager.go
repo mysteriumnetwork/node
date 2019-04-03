@@ -131,6 +131,7 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.done = make(chan struct{})
 	sessionInstance.Config = config
+	sessionInstance.ProposalID = proposalID
 	sessionInstance.CreatedAt = time.Now().UTC()
 
 	balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)

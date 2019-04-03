@@ -81,3 +81,13 @@ func (storage *StorageMemory) Remove(id ID) {
 	defer storage.lock.Unlock()
 	delete(storage.sessions, id)
 }
+
+// RemoveForProposal removes all sessions with given proposal id
+func (storage *StorageMemory) RemoveForProposal(proposalID int) {
+	sessions := storage.GetAll()
+	for _, session := range sessions {
+		if session.ProposalID == proposalID {
+			storage.Remove(session.ID)
+		}
+	}
+}
