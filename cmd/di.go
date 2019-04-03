@@ -476,7 +476,7 @@ func (di *Dependencies) bootstrapMetrics(options node.Options) {
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	di.NATTracker = traversal.NewEventsTracker()
-	di.NATEventSender = traversal.NewEventsSender(di.MetricsSender)
+	di.NATEventSender = traversal.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
 	if options.ExperimentNATPunching {
 		di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
 		di.LastSessionShutdown = make(chan struct{})

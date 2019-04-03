@@ -28,6 +28,9 @@ const eventsSenderLogPrefix = "[traversal-events-sender] "
 // EventsSender allows subscribing to NAT events and sends them to server
 type EventsSender struct {
 	metricsSender metricsSender
+	ipResolver    ipResolver
+	lastIp        string
+	lastEventType string
 }
 
 type metricsSender interface {
@@ -35,17 +38,31 @@ type metricsSender interface {
 	SendNATMappingFailEvent(err error) error
 }
 
+type ipResolver func() (string, error)
+
 // NewEventsSender returns a new instance of events sender
-func NewEventsSender(metricsSender metricsSender) *EventsSender {
-	return &EventsSender{metricsSender: metricsSender}
+func NewEventsSender(metricsSender metricsSender, ipResolver ipResolver) *EventsSender {
+	return &EventsSender{metricsSender: metricsSender, ipResolver: ipResolver, lastIp: ""}
 }
 
 // ConsumeNATEvent sends received event to server
 func (es *EventsSender) ConsumeNATEvent(event Event) {
-	err := es.sendNATEvent(event)
+	publicIP, err := es.ipResolver()
+	if err != nil {
+		log.Warnf(eventsSenderLogPrefix, "resolving public ip failed: ", err)
+		return
+	}
+	if publicIP == es.lastIp && event.Type == es.lastEventType {
+		return
+	}
+
+	err = es.sendNATEvent(event)
 	if err != nil {
 		log.Warnf(eventsSenderLogPrefix, "sending event failed: ", err)
 	}
+
+	es.lastIp = publicIP
+	es.lastEventType = event.Type
 }
 
 func (es *EventsSender) sendNATEvent(event Event) error {
