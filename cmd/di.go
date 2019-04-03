@@ -18,7 +18,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -55,6 +54,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/traversal/config"
+	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
@@ -86,9 +86,9 @@ type Storage interface {
 // NatPinger is responsible for pinging nat holes
 type NatPinger interface {
 	PingProvider(ip string, port int) error
-	PingTarget(json.RawMessage)
-	BindPort(port int)
-	WaitForHole() error
+	PingTarget(*traversal.Params)
+	BindConsumerPort(port int)
+	BindServicePort(serviceType services.ServiceType, port int)
 	Start()
 	Stop()
 }
@@ -146,8 +146,6 @@ type Dependencies struct {
 
 	PortPool *port.Pool
 
-	LastSessionShutdown chan struct{}
-
 	MetricsSender *metrics.Sender
 }
 
@@ -182,6 +180,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapMetrics(nodeOptions)
+
+	di.PortPool = port.NewPool()
 
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
@@ -355,8 +355,7 @@ func newSessionManagerFactory(
 	sessionStorage *session.StorageMemory,
 	promiseStorage session_payment.PromiseStorage,
 	nodeOptions node.Options,
-	natPingerChan func(json.RawMessage),
-	lastSessionShutdown chan struct{},
+	natPingerChan func(*traversal.Params),
 	natTracker NatEventTracker,
 	serviceID string,
 ) session.ManagerFactory {
@@ -398,7 +397,6 @@ func newSessionManagerFactory(
 			sessionStorage,
 			providerBalanceTrackerFactory,
 			natPingerChan,
-			lastSessionShutdown,
 			natTracker,
 			serviceID,
 		)
@@ -502,10 +500,12 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	di.NATTracker = traversal.NewEventsTracker()
 	di.NATEventSender = traversal.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
 	if options.ExperimentNATPunching {
-		di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
-		di.LastSessionShutdown = make(chan struct{})
+		di.NATPinger = traversal.NewPingerFactory(
+			di.NATTracker,
+			config.NewConfigParser(),
+			traversal.NewNATProxy(),
+			di.PortPool)
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
-		di.LastSessionShutdown = nil
 	}
 }

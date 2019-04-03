@@ -24,7 +24,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/port"
+
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/services"
 	"github.com/pkg/errors"
 	"golang.org/x/net/ipv4"
 )
@@ -33,21 +36,16 @@ const prefix = "[NATPinger] "
 const pingInterval = 200
 const pingTimeout = 10000
 
-// ConfigParser is able to parse a config from given raw json
-type ConfigParser interface {
-	Parse(config json.RawMessage) (ip string, port int, err error)
-}
-
 // Pinger represents NAT pinger structure
 type Pinger struct {
-	localPort      int
-	pingTarget     chan json.RawMessage
-	pingReceived   chan struct{}
+	pingTarget     chan *Params
 	pingCancelled  chan struct{}
 	natEventWaiter NatEventWaiter
 	configParser   ConfigParser
-	stop           chan struct{}
 	once           sync.Once
+	natProxy       natProxy
+	portPool       portSupplier
+	consumerPort   int
 }
 
 // NatEventWaiter is responsible for waiting for nat events
@@ -55,47 +53,75 @@ type NatEventWaiter interface {
 	WaitForEvent() Event
 }
 
+// ConfigParser is able to parse a config from given raw json
+type ConfigParser interface {
+	Parse(config json.RawMessage) (ip string, port int, serviceType services.ServiceType, err error)
+}
+
+type portSupplier interface {
+	Acquire() (port.Port, error)
+}
+
 // NewPingerFactory returns Pinger instance
-func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser) *Pinger {
-	target := make(chan json.RawMessage)
-	received := make(chan struct{})
+func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool portSupplier) *Pinger {
+	target := make(chan *Params)
 	cancel := make(chan struct{})
-	stop := make(chan struct{})
 	return &Pinger{
 		pingTarget:     target,
-		pingReceived:   received,
 		pingCancelled:  cancel,
 		natEventWaiter: waiter,
 		configParser:   parser,
-		stop:           stop,
+		natProxy:       proxy,
+		portPool:       portPool,
 	}
 }
 
-// Start starts NAT pinger and waits for pingTarget to ping
+type natProxy interface {
+	handOff(serviceType services.ServiceType, conn *net.UDPConn)
+	registerServicePort(serviceType services.ServiceType, port int)
+	isAvailable(serviceType services.ServiceType) bool
+}
+
+// Params contains session parameters needed to NAT ping remote peer
+type Params struct {
+	RequestConfig json.RawMessage
+	Port          int
+}
+
+// Start starts NAT pinger and waits for PingTarget to ping
 func (p *Pinger) Start() {
 	log.Info(prefix, "Starting a NAT pinger")
+
+	// We dont need to run pinger if NAT port auto-configuration is successful
+	if p.natEventWaiter.WaitForEvent().Type == SuccessEventType {
+		return
+	}
+
 	for {
 		select {
-		case <-p.stop:
-			return
-		case dst := <-p.pingTarget:
-			IP, port, err := p.configParser.Parse(dst)
+		case pingParams := <-p.pingTarget:
+			log.Info(prefix, "Pinging peer with", pingParams)
+
+			IP, port, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
 			if err != nil {
-				log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", string(dst))))
+				log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", pingParams)))
 			}
 
-			log.Infof("%s ping target received: IP: %v, port: %v", prefix, IP, port)
-			if port == 0 {
-				// client did not sent its port to ping to, notifying the service to start
-				p.pingReceived <- struct{}{}
+			if !p.natProxy.isAvailable(serviceType) {
+				log.Warn(prefix, serviceType, " NATProxy is not available for this transport protocol")
 				continue
 			}
-			conn, err := p.getConnection(IP, port)
+
+			log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, port)
+			if port == 0 {
+				// client did not sent its port to ping to, notifying the service to start
+				continue
+			}
+			conn, err := p.getConnection(IP, port, pingParams.Port)
 			if err != nil {
 				log.Error(prefix, "failed to get connection: ", err)
 				continue
 			}
-			defer conn.Close()
 
 			go func() {
 				err := p.ping(conn)
@@ -104,42 +130,33 @@ func (p *Pinger) Start() {
 				}
 			}()
 
-			select {
-			case <-p.stop:
-				return
-			case <-time.After(pingInterval * time.Millisecond):
-			}
-
 			err = p.pingReceiver(conn)
 			if err != nil {
 				log.Error(prefix, "ping receiver error: ", err)
 				continue
 			}
 
-			p.pingReceived <- struct{}{}
 			log.Info(prefix, "ping received, waiting for a new connection")
-			conn.Close()
+
+			go p.natProxy.handOff(serviceType, conn)
 		}
 	}
 }
 
-// Stop stops the nat pinger
+// Stop noop method
 func (p *Pinger) Stop() {
-	p.once.Do(func() { close(p.stop) })
+	// noop method - NATPinger should not stop
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
 func (p *Pinger) PingProvider(ip string, port int) error {
 	log.Info(prefix, "NAT pinging to provider")
 
-	conn, err := p.getConnection(ip, port)
+	conn, err := p.getConnection(ip, port, p.consumerPort)
 	if err != nil {
 		return errors.Wrap(err, "failed to get connection")
 	}
 	defer conn.Close()
-
-	//let provider ping first
-	time.Sleep(20 * time.Millisecond)
 
 	go func() {
 		err := p.ping(conn)
@@ -154,8 +171,8 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 		return err
 	}
 
-	// wait for provider to startup
-	time.Sleep(3 * time.Second)
+	// wait for provider to setup NAT proxy connection
+	time.Sleep(200 * time.Millisecond)
 
 	return nil
 }
@@ -173,6 +190,8 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 			// This is the essence of the TTL based udp punching.
 			// We're slowly increasing the TTL so that the packet is held.
 			// After a few attempts we're setting the value to 128 and assuming we're through.
+			// We could stop sending ping to Consumer beyond 4 hops to prevent from possible Consumer's router's
+			//  DOS block, but we plan, that Consumer at the same time will be Provider too in near future.
 			if n > 4 {
 				n = 128
 			}
@@ -192,7 +211,7 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 	}
 }
 
-func (p *Pinger) getConnection(ip string, port int) (*net.UDPConn, error) {
+func (p *Pinger) getConnection(ip string, port int, pingerPort int) (*net.UDPConn, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", ip, port))
 	if err != nil {
 		return nil, err
@@ -200,7 +219,7 @@ func (p *Pinger) getConnection(ip string, port int) (*net.UDPConn, error) {
 
 	log.Info(prefix, "remote socket: ", udpAddr.String())
 
-	conn, err := net.DialUDP("udp", &net.UDPAddr{Port: p.localPort}, udpAddr)
+	conn, err := net.DialUDP("udp", &net.UDPAddr{Port: pingerPort}, udpAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -211,46 +230,24 @@ func (p *Pinger) getConnection(ip string, port int) (*net.UDPConn, error) {
 }
 
 // PingTarget relays ping target address data
-func (p *Pinger) PingTarget(target json.RawMessage) {
+func (p *Pinger) PingTarget(target *Params) {
 	p.pingTarget <- target
 }
 
-// BindPort gets port from session creation config and binds Pinger port to ping from
-func (p *Pinger) BindPort(port int) {
-	p.localPort = port
+// BindConsumerPort binds NATPinger to source consumer port
+func (p *Pinger) BindConsumerPort(port int) {
+	p.consumerPort = port
 }
 
-// WaitForHole waits while ping from remote peer is received
-func (p *Pinger) WaitForHole() error {
-	// TODO: check if three is a nat to punch
-	events := make(chan Event)
-	go func() {
-		events <- p.natEventWaiter.WaitForEvent()
-	}()
-
-	select {
-	case event := <-events:
-		if event.Type == SuccessEventType {
-			return nil
-		}
-		log.Info(prefix, "waiting for NAT pin-hole")
-		_, ok := <-p.pingReceived
-		if !ok {
-			return errors.New("NATPinger channel has been closed")
-		}
-		return nil
-	case <-p.stop:
-		return errors.New("NAT wait cancelled")
-	}
+// BindServicePort register service port to forward connection to
+func (p *Pinger) BindServicePort(serviceType services.ServiceType, port int) {
+	p.natProxy.registerServicePort(serviceType, port)
 }
 
 func (p *Pinger) pingReceiver(conn *net.UDPConn) error {
 	timeout := time.After(pingTimeout * time.Millisecond)
 	for {
 		select {
-		case <-p.stop:
-			p.pingCancelled <- struct{}{}
-			return errors.New("NAT punch attempt cancelled")
 		case <-timeout:
 			p.pingCancelled <- struct{}{}
 			return errors.New("NAT punch attempt timed out")
@@ -267,11 +264,8 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn) error {
 		fmt.Println("remote peer data received: ", string(buf[:n]))
 
 		// send another couple of pings to remote side, because only now we have a pinghole
-		// or wait for you pings to reach other end before closing pinger conn.
+		// or wait for your pings to reach other end before closing pinger conn.
 		select {
-		case <-p.stop:
-			p.pingCancelled <- struct{}{}
-			return errors.New("NAT punch attempt cancelled")
 		case <-time.After(2 * pingInterval * time.Millisecond):
 			p.pingCancelled <- struct{}{}
 			return nil

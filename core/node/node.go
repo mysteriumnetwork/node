@@ -84,7 +84,6 @@ func (node *Node) Start() error {
 	}
 
 	log.Infof("Api started on: %v", address)
-
 	go node.natPinger.Start()
 
 	return nil

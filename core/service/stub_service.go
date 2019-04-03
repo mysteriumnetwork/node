@@ -53,7 +53,7 @@ func (service *serviceFake) GetType() string {
 	return "fake"
 }
 
-func (service *serviceFake) ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (service *serviceFake) ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	return struct{}{}, func() {}, nil
 }
 
@@ -118,11 +118,8 @@ func MockDiscoveryFactoryFunc(ds Discovery) DiscoveryFactory {
 // MockNATPinger returns a mock nat pinger, that really doesn't do much
 type MockNATPinger struct{}
 
-// BindPort does nothing
-func (mnp *MockNATPinger) BindPort(port int) {}
-
-// WaitForHole returns nil
-func (mnp *MockNATPinger) WaitForHole() error { return nil }
+// BindConsumerPort does nothing
+func (mnp *MockNATPinger) BindConsumerPort(port int) {}
 
 // Stop does nothing
 func (mnp *MockNATPinger) Stop() {}

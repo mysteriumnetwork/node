@@ -59,7 +59,7 @@ func (pool *Pool) Acquire() (port Port, err error) {
 	if !available {
 		p, err = pool.seekAvailablePort()
 	}
-	log.Debugf("%s supplying port %v, err %v", logPrefix, p, err)
+	log.Debugf("%ssupplying port %v, err %v", logPrefix, p, err)
 	return Port(p), errors.Wrap(err, "could not acquire port")
 }
 

@@ -22,6 +22,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/pkg/errors"
 )
 
@@ -33,7 +34,7 @@ type processFactory func(options connection.ConnectOptions) (openvpn.Process, *C
 
 // NATPinger tries to punch a hole in NAT
 type NATPinger interface {
-	BindPort(port int)
+	BindConsumerPort(port int)
 	Stop()
 	PingProvider(ip string, port int) error
 }
@@ -51,14 +52,14 @@ type Client struct {
 func (c *Client) Start(options connection.ConnectOptions) error {
 	log.Info("starting connection")
 	proc, clientConfig, err := c.processFactory(options)
-	log.Info("client config factory error: ", err)
 	if err != nil {
+		log.Info("client config factory error: ", err)
 		return err
 	}
 	c.process = proc
 	log.Infof("client config: %v", clientConfig)
 
-	c.natPinger.BindPort(clientConfig.LocalPort)
+	c.natPinger.BindConsumerPort(clientConfig.LocalPort)
 	err = c.natPinger.PingProvider(clientConfig.vpnConfig.RemoteIP, clientConfig.vpnConfig.RemotePort)
 	if err != nil {
 		return err
@@ -89,6 +90,13 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 		return nil, errors.Wrap(err, "failed to get consumer config")
 	}
 	c.publicIP = ip
+
+	switch c.natPinger.(type) {
+	case *traversal.NoopPinger:
+		log.Infof("noop pinger detected, returning nil client config.")
+		return nil, nil
+	}
+
 	return &ConsumerConfig{
 		// TODO: since GetConfig is executed before Start we cannot access VPNConfig structure yet
 		// TODO skip sending port here, since provider generates port for consumer in VPNConfig

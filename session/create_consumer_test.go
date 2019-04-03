@@ -23,13 +23,14 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	config       = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
-	mockConsumer = func(json.RawMessage) (ServiceConfiguration, DestroyCallback, error) {
+	mockConsumer = func(json.RawMessage, func(int) int) (ServiceConfiguration, DestroyCallback, error) {
 		return config, nil, nil
 	}
 	mockID = identity.FromAddress("0x0")
@@ -141,7 +142,7 @@ type managerFake struct {
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID, issuerID identity.Identity, proposalID int, config ServiceConfiguration, requestConfig json.RawMessage) (Session, error) {
+func (manager *managerFake) Create(consumerID, issuerID identity.Identity, proposalID int, config ServiceConfiguration, pingParams *traversal.Params) (Session, error) {
 	manager.lastConsumerID = consumerID
 	manager.lastIssuerID = issuerID
 	manager.lastProposalID = proposalID

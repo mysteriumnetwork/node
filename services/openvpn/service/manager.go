@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/services"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/pkg/errors"
@@ -50,8 +51,7 @@ type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outbound
 
 // NATPinger defined Pinger interface for Provider
 type NATPinger interface {
-	BindPort(port int)
-	WaitForHole() error
+	BindServicePort(serviceType services.ServiceType, port int)
 	Stop()
 }
 
@@ -113,8 +113,8 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	vpnServerConfig := m.vpnServerConfigFactory(primitives, servicePort.Num())
 	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
-	// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
-	m.natPinger.BindPort(m.serviceOptions.Port)
+	// register service port to which NATProxy will forward connects attempts to
+	m.natPinger.BindServicePort(openvpn_service.ServiceType, servicePort.Num())
 
 	log.Info(logPrefix, "starting openvpn server on port: ", servicePort.Num())
 	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, servicePort.Num()); err != nil {
@@ -143,22 +143,36 @@ func (m *Manager) Stop() (err error) {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(config json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	if m.vpnServiceConfigProvider == nil {
 		log.Info(logPrefix, "Config provider not initialized")
 		return nil, nil, errors.New("Config provider not initialized")
 	}
 
-	if config != nil && len(config) > 0 { // Older clients do not send any config, but we should keep back compatibility and not fail in this case.
+	pp, err := m.ports.Acquire()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to acquire pinger port")
+	}
+
+	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
+	if sessionConfig != nil && len(sessionConfig) > 0 {
 		var c openvpn_service.ConsumerConfig
-		err := json.Unmarshal(config, &c)
+		err := json.Unmarshal(sessionConfig, &c)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing consumer config failed")
+			return nil, nil, errors.Wrap(err, "parsing consumer sessionConfig failed")
+		}
+		// We are behind NAT and port auto-configuration has failed
+		if (m.outboundIP != m.publicIP) && (m.natEventGetter.LastEvent().Type == traversal.FailureEventType) {
+			c.Port = pp.Num()
+			pingerPort(pp.Num())
 		}
 		m.consumerConfig = c
 	}
 
-	return m.vpnServiceConfigProvider.ProvideConfig(config)
+	// relay pinger port for actual transport service
+	portRelay := func(int) int { port := pp.Num(); return port }
+
+	return m.vpnServiceConfigProvider.ProvideConfig(sessionConfig, portRelay)
 }
 
 func vpnStateCallback(state openvpn.State) {

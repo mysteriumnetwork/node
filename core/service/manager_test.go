@@ -45,7 +45,6 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogWaiterFactory,
 		MockDialogHandlerFactory,
 		discoveryFactory,
-		&MockNATPinger{},
 		&mockPublisher{},
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
@@ -70,7 +69,6 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogWaiterFactory,
 		MockDialogHandlerFactory,
 		discoveryFactory,
-		&MockNATPinger{},
 		&mockPublisher{},
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
@@ -97,7 +95,6 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		MockDialogWaiterFactory,
 		MockDialogHandlerFactory,
 		discoveryFactory,
-		&MockNATPinger{},
 		eventBus,
 	)
 

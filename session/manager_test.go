@@ -18,7 +18,6 @@
 package session
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -65,13 +64,13 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
 	sessionStore := NewStorageMemory()
-	natPinger := func(json.RawMessage) {}
+	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil,
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
 		&MockNatEventTracker{}, "test service id")
 
-	requestConfig := json.RawMessage{}
-	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, requestConfig)
+	pingerParams := &traversal.Params{}
+	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, pingerParams)
 	expectedResult.done = sessionInstance.done
 	assert.NoError(t, err)
 
@@ -85,13 +84,13 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
-	natPinger := func(json.RawMessage) {}
+	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil,
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
 		&MockNatEventTracker{}, "test service id")
 
-	requestConfig := json.RawMessage{}
-	sessionInstance, err := manager.Create(consumerID, consumerID, 69, nil, requestConfig)
+	pingerParams := &traversal.Params{}
+	sessionInstance, err := manager.Create(consumerID, consumerID, 69, nil, pingerParams)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Exactly(t, Session{}, sessionInstance)
 }
