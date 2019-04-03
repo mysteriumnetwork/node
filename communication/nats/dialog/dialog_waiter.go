@@ -22,12 +22,14 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/pkg/errors"
 )
 
 // NewDialogWaiter constructs new DialogWaiter which works through NATS connection.
@@ -78,7 +80,6 @@ func (waiter *dialogWaiter) Stop() error {
 // ServeDialogs starts accepting dialogs initiated by peers
 func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-
 		valid, err := waiter.validateDialogRequest(request)
 		if err != nil {
 			log.Error(waiterLogPrefix, "Validation check failed: ", err.Error())
@@ -89,8 +90,19 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 			return &responseInvalidIdentity, nil
 		}
 
+		uid, err := uuid.NewV4()
+		if err != nil {
+			log.Error(waiterLogPrefix, "Failed to generate unique topic: ", err)
+			return &responseInternalError, errors.Wrap(err, "failed to generate unique topic")
+		}
+
 		peerID := identity.FromAddress(request.PeerID)
-		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecForPeer(peerID))
+		topic := uid.String()
+		if len(request.Version) == 0 {
+			// TODO this is a compatibility check. It should be removed once all consumers will migrate to the newer version.
+			topic = waiter.address.GetTopic() + "." + peerID.Address
+		}
+		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecForPeer(peerID), topic)
 		err = dialogHandler.Handle(dialog)
 		if err != nil {
 			log.Error(waiterLogPrefix, fmt.Sprintf("Failed dialog from: '%s'. %s", request.PeerID, err))
@@ -102,9 +114,12 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		waiter.Unlock()
 
 		log.Info(waiterLogPrefix, fmt.Sprintf("Accepted dialog from: '%s'", request.PeerID))
-		return &responseOK, nil
+		return &dialogCreateResponse{
+			Reason:        responseOK.Reason,
+			ReasonMessage: responseOK.ReasonMessage,
+			Topic:         topic,
+		}, nil
 	}
-
 	codec := NewCodecSecured(communication.NewCodecJSON(), waiter.signer, identity.NewVerifierSigned())
 	receiver := nats.NewReceiver(waiter.address.GetConnection(), codec, waiter.address.GetTopic())
 
@@ -112,7 +127,6 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 }
 
 func (waiter *dialogWaiter) newCodecForPeer(peerID identity.Identity) *codecSecured {
-
 	return NewCodecSecured(
 		communication.NewCodecJSON(),
 		waiter.signer,
@@ -120,13 +134,11 @@ func (waiter *dialogWaiter) newCodecForPeer(peerID identity.Identity) *codecSecu
 	)
 }
 
-func (waiter *dialogWaiter) newDialogToPeer(peerID identity.Identity, peerCodec *codecSecured) *dialog {
-	subTopic := waiter.address.GetTopic() + "." + peerID.Address
-
+func (waiter *dialogWaiter) newDialogToPeer(peerID identity.Identity, peerCodec *codecSecured, topic string) *dialog {
 	return &dialog{
 		peerID:   peerID,
-		Sender:   nats.NewSender(waiter.address.GetConnection(), peerCodec, subTopic),
-		Receiver: nats.NewReceiver(waiter.address.GetConnection(), peerCodec, subTopic),
+		Sender:   nats.NewSender(waiter.address.GetConnection(), peerCodec, topic),
+		Receiver: nats.NewReceiver(waiter.address.GetConnection(), peerCodec, topic),
 	}
 }
 

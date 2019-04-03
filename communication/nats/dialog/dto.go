@@ -25,16 +25,18 @@ import (
 const endpointDialogCreate = communication.RequestEndpoint("dialog-create")
 
 var (
-	responseOK              = dialogCreateResponse{200, "OK"}
-	responseInvalidIdentity = dialogCreateResponse{400, "Invalid Identity"}
-	responseInternalError   = dialogCreateResponse{500, "Internal Error"}
+	responseOK              = dialogCreateResponse{200, "OK", ""}
+	responseInvalidIdentity = dialogCreateResponse{400, "Invalid Identity", ""}
+	responseInternalError   = dialogCreateResponse{500, "Internal Error", ""}
 )
 
 type dialogCreateRequest struct {
-	PeerID string `json:"peer_id"`
+	PeerID  string `json:"peer_id"`
+	Version string `json:"version,omitempty"`
 }
 
 type dialogCreateResponse struct {
 	Reason        uint   `json:"reason"`
 	ReasonMessage string `json:"reasonMessage"`
+	Topic         string `json:"topic,omitempty"`
 }
