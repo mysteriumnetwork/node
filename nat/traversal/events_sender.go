@@ -44,7 +44,7 @@ func NewEventsSender(metricsSender metricsSender) *EventsSender {
 func (es *EventsSender) ConsumeNATEvent(event Event) {
 	err := es.sendNATEvent(event)
 	if err != nil {
-		log.Warn(eventsSenderLogPrefix, "sending event failed", err)
+		log.Warnf(eventsSenderLogPrefix, "sending event failed: ", err)
 	}
 }
 
