@@ -1,13 +1,13 @@
 # Mysterium Node - decentralized VPN built on blockchain
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/mysteriumnetwork/node)](https://goreportcard.com/report/github.com/mysteriumnetwork/node)
-[![Build Status](https://travis-ci.org/mysteriumnetwork/node.svg?branch=master)](https://travis-ci.org/mysteriumnetwork/node)
+[![Build Status](https://travis-ci.com/mysteriumnetwork/node.svg?branch=master)](https://travis-ci.com/mysteriumnetwork/node)
 [![pullreminders](https://pullreminders.com/badge.svg)](https://pullreminders.com?ref=badge)
 
-Cross-platform software to run a node in Mysterium Network. It contains Mysterium server (node), 
+Cross-platform software to run a node in Mysterium Network. It contains Mysterium server (node),
 client API (tequila API) and client-cli (console client) for Mysterium Network.
- 
-Currently node supports OpenVPN as its underlying VPN transport. 
+
+Currently node supports OpenVPN as its underlying VPN transport.
 
 ## Getting Started
 
@@ -15,13 +15,13 @@ Currently node supports OpenVPN as its underlying VPN transport.
 - [Whitepaper](https://mysterium.network/whitepaper.pdf)
 - [Latest](https://github.com/mysteriumnetwork/node/releases/latest) release
 - [Installation guide](./INSTALL.md)
-- [Node wiki](https://github.com/mysteriumnetwork/node/wiki/) 
+- [Node wiki](https://github.com/mysteriumnetwork/node/wiki/)
 
 ### Prerequisites
 
-To run a node as docker container You will need [docker](https://www.docker.com/). 
-You should be able to run a node on any OS that supports docker. 
-Tested on these OSes so far: _Dabian 9_, _Ubuntu 16.04_ and _Centos 7_. 
+To run a node as docker container You will need [docker](https://www.docker.com/).
+You should be able to run a node on any OS that supports docker.
+Tested on these OSes so far: _Dabian 9_, _Ubuntu 16.04_ and _Centos 7_.
 
 You can check latest docker node versions here: https://hub.docker.com/r/mysteriumnetwork/myst/
 
@@ -44,7 +44,7 @@ For possible issues while running a node refer to our [FAQ](https://github.com/m
 ## Built With
 
 * [go](https://golang.org/) - The Go Programming Language
-* [travis](https://travis-ci.org/) - Travis continuous integration tool
+* [travis](https://travis-ci.com/) - Travis continuous integration tool
 * [docker](https://www.docker.com/what-docker) - Containerize applications
 * [openvpn](https://openvpn.net) - Solid VPN solution
 * [wireguard](https://www.wireguard.com/) - extremely simple yet fast and modern VPN
