@@ -79,8 +79,8 @@ func TestSender_SendNATMappingSuccessEvent_ReturnsTransportErrors(t *testing.T) 
 	mockTransport.mockResponse = errors.New("mock error")
 	sender := &Sender{Transport: mockTransport, ApplicationVersion: "test version"}
 
-	error := sender.SendNATMappingSuccessEvent()
-	assert.Error(t, error)
+	err := sender.SendNATMappingSuccessEvent()
+	assert.Error(t, err)
 }
 
 func TestSender_SendNATMappingFailEvent_SendsToTransport(t *testing.T) {
@@ -103,6 +103,6 @@ func TestSender_SendNATMappingFailEvent_ReturnsTransportErrors(t *testing.T) {
 	mockTransport.mockResponse = errors.New("mock error")
 	sender := &Sender{Transport: mockTransport, ApplicationVersion: "test version"}
 
-	error := sender.SendNATMappingFailEvent(errors.New("mock nat mapping error"))
-	assert.Error(t, error)
+	err := sender.SendNATMappingFailEvent(errors.New("mock nat mapping error"))
+	assert.Error(t, err)
 }
