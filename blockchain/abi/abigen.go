@@ -24,13 +24,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 var pkgName = flag.String("pkg", "", "Same as abigen tool from ethereum project")
 var output = flag.String("out", "", "Filename where to write generated code. Unspecified - stdout")
-var input = flag.String("in", "", "Filename of truffle compiled smart contract (json format)")
+var input = flag.String("in", "", "Filename(s) separated by comma, of truffle compiled smart contract(s) (json format)")
 
 func main() {
 	flag.Parse()
@@ -44,37 +45,73 @@ func main() {
 		os.Exit(-1)
 	}
 
-	smartContract, err := parseTruffleArtifact(*input)
+	smartContracts, err := parseTruffleArtifacts(*input)
 	if err != nil {
 		fmt.Println("Error parsing truffle output: ", err.Error())
 		os.Exit(-1)
 	}
 
-	genCode, err := bind.Bind([]string{smartContract.ContractName}, []string{smartContract.AbiString()}, []string{smartContract.Bytecode}, *pkgName, bind.LangGo)
-	if err != nil {
-		fmt.Println("Error: ", err.Error())
-		os.Exit(-1)
-	}
-	writer := os.Stdout
-	if *output != "" {
-		if err := os.MkdirAll(*output, 0755); err != nil { // >:)
-			fmt.Println("Error creating output dir:", err.Error())
-		}
-		writer, err = os.Create(filepath.Join(*output, smartContract.ContractName+".go"))
+	for _, smartContract := range smartContracts {
+		genCode, err := bindSmartContract(smartContract, *pkgName)
 		if err != nil {
-			fmt.Println("Error:", err.Error())
-			os.Exit(1)
+			fmt.Println("Error binding smart contract: ", err.Error())
+			os.Exit(-1)
 		}
-		if _, err := io.WriteString(writer, licenseHeader); err != nil {
-			fmt.Println("Error writing license: ", err.Error())
-			os.Exit(1)
+		if err := writeToOutput(smartContract.ContractName, genCode, *output); err != nil {
+			fmt.Println("Error writing generated code: ", err.Error())
+			os.Exit(-1)
 		}
-		defer writer.Close()
 	}
-	_, err = io.WriteString(writer, genCode)
+}
+
+func writeToOutput(fileName string, genCode, output string) error {
+	var writer io.Writer
+	if output != "" {
+		if err := os.MkdirAll(output, 0755); err != nil { // >:)
+			return err
+		}
+		file, err := os.Create(filepath.Join(output, fileName+".go"))
+		defer file.Close()
+		if err != nil {
+			return err
+		}
+		if _, err := io.WriteString(file, licenseHeader); err != nil {
+			return err
+		}
+		writer = file
+	} else {
+		writer = os.Stdout
+		_, err := io.WriteString(writer, fmt.Sprintf("--- Smart contract: %s ---\n", fileName))
+		if err != nil {
+			return err
+		}
+	}
+
+	if _, err := io.WriteString(writer, genCode); err != nil {
+		return err
+	}
+	return nil
+}
+
+func bindSmartContract(smartContract truffleArtifact, pkgName string) (string, error) {
+	genCode, err := bind.Bind([]string{smartContract.ContractName}, []string{smartContract.AbiString()}, []string{smartContract.Bytecode}, pkgName, bind.LangGo)
 	if err != nil {
-		fmt.Println("Error:", err.Error())
+		return "", err
 	}
+	return genCode, nil
+}
+
+func parseTruffleArtifacts(input string) ([]truffleArtifact, error) {
+	inputs := strings.Split(input, ",")
+	var artifacts []truffleArtifact
+	for _, input := range inputs {
+		artifact, err := parseTruffleArtifact(input)
+		if err != nil {
+			return nil, err
+		}
+		artifacts = append(artifacts, artifact)
+	}
+	return artifacts, nil
 }
 
 func parseTruffleArtifact(input string) (truffleArtifact, error) {
