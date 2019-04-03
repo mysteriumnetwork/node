@@ -30,7 +30,6 @@ import (
 
 // NewDialogEstablisher constructs new DialogEstablisher which works thru NATS connection.
 func NewDialogEstablisher(ID identity.Identity, signer identity.Signer) *dialogEstablisher {
-
 	return &dialogEstablisher{
 		ID:     ID,
 		Signer: signer,
@@ -67,31 +66,31 @@ func (establisher *dialogEstablisher) EstablishDialog(
 	peerCodec := establisher.newCodecForPeer(peerID)
 
 	peerSender := establisher.newSenderToPeer(peerAddress, peerCodec)
-	err = establisher.negotiateDialog(peerSender)
+	topic, err := establisher.negotiateDialog(peerSender)
 	if err != nil {
 		return nil, err
 	}
 
-	dialog := establisher.newDialogToPeer(peerID, peerAddress, peerCodec)
+	dialog := establisher.newDialogToPeer(peerID, peerAddress, peerCodec, topic)
 	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", peerContact))
 
 	return dialog, nil
 }
 
-func (establisher *dialogEstablisher) negotiateDialog(sender communication.Sender) error {
+func (establisher *dialogEstablisher) negotiateDialog(sender communication.Sender) (string, error) {
 	response, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
 			PeerID: establisher.ID.Address,
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("dialog creation error. %s", err)
+		return "", fmt.Errorf("dialog creation error. %s", err)
 	}
 	if response.(*dialogCreateResponse).Reason != 200 {
-		return fmt.Errorf("dialog creation rejected. %#v", response)
+		return "", fmt.Errorf("dialog creation rejected. %#v", response)
 	}
 
-	return nil
+	return response.(*dialogCreateResponse).Topic, nil
 }
 
 func (establisher *dialogEstablisher) newCodecForPeer(peerID identity.Identity) *codecSecured {
@@ -119,12 +118,15 @@ func (establisher *dialogEstablisher) newDialogToPeer(
 	peerID identity.Identity,
 	peerAddress *discovery.AddressNATS,
 	peerCodec *codecSecured,
+	topic string,
 ) *dialog {
+	if len(topic) == 0 {
+		topic = peerAddress.GetTopic() + "." + establisher.ID.Address
+	}
 
-	subTopic := peerAddress.GetTopic() + "." + establisher.ID.Address
 	return &dialog{
 		peerID:   peerID,
-		Sender:   nats.NewSender(peerAddress.GetConnection(), peerCodec, subTopic),
-		Receiver: nats.NewReceiver(peerAddress.GetConnection(), peerCodec, subTopic),
+		Sender:   nats.NewSender(peerAddress.GetConnection(), peerCodec, topic),
+		Receiver: nats.NewReceiver(peerAddress.GetConnection(), peerCodec, topic),
 	}
 }
