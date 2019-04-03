@@ -51,7 +51,7 @@ func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 
 	transport := NewElasticSearchTransport(server.URL, time.Second)
 
-	app := applicationInfo{Name: "test app", Version: "test version"}
+	app := appInfo{Name: "test app", Version: "test version"}
 	event := event{Application: app}
 
 	err := transport.sendEvent(event)

@@ -459,8 +459,8 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 }
 
 func (di *Dependencies) bootstrapMetrics(options node.Options) {
-	applicationVersion := metadata.VersionAsString()
-	di.MetricsSender = metrics.NewSender(options.DisableMetrics, options.MetricsAddress, applicationVersion)
+	appVersion := metadata.VersionAsString()
+	di.MetricsSender = metrics.NewSender(options.DisableMetrics, options.MetricsAddress, appVersion)
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {

@@ -28,8 +28,8 @@ const natMappingFailEventName = "nat_mapping_fail"
 
 // Sender builds events and sends them using given transport
 type Sender struct {
-	Transport          Transport
-	ApplicationVersion string
+	Transport  Transport
+	AppVersion string
 }
 
 // Transport allows sending events
@@ -38,13 +38,13 @@ type Transport interface {
 }
 
 type event struct {
-	Application applicationInfo `json:"application"`
-	EventName   string          `json:"eventName"`
-	CreatedAt   int64           `json:"createdAt"`
-	Context     interface{}     `json:"context"`
+	Application appInfo     `json:"application"`
+	EventName   string      `json:"eventName"`
+	CreatedAt   int64       `json:"createdAt"`
+	Context     interface{} `json:"context"`
 }
 
-type applicationInfo struct {
+type appInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
@@ -70,7 +70,7 @@ func (sender *Sender) SendNATMappingFailEvent(err error) error {
 }
 
 func (sender *Sender) sendEvent(eventName string, context interface{}) error {
-	appInfo := applicationInfo{Name: appName, Version: sender.ApplicationVersion}
-	event := event{Application: appInfo, EventName: eventName, CreatedAt: time.Now().Unix(), Context: context}
+	app := appInfo{Name: appName, Version: sender.AppVersion}
+	event := event{Application: app, EventName: eventName, CreatedAt: time.Now().Unix(), Context: context}
 	return sender.Transport.sendEvent(event)
 }
