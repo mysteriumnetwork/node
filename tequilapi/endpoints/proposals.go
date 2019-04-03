@@ -124,7 +124,7 @@ func NewProposalsEndpoint(proposalProvider ProposalProvider, morqaClient metrics
 //     type: string
 //   - in: query
 //     name: serviceType
-//     description: the service type of the proposal
+//     description: the service type of the proposal. Possible values are "openvpn", "wireguard" and "noop"
 //     type: string
 //   - in: query
 //     name: fetchConnectCounts
