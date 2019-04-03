@@ -58,7 +58,7 @@ type connectionRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"providerId"`
 
-	// service type. Possible values are "openvpn" and "noop"
+	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: false
 	// default: openvpn
 	// example: openvpn
