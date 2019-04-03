@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/asdine/storm"
+	"github.com/pkg/errors"
 )
 
 // Bolt is a wrapper around boltdb
@@ -36,7 +37,7 @@ func NewStorage(path string) (*Bolt, error) {
 // openDB creates new or open existing BoltDB
 func openDB(name string) (*Bolt, error) {
 	db, err := storm.Open(name)
-	return &Bolt{db}, err
+	return &Bolt{db}, errors.Wrap(err, "failed to open boltDB")
 }
 
 // Store allows to keep struct grouped by the bucket
