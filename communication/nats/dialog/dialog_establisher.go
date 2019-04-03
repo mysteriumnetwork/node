@@ -66,7 +66,7 @@ func (establisher *dialogEstablisher) EstablishDialog(
 	peerCodec := establisher.newCodecForPeer(peerID)
 
 	peerSender := establisher.newSenderToPeer(peerAddress, peerCodec)
-	topic, err := establisher.negotiateDialog(peerSender)
+	topic, err := establisher.negotiateTopic(peerSender)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (establisher *dialogEstablisher) EstablishDialog(
 	return dialog, nil
 }
 
-func (establisher *dialogEstablisher) negotiateDialog(sender communication.Sender) (string, error) {
+func (establisher *dialogEstablisher) negotiateTopic(sender communication.Sender) (string, error) {
 	response, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
 			PeerID:  establisher.ID.Address,
