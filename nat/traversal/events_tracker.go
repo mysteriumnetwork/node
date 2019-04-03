@@ -28,12 +28,12 @@ import (
 const EventTopic = "Traversal"
 
 const (
-	// EmptyEventName is name of event where nothing really happened
-	EmptyEventName = ""
-	// SuccessEventName is name of event for a successful NAT traversal
-	SuccessEventName = "success"
-	// FailureEventName is name of event for a failed NAT traversal
-	FailureEventName = "failure"
+	// EmptyEventType is name of event where nothing really happened
+	EmptyEventType = ""
+	// SuccessEventType is name of event for a successful NAT traversal
+	SuccessEventType = "success"
+	// FailureEventType is name of event for a failed NAT traversal
+	FailureEventType = "failure"
 )
 
 // EventsTracker is able to track NAT traversal events
@@ -50,12 +50,12 @@ type metricsSender interface {
 
 // BuildSuccessEvent returns new event for successful NAT traversal
 func BuildSuccessEvent() Event {
-	return Event{Name: SuccessEventName}
+	return Event{Type: SuccessEventType}
 }
 
 // BuildFailureEvent returns new event for failed NAT traversal
 func BuildFailureEvent(err error) Event {
-	return Event{Name: FailureEventName, Error: err}
+	return Event{Type: FailureEventType, Error: err}
 }
 
 // NewEventsTracker returns a new instance of event tracker
@@ -87,7 +87,7 @@ func (et *EventsTracker) LastEvent() Event {
 
 // WaitForEvent waits for event to occur
 func (et *EventsTracker) WaitForEvent() Event {
-	if et.lastEvent.Name != EmptyEventName {
+	if et.lastEvent.Type != EmptyEventType {
 		return et.lastEvent
 	}
 	e := <-et.eventChan
@@ -96,18 +96,18 @@ func (et *EventsTracker) WaitForEvent() Event {
 }
 
 func (et *EventsTracker) sendNATEvent(event Event) error {
-	switch event.Name {
-	case SuccessEventName:
+	switch event.Type {
+	case SuccessEventType:
 		return et.metricsSender.SendNATMappingSuccessEvent()
-	case FailureEventName:
+	case FailureEventType:
 		return et.metricsSender.SendNATMappingFailEvent(event.Error)
 	default:
-		return fmt.Errorf("unknown event name: %v", event.Name)
+		return fmt.Errorf("unknown event type: %v", event.Type)
 	}
 }
 
 // Event represents a NAT traversal related event
 type Event struct {
-	Name  string
+	Type  string
 	Error error
 }

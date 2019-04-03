@@ -185,7 +185,7 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 
 	if sessionInstance.Last && manager.lastSessionShutdown != nil {
 		log.Info("attempting to stop service")
-		if manager.natEventGetter.LastEvent().Name == traversal.FailureEventName {
+		if manager.natEventGetter.LastEvent().Type == traversal.FailureEventType {
 			log.Info("last session destroy requested - stopping service executable")
 			manager.lastSessionShutdown <- struct{}{}
 			log.Info("executable shutdown on last session triggered")
