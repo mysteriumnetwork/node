@@ -18,7 +18,6 @@
 package traversal
 
 import (
-	"fmt"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -40,14 +39,8 @@ const (
 
 // EventsTracker is able to track NAT traversal events
 type EventsTracker struct {
-	lastEvent     Event
-	eventChan     chan Event
-	metricsSender metricsSender
-}
-
-type metricsSender interface {
-	SendNATMappingSuccessEvent() error
-	SendNATMappingFailEvent(err error) error
+	lastEvent Event
+	eventChan chan Event
 }
 
 // BuildSuccessEvent returns new event for successful NAT traversal
@@ -61,18 +54,13 @@ func BuildFailureEvent(err error) Event {
 }
 
 // NewEventsTracker returns a new instance of event tracker
-func NewEventsTracker(metricsSender metricsSender) *EventsTracker {
-	return &EventsTracker{eventChan: make(chan Event, 1), metricsSender: metricsSender}
+func NewEventsTracker() *EventsTracker {
+	return &EventsTracker{eventChan: make(chan Event, 1)}
 }
 
 // ConsumeNATEvent consumes a NAT event
 func (et *EventsTracker) ConsumeNATEvent(event Event) {
 	log.Info(eventsTrackerLogPrefix, "got NAT event: ", event)
-
-	err := et.sendNATEvent(event)
-	if err != nil {
-		log.Warn(eventsTrackerLogPrefix, "sending event failed", err)
-	}
 
 	et.lastEvent = event
 	select {
@@ -95,17 +83,6 @@ func (et *EventsTracker) WaitForEvent() Event {
 	e := <-et.eventChan
 	log.Info(eventsTrackerLogPrefix, "got NAT event: ", e)
 	return e
-}
-
-func (et *EventsTracker) sendNATEvent(event Event) error {
-	switch event.Type {
-	case SuccessEventType:
-		return et.metricsSender.SendNATMappingSuccessEvent()
-	case FailureEventType:
-		return et.metricsSender.SendNATMappingFailEvent(event.Error)
-	default:
-		return fmt.Errorf("unknown event type: %v", event.Type)
-	}
 }
 
 // Event represents a NAT traversal related event
