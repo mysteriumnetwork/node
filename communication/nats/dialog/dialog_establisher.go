@@ -80,7 +80,8 @@ func (establisher *dialogEstablisher) EstablishDialog(
 func (establisher *dialogEstablisher) negotiateDialog(sender communication.Sender) (string, error) {
 	response, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
-			PeerID: establisher.ID.Address,
+			PeerID:  establisher.ID.Address,
+			Version: "v1",
 		},
 	})
 	if err != nil {

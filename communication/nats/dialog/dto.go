@@ -31,7 +31,8 @@ var (
 )
 
 type dialogCreateRequest struct {
-	PeerID string `json:"peer_id"`
+	PeerID  string `json:"peer_id"`
+	Version string `json:"version,omitempty"`
 }
 
 type dialogCreateResponse struct {

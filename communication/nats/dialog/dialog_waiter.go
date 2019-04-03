@@ -98,6 +98,10 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 
 		peerID := identity.FromAddress(request.PeerID)
 		topic := uid.String()
+		if len(request.Version) == 0 {
+			// TODO this is a compatibility check. It should be removed once all consumers will migrate to the newer version.
+			topic = waiter.address.GetTopic() + "." + peerID.Address
+		}
 		dialog := waiter.newDialogToPeer(peerID, waiter.newCodecForPeer(peerID), topic)
 		err = dialogHandler.Handle(dialog)
 		if err != nil {
