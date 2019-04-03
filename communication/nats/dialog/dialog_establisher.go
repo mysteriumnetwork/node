@@ -122,6 +122,7 @@ func (establisher *dialogEstablisher) newDialogToPeer(
 	topic string,
 ) *dialog {
 	if len(topic) == 0 {
+		// TODO this is a compatibility check. It should be removed once all consumers will migrate to the newer version.
 		topic = peerAddress.GetTopic() + "." + establisher.ID.Address
 	}
 
