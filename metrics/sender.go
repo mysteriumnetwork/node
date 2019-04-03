@@ -34,10 +34,11 @@ type Sender struct {
 
 // Transport allows sending events
 type Transport interface {
-	sendEvent(event) error
+	SendEvent(Event) error
 }
 
-type event struct {
+// Event contains data about event, which is sent using transport
+type Event struct {
 	Application appInfo     `json:"application"`
 	EventName   string      `json:"eventName"`
 	CreatedAt   int64       `json:"createdAt"`
@@ -71,6 +72,6 @@ func (sender *Sender) SendNATMappingFailEvent(err error) error {
 
 func (sender *Sender) sendEvent(eventName string, context interface{}) error {
 	app := appInfo{Name: appName, Version: sender.AppVersion}
-	event := event{Application: app, EventName: eventName, CreatedAt: time.Now().Unix(), Context: context}
-	return sender.Transport.sendEvent(event)
+	event := Event{Application: app, EventName: eventName, CreatedAt: time.Now().Unix(), Context: context}
+	return sender.Transport.SendEvent(event)
 }

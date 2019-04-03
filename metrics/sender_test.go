@@ -25,7 +25,7 @@ import (
 )
 
 type mockEventsTransport struct {
-	sentEvent    event
+	sentEvent    Event
 	mockResponse error
 }
 
@@ -33,7 +33,7 @@ func buildMockEventsTransport(mockResponse error) *mockEventsTransport {
 	return &mockEventsTransport{mockResponse: mockResponse}
 }
 
-func (transport *mockEventsTransport) sendEvent(event event) error {
+func (transport *mockEventsTransport) SendEvent(event Event) error {
 	transport.sentEvent = event
 	return transport.mockResponse
 }
