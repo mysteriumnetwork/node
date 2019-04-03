@@ -65,6 +65,10 @@ func main() {
 			fmt.Println("Error:", err.Error())
 			os.Exit(1)
 		}
+		if _, err := io.WriteString(writer, licenseHeader); err != nil {
+			fmt.Println("Error writing license: ", err.Error())
+			os.Exit(1)
+		}
 		defer writer.Close()
 	}
 	_, err = io.WriteString(writer, genCode)
@@ -95,3 +99,22 @@ type truffleArtifact struct {
 func (to truffleArtifact) AbiString() string {
 	return string(to.AbiBytes)
 }
+
+const licenseHeader = `/*
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+`
