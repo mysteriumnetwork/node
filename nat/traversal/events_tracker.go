@@ -27,6 +27,8 @@ import (
 // EventTopic the topic that traversal events are published on
 const EventTopic = "Traversal"
 
+const eventsTrackerLogPrefix = "[traversal-events-tracker] "
+
 const (
 	// EmptyEventType is name of event where nothing really happened
 	EmptyEventType = ""
@@ -65,11 +67,11 @@ func NewEventsTracker(metricsSender metricsSender) *EventsTracker {
 
 // ConsumeNATEvent consumes a NAT event
 func (et *EventsTracker) ConsumeNATEvent(event Event) {
-	log.Info("got NAT event: ", event)
+	log.Info(eventsTrackerLogPrefix, "got NAT event: ", event)
 
 	err := et.sendNATEvent(event)
 	if err != nil {
-		log.Warn("sending event failed", err)
+		log.Warn(eventsTrackerLogPrefix, "sending event failed", err)
 	}
 
 	et.lastEvent = event
@@ -81,7 +83,7 @@ func (et *EventsTracker) ConsumeNATEvent(event Event) {
 
 // LastEvent returns the last known event
 func (et *EventsTracker) LastEvent() Event {
-	log.Info("getting last NAT event: ", et.lastEvent)
+	log.Info(eventsTrackerLogPrefix, "getting last NAT event: ", et.lastEvent)
 	return et.lastEvent
 }
 
@@ -91,7 +93,7 @@ func (et *EventsTracker) WaitForEvent() Event {
 		return et.lastEvent
 	}
 	e := <-et.eventChan
-	log.Info("got NAT event: ", e)
+	log.Info(eventsTrackerLogPrefix, "got NAT event: ", e)
 	return e
 }
 
