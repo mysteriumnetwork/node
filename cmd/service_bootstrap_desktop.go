@@ -186,6 +186,11 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		newDialogHandler,
 		newDiscovery,
 		di.NATPinger,
-		di.ServiceSessionStorage,
+		di.EventBus,
 	)
+
+	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
+	if err := di.EventBus.Subscribe(service.StopTopic, serviceCleaner.Cleanup); err != nil {
+		log.Error(logPrefix, "failed to subscribe service cleaner")
+	}
 }

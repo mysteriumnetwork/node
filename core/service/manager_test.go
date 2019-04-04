@@ -21,7 +21,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/session"
+	"github.com/asaskevich/EventBus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -48,7 +48,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&MockNATPinger{},
-		session.NewStorageMemory(),
+		EventBus.New(),
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.Nil(t, err)
@@ -73,7 +73,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&MockNATPinger{},
-		session.NewStorageMemory(),
+		EventBus.New(),
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.Nil(t, err)
@@ -81,4 +81,40 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 	assert.Nil(t, err)
 	discovery.Wait()
 	assert.Len(t, manager.servicePool.List(), 0)
+}
+
+func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
+	registry := NewRegistry()
+	mockCopy := *serviceMock
+	mockCopy.mockProcess = make(chan struct{})
+	registry.Register(serviceType, func(options Options) (Service, market.ServiceProposal, error) {
+		return &mockCopy, proposalMock, nil
+	})
+
+	discovery := mockDiscovery{}
+	discoveryFactory := MockDiscoveryFactoryFunc(&discovery)
+	eventBus := EventBus.New()
+	manager := NewManager(
+		registry,
+		MockDialogWaiterFactory,
+		MockDialogHandlerFactory,
+		discoveryFactory,
+		&MockNATPinger{},
+		eventBus,
+	)
+
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
+	assert.NoError(t, err)
+
+	var invokedInstance *Instance
+	f := func(instance *Instance) {
+		invokedInstance = instance
+	}
+	err = eventBus.Subscribe(StopTopic, f)
+	assert.NoError(t, err)
+
+	err = manager.Stop(id)
+	assert.NoError(t, err)
+
+	assert.Equal(t, &mockCopy, invokedInstance.service)
 }

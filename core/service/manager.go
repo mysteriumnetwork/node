@@ -28,6 +28,9 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
+// StopTopic is used in event bus to announce that service was stopped
+const StopTopic = "Service stop"
+
 var (
 	// ErrorLocation error indicates that action (i.e. disconnect)
 	ErrorLocation = errors.New("failed to detect service location")
@@ -64,11 +67,6 @@ type Discovery interface {
 	Wait()
 }
 
-// SessionStorage keeps sessions and allows removing them by proposal id
-type SessionStorage interface {
-	RemoveForProposal(proposalID int)
-}
-
 // WaitForNATHole blocks until NAT hole is punched towards consumer through local NAT or until hole punching failed
 type WaitForNATHole func() error
 
@@ -79,7 +77,7 @@ func NewManager(
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
 	natPinger NATPinger,
-	sessionStorage SessionStorage,
+	eventPublisher Publisher,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
@@ -88,8 +86,13 @@ func NewManager(
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
 		natPinger:            natPinger,
-		sessionStorage:       sessionStorage,
+		eventPublisher:       eventPublisher,
 	}
+}
+
+// Publisher is responsible for publishing given events
+type Publisher interface {
+	Publish(topic string, args ...interface{})
 }
 
 // Manager entrypoint which knows how to start pluggable Mysterium instances
@@ -103,7 +106,7 @@ type Manager struct {
 	discoveryFactory DiscoveryFactory
 
 	natPinger      NATPinger
-	sessionStorage SessionStorage
+	eventPublisher Publisher
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -183,9 +186,14 @@ func (manager *Manager) Stop(id ID) error {
 	if instance == nil {
 		return errors.New("service not found")
 	}
-	manager.sessionStorage.RemoveForProposal(instance.proposal.ID)
 
-	return manager.servicePool.Stop(id)
+	err := manager.servicePool.Stop(id)
+	if err != nil {
+		return err
+	}
+
+	manager.eventPublisher.Publish(StopTopic, instance)
+	return nil
 }
 
 // Service returns a service instance by requested id.
