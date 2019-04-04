@@ -31,7 +31,9 @@ import (
 
 var pkgName = flag.String("pkg", "", "Same as abigen tool from ethereum project")
 var output = flag.String("out", "", "Filename where to write generated code. Unspecified - stdout")
-var input = flag.String("in", "", "Filename(s) separated by comma, of truffle compiled smart contract(s) (json format)")
+var localdir = flag.String("localdir", "", "Local dir in which to search for specified contracts (. means current) overrides github repo")
+var contracts = flag.String("contracts", "", "Filename(s) separated by comma, of truffle compiled smart contract(s) (json format)")
+var githubRepo = flag.String("githubrepo", "mysteriumnetwork/payments-smart-contracts", "github repository under which to search releases and attached smart contracts")
 
 func main() {
 	flag.Parse()
@@ -40,12 +42,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	if *input == "" {
-		fmt.Println("input filename is missing")
-		os.Exit(-1)
-	}
-
-	smartContracts, err := parseTruffleArtifacts(*input)
+	smartContracts, err := parseTruffleArtifacts(*localdir, *githubRepo, *contracts)
 	if err != nil {
 		fmt.Println("Error parsing truffle output: ", err.Error())
 		os.Exit(-1)
@@ -101,11 +98,27 @@ func bindSmartContract(smartContract truffleArtifact, pkgName string) (string, e
 	return genCode, nil
 }
 
-func parseTruffleArtifacts(input string) ([]truffleArtifact, error) {
-	inputs := strings.Split(input, ",")
+func parseTruffleArtifacts(localDir, githubRepo, contracts string) ([]truffleArtifact, error) {
+	contractList := strings.Split(contracts, ",")
+
+	if localDir != "" {
+		return loadFromLocalDir(localDir, contractList)
+	}
+	return loadFromGitRepo(githubRepo, contractList)
+}
+
+func loadFromGitRepo(githubRepo string, contractList []string) ([]truffleArtifact, error) {
+	return nil, nil
+}
+
+func loadFromLocalDir(localDir string, contracts []string) ([]truffleArtifact, error) {
 	var artifacts []truffleArtifact
-	for _, input := range inputs {
-		artifact, err := parseTruffleArtifact(input)
+	for _, contract := range contracts {
+		reader, err := os.Open(filepath.Join(localDir, contract))
+		if err != nil {
+			return nil, err
+		}
+		artifact, err := parseTruffleArtifact(reader)
 		if err != nil {
 			return nil, err
 		}
@@ -114,14 +127,9 @@ func parseTruffleArtifacts(input string) ([]truffleArtifact, error) {
 	return artifacts, nil
 }
 
-func parseTruffleArtifact(input string) (truffleArtifact, error) {
-	reader, err := os.Open(input)
-	if err != nil {
-		return truffleArtifact{}, err
-	}
+func parseTruffleArtifact(inputReader io.Reader) (truffleArtifact, error) {
 	var output truffleArtifact
-	err = json.NewDecoder(reader).Decode(&output)
-	if err != nil {
+	if err := json.NewDecoder(inputReader).Decode(&output); err != nil {
 		return truffleArtifact{}, err
 	}
 	return output, nil
