@@ -34,18 +34,26 @@ const MaxResources = 255
 // Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.
 type Allocator struct {
+	mu          sync.Mutex
 	Ifaces      map[int]struct{}
 	IPAddresses map[int]struct{}
 	Ports       map[int]struct{}
-	mu          sync.Mutex
+
+	portMin int
+	portMax int
+	subnet  net.IPNet
 }
 
 // NewAllocator creates new resource pool for wireguard connection.
-func NewAllocator() *Allocator {
+func NewAllocator(portMin, portMax int, subnet net.IPNet) *Allocator {
 	return &Allocator{
 		Ifaces:      make(map[int]struct{}),
 		IPAddresses: make(map[int]struct{}),
 		Ports:       make(map[int]struct{}),
+
+		portMin: portMin,
+		portMax: portMax,
+		subnet:  subnet,
 	}
 }
 
@@ -104,17 +112,13 @@ func (a *Allocator) AllocateIPNet() (net.IPNet, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	var s string
 	for i := 0; i < MaxResources; i++ {
 		if _, ok := a.IPAddresses[i]; !ok {
 			a.IPAddresses[i] = struct{}{}
-			s = fmt.Sprintf("10.182.%d.0/24", i)
-			break
+			return calcIPNet(a.subnet, i), nil
 		}
 	}
-
-	_, subnet, err := net.ParseCIDR(s)
-	return *subnet, err
+	return net.IPNet{}, errors.New("no more unused subnets")
 }
 
 // AllocatePort provides available UDP port for the wireguard endpoint.
@@ -122,7 +126,7 @@ func (a *Allocator) AllocatePort() (int, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	for i := 52820; i < 52820+MaxResources; i++ {
+	for i := a.portMin; i < a.portMax; i++ {
 		if _, ok := a.Ports[i]; !ok {
 			a.Ports[i] = struct{}{}
 			return i, nil
@@ -189,4 +193,12 @@ func interfaceExists(ifaces []net.Interface, name string) bool {
 		}
 	}
 	return false
+}
+
+func calcIPNet(ipnet net.IPNet, index int) net.IPNet {
+	ip := make(net.IP, len(ipnet.IP))
+	copy(ip, ipnet.IP)
+	ip = ip.To4()
+	ip[2] = byte(index)
+	return net.IPNet{IP: ip, Mask: net.IPv4Mask(255, 255, 255, 0)}
 }
