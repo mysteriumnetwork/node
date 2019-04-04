@@ -26,19 +26,31 @@ import (
 // EventTopic the topic that traversal events are published on
 const EventTopic = "Traversal"
 
-// EventNoEvent represents an occurrence where nothing really happened
-var EventNoEvent = Event{Name: ""}
+const eventsTrackerLogPrefix = "[traversal-events-tracker] "
 
-// EventSuccess represents a successful NAT traversal
-var EventSuccess = Event{Name: "success"}
-
-// EventFailure represents a failed NAT traversal event
-var EventFailure = Event{Name: "failure"}
+const (
+	// EmptyEventType is name of event where nothing really happened
+	EmptyEventType = ""
+	// SuccessEventType is name of event for a successful NAT traversal
+	SuccessEventType = "success"
+	// FailureEventType is name of event for a failed NAT traversal
+	FailureEventType = "failure"
+)
 
 // EventsTracker is able to track NAT traversal events
 type EventsTracker struct {
 	lastEvent Event
 	eventChan chan Event
+}
+
+// BuildSuccessEvent returns new event for successful NAT traversal
+func BuildSuccessEvent() Event {
+	return Event{Type: SuccessEventType}
+}
+
+// BuildFailureEvent returns new event for failed NAT traversal
+func BuildFailureEvent(err error) Event {
+	return Event{Type: FailureEventType, Error: err}
 }
 
 // NewEventsTracker returns a new instance of event tracker
@@ -48,7 +60,8 @@ func NewEventsTracker() *EventsTracker {
 
 // ConsumeNATEvent consumes a NAT event
 func (et *EventsTracker) ConsumeNATEvent(event Event) {
-	log.Info("got NAT event: ", event)
+	log.Info(eventsTrackerLogPrefix, "got NAT event: ", event)
+
 	et.lastEvent = event
 	select {
 	case et.eventChan <- event:
@@ -58,21 +71,22 @@ func (et *EventsTracker) ConsumeNATEvent(event Event) {
 
 // LastEvent returns the last known event
 func (et *EventsTracker) LastEvent() Event {
-	log.Info("getting last NAT event: ", et.lastEvent)
+	log.Info(eventsTrackerLogPrefix, "getting last NAT event: ", et.lastEvent)
 	return et.lastEvent
 }
 
 // WaitForEvent waits for event to occur
 func (et *EventsTracker) WaitForEvent() Event {
-	if et.lastEvent != EventNoEvent {
+	if et.lastEvent.Type != EmptyEventType {
 		return et.lastEvent
 	}
 	e := <-et.eventChan
-	log.Info("got NAT event: ", e)
+	log.Info(eventsTrackerLogPrefix, "got NAT event: ", e)
 	return e
 }
 
 // Event represents a NAT traversal related event
 type Event struct {
-	Name string
+	Type  string
+	Error error
 }

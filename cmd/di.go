@@ -91,11 +91,16 @@ type NatPinger interface {
 	Stop()
 }
 
-// NatEventTracker is responsible for tracking nat events
+// NatEventTracker is responsible for tracking NAT events
 type NatEventTracker interface {
 	ConsumeNATEvent(event traversal.Event)
 	LastEvent() traversal.Event
 	WaitForEvent() traversal.Event
+}
+
+// NatEventSender is responsible for sending NAT events to metrics server
+type NatEventSender interface {
+	ConsumeNATEvent(event traversal.Event)
 }
 
 // Dependencies is DI container for top level components which is reused in several places
@@ -134,9 +139,13 @@ type Dependencies struct {
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 
-	NATPinger           NatPinger
-	NATTracker          NatEventTracker
+	NATPinger      NatPinger
+	NATTracker     NatEventTracker
+	NATEventSender NatEventSender
+
 	LastSessionShutdown chan struct{}
+
+	MetricsSender *metrics.Sender
 }
 
 // Bootstrap initiates all container dependencies
@@ -164,6 +173,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapIdentityComponents(nodeOptions)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
+	di.bootstrapMetrics(nodeOptions)
 
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
@@ -279,6 +289,10 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	}
 
 	// NAT events
+	err = di.EventBus.Subscribe(traversal.EventTopic, di.NATEventSender.ConsumeNATEvent)
+	if err != nil {
+		return err
+	}
 	return di.EventBus.Subscribe(traversal.EventTopic, di.NATTracker.ConsumeNATEvent)
 }
 
@@ -323,9 +337,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router, corsPolicy)
-	metricsSender := metrics.CreateSender(nodeOptions.DisableMetrics, nodeOptions.MetricsAddress)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, metricsSender, di.NATPinger)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, di.MetricsSender, di.NATPinger)
 }
 
 func newSessionManagerFactory(
@@ -456,13 +469,18 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
 }
 
+func (di *Dependencies) bootstrapMetrics(options node.Options) {
+	appVersion := metadata.VersionAsString()
+	di.MetricsSender = metrics.NewSender(options.DisableMetrics, options.MetricsAddress, appVersion)
+}
+
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
+	di.NATTracker = traversal.NewEventsTracker()
+	di.NATEventSender = traversal.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
 	if options.ExperimentNATPunching {
-		di.NATTracker = traversal.NewEventsTracker()
 		di.NATPinger = traversal.NewPingerFactory(di.NATTracker, config.NewConfigParser())
 		di.LastSessionShutdown = make(chan struct{})
 	} else {
-		di.NATTracker = &traversal.NoopEventsTracker{}
 		di.NATPinger = &traversal.NoopPinger{}
 		di.LastSessionShutdown = nil
 	}

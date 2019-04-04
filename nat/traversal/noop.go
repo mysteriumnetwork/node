@@ -39,15 +39,3 @@ func (np *NoopPinger) BindPort(port int) {}
 
 // WaitForHole does nothing
 func (np *NoopPinger) WaitForHole() error { return nil }
-
-// NoopEventsTracker does nothing
-type NoopEventsTracker struct{}
-
-// ConsumeNATEvent does nothing
-func (net *NoopEventsTracker) ConsumeNATEvent(event Event) {}
-
-// LastEvent does nothing
-func (net *NoopEventsTracker) LastEvent() Event { return Event{} }
-
-// WaitForEvent does nothing
-func (net *NoopEventsTracker) WaitForEvent() Event { return Event{} }

@@ -21,7 +21,6 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/tequilapi"
 )
@@ -61,7 +60,7 @@ type Node struct {
 // Start starts Mysterium node (Tequilapi service, fetches location)
 func (node *Node) Start() error {
 	go func() {
-		err := node.metricsSender.SendStartupEvent(metadata.VersionAsString())
+		err := node.metricsSender.SendStartupEvent()
 		if err != nil {
 			log.Warn("Failed to send startup event: ", err)
 		}
