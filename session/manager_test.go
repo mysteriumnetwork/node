@@ -67,7 +67,8 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPinger := func(json.RawMessage) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil, &MockNatEventTracker{})
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil,
+		&MockNatEventTracker{}, "test service id")
 
 	requestConfig := json.RawMessage{}
 	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, requestConfig)
@@ -86,7 +87,8 @@ func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPinger := func(json.RawMessage) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil, &MockNatEventTracker{})
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger, nil,
+		&MockNatEventTracker{}, "test service id")
 
 	requestConfig := json.RawMessage{}
 	sessionInstance, err := manager.Create(consumerID, consumerID, 69, nil, requestConfig)

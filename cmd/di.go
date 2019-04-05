@@ -349,6 +349,7 @@ func newSessionManagerFactory(
 	natPingerChan func(json.RawMessage),
 	lastSessionShutdown chan struct{},
 	natTracker NatEventTracker,
+	serviceID string,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.BalanceTracker, error) {
@@ -390,6 +391,7 @@ func newSessionManagerFactory(
 			natPingerChan,
 			lastSessionShutdown,
 			natTracker,
+			serviceID,
 		)
 	}
 }

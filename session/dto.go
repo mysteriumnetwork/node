@@ -37,7 +37,7 @@ type Session struct {
 	ID         ID
 	ConsumerID identity.Identity
 	Config     ServiceConfiguration
-	ProposalID int
+	serviceID  string
 	CreatedAt  time.Time
 	Last       bool
 	done       chan struct{}

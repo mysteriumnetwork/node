@@ -24,10 +24,10 @@ type Cleaner struct {
 
 // SessionStorage keeps sessions and allows removing them by proposal id
 type SessionStorage interface {
-	RemoveForProposal(proposalID int)
+	RemoveForService(serviceId string)
 }
 
 // Cleanup removes sessions of stopped service
 func (cleaner *Cleaner) Cleanup(instance *Instance) {
-	cleaner.SessionStorage.RemoveForProposal(instance.proposal.ID)
+	cleaner.SessionStorage.RemoveForService(string(instance.id))
 }

@@ -89,7 +89,7 @@ func (mdh *mockDialogHandler) Handle(communication.Dialog) error {
 }
 
 // MockDialogHandlerFactory creates a new mock dialog handler
-func MockDialogHandlerFactory(market.ServiceProposal, session.ConfigNegotiator) communication.DialogHandler {
+func MockDialogHandlerFactory(market.ServiceProposal, session.ConfigNegotiator, string) communication.DialogHandler {
 	return &mockDialogHandler{}
 }
 

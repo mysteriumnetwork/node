@@ -21,7 +21,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
 	discovery_registry "github.com/mysteriumnetwork/node/market/proposals/registry"
@@ -50,17 +49,11 @@ func NewPool() *Pool {
 }
 
 // Add registers a service to running instances pool
-func (p *Pool) Add(instance *Instance) (ID, error) {
+func (p *Pool) Add(instance *Instance) {
 	p.Lock()
 	defer p.Unlock()
 
-	id, err := generateID()
-	if err != nil {
-		return id, err
-	}
-
-	p.instances[id] = instance
-	return id, nil
+	p.instances[instance.id] = instance
 }
 
 // Del removes a service from running instances pool
@@ -100,6 +93,8 @@ func (p *Pool) stop(id ID) error {
 	if instance.service != nil {
 		errStop.Add(instance.service.Stop())
 	}
+
+	// TODO: publish event in here
 
 	p.del(id)
 	return errStop.Errorf("ErrorCollection(%s)", ", ")
@@ -152,6 +147,7 @@ func NewInstance(
 
 // Instance represents a run service
 type Instance struct {
+	id           ID
 	state        State
 	options      Options
 	service      RunnableService
@@ -173,12 +169,4 @@ func (i *Instance) Proposal() market.ServiceProposal {
 // State returns the service instance state.
 func (i *Instance) State() State {
 	return i.state
-}
-
-func generateID() (ID, error) {
-	uid, err := uuid.NewV4()
-	if err != nil {
-		return ID(""), err
-	}
-	return ID(uid.String()), nil
 }

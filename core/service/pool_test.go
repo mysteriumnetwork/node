@@ -60,13 +60,12 @@ func Test_Pool_StopAllSuccess(t *testing.T) {
 
 func Test_Pool_StopDoesNotStop(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{service: service}
+	instance := &Instance{id: "test id", service: service}
 
 	pool := NewPool()
-	id, err := pool.Add(instance)
-	assert.Nil(t, err)
+	pool.Add(instance)
 
-	err = pool.Stop(id)
+	err := pool.Stop("test id")
 	assert.EqualError(t, err, "ErrorCollection(I dont want to stop)")
 }
 
@@ -78,7 +77,7 @@ func Test_Pool_StopReturnsErrIfInstanceDoesNotExist(t *testing.T) {
 
 func Test_Pool_StopAllDoesNotStopOneInstance(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{service: service}
+	instance := &Instance{id: "test id", service: service}
 
 	pool := NewPool()
 	pool.Add(instance)

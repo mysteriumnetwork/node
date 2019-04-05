@@ -166,7 +166,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			di.IdentityRegistry,
 		), nil
 	}
-	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator) communication.DialogHandler {
+	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator, serviceID string) communication.DialogHandler {
 		sessionManagerFactory := newSessionManagerFactory(
 			proposal,
 			di.ServiceSessionStorage,
@@ -174,7 +174,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			nodeOptions,
 			di.NATPinger.PingTarget,
 			di.LastSessionShutdown,
-			di.NATTracker)
+			di.NATTracker,
+			serviceID)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))
 	}
 	newDiscovery := func() service.Discovery {
