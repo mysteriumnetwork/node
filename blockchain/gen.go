@@ -17,4 +17,4 @@
 
 package blockchain
 
-//go:generate go run abi/abigen.go --localdir=abi --contracts=IdentityRegistry.json,IdentityImplementation.json --out=generated --pkg=generated
+//go:generate go run abi/abigen.go --githubrepo=mysteriumnetwork/payments-smart-contracts -githubrelease=v0.0.1 --contracts=IdentityRegistry.json,IdentityImplementation.json --out=generated --pkg=generated

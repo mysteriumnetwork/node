@@ -19,9 +19,11 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,6 +36,7 @@ var output = flag.String("out", "", "Filename where to write generated code. Uns
 var localdir = flag.String("localdir", "", "Local dir in which to search for specified contracts (. means current) overrides github repo")
 var contracts = flag.String("contracts", "", "Filename(s) separated by comma, of truffle compiled smart contract(s) (json format)")
 var githubRepo = flag.String("githubrepo", "mysteriumnetwork/payments-smart-contracts", "github repository under which to search releases and attached smart contracts")
+var githubRelease = flag.String("githubrelease", "", "Release tag of contracts (latest not supported!)")
 
 func main() {
 	flag.Parse()
@@ -107,8 +110,32 @@ func parseTruffleArtifacts(localDir, githubRepo, contracts string) ([]truffleArt
 	return loadFromGitRepo(githubRepo, contractList)
 }
 
+const smartContractRepoUrl = "https://github.com/%s/releases/download/%s/%s"
+
 func loadFromGitRepo(githubRepo string, contractList []string) ([]truffleArtifact, error) {
-	return nil, nil
+	if *githubRelease == "" {
+		return nil, errors.New("no release version specified")
+	}
+	var artifacts []truffleArtifact
+	httpClient := http.Client{}
+	for _, contractName := range contractList {
+		url := fmt.Sprintf(smartContractRepoUrl, githubRepo, *githubRelease, contractName)
+		resp, err := httpClient.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("error executing GET: %s", err.Error())
+		}
+		if resp.StatusCode != 200 {
+			return nil, fmt.Errorf("unexpected status response status code: %d", resp.StatusCode)
+		}
+		artifact, err := parseTruffleArtifact(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		artifacts = append(artifacts, artifact)
+		// ignore the error - as program will exit when all downloads complete, no need to worry about resource leakage on errors
+		_ = resp.Body.Close()
+	}
+	return artifacts, nil
 }
 
 func loadFromLocalDir(localDir string, contracts []string) ([]truffleArtifact, error) {
