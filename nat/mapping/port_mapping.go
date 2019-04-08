@@ -83,14 +83,14 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 
 func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name string, publisher Publisher) {
 	if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
-		log.Debugf("%s, Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
+		log.Debugf("%s Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
-			publisher.Publish(traversal.EventTopic, traversal.EventFailure)
+			publisher.Publish(traversal.EventTopic, traversal.BuildFailureEvent(err))
 			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
 			return
 		}
 	}
-	publisher.Publish(traversal.EventTopic, traversal.EventSuccess)
-	log.Info(logPrefix, "Mapped network port:", extPort)
+	publisher.Publish(traversal.EventTopic, traversal.BuildSuccessEvent())
+	log.Info(logPrefix, "Mapped network port: ", extPort)
 }

@@ -15,27 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package traversal
+package blockchain
 
-import "encoding/json"
-
-// NoopPinger does nothing
-type NoopPinger struct{}
-
-// Start does nothing
-func (np *NoopPinger) Start() {}
-
-// Stop does nothing
-func (np *NoopPinger) Stop() {}
-
-// PingProvider does nothing
-func (np *NoopPinger) PingProvider(ip string, port int) error { return nil }
-
-// PingTarget does nothing
-func (np *NoopPinger) PingTarget(json.RawMessage) {}
-
-// BindPort does nothing
-func (np *NoopPinger) BindPort(port int) {}
-
-// WaitForHole does nothing
-func (np *NoopPinger) WaitForHole() error { return nil }
+//go:generate go run abi/abigen.go --githubrepo=mysteriumnetwork/payments-smart-contracts -githubrelease=v0.0.1 --contracts=IdentityRegistry.json,IdentityImplementation.json --out=generated --pkg=generated

@@ -23,33 +23,55 @@ import (
 
 const appName = "myst"
 const startupEventName = "startup"
+const natMappingSuccessEventName = "nat_mapping_success"
+const natMappingFailEventName = "nat_mapping_fail"
 
 // Sender builds events and sends them using given transport
 type Sender struct {
-	Transport Transport
+	Transport  Transport
+	AppVersion string
 }
 
 // Transport allows sending events
 type Transport interface {
-	sendEvent(event) error
+	SendEvent(Event) error
 }
 
-type event struct {
-	Application applicationInfo `json:"application"`
-	EventName   string          `json:"eventName"`
-	CreatedAt   int64           `json:"createdAt"`
-	Context     interface{}     `json:"context"`
+// Event contains data about event, which is sent using transport
+type Event struct {
+	Application appInfo     `json:"application"`
+	EventName   string      `json:"eventName"`
+	CreatedAt   int64       `json:"createdAt"`
+	Context     interface{} `json:"context"`
 }
 
-type applicationInfo struct {
+type appInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 
-// SendStartupEvent sends startup event
-func (sender *Sender) SendStartupEvent(version string) error {
-	appInfo := applicationInfo{Name: appName, Version: version}
-	event := event{Application: appInfo, EventName: startupEventName, CreatedAt: time.Now().Unix()}
+type natMappingFailContext struct {
+	errorMessage string
+}
 
-	return sender.Transport.sendEvent(event)
+// SendStartupEvent sends startup event
+func (sender *Sender) SendStartupEvent() error {
+	return sender.sendEvent(startupEventName, nil)
+}
+
+// SendNATMappingSuccessEvent sends event about successful NAT mapping
+func (sender *Sender) SendNATMappingSuccessEvent() error {
+	return sender.sendEvent(natMappingSuccessEventName, nil)
+}
+
+// SendNATMappingFailEvent sends event about failed NAT mapping
+func (sender *Sender) SendNATMappingFailEvent(err error) error {
+	context := natMappingFailContext{errorMessage: err.Error()}
+	return sender.sendEvent(natMappingFailEventName, context)
+}
+
+func (sender *Sender) sendEvent(eventName string, context interface{}) error {
+	app := appInfo{Name: appName, Version: sender.AppVersion}
+	event := Event{Application: app, EventName: eventName, CreatedAt: time.Now().Unix(), Context: context}
+	return sender.Transport.SendEvent(event)
 }

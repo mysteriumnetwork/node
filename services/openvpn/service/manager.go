@@ -143,9 +143,9 @@ func (m *Manager) ProvideConfig(config json.RawMessage) (session.ServiceConfigur
 		return nil, nil, errors.New("Config provider not initialized")
 	}
 	var c openvpn_service.ConsumerConfig
-	error := json.Unmarshal(config, &c)
-	if error != nil {
-		return nil, nil, errors.Wrap(error, "parsing consumer config failed")
+	err := json.Unmarshal(config, &c)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "parsing consumer config failed")
 	}
 	m.consumerConfig = c
 	return m.vpnServiceConfigProvider.ProvideConfig(config)

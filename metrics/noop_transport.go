@@ -25,6 +25,6 @@ func NewNoopTransport() Transport {
 type noopTransport struct {
 }
 
-func (transport *noopTransport) sendEvent(event event) error {
+func (transport *noopTransport) SendEvent(event Event) error {
 	return nil
 }

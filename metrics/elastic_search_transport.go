@@ -38,7 +38,7 @@ type elasticSearchTransport struct {
 	url  string
 }
 
-func (transport *elasticSearchTransport) sendEvent(event event) error {
+func (transport *elasticSearchTransport) SendEvent(event Event) error {
 	req, err := requests.NewPostRequest(transport.url, "/", event)
 	if err != nil {
 		return err

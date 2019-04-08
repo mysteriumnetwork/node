@@ -28,7 +28,7 @@ import (
 
 const receiverLogPrefix = "[NATS.Receiver] "
 
-// NewReceiver constructs new Receiver's instance which works thru NATS connection.
+// NewReceiver constructs new Receiver's instance which works through NATS connection.
 // Codec packs/unpacks messages to byte payloads.
 // Topic (optional) if need to send messages prefixed topic.
 func NewReceiver(connection Connection, codec communication.Codec, topic string) *receiverNATS {

@@ -166,14 +166,16 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			di.IdentityRegistry,
 		), nil
 	}
-	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator) communication.DialogHandler {
+	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator, serviceID string) communication.DialogHandler {
 		sessionManagerFactory := newSessionManagerFactory(
-			proposal, di.ServiceSessionStorage,
+			proposal,
+			di.ServiceSessionStorage,
 			di.PromiseStorage,
 			nodeOptions,
 			di.NATPinger.PingTarget,
 			di.LastSessionShutdown,
-			di.NATTracker)
+			di.NATTracker,
+			serviceID)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))
 	}
 	newDiscovery := func() service.Discovery {
@@ -185,5 +187,11 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		newDialogHandler,
 		newDiscovery,
 		di.NATPinger,
+		di.EventBus,
 	)
+
+	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
+	if err := di.EventBus.Subscribe(service.StopTopic, serviceCleaner.Cleanup); err != nil {
+		log.Error(logPrefix, "failed to subscribe service cleaner")
+	}
 }

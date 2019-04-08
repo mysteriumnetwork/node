@@ -15,27 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package traversal
+package service
 
-import "encoding/json"
+// Cleaner cleans up when service is stopped
+type Cleaner struct {
+	SessionStorage SessionStorage
+}
 
-// NoopPinger does nothing
-type NoopPinger struct{}
+// SessionStorage keeps sessions and allows removing them by proposal id
+type SessionStorage interface {
+	RemoveForService(serviceId string)
+}
 
-// Start does nothing
-func (np *NoopPinger) Start() {}
-
-// Stop does nothing
-func (np *NoopPinger) Stop() {}
-
-// PingProvider does nothing
-func (np *NoopPinger) PingProvider(ip string, port int) error { return nil }
-
-// PingTarget does nothing
-func (np *NoopPinger) PingTarget(json.RawMessage) {}
-
-// BindPort does nothing
-func (np *NoopPinger) BindPort(port int) {}
-
-// WaitForHole does nothing
-func (np *NoopPinger) WaitForHole() error { return nil }
+// Cleanup removes sessions of stopped service
+func (cleaner *Cleaner) Cleanup(instance *Instance) {
+	cleaner.SessionStorage.RemoveForService(string(instance.id))
+}

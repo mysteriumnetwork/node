@@ -51,10 +51,10 @@ func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 
 	transport := NewElasticSearchTransport(server.URL, time.Second)
 
-	app := applicationInfo{Name: "test app", Version: "test version"}
-	event := event{Application: app}
+	app := appInfo{Name: "test app", Version: "test version"}
+	event := Event{Application: app}
 
-	err := transport.sendEvent(event)
+	err := transport.SendEvent(event)
 
 	assert.True(t, invoked)
 	assert.NoError(t, err)
@@ -70,7 +70,7 @@ func TestElasticSearchTransport_SendEvent_WithUnexpectedStatus(t *testing.T) {
 
 	transport := NewElasticSearchTransport(server.URL, time.Second)
 
-	err := transport.sendEvent(event{})
+	err := transport.SendEvent(Event{})
 
 	assert.True(t, invoked)
 	assert.EqualError(t, err, "unexpected response status: 500 Internal Server Error, body: something not cool happened")
@@ -85,7 +85,7 @@ func TestElasticSearchTransport_SendEvent_WithUnexpectedResponse(t *testing.T) {
 
 	transport := NewElasticSearchTransport(server.URL, time.Second)
 
-	err := transport.sendEvent(event{})
+	err := transport.SendEvent(Event{})
 
 	assert.True(t, invoked)
 	assert.EqualError(t, err, "unexpected response body: bad")

@@ -17,10 +17,12 @@
 
 package metrics
 
-import "time"
+import (
+	"time"
+)
 
-// CreateSender creates metrics sender with appropriate transport
-func CreateSender(disableMetrics bool, metricsAddress string) *Sender {
+// NewSender creates metrics sender with appropriate transport
+func NewSender(disableMetrics bool, metricsAddress, appVersion string) *Sender {
 	var transport Transport
 	if disableMetrics {
 		transport = NewNoopTransport()
@@ -28,5 +30,5 @@ func CreateSender(disableMetrics bool, metricsAddress string) *Sender {
 		transport = NewElasticSearchTransport(metricsAddress, 10*time.Second)
 	}
 
-	return &Sender{Transport: transport}
+	return &Sender{Transport: transport, AppVersion: appVersion}
 }
