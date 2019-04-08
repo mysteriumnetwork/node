@@ -38,12 +38,12 @@ var (
 	}
 	portFlag = cli.IntFlag{
 		Name:  "openvpn.port",
-		Usage: "Openvpn port to use. Default 1194",
+		Usage: "Openvpn port to use. If not specified, random port will be used",
 		Value: defaultOptions.Port,
 	}
 	defaultOptions = Options{
 		Protocol: "udp",
-		Port:     1194,
+		Port:     0,
 	}
 )
 

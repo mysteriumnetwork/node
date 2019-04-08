@@ -47,13 +47,18 @@ func NewManager(
 	mapPort func(int) (releasePortMapping func()),
 	lastSessionShutdown chan struct{},
 	natEventGetter NATEventGetter,
-	portPool *port.Pool,
+	portPool PortSupplier,
 ) *Manager {
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 
 	serverFactory := newServerFactory(nodeOptions, sessionValidator)
 	if lastSessionShutdown != nil {
 		serverFactory = newRestartingServerFactory(nodeOptions, sessionValidator, natPinger, lastSessionShutdown)
+	}
+
+	portSupplier := portPool
+	if serviceOptions.Port != 0 {
+		portSupplier = port.NewFixed(serviceOptions.Port)
 	}
 
 	return &Manager{
@@ -68,7 +73,7 @@ func NewManager(
 		serviceOptions:                 serviceOptions,
 		mapPort:                        mapPort,
 		natEventGetter:                 natEventGetter,
-		portPool:                       portPool,
+		ports:                          portSupplier,
 	}
 }
 

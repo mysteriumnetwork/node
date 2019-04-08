@@ -59,7 +59,7 @@ type NATEventGetter interface {
 	LastEvent() traversal.Event
 }
 
-type PortPool interface {
+type PortSupplier interface {
 	Acquire() port.Port
 }
 
@@ -67,7 +67,7 @@ type PortPool interface {
 type Manager struct {
 	natService     nat.NATService
 	mapPort        func(int) (releasePortMapping func())
-	portPool       PortPool
+	ports          PortSupplier
 	port           port.Port
 	releasePorts   func()
 	natPinger      NATPinger
@@ -97,7 +97,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	m.port = m.portPool.Acquire()
+	m.port = m.ports.Acquire()
 	m.releasePorts = m.mapPort(m.port.Num())
 
 	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
