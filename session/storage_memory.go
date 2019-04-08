@@ -82,7 +82,7 @@ func (storage *StorageMemory) Remove(id ID) {
 	delete(storage.sessions, id)
 }
 
-// RemoveForService removes all sessions with given proposal id
+// RemoveForService removes all sessions which belong to given service
 func (storage *StorageMemory) RemoveForService(serviceId string) {
 	sessions := storage.GetAll()
 	for _, session := range sessions {

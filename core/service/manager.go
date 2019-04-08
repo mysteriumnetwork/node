@@ -82,18 +82,12 @@ func NewManager(
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
-		servicePool:          NewPool(),
+		servicePool:          NewPool(eventPublisher),
 		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
 		natPinger:            natPinger,
-		eventPublisher:       eventPublisher,
 	}
-}
-
-// Publisher is responsible for publishing given events
-type Publisher interface {
-	Publish(topic string, args ...interface{})
 }
 
 // Manager entrypoint which knows how to start pluggable Mysterium instances
@@ -106,8 +100,7 @@ type Manager struct {
 
 	discoveryFactory DiscoveryFactory
 
-	natPinger      NATPinger
-	eventPublisher Publisher
+	natPinger NATPinger
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -195,17 +188,11 @@ func (manager *Manager) Kill() error {
 
 // Stop stops the service.
 func (manager *Manager) Stop(id ID) error {
-	instance := manager.servicePool.Instance(id)
-	if instance == nil {
-		return errors.New("service not found")
-	}
-
 	err := manager.servicePool.Stop(id)
 	if err != nil {
 		return err
 	}
 
-	manager.eventPublisher.Publish(StopTopic, instance)
 	return nil
 }
 

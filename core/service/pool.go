@@ -37,14 +37,21 @@ type RunnableService interface {
 
 // Pool is responsible for supervising running instances
 type Pool struct {
-	instances map[ID]*Instance
+	eventPublisher Publisher
+	instances      map[ID]*Instance
 	sync.Mutex
 }
 
+// Publisher is responsible for publishing given events
+type Publisher interface {
+	Publish(topic string, args ...interface{})
+}
+
 // NewPool returns a empty service pool
-func NewPool() *Pool {
+func NewPool(eventPublisher Publisher) *Pool {
 	return &Pool{
-		instances: make(map[ID]*Instance),
+		eventPublisher: eventPublisher,
+		instances:      make(map[ID]*Instance),
 	}
 }
 
@@ -94,9 +101,8 @@ func (p *Pool) stop(id ID) error {
 		errStop.Add(instance.service.Stop())
 	}
 
-	// TODO: publish event in here
-
 	p.del(id)
+	p.eventPublisher.Publish(StopTopic, instance)
 	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
 

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/asaskevich/EventBus"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -48,7 +47,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&MockNATPinger{},
-		EventBus.New(),
+		&mockPublisher{},
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.Nil(t, err)
@@ -73,7 +72,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&MockNATPinger{},
-		EventBus.New(),
+		&mockPublisher{},
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.Nil(t, err)
@@ -93,7 +92,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 
 	discovery := mockDiscovery{}
 	discoveryFactory := MockDiscoveryFactoryFunc(&discovery)
-	eventBus := EventBus.New()
+	eventBus := &mockPublisher{}
 	manager := NewManager(
 		registry,
 		MockDialogWaiterFactory,
@@ -106,15 +105,10 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.NoError(t, err)
 
-	var invokedInstance *Instance
-	f := func(instance *Instance) {
-		invokedInstance = instance
-	}
-	err = eventBus.Subscribe(StopTopic, f)
-	assert.NoError(t, err)
-
 	err = manager.Stop(id)
 	assert.NoError(t, err)
 
-	assert.Equal(t, &mockCopy, invokedInstance.service)
+	assert.Equal(t, StopTopic, eventBus.publishedTopic)
+	assert.Len(t, eventBus.publishedArgs, 1)
+	assert.Equal(t, &mockCopy, eventBus.publishedArgs[0].(*Instance).service)
 }
