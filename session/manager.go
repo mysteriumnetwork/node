@@ -86,6 +86,7 @@ func NewManager(
 	natPingerChan func(json.RawMessage),
 	lastSessionShutdown chan struct{},
 	natEventGetter NATEventGetter,
+	serviceId string,
 ) *Manager {
 	return &Manager{
 		currentProposal:       currentProposal,
@@ -95,6 +96,7 @@ func NewManager(
 		natPingerChan:         natPingerChan,
 		lastSessionShutdown:   lastSessionShutdown,
 		natEventGetter:        natEventGetter,
+		serviceId:             serviceId,
 
 		creationLock: sync.Mutex{},
 	}
@@ -110,6 +112,7 @@ type Manager struct {
 	natPingerChan         func(json.RawMessage)
 	lastSessionShutdown   chan struct{}
 	natEventGetter        NATEventGetter
+	serviceId             string
 
 	creationLock sync.Mutex
 }
@@ -128,6 +131,7 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	if err != nil {
 		return
 	}
+	sessionInstance.serviceID = manager.serviceId
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.done = make(chan struct{})
 	sessionInstance.Config = config

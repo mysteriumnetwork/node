@@ -21,7 +21,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
 	discovery_registry "github.com/mysteriumnetwork/node/market/proposals/registry"
@@ -38,29 +37,30 @@ type RunnableService interface {
 
 // Pool is responsible for supervising running instances
 type Pool struct {
-	instances map[ID]*Instance
+	eventPublisher Publisher
+	instances      map[ID]*Instance
 	sync.Mutex
 }
 
+// Publisher is responsible for publishing given events
+type Publisher interface {
+	Publish(topic string, args ...interface{})
+}
+
 // NewPool returns a empty service pool
-func NewPool() *Pool {
+func NewPool(eventPublisher Publisher) *Pool {
 	return &Pool{
-		instances: make(map[ID]*Instance),
+		eventPublisher: eventPublisher,
+		instances:      make(map[ID]*Instance),
 	}
 }
 
 // Add registers a service to running instances pool
-func (p *Pool) Add(instance *Instance) (ID, error) {
+func (p *Pool) Add(instance *Instance) {
 	p.Lock()
 	defer p.Unlock()
 
-	id, err := generateID()
-	if err != nil {
-		return id, err
-	}
-
-	p.instances[id] = instance
-	return id, nil
+	p.instances[instance.id] = instance
 }
 
 // Del removes a service from running instances pool
@@ -102,6 +102,7 @@ func (p *Pool) stop(id ID) error {
 	}
 
 	p.del(id)
+	p.eventPublisher.Publish(StopTopic, instance)
 	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
 
@@ -152,6 +153,7 @@ func NewInstance(
 
 // Instance represents a run service
 type Instance struct {
+	id           ID
 	state        State
 	options      Options
 	service      RunnableService
@@ -173,12 +175,4 @@ func (i *Instance) Proposal() market.ServiceProposal {
 // State returns the service instance state.
 func (i *Instance) State() State {
 	return i.state
-}
-
-func generateID() (ID, error) {
-	uid, err := uuid.NewV4()
-	if err != nil {
-		return ID(""), err
-	}
-	return ID(uid.String()), nil
 }
