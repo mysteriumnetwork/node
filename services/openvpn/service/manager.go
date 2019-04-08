@@ -19,10 +19,10 @@ package service
 
 import (
 	"encoding/json"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -36,7 +36,7 @@ import (
 const logPrefix = "[service-openvpn] "
 
 // ServerConfigFactory callback generates session config for remote client
-type ServerConfigFactory func(*tls.Primitives) *openvpn_service.ServerConfig
+type ServerConfigFactory func(secPrimitives *tls.Primitives, port int) *openvpn_service.ServerConfig
 
 // ServerFactory initiates Openvpn server instance during runtime
 type ServerFactory func(*openvpn_service.ServerConfig) openvpn.Process
@@ -45,7 +45,7 @@ type ServerFactory func(*openvpn_service.ServerConfig) openvpn.Process
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
 // SessionConfigNegotiatorFactory initiates ConfigProvider instance during runtime
-type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string) session.ConfigNegotiator
+type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string, port int) session.ConfigNegotiator
 
 // NATPinger defined Pinger interface for Provider
 type NATPinger interface {
@@ -59,10 +59,16 @@ type NATEventGetter interface {
 	LastEvent() traversal.Event
 }
 
+type PortPool interface {
+	Acquire() port.Port
+}
+
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
 	natService     nat.NATService
-	mapPort        func() (releasePortMapping func())
+	mapPort        func(int) (releasePortMapping func())
+	portPool       PortPool
+	port           port.Port
 	releasePorts   func()
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
@@ -91,23 +97,24 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	m.releasePorts = m.mapPort()
+	m.port = m.portPool.Acquire()
+	m.releasePorts = m.mapPort(m.port.Num())
 
 	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
 	if err != nil {
 		return
 	}
 
-	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP)
+	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP, m.port.Num())
 
-	vpnServerConfig := m.vpnServerConfigFactory(primitives)
+	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.port.Num())
 	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
 	// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
 	m.natPinger.BindPort(m.serviceOptions.Port)
 
-	log.Info(logPrefix, "starting openvpn server")
-	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.serviceOptions.Port); err != nil {
+	log.Info(logPrefix, "starting openvpn server on port: ", m.port.Num())
+	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.port.Num()); err != nil {
 		return errors.Wrap(err, "failed to add firewall rule")
 	}
 
@@ -125,13 +132,15 @@ func (m *Manager) Stop() (err error) {
 		m.releasePorts()
 	}
 
-	if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, m.serviceOptions.Port); err != nil {
+	if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, m.port.Num()); err != nil {
 		log.Error(logPrefix, "Failed to delete firewall rule for OpenVPN", err)
 	}
 
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
 	}
+
+	m.port.Release()
 
 	return nil
 }

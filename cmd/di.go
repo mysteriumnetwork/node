@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/mysteriumnetwork/node/core/port"
 	"path/filepath"
 	"time"
 
@@ -142,6 +143,8 @@ type Dependencies struct {
 	NATPinger      NatPinger
 	NATTracker     NatEventTracker
 	NATEventSender NatEventSender
+
+	PortPool *port.Pool
 
 	LastSessionShutdown chan struct{}
 
