@@ -47,6 +47,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&MockNATPinger{},
+		&mockPublisher{},
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.Nil(t, err)
@@ -71,6 +72,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&MockNATPinger{},
+		&mockPublisher{},
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
 	assert.Nil(t, err)
@@ -78,4 +80,35 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 	assert.Nil(t, err)
 	discovery.Wait()
 	assert.Len(t, manager.servicePool.List(), 0)
+}
+
+func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
+	registry := NewRegistry()
+	mockCopy := *serviceMock
+	mockCopy.mockProcess = make(chan struct{})
+	registry.Register(serviceType, func(options Options) (Service, market.ServiceProposal, error) {
+		return &mockCopy, proposalMock, nil
+	})
+
+	discovery := mockDiscovery{}
+	discoveryFactory := MockDiscoveryFactoryFunc(&discovery)
+	eventBus := &mockPublisher{}
+	manager := NewManager(
+		registry,
+		MockDialogWaiterFactory,
+		MockDialogHandlerFactory,
+		discoveryFactory,
+		&MockNATPinger{},
+		eventBus,
+	)
+
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
+	assert.NoError(t, err)
+
+	err = manager.Stop(id)
+	assert.NoError(t, err)
+
+	assert.Equal(t, StopTopic, eventBus.publishedTopic)
+	assert.Len(t, eventBus.publishedArgs, 1)
+	assert.Equal(t, &mockCopy, eventBus.publishedArgs[0].(*Instance).service)
 }

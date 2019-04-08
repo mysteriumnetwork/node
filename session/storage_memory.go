@@ -81,3 +81,13 @@ func (storage *StorageMemory) Remove(id ID) {
 	defer storage.lock.Unlock()
 	delete(storage.sessions, id)
 }
+
+// RemoveForService removes all sessions which belong to given service
+func (storage *StorageMemory) RemoveForService(serviceId string) {
+	sessions := storage.GetAll()
+	for _, session := range sessions {
+		if session.serviceID == serviceId {
+			storage.Remove(session.ID)
+		}
+	}
+}

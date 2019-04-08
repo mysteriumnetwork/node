@@ -171,6 +171,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	di.bootstrapEventBus()
 	di.bootstrapIdentityComponents(nodeOptions)
 	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
 	di.bootstrapMetrics(nodeOptions)
@@ -312,7 +313,6 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
 	di.PromiseStorage = promise.NewStorage(di.Storage)
-	di.EventBus = EventBus.New()
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
@@ -349,6 +349,7 @@ func newSessionManagerFactory(
 	natPingerChan func(json.RawMessage),
 	lastSessionShutdown chan struct{},
 	natTracker NatEventTracker,
+	serviceID string,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.BalanceTracker, error) {
@@ -390,6 +391,7 @@ func newSessionManagerFactory(
 			natPingerChan,
 			lastSessionShutdown,
 			natTracker,
+			serviceID,
 		)
 	}
 }
@@ -442,6 +444,10 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	return nil
+}
+
+func (di *Dependencies) bootstrapEventBus() {
+	di.EventBus = EventBus.New()
 }
 
 func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {

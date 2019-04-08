@@ -28,19 +28,29 @@ type mockService struct {
 	killErr error
 }
 
+type mockPublisher struct {
+	publishedTopic string
+	publishedArgs  []interface{}
+}
+
+func (mockPublisher *mockPublisher) Publish(topic string, args ...interface{}) {
+	mockPublisher.publishedTopic = topic
+	mockPublisher.publishedArgs = args
+}
+
 func (mr *mockService) Stop() error {
 	return mr.killErr
 }
 
 func Test_Pool_NewPool(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(&mockPublisher{})
 	assert.Len(t, pool.instances, 0)
 }
 
 func Test_Pool_Add(t *testing.T) {
 	instance := &Instance{}
 
-	pool := NewPool()
+	pool := NewPool(&mockPublisher{})
 	pool.Add(instance)
 
 	assert.Len(t, pool.instances, 1)
@@ -51,7 +61,7 @@ func Test_Pool_StopAllSuccess(t *testing.T) {
 		service: &mockService{},
 	}
 
-	pool := NewPool()
+	pool := NewPool(&mockPublisher{})
 	pool.Add(instance)
 
 	err := pool.StopAll()
@@ -60,27 +70,26 @@ func Test_Pool_StopAllSuccess(t *testing.T) {
 
 func Test_Pool_StopDoesNotStop(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{service: service}
+	instance := &Instance{id: "test id", service: service}
 
-	pool := NewPool()
-	id, err := pool.Add(instance)
-	assert.Nil(t, err)
+	pool := NewPool(&mockPublisher{})
+	pool.Add(instance)
 
-	err = pool.Stop(id)
+	err := pool.Stop("test id")
 	assert.EqualError(t, err, "ErrorCollection(I dont want to stop)")
 }
 
 func Test_Pool_StopReturnsErrIfInstanceDoesNotExist(t *testing.T) {
-	pool := NewPool()
+	pool := NewPool(&mockPublisher{})
 	err := pool.Stop("something")
 	assert.Equal(t, ErrNoSuchInstance, err)
 }
 
 func Test_Pool_StopAllDoesNotStopOneInstance(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{service: service}
+	instance := &Instance{id: "test id", service: service}
 
-	pool := NewPool()
+	pool := NewPool(&mockPublisher{})
 	pool.Add(instance)
 
 	err := pool.StopAll()

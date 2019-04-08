@@ -22,11 +22,15 @@ import (
 	"errors"
 
 	log "github.com/cihub/seelog"
+	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
 )
+
+// StopTopic is used in event bus to announce that service was stopped
+const StopTopic = "Service stop"
 
 var (
 	// ErrorLocation error indicates that action (i.e. disconnect)
@@ -52,7 +56,7 @@ type NATPinger interface {
 type DialogWaiterFactory func(providerID identity.Identity, serviceType string) (communication.DialogWaiter, error)
 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
-type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator) communication.DialogHandler
+type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator, string) communication.DialogHandler
 
 // DiscoveryFactory initiates instance which is able announce service discoverability
 type DiscoveryFactory func() Discovery
@@ -74,10 +78,11 @@ func NewManager(
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
 	natPinger NATPinger,
+	eventPublisher Publisher,
 ) *Manager {
 	return &Manager{
 		serviceRegistry:      serviceRegistry,
-		servicePool:          NewPool(),
+		servicePool:          NewPool(eventPublisher),
 		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
@@ -117,7 +122,12 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 	proposal.SetProviderContact(providerID, providerContact)
 
-	dialogHandler := manager.dialogHandlerFactory(proposal, service)
+	id, err = generateID()
+	if err != nil {
+		return id, err
+	}
+
+	dialogHandler := manager.dialogHandlerFactory(proposal, service, string(id))
 	if err = dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return id, err
 	}
@@ -126,6 +136,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	discovery.Start(providerID, proposal)
 
 	instance := Instance{
+		id:           id,
 		state:        Starting,
 		options:      options,
 		service:      service,
@@ -134,10 +145,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		discovery:    discovery,
 	}
 
-	id, err = manager.servicePool.Add(&instance)
-	if err != nil {
-		return id, err
-	}
+	manager.servicePool.Add(&instance)
 
 	go func() {
 		instance.state = Running
@@ -148,6 +156,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 		instance.state = NotRunning
 
+		// TODO: fix https://github.com/mysteriumnetwork/node/issues/855
 		stopErr := manager.servicePool.Stop(id)
 		if stopErr != nil {
 			log.Error("Service stop failed: ", stopErr)
@@ -157,6 +166,14 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}()
 
 	return id, nil
+}
+
+func generateID() (ID, error) {
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return ID(""), err
+	}
+	return ID(uid.String()), nil
 }
 
 // List returns array of running service instances.
@@ -171,7 +188,12 @@ func (manager *Manager) Kill() error {
 
 // Stop stops the service.
 func (manager *Manager) Stop(id ID) error {
-	return manager.servicePool.Stop(id)
+	err := manager.servicePool.Stop(id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Service returns a service instance by requested id.
