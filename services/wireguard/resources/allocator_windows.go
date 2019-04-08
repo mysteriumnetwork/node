@@ -19,7 +19,6 @@ package resources
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"sync"
 )
@@ -32,12 +31,18 @@ const MaxResources = 255
 type Allocator struct {
 	IPAddresses map[int]struct{}
 	mu          sync.Mutex
+
+	listenPort int
+	subnet     net.IPNet
 }
 
 // NewAllocator creates new resource pool for wireguard connection.
-func NewAllocator() *Allocator {
+func NewAllocator(listenPort int, subnet net.IPNet) *Allocator {
 	return &Allocator{
 		IPAddresses: make(map[int]struct{}),
+
+		listenPort: listenPort,
+		subnet:     subnet,
 	}
 }
 
@@ -60,21 +65,15 @@ func (a *Allocator) AllocateIPNet() (net.IPNet, error) {
 	for i := 1; i < MaxResources; i++ {
 		if _, ok := a.IPAddresses[i]; !ok {
 			a.IPAddresses[i] = struct{}{}
-			s = fmt.Sprintf("10.182.0.%d/24", i)
-			break
+			return calcIPNet(a.subnet, i), nil
 		}
 	}
-
-	ip, subnet, err := net.ParseCIDR(s)
-	if subnet != nil {
-		subnet.IP = ip
-	}
-	return *subnet, err
+	return net.IPNet{}, errors.New("no more unused subnets")
 }
 
 // AllocatePort provides available UDP port for the wireguard endpoint.
 func (a *Allocator) AllocatePort() (int, error) {
-	return 52820, nil
+	return a.listenPort, nil
 }
 
 // ReleaseInterface is not required for Windows implementation and left here just to satisfy the interface.
@@ -104,4 +103,12 @@ func (a *Allocator) ReleaseIPNet(ipnet net.IPNet) error {
 // ReleasePort is not required for Windows implementation and left here just to satisfy the interface.
 func (a *Allocator) ReleasePort(port int) error {
 	return nil
+}
+
+func calcIPNet(ipnet net.IPNet, index int) net.IPNet {
+	ip := make(net.IP, len(ipnet.IP))
+	copy(ip, ipnet.IP)
+	ip = ip.To4()
+	ip[3] = byte(index)
+	return net.IPNet{IP: ip, Mask: net.IPv4Mask(255, 255, 255, 0)}
 }

@@ -31,6 +31,7 @@ import (
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/pkg/errors"
 )
 
@@ -57,7 +58,8 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	c.config.Provider = config.Provider
 	c.config.Consumer.IPAddress = config.Consumer.IPAddress
 
-	resourceAllocator := resources.NewAllocator()
+	// Resource allocator uses config received from the provider. No configuration options required, passing default ones.
+	resourceAllocator := resources.NewAllocator(service.DefaultOptions.PortMin, service.DefaultOptions.PortMax, service.DefaultOptions.Subnet)
 
 	// We do not need port mapping for consumer, since it initiates the session
 	fakePortMapper := func(port int) (releasePortMapping func()) {

@@ -74,6 +74,7 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	ce.endpoint.Port = port
 	ce.endpoint.IP = net.ParseIP(ce.location.PubIP)
 
+	var deviceConfig deviceConfig
 	if config == nil {
 		// nil config mean its a provider Start
 		ce.releasePortMapping = ce.mapPort(port)
@@ -88,15 +89,13 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		ce.ipAddr = ipAddr
 		ce.ipAddr.IP = providerIP(ce.ipAddr)
 		ce.privateKey = privateKey
+		deviceConfig.listenPort = ce.endpoint.Port
 	} else {
 		ce.ipAddr = config.Consumer.IPAddress
 		ce.privateKey = config.Consumer.PrivateKey
 	}
 
-	var deviceConfig deviceConfig
-	deviceConfig.listenPort = ce.endpoint.Port
 	deviceConfig.privateKey = ce.privateKey
-
 	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.ipAddr)
 }
 
