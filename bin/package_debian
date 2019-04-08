@@ -45,7 +45,11 @@ fi
 DIR_BUILD="build/package"
 PACKAGE_FILE="${DIR_BUILD}/myst_linux_${ARCH}.deb"
 
-bin/build
+if [ "$ARCH" == "armhf" ]; then
+    bin/build_xgo linux/arm
+else
+    bin/build
+fi
 
 printf "Building Debian package '$PACKAGE_FILE' for architecture '$ARCH' ..\n" \
     && mkdir -p ${DIR_BUILD} \
