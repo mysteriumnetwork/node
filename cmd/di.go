@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"github.com/mysteriumnetwork/node/core/port"
 	"path/filepath"
 	"time"
 
@@ -38,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"

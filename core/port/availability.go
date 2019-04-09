@@ -17,10 +17,36 @@
 
 package port
 
-// Port (networking)
-type Port int
+import (
+	"net"
+	"strconv"
 
-// Num returns port's numeric value
-func (p Port) Num() int {
-	return int(p)
+	log "github.com/cihub/seelog"
+	"github.com/pkg/errors"
+)
+
+func available(protocol string, port int) bool {
+	addr := ":" + strconv.Itoa(port)
+
+	switch protocol {
+	case "udp", "udp4", "udp6":
+		udpAddr, err := net.ResolveUDPAddr(protocol, addr)
+		if err != nil {
+			panic(errors.Wrap(err, "unable to resolve UDP address - this is a bug"))
+		}
+		conn, err := net.ListenUDP(protocol, udpAddr)
+		if err != nil {
+			return false
+		}
+		defer conn.Close()
+	default:
+		listener, err := net.Listen(protocol, addr)
+		if err != nil {
+			log.Infof("Port %v for protocol %v is busy", port, protocol)
+			return false
+		}
+		defer listener.Close()
+	}
+
+	return true
 }

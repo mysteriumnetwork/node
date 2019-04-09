@@ -19,6 +19,7 @@ package service
 
 import (
 	"encoding/json"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
@@ -59,15 +60,15 @@ type NATEventGetter interface {
 	LastEvent() traversal.Event
 }
 
-type PortSupplier interface {
-	Acquire() port.Port
+type portSupplier interface {
+	Acquire(protocol string) port.Port
 }
 
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
 	natService     nat.NATService
 	mapPort        func(int) (releasePortMapping func())
-	ports          PortSupplier
+	ports          portSupplier
 	port           port.Port
 	releasePorts   func()
 	natPinger      NATPinger
@@ -97,7 +98,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	m.port = m.ports.Acquire()
+	m.port = m.ports.Acquire(m.serviceOptions.Protocol)
 	m.releasePorts = m.mapPort(m.port.Num())
 
 	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
@@ -139,8 +140,6 @@ func (m *Manager) Stop() (err error) {
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
 	}
-
-	m.port.Release()
 
 	return nil
 }

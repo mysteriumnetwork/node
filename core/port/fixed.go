@@ -17,17 +17,17 @@
 
 package port
 
-// Fixed represents a fixed port number supplier
-type Fixed struct {
+// FixedPortSupplier represents a fixed port number supplier
+type FixedPortSupplier struct {
 	number int
 }
 
 // NewFixed creates a fixed port number provider
-func NewFixed(port int) *Fixed {
-	return &Fixed{number: port}
+func NewFixed(port int) *FixedPortSupplier {
+	return &FixedPortSupplier{number: port}
 }
 
 // Acquire returns the fixed port
-func (fixed *Fixed) Acquire() Port {
-	return Port{number: fixed.number}
+func (fixed *FixedPortSupplier) Acquire(protocol string) Port {
+	return Port(fixed.number)
 }

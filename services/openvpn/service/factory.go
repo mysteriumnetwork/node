@@ -20,6 +20,7 @@ package service
 import (
 	"crypto/x509/pkix"
 	"encoding/json"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
@@ -47,7 +48,7 @@ func NewManager(
 	mapPort func(int) (releasePortMapping func()),
 	lastSessionShutdown chan struct{},
 	natEventGetter NATEventGetter,
-	portPool PortSupplier,
+	portPool portSupplier,
 ) *Manager {
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 
