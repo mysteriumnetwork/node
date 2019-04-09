@@ -30,10 +30,10 @@ func NewDetector(ipResolver ip.Resolver, locationResolver Resolver) Detector {
 }
 
 // NewDetectorFake constructs Detector instance with faked data
-func NewDetectorFake(ipAddress string, country string) Detector {
+func NewDetectorFake(ipAddress, country, city, nodeType string) Detector {
 	return &detector{
 		ipResolver:       ip.NewResolverMock(ipAddress),
-		locationResolver: NewStaticResolver(country),
+		locationResolver: NewStaticResolver(country, city, nodeType),
 	}
 }
 

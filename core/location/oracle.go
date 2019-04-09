@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,16 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package location
 
-// OptionsLocation describes possible parameters of location detection configuration
-type OptionsLocation struct {
-	IpifyUrl   string
-	ExternalDB string
+import (
+	"github.com/mysteriumnetwork/node/core/location/gendb"
+	geoip2 "github.com/oschwald/geoip2-golang"
+)
 
-	Type     string
-	Address  string
-	Country  string
-	City     string
-	NodeType string
+// NewOracleResolver returns new db resolver initialized from built in data
+func NewOracleResolver(address string) Resolver {
+	dbBytes, err := gendb.LoadData()
+	if err != nil {
+		return NewFailingResolver(err)
+	}
+
+	dbReader, err := geoip2.FromBytes(dbBytes)
+	if err != nil {
+		return NewFailingResolver(err)
+	}
+	return &DbResolver{dbReader: dbReader}
 }

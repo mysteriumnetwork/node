@@ -29,8 +29,8 @@ type DbResolver struct {
 	dbReader *geoip2.Reader
 }
 
-// NewExternalDbResolver returns Resolver which uses external country database
-func NewExternalDbResolver(databasePath string) Resolver {
+// NewExternalDBResolver returns Resolver which uses external country database
+func NewExternalDBResolver(databasePath string) Resolver {
 	db, err := geoip2.Open(databasePath)
 	if err != nil {
 		return NewFailingResolver(err)

@@ -17,17 +17,21 @@
 
 package location
 
-// StaticResolver struct represents country by ip ExternalDbResolver which always returns specified country
+// StaticResolver struct represents country by ip ExternalDBResolver which always returns specified country
 type StaticResolver struct {
-	country string
-	error   error
+	country  string
+	city     string
+	nodeType string
+	err      error
 }
 
 // NewStaticResolver creates new StaticResolver with specified country
-func NewStaticResolver(country string) *StaticResolver {
+func NewStaticResolver(country, city, nodeType string) *StaticResolver {
 	return &StaticResolver{
-		country: country,
-		error:   nil,
+		country:  country,
+		city:     city,
+		nodeType: nodeType,
+		err:      nil,
 	}
 }
 
@@ -35,11 +39,11 @@ func NewStaticResolver(country string) *StaticResolver {
 func NewFailingResolver(err error) *StaticResolver {
 	return &StaticResolver{
 		country: "",
-		error:   err,
+		err:     err,
 	}
 }
 
 // ResolveCountry maps given ip to country
 func (d *StaticResolver) ResolveCountry(ip string) (string, error) {
-	return d.country, d.error
+	return d.country, d.err
 }

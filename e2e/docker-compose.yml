@@ -18,6 +18,7 @@ services:
       - ../../e2e/myst-provider:/var/lib/mysterium-node
     command: >
       --ipify-url=http://ipify:3000
+      --location.type=manual
       --location.country=e2e-land
       --experiment-identity-check
       --localnet

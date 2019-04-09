@@ -33,24 +33,50 @@ var (
 		Usage: "Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
 		Value: "",
 	}
-	// LocationCountryFlag allows to configure service country manually
-	LocationCountryFlag = cli.StringFlag{
+
+	locationTypeFlag = cli.StringFlag{
+		Name:  "location.type",
+		Usage: "Service location detection type",
+		Value: "localdb",
+	}
+	locationAddressFlag = cli.StringFlag{
+		Name:  "location.address",
+		Usage: "Address of the service location system",
+		Value: "",
+	}
+	locationCountryFlag = cli.StringFlag{
 		Name:  "location.country",
 		Usage: "Service location country. If not given country is autodetected",
+		Value: "",
+	}
+	locationCityFlag = cli.StringFlag{
+		Name:  "location.city",
+		Usage: "Service location city",
+		Value: "",
+	}
+	locationNodeTypeFlag = cli.StringFlag{
+		Name:  "location.node.type",
+		Usage: "Service location node type",
 		Value: "",
 	}
 )
 
 // RegisterFlagsLocation function register location flags to flag list
 func RegisterFlagsLocation(flags *[]cli.Flag) {
-	*flags = append(*flags, ipifyURLFlag, locationDatabaseFlag, LocationCountryFlag)
+	*flags = append(*flags, ipifyURLFlag, locationDatabaseFlag,
+		locationTypeFlag, locationAddressFlag, locationCountryFlag, locationCityFlag, locationNodeTypeFlag)
 }
 
 // ParseFlagsLocation function fills in location options from CLI context
 func ParseFlagsLocation(ctx *cli.Context) node.OptionsLocation {
 	return node.OptionsLocation{
 		IpifyUrl:   ctx.GlobalString(ipifyURLFlag.Name),
-		ExternalDb: ctx.GlobalString(locationDatabaseFlag.Name),
-		Country:    ctx.GlobalString(LocationCountryFlag.Name),
+		ExternalDB: ctx.GlobalString(locationDatabaseFlag.Name),
+
+		Type:     ctx.GlobalString(locationTypeFlag.Name),
+		Address:  ctx.GlobalString(locationAddressFlag.Name),
+		Country:  ctx.GlobalString(locationCountryFlag.Name),
+		City:     ctx.GlobalString(locationCityFlag.Name),
+		NodeType: ctx.GlobalString(locationNodeTypeFlag.Name),
 	}
 }

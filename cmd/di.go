@@ -19,6 +19,8 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -176,7 +178,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapEventBus()
 	di.bootstrapIdentityComponents(nodeOptions)
-	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
+
+	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
+		return err
+	}
+
 	di.bootstrapMetrics(nodeOptions)
 
 	di.bootstrapNATComponents(nodeOptions)
@@ -331,6 +337,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
+	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
@@ -463,20 +470,31 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 
-func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) {
+func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) error {
 	di.IPResolver = ip.NewResolver(options.IpifyUrl)
 
-	switch {
-	case options.Country != "":
-		di.LocationResolver = location.NewStaticResolver(options.Country)
-	case options.ExternalDb != "":
-		di.LocationResolver = location.NewExternalDbResolver(filepath.Join(configDirectory, options.ExternalDb))
+	switch options.Type {
+	case "localdb":
+		if options.ExternalDB != "" {
+			di.LocationResolver = location.NewExternalDBResolver(filepath.Join(configDirectory, options.ExternalDB))
+		} else {
+			di.LocationResolver = location.NewBuiltInResolver()
+		}
+	case "oracle":
+		if len(options.Address) == 0 {
+			return errors.New("location detector address cannot be empty")
+		}
+		di.LocationResolver = location.NewOracleResolver(options.Address)
+	case "manual":
+		di.LocationResolver = location.NewStaticResolver(options.Country, options.City, options.NodeType)
 	default:
-		di.LocationResolver = location.NewBuiltInResolver()
+		return fmt.Errorf("unknown location detector type: %s", options.Type)
 	}
 
 	di.LocationDetector = location.NewDetector(di.IPResolver, di.LocationResolver)
 	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
+
+	return nil
 }
 
 func (di *Dependencies) bootstrapMetrics(options node.Options) {

@@ -26,7 +26,7 @@ import (
 )
 
 func TestNewDetector(t *testing.T) {
-	detector := NewDetectorFake("8.8.8.8", "US")
+	detector := NewDetectorFake("8.8.8.8", "US", "New York", "residential")
 
 	location, err := detector.DetectLocation()
 	assert.Equal(t, "US", location.Country)
@@ -38,7 +38,7 @@ func TestWithIpResolverFailing(t *testing.T) {
 	ipErr := errors.New("ip DbResolver error")
 	detector := NewDetector(
 		ip.NewResolverMockFailing(ipErr),
-		NewStaticResolver(""),
+		NewStaticResolver("", "", ""),
 	)
 
 	location, err := detector.DetectLocation()

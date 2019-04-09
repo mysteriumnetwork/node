@@ -25,7 +25,7 @@ import (
 )
 
 func TestLocationCacheFirstCall(t *testing.T) {
-	locationDetector := NewDetectorFake("100.100.100.100", "country")
+	locationDetector := NewDetectorFake("100.100.100.100", "country", "city", "residential")
 	locationCache := NewLocationCache(locationDetector)
 
 	location := locationCache.Get()
@@ -33,7 +33,7 @@ func TestLocationCacheFirstCall(t *testing.T) {
 }
 
 func TestLocationCacheFirstSecondCalls(t *testing.T) {
-	locationDetector := NewDetectorFake("100.100.100.100", "country")
+	locationDetector := NewDetectorFake("100.100.100.100", "country", "city", "residential")
 	locationCache := NewLocationCache(locationDetector)
 
 	location, err := locationCache.RefreshAndGet()
