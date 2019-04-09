@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,32 +24,13 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
 
-type fakeManagerForLocation struct {
-	onStatusReturn connection.Status
-}
-
-func (fm *fakeManagerForLocation) Connect(consumerID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
-	return nil
-}
-
-func (fm *fakeManagerForLocation) Status() connection.Status {
-	return fm.onStatusReturn
-}
-
-func (fm *fakeManagerForLocation) Disconnect() error {
-	return nil
-}
-
-func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
+func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 
-	AddRoutesForLocation(router, nil, nil, nil)
+	AddRoutesForConnectionLocation(router, nil, nil, nil)
 
 	tests := []struct {
 		method         string
@@ -59,7 +40,7 @@ func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 		expectedJSON   string
 	}{
 		{
-			http.MethodGet, "/location", "",
+			http.MethodGet, "/connection/location", "",
 			http.StatusOK,
 			`{
 				"ASN": "62179",
@@ -67,19 +48,6 @@ func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 				"Continent": "EU",
 				"Country": "LT",
 				"IP": "1.2.3.4",
-				"ISP": "Telia Lietuva, AB",
-				"NodeType": "residential"
-			}`,
-		},
-		{
-			http.MethodGet, "/location/2.2.2.2", "",
-			http.StatusOK,
-			`{
-				"ASN": "62179",
-				"City": "Vilnius",
-				"Continent": "EU",
-				"Country": "LT",
-				"IP": "2.2.2.2",
 				"ISP": "Telia Lietuva, AB",
 				"NodeType": "residential"
 			}`,
