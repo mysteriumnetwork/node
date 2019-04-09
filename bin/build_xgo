@@ -43,7 +43,7 @@ xgo \
 #  - myst-darwin-10.6-amd64 -> myst_darwin_amd64
 #  - myst-linux-amd64       -> myst_linux_amd64
 for BINARY in `ls ${DIR_TEMP}`; do
-    BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/.*-([a-z]*)(-[0-9.]*)?-([a-z]*)/myst_\1_\3/p'`
+    BINARY_RENAMED=`echo ${BINARY} | sed -nE 's/myst-([a-z]*)(-[0-9.]*)?-([0-z]*)(-[0-9]*)?/myst_\1_\3/p'`
     mv ${DIR_TEMP}/${BINARY} ${DIR_BUILD}/${BINARY_RENAMED}
 done
 rm -rf ${DIR_TEMP}
