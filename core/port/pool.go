@@ -27,7 +27,7 @@ import (
 // Pool hands out ports for service use
 type Pool struct {
 	start, capacity int
-	seed            rand.Source
+	rng             *rand.Rand
 }
 
 // NewPool creates a port pool that will provide ports from range 40000-50000
@@ -35,7 +35,7 @@ func NewPool() *Pool {
 	return &Pool{
 		start:    40000,
 		capacity: 10000,
-		seed:     rand.NewSource(time.Now().UnixNano()),
+		rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -50,7 +50,7 @@ func (pool *Pool) Acquire(protocol string) Port {
 }
 
 func (pool *Pool) randomPort() int {
-	return pool.start + rand.New(pool.seed).Intn(pool.capacity)
+	return pool.start + pool.rng.Intn(pool.capacity)
 }
 
 func (pool *Pool) seekAvailablePort(protocol string) int {
