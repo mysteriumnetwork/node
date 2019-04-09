@@ -18,8 +18,10 @@
 package service
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,4 +29,22 @@ func TestManager_StopNotPanic(t *testing.T) {
 	m := Manager{}
 	err := m.Stop()
 	assert.NoError(t, err)
+}
+
+func TestManager_ProvideConfigNotFailOnEmptyConfig(t *testing.T) {
+	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}}
+	_, _, err := m.ProvideConfig([]byte(""))
+	assert.NoError(t, err)
+}
+
+func TestManager_ProvideConfigNotFailOnNilConfig(t *testing.T) {
+	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}}
+	_, _, err := m.ProvideConfig(nil)
+	assert.NoError(t, err)
+}
+
+type mockConfigProvider struct{}
+
+func (cp *mockConfigProvider) ProvideConfig(consumerKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
+	return nil, nil, nil
 }
