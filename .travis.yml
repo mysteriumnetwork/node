@@ -97,12 +97,14 @@ jobs:
       name: "Linux ARM packages"
 
     - script:
+      - bin/build
       - bin/builder_run BINARY=build/myst/myst bin/package_debian $BUILD_VERSION amd64
       - bin/s3 sync build/package s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
       name: "DEB AMD64 packages"
 
     - script:
-      - bin/builder_run BINARY=build/myst/myst_arm_5 bin/package_debian $BUILD_VERSION armhf
+      - bin/build_xgo linux/arm
+      - bin/builder_run BINARY=build/myst/myst_linux_arm bin/package_debian $BUILD_VERSION armhf
       - bin/s3 sync build/package s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
       name: "DEB ARM packages"
 
