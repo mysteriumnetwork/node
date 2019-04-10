@@ -47,7 +47,7 @@ func listenTcp(port int) error {
 	if err != nil {
 		return err
 	}
-	_ = listener.Close()
+	defer listener.Close()
 	return nil
 }
 
@@ -60,6 +60,6 @@ func listenUdp(port int) error {
 	if err != nil {
 		return err
 	}
-	_ = udpConn.Close()
+	defer udpConn.Close()
 	return nil
 }

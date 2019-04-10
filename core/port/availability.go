@@ -25,28 +25,29 @@ import (
 	"github.com/pkg/errors"
 )
 
-func available(protocol string, port int) bool {
+func available(protocol string, port int) (bool, error) {
 	addr := ":" + strconv.Itoa(port)
 
 	switch protocol {
 	case "udp", "udp4", "udp6":
 		udpAddr, err := net.ResolveUDPAddr(protocol, addr)
 		if err != nil {
-			panic(errors.Wrap(err, "unable to resolve UDP address - this is a bug"))
+			return false, errors.Wrap(err, "unable to resolve UDP address")
 		}
 		conn, err := net.ListenUDP(protocol, udpAddr)
 		if err != nil {
-			return false
+			log.Infof("%s cannot listen on UDP port %v: %v", logPrefix, port, err)
+			return false, nil
 		}
 		defer conn.Close()
 	default:
 		listener, err := net.Listen(protocol, addr)
 		if err != nil {
-			log.Infof(logPrefix+"port %v for protocol %v is busy", port, protocol)
-			return false
+			log.Infof("%s cannot listen on TCP port %v: %v", logPrefix, port, err)
+			return false, nil
 		}
 		defer listener.Close()
 	}
 
-	return true
+	return true, nil
 }

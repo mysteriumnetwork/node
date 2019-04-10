@@ -28,7 +28,7 @@ import (
 // Pool hands out ports for service use
 type Pool struct {
 	start, capacity int
-	rng             *rand.Rand
+	rand            *rand.Rand
 }
 
 // NewPool creates a port pool that will provide ports from range 40000-50000
@@ -36,33 +36,34 @@ func NewPool() *Pool {
 	return &Pool{
 		start:    40000,
 		capacity: 10000,
-		rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
+		rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
 // Acquire returns an unused port in pool's range
 func (pool *Pool) Acquire(protocol string) (Port, error) {
 	p := pool.randomPort()
-	if !available(protocol, p) {
-		var err error
-		p, err = pool.seekAvailablePort(protocol)
-		if err != nil {
-			return 0, err
-		}
+	available, err := available(protocol, p)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not acquire port")
 	}
-	log.Debugf(logPrefix+"supplying %s port %d", protocol, p)
-	return Port(p), nil
+	if !available {
+		p, err = pool.seekAvailablePort(protocol)
+	}
+	log.Debugf("%s supplying %v port %v, err %v", logPrefix, protocol, p, err)
+	return Port(p), errors.Wrap(err, "could not acquire port")
 }
 
 func (pool *Pool) randomPort() int {
-	return pool.start + pool.rng.Intn(pool.capacity)
+	return pool.start + pool.rand.Intn(pool.capacity)
 }
 
 func (pool *Pool) seekAvailablePort(protocol string) (int, error) {
 	for i := 0; i < pool.capacity; i++ {
 		p := pool.start + i
-		if available(protocol, p) {
-			return p, nil
+		available, err := available(protocol, p)
+		if available || err != nil {
+			return p, err
 		}
 	}
 	return 0, errors.New("port pool is exhausted")
