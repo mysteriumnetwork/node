@@ -5,7 +5,7 @@
 # - https://search.maven.org/search?q=g:network.mysterium
 #
 # Usage:
-#> bin/release_android_sonatype <VERSION>
+#> bin/release_android <VERSION>
 
 set -e
 
