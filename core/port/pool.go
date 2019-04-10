@@ -22,6 +22,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/pkg/errors"
 )
 
 // Pool hands out ports for service use
@@ -40,25 +41,29 @@ func NewPool() *Pool {
 }
 
 // Acquire returns an unused port in pool's range
-func (pool *Pool) Acquire(protocol string) Port {
+func (pool *Pool) Acquire(protocol string) (Port, error) {
 	p := pool.randomPort()
 	if !available(protocol, p) {
-		p = pool.seekAvailablePort(protocol)
+		var err error
+		p, err = pool.seekAvailablePort(protocol)
+		if err != nil {
+			return 0, err
+		}
 	}
 	log.Debugf("port pool: supplying %s port %d", protocol, p)
-	return Port(p)
+	return Port(p), nil
 }
 
 func (pool *Pool) randomPort() int {
 	return pool.start + pool.rng.Intn(pool.capacity)
 }
 
-func (pool *Pool) seekAvailablePort(protocol string) int {
+func (pool *Pool) seekAvailablePort(protocol string) (int, error) {
 	for i := 0; i < pool.capacity; i++ {
 		p := pool.start + i
 		if available(protocol, p) {
-			return p
+			return p, nil
 		}
 	}
-	panic("port pool is exhausted")
+	return 0, errors.New("port pool is exhausted")
 }

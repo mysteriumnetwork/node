@@ -30,15 +30,15 @@ func TestAcquiredPortsAreUsable(t *testing.T) {
 	pool := NewPool()
 
 	// when
-	tcpPort := pool.Acquire("tcp").Num()
+	tcpPort, _ := pool.Acquire("tcp")
 	// then
-	err := listenTcp(tcpPort)
+	err := listenTcp(tcpPort.Num())
 	assert.NoError(t, err)
 
 	// when
-	udpPort := pool.Acquire("udp").Num()
+	udpPort, _ := pool.Acquire("udp")
 	// then
-	err = listenUdp(udpPort)
+	err = listenUdp(udpPort.Num())
 	assert.NoError(t, err)
 }
 
