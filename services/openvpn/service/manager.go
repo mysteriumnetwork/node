@@ -69,8 +69,6 @@ type Manager struct {
 	natService     nat.NATService
 	mapPort        func(int) (releasePortMapping func())
 	ports          portSupplier
-	port           port.Port
-	releasePorts   func()
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
 
@@ -98,29 +96,35 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	m.port, err = m.ports.Acquire(m.serviceOptions.Protocol)
+	servicePort, err := m.ports.Acquire(m.serviceOptions.Protocol)
 	if err != nil {
 		return errors.Wrap(err, "failed to acquire an unused port")
 	}
-	m.releasePorts = m.mapPort(m.port.Num())
+	releasePorts := m.mapPort(servicePort.Num())
+	defer releasePorts()
 
 	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
 	if err != nil {
 		return
 	}
 
-	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP, m.port.Num())
+	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP, servicePort.Num())
 
-	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.port.Num())
+	vpnServerConfig := m.vpnServerConfigFactory(primitives, servicePort.Num())
 	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
 	// block until NATPinger punches the hole in NAT for first incoming connect or continues if service not behind NAT
 	m.natPinger.BindPort(m.serviceOptions.Port)
 
-	log.Info(logPrefix, "starting openvpn server on port: ", m.port.Num())
-	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.port.Num()); err != nil {
+	log.Info(logPrefix, "starting openvpn server on port: ", servicePort.Num())
+	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, servicePort.Num()); err != nil {
 		return errors.Wrap(err, "failed to add firewall rule")
 	}
+	defer func() {
+		if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, servicePort.Num()); err != nil {
+			_ = log.Error(logPrefix, "failed to delete firewall rule for OpenVPN", err)
+		}
+	}()
 
 	if err = m.vpnServer.Start(); err != nil {
 		return
@@ -132,18 +136,9 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 
 // Stop stops service
 func (m *Manager) Stop() (err error) {
-	if m.releasePorts != nil {
-		m.releasePorts()
-	}
-
-	if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, m.port.Num()); err != nil {
-		log.Error(logPrefix, "Failed to delete firewall rule for OpenVPN", err)
-	}
-
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
 	}
-
 	return nil
 }
 
