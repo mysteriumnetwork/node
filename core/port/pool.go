@@ -50,7 +50,7 @@ func (pool *Pool) Acquire(protocol string) (Port, error) {
 			return 0, err
 		}
 	}
-	log.Debugf("port pool: supplying %s port %d", protocol, p)
+	log.Debugf(logPrefix+"supplying %s port %d", protocol, p)
 	return Port(p), nil
 }
 

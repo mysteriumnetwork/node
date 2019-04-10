@@ -17,6 +17,8 @@
 
 package port
 
+const logPrefix = "[port-provider] "
+
 // Port (networking)
 type Port int
 

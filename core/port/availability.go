@@ -42,7 +42,7 @@ func available(protocol string, port int) bool {
 	default:
 		listener, err := net.Listen(protocol, addr)
 		if err != nil {
-			log.Infof("Port %v for protocol %v is busy", port, protocol)
+			log.Infof(logPrefix+"port %v for protocol %v is busy", port, protocol)
 			return false
 		}
 		defer listener.Close()
