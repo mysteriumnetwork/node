@@ -26,12 +26,7 @@ var (
 	ipifyURLFlag = cli.StringFlag{
 		Name:  "ipify-url",
 		Usage: "Address (URL form) of ipify service",
-		Value: "https://api.ipify.org/",
-	}
-	locationDatabaseFlag = cli.StringFlag{
-		Name:  "location.database",
-		Usage: "Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
-		Value: "",
+		Value: "https://api.ipify.org/?format=json",
 	}
 
 	locationTypeFlag = cli.StringFlag{
@@ -55,7 +50,7 @@ var (
 		Value: "",
 	}
 	locationNodeTypeFlag = cli.StringFlag{
-		Name:  "location.node.type",
+		Name:  "location.node-type",
 		Usage: "Service location node type",
 		Value: "",
 	}
@@ -63,15 +58,14 @@ var (
 
 // RegisterFlagsLocation function register location flags to flag list
 func RegisterFlagsLocation(flags *[]cli.Flag) {
-	*flags = append(*flags, ipifyURLFlag, locationDatabaseFlag,
+	*flags = append(*flags, ipifyURLFlag,
 		locationTypeFlag, locationAddressFlag, locationCountryFlag, locationCityFlag, locationNodeTypeFlag)
 }
 
 // ParseFlagsLocation function fills in location options from CLI context
 func ParseFlagsLocation(ctx *cli.Context) node.OptionsLocation {
 	return node.OptionsLocation{
-		IpifyUrl:   ctx.GlobalString(ipifyURLFlag.Name),
-		ExternalDB: ctx.GlobalString(locationDatabaseFlag.Name),
+		IpifyUrl: ctx.GlobalString(ipifyURLFlag.Name),
 
 		Type:     ctx.GlobalString(locationTypeFlag.Name),
 		Address:  ctx.GlobalString(locationAddressFlag.Name),

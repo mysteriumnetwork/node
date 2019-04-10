@@ -18,12 +18,12 @@
 package location
 
 type cache struct {
-	locationDetector Detector
+	locationDetector Resolver
 	location         Location
 }
 
 // NewLocationCache constructs Cache
-func NewLocationCache(locationDetector Detector) Cache {
+func NewLocationCache(locationDetector Resolver) Cache {
 	return &cache{
 		locationDetector: locationDetector,
 	}
@@ -36,7 +36,7 @@ func (lc *cache) Get() Location {
 
 // Stores location to cache
 func (lc *cache) RefreshAndGet() (Location, error) {
-	location, err := lc.locationDetector.DetectLocation()
+	location, err := lc.locationDetector.DetectLocation(nil)
 	lc.location = location
 	return lc.location, err
 }

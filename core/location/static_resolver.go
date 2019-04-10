@@ -17,6 +17,8 @@
 
 package location
 
+import "net"
+
 // StaticResolver struct represents country by ip ExternalDBResolver which always returns specified country
 type StaticResolver struct {
 	country  string
@@ -44,6 +46,11 @@ func NewFailingResolver(err error) *StaticResolver {
 }
 
 // ResolveCountry maps given ip to country
-func (d *StaticResolver) ResolveCountry(ip string) (string, error) {
+func (d *StaticResolver) ResolveCountry(ip net.IP) (string, error) {
 	return d.country, d.err
+}
+
+// ResolveCountry maps given ip to country
+func (d *StaticResolver) DetectLocation(ip net.IP) (Location, error) {
+	return Location{Country: d.country}, d.err
 }

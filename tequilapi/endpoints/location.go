@@ -18,6 +18,7 @@
 package endpoints
 
 import (
+	"net"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -33,7 +34,7 @@ type locationResponse struct {
 	IP string
 	// Autonomous system number
 	// example: 62179
-	ASN string
+	ASN int
 	// Internet Service Provider name
 	// example: Telia Lietuva, AB
 	ISP string
@@ -50,23 +51,20 @@ type locationResponse struct {
 
 	// Node type
 	// example: residential
-	NodeType string
+	UserType string
 }
 
 // LocationEndpoint struct represents /location resource and it's subresources
 type LocationEndpoint struct {
-	manager               connection.Manager
-	locationDetector      location.Detector
-	originalLocationCache location.Cache
+	manager          connection.Manager
+	locationResolver location.Resolver
 }
 
 // NewLocationEndpoint creates and returns location endpoint
-func NewLocationEndpoint(manager connection.Manager, locationDetector location.Detector,
-	originalLocationCache location.Cache) *LocationEndpoint {
+func NewLocationEndpoint(manager connection.Manager, locationResolver location.Resolver) *LocationEndpoint {
 	return &LocationEndpoint{
-		manager:               manager,
-		locationDetector:      locationDetector,
-		originalLocationCache: originalLocationCache,
+		manager:          manager,
+		locationResolver: locationResolver,
 	}
 }
 
@@ -80,25 +78,15 @@ func NewLocationEndpoint(manager connection.Manager, locationDetector location.D
 //     description: Original locations
 //     schema:
 //       "$ref": "#/definitions/LocationDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 //   503:
 //     description: Service unavailable
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	currentLocation := locationResponse{
-		IP:  "1.2.3.4",
-		ASN: "62179",
-		ISP: "Telia Lietuva, AB",
-
-		Continent: "EU",
-		Country:   "LT",
-		City:      "Vilnius",
-
-		NodeType: "residential",
+	currentLocation, err := le.locationResolver.DetectLocation(nil)
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
 	}
 
 	utils.WriteAsJSON(currentLocation, writer)
@@ -114,35 +102,24 @@ func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 //     description: Requested locations
 //     schema:
 //       "$ref": "#/definitions/LocationDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 //   503:
 //     description: Service unavailable
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *LocationEndpoint) GetLocationByIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	currentLocation := locationResponse{
-		IP:  params.ByName("ip"),
-		ASN: "62179",
-		ISP: "Telia Lietuva, AB",
-
-		Continent: "EU",
-		Country:   "LT",
-		City:      "Vilnius",
-
-		NodeType: "residential",
+	ip := params.ByName("ip")
+	location, err := le.locationResolver.DetectLocation(net.ParseIP(ip))
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
 	}
 
-	utils.WriteAsJSON(currentLocation, writer)
+	utils.WriteAsJSON(location, writer)
 }
 
 // AddRoutesForLocation adds location routes to given router
-func AddRoutesForLocation(router *httprouter.Router, manager connection.Manager,
-	locationDetector location.Detector, locationCache location.Cache) {
-
-	locationEndpoint := NewLocationEndpoint(manager, locationDetector, locationCache)
+func AddRoutesForLocation(router *httprouter.Router, manager connection.Manager, locationResolver location.Resolver) {
+	locationEndpoint := NewLocationEndpoint(manager, locationResolver)
 	router.GET("/location", locationEndpoint.GetLocation)
 	router.GET("/location/:ip", locationEndpoint.GetLocationByIP)
 }

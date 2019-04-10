@@ -126,7 +126,6 @@ type Dependencies struct {
 
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
-	LocationDetector location.Detector
 	LocationOriginal location.Cache
 
 	StatisticsTracker  *statistics.SessionStatisticsTracker
@@ -337,8 +336,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
-	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
-	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
+	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.LocationResolver)
+	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
@@ -474,12 +473,13 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	di.IPResolver = ip.NewResolver(options.IpifyUrl)
 
 	switch options.Type {
-	case "localdb":
-		if options.ExternalDB != "" {
-			di.LocationResolver = location.NewExternalDBResolver(filepath.Join(configDirectory, options.ExternalDB))
-		} else {
-			di.LocationResolver = location.NewBuiltInResolver()
+	case "builtin":
+		di.LocationResolver = location.NewBuiltInResolver()
+	case "mmdb":
+		if len(options.Address) == 0 {
+			return errors.New("location detector address cannot be empty")
 		}
+		di.LocationResolver = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address))
 	case "oracle":
 		if len(options.Address) == 0 {
 			return errors.New("location detector address cannot be empty")
@@ -491,9 +491,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 		return fmt.Errorf("unknown location detector type: %s", options.Type)
 	}
 
-	di.LocationDetector = location.NewDetector(di.IPResolver, di.LocationResolver)
-	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
-
+	di.LocationOriginal = location.NewLocationCache(di.LocationResolver)
 	return nil
 }
 

@@ -93,7 +93,7 @@ func (di *Dependencies) resolveIPsAndLocation() (loc location.ServiceLocationInf
 	}
 	loc.OutIP = outboundIP
 
-	currentCountry, err := di.LocationResolver.ResolveCountry(pubIP)
+	currentCountry, err := di.LocationResolver.ResolveCountry(nil)
 	if err != nil {
 		log.Warn(logPrefix, "Failed to detect service country. ", err)
 		err = service.ErrorLocation

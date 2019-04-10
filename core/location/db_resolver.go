@@ -42,24 +42,32 @@ func NewExternalDBResolver(databasePath string) Resolver {
 }
 
 // ResolveCountry maps given ip to country
-func (r *DbResolver) ResolveCountry(ip string) (string, error) {
-	ipObject := net.ParseIP(ip)
-	if ipObject == nil {
-		return "", errors.New("failed to parse IP")
-	}
-
-	countryRecord, err := r.dbReader.Country(ipObject)
+func (r *DbResolver) ResolveCountry(ip net.IP) (string, error) {
+	location, err := r.DetectLocation(ip)
 	if err != nil {
 		return "", err
+	}
+
+	return location.Country, nil
+}
+
+func (r *DbResolver) DetectLocation(ip net.IP) (Location, error) {
+	if ip == nil {
+		return Location{}, errors.New("failed to parse IP")
+	}
+
+	countryRecord, err := r.dbReader.Country(ip)
+	if err != nil {
+		return Location{}, err
 	}
 
 	country := countryRecord.Country.IsoCode
 	if country == "" {
 		country = countryRecord.RegisteredCountry.IsoCode
 		if country == "" {
-			return "", errors.New("failed to resolve country")
+			return Location{}, errors.New("failed to resolve country")
 		}
 	}
 
-	return country, nil
+	return Location{Country: country}, nil
 }

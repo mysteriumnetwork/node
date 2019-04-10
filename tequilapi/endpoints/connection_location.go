@@ -28,18 +28,15 @@ import (
 
 // ConnectionLocationEndpoint struct represents /connection/location resource and it's subresources.
 type ConnectionLocationEndpoint struct {
-	manager               connection.Manager
-	locationDetector      location.Detector
-	originalLocationCache location.Cache
+	manager          connection.Manager
+	locationResolver location.Resolver
 }
 
 // NewConnectionLocationEndpoint creates and returns connection location endpoint.
-func NewConnectionLocationEndpoint(manager connection.Manager, locationDetector location.Detector,
-	originalLocationCache location.Cache) *LocationEndpoint {
+func NewConnectionLocationEndpoint(manager connection.Manager, locationResolver location.Resolver) *LocationEndpoint {
 	return &LocationEndpoint{
-		manager:               manager,
-		locationDetector:      locationDetector,
-		originalLocationCache: originalLocationCache,
+		manager:          manager,
+		locationResolver: locationResolver,
 	}
 }
 
@@ -62,25 +59,24 @@ func NewConnectionLocationEndpoint(manager connection.Manager, locationDetector 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	connectionLocation := locationResponse{
-		IP:  "1.2.3.4",
-		ASN: "62179",
-		ISP: "Telia Lietuva, AB",
-
-		Continent: "EU",
-		Country:   "LT",
-		City:      "Vilnius",
-
-		NodeType: "residential",
+	if le.manager.Status().State != connection.Connected {
+		utils.SendErrorMessage(writer, "Connection is not connected", http.StatusServiceUnavailable)
+		return
 	}
 
-	utils.WriteAsJSON(connectionLocation, writer)
+	currentLocation, err := le.locationResolver.DetectLocation(nil)
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
+	}
+
+	utils.WriteAsJSON(currentLocation, writer)
 }
 
 // AddRoutesForConnectionLocation adds connection location routes to given router
 func AddRoutesForConnectionLocation(router *httprouter.Router, manager connection.Manager,
-	locationDetector location.Detector, locationCache location.Cache) {
+	locationResolver location.Resolver) {
 
-	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, locationDetector, locationCache)
+	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, locationResolver)
 	router.GET("/connection/location", connectionLocationEndpoint.GetLocation)
 }

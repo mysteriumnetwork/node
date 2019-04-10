@@ -63,7 +63,7 @@ type clientRest struct {
 func (client *clientRest) GetPublicIP() (string, error) {
 	var ipResponse ipResponse
 
-	request, err := http.NewRequest("GET", client.ipifyUrl+"/?format=json", nil)
+	request, err := http.NewRequest("GET", client.ipifyUrl, nil)
 	request.Header.Set("User-Agent", ipifyAPIClient)
 	request.Header.Set("Accept", "application/json")
 	if err != nil {
