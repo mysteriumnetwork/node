@@ -41,7 +41,7 @@ var (
 	}
 	locationCountryFlag = cli.StringFlag{
 		Name:  "location.country",
-		Usage: "Service location country. If not given country is autodetected",
+		Usage: "Service location country",
 		Value: "",
 	}
 	locationCityFlag = cli.StringFlag{
