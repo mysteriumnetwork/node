@@ -52,6 +52,12 @@ var (
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
 	}
+
+	aclFlag = cli.StringFlag{
+		Name:  "acl.list",
+		Usage: "Comma separated list that determines the the allowed identities on our service.",
+		Value: "",
+	}
 )
 
 // NewCommand function creates service command
@@ -107,6 +113,7 @@ type serviceCommand struct {
 	identityHandler identity_selector.Handler
 	tequilapi       *client.Client
 	errorChannel    chan error
+	acl             client.ACL
 }
 
 // Run runs a command
@@ -146,7 +153,7 @@ func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, servi
 }
 
 func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options) {
-	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options)
+	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.acl)
 	if err != nil {
 		sc.errorChannel <- err
 	}

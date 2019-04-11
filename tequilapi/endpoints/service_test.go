@@ -370,3 +370,43 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 		resp.Body.String(),
 	)
 }
+
+func Test_ServiceStart_WithACL(t *testing.T) {
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		strings.NewReader(`{
+			"type": "testprotocol",
+			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"acl": {
+				"listIds": ["verified-streaming", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
+			}
+		}`),
+	)
+	resp := httptest.NewRecorder()
+
+	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusCreated, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+			"providerId": "0xProviderId",
+			"type": "testprotocol",
+			"options": {"foo": "bar"},
+			"status": "Running",
+			"proposal": {
+				"id": 1,
+				"providerId": "0xProviderId",
+				"serviceType": "testprotocol",
+				"serviceDefinition": {
+					"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+				}
+			}
+		}`,
+		resp.Body.String(),
+	)
+}

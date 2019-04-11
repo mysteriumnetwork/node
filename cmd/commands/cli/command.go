@@ -43,7 +43,7 @@ import (
 const cliCommandName = "cli"
 
 const serviceHelp = `service <action> [args]
-	start	<ProviderID> <ServiceType> [options]
+	start	<ProviderID> <ServiceType> [acl] [options]
 	stop	<ServiceID>
 	status	<ServiceID>
 	list
@@ -86,6 +86,12 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --warranty'",
 	"type 'license --conditions'",
 ))
+
+var aclFlag = cli.StringFlag{
+	Name:  "acl.list",
+	Usage: "acl lists to use in order to limit access to the service. Accepts a comma separated list. For example: mysterium,private",
+	Value: "",
+}
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *cliApp) Run() (err error) {
@@ -216,13 +222,13 @@ func (c *cliApp) service(argsString string) {
 }
 
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
-	opts, err := parseServiceOptions(serviceType, args...)
+	opts, acl, err := parseStartFlags(serviceType, args...)
 	if err != nil {
 		info("Failed to parse service options:", err)
 		return
 	}
 
-	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts)
+	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, acl)
 	if err != nil {
 		info("Failed to start service: ", err)
 		return
@@ -701,10 +707,12 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 	)
 }
 
-func parseServiceOptions(serviceType string, args ...string) (service.Options, error) {
+func parseStartFlags(serviceType string, args ...string) (service.Options, tequilapi_client.ACL, error) {
+	var acl tequilapi_client.ACL
 	var flags []cli.Flag
 	openvpn_service.RegisterFlags(&flags)
 	wireguard_service.RegisterFlags(&flags)
+	flags = append(flags, aclFlag)
 
 	set := flag.NewFlagSet("", flag.ContinueOnError)
 	for _, f := range flags {
@@ -712,19 +720,24 @@ func parseServiceOptions(serviceType string, args ...string) (service.Options, e
 	}
 
 	if err := set.Parse(args); err != nil {
-		return nil, err
+		return nil, acl, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
 
-	switch serviceType {
-	case noop.ServiceType:
-		return noop.ParseFlags(ctx), nil
-	case wireguard.ServiceType:
-		return wireguard_service.ParseFlags(ctx), nil
-	case openvpn.ServiceType:
-		return openvpn_service.ParseFlags(ctx), nil
+	splits := strings.Split(ctx.String(aclFlag.Name), ",")
+	acl = tequilapi_client.ACL{
+		ListIds: splits,
 	}
 
-	return nil, errors.New("service type not found")
+	switch serviceType {
+	case noop.ServiceType:
+		return noop.ParseFlags(ctx), acl, nil
+	case wireguard.ServiceType:
+		return wireguard_service.ParseFlags(ctx), acl, nil
+	case openvpn.ServiceType:
+		return openvpn_service.ParseFlags(ctx), acl, nil
+	}
+
+	return nil, acl, errors.New("service type not found")
 }

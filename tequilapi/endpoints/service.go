@@ -44,6 +44,16 @@ type serviceRequest struct {
 	// required: false
 	// example: {"port": 1123, "protocol": "udp"}
 	Options interface{} `json:"options"`
+
+	// access list which determines which identities will be able to receive the service
+	// required: false
+	acl acl `json:"acl"`
+}
+
+// acl represents the access controls
+// swagger:model ACL
+type acl struct {
+	ListIds []string `json:"listIds"`
 }
 
 // swagger:model ServiceListDTO
@@ -264,15 +274,21 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, 
 		ProviderID string           `json:"providerId"`
 		Type       string           `json:"type"`
 		Options    *json.RawMessage `json:"options"`
+		ACL        acl              `json:"acl"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
 		return serviceRequest{}, err
+	}
+
+	if jsonData.ACL.ListIds == nil {
+		jsonData.ACL.ListIds = []string{}
 	}
 
 	sr := serviceRequest{
 		ProviderID: jsonData.ProviderID,
 		Type:       se.toServiceType(jsonData.Type),
 		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
+		acl:        jsonData.ACL,
 	}
 	return sr, nil
 }
