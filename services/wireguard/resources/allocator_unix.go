@@ -29,7 +29,7 @@ import (
 )
 
 // MaxResources sets the limit to the maximum number of wireguard connections.
-const MaxResources = 255
+const MaxResources = 256
 
 // Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.

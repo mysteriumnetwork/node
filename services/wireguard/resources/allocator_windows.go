@@ -24,7 +24,7 @@ import (
 )
 
 // MaxResources sets the limit to the maximum number of wireguard connections.
-const MaxResources = 255
+const MaxResources = 256
 
 // Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.
@@ -61,7 +61,7 @@ func (a *Allocator) AllocateIPNet() (net.IPNet, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	for i := 1; i < MaxResources; i++ {
+	for i := 0; i < MaxResources; i++ {
 		if _, ok := a.IPAddresses[i]; !ok {
 			a.IPAddresses[i] = struct{}{}
 			return calcIPNet(a.subnet, i), nil
