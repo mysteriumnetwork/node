@@ -28,18 +28,18 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-const ipifyAPIClient = "goclient-v0.1"
-const ipifyAPILogPrefix = "[ipify.api] "
+const apiClient = "goclient-v0.1"
+const ipAPILogPrefix = "[ip-detector.api] "
 
-// NewResolver creates new ipify based resolver with default timeout of one minute
-func NewResolver(ipifyUrl string) Resolver {
-	return NewResolverWithTimeout(ipifyUrl, 1*time.Minute)
+// NewResolver creates new ip-detector resolver with default timeout of one minute
+func NewResolver(url string) Resolver {
+	return NewResolverWithTimeout(url, 1*time.Minute)
 }
 
-// NewResolverWithTimeout creates new ipify based resolver with specified timeout
-func NewResolverWithTimeout(ipifyUrl string, timeout time.Duration) Resolver {
+// NewResolverWithTimeout creates new ip-detector resolver with specified timeout
+func NewResolverWithTimeout(url string, timeout time.Duration) Resolver {
 	return &clientRest{
-		ipifyUrl: ipifyUrl,
+		url: url,
 		httpClient: http.Client{
 			Timeout: timeout,
 			Transport: &http.Transport{
@@ -56,18 +56,18 @@ type ipResponse struct {
 }
 
 type clientRest struct {
-	ipifyUrl   string
+	url        string
 	httpClient http.Client
 }
 
 func (client *clientRest) GetPublicIP() (string, error) {
 	var ipResponse ipResponse
 
-	request, err := http.NewRequest("GET", client.ipifyUrl, nil)
-	request.Header.Set("User-Agent", ipifyAPIClient)
+	request, err := http.NewRequest("GET", client.url, nil)
+	request.Header.Set("User-Agent", apiClient)
 	request.Header.Set("Accept", "application/json")
 	if err != nil {
-		log.Critical(ipifyAPILogPrefix, err)
+		log.Critical(ipAPILogPrefix, err)
 		return "", err
 	}
 
@@ -76,7 +76,7 @@ func (client *clientRest) GetPublicIP() (string, error) {
 		return "", err
 	}
 
-	log.Info(ipifyAPILogPrefix, "IP detected: ", ipResponse.IP)
+	log.Info(ipAPILogPrefix, "IP detected: ", ipResponse.IP)
 	return ipResponse.IP, nil
 }
 
@@ -95,14 +95,14 @@ func (client *clientRest) GetOutboundIP() (string, error) {
 func (client *clientRest) doRequest(request *http.Request, responseDto interface{}) error {
 	response, err := client.httpClient.Do(request)
 	if err != nil {
-		log.Error(ipifyAPILogPrefix, err)
+		log.Error(ipAPILogPrefix, err)
 		return err
 	}
 	defer response.Body.Close()
 
 	err = parseResponseError(response)
 	if err != nil {
-		log.Error(ipifyAPILogPrefix, err)
+		log.Error(ipAPILogPrefix, err)
 		return err
 	}
 

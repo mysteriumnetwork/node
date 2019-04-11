@@ -17,7 +17,11 @@
 
 package location
 
-import "net"
+import (
+	"net"
+
+	"github.com/mysteriumnetwork/node/core/ip"
+)
 
 // StaticResolver struct represents country by ip ExternalDBResolver which always returns specified country
 type StaticResolver struct {
@@ -25,32 +29,41 @@ type StaticResolver struct {
 	city     string
 	nodeType string
 	err      error
+
+	ipResolver ip.Resolver
 }
 
 // NewStaticResolver creates new StaticResolver with specified country
-func NewStaticResolver(country, city, nodeType string) *StaticResolver {
+func NewStaticResolver(country, city, nodeType string, ipResolver ip.Resolver) *StaticResolver {
 	return &StaticResolver{
 		country:  country,
 		city:     city,
 		nodeType: nodeType,
 		err:      nil,
+
+		ipResolver: ipResolver,
 	}
 }
 
 // NewFailingResolver returns StaticResolver with entered error
 func NewFailingResolver(err error) *StaticResolver {
 	return &StaticResolver{
-		country: "",
-		err:     err,
+		err:        err,
+		ipResolver: ip.NewResolverMock(""),
 	}
 }
 
-// ResolveCountry maps given ip to country
-func (d *StaticResolver) ResolveCountry(ip net.IP) (string, error) {
-	return d.country, d.err
-}
-
-// ResolveCountry maps given ip to country
+// DetectLocation maps given ip to country
 func (d *StaticResolver) DetectLocation(ip net.IP) (Location, error) {
-	return Location{Country: d.country}, d.err
+	pubIP, err := d.ipResolver.GetPublicIP()
+	if err != nil {
+		return Location{}, err
+	}
+
+	return Location{
+		Country:  d.country,
+		City:     d.city,
+		NodeType: d.nodeType,
+		IP:       pubIP,
+	}, d.err
 }

@@ -81,25 +81,20 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 }
 
 func (di *Dependencies) resolveIPsAndLocation() (loc location.ServiceLocationInfo, err error) {
-	pubIP, err := di.IPResolver.GetPublicIP()
-	if err != nil {
-		return
-	}
-	loc.PubIP = pubIP
-
 	outboundIP, err := di.IPResolver.GetOutboundIP()
 	if err != nil {
 		return
 	}
-	loc.OutIP = outboundIP
 
-	currentCountry, err := di.LocationResolver.ResolveCountry(nil)
+	location, err := di.LocationResolver.DetectLocation(nil)
 	if err != nil {
 		log.Warn(logPrefix, "Failed to detect service country. ", err)
 		err = service.ErrorLocation
 		return
 	}
-	loc.Country = currentCountry
+	loc.OutIP = outboundIP
+	loc.PubIP = location.IP
+	loc.Country = location.Country
 
 	log.Info(logPrefix, "Detected service country: ", loc.Country)
 	return

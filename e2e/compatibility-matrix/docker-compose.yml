@@ -46,7 +46,7 @@ services:
     expose:
       - 4050
     command: >
-      --ipify-url=http://ipify:3000
+      --ip-detector=http://ipify:3000
       --experiment-identity-check
       --experiment-promise-check
       --localnet
@@ -70,7 +70,8 @@ services:
     volumes:
       - ../../e2e/myst-provider:/var/lib/mysterium-node
     command: >
-      --ipify-url=http://ipify:3000
+      --ip-detector=http://ipify:3000
+      --location.type=manual
       --location.country=e2e-land
       --experiment-identity-check
       --experiment-payments
@@ -97,7 +98,7 @@ services:
     expose:
       - 4050
     command: >
-      --ipify-url=http://ipify:3000
+      --ip-detector=http://ipify:3000
       --experiment-identity-check
       --experiment-payments
       --localnet

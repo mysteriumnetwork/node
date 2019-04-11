@@ -34,8 +34,6 @@ const oracleResolverLogPrefix = "[location.Oracle.Resolver] "
 type oracleResolver struct {
 	http                  mysterium.HTTPTransport
 	oracleResolverAddress string
-
-	*ipResolver
 }
 
 // NewOracleResolver returns new db resolver initialized from Location Oracle service
@@ -43,17 +41,7 @@ func NewOracleResolver(address string) *oracleResolver {
 	return &oracleResolver{
 		newHTTPTransport(1 * time.Minute),
 		address,
-		&ipResolver{},
 	}
-}
-
-func (o *oracleResolver) ResolveCountry(ip net.IP) (string, error) {
-	location, err := o.DetectLocation(ip)
-	if err != nil {
-		return "", err
-	}
-
-	return location.Country, nil
 }
 
 func (o *oracleResolver) DetectLocation(ip net.IP) (location Location, err error) {

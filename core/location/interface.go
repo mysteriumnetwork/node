@@ -23,7 +23,6 @@ import (
 
 // Resolver allows resolving location by ip
 type Resolver interface {
-	ResolveCountry(ip net.IP) (string, error)
 	DetectLocation(ip net.IP) (Location, error)
 }
 

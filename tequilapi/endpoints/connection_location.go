@@ -33,8 +33,8 @@ type ConnectionLocationEndpoint struct {
 }
 
 // NewConnectionLocationEndpoint creates and returns connection location endpoint.
-func NewConnectionLocationEndpoint(manager connection.Manager, locationResolver location.Resolver) *LocationEndpoint {
-	return &LocationEndpoint{
+func NewConnectionLocationEndpoint(manager connection.Manager, locationResolver location.Resolver) *ConnectionLocationEndpoint {
+	return &ConnectionLocationEndpoint{
 		manager:          manager,
 		locationResolver: locationResolver,
 	}
@@ -50,10 +50,6 @@ func NewConnectionLocationEndpoint(manager connection.Manager, locationResolver 
 //     description: Connection locations
 //     schema:
 //       "$ref": "#/definitions/LocationDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 //   503:
 //     description: Service unavailable
 //     schema:
@@ -78,5 +74,5 @@ func AddRoutesForConnectionLocation(router *httprouter.Router, manager connectio
 	locationResolver location.Resolver) {
 
 	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, locationResolver)
-	router.GET("/connection/location", connectionLocationEndpoint.GetLocation)
+	router.GET("/connection/location", connectionLocationEndpoint.GetConnectionLocation)
 }

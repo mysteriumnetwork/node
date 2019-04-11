@@ -19,7 +19,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -337,7 +336,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.LocationResolver)
-	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationResolver)
+	tequilapi_endpoints.AddRoutesForLocation(router, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
@@ -469,26 +468,25 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 
-func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) error {
-	di.IPResolver = ip.NewResolver(options.IpifyUrl)
+func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
+	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
 	switch options.Type {
 	case "builtin":
-		di.LocationResolver = location.NewBuiltInResolver()
+		di.LocationResolver, err = location.NewBuiltInResolver(di.IPResolver)
 	case "mmdb":
-		if len(options.Address) == 0 {
-			return errors.New("location detector address cannot be empty")
-		}
-		di.LocationResolver = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address))
+		di.LocationResolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
 	case "oracle":
-		if len(options.Address) == 0 {
-			return errors.New("location detector address cannot be empty")
-		}
 		di.LocationResolver = location.NewOracleResolver(options.Address)
 	case "manual":
-		di.LocationResolver = location.NewStaticResolver(options.Country, options.City, options.NodeType)
+		di.LocationResolver = location.NewStaticResolver(options.Country, options.City, options.NodeType, di.IPResolver)
 	default:
 		return fmt.Errorf("unknown location detector type: %s", options.Type)
+	}
+
+	if err != nil {
+		log.Error("Failed to load location resolver: ", err)
+		di.LocationResolver = location.NewFailingResolver(err)
 	}
 
 	di.LocationOriginal = location.NewLocationCache(di.LocationResolver)

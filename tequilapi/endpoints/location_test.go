@@ -18,6 +18,7 @@
 package endpoints
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
@@ -49,7 +51,7 @@ func (fm *fakeManagerForLocation) Disconnect() error {
 func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 
-	AddRoutesForLocation(router, nil, nil, nil)
+	AddRoutesForLocation(router, &locationResolverMock{ip: "1.2.3.4"})
 
 	tests := []struct {
 		method         string
@@ -62,26 +64,26 @@ func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 			http.MethodGet, "/location", "",
 			http.StatusOK,
 			`{
-				"ASN": "62179",
-				"City": "Vilnius",
-				"Continent": "EU",
-				"Country": "LT",
-				"IP": "1.2.3.4",
-				"ISP": "Telia Lietuva, AB",
-				"NodeType": "residential"
+				"asn": 62179,
+				"city": "Vilnius",
+				"continent": "EU",
+				"country": "LT",
+				"ip": "1.2.3.4",
+				"isp": "Telia Lietuva, AB",
+				"node_type": "residential"
 			}`,
 		},
 		{
 			http.MethodGet, "/location/2.2.2.2", "",
 			http.StatusOK,
 			`{
-				"ASN": "62179",
-				"City": "Vilnius",
-				"Continent": "EU",
-				"Country": "LT",
-				"IP": "2.2.2.2",
-				"ISP": "Telia Lietuva, AB",
-				"NodeType": "residential"
+				"asn": 62179,
+				"city": "Vilnius",
+				"continent": "EU",
+				"country": "LT",
+				"ip": "2.2.2.2",
+				"isp": "Telia Lietuva, AB",
+				"node_type": "residential"
 			}`,
 		},
 	}
@@ -97,4 +99,26 @@ func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 			assert.Equal(t, "", resp.Body.String())
 		}
 	}
+}
+
+type locationResolverMock struct {
+	ip string
+}
+
+func (r *locationResolverMock) DetectLocation(ip net.IP) (location.Location, error) {
+	loc := location.Location{
+		ASN:       62179,
+		City:      "Vilnius",
+		Continent: "EU",
+		Country:   "LT",
+		IP:        ip.String(),
+		ISP:       "Telia Lietuva, AB",
+		NodeType:  "residential",
+	}
+
+	if r.ip != "" && ip == nil {
+		loc.IP = r.ip
+	}
+
+	return loc, nil
 }

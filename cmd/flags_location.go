@@ -23,21 +23,21 @@ import (
 )
 
 var (
-	ipifyURLFlag = cli.StringFlag{
-		Name:  "ipify-url",
-		Usage: "Address (URL form) of ipify service",
-		Value: "https://api.ipify.org/?format=json",
+	ipDetectorURLFlag = cli.StringFlag{
+		Name:  "ip-detector",
+		Usage: "Address (URL form) of ip detection service",
+		Value: "https://testnet-location.mysterium.network/api/v1/location",
 	}
 
 	locationTypeFlag = cli.StringFlag{
 		Name:  "location.type",
 		Usage: "Service location detection type",
-		Value: "localdb",
+		Value: "builtin",
 	}
 	locationAddressFlag = cli.StringFlag{
 		Name:  "location.address",
 		Usage: "Address of the service location system",
-		Value: "",
+		Value: "https://testnet-location.mysterium.network/api/v1/location",
 	}
 	locationCountryFlag = cli.StringFlag{
 		Name:  "location.country",
@@ -58,14 +58,14 @@ var (
 
 // RegisterFlagsLocation function register location flags to flag list
 func RegisterFlagsLocation(flags *[]cli.Flag) {
-	*flags = append(*flags, ipifyURLFlag,
+	*flags = append(*flags, ipDetectorURLFlag,
 		locationTypeFlag, locationAddressFlag, locationCountryFlag, locationCityFlag, locationNodeTypeFlag)
 }
 
 // ParseFlagsLocation function fills in location options from CLI context
 func ParseFlagsLocation(ctx *cli.Context) node.OptionsLocation {
 	return node.OptionsLocation{
-		IpifyUrl: ctx.GlobalString(ipifyURLFlag.Name),
+		IPDetectorURL: ctx.GlobalString(ipDetectorURLFlag.Name),
 
 		Type:     ctx.GlobalString(locationTypeFlag.Name),
 		Address:  ctx.GlobalString(locationAddressFlag.Name),

@@ -24,13 +24,20 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 
-	AddRoutesForConnectionLocation(router, nil, nil, nil)
+	AddRoutesForConnectionLocation(router, &mockConnectionManager{
+		onStatusReturn: connection.Status{
+			State: connection.Connected,
+		},
+	}, &locationResolverMock{
+		ip: "1.2.3.4",
+	})
 
 	tests := []struct {
 		method         string
@@ -43,14 +50,46 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 			http.MethodGet, "/connection/location", "",
 			http.StatusOK,
 			`{
-				"ASN": "62179",
-				"City": "Vilnius",
-				"Continent": "EU",
-				"Country": "LT",
-				"IP": "1.2.3.4",
-				"ISP": "Telia Lietuva, AB",
-				"NodeType": "residential"
+				"asn": 62179,
+				"city": "Vilnius",
+				"continent": "EU",
+				"country": "LT",
+				"ip": "1.2.3.4",
+				"isp": "Telia Lietuva, AB",
+				"node_type": "residential"
 			}`,
+		},
+	}
+
+	for _, test := range tests {
+		resp := httptest.NewRecorder()
+		req := httptest.NewRequest(test.method, test.path, strings.NewReader(test.body))
+		router.ServeHTTP(resp, req)
+		assert.Equal(t, test.expectedStatus, resp.Code)
+		if test.expectedJSON != "" {
+			assert.JSONEq(t, test.expectedJSON, resp.Body.String())
+		} else {
+			assert.Equal(t, "", resp.Body.String())
+		}
+	}
+}
+
+func TestAddRoutesForConnectionLocationFailOnDisconnectedState(t *testing.T) {
+	router := httprouter.New()
+
+	AddRoutesForConnectionLocation(router, &mockConnectionManager{}, &locationResolverMock{ip: "1.2.3.4"})
+
+	tests := []struct {
+		method         string
+		path           string
+		body           string
+		expectedStatus int
+		expectedJSON   string
+	}{
+		{
+			http.MethodGet, "/connection/location", "",
+			http.StatusServiceUnavailable,
+			`{"message":"Connection is not connected"}`,
 		},
 	}
 

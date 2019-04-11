@@ -18,47 +18,45 @@
 package location
 
 import (
-	"errors"
 	"net"
 
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/oschwald/geoip2-golang"
+	"github.com/pkg/errors"
 )
 
-// DbResolver struct represents ip -> country resolver which uses geoip2 data reader
-type DbResolver struct {
-	dbReader *geoip2.Reader
+// DBResolver struct represents ip -> country resolver which uses geoip2 data reader
+type DBResolver struct {
+	dbReader   *geoip2.Reader
+	ipResolver ip.Resolver
 }
 
 // NewExternalDBResolver returns Resolver which uses external country database
-func NewExternalDBResolver(databasePath string) Resolver {
+func NewExternalDBResolver(databasePath string, ipResolver ip.Resolver) (*DBResolver, error) {
 	db, err := geoip2.Open(databasePath)
 	if err != nil {
-		return NewFailingResolver(err)
+		return nil, errors.Wrap(err, "failed to open external db")
 	}
 
-	return &DbResolver{
-		dbReader: db,
-	}
+	return &DBResolver{
+		dbReader:   db,
+		ipResolver: ipResolver,
+	}, nil
 }
 
-// ResolveCountry maps given ip to country
-func (r *DbResolver) ResolveCountry(ip net.IP) (string, error) {
-	location, err := r.DetectLocation(ip)
-	if err != nil {
-		return "", err
-	}
-
-	return location.Country, nil
-}
-
-func (r *DbResolver) DetectLocation(ip net.IP) (Location, error) {
+// DetectLocation maps given ip to country
+func (r *DBResolver) DetectLocation(ip net.IP) (Location, error) {
 	if ip == nil {
-		return Location{}, errors.New("failed to parse IP")
+		ipAddress, err := r.ipResolver.GetPublicIP()
+		if err != nil {
+			return Location{}, errors.Wrap(err, "failed to get public IP")
+		}
+		ip = net.ParseIP(ipAddress)
 	}
 
 	countryRecord, err := r.dbReader.Country(ip)
 	if err != nil {
-		return Location{}, err
+		return Location{}, errors.Wrap(err, "failed to get a country")
 	}
 
 	country := countryRecord.Country.IsoCode

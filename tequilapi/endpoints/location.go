@@ -22,7 +22,6 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -56,14 +55,12 @@ type locationResponse struct {
 
 // LocationEndpoint struct represents /location resource and it's subresources
 type LocationEndpoint struct {
-	manager          connection.Manager
 	locationResolver location.Resolver
 }
 
 // NewLocationEndpoint creates and returns location endpoint
-func NewLocationEndpoint(manager connection.Manager, locationResolver location.Resolver) *LocationEndpoint {
+func NewLocationEndpoint(locationResolver location.Resolver) *LocationEndpoint {
 	return &LocationEndpoint{
-		manager:          manager,
 		locationResolver: locationResolver,
 	}
 }
@@ -118,8 +115,8 @@ func (le *LocationEndpoint) GetLocationByIP(writer http.ResponseWriter, request 
 }
 
 // AddRoutesForLocation adds location routes to given router
-func AddRoutesForLocation(router *httprouter.Router, manager connection.Manager, locationResolver location.Resolver) {
-	locationEndpoint := NewLocationEndpoint(manager, locationResolver)
+func AddRoutesForLocation(router *httprouter.Router, locationResolver location.Resolver) {
+	locationEndpoint := NewLocationEndpoint(locationResolver)
 	router.GET("/location", locationEndpoint.GetLocation)
 	router.GET("/location/:ip", locationEndpoint.GetLocationByIP)
 }
