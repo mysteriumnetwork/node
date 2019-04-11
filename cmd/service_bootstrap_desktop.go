@@ -26,6 +26,7 @@ import (
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -114,19 +115,31 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		currentLocation := market.Location{Country: locationInfo.Country}
 		transportOptions := serviceOptions.(openvpn_service.Options)
 
-		mapPort := func() func() {
+		mapPort := func(port int) func() {
 			return mapping.GetPortMappingFunc(
 				locationInfo.PubIP,
 				locationInfo.OutIP,
 				transportOptions.Protocol,
-				transportOptions.Port,
+				port,
 				"Myst node OpenVPN port mapping",
 				di.EventBus)
 		}
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
 		natService := nat.NewService()
-		return openvpn_service.NewManager(nodeOptions, transportOptions, locationInfo, di.ServiceSessionStorage, natService, di.NATPinger, mapPort, di.LastSessionShutdown, di.NATTracker), proposal, nil
+		manager := openvpn_service.NewManager(
+			nodeOptions,
+			transportOptions,
+			locationInfo,
+			di.ServiceSessionStorage,
+			natService,
+			di.NATPinger,
+			mapPort,
+			di.LastSessionShutdown,
+			di.NATTracker,
+			di.PortPool,
+		)
+		return manager, proposal, nil
 	}
 	di.ServiceRegistry.Register(service_openvpn.ServiceType, createService)
 }
@@ -181,6 +194,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	newDiscovery := func() service.Discovery {
 		return registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory)
 	}
+	di.PortPool = port.NewPool()
 	di.ServicesManager = service.NewManager(
 		di.ServiceRegistry,
 		newDialogWaiter,

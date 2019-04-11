@@ -37,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
@@ -142,6 +143,8 @@ type Dependencies struct {
 	NATPinger      NatPinger
 	NATTracker     NatEventTracker
 	NATEventSender NatEventSender
+
+	PortPool *port.Pool
 
 	LastSessionShutdown chan struct{}
 
