@@ -38,12 +38,11 @@ const (
 
 func getSharingScript(ifaceName, props, action string) string {
 	return `regsvr32 /s hnetcfg.dll;
-		Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" | foreach { $_.IsIcsPublic = 0; $_.IsIcsPrivate = 0; $_.Put() };
 		$netShare = New-Object -ComObject HNetCfg.HNetShare;
 		$c = $netShare.EnumEveryConnection |? { $netshare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
+		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);` + action + `
 		$guid = $netShare.NetConnectionProps.Invoke($c).Guid;
-		$props = Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" -Filter "__PATH like '%$guid%'";` + props + `$props.Put();
-		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);` + action
+		$props = Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" -Filter "__PATH like '%$guid%'";` + props + `$props.Put();`
 }
 
 func getPublicSharingScript(ifaceName string) string {
@@ -67,8 +66,19 @@ type serviceICS struct {
 	oldICSConfig       map[string]string
 }
 
+func (ics *serviceICS) disableICSAllInterfaces() error {
+	_, err := ics.powerShell(`Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" | foreach { $_.IsIcsPublic = 0; $_.IsIcsPrivate = 0; $_.Put() };`)
+	return err
+}
+
 // Enable enables internet connection sharing for the public interface.
 func (ics *serviceICS) Enable() error {
+	// We have to clean up ICS configuration for all interfaces to apply our configuration.
+	// It is possible to have ICS configured only for single pair of interfaces.
+	if err := ics.disableICSAllInterfaces(); err != nil {
+		return errors.Wrap(err, "failed to cleanup ICS before Enabling")
+	}
+
 	if err := ics.enableRemoteAccessService(); err != nil {
 		return errors.Wrap(err, "failed to Enable RemoteAccess service")
 	}
@@ -105,7 +115,6 @@ func (ics *serviceICS) enableRemoteAccessService() error {
 
 // Add enables internet connection sharing for the local interface.
 func (ics *serviceICS) Add(rule RuleForwarding) error {
-	// TODO firewall rule configuration should be added here for new connections.
 	_, ipnet, err := net.ParseCIDR(rule.SourceAddress)
 	if err != nil {
 		log.Warnf("%s Failed to parse IP-address: %s", natLogPrefix, rule.SourceAddress)
@@ -139,7 +148,6 @@ func (ics *serviceICS) Add(rule RuleForwarding) error {
 
 // Del disables internet connection sharing for the local interface.
 func (ics *serviceICS) Del(rule RuleForwarding) error {
-	// TODO firewall rule configuration should be added here for cleaning up unused connections.
 	ifaceName, err := ics.getInternalInterfaceName()
 	if err != nil {
 		return errors.Wrap(err, "failed to find suitable interface")
@@ -198,6 +206,9 @@ func (ics *serviceICS) Disable() (resErr error) {
 		}
 	}
 
+	if err := ics.disableICSAllInterfaces(); err != nil {
+		return errors.Wrap(err, "failed to cleanup ICS before Enabling")
+	}
 	return resErr
 }
 
