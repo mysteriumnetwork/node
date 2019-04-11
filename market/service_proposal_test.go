@@ -190,3 +190,61 @@ func Test_ServiceProposal_RegisterPaymentMethodUnserializer(t *testing.T) {
 
 	assert.True(t, exists)
 }
+
+func Test_ServiceProposal_UnserializeWithACL(t *testing.T) {
+	jsonData := []byte(`{
+		"id": 1,
+		"format": "format/X",
+		"service_type": "mock_service",
+		"service_definition": null,
+		"payment_method_type": "mock_payment",
+		"payment_method": {},
+		"provider_id": "node",
+		"provider_contacts": [
+			{ "type" : "mock_contact" , "definition" : {}}
+		],
+		"acl": [{
+			"protocol": "http",
+			"listIds": ["verified-streaming", "dvpn-traffic"],
+			"_links": {
+				"list": {
+					"href": "https://mysterium-oracle.mysterium.network/v1/lists/{rel}"
+				}
+			}
+		}]
+	}`)
+
+	var actual ServiceProposal
+	err := json.Unmarshal(jsonData, &actual)
+	assert.NoError(t, err)
+
+	acl := []ACL{
+		{
+			Protocol: "http",
+			ListIds:  []string{"verified-streaming", "dvpn-traffic"},
+			Links: ACLLinks{
+				List: ACLList{
+					Href: "https://mysterium-oracle.mysterium.network/v1/lists/{rel}",
+				},
+			},
+		},
+	}
+	expected := ServiceProposal{
+		ID:                1,
+		Format:            "format/X",
+		ServiceType:       "mock_service",
+		ServiceDefinition: serviceDefinition,
+		PaymentMethodType: "mock_payment",
+		PaymentMethod:     paymentMethod,
+		ProviderID:        "node",
+		ProviderContacts: ContactList{
+			Contact{
+				Type:       "mock_contact",
+				Definition: mockContact{},
+			},
+		},
+		ACL: &acl,
+	}
+	assert.Equal(t, expected, actual)
+	assert.True(t, actual.IsSupported())
+}

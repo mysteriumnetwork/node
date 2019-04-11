@@ -53,6 +53,24 @@ type ServiceProposal struct {
 
 	// Communication methods possible
 	ProviderContacts ContactList `json:"provider_contacts"`
+
+	// ACL represents the access controls for proposal
+	ACL *[]ACL `json:"acl,omitempty"`
+}
+
+// ACL represents the access controls for proposal
+type ACL struct {
+	Protocol string   `json:"protocol"`
+	ListIds  []string `json:"listIds"`
+	Links    ACLLinks `json:"_links"`
+}
+
+type ACLLinks struct {
+	List ACLList
+}
+
+type ACLList struct {
+	Href string `json:"href"`
 }
 
 // UnmarshalJSON is custom json unmarshaler to dynamically fill in ServiceProposal values
@@ -66,6 +84,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 		ServiceDefinition *json.RawMessage `json:"service_definition"`
 		PaymentMethod     *json.RawMessage `json:"payment_method"`
 		ProviderContacts  *json.RawMessage `json:"provider_contacts"`
+		ACL               *[]ACL           `json:"acl,omitempty"`
 	}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		return err
@@ -92,6 +111,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	// run contact unserializer
 	proposal.ProviderContacts = unserializeContacts(jsonData.ProviderContacts)
 
+	proposal.ACL = jsonData.ACL
 	return nil
 }
 

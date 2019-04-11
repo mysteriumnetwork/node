@@ -47,7 +47,7 @@ type serviceRequest struct {
 
 	// access list which determines which identities will be able to receive the service
 	// required: false
-	acl acl `json:"acl"`
+	ACL acl `json:"acl"`
 }
 
 // acl represents the access controls
@@ -288,7 +288,7 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, 
 		ProviderID: jsonData.ProviderID,
 		Type:       se.toServiceType(jsonData.Type),
 		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
-		acl:        jsonData.ACL,
+		ACL:        jsonData.ACL,
 	}
 	return sr, nil
 }
