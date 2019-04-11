@@ -9,6 +9,17 @@
       <password>${env.SONATYPE_PASSWORD}</password>
     </server>
   </servers>
+  <proxies>
+    <proxy>
+      <id>sonatype-proxy</id>
+      <active>true</active>
+      <protocol>https</protocol>
+      <host>tinyproxy.mysterium.network</host>
+      <port>8899</port>
+      <username>${env.PROXY_SONATYPE_USERNAME}</username>
+      <password>${env.PROXY_SONATYPE_PASSWORD}</password>
+    </proxy>
+  </proxies>
   <profiles>
     <profile>
       <id>ossrh</id>
