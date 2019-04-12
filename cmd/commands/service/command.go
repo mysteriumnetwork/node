@@ -53,8 +53,8 @@ var (
 		Usage: "Agree with terms & conditions",
 	}
 
-	aclFlag = cli.StringFlag{
-		Name:  "acl.list",
+	accessPolicyFlag = cli.StringFlag{
+		Name:  "access-policy.list",
 		Usage: "Comma separated list that determines the the allowed identities on our service.",
 		Value: "",
 	}
@@ -90,7 +90,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 					di.MysteriumAPI,
 					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
 					di.SignerFactory),
-				acl: parseACLFlag(ctx),
+				ap: parseAccessPolicyFlag(ctx),
 			}
 
 			go func() {
@@ -114,7 +114,7 @@ type serviceCommand struct {
 	identityHandler identity_selector.Handler
 	tequilapi       *client.Client
 	errorChannel    chan error
-	acl             client.ACL
+	ap              client.AccessPolicy
 }
 
 // Run runs a command
@@ -154,7 +154,7 @@ func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, servi
 }
 
 func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options) {
-	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.acl)
+	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap)
 	if err != nil {
 		sc.errorChannel <- err
 	}
@@ -165,7 +165,7 @@ func registerFlags(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		agreedTermsConditionsFlag,
 		identityFlag, identityPassphraseFlag,
-		aclFlag,
+		accessPolicyFlag,
 	)
 	openvpn_service.RegisterFlags(flags)
 	wireguard_service.RegisterFlags(flags)
@@ -179,14 +179,14 @@ func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 	}
 }
 
-// parseACLFlag function the acl data from CLI context
-func parseACLFlag(ctx *cli.Context) client.ACL {
-	aclValue := ctx.String(aclFlag.Name)
-	if aclValue == "" {
-		return client.ACL{}
+// parseAccessPolicyFlag fetches the access policy data from CLI context
+func parseAccessPolicyFlag(ctx *cli.Context) client.AccessPolicy {
+	policies := ctx.String(accessPolicyFlag.Name)
+	if policies == "" {
+		return client.AccessPolicy{}
 	}
-	splits := strings.Split(aclValue, ",")
-	return client.ACL{
+	splits := strings.Split(policies, ",")
+	return client.AccessPolicy{
 		ListIds: splits,
 	}
 }

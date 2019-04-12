@@ -87,8 +87,8 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --conditions'",
 ))
 
-var aclFlag = cli.StringFlag{
-	Name:  "acl.list",
+var accessPolicyFlag = cli.StringFlag{
+	Name:  "access-policy.list",
 	Usage: "acl lists to use in order to limit access to the service. Accepts a comma separated list. For example: mysterium,private",
 	Value: "",
 }
@@ -222,13 +222,13 @@ func (c *cliApp) service(argsString string) {
 }
 
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
-	opts, acl, err := parseStartFlags(serviceType, args...)
+	opts, accessPolicy, err := parseStartFlags(serviceType, args...)
 	if err != nil {
 		info("Failed to parse service options:", err)
 		return
 	}
 
-	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, acl)
+	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, accessPolicy)
 	if err != nil {
 		info("Failed to start service: ", err)
 		return
@@ -707,12 +707,12 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, tequilapi_client.ACL, error) {
-	var acl tequilapi_client.ACL
+func parseStartFlags(serviceType string, args ...string) (service.Options, tequilapi_client.AccessPolicy, error) {
+	var ap tequilapi_client.AccessPolicy
 	var flags []cli.Flag
 	openvpn_service.RegisterFlags(&flags)
 	wireguard_service.RegisterFlags(&flags)
-	flags = append(flags, aclFlag)
+	flags = append(flags, accessPolicyFlag)
 
 	set := flag.NewFlagSet("", flag.ContinueOnError)
 	for _, f := range flags {
@@ -720,27 +720,27 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, tequi
 	}
 
 	if err := set.Parse(args); err != nil {
-		return nil, acl, err
+		return nil, ap, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
 
-	aclFlagValue := ctx.String(aclFlag.Name)
-	if aclFlagValue != "" {
-		splits := strings.Split(ctx.String(aclFlag.Name), ",")
-		acl = tequilapi_client.ACL{
+	apFlagValue := ctx.String(accessPolicyFlag.Name)
+	if apFlagValue != "" {
+		splits := strings.Split(ctx.String(accessPolicyFlag.Name), ",")
+		ap = tequilapi_client.AccessPolicy{
 			ListIds: splits,
 		}
 	}
 
 	switch serviceType {
 	case noop.ServiceType:
-		return noop.ParseFlags(ctx), acl, nil
+		return noop.ParseFlags(ctx), ap, nil
 	case wireguard.ServiceType:
-		return wireguard_service.ParseFlags(ctx), acl, nil
+		return wireguard_service.ParseFlags(ctx), ap, nil
 	case openvpn.ServiceType:
-		return openvpn_service.ParseFlags(ctx), acl, nil
+		return openvpn_service.ParseFlags(ctx), ap, nil
 	}
 
-	return nil, acl, errors.New("service type not found")
+	return nil, ap, errors.New("service type not found")
 }

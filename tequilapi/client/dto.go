@@ -155,7 +155,7 @@ type ServiceSessionDTO struct {
 	ConsumerID string `json:"consumerId"`
 }
 
-// ACL represents the access controls for service start
-type ACL struct {
+// AccessPolicy represents the access controls for service start
+type AccessPolicy struct {
 	ListIds []string `json:"listIds"`
 }

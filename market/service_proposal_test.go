@@ -191,7 +191,7 @@ func Test_ServiceProposal_RegisterPaymentMethodUnserializer(t *testing.T) {
 	assert.True(t, exists)
 }
 
-func Test_ServiceProposal_UnserializeWithACL(t *testing.T) {
+func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
 	jsonData := []byte(`{
 		"id": 1,
 		"format": "format/X",
@@ -203,7 +203,7 @@ func Test_ServiceProposal_UnserializeWithACL(t *testing.T) {
 		"provider_contacts": [
 			{ "type" : "mock_contact" , "definition" : {}}
 		],
-		"acl": [{
+		"access_policies": [{
 			"protocol": "http",
 			"listIds": ["verified-traffic", "dvpn-traffic"],
 			"_links": {
@@ -218,12 +218,12 @@ func Test_ServiceProposal_UnserializeWithACL(t *testing.T) {
 	err := json.Unmarshal(jsonData, &actual)
 	assert.NoError(t, err)
 
-	acl := []ACL{
+	accessPolicies := []AccessPolicy{
 		{
 			Protocol: "http",
 			ListIds:  []string{"verified-traffic", "dvpn-traffic"},
-			Links: ACLLinks{
-				List: ACLList{
+			Links: AccessPolicyLinks{
+				List: AccessPolicyList{
 					Href: "https://mysterium-oracle.mysterium.network/v1/lists/{rel}",
 				},
 			},
@@ -243,7 +243,7 @@ func Test_ServiceProposal_UnserializeWithACL(t *testing.T) {
 				Definition: mockContact{},
 			},
 		},
-		ACL: &acl,
+		AccessPolicies: &accessPolicies,
 	}
 	assert.Equal(t, expected, actual)
 	assert.True(t, actual.IsSupported())

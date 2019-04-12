@@ -296,22 +296,22 @@ func (client *Client) Service(id string) (service ServiceInfoDTO, err error) {
 }
 
 // ServiceStart starts an instance of the service.
-func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, acl ACL) (service ServiceInfoDTO, err error) {
+func (client *Client) ServiceStart(providerID, serviceType string, options interface{}, ap AccessPolicy) (service ServiceInfoDTO, err error) {
 	opts, err := json.Marshal(options)
 	if err != nil {
 		return service, err
 	}
 
 	payload := struct {
-		ProviderID string          `json:"providerID"`
-		Type       string          `json:"type"`
-		Options    json.RawMessage `json:"options"`
-		ACL        ACL             `json:"acl"`
+		ProviderID   string          `json:"providerID"`
+		Type         string          `json:"type"`
+		Options      json.RawMessage `json:"options"`
+		AccessPolicy AccessPolicy    `json:"accessPolicy"`
 	}{
 		providerID,
 		serviceType,
 		opts,
-		acl,
+		ap,
 	}
 
 	response, err := client.http.Post("services", payload)

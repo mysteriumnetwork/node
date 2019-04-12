@@ -46,28 +46,28 @@ var (
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        "0xProviderId",
 	}
-	acls = []market.ACL{
+	ap = []market.AccessPolicy{
 		{
 			Protocol: "http",
 			ListIds:  []string{"verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"},
-			Links: market.ACLLinks{
-				List: market.ACLList{
+			Links: market.AccessPolicyLinks{
+				List: market.AccessPolicyList{
 					Href: fmt.Sprintf("%v{ref}", mockACLEndpoint),
 				},
 			},
 		},
 	}
-	serviceTypeWithACL = "mockaclservice"
-	mockACLProposal    = market.ServiceProposal{
+	serviceTypeWithAccessPolicy = "mockaclservice"
+	mockACLProposal             = market.ServiceProposal{
 		ID:                1,
-		ServiceType:       serviceTypeWithACL,
+		ServiceType:       serviceTypeWithAccessPolicy,
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        "0xProviderId",
-		ACL:               &acls,
+		AccessPolicies:    &ap,
 	}
-	mockServiceRunning        = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil)
-	mockServiceStopped        = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil)
-	mockServiceRunningWithACL = service.NewInstance(mockServiceOptions, service.Running, nil, mockACLProposal, nil, nil)
+	mockServiceRunning                 = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil)
+	mockServiceStopped                 = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil)
+	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, service.Running, nil, mockACLProposal, nil, nil)
 )
 
 type fancyServiceOptions struct {
@@ -76,8 +76,8 @@ type fancyServiceOptions struct {
 
 type mockServiceManager struct{}
 
-func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, acl *[]market.ACL, options service.Options) (service.ID, error) {
-	if serviceType == serviceTypeWithACL {
+func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, acl *[]market.AccessPolicy, options service.Options) (service.ID, error) {
+	if serviceType == serviceTypeWithAccessPolicy {
 		return mockACLServiceID, nil
 	}
 	return mockServiceID, nil
@@ -88,7 +88,7 @@ func (sm *mockServiceManager) Service(id service.ID) *service.Instance {
 		return mockServiceRunning
 	}
 	if id == mockACLServiceID {
-		return mockServiceRunningWithACL
+		return mockServiceRunningWithAccessPolicy
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ var fakeOptionsParser = map[string]ServiceOptionsParser{
 	"testprotocol": func(opts *json.RawMessage) (service.Options, error) {
 		return nil, nil
 	},
-	serviceTypeWithACL: func(opts *json.RawMessage) (service.Options, error) {
+	serviceTypeWithAccessPolicy: func(opts *json.RawMessage) (service.Options, error) {
 		return nil, nil
 	},
 	"errorprotocol": func(opts *json.RawMessage) (service.Options, error) {
@@ -403,7 +403,7 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 	)
 }
 
-func Test_ServiceStart_WithACL(t *testing.T) {
+func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockACLEndpoint)
 
 	req := httptest.NewRequest(
@@ -437,7 +437,7 @@ func Test_ServiceStart_WithACL(t *testing.T) {
 				"serviceDefinition": {
 					"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
 				},
-				"acl": [
+				"accessPolicies": [
 					{
 						"_links": {
 							"list": {

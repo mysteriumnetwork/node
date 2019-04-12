@@ -50,12 +50,12 @@ type serviceRequest struct {
 
 	// access list which determines which identities will be able to receive the service
 	// required: false
-	ACL acl `json:"acl"`
+	AccessPolicy accessPolicy `json:"accessPolicy"`
 }
 
-// acl represents the access controls
-// swagger:model ACL
-type acl struct {
+// accessPolicy represents the access controls
+// swagger:model AccessPolicy
+type accessPolicy struct {
 	ListIds []string `json:"listIds"`
 }
 
@@ -84,14 +84,14 @@ type serviceInfo struct {
 
 	Proposal proposalRes `json:"proposal"`
 
-	ACL *[]market.ACL `json:"acl,omitempty"`
+	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
 }
 
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
 type ServiceEndpoint struct {
-	serviceManager ServiceManager
-	aclEndpointURL string
-	optionsParser  map[string]ServiceOptionsParser
+	serviceManager          ServiceManager
+	accessPolicyEndpointURL string
+	optionsParser           map[string]ServiceOptionsParser
 }
 
 // ServiceOptionsParser parses request to service specific options
@@ -105,11 +105,11 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, aclEndpoint string) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string) *ServiceEndpoint {
 	return &ServiceEndpoint{
-		serviceManager: serviceManager,
-		optionsParser:  optionsParser,
-		aclEndpointURL: aclEndpoint,
+		serviceManager:          serviceManager,
+		optionsParser:           optionsParser,
+		accessPolicyEndpointURL: accessPolicyEndpointURL,
 	}
 }
 
@@ -207,9 +207,9 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	acls := getACLData(sr, "http", se.aclEndpointURL)
+	ap := getACLData(sr, "http", se.accessPolicyEndpointURL)
 
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, acls, sr.Options)
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, ap, sr.Options)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -225,16 +225,16 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
-func getACLData(sr serviceRequest, protocol, href string) *[]market.ACL {
-	if len(sr.ACL.ListIds) == 0 {
+func getACLData(sr serviceRequest, protocol, href string) *[]market.AccessPolicy {
+	if len(sr.AccessPolicy.ListIds) == 0 {
 		return nil
 	}
-	acls := &[]market.ACL{
+	acls := &[]market.AccessPolicy{
 		{
 			Protocol: protocol,
-			ListIds:  sr.ACL.ListIds,
-			Links: market.ACLLinks{
-				List: market.ACLList{
+			ListIds:  sr.AccessPolicy.ListIds,
+			Links: market.AccessPolicyLinks{
+				List: market.AccessPolicyList{
 					Href: fmt.Sprintf("%v{ref}", href),
 				},
 			},
@@ -298,24 +298,24 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	var jsonData struct {
-		ProviderID string           `json:"providerId"`
-		Type       string           `json:"type"`
-		Options    *json.RawMessage `json:"options"`
-		ACL        acl              `json:"acl"`
+		ProviderID   string           `json:"providerId"`
+		Type         string           `json:"type"`
+		Options      *json.RawMessage `json:"options"`
+		AccessPolicy accessPolicy     `json:"accessPolicy"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
 		return serviceRequest{}, err
 	}
 
-	if jsonData.ACL.ListIds == nil {
-		jsonData.ACL.ListIds = []string{}
+	if jsonData.AccessPolicy.ListIds == nil {
+		jsonData.AccessPolicy.ListIds = []string{}
 	}
 
 	sr := serviceRequest{
-		ProviderID: jsonData.ProviderID,
-		Type:       se.toServiceType(jsonData.Type),
-		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
-		ACL:        jsonData.ACL,
+		ProviderID:   jsonData.ProviderID,
+		Type:         se.toServiceType(jsonData.Type),
+		Options:      se.toServiceOptions(jsonData.Type, jsonData.Options),
+		AccessPolicy: jsonData.AccessPolicy,
 	}
 	return sr, nil
 }
@@ -386,7 +386,7 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 
 // ServiceManager represents service manager that will be used for manipulation node services.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, acl *[]market.ACL, options service.Options) (service.ID, error)
+	Start(providerID identity.Identity, serviceType string, acl *[]market.AccessPolicy, options service.Options) (service.ID, error)
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error

@@ -54,24 +54,24 @@ type ServiceProposal struct {
 	// Communication methods possible
 	ProviderContacts ContactList `json:"provider_contacts"`
 
-	// ACL represents the access controls for proposal
-	ACL *[]ACL `json:"acl,omitempty"`
+	// AccessPolicies represents the access controls for proposal
+	AccessPolicies *[]AccessPolicy `json:"access_policies,omitempty"`
 }
 
-// ACL represents the access controls for proposal
-type ACL struct {
-	Protocol string   `json:"protocol"`
-	ListIds  []string `json:"listIds"`
-	Links    ACLLinks `json:"_links"`
+// AccessPolicy represents the access controls for proposal
+type AccessPolicy struct {
+	Protocol string            `json:"protocol"`
+	ListIds  []string          `json:"listIds"`
+	Links    AccessPolicyLinks `json:"_links"`
 }
 
-// ACLLinks contains all the links to the corresponding resources
-type ACLLinks struct {
-	List ACLList `json:"list"`
+// AccessPolicyLinks contains all the links to the corresponding resources
+type AccessPolicyLinks struct {
+	List AccessPolicyList `json:"list"`
 }
 
-// ACLList represents the way of reaching the list
-type ACLList struct {
+// AccessPolicyList represents the way of reaching the list
+type AccessPolicyList struct {
 	Href string `json:"href"`
 }
 
@@ -86,7 +86,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 		ServiceDefinition *json.RawMessage `json:"service_definition"`
 		PaymentMethod     *json.RawMessage `json:"payment_method"`
 		ProviderContacts  *json.RawMessage `json:"provider_contacts"`
-		ACL               *[]ACL           `json:"acl,omitempty"`
+		AccessPolicies    *[]AccessPolicy  `json:"access_policies,omitempty"`
 	}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		return err
@@ -113,7 +113,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	// run contact unserializer
 	proposal.ProviderContacts = unserializeContacts(jsonData.ProviderContacts)
 
-	proposal.ACL = jsonData.ACL
+	proposal.AccessPolicies = jsonData.AccessPolicies
 	return nil
 }
 
@@ -126,9 +126,9 @@ func (proposal *ServiceProposal) SetProviderContact(providerID identity.Identity
 	proposal.ProviderContacts = ContactList{providerContact}
 }
 
-// SetACL updates service proposal with the given ACL
-func (proposal *ServiceProposal) SetACL(acls *[]ACL) {
-	proposal.ACL = acls
+// SetAccessPolicies updates service proposal with the given ACL
+func (proposal *ServiceProposal) SetAccessPolicies(ap *[]AccessPolicy) {
+	proposal.AccessPolicies = ap
 }
 
 // IsSupported returns true if this service proposal can be used for connections by service consumer

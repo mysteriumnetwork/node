@@ -106,12 +106,12 @@ type Manager struct {
 // Start starts an instance of the given service type if knows one in service registry.
 // It passes the options to the start method of the service.
 // If an error occurs in the underlying service, the error is then returned.
-func (manager *Manager) Start(providerID identity.Identity, serviceType string, acl *[]market.ACL, options Options) (id ID, err error) {
+func (manager *Manager) Start(providerID identity.Identity, serviceType string, ap *[]market.AccessPolicy, options Options) (id ID, err error) {
 	service, proposal, err := manager.serviceRegistry.Create(serviceType, options)
 	if err != nil {
 		return id, err
 	}
-	proposal.SetACL(acl)
+	proposal.SetAccessPolicies(ap)
 
 	dialogWaiter, err := manager.dialogWaiterFactory(providerID, serviceType)
 	if err != nil {

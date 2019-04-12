@@ -44,10 +44,10 @@ var (
 		Value: metadata.DefaultNetwork.DiscoveryAPIAddress,
 	}
 
-	aclAddressFlag = cli.StringFlag{
-		Name:  "acl-oracle-address",
-		Usage: "`URL` of acl oracle endpoint for retrieving lists",
-		Value: metadata.DefaultNetwork.ACLOracleEndpointAddress,
+	accessPolicyAddressFlag = cli.StringFlag{
+		Name:  "access-policy-address",
+		Usage: "`URL` of acl oracle endpoint for retrieving lists of access policies",
+		Value: metadata.DefaultNetwork.AccessPolicyOracleEndpointAddress,
 	}
 
 	brokerAddressFlag = cli.StringFlag{
@@ -88,7 +88,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		natPunchingFlag,
 		discoveryAddressFlag, brokerAddressFlag,
 		etherRPCFlag, etherContractPaymentsFlag,
-		qualityOracleFlag, aclAddressFlag,
+		qualityOracleFlag, accessPolicyAddressFlag,
 	)
 }
 
@@ -102,7 +102,7 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ExperimentNATPunching:   ctx.GlobalBool(natPunchingFlag.Name),
 
 		DiscoveryAPIAddress: ctx.GlobalString(discoveryAddressFlag.Name),
-		ACLEndpointAddress:  ctx.GlobalString(aclAddressFlag.Name),
+		ACLEndpointAddress:  ctx.GlobalString(accessPolicyAddressFlag.Name),
 		BrokerAddress:       ctx.GlobalString(brokerAddressFlag.Name),
 
 		EtherClientRPC:       ctx.GlobalString(etherRPCFlag.Name),
