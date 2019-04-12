@@ -25,11 +25,11 @@ import (
 )
 
 // swagger:model ACL
-type acl struct {
-	AccessLists []accessList `json:"acl"`
+type aclCollection struct {
+	Entries []acl `json:"entries"`
 }
 
-type accessList struct {
+type acl struct {
 	Name        string       `json:"name"`
 	Description string       `json:"description"`
 	Allow       []accessRule `json:"allow"`
@@ -43,7 +43,7 @@ type accessRule struct {
 type aclEndpoint struct {
 }
 
-var staticAccessList = accessList{
+var staticAccessList = acl{
 	Name:        "mysterium",
 	Description: "Mysterium Network approved identities",
 	Allow: []accessRule{
@@ -69,7 +69,7 @@ func NewACLEndpoint() *aclEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ACL"
 func (ale *aclEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	r := acl{AccessLists: []accessList{staticAccessList}}
+	r := aclCollection{Entries: []acl{staticAccessList}}
 	utils.WriteAsJSON(r, resp)
 }
 

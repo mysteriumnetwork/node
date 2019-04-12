@@ -44,7 +44,7 @@ func Test_Get_ACL(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"acl": [
+			"entries": [
 				{
 					"name": "mysterium",
 					"description": "Mysterium Network approved identities",
