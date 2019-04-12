@@ -24,9 +24,9 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-// swagger:model AccessLists
-type accessLists struct {
-	AccessLists []accessList `json:"accessLists"`
+// swagger:model ACL
+type acl struct {
+	AccessLists []accessList `json:"acl"`
 }
 
 type accessList struct {
@@ -40,7 +40,7 @@ type accessRule struct {
 	Value string `json:"value"`
 }
 
-type accessListsEndpoint struct {
+type aclEndpoint struct {
 }
 
 var staticAccessList = accessList{
@@ -54,12 +54,12 @@ var staticAccessList = accessList{
 	},
 }
 
-// NewAccessListsEndpoint creates and returns access lists endpoint
-func NewAccessListsEndpoint() *accessListsEndpoint {
-	return &accessListsEndpoint{}
+// NewACLEndpoint creates and returns ACL endpoint
+func NewACLEndpoint() *aclEndpoint {
+	return &aclEndpoint{}
 }
 
-// swagger:operation GET /access-lists AccessLists listAccessLists
+// swagger:operation GET /acl ACL
 // ---
 // summary: Returns access lists
 // description: Returns list of access lists
@@ -67,14 +67,14 @@ func NewAccessListsEndpoint() *accessListsEndpoint {
 //   200:
 //     description: List of access lists
 //     schema:
-//       "$ref": "#/definitions/AccessLists"
-func (ale *accessListsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	r := accessLists{AccessLists: []accessList{staticAccessList}}
+//       "$ref": "#/definitions/ACL"
+func (ale *aclEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r := acl{AccessLists: []accessList{staticAccessList}}
 	utils.WriteAsJSON(r, resp)
 }
 
-// AddRoutesForAccessLists attaches access lists endpoints to router
-func AddRoutesForAccessLists(router *httprouter.Router) {
-	ale := NewAccessListsEndpoint()
-	router.GET("/access-lists", ale.List)
+// AddRoutesForACL attaches ACL endpoints to router
+func AddRoutesForACL(router *httprouter.Router) {
+	ale := NewACLEndpoint()
+	router.GET("/acl", ale.List)
 }

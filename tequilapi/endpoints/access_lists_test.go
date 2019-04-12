@@ -26,13 +26,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Get_AccessLists(t *testing.T) {
+func Test_Get_ACL(t *testing.T) {
 	router := httprouter.New()
-	AddRoutesForAccessLists(router)
+	AddRoutesForACL(router)
 
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/access-lists",
+		"/acl",
 		nil,
 	)
 	assert.Nil(t, err)
@@ -44,7 +44,7 @@ func Test_Get_AccessLists(t *testing.T) {
 	assert.JSONEq(
 		t,
 		`{
-			"accessLists": [
+			"acl": [
 				{
 					"name": "mysterium",
 					"description": "Mysterium Network approved identities",
