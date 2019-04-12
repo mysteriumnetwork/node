@@ -18,6 +18,7 @@
 package service
 
 import (
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -26,12 +27,22 @@ import (
 const logPrefix = "[service-wireguard] "
 
 // GetProposal returns the proposal for wireguard service
-func GetProposal(country string) market.ServiceProposal {
+func GetProposal(location location.Location) market.ServiceProposal {
+	marketLocation := market.Location{
+		Continent: location.Continent,
+		Country:   location.Country,
+		City:      location.City,
+
+		ASN:      location.ASN,
+		ISP:      location.ISP,
+		NodeType: location.NodeType,
+	}
+
 	return market.ServiceProposal{
 		ServiceType: wg.ServiceType,
 		ServiceDefinition: wg.ServiceDefinition{
-			Location:          market.Location{Country: country},
-			LocationOriginate: market.Location{Country: country},
+			Location:          marketLocation,
+			LocationOriginate: marketLocation,
 		},
 		PaymentMethodType: wg.PaymentMethod,
 		PaymentMethod: wg.Payment{

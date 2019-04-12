@@ -28,8 +28,16 @@ import (
 )
 
 var (
-	locationLTTelia = market.Location{"LT", "Vilnius", "AS8764"}
-	protocol        = "tcp"
+	locationLTTelia = market.Location{
+		Continent: "EU",
+		Country:   "LT",
+		City:      "Vilnius",
+
+		ASN:      8764,
+		ISP:      "Telia Lietuva, AB",
+		NodeType: "residential",
+	}
+	protocol = "tcp"
 )
 
 func Test_NewServiceProposalWithLocation(t *testing.T) {

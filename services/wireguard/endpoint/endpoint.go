@@ -22,7 +22,7 @@ import (
 	"net"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -43,7 +43,7 @@ type wgClient interface {
 type connectionEndpoint struct {
 	iface              string
 	privateKey         string
-	location           location.ServiceLocationInfo
+	ipResolver         ip.Resolver
 	ipAddr             net.IPNet
 	endpoint           net.UDPAddr
 	resourceAllocator  *resources.Allocator
@@ -65,19 +65,18 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		return err
 	}
 
-	port, err := ce.resourceAllocator.AllocatePort()
-	if err != nil {
-		return err
-	}
-
 	ce.iface = iface
-	ce.endpoint.Port = port
-	ce.endpoint.IP = net.ParseIP(ce.location.PubIP)
-
 	var deviceConfig deviceConfig
 	if config == nil {
 		// nil config mean its a provider Start
-		ce.releasePortMapping = ce.mapPort(port)
+		pubIP, err := ce.ipResolver.GetPublicIP()
+		if err != nil {
+			return err
+		}
+		port, err := ce.resourceAllocator.AllocatePort()
+		if err != nil {
+			return err
+		}
 		privateKey, err := key.GeneratePrivateKey()
 		if err != nil {
 			return err
@@ -88,6 +87,9 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 		}
 		ce.ipAddr = ipAddr
 		ce.ipAddr.IP = providerIP(ce.ipAddr)
+		ce.endpoint.IP = net.ParseIP(pubIP)
+		ce.endpoint.Port = port
+		ce.releasePortMapping = ce.mapPort(port)
 		ce.privateKey = privateKey
 		deviceConfig.listenPort = ce.endpoint.Port
 	} else {
@@ -121,12 +123,21 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 		return wg.ServiceConfig{}, err
 	}
 
+	pubIP, err := ce.ipResolver.GetPublicIP()
+	if err != nil {
+		return wg.ServiceConfig{}, err
+	}
+	outIP, err := ce.ipResolver.GetOutboundIP()
+	if err != nil {
+		return wg.ServiceConfig{}, err
+	}
+
 	var config wg.ServiceConfig
 	config.Provider.PublicKey = publicKey
 	config.Provider.Endpoint = ce.endpoint
 	config.Consumer.IPAddress = ce.ipAddr
 	config.Consumer.IPAddress.IP = ce.consumerIP(ce.ipAddr)
-	if ce.location.OutIP != ce.location.PubIP {
+	if outIP != pubIP {
 		config.Consumer.ConnectDelay = ce.connectDelay
 	}
 	return config, nil

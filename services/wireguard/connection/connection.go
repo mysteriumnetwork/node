@@ -26,7 +26,6 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/location"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
@@ -62,7 +61,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	}
 
 	resourceAllocator := connectionResourceAllocator()
-	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(location.ServiceLocationInfo{}, resourceAllocator, fakePortMapper, 0)
+	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(nil, resourceAllocator, fakePortMapper, 0)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new connection endpoint")
 	}
