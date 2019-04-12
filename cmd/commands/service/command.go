@@ -90,6 +90,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 					di.MysteriumAPI,
 					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
 					di.SignerFactory),
+				acl: parseACLFlag(ctx),
 			}
 
 			go func() {
@@ -123,7 +124,7 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		serviceTypes = strings.Split(arg, ",")
 	}
 
-	identity, err := sc.unlockIdentity(parseFlags(ctx))
+	identity, err := sc.unlockIdentity(parseIdentityFlags(ctx))
 	if err != nil {
 		return err
 	}
@@ -164,16 +165,29 @@ func registerFlags(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		agreedTermsConditionsFlag,
 		identityFlag, identityPassphraseFlag,
+		aclFlag,
 	)
 	openvpn_service.RegisterFlags(flags)
 	wireguard_service.RegisterFlags(flags)
 }
 
-// parseFlags function fills in service command options from CLI context
-func parseFlags(ctx *cli.Context) service.OptionsIdentity {
+// parseIdentityFlags function fills in service command options from CLI context
+func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 	return service.OptionsIdentity{
 		Identity:   ctx.String(identityFlag.Name),
 		Passphrase: ctx.String(identityPassphraseFlag.Name),
+	}
+}
+
+// parseACLFlag function the acl data from CLI context
+func parseACLFlag(ctx *cli.Context) client.ACL {
+	aclValue := ctx.String(aclFlag.Name)
+	if aclValue == "" {
+		return client.ACL{}
+	}
+	splits := strings.Split(aclValue, ",")
+	return client.ACL{
+		ListIds: splits,
 	}
 }
 

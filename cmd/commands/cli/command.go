@@ -725,9 +725,12 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, tequi
 
 	ctx := cli.NewContext(nil, set, nil)
 
-	splits := strings.Split(ctx.String(aclFlag.Name), ",")
-	acl = tequilapi_client.ACL{
-		ListIds: splits,
+	aclFlagValue := ctx.String(aclFlag.Name)
+	if aclFlagValue != "" {
+		splits := strings.Split(ctx.String(aclFlag.Name), ",")
+		acl = tequilapi_client.ACL{
+			ListIds: splits,
+		}
 	}
 
 	switch serviceType {
