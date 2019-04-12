@@ -83,6 +83,8 @@ type serviceInfo struct {
 	Status string `json:"status"`
 
 	Proposal proposalRes `json:"proposal"`
+
+	ACL *[]market.ACL `json:"acl,omitempty"`
 }
 
 // ServiceEndpoint struct represents management of service resource and it's sub-resources

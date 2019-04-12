@@ -205,7 +205,7 @@ func Test_ServiceProposal_UnserializeWithACL(t *testing.T) {
 		],
 		"acl": [{
 			"protocol": "http",
-			"listIds": ["verified-streaming", "dvpn-traffic"],
+			"listIds": ["verified-traffic", "dvpn-traffic"],
 			"_links": {
 				"list": {
 					"href": "https://mysterium-oracle.mysterium.network/v1/lists/{rel}"
@@ -221,7 +221,7 @@ func Test_ServiceProposal_UnserializeWithACL(t *testing.T) {
 	acl := []ACL{
 		{
 			Protocol: "http",
-			ListIds:  []string{"verified-streaming", "dvpn-traffic"},
+			ListIds:  []string{"verified-traffic", "dvpn-traffic"},
 			Links: ACLLinks{
 				List: ACLList{
 					Href: "https://mysterium-oracle.mysterium.network/v1/lists/{rel}",

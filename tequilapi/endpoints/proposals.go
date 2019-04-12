@@ -74,6 +74,9 @@ type proposalRes struct {
 
 	// Metrics of the service
 	Metrics json.RawMessage `json:"metrics,omitempty"`
+
+	// ACL
+	ACL *[]market.ACL `json:"acl,omitempty"`
 }
 
 func proposalToRes(p market.ServiceProposal) proposalRes {
@@ -92,6 +95,7 @@ func proposalToRes(p market.ServiceProposal) proposalRes {
 				NodeType: p.ServiceDefinition.GetLocation().NodeType,
 			},
 		},
+		ACL: p.ACL,
 	}
 }
 
