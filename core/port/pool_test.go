@@ -26,29 +26,12 @@ import (
 )
 
 func TestAcquiredPortsAreUsable(t *testing.T) {
-	// given
 	pool := NewPool()
 
-	// when
-	tcpPort, _ := pool.Acquire("tcp")
-	// then
-	err := listenTcp(tcpPort.Num())
-	assert.NoError(t, err)
+	port, _ := pool.Acquire()
+	err := listenUdp(port.Num())
 
-	// when
-	udpPort, _ := pool.Acquire("udp")
-	// then
-	err = listenUdp(udpPort.Num())
 	assert.NoError(t, err)
-}
-
-func listenTcp(port int) error {
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(port))
-	if err != nil {
-		return err
-	}
-	defer listener.Close()
-	return nil
 }
 
 func listenUdp(port int) error {

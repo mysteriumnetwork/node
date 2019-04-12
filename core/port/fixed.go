@@ -28,6 +28,6 @@ func NewFixed(port int) *FixedPortSupplier {
 }
 
 // Acquire returns the fixed port
-func (fixed *FixedPortSupplier) Acquire(protocol string) (Port, error) {
+func (fixed *FixedPortSupplier) Acquire() (Port, error) {
 	return Port(fixed.number), nil
 }

@@ -41,16 +41,16 @@ func NewPool() *Pool {
 }
 
 // Acquire returns an unused port in pool's range
-func (pool *Pool) Acquire(protocol string) (Port, error) {
+func (pool *Pool) Acquire() (port Port, err error) {
 	p := pool.randomPort()
-	available, err := available(protocol, p)
+	available, err := available(p)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not acquire port")
 	}
 	if !available {
-		p, err = pool.seekAvailablePort(protocol)
+		p, err = pool.seekAvailablePort()
 	}
-	log.Debugf("%s supplying %v port %v, err %v", logPrefix, protocol, p, err)
+	log.Debugf("%s supplying port %v, err %v", logPrefix, p, err)
 	return Port(p), errors.Wrap(err, "could not acquire port")
 }
 
@@ -58,10 +58,10 @@ func (pool *Pool) randomPort() int {
 	return pool.start + pool.rand.Intn(pool.capacity)
 }
 
-func (pool *Pool) seekAvailablePort(protocol string) (int, error) {
+func (pool *Pool) seekAvailablePort() (int, error) {
 	for i := 0; i < pool.capacity; i++ {
 		p := pool.start + i
-		available, err := available(protocol, p)
+		available, err := available(p)
 		if available || err != nil {
 			return p, err
 		}
