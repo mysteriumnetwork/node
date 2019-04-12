@@ -65,10 +65,12 @@ type ACL struct {
 	Links    ACLLinks `json:"_links"`
 }
 
+// ACLLinks contains all the links to the corresponding resources
 type ACLLinks struct {
-	List ACLList
+	List ACLList `json:"list"`
 }
 
+// ACLList represents the way of reaching the list
 type ACLList struct {
 	Href string `json:"href"`
 }
@@ -122,6 +124,11 @@ func (proposal *ServiceProposal) SetProviderContact(providerID identity.Identity
 	proposal.ID = 1
 	proposal.ProviderID = providerID.Address
 	proposal.ProviderContacts = ContactList{providerContact}
+}
+
+// SetACL updates service proposal with the given ACL
+func (proposal *ServiceProposal) SetACL(acls *[]ACL) {
+	proposal.ACL = acls
 }
 
 // IsSupported returns true if this service proposal can be used for connections by service consumer

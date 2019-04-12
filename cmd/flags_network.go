@@ -43,6 +43,13 @@ var (
 		Usage: "`URL` of discovery service",
 		Value: metadata.DefaultNetwork.DiscoveryAPIAddress,
 	}
+
+	aclAddressFlag = cli.StringFlag{
+		Name:  "acl-oracle-address",
+		Usage: "`URL` of acl oracle endpoint for retrieving lists",
+		Value: metadata.DefaultNetwork.ACLOracleEndpointAddress,
+	}
+
 	brokerAddressFlag = cli.StringFlag{
 		Name:  "broker-address",
 		Usage: "`URI` of message broker",
@@ -81,25 +88,26 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		natPunchingFlag,
 		discoveryAddressFlag, brokerAddressFlag,
 		etherRPCFlag, etherContractPaymentsFlag,
-		qualityOracleFlag,
+		qualityOracleFlag, aclAddressFlag,
 	)
 }
 
 // ParseFlagsNetwork function fills in directory options from CLI context
 func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 	return node.OptionsNetwork{
-		ctx.GlobalBool(testFlag.Name),
-		ctx.GlobalBool(localnetFlag.Name),
+		Testnet:  ctx.GlobalBool(testFlag.Name),
+		Localnet: ctx.GlobalBool(localnetFlag.Name),
 
-		ctx.GlobalBool(identityCheckFlag.Name),
-		ctx.GlobalBool(natPunchingFlag.Name),
+		ExperimentIdentityCheck: ctx.GlobalBool(identityCheckFlag.Name),
+		ExperimentNATPunching:   ctx.GlobalBool(natPunchingFlag.Name),
 
-		ctx.GlobalString(discoveryAddressFlag.Name),
-		ctx.GlobalString(brokerAddressFlag.Name),
+		DiscoveryAPIAddress: ctx.GlobalString(discoveryAddressFlag.Name),
+		ACLEndpointAddress:  ctx.GlobalString(aclAddressFlag.Name),
+		BrokerAddress:       ctx.GlobalString(brokerAddressFlag.Name),
 
-		ctx.GlobalString(etherRPCFlag.Name),
-		ctx.GlobalString(etherContractPaymentsFlag.Name),
+		EtherClientRPC:       ctx.GlobalString(etherRPCFlag.Name),
+		EtherPaymentsAddress: ctx.GlobalString(etherContractPaymentsFlag.Name),
 
-		ctx.GlobalString(qualityOracleFlag.Name),
+		QualityOracle: ctx.GlobalString(qualityOracleFlag.Name),
 	}
 }

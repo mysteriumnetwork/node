@@ -19,7 +19,10 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	"github.com/mysteriumnetwork/node/market"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -85,6 +88,7 @@ type serviceInfo struct {
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
 type ServiceEndpoint struct {
 	serviceManager ServiceManager
+	aclEndpointURL string
 	optionsParser  map[string]ServiceOptionsParser
 }
 
@@ -99,10 +103,11 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, aclEndpoint string) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager: serviceManager,
 		optionsParser:  optionsParser,
+		aclEndpointURL: aclEndpoint,
 	}
 }
 
@@ -200,7 +205,9 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, sr.Options)
+	acls := getACLData(sr, "http", se.aclEndpointURL)
+
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, acls, sr.Options)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -214,6 +221,24 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	resp.WriteHeader(http.StatusCreated)
 	statusResponse := toServiceInfoResponse(id, instance)
 	utils.WriteAsJSON(statusResponse, resp)
+}
+
+func getACLData(sr serviceRequest, protocol, href string) *[]market.ACL {
+	if len(sr.ACL.ListIds) == 0 {
+		return nil
+	}
+	acls := &[]market.ACL{
+		{
+			Protocol: protocol,
+			ListIds:  sr.ACL.ListIds,
+			Links: market.ACLLinks{
+				List: market.ACLList{
+					Href: fmt.Sprintf("%v{ref}", href),
+				},
+			},
+		},
+	}
+	return acls
 }
 
 // ServiceStop stops service on the node.
@@ -260,8 +285,8 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) {
-	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser)
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, aclEndpoint string) {
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, aclEndpoint)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
 	router.POST("/services", serviceEndpoint.ServiceStart)
@@ -359,7 +384,7 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 
 // ServiceManager represents service manager that will be used for manipulation node services.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, options service.Options) (service.ID, error)
+	Start(providerID identity.Identity, serviceType string, acl *[]market.ACL, options service.Options) (service.ID, error)
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error

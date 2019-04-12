@@ -26,6 +26,7 @@ type OptionsNetwork struct {
 	ExperimentNATPunching   bool
 
 	DiscoveryAPIAddress string
+	ACLEndpointAddress  string
 	BrokerAddress       string
 
 	EtherClientRPC       string
