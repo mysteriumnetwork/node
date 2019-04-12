@@ -26,13 +26,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Get_ACL(t *testing.T) {
+func Test_Get_AccessPolicies(t *testing.T) {
 	router := httprouter.New()
-	AddRoutesForACL(router)
+	AddRoutesForAccessPolicies(router)
 
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"/acl",
+		"/access-policies",
 		nil,
 	)
 	assert.Nil(t, err)

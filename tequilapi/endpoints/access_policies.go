@@ -24,12 +24,12 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-// swagger:model ACL
-type aclCollection struct {
-	Entries []acl `json:"entries"`
+// swagger:model AccessPolicies
+type accessPolicyCollection struct {
+	Entries []accessPolicy `json:"entries"`
 }
 
-type acl struct {
+type accessPolicy struct {
 	Name        string       `json:"name"`
 	Description string       `json:"description"`
 	Allow       []accessRule `json:"allow"`
@@ -40,10 +40,10 @@ type accessRule struct {
 	Value string `json:"value"`
 }
 
-type aclEndpoint struct {
+type accessPoliciesEndpoint struct {
 }
 
-var staticAccessList = acl{
+var staticAccessPolicy = accessPolicy{
 	Name:        "mysterium",
 	Description: "Mysterium Network approved identities",
 	Allow: []accessRule{
@@ -54,27 +54,27 @@ var staticAccessList = acl{
 	},
 }
 
-// NewACLEndpoint creates and returns ACL endpoint
-func NewACLEndpoint() *aclEndpoint {
-	return &aclEndpoint{}
+// NewAccessPoliciesEndpoint creates and returns access policies endpoint
+func NewAccessPoliciesEndpoint() *accessPoliciesEndpoint {
+	return &accessPoliciesEndpoint{}
 }
 
-// swagger:operation GET /acl ACL
+// swagger:operation GET /access-policies AccessPolicies
 // ---
 // summary: Returns access lists
-// description: Returns list of access lists
+// description: Returns list of access policies
 // responses:
 //   200:
-//     description: List of access lists
+//     description: List of access policies
 //     schema:
-//       "$ref": "#/definitions/ACL"
-func (ale *aclEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	r := aclCollection{Entries: []acl{staticAccessList}}
+//       "$ref": "#/definitions/AccessPolicies"
+func (ape *accessPoliciesEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r := accessPolicyCollection{Entries: []accessPolicy{staticAccessPolicy}}
 	utils.WriteAsJSON(r, resp)
 }
 
-// AddRoutesForACL attaches ACL endpoints to router
-func AddRoutesForACL(router *httprouter.Router) {
-	ale := NewACLEndpoint()
-	router.GET("/acl", ale.List)
+// AddRoutesForAccessPolicies attaches access policies endpoints to router
+func AddRoutesForAccessPolicies(router *httprouter.Router) {
+	ape := NewAccessPoliciesEndpoint()
+	router.GET("/access-policies", ape.List)
 }
