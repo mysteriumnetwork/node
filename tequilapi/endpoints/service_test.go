@@ -442,7 +442,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 				"providerId": "0xProviderId",
 				"serviceType": "mockAccessPolicyService",
 				"serviceDefinition": {
-					"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+					"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
 				},
 				"accessPolicies": [
 					{
