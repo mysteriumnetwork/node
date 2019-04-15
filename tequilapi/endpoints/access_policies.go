@@ -24,12 +24,12 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-// swagger:model AccessLists
-type accessLists struct {
-	AccessLists []accessList `json:"accessLists"`
+// swagger:model AccessPolicies
+type accessPolicyCollection struct {
+	Entries []accessPolicy `json:"entries"`
 }
 
-type accessList struct {
+type accessPolicy struct {
 	Name        string       `json:"name"`
 	Description string       `json:"description"`
 	Allow       []accessRule `json:"allow"`
@@ -40,10 +40,10 @@ type accessRule struct {
 	Value string `json:"value"`
 }
 
-type accessListsEndpoint struct {
+type accessPoliciesEndpoint struct {
 }
 
-var staticAccessList = accessList{
+var staticAccessPolicy = accessPolicy{
 	Name:        "mysterium",
 	Description: "Mysterium Network approved identities",
 	Allow: []accessRule{
@@ -54,27 +54,27 @@ var staticAccessList = accessList{
 	},
 }
 
-// NewAccessListsEndpoint creates and returns access lists endpoint
-func NewAccessListsEndpoint() *accessListsEndpoint {
-	return &accessListsEndpoint{}
+// NewAccessPoliciesEndpoint creates and returns access policies endpoint
+func NewAccessPoliciesEndpoint() *accessPoliciesEndpoint {
+	return &accessPoliciesEndpoint{}
 }
 
-// swagger:operation GET /access-lists AccessLists listAccessLists
+// swagger:operation GET /access-policies AccessPolicies
 // ---
 // summary: Returns access lists
-// description: Returns list of access lists
+// description: Returns list of access policies
 // responses:
 //   200:
-//     description: List of access lists
+//     description: List of access policies
 //     schema:
-//       "$ref": "#/definitions/AccessLists"
-func (ale *accessListsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	r := accessLists{AccessLists: []accessList{staticAccessList}}
+//       "$ref": "#/definitions/AccessPolicies"
+func (ape *accessPoliciesEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r := accessPolicyCollection{Entries: []accessPolicy{staticAccessPolicy}}
 	utils.WriteAsJSON(r, resp)
 }
 
-// AddRoutesForAccessLists attaches access lists endpoints to router
-func AddRoutesForAccessLists(router *httprouter.Router) {
-	ale := NewAccessListsEndpoint()
-	router.GET("/access-lists", ale.List)
+// AddRoutesForAccessPolicies attaches access policies endpoints to router
+func AddRoutesForAccessPolicies(router *httprouter.Router) {
+	ape := NewAccessPoliciesEndpoint()
+	router.GET("/access-policies", ape.List)
 }
