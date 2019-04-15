@@ -55,7 +55,7 @@ var (
 
 	accessPolicyFlag = cli.StringFlag{
 		Name:  "access-policy.list",
-		Usage: "Comma separated list that determines the the allowed identities on our service.",
+		Usage: "Comma separated list that determines the allowed identities on our service.",
 		Value: "",
 	}
 )
@@ -187,7 +187,7 @@ func parseAccessPolicyFlag(ctx *cli.Context) client.AccessPolicy {
 	}
 	splits := strings.Split(policies, ",")
 	return client.AccessPolicy{
-		ListIds: splits,
+		IDs: splits,
 	}
 }
 

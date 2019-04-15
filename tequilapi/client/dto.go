@@ -157,5 +157,5 @@ type ServiceSessionDTO struct {
 
 // AccessPolicy represents the access controls for service start
 type AccessPolicy struct {
-	ListIds []string `json:"listIds"`
+	IDs []string `json:"ids"`
 }

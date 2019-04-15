@@ -56,7 +56,7 @@ type serviceRequest struct {
 // accessPolicy represents the access controls
 // swagger:model AccessPolicyRequest
 type accessPolicyRequest struct {
-	ListIds []string `json:"listIds"`
+	Ids []string `json:"Ids"`
 }
 
 // swagger:model ServiceListDTO
@@ -226,15 +226,15 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 }
 
 func getAccessPolicyData(sr serviceRequest, href string) *[]market.AccessPolicy {
-	if len(sr.AccessPolicy.ListIds) == 0 {
+	if len(sr.AccessPolicy.Ids) == 0 {
 		return nil
 	}
 
-	result := make([]market.AccessPolicy, len(sr.AccessPolicy.ListIds))
+	result := make([]market.AccessPolicy, len(sr.AccessPolicy.Ids))
 	for i := range result {
 		result[i] = market.AccessPolicy{
-			ID:     sr.AccessPolicy.ListIds[i],
-			Source: fmt.Sprintf("%v%v", href, sr.AccessPolicy.ListIds[i]),
+			ID:     sr.AccessPolicy.Ids[i],
+			Source: fmt.Sprintf("%v%v", href, sr.AccessPolicy.Ids[i]),
 		}
 	}
 
@@ -305,8 +305,8 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, 
 		return serviceRequest{}, err
 	}
 
-	if jsonData.AccessPolicy.ListIds == nil {
-		jsonData.AccessPolicy.ListIds = []string{}
+	if jsonData.AccessPolicy.Ids == nil {
+		jsonData.AccessPolicy.Ids = []string{}
 	}
 
 	sr := serviceRequest{

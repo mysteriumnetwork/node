@@ -726,10 +726,10 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, tequi
 	ctx := cli.NewContext(nil, set, nil)
 
 	apFlagValue := ctx.String(accessPolicyFlag.Name)
-	if apFlagValue != "" {
+	if len(apFlagValue) > 0 {
 		splits := strings.Split(ctx.String(accessPolicyFlag.Name), ",")
 		ap = tequilapi_client.AccessPolicy{
-			ListIds: splits,
+			IDs: splits,
 		}
 	}
 
