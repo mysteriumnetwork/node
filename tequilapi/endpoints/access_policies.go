@@ -30,7 +30,8 @@ type accessPolicyCollection struct {
 }
 
 type accessPolicy struct {
-	Name        string       `json:"name"`
+	ID          string       `json:"id"`
+	Title       string       `json:"title"`
 	Description string       `json:"description"`
 	Allow       []accessRule `json:"allow"`
 }
@@ -44,7 +45,8 @@ type accessPoliciesEndpoint struct {
 }
 
 var staticAccessPolicy = accessPolicy{
-	Name:        "mysterium",
+	ID:          "mysterium",
+	Title:       "Mysterium verified traffic",
 	Description: "Mysterium Network approved identities",
 	Allow: []accessRule{
 		{
