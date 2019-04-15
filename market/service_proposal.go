@@ -60,19 +60,8 @@ type ServiceProposal struct {
 
 // AccessPolicy represents the access controls for proposal
 type AccessPolicy struct {
-	Protocol string            `json:"protocol"`
-	ListIds  []string          `json:"listIds"`
-	Links    AccessPolicyLinks `json:"_links"`
-}
-
-// AccessPolicyLinks contains all the links to the corresponding resources
-type AccessPolicyLinks struct {
-	List AccessPolicyList `json:"list"`
-}
-
-// AccessPolicyList represents the way of reaching the list
-type AccessPolicyList struct {
-	Href string `json:"href"`
+	ID     string `json:"id"`
+	Source string `json:"source"`
 }
 
 // UnmarshalJSON is custom json unmarshaler to dynamically fill in ServiceProposal values

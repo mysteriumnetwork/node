@@ -48,17 +48,24 @@ var (
 	}
 	ap = []market.AccessPolicy{
 		{
-			Protocol: "http",
-			ListIds:  []string{"verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"},
-			Links: market.AccessPolicyLinks{
-				List: market.AccessPolicyList{
-					Href: fmt.Sprintf("%v{ref}", mockAccessPolicyEndpoint),
-				},
-			},
+			ID:     "verified-traffic",
+			Source: fmt.Sprintf("%v%v", mockAccessPolicyEndpoint, "verified-traffic"),
+		},
+		{
+			ID:     "0x0000000000000001",
+			Source: fmt.Sprintf("%v%v", mockAccessPolicyEndpoint, "0x0000000000000001"),
+		},
+		{
+			ID:     "dvpn-traffic",
+			Source: fmt.Sprintf("%v%v", mockAccessPolicyEndpoint, "dvpn-traffic"),
+		},
+		{
+			ID:     "12312312332132",
+			Source: fmt.Sprintf("%v%v", mockAccessPolicyEndpoint, "12312312332132"),
 		},
 	}
-	serviceTypeWithAccessPolicy = "mockaclservice"
-	mockACLProposal             = market.ServiceProposal{
+	serviceTypeWithAccessPolicy  = "mockAccessPolicyService"
+	mockProposalWithAccessPolicy = market.ServiceProposal{
 		ID:                1,
 		ServiceType:       serviceTypeWithAccessPolicy,
 		ServiceDefinition: TestServiceDefinition{},
@@ -67,7 +74,7 @@ var (
 	}
 	mockServiceRunning                 = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil)
 	mockServiceStopped                 = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil)
-	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, service.Running, nil, mockACLProposal, nil, nil)
+	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposalWithAccessPolicy, nil, nil)
 )
 
 type fancyServiceOptions struct {
@@ -76,7 +83,7 @@ type fancyServiceOptions struct {
 
 type mockServiceManager struct{}
 
-func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, acl *[]market.AccessPolicy, options service.Options) (service.ID, error) {
+func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error) {
 	if serviceType == serviceTypeWithAccessPolicy {
 		return mockAccessPolicyServiceID, nil
 	}
@@ -410,7 +417,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 		http.MethodGet,
 		"/irrelevant",
 		strings.NewReader(`{
-			"type": "mockaclservice",
+			"type": "mockAccessPolicyService",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
 			"acl": {
 				"listIds": ["verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
@@ -427,30 +434,32 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 		`{
 			"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c9",
 			"providerId": "0xProviderId",
-			"type": "mockaclservice",
+			"type": "mockAccessPolicyService",
 			"options": {"foo": "bar"},
 			"status": "Running",
 			"proposal": {
 				"id": 1,
 				"providerId": "0xProviderId",
-				"serviceType": "mockaclservice",
+				"serviceType": "mockAccessPolicyService",
 				"serviceDefinition": {
 					"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
 				},
 				"accessPolicies": [
 					{
-						"_links": {
-							"list": {
-								"href": "https://some.domain/api/v1/lists/{ref}"
-							}
-						},
-						"listIds": [
-							"verified-traffic",
-							"dvpn-traffic",
-							"12312312332132",
-							"0x0000000000000001"
-						],
-						"protocol": "http"
+						"id":"verified-traffic",
+						"source": "https://some.domain/api/v1/lists/verified-traffic"
+					},
+					{
+						"id":"0x0000000000000001",
+						"source": "https://some.domain/api/v1/lists/0x0000000000000001"
+					},
+					{
+						"id":"dvpn-traffic",
+						"source": "https://some.domain/api/v1/lists/dvpn-traffic"
+					},
+					{
+						"id":"12312312332132",
+						"source": "https://some.domain/api/v1/lists/12312312332132"
 					}
 				]
 			}

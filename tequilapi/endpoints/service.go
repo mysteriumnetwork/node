@@ -207,7 +207,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	ap := getAccessPolicyData(sr, "http", se.accessPolicyEndpointURL)
+	ap := getAccessPolicyData(sr, se.accessPolicyEndpointURL)
 
 	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, ap, sr.Options)
 	if err == service.ErrorLocation {
@@ -225,22 +225,20 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
-func getAccessPolicyData(sr serviceRequest, protocol, href string) *[]market.AccessPolicy {
+func getAccessPolicyData(sr serviceRequest, href string) *[]market.AccessPolicy {
 	if len(sr.AccessPolicy.ListIds) == 0 {
 		return nil
 	}
-	acls := &[]market.AccessPolicy{
-		{
-			Protocol: protocol,
-			ListIds:  sr.AccessPolicy.ListIds,
-			Links: market.AccessPolicyLinks{
-				List: market.AccessPolicyList{
-					Href: fmt.Sprintf("%v{ref}", href),
-				},
-			},
-		},
+
+	result := make([]market.AccessPolicy, len(sr.AccessPolicy.ListIds))
+	for i := range result {
+		result[i] = market.AccessPolicy{
+			ID:     sr.AccessPolicy.ListIds[i],
+			Source: fmt.Sprintf("%v%v", href, sr.AccessPolicy.ListIds[i]),
+		}
 	}
-	return acls
+
+	return &result
 }
 
 // ServiceStop stops service on the node.
@@ -287,8 +285,8 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, aclEndpoint string) {
-	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, aclEndpoint)
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string) {
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, accessPolicyEndpointURL)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
 	router.POST("/services", serviceEndpoint.ServiceStart)

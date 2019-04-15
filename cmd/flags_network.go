@@ -46,7 +46,7 @@ var (
 
 	accessPolicyAddressFlag = cli.StringFlag{
 		Name:  "access-policy-address",
-		Usage: "`URL` of access policy oracle endpoint for retrieving lists of access policies",
+		Usage: "`URL` of trust oracle endpoint for retrieving lists of access policies",
 		Value: metadata.DefaultNetwork.AccessPolicyOracleEndpointAddress,
 	}
 

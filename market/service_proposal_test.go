@@ -204,13 +204,12 @@ func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
 			{ "type" : "mock_contact" , "definition" : {}}
 		],
 		"access_policies": [{
-			"protocol": "http",
-			"listIds": ["verified-traffic", "dvpn-traffic"],
-			"_links": {
-				"list": {
-					"href": "https://mysterium-oracle.mysterium.network/v1/lists/{rel}"
-				}
-			}
+			"id": "verified-traffic",
+			"source": "https://mysterium-oracle.mysterium.network/v1/lists/verified-traffic"
+		},
+		{
+			"id": "dvpn-traffic",
+			"source": "https://mysterium-oracle.mysterium.network/v1/lists/dvpn-traffic"
 		}]
 	}`)
 
@@ -220,13 +219,12 @@ func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
 
 	accessPolicies := []AccessPolicy{
 		{
-			Protocol: "http",
-			ListIds:  []string{"verified-traffic", "dvpn-traffic"},
-			Links: AccessPolicyLinks{
-				List: AccessPolicyList{
-					Href: "https://mysterium-oracle.mysterium.network/v1/lists/{rel}",
-				},
-			},
+			ID:     "verified-traffic",
+			Source: "https://mysterium-oracle.mysterium.network/v1/lists/verified-traffic",
+		},
+		{
+			ID:     "dvpn-traffic",
+			Source: "https://mysterium-oracle.mysterium.network/v1/lists/dvpn-traffic",
 		},
 	}
 	expected := ServiceProposal{
