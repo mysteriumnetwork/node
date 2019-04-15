@@ -28,10 +28,10 @@ import (
 
 // Options describes options which are required to start Wireguard service
 type Options struct {
-	ConnectDelay int       `json:"connectDelay"`
-	PortMin      int       `json:"portMin"`
-	PortMax      int       `json:"portMax"`
-	Subnet       net.IPNet `json:"subnet"`
+	ConnectDelay   int       `json:"connectDelay"`
+	PortMin        int       `json:"portMin"`
+	MaxConnections int       `json:"maxConnections"`
+	Subnet         net.IPNet `json:"subnet"`
 }
 
 var (
@@ -45,31 +45,21 @@ var (
 		Usage: "Min value of the allowed range of listen ports",
 		Value: DefaultOptions.PortMin,
 	}
-	portMax = cli.IntFlag{
-		Name:  "wireguard.listen.port.max",
-		Usage: "Max value of the allowed range of listen ports",
-		Value: DefaultOptions.PortMax,
+	maxConnections = cli.IntFlag{
+		Name:  "wireguard.listen.max-connections",
+		Usage: "Maximum number of connections",
+		Value: DefaultOptions.MaxConnections,
 	}
 	subnet = cli.StringFlag{
 		Name:  "wireguard.allowed.subnet",
 		Usage: "Subnet allowed for using by the wireguard services",
 		Value: DefaultOptions.Subnet.String(),
 	}
-
-	// DefaultOptions is a wireguard service configuration that will be used if no options provided.
-	DefaultOptions = Options{
-		ConnectDelay: 2000,
-		PortMin:      52820,
-		PortMax:      53075,
-		Subnet: net.IPNet{
-			IP:   net.ParseIP("10.182.0.0"),
-			Mask: net.IPv4Mask(255, 255, 0, 0),
-		}}
 )
 
 // RegisterFlags function register Wireguard flags to flag list
 func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, delayFlag, portMin, portMax, subnet)
+	*flags = append(*flags, delayFlag, portMin, maxConnections, subnet)
 }
 
 // ParseFlags function fills in Wireguard options from CLI context
@@ -81,10 +71,10 @@ func ParseFlags(ctx *cli.Context) service.Options {
 	}
 
 	return Options{
-		ConnectDelay: ctx.Int(delayFlag.Name),
-		PortMin:      ctx.Int(portMin.Name),
-		PortMax:      ctx.Int(portMax.Name),
-		Subnet:       *ipnet,
+		ConnectDelay:   ctx.Int(delayFlag.Name),
+		PortMin:        ctx.Int(portMin.Name),
+		MaxConnections: ctx.Int(maxConnections.Name),
+		Subnet:         *ipnet,
 	}
 }
 
@@ -102,25 +92,25 @@ func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
 // MarshalJSON implements json.Marshaler interface to provide human readable configuration.
 func (o Options) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		ConnectDelay int    `json:"connectDelay"`
-		PortMin      int    `json:"portMin"`
-		PortMax      int    `json:"portMax"`
-		Subnet       string `json:"subnet"`
+		ConnectDelay   int    `json:"connectDelay"`
+		PortMin        int    `json:"portMin"`
+		MaxConnections int    `json:"maxConnections"`
+		Subnet         string `json:"subnet"`
 	}{
-		ConnectDelay: o.ConnectDelay,
-		PortMin:      o.PortMin,
-		PortMax:      o.PortMax,
-		Subnet:       o.Subnet.String(),
+		ConnectDelay:   o.ConnectDelay,
+		PortMin:        o.PortMin,
+		MaxConnections: o.MaxConnections,
+		Subnet:         o.Subnet.String(),
 	})
 }
 
 // UnmarshalJSON implements json.Unmarshaler interface to receive human readable configuration.
 func (o *Options) UnmarshalJSON(data []byte) error {
 	var options struct {
-		ConnectDelay int    `json:"connectDelay"`
-		PortMin      int    `json:"portMin"`
-		PortMax      int    `json:"portMax"`
-		Subnet       string `json:"subnet"`
+		ConnectDelay   int    `json:"connectDelay"`
+		PortMin        int    `json:"portMin"`
+		MaxConnections int    `json:"maxConnections"`
+		Subnet         string `json:"subnet"`
 	}
 
 	if err := json.Unmarshal(data, &options); err != nil {
@@ -133,8 +123,8 @@ func (o *Options) UnmarshalJSON(data []byte) error {
 	if options.PortMin != 0 {
 		o.PortMin = options.PortMin
 	}
-	if options.PortMax != 0 {
-		o.PortMax = options.PortMax
+	if options.MaxConnections != 0 {
+		o.MaxConnections = options.MaxConnections
 	}
 	if len(options.Subnet) > 0 {
 		_, ipnet, err := net.ParseCIDR(options.Subnet)

@@ -23,26 +23,25 @@ import (
 	"sync"
 )
 
-// MaxResources sets the limit to the maximum number of wireguard connections.
-const MaxResources = 253
-
 // Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.
 type Allocator struct {
 	IPAddresses map[int]struct{}
 	mu          sync.Mutex
 
-	listenPort int
-	subnet     net.IPNet
+	ports          PortSupplier
+	maxConnections int
+	subnet         net.IPNet
 }
 
 // NewAllocator creates new resource pool for wireguard connection.
-func NewAllocator(listenPort int, subnet net.IPNet) *Allocator {
+func NewAllocator(portSupplier PortSupplier, maxConnections int, subnet net.IPNet) *Allocator {
 	return &Allocator{
 		IPAddresses: make(map[int]struct{}),
 
-		listenPort: listenPort,
-		subnet:     subnet,
+		ports:          portSupplier,
+		maxConnections: maxConnections,
+		subnet:         subnet,
 	}
 }
 
@@ -61,7 +60,7 @@ func (a *Allocator) AllocateIPNet() (net.IPNet, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	for i := 2; i < MaxResources+2; i++ {
+	for i := 2; i < a.maxConnections+2; i++ {
 		if _, ok := a.IPAddresses[i]; !ok {
 			a.IPAddresses[i] = struct{}{}
 			return calcIPNet(a.subnet, i), nil
@@ -72,7 +71,8 @@ func (a *Allocator) AllocateIPNet() (net.IPNet, error) {
 
 // AllocatePort provides available UDP port for the wireguard endpoint.
 func (a *Allocator) AllocatePort() (int, error) {
-	return a.listenPort, nil
+	p, err := a.ports.Acquire()
+	return int(p), err
 }
 
 // ReleaseInterface is not required for Windows implementation and left here just to satisfy the interface.

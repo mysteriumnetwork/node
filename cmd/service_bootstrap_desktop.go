@@ -80,7 +80,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 					di.EventBus)
 			}
 
-			return wireguard_service.NewManager(di.IPResolver, di.NATService, mapPort, wgOptions),
+			return wireguard_service.NewManager(di.IPResolver, di.NATService, mapPort, wgOptions, di.PortPool),
 				wireguard_service.GetProposal(location), nil
 		},
 	)

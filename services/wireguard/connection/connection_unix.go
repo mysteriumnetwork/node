@@ -20,11 +20,13 @@
 package connection
 
 import (
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/services/wireguard/service"
 )
 
 func connectionResourceAllocator() *resources.Allocator {
 	// Resource allocator uses config received from the provider. No configuration options required, passing default ones.
-	return resources.NewAllocator(service.DefaultOptions.PortMin, service.DefaultOptions.PortMax, service.DefaultOptions.Subnet)
+	opts := service.DefaultOptions
+	return resources.NewAllocator(port.NewFixed(opts.PortMin), opts.MaxConnections, opts.Subnet)
 }

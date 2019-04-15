@@ -1,3 +1,5 @@
+//+build windows
+
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -15,16 +17,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package service
 
-import (
-	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/services/wireguard/resources"
-	"github.com/mysteriumnetwork/node/services/wireguard/service"
-)
+import "net"
 
-func connectionResourceAllocator() *resources.Allocator {
-	// Resource allocator uses config received from the provider. No configuration options required, passing default ones.
-	opts := service.DefaultOptions
-	return resources.NewAllocator(port.NewFixed(opts.PortMin), opts.MaxConnections, opts.Subnet)
-}
+// DefaultOptions is a wireguard service configuration that will be used if no options provided.
+var DefaultOptions = Options{
+	ConnectDelay:   2000,
+	PortMin:        0,
+	MaxConnections: 253,
+	Subnet: net.IPNet{
+		IP:   net.ParseIP("10.182.0.0"),
+		Mask: net.IPv4Mask(255, 255, 0, 0),
+	}}

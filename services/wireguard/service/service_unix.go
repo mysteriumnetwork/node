@@ -25,6 +25,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -39,9 +40,16 @@ func NewManager(
 	ipResolver ip.Resolver,
 	natService nat.NATService,
 	portMap func(port int) (releasePortMapping func()),
-	options Options) *Manager {
+	options Options,
+	portPool resources.PortSupplier,
+) *Manager {
 
-	resourceAllocator := resources.NewAllocator(options.PortMin, options.PortMax, options.Subnet)
+	portSupplier := portPool
+	if options.PortMin != 0 {
+		portSupplier = port.NewFixed(options.PortMin)
+	}
+
+	resourceAllocator := resources.NewAllocator(portSupplier, options.MaxConnections, options.Subnet)
 	return &Manager{
 		natService: natService,
 		ipResolver: ipResolver,

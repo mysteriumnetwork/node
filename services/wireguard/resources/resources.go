@@ -15,16 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package connection
+package resources
 
-import (
-	"github.com/mysteriumnetwork/node/core/port"
-	"github.com/mysteriumnetwork/node/services/wireguard/resources"
-	"github.com/mysteriumnetwork/node/services/wireguard/service"
-)
+import "github.com/mysteriumnetwork/node/core/port"
 
-func connectionResourceAllocator() *resources.Allocator {
-	// Resource allocator uses config received from the provider. No configuration options required, passing default ones.
-	opts := service.DefaultOptions
-	return resources.NewAllocator(port.NewFixed(opts.PortMin), opts.MaxConnections, opts.Subnet)
+// PortSupplier supplies ports to wireguard allocator
+type PortSupplier interface {
+	Acquire() (port.Port, error)
 }
