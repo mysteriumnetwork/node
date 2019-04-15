@@ -61,7 +61,7 @@ type NATEventGetter interface {
 }
 
 type portSupplier interface {
-	Acquire(protocol string) (port.Port, error)
+	Acquire() (port.Port, error)
 }
 
 // Manager represents entrypoint for Openvpn service with top level components
@@ -96,7 +96,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	servicePort, err := m.ports.Acquire(m.serviceOptions.Protocol)
+	servicePort, err := m.ports.Acquire()
 	if err != nil {
 		return errors.Wrap(err, "failed to acquire an unused port")
 	}
