@@ -80,7 +80,7 @@ func NewLocationEndpoint(locationResolver location.Resolver) *LocationEndpoint {
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	currentLocation, err := le.locationResolver.DetectLocation(nil)
+	currentLocation, err := le.locationResolver.DetectLocation()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return
@@ -105,7 +105,7 @@ func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *LocationEndpoint) GetLocationByIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	ip := params.ByName("ip")
-	location, err := le.locationResolver.DetectLocation(net.ParseIP(ip))
+	location, err := le.locationResolver.ResolveLocation(net.ParseIP(ip))
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return

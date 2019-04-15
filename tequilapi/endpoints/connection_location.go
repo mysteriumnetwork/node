@@ -60,7 +60,7 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.Response
 		return
 	}
 
-	currentLocation, err := le.locationResolver.DetectLocation(nil)
+	currentLocation, err := le.locationResolver.DetectLocation()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return

@@ -23,7 +23,8 @@ import (
 
 // Resolver allows resolving location by ip
 type Resolver interface {
-	DetectLocation(ip net.IP) (Location, error)
+	DetectLocation() (Location, error)
+	ResolveLocation(ip net.IP) (Location, error)
 }
 
 // Cache allows caching location

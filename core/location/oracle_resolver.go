@@ -44,7 +44,13 @@ func NewOracleResolver(address string) *oracleResolver {
 	}
 }
 
-func (o *oracleResolver) DetectLocation(ip net.IP) (location Location, err error) {
+// DetectLocation detects current IP-address provides location information for the IP.
+func (o *oracleResolver) DetectLocation() (location Location, err error) {
+	return o.ResolveLocation(nil)
+}
+
+// ResolveLocation maps given ip to country.
+func (o *oracleResolver) ResolveLocation(ip net.IP) (location Location, err error) {
 	var ipAddress string
 	if ip != nil {
 		ipAddress = ip.String()

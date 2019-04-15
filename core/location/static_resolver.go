@@ -53,17 +53,25 @@ func NewFailingResolver(err error) *StaticResolver {
 	}
 }
 
-// DetectLocation maps given ip to country
-func (d *StaticResolver) DetectLocation(ip net.IP) (Location, error) {
+// DetectLocation detects current IP-address provides location information for the IP.
+func (d *StaticResolver) DetectLocation() (Location, error) {
 	pubIP, err := d.ipResolver.GetPublicIP()
 	if err != nil {
 		return Location{}, err
 	}
+	return d.ResolveLocation(net.ParseIP(pubIP))
+}
 
+// ResolveLocation maps given ip to country.
+func (d *StaticResolver) ResolveLocation(ip net.IP) (Location, error) {
+	var ipAddress string
+	if ip != nil {
+		ipAddress = ip.String()
+	}
 	return Location{
 		Country:  d.country,
 		City:     d.city,
 		NodeType: d.nodeType,
-		IP:       pubIP,
+		IP:       ipAddress,
 	}, d.err
 }

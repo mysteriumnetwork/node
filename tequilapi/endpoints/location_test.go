@@ -105,7 +105,11 @@ type locationResolverMock struct {
 	ip string
 }
 
-func (r *locationResolverMock) DetectLocation(ip net.IP) (location.Location, error) {
+func (r *locationResolverMock) DetectLocation() (location.Location, error) {
+	return r.ResolveLocation(nil)
+}
+
+func (r *locationResolverMock) ResolveLocation(ip net.IP) (location.Location, error) {
 	loc := location.Location{
 		ASN:       62179,
 		City:      "Vilnius",

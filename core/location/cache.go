@@ -36,7 +36,7 @@ func (lc *cache) Get() Location {
 
 // Stores location to cache
 func (lc *cache) RefreshAndGet() (Location, error) {
-	location, err := lc.locationDetector.DetectLocation(nil)
+	location, err := lc.locationDetector.DetectLocation()
 	lc.location = location
 	return lc.location, err
 }

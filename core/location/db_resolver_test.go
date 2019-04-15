@@ -45,7 +45,7 @@ func TestResolverResolveCountry(t *testing.T) {
 		resolver, err := NewExternalDBResolver("db/GeoLite2-Country.mmdb", ip.NewResolverMock(tt.ip))
 		assert.NoError(t, err)
 
-		got, err := resolver.DetectLocation(net.ParseIP(tt.ip))
+		got, err := resolver.ResolveLocation(net.ParseIP(tt.ip))
 		fmt.Println(got, err)
 
 		assert.Equal(t, tt.want, got.Country, tt.ip)

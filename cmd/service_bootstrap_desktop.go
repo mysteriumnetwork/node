@@ -57,7 +57,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		wireguard.ServiceType,
 		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-			location, err := di.LocationResolver.DetectLocation(nil)
+			location, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
@@ -86,7 +86,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 	createService := func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-		loc, err := di.LocationResolver.DetectLocation(nil)
+		loc, err := di.LocationResolver.DetectLocation()
 		if err != nil {
 			return nil, market.ServiceProposal{}, err
 		}
@@ -145,7 +145,7 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		service_noop.ServiceType,
 		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-			location, err := di.LocationResolver.DetectLocation(nil)
+			location, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
