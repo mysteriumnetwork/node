@@ -46,7 +46,7 @@ var (
 
 	accessPolicyAddressFlag = cli.StringFlag{
 		Name:  "access-policy-address",
-		Usage: "`URL` of acl oracle endpoint for retrieving lists of access policies",
+		Usage: "`URL` of access policy oracle endpoint for retrieving lists of access policies",
 		Value: metadata.DefaultNetwork.AccessPolicyOracleEndpointAddress,
 	}
 
@@ -101,9 +101,9 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ExperimentIdentityCheck: ctx.GlobalBool(identityCheckFlag.Name),
 		ExperimentNATPunching:   ctx.GlobalBool(natPunchingFlag.Name),
 
-		DiscoveryAPIAddress: ctx.GlobalString(discoveryAddressFlag.Name),
-		ACLEndpointAddress:  ctx.GlobalString(accessPolicyAddressFlag.Name),
-		BrokerAddress:       ctx.GlobalString(brokerAddressFlag.Name),
+		DiscoveryAPIAddress:         ctx.GlobalString(discoveryAddressFlag.Name),
+		AccessPolicyEndpointAddress: ctx.GlobalString(accessPolicyAddressFlag.Name),
+		BrokerAddress:               ctx.GlobalString(brokerAddressFlag.Name),
 
 		EtherClientRPC:       ctx.GlobalString(etherRPCFlag.Name),
 		EtherPaymentsAddress: ctx.GlobalString(etherContractPaymentsFlag.Name),

@@ -43,7 +43,7 @@ import (
 const cliCommandName = "cli"
 
 const serviceHelp = `service <action> [args]
-	start	<ProviderID> <ServiceType> [acl] [options]
+	start	<ProviderID> <ServiceType> [access-policies] [options]
 	stop	<ServiceID>
 	status	<ServiceID>
 	list
@@ -89,7 +89,7 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 
 var accessPolicyFlag = cli.StringFlag{
 	Name:  "access-policy.list",
-	Usage: "acl lists to use in order to limit access to the service. Accepts a comma separated list. For example: mysterium,private",
+	Usage: "access policy lists to use in order to limit access to the service. Accepts a comma separated list. For example: mysterium,private",
 	Value: "",
 }
 

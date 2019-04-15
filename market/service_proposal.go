@@ -126,7 +126,7 @@ func (proposal *ServiceProposal) SetProviderContact(providerID identity.Identity
 	proposal.ProviderContacts = ContactList{providerContact}
 }
 
-// SetAccessPolicies updates service proposal with the given ACL
+// SetAccessPolicies updates service proposal with the given AccessPolicy
 func (proposal *ServiceProposal) SetAccessPolicies(ap *[]AccessPolicy) {
 	proposal.AccessPolicies = ap
 }

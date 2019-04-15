@@ -50,12 +50,12 @@ type serviceRequest struct {
 
 	// access list which determines which identities will be able to receive the service
 	// required: false
-	AccessPolicy accessPolicy `json:"accessPolicy"`
+	AccessPolicy accessPolicyRequest `json:"accessPolicy"`
 }
 
 // accessPolicy represents the access controls
-// swagger:model AccessPolicy
-type accessPolicy struct {
+// swagger:model AccessPolicyRequest
+type accessPolicyRequest struct {
 	ListIds []string `json:"listIds"`
 }
 
@@ -207,7 +207,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	ap := getACLData(sr, "http", se.accessPolicyEndpointURL)
+	ap := getAccessPolicyData(sr, "http", se.accessPolicyEndpointURL)
 
 	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, ap, sr.Options)
 	if err == service.ErrorLocation {
@@ -225,7 +225,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
-func getACLData(sr serviceRequest, protocol, href string) *[]market.AccessPolicy {
+func getAccessPolicyData(sr serviceRequest, protocol, href string) *[]market.AccessPolicy {
 	if len(sr.AccessPolicy.ListIds) == 0 {
 		return nil
 	}
@@ -298,10 +298,10 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	var jsonData struct {
-		ProviderID   string           `json:"providerId"`
-		Type         string           `json:"type"`
-		Options      *json.RawMessage `json:"options"`
-		AccessPolicy accessPolicy     `json:"accessPolicy"`
+		ProviderID   string              `json:"providerId"`
+		Type         string              `json:"type"`
+		Options      *json.RawMessage    `json:"options"`
+		AccessPolicy accessPolicyRequest `json:"accessPolicy"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
 		return serviceRequest{}, err
@@ -386,7 +386,7 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 
 // ServiceManager represents service manager that will be used for manipulation node services.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, acl *[]market.AccessPolicy, options service.Options) (service.ID, error)
+	Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error)
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error
