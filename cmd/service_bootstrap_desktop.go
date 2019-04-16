@@ -20,6 +20,8 @@
 package cmd
 
 import (
+	"errors"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -164,16 +166,40 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	di.ServiceRegistry = service.NewRegistry()
 	di.ServiceSessionStorage = session.NewStorageMemory()
 
-	newDialogWaiter := func(providerID identity.Identity, serviceType string) (communication.DialogWaiter, error) {
+	registeredIdentityValidator := func(peerID identity.Identity) error {
+		registered, err := di.IdentityRegistry.IsRegistered(peerID)
+		if err != nil {
+			return err
+		} else if !registered {
+			return errors.New("identity is not registered")
+		}
+		return nil
+	}
+
+	newDialogWaiter := func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error) {
 		address, err := nats_discovery.NewAddressFromHostAndID(di.NetworkDefinition.BrokerAddress, providerID, serviceType)
 		if err != nil {
 			return nil, err
 		}
 
+		allowedIdentityValidator := func(peerID identity.Identity) error {
+			if len(allowedIDs) == 0 {
+				return nil
+			}
+
+			for _, id := range allowedIDs {
+				if peerID.Address == id.Address {
+					return nil
+				}
+			}
+			return errors.New("identity is not allowed")
+		}
+
 		return nats_dialog.NewDialogWaiter(
 			address,
 			di.SignerFactory(providerID),
-			di.IdentityRegistry,
+			registeredIdentityValidator,
+			allowedIdentityValidator,
 		), nil
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator, serviceID string) communication.DialogHandler {
