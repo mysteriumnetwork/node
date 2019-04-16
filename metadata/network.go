@@ -45,7 +45,7 @@ var TestnetDefinition = NetworkDefinition{
 // Expects discovery, broker and morqa services on localhost
 var LocalnetDefinition = NetworkDefinition{
 	DiscoveryAPIAddress:       "http://localhost/v1",
-	AccessPolicyOracleAddress: "https://devnet-trust.mysterium.network/api/v1/access-policies/",
+	AccessPolicyOracleAddress: "https://localhost:8081/api/v1/access-policies/",
 	BrokerAddress:             "localhost",
 	EtherClientRPC:            "http://localhost:8545",
 	QualityOracle:             "http://localhost:8080",

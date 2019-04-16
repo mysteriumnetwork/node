@@ -26,9 +26,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Get_AccessPolicies(t *testing.T) {
+func Test_Get_AccessPolicies_ReturnsAccessPolicies(t *testing.T) {
+	mockResponse := `
+	{
+		"entries": [
+			{
+				"id": "mysterium",
+				"title": "Mysterium verified traffic",
+				"description": "Mysterium Network approved identities",
+				"allow": [
+					{
+						"type": "identity",
+						"value": "0xf4d6ffba09d460ebe10d24667770437981ce3de9"
+					}
+				]
+			}
+		]
+	}`
+	server := newTestServer(http.StatusOK, mockResponse)
+
 	router := httprouter.New()
-	AddRoutesForAccessPolicies(router)
+	AddRoutesForAccessPolicies(router, server.URL)
 
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -41,23 +59,31 @@ func Test_Get_AccessPolicies(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(
-		t,
-		`{
-			"entries": [
-				{
-					"id": "mysterium",
-					"title": "Mysterium verified traffic",
-					"description": "Mysterium Network approved identities",
-					"allow": [
-						{
-							"type": "identity",
-							"value": "0xf4d6ffba09d460ebe10d24667770437981ce3de9"
-						}
-					]
-				}
-			]
-		}`,
-		resp.Body.String(),
+	assert.JSONEq(t, mockResponse, resp.Body.String())
+}
+
+func Test_Get_AccessPolicies_WhenRequestFails_ReturnsError(t *testing.T) {
+	server := newTestServer(http.StatusInternalServerError, `{"error": "something bad"}`)
+
+	router := httprouter.New()
+	AddRoutesForAccessPolicies(router, server.URL)
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/access-policies",
+		nil,
 	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+}
+
+func newTestServer(mockStatus int, mockResponse string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(mockStatus)
+		w.Write([]byte(mockResponse))
+	}))
 }

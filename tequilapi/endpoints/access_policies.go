@@ -19,8 +19,10 @@ package endpoints
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -42,41 +44,49 @@ type accessRule struct {
 }
 
 type accessPoliciesEndpoint struct {
-}
-
-var staticAccessPolicy = accessPolicy{
-	ID:          "mysterium",
-	Title:       "Mysterium verified traffic",
-	Description: "Mysterium Network approved identities",
-	Allow: []accessRule{
-		{
-			Type:  "identity",
-			Value: "0xf4d6ffba09d460ebe10d24667770437981ce3de9",
-		},
-	},
+	http                    requests.HTTPTransport
+	accessPolicyEndpointURL string
 }
 
 // NewAccessPoliciesEndpoint creates and returns access policies endpoint
-func NewAccessPoliciesEndpoint() *accessPoliciesEndpoint {
-	return &accessPoliciesEndpoint{}
+func NewAccessPoliciesEndpoint(accessPolicyEndpointURL string) *accessPoliciesEndpoint {
+	return &accessPoliciesEndpoint{
+		http:                    requests.NewHTTPClient(1 * time.Minute),
+		accessPolicyEndpointURL: accessPolicyEndpointURL,
+	}
 }
 
 // swagger:operation GET /access-policies AccessPolicies
 // ---
-// summary: Returns access lists
+// summary: Returns access policies
 // description: Returns list of access policies
 // responses:
 //   200:
 //     description: List of access policies
 //     schema:
 //       "$ref": "#/definitions/AccessPolicies"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
 func (ape *accessPoliciesEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	r := accessPolicyCollection{Entries: []accessPolicy{staticAccessPolicy}}
+	req, err := requests.NewGetRequest(ape.accessPolicyEndpointURL, "", nil)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+	r := accessPolicyCollection{}
+	err = ape.http.DoRequestAndParseResponse(req, &r)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
 	utils.WriteAsJSON(r, resp)
 }
 
 // AddRoutesForAccessPolicies attaches access policies endpoints to router
-func AddRoutesForAccessPolicies(router *httprouter.Router) {
-	ape := NewAccessPoliciesEndpoint()
+func AddRoutesForAccessPolicies(router *httprouter.Router, accessPolicyEndpointURL string) {
+	ape := NewAccessPoliciesEndpoint(accessPolicyEndpointURL)
 	router.GET("/access-policies", ape.List)
 }
