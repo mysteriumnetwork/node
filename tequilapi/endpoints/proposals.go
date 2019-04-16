@@ -113,7 +113,7 @@ func mapProposalsToRes(
 
 // ProposalProvider allows to fetch proposals by specified params
 type ProposalProvider interface {
-	FindProposals(providerID string, serviceType string) ([]market.ServiceProposal, error)
+	FindProposals(providerID, serviceType, accessPolicyID, accessPolicySource string) ([]market.ServiceProposal, error)
 }
 
 type proposalsEndpoint struct {
@@ -140,6 +140,14 @@ func NewProposalsEndpoint(proposalProvider ProposalProvider, morqaClient metrics
 //     description: the service type of the proposal. Possible values are "openvpn", "wireguard" and "noop"
 //     type: string
 //   - in: query
+//     name: accessPolicyId
+//     description: the access policy id to filter the proposals by
+//     type: string
+//   - in: query
+//     name: accessPolicySource
+//     description: the access policy source to filter the proposals by
+//     type: string
+//   - in: query
 //     name: fetchConnectCounts
 //     description: if set to true, fetches the connection success metrics for nodes. False by default.
 //     type: boolean
@@ -156,7 +164,10 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 	providerID := req.URL.Query().Get("providerId")
 	serviceType := req.URL.Query().Get("serviceType")
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
-	proposals, err := pe.proposalProvider.FindProposals(providerID, serviceType)
+	accessPolicyID := req.URL.Query().Get("accessPolicyId")
+	accessPolicySource := req.URL.Query().Get("accessPolicySource")
+
+	proposals, err := pe.proposalProvider.FindProposals(providerID, serviceType, accessPolicyID, accessPolicySource)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
