@@ -19,12 +19,10 @@ package oracle
 
 import (
 	"encoding/json"
-	"net/http"
 	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/market/metrics"
-	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
@@ -33,25 +31,15 @@ const (
 )
 
 type mysteriumMorqa struct {
-	http                 mysterium.HTTPTransport
+	http                 requests.HTTPTransport
 	qualityOracleAddress string
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
 func NewMorqaClient(qualityOracleAddress string) metrics.QualityOracle {
 	return &mysteriumMorqa{
-		newHTTPTransport(1 * time.Minute),
+		requests.NewHTTPClient(1 * time.Minute),
 		qualityOracleAddress,
-	}
-}
-
-func newHTTPTransport(requestTimeout time.Duration) mysterium.HTTPTransport {
-	return &http.Client{
-		Transport: &http.Transport{
-			//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
-			DisableKeepAlives: true,
-		},
-		Timeout: requestTimeout,
 	}
 }
 
@@ -64,28 +52,11 @@ func (m *mysteriumMorqa) ProposalsMetrics() []json.RawMessage {
 	}
 
 	var metricsResponse metrics.ServiceMetricsResponse
-	err = m.doRequestAndParseResponse(req, &metricsResponse)
+	err = m.http.DoRequestAndParseResponse(req, &metricsResponse)
 	if err != nil {
 		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics", err)
 		return nil
 	}
 
 	return metricsResponse.Connects
-}
-
-func (m *mysteriumMorqa) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
-	resp, err := m.http.Do(req)
-	if err != nil {
-		log.Error(mysteriumMorqaLogPrefix, err)
-		return err
-	}
-	defer resp.Body.Close()
-
-	err = mysterium.ParseResponseError(resp)
-	if err != nil {
-		log.Error(mysteriumMorqaLogPrefix, err)
-		return err
-	}
-
-	return mysterium.ParseResponseJSON(resp, responseValue)
 }

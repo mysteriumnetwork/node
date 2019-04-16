@@ -31,11 +31,23 @@ func TestLocationSerialize(t *testing.T) {
 		expectedJSON string
 	}{
 		{
-			Location{"XX", "YY", "AS123"},
+			Location{
+				Continent: "CC",
+				Country:   "XX",
+				City:      "YY",
+
+				ASN:      123,
+				ISP:      "II",
+				NodeType: "RR",
+			},
 			`{
+				"continent": "CC",
 				"country": "XX",
 				"city": "YY",
-				"asn": "AS123"
+
+				"asn": 123,
+				"isp": "II",
+				"node_type": "RR"
 			}`,
 		},
 		{
@@ -66,11 +78,23 @@ func TestLocationUnserialize(t *testing.T) {
 	}{
 		{
 			`{
+				"continent": "CC",
 				"country": "XX",
 				"city": "YY",
-				"asn": "AS123"
+
+				"asn": 123,
+				"isp": "II",
+				"node_type": "RR"
 			}`,
-			Location{"XX", "YY", "AS123"},
+			Location{
+				Continent: "CC",
+				Country:   "XX",
+				City:      "YY",
+
+				ASN:      123,
+				ISP:      "II",
+				NodeType: "RR",
+			},
 			nil,
 		},
 		{

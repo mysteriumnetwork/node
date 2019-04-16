@@ -71,7 +71,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		},
 
 		Location: node.OptionsLocation{
-			IpifyUrl: "https://api.ipify.org/",
+			IPDetectorURL: "https://api.ipify.org/?format=json",
 		},
 
 		OptionsNetwork: node.OptionsNetwork(*optionsNetwork),

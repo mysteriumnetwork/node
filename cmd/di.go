@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -124,7 +125,6 @@ type Dependencies struct {
 
 	IPResolver       ip.Resolver
 	LocationResolver location.Resolver
-	LocationDetector location.Detector
 	LocationOriginal location.Cache
 
 	StatisticsTracker  *statistics.SessionStatisticsTracker
@@ -176,7 +176,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapEventBus()
 	di.bootstrapIdentityComponents(nodeOptions)
-	di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config)
+
+	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
+		return err
+	}
+
 	di.bootstrapMetrics(nodeOptions)
 
 	di.bootstrapNATComponents(nodeOptions)
@@ -331,7 +335,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
-	tequilapi_endpoints.AddRoutesForLocation(router, di.ConnectionManager, di.LocationDetector, di.LocationOriginal)
+	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.LocationResolver)
+	tequilapi_endpoints.AddRoutesForLocation(router, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
@@ -463,20 +468,29 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 
-func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) {
-	di.IPResolver = ip.NewResolver(options.IpifyUrl)
+func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
+	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
-	switch {
-	case options.Country != "":
-		di.LocationResolver = location.NewStaticResolver(options.Country)
-	case options.ExternalDb != "":
-		di.LocationResolver = location.NewExternalDbResolver(filepath.Join(configDirectory, options.ExternalDb))
+	switch options.Type {
+	case "builtin":
+		di.LocationResolver, err = location.NewBuiltInResolver(di.IPResolver)
+	case "mmdb":
+		di.LocationResolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
+	case "oracle":
+		di.LocationResolver = location.NewOracleResolver(options.Address)
+	case "manual":
+		di.LocationResolver = location.NewStaticResolver(options.Country, options.City, options.NodeType, di.IPResolver)
 	default:
-		di.LocationResolver = location.NewBuiltInResolver()
+		return fmt.Errorf("unknown location detector type: %s", options.Type)
 	}
 
-	di.LocationDetector = location.NewDetector(di.IPResolver, di.LocationResolver)
-	di.LocationOriginal = location.NewLocationCache(di.LocationDetector)
+	if err != nil {
+		log.Error("Failed to load location resolver: ", err)
+		di.LocationResolver = location.NewFailingResolver(err)
+	}
+
+	di.LocationOriginal = location.NewLocationCache(di.LocationResolver)
+	return nil
 }
 
 func (di *Dependencies) bootstrapMetrics(options node.Options) {

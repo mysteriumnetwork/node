@@ -18,48 +18,57 @@
 package location
 
 import (
-	"errors"
 	"net"
 
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/oschwald/geoip2-golang"
+	"github.com/pkg/errors"
 )
 
-// DbResolver struct represents ip -> country resolver which uses geoip2 data reader
-type DbResolver struct {
-	dbReader *geoip2.Reader
+// DBResolver struct represents ip -> country resolver which uses geoip2 data reader
+type DBResolver struct {
+	dbReader   *geoip2.Reader
+	ipResolver ip.Resolver
 }
 
-// NewExternalDbResolver returns Resolver which uses external country database
-func NewExternalDbResolver(databasePath string) Resolver {
+// NewExternalDBResolver returns Resolver which uses external country database
+func NewExternalDBResolver(databasePath string, ipResolver ip.Resolver) (*DBResolver, error) {
 	db, err := geoip2.Open(databasePath)
 	if err != nil {
-		return NewFailingResolver(err)
+		return nil, errors.Wrap(err, "failed to open external db")
 	}
 
-	return &DbResolver{
-		dbReader: db,
-	}
+	return &DBResolver{
+		dbReader:   db,
+		ipResolver: ipResolver,
+	}, nil
 }
 
-// ResolveCountry maps given ip to country
-func (r *DbResolver) ResolveCountry(ip string) (string, error) {
-	ipObject := net.ParseIP(ip)
-	if ipObject == nil {
-		return "", errors.New("failed to parse IP")
+// DetectLocation detects current IP-address provides location information for the IP.
+func (r *DBResolver) DetectLocation() (Location, error) {
+	ipAddress, err := r.ipResolver.GetPublicIP()
+	if err != nil {
+		return Location{}, errors.Wrap(err, "failed to get public IP")
 	}
 
-	countryRecord, err := r.dbReader.Country(ipObject)
+	ip := net.ParseIP(ipAddress)
+	return r.ResolveLocation(ip)
+}
+
+// ResolveLocation maps given ip to country.
+func (r *DBResolver) ResolveLocation(ip net.IP) (Location, error) {
+	countryRecord, err := r.dbReader.Country(ip)
 	if err != nil {
-		return "", err
+		return Location{}, errors.Wrap(err, "failed to get a country")
 	}
 
 	country := countryRecord.Country.IsoCode
 	if country == "" {
 		country = countryRecord.RegisteredCountry.IsoCode
 		if country == "" {
-			return "", errors.New("failed to resolve country")
+			return Location{}, errors.New("failed to resolve country")
 		}
 	}
 
-	return country, nil
+	return Location{Country: country}, nil
 }

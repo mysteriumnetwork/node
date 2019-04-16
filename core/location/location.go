@@ -17,12 +17,15 @@
 
 package location
 
-// Location structure represents location information (ip and country)
+// Location structure represents location information
 type Location struct {
-	// IP address
-	// example: 127.0.0.1
-	IP string `json:"ip"`
+	IP  string `json:"ip"`
+	ASN int    `json:"asn"`
+	ISP string `json:"isp"`
 
-	// example: NL
-	Country string `json:"country"`
+	Continent string `json:"continent"`
+	Country   string `json:"country"`
+	City      string `json:"city"`
+
+	NodeType string `json:"node_type"`
 }

@@ -34,15 +34,20 @@ type proposalsRes struct {
 
 // swagger:model ServiceLocationDTO
 type locationRes struct {
-	// Autonomous System Number
-	// example: AS00001
-	ASN string `json:"asn"`
-
+	// example: EU
+	Continent string `json:"continent,omitempty"`
 	// example: NL
 	Country string `json:"country,omitempty"`
-
 	// example: Amsterdam
 	City string `json:"city,omitempty"`
+
+	// Autonomous System Number
+	// example: 00001
+	ASN int `json:"asn"`
+	// example: Telia Lietuva, AB
+	ISP string `json:"isp,omitempty"`
+	// example: residential
+	NodeType string `json:"node_type,omitempty"`
 }
 
 // swagger:model ServiceDefinitionDTO
@@ -78,9 +83,13 @@ func proposalToRes(p market.ServiceProposal) proposalRes {
 		ServiceType: p.ServiceType,
 		ServiceDefinition: serviceDefinitionRes{
 			LocationOriginate: locationRes{
-				ASN:     p.ServiceDefinition.GetLocation().ASN,
-				Country: p.ServiceDefinition.GetLocation().Country,
-				City:    p.ServiceDefinition.GetLocation().City,
+				Continent: p.ServiceDefinition.GetLocation().Continent,
+				Country:   p.ServiceDefinition.GetLocation().Country,
+				City:      p.ServiceDefinition.GetLocation().City,
+
+				ASN:      p.ServiceDefinition.GetLocation().ASN,
+				ISP:      p.ServiceDefinition.GetLocation().ISP,
+				NodeType: p.ServiceDefinition.GetLocation().NodeType,
 			},
 		},
 	}

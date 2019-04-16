@@ -35,8 +35,10 @@ const (
 
 // NewGetRequest generates http Get request
 func NewGetRequest(apiURI, path string, params url.Values) (*http.Request, error) {
-	pathWithQuery := fmt.Sprintf("%v?%v", path, params.Encode())
-	return newRequest(http.MethodGet, apiURI, pathWithQuery, nil)
+	if params != nil {
+		path = fmt.Sprintf("%v?%v", path, params.Encode())
+	}
+	return newRequest(http.MethodGet, apiURI, path, nil)
 }
 
 // NewPostRequest generates http Post request
@@ -94,8 +96,11 @@ func encodeToJSON(value interface{}) ([]byte, error) {
 }
 
 func newRequest(method, apiURI, path string, body []byte) (*http.Request, error) {
-	fullUrl := fmt.Sprintf("%v/%v", apiURI, path)
-	req, err := http.NewRequest(method, fullUrl, bytes.NewBuffer(body))
+	url := apiURI
+	if len(path) > 0 {
+		url = fmt.Sprintf("%v/%v", apiURI, path)
+	}
+	req, err := http.NewRequest(method, url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}

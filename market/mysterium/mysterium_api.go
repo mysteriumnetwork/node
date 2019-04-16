@@ -19,7 +19,6 @@ package mysterium
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"time"
 
@@ -34,31 +33,16 @@ const (
 	mysteriumAPILogPrefix = "[Mysterium.api] "
 )
 
-// HTTPTransport interface with single method do is extracted from net/transport.Client structure
-type HTTPTransport interface {
-	Do(*http.Request) (*http.Response, error)
-}
-
-func newHTTPTransport(requestTimeout time.Duration) HTTPTransport {
-	return &http.Client{
-		Transport: &http.Transport{
-			//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
-			DisableKeepAlives: true,
-		},
-		Timeout: requestTimeout,
-	}
-}
-
 // MysteriumAPI provides access to mysterium owned central discovery service
 type MysteriumAPI struct {
-	http                HTTPTransport
+	http                requests.HTTPTransport
 	discoveryAPIAddress string
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
 func NewClient(discoveryAPIAddress string) *MysteriumAPI {
 	return &MysteriumAPI{
-		newHTTPTransport(1 * time.Minute),
+		requests.NewHTTPClient(1 * time.Minute),
 		discoveryAPIAddress,
 	}
 }
@@ -72,7 +56,7 @@ func (mApi *MysteriumAPI) RegisterIdentity(id identity.Identity, signer identity
 		return err
 	}
 
-	err = mApi.doRequest(req)
+	err = mApi.http.DoRequest(req)
 	if err == nil {
 		log.Info(mysteriumAPILogPrefix, "Identity registered: ", id.Address)
 	}
@@ -88,7 +72,7 @@ func (mApi *MysteriumAPI) GetPayoutInfo(id identity.Identity, signer identity.Si
 	}
 
 	var payoutInfoResponse PayoutInfoResponse
-	err = mApi.doRequestAndParseResponse(req, &payoutInfoResponse)
+	err = mApi.http.DoRequestAndParseResponse(req, &payoutInfoResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +91,7 @@ func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress stri
 		return err
 	}
 
-	err = mApi.doRequest(req)
+	err = mApi.http.DoRequest(req)
 	if err == nil {
 		log.Info(mysteriumAPILogPrefix, "Payout address ", ethAddress, " registered")
 	}
@@ -123,7 +107,7 @@ func (mApi *MysteriumAPI) RegisterProposal(proposal market.ServiceProposal, sign
 		return err
 	}
 
-	err = mApi.doRequest(req)
+	err = mApi.http.DoRequest(req)
 	if err == nil {
 		log.Info(mysteriumAPILogPrefix, "Proposal registered for node: ", proposal.ProviderID, " service type: ", proposal.ServiceType)
 	}
@@ -141,7 +125,7 @@ func (mApi *MysteriumAPI) UnregisterProposal(proposal market.ServiceProposal, si
 		return err
 	}
 
-	err = mApi.doRequest(req)
+	err = mApi.http.DoRequest(req)
 
 	if err == nil {
 		log.Info(mysteriumAPILogPrefix, "Proposal unregistered for node: ", proposal.ProviderID)
@@ -160,7 +144,7 @@ func (mApi *MysteriumAPI) PingProposal(proposal market.ServiceProposal, signer i
 		return err
 	}
 
-	err = mApi.doRequest(req)
+	err = mApi.http.DoRequest(req)
 	if err == nil {
 		log.Info(mysteriumAPILogPrefix, "Proposal pinged for node: ", proposal.ProviderID, " service type: ", proposal.ServiceType)
 	}
@@ -184,7 +168,7 @@ func (mApi *MysteriumAPI) FindProposals(providerID string, serviceType string) (
 	}
 
 	var proposalsResponse ProposalsResponse
-	err = mApi.doRequestAndParseResponse(req, &proposalsResponse)
+	err = mApi.http.DoRequestAndParseResponse(req, &proposalsResponse)
 	if err != nil {
 		return nil, err
 	}
@@ -202,40 +186,12 @@ func (mApi *MysteriumAPI) SendSessionStats(sessionID session.ID, sessionStats Se
 		return err
 	}
 
-	err = mApi.doRequest(req)
+	err = mApi.http.DoRequest(req)
 	if err == nil {
 		log.Info(mysteriumAPILogPrefix, "Session stats sent: ", sessionID)
 	}
 
 	return nil
-}
-
-func (mApi *MysteriumAPI) doRequest(req *http.Request) error {
-	resp, err := mApi.http.Do(req)
-	if err != nil {
-		log.Error(mysteriumAPILogPrefix, err)
-		return err
-	}
-	defer resp.Body.Close()
-
-	return ParseResponseError(resp)
-}
-
-func (mApi *MysteriumAPI) doRequestAndParseResponse(req *http.Request, responseValue interface{}) error {
-	resp, err := mApi.http.Do(req)
-	if err != nil {
-		log.Error(mysteriumAPILogPrefix, err)
-		return err
-	}
-	defer resp.Body.Close()
-
-	err = ParseResponseError(resp)
-	if err != nil {
-		log.Error(mysteriumAPILogPrefix, err)
-		return err
-	}
-
-	return ParseResponseJSON(resp, responseValue)
 }
 
 func supportedProposalsOnly(proposals []market.ServiceProposal) (supported []market.ServiceProposal) {

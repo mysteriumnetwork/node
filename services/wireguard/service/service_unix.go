@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -36,7 +36,7 @@ import (
 
 // NewManager creates new instance of Wireguard service
 func NewManager(
-	location location.ServiceLocationInfo,
+	ipResolver ip.Resolver,
 	natService nat.NATService,
 	portMap func(port int) (releasePortMapping func()),
 	options Options) *Manager {
@@ -44,13 +44,10 @@ func NewManager(
 	resourceAllocator := resources.NewAllocator(options.PortMin, options.PortMax, options.Subnet)
 	return &Manager{
 		natService: natService,
-
-		publicIP:        location.PubIP,
-		outboundIP:      location.OutIP,
-		currentLocation: location.Country,
+		ipResolver: ipResolver,
 
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
-			return endpoint.NewConnectionEndpoint(location, resourceAllocator, portMap, options.ConnectDelay)
+			return endpoint.NewConnectionEndpoint(ipResolver, resourceAllocator, portMap, options.ConnectDelay)
 		},
 	}
 }
@@ -62,9 +59,7 @@ type Manager struct {
 
 	connectionEndpointFactory func() (wg.ConnectionEndpoint, error)
 
-	publicIP        string
-	outboundIP      string
-	currentLocation string
+	ipResolver ip.Resolver
 }
 
 // ProvideConfig provides the config for consumer
@@ -93,7 +88,12 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 		return nil, nil, err
 	}
 
-	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: manager.outboundIP}
+	outIP, err := manager.ipResolver.GetOutboundIP()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: outIP}
 	if err := manager.natService.Add(natRule); err != nil {
 		return nil, nil, errors.Wrap(err, "failed to add NAT forwarding rule")
 	}

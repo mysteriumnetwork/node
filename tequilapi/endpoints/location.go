@@ -18,82 +18,105 @@
 package endpoints
 
 import (
+	"net"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // swagger:model LocationDTO
 type locationResponse struct {
-	Original location.Location `json:"original"`
-	Current  location.Location `json:"current"`
+	// IP address
+	// example: 1.2.3.4
+	IP string
+	// Autonomous system number
+	// example: 62179
+	ASN int
+	// Internet Service Provider name
+	// example: Telia Lietuva, AB
+	ISP string
+
+	// Continent
+	// example: EU
+	Continent string
+	// Node Country
+	// example: LT
+	Country string
+	// Node City
+	// example: Vilnius
+	City string
+
+	// Node type
+	// example: residential
+	UserType string
 }
 
 // LocationEndpoint struct represents /location resource and it's subresources
 type LocationEndpoint struct {
-	manager               connection.Manager
-	locationDetector      location.Detector
-	originalLocationCache location.Cache
+	locationResolver location.Resolver
 }
 
 // NewLocationEndpoint creates and returns location endpoint
-func NewLocationEndpoint(manager connection.Manager, locationDetector location.Detector,
-	originalLocationCache location.Cache) *LocationEndpoint {
+func NewLocationEndpoint(locationResolver location.Resolver) *LocationEndpoint {
 	return &LocationEndpoint{
-		manager:               manager,
-		locationDetector:      locationDetector,
-		originalLocationCache: originalLocationCache,
+		locationResolver: locationResolver,
 	}
 }
 
-// GetLocation responds with original and current locations
+// GetLocation responds with original locations
 // swagger:operation GET /location Location getLocation
 // ---
-// summary: Returns location
-// description: Returns original and current locations
+// summary: Returns original location
+// description: Returns original locations
 // responses:
 //   200:
-//     description: Original and current locations
+//     description: Original locations
 //     schema:
 //       "$ref": "#/definitions/LocationDTO"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 //   503:
 //     description: Service unavailable
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	originalLocation := le.originalLocationCache.Get()
-
-	var currentLocation location.Location
-	var err error
-	if le.manager.Status().State == connection.Connected {
-		currentLocation, err = le.locationDetector.DetectLocation()
-		if err != nil {
-			utils.SendError(writer, err, http.StatusServiceUnavailable)
-			return
-		}
-	} else {
-		currentLocation = originalLocation
+	currentLocation, err := le.locationResolver.DetectLocation()
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
 	}
 
-	response := locationResponse{
-		Original: originalLocation,
-		Current:  currentLocation,
+	utils.WriteAsJSON(currentLocation, writer)
+}
+
+// GetLocationByIP responds with requested locations
+// swagger:operation GET /location/:ip Location getLocationByIP
+// ---
+// summary: Returns requested location
+// description: Returns requested locations
+// responses:
+//   200:
+//     description: Requested locations
+//     schema:
+//       "$ref": "#/definitions/LocationDTO"
+//   503:
+//     description: Service unavailable
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (le *LocationEndpoint) GetLocationByIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ip := params.ByName("ip")
+	location, err := le.locationResolver.ResolveLocation(net.ParseIP(ip))
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
 	}
 
-	utils.WriteAsJSON(response, writer)
+	utils.WriteAsJSON(location, writer)
 }
 
 // AddRoutesForLocation adds location routes to given router
-func AddRoutesForLocation(router *httprouter.Router, manager connection.Manager,
-	locationDetector location.Detector, locationCache location.Cache) {
-
-	locationEndpoint := NewLocationEndpoint(manager, locationDetector, locationCache)
+func AddRoutesForLocation(router *httprouter.Router, locationResolver location.Resolver) {
+	locationEndpoint := NewLocationEndpoint(locationResolver)
 	router.GET("/location", locationEndpoint.GetLocation)
+	router.GET("/location/:ip", locationEndpoint.GetLocationByIP)
 }

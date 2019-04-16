@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,7 +34,7 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 	})
 	assert.NoError(t, err)
 
-	transport := newHTTPTransport(50 * time.Millisecond)
+	transport := requests.NewHTTPClient(50 * time.Millisecond)
 	req, err := http.NewRequest(http.MethodGet, "http://"+address+"/", nil)
 	assert.NoError(t, err)
 

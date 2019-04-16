@@ -20,7 +20,7 @@
 package endpoint
 
 import (
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/ip"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint/userspace"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -28,7 +28,7 @@ import (
 
 // NewConnectionEndpoint creates new wireguard connection endpoint.
 func NewConnectionEndpoint(
-	location location.ServiceLocationInfo,
+	ipResolver ip.Resolver,
 	resourceAllocator *resources.Allocator,
 	portMap func(port int) (releasePortMapping func()),
 	connectDelay int) (wg.ConnectionEndpoint, error) {
@@ -36,7 +36,7 @@ func NewConnectionEndpoint(
 	client, err := userspace.NewWireguardClient()
 	return &connectionEndpoint{
 		wgClient:           client,
-		location:           location,
+		ipResolver:         ipResolver,
 		resourceAllocator:  resourceAllocator,
 		mapPort:            portMap,
 		releasePortMapping: func() {},

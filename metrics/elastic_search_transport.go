@@ -20,21 +20,22 @@ package metrics
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"strings"
 	"time"
 
-	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
 // NewElasticSearchTransport creates transport allowing to send events to ElasticSearch through HTTP
 func NewElasticSearchTransport(url string, timeout time.Duration) Transport {
-	return &elasticSearchTransport{http: newMysteriumHTTPTransport(timeout), url: url}
+	return &elasticSearchTransport{
+		http: requests.NewHTTPClient(timeout),
+		url:  url,
+	}
 }
 
 type elasticSearchTransport struct {
-	http mysterium.HTTPTransport
+	http requests.HTTPTransport
 	url  string
 }
 
@@ -65,14 +66,4 @@ func (transport *elasticSearchTransport) SendEvent(event Event) error {
 	}
 
 	return nil
-}
-
-func newMysteriumHTTPTransport(timeout time.Duration) mysterium.HTTPTransport {
-	return &http.Client{
-		Transport: &http.Transport{
-			//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
-			DisableKeepAlives: true,
-		},
-		Timeout: timeout,
-	}
 }

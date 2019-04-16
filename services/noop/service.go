@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -65,11 +66,19 @@ func (manager *Manager) Stop() error {
 }
 
 // GetProposal returns the proposal for NOOP service for given country
-func GetProposal(country string) market.ServiceProposal {
+func GetProposal(location location.Location) market.ServiceProposal {
 	return market.ServiceProposal{
 		ServiceType: ServiceType,
 		ServiceDefinition: ServiceDefinition{
-			Location: market.Location{Country: country},
+			Location: market.Location{
+				Continent: location.Continent,
+				Country:   location.Country,
+				City:      location.City,
+
+				ASN:      location.ASN,
+				ISP:      location.ISP,
+				NodeType: location.NodeType,
+			},
 		},
 		PaymentMethodType: PaymentMethodNoop,
 		PaymentMethod: PaymentNoop{

@@ -22,7 +22,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
@@ -35,7 +35,7 @@ import (
 
 // NewManager creates new instance of Wireguard service
 func NewManager(
-	location location.ServiceLocationInfo,
+	ipResolver ip.Resolver,
 	natService nat.NATService,
 	portMap func(port int) (releasePortMapping func()),
 	options Options) *Manager {
@@ -45,7 +45,7 @@ func NewManager(
 		natService:        natService,
 		resourceAllocator: resourceAllocator,
 		portMap:           portMap,
-		location:          location,
+		ipResolver:        ipResolver,
 		options:           options,
 	}
 }
@@ -59,9 +59,9 @@ type Manager struct {
 
 	resourceAllocator *resources.Allocator
 
-	location location.ServiceLocationInfo
-	portMap  func(port int) (releasePortMapping func())
-	options  Options
+	ipResolver ip.Resolver
+	portMap    func(port int) (releasePortMapping func())
+	options    Options
 }
 
 // ProvideConfig provides the config for consumer
@@ -97,12 +97,17 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage) (session.Servic
 func (manager *Manager) Serve(providerID identity.Identity) error {
 	manager.wg.Add(1)
 
-	connectionEndpoint, err := endpoint.NewConnectionEndpoint(manager.location, manager.resourceAllocator, manager.portMap, manager.options.ConnectDelay)
+	connectionEndpoint, err := endpoint.NewConnectionEndpoint(manager.ipResolver, manager.resourceAllocator, manager.portMap, manager.options.ConnectDelay)
 	if err != nil {
 		return err
 	}
 
 	if err := connectionEndpoint.Start(nil); err != nil {
+		return err
+	}
+
+	outIP, err := manager.ipResolver.GetOutboundIP()
+	if err != nil {
 		return err
 	}
 
@@ -120,7 +125,7 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 		}
 	}()
 
-	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: manager.location.OutIP}
+	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: outIP}
 	if err := manager.natService.Add(natRule); err != nil {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}

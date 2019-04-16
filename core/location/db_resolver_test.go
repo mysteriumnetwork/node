@@ -18,8 +18,11 @@
 package location
 
 import (
+	"fmt"
+	"net"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,16 +36,19 @@ func TestResolverResolveCountry(t *testing.T) {
 		{"8.8.4.4", "US", ""},
 		{"95.85.39.36", "NL", ""},
 		{"127.0.0.1", "", "failed to resolve country"},
-		{"8.8.8.8.8", "", "failed to parse IP"},
+		{"8.8.8.8.8", "", "failed to get a country: ipAddress passed to Lookup cannot be nil"},
 		{"185.243.112.225", "", "failed to resolve country"},
-		{"asd", "", "failed to parse IP"},
+		{"asd", "", "failed to get a country: ipAddress passed to Lookup cannot be nil"},
 	}
 
-	resolver := NewExternalDbResolver("db/GeoLite2-Country.mmdb")
 	for _, tt := range tests {
-		got, err := resolver.ResolveCountry(tt.ip)
+		resolver, err := NewExternalDBResolver("db/GeoLite2-Country.mmdb", ip.NewResolverMock(tt.ip))
+		assert.NoError(t, err)
 
-		assert.Equal(t, tt.want, got, tt.ip)
+		got, err := resolver.ResolveLocation(net.ParseIP(tt.ip))
+		fmt.Println(got, err)
+
+		assert.Equal(t, tt.want, got.Country, tt.ip)
 		if tt.wantErr != "" {
 			assert.EqualError(t, err, tt.wantErr, tt.ip)
 		} else {

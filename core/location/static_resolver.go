@@ -17,29 +17,62 @@
 
 package location
 
-// StaticResolver struct represents country by ip ExternalDbResolver which always returns specified country
+import (
+	"net"
+
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/pkg/errors"
+)
+
+// StaticResolver struct represents country by ip ExternalDBResolver which always returns specified country
 type StaticResolver struct {
-	country string
-	error   error
+	country  string
+	city     string
+	nodeType string
+	err      error
+
+	ipResolver ip.Resolver
 }
 
 // NewStaticResolver creates new StaticResolver with specified country
-func NewStaticResolver(country string) *StaticResolver {
+func NewStaticResolver(country, city, nodeType string, ipResolver ip.Resolver) *StaticResolver {
 	return &StaticResolver{
-		country: country,
-		error:   nil,
+		country:  country,
+		city:     city,
+		nodeType: nodeType,
+		err:      nil,
+
+		ipResolver: ipResolver,
 	}
 }
 
 // NewFailingResolver returns StaticResolver with entered error
 func NewFailingResolver(err error) *StaticResolver {
 	return &StaticResolver{
-		country: "",
-		error:   err,
+		err:        err,
+		ipResolver: ip.NewResolverMock(""),
 	}
 }
 
-// ResolveCountry maps given ip to country
-func (d *StaticResolver) ResolveCountry(ip string) (string, error) {
-	return d.country, d.error
+// DetectLocation detects current IP-address provides location information for the IP.
+func (d *StaticResolver) DetectLocation() (Location, error) {
+	pubIP, err := d.ipResolver.GetPublicIP()
+	if err != nil {
+		return Location{}, errors.Wrap(err, "failed to get public IP")
+	}
+	return d.ResolveLocation(net.ParseIP(pubIP))
+}
+
+// ResolveLocation maps given ip to country.
+func (d *StaticResolver) ResolveLocation(ip net.IP) (Location, error) {
+	var ipAddress string
+	if ip != nil {
+		ipAddress = ip.String()
+	}
+	return Location{
+		Country:  d.country,
+		City:     d.city,
+		NodeType: d.nodeType,
+		IP:       ipAddress,
+	}, d.err
 }

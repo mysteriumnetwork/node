@@ -106,7 +106,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 					"providerId": "0xProviderId",
 					"serviceType": "testprotocol",
 					"serviceDefinition": {
-						"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+						"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
 					}
 				}
 			}]`,
@@ -127,7 +127,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 					"providerId": "0xProviderId",
 					"serviceType": "testprotocol",
 					"serviceDefinition": {
-						"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+						"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
 					}
 				}
 			}`,
@@ -148,7 +148,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 					"providerId": "0xProviderId",
 					"serviceType": "testprotocol",
 					"serviceDefinition": {
-						"locationOriginate": {"asn": "LT", "country": "Lithuania", "city": "Vilnius"}
+						"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
 					}
 				}
 			}`,
@@ -322,7 +322,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 				"serviceType": "testprotocol",
 				"serviceDefinition": {
 					"locationOriginate": {
-						"asn": "LT",
+						"asn": 123,
 						"country": "Lithuania",
 						"city": "Vilnius"
 					}

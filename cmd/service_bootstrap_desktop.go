@@ -57,7 +57,11 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		wireguard.ServiceType,
 		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-			locationInfo, err := di.resolveIPsAndLocation()
+			location, err := di.LocationResolver.DetectLocation()
+			if err != nil {
+				return nil, market.ServiceProposal{}, err
+			}
+			outIP, err := di.IPResolver.GetOutboundIP()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
@@ -66,63 +70,57 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			mapPort := func(port int) func() {
 				return mapping.GetPortMappingFunc(
-					locationInfo.PubIP,
-					locationInfo.OutIP,
+					location.IP,
+					outIP,
 					"UDP",
 					port,
 					"Myst node wireguard(tm) port mapping",
 					di.EventBus)
 			}
 
-			return wireguard_service.NewManager(locationInfo, di.NATService, mapPort, wgOptions),
-				wireguard_service.GetProposal(locationInfo.Country), nil
+			return wireguard_service.NewManager(di.IPResolver, di.NATService, mapPort, wgOptions),
+				wireguard_service.GetProposal(location), nil
 		},
 	)
 }
 
-func (di *Dependencies) resolveIPsAndLocation() (loc location.ServiceLocationInfo, err error) {
-	pubIP, err := di.IPResolver.GetPublicIP()
-	if err != nil {
-		return
-	}
-	loc.PubIP = pubIP
-
-	outboundIP, err := di.IPResolver.GetOutboundIP()
-	if err != nil {
-		return
-	}
-	loc.OutIP = outboundIP
-
-	currentCountry, err := di.LocationResolver.ResolveCountry(pubIP)
-	if err != nil {
-		log.Warn(logPrefix, "Failed to detect service country. ", err)
-		err = service.ErrorLocation
-		return
-	}
-	loc.Country = currentCountry
-
-	log.Info(logPrefix, "Detected service country: ", loc.Country)
-	return
-}
-
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 	createService := func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-		locationInfo, err := di.resolveIPsAndLocation()
+		loc, err := di.LocationResolver.DetectLocation()
+		if err != nil {
+			return nil, market.ServiceProposal{}, err
+		}
+		outIP, err := di.IPResolver.GetOutboundIP()
 		if err != nil {
 			return nil, market.ServiceProposal{}, err
 		}
 
-		currentLocation := market.Location{Country: locationInfo.Country}
+		currentLocation := market.Location{
+			Continent: loc.Continent,
+			Country:   loc.Country,
+			City:      loc.City,
+
+			ASN:      loc.ASN,
+			ISP:      loc.ISP,
+			NodeType: loc.NodeType,
+		}
+
 		transportOptions := serviceOptions.(openvpn_service.Options)
 
 		mapPort := func(port int) func() {
 			return mapping.GetPortMappingFunc(
-				locationInfo.PubIP,
-				locationInfo.OutIP,
+				loc.IP,
+				outIP,
 				transportOptions.Protocol,
 				port,
 				"Myst node OpenVPN port mapping",
 				di.EventBus)
+		}
+
+		locationInfo := location.ServiceLocationInfo{
+			OutIP:   outIP,
+			PubIP:   loc.IP,
+			Country: loc.Country,
 		}
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
@@ -147,12 +145,12 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 	di.ServiceRegistry.Register(
 		service_noop.ServiceType,
 		func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
-			locationInfo, err := di.resolveIPsAndLocation()
+			location, err := di.LocationResolver.DetectLocation()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
 
-			return service_noop.NewManager(), service_noop.GetProposal(locationInfo.Country), nil
+			return service_noop.NewManager(), service_noop.GetProposal(location), nil
 		},
 	)
 }

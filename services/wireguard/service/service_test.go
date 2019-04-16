@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -57,7 +59,7 @@ func Test_GetProposal(t *testing.T) {
 				},
 			},
 		},
-		GetProposal(country),
+		GetProposal(location.Location{Country: country}),
 	)
 }
 
@@ -106,10 +108,8 @@ func (mce *mockConnectionEndpoint) PeerStats() (wg.Stats, error) {
 
 func newManagerStub(pub, out, country string) *Manager {
 	return &Manager{
-		currentLocation: country,
-		publicIP:        pub,
-		outboundIP:      out,
-		natService:      &serviceFake{},
+		ipResolver: ip.NewResolverMock("1.2.3.4"),
+		natService: &serviceFake{},
 		connectionEndpointFactory: func() (wg.ConnectionEndpoint, error) {
 			return connectionEndpointStub, nil
 		},

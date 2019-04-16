@@ -18,13 +18,18 @@
 package location
 
 import (
+	"net"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestBuiltInResolverWorks(t *testing.T) {
-	country, err := NewBuiltInResolver().ResolveCountry("46.111.111.99")
+	resolver, err := NewBuiltInResolver(ip.NewResolverMock("46.111.111.99"))
 	assert.NoError(t, err)
-	assert.Equal(t, "RU", country)
+
+	location, err := resolver.ResolveLocation(net.ParseIP("46.111.111.99"))
+	assert.NoError(t, err)
+	assert.Equal(t, "RU", location.Country)
 }

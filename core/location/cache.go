@@ -18,12 +18,12 @@
 package location
 
 type cache struct {
-	locationDetector Detector
+	locationDetector Resolver
 	location         Location
 }
 
 // NewLocationCache constructs Cache
-func NewLocationCache(locationDetector Detector) Cache {
+func NewLocationCache(locationDetector Resolver) Cache {
 	return &cache{
 		locationDetector: locationDetector,
 	}

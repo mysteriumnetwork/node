@@ -18,36 +18,26 @@
 package ip
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net"
-	"net/http"
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/requests"
 )
 
-const ipifyAPIClient = "goclient-v0.1"
-const ipifyAPILogPrefix = "[ipify.api] "
+const apiClient = "goclient-v0.1"
+const ipAPILogPrefix = "[ip-detector.api] "
 
-// NewResolver creates new ipify based resolver with default timeout of one minute
-func NewResolver(ipifyUrl string) Resolver {
-	return NewResolverWithTimeout(ipifyUrl, 1*time.Minute)
+// NewResolver creates new ip-detector resolver with default timeout of one minute
+func NewResolver(url string) Resolver {
+	return NewResolverWithTimeout(url, 1*time.Minute)
 }
 
-// NewResolverWithTimeout creates new ipify based resolver with specified timeout
-func NewResolverWithTimeout(ipifyUrl string, timeout time.Duration) Resolver {
+// NewResolverWithTimeout creates new ip-detector resolver with specified timeout
+func NewResolverWithTimeout(url string, timeout time.Duration) Resolver {
 	return &clientRest{
-		ipifyUrl: ipifyUrl,
-		httpClient: http.Client{
-			Timeout: timeout,
-			Transport: &http.Transport{
-				//dont cache tcp connections - first requests after state change (direct -> tunneled and vice versa) will always fail
-				//as stale tcp states are not closed after switch. Probably some kind of CloseIdleConnections will help in the future
-				DisableKeepAlives: true,
-			},
-		},
+		url:  url,
+		http: requests.NewHTTPClient(timeout),
 	}
 }
 
@@ -56,27 +46,27 @@ type ipResponse struct {
 }
 
 type clientRest struct {
-	ipifyUrl   string
-	httpClient http.Client
+	url  string
+	http requests.HTTPTransport
 }
 
 func (client *clientRest) GetPublicIP() (string, error) {
 	var ipResponse ipResponse
 
-	request, err := http.NewRequest("GET", client.ipifyUrl+"/?format=json", nil)
-	request.Header.Set("User-Agent", ipifyAPIClient)
+	request, err := requests.NewGetRequest(client.url, "", nil)
+	request.Header.Set("User-Agent", apiClient)
 	request.Header.Set("Accept", "application/json")
 	if err != nil {
-		log.Critical(ipifyAPILogPrefix, err)
+		log.Critical(ipAPILogPrefix, err)
 		return "", err
 	}
 
-	err = client.doRequest(request, &ipResponse)
+	err = client.http.DoRequestAndParseResponse(request, &ipResponse)
 	if err != nil {
 		return "", err
 	}
 
-	log.Info(ipifyAPILogPrefix, "IP detected: ", ipResponse.IP)
+	log.Info(ipAPILogPrefix, "IP detected: ", ipResponse.IP)
 	return ipResponse.IP, nil
 }
 
@@ -90,43 +80,4 @@ func (client *clientRest) GetOutboundIP() (string, error) {
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 	log.Info("[Detect Outbound IP] ", "IP detected: ", localAddr.IP.String())
 	return localAddr.IP.String(), nil
-}
-
-func (client *clientRest) doRequest(request *http.Request, responseDto interface{}) error {
-	response, err := client.httpClient.Do(request)
-	if err != nil {
-		log.Error(ipifyAPILogPrefix, err)
-		return err
-	}
-	defer response.Body.Close()
-
-	err = parseResponseError(response)
-	if err != nil {
-		log.Error(ipifyAPILogPrefix, err)
-		return err
-	}
-
-	return parseResponseJSON(response, &responseDto)
-}
-
-func parseResponseJSON(response *http.Response, dto interface{}) error {
-	responseJSON, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(responseJSON, dto)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func parseResponseError(response *http.Response) error {
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("server response invalid: %s (%s)", response.Status, response.Request.URL)
-	}
-
-	return nil
 }

@@ -19,8 +19,11 @@ package market
 
 // Location struct represents geographic location of service provider
 type Location struct {
-	Country string `json:"country,omitempty"`
-	City    string `json:"city,omitempty"`
-	// Autonomous System Number http://www.whatismyip.cx/
-	ASN string `json:"asn,omitempty"`
+	Continent string `json:"continent,omitempty"`
+	Country   string `json:"country,omitempty"`
+	City      string `json:"city,omitempty"`
+
+	ASN      int    `json:"asn,omitempty"`
+	ISP      string `json:"isp,omitempty"`
+	NodeType string `json:"node_type,omitempty"`
 }

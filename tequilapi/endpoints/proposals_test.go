@@ -30,7 +30,7 @@ import (
 type TestServiceDefinition struct{}
 
 func (service TestServiceDefinition) GetLocation() market.Location {
-	return market.Location{ASN: "LT", Country: "Lithuania", City: "Vilnius"}
+	return market.Location{ASN: 123, Country: "Lithuania", City: "Vilnius"}
 }
 
 var serviceProposals = []market.ServiceProposal{
@@ -79,7 +79,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
                     "serviceType": "testprotocol",
                     "serviceDefinition": {
                         "locationOriginate": {
-                            "asn": "LT",
+                            "asn": 123,
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
@@ -118,7 +118,7 @@ func TestProposalsEndpointList(t *testing.T) {
                     "serviceType": "testprotocol",
                     "serviceDefinition": {
                         "locationOriginate": {
-                            "asn": "LT",
+                            "asn": 123,
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
@@ -130,7 +130,7 @@ func TestProposalsEndpointList(t *testing.T) {
                     "serviceType": "testprotocol",
                     "serviceDefinition": {
                         "locationOriginate": {
-                            "asn": "LT",
+                            "asn": 123,
                             "country": "Lithuania",
                             "city": "Vilnius"
                         }
@@ -167,7 +167,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 					"serviceType": "testprotocol",
 					"serviceDefinition": {
 						"locationOriginate": {
-							"asn": "LT",
+							"asn": 123,
 							"country": "Lithuania",
 							"city": "Vilnius"
 						}
@@ -186,7 +186,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 					"serviceType": "testprotocol",
 					"serviceDefinition": {
 						"locationOriginate": {
-							"asn": "LT",
+							"asn": 123,
 							"country": "Lithuania",
 							"city": "Vilnius"
 						}
