@@ -176,7 +176,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		return nil
 	}
 
-	newDialogWaiter := func(providerID identity.Identity, serviceType string, allowedIDs ...identity.Identity) (communication.DialogWaiter, error) {
+	newDialogWaiter := func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error) {
 		address, err := nats_discovery.NewAddressFromHostAndID(di.NetworkDefinition.BrokerAddress, providerID, serviceType)
 		if err != nil {
 			return nil, err
@@ -186,7 +186,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			if len(allowedIDs) == 0 {
 				return nil
 			}
-			// TODO this can be done simple with a map
+
 			for _, id := range allowedIDs {
 				if peerID.Address == id.Address {
 					return nil
