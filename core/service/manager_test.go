@@ -49,7 +49,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		&MockNATPinger{},
 		&mockPublisher{},
 	)
-	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
+	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
 
 	discovery.Wait()
@@ -74,7 +74,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		&MockNATPinger{},
 		&mockPublisher{},
 	)
-	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
 	err = manager.Stop(id)
 	assert.Nil(t, err)
@@ -102,7 +102,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		eventBus,
 	)
 
-	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, struct{}{})
+	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.NoError(t, err)
 
 	err = manager.Stop(id)

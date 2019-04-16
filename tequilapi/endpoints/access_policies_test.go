@@ -46,7 +46,8 @@ func Test_Get_AccessPolicies(t *testing.T) {
 		`{
 			"entries": [
 				{
-					"name": "mysterium",
+					"id": "mysterium",
+					"title": "Mysterium verified traffic",
 					"description": "Mysterium Network approved identities",
 					"allow": [
 						{

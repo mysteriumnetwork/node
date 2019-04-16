@@ -53,6 +53,15 @@ type ServiceProposal struct {
 
 	// Communication methods possible
 	ProviderContacts ContactList `json:"provider_contacts"`
+
+	// AccessPolicies represents the access controls for proposal
+	AccessPolicies *[]AccessPolicy `json:"access_policies,omitempty"`
+}
+
+// AccessPolicy represents the access controls for proposal
+type AccessPolicy struct {
+	ID     string `json:"id"`
+	Source string `json:"source"`
 }
 
 // UnmarshalJSON is custom json unmarshaler to dynamically fill in ServiceProposal values
@@ -66,6 +75,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 		ServiceDefinition *json.RawMessage `json:"service_definition"`
 		PaymentMethod     *json.RawMessage `json:"payment_method"`
 		ProviderContacts  *json.RawMessage `json:"provider_contacts"`
+		AccessPolicies    *[]AccessPolicy  `json:"access_policies,omitempty"`
 	}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		return err
@@ -92,6 +102,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 	// run contact unserializer
 	proposal.ProviderContacts = unserializeContacts(jsonData.ProviderContacts)
 
+	proposal.AccessPolicies = jsonData.AccessPolicies
 	return nil
 }
 
@@ -102,6 +113,11 @@ func (proposal *ServiceProposal) SetProviderContact(providerID identity.Identity
 	proposal.ID = 1
 	proposal.ProviderID = providerID.Address
 	proposal.ProviderContacts = ContactList{providerContact}
+}
+
+// SetAccessPolicies updates service proposal with the given AccessPolicy
+func (proposal *ServiceProposal) SetAccessPolicies(ap *[]AccessPolicy) {
+	proposal.AccessPolicies = ap
 }
 
 // IsSupported returns true if this service proposal can be used for connections by service consumer

@@ -19,11 +19,13 @@ package endpoints
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -44,6 +46,16 @@ type serviceRequest struct {
 	// required: false
 	// example: {"port": 1123, "protocol": "udp"}
 	Options interface{} `json:"options"`
+
+	// access list which determines which identities will be able to receive the service
+	// required: false
+	AccessPolicy accessPolicyRequest `json:"accessPolicy"`
+}
+
+// accessPolicy represents the access controls
+// swagger:model AccessPolicyRequest
+type accessPolicyRequest struct {
+	Ids []string `json:"Ids"`
 }
 
 // swagger:model ServiceListDTO
@@ -70,12 +82,15 @@ type serviceInfo struct {
 	Status string `json:"status"`
 
 	Proposal proposalRes `json:"proposal"`
+
+	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
 }
 
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
 type ServiceEndpoint struct {
-	serviceManager ServiceManager
-	optionsParser  map[string]ServiceOptionsParser
+	serviceManager          ServiceManager
+	accessPolicyEndpointURL string
+	optionsParser           map[string]ServiceOptionsParser
 }
 
 // ServiceOptionsParser parses request to service specific options
@@ -89,10 +104,11 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string) *ServiceEndpoint {
 	return &ServiceEndpoint{
-		serviceManager: serviceManager,
-		optionsParser:  optionsParser,
+		serviceManager:          serviceManager,
+		optionsParser:           optionsParser,
+		accessPolicyEndpointURL: accessPolicyEndpointURL,
 	}
 }
 
@@ -190,7 +206,9 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, sr.Options)
+	ap := getAccessPolicyData(sr, se.accessPolicyEndpointURL)
+
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, ap, sr.Options)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -204,6 +222,22 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	resp.WriteHeader(http.StatusCreated)
 	statusResponse := toServiceInfoResponse(id, instance)
 	utils.WriteAsJSON(statusResponse, resp)
+}
+
+func getAccessPolicyData(sr serviceRequest, href string) *[]market.AccessPolicy {
+	if len(sr.AccessPolicy.Ids) == 0 {
+		return nil
+	}
+
+	result := make([]market.AccessPolicy, len(sr.AccessPolicy.Ids))
+	for i := range result {
+		result[i] = market.AccessPolicy{
+			ID:     sr.AccessPolicy.Ids[i],
+			Source: fmt.Sprintf("%v%v", href, sr.AccessPolicy.Ids[i]),
+		}
+	}
+
+	return &result
 }
 
 // ServiceStop stops service on the node.
@@ -250,8 +284,8 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser) {
-	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser)
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string) {
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, accessPolicyEndpointURL)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
 	router.POST("/services", serviceEndpoint.ServiceStart)
@@ -261,18 +295,24 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	var jsonData struct {
-		ProviderID string           `json:"providerId"`
-		Type       string           `json:"type"`
-		Options    *json.RawMessage `json:"options"`
+		ProviderID   string              `json:"providerId"`
+		Type         string              `json:"type"`
+		Options      *json.RawMessage    `json:"options"`
+		AccessPolicy accessPolicyRequest `json:"accessPolicy"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
 		return serviceRequest{}, err
 	}
 
+	if jsonData.AccessPolicy.Ids == nil {
+		jsonData.AccessPolicy.Ids = []string{}
+	}
+
 	sr := serviceRequest{
-		ProviderID: jsonData.ProviderID,
-		Type:       se.toServiceType(jsonData.Type),
-		Options:    se.toServiceOptions(jsonData.Type, jsonData.Options),
+		ProviderID:   jsonData.ProviderID,
+		Type:         se.toServiceType(jsonData.Type),
+		Options:      se.toServiceOptions(jsonData.Type, jsonData.Options),
+		AccessPolicy: jsonData.AccessPolicy,
 	}
 	return sr, nil
 }
@@ -343,7 +383,7 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 
 // ServiceManager represents service manager that will be used for manipulation node services.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, options service.Options) (service.ID, error)
+	Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error)
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error

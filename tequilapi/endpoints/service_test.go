@@ -20,6 +20,7 @@ package endpoints
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -33,18 +34,47 @@ import (
 )
 
 var (
-	mockServiceID      = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
-	mockServiceOptions = fancyServiceOptions{
+	mockServiceID             = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+	mockAccessPolicyServiceID = service.ID("6ba7b810-9dad-11d1-80b4-00c04fd430c9")
+	mockServiceOptions        = fancyServiceOptions{
 		Foo: "bar",
 	}
-	mockProposal = market.ServiceProposal{
+	mockAccessPolicyEndpoint = "https://some.domain/api/v1/lists/"
+	mockProposal             = market.ServiceProposal{
 		ID:                1,
 		ServiceType:       "testprotocol",
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        "0xProviderId",
 	}
-	mockServiceRunning = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil)
-	mockServiceStopped = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil)
+	ap = []market.AccessPolicy{
+		{
+			ID:     "verified-traffic",
+			Source: fmt.Sprintf("%v%v", mockAccessPolicyEndpoint, "verified-traffic"),
+		},
+		{
+			ID:     "0x0000000000000001",
+			Source: fmt.Sprintf("%v%v", mockAccessPolicyEndpoint, "0x0000000000000001"),
+		},
+		{
+			ID:     "dvpn-traffic",
+			Source: fmt.Sprintf("%v%v", mockAccessPolicyEndpoint, "dvpn-traffic"),
+		},
+		{
+			ID:     "12312312332132",
+			Source: fmt.Sprintf("%v%v", mockAccessPolicyEndpoint, "12312312332132"),
+		},
+	}
+	serviceTypeWithAccessPolicy  = "mockAccessPolicyService"
+	mockProposalWithAccessPolicy = market.ServiceProposal{
+		ID:                1,
+		ServiceType:       serviceTypeWithAccessPolicy,
+		ServiceDefinition: TestServiceDefinition{},
+		ProviderID:        "0xProviderId",
+		AccessPolicies:    &ap,
+	}
+	mockServiceRunning                 = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil)
+	mockServiceStopped                 = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil)
+	mockServiceRunningWithAccessPolicy = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposalWithAccessPolicy, nil, nil)
 )
 
 type fancyServiceOptions struct {
@@ -53,13 +83,19 @@ type fancyServiceOptions struct {
 
 type mockServiceManager struct{}
 
-func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, options service.Options) (service.ID, error) {
+func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error) {
+	if serviceType == serviceTypeWithAccessPolicy {
+		return mockAccessPolicyServiceID, nil
+	}
 	return mockServiceID, nil
 }
 func (sm *mockServiceManager) Stop(id service.ID) error { return nil }
 func (sm *mockServiceManager) Service(id service.ID) *service.Instance {
 	if id == "6ba7b810-9dad-11d1-80b4-00c04fd430c8" {
 		return mockServiceRunning
+	}
+	if id == mockAccessPolicyServiceID {
+		return mockServiceRunningWithAccessPolicy
 	}
 	return nil
 }
@@ -74,6 +110,9 @@ var fakeOptionsParser = map[string]ServiceOptionsParser{
 	"testprotocol": func(opts *json.RawMessage) (service.Options, error) {
 		return nil, nil
 	},
+	serviceTypeWithAccessPolicy: func(opts *json.RawMessage) (service.Options, error) {
+		return nil, nil
+	},
 	"errorprotocol": func(opts *json.RawMessage) (service.Options, error) {
 		return nil, errors.New("error")
 	},
@@ -81,7 +120,7 @@ var fakeOptionsParser = map[string]ServiceOptionsParser{
 
 func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := httprouter.New()
-	AddRoutesForService(router, &mockServiceManager{}, fakeOptionsParser)
+	AddRoutesForService(router, &mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
 
 	tests := []struct {
 		method         string
@@ -178,7 +217,7 @@ func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 }
 
 func Test_ServiceStartInvalidType(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -207,7 +246,7 @@ func Test_ServiceStartInvalidType(t *testing.T) {
 }
 
 func Test_ServiceStart_InvalidType(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -236,7 +275,7 @@ func Test_ServiceStart_InvalidType(t *testing.T) {
 }
 
 func Test_ServiceStart_InvalidOptions(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -265,7 +304,7 @@ func Test_ServiceStart_InvalidOptions(t *testing.T) {
 }
 
 func Test_ServiceStartAlreadyRunning(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
 
 	req := httptest.NewRequest(
 		http.MethodGet,
@@ -289,7 +328,7 @@ func Test_ServiceStartAlreadyRunning(t *testing.T) {
 }
 
 func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
 
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
@@ -300,7 +339,7 @@ func Test_ServiceStatus_NotFoundIsReturnedWhenNotStarted(t *testing.T) {
 }
 
 func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
 
 	req := httptest.NewRequest(http.MethodGet, "/irrelevant", nil)
 	resp := httptest.NewRecorder()
@@ -333,7 +372,7 @@ func Test_ServiceGetReturnsServiceInfo(t *testing.T) {
 	)
 }
 func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
 
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("a"))
 	resp := httptest.NewRecorder()
@@ -351,7 +390,7 @@ func Test_ServiceCreate_Returns400ErrorIfRequestBodyIsNotJSON(t *testing.T) {
 }
 
 func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
-	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser)
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
 
 	req := httptest.NewRequest(http.MethodPut, "/irrelevant", strings.NewReader("{}"))
 	resp := httptest.NewRecorder()
@@ -365,6 +404,64 @@ func Test_ServiceCreate_Returns422ErrorIfRequestBodyIsMissingFieldValues(t *test
 			"errors": {
 				"providerId": [ {"code": "required", "message": "Field is required"} ],
 				"type": [ {"code": "required", "message": "Field is required"} ]
+			}
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		strings.NewReader(`{
+			"type": "mockAccessPolicyService",
+			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"accessPolicy": {
+				"ids": ["verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
+			}
+		}`),
+	)
+	resp := httptest.NewRecorder()
+
+	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusCreated, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"id": "6ba7b810-9dad-11d1-80b4-00c04fd430c9",
+			"providerId": "0xProviderId",
+			"type": "mockAccessPolicyService",
+			"options": {"foo": "bar"},
+			"status": "Running",
+			"proposal": {
+				"id": 1,
+				"providerId": "0xProviderId",
+				"serviceType": "mockAccessPolicyService",
+				"serviceDefinition": {
+					"locationOriginate": {"asn": 123, "country": "Lithuania", "city": "Vilnius"}
+				},
+				"accessPolicies": [
+					{
+						"id":"verified-traffic",
+						"source": "https://some.domain/api/v1/lists/verified-traffic"
+					},
+					{
+						"id":"0x0000000000000001",
+						"source": "https://some.domain/api/v1/lists/0x0000000000000001"
+					},
+					{
+						"id":"dvpn-traffic",
+						"source": "https://some.domain/api/v1/lists/dvpn-traffic"
+					},
+					{
+						"id":"12312312332132",
+						"source": "https://some.domain/api/v1/lists/12312312332132"
+					}
+				]
 			}
 		}`,
 		resp.Body.String(),

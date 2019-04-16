@@ -23,30 +23,33 @@ import (
 
 // NetworkDefinition structure holds all parameters which describe particular network
 type NetworkDefinition struct {
-	DiscoveryAPIAddress     string
-	BrokerAddress           string
-	EtherClientRPC          string
-	QualityOracle           string
-	PaymentsContractAddress common.Address
+	DiscoveryAPIAddress       string
+	AccessPolicyOracleAddress string
+	BrokerAddress             string
+	EtherClientRPC            string
+	QualityOracle             string
+	PaymentsContractAddress   common.Address
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
 var TestnetDefinition = NetworkDefinition{
-	"https://testnet-api.mysterium.network/v1",
-	"nats://testnet-broker.mysterium.network",
-	"https://ropsten.infura.io",
-	"https://testnet-morqa.mysterium.network/api/v1",
-	common.HexToAddress("0xbe5F9CCea12Df756bF4a5Baf4c29A10c3ee7C83B"),
+	DiscoveryAPIAddress:       "https://testnet-api.mysterium.network/v1",
+	AccessPolicyOracleAddress: "https://testnet-trust.mysterium.network/api/v1/access-policies/",
+	BrokerAddress:             "nats://testnet-broker.mysterium.network",
+	EtherClientRPC:            "https://ropsten.infura.io",
+	QualityOracle:             "https://testnet-morqa.mysterium.network/api/v1",
+	PaymentsContractAddress:   common.HexToAddress("0xbe5F9CCea12Df756bF4a5Baf4c29A10c3ee7C83B"),
 }
 
 // LocalnetDefinition defines parameters for local network
 // Expects discovery, broker and morqa services on localhost
 var LocalnetDefinition = NetworkDefinition{
-	"http://localhost/v1",
-	"localhost",
-	"http://localhost:8545",
-	"http://localhost:8080",
-	common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea"),
+	DiscoveryAPIAddress:       "http://localhost/v1",
+	AccessPolicyOracleAddress: "https://devnet-trust.mysterium.network/api/v1/access-policies/",
+	BrokerAddress:             "localhost",
+	EtherClientRPC:            "http://localhost:8545",
+	QualityOracle:             "http://localhost:8080",
+	PaymentsContractAddress:   common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea"),
 }
 
 // DefaultNetwork defines default network values when no runtime parameters are given

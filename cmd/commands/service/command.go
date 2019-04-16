@@ -52,6 +52,12 @@ var (
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
 	}
+
+	accessPolicyFlag = cli.StringFlag{
+		Name:  "access-policy.list",
+		Usage: "Comma separated list that determines the allowed identities on our service.",
+		Value: "",
+	}
 )
 
 // NewCommand function creates service command
@@ -84,6 +90,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 					di.MysteriumAPI,
 					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
 					di.SignerFactory),
+				ap: parseAccessPolicyFlag(ctx),
 			}
 
 			go func() {
@@ -107,6 +114,7 @@ type serviceCommand struct {
 	identityHandler identity_selector.Handler
 	tequilapi       *client.Client
 	errorChannel    chan error
+	ap              client.AccessPolicy
 }
 
 // Run runs a command
@@ -116,7 +124,7 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		serviceTypes = strings.Split(arg, ",")
 	}
 
-	identity, err := sc.unlockIdentity(parseFlags(ctx))
+	identity, err := sc.unlockIdentity(parseIdentityFlags(ctx))
 	if err != nil {
 		return err
 	}
@@ -146,7 +154,7 @@ func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, servi
 }
 
 func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options) {
-	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options)
+	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap)
 	if err != nil {
 		sc.errorChannel <- err
 	}
@@ -157,16 +165,29 @@ func registerFlags(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		agreedTermsConditionsFlag,
 		identityFlag, identityPassphraseFlag,
+		accessPolicyFlag,
 	)
 	openvpn_service.RegisterFlags(flags)
 	wireguard_service.RegisterFlags(flags)
 }
 
-// parseFlags function fills in service command options from CLI context
-func parseFlags(ctx *cli.Context) service.OptionsIdentity {
+// parseIdentityFlags function fills in service command options from CLI context
+func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 	return service.OptionsIdentity{
 		Identity:   ctx.String(identityFlag.Name),
 		Passphrase: ctx.String(identityPassphraseFlag.Name),
+	}
+}
+
+// parseAccessPolicyFlag fetches the access policy data from CLI context
+func parseAccessPolicyFlag(ctx *cli.Context) client.AccessPolicy {
+	policies := ctx.String(accessPolicyFlag.Name)
+	if policies == "" {
+		return client.AccessPolicy{}
+	}
+	splits := strings.Split(policies, ",")
+	return client.AccessPolicy{
+		IDs: splits,
 	}
 }
 
