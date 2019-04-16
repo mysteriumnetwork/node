@@ -27,28 +27,31 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/pkg/errors"
 )
 
+type validator interface {
+	Validate(peerID identity.Identity) error
+}
+
 // NewDialogWaiter constructs new DialogWaiter which works through NATS connection.
-func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer, identityRegistry registry.IdentityRegistry) *dialogWaiter {
+func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer, validators ...validator) *dialogWaiter {
 	return &dialogWaiter{
-		address:          address,
-		signer:           signer,
-		dialogs:          make([]communication.Dialog, 0),
-		identityRegistry: identityRegistry,
+		address:    address,
+		signer:     signer,
+		dialogs:    make([]communication.Dialog, 0),
+		validators: validators,
 	}
 }
 
 const waiterLogPrefix = "[NATS.DialogWaiter] "
 
 type dialogWaiter struct {
-	address          *discovery.AddressNATS
-	signer           identity.Signer
-	dialogs          []communication.Dialog
-	identityRegistry registry.IdentityRegistry
+	address    *discovery.AddressNATS
+	signer     identity.Signer
+	dialogs    []communication.Dialog
+	validators []validator
 
 	sync.RWMutex
 }
@@ -80,14 +83,10 @@ func (waiter *dialogWaiter) Stop() error {
 // ServeDialogs starts accepting dialogs initiated by peers
 func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandler) error {
 	createDialog := func(request *dialogCreateRequest) (*dialogCreateResponse, error) {
-		valid, err := waiter.validateDialogRequest(request)
+		err := waiter.validateDialogRequest(request)
 		if err != nil {
 			log.Error(waiterLogPrefix, "Validation check failed: ", err.Error())
 			return &responseInternalError, nil
-		}
-		if !valid {
-			log.Error(waiterLogPrefix, "Rejecting invalid peerID: ", request.PeerID)
-			return &responseInvalidIdentity, nil
 		}
 
 		uid, err := uuid.NewV4()
@@ -142,15 +141,16 @@ func (waiter *dialogWaiter) newDialogToPeer(peerID identity.Identity, peerCodec 
 	}
 }
 
-func (waiter *dialogWaiter) validateDialogRequest(request *dialogCreateRequest) (bool, error) {
+func (waiter *dialogWaiter) validateDialogRequest(request *dialogCreateRequest) error {
 	if request.PeerID == "" {
-		return false, nil
+		return errors.New("no identity provided")
 	}
 
-	registered, err := waiter.identityRegistry.IsRegistered(identity.FromAddress(request.PeerID))
-	if err != nil {
-		return false, err
+	for _, v := range waiter.validators {
+		if err := v.Validate(identity.FromAddress(request.PeerID)); err != nil {
+			return errors.Wrap(err, "failed to validate dialog request")
+		}
 	}
 
-	return registered, nil
+	return nil
 }
