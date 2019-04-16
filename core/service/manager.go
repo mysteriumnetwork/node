@@ -113,7 +113,7 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	}
 	proposal.SetAccessPolicies(ap)
 
-	allowedIDs, err := fetchAllowedIDs(*ap)
+	allowedIDs, err := fetchAllowedIDs(ap)
 	if err != nil {
 		return id, err
 	}

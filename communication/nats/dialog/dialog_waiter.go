@@ -84,7 +84,7 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 		err := waiter.validateDialogRequest(request)
 		if err != nil {
 			log.Error(waiterLogPrefix, "Validation check failed: ", err.Error())
-			return &responseInternalError, nil
+			return &responseInvalidIdentity, nil
 		}
 
 		uid, err := uuid.NewV4()

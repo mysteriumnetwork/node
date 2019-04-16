@@ -26,11 +26,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-func fetchAllowedIDs(ap []market.AccessPolicy) (allowedIDs []identity.Identity, err error) {
+func fetchAllowedIDs(ap *[]market.AccessPolicy) (allowedIDs []identity.Identity, err error) {
+	if ap == nil {
+		return nil, nil
+	}
+
 	client := requests.NewHTTPClient(time.Minute)
 
 	var ruleSet market.AccessPolicyRuleSet
-	for _, p := range ap {
+	for _, p := range *ap {
 		req, err := requests.NewGetRequest(p.Source, "", nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create request")
