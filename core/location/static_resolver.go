@@ -21,6 +21,7 @@ import (
 	"net"
 
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/pkg/errors"
 )
 
 // StaticResolver struct represents country by ip ExternalDBResolver which always returns specified country
@@ -57,7 +58,7 @@ func NewFailingResolver(err error) *StaticResolver {
 func (d *StaticResolver) DetectLocation() (Location, error) {
 	pubIP, err := d.ipResolver.GetPublicIP()
 	if err != nil {
-		return Location{}, err
+		return Location{}, errors.Wrap(err, "failed to get public IP")
 	}
 	return d.ResolveLocation(net.ParseIP(pubIP))
 }

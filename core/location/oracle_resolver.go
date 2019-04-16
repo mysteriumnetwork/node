@@ -18,28 +18,25 @@
 package location
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net"
-	"net/http"
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/market/mysterium"
+	"github.com/mysteriumnetwork/node/requests"
+	"github.com/pkg/errors"
 )
 
 const oracleResolverLogPrefix = "[location.Oracle.Resolver] "
 
 type oracleResolver struct {
-	http                  mysterium.HTTPTransport
+	http                  requests.HTTPTransport
 	oracleResolverAddress string
 }
 
 // NewOracleResolver returns new db resolver initialized from Location Oracle service
 func NewOracleResolver(address string) *oracleResolver {
 	return &oracleResolver{
-		newHTTPTransport(1 * time.Minute),
+		requests.NewHTTPClient(1 * time.Minute),
 		address,
 	}
 }
@@ -56,61 +53,12 @@ func (o *oracleResolver) ResolveLocation(ip net.IP) (location Location, err erro
 		ipAddress = ip.String()
 	}
 
-	request, err := http.NewRequest("GET", o.oracleResolverAddress+"/"+ipAddress, nil)
+	request, err := requests.NewGetRequest(o.oracleResolverAddress, ipAddress, nil)
 	if err != nil {
 		log.Error(oracleResolverLogPrefix, err)
-		return Location{}, err
+		return Location{}, errors.Wrap(err, "failed to create request")
 	}
 
-	err = o.doRequest(request, &location)
-	return location, err
-}
-
-func (o *oracleResolver) doRequest(request *http.Request, responseDto interface{}) error {
-	response, err := o.http.Do(request)
-	if err != nil {
-		log.Error(oracleResolverLogPrefix, err)
-		return err
-	}
-	defer response.Body.Close()
-
-	err = parseResponseError(response)
-	if err != nil {
-		log.Error(oracleResolverLogPrefix, err)
-		return err
-	}
-
-	return parseResponseJSON(response, &responseDto)
-}
-
-func newHTTPTransport(requestTimeout time.Duration) mysterium.HTTPTransport {
-	return &http.Client{
-		Transport: &http.Transport{
-			//Don't reuse tcp connections for request - see ip/rest_resolver.go for details
-			DisableKeepAlives: true,
-		},
-		Timeout: requestTimeout,
-	}
-}
-
-func parseResponseJSON(response *http.Response, dto interface{}) error {
-	responseJSON, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal(responseJSON, dto)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func parseResponseError(response *http.Response) error {
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("server response invalid: %s (%s)", response.Status, response.Request.URL)
-	}
-
-	return nil
+	err = o.http.DoRequestAndParseResponse(request, &location)
+	return location, errors.Wrap(err, "failed to execute request")
 }
