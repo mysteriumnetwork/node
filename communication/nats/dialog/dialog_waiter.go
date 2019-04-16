@@ -31,9 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type validator interface {
-	Validate(peerID identity.Identity) error
-}
+type validator func(peerID identity.Identity) error
 
 // NewDialogWaiter constructs new DialogWaiter which works through NATS connection.
 func NewDialogWaiter(address *discovery.AddressNATS, signer identity.Signer, validators ...validator) *dialogWaiter {
@@ -146,8 +144,8 @@ func (waiter *dialogWaiter) validateDialogRequest(request *dialogCreateRequest) 
 		return errors.New("no identity provided")
 	}
 
-	for _, v := range waiter.validators {
-		if err := v.Validate(identity.FromAddress(request.PeerID)); err != nil {
+	for _, f := range waiter.validators {
+		if err := f(identity.FromAddress(request.PeerID)); err != nil {
 			return errors.Wrap(err, "failed to validate dialog request")
 		}
 	}
