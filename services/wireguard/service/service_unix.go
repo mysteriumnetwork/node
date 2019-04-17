@@ -25,6 +25,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
@@ -34,13 +35,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+type portSupplier interface {
+	Acquire() (port.Port, error)
+}
+
 // NewManager creates new instance of Wireguard service
 func NewManager(
 	ipResolver ip.Resolver,
 	natService nat.NATService,
 	portMap func(port int) (releasePortMapping func()),
 	options Options,
-	portSupplier resources.PortSupplier,
+	portSupplier portSupplier,
 ) *Manager {
 
 	resourceAllocator := resources.NewAllocator(portSupplier, options.Subnet)

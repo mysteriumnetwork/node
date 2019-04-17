@@ -21,11 +21,17 @@ import (
 	"errors"
 	"net"
 	"sync"
+
+	"github.com/mysteriumnetwork/node/core/port"
 )
 
 // MaxConnections sets the limit to the maximum number of wireguard connections.
 // x.x.x.0, x.x.x.1 and x.x.x.255 are reserved
 var MaxConnections = 253
+
+type portSupplier interface {
+	Acquire() (port.Port, error)
+}
 
 // Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.
@@ -33,12 +39,12 @@ type Allocator struct {
 	IPAddresses map[int]struct{}
 	mu          sync.Mutex
 
-	portSupplier PortSupplier
+	portSupplier portSupplier
 	subnet       net.IPNet
 }
 
 // NewAllocator creates new resource pool for wireguard connection.
-func NewAllocator(portSupplier PortSupplier, subnet net.IPNet) *Allocator {
+func NewAllocator(portSupplier portSupplier, subnet net.IPNet) *Allocator {
 	return &Allocator{
 		IPAddresses: make(map[int]struct{}),
 

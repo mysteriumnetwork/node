@@ -34,6 +34,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+type portSupplier interface {
+	Acquire() (port.Port, error)
+}
+
 // NewManager creates new instance of Wireguard service
 func NewManager(
 	ipResolver ip.Resolver,
