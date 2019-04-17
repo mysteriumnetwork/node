@@ -56,19 +56,21 @@ func (r *DBResolver) DetectLocation() (Location, error) {
 }
 
 // ResolveLocation maps given ip to country.
-func (r *DBResolver) ResolveLocation(ip net.IP) (Location, error) {
+func (r *DBResolver) ResolveLocation(ip net.IP) (loc Location, err error) {
 	countryRecord, err := r.dbReader.Country(ip)
 	if err != nil {
-		return Location{}, errors.Wrap(err, "failed to get a country")
+		return loc, errors.Wrap(err, "failed to get a country")
 	}
 
 	country := countryRecord.Country.IsoCode
 	if country == "" {
 		country = countryRecord.RegisteredCountry.IsoCode
 		if country == "" {
-			return Location{}, errors.New("failed to resolve country")
+			return loc, errors.New("failed to resolve country")
 		}
 	}
 
-	return Location{Country: country}, nil
+	loc.IP = ip.String()
+	loc.Country = country
+	return loc, nil
 }
