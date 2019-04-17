@@ -196,7 +196,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	proposals, err := ce.proposalProvider.FindProposals(cr.ProviderID, cr.ServiceType)
+	proposals, err := ce.proposalProvider.FindProposals(cr.ProviderID, cr.ServiceType, "", "")
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
