@@ -155,10 +155,6 @@ func (ce *connectionEndpoint) Stop() error {
 		return err
 	}
 
-	if err := ce.resourceAllocator.ReleasePort(ce.endpoint.Port); err != nil {
-		return err
-	}
-
 	if err := ce.resourceAllocator.ReleaseIPNet(ce.ipAddr); err != nil {
 		return err
 	}

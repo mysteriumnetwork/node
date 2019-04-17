@@ -38,7 +38,6 @@ type Allocator struct {
 	mu          sync.Mutex
 	Ifaces      map[int]struct{}
 	IPAddresses map[int]struct{}
-	Ports       map[int]struct{}
 
 	portSupplier PortSupplier
 	subnet       net.IPNet
@@ -49,7 +48,6 @@ func NewAllocator(ports PortSupplier, subnet net.IPNet) *Allocator {
 	return &Allocator{
 		Ifaces:      make(map[int]struct{}),
 		IPAddresses: make(map[int]struct{}),
-		Ports:       make(map[int]struct{}),
 
 		portSupplier: ports,
 		subnet:       subnet,
@@ -125,15 +123,10 @@ func (a *Allocator) AllocatePort() (int, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if len(a.Ports) == MaxConnections {
-		return 0, errors.Errorf("already running max number of connections: %d", MaxConnections)
-	}
-
 	port, err := a.portSupplier.Acquire()
 	if err != nil {
 		return 0, err
 	}
-	a.Ports[port.Num()] = struct{}{}
 	return port.Num(), nil
 }
 
@@ -171,19 +164,6 @@ func (a *Allocator) ReleaseIPNet(ipnet net.IPNet) error {
 	}
 
 	delete(a.IPAddresses, i)
-	return nil
-}
-
-// ReleasePort releases UDP port.
-func (a *Allocator) ReleasePort(port int) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	if _, ok := a.Ports[port]; !ok {
-		return errors.New("allocated port not found")
-	}
-
-	delete(a.Ports, port)
 	return nil
 }
 

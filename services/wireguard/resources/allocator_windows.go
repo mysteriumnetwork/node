@@ -104,11 +104,6 @@ func (a *Allocator) ReleaseIPNet(ipnet net.IPNet) error {
 	return nil
 }
 
-// ReleasePort is not required for Windows implementation and left here just to satisfy the interface.
-func (a *Allocator) ReleasePort(port int) error {
-	return nil
-}
-
 func calcIPNet(ipnet net.IPNet, index int) net.IPNet {
 	ip := make(net.IP, len(ipnet.IP))
 	copy(ip, ipnet.IP)
