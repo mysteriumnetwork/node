@@ -96,13 +96,13 @@ func (client httpClient) doPayloadRequest(method, path string, payload interface
 
 func (client *httpClient) executeRequest(method, fullPath string, payloadJSON []byte) (*http.Response, error) {
 	request, err := http.NewRequest(method, fullPath, bytes.NewBuffer(payloadJSON))
-	request.Header.Set("User-Agent", client.ua)
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Accept", "application/json")
 	if err != nil {
 		log.Critical(client.logPrefix, err)
 		return nil, err
 	}
+	request.Header.Set("User-Agent", client.ua)
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json")
 
 	response, err := client.http.Do(request)
 
