@@ -20,13 +20,17 @@
 package resources
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/pkg/errors"
 )
+
+// MaxConnections sets the limit to the maximum number of wireguard connections.
+var MaxConnections = 256
 
 // Allocator is mock wireguard resource handler.
 // It will manage lists of network interfaces names, IP addresses and port for endpoints.
@@ -36,22 +40,19 @@ type Allocator struct {
 	IPAddresses map[int]struct{}
 	Ports       map[int]struct{}
 
-	ports          PortSupplier
-	portMin        int
-	maxConnections int
-	subnet         net.IPNet
+	portSupplier PortSupplier
+	subnet       net.IPNet
 }
 
 // NewAllocator creates new resource pool for wireguard connection.
-func NewAllocator(ports PortSupplier, maxConnections int, subnet net.IPNet) *Allocator {
+func NewAllocator(ports PortSupplier, subnet net.IPNet) *Allocator {
 	return &Allocator{
 		Ifaces:      make(map[int]struct{}),
 		IPAddresses: make(map[int]struct{}),
 		Ports:       make(map[int]struct{}),
 
-		ports:          ports,
-		maxConnections: maxConnections,
-		subnet:         subnet,
+		portSupplier: ports,
+		subnet:       subnet,
 	}
 }
 
@@ -91,7 +92,7 @@ func (a *Allocator) AllocateInterface() (string, error) {
 		return "", err
 	}
 
-	for i := 0; i < a.maxConnections; i++ {
+	for i := 0; i < MaxConnections; i++ {
 		if _, ok := a.Ifaces[i]; !ok {
 			a.Ifaces[i] = struct{}{}
 			if interfaceExists(ifaces, fmt.Sprintf("%s%d", interfacePrefix, i)) {
@@ -110,7 +111,7 @@ func (a *Allocator) AllocateIPNet() (net.IPNet, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	for i := 0; i < a.maxConnections; i++ {
+	for i := 0; i < MaxConnections; i++ {
 		if _, ok := a.IPAddresses[i]; !ok {
 			a.IPAddresses[i] = struct{}{}
 			return calcIPNet(a.subnet, i), nil
@@ -124,33 +125,16 @@ func (a *Allocator) AllocatePort() (int, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if err := a.initializePortMin(); err != nil {
+	if len(a.Ports) == MaxConnections {
+		return 0, errors.Errorf("already running max number of connections: %d", MaxConnections)
+	}
+
+	port, err := a.portSupplier.Acquire()
+	if err != nil {
 		return 0, err
 	}
-
-	portMax := a.portMin + a.maxConnections
-	for i := a.portMin; i < portMax; i++ {
-		if _, ok := a.Ports[i]; !ok {
-			a.Ports[i] = struct{}{}
-			return i, nil
-		}
-	}
-
-	return 0, errors.New("no more unused ports")
-}
-
-func (a *Allocator) initializePortMin() error {
-	if a.portMin != 0 {
-		return nil
-	}
-
-	port, err := a.ports.Acquire()
-	if err != nil {
-		return err
-	}
-
-	a.portMin = port.Num()
-	return nil
+	a.Ports[port.Num()] = struct{}{}
+	return port.Num(), nil
 }
 
 // ReleaseInterface releases name for the wireguard network interface.
