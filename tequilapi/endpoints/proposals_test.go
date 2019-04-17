@@ -89,7 +89,52 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
-	assert.Equal(t, "0xProviderId", mockProposalProvider.recordedProviderId)
+	assert.Equal(t, "0xProviderId", mockProposalProvider.recordedProviderID)
+}
+
+func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
+	mockProposalProvider := &mockProposalProvider{
+		proposals: []market.ServiceProposal{serviceProposals[0]},
+	}
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		nil,
+	)
+	assert.Nil(t, err)
+
+	query := req.URL.Query()
+	query.Set("accessPolicyId", "accessPolicyId")
+	query.Set("accessPolicySource", "accessPolicySource")
+	req.URL.RawQuery = query.Encode()
+
+	resp := httptest.NewRecorder()
+	handlerFunc := NewProposalsEndpoint(mockProposalProvider, &mysteriumMorqaFake{}).List
+	handlerFunc(resp, req, nil)
+
+	assert.JSONEq(
+		t,
+		`{
+            "proposals": [
+                {
+                    "id": 1,
+                    "providerId": "0xProviderId",
+                    "serviceType": "testprotocol",
+                    "serviceDefinition": {
+                        "locationOriginate": {
+                            "asn": 123,
+                            "country": "Lithuania",
+                            "city": "Vilnius"
+                        }
+                    }
+                }
+            ]
+        }`,
+		resp.Body.String(),
+	)
+	assert.Equal(t, "accessPolicySource", mockProposalProvider.recordedAccessPolicySource)
+	assert.Equal(t, "accessPolicyId", mockProposalProvider.recordedAccessPolicyID)
 }
 
 func TestProposalsEndpointList(t *testing.T) {
@@ -220,14 +265,18 @@ func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
 }
 
 type mockProposalProvider struct {
-	recordedProviderId  string
-	recordedServiceType string
-	proposals           []market.ServiceProposal
+	recordedProviderID         string
+	recordedServiceType        string
+	recordedAccessPolicyID     string
+	recordedAccessPolicySource string
+	proposals                  []market.ServiceProposal
 }
 
-func (mpp *mockProposalProvider) FindProposals(providerID string, serviceType string) ([]market.ServiceProposal, error) {
-	mpp.recordedProviderId = providerID
+func (mpp *mockProposalProvider) FindProposals(providerID, serviceType, accessPolicyID, accessPolicySource string) ([]market.ServiceProposal, error) {
+	mpp.recordedProviderID = providerID
 	mpp.recordedServiceType = serviceType
+	mpp.recordedAccessPolicyID = accessPolicyID
+	mpp.recordedAccessPolicySource = accessPolicySource
 	return mpp.proposals, nil
 }
 
