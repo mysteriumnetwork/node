@@ -80,7 +80,13 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 					di.EventBus)
 			}
 
-			return wireguard_service.NewManager(di.IPResolver, di.NATService, mapPort, wgOptions),
+			portPool := di.PortPool
+			if wgOptions.Ports.IsSpecified() {
+				log.Debugf("%s fixed service port range (%s) configured, using custom port pool", logPrefix, wgOptions.Ports)
+				portPool = port.NewFixedRangePool(*wgOptions.Ports)
+			}
+
+			return wireguard_service.NewManager(di.IPResolver, di.NATService, mapPort, wgOptions, portPool),
 				wireguard_service.GetProposal(location), nil
 		},
 	)

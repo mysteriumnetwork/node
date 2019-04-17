@@ -40,6 +40,15 @@ func NewPool() *Pool {
 	}
 }
 
+// NewFixedRangePool creates a fixed size pool from port.Range
+func NewFixedRangePool(r Range) *Pool {
+	return &Pool{
+		start:    r.Start,
+		capacity: r.Capacity(),
+		rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
+	}
+}
+
 // Acquire returns an unused port in pool's range
 func (pool *Pool) Acquire() (port Port, err error) {
 	p := pool.randomPort()

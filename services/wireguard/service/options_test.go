@@ -22,6 +22,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,14 +42,13 @@ func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
 }
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
-	request := json.RawMessage(`{"connectDelay": 3000, "portMin":123, "portMax":1234, "subnet":"10.10.0.0/16"}`)
+	request := json.RawMessage(`{"connectDelay": 3000, "ports": "52820:53075", "subnet":"10.10.0.0/16"}`)
 	options, err := ParseJSONOptions(&request)
 
 	assert.NoError(t, err)
 	assert.Equal(t, Options{
 		ConnectDelay: 3000,
-		PortMin:      123,
-		PortMax:      1234,
+		Ports:        &port.Range{52820, 53075},
 		Subnet: net.IPNet{
 			IP:   net.ParseIP("10.10.0.0").To4(),
 			Mask: net.IPv4Mask(255, 255, 0, 0),

@@ -26,5 +26,5 @@ import (
 
 func connectionResourceAllocator() *resources.Allocator {
 	// Resource allocator uses config received from the provider. No configuration options required, passing default ones.
-	return resources.NewAllocator(service.DefaultOptions.PortMin, service.DefaultOptions.PortMax, service.DefaultOptions.Subnet)
+	return resources.NewAllocator(nil, service.DefaultOptions.Subnet)
 }
