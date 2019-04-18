@@ -19,7 +19,6 @@ package location
 
 import (
 	"fmt"
-	"net"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -45,7 +44,7 @@ func TestResolverResolveCountry(t *testing.T) {
 		resolver, err := NewExternalDBResolver("db/GeoLite2-Country.mmdb", ip.NewResolverMock(tt.ip))
 		assert.NoError(t, err)
 
-		got, err := resolver.ResolveLocation(net.ParseIP(tt.ip))
+		got, err := resolver.DetectLocation()
 		fmt.Println(got, err)
 
 		assert.Equal(t, tt.want, got.Country, tt.ip)

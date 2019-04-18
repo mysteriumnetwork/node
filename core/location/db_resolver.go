@@ -45,18 +45,13 @@ func NewExternalDBResolver(databasePath string, ipResolver ip.Resolver) (*DBReso
 }
 
 // DetectLocation detects current IP-address provides location information for the IP.
-func (r *DBResolver) DetectLocation() (Location, error) {
+func (r *DBResolver) DetectLocation() (loc Location, err error) {
 	ipAddress, err := r.ipResolver.GetPublicIP()
 	if err != nil {
 		return Location{}, errors.Wrap(err, "failed to get public IP")
 	}
 
 	ip := net.ParseIP(ipAddress)
-	return r.ResolveLocation(ip)
-}
-
-// ResolveLocation maps given ip to country.
-func (r *DBResolver) ResolveLocation(ip net.IP) (loc Location, err error) {
 	countryRecord, err := r.dbReader.Country(ip)
 	if err != nil {
 		return loc, errors.Wrap(err, "failed to get a country")
