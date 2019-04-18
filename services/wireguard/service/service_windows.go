@@ -44,15 +44,10 @@ func NewManager(
 	natService nat.NATService,
 	portMap func(port int) (releasePortMapping func()),
 	options Options,
-	portPool portSupplier,
+	portSupplier portSupplier,
 ) *Manager {
 
-	portSupplier := portPool
-	if options.PortMin != 0 {
-		portSupplier = port.NewFixed(options.PortMin)
-	}
-
-	resourceAllocator := resources.NewAllocator(portSupplier, options.MaxConnections, options.Subnet)
+	resourceAllocator := resources.NewAllocator(portSupplier, options.Subnet)
 	return &Manager{
 		natService:        natService,
 		resourceAllocator: resourceAllocator,

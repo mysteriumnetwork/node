@@ -82,7 +82,7 @@ func (a *Allocator) AllocateIPNet() (net.IPNet, error) {
 
 // AllocatePort provides available UDP port for the wireguard endpoint.
 func (a *Allocator) AllocatePort() (int, error) {
-	p, err := a.ports.Acquire()
+	p, err := a.portSupplier.Acquire()
 	return int(p), err
 }
 
