@@ -61,7 +61,7 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 }
 
 func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
-	clientConfig := ClientConfig{config.NewConfig(runtimeDir, scriptSearchPath), 50221, nil}
+	clientConfig := ClientConfig{GenericConfig: config.NewConfig(runtimeDir, scriptSearchPath), vpnConfig: nil}
 
 	clientConfig.SetDevice("tun")
 	clientConfig.SetParam("cipher", "AES-256-GCM")

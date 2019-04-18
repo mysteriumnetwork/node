@@ -132,6 +132,12 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		}
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
+
+		var portSupplier port.ServicePortSupplier = di.PortPool
+		if transportOptions.Port != 0 && locationInfo.PubIP == locationInfo.OutIP {
+			portSupplier = port.NewFixed(transportOptions.Port)
+		}
+
 		manager := openvpn_service.NewManager(
 			nodeOptions,
 			transportOptions,
@@ -140,9 +146,8 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			di.NATService,
 			di.NATPinger,
 			mapPort,
-			di.LastSessionShutdown,
 			di.NATTracker,
-			di.PortPool,
+			portSupplier,
 		)
 		return manager, proposal, nil
 	}
@@ -215,7 +220,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			di.PromiseStorage,
 			nodeOptions,
 			di.NATPinger.PingTarget,
-			di.LastSessionShutdown,
 			di.NATTracker,
 			serviceID)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))
@@ -223,13 +227,11 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	newDiscovery := func() service.Discovery {
 		return registry.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory)
 	}
-	di.PortPool = port.NewPool()
 	di.ServicesManager = service.NewManager(
 		di.ServiceRegistry,
 		newDialogWaiter,
 		newDialogHandler,
 		newDiscovery,
-		di.NATPinger,
 		di.EventBus,
 	)
 

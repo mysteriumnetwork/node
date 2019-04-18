@@ -59,7 +59,8 @@ func Test_GetProposal(t *testing.T) {
 
 func Test_Manager_ProvideConfig(t *testing.T) {
 	manager := NewManager()
-	sessionConfig, cb, err := manager.ProvideConfig(nil)
+	fn := func(i int) int { return 0 }
+	sessionConfig, cb, err := manager.ProvideConfig(nil, fn)
 	assert.NoError(t, err)
 	assert.Nil(t, sessionConfig)
 	assert.Nil(t, cb)

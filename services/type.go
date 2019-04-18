@@ -15,29 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package traversal
+package services
 
-import (
-	"github.com/mysteriumnetwork/node/services"
-)
-
-// NoopPinger does nothing
-type NoopPinger struct{}
-
-// Start does nothing
-func (np *NoopPinger) Start() {}
-
-// Stop does nothing
-func (np *NoopPinger) Stop() {}
-
-// PingProvider does nothing
-func (np *NoopPinger) PingProvider(ip string, port int) error { return nil }
-
-// PingTarget does nothing
-func (np *NoopPinger) PingTarget(*Params) {}
-
-// BindConsumerPort does nothing
-func (np *NoopPinger) BindConsumerPort(port int) {}
-
-// BindServicePort does nothing
-func (np *NoopPinger) BindServicePort(serviceType services.ServiceType, port int) {}
+// ServiceType identifies service type
+type ServiceType string

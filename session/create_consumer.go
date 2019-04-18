@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session/promise"
 )
 
@@ -43,7 +44,7 @@ type createConsumer struct {
 
 // Creator defines method for session creation
 type Creator interface {
-	Create(consumerID, issuerID identity.Identity, proposalID int, config ServiceConfiguration, requestConfig json.RawMessage) (Session, error)
+	Create(consumerID, issuerID identity.Identity, proposalID int, config ServiceConfiguration, pingerPrams *traversal.Params) (Session, error)
 }
 
 // GetMessageEndpoint returns endpoint there to receive messages
@@ -61,7 +62,14 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
-	config, destroyCallback, err := consumer.configProvider(request.Config)
+	var pingerPort int
+	config, destroyCallback, err := consumer.configProvider(
+		request.Config,
+		func(port int) int {
+			pingerPort = port
+			// its not important here
+			return 0
+		})
 	if err != nil {
 		return responseInternalError, err
 	}
@@ -71,7 +79,9 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		issuerID = request.ConsumerInfo.IssuerID
 	}
 
-	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID, config, request.Config)
+	pingerParams := &traversal.Params{RequestConfig: request.Config, Port: pingerPort}
+
+	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID, config, pingerParams)
 	switch err {
 	case nil:
 		if destroyCallback != nil {

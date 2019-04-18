@@ -45,11 +45,11 @@ type IDGenerator func() (ID, error)
 
 // ConfigNegotiator is able to handle config negotiations
 type ConfigNegotiator interface {
-	ProvideConfig(consumerKey json.RawMessage) (ServiceConfiguration, DestroyCallback, error)
+	ProvideConfig(consumerKey json.RawMessage, pingerPort func(int) int) (ServiceConfiguration, DestroyCallback, error)
 }
 
 // ConfigProvider provides session config for remote client
-type ConfigProvider func(consumerKey json.RawMessage) (ServiceConfiguration, DestroyCallback, error)
+type ConfigProvider func(consumerKey json.RawMessage, pingerPort func(int) int) (ServiceConfiguration, DestroyCallback, error)
 
 // DestroyCallback cleanups session
 type DestroyCallback func()
@@ -83,8 +83,7 @@ func NewManager(
 	idGenerator IDGenerator,
 	sessionStorage Storage,
 	balanceTrackerFactory BalanceTrackerFactory,
-	natPingerChan func(json.RawMessage),
-	lastSessionShutdown chan struct{},
+	natPingerChan func(*traversal.Params),
 	natEventGetter NATEventGetter,
 	serviceId string,
 ) *Manager {
@@ -94,7 +93,6 @@ func NewManager(
 		sessionStorage:        sessionStorage,
 		balanceTrackerFactory: balanceTrackerFactory,
 		natPingerChan:         natPingerChan,
-		lastSessionShutdown:   lastSessionShutdown,
 		natEventGetter:        natEventGetter,
 		serviceId:             serviceId,
 
@@ -109,8 +107,7 @@ type Manager struct {
 	sessionStorage        Storage
 	balanceTrackerFactory BalanceTrackerFactory
 	provideConfig         ConfigProvider
-	natPingerChan         func(json.RawMessage)
-	lastSessionShutdown   chan struct{}
+	natPingerChan         func(*traversal.Params)
 	natEventGetter        NATEventGetter
 	serviceId             string
 
@@ -118,7 +115,7 @@ type Manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int, config ServiceConfiguration, requestConfig json.RawMessage) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -159,15 +156,7 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 		}
 	}()
 
-	// start NAT pinger here, do not block - configuration should be returned to consumer
-	// start NAT pinger, get hole punched, launch service.
-	//  on session-destroy - shutdown service and wait for session-create
-	// TODO: We might want to start a separate openvpn daemon if node is behind the NAT
-
-	// We need to know that session creation is already in-progress here
-
-	// postpone vpnServer start until NAT hole is punched
-	manager.natPingerChan(requestConfig)
+	manager.natPingerChan(pingerParams)
 	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
 }
@@ -185,15 +174,6 @@ func (manager *Manager) Destroy(consumerID identity.Identity, sessionID string) 
 
 	if sessionInstance.ConsumerID != consumerID {
 		return ErrorWrongSessionOwner
-	}
-
-	if sessionInstance.Last && manager.lastSessionShutdown != nil {
-		log.Info("attempting to stop service")
-		if manager.natEventGetter.LastEvent().Type == traversal.FailureEventType {
-			log.Info("last session destroy requested - stopping service executable")
-			manager.lastSessionShutdown <- struct{}{}
-			log.Info("executable shutdown on last session triggered")
-		}
 	}
 
 	manager.sessionStorage.Remove(ID(sessionID))

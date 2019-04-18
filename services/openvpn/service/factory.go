@@ -38,29 +38,19 @@ import (
 )
 
 // NewManager creates new instance of Openvpn service
-func NewManager(
-	nodeOptions node.Options,
+func NewManager(nodeOptions node.Options,
 	serviceOptions Options,
 	location location.ServiceLocationInfo,
 	sessionMap openvpn_session.SessionMap,
 	natService nat.NATService,
 	natPinger NATPinger,
 	mapPort func(int) (releasePortMapping func()),
-	lastSessionShutdown chan struct{},
 	natEventGetter NATEventGetter,
-	portPool portSupplier,
+	portPool port.ServicePortSupplier,
 ) *Manager {
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 
 	serverFactory := newServerFactory(nodeOptions, sessionValidator)
-	if lastSessionShutdown != nil {
-		serverFactory = newRestartingServerFactory(nodeOptions, sessionValidator, natPinger, lastSessionShutdown)
-	}
-
-	portSupplier := portPool
-	if serviceOptions.Port != 0 {
-		portSupplier = port.NewFixed(serviceOptions.Port)
-	}
 
 	return &Manager{
 		publicIP:                       location.PubIP,
@@ -74,14 +64,13 @@ func NewManager(
 		serviceOptions:                 serviceOptions,
 		mapPort:                        mapPort,
 		natEventGetter:                 natEventGetter,
-		ports:                          portSupplier,
+		ports:                          portPool,
 	}
 }
 
 // newServerConfigFactory returns function generating server config and generates required security primitives
 func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) ServerConfigFactory {
 	return func(secPrimitives *tls.Primitives, port int) *openvpn_service.ServerConfig {
-		// TODO: check nodeOptions for --openvpn-transport option
 		return openvpn_service.NewServerConfig(
 			nodeOptions.Directories.Runtime,
 			nodeOptions.Directories.Config,
@@ -104,32 +93,13 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 	}
 }
 
-func newRestartingServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, natPinger NATPinger, lastSessionShutdown chan struct{}) ServerFactory {
-	return func(config *openvpn_service.ServerConfig) openvpn.Process {
-		return &restartingServer{
-			stop:   make(chan struct{}),
-			waiter: make(chan error),
-			openvpnFactory: func() openvpn.Process {
-				return openvpn.CreateNewProcess(
-					nodeOptions.Openvpn.BinaryPath(),
-					config.GenericConfig,
-					auth.NewMiddleware(sessionValidator.Validate),
-					state.NewMiddleware(vpnStateCallback),
-				)
-			},
-			natPinger:           natPinger,
-			lastSessionShutdown: lastSessionShutdown,
-		}
-	}
-}
-
 // newSessionConfigNegotiatorFactory returns function generating session config for remote client
 func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options, natEventGetter NATEventGetter) SessionConfigNegotiatorFactory {
 	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string, port int) session.ConfigNegotiator {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP, networkOptions.Localnet)
 		return &OpenvpnConfigNegotiator{
 			natEventGetter: natEventGetter,
-			vpnConfig: openvpn_service.VPNConfig{
+			vpnConfig: &openvpn_service.VPNConfig{
 				RemoteIP:        serverIP,
 				RemotePort:      port,
 				RemoteProtocol:  serviceOptions.Protocol,
@@ -143,23 +113,27 @@ func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, servi
 // OpenvpnConfigNegotiator knows how to send the openvpn config to the consumer
 type OpenvpnConfigNegotiator struct {
 	natEventGetter NATEventGetter
-	vpnConfig      openvpn_service.VPNConfig
+	vpnConfig      *openvpn_service.VPNConfig
 }
 
 // ProvideConfig returns the config for user
-func (ocn *OpenvpnConfigNegotiator) ProvideConfig(json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error) {
-	localPort := ocn.determineClientPort()
+func (ocn *OpenvpnConfigNegotiator) ProvideConfig(consumerKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+	localPort := ocn.determineClientPort(pingerPort(0))
 	ocn.vpnConfig.LocalPort = localPort
-	return &ocn.vpnConfig, nil, nil
+	log.Info(logPrefix, "pinger port: ", ocn.vpnConfig.RemotePort)
+	return ocn.vpnConfig, nil, nil
 }
 
-func (ocn *OpenvpnConfigNegotiator) determineClientPort() int {
+func (ocn *OpenvpnConfigNegotiator) determineClientPort(pingerPort int) int {
 	if ocn.natEventGetter.LastEvent().Type == traversal.FailureEventType {
 		// port mapping failed, assume NAT hole-punching
-		// randomize port
+		// let Consumer communicate with Provider's NATPinger port
+		ocn.vpnConfig.RemotePort = pingerPort
+		// TODO: randomize port
+		log.Info(logPrefix, "client port determined: ", 50221)
 		return 50221
 	}
-	log.Info("returning auto port")
+	log.Info(logPrefix, "returning auto port")
 	return 0
 }
 

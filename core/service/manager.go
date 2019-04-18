@@ -43,13 +43,7 @@ var (
 type Service interface {
 	Serve(providerID identity.Identity) error
 	Stop() error
-	ProvideConfig(publicKey json.RawMessage) (session.ServiceConfiguration, session.DestroyCallback, error)
-}
-
-// NATPinger defines Pinger interface for Provider
-type NATPinger interface {
-	BindPort(port int)
-	WaitForHole() error
+	ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error)
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
@@ -77,7 +71,6 @@ func NewManager(
 	dialogWaiterFactory DialogWaiterFactory,
 	dialogHandlerFactory DialogHandlerFactory,
 	discoveryFactory DiscoveryFactory,
-	natPinger NATPinger,
 	eventPublisher Publisher,
 ) *Manager {
 	return &Manager{
@@ -86,7 +79,6 @@ func NewManager(
 		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
-		natPinger:            natPinger,
 	}
 }
 
@@ -99,8 +91,6 @@ type Manager struct {
 	servicePool     *Pool
 
 	discoveryFactory DiscoveryFactory
-
-	natPinger NATPinger
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
