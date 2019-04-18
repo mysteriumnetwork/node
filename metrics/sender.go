@@ -50,6 +50,7 @@ type appInfo struct {
 }
 
 type natMappingContext struct {
+	stage        string
 	successful   bool
 	errorMessage *string
 }
@@ -60,15 +61,15 @@ func (sender *Sender) SendStartupEvent() error {
 }
 
 // SendNATMappingSuccessEvent sends event about successful NAT mapping
-func (sender *Sender) SendNATMappingSuccessEvent() error {
-	context := natMappingContext{successful: true}
+func (sender *Sender) SendNATMappingSuccessEvent(stage string) error {
+	context := natMappingContext{stage: stage, successful: true}
 	return sender.sendEvent(natMappingEventName, context)
 }
 
 // SendNATMappingFailEvent sends event about failed NAT mapping
-func (sender *Sender) SendNATMappingFailEvent(err error) error {
+func (sender *Sender) SendNATMappingFailEvent(stage string, err error) error {
 	errorMessage := err.Error()
-	context := natMappingContext{successful: false, errorMessage: &errorMessage}
+	context := natMappingContext{stage: stage, successful: false, errorMessage: &errorMessage}
 	return sender.sendEvent(natMappingEventName, context)
 }
 

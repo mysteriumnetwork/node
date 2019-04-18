@@ -33,6 +33,8 @@ const (
 	mapUpdateInterval = 15 * time.Minute
 )
 
+const stageName = "upnp"
+
 // Publisher is responsible for publishing given events
 type Publisher interface {
 	Publish(topic string, args ...interface{})
@@ -86,11 +88,11 @@ func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name
 		log.Debugf("%s Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
-			publisher.Publish(traversal.EventTopic, traversal.BuildFailureEvent(err))
+			publisher.Publish(traversal.EventTopic, traversal.BuildFailureEvent(stageName, err))
 			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
 			return
 		}
 	}
-	publisher.Publish(traversal.EventTopic, traversal.BuildSuccessEvent())
+	publisher.Publish(traversal.EventTopic, traversal.BuildSuccessEvent(stageName))
 	log.Info(logPrefix, "Mapped network port: ", extPort)
 }

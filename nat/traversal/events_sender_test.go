@@ -25,22 +25,26 @@ import (
 )
 
 type mockMetricsSender struct {
-	mockResponse  error
+	mockResponse error
+
 	successSent   bool
 	failErrorSent error
+	stageSent     string
 }
 
 func buildMockMetricsSender(mockResponse error) *mockMetricsSender {
 	return &mockMetricsSender{mockResponse: mockResponse, successSent: false}
 }
 
-func (sender *mockMetricsSender) SendNATMappingSuccessEvent() error {
+func (sender *mockMetricsSender) SendNATMappingSuccessEvent(stage string) error {
 	sender.successSent = true
+	sender.stageSent = stage
 	return nil
 }
 
-func (sender *mockMetricsSender) SendNATMappingFailEvent(err error) error {
+func (sender *mockMetricsSender) SendNATMappingFailEvent(stage string, err error) error {
 	sender.failErrorSent = err
+	sender.stageSent = stage
 	return nil
 }
 
@@ -58,9 +62,10 @@ func Test_EventsSender_ConsumeNATEvent_SendsSuccessEvent(t *testing.T) {
 	mockIPResolver := mockIPResolver{mockIp: "1st ip"}
 	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
 
-	sender.ConsumeNATEvent(Event{Type: SuccessEventType})
+	sender.ConsumeNATEvent(Event{Stage: "hole_punching", Type: SuccessEventType})
 
 	assert.True(t, mockMetricsSender.successSent)
+	assert.Equal(t, "hole_punching", mockMetricsSender.stageSent)
 }
 
 func Test_EventsSender_ConsumeNATEvent_WithSameIp_DoesNotSendSuccessEventAgain(t *testing.T) {
@@ -106,9 +111,10 @@ func Test_EventsSender_ConsumeNATEvent_SendsFailureEvent(t *testing.T) {
 	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
 
 	testErr := errors.New("test error")
-	sender.ConsumeNATEvent(Event{Type: FailureEventType, Error: testErr})
+	sender.ConsumeNATEvent(Event{Stage: "hole_punching", Type: FailureEventType, Error: testErr})
 
 	assert.Equal(t, testErr, mockMetricsSender.failErrorSent)
+	assert.Equal(t, "hole_punching", mockMetricsSender.stageSent)
 }
 
 func Test_EventsSender_ConsumeNATEvent_WithSuccessAndFailureOnSameIp_SendsBothEvents(t *testing.T) {

@@ -34,8 +34,8 @@ type EventsSender struct {
 }
 
 type metricsSender interface {
-	SendNATMappingSuccessEvent() error
-	SendNATMappingFailEvent(err error) error
+	SendNATMappingSuccessEvent(stage string) error
+	SendNATMappingFailEvent(stage string, err error) error
 }
 
 type ipResolver func() (string, error)
@@ -68,9 +68,9 @@ func (es *EventsSender) ConsumeNATEvent(event Event) {
 func (es *EventsSender) sendNATEvent(event Event) error {
 	switch event.Type {
 	case SuccessEventType:
-		return es.metricsSender.SendNATMappingSuccessEvent()
+		return es.metricsSender.SendNATMappingSuccessEvent(event.Stage)
 	case FailureEventType:
-		return es.metricsSender.SendNATMappingFailEvent(event.Error)
+		return es.metricsSender.SendNATMappingFailEvent(event.Stage, event.Error)
 	default:
 		return fmt.Errorf("unknown event type: %v", event.Type)
 	}
