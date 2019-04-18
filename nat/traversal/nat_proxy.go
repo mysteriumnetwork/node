@@ -59,7 +59,7 @@ func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
 	if err != nil {
 		log.Error(logPrefix, "failed to writing / reading a stream to/from NATProxy: ", err)
 	}
-	log.Tracef("%total bytes transferred from %s to %s: %s", logPrefix,
+	log.Tracef("%stotal bytes transferred from %s to %s: %d", logPrefix,
 		srcConn.RemoteAddr().String(),
 		dstConn.RemoteAddr().String(),
 		totalBytes)

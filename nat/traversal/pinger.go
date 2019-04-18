@@ -24,9 +24,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/port"
-
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/pkg/errors"
 	"golang.org/x/net/ipv4"
@@ -40,9 +39,10 @@ const pingTimeout = 10000
 type Pinger struct {
 	pingTarget     chan *Params
 	pingCancelled  chan struct{}
+	stop           chan struct{}
+	once           sync.Once
 	natEventWaiter NatEventWaiter
 	configParser   ConfigParser
-	once           sync.Once
 	natProxy       natProxy
 	portPool       portSupplier
 	consumerPort   int
@@ -66,9 +66,11 @@ type portSupplier interface {
 func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool portSupplier) *Pinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
+	stop := make(chan struct{})
 	return &Pinger{
 		pingTarget:     target,
 		pingCancelled:  cancel,
+		stop:           stop,
 		natEventWaiter: waiter,
 		configParser:   parser,
 		natProxy:       proxy,
@@ -99,6 +101,8 @@ func (p *Pinger) Start() {
 
 	for {
 		select {
+		case <-p.stop:
+			return
 		case pingParams := <-p.pingTarget:
 			log.Info(prefix, "Pinging peer with", pingParams)
 
@@ -143,9 +147,9 @@ func (p *Pinger) Start() {
 	}
 }
 
-// Stop noop method
+// Stop stops pinger loop
 func (p *Pinger) Stop() {
-	// noop method - NATPinger should not stop
+	p.once.Do(func() { close(p.stop) })
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
