@@ -44,7 +44,7 @@ type Pinger struct {
 	natEventWaiter NatEventWaiter
 	configParser   ConfigParser
 	natProxy       natProxy
-	portPool       portSupplier
+	portPool       PortSupplier
 	consumerPort   int
 }
 
@@ -58,12 +58,13 @@ type ConfigParser interface {
 	Parse(config json.RawMessage) (ip string, port int, serviceType services.ServiceType, err error)
 }
 
-type portSupplier interface {
+// PortSupplier provides port needed to run a service on
+type PortSupplier interface {
 	Acquire() (port.Port, error)
 }
 
 // NewPingerFactory returns Pinger instance
-func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool portSupplier) *Pinger {
+func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier) *Pinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})

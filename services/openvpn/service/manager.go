@@ -60,15 +60,11 @@ type NATEventGetter interface {
 	LastEvent() traversal.Event
 }
 
-type portSupplier interface {
-	Acquire() (port.Port, error)
-}
-
 // Manager represents entrypoint for Openvpn service with top level components
 type Manager struct {
 	natService     nat.NATService
 	mapPort        func(int) (releasePortMapping func())
-	ports          portSupplier
+	ports          port.ServicePortSupplier
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
 

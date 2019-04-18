@@ -35,19 +35,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type portSupplier interface {
-	Acquire() (port.Port, error)
-}
-
 // NewManager creates new instance of Wireguard service
 func NewManager(
 	ipResolver ip.Resolver,
 	natService nat.NATService,
 	portMap func(port int) (releasePortMapping func()),
 	options Options,
-	portSupplier portSupplier,
+	portSupplier port.ServicePortSupplier,
 ) *Manager {
-
 	resourceAllocator := resources.NewAllocator(portSupplier, options.Subnet)
 	return &Manager{
 		natService: natService,

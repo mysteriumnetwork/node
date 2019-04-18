@@ -81,7 +81,4 @@ func (np *NATProxy) getConnection(serviceType services.ServiceType) (*net.UDPCon
 
 func (np *NATProxy) isAvailable(serviceType services.ServiceType) bool {
 	return np.servicePorts[serviceType] > 0
-		return true
-	}
-	return false
 }

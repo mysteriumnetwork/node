@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -37,8 +38,7 @@ import (
 )
 
 // NewManager creates new instance of Openvpn service
-func NewManager(
-	nodeOptions node.Options,
+func NewManager(nodeOptions node.Options,
 	serviceOptions Options,
 	location location.ServiceLocationInfo,
 	sessionMap openvpn_session.SessionMap,
@@ -46,7 +46,7 @@ func NewManager(
 	natPinger NATPinger,
 	mapPort func(int) (releasePortMapping func()),
 	natEventGetter NATEventGetter,
-	portPool portSupplier,
+	portPool port.ServicePortSupplier,
 ) *Manager {
 	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
 

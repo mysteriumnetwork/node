@@ -46,11 +46,6 @@ import (
 
 const logPrefix = "[service bootstrap] "
 
-// PortSupplier provides ports for services to run on
-type PortSupplier interface {
-	Acquire() (port.Port, error)
-}
-
 // bootstrapServices loads all the components required for running services
 func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
 	di.bootstrapServiceComponents(nodeOptions)
@@ -138,7 +133,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
 
-		var portSupplier PortSupplier = di.PortPool
+		var portSupplier port.ServicePortSupplier = di.PortPool
 		if transportOptions.Port != 0 && locationInfo.PubIP == locationInfo.OutIP {
 			portSupplier = port.NewFixed(transportOptions.Port)
 		}

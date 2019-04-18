@@ -31,6 +31,11 @@ type Pool struct {
 	rand            *rand.Rand
 }
 
+// ServicePortSupplier provides port needed to run a service on
+type ServicePortSupplier interface {
+	Acquire() (Port, error)
+}
+
 // NewPool creates a port pool that will provide ports from range 40000-50000
 func NewPool() *Pool {
 	return &Pool{
