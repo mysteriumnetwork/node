@@ -18,7 +18,6 @@
 package endpoints
 
 import (
-	"net"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -90,7 +89,7 @@ func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 }
 
 // GetLocationByIP responds with requested locations
-// swagger:operation GET /location/:ip Location getLocationByIP
+// swagger:operation GET /location/ Location getLocationByIP
 // ---
 // summary: Returns requested location
 // description: Returns requested locations
@@ -104,8 +103,7 @@ func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *LocationEndpoint) GetLocationByIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	ip := params.ByName("ip")
-	location, err := le.locationResolver.ResolveLocation(net.ParseIP(ip))
+	location, err := le.locationResolver.DetectLocation()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return

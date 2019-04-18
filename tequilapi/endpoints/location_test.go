@@ -18,7 +18,6 @@
 package endpoints
 
 import (
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -73,19 +72,6 @@ func TestAddRoutesForLocationAddsRoutes(t *testing.T) {
 				"node_type": "residential"
 			}`,
 		},
-		{
-			http.MethodGet, "/location/2.2.2.2", "",
-			http.StatusOK,
-			`{
-				"asn": 62179,
-				"city": "Vilnius",
-				"continent": "EU",
-				"country": "LT",
-				"ip": "2.2.2.2",
-				"isp": "Telia Lietuva, AB",
-				"node_type": "residential"
-			}`,
-		},
 	}
 
 	for _, test := range tests {
@@ -106,22 +92,14 @@ type locationResolverMock struct {
 }
 
 func (r *locationResolverMock) DetectLocation() (location.Location, error) {
-	return r.ResolveLocation(nil)
-}
-
-func (r *locationResolverMock) ResolveLocation(ip net.IP) (location.Location, error) {
 	loc := location.Location{
 		ASN:       62179,
 		City:      "Vilnius",
 		Continent: "EU",
 		Country:   "LT",
-		IP:        ip.String(),
+		IP:        r.ip,
 		ISP:       "Telia Lietuva, AB",
 		NodeType:  "residential",
-	}
-
-	if r.ip != "" && ip == nil {
-		loc.IP = r.ip
 	}
 
 	return loc, nil
