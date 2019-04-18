@@ -12,16 +12,11 @@ var ErrLocationResolutionFailed = errors.New("location resolution failed")
 
 // FallbackResolver represents a resolver that tries multiple resolution techniques in sequence until one of them completes successfully, or all of them fail.
 type FallbackResolver struct {
-	LocationResolvers []LocationResolver
-}
-
-// LocationResolver allows us to detect location
-type LocationResolver interface {
-	DetectLocation() (Location, error)
+	LocationResolvers []Resolver
 }
 
 // NewFallbackResolver returns a new instance of fallback resolver
-func NewFallbackResolver(resolvers []LocationResolver) *FallbackResolver {
+func NewFallbackResolver(resolvers []Resolver) *FallbackResolver {
 	return &FallbackResolver{
 		LocationResolvers: resolvers,
 	}

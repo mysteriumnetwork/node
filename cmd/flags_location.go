@@ -32,7 +32,7 @@ var (
 	locationTypeFlag = cli.StringFlag{
 		Name:  "location.type",
 		Usage: "Service location detection type",
-		Value: "builtin",
+		Value: "",
 	}
 	locationAddressFlag = cli.StringFlag{
 		Name:  "location.address",
