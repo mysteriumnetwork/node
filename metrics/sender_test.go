@@ -65,14 +65,14 @@ func TestSender_SendNATMappingSuccessEvent_SendsToTransport(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
-	err := sender.SendNATMappingSuccessEvent("upnp")
+	err := sender.SendNATMappingSuccessEvent("port_mapping")
 	assert.NoError(t, err)
 
 	sentEvent := mockTransport.sentEvent
 	assert.Equal(t, "nat_mapping", sentEvent.EventName)
 	assert.Equal(t, appInfo{Name: "myst", Version: "test version"}, sentEvent.Application)
 	assert.NotZero(t, sentEvent.CreatedAt)
-	assert.Equal(t, natMappingContext{successful: true, stage: "upnp"}, sentEvent.Context)
+	assert.Equal(t, natMappingContext{successful: true, stage: "port_mapping"}, sentEvent.Context)
 }
 
 func TestSender_SendNATMappingSuccessEvent_ReturnsTransportErrors(t *testing.T) {
@@ -80,7 +80,7 @@ func TestSender_SendNATMappingSuccessEvent_ReturnsTransportErrors(t *testing.T) 
 	mockTransport.mockResponse = errors.New("mock error")
 	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
-	err := sender.SendNATMappingSuccessEvent("upnp")
+	err := sender.SendNATMappingSuccessEvent("port_mapping")
 	assert.Error(t, err)
 }
 

@@ -34,8 +34,7 @@ const (
 )
 
 // StageName is used to indicate port mapping NAT traversal stage
-// TODO: change value to "port_mapping"
-const StageName = "upnp"
+const StageName = "port_mapping"
 
 // Publisher is responsible for publishing given events
 type Publisher interface {
