@@ -43,5 +43,9 @@ func (c *ConsumerConfigParser) Parse(config json.RawMessage) (ip string, port in
 	if err != nil {
 		return "", 0, "", errors.Wrap(err, "parsing consumer address:port failed")
 	}
-	return cfg.IP, cfg.Port, openvpn.ServiceType, nil
+
+	if cfg.IP == nil {
+		return "", 0, "", nil
+	}
+	return *cfg.IP, cfg.Port, openvpn.ServiceType, nil
 }
