@@ -39,11 +39,6 @@ var (
 		Usage: "Address of the service location system",
 		Value: "https://testnet-location.mysterium.network/api/v1/location",
 	}
-	locationDatabaseFlag = cli.StringFlag{
-		Name:  "location.database",
-		Usage: "Service location autodetect database of GeoLite2 format e.g. http://dev.maxmind.com/geoip/geoip2/geolite2/",
-		Value: "",
-	}
 	locationCountryFlag = cli.StringFlag{
 		Name:  "location.country",
 		Usage: "Service location country",
@@ -64,9 +59,7 @@ var (
 // RegisterFlagsLocation function register location flags to flag list
 func RegisterFlagsLocation(flags *[]cli.Flag) {
 	*flags = append(*flags, ipDetectorURLFlag,
-		locationTypeFlag, locationAddressFlag,
-		locationCountryFlag, locationCityFlag,
-		locationNodeTypeFlag, locationDatabaseFlag)
+		locationTypeFlag, locationAddressFlag, locationCountryFlag, locationCityFlag, locationNodeTypeFlag)
 }
 
 // ParseFlagsLocation function fills in location options from CLI context
@@ -74,11 +67,10 @@ func ParseFlagsLocation(ctx *cli.Context) node.OptionsLocation {
 	return node.OptionsLocation{
 		IPDetectorURL: ctx.GlobalString(ipDetectorURLFlag.Name),
 
-		Type:       ctx.GlobalString(locationTypeFlag.Name),
-		Address:    ctx.GlobalString(locationAddressFlag.Name),
-		Country:    ctx.GlobalString(locationCountryFlag.Name),
-		City:       ctx.GlobalString(locationCityFlag.Name),
-		NodeType:   ctx.GlobalString(locationNodeTypeFlag.Name),
-		ExternalDb: ctx.GlobalString(locationDatabaseFlag.Name),
+		Type:     node.LocationType(ctx.GlobalString(locationTypeFlag.Name)),
+		Address:  ctx.GlobalString(locationAddressFlag.Name),
+		Country:  ctx.GlobalString(locationCountryFlag.Name),
+		City:     ctx.GlobalString(locationCityFlag.Name),
+		NodeType: ctx.GlobalString(locationNodeTypeFlag.Name),
 	}
 }

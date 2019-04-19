@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"fmt"
+	"path/filepath"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -491,11 +493,40 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 
-func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
+func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) error {
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
-	resolver, err := location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.Type, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
-	if err != nil {
-		return err
+
+	manualResolver := location.NewStaticResolver(options.Country, options.City, options.NodeType, di.IPResolver)
+
+	var resolver location.Resolver
+	switch options.Type {
+	case node.LocationTypeManual:
+		resolver = location.NewFallbackResolver([]location.Resolver{manualResolver})
+
+	case node.LocationTypeBuiltin:
+		var builtinResolver location.Resolver
+		builtinResolver, err := location.NewBuiltInResolver(di.IPResolver)
+		if err != nil {
+			log.Error("Failed to load builtin location resolver: ", err)
+			builtinResolver = location.NewFailingResolver(err)
+		}
+		resolver = location.NewFallbackResolver([]location.Resolver{builtinResolver, manualResolver})
+
+	case node.LocationTypeMMDB:
+		var mmdbResolver location.Resolver
+		mmdbResolver, err := location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
+		if err != nil {
+			log.Error("Failed to load external db location resolver: ", err)
+			mmdbResolver = location.NewFailingResolver(err)
+		}
+		resolver = location.NewFallbackResolver([]location.Resolver{mmdbResolver, manualResolver})
+
+	case "", node.LocationTypeOracle:
+		oracleResolver := location.NewOracleResolver(options.Address)
+		resolver = location.NewFallbackResolver([]location.Resolver{oracleResolver, manualResolver})
+
+	default:
+		return fmt.Errorf("unknown location detector type: %s", options.Type)
 	}
 
 	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
