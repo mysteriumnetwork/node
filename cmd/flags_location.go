@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/urfave/cli"
 )
@@ -30,13 +32,22 @@ var (
 	}
 
 	locationTypeFlag = cli.StringFlag{
-		Name:  "location.type",
-		Usage: "Service location detection type",
-		Value: "",
+		Name: "location.type",
+		Usage: fmt.Sprintf(
+			"Location autodetect provider (%s, %s, %s, %s)",
+			node.LocationTypeOracle,
+			node.LocationTypeBuiltin,
+			node.LocationTypeMMDB,
+			node.LocationTypeManual,
+		),
+		Value: string(node.LocationTypeOracle),
 	}
 	locationAddressFlag = cli.StringFlag{
-		Name:  "location.address",
-		Usage: "Address of the service location system",
+		Name: "location.address",
+		Usage: fmt.Sprintf(
+			"Address of specific location provider given in '--%s'",
+			locationTypeFlag.Name,
+		),
 		Value: "https://testnet-location.mysterium.network/api/v1/location",
 	}
 	locationCountryFlag = cli.StringFlag{

@@ -520,7 +520,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 		}
 		resolver = location.NewFallbackResolver([]location.Resolver{mmdbResolver, manualResolver})
 
-	case "", node.LocationTypeOracle:
+	case node.LocationTypeOracle:
 		oracleResolver := location.NewOracleResolver(options.Address)
 		resolver = location.NewFallbackResolver([]location.Resolver{oracleResolver, manualResolver})
 
