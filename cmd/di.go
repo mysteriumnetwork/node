@@ -381,7 +381,6 @@ func newSessionManagerFactory(
 	proposal market.ServiceProposal,
 	sessionStorage *session.StorageMemory,
 	promiseStorage session_payment.PromiseStorage,
-	nodeOptions node.Options,
 	natPingerChan func(*traversal.Params),
 	natTracker NatEventTracker,
 	serviceID string,

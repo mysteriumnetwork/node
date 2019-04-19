@@ -218,7 +218,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			proposal,
 			di.ServiceSessionStorage,
 			di.PromiseStorage,
-			nodeOptions,
 			di.NATPinger.PingTarget,
 			di.NATTracker,
 			serviceID)
