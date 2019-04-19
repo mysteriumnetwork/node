@@ -114,12 +114,6 @@ func (p *Pinger) Start() {
 			}
 
 			log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, port)
-			if port == 0 || IP == "" {
-				// client did not sent its port to ping to, notifying the service to start
-				log.Warn(prefix, "Remote party does not support NAT hole punching, IP:PORT is missing")
-				continue
-			}
-
 			if !p.natProxy.isAvailable(serviceType) {
 				log.Warn(prefix, serviceType, " NATProxy is not available for this transport protocol")
 				continue

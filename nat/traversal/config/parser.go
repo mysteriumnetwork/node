@@ -45,7 +45,7 @@ func (c *ConsumerConfigParser) Parse(config json.RawMessage) (ip string, port in
 	}
 
 	if cfg.IP == nil {
-		return "", 0, "", nil
+		return "", 0, "", errors.New("remote party does not support NAT hole punching, IP:PORT is missing")
 	}
 	return *cfg.IP, cfg.Port, openvpn.ServiceType, nil
 }
