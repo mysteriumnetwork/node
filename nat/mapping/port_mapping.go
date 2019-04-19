@@ -33,7 +33,9 @@ const (
 	mapUpdateInterval = 15 * time.Minute
 )
 
-const stageName = "upnp"
+// StageName is used to indicate port mapping NAT traversal stage
+// TODO: change value to "port_mapping"
+const StageName = "upnp"
 
 // Publisher is responsible for publishing given events
 type Publisher interface {
@@ -88,11 +90,11 @@ func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name
 		log.Debugf("%s Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
-			publisher.Publish(traversal.EventTopic, traversal.BuildFailureEvent(stageName, err))
+			publisher.Publish(traversal.EventTopic, traversal.BuildFailureEvent(StageName, err))
 			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
 			return
 		}
 	}
-	publisher.Publish(traversal.EventTopic, traversal.BuildSuccessEvent(stageName))
+	publisher.Publish(traversal.EventTopic, traversal.BuildSuccessEvent(StageName))
 	log.Info(logPrefix, "Mapped network port: ", extPort)
 }

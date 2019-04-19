@@ -31,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
@@ -125,7 +126,7 @@ func (ocn *OpenvpnConfigNegotiator) ProvideConfig(consumerKey json.RawMessage, p
 }
 
 func (ocn *OpenvpnConfigNegotiator) determineClientPort(pingerPort int) int {
-	if ocn.natEventGetter.LastEvent().Type == traversal.FailureEventType {
+	if ocn.portMappingFailed() {
 		// port mapping failed, assume NAT hole-punching
 		// let Consumer communicate with Provider's NATPinger port
 		ocn.vpnConfig.RemotePort = pingerPort
@@ -133,8 +134,14 @@ func (ocn *OpenvpnConfigNegotiator) determineClientPort(pingerPort int) int {
 		log.Info(logPrefix, "client port determined: ", 50221)
 		return 50221
 	}
+
 	log.Info(logPrefix, "returning auto port")
 	return 0
+}
+
+func (ocn *OpenvpnConfigNegotiator) portMappingFailed() bool {
+	event := ocn.natEventGetter.LastEvent()
+	return event.Stage == mapping.StageName && event.Type == traversal.FailureEventType
 }
 
 func vpnServerIP(serviceOptions Options, outboundIP, publicIP string, isLocalnet bool) string {
