@@ -97,9 +97,15 @@ type Params struct {
 func (p *Pinger) Start() {
 	log.Info(prefix, "Starting a NAT pinger")
 
-	previousStageSucceeded := p.waitForPreviousStageResult()
-	if previousStageSucceeded {
+	resultChannel := make(chan bool)
+	go func() { resultChannel <- p.waitForPreviousStageResult() }()
+	select {
+	case <-p.stop:
 		return
+	case previousStageSucceeded := <-resultChannel:
+		if previousStageSucceeded {
+			return
+		}
 	}
 
 	for {
