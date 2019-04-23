@@ -29,8 +29,6 @@ const EventTopic = "Traversal"
 const eventsTrackerLogPrefix = "[traversal-events-tracker] "
 
 const (
-	// EmptyEventType is name of event where nothing really happened
-	EmptyEventType = ""
 	// SuccessEventType is name of event for a successful NAT traversal
 	SuccessEventType = "success"
 	// FailureEventType is name of event for a failed NAT traversal
@@ -39,7 +37,7 @@ const (
 
 // EventsTracker is able to track NAT traversal events
 type EventsTracker struct {
-	lastEvent Event
+	lastEvent *Event
 	eventChan chan Event
 }
 
@@ -62,23 +60,26 @@ func NewEventsTracker() *EventsTracker {
 func (et *EventsTracker) ConsumeNATEvent(event Event) {
 	log.Info(eventsTrackerLogPrefix, "got NAT event: ", event)
 
-	et.lastEvent = event
+	et.lastEvent = &event
 	select {
 	case et.eventChan <- event:
 	case <-time.After(300 * time.Millisecond):
 	}
 }
 
-// LastEvent returns the last known event
-func (et *EventsTracker) LastEvent() Event {
+// LastEvent returns the last known event and boolean flag, indicating if such event exists
+func (et *EventsTracker) LastEvent() (Event, bool) {
 	log.Info(eventsTrackerLogPrefix, "getting last NAT event: ", et.lastEvent)
-	return et.lastEvent
+	if et.lastEvent == nil {
+		return Event{}, false
+	}
+	return *et.lastEvent, true
 }
 
 // WaitForEvent waits for event to occur
 func (et *EventsTracker) WaitForEvent() Event {
-	if et.lastEvent.Type != EmptyEventType {
-		return et.lastEvent
+	if et.lastEvent != nil {
+		return *et.lastEvent
 	}
 	e := <-et.eventChan
 	log.Info(eventsTrackerLogPrefix, "got NAT event: ", e)
