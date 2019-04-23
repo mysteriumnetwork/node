@@ -53,6 +53,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/traversal/config"
+	"github.com/mysteriumnetwork/node/nat/upnp"
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -181,6 +182,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapMetrics(nodeOptions)
 
 	di.PortPool = port.NewPool()
+
+	go upnp.ReportNetworkGateways()
 
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
