@@ -49,13 +49,13 @@ type serviceRequest struct {
 
 	// access list which determines which identities will be able to receive the service
 	// required: false
-	AccessPolicy accessPolicyRequest `json:"accessPolicy"`
+	AccessPolicies accessPoliciesRequest `json:"accessPolicies"`
 }
 
 // accessPolicy represents the access controls
 // swagger:model AccessPolicyRequest
-type accessPolicyRequest struct {
-	Ids []string `json:"Ids"`
+type accessPoliciesRequest struct {
+	Ids []string `json:"ids"`
 }
 
 // swagger:model ServiceListDTO
@@ -225,15 +225,15 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 }
 
 func getAccessPolicyData(sr serviceRequest, href string) *[]market.AccessPolicy {
-	if len(sr.AccessPolicy.Ids) == 0 {
+	if len(sr.AccessPolicies.Ids) == 0 {
 		return nil
 	}
 
-	result := make([]market.AccessPolicy, len(sr.AccessPolicy.Ids))
+	result := make([]market.AccessPolicy, len(sr.AccessPolicies.Ids))
 	for i := range result {
 		result[i] = market.AccessPolicy{
-			ID:     sr.AccessPolicy.Ids[i],
-			Source: fmt.Sprintf("%v%v", href, sr.AccessPolicy.Ids[i]),
+			ID:     sr.AccessPolicies.Ids[i],
+			Source: fmt.Sprintf("%v%v", href, sr.AccessPolicies.Ids[i]),
 		}
 	}
 
@@ -295,24 +295,24 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
 	var jsonData struct {
-		ProviderID   string              `json:"providerId"`
-		Type         string              `json:"type"`
-		Options      *json.RawMessage    `json:"options"`
-		AccessPolicy accessPolicyRequest `json:"accessPolicy"`
+		ProviderID     string                `json:"providerId"`
+		Type           string                `json:"type"`
+		Options        *json.RawMessage      `json:"options"`
+		AccessPolicies accessPoliciesRequest `json:"accessPolicies"`
 	}
 	if err := json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
 		return serviceRequest{}, err
 	}
 
-	if jsonData.AccessPolicy.Ids == nil {
-		jsonData.AccessPolicy.Ids = []string{}
+	if jsonData.AccessPolicies.Ids == nil {
+		jsonData.AccessPolicies.Ids = []string{}
 	}
 
 	sr := serviceRequest{
-		ProviderID:   jsonData.ProviderID,
-		Type:         se.toServiceType(jsonData.Type),
-		Options:      se.toServiceOptions(jsonData.Type, jsonData.Options),
-		AccessPolicy: jsonData.AccessPolicy,
+		ProviderID:     jsonData.ProviderID,
+		Type:           se.toServiceType(jsonData.Type),
+		Options:        se.toServiceOptions(jsonData.Type, jsonData.Options),
+		AccessPolicies: jsonData.AccessPolicies,
 	}
 	return sr, nil
 }
