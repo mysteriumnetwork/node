@@ -117,6 +117,19 @@ func Test_EventsSender_ConsumeNATEvent_SendsFailureEvent(t *testing.T) {
 	assert.Equal(t, "hole_punching", mockMetricsSender.stageSent)
 }
 
+func Test_EventsSender_ConsumeNATEvent_WithFailuresOfDifferentStages_SendsBothEvents(t *testing.T) {
+	mockMetricsSender := buildMockMetricsSender(nil)
+	mockIPResolver := &mockIPResolver{mockIp: "1st ip"}
+	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+
+	testErr1 := errors.New("test error 1")
+	sender.ConsumeNATEvent(Event{Successful: false, Error: testErr1, Stage: "test 1"})
+	testErr2 := errors.New("test error 2")
+	sender.ConsumeNATEvent(Event{Successful: false, Error: testErr2, Stage: "test 2"})
+
+	assert.Equal(t, testErr2, mockMetricsSender.failErrorSent)
+}
+
 func Test_EventsSender_ConsumeNATEvent_WithSuccessAndFailureOnSameIp_SendsBothEvents(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := &mockIPResolver{mockIp: "1st ip"}

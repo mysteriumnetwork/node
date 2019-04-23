@@ -80,6 +80,5 @@ func (es *EventsSender) isEventRelevant(event Event, ip string) bool {
 		return true
 	}
 
-	// TODO: add check for Stage or remove this optimisation
-	return event.Successful != es.lastEvent.Successful
+	return event.Successful != es.lastEvent.Successful || event.Stage != es.lastEvent.Stage
 }
