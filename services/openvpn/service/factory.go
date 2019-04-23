@@ -32,7 +32,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
-	"github.com/mysteriumnetwork/node/nat/traversal"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
@@ -144,7 +143,7 @@ func (ocn *OpenvpnConfigNegotiator) portMappingFailed() bool {
 	if !found {
 		return false
 	}
-	return event.Stage == mapping.StageName && event.Type == traversal.FailureEventType
+	return event.Stage == mapping.StageName && !event.Successful
 }
 
 func vpnServerIP(serviceOptions Options, outboundIP, publicIP string, isLocalnet bool) string {

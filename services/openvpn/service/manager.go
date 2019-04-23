@@ -180,7 +180,7 @@ func (m *Manager) portMappingFailed() bool {
 	if !found {
 		return false
 	}
-	return event.Stage == mapping.StageName && event.Type == traversal.FailureEventType
+	return event.Stage == mapping.StageName && !event.Successful
 }
 
 func vpnStateCallback(state openvpn.State) {

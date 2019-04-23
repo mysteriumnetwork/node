@@ -191,7 +191,7 @@ func (p *Pinger) waitForPreviousStageResult() bool {
 	for {
 		event := p.natEventWaiter.WaitForEvent()
 		if event.Stage == p.previousStage {
-			return event.Type == SuccessEventType
+			return event.Successful
 		}
 	}
 }

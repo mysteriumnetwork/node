@@ -28,13 +28,6 @@ const EventTopic = "Traversal"
 
 const eventsTrackerLogPrefix = "[traversal-events-tracker] "
 
-const (
-	// SuccessEventType is name of event for a successful NAT traversal
-	SuccessEventType = "success"
-	// FailureEventType is name of event for a failed NAT traversal
-	FailureEventType = "failure"
-)
-
 // EventsTracker is able to track NAT traversal events
 type EventsTracker struct {
 	lastEvent *Event
@@ -43,12 +36,12 @@ type EventsTracker struct {
 
 // BuildSuccessEvent returns new event for successful NAT traversal
 func BuildSuccessEvent(stage string) Event {
-	return Event{Stage: stage, Type: SuccessEventType}
+	return Event{Stage: stage, Successful: true}
 }
 
 // BuildFailureEvent returns new event for failed NAT traversal
 func BuildFailureEvent(stage string, err error) Event {
-	return Event{Stage: stage, Type: FailureEventType, Error: err}
+	return Event{Stage: stage, Successful: false, Error: err}
 }
 
 // NewEventsTracker returns a new instance of event tracker
@@ -88,7 +81,7 @@ func (et *EventsTracker) WaitForEvent() Event {
 
 // Event represents a NAT traversal related event
 type Event struct {
-	Stage string
-	Type  string
-	Error error
+	Stage      string
+	Successful bool
+	Error      error
 }
