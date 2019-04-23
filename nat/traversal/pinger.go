@@ -105,23 +105,20 @@ func (p *Pinger) Start() {
 		case <-p.stop:
 			return
 		case pingParams := <-p.pingTarget:
-			log.Info(prefix, "Pinging peer with", pingParams)
+			log.Info(prefix, "Pinging peer with: ", pingParams)
 
 			IP, port, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
 			if err != nil {
 				log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", pingParams)))
+				continue
 			}
 
+			log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, port)
 			if !p.natProxy.isAvailable(serviceType) {
 				log.Warn(prefix, serviceType, " NATProxy is not available for this transport protocol")
 				continue
 			}
 
-			log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, port)
-			if port == 0 {
-				// client did not sent its port to ping to, notifying the service to start
-				continue
-			}
 			conn, err := p.getConnection(IP, port, pingParams.Port)
 			if err != nil {
 				log.Error(prefix, "failed to get connection: ", err)
@@ -177,7 +174,7 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 	}
 
 	// wait for provider to setup NAT proxy connection
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(400 * time.Millisecond)
 
 	return nil
 }

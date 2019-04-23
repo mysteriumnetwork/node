@@ -102,7 +102,7 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 		// TODO skip sending port here, since provider generates port for consumer in VPNConfig
 		//Port: c.vpnClientConfig.LocalPort,
 		Port: 50221,
-		IP:   ip,
+		IP:   &ip,
 	}, nil
 }
 
