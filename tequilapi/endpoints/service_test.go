@@ -419,7 +419,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 		strings.NewReader(`{
 			"type": "mockAccessPolicyService",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"accessPolicy": {
+			"accessPolicies": {
 				"ids": ["verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
 			}
 		}`),
