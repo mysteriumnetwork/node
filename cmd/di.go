@@ -18,8 +18,6 @@
 package cmd
 
 import (
-	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/asaskevich/EventBus"
@@ -469,7 +467,7 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
-	di.LocationResolver, err = FallbackResolverFactory(di.IPResolver, options, configDirFlag)
+	di.LocationResolver, err = location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
 	if err != nil {
 		return err
 	}
@@ -494,39 +492,5 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 			di.PortPool)
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
-	}
-}
-
-// FallbackResolverFactory creates a fallback resolver given the params
-func FallbackResolverFactory(ipResolver ip.Resolver, options node.OptionsLocation, configDirectory string) (location.Resolver, error) {
-	if options.Type == "manual" {
-		return location.NewStaticResolver(options.Country, options.City, options.NodeType, ipResolver), nil
-	}
-
-	var builtin location.Resolver
-	builtin, err := location.NewBuiltInResolver(ipResolver)
-	if err != nil {
-		log.Error("Failed to load builtin location resolver: ", err)
-		builtin = location.NewFailingResolver(err)
-	}
-
-	var mmdb location.Resolver
-	mmdb, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), ipResolver)
-	if err != nil {
-		log.Error("Failed to load external db location resolver: ", err)
-		mmdb = location.NewFailingResolver(err)
-	}
-
-	oracleResolver := location.NewOracleResolver(options.Address)
-
-	switch options.Type {
-	case "builtin":
-		return location.NewFallbackResolver([]location.Resolver{builtin, oracleResolver, mmdb}), nil
-	case "mmdb":
-		return location.NewFallbackResolver([]location.Resolver{mmdb, oracleResolver, builtin}), nil
-	case "", "oracle":
-		return location.NewFallbackResolver([]location.Resolver{oracleResolver, builtin, mmdb}), nil
-	default:
-		return nil, fmt.Errorf("unknown location detector type: %s", options.Type)
 	}
 }

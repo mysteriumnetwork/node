@@ -18,8 +18,8 @@
 package location
 
 import (
-	"github.com/mysteriumnetwork/node/core/location/gendb"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location/gendb"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/pkg/errors"
 )
