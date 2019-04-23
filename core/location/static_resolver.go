@@ -18,8 +18,6 @@
 package location
 
 import (
-	"net"
-
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/pkg/errors"
 )
@@ -60,19 +58,10 @@ func (d *StaticResolver) DetectLocation() (Location, error) {
 	if err != nil {
 		return Location{}, errors.Wrap(err, "failed to get public IP")
 	}
-	return d.ResolveLocation(net.ParseIP(pubIP))
-}
-
-// ResolveLocation maps given ip to country.
-func (d *StaticResolver) ResolveLocation(ip net.IP) (Location, error) {
-	var ipAddress string
-	if ip != nil {
-		ipAddress = ip.String()
-	}
 	return Location{
 		Country:  d.country,
 		City:     d.city,
 		NodeType: d.nodeType,
-		IP:       ipAddress,
+		IP:       pubIP,
 	}, d.err
 }

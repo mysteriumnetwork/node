@@ -18,8 +18,6 @@
 package cmd
 
 import (
-	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/asaskevich/EventBus"
@@ -469,23 +467,9 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
-
-	switch options.Type {
-	case "builtin":
-		di.LocationResolver, err = location.NewBuiltInResolver(di.IPResolver)
-	case "mmdb":
-		di.LocationResolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
-	case "oracle":
-		di.LocationResolver = location.NewOracleResolver(options.Address)
-	case "manual":
-		di.LocationResolver = location.NewStaticResolver(options.Country, options.City, options.NodeType, di.IPResolver)
-	default:
-		return fmt.Errorf("unknown location detector type: %s", options.Type)
-	}
-
+	di.LocationResolver, err = location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.Type, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
 	if err != nil {
-		log.Error("Failed to load location resolver: ", err)
-		di.LocationResolver = location.NewFailingResolver(err)
+		return err
 	}
 
 	di.LocationOriginal = location.NewLocationCache(di.LocationResolver)

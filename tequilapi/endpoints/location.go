@@ -18,7 +18,6 @@
 package endpoints
 
 import (
-	"net"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -89,34 +88,8 @@ func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 	utils.WriteAsJSON(currentLocation, writer)
 }
 
-// GetLocationByIP responds with requested locations
-// swagger:operation GET /location/:ip Location getLocationByIP
-// ---
-// summary: Returns requested location
-// description: Returns requested locations
-// responses:
-//   200:
-//     description: Requested locations
-//     schema:
-//       "$ref": "#/definitions/LocationDTO"
-//   503:
-//     description: Service unavailable
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
-func (le *LocationEndpoint) GetLocationByIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	ip := params.ByName("ip")
-	location, err := le.locationResolver.ResolveLocation(net.ParseIP(ip))
-	if err != nil {
-		utils.SendError(writer, err, http.StatusServiceUnavailable)
-		return
-	}
-
-	utils.WriteAsJSON(location, writer)
-}
-
 // AddRoutesForLocation adds location routes to given router
 func AddRoutesForLocation(router *httprouter.Router, locationResolver location.Resolver) {
 	locationEndpoint := NewLocationEndpoint(locationResolver)
 	router.GET("/location", locationEndpoint.GetLocation)
-	router.GET("/location/:ip", locationEndpoint.GetLocationByIP)
 }
