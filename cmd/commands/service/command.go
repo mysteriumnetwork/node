@@ -53,7 +53,7 @@ var (
 		Usage: "Agree with terms & conditions",
 	}
 
-	accessPolicyFlag = cli.StringFlag{
+	accessPolicyListFlag = cli.StringFlag{
 		Name:  "access-policy.list",
 		Usage: "Comma separated list that determines the allowed identities on our service.",
 		Value: "",
@@ -114,7 +114,7 @@ type serviceCommand struct {
 	identityHandler identity_selector.Handler
 	tequilapi       *client.Client
 	errorChannel    chan error
-	ap              client.AccessPolicy
+	ap              client.AccessPoliciesRequest
 }
 
 // Run runs a command
@@ -165,7 +165,7 @@ func registerFlags(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		agreedTermsConditionsFlag,
 		identityFlag, identityPassphraseFlag,
-		accessPolicyFlag,
+		accessPolicyListFlag,
 	)
 	openvpn_service.RegisterFlags(flags)
 	wireguard_service.RegisterFlags(flags)
@@ -180,13 +180,13 @@ func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 }
 
 // parseAccessPolicyFlag fetches the access policy data from CLI context
-func parseAccessPolicyFlag(ctx *cli.Context) client.AccessPolicy {
-	policies := ctx.String(accessPolicyFlag.Name)
+func parseAccessPolicyFlag(ctx *cli.Context) client.AccessPoliciesRequest {
+	policies := ctx.String(accessPolicyListFlag.Name)
 	if policies == "" {
-		return client.AccessPolicy{}
+		return client.AccessPoliciesRequest{}
 	}
 	splits := strings.Split(policies, ",")
-	return client.AccessPolicy{
+	return client.AccessPoliciesRequest{
 		IDs: splits,
 	}
 }

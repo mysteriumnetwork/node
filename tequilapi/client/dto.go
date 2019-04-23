@@ -155,7 +155,7 @@ type ServiceSessionDTO struct {
 	ConsumerID string `json:"consumerId"`
 }
 
-// AccessPolicy represents the access controls for service start
-type AccessPolicy struct {
+// AccessPoliciesRequest represents the access controls for service start
+type AccessPoliciesRequest struct {
 	IDs []string `json:"ids"`
 }

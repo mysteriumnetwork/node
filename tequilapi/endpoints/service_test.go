@@ -419,7 +419,7 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 		strings.NewReader(`{
 			"type": "mockAccessPolicyService",
 			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
-			"accessPolicy": {
+			"accessPolicies": {
 				"ids": ["verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
 			}
 		}`),
@@ -464,6 +464,32 @@ func Test_ServiceStart_WithAccessPolicy(t *testing.T) {
 				]
 			}
 		}`,
+		resp.Body.String(),
+	)
+}
+
+func Test_ServiceStart_ReturnsBadRequest_WithUnknownParams(t *testing.T) {
+	serviceEndpoint := NewServiceEndpoint(&mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/irrelevant",
+		strings.NewReader(`{
+			"type": "mockAccessPolicyService",
+			"providerId": "0x9edf75f870d87d2d1a69f0d950a99984ae955ee0",
+			"accessPolicy": {
+				"ids": ["verified-traffic", "dvpn-traffic", "12312312332132", "0x0000000000000001"]
+			}
+		}`),
+	)
+	resp := httptest.NewRecorder()
+
+	serviceEndpoint.ServiceStart(resp, req, httprouter.Params{})
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	assert.JSONEq(
+		t,
+		`{"message": "json: unknown field \"accessPolicy\""}`,
 		resp.Body.String(),
 	)
 }

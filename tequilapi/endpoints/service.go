@@ -300,7 +300,9 @@ func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, 
 		Options        *json.RawMessage      `json:"options"`
 		AccessPolicies accessPoliciesRequest `json:"accessPolicies"`
 	}
-	if err := json.NewDecoder(req.Body).Decode(&jsonData); err != nil {
+	decoder := json.NewDecoder(req.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&jsonData); err != nil {
 		return serviceRequest{}, err
 	}
 
