@@ -46,6 +46,7 @@ type Pinger struct {
 	natProxy       natProxy
 	portPool       PortSupplier
 	consumerPort   int
+	previousStage  string
 }
 
 // NatEventWaiter is responsible for waiting for nat events
@@ -64,7 +65,7 @@ type PortSupplier interface {
 }
 
 // NewPingerFactory returns Pinger instance
-func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier) *Pinger {
+func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier, previousStage string) *Pinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})
@@ -76,6 +77,7 @@ func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy
 		configParser:   parser,
 		natProxy:       proxy,
 		portPool:       portPool,
+		previousStage:  previousStage,
 	}
 }
 
@@ -95,9 +97,15 @@ type Params struct {
 func (p *Pinger) Start() {
 	log.Info(prefix, "Starting a NAT pinger")
 
-	// We dont need to run pinger if NAT port auto-configuration is successful
-	if p.natEventWaiter.WaitForEvent().Type == SuccessEventType {
+	resultChannel := make(chan bool, 1)
+	go func() { resultChannel <- p.waitForPreviousStageResult() }()
+	select {
+	case <-p.stop:
 		return
+	case previousStageSucceeded := <-resultChannel:
+		if previousStageSucceeded {
+			return
+		}
 	}
 
 	for {
@@ -177,6 +185,15 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 	time.Sleep(400 * time.Millisecond)
 
 	return nil
+}
+
+func (p *Pinger) waitForPreviousStageResult() bool {
+	for {
+		event := p.natEventWaiter.WaitForEvent()
+		if event.Stage == p.previousStage {
+			return event.Type == SuccessEventType
+		}
+	}
 }
 
 func (p *Pinger) ping(conn *net.UDPConn) error {

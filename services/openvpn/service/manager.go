@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
@@ -157,8 +158,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(i
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "parsing consumer sessionConfig failed")
 		}
-		// We are behind NAT and port auto-configuration has failed
-		if (m.outboundIP != m.publicIP) && (m.natEventGetter.LastEvent().Type == traversal.FailureEventType) {
+		if m.isBehindNAT() && m.portMappingFailed() {
 			c.Port = pp.Num()
 			pingerPort(pp.Num())
 		}
@@ -169,6 +169,15 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(i
 	portRelay := func(int) int { port := pp.Num(); return port }
 
 	return m.vpnServiceConfigProvider.ProvideConfig(sessionConfig, portRelay)
+}
+
+func (m *Manager) isBehindNAT() bool {
+	return m.outboundIP != m.publicIP
+}
+
+func (m *Manager) portMappingFailed() bool {
+	event := m.natEventGetter.LastEvent()
+	return event.Stage == mapping.StageName && event.Type == traversal.FailureEventType
 }
 
 func vpnStateCallback(state openvpn.State) {

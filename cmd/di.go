@@ -50,6 +50,7 @@ import (
 	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/traversal/config"
 	"github.com/mysteriumnetwork/node/services"
@@ -488,7 +489,8 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 			di.NATTracker,
 			config.NewConfigParser(),
 			traversal.NewNATProxy(),
-			di.PortPool)
+			di.PortPool,
+			mapping.StageName)
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
