@@ -18,7 +18,6 @@
 package location
 
 import (
-	"net"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -43,17 +42,7 @@ func NewOracleResolver(address string) *oracleResolver {
 
 // DetectLocation detects current IP-address provides location information for the IP.
 func (o *oracleResolver) DetectLocation() (location Location, err error) {
-	return o.ResolveLocation(nil)
-}
-
-// ResolveLocation maps given ip to country.
-func (o *oracleResolver) ResolveLocation(ip net.IP) (location Location, err error) {
-	var ipAddress string
-	if ip != nil {
-		ipAddress = ip.String()
-	}
-
-	request, err := requests.NewGetRequest(o.oracleResolverAddress, ipAddress, nil)
+	request, err := requests.NewGetRequest(o.oracleResolverAddress, "", nil)
 	if err != nil {
 		log.Error(oracleResolverLogPrefix, err)
 		return Location{}, errors.Wrap(err, "failed to create request")

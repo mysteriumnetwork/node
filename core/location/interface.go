@@ -17,14 +17,9 @@
 
 package location
 
-import (
-	"net"
-)
-
 // Resolver allows resolving location by ip
 type Resolver interface {
 	DetectLocation() (Location, error)
-	ResolveLocation(ip net.IP) (Location, error)
 }
 
 // Cache allows caching location

@@ -21,9 +21,10 @@ package node
 type OptionsLocation struct {
 	IPDetectorURL string
 
-	Type     string
-	Address  string
-	Country  string
-	City     string
-	NodeType string
+	Type       string
+	Address    string
+	Country    string
+	City       string
+	NodeType   string
+	ExternalDb string
 }

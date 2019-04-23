@@ -18,7 +18,6 @@
 package location
 
 import (
-	"net"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -29,7 +28,7 @@ func TestBuiltInResolverWorks(t *testing.T) {
 	resolver, err := NewBuiltInResolver(ip.NewResolverMock("46.111.111.99"))
 	assert.NoError(t, err)
 
-	location, err := resolver.ResolveLocation(net.ParseIP("46.111.111.99"))
+	location, err := resolver.DetectLocation()
 	assert.NoError(t, err)
 	assert.Equal(t, "RU", location.Country)
 }
