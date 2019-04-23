@@ -161,11 +161,7 @@ func (c *cliApp) handleActions(line string) {
 		{command: "license", handler: c.license},
 		{command: "registration", handler: c.registration},
 		{command: "proposals", handler: c.proposals},
-<<<<<<< HEAD
 		{command: "service", handler: c.service},
-=======
-		{command: "sendRubbish", handler: c.sendRubbish},
->>>>>>> d5243e169033e542e5552a5658fac5678170ca83
 	}
 
 	for _, cmd := range staticCmds {
@@ -500,7 +496,7 @@ func (c *cliApp) ip() {
 }
 
 func (c *cliApp) help() {
-	info("Mysterium CLI tequilapi commands mod by JF:")
+	info("Mysterium CLI tequilapi commands:")
 	fmt.Println(c.completer.Tree("  "))
 }
 
@@ -606,31 +602,6 @@ func (c *cliApp) stopClient() {
 	success("Client stopped")
 }
 
-func (c *cliApp) sendRubbish(argsString string) {
-	success("Rubbish sent correctly!: ", argsString)
-	//"umido", "plastica", "secco", "indifferenziata"
-	arg := strings.Fields(argsString)
-	if len(arg) < 0 {
-		info("mi manca qualche informazione")
-		return
-	}
-
-	switch arg[0] {
-	case "umido":
-		fmt.Println("l'umido passa una volta a settimana il martedi")
-	case "plastica":
-		fmt.Println("la plastica passa il lunedi ed il venerdi")
-	case "secco":
-		fmt.Println("per il secco devi pagare un extra")
-	case "indifferenziata":
-		fmt.Println("l'indifferenziata è un lusso per pochi, e solo il giovedi")
-
-	default:
-		warnf("Cosa altro diavolo vuoi buttare che non conosco? %s\n", argsString)
-		return
-	}
-}
-
 func (c *cliApp) version(argsString string) {
 	fmt.Println(versionSummary)
 }
@@ -658,12 +629,6 @@ func getIdentityOptionList(tequilapi *tequilapi_client.Client) func(string) []st
 		}
 
 		return identities
-	}
-}
-
-func getTypeOfRubbish() func(string) []string {
-	return func(line string) []string {
-		return []string{"umido", "plastica", "secco", "indifferenziata"}
 	}
 }
 
@@ -737,12 +702,6 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 			"registration",
 			readline.PcItemDynamic(
 				getIdentityOptionList(tequilapi),
-			),
-		),
-		readline.PcItem(
-			"sendRubbish",
-			readline.PcItemDynamic(
-				getTypeOfRubbish(),
 			),
 		),
 	)

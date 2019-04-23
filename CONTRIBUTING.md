@@ -8,6 +8,8 @@ Mysterium Network Node is written in Golang, if you want to hack on it you will
 need a functional go dev environment.  See official golang documentation for how
 to https://golang.org/doc/install
 
+to set correctly the GOPATH environment variable check this out: (https://www.digitalocean.com/community/tutorials/how-to-install-go-on-ubuntu-18-04) 
+
 * **Step 1.** Get project dependencies
 
 Install openvpn
@@ -42,7 +44,7 @@ git remote add upstream https://github.com/mysteriumnetwork/node.git
 ```
 
 For bonus points add a git alias and a shell alias to do the syncing.  Edit
-`~/.gitconfig and add
+`~/.gitconfig` and add
 ```bash
 [alias]
 	pu = !"git fetch origin -v; git fetch upstream -v; git merge upstream/master"
@@ -50,7 +52,7 @@ For bonus points add a git alias and a shell alias to do the syncing.  Edit
 
 Then define a shell alias
 ```bash
-alias sync-repo='git pu; git push
+alias sync-repo='git pu; git push'
 ```
 
 Now any time you are on master branch (for any project you set up like this) you
@@ -69,7 +71,7 @@ and `make dep-ensure` to install `dep` and to get dependencies).  Happy hacking!
 make build && bin/run_provider
 
 # Start node in consumer role
-make build && bin/run_consumer
+make build && bin/run_consumer cli
 ```
 
 ## Running Node as interactive demo:
@@ -104,17 +106,54 @@ bin/run_consumer cli
 » proposals
 
 # Connect to a server
-» connect <consumer-identity> <provider-identity>
+» connect <consumer-identity> <provider-identity> <protocol:(openvpn|wireguard)>
 ```
+
+## Info
+
+set the `gopath` for the IDE in settings, then run a new build configuration with `github.com/mysteriumnetwork/node/cmd/mysterium_node` as package and add the following parameters into the program arguments field: 
+```
+--tequilapi.address=127.0.0.1 --tequilapi.port=4052 cli
+```
+and you will get the interactive console like in a normal terminal
+
+ - IMPORTANTE! per impostare la GOPATH eseguire come primo comando in ogni finestra: source ~/.profile
+ - path repo: `cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/`
+
+ - costruzione LOCALNET:
+   - stoppare container precedenti se ci sono: `docker stop localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1`
+   - eliminarli: `docker rm localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1`
+   - pulire tutto: `docker system prune`
+   - comando finale: `bin/localnet/setup.sh`
+   - se appare il token e payment allora tutto ok
+
+ - avvio PROVIDER
+   - `make build && bin/run_provider`
+
+ - avvio CONSUMER
+   - `make build && bin/run_consumer cli`
+
+
+SETUP: `source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && docker stop localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1 && docker rm localnet_discovery_1 localnet_db_1 localnet_broker_1 localnet_geth_1;  yes | docker system prune; bin/localnet/setup.sh;`
+
+PROVIDER: `source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && make build && bin/run_provider;`
+
+CONSUMER: `source ~/.profile && cd /mnt/hgfs/C/Users/Jey/go/src/github.com/mysteriumnetwork/node/ && make build && bin/run_consumer cli;`
+
+
+### IntellJ GoLand
+per compilare e runnare il programma creare una configurazione Go Build ed avviare file cmd/mysterium_node/mysterium_node.go, aggiungere `--tequilapi.address=127.0.0.1 --tequilapi.port=4052 cli` per avviare la cli in localnet
 
 ## Generate Tequila API documentation from client source code
 
 * **Step 1.** Install go-swagger
+
 ```bash
 go get github.com/go-swagger/go-swagger/cmd/swagger/
 ```
 
 * **Step 2.** Generate specification:
+
 ```bash
 bin/swagger_generate
 ```

@@ -6,11 +6,11 @@ CMD_DEP := $(shell which dep)
 
 help:
 	@echo "Select a sub command \n"
-	@echo "dep:\t Install package manager 'dep'"
+	@echo "dep:\t\t Install package manager 'dep'"
 	@echo "dep-ensure:\t Get dependencies"
-	@echo "build:\t Build myst"
+	@echo "build:\t\t Build myst"
 	@echo "build-image:\t Build myst Docker image"
-	@echo "help:\t Display this help"
+	@echo "help:\t\t Display this help"
 	@echo "\nSee README.md for more."
 
 dep:

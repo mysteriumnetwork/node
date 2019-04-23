@@ -3,8 +3,4 @@
 sudo ./build/myst/myst \
     --data-dir=./build/myst/consumer \
     --runtime-dir=./build/myst/consumer \
-    --tequilapi.address=127.0.0.1 \
-    --tequilapi.port=4053 \
-    --keystore.lightweight \
-    --localnet \
-    $@
+$@
