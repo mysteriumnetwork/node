@@ -97,7 +97,7 @@ type Params struct {
 func (p *Pinger) Start() {
 	log.Info(prefix, "Starting a NAT pinger")
 
-	resultChannel := make(chan bool)
+	resultChannel := make(chan bool, 1)
 	go func() { resultChannel <- p.waitForPreviousStageResult() }()
 	select {
 	case <-p.stop:
