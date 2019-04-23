@@ -26,8 +26,8 @@ import (
 )
 
 // CreateLocationResolver creates a fallback resolver given the params
-func CreateLocationResolver(ipResolver ip.Resolver, country, city, nodeType, address, externalDb, configDirectory string) (Resolver, error) {
-	if nodeType == "manual" {
+func CreateLocationResolver(ipResolver ip.Resolver, country, city, locatorType, nodeType, address, externalDb, configDirectory string) (Resolver, error) {
+	if locatorType == "manual" {
 		return NewStaticResolver(country, city, nodeType, ipResolver), nil
 	}
 
@@ -40,7 +40,7 @@ func CreateLocationResolver(ipResolver ip.Resolver, country, city, nodeType, add
 
 	oracleResolver := NewOracleResolver(address)
 
-	switch nodeType {
+	switch locatorType {
 	case "builtin":
 		return NewFallbackResolver([]Resolver{builtin, oracleResolver}), nil
 	case "mmdb":
@@ -54,6 +54,6 @@ func CreateLocationResolver(ipResolver ip.Resolver, country, city, nodeType, add
 	case "", "oracle":
 		return NewFallbackResolver([]Resolver{oracleResolver, builtin}), nil
 	default:
-		return nil, fmt.Errorf("unknown location detector type: %s", nodeType)
+		return nil, fmt.Errorf("unknown location detector type: %s", locatorType)
 	}
 }

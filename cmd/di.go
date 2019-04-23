@@ -466,8 +466,7 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
-
-	di.LocationResolver, err = location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
+	di.LocationResolver, err = location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.Type, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
 	if err != nil {
 		return err
 	}
