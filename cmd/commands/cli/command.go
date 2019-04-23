@@ -707,8 +707,8 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, tequilapi_client.AccessPolicy, error) {
-	var ap tequilapi_client.AccessPolicy
+func parseStartFlags(serviceType string, args ...string) (service.Options, tequilapi_client.AccessPoliciesRequest, error) {
+	var ap tequilapi_client.AccessPoliciesRequest
 	var flags []cli.Flag
 	openvpn_service.RegisterFlags(&flags)
 	wireguard_service.RegisterFlags(&flags)
@@ -728,7 +728,7 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, tequi
 	apFlagValue := ctx.String(accessPolicyFlag.Name)
 	if len(apFlagValue) > 0 {
 		splits := strings.Split(ctx.String(accessPolicyFlag.Name), ",")
-		ap = tequilapi_client.AccessPolicy{
+		ap = tequilapi_client.AccessPoliciesRequest{
 			IDs: splits,
 		}
 	}
