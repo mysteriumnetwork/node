@@ -493,7 +493,9 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 			config.NewConfigParser(),
 			traversal.NewNATProxy(),
 			di.PortPool,
-			mapping.StageName)
+			mapping.StageName,
+			di.EventBus,
+		)
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
