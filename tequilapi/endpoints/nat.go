@@ -25,17 +25,19 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
+// NatStatusDTO gives information about NAT traversal success or failure
 // swagger:model NatStatusDTO
 type NatStatusDTO struct {
 	Successful bool   `json:"successful"`
 	Error      string `json:"error"`
 }
 
+// NatEvents allows retrieving last traversal event
 type NatEvents interface {
 	LastEvent() *traversal.Event
 }
 
-// ServiceEndpoint struct represents management of service resource and it's sub-resources
+// NatEndpoint struct represents endpoints about NAT traversal
 type NatEndpoint struct {
 	natEvents NatEvents
 }
@@ -71,7 +73,7 @@ func (ne *NatEndpoint) NatStatus(resp http.ResponseWriter, _ *http.Request, _ ht
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
-// AddRoutesForService adds service routes to given router
+// AddRoutesForNat adds nat routes to given router
 func AddRoutesForNat(router *httprouter.Router, natEvents NatEvents) {
 	natEndpoint := NewNatEndpoint(natEvents)
 
