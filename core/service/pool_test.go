@@ -33,9 +33,9 @@ type mockPublisher struct {
 	publishedArg   interface{}
 }
 
-func (mockPublisher *mockPublisher) Publish(topic string, arg interface{}) {
+func (mockPublisher *mockPublisher) Publish(topic string, data interface{}) {
 	mockPublisher.publishedTopic = topic
-	mockPublisher.publishedArg = arg
+	mockPublisher.publishedArg = data
 }
 
 func (mr *mockService) Stop() error {

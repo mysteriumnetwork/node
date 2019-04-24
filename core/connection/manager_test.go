@@ -301,7 +301,7 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 
 	for _, v := range history {
 		if v.calledWithTopic == SessionEventTopic {
-			event := v.calledWithArg.(SessionEvent)
+			event := v.calledWithData.(SessionEvent)
 			if event.Status == SessionEndedStatus {
 				found = true
 
@@ -350,12 +350,12 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 
 	for _, v := range history {
 		if v.calledWithTopic == StatisticsEventTopic {
-			event := v.calledWithArg.(consumer.SessionStatistics)
+			event := v.calledWithData.(consumer.SessionStatistics)
 			assert.True(tc.T(), event.BytesReceived == tc.mockStatistics.BytesReceived)
 			assert.True(tc.T(), event.BytesSent == tc.mockStatistics.BytesSent)
 		}
 		if v.calledWithTopic == StateEventTopic {
-			event := v.calledWithArg.(StateEvent)
+			event := v.calledWithData.(StateEvent)
 			assert.Equal(tc.T(), Connected, event.State)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
@@ -363,7 +363,7 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
 		}
 		if v.calledWithTopic == SessionEventTopic {
-			event := v.calledWithArg.(SessionEvent)
+			event := v.calledWithData.(SessionEvent)
 			assert.Equal(tc.T(), SessionCreatedStatus, event.Status)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)

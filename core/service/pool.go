@@ -44,7 +44,7 @@ type Pool struct {
 
 // Publisher is responsible for publishing given events
 type Publisher interface {
-	Publish(topic string, arg interface{})
+	Publish(topic string, data interface{})
 }
 
 // NewPool returns a empty service pool
