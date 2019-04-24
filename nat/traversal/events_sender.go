@@ -50,7 +50,7 @@ func (es *EventsSender) ConsumeNATEvent(event Event) {
 		log.Warnf(eventsSenderLogPrefix, "resolving public ip failed: ", err)
 		return
 	}
-	if !es.isEventRelevant(event, publicIP) {
+	if publicIP == es.lastIp && es.matchesLastEvent(event) {
 		return
 	}
 
@@ -71,14 +71,10 @@ func (es *EventsSender) sendNATEvent(event Event) error {
 	return es.metricsSender.SendNATMappingFailEvent(event.Stage, event.Error)
 }
 
-func (es *EventsSender) isEventRelevant(event Event, ip string) bool {
-	if ip != es.lastIp {
-		return true
-	}
-
+func (es *EventsSender) matchesLastEvent(event Event) bool {
 	if es.lastEvent == nil {
-		return true
+		return false
 	}
 
-	return event.Successful != es.lastEvent.Successful || event.Stage != es.lastEvent.Stage
+	return event.Successful == es.lastEvent.Successful && event.Stage == es.lastEvent.Stage
 }
