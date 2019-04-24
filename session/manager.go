@@ -74,7 +74,7 @@ type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (B
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
-	LastEvent() (traversal.Event, bool)
+	LastEvent() *traversal.Event
 }
 
 // NewManager returns new session Manager

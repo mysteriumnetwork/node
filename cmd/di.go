@@ -96,7 +96,7 @@ type NatPinger interface {
 // NatEventTracker is responsible for tracking NAT events
 type NatEventTracker interface {
 	ConsumeNATEvent(event traversal.Event)
-	LastEvent() (traversal.Event, bool)
+	LastEvent() *traversal.Event
 	WaitForEvent() traversal.Event
 }
 

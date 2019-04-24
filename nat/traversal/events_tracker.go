@@ -61,12 +61,9 @@ func (et *EventsTracker) ConsumeNATEvent(event Event) {
 }
 
 // LastEvent returns the last known event and boolean flag, indicating if such event exists
-func (et *EventsTracker) LastEvent() (Event, bool) {
+func (et *EventsTracker) LastEvent() *Event {
 	log.Info(eventsTrackerLogPrefix, "getting last NAT event: ", et.lastEvent)
-	if et.lastEvent == nil {
-		return Event{}, false
-	}
-	return *et.lastEvent, true
+	return et.lastEvent
 }
 
 // WaitForEvent waits for event to occur

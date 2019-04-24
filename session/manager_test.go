@@ -98,6 +98,6 @@ func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 type MockNatEventTracker struct {
 }
 
-func (mnet *MockNatEventTracker) LastEvent() (traversal.Event, bool) {
-	return traversal.Event{}, true
+func (mnet *MockNatEventTracker) LastEvent() *traversal.Event {
+	return &traversal.Event{}
 }

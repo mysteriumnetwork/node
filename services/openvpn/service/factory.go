@@ -139,8 +139,8 @@ func (ocn *OpenvpnConfigNegotiator) determineClientPort(pingerPort int) int {
 }
 
 func (ocn *OpenvpnConfigNegotiator) portMappingFailed() bool {
-	event, found := ocn.natEventGetter.LastEvent()
-	if !found {
+	event := ocn.natEventGetter.LastEvent()
+	if event == nil {
 		return false
 	}
 	return event.Stage == mapping.StageName && !event.Successful
