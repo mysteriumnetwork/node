@@ -37,7 +37,7 @@ const StageName = "port_mapping"
 
 // Publisher is responsible for publishing given events
 type Publisher interface {
-	Publish(topic string, args ...interface{})
+	Publish(topic string, arg interface{})
 }
 
 // GetPortMappingFunc returns PortMapping function if service is behind NAT

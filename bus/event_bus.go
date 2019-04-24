@@ -22,10 +22,23 @@ import asaskevichEventBus "github.com/asaskevich/EventBus"
 // EventBus allows subscribing and publishing data by topic
 type EventBus interface {
 	Subscribe(topic string, fn interface{}) error
-	Publish(topic string, args ...interface{})
+	Publish(topic string, arg interface{})
+}
+
+type simplifiedEventBus struct {
+	bus *asaskevichEventBus.Bus
+}
+
+func (bus simplifiedEventBus) Subscribe(topic string, fn interface{}) error {
+	return bus.Subscribe(topic, fn)
+}
+
+func (bus simplifiedEventBus) Publish(topic string, arg interface{}) {
+	bus.Publish(topic, arg)
 }
 
 // NewEventBus returns implementation of EventBus
 func NewEventBus() EventBus {
-	return asaskevichEventBus.New()
+	bus := asaskevichEventBus.New()
+	return simplifiedEventBus{bus: &bus}
 }
