@@ -48,7 +48,7 @@ type Pinger struct {
 	portPool       PortSupplier
 	consumerPort   int
 	previousStage  string
-	publisher      Publisher
+	eventPublisher Publisher
 }
 
 // NatEventWaiter is responsible for waiting for nat events
@@ -85,7 +85,7 @@ func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy
 		natProxy:       proxy,
 		portPool:       portPool,
 		previousStage:  previousStage,
-		publisher:      publisher,
+		eventPublisher: publisher,
 	}
 }
 
@@ -225,11 +225,11 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 
 			err := p.sendPingRequest(conn, n)
 			if err != nil {
-				p.publisher.Publish(EventTopic, BuildFailureEvent(stageName, err))
+				p.eventPublisher.Publish(EventTopic, BuildFailureEvent(stageName, err))
 				return err
 			}
 
-			p.publisher.Publish(EventTopic, BuildSuccessEvent(stageName))
+			p.eventPublisher.Publish(EventTopic, BuildSuccessEvent(stageName))
 
 			n++
 		}
