@@ -20,10 +20,9 @@ package mapping
 import (
 	"time"
 
-	"github.com/mysteriumnetwork/node/nat/traversal"
-
 	log "github.com/cihub/seelog"
 	portmap "github.com/ethereum/go-ethereum/p2p/nat"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 )
 
 const logPrefix = "[port mapping] "
