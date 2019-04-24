@@ -28,29 +28,20 @@ const EventTopic = "Traversal"
 
 const eventsTrackerLogPrefix = "[traversal-events-tracker] "
 
-const (
-	// EmptyEventType is name of event where nothing really happened
-	EmptyEventType = ""
-	// SuccessEventType is name of event for a successful NAT traversal
-	SuccessEventType = "success"
-	// FailureEventType is name of event for a failed NAT traversal
-	FailureEventType = "failure"
-)
-
 // EventsTracker is able to track NAT traversal events
 type EventsTracker struct {
-	lastEvent Event
+	lastEvent *Event
 	eventChan chan Event
 }
 
 // BuildSuccessEvent returns new event for successful NAT traversal
 func BuildSuccessEvent(stage string) Event {
-	return Event{Stage: stage, Type: SuccessEventType}
+	return Event{Stage: stage, Successful: true}
 }
 
 // BuildFailureEvent returns new event for failed NAT traversal
 func BuildFailureEvent(stage string, err error) Event {
-	return Event{Stage: stage, Type: FailureEventType, Error: err}
+	return Event{Stage: stage, Successful: false, Error: err}
 }
 
 // NewEventsTracker returns a new instance of event tracker
@@ -62,23 +53,23 @@ func NewEventsTracker() *EventsTracker {
 func (et *EventsTracker) ConsumeNATEvent(event Event) {
 	log.Info(eventsTrackerLogPrefix, "got NAT event: ", event)
 
-	et.lastEvent = event
+	et.lastEvent = &event
 	select {
 	case et.eventChan <- event:
 	case <-time.After(300 * time.Millisecond):
 	}
 }
 
-// LastEvent returns the last known event
-func (et *EventsTracker) LastEvent() Event {
+// LastEvent returns the last known event and boolean flag, indicating if such event exists
+func (et *EventsTracker) LastEvent() *Event {
 	log.Info(eventsTrackerLogPrefix, "getting last NAT event: ", et.lastEvent)
 	return et.lastEvent
 }
 
 // WaitForEvent waits for event to occur
 func (et *EventsTracker) WaitForEvent() Event {
-	if et.lastEvent.Type != EmptyEventType {
-		return et.lastEvent
+	if et.lastEvent != nil {
+		return *et.lastEvent
 	}
 	e := <-et.eventChan
 	log.Info(eventsTrackerLogPrefix, "got NAT event: ", e)
@@ -87,7 +78,7 @@ func (et *EventsTracker) WaitForEvent() Event {
 
 // Event represents a NAT traversal related event
 type Event struct {
-	Stage string
-	Type  string
-	Error error
+	Stage      string
+	Successful bool
+	Error      error
 }

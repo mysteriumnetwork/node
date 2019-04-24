@@ -18,8 +18,6 @@
 package traversal
 
 import (
-	"fmt"
-
 	log "github.com/cihub/seelog"
 )
 
@@ -30,7 +28,7 @@ type EventsSender struct {
 	metricsSender metricsSender
 	ipResolver    ipResolver
 	lastIp        string
-	lastEventType string
+	lastEvent     *Event
 }
 
 type metricsSender interface {
@@ -52,7 +50,7 @@ func (es *EventsSender) ConsumeNATEvent(event Event) {
 		log.Warnf(eventsSenderLogPrefix, "resolving public ip failed: ", err)
 		return
 	}
-	if publicIP == es.lastIp && event.Type == es.lastEventType {
+	if publicIP == es.lastIp && es.matchesLastEvent(event) {
 		return
 	}
 
@@ -62,16 +60,21 @@ func (es *EventsSender) ConsumeNATEvent(event Event) {
 	}
 
 	es.lastIp = publicIP
-	es.lastEventType = event.Type
+	es.lastEvent = &event
 }
 
 func (es *EventsSender) sendNATEvent(event Event) error {
-	switch event.Type {
-	case SuccessEventType:
+	if event.Successful {
 		return es.metricsSender.SendNATMappingSuccessEvent(event.Stage)
-	case FailureEventType:
-		return es.metricsSender.SendNATMappingFailEvent(event.Stage, event.Error)
-	default:
-		return fmt.Errorf("unknown event type: %v", event.Type)
 	}
+
+	return es.metricsSender.SendNATMappingFailEvent(event.Stage, event.Error)
+}
+
+func (es *EventsSender) matchesLastEvent(event Event) bool {
+	if es.lastEvent == nil {
+		return false
+	}
+
+	return event.Successful == es.lastEvent.Successful && event.Stage == es.lastEvent.Stage
 }

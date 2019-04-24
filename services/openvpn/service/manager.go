@@ -58,7 +58,7 @@ type NATPinger interface {
 
 // NATEventGetter allows us to fetch the last known NAT event
 type NATEventGetter interface {
-	LastEvent() traversal.Event
+	LastEvent() *traversal.Event
 }
 
 // Manager represents entrypoint for Openvpn service with top level components
@@ -177,7 +177,10 @@ func (m *Manager) isBehindNAT() bool {
 
 func (m *Manager) portMappingFailed() bool {
 	event := m.natEventGetter.LastEvent()
-	return event.Stage == mapping.StageName && event.Type == traversal.FailureEventType
+	if event == nil {
+		return false
+	}
+	return event.Stage == mapping.StageName && !event.Successful
 }
 
 func vpnStateCallback(state openvpn.State) {
