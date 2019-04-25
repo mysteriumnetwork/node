@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
-	"github.com/mysteriumnetwork/node/bus"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -39,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -131,7 +131,7 @@ type Dependencies struct {
 	StatisticsReporter *statistics.SessionStatisticsReporter
 	SessionStorage     *consumer_session.Storage
 
-	EventBus bus.EventBus
+	EventBus eventbus.EventBus
 
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
@@ -456,7 +456,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 }
 
 func (di *Dependencies) bootstrapEventBus() {
-	di.EventBus = bus.NewEventBus()
+	di.EventBus = eventbus.NewEventBus()
 }
 
 func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
