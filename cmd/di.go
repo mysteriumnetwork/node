@@ -20,7 +20,6 @@ package cmd
 import (
 	"time"
 
-	"github.com/asaskevich/EventBus"
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -39,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -131,7 +131,7 @@ type Dependencies struct {
 	StatisticsReporter *statistics.SessionStatisticsReporter
 	SessionStorage     *consumer_session.Storage
 
-	EventBus EventBus.Bus
+	EventBus eventbus.EventBus
 
 	ConnectionManager  connection.Manager
 	ConnectionRegistry *connection.Registry
@@ -456,7 +456,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 }
 
 func (di *Dependencies) bootstrapEventBus() {
-	di.EventBus = EventBus.New()
+	di.EventBus = eventbus.New()
 }
 
 func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {

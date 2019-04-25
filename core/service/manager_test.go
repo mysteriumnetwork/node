@@ -105,6 +105,5 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, StopTopic, eventBus.publishedTopic)
-	assert.Len(t, eventBus.publishedArgs, 1)
-	assert.Equal(t, &mockCopy, eventBus.publishedArgs[0].(*Instance).service)
+	assert.Equal(t, &mockCopy, eventBus.publishedData.(*Instance).service)
 }

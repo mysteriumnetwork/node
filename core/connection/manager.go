@@ -64,7 +64,7 @@ type SessionInfo struct {
 
 // Publisher is responsible for publishing given events
 type Publisher interface {
-	Publish(topic string, args ...interface{})
+	Publish(topic string, data interface{})
 }
 
 // PaymentIssuer handles the payments for service

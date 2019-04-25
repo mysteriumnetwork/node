@@ -32,7 +32,7 @@ import (
 // StubPublisherEvent represents the event in publishers history
 type StubPublisherEvent struct {
 	calledWithTopic string
-	calledWithArgs  []interface{}
+	calledWithData  interface{}
 }
 
 // StubPublisher acts as a publisher
@@ -49,12 +49,12 @@ func NewStubPublisher() *StubPublisher {
 }
 
 // Publish adds the given event to the publish history
-func (sp *StubPublisher) Publish(topic string, args ...interface{}) {
+func (sp *StubPublisher) Publish(topic string, data interface{}) {
 	sp.lock.Lock()
 	defer sp.lock.Unlock()
 	event := StubPublisherEvent{
 		calledWithTopic: topic,
-		calledWithArgs:  args,
+		calledWithData:  data,
 	}
 	sp.publishHistory = append(sp.publishHistory, event)
 }
