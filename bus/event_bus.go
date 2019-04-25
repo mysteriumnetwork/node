@@ -26,19 +26,19 @@ type EventBus interface {
 }
 
 type simplifiedEventBus struct {
-	bus *asaskevichEventBus.Bus
+	bus asaskevichEventBus.Bus
 }
 
 func (bus simplifiedEventBus) Subscribe(topic string, fn interface{}) error {
-	return bus.Subscribe(topic, fn)
+	return bus.bus.Subscribe(topic, fn)
 }
 
 func (bus simplifiedEventBus) Publish(topic string, data interface{}) {
-	bus.Publish(topic, data)
+	bus.bus.Publish(topic, data)
 }
 
 // NewEventBus returns implementation of EventBus
 func NewEventBus() EventBus {
 	bus := asaskevichEventBus.New()
-	return simplifiedEventBus{bus: &bus}
+	return simplifiedEventBus{bus: bus}
 }
