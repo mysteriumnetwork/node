@@ -243,7 +243,7 @@ func (p *Pinger) sendPingRequest(conn *net.UDPConn, ttl int) error {
 	}
 
 	_, err = conn.Write([]byte("continuously pinging to " + conn.RemoteAddr().String()))
-	return err
+	return errors.Wrap(err, "pinging request failed")
 }
 
 func (p *Pinger) getConnection(ip string, port int, pingerPort int) (*net.UDPConn, error) {
