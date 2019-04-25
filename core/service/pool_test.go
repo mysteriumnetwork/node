@@ -30,12 +30,12 @@ type mockService struct {
 
 type mockPublisher struct {
 	publishedTopic string
-	publishedArg   interface{}
+	publishedData  interface{}
 }
 
 func (mockPublisher *mockPublisher) Publish(topic string, data interface{}) {
 	mockPublisher.publishedTopic = topic
-	mockPublisher.publishedArg = data
+	mockPublisher.publishedData = data
 }
 
 func (mr *mockService) Stop() error {
