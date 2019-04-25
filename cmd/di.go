@@ -488,6 +488,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	di.NATTracker = traversal.NewEventsTracker()
 	di.NATEventSender = traversal.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
 	if options.ExperimentNATPunching {
+		log.Trace(logPrefix + "experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPingerFactory(
 			di.NATTracker,
 			config.NewConfigParser(),
