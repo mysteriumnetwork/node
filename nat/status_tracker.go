@@ -25,7 +25,7 @@ import (
 // It can finish either by successful event from any stage, or by a failure of the last stage.
 type StatusTracker struct {
 	lastStageName string
-	status        string
+	status        Status
 }
 
 const (
@@ -34,20 +34,26 @@ const (
 	statusFailure     = "failure"
 )
 
-// Status returns NAT traversal status - either "not_finished", "successful" or "failure"
-func (t *StatusTracker) Status() string {
+// Status represents NAT traversal status (either "not_finished", "successful" or "failure") and an optional error.
+type Status struct {
+	Status string
+	Error  error
+}
+
+// Status returns NAT traversal status
+func (t *StatusTracker) Status() Status {
 	return t.status
 }
 
 // ConsumeNATEvent processes NAT event to determine NAT traversal status
 func (t *StatusTracker) ConsumeNATEvent(event natevents.Event) {
 	if event.Stage == t.lastStageName && event.Successful == false {
-		t.status = statusFailure
+		t.status = Status{Status: statusFailure, Error: event.Error}
 		return
 	}
 
 	if event.Successful {
-		t.status = statusSuccessful
+		t.status = Status{Status: statusSuccessful}
 		return
 	}
 }
@@ -56,6 +62,6 @@ func (t *StatusTracker) ConsumeNATEvent(event natevents.Event) {
 func NewStatusTracker(lastStageName string) *StatusTracker {
 	return &StatusTracker{
 		lastStageName: lastStageName,
-		status:        statusNotFinished,
+		status:        Status{Status: statusNotFinished},
 	}
 }
