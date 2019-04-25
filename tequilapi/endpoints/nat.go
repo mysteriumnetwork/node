@@ -25,11 +25,17 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
+const (
+	statusNotFinished = "not_finished"
+	statusSuccessful  = "successful"
+	statusFailure     = "failure"
+)
+
 // NATStatusDTO gives information about NAT traversal success or failure
 // swagger:model NATStatusDTO
 type NATStatusDTO struct {
-	Successful bool   `json:"successful"`
-	Error      string `json:"error"`
+	Status string  `json:"status"`
+	Error  *string `json:"error,omitempty"`
 }
 
 // NATEvents allows retrieving last traversal event
@@ -53,23 +59,16 @@ func NewNATEndpoint(natEvents NATEvents) *NATEndpoint {
 // swagger:operation GET /nat/status NAT NATStatusDTO
 // ---
 // summary: Shows NAT status
-// description: NAT status returns the last known NAT event
+// description: NAT status returns the last known NAT traversal status
 // responses:
 //   200:
-//     description: NAT status and/or error
+//     description: NAT status ("not_finished"/"successful"/"failed") and optionally error if status is "failed"
 //     schema:
 //       "$ref": "#/definitions/NATStatusDTO"
-//   204:
-//     description: No status available
 func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	event := ne.natEvents.LastEvent()
 
 	statusResponse := toNATStatusResponse(event)
-	if statusResponse == nil {
-		utils.SendErrorMessage(resp, "No status is available", http.StatusNoContent)
-		return
-	}
-
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
@@ -80,18 +79,19 @@ func AddRoutesForNAT(router *httprouter.Router, natEvents NATEvents) {
 	router.GET("/nat/status", natEndpoint.NATStatus)
 }
 
-func toNATStatusResponse(event *traversal.Event) *NATStatusDTO {
+func toNATStatusResponse(event *traversal.Event) NATStatusDTO {
 	if event == nil {
-		return nil
+		return NATStatusDTO{Status: statusNotFinished}
 	}
 
-	status := event.Successful
-	var error string
+	if event.Successful {
+		return NATStatusDTO{Status: statusSuccessful}
+	}
+
+	var error *string
 	if event.Error != nil {
-		error = event.Error.Error()
+		msg := event.Error.Error()
+		error = &msg
 	}
-	return &NATStatusDTO{
-		Successful: status,
-		Error:      error,
-	}
+	return NATStatusDTO{Status: statusFailure, Error: error}
 }

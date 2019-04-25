@@ -18,7 +18,6 @@
 package endpoints
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,53 +28,42 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_NATStatus_ReturnsSuccess_WithSuccessfulEvent(t *testing.T) {
+func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
 	successfulEvent := traversal.BuildSuccessEvent("hole_punching")
 
 	testResponse(
 		t,
 		natTrackerMock{mockLastEvent: &successfulEvent},
 		`{
-			"successful": true,
-			"error": ""
+			"status": "successful"
 		}`,
 	)
 }
 
-func Test_NATStatus_ReturnsFailureWithError_WithFailureEvent(t *testing.T) {
+func Test_NATStatus_ReturnsStatusFailureAndError_WithFailureEvent(t *testing.T) {
 	failureEvent := traversal.BuildFailureEvent("hole_punching", errors.New("mock error"))
 
 	testResponse(
 		t,
 		natTrackerMock{mockLastEvent: &failureEvent},
 		`{
-			"successful": false,
+			"status": "failure",
 			"error": "mock error"
 		}`,
 	)
 }
 
-func Test_NATStatus_ReturnsError_WhenEventIsNotAvailable(t *testing.T) {
-	testErrorResponse(
+func Test_NATStatus_ReturnsStatusNotFinished_WhenEventIsNotAvailable(t *testing.T) {
+	testResponse(
 		t,
 		natTrackerMock{mockLastEvent: nil},
 		`{
-			"message": "No status is available"
+			"status": "not_finished"
 		}`,
 	)
 }
 
 func testResponse(t *testing.T, mockedTracker natTrackerMock, expectedJson string) {
-	resp, err := makeStatusRequestAndReturnResponse(mockedTracker)
-	assert.Nil(t, err)
-
-	parsedResponse := &NATStatusDTO{}
-	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
-	assert.Nil(t, err)
-	assert.JSONEq(t, expectedJson, resp.Body.String())
-}
-
-func testErrorResponse(t *testing.T, mockedTracker natTrackerMock, expectedJson string) {
 	resp, err := makeStatusRequestAndReturnResponse(mockedTracker)
 	assert.Nil(t, err)
 
