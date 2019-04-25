@@ -29,12 +29,12 @@ type simplifiedEventBus struct {
 	bus asaskevichEventBus.Bus
 }
 
-func (bus simplifiedEventBus) Subscribe(topic string, fn interface{}) error {
-	return bus.bus.Subscribe(topic, fn)
+func (simplifiedBus simplifiedEventBus) Subscribe(topic string, fn interface{}) error {
+	return simplifiedBus.bus.Subscribe(topic, fn)
 }
 
-func (bus simplifiedEventBus) Publish(topic string, data interface{}) {
-	bus.bus.Publish(topic, data)
+func (simplifiedBus simplifiedEventBus) Publish(topic string, data interface{}) {
+	simplifiedBus.bus.Publish(topic, data)
 }
 
 // New returns implementation of EventBus
