@@ -456,7 +456,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 }
 
 func (di *Dependencies) bootstrapEventBus() {
-	di.EventBus = eventbus.NewEventBus()
+	di.EventBus = eventbus.New()
 }
 
 func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {

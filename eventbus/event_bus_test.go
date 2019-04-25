@@ -17,28 +17,20 @@
 
 package eventbus
 
-import asaskevichEventBus "github.com/asaskevich/EventBus"
+import (
+	"testing"
 
-// EventBus allows subscribing and publishing data by topic
-type EventBus interface {
-	Subscribe(topic string, fn interface{}) error
-	Publish(topic string, data interface{})
-}
+	"github.com/stretchr/testify/assert"
+)
 
-type simplifiedEventBus struct {
-	bus asaskevichEventBus.Bus
-}
+func Test_simplifiedEventBus_Publish_InvokesSubscribers(t *testing.T) {
+	eventBus := New()
+	var received string
+	eventBus.Subscribe("test topic", func(data string) {
+		received = data
+	})
 
-func (bus simplifiedEventBus) Subscribe(topic string, fn interface{}) error {
-	return bus.bus.Subscribe(topic, fn)
-}
+	eventBus.Publish("test topic", "test data")
 
-func (bus simplifiedEventBus) Publish(topic string, data interface{}) {
-	bus.bus.Publish(topic, data)
-}
-
-// New returns implementation of EventBus
-func New() EventBus {
-	bus := asaskevichEventBus.New()
-	return simplifiedEventBus{bus: bus}
+	assert.Equal(t, "test data", received)
 }
