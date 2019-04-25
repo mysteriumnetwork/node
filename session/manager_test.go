@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/natevents"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/stretchr/testify/assert"
 )
@@ -98,6 +99,6 @@ func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 type MockNatEventTracker struct {
 }
 
-func (mnet *MockNatEventTracker) LastEvent() *traversal.Event {
-	return &traversal.Event{}
+func (mnet *MockNatEventTracker) LastEvent() *natevents.Event {
+	return &natevents.Event{}
 }

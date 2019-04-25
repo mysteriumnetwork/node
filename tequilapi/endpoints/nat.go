@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/nat/natevents"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -40,7 +40,7 @@ type NATStatusDTO struct {
 
 // NATEvents allows retrieving last traversal event
 type NATEvents interface {
-	LastEvent() *traversal.Event
+	LastEvent() *natevents.Event
 }
 
 // NATEndpoint struct represents endpoints about NAT traversal
@@ -79,7 +79,7 @@ func AddRoutesForNAT(router *httprouter.Router, natEvents NATEvents) {
 	router.GET("/nat/status", natEndpoint.NATStatus)
 }
 
-func toNATStatusResponse(event *traversal.Event) NATStatusDTO {
+func toNATStatusResponse(event *natevents.Event) NATStatusDTO {
 	if event == nil {
 		return NATStatusDTO{Status: statusNotFinished}
 	}

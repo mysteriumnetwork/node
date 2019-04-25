@@ -23,13 +23,13 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/nat/natevents"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
-	successfulEvent := traversal.BuildSuccessEvent("hole_punching")
+	successfulEvent := natevents.BuildSuccessEvent("hole_punching")
 
 	testResponse(
 		t,
@@ -41,7 +41,7 @@ func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
 }
 
 func Test_NATStatus_ReturnsStatusFailureAndError_WithFailureEvent(t *testing.T) {
-	failureEvent := traversal.BuildFailureEvent("hole_punching", errors.New("mock error"))
+	failureEvent := natevents.BuildFailureEvent("hole_punching", errors.New("mock error"))
 
 	testResponse(
 		t,
@@ -85,9 +85,9 @@ func makeStatusRequestAndReturnResponse(mockedTracker natTrackerMock) (*httptest
 }
 
 type natTrackerMock struct {
-	mockLastEvent *traversal.Event
+	mockLastEvent *natevents.Event
 }
 
-func (nt *natTrackerMock) LastEvent() *traversal.Event {
+func (nt *natTrackerMock) LastEvent() *natevents.Event {
 	return nt.mockLastEvent
 }

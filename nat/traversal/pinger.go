@@ -26,15 +26,17 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/nat/natevents"
 	"github.com/mysteriumnetwork/node/services"
 	"github.com/pkg/errors"
 	"golang.org/x/net/ipv4"
 )
 
+// StageName represents hole-punching stage of NAT traversal
+const StageName = "hole_punching"
 const prefix = "[NATPinger] "
 const pingInterval = 200
 const pingTimeout = 10000
-const stageName = "hole_punching"
 
 // Pinger represents NAT pinger structure
 type Pinger struct {
@@ -53,7 +55,7 @@ type Pinger struct {
 
 // NatEventWaiter is responsible for waiting for nat events
 type NatEventWaiter interface {
-	WaitForEvent() Event
+	WaitForEvent() natevents.Event
 }
 
 // ConfigParser is able to parse a config from given raw json
@@ -225,11 +227,11 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 
 			err := p.sendPingRequest(conn, n)
 			if err != nil {
-				p.eventPublisher.Publish(EventTopic, BuildFailureEvent(stageName, err))
+				p.eventPublisher.Publish(natevents.EventTopic, natevents.BuildFailureEvent(StageName, err))
 				return err
 			}
 
-			p.eventPublisher.Publish(EventTopic, BuildSuccessEvent(stageName))
+			p.eventPublisher.Publish(natevents.EventTopic, natevents.BuildSuccessEvent(StageName))
 
 			n++
 		}

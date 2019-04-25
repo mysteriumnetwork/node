@@ -51,6 +51,7 @@ import (
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
+	"github.com/mysteriumnetwork/node/nat/natevents"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/traversal/config"
 	"github.com/mysteriumnetwork/node/nat/upnp"
@@ -95,14 +96,14 @@ type NatPinger interface {
 
 // NatEventTracker is responsible for tracking NAT events
 type NatEventTracker interface {
-	ConsumeNATEvent(event traversal.Event)
-	LastEvent() *traversal.Event
-	WaitForEvent() traversal.Event
+	ConsumeNATEvent(event natevents.Event)
+	LastEvent() *natevents.Event
+	WaitForEvent() natevents.Event
 }
 
 // NatEventSender is responsible for sending NAT events to metrics server
 type NatEventSender interface {
-	ConsumeNATEvent(event traversal.Event)
+	ConsumeNATEvent(event natevents.Event)
 }
 
 // Dependencies is DI container for top level components which is reused in several places
@@ -299,11 +300,11 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	}
 
 	// NAT events
-	err = di.EventBus.Subscribe(traversal.EventTopic, di.NATEventSender.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(natevents.EventTopic, di.NATEventSender.ConsumeNATEvent)
 	if err != nil {
 		return err
 	}
-	return di.EventBus.Subscribe(traversal.EventTopic, di.NATTracker.ConsumeNATEvent)
+	return di.EventBus.Subscribe(natevents.EventTopic, di.NATTracker.ConsumeNATEvent)
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
@@ -486,8 +487,8 @@ func (di *Dependencies) bootstrapMetrics(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
-	di.NATTracker = traversal.NewEventsTracker()
-	di.NATEventSender = traversal.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
+	di.NATTracker = natevents.NewEventsTracker()
+	di.NATEventSender = natevents.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
 	if options.ExperimentNATPunching {
 		di.NATPinger = traversal.NewPingerFactory(
 			di.NATTracker,

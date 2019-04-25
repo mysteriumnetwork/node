@@ -29,7 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
-	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/nat/natevents"
 	"github.com/mysteriumnetwork/node/services"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
@@ -58,7 +58,7 @@ type NATPinger interface {
 
 // NATEventGetter allows us to fetch the last known NAT event
 type NATEventGetter interface {
-	LastEvent() *traversal.Event
+	LastEvent() *natevents.Event
 }
 
 // Manager represents entrypoint for Openvpn service with top level components
