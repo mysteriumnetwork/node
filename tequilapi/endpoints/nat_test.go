@@ -23,80 +23,81 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	failedEvent = traversal.BuildFailureEvent(
-		"hole_punching",
-		errors.New("no UPnP or NAT-PMP router discovered"),
+func Test_NatStatus_ReturnsSuccess_WithSuccessfulEvent(t *testing.T) {
+	successfulEvent := traversal.BuildSuccessEvent("hole_punching")
+
+	testResponse(
+		t,
+		natTrackerMock{mockLastEvent: &successfulEvent},
+		`{
+			"successful": true,
+			"error": ""
+		}`,
 	)
-	successfulEvent = traversal.BuildSuccessEvent("hole_punching")
-)
-
-func Test_NatEndpoint_Status_WhenStatusIsSuccessful(t *testing.T) {
-	expected := toNatStatusResponse(&successfulEvent)
-
-	testResponse(t, natTrackerMock{mockLastEvent: &successfulEvent}, expected)
 }
 
-func Test_NatEndpoint_Status_WhenStatusIsNotAvailable(t *testing.T) {
-	expected := errorMessage{Message: "No status is available"}
+func Test_NatStatus_ReturnsFailureWithError_WithFailureEvent(t *testing.T) {
+	failureEvent := traversal.BuildFailureEvent("hole_punching", errors.New("mock error"))
 
-	testErrorResponse(t, natTrackerMock{mockLastEvent: nil}, &expected)
+	testResponse(
+		t,
+		natTrackerMock{mockLastEvent: &failureEvent},
+		`{
+			"successful": false,
+			"error": "mock error"
+		}`,
+	)
 }
 
-func Test_NatEndpoint_Status_WhenStatusIsFailed(t *testing.T) {
-	expected := toNatStatusResponse(&failedEvent)
-
-	testResponse(t, natTrackerMock{mockLastEvent: &failedEvent}, expected)
+func Test_NatStatus_ReturnsError_WhenEventIsNotAvailable(t *testing.T) {
+	testErrorResponse(
+		t,
+		natTrackerMock{mockLastEvent: nil},
+		`{
+			"message": "No status is available"
+		}`,
+	)
 }
 
-func testResponse(t *testing.T, mockedTracker natTrackerMock, expected interface{}) {
+func testResponse(t *testing.T, mockedTracker natTrackerMock, expectedJson string) {
 	resp, err := makeStatusRequestAndReturnResponse(mockedTracker)
 	assert.Nil(t, err)
 
 	parsedResponse := &NatStatusDTO{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
-	assert.EqualValues(t, expected, parsedResponse)
+	assert.JSONEq(t, expectedJson, resp.Body.String())
 }
 
-func testErrorResponse(t *testing.T, mockedTracker natTrackerMock, expected interface{}) {
+func testErrorResponse(t *testing.T, mockedTracker natTrackerMock, expectedJson string) {
 	resp, err := makeStatusRequestAndReturnResponse(mockedTracker)
 	assert.Nil(t, err)
 
-	parsedResponse := &errorMessage{}
-	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
-	assert.Nil(t, err)
-	assert.EqualValues(t, expected, parsedResponse)
+	assert.JSONEq(t, expectedJson, resp.Body.String())
 }
 
 func makeStatusRequestAndReturnResponse(mockedTracker natTrackerMock) (*httptest.ResponseRecorder, error) {
-	req, err := http.NewRequest(
-		http.MethodGet,
-		"/irrelevant",
-		nil,
-	)
+	req, err := http.NewRequest(http.MethodGet, "/nat/status", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewNatEndpoint(&mockedTracker).NatStatus
-	handlerFunc(resp, req, nil)
+	router := httprouter.New()
+	AddRoutesForNat(router, &mockedTracker)
+	router.ServeHTTP(resp, req)
 
 	return resp, nil
 }
 
 type natTrackerMock struct {
 	mockLastEvent *traversal.Event
-}
-
-type errorMessage struct {
-	Message string `json:"message"`
 }
 
 func (nt *natTrackerMock) LastEvent() *traversal.Event {
