@@ -510,6 +510,7 @@ func (di *Dependencies) bootstrapMetrics(options node.Options) {
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	di.NATTracker = event.NewTracker()
 	if options.ExperimentNATPunching {
+		log.Trace(logPrefix + "experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPingerFactory(
 			di.NATTracker,
 			config.NewConfigParser(),
