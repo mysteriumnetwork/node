@@ -266,7 +266,13 @@ func (p *Pinger) getConnection(ip string, port int, pingerPort int) (*net.UDPCon
 
 // PingTarget relays ping target address data
 func (p *Pinger) PingTarget(target *Params) {
-	p.pingTarget <- target
+	select {
+	case p.pingTarget <- target:
+		return
+	// do not block if ping target is not received
+	case <-time.After(100 * time.Millisecond):
+		return
+	}
 }
 
 // BindConsumerPort binds NATPinger to source consumer port
