@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_NatStatus_ReturnsSuccess_WithSuccessfulEvent(t *testing.T) {
+func Test_NATStatus_ReturnsSuccess_WithSuccessfulEvent(t *testing.T) {
 	successfulEvent := traversal.BuildSuccessEvent("hole_punching")
 
 	testResponse(
@@ -42,7 +42,7 @@ func Test_NatStatus_ReturnsSuccess_WithSuccessfulEvent(t *testing.T) {
 	)
 }
 
-func Test_NatStatus_ReturnsFailureWithError_WithFailureEvent(t *testing.T) {
+func Test_NATStatus_ReturnsFailureWithError_WithFailureEvent(t *testing.T) {
 	failureEvent := traversal.BuildFailureEvent("hole_punching", errors.New("mock error"))
 
 	testResponse(
@@ -55,7 +55,7 @@ func Test_NatStatus_ReturnsFailureWithError_WithFailureEvent(t *testing.T) {
 	)
 }
 
-func Test_NatStatus_ReturnsError_WhenEventIsNotAvailable(t *testing.T) {
+func Test_NATStatus_ReturnsError_WhenEventIsNotAvailable(t *testing.T) {
 	testErrorResponse(
 		t,
 		natTrackerMock{mockLastEvent: nil},
@@ -69,7 +69,7 @@ func testResponse(t *testing.T, mockedTracker natTrackerMock, expectedJson strin
 	resp, err := makeStatusRequestAndReturnResponse(mockedTracker)
 	assert.Nil(t, err)
 
-	parsedResponse := &NatStatusDTO{}
+	parsedResponse := &NATStatusDTO{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
 	assert.JSONEq(t, expectedJson, resp.Body.String())
@@ -90,7 +90,7 @@ func makeStatusRequestAndReturnResponse(mockedTracker natTrackerMock) (*httptest
 
 	resp := httptest.NewRecorder()
 	router := httprouter.New()
-	AddRoutesForNat(router, &mockedTracker)
+	AddRoutesForNAT(router, &mockedTracker)
 	router.ServeHTTP(resp, req)
 
 	return resp, nil

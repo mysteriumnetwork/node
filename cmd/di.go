@@ -344,7 +344,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(router, nodeOptions.AccessPolicyEndpointAddress)
-	tequilapi_endpoints.AddRoutesForNat(router, di.NATTracker)
+	tequilapi_endpoints.AddRoutesForNAT(router, di.NATTracker)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()

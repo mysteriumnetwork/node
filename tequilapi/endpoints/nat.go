@@ -25,46 +25,46 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
-// NatStatusDTO gives information about NAT traversal success or failure
-// swagger:model NatStatusDTO
-type NatStatusDTO struct {
+// NATStatusDTO gives information about NAT traversal success or failure
+// swagger:model NATStatusDTO
+type NATStatusDTO struct {
 	Successful bool   `json:"successful"`
 	Error      string `json:"error"`
 }
 
-// NatEvents allows retrieving last traversal event
-type NatEvents interface {
+// NATEvents allows retrieving last traversal event
+type NATEvents interface {
 	LastEvent() *traversal.Event
 }
 
-// NatEndpoint struct represents endpoints about NAT traversal
-type NatEndpoint struct {
-	natEvents NatEvents
+// NATEndpoint struct represents endpoints about NAT traversal
+type NATEndpoint struct {
+	natEvents NATEvents
 }
 
-// NewNatEndpoint creates and returns nat endpoint
-func NewNatEndpoint(natEvents NatEvents) *NatEndpoint {
-	return &NatEndpoint{
+// NewNATEndpoint creates and returns nat endpoint
+func NewNATEndpoint(natEvents NATEvents) *NATEndpoint {
+	return &NATEndpoint{
 		natEvents: natEvents,
 	}
 }
 
-// NatStatus provides NAT configuration info
-// swagger:operation GET /nat/status Nat NatStatusDTO
+// NATStatus provides NAT configuration info
+// swagger:operation GET /nat/status NAT NATStatusDTO
 // ---
 // summary: Shows NAT status
-// description: Nat status returns the last known NAT event
+// description: NAT status returns the last known NAT event
 // responses:
 //   200:
 //     description: NAT status and/or error
 //     schema:
-//       "$ref": "#/definitions/NatStatusDTO"
+//       "$ref": "#/definitions/NATStatusDTO"
 //   204:
 //     description: No status available
-func (ne *NatEndpoint) NatStatus(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	event := ne.natEvents.LastEvent()
 
-	statusResponse := toNatStatusResponse(event)
+	statusResponse := toNATStatusResponse(event)
 	if statusResponse == nil {
 		utils.SendErrorMessage(resp, "No status is available", http.StatusNoContent)
 		return
@@ -73,14 +73,14 @@ func (ne *NatEndpoint) NatStatus(resp http.ResponseWriter, _ *http.Request, _ ht
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
-// AddRoutesForNat adds nat routes to given router
-func AddRoutesForNat(router *httprouter.Router, natEvents NatEvents) {
-	natEndpoint := NewNatEndpoint(natEvents)
+// AddRoutesForNAT adds nat routes to given router
+func AddRoutesForNAT(router *httprouter.Router, natEvents NATEvents) {
+	natEndpoint := NewNATEndpoint(natEvents)
 
-	router.GET("/nat/status", natEndpoint.NatStatus)
+	router.GET("/nat/status", natEndpoint.NATStatus)
 }
 
-func toNatStatusResponse(event *traversal.Event) *NatStatusDTO {
+func toNATStatusResponse(event *traversal.Event) *NATStatusDTO {
 	if event == nil {
 		return nil
 	}
@@ -90,7 +90,7 @@ func toNatStatusResponse(event *traversal.Event) *NatStatusDTO {
 	if event.Error != nil {
 		error = event.Error.Error()
 	}
-	return &NatStatusDTO{
+	return &NATStatusDTO{
 		Successful: status,
 		Error:      error,
 	}
