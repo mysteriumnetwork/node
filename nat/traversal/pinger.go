@@ -34,6 +34,7 @@ import (
 const prefix = "[NATPinger] "
 const pingInterval = 200
 const pingTimeout = 10000
+const stageName = "hole_punching"
 
 // Pinger represents NAT pinger structure
 type Pinger struct {
@@ -47,6 +48,7 @@ type Pinger struct {
 	portPool       PortSupplier
 	consumerPort   int
 	previousStage  string
+	eventPublisher Publisher
 }
 
 // NatEventWaiter is responsible for waiting for nat events
@@ -64,8 +66,13 @@ type PortSupplier interface {
 	Acquire() (port.Port, error)
 }
 
+// Publisher is responsible for publishing given events
+type Publisher interface {
+	Publish(topic string, data interface{})
+}
+
 // NewPingerFactory returns Pinger instance
-func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier, previousStage string) *Pinger {
+func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier, previousStage string, publisher Publisher) *Pinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})
@@ -78,6 +85,7 @@ func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy
 		natProxy:       proxy,
 		portPool:       portPool,
 		previousStage:  previousStage,
+		eventPublisher: publisher,
 	}
 }
 
@@ -215,19 +223,27 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 				n = 128
 			}
 
-			err := ipv4.NewConn(conn).SetTTL(n)
+			err := p.sendPingRequest(conn, n)
 			if err != nil {
-				return errors.Wrap(err, "pinger setting ttl failed")
-			}
-
-			n++
-
-			_, err = conn.Write([]byte("continuously pinging to " + conn.RemoteAddr().String()))
-			if err != nil {
+				p.eventPublisher.Publish(EventTopic, BuildFailureEvent(stageName, err))
 				return err
 			}
+
+			p.eventPublisher.Publish(EventTopic, BuildSuccessEvent(stageName))
+
+			n++
 		}
 	}
+}
+
+func (p *Pinger) sendPingRequest(conn *net.UDPConn, ttl int) error {
+	err := ipv4.NewConn(conn).SetTTL(ttl)
+	if err != nil {
+		return errors.Wrap(err, "pinger setting ttl failed")
+	}
+
+	_, err = conn.Write([]byte("continuously pinging to " + conn.RemoteAddr().String()))
+	return errors.Wrap(err, "pinging request failed")
 }
 
 func (p *Pinger) getConnection(ip string, port int, pingerPort int) (*net.UDPConn, error) {
