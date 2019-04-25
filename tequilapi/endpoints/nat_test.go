@@ -23,17 +23,23 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/nat/natevents"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
-	successfulEvent := natevents.BuildSuccessEvent("hole_punching")
+type mockNATStatusProvider struct {
+	mockStatus nat.Status
+}
 
+func (mockProvider *mockNATStatusProvider) Status() nat.Status {
+	return mockProvider.mockStatus
+}
+
+func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
 	testResponse(
 		t,
-		natTrackerMock{mockLastEvent: &successfulEvent},
+		nat.Status{Status: statusSuccessful},
 		`{
 			"status": "successful"
 		}`,
@@ -41,11 +47,9 @@ func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
 }
 
 func Test_NATStatus_ReturnsStatusFailureAndError_WithFailureEvent(t *testing.T) {
-	failureEvent := natevents.BuildFailureEvent("hole_punching", errors.New("mock error"))
-
 	testResponse(
 		t,
-		natTrackerMock{mockLastEvent: &failureEvent},
+		nat.Status{Status: statusFailure, Error: errors.New("mock error")},
 		`{
 			"status": "failure",
 			"error": "mock error"
@@ -56,38 +60,24 @@ func Test_NATStatus_ReturnsStatusFailureAndError_WithFailureEvent(t *testing.T) 
 func Test_NATStatus_ReturnsStatusNotFinished_WhenEventIsNotAvailable(t *testing.T) {
 	testResponse(
 		t,
-		natTrackerMock{mockLastEvent: nil},
+		nat.Status{Status: statusNotFinished},
 		`{
 			"status": "not_finished"
 		}`,
 	)
 }
 
-func testResponse(t *testing.T, mockedTracker natTrackerMock, expectedJson string) {
-	resp, err := makeStatusRequestAndReturnResponse(mockedTracker)
-	assert.Nil(t, err)
+func testResponse(t *testing.T, mockStatus nat.Status, expectedJson string) {
+	provider := mockNATStatusProvider{mockStatus: mockStatus}
 
-	assert.JSONEq(t, expectedJson, resp.Body.String())
-}
-
-func makeStatusRequestAndReturnResponse(mockedTracker natTrackerMock) (*httptest.ResponseRecorder, error) {
 	req, err := http.NewRequest(http.MethodGet, "/nat/status", nil)
-	if err != nil {
-		return nil, err
-	}
-
+	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 	router := httprouter.New()
-	AddRoutesForNAT(router, &mockedTracker)
+	AddRoutesForNAT(router, provider.Status)
+
 	router.ServeHTTP(resp, req)
 
-	return resp, nil
-}
-
-type natTrackerMock struct {
-	mockLastEvent *natevents.Event
-}
-
-func (nt *natTrackerMock) LastEvent() *natevents.Event {
-	return nt.mockLastEvent
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(t, expectedJson, resp.Body.String())
 }

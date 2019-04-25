@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/natevents"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -38,6 +39,8 @@ type NATStatusDTO struct {
 	Error  *string `json:"error,omitempty"`
 }
 
+type natStatusProvider func() nat.Status
+
 // NATEvents allows retrieving last traversal event
 type NATEvents interface {
 	LastEvent() *natevents.Event
@@ -45,13 +48,13 @@ type NATEvents interface {
 
 // NATEndpoint struct represents endpoints about NAT traversal
 type NATEndpoint struct {
-	natEvents NATEvents
+	statusProvider natStatusProvider
 }
 
 // NewNATEndpoint creates and returns nat endpoint
-func NewNATEndpoint(natEvents NATEvents) *NATEndpoint {
+func NewNATEndpoint(statusProvider natStatusProvider) *NATEndpoint {
 	return &NATEndpoint{
-		natEvents: natEvents,
+		statusProvider: statusProvider,
 	}
 }
 
@@ -66,32 +69,22 @@ func NewNATEndpoint(natEvents NATEvents) *NATEndpoint {
 //     schema:
 //       "$ref": "#/definitions/NATStatusDTO"
 func (ne *NATEndpoint) NATStatus(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	event := ne.natEvents.LastEvent()
-
-	statusResponse := toNATStatusResponse(event)
+	status := ne.statusProvider()
+	statusResponse := toNATStatusResponse(status)
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
 // AddRoutesForNAT adds nat routes to given router
-func AddRoutesForNAT(router *httprouter.Router, natEvents NATEvents) {
-	natEndpoint := NewNATEndpoint(natEvents)
+func AddRoutesForNAT(router *httprouter.Router, statusProvider natStatusProvider) {
+	natEndpoint := NewNATEndpoint(statusProvider)
 
 	router.GET("/nat/status", natEndpoint.NATStatus)
 }
 
-func toNATStatusResponse(event *natevents.Event) NATStatusDTO {
-	if event == nil {
-		return NATStatusDTO{Status: statusNotFinished}
+func toNATStatusResponse(status nat.Status) NATStatusDTO {
+	if status.Error == nil {
+		return NATStatusDTO{Status: status.Status}
 	}
-
-	if event.Successful {
-		return NATStatusDTO{Status: statusSuccessful}
-	}
-
-	var error *string
-	if event.Error != nil {
-		msg := event.Error.Error()
-		error = &msg
-	}
-	return NATStatusDTO{Status: statusFailure, Error: error}
+	error := status.Error.Error()
+	return NATStatusDTO{Status: status.Status, Error: &error}
 }
