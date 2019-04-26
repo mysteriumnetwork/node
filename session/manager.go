@@ -26,7 +26,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/nat/natevents"
+	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 )
 
@@ -75,7 +75,7 @@ type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (B
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
-	LastEvent() *natevents.Event
+	LastEvent() *event.Event
 }
 
 // NewManager returns new session Manager

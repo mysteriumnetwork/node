@@ -50,8 +50,8 @@ import (
 	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
-	"github.com/mysteriumnetwork/node/nat/natevents"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/traversal/config"
 	"github.com/mysteriumnetwork/node/nat/upnp"
@@ -96,20 +96,20 @@ type NatPinger interface {
 
 // NatEventTracker is responsible for tracking NAT events
 type NatEventTracker interface {
-	ConsumeNATEvent(event natevents.Event)
-	LastEvent() *natevents.Event
-	WaitForEvent() natevents.Event
+	ConsumeNATEvent(event event.Event)
+	LastEvent() *event.Event
+	WaitForEvent() event.Event
 }
 
 // NatEventSender is responsible for sending NAT events to metrics server
 type NatEventSender interface {
-	ConsumeNATEvent(event natevents.Event)
+	ConsumeNATEvent(event event.Event)
 }
 
 // NATStatusTracker tracks status of NAT traversal by consuming NAT events
 type NATStatusTracker interface {
 	Status() nat.Status
-	ConsumeNATEvent(event natevents.Event)
+	ConsumeNATEvent(event event.Event)
 }
 
 // Dependencies is DI container for top level components which is reused in several places
@@ -307,15 +307,15 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	}
 
 	// NAT events
-	err = di.EventBus.Subscribe(natevents.EventTopic, di.NATEventSender.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(event.EventTopic, di.NATEventSender.ConsumeNATEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(natevents.EventTopic, di.NATTracker.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(event.EventTopic, di.NATTracker.ConsumeNATEvent)
 	if err != nil {
 		return err
 	}
-	return di.EventBus.Subscribe(natevents.EventTopic, di.NATStatusTracker.ConsumeNATEvent)
+	return di.EventBus.Subscribe(event.EventTopic, di.NATStatusTracker.ConsumeNATEvent)
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
@@ -498,7 +498,7 @@ func (di *Dependencies) bootstrapMetrics(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
-	di.NATTracker = natevents.NewEventsTracker()
+	di.NATTracker = event.NewEventsTracker()
 	if options.ExperimentNATPunching {
 		di.NATPinger = traversal.NewPingerFactory(
 			di.NATTracker,
@@ -512,7 +512,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
 
-	di.NATEventSender = natevents.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
+	di.NATEventSender = event.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
 
 	var lastStageName string
 	if options.ExperimentNATPunching {

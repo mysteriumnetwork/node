@@ -18,7 +18,7 @@
 package nat
 
 import (
-	"github.com/mysteriumnetwork/node/nat/natevents"
+	"github.com/mysteriumnetwork/node/nat/event"
 )
 
 // StatusTracker keeps status of NAT traversal by consuming NAT events - whether if finished and was it successful.
@@ -46,7 +46,7 @@ func (t *StatusTracker) Status() Status {
 }
 
 // ConsumeNATEvent processes NAT event to determine NAT traversal status
-func (t *StatusTracker) ConsumeNATEvent(event natevents.Event) {
+func (t *StatusTracker) ConsumeNATEvent(event event.Event) {
 	if event.Stage == t.lastStageName && event.Successful == false {
 		t.status = Status{Status: statusFailure, Error: event.Error}
 		return

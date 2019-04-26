@@ -22,7 +22,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/natevents"
+	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -43,7 +43,7 @@ type natStatusProvider func() nat.Status
 
 // NATEvents allows retrieving last traversal event
 type NATEvents interface {
-	LastEvent() *natevents.Event
+	LastEvent() *event.Event
 }
 
 // NATEndpoint struct represents endpoints about NAT traversal
