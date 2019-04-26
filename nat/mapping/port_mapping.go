@@ -88,11 +88,11 @@ func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name
 		log.Debugf("%s Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
-			publisher.Publish(event.EventTopic, event.BuildFailureEvent(StageName, err))
+			publisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
 			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
 			return
 		}
 	}
-	publisher.Publish(event.EventTopic, event.BuildSuccessEvent(StageName))
+	publisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
 	log.Info(logPrefix, "Mapped network port: ", extPort)
 }

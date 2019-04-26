@@ -307,15 +307,15 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	}
 
 	// NAT events
-	err = di.EventBus.Subscribe(event.EventTopic, di.NATEventSender.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(event.Topic, di.NATEventSender.ConsumeNATEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(event.EventTopic, di.NATTracker.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(event.Topic, di.NATTracker.ConsumeNATEvent)
 	if err != nil {
 		return err
 	}
-	return di.EventBus.Subscribe(event.EventTopic, di.NATStatusTracker.ConsumeNATEvent)
+	return di.EventBus.Subscribe(event.Topic, di.NATStatusTracker.ConsumeNATEvent)
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
@@ -498,7 +498,7 @@ func (di *Dependencies) bootstrapMetrics(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
-	di.NATTracker = event.NewEventsTracker()
+	di.NATTracker = event.NewTracker()
 	if options.ExperimentNATPunching {
 		di.NATPinger = traversal.NewPingerFactory(
 			di.NATTracker,
@@ -512,7 +512,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
 
-	di.NATEventSender = event.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
+	di.NATEventSender = event.NewSender(di.MetricsSender, di.IPResolver.GetPublicIP)
 
 	var lastStageName string
 	if options.ExperimentNATPunching {

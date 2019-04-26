@@ -23,19 +23,19 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-// EventTopic the topic that traversal events are published on
-const EventTopic = "Traversal"
+// Topic the topic that traversal events are published on
+const Topic = "Traversal"
 
 const eventsTrackerLogPrefix = "[traversal-events-tracker] "
 
-// EventsTracker is able to track NAT traversal events
-type EventsTracker struct {
+// Tracker is able to track NAT traversal events
+type Tracker struct {
 	lastEvent *Event
 	eventChan chan Event
 }
 
-// BuildSuccessEvent returns new event for successful NAT traversal
-func BuildSuccessEvent(stage string) Event {
+// BuildSuccessfulEvent returns new event for successful NAT traversal
+func BuildSuccessfulEvent(stage string) Event {
 	return Event{Stage: stage, Successful: true}
 }
 
@@ -44,13 +44,13 @@ func BuildFailureEvent(stage string, err error) Event {
 	return Event{Stage: stage, Successful: false, Error: err}
 }
 
-// NewEventsTracker returns a new instance of event tracker
-func NewEventsTracker() *EventsTracker {
-	return &EventsTracker{eventChan: make(chan Event, 1)}
+// NewTracker returns a new instance of event tracker
+func NewTracker() *Tracker {
+	return &Tracker{eventChan: make(chan Event, 1)}
 }
 
 // ConsumeNATEvent consumes a NAT event
-func (et *EventsTracker) ConsumeNATEvent(event Event) {
+func (et *Tracker) ConsumeNATEvent(event Event) {
 	log.Info(eventsTrackerLogPrefix, "got NAT event: ", event)
 
 	et.lastEvent = &event
@@ -61,13 +61,13 @@ func (et *EventsTracker) ConsumeNATEvent(event Event) {
 }
 
 // LastEvent returns the last known event and boolean flag, indicating if such event exists
-func (et *EventsTracker) LastEvent() *Event {
+func (et *Tracker) LastEvent() *Event {
 	log.Info(eventsTrackerLogPrefix, "getting last NAT event: ", et.lastEvent)
 	return et.lastEvent
 }
 
 // WaitForEvent waits for event to occur
-func (et *EventsTracker) WaitForEvent() Event {
+func (et *Tracker) WaitForEvent() Event {
 	if et.lastEvent != nil {
 		return *et.lastEvent
 	}

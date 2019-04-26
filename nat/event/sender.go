@@ -21,10 +21,10 @@ import (
 	log "github.com/cihub/seelog"
 )
 
-const eventsSenderLogPrefix = "[traversal-events-sender] "
+const senderLogPrefix = "[traversal-events-sender] "
 
-// EventsSender allows subscribing to NAT events and sends them to server
-type EventsSender struct {
+// Sender allows subscribing to NAT events and sends them to server
+type Sender struct {
 	metricsSender metricsSender
 	ipResolver    ipResolver
 	lastIp        string
@@ -38,16 +38,16 @@ type metricsSender interface {
 
 type ipResolver func() (string, error)
 
-// NewEventsSender returns a new instance of events sender
-func NewEventsSender(metricsSender metricsSender, ipResolver ipResolver) *EventsSender {
-	return &EventsSender{metricsSender: metricsSender, ipResolver: ipResolver, lastIp: ""}
+// NewSender returns a new instance of events sender
+func NewSender(metricsSender metricsSender, ipResolver ipResolver) *Sender {
+	return &Sender{metricsSender: metricsSender, ipResolver: ipResolver, lastIp: ""}
 }
 
 // ConsumeNATEvent sends received event to server
-func (es *EventsSender) ConsumeNATEvent(event Event) {
+func (es *Sender) ConsumeNATEvent(event Event) {
 	publicIP, err := es.ipResolver()
 	if err != nil {
-		log.Warnf(eventsSenderLogPrefix, "resolving public ip failed: ", err)
+		log.Warnf(senderLogPrefix, "resolving public ip failed: ", err)
 		return
 	}
 	if publicIP == es.lastIp && es.matchesLastEvent(event) {
@@ -56,14 +56,14 @@ func (es *EventsSender) ConsumeNATEvent(event Event) {
 
 	err = es.sendNATEvent(event)
 	if err != nil {
-		log.Warnf(eventsSenderLogPrefix, "sending event failed: ", err)
+		log.Warnf(senderLogPrefix, "sending event failed: ", err)
 	}
 
 	es.lastIp = publicIP
 	es.lastEvent = &event
 }
 
-func (es *EventsSender) sendNATEvent(event Event) error {
+func (es *Sender) sendNATEvent(event Event) error {
 	if event.Successful {
 		return es.metricsSender.SendNATMappingSuccessEvent(event.Stage)
 	}
@@ -71,7 +71,7 @@ func (es *EventsSender) sendNATEvent(event Event) error {
 	return es.metricsSender.SendNATMappingFailEvent(event.Stage, event.Error)
 }
 
-func (es *EventsSender) matchesLastEvent(event Event) bool {
+func (es *Sender) matchesLastEvent(event Event) bool {
 	if es.lastEvent == nil {
 		return false
 	}

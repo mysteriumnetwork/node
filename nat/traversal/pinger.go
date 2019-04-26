@@ -227,11 +227,11 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 
 			err := p.sendPingRequest(conn, n)
 			if err != nil {
-				p.eventPublisher.Publish(event.EventTopic, event.BuildFailureEvent(StageName, err))
+				p.eventPublisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
 				return err
 			}
 
-			p.eventPublisher.Publish(event.EventTopic, event.BuildSuccessEvent(StageName))
+			p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
 
 			n++
 		}
