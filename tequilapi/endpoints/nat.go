@@ -35,8 +35,8 @@ const (
 // NATStatusDTO gives information about NAT traversal success or failure
 // swagger:model NATStatusDTO
 type NATStatusDTO struct {
-	Status string  `json:"status"`
-	Error  *string `json:"error,omitempty"`
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
 }
 
 type natStatusProvider func() nat.Status
@@ -86,5 +86,5 @@ func toNATStatusResponse(status nat.Status) NATStatusDTO {
 		return NATStatusDTO{Status: status.Status}
 	}
 	error := status.Error.Error()
-	return NATStatusDTO{Status: status.Status, Error: &error}
+	return NATStatusDTO{Status: status.Status, Error: error}
 }
