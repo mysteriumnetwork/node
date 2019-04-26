@@ -144,6 +144,7 @@ func (c *cliApp) handleActions(line string) {
 		{"help", c.help},
 		{"status", c.status},
 		{"healthcheck", c.healthcheck},
+		{"nat", c.natStatus},
 		{"ip", c.ip},
 		{"disconnect", c.disconnect},
 		{"stop", c.stopClient},
@@ -449,6 +450,20 @@ func (c *cliApp) healthcheck() {
 	info(buildString)
 }
 
+func (c *cliApp) natStatus() {
+	status, err := c.tequilapi.NATStatus()
+	if err != nil {
+		warn("Failed to retrieve NAT traversal status:", err)
+		return
+	}
+
+	if status.Error == "" {
+		infof("NAT traversal status: %q\n", status.Status)
+	} else {
+		infof("NAT traversal status: %q (error: %q)\n", status.Status, status.Error)
+	}
+}
+
 func (c *cliApp) proposals(filter string) {
 	proposals := c.fetchProposals()
 	c.fetchedProposals = proposals
@@ -673,6 +688,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		),
 		readline.PcItem("status"),
 		readline.PcItem("healthcheck"),
+		readline.PcItem("nat"),
 		readline.PcItem("proposals"),
 		readline.PcItem("ip"),
 		readline.PcItem("disconnect"),
