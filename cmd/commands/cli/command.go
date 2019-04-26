@@ -144,6 +144,7 @@ func (c *cliApp) handleActions(line string) {
 		{"help", c.help},
 		{"status", c.status},
 		{"healthcheck", c.healthcheck},
+		{"nat", c.natStatus},
 		{"ip", c.ip},
 		{"disconnect", c.disconnect},
 		{"stop", c.stopClient},
@@ -153,15 +154,15 @@ func (c *cliApp) handleActions(line string) {
 		command string
 		handler func(argsString string)
 	}{
-		{command: "connect", handler: c.connect},
-		{command: "unlock", handler: c.unlock},
-		{command: "identities", handler: c.identities},
-		{command: "payout", handler: c.payout},
-		{command: "version", handler: c.version},
-		{command: "license", handler: c.license},
-		{command: "registration", handler: c.registration},
-		{command: "proposals", handler: c.proposals},
-		{command: "service", handler: c.service},
+		{"connect", c.connect},
+		{"unlock", c.unlock},
+		{"identities", c.identities},
+		{"payout", c.payout},
+		{"version", c.version},
+		{"license", c.license},
+		{"registration", c.registration},
+		{"proposals", c.proposals},
+		{"service", c.service},
 	}
 
 	for _, cmd := range staticCmds {
@@ -449,6 +450,20 @@ func (c *cliApp) healthcheck() {
 	info(buildString)
 }
 
+func (c *cliApp) natStatus() {
+	status, err := c.tequilapi.NATStatus()
+	if err != nil {
+		warn("Failed to retrieve NAT traversal status:", err)
+		return
+	}
+
+	if status.Error == "" {
+		infof("NAT traversal status: %q\n", status.Status)
+	} else {
+		infof("NAT traversal status: %q (error: %q)\n", status.Status, status.Error)
+	}
+}
+
 func (c *cliApp) proposals(filter string) {
 	proposals := c.fetchProposals()
 	c.fetchedProposals = proposals
@@ -673,6 +688,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		),
 		readline.PcItem("status"),
 		readline.PcItem("healthcheck"),
+		readline.PcItem("nat"),
 		readline.PcItem("proposals"),
 		readline.PcItem("ip"),
 		readline.PcItem("disconnect"),

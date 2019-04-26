@@ -50,6 +50,7 @@ import (
 	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/nat/traversal/config"
@@ -95,14 +96,20 @@ type NatPinger interface {
 
 // NatEventTracker is responsible for tracking NAT events
 type NatEventTracker interface {
-	ConsumeNATEvent(event traversal.Event)
-	LastEvent() *traversal.Event
-	WaitForEvent() traversal.Event
+	ConsumeNATEvent(event event.Event)
+	LastEvent() *event.Event
+	WaitForEvent() event.Event
 }
 
 // NatEventSender is responsible for sending NAT events to metrics server
 type NatEventSender interface {
-	ConsumeNATEvent(event traversal.Event)
+	ConsumeNATEvent(event event.Event)
+}
+
+// NATStatusTracker tracks status of NAT traversal by consuming NAT events
+type NATStatusTracker interface {
+	Status() nat.Status
+	ConsumeNATEvent(event event.Event)
 }
 
 // Dependencies is DI container for top level components which is reused in several places
@@ -140,9 +147,10 @@ type Dependencies struct {
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 
-	NATPinger      NatPinger
-	NATTracker     NatEventTracker
-	NATEventSender NatEventSender
+	NATPinger        NatPinger
+	NATTracker       NatEventTracker
+	NATEventSender   NatEventSender
+	NATStatusTracker NATStatusTracker
 
 	PortPool *port.Pool
 
@@ -299,11 +307,15 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	}
 
 	// NAT events
-	err = di.EventBus.Subscribe(traversal.EventTopic, di.NATEventSender.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(event.Topic, di.NATEventSender.ConsumeNATEvent)
 	if err != nil {
 		return err
 	}
-	return di.EventBus.Subscribe(traversal.EventTopic, di.NATTracker.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(event.Topic, di.NATTracker.ConsumeNATEvent)
+	if err != nil {
+		return err
+	}
+	return di.EventBus.Subscribe(event.Topic, di.NATStatusTracker.ConsumeNATEvent)
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
@@ -344,6 +356,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(router, nodeOptions.AccessPolicyEndpointAddress)
+	tequilapi_endpoints.AddRoutesForNAT(router, di.NATStatusTracker.Status)
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
@@ -485,8 +498,7 @@ func (di *Dependencies) bootstrapMetrics(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
-	di.NATTracker = traversal.NewEventsTracker()
-	di.NATEventSender = traversal.NewEventsSender(di.MetricsSender, di.IPResolver.GetPublicIP)
+	di.NATTracker = event.NewTracker()
 	if options.ExperimentNATPunching {
 		di.NATPinger = traversal.NewPingerFactory(
 			di.NATTracker,
@@ -499,4 +511,14 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
+
+	di.NATEventSender = event.NewSender(di.MetricsSender, di.IPResolver.GetPublicIP)
+
+	var lastStageName string
+	if options.ExperimentNATPunching {
+		lastStageName = traversal.StageName
+	} else {
+		lastStageName = mapping.StageName
+	}
+	di.NATStatusTracker = nat.NewStatusTracker(lastStageName)
 }

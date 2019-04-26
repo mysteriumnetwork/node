@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package traversal
+package event
 
 import (
 	"errors"
@@ -60,7 +60,7 @@ func (resolver *mockIPResolver) GetPublicIP() (string, error) {
 func Test_EventsSender_ConsumeNATEvent_SendsSuccessEvent(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := mockIPResolver{mockIp: "1st ip"}
-	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
 
 	sender.ConsumeNATEvent(Event{Stage: "hole_punching", Successful: true})
 
@@ -71,7 +71,7 @@ func Test_EventsSender_ConsumeNATEvent_SendsSuccessEvent(t *testing.T) {
 func Test_EventsSender_ConsumeNATEvent_WithSameIp_DoesNotSendSuccessEventAgain(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := mockIPResolver{mockIp: "1st ip"}
-	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
 
 	sender.ConsumeNATEvent(Event{Successful: true})
 
@@ -84,7 +84,7 @@ func Test_EventsSender_ConsumeNATEvent_WithSameIp_DoesNotSendSuccessEventAgain(t
 func Test_EventsSender_ConsumeNATEvent_WithDifferentIP_SendsSuccessEventAgain(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := &mockIPResolver{mockIp: "1st ip"}
-	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
 
 	sender.ConsumeNATEvent(Event{Successful: true})
 
@@ -98,7 +98,7 @@ func Test_EventsSender_ConsumeNATEvent_WithDifferentIP_SendsSuccessEventAgain(t 
 func Test_EventsSender_ConsumeNATEvent_WhenIPResolverFails_DoesNotSendEvent(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := &mockIPResolver{mockErr: errors.New("mock error")}
-	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
 
 	sender.ConsumeNATEvent(Event{Successful: true})
 
@@ -108,7 +108,7 @@ func Test_EventsSender_ConsumeNATEvent_WhenIPResolverFails_DoesNotSendEvent(t *t
 func Test_EventsSender_ConsumeNATEvent_SendsFailureEvent(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := mockIPResolver{mockIp: "1st ip"}
-	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
 
 	testErr := errors.New("test error")
 	sender.ConsumeNATEvent(Event{Stage: "hole_punching", Successful: false, Error: testErr})
@@ -120,7 +120,7 @@ func Test_EventsSender_ConsumeNATEvent_SendsFailureEvent(t *testing.T) {
 func Test_EventsSender_ConsumeNATEvent_WithFailuresOfDifferentStages_SendsBothEvents(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := &mockIPResolver{mockIp: "1st ip"}
-	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
 
 	testErr1 := errors.New("test error 1")
 	sender.ConsumeNATEvent(Event{Successful: false, Error: testErr1, Stage: "test 1"})
@@ -133,7 +133,7 @@ func Test_EventsSender_ConsumeNATEvent_WithFailuresOfDifferentStages_SendsBothEv
 func Test_EventsSender_ConsumeNATEvent_WithSuccessAndFailureOnSameIp_SendsBothEvents(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := &mockIPResolver{mockIp: "1st ip"}
-	sender := NewEventsSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
 
 	sender.ConsumeNATEvent(Event{Successful: true})
 	testErr := errors.New("test error")
