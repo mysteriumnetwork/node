@@ -72,6 +72,8 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 )
 
+const logPrefix = "[service bootstrap] "
+
 // Storage stores persistent objects for future usage
 type Storage interface {
 	Store(issuer string, data interface{}) error
