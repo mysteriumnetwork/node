@@ -336,6 +336,19 @@ func (client *Client) ServiceStop(id string) error {
 	return nil
 }
 
+// NATStatus returns status of NAT traversal
+func (client *Client) NATStatus() (NATStatusDTO, error) {
+	status := NATStatusDTO{}
+
+	response, err := client.http.Get("nat/status", nil)
+	if err != nil {
+		return status, err
+	}
+
+	err = parseResponseJSON(response, &status)
+	return status, err
+}
+
 // ServiceSessions returns all currently running sessions
 func (client *Client) ServiceSessions() (ServiceSessionListDTO, error) {
 	sessions := ServiceSessionListDTO{}

@@ -159,3 +159,9 @@ type ServiceSessionDTO struct {
 type AccessPoliciesRequest struct {
 	IDs []string `json:"ids"`
 }
+
+// NATStatusDTO gives information about NAT traversal success or failure
+type NATStatusDTO struct {
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
+}
