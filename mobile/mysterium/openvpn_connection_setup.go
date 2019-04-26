@@ -18,16 +18,19 @@
 package mysterium
 
 import (
-	"errors"
 	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
+	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/session"
+	"github.com/pkg/errors"
 )
 
 type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, error)
@@ -37,6 +40,8 @@ var errSessionWrapperNotStarted = errors.New("session wrapper not started")
 type sessionWrapper struct {
 	session       *openvpn3.Session
 	createSession openvpn3SessionFactory
+	natPinger     cmd.NatPinger
+	ipResolver    ip.Resolver
 }
 
 func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
@@ -63,7 +68,23 @@ func (wrapper *sessionWrapper) Wait() error {
 }
 
 func (wrapper *sessionWrapper) GetConfig() (connection.ConsumerConfig, error) {
-	return nil, nil
+	ip, err := wrapper.ipResolver.GetPublicIP()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get consumer config")
+	}
+
+	switch wrapper.natPinger.(type) {
+	case *traversal.NoopPinger:
+		log.Infof("noop pinger detected, returning nil client config.")
+		return nil, nil
+	}
+
+	return &openvpn.ConsumerConfig{
+		// TODO: since GetConfig is executed before Start we cannot access VPNConfig structure yet
+		// TODO skip sending port here, since provider generates port for consumer in VPNConfig
+		Port: 50221,
+		IP:   &ip,
+	}, nil
 }
 
 func channelToCallbacks(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) openvpn3.MobileSessionCallbacks {
@@ -156,6 +177,8 @@ type OpenvpnConnectionFactory struct {
 	sessionTracker *sessionTracker
 	signerFactory  identity.SignerFactory
 	tunnelSetup    Openvpn3TunnelSetup
+	natPinger      cmd.NatPinger
+	ipResolver     ip.Resolver
 }
 
 // Create creates a new openvpn connection
@@ -194,6 +217,8 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 	}
 	return &sessionWrapper{
 		createSession: sessionFactory,
+		natPinger:     ocf.natPinger,
+		ipResolver:    ocf.ipResolver,
 	}, nil
 }
 
@@ -206,6 +231,8 @@ func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelS
 		sessionTracker: st,
 		signerFactory:  mobNode.di.SignerFactory,
 		tunnelSetup:    tunnelSetup,
+		natPinger:      mobNode.di.NATPinger,
+		ipResolver:     mobNode.di.IPResolver,
 	}
 	mobNode.di.EventBus.Subscribe(connection.StateEventTopic, st.handleState)
 
