@@ -154,15 +154,15 @@ func (c *cliApp) handleActions(line string) {
 		command string
 		handler func(argsString string)
 	}{
-		{command: "connect", handler: c.connect},
-		{command: "unlock", handler: c.unlock},
-		{command: "identities", handler: c.identities},
-		{command: "payout", handler: c.payout},
-		{command: "version", handler: c.version},
-		{command: "license", handler: c.license},
-		{command: "registration", handler: c.registration},
-		{command: "proposals", handler: c.proposals},
-		{command: "service", handler: c.service},
+		{"connect", c.connect},
+		{"unlock", c.unlock},
+		{"identities", c.identities},
+		{"payout", c.payout},
+		{"version", c.version},
+		{"license", c.license},
+		{"registration", c.registration},
+		{"proposals", c.proposals},
+		{"service", c.service},
 	}
 
 	for _, cmd := range staticCmds {
