@@ -134,7 +134,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
 
 		var portSupplier port.ServicePortSupplier = di.PortPool
-		if transportOptions.Port != 0 {
+		if transportOptions.Port != 0 && locationInfo.PubIP == locationInfo.OutIP {
 			portSupplier = port.NewFixed(transportOptions.Port)
 		}
 

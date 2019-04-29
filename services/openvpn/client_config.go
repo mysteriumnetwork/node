@@ -38,15 +38,11 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort, localPort int)
 	c.SetFlag("auth-nocache")
 	c.SetParam("remote", serverIP)
 	c.SetPort(serverPort)
-	if localPort > 0 {
-		c.SetParam("lport", strconv.Itoa(localPort))
-		c.SetFlag("float")
-		// more on this: https://www.v13.gr/blog/?p=386
-		c.SetParam("remote-cert-ku", "84")
-		c.LocalPort = localPort
-	} else {
-		c.SetParam("remote-cert-tls", "server")
-	}
+	c.SetParam("lport", strconv.Itoa(localPort))
+	c.SetFlag("float")
+	// more on this: https://www.v13.gr/blog/?p=386
+	c.SetParam("remote-cert-ku", "84")
+	c.LocalPort = localPort
 	c.SetFlag("auth-user-pass")
 	c.SetFlag("management-query-passwords")
 }
