@@ -20,6 +20,9 @@ package cmd
 import (
 	"time"
 
+	"fmt"
+	"path/filepath"
+
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
-	location_factory "github.com/mysteriumnetwork/node/core/location/factory"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -495,9 +497,22 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
 	var resolver location.Resolver
-	if resolver, err = location_factory.CreateResolver(options, configDirectory, di.IPResolver); err != nil {
-		return
+	switch options.Type {
+	case node.LocationTypeManual:
+		resolver = location.NewStaticResolver(options.Country, options.City, options.NodeType, di.IPResolver)
+	case node.LocationTypeBuiltin:
+		resolver, err = location.NewBuiltInResolver(di.IPResolver)
+	case node.LocationTypeMMDB:
+		resolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
+	case node.LocationTypeOracle:
+		resolver, err = location.NewOracleResolver(options.Address), nil
+	default:
+		err = fmt.Errorf("unknown location detector type: %s", options.Type)
 	}
+	if err != nil {
+		return err
+	}
+
 	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
 	return
 }
