@@ -18,8 +18,9 @@
 package utils
 
 import (
-	"fmt"
 	"os"
+
+	log "github.com/cihub/seelog"
 )
 
 // Killer kills some resource and performs cleanup
@@ -49,12 +50,13 @@ func newStopper(kill Killer, exit exitter) func() {
 
 func stop(kill Killer, exit exitter) {
 	if err := kill(); err != nil {
-		msg := fmt.Sprintf("Error while killing process: %v\n", err.Error())
-		fmt.Fprintln(os.Stderr, msg)
+		log.Errorf("Error while killing process: %v\n", err.Error())
+		log.Flush()
 		exit(1)
 		return
 	}
 
-	fmt.Println("Good bye")
+	log.Info("Good bye")
+	log.Flush()
 	exit(0)
 }

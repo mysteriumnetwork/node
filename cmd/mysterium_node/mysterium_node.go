@@ -18,9 +18,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/cmd"
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
@@ -47,13 +47,15 @@ var (
 func main() {
 	app, err := NewCommand()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		log.Error("Failed to create command: ", err)
+		log.Flush()
 		os.Exit(1)
 	}
 
 	err = app.Run(os.Args)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		log.Error("Failed to execute command: ", err)
+		log.Flush()
 		os.Exit(1)
 	}
 }
