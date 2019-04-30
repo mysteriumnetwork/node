@@ -60,13 +60,12 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	log.Infof("client config: %v", clientConfig)
 
 	c.natPinger.BindConsumerPort(clientConfig.LocalPort)
-	if clientConfig.vpnConfig.LocalPort > 0 {
-		err = c.natPinger.PingProvider(clientConfig.vpnConfig.RemoteIP, clientConfig.vpnConfig.RemotePort)
+	if clientConfig.VpnConfig.LocalPort > 0 {
+		err = c.natPinger.PingProvider(clientConfig.VpnConfig.RemoteIP, clientConfig.VpnConfig.RemotePort)
+		if err != nil {
+			return err
+		}
 	}
-	if err != nil {
-		return err
-	}
-
 	return c.process.Start()
 }
 

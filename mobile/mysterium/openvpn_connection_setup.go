@@ -33,7 +33,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, error)
+type openvpn3SessionFactory func(connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error)
 
 var errSessionWrapperNotStarted = errors.New("session wrapper not started")
 
@@ -45,10 +45,22 @@ type sessionWrapper struct {
 }
 
 func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
-	session, err := wrapper.createSession(options)
+	session, clientConfig, err := wrapper.createSession(options)
 	if err != nil {
 		return err
 	}
+
+	log.Info("client config after session create: ", clientConfig)
+	wrapper.natPinger.BindConsumerPort(clientConfig.LocalPort)
+	if clientConfig.LocalPort > 0 {
+		err := wrapper.natPinger.PingProvider(
+			clientConfig.VpnConfig.RemoteIP,
+			clientConfig.VpnConfig.RemotePort)
+		if err != nil {
+			return err
+		}
+	}
+
 	wrapper.session = session
 	wrapper.session.Start()
 	return nil
@@ -182,16 +194,19 @@ type OpenvpnConnectionFactory struct {
 }
 
 // Create creates a new openvpn connection
-func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
-	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, error) {
+func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (con connection.Connection, err error) {
+	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error) {
 		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
+		// TODO: override vpnClientConfig params with proxy local IP and pinger port
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+
+		log.Info("client config on create: ", vpnClientConfig)
 
 		profileContent, err := vpnClientConfig.ToConfigFileContent()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		config := openvpn3.NewConfig(profileContent)
@@ -203,7 +218,7 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 
 		username, password, err := session.SignatureCredentialsProvider(options.SessionID, signer)()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		credentials := openvpn3.UserCredentials{
@@ -213,7 +228,7 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 
 		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), ocf.tunnelSetup)
 		ocf.sessionTracker.sessionCreated(session)
-		return session, nil
+		return session, vpnClientConfig, nil
 	}
 	return &sessionWrapper{
 		createSession: sessionFactory,

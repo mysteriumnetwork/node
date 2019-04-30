@@ -236,7 +236,7 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 			n++
 			i++
 
-			if i*pingInterval > 10000 {
+			if i*pingInterval > pingTimeout {
 				err := errors.New("timeout while waiting for ping ack, trying to continue")
 				p.eventPublisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
 				return err
