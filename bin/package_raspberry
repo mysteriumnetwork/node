@@ -1,0 +1,26 @@
+#!/bin/bash
+
+###########################################################################
+# Creates Raspberry image
+#
+# Usage:
+#> bin/package_raspberry
+
+set -e
+
+source bin/helpers/output.sh
+
+printf "Building Raspberry Pi image..\n"
+
+git clone https://github.com/RPi-Distro/pi-gen.git
+
+cp -r bin/package/raspberry/* pi-gen/
+mkdir -p pi-gen/stagemyst/00-install-deb/files/
+cp build/package/myst_linux_armhf.deb pi-gen/stagemyst/00-install-deb/files/
+
+pushd pi-gen
+./build-docker.sh
+
+sudo mv deploy/image_*-mystberry.zip ../build/package/mystberry.zip
+
+popd
