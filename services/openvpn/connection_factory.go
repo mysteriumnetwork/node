@@ -100,5 +100,6 @@ func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateCha
 		processFactory: procFactory,
 		ipResolver:     op.ipResolver,
 		natPinger:      op.natPinger,
+		pingerStop:     make(chan struct{}),
 	}, nil
 }
