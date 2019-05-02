@@ -25,30 +25,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
-type cache struct {
-	locationDetector Resolver
-	location         Location
-}
-
-// NewLocationCache constructs Cache
-func NewLocationCache(locationDetector Resolver) Cache {
-	return &cache{
-		locationDetector: locationDetector,
-	}
-}
-
-// Gets location from cache
-func (lc *cache) Get() Location {
-	return lc.location
-}
-
-// Stores location to cache
-func (lc *cache) RefreshAndGet() (Location, error) {
-	location, err := lc.locationDetector.DetectLocation()
-	lc.location = location
-	return lc.location, err
-}
-
 const locationCacheLogPrefix = "[location-cache]"
 
 type ProperCache struct {
@@ -57,6 +33,13 @@ type ProperCache struct {
 	location         Location
 	expiry           time.Duration
 	lock             sync.Mutex
+}
+
+func NewProperCache(resolver Resolver, expiry time.Duration) *ProperCache {
+	return &ProperCache{
+		locationDetector: resolver,
+		expiry:           expiry,
+	}
 }
 
 func (c *ProperCache) needsRefresh() bool {
@@ -75,8 +58,8 @@ func (c *ProperCache) fetchAndSave() (Location, error) {
 	return loc, err
 }
 
-// Get returns location from cache, or fetches it if needed
-func (c *ProperCache) Get() (Location, error) {
+// DetectLocation returns location from cache, or fetches it if needed
+func (c *ProperCache) DetectLocation() (Location, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -85,6 +68,19 @@ func (c *ProperCache) Get() (Location, error) {
 	}
 
 	return c.fetchAndSave()
+}
+
+// DetectLocation returns location from cache, or fetches it if needed
+func (c *ProperCache) Get() Location {
+	loc, err := c.DetectLocation()
+	if err != nil {
+		log.Error(locationCacheLogPrefix, "location update failed", err)
+	}
+	return loc
+}
+
+func (c *ProperCache) RefreshAndGet() (Location, error) {
+	return c.DetectLocation()
 }
 
 // HandleConnectionEvent handles connection state change and fetches the location info accordingly.
@@ -96,12 +92,12 @@ func (c *ProperCache) HandleConnectionEvent(se connection.StateEvent) {
 		return
 	}
 
-	_, err := c.fetchAndSave()
+	loc, err := c.fetchAndSave()
 	if err != nil {
 		log.Error(locationCacheLogPrefix, "location update failed", err)
 		// reset time so a fetch is tried the next time a get is called
 		c.lastFetched = time.Time{}
 	} else {
-		log.Trace(locationCacheLogPrefix, "location update succeeded")
+		log.Trace(locationCacheLogPrefix, "location update succeeded", loc)
 	}
 }

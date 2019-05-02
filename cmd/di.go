@@ -111,6 +111,10 @@ type NATStatusTracker interface {
 	Status() nat.Status
 	ConsumeNATEvent(event event.Event)
 }
+type CacheResolver interface {
+	location.Resolver
+	HandleConnectionEvent(connection.StateEvent)
+}
 
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
@@ -131,7 +135,7 @@ type Dependencies struct {
 	IdentityRegistration identity_registry.RegistrationDataProvider
 
 	IPResolver       ip.Resolver
-	LocationResolver location.Resolver
+	LocationResolver CacheResolver
 	LocationOriginal location.Cache
 
 	StatisticsTracker  *statistics.SessionStatisticsTracker
@@ -306,6 +310,11 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 
+	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.LocationResolver.HandleConnectionEvent)
+	if err != nil {
+		return err
+	}
+
 	// NAT events
 	err = di.EventBus.Subscribe(event.Topic, di.NATEventSender.ConsumeNATEvent)
 	if err != nil {
@@ -315,6 +324,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	if err != nil {
 		return err
 	}
+
 	return di.EventBus.Subscribe(event.Topic, di.NATStatusTracker.ConsumeNATEvent)
 }
 
@@ -483,12 +493,14 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
-	di.LocationResolver, err = location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.Type, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
+	resolver, err := location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.Type, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
 	if err != nil {
 		return err
 	}
 
-	di.LocationOriginal = location.NewLocationCache(di.LocationResolver)
+	cache := location.NewProperCache(resolver, time.Minute*5)
+	di.LocationOriginal = cache
+	di.LocationResolver = cache
 	return nil
 }
 

@@ -22,6 +22,7 @@ import asaskevichEventBus "github.com/asaskevich/EventBus"
 // EventBus allows subscribing and publishing data by topic
 type EventBus interface {
 	Subscribe(topic string, fn interface{}) error
+	SubscribeAsync(topic string, fn interface{}) error
 	Publish(topic string, data interface{})
 }
 
@@ -31,6 +32,10 @@ type simplifiedEventBus struct {
 
 func (simplifiedBus simplifiedEventBus) Subscribe(topic string, fn interface{}) error {
 	return simplifiedBus.bus.Subscribe(topic, fn)
+}
+
+func (simplifiedBus simplifiedEventBus) SubscribeAsync(topic string, fn interface{}) error {
+	return simplifiedBus.bus.SubscribeAsync(topic, fn, false)
 }
 
 func (simplifiedBus simplifiedEventBus) Publish(topic string, data interface{}) {

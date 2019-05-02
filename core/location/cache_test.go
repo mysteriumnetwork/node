@@ -18,44 +18,13 @@
 package location
 
 import (
-	"errors"
 	"testing"
 	"time"
 
-	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mysteriumnetwork/node/core/connection"
 )
-
-func TestLocationCacheFirstCall(t *testing.T) {
-	locationDetector := NewStaticResolver("country", "city", "residential", ip.NewResolverMock("100.100.100.100"))
-	locationCache := NewLocationCache(locationDetector)
-
-	location := locationCache.Get()
-	assert.Equal(t, Location{}, location)
-}
-
-func TestLocationCacheFirstSecondCalls(t *testing.T) {
-	locationDetector := NewStaticResolver("country", "city", "residential", ip.NewResolverMock("100.100.100.100"))
-	locationCache := NewLocationCache(locationDetector)
-
-	location, err := locationCache.RefreshAndGet()
-	assert.Equal(t, "country", location.Country)
-	assert.Equal(t, "100.100.100.100", location.IP)
-	assert.NoError(t, err)
-
-	locationSecondCall := locationCache.Get()
-	assert.Equal(t, location, locationSecondCall)
-}
-
-func TestLocationCacheWithError(t *testing.T) {
-	locationErr := errors.New("location DBResolver error")
-	locationDetector := NewFailingResolver(locationErr)
-	locationCache := NewLocationCache(locationDetector)
-
-	location, err := locationCache.RefreshAndGet()
-	assert.EqualError(t, locationErr, err.Error())
-	assert.Equal(t, Location{}, location)
-}
 
 func TestProperCache_needsRefresh(t *testing.T) {
 	type fields struct {
@@ -100,4 +69,44 @@ func TestProperCache_needsRefresh(t *testing.T) {
 			}
 		})
 	}
+}
+
+type mockResolver struct {
+	called      bool
+	errToReturn error
+}
+
+func (mr *mockResolver) DetectLocation() (Location, error) {
+	mr.called = true
+	return Location{}, mr.errToReturn
+}
+
+func TestCacheHandlesConnection_Connected(t *testing.T) {
+	r := &mockResolver{}
+	c := &ProperCache{
+		expiry:           time.Second * 1,
+		locationDetector: r,
+	}
+	c.HandleConnectionEvent(connection.StateEvent{State: connection.Connected})
+	assert.True(t, r.called)
+}
+
+func TestCacheHandlesConnection_NotConnected(t *testing.T) {
+	r := &mockResolver{}
+	c := &ProperCache{
+		expiry:           time.Second * 1,
+		locationDetector: r,
+	}
+	c.HandleConnectionEvent(connection.StateEvent{State: connection.NotConnected})
+	assert.True(t, r.called)
+}
+
+func TestCacheIgnoresOther(t *testing.T) {
+	r := &mockResolver{}
+	c := &ProperCache{
+		expiry:           time.Second * 1,
+		locationDetector: r,
+	}
+	c.HandleConnectionEvent(connection.StateEvent{State: connection.Reconnecting})
+	assert.False(t, r.called)
 }
