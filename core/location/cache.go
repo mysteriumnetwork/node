@@ -27,6 +27,7 @@ import (
 
 const locationCacheLogPrefix = "[location-cache]"
 
+// ProperCache allows us to cache location resolution
 type ProperCache struct {
 	lastFetched      time.Time
 	locationDetector Resolver
@@ -35,6 +36,7 @@ type ProperCache struct {
 	lock             sync.Mutex
 }
 
+// NewProperCache returns a new instance of location cache
 func NewProperCache(resolver Resolver, expiry time.Duration) *ProperCache {
 	return &ProperCache{
 		locationDetector: resolver,
@@ -68,19 +70,6 @@ func (c *ProperCache) DetectLocation() (Location, error) {
 	}
 
 	return c.fetchAndSave()
-}
-
-// DetectLocation returns location from cache, or fetches it if needed
-func (c *ProperCache) Get() Location {
-	loc, err := c.DetectLocation()
-	if err != nil {
-		log.Error(locationCacheLogPrefix, "location update failed", err)
-	}
-	return loc
-}
-
-func (c *ProperCache) RefreshAndGet() (Location, error) {
-	return c.DetectLocation()
 }
 
 // HandleConnectionEvent handles connection state change and fetches the location info accordingly.

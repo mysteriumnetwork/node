@@ -21,9 +21,3 @@ package location
 type Resolver interface {
 	DetectLocation() (Location, error)
 }
-
-// Cache allows caching location
-type Cache interface {
-	Get() Location
-	RefreshAndGet() (Location, error)
-}

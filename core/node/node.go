@@ -35,26 +35,26 @@ type NatPinger interface {
 func NewNode(
 	connectionManager connection.Manager,
 	tequilapiServer tequilapi.APIServer,
-	originalLocationCache location.Cache,
+	locationCache location.Resolver,
 	metricsSender *metrics.Sender,
 	natPinger NatPinger,
 ) *Node {
 	return &Node{
-		connectionManager:     connectionManager,
-		httpAPIServer:         tequilapiServer,
-		originalLocationCache: originalLocationCache,
-		metricsSender:         metricsSender,
-		natPinger:             natPinger,
+		connectionManager: connectionManager,
+		httpAPIServer:     tequilapiServer,
+		locationCache:     locationCache,
+		metricsSender:     metricsSender,
+		natPinger:         natPinger,
 	}
 }
 
 // Node represent entrypoint for Mysterium node with top level components
 type Node struct {
-	connectionManager     connection.Manager
-	httpAPIServer         tequilapi.APIServer
-	originalLocationCache location.Cache
-	metricsSender         *metrics.Sender
-	natPinger             NatPinger
+	connectionManager connection.Manager
+	httpAPIServer     tequilapi.APIServer
+	locationCache     location.Resolver
+	metricsSender     *metrics.Sender
+	natPinger         NatPinger
 }
 
 // Start starts Mysterium node (Tequilapi service, fetches location)
@@ -66,7 +66,7 @@ func (node *Node) Start() error {
 		}
 	}()
 
-	originalLocation, err := node.originalLocationCache.RefreshAndGet()
+	originalLocation, err := node.locationCache.DetectLocation()
 	if err != nil {
 		log.Warn("Failed to detect original country: ", err)
 	} else {

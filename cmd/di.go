@@ -111,6 +111,8 @@ type NATStatusTracker interface {
 	Status() nat.Status
 	ConsumeNATEvent(event event.Event)
 }
+
+// CacheResolver caches the location resolution results
 type CacheResolver interface {
 	location.Resolver
 	HandleConnectionEvent(connection.StateEvent)
@@ -136,7 +138,6 @@ type Dependencies struct {
 
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
-	LocationOriginal location.Cache
 
 	StatisticsTracker  *statistics.SessionStatisticsTracker
 	StatisticsReporter *statistics.SessionStatisticsReporter
@@ -222,7 +223,6 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 		nodeOptions.Openvpn.BinaryPath(),
 		nodeOptions.Directories.Config,
 		nodeOptions.Directories.Runtime,
-		di.LocationOriginal,
 		di.SignerFactory,
 		di.IPResolver,
 		di.NATPinger,
@@ -339,7 +339,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.StatisticsTracker,
 		di.MysteriumAPI,
 		di.SignerFactory,
-		di.LocationOriginal.Get,
+		di.LocationResolver,
 		time.Minute,
 	)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
@@ -372,7 +372,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router, corsPolicy)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, di.MetricsSender, di.NATPinger)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationResolver, di.MetricsSender, di.NATPinger)
 }
 
 func newSessionManagerFactory(
@@ -498,9 +498,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 		return err
 	}
 
-	cache := location.NewProperCache(resolver, time.Minute*5)
-	di.LocationOriginal = cache
-	di.LocationResolver = cache
+	di.LocationResolver = location.NewProperCache(resolver, time.Minute*5)
 	return nil
 }
 
