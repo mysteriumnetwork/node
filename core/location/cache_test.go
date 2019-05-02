@@ -20,6 +20,7 @@ package location
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/stretchr/testify/assert"
@@ -54,4 +55,49 @@ func TestLocationCacheWithError(t *testing.T) {
 	location, err := locationCache.RefreshAndGet()
 	assert.EqualError(t, locationErr, err.Error())
 	assert.Equal(t, Location{}, location)
+}
+
+func TestProperCache_needsRefresh(t *testing.T) {
+	type fields struct {
+		lastFetched time.Time
+		expiry      time.Duration
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name:   "returns true on zero time",
+			want:   true,
+			fields: fields{},
+		},
+		{
+			name: "returns true if expired",
+			want: true,
+			fields: fields{
+				lastFetched: time.Now().Add(time.Second * -59),
+				expiry:      time.Minute * 1,
+			},
+		},
+		{
+			name: "returns false if updated recently",
+			want: false,
+			fields: fields{
+				lastFetched: time.Now().Add(time.Second * -61),
+				expiry:      time.Minute * 1,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &ProperCache{
+				lastFetched: tt.fields.lastFetched,
+				expiry:      tt.fields.expiry,
+			}
+			if got := c.needsRefresh(); got != tt.want {
+				t.Errorf("ProperCache.needsRefresh() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

@@ -17,6 +17,14 @@
 
 package location
 
+import (
+	"sync"
+	"time"
+
+	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/connection"
+)
+
 type cache struct {
 	locationDetector Resolver
 	location         Location
@@ -39,4 +47,61 @@ func (lc *cache) RefreshAndGet() (Location, error) {
 	location, err := lc.locationDetector.DetectLocation()
 	lc.location = location
 	return lc.location, err
+}
+
+const locationCacheLogPrefix = "[location-cache]"
+
+type ProperCache struct {
+	lastFetched      time.Time
+	locationDetector Resolver
+	location         Location
+	expiry           time.Duration
+	lock             sync.Mutex
+}
+
+func (c *ProperCache) needsRefresh() bool {
+	return c.lastFetched.IsZero() || c.lastFetched.After(time.Now().Add(-c.expiry))
+}
+
+func (c *ProperCache) fetchAndSave() (Location, error) {
+	loc, err := c.locationDetector.DetectLocation()
+
+	// on successful fetch save the values for further use
+	if err == nil {
+		c.location = loc
+		c.lastFetched = time.Now()
+	}
+
+	return loc, err
+}
+
+// Get returns location from cache, or fetches it if needed
+func (c *ProperCache) Get() (Location, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if !c.needsRefresh() {
+		return c.location, nil
+	}
+
+	return c.fetchAndSave()
+}
+
+// HandleConnectionEvent handles connection state change and fetches the location info accordingly.
+// On the consumer side, we'll need to re-fetch the location once the user is connected or disconnected from a service.
+func (c *ProperCache) HandleConnectionEvent(se connection.StateEvent) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if se.State != connection.Connected && se.State != connection.NotConnected {
+		return
+	}
+
+	_, err := c.fetchAndSave()
+	if err != nil {
+		log.Error(locationCacheLogPrefix, "location update failed", err)
+		// reset time so a fetch is tried the next time a get is called
+		c.lastFetched = time.Time{}
+	} else {
+		log.Trace(locationCacheLogPrefix, "location update succeeded")
+	}
 }
