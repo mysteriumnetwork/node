@@ -498,7 +498,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 		return err
 	}
 
-	di.LocationResolver = location.NewProperCache(resolver, time.Minute*5)
+	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
 	return nil
 }
 

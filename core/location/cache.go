@@ -25,10 +25,10 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
-const locationCacheLogPrefix = "[location-cache]"
+const locationCacheLogPrefix = "[location-cache] "
 
-// ProperCache allows us to cache location resolution
-type ProperCache struct {
+// Cache allows us to cache location resolution
+type Cache struct {
 	lastFetched      time.Time
 	locationDetector Resolver
 	location         Location
@@ -36,19 +36,19 @@ type ProperCache struct {
 	lock             sync.Mutex
 }
 
-// NewProperCache returns a new instance of location cache
-func NewProperCache(resolver Resolver, expiry time.Duration) *ProperCache {
-	return &ProperCache{
+// NewCache returns a new instance of location cache
+func NewCache(resolver Resolver, expiry time.Duration) *Cache {
+	return &Cache{
 		locationDetector: resolver,
 		expiry:           expiry,
 	}
 }
 
-func (c *ProperCache) needsRefresh() bool {
+func (c *Cache) needsRefresh() bool {
 	return c.lastFetched.IsZero() || c.lastFetched.After(time.Now().Add(-c.expiry))
 }
 
-func (c *ProperCache) fetchAndSave() (Location, error) {
+func (c *Cache) fetchAndSave() (Location, error) {
 	loc, err := c.locationDetector.DetectLocation()
 
 	// on successful fetch save the values for further use
@@ -61,7 +61,7 @@ func (c *ProperCache) fetchAndSave() (Location, error) {
 }
 
 // DetectLocation returns location from cache, or fetches it if needed
-func (c *ProperCache) DetectLocation() (Location, error) {
+func (c *Cache) DetectLocation() (Location, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -74,7 +74,7 @@ func (c *ProperCache) DetectLocation() (Location, error) {
 
 // HandleConnectionEvent handles connection state change and fetches the location info accordingly.
 // On the consumer side, we'll need to re-fetch the location once the user is connected or disconnected from a service.
-func (c *ProperCache) HandleConnectionEvent(se connection.StateEvent) {
+func (c *Cache) HandleConnectionEvent(se connection.StateEvent) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if se.State != connection.Connected && se.State != connection.NotConnected {

@@ -26,7 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
-func TestProperCache_needsRefresh(t *testing.T) {
+func TestCache_needsRefresh(t *testing.T) {
 	type fields struct {
 		lastFetched time.Time
 		expiry      time.Duration
@@ -60,12 +60,12 @@ func TestProperCache_needsRefresh(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &ProperCache{
+			c := &Cache{
 				lastFetched: tt.fields.lastFetched,
 				expiry:      tt.fields.expiry,
 			}
 			if got := c.needsRefresh(); got != tt.want {
-				t.Errorf("ProperCache.needsRefresh() = %v, want %v", got, tt.want)
+				t.Errorf("Cache.needsRefresh() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -83,7 +83,7 @@ func (mr *mockResolver) DetectLocation() (Location, error) {
 
 func TestCacheHandlesConnection_Connected(t *testing.T) {
 	r := &mockResolver{}
-	c := &ProperCache{
+	c := &Cache{
 		expiry:           time.Second * 1,
 		locationDetector: r,
 	}
@@ -93,7 +93,7 @@ func TestCacheHandlesConnection_Connected(t *testing.T) {
 
 func TestCacheHandlesConnection_NotConnected(t *testing.T) {
 	r := &mockResolver{}
-	c := &ProperCache{
+	c := &Cache{
 		expiry:           time.Second * 1,
 		locationDetector: r,
 	}
@@ -103,7 +103,7 @@ func TestCacheHandlesConnection_NotConnected(t *testing.T) {
 
 func TestCacheIgnoresOther(t *testing.T) {
 	r := &mockResolver{}
-	c := &ProperCache{
+	c := &Cache{
 		expiry:           time.Second * 1,
 		locationDetector: r,
 	}
