@@ -21,6 +21,8 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 
+	"github.com/mysteriumnetwork/node/nat/traversal"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
@@ -142,6 +144,10 @@ func (ocn *OpenvpnConfigNegotiator) portMappingFailed() bool {
 	event := ocn.natEventGetter.LastEvent()
 	if event == nil {
 		return false
+	}
+
+	if event.Stage == traversal.StageName {
+		return true
 	}
 	return event.Stage == mapping.StageName && !event.Successful
 }

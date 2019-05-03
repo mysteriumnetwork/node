@@ -54,8 +54,8 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 	wrapper.natPinger.BindConsumerPort(clientConfig.LocalPort)
 	if clientConfig.LocalPort > 0 {
 		err := wrapper.natPinger.PingProvider(
-			clientConfig.VpnConfig.RemoteIP,
-			clientConfig.VpnConfig.RemotePort)
+			clientConfig.OriginalRemoteIP,
+			clientConfig.OriginalRemotePort)
 		if err != nil {
 			return err
 		}
@@ -196,8 +196,11 @@ type OpenvpnConnectionFactory struct {
 // Create creates a new openvpn connection
 func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (con connection.Connection, err error) {
 	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error) {
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
-		// TODO: override vpnClientConfig params with proxy local IP and pinger port
+		outIP, err := ocf.ipResolver.GetOutboundIP()
+		if err != nil {
+			return nil, nil, err
+		}
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "", outIP)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -226,6 +229,8 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 			Password: password,
 		}
 
+		// ocf.tunnelSetup.ExcludeRoute("127.0.0.1", 32, 0, false)
+		ocf.natPinger.SetProtectSocketCallback(ocf.tunnelSetup.SocketProtect)
 		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), ocf.tunnelSetup)
 		ocf.sessionTracker.sessionCreated(session)
 		return session, vpnClientConfig, nil
@@ -250,7 +255,6 @@ func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelS
 		ipResolver:     mobNode.di.IPResolver,
 	}
 	mobNode.di.EventBus.Subscribe(connection.StateEventTopic, st.handleState)
-
 	mobNode.di.ConnectionRegistry.Register("openvpn", factory)
 	return st
 }

@@ -92,6 +92,7 @@ type NatPinger interface {
 	BindServicePort(serviceType services.ServiceType, port int)
 	Start()
 	Stop()
+	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 }
 
 // NatEventTracker is responsible for tracking NAT events
@@ -503,7 +504,7 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 		di.NATPinger = traversal.NewPingerFactory(
 			di.NATTracker,
 			config.NewConfigParser(),
-			traversal.NewNATProxy(),
+			traversal.NewNATProxy(di.IPResolver),
 			di.PortPool,
 			mapping.StageName,
 			di.EventBus,

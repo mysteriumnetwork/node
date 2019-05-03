@@ -24,6 +24,9 @@ import (
 // NoopPinger does nothing
 type NoopPinger struct{}
 
+// SetProtectSocketCallback does nothing
+func (np *NoopPinger) SetProtectSocketCallback(SocketProtect func(socket int) bool) {}
+
 // Start does nothing
 func (np *NoopPinger) Start() {}
 

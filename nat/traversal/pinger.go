@@ -53,6 +53,10 @@ type Pinger struct {
 	eventPublisher Publisher
 }
 
+func (p *Pinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {
+	p.natProxy.setProtectSocketCallback(socketProtect)
+}
+
 // NatEventWaiter is responsible for waiting for nat events
 type NatEventWaiter interface {
 	WaitForEvent() event.Event
@@ -95,6 +99,8 @@ type natProxy interface {
 	handOff(serviceType services.ServiceType, conn *net.UDPConn)
 	registerServicePort(serviceType services.ServiceType, port int)
 	isAvailable(serviceType services.ServiceType) bool
+	consumerHandOff(consumerPort int, conn *net.UDPConn)
+	setProtectSocketCallback(socketProtect func(socket int) bool)
 }
 
 // Params contains session parameters needed to NAT ping remote peer
@@ -177,7 +183,7 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get connection")
 	}
-	defer conn.Close()
+	//defer conn.Close()
 
 	go func() {
 		err := p.ping(conn)
@@ -190,6 +196,11 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 	err = p.pingReceiver(conn)
 	if err != nil {
 		return err
+	}
+
+	if p.consumerPort > 0 {
+		log.Info(prefix, "Handling connection to consumer NAT proxy")
+		go p.natProxy.consumerHandOff(p.consumerPort, conn)
 	}
 
 	// wait for provider to setup NAT proxy connection
