@@ -46,16 +46,18 @@ func mockSignerFactory(_ identity.Identity) identity.Signer {
 	return &identity.SignerFake{}
 }
 
-func mockLocationDetector() location.Location {
+type mockLocationDetector struct{}
+
+func (mld *mockLocationDetector) DetectLocation() (location.Location, error) {
 	return location.Location{
 		Country: "KG",
-	}
+	}, nil
 }
 
 func TestStatisticsReporterStartsAndStops(t *testing.T) {
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
 	mockSender := newMockRemoteSender()
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, mockLocationDetector, time.Minute)
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, &mockLocationDetector{}, time.Minute)
 
 	reporter.ConsumeSessionEvent(mockSessionEvent)
 
@@ -69,7 +71,7 @@ func TestStatisticsReporterStartsAndStops(t *testing.T) {
 func TestStatisticsReporterInterval(t *testing.T) {
 	mockSender := newMockRemoteSender()
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, mockLocationDetector, time.Nanosecond)
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
 
 	reporter.ConsumeSessionEvent(mockSessionEvent)
 
@@ -82,7 +84,7 @@ func TestStatisticsReporterInterval(t *testing.T) {
 func TestStatisticsReporterConsumeSessionEvent(t *testing.T) {
 	mockSender := newMockRemoteSender()
 	statisticsTracker := NewSessionStatisticsTracker(time.Now)
-	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, mockLocationDetector, time.Nanosecond)
+	reporter := NewSessionStatisticsReporter(statisticsTracker, mockSender, mockSignerFactory, &mockLocationDetector{}, time.Nanosecond)
 	reporter.ConsumeSessionEvent(mockSessionEvent)
 	<-mockSender.called
 	assert.True(t, reporter.started)

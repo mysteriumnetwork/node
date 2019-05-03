@@ -112,6 +112,12 @@ type NATStatusTracker interface {
 	ConsumeNATEvent(event event.Event)
 }
 
+// CacheResolver caches the location resolution results
+type CacheResolver interface {
+	location.Resolver
+	HandleConnectionEvent(connection.StateEvent)
+}
+
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
@@ -131,8 +137,7 @@ type Dependencies struct {
 	IdentityRegistration identity_registry.RegistrationDataProvider
 
 	IPResolver       ip.Resolver
-	LocationResolver location.Resolver
-	LocationOriginal location.Cache
+	LocationResolver CacheResolver
 
 	StatisticsTracker  *statistics.SessionStatisticsTracker
 	StatisticsReporter *statistics.SessionStatisticsReporter
@@ -218,7 +223,6 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 		nodeOptions.Openvpn.BinaryPath(),
 		nodeOptions.Directories.Config,
 		nodeOptions.Directories.Runtime,
-		di.LocationOriginal,
 		di.SignerFactory,
 		di.IPResolver,
 		di.NATPinger,
@@ -306,6 +310,11 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 
+	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.LocationResolver.HandleConnectionEvent)
+	if err != nil {
+		return err
+	}
+
 	// NAT events
 	err = di.EventBus.Subscribe(event.Topic, di.NATEventSender.ConsumeNATEvent)
 	if err != nil {
@@ -315,6 +324,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	if err != nil {
 		return err
 	}
+
 	return di.EventBus.Subscribe(event.Topic, di.NATStatusTracker.ConsumeNATEvent)
 }
 
@@ -329,7 +339,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 		di.StatisticsTracker,
 		di.MysteriumAPI,
 		di.SignerFactory,
-		di.LocationOriginal.Get,
+		di.LocationResolver,
 		time.Minute,
 	)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
@@ -362,7 +372,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router, corsPolicy)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationOriginal, di.MetricsSender, di.NATPinger)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationResolver, di.MetricsSender, di.NATPinger)
 }
 
 func newSessionManagerFactory(
@@ -483,12 +493,12 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
-	di.LocationResolver, err = location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.Type, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
+	resolver, err := location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.Type, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
 	if err != nil {
 		return err
 	}
 
-	di.LocationOriginal = location.NewLocationCache(di.LocationResolver)
+	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
 	return nil
 }
 
