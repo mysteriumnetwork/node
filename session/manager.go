@@ -143,6 +143,7 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	// stop the balance tracker once the session is finished
 	go func() {
 		<-sessionInstance.done
+		close(pingerParams.Cancel)
 		balanceTracker.Stop()
 	}()
 

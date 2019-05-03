@@ -18,6 +18,8 @@
 package openvpn
 
 import (
+	"sync"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -36,7 +38,7 @@ type processFactory func(options connection.ConnectOptions) (openvpn.Process, *C
 type NATPinger interface {
 	BindConsumerPort(port int)
 	Stop()
-	PingProvider(ip string, port int) error
+	PingProvider(ip string, port int, stop <-chan struct{}) error
 }
 
 // Client takes in the openvpn process and works with it
@@ -46,6 +48,9 @@ type Client struct {
 	ipResolver     ip.Resolver
 	natPinger      NATPinger
 	publicIP       string
+	pingerStop     chan struct{}
+
+	stopOnce sync.Once
 }
 
 // Start starts the connection
@@ -61,7 +66,7 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 
 	c.natPinger.BindConsumerPort(clientConfig.LocalPort)
 	if clientConfig.VpnConfig.LocalPort > 0 {
-		err = c.natPinger.PingProvider(clientConfig.VpnConfig.RemoteIP, clientConfig.VpnConfig.RemotePort)
+		err = c.natPinger.PingProvider(clientConfig.VpnConfig.RemoteIP, clientConfig.VpnConfig.RemotePort, c.pingerStop)
 		if err != nil {
 			return err
 		}
@@ -79,9 +84,12 @@ func (c *Client) Wait() error {
 
 // Stop stops the connection
 func (c *Client) Stop() {
-	if c.process != nil {
-		c.process.Stop()
-	}
+	c.stopOnce.Do(func() {
+		if c.process != nil {
+			c.process.Stop()
+		}
+		close(c.pingerStop)
+	})
 }
 
 // GetConfig returns the consumer-side configuration.

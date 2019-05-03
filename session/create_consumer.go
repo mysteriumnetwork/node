@@ -79,7 +79,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		issuerID = request.ConsumerInfo.IssuerID
 	}
 
-	pingerParams := &traversal.Params{RequestConfig: request.Config, Port: pingerPort}
+	pingerParams := &traversal.Params{RequestConfig: request.Config, Port: pingerPort, Cancel: make(chan struct{})}
 
 	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID, config, pingerParams)
 	switch err {

@@ -38,6 +38,11 @@ const prefix = "[NATPinger] "
 const pingInterval = 200
 const pingTimeout = 10000
 
+var (
+	errNATPunchAttemptStopped  = errors.New("NAT punch attempt stopped")
+	errNATPunchAttemptTimedOut = errors.New("NAT punch attempt timed out")
+)
+
 // Pinger represents NAT pinger structure
 type Pinger struct {
 	pingTarget     chan *Params
@@ -101,6 +106,7 @@ type natProxy interface {
 type Params struct {
 	RequestConfig json.RawMessage
 	Port          int
+	Cancel        chan struct{}
 }
 
 // Start starts NAT pinger and waits for PingTarget to ping
@@ -150,7 +156,7 @@ func (p *Pinger) Start() {
 				}
 			}()
 
-			err = p.pingReceiver(conn)
+			err = p.pingReceiver(conn, pingParams.Cancel)
 			if err != nil {
 				log.Error(prefix, "ping receiver error: ", err)
 				continue
@@ -170,7 +176,7 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, port int) error {
+func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 	log.Info(prefix, "NAT pinging to provider")
 
 	conn, err := p.getConnection(ip, port, p.consumerPort)
@@ -187,7 +193,7 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 	}()
 
 	time.Sleep(pingInterval * time.Millisecond)
-	err = p.pingReceiver(conn)
+	err = p.pingReceiver(conn, stop)
 	if err != nil {
 		return err
 	}
@@ -294,13 +300,16 @@ func (p *Pinger) BindServicePort(serviceType services.ServiceType, port int) {
 	p.natProxy.registerServicePort(serviceType, port)
 }
 
-func (p *Pinger) pingReceiver(conn *net.UDPConn) error {
+func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 	timeout := time.After(pingTimeout * time.Millisecond)
 	for {
 		select {
 		case <-timeout:
 			p.pingCancelled <- struct{}{}
-			return errors.New("NAT punch attempt timed out")
+			return errNATPunchAttemptTimedOut
+		case <-stop:
+			p.pingCancelled <- struct{}{}
+			return errNATPunchAttemptStopped
 		default:
 		}
 
@@ -319,6 +328,9 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn) error {
 		case <-time.After(2 * pingInterval * time.Millisecond):
 			p.pingCancelled <- struct{}{}
 			return nil
+		case <-stop:
+			p.pingCancelled <- struct{}{}
+			return errNATPunchAttemptStopped
 		}
 	}
 }
