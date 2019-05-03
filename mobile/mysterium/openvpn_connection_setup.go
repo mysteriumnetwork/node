@@ -42,6 +42,8 @@ type sessionWrapper struct {
 	createSession openvpn3SessionFactory
 	natPinger     cmd.NatPinger
 	ipResolver    ip.Resolver
+	pingerStop    chan struct{}
+	stopOnce      sync.Once
 }
 
 func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
@@ -55,7 +57,8 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 	if clientConfig.LocalPort > 0 {
 		err := wrapper.natPinger.PingProvider(
 			clientConfig.VpnConfig.RemoteIP,
-			clientConfig.VpnConfig.RemotePort)
+			clientConfig.VpnConfig.RemotePort,
+			wrapper.pingerStop)
 		if err != nil {
 			return err
 		}
@@ -67,9 +70,12 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 }
 
 func (wrapper *sessionWrapper) Stop() {
-	if wrapper.session != nil {
-		wrapper.session.Stop()
-	}
+	wrapper.stopOnce.Do(func() {
+		if wrapper.session != nil {
+			wrapper.session.Stop()
+		}
+		close(wrapper.pingerStop)
+	})
 }
 
 func (wrapper *sessionWrapper) Wait() error {

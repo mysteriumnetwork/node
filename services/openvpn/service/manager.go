@@ -161,6 +161,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(i
 		if m.isBehindNAT() && m.portMappingFailed() {
 			c.Port = pp.Num()
 			if m.serviceOptions.Port > 0 {
+				// TODO: allocate random port from pool
 				pingerPort(12234)
 			} else {
 				pingerPort(pp.Num())
