@@ -68,9 +68,9 @@ func (node *Node) Start() error {
 
 	originalLocation, err := node.locationCache.DetectLocation()
 	if err != nil {
-		log.Warn("Failed to detect original country: ", err)
+		log.Warn("Failed to detect original location: ", err)
 	} else {
-		log.Info("Original country detected: ", originalLocation.Country)
+		log.Infof("Original location detected: %s (%s)", originalLocation.Country, originalLocation.NodeType)
 	}
 
 	err = node.httpAPIServer.StartServing()

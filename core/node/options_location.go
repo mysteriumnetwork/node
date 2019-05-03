@@ -17,14 +17,27 @@
 
 package node
 
+// LocationType identifies location
+type LocationType string
+
+const (
+	// LocationTypeManual defines type which resolves location from manually entered values
+	LocationTypeManual = LocationType("manual")
+	// LocationTypeBuiltin defines type which resolves location from built in DB
+	LocationTypeBuiltin = LocationType("builtin")
+	// LocationTypeMMDB defines type which resolves location from given MMDB file
+	LocationTypeMMDB = LocationType("mmdb")
+	// LocationTypeOracle defines type which resolves location from given URL of LocationOracle
+	LocationTypeOracle = LocationType("oracle")
+)
+
 // OptionsLocation describes possible parameters of location detection configuration
 type OptionsLocation struct {
 	IPDetectorURL string
 
-	Type       string
-	Address    string
-	Country    string
-	City       string
-	NodeType   string
-	ExternalDb string
+	Type     LocationType
+	Address  string
+	Country  string
+	City     string
+	NodeType string
 }

@@ -20,6 +20,9 @@ package cmd
 import (
 	"time"
 
+	"fmt"
+	"path/filepath"
+
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -379,7 +382,6 @@ func newSessionManagerFactory(
 	proposal market.ServiceProposal,
 	sessionStorage *session.StorageMemory,
 	promiseStorage session_payment.PromiseStorage,
-	nodeOptions node.Options,
 	natPingerChan func(*traversal.Params),
 	natTracker NatEventTracker,
 	serviceID string,
@@ -493,13 +495,26 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
-	resolver, err := location.CreateLocationResolver(di.IPResolver, options.Country, options.City, options.Type, options.NodeType, options.Address, options.ExternalDb, configDirFlag)
+
+	var resolver location.Resolver
+	switch options.Type {
+	case node.LocationTypeManual:
+		resolver = location.NewStaticResolver(options.Country, options.City, options.NodeType, di.IPResolver)
+	case node.LocationTypeBuiltin:
+		resolver, err = location.NewBuiltInResolver(di.IPResolver)
+	case node.LocationTypeMMDB:
+		resolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
+	case node.LocationTypeOracle:
+		resolver, err = location.NewOracleResolver(options.Address), nil
+	default:
+		err = fmt.Errorf("unknown location detector type: %s", options.Type)
+	}
 	if err != nil {
 		return err
 	}
 
 	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
-	return nil
+	return
 }
 
 func (di *Dependencies) bootstrapMetrics(options node.Options) {
