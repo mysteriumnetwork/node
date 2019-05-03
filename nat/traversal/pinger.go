@@ -161,6 +161,7 @@ func (p *Pinger) Start() {
 				log.Error(prefix, "ping receiver error: ", err)
 				continue
 			}
+			p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
 
 			log.Info(prefix, "ping received, waiting for a new connection")
 
@@ -214,6 +215,7 @@ func (p *Pinger) waitForPreviousStageResult() bool {
 
 func (p *Pinger) ping(conn *net.UDPConn) error {
 	n := 1
+	i := 0
 
 	for {
 		select {
@@ -237,9 +239,14 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 				return err
 			}
 
-			p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
-
 			n++
+			i++
+
+			if i*pingInterval > pingTimeout {
+				err := errors.New("timeout while waiting for ping ack, trying to continue")
+				p.eventPublisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
+				return err
+			}
 		}
 	}
 }

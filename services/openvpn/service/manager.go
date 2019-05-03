@@ -160,14 +160,23 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(i
 		}
 		if m.isBehindNAT() && m.portMappingFailed() {
 			c.Port = pp.Num()
-			pingerPort(pp.Num())
+			if m.serviceOptions.Port > 0 {
+				// TODO: allocate random port from pool
+				pingerPort(12234)
+			} else {
+				pingerPort(pp.Num())
+			}
 		}
 		m.consumerConfig = c
 	}
 
+	var portRelay func(int) int
 	// relay pinger port for actual transport service
-	portRelay := func(int) int { port := pp.Num(); return port }
-
+	if m.serviceOptions.Port > 0 {
+		portRelay = func(int) int { port := 12234; return port }
+	} else {
+		portRelay = func(int) int { port := pp.Num(); return port }
+	}
 	return m.vpnServiceConfigProvider.ProvideConfig(sessionConfig, portRelay)
 }
 

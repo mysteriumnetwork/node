@@ -28,7 +28,7 @@ import (
 type ClientConfig struct {
 	*config.GenericConfig
 	LocalPort int
-	vpnConfig *VPNConfig
+	VpnConfig *VPNConfig
 }
 
 // SetClientMode adds config arguments for openvpn behave as client
@@ -38,15 +38,11 @@ func (c *ClientConfig) SetClientMode(serverIP string, serverPort, localPort int)
 	c.SetFlag("auth-nocache")
 	c.SetParam("remote", serverIP)
 	c.SetPort(serverPort)
-	if localPort > 0 {
-		c.SetParam("lport", strconv.Itoa(localPort))
-		c.SetFlag("float")
-		// more on this: https://www.v13.gr/blog/?p=386
-		c.SetParam("remote-cert-ku", "84")
-		c.LocalPort = localPort
-	} else {
-		c.SetParam("remote-cert-tls", "server")
-	}
+	c.SetParam("lport", strconv.Itoa(localPort))
+	c.SetFlag("float")
+	// more on this: https://www.v13.gr/blog/?p=386
+	c.SetParam("remote-cert-ku", "84")
+	c.LocalPort = localPort
 	c.SetFlag("auth-user-pass")
 	c.SetFlag("management-query-passwords")
 }
@@ -61,7 +57,7 @@ func (c *ClientConfig) SetProtocol(protocol string) {
 }
 
 func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
-	clientConfig := ClientConfig{GenericConfig: config.NewConfig(runtimeDir, scriptSearchPath), vpnConfig: nil}
+	clientConfig := ClientConfig{GenericConfig: config.NewConfig(runtimeDir, scriptSearchPath), VpnConfig: nil}
 
 	clientConfig.SetDevice("tun")
 	clientConfig.SetParam("cipher", "AES-256-GCM")
@@ -96,7 +92,7 @@ func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeD
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
-	clientFileConfig.vpnConfig = vpnConfig
+	clientFileConfig.VpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort, vpnConfig.LocalPort)
 	clientFileConfig.SetProtocol(vpnConfig.RemoteProtocol)
