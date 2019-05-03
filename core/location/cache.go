@@ -32,6 +32,7 @@ type Cache struct {
 	lastFetched      time.Time
 	locationDetector Resolver
 	location         Location
+	origin           *Location
 	expiry           time.Duration
 	lock             sync.Mutex
 }
@@ -55,9 +56,29 @@ func (c *Cache) fetchAndSave() (Location, error) {
 	if err == nil {
 		c.location = loc
 		c.lastFetched = time.Now()
-	}
 
+		// In case it's our first resolution - treat this as an origin of the user.
+		// This won't be modified further.
+		if !c.isOriginSet() {
+			c.origin = &loc
+		}
+	}
 	return loc, err
+}
+
+func (c *Cache) isOriginSet() bool {
+	return c.origin != nil
+}
+
+// GetOrigin returns the origin for the user - a location that's not modified by starting services.
+func (c *Cache) GetOrigin() (Location, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if !c.isOriginSet() {
+		return c.fetchAndSave()
+	}
+	return *c.origin, nil
 }
 
 // DetectLocation returns location from cache, or fetches it if needed
@@ -68,7 +89,6 @@ func (c *Cache) DetectLocation() (Location, error) {
 	if !c.needsRefresh() {
 		return c.location, nil
 	}
-
 	return c.fetchAndSave()
 }
 

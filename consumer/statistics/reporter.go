@@ -51,7 +51,7 @@ type Reporter interface {
 // SessionStatisticsReporter sends session stats to remote API server with a fixed sendInterval.
 // Extra one send will be done on session disconnect.
 type SessionStatisticsReporter struct {
-	locationDetector location.Resolver
+	locationDetector location.OriginResolver
 
 	signerFactory     identity.SignerFactory
 	statisticsTracker StatsTracker
@@ -65,7 +65,7 @@ type SessionStatisticsReporter struct {
 }
 
 // NewSessionStatisticsReporter function creates new session stats sender by given options
-func NewSessionStatisticsReporter(statisticsTracker StatsTracker, remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector location.Resolver, interval time.Duration) *SessionStatisticsReporter {
+func NewSessionStatisticsReporter(statisticsTracker StatsTracker, remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector location.OriginResolver, interval time.Duration) *SessionStatisticsReporter {
 	return &SessionStatisticsReporter{
 		locationDetector:  locationDetector,
 		signerFactory:     signerFactory,
@@ -87,7 +87,7 @@ func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, service
 	}
 
 	signer := sr.signerFactory(consumerID)
-	loc, err := sr.locationDetector.DetectLocation()
+	loc, err := sr.locationDetector.GetOrigin()
 	if err != nil {
 		log.Error(statsSenderLogPrefix, "Failed to resolve location: ", err)
 	}

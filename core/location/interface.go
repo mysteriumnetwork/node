@@ -21,3 +21,8 @@ package location
 type Resolver interface {
 	DetectLocation() (Location, error)
 }
+
+// OriginResolver fetches the original country
+type OriginResolver interface {
+	GetOrigin() (Location, error)
+}

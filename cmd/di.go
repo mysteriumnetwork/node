@@ -120,6 +120,7 @@ type NATStatusTracker interface {
 // CacheResolver caches the location resolution results
 type CacheResolver interface {
 	location.Resolver
+	location.OriginResolver
 	HandleConnectionEvent(connection.StateEvent)
 }
 

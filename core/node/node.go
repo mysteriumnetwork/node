@@ -35,7 +35,7 @@ type NatPinger interface {
 func NewNode(
 	connectionManager connection.Manager,
 	tequilapiServer tequilapi.APIServer,
-	locationCache location.Resolver,
+	locationCache location.OriginResolver,
 	metricsSender *metrics.Sender,
 	natPinger NatPinger,
 ) *Node {
@@ -52,7 +52,7 @@ func NewNode(
 type Node struct {
 	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
-	locationCache     location.Resolver
+	locationCache     location.OriginResolver
 	metricsSender     *metrics.Sender
 	natPinger         NatPinger
 }
@@ -66,7 +66,7 @@ func (node *Node) Start() error {
 		}
 	}()
 
-	originalLocation, err := node.locationCache.DetectLocation()
+	originalLocation, err := node.locationCache.GetOrigin()
 	if err != nil {
 		log.Warn("Failed to detect original location: ", err)
 	} else {
