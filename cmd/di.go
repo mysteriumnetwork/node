@@ -75,6 +75,8 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 )
 
+const logPrefix = "[service bootstrap] "
+
 // Storage stores persistent objects for future usage
 type Storage interface {
 	Store(issuer string, data interface{}) error
@@ -525,6 +527,7 @@ func (di *Dependencies) bootstrapMetrics(options node.Options) {
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	di.NATTracker = event.NewTracker()
 	if options.ExperimentNATPunching {
+		log.Trace(logPrefix + "experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPingerFactory(
 			di.NATTracker,
 			config.NewConfigParser(),
