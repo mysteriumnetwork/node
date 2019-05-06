@@ -136,6 +136,14 @@ func (m *Manager) Stop() (err error) {
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
 	}
+
+	if m.natService != nil {
+		return m.natService.Del(nat.RuleForwarding{
+			SourceAddress: "10.8.0.0/24",
+			TargetIP:      m.outboundIP,
+		})
+	}
+
 	return nil
 }
 
