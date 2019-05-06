@@ -173,6 +173,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	nats_discovery.Bootstrap()
 
 	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
+	log.Infof("Build information (%s)", metadata.BuildAsString())
 
 	if err := nodeOptions.Directories.Check(); err != nil {
 		return err
