@@ -1,0 +1,17 @@
+#!/bin/bash
+
+body='{
+"request": {
+"branch":"master"
+}}'
+
+ORG="mysteriumnetwork"
+REPO="mysterium-vpn"
+
+curl -s -X POST \
+   -H "Content-Type: application/json" \
+   -H "Accept: application/json" \
+   -H "Travis-API-Version: 3" \
+   -H "Authorization: token $TRAVIS_API_KEY" \
+   -d "$body" \
+   https://api.travis-ci.com/repo/$ORG%2F$REPO/requests
