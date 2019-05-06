@@ -162,6 +162,10 @@ jobs:
       - bin/release_goreport
       name: "Update Go Report Card"
 
+    - script:
+      - bin/travis_scripts/trigger_desktop_app_build
+      name: "Trigger Desktop APP build"
+
     # Official release (on tags only)
     - stage: release
       script: bin/s3 sync s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts build/package
