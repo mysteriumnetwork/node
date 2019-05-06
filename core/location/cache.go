@@ -23,6 +23,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
+	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 )
 
 const locationCacheLogPrefix = "[location-cache] "
@@ -32,7 +33,7 @@ type Cache struct {
 	lastFetched      time.Time
 	locationDetector Resolver
 	location         Location
-	origin           *Location
+	origin           Location
 	expiry           time.Duration
 	lock             sync.Mutex
 }
@@ -56,29 +57,15 @@ func (c *Cache) fetchAndSave() (Location, error) {
 	if err == nil {
 		c.location = loc
 		c.lastFetched = time.Now()
-
-		// In case it's our first resolution - treat this as an origin of the user.
-		// This won't be modified further.
-		if !c.isOriginSet() {
-			c.origin = &loc
-		}
 	}
 	return loc, err
-}
-
-func (c *Cache) isOriginSet() bool {
-	return c.origin != nil
 }
 
 // GetOrigin returns the origin for the user - a location that's not modified by starting services.
 func (c *Cache) GetOrigin() (Location, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	if !c.isOriginSet() {
-		return c.fetchAndSave()
-	}
-	return *c.origin, nil
+	return c.origin, nil
 }
 
 // DetectLocation returns location from cache, or fetches it if needed
@@ -108,5 +95,22 @@ func (c *Cache) HandleConnectionEvent(se connection.StateEvent) {
 		c.lastFetched = time.Time{}
 	} else {
 		log.Trace(locationCacheLogPrefix, "location update succeeded", loc)
+	}
+}
+
+// HandleNodeEvent handles node state change and fetches the location info accordingly.
+func (c *Cache) HandleNodeEvent(se nodevent.Payload) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if se.Status != nodevent.StatusStarted {
+		return
+	}
+
+	var err error
+	c.origin, err = c.locationDetector.DetectLocation()
+	if err != nil {
+		log.Warn(locationCacheLogPrefix, "Failed to detect original location: ", err)
+	} else {
+		log.Tracef("%sOriginal location detected: %s (%s)", locationCacheLogPrefix, c.origin.Country, c.origin.NodeType)
 	}
 }
