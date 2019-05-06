@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,14 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package location
+package event
 
-// Resolver allows resolving location by ip
-type Resolver interface {
-	DetectLocation() (Location, error)
-}
+const (
+	// Topic represents the topic we're gonna be publishing and subscribing on
+	Topic = "Node"
+	// StatusStarted is published once node is started
+	StatusStarted Status = "Started"
+	// StatusStopped is published once node is stopped
+	StatusStopped Status = "Stopped"
+)
 
-// OriginResolver fetches the original country
-type OriginResolver interface {
-	GetOrigin() (Location, error)
+// Status represents the various states of node
+type Status string
+
+// Payload is the payload we'll send once an event is published
+type Payload struct {
+	Status Status
 }

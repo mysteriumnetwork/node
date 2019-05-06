@@ -37,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
+	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -120,6 +121,8 @@ type NATStatusTracker interface {
 // CacheResolver caches the location resolution results
 type CacheResolver interface {
 	location.Resolver
+	location.OriginResolver
+	HandleNodeEvent(se nodevent.Payload)
 	HandleConnectionEvent(connection.StateEvent)
 }
 
@@ -315,11 +318,6 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 
-	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.LocationResolver.HandleConnectionEvent)
-	if err != nil {
-		return err
-	}
-
 	// NAT events
 	err = di.EventBus.Subscribe(event.Topic, di.NATEventSender.ConsumeNATEvent)
 	if err != nil {
@@ -377,7 +375,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router, corsPolicy)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.LocationResolver, di.MetricsSender, di.NATPinger)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger)
 }
 
 func newSessionManagerFactory(
@@ -516,6 +514,17 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	}
 
 	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
+
+	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.LocationResolver.HandleConnectionEvent)
+	if err != nil {
+		return err
+	}
+
+	err = di.EventBus.SubscribeAsync(nodevent.Topic, di.LocationResolver.HandleNodeEvent)
+	if err != nil {
+		return err
+	}
+
 	return
 }
 

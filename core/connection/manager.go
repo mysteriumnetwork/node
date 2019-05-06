@@ -334,6 +334,10 @@ func (manager *connectionManager) Disconnect() error {
 	manager.cleanConnection()
 	manager.setStatus(statusNotConnected())
 
+	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
+		State:       NotConnected,
+		SessionInfo: manager.sessionInfo,
+	})
 	return nil
 }
 

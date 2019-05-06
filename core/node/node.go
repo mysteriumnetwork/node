@@ -20,7 +20,7 @@ package node
 import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/location"
+	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/tequilapi"
 )
@@ -31,18 +31,23 @@ type NatPinger interface {
 	Stop()
 }
 
+// Publisher is responsible for publishing given events
+type Publisher interface {
+	Publish(topic string, data interface{})
+}
+
 // NewNode function creates new Mysterium node by given options
 func NewNode(
 	connectionManager connection.Manager,
 	tequilapiServer tequilapi.APIServer,
-	locationCache location.Resolver,
+	publisher Publisher,
 	metricsSender *metrics.Sender,
 	natPinger NatPinger,
 ) *Node {
 	return &Node{
 		connectionManager: connectionManager,
 		httpAPIServer:     tequilapiServer,
-		locationCache:     locationCache,
+		publisher:         publisher,
 		metricsSender:     metricsSender,
 		natPinger:         natPinger,
 	}
@@ -52,7 +57,7 @@ func NewNode(
 type Node struct {
 	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
-	locationCache     location.Resolver
+	publisher         Publisher
 	metricsSender     *metrics.Sender
 	natPinger         NatPinger
 }
@@ -66,14 +71,7 @@ func (node *Node) Start() error {
 		}
 	}()
 
-	originalLocation, err := node.locationCache.DetectLocation()
-	if err != nil {
-		log.Warn("Failed to detect original location: ", err)
-	} else {
-		log.Infof("Original location detected: %s (%s)", originalLocation.Country, originalLocation.NodeType)
-	}
-
-	err = node.httpAPIServer.StartServing()
+	err := node.httpAPIServer.StartServing()
 	if err != nil {
 		return err
 	}
@@ -83,6 +81,8 @@ func (node *Node) Start() error {
 		return err
 	}
 
+	node.publisher.Publish(event.Topic, event.Payload{Status: event.StatusStarted})
+
 	log.Infof("Api started on: %v", address)
 	go node.natPinger.Start()
 
@@ -91,6 +91,7 @@ func (node *Node) Start() error {
 
 // Wait blocks until Mysterium node is stopped
 func (node *Node) Wait() error {
+	defer node.publisher.Publish(event.Topic, event.Payload{Status: event.StatusStopped})
 	return node.httpAPIServer.Wait()
 }
 
