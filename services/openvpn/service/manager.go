@@ -20,6 +20,8 @@ package service
 import (
 	"encoding/json"
 
+	"github.com/mysteriumnetwork/node/nat/traversal"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
@@ -140,7 +142,7 @@ func (m *Manager) Stop() (err error) {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	if m.vpnServiceConfigProvider == nil {
 		log.Info(logPrefix, "Config provider not initialized")
 		return nil, nil, errors.New("Config provider not initialized")
@@ -149,6 +151,11 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(i
 	pp, err := m.ports.Acquire()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to acquire pinger port")
+	}
+
+	cp, err := m.ports.Acquire()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to acquire consumer port")
 	}
 
 	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
@@ -161,20 +168,20 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(i
 		if m.isBehindNAT() && m.portMappingFailed() {
 			c.Port = pp.Num()
 			if m.serviceOptions.Port > 0 {
-				pingerPort(12234)
+				pingerPort(11234, cp.Num())
 			} else {
-				pingerPort(pp.Num())
+				pingerPort(pp.Num(), cp.Num())
 			}
 		}
 		m.consumerConfig = c
 	}
 
-	var portRelay func(int) int
+	var portRelay func(int, int) int
 	// relay pinger port for actual transport service
 	if m.serviceOptions.Port > 0 {
-		portRelay = func(int) int { port := 12234; return port }
+		portRelay = func(int, int) int { return 11234 }
 	} else {
-		portRelay = func(int) int { port := pp.Num(); return port }
+		portRelay = func(int, int) int { return pp.Num() }
 	}
 	return m.vpnServiceConfigProvider.ProvideConfig(sessionConfig, portRelay)
 }
@@ -187,6 +194,10 @@ func (m *Manager) portMappingFailed() bool {
 	event := m.natEventGetter.LastEvent()
 	if event == nil {
 		return false
+	}
+
+	if event.Stage == traversal.StageName {
+		return true
 	}
 	return event.Stage == mapping.StageName && !event.Successful
 }

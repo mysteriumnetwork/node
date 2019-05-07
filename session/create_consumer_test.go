@@ -30,7 +30,7 @@ import (
 
 var (
 	config       = json.RawMessage(`{"Param1":"string-param","Param2":123}`)
-	mockConsumer = func(json.RawMessage, func(int) int) (ServiceConfiguration, DestroyCallback, error) {
+	mockConsumer = func(json.RawMessage, func(int, int) int) (ServiceConfiguration, DestroyCallback, error) {
 		return config, nil, nil
 	}
 	mockID = identity.FromAddress("0x0")

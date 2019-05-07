@@ -68,6 +68,8 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 
 func (wrapper *sessionWrapper) Stop() {
 	if wrapper.session != nil {
+		log.Info("Stopping NATProxy")
+		wrapper.natPinger.StopNATProxy()
 		wrapper.session.Stop()
 	}
 }
@@ -87,15 +89,15 @@ func (wrapper *sessionWrapper) GetConfig() (connection.ConsumerConfig, error) {
 
 	switch wrapper.natPinger.(type) {
 	case *traversal.NoopPinger:
-		log.Infof("noop pinger detected, returning nil client config.")
+		log.Info("noop pinger detected, returning nil client config.")
 		return nil, nil
 	}
 
 	return &openvpn.ConsumerConfig{
 		// TODO: since GetConfig is executed before Start we cannot access VPNConfig structure yet
 		// TODO skip sending port here, since provider generates port for consumer in VPNConfig
-		Port: 50221,
-		IP:   &ip,
+		// Port: 50221,
+		IP: &ip,
 	}, nil
 }
 

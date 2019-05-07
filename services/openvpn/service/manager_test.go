@@ -41,20 +41,20 @@ func (portSupplierMock) Acquire() (port.Port, error) {
 
 func TestManager_ProvideConfigNotFailOnEmptyConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, ports: portSupplierMock{}}
-	fn := func(i int) int { return 0 }
+	fn := func(i, n int) int { return 0 }
 	_, _, err := m.ProvideConfig([]byte(""), fn)
 	assert.NoError(t, err)
 }
 
 func TestManager_ProvideConfigNotFailOnNilConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, ports: portSupplierMock{}}
-	fn := func(i int) int { return 0 }
+	fn := func(i, n int) int { return 0 }
 	_, _, err := m.ProvideConfig(nil, fn)
 	assert.NoError(t, err)
 }
 
 type mockConfigProvider struct{}
 
-func (cp *mockConfigProvider) ProvideConfig(consumerKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (cp *mockConfigProvider) ProvideConfig(consumerKey json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	return nil, nil, nil
 }

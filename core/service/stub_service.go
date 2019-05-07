@@ -53,7 +53,7 @@ func (service *serviceFake) GetType() string {
 	return "fake"
 }
 
-func (service *serviceFake) ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (service *serviceFake) ProvideConfig(publicKey json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	return struct{}{}, func() {}, nil
 }
 

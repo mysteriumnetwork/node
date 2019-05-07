@@ -59,7 +59,7 @@ func NewManager(nodeOptions node.Options,
 		outboundIP:                     location.OutIP,
 		currentLocation:                location.Country,
 		natService:                     natService,
-		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions, natEventGetter),
+		sessionConfigNegotiatorFactory: newSessionConfigNegotiatorFactory(nodeOptions.OptionsNetwork, serviceOptions, natEventGetter, portPool),
 		vpnServerConfigFactory:         newServerConfigFactory(nodeOptions, serviceOptions),
 		vpnServerFactory:               serverFactory,
 		natPinger:                      natPinger,
@@ -96,7 +96,7 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 }
 
 // newSessionConfigNegotiatorFactory returns function generating session config for remote client
-func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options, natEventGetter NATEventGetter) SessionConfigNegotiatorFactory {
+func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options, natEventGetter NATEventGetter, portPool port.ServicePortSupplier) SessionConfigNegotiatorFactory {
 	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string, port int) session.ConfigNegotiator {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP, networkOptions.Localnet)
 		return &OpenvpnConfigNegotiator{
@@ -108,6 +108,7 @@ func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, servi
 				TLSPresharedKey: secPrimitives.PresharedKey.ToPEMFormat(),
 				CACertificate:   secPrimitives.CertificateAuthority.ToPEMFormat(),
 			},
+			portPool: portPool,
 		}
 	}
 }
@@ -116,24 +117,30 @@ func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, servi
 type OpenvpnConfigNegotiator struct {
 	natEventGetter NATEventGetter
 	vpnConfig      *openvpn_service.VPNConfig
+	portPool       port.ServicePortSupplier
 }
 
 // ProvideConfig returns the config for user
-func (ocn *OpenvpnConfigNegotiator) ProvideConfig(consumerKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
-	localPort := ocn.determineClientPort(pingerPort(0))
-	ocn.vpnConfig.LocalPort = localPort
+func (ocn *OpenvpnConfigNegotiator) ProvideConfig(consumerKey json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+	ocn.vpnConfig.LocalPort = ocn.determineClientPort()
+	ocn.vpnConfig.RemotePort = pingerPort(0, ocn.vpnConfig.LocalPort)
+
 	log.Info(logPrefix, "pinger port: ", ocn.vpnConfig.RemotePort)
 	return ocn.vpnConfig, nil, nil
 }
 
-func (ocn *OpenvpnConfigNegotiator) determineClientPort(pingerPort int) int {
+func (ocn *OpenvpnConfigNegotiator) determineClientPort() int {
 	if ocn.portMappingFailed() {
 		// port mapping failed, assume NAT hole-punching
 		// let Consumer communicate with Provider's NATPinger port
-		ocn.vpnConfig.RemotePort = pingerPort
-		// TODO: randomize port
-		log.Info(logPrefix, "client port determined: ", 50221)
-		return 50221
+		port, err := ocn.portPool.Acquire()
+		if err != nil {
+			log.Error(logPrefix, "failed to acquire port for client local port, returning 50221")
+			return 50221
+
+		}
+		log.Info(logPrefix, "client port determined: ", port)
+		return port.Num()
 	}
 
 	log.Info(logPrefix, "returning auto port")

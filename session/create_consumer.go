@@ -19,6 +19,7 @@ package session
 
 import (
 	"encoding/json"
+	"mm/simsack/util/log"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
@@ -62,11 +63,13 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
-	var pingerPort int
+	var pingerPort, consumerPort int
 	config, destroyCallback, err := consumer.configProvider(
 		request.Config,
-		func(port int) int {
+		func(port, cPort int) int {
+			log.Infof("%spingerPort called, pingerPort: %d, consumerPort: %d ", consumerLogPrefix, port, cPort)
 			pingerPort = port
+			consumerPort = cPort
 			// its not important here
 			return 0
 		})
@@ -79,7 +82,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		issuerID = request.ConsumerInfo.IssuerID
 	}
 
-	pingerParams := &traversal.Params{RequestConfig: request.Config, Port: pingerPort}
+	pingerParams := &traversal.Params{RequestConfig: request.Config, Port: pingerPort, ConsumerPort: consumerPort}
 
 	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID, config, pingerParams)
 	switch err {

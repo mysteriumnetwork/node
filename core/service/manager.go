@@ -43,7 +43,7 @@ var (
 type Service interface {
 	Serve(providerID identity.Identity) error
 	Stop() error
-	ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error)
+	ProvideConfig(publicKey json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error)
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs

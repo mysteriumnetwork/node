@@ -46,7 +46,7 @@ type Manager struct {
 }
 
 // ProvideConfig provides the session configuration
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
 	return nil, nil, nil
 }
 
