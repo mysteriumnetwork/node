@@ -92,6 +92,10 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 	createService := func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+		if err := nodeOptions.Openvpn.Check(); err != nil {
+			return nil, market.ServiceProposal{}, err
+		}
+
 		loc, err := di.LocationResolver.DetectLocation()
 		if err != nil {
 			return nil, market.ServiceProposal{}, err
