@@ -66,7 +66,7 @@ func (client *clientRest) GetPublicIP() (string, error) {
 		return "", err
 	}
 
-	log.Info(ipAPILogPrefix, "IP detected: ", ipResponse.IP)
+	log.Trace(ipAPILogPrefix, "IP detected: ", ipResponse.IP)
 	return ipResponse.IP, nil
 }
 
@@ -78,6 +78,6 @@ func (client *clientRest) GetOutboundIP() (string, error) {
 	defer conn.Close()
 
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	log.Info("[Detect Outbound IP] ", "IP detected: ", localAddr.IP.String())
+	log.Trace("[Detect Outbound IP] ", "IP detected: ", localAddr.IP.String())
 	return localAddr.IP.String(), nil
 }
