@@ -23,6 +23,8 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/nat/traversal"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -65,39 +67,39 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (manager *Manager) ProvideConfig(publicKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
 	key := &wg.ConsumerConfig{}
 	err := json.Unmarshal(publicKey, key)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, params, err
 	}
 
 	connectionEndpoint, err := manager.connectionEndpointFactory()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, params, err
 	}
 
 	if err := connectionEndpoint.Start(nil); err != nil {
-		return nil, nil, err
+		return nil, nil, params, err
 	}
 
 	if err := connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
-		return nil, nil, err
+		return nil, nil, params, err
 	}
 
 	config, err := connectionEndpoint.Config()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, params, err
 	}
 
 	outIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, params, err
 	}
 
 	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: outIP}
 	if err := manager.natService.Add(natRule); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to add NAT forwarding rule")
+		return nil, nil, nil, errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
 	destroy := func() {
@@ -109,7 +111,7 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func
 		}
 	}
 
-	return config, destroy, nil
+	return config, destroy, params, nil
 }
 
 // Serve starts service - does block

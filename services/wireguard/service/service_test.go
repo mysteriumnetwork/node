@@ -71,8 +71,7 @@ func Test_Manager_Serve(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	fn := func(i int) int { return 0 }
-	sessionConfig, _, err := manager.ProvideConfig(json.RawMessage(`{"PublicKey": "gZfkZArbw9lqfl4Yzr1Kv3nqGlhe/ynH9KKRbzPFMGk="}`), fn)
+	sessionConfig, _, _, err := manager.ProvideConfig(json.RawMessage(`{"PublicKey": "gZfkZArbw9lqfl4Yzr1Kv3nqGlhe/ynH9KKRbzPFMGk="}`), nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, sessionConfig)
 }

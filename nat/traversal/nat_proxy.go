@@ -39,6 +39,7 @@ type NATProxy struct {
 	ipResolver    ip.Resolver
 	socketProtect func(socket int) bool
 	stop          chan struct{}
+	once          sync.Once
 }
 
 // consumerHandOff launches listener on pinger port and wait for openvpn connect
@@ -133,14 +134,11 @@ func (np *NATProxy) masterLoop(conn *net.UDPConn, remoteConn *net.UDPConn) {
 					log.Errorf("%sFailed to write remote peer: %s cause: %s", logPrefix, remoteConn.RemoteAddr().String(), err)
 					return
 				}
-				//log.Info(logPrefix, "bytes written to remote: ", nw)
-				//log.Info(logPrefix, "start copying stream from remoteConn to consumer NAT proxy")
 				if np.addrLast != addr {
 					np.addrLast = addr
 					go np.readWriteToAddr(remoteConn, conn, addr)
 				}
 			}
-			// time.Sleep(failedReadRetryInterval * time.Millisecond)
 		}
 	}
 }
@@ -164,7 +162,6 @@ func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, 
 					log.Errorf("%sFailed to write to local process: %s cause: %s", logPrefix, remoteConn.LocalAddr().String(), err)
 					return
 				}
-				//log.Info(logPrefix, "bytes written to local process: ", nw)
 			}
 		}
 	}
@@ -196,8 +193,6 @@ func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
 	defer srcConn.Close()
 	totalBytes, err := io.Copy(dstConn, srcConn)
 	if err != nil {
-		//log.Infof("%sdst socket: %v", logPrefix, dstConn.RemoteAddr().String(), dstConn.LocalAddr().String())
-		//log.Infof("%sscr socket: %v", logPrefix, srcConn.RemoteAddr().String(), srcConn.LocalAddr().String())
 		log.Error(logPrefix, "failed to writing / reading a stream to/from NATProxy: ", err)
 	}
 	log.Tracef("%stotal bytes transferred from %s to %s: %d", logPrefix,
@@ -229,5 +224,7 @@ func (np *NATProxy) setProtectSocketCallback(socketProtect func(socket int) bool
 }
 
 func (np *NATProxy) close() {
-	close(np.stop)
+	np.once.Do(func() {
+		close(np.stop)
+	})
 }

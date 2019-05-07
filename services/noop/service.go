@@ -22,6 +22,8 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/mysteriumnetwork/node/nat/traversal"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
@@ -46,8 +48,8 @@ type Manager struct {
 }
 
 // ProvideConfig provides the session configuration
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
-	return nil, nil, nil
+func (manager *Manager) ProvideConfig(publicKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
+	return nil, nil, nil, nil
 }
 
 // Serve starts service - does block

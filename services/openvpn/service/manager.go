@@ -95,7 +95,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	servicePort, err := m.ports.Acquire()
+	servicePort, err := m.ports.OpenvpnPort()
 	if err != nil {
 		return errors.Wrap(err, "failed to acquire an unused port")
 	}
@@ -142,48 +142,45 @@ func (m *Manager) Stop() (err error) {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, _ *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
 	if m.vpnServiceConfigProvider == nil {
 		log.Info(logPrefix, "Config provider not initialized")
-		return nil, nil, errors.New("Config provider not initialized")
+		return nil, nil, nil, errors.New("Config provider not initialized")
 	}
 
-	pp, err := m.ports.Acquire()
+	op, err := m.ports.OpenvpnPort()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to acquire pinger port")
+		return nil, nil, nil, errors.Wrap(err, "failed to acquire openvpn port")
 	}
 
-	cp, err := m.ports.Acquire()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to acquire consumer port")
-	}
+	traversalParams := &traversal.Params{Port: op.Num()}
 
 	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
 	if sessionConfig != nil && len(sessionConfig) > 0 {
 		var c openvpn_service.ConsumerConfig
 		err := json.Unmarshal(sessionConfig, &c)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing consumer sessionConfig failed")
-		}
-		if m.isBehindNAT() && m.portMappingFailed() {
-			c.Port = pp.Num()
-			if m.serviceOptions.Port > 0 {
-				pingerPort(11234, cp.Num())
-			} else {
-				pingerPort(pp.Num(), cp.Num())
-			}
+			return nil, nil, nil, errors.Wrap(err, "parsing consumer sessionConfig failed")
 		}
 		m.consumerConfig = c
+
+		if m.isBehindNAT() && m.portMappingFailed() {
+			pp, err := m.ports.Acquire()
+			if err != nil {
+				return nil, nil, nil, errors.Wrap(err, "failed to acquire pinger port")
+			}
+
+			cp, err := m.ports.Acquire()
+			if err != nil {
+				return nil, nil, nil, errors.Wrap(err, "failed to acquire consumer port")
+			}
+
+			traversalParams.Port = pp.Num()
+			traversalParams.ConsumerPort = cp.Num()
+		}
 	}
 
-	var portRelay func(int, int) int
-	// relay pinger port for actual transport service
-	if m.serviceOptions.Port > 0 {
-		portRelay = func(int, int) int { return 11234 }
-	} else {
-		portRelay = func(int, int) int { return pp.Num() }
-	}
-	return m.vpnServiceConfigProvider.ProvideConfig(sessionConfig, portRelay)
+	return m.vpnServiceConfigProvider.ProvideConfig(sessionConfig, traversalParams)
 }
 
 func (m *Manager) isBehindNAT() bool {

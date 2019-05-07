@@ -29,11 +29,13 @@ import (
 type Pool struct {
 	start, capacity int
 	rand            *rand.Rand
+	openvpnPort     int
 }
 
 // ServicePortSupplier provides port needed to run a service on
 type ServicePortSupplier interface {
 	Acquire() (Port, error)
+	OpenvpnPort() (Port, error)
 }
 
 // NewPool creates a port pool that will provide ports from range 40000-50000
@@ -66,6 +68,26 @@ func (pool *Pool) Acquire() (port Port, err error) {
 	}
 	log.Debugf("%ssupplying port %v, err %v", logPrefix, p, err)
 	return Port(p), errors.Wrap(err, "could not acquire port")
+}
+
+// SetOpenvpnPort sets fixed openvpn service port
+func (pool *Pool) SetOpenvpnPort(port int) {
+	pool.openvpnPort = port
+}
+
+// FixedOpenvpnPort gets fixed openvpn service port
+func (pool *Pool) OpenvpnPort() (Port, error) {
+	if pool.openvpnPort > 0 {
+		return Port(pool.openvpnPort), nil
+	}
+
+	port, err := pool.Acquire()
+	if err != nil {
+		return 0, err
+	}
+	pool.openvpnPort = port.Num()
+
+	return port, nil
 }
 
 func (pool *Pool) randomPort() int {

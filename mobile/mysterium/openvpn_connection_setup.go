@@ -94,9 +94,7 @@ func (wrapper *sessionWrapper) GetConfig() (connection.ConsumerConfig, error) {
 	}
 
 	return &openvpn.ConsumerConfig{
-		// TODO: since GetConfig is executed before Start we cannot access VPNConfig structure yet
-		// TODO skip sending port here, since provider generates port for consumer in VPNConfig
-		// Port: 50221,
+		// skip sending port here, since provider generates port for consumer in VPNConfig
 		IP: &ip,
 	}, nil
 }

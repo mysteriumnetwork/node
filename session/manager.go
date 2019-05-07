@@ -46,11 +46,11 @@ type IDGenerator func() (ID, error)
 
 // ConfigNegotiator is able to handle config negotiations
 type ConfigNegotiator interface {
-	ProvideConfig(consumerKey json.RawMessage, pingerPort func(int, int) int) (ServiceConfiguration, DestroyCallback, error)
+	ProvideConfig(consumerKey json.RawMessage, travesalParams *traversal.Params) (ServiceConfiguration, DestroyCallback, *traversal.Params, error)
 }
 
 // ConfigProvider provides session config for remote client
-type ConfigProvider func(consumerKey json.RawMessage, pingerPort func(int, int) int) (ServiceConfiguration, DestroyCallback, error)
+type ConfigProvider func(consumerKey json.RawMessage, traversalParams *traversal.Params) (ServiceConfiguration, DestroyCallback, *traversal.Params, error)
 
 // DestroyCallback cleanups session
 type DestroyCallback func()

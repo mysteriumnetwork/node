@@ -33,7 +33,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
-	"github.com/mysteriumnetwork/node/nat/mapping"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
@@ -121,42 +120,11 @@ type OpenvpnConfigNegotiator struct {
 }
 
 // ProvideConfig returns the config for user
-func (ocn *OpenvpnConfigNegotiator) ProvideConfig(consumerKey json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
-	ocn.vpnConfig.LocalPort = ocn.determineClientPort()
-	ocn.vpnConfig.RemotePort = pingerPort(0, ocn.vpnConfig.LocalPort)
+func (ocn *OpenvpnConfigNegotiator) ProvideConfig(consumerKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
+	ocn.vpnConfig.LocalPort = params.ConsumerPort
+	ocn.vpnConfig.RemotePort = params.Port
 
-	log.Info(logPrefix, "pinger port: ", ocn.vpnConfig.RemotePort)
-	return ocn.vpnConfig, nil, nil
-}
-
-func (ocn *OpenvpnConfigNegotiator) determineClientPort() int {
-	if ocn.portMappingFailed() {
-		// port mapping failed, assume NAT hole-punching
-		// let Consumer communicate with Provider's NATPinger port
-		port, err := ocn.portPool.Acquire()
-		if err != nil {
-			log.Error(logPrefix, "failed to acquire port for client local port, returning 50221")
-			return 50221
-
-		}
-		log.Info(logPrefix, "client port determined: ", port)
-		return port.Num()
-	}
-
-	log.Info(logPrefix, "returning auto port")
-	return 0
-}
-
-func (ocn *OpenvpnConfigNegotiator) portMappingFailed() bool {
-	event := ocn.natEventGetter.LastEvent()
-	if event == nil {
-		return false
-	}
-
-	if event.Stage == traversal.StageName {
-		return true
-	}
-	return event.Stage == mapping.StageName && !event.Successful
+	return ocn.vpnConfig, nil, params, nil
 }
 
 func vpnServerIP(serviceOptions Options, outboundIP, publicIP string, isLocalnet bool) string {

@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/mysteriumnetwork/node/nat/traversal"
+
 	log "github.com/cihub/seelog"
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
@@ -43,7 +45,7 @@ var (
 type Service interface {
 	Serve(providerID identity.Identity) error
 	Stop() error
-	ProvideConfig(publicKey json.RawMessage, pingerPort func(int, int) int) (session.ServiceConfiguration, session.DestroyCallback, error)
+	ProvideConfig(publicKey json.RawMessage, traversalParams *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error)
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs
