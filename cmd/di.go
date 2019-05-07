@@ -18,10 +18,9 @@
 package cmd
 
 import (
-	"time"
-
 	"fmt"
 	"path/filepath"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -179,10 +178,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	log.Infof("Build information (%s)", metadata.BuildAsString())
 
 	if err := nodeOptions.Directories.Check(); err != nil {
-		return err
-	}
-
-	if err := nodeOptions.Openvpn.Check(); err != nil {
 		return err
 	}
 
