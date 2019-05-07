@@ -1,7 +1,6 @@
-# This is the configuration file for /etc/init.d/mysterium-server
-# Define additional args for mysterium_server (see help for full list)
+# Define additional args for `myst` service (see `myst --help` for full list)
 CONF_DIR="--config-dir=/etc/mysterium-node"
 RUN_DIR="--runtime-dir=/var/run/mysterium-node"
 DATA_DIR="--data-dir=/var/lib/mysterium-node"
-DAEMON_OPTS="--tequilapi.address=0.0.0.0"
-SERVICE_OPTS="openvpn"
+DAEMON_OPTS=""
+SERVICE_OPTS=""
