@@ -70,7 +70,7 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 		log.Debug(logPrefix, "Deleting port mapping for port: ", extPort)
 
 		if err := m.DeleteMapping(protocol, extPort, intPort); err != nil {
-			log.Debug(logPrefix, "Couldn't delete port mapping: ", err)
+			log.Warn(logPrefix, "Couldn't delete port mapping: ", err)
 		}
 	}()
 	for {
@@ -85,11 +85,11 @@ func mapPort(m portmap.Interface, c chan struct{}, protocol string, extPort, int
 
 func addMapping(m portmap.Interface, protocol string, extPort, intPort int, name string, publisher Publisher) {
 	if err := m.AddMapping(protocol, extPort, intPort, name, mapTimeout); err != nil {
-		log.Debugf("%s Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
+		log.Warnf("%s Couldn't add port mapping for port %d: %v, retrying with permanent lease", logPrefix, extPort, err)
 		if err := m.AddMapping(protocol, extPort, intPort, name, 0); err != nil {
 			// some gateways support only permanent leases
 			publisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
-			log.Debugf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
+			log.Warnf("%s Couldn't add port mapping for port %d: %v", logPrefix, extPort, err)
 			return
 		}
 	}
