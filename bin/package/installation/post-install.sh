@@ -47,6 +47,9 @@ printf "Creating directories...\n" \
     && mkdir -p $OS_DIR_LOG $OS_DIR_CONFIG $OS_DIR_RUN $OS_DIR_DATA \
     && chown $DAEMON_USER:$DAEMON_GROUP $OS_DIR_LOG $OS_DIR_CONFIG $OS_DIR_RUN $OS_DIR_DATA
 
+printf "Setting required capabilities...\n" \
+    && setcap cap_net_admin+ep /usr/bin/myst
+
 # Remove legacy symlink, if it exists
 if [[ -L $OS_DIR_INITD/mysterium-node ]]; then
     rm -f $OS_DIR_INITD/mysterium-node

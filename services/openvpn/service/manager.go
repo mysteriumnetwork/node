@@ -20,8 +20,6 @@ package service
 import (
 	"encoding/json"
 
-	"github.com/mysteriumnetwork/node/nat/traversal"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
@@ -32,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/mapping"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/services"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
@@ -138,6 +137,14 @@ func (m *Manager) Stop() (err error) {
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
 	}
+
+	if m.natService != nil {
+		return m.natService.Del(nat.RuleForwarding{
+			SourceAddress: "10.8.0.0/24",
+			TargetIP:      m.outboundIP,
+		})
+	}
+
 	return nil
 }
 

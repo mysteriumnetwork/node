@@ -44,8 +44,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-const logPrefix = "[service bootstrap] "
-
 // bootstrapServices loads all the components required for running services
 func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
 	di.bootstrapServiceComponents(nodeOptions)
@@ -82,7 +80,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			portPool := di.PortPool
 			if wgOptions.Ports.IsSpecified() {
-				log.Debugf("%s fixed service port range (%s) configured, using custom port pool", logPrefix, wgOptions.Ports)
+				log.Infof("%s fixed service port range (%s) configured, using custom port pool", logPrefix, wgOptions.Ports)
 				portPool = port.NewFixedRangePool(*wgOptions.Ports)
 			}
 
@@ -94,6 +92,10 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 	createService := func(serviceOptions service.Options) (service.Service, market.ServiceProposal, error) {
+		if err := nodeOptions.Openvpn.Check(); err != nil {
+			return nil, market.ServiceProposal{}, err
+		}
+
 		loc, err := di.LocationResolver.DetectLocation()
 		if err != nil {
 			return nil, market.ServiceProposal{}, err
@@ -217,7 +219,6 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			proposal,
 			di.ServiceSessionStorage,
 			di.PromiseStorage,
-			nodeOptions,
 			di.NATPinger.PingTarget,
 			di.NATTracker,
 			serviceID)

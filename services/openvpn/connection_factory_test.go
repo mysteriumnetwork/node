@@ -23,7 +23,6 @@ import (
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,18 +35,6 @@ var fakeSessionConfig = []byte(`{
     "CACertificate": "\n-----BEGIN CERTIFICATE-----\nMIIByDCCAW6gAwIBAgICBFcwCgYIKoZIzj0EAwIwQzELMAkGA1UEBhMCR0IxGzAZ\nBgNVBAoTEk15c3Rlcm1pdW0ubmV0d29yazEXMBUGA1UECxMOTXlzdGVyaXVtIFRl\nYW0wHhcNMTgwNTA4MTIwMDU5WhcNMjgwNTA4MTIwMDU5WjBDMQswCQYDVQQGEwJH\nQjEbMBkGA1UEChMSTXlzdGVybWl1bS5uZXR3b3JrMRcwFQYDVQQLEw5NeXN0ZXJp\ndW0gVGVhbTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKvoBgL5PCWlUr4PSl2j\njSXtW8ohVESWVL6l0de+Sj6dWsjELxmLAKdnwep9CcYvGE0i3Q0M24C/ZSoCREpl\n8UOjUjBQMA4GA1UdDwEB/wQEAwIChDAdBgNVHSUEFjAUBggrBgEFBQcDAgYIKwYB\nBQUHAwEwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ4EBwQFAQIDBAUwCgYIKoZIzj0E\nAwIDSAAwRQIhAKLOIPprhU7CCyFG52J8FmyzwBJjcwHu+ZzGFrdfwEKKAiB7xkYM\nYFcPCscvdnZ1U8hTUaREZmDB2w9eaGyCM4YXAg==\n-----END CERTIFICATE-----\n"
 }`)
 
-type cacheFake struct {
-	location location.Location
-	err      error
-}
-
-func (cf *cacheFake) Get() location.Location {
-	return cf.location
-}
-func (cf *cacheFake) RefreshAndGet() (location.Location, error) {
-	return cf.location, cf.err
-}
-
 var _ connection.Factory = &ProcessBasedConnectionFactory{}
 
 func fakeSignerFactory(_ identity.Identity) identity.Signer {
@@ -55,7 +42,7 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 }
 
 func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	channel := make(chan connection.State)
 	statisticsChannel := make(chan consumer.SessionStatistics)
 	connectionOptions := connection.ConnectOptions{}
@@ -66,7 +53,7 @@ func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
 }
 
 func TestConnectionFactory_CreatesConnection(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", &cacheFake{}, fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	channel := make(chan connection.State)
 	statisticsChannel := make(chan consumer.SessionStatistics)
 	conn, err := factory.Create(channel, statisticsChannel)
@@ -81,7 +68,7 @@ type MockNATPinger struct{}
 func (mnp *MockNATPinger) BindConsumerPort(port int) {}
 
 // PingProvider does nothing
-func (mnp *MockNATPinger) PingProvider(_ string, port int) error { return nil }
+func (mnp *MockNATPinger) PingProvider(_ string, port int, _ <-chan struct{}) error { return nil }
 
 // Stop does nothing
 func (mnp *MockNATPinger) Stop() {}

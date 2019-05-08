@@ -66,7 +66,7 @@ func (pool *Pool) Acquire() (port Port, err error) {
 	if !available {
 		p, err = pool.seekAvailablePort()
 	}
-	log.Debugf("%ssupplying port %v, err %v", logPrefix, p, err)
+	log.Infof("%ssupplying port %v, err %v", logPrefix, p, err)
 	return Port(p), errors.Wrap(err, "could not acquire port")
 }
 
@@ -75,7 +75,7 @@ func (pool *Pool) SetOpenvpnPort(port int) {
 	pool.openvpnPort = port
 }
 
-// FixedOpenvpnPort gets fixed openvpn service port
+// OpenvpnPort gets fixed openvpn service port
 func (pool *Pool) OpenvpnPort() (Port, error) {
 	if pool.openvpnPort > 0 {
 		return Port(pool.openvpnPort), nil

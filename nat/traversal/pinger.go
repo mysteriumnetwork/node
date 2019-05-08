@@ -38,6 +38,11 @@ const prefix = "[NATPinger] "
 const pingInterval = 200
 const pingTimeout = 10000
 
+var (
+	errNATPunchAttemptStopped  = errors.New("NAT punch attempt stopped")
+	errNATPunchAttemptTimedOut = errors.New("NAT punch attempt timed out")
+)
+
 // Pinger represents NAT pinger structure
 type Pinger struct {
 	pingTarget     chan *Params
@@ -105,6 +110,7 @@ type Params struct {
 	RequestConfig *json.RawMessage
 	Port          int
 	ConsumerPort  int
+	Cancel        chan struct{}
 }
 
 // Start starts NAT pinger and waits for PingTarget to ping
@@ -155,7 +161,7 @@ func (p *Pinger) Start() {
 				}
 			}()
 
-			err = p.pingReceiver(conn)
+			err = p.pingReceiver(conn, pingParams.Cancel)
 			if err != nil {
 				log.Error(prefix, "ping receiver error: ", err)
 				continue
@@ -178,7 +184,7 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, port int) error {
+func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 	log.Info(prefix, "NAT pinging to provider")
 
 	conn, err := p.getConnection(ip, port, p.consumerPort)
@@ -194,7 +200,7 @@ func (p *Pinger) PingProvider(ip string, port int) error {
 	}()
 
 	time.Sleep(pingInterval * time.Millisecond)
-	err = p.pingReceiver(conn)
+	err = p.pingReceiver(conn, stop)
 	if err != nil {
 		return err
 	}
@@ -233,7 +239,7 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 			// This is the essence of the TTL based udp punching.
 			// We're slowly increasing the TTL so that the packet is held.
 			// After a few attempts we're setting the value to 128 and assuming we're through.
-			// We could close sending ping to Consumer beyond 4 hops to prevent from possible Consumer's router's
+			// We could stop sending ping to Consumer beyond 4 hops to prevent from possible Consumer's router's
 			//  DOS block, but we plan, that Consumer at the same time will be Provider too in near future.
 			if n > 4 {
 				n = 128
@@ -306,13 +312,16 @@ func (p *Pinger) BindServicePort(serviceType services.ServiceType, port int) {
 	p.natProxy.registerServicePort(serviceType, port)
 }
 
-func (p *Pinger) pingReceiver(conn *net.UDPConn) error {
+func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 	timeout := time.After(pingTimeout * time.Millisecond)
 	for {
 		select {
 		case <-timeout:
 			p.pingCancelled <- struct{}{}
-			return errors.New("NAT punch attempt timed out")
+			return errNATPunchAttemptTimedOut
+		case <-stop:
+			p.pingCancelled <- struct{}{}
+			return errNATPunchAttemptStopped
 		default:
 		}
 
@@ -321,8 +330,6 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn) error {
 		if err != nil {
 			log.Errorf("%sFailed to read remote peer: %s cause: %s", prefix, conn.RemoteAddr().String(), err)
 			return err
-			//time.Sleep(pingInterval * time.Millisecond)
-			//continue
 		}
 		fmt.Println("remote peer data received: ", string(buf[:n]))
 
@@ -332,6 +339,9 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn) error {
 		case <-time.After(2 * pingInterval * time.Millisecond):
 			p.pingCancelled <- struct{}{}
 			return nil
+		case <-stop:
+			p.pingCancelled <- struct{}{}
+			return errNATPunchAttemptStopped
 		}
 	}
 }

@@ -23,9 +23,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/core/ip"
-
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/services"
 )
 
@@ -105,13 +104,6 @@ func (np *NATProxy) consumerHandOff(consumerPort int, remoteConn *net.UDPConn) {
 			//			proxyFD.Close()
 		}
 	}
-}
-
-type StreamListener struct {
-	addr         *net.UDPAddr
-	lock         sync.Mutex
-	conn         *net.UDPConn
-	preConnected bool
 }
 
 func (np *NATProxy) masterLoop(conn *net.UDPConn, remoteConn *net.UDPConn) {

@@ -182,7 +182,7 @@ func (mApi *MysteriumAPI) FindProposals(providerID, serviceType, accessPolicyID,
 	}
 	total := len(proposalsResponse.Proposals)
 	supported := supportedProposalsOnly(proposalsResponse.Proposals)
-	log.Info(mysteriumAPILogPrefix, "Total proposals: ", total, " supported: ", len(supported))
+	log.Trace(mysteriumAPILogPrefix, "Total proposals: ", total, " supported: ", len(supported))
 	return supported, nil
 }
 

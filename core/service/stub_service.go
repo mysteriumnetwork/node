@@ -21,11 +21,10 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/nat/traversal"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 )
 

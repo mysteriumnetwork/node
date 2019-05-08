@@ -21,13 +21,12 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/mysteriumnetwork/node/nat/traversal"
-
 	log "github.com/cihub/seelog"
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 )
 

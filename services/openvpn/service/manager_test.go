@@ -21,12 +21,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/mysteriumnetwork/node/core/port"
-
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestManager_StopNotPanic(t *testing.T) {

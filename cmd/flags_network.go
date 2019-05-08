@@ -73,7 +73,7 @@ var (
 		Value: metadata.DefaultNetwork.QualityOracle,
 	}
 
-	natPunchingFlag = cli.BoolFlag{
+	natPunchingFlag = cli.BoolTFlag{
 		Name:  "experiment-natpunching",
 		Usage: "Enables experimental NAT hole punching",
 	}

@@ -73,6 +73,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	}
 
 	pingerParams.RequestConfig = &request.Config
+	pingerParams.Cancel = make(chan struct{})
 
 	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID, config, pingerParams)
 	switch err {

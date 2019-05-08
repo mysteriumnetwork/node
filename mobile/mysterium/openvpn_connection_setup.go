@@ -42,6 +42,8 @@ type sessionWrapper struct {
 	createSession openvpn3SessionFactory
 	natPinger     cmd.NatPinger
 	ipResolver    ip.Resolver
+	pingerStop    chan struct{}
+	stopOnce      sync.Once
 }
 
 func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
@@ -55,7 +57,8 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 	if clientConfig.LocalPort > 0 {
 		err := wrapper.natPinger.PingProvider(
 			clientConfig.OriginalRemoteIP,
-			clientConfig.OriginalRemotePort)
+			clientConfig.OriginalRemotePort,
+			wrapper.pingerStop)
 		if err != nil {
 			return err
 		}
@@ -67,11 +70,14 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 }
 
 func (wrapper *sessionWrapper) Stop() {
-	if wrapper.session != nil {
-		log.Info("Stopping NATProxy")
-		wrapper.natPinger.StopNATProxy()
-		wrapper.session.Stop()
-	}
+	wrapper.stopOnce.Do(func() {
+		if wrapper.session != nil {
+			log.Info("Stopping NATProxy")
+			wrapper.natPinger.StopNATProxy()
+			wrapper.session.Stop()
+		}
+		close(wrapper.pingerStop)
+	})
 }
 
 func (wrapper *sessionWrapper) Wait() error {
@@ -229,7 +235,6 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 			Password: password,
 		}
 
-		// ocf.tunnelSetup.ExcludeRoute("127.0.0.1", 32, 0, false)
 		ocf.natPinger.SetProtectSocketCallback(ocf.tunnelSetup.SocketProtect)
 		session := openvpn3.NewMobileSession(config, credentials, channelToCallbacks(stateChannel, statisticsChannel), ocf.tunnelSetup)
 		ocf.sessionTracker.sessionCreated(session)

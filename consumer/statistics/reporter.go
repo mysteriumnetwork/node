@@ -36,9 +36,6 @@ const statsSenderLogPrefix = "[session-stats-sender] "
 // ErrSessionNotStarted represents the error that occurs when the session has not been started yet
 var ErrSessionNotStarted = errors.New("session not started")
 
-// LocationDetector detects the country for session stats
-type LocationDetector func() location.Location
-
 // StatsTracker allows for retrieval and resetting of statistics
 type StatsTracker interface {
 	Retrieve() consumer.SessionStatistics
@@ -54,7 +51,7 @@ type Reporter interface {
 // SessionStatisticsReporter sends session stats to remote API server with a fixed sendInterval.
 // Extra one send will be done on session disconnect.
 type SessionStatisticsReporter struct {
-	locationDetector LocationDetector
+	locationDetector location.OriginResolver
 
 	signerFactory     identity.SignerFactory
 	statisticsTracker StatsTracker
@@ -68,7 +65,7 @@ type SessionStatisticsReporter struct {
 }
 
 // NewSessionStatisticsReporter function creates new session stats sender by given options
-func NewSessionStatisticsReporter(statisticsTracker StatsTracker, remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector LocationDetector, interval time.Duration) *SessionStatisticsReporter {
+func NewSessionStatisticsReporter(statisticsTracker StatsTracker, remoteReporter Reporter, signerFactory identity.SignerFactory, locationDetector location.OriginResolver, interval time.Duration) *SessionStatisticsReporter {
 	return &SessionStatisticsReporter{
 		locationDetector:  locationDetector,
 		signerFactory:     signerFactory,
@@ -90,14 +87,18 @@ func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, service
 	}
 
 	signer := sr.signerFactory(consumerID)
-	country := sr.locationDetector().Country
+	loc, err := sr.locationDetector.GetOrigin()
+	if err != nil {
+		log.Error(statsSenderLogPrefix, "Failed to resolve location: ", err)
+	}
+
 	sr.done = make(chan struct{})
 
 	go func() {
 		for {
 			select {
 			case <-sr.done:
-				if err := sr.send(serviceType, providerID, country, sessionID, signer); err != nil {
+				if err := sr.send(serviceType, providerID, loc.Country, sessionID, signer); err != nil {
 					log.Error(statsSenderLogPrefix, "Failed to send session stats to the remote service: ", err)
 				} else {
 					log.Debug(statsSenderLogPrefix, "Final stats sent")
@@ -106,7 +107,7 @@ func (sr *SessionStatisticsReporter) start(consumerID identity.Identity, service
 				sr.statisticsTracker.Reset()
 				return
 			case <-time.After(sr.sendInterval):
-				if err := sr.send(serviceType, providerID, country, sessionID, signer); err != nil {
+				if err := sr.send(serviceType, providerID, loc.Country, sessionID, signer); err != nil {
 					log.Error(statsSenderLogPrefix, "Failed to send session stats to the remote service: ", err)
 				} else {
 					log.Debug(statsSenderLogPrefix, "Stats sent")

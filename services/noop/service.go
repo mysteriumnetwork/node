@@ -22,20 +22,19 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/nat/traversal"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 const logPrefix = "[service-noop] "
 
 // ErrAlreadyStarted is the error we return when the start is called multiple times
-var ErrAlreadyStarted = errors.New("Service already started")
+var ErrAlreadyStarted = errors.New("Service already started!")
 
 // NewManager creates new instance of Noop service
 func NewManager() *Manager {

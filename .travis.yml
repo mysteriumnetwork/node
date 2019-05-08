@@ -8,13 +8,11 @@ env:
     - BUILD_BRANCH=$TRAVIS_BRANCH
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
     - BUILD_VERSION=$TRAVIS_TAG
+    - BUILD_DEV_RELEASE=0.0.0-dev
 
 before_install:
   - if [ -z "$BUILD_VERSION" ]; then
-      export BUILD_VERSION=$(
-        curl -s -H "Authorization:token $GIT_RELEASES_API_KEY"
-        https://api.github.com/repos/${TRAVIS_REPO_SLUG}/releases |
-        jq -r '( first(.[]  | select(.prerelease == true)) ) | .tag_name');
+      export BUILD_VERSION=$BUILD_DEV_RELEASE;
     fi
 
 after_failure:
@@ -105,8 +103,9 @@ jobs:
     - script:
       - bin/build_xgo linux/arm
       - bin/builder_run BINARY=build/myst/myst_linux_arm bin/package_debian $BUILD_VERSION armhf
+      - bin/package_raspberry
       - bin/s3 sync build/package s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts
-      name: "DEB ARM packages"
+      name: "DEB ARM package and Raspberry image"
 
     - script:
       - BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin amd64
@@ -160,6 +159,10 @@ jobs:
     - script:
       - bin/release_goreport
       name: "Update Go Report Card"
+
+    - script:
+      - bin/travis_scripts/trigger_desktop_app_build
+      name: "Trigger Desktop APP build"
 
     # Official release (on tags only)
     - stage: release

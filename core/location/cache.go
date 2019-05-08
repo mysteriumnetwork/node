@@ -17,26 +17,100 @@
 
 package location
 
-type cache struct {
+import (
+	"sync"
+	"time"
+
+	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/connection"
+	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+)
+
+const locationCacheLogPrefix = "[location-cache] "
+
+// Cache allows us to cache location resolution
+type Cache struct {
+	lastFetched      time.Time
 	locationDetector Resolver
 	location         Location
+	origin           Location
+	expiry           time.Duration
+	lock             sync.Mutex
 }
 
-// NewLocationCache constructs Cache
-func NewLocationCache(locationDetector Resolver) Cache {
-	return &cache{
-		locationDetector: locationDetector,
+// NewCache returns a new instance of location cache
+func NewCache(resolver Resolver, expiry time.Duration) *Cache {
+	return &Cache{
+		locationDetector: resolver,
+		expiry:           expiry,
 	}
 }
 
-// Gets location from cache
-func (lc *cache) Get() Location {
-	return lc.location
+func (c *Cache) needsRefresh() bool {
+	return c.lastFetched.IsZero() || c.lastFetched.After(time.Now().Add(-c.expiry))
 }
 
-// Stores location to cache
-func (lc *cache) RefreshAndGet() (Location, error) {
-	location, err := lc.locationDetector.DetectLocation()
-	lc.location = location
-	return lc.location, err
+func (c *Cache) fetchAndSave() (Location, error) {
+	loc, err := c.locationDetector.DetectLocation()
+
+	// on successful fetch save the values for further use
+	if err == nil {
+		c.location = loc
+		c.lastFetched = time.Now()
+	}
+	return loc, err
+}
+
+// GetOrigin returns the origin for the user - a location that's not modified by starting services.
+func (c *Cache) GetOrigin() (Location, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.origin, nil
+}
+
+// DetectLocation returns location from cache, or fetches it if needed
+func (c *Cache) DetectLocation() (Location, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if !c.needsRefresh() {
+		return c.location, nil
+	}
+	return c.fetchAndSave()
+}
+
+// HandleConnectionEvent handles connection state change and fetches the location info accordingly.
+// On the consumer side, we'll need to re-fetch the location once the user is connected or disconnected from a service.
+func (c *Cache) HandleConnectionEvent(se connection.StateEvent) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if se.State != connection.Connected && se.State != connection.NotConnected {
+		return
+	}
+
+	loc, err := c.fetchAndSave()
+	if err != nil {
+		log.Error(locationCacheLogPrefix, "location update failed", err)
+		// reset time so a fetch is tried the next time a get is called
+		c.lastFetched = time.Time{}
+	} else {
+		log.Trace(locationCacheLogPrefix, "location update succeeded", loc)
+	}
+}
+
+// HandleNodeEvent handles node state change and fetches the location info accordingly.
+func (c *Cache) HandleNodeEvent(se nodevent.Payload) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if se.Status != nodevent.StatusStarted {
+		return
+	}
+
+	var err error
+	c.origin, err = c.locationDetector.DetectLocation()
+	if err != nil {
+		log.Warn(locationCacheLogPrefix, "Failed to detect original location: ", err)
+	} else {
+		log.Tracef("%sOriginal location detected: %s (%s)", locationCacheLogPrefix, c.origin.Country, c.origin.NodeType)
+	}
 }

@@ -98,12 +98,10 @@ func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeD
 	// override vpnClientConfig params with proxy local IP and pinger port
 	// do this only if connecting to natted provider
 	if vpnConfig.LocalPort > 0 {
-		//		vpnClientConfig.OriginalRemoteIP = vpnClientConfig.VpnConfig.RemoteIP
-		//		vpnClientConfig.OriginalRemotePort = vpnClientConfig.VpnConfig.RemotePort
 		clientFileConfig.OriginalRemoteIP = vpnConfig.RemoteIP
 		clientFileConfig.OriginalRemotePort = vpnConfig.RemotePort
-		//vpnConfig.RemoteIP = outboundIP
 		vpnConfig.RemoteIP = "127.0.0.1"
+		// TODO: randomize this too?
 		vpnConfig.RemotePort = vpnConfig.LocalPort + 1
 	}
 

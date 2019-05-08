@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/services/openvpn/middlewares/client/bytescount"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
@@ -36,31 +35,28 @@ import (
 
 // ProcessBasedConnectionFactory represents a factory for creating process-based openvpn connections
 type ProcessBasedConnectionFactory struct {
-	openvpnBinary         string
-	configDirectory       string
-	runtimeDirectory      string
-	originalLocationCache location.Cache
-	signerFactory         identity.SignerFactory
-	ipResolver            ip.Resolver
-	natPinger             NATPinger
+	openvpnBinary    string
+	configDirectory  string
+	runtimeDirectory string
+	signerFactory    identity.SignerFactory
+	ipResolver       ip.Resolver
+	natPinger        NATPinger
 }
 
 // NewProcessBasedConnectionFactory creates a new ProcessBasedConnectionFactory
 func NewProcessBasedConnectionFactory(
 	openvpnBinary, configDirectory, runtimeDirectory string,
-	originalLocationCache location.Cache,
 	signerFactory identity.SignerFactory,
 	resolver ip.Resolver,
 	natPinger NATPinger,
 ) *ProcessBasedConnectionFactory {
 	return &ProcessBasedConnectionFactory{
-		openvpnBinary:         openvpnBinary,
-		configDirectory:       configDirectory,
-		runtimeDirectory:      runtimeDirectory,
-		originalLocationCache: originalLocationCache,
-		signerFactory:         signerFactory,
-		ipResolver:            resolver,
-		natPinger:             natPinger,
+		openvpnBinary:    openvpnBinary,
+		configDirectory:  configDirectory,
+		runtimeDirectory: runtimeDirectory,
+		signerFactory:    signerFactory,
+		ipResolver:       resolver,
+		natPinger:        natPinger,
 	}
 }
 
@@ -100,5 +96,6 @@ func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateCha
 		processFactory: procFactory,
 		ipResolver:     op.ipResolver,
 		natPinger:      op.natPinger,
+		pingerStop:     make(chan struct{}),
 	}, nil
 }
