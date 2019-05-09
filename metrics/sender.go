@@ -27,8 +27,9 @@ const natMappingEventName = "nat_mapping"
 
 // Sender builds events and sends them using given transport
 type Sender struct {
-	Transport  Transport
-	AppVersion string
+	Transport     Transport
+	AppVersion    string
+	GatewayLoader func() []map[string]string
 }
 
 // Transport allows sending events
@@ -50,9 +51,10 @@ type appInfo struct {
 }
 
 type natMappingContext struct {
-	Stage        string  `json:"stage"`
-	Successful   bool    `json:"successful"`
-	ErrorMessage *string `json:"error_message"`
+	Stage        string              `json:"stage"`
+	Successful   bool                `json:"successful"`
+	ErrorMessage *string             `json:"error_message"`
+	Gateways     []map[string]string `json:"gateways,omitempty"`
 }
 
 // SendStartupEvent sends startup event
@@ -62,14 +64,14 @@ func (sender *Sender) SendStartupEvent() error {
 
 // SendNATMappingSuccessEvent sends event about successful NAT mapping
 func (sender *Sender) SendNATMappingSuccessEvent(stage string) error {
-	context := natMappingContext{Stage: stage, Successful: true}
+	context := natMappingContext{Stage: stage, Successful: true, Gateways: sender.GatewayLoader()}
 	return sender.sendEvent(natMappingEventName, context)
 }
 
 // SendNATMappingFailEvent sends event about failed NAT mapping
 func (sender *Sender) SendNATMappingFailEvent(stage string, err error) error {
 	errorMessage := err.Error()
-	context := natMappingContext{Stage: stage, Successful: false, ErrorMessage: &errorMessage}
+	context := natMappingContext{Stage: stage, Successful: false, ErrorMessage: &errorMessage, Gateways: sender.GatewayLoader()}
 	return sender.sendEvent(natMappingEventName, context)
 }
 
