@@ -166,7 +166,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *
 		var c openvpn_service.ConsumerConfig
 		err := json.Unmarshal(sessionConfig, &c)
 		if err != nil {
-			return nil, nil
+			return nil, errors.Wrap(err, "parsing consumer sessionConfig failed")
 		}
 		m.consumerConfig = c
 
