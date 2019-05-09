@@ -34,7 +34,7 @@ import (
 const logPrefix = "[service-noop] "
 
 // ErrAlreadyStarted is the error we return when the start is called multiple times
-var ErrAlreadyStarted = errors.New("Service already started!")
+var ErrAlreadyStarted = errors.New("service already started")
 
 // NewManager creates new instance of Noop service
 func NewManager() *Manager {
