@@ -525,8 +525,16 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
+	var registry discovery.ProposalRegistry
+	switch options.Type {
+	case node.DiscoveryTypeAPI:
+		registry = discovery.NewRegistryAPI(di.MysteriumAPI)
+	default:
+		return fmt.Errorf("unknown discovery provider: %s", options.Type)
+	}
+
 	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory)
+		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, registry, di.SignerFactory)
 	}
 
 	return nil
@@ -546,7 +554,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	case node.LocationTypeOracle:
 		resolver, err = location.NewOracleResolver(options.Address), nil
 	default:
-		err = fmt.Errorf("unknown location detector type: %s", options.Type)
+		err = fmt.Errorf("unknown location provider: %s", options.Type)
 	}
 	if err != nil {
 		return err
