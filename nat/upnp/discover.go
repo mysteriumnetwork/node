@@ -31,38 +31,37 @@ import (
 
 const logPrefix = "[upnp]"
 
-type gatewayDevice struct {
+// GatewayDevice represents a scanned gateway device
+type GatewayDevice struct {
 	root   *goupnp.RootDevice
 	server string
 }
 
-// String returns human-readable string representation of gatewayDevice
-func (device gatewayDevice) String() string {
-	return fmt.Sprintf("%v", map[string]string{
+// ToMap returns a map representation of the device
+func (device GatewayDevice) ToMap() map[string]string {
+	return map[string]string{
 		"server":       device.server,
 		"deviceType":   device.root.Device.DeviceType,
 		"manufacturer": device.root.Device.Manufacturer,
 		"friendlyName": device.root.Device.FriendlyName,
 		"modelName":    device.root.Device.ModelName,
 		"modelNo":      device.root.Device.ModelNumber,
-	})
+	}
 }
 
-// ReportNetworkGateways scans network for internet gateways supporting UPnP and reports them to stdout
-func ReportNetworkGateways() {
-	log.Trace(logPrefix, " Scanning for UPnP gateways")
-	gateways, err := discoverGateways()
-	if err != nil {
-		_ = log.Error(logPrefix, errors.Wrap(err, "error discovering UPnP devices"))
-		return
-	}
+// String returns human-readable string representation of gatewayDevice
+func (device GatewayDevice) String() string {
+	return fmt.Sprintf("%v", device.ToMap())
+}
+
+func printGatewayInfo(gateways []GatewayDevice) {
 	log.Infof("%s UPnP gateways detected: %d", logPrefix, len(gateways))
 	for _, device := range gateways {
 		log.Infof("%s UPnP gateway detected %v", logPrefix, device)
 	}
 }
 
-func discoverGateways() ([]gatewayDevice, error) {
+func discoverGateways() ([]GatewayDevice, error) {
 	client, err := httpu.NewHTTPUClient()
 	if err != nil {
 		return nil, err
@@ -73,7 +72,7 @@ func discoverGateways() ([]gatewayDevice, error) {
 		return nil, err
 	}
 
-	var results []gatewayDevice
+	var results []GatewayDevice
 
 	for _, response := range responses {
 		device, err := parseDiscoveryResponse(response)
@@ -92,8 +91,8 @@ func discoverGateways() ([]gatewayDevice, error) {
 	return results, nil
 }
 
-func parseDiscoveryResponse(res *http.Response) (*gatewayDevice, error) {
-	device := &gatewayDevice{server: res.Header.Get("server")}
+func parseDiscoveryResponse(res *http.Response) (*GatewayDevice, error) {
+	device := &GatewayDevice{server: res.Header.Get("server")}
 
 	loc, err := res.Location()
 	if err != nil {
@@ -108,6 +107,6 @@ func parseDiscoveryResponse(res *http.Response) (*gatewayDevice, error) {
 	return device, nil
 }
 
-func isGateway(device *gatewayDevice) bool {
+func isGateway(device *GatewayDevice) bool {
 	return strings.Contains(device.root.Device.DeviceType, "InternetGatewayDevice")
 }
