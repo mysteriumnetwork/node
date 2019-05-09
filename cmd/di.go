@@ -200,8 +200,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.PortPool = port.NewPool()
 
-	go upnp.ReportNetworkGateways()
-
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
 	di.bootstrapNodeComponents(nodeOptions)
@@ -525,8 +523,13 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 }
 
 func (di *Dependencies) bootstrapMetrics(options node.Options) {
+	loader := &upnp.GatewayLoader{}
+
+	// warm up the loader as the load takes up to a couple of secs
+	go loader.Get()
+
 	appVersion := metadata.VersionAsString()
-	di.MetricsSender = metrics.NewSender(options.DisableMetrics, options.MetricsAddress, appVersion)
+	di.MetricsSender = metrics.NewSender(options.DisableMetrics, options.MetricsAddress, appVersion, loader.HumanReadable)
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
