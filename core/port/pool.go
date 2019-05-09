@@ -70,9 +70,15 @@ func (pool *Pool) Acquire() (port Port, err error) {
 	return Port(p), errors.Wrap(err, "could not acquire port")
 }
 
-// SetOpenvpnPort sets fixed openvpn service port
-func (pool *Pool) SetOpenvpnPort(port int) {
-	pool.openvpnPort = port
+// SetServicePort sets fixed openvpn service port
+func (pool *Pool) SetServicePort(serviceType string, port int) error {
+	switch serviceType {
+	case "openvpn":
+		pool.openvpnPort = port
+	default:
+		errors.New("service type is not defined for SetServicePort")
+	}
+	return nil
 }
 
 // PortForService returns fixed service port or allocates a new one if fixed is not defined
