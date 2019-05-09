@@ -30,16 +30,18 @@ type Options struct {
 
 	TequilapiAddress string
 	TequilapiPort    int
+	UI               OptionsUI
 
 	DisableMetrics bool
 	MetricsAddress string
 
 	Keystore OptionsKeystore
 
-	Openvpn  Openvpn
-	Location OptionsLocation
-	UI       OptionsUI
 	OptionsNetwork
+	Discovery OptionsDiscovery
+	Location  OptionsLocation
+
+	Openvpn Openvpn
 }
 
 // OptionsKeystore stores the keystore configuration

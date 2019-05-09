@@ -17,7 +17,7 @@
 
 package node
 
-// LocationType identifies location
+// LocationType identifies location type
 type LocationType string
 
 const (
