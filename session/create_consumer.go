@@ -62,7 +62,7 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
-	config, destroyCallback, pingerParams, err := consumer.configProvider(request.Config, &traversal.Params{})
+	sessionConfigParams, err := consumer.configProvider(request.Config, &traversal.Params{})
 	if err != nil {
 		return responseInternalError, err
 	}
@@ -72,19 +72,19 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		issuerID = request.ConsumerInfo.IssuerID
 	}
 
-	pingerParams.RequestConfig = request.Config
-	pingerParams.Cancel = make(chan struct{})
+	sessionConfigParams.TraversalParams.RequestConfig = request.Config
+	sessionConfigParams.TraversalParams.Cancel = make(chan struct{})
 
-	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID, config, pingerParams)
+	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID, sessionConfigParams.SessionServiceConfig, sessionConfigParams.TraversalParams)
 	switch err {
 	case nil:
-		if destroyCallback != nil {
+		if sessionConfigParams.SessionDestroyCallback != nil {
 			go func() {
 				<-sessionInstance.done
-				destroyCallback()
+				sessionConfigParams.SessionDestroyCallback()
 			}()
 		}
-		return responseWithSession(sessionInstance, config, consumer.promiseLoader.LoadPaymentInfo(consumer.peerID, consumer.receiverID, issuerID)), nil
+		return responseWithSession(sessionInstance, sessionConfigParams.SessionServiceConfig, consumer.promiseLoader.LoadPaymentInfo(consumer.peerID, consumer.receiverID, issuerID)), nil
 	case ErrorInvalidProposal:
 		return responseInvalidProposal, nil
 	default:

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
@@ -44,13 +45,20 @@ const managerLogPrefix = "[session-manager] "
 // IDGenerator defines method for session id generation
 type IDGenerator func() (ID, error)
 
+// ConfigParams session configuration parameters
+type ConfigParams struct {
+	SessionServiceConfig   ServiceConfiguration
+	SessionDestroyCallback DestroyCallback
+	TraversalParams        *traversal.Params
+}
+
 // ConfigNegotiator is able to handle config negotiations
 type ConfigNegotiator interface {
-	ProvideConfig(consumerKey json.RawMessage, travesalParams *traversal.Params) (ServiceConfiguration, DestroyCallback, *traversal.Params, error)
+	ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*ConfigParams, error)
 }
 
 // ConfigProvider provides session config for remote client
-type ConfigProvider func(consumerKey json.RawMessage, traversalParams *traversal.Params) (ServiceConfiguration, DestroyCallback, *traversal.Params, error)
+type ConfigProvider func(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*ConfigParams, error)
 
 // DestroyCallback cleanups session
 type DestroyCallback func()

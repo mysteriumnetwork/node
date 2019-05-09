@@ -54,8 +54,8 @@ func (service *serviceFake) GetType() string {
 	return "fake"
 }
 
-func (service *serviceFake) ProvideConfig(publicKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
-	return struct{}{}, func() {}, params, nil
+func (service *serviceFake) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
+	return &session.ConfigParams{TraversalParams: traversalParams}, nil
 }
 
 type mockDialogWaiter struct {

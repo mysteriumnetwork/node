@@ -59,11 +59,11 @@ func Test_GetProposal(t *testing.T) {
 
 func Test_Manager_ProvideConfig(t *testing.T) {
 	manager := NewManager()
-	sessionConfig, cb, params, err := manager.ProvideConfig(nil, nil)
+	sessionConfig, err := manager.ProvideConfig(nil, nil)
 	assert.NoError(t, err)
-	assert.Nil(t, params)
-	assert.Nil(t, sessionConfig)
-	assert.Nil(t, cb)
+	assert.Nil(t, sessionConfig.TraversalParams)
+	assert.Nil(t, sessionConfig.SessionServiceConfig)
+	assert.Nil(t, sessionConfig.SessionDestroyCallback)
 }
 
 func Test_Manager_Serve_Stop(t *testing.T) {

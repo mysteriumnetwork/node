@@ -149,37 +149,36 @@ func (m *Manager) Stop() (err error) {
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
-func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, _ *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
+func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
 	if m.vpnServiceConfigProvider == nil {
-		log.Info(logPrefix, "Config provider not initialized")
-		return nil, nil, nil, errors.New("Config provider not initialized")
+		return nil, errors.New("Config provider not initialized")
 	}
 
 	op, err := m.ports.PortForService(openvpn_service.ServiceType)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to acquire openvpn port")
+		return nil, err
 	}
 
-	traversalParams := &traversal.Params{ProviderPort: op.Num()}
+	traversalParams = &traversal.Params{ProviderPort: op.Num()}
 
 	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
 	if sessionConfig != nil && len(sessionConfig) > 0 {
 		var c openvpn_service.ConsumerConfig
 		err := json.Unmarshal(sessionConfig, &c)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing consumer sessionConfig failed")
+			return nil, nil
 		}
 		m.consumerConfig = c
 
 		if m.isBehindNAT() && m.portMappingFailed() {
 			pp, err := m.ports.Acquire()
 			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "failed to acquire pinger port")
+				return nil, nil
 			}
 
 			cp, err := m.ports.Acquire()
 			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "failed to acquire consumer port")
+				return nil, nil
 			}
 
 			traversalParams.ProviderPort = pp.Num()

@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
+
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -119,11 +120,11 @@ type OpenvpnConfigNegotiator struct {
 }
 
 // ProvideConfig returns the config for user
-func (ocn *OpenvpnConfigNegotiator) ProvideConfig(consumerKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
-	ocn.vpnConfig.LocalPort = params.ConsumerPort
-	ocn.vpnConfig.RemotePort = params.ProviderPort
+func (ocn *OpenvpnConfigNegotiator) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
+	ocn.vpnConfig.LocalPort = traversalParams.ConsumerPort
+	ocn.vpnConfig.RemotePort = traversalParams.ProviderPort
 
-	return ocn.vpnConfig, nil, params, nil
+	return &session.ConfigParams{SessionServiceConfig: ocn.vpnConfig, TraversalParams: traversalParams}, nil
 }
 
 func vpnServerIP(serviceOptions Options, outboundIP, publicIP string, isLocalnet bool) string {

@@ -44,7 +44,7 @@ var (
 type Service interface {
 	Serve(providerID identity.Identity) error
 	Stop() error
-	ProvideConfig(publicKey json.RawMessage, traversalParams *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error)
+	ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error)
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs

@@ -46,18 +46,18 @@ func (portSupplierMock) PortForService(string) (port.Port, error) {
 
 func TestManager_ProvideConfigNotFailOnEmptyConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, ports: portSupplierMock{}}
-	_, _, _, err := m.ProvideConfig([]byte(""), nil)
+	_, err := m.ProvideConfig([]byte(""), nil)
 	assert.NoError(t, err)
 }
 
 func TestManager_ProvideConfigNotFailOnNilConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, ports: portSupplierMock{}}
-	_, _, _, err := m.ProvideConfig(nil, nil)
+	_, err := m.ProvideConfig(nil, nil)
 	assert.NoError(t, err)
 }
 
 type mockConfigProvider struct{}
 
-func (cp *mockConfigProvider) ProvideConfig(consumerKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
-	return nil, nil, params, nil
+func (cp *mockConfigProvider) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
+	return &session.ConfigParams{SessionServiceConfig: traversalParams}, nil
 }

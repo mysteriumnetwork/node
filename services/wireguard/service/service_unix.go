@@ -33,7 +33,6 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/pkg/errors"
 )
 
 // NewManager creates new instance of Wireguard service
@@ -66,39 +65,39 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
+func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
 	key := &wg.ConsumerConfig{}
-	err := json.Unmarshal(publicKey, key)
+	err := json.Unmarshal(sessionConfig, key)
 	if err != nil {
-		return nil, nil, params, err
+		return nil, nil
 	}
 
 	connectionEndpoint, err := manager.connectionEndpointFactory()
 	if err != nil {
-		return nil, nil, params, err
+		return nil, nil
 	}
 
 	if err := connectionEndpoint.Start(nil); err != nil {
-		return nil, nil, params, err
+		return nil, nil
 	}
 
 	if err := connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
-		return nil, nil, params, err
+		return nil, nil
 	}
 
 	config, err := connectionEndpoint.Config()
 	if err != nil {
-		return nil, nil, params, err
+		return nil, nil
 	}
 
 	outIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
-		return nil, nil, params, err
+		return nil, nil
 	}
 
 	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: outIP}
 	if err := manager.natService.Add(natRule); err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to add NAT forwarding rule")
+		return nil, nil
 	}
 
 	destroy := func() {
@@ -110,7 +109,7 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage, params *travers
 		}
 	}
 
-	return config, destroy, params, nil
+	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
 }
 
 // Serve starts service - does block
