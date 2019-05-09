@@ -206,7 +206,7 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 	}
 
 	if p.consumerPort > 0 {
-		log.Info(prefix, "Handling connection to consumer NAT proxy")
+		log.Info(prefix, "Handing connection to consumer NAT proxy")
 		go p.natProxy.consumerHandOff(p.consumerPort, conn)
 	}
 
