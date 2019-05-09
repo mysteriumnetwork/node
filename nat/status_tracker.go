@@ -56,6 +56,8 @@ func (t *StatusTracker) ConsumeNATEvent(event event.Event) {
 		t.status = Status{Status: statusSuccessful}
 		return
 	}
+
+	t.status = Status{Status: statusNotFinished}
 }
 
 // NewStatusTracker returns new instance of status tracker

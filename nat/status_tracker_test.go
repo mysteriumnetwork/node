@@ -59,3 +59,16 @@ func Test_StatusTracker_Status_ReturnsNotFinished_WithPortMappingFailureEvent(t 
 	assert.Equal(t, "not_finished", status.Status)
 	assert.Nil(t, status.Error)
 }
+
+func Test_StatusTracker_Status_ReturnsNotFinished_AfterSuccess(t *testing.T) {
+	tracker := NewStatusTracker("last stage")
+	tracker.ConsumeNATEvent(event.Event{Successful: true, Stage: "any stage"})
+	status := tracker.Status()
+
+	assert.Equal(t, "successful", status.Status)
+	assert.Nil(t, status.Error)
+
+	tracker.ConsumeNATEvent(event.Event{Successful: false, Stage: "any stage"})
+	status = tracker.Status()
+	assert.Equal(t, "not_finished", status.Status)
+}
