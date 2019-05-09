@@ -26,7 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
-	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
@@ -228,14 +227,11 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 			serviceID)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))
 	}
-	newDiscovery := func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory)
-	}
 	di.ServicesManager = service.NewManager(
 		di.ServiceRegistry,
 		newDialogWaiter,
 		newDialogHandler,
-		newDiscovery,
+		di.DiscoveryFactory,
 		di.EventBus,
 	)
 

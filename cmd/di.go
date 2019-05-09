@@ -34,6 +34,7 @@ import (
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -154,6 +155,8 @@ type Dependencies struct {
 	IdentityRegistry     identity_registry.IdentityRegistry
 	IdentityRegistration identity_registry.RegistrationDataProvider
 
+	DiscoveryFactory service.DiscoveryFactory
+
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
 
@@ -210,6 +213,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapEventBus()
 	di.bootstrapIdentityComponents(nodeOptions)
+
+	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
+		return err
+	}
 
 	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
 		return err
@@ -515,6 +522,14 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 		return identity.NewSigner(di.Keystore, id)
 	}
 	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
+}
+
+func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
+	di.DiscoveryFactory = func() service.Discovery {
+		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, di.MysteriumAPI, di.SignerFactory)
+	}
+
+	return nil
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
