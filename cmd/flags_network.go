@@ -38,10 +38,10 @@ var (
 		Usage: "Enables experimental identity check",
 	}
 
-	discoveryAddressFlag = cli.StringFlag{
-		Name:  "discovery-address",
-		Usage: "`URL` of discovery service",
-		Value: metadata.DefaultNetwork.DiscoveryAPIAddress,
+	apiAddressFlag = cli.StringFlag{
+		Name:  "api.address",
+		Usage: "`URL` of Mysterium API",
+		Value: metadata.DefaultNetwork.APIAddress,
 	}
 
 	accessPolicyAddressFlag = cli.StringFlag{
@@ -86,7 +86,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		testFlag, localnetFlag,
 		identityCheckFlag,
 		natPunchingFlag,
-		discoveryAddressFlag, brokerAddressFlag,
+		apiAddressFlag, brokerAddressFlag,
 		etherRPCFlag, etherContractPaymentsFlag,
 		qualityOracleFlag, accessPolicyAddressFlag,
 	)
@@ -101,7 +101,7 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ExperimentIdentityCheck: ctx.GlobalBool(identityCheckFlag.Name),
 		ExperimentNATPunching:   ctx.GlobalBool(natPunchingFlag.Name),
 
-		DiscoveryAPIAddress:         ctx.GlobalString(discoveryAddressFlag.Name),
+		APIAddress:                  ctx.GlobalString(apiAddressFlag.Name),
 		AccessPolicyEndpointAddress: ctx.GlobalString(accessPolicyAddressFlag.Name),
 		BrokerAddress:               ctx.GlobalString(brokerAddressFlag.Name),
 
