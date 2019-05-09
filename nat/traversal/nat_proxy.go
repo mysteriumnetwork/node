@@ -38,20 +38,21 @@ type NATProxy struct {
 	addrLast      *net.UDPAddr
 	ipResolver    ip.Resolver
 	socketProtect func(socket int) bool
-	stop          chan struct{}
 	once          sync.Once
 }
 
-// consumerHandOff launches listener on pinger port and wait for openvpn connect
+func (np *NATProxy) consumerHandOff(consumerPort int, remoteConn *net.UDPConn) chan struct{} {
+	stop := make(chan struct{})
+	go np.consumerProxy(consumerPort, remoteConn, stop)
+	return stop
+}
+
+// consumerProxy launches listener on pinger port and wait for openvpn connect
 // Read from listener socket and write to remoteConn
 // Read from remoteConn and write to listener socket
-func (np *NATProxy) consumerHandOff(consumerPort int, remoteConn *net.UDPConn) {
+func (np *NATProxy) consumerProxy(consumerPort int, remoteConn *net.UDPConn, stop chan struct{}) {
 	log.Info(logPrefix, "Inside consumer NAT proxy")
 
-	// reinit a stop channel, since it might be closed by previous connect
-	np.stop = make(chan struct{})
-
-	// outIP, err := np.ipResolver.GetOutboundIP()
 	laddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", "127.0.0.1", consumerPort+1))
 	if err != nil {
 		log.Error(logPrefix, "failed to get local address for consumer NAT proxy: ", err)
@@ -81,7 +82,7 @@ func (np *NATProxy) consumerHandOff(consumerPort int, remoteConn *net.UDPConn) {
 		}
 
 		select {
-		case <-np.stop:
+		case <-stop:
 			log.Info(logPrefix, "Stopping NATProxy handOff loop")
 			proxyConn.Close()
 			remoteConn.Close()
@@ -90,18 +91,18 @@ func (np *NATProxy) consumerHandOff(consumerPort int, remoteConn *net.UDPConn) {
 			proxyConn.SetReadBuffer(bufferLen)
 			proxyConn.SetWriteBuffer(bufferLen)
 
-			np.masterLoop(proxyConn, remoteConn)
+			np.masterLoop(proxyConn, remoteConn, stop)
 
 			proxyConn.Close()
 		}
 	}
 }
 
-func (np *NATProxy) masterLoop(conn *net.UDPConn, remoteConn *net.UDPConn) {
+func (np *NATProxy) masterLoop(conn *net.UDPConn, remoteConn *net.UDPConn, stop chan struct{}) {
 	log.Info(logPrefix, "start copying stream from consumer NAT proxy to remote remoteConn")
 	for {
 		select {
-		case <-np.stop:
+		case <-stop:
 			log.Info(logPrefix, "Stopping NATProxy masterLoop")
 			return
 		default:
@@ -119,17 +120,17 @@ func (np *NATProxy) masterLoop(conn *net.UDPConn, remoteConn *net.UDPConn) {
 				}
 				if np.addrLast != addr {
 					np.addrLast = addr
-					go np.readWriteToAddr(remoteConn, conn, addr)
+					go np.readWriteToAddr(remoteConn, conn, addr, stop)
 				}
 			}
 		}
 	}
 }
 
-func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, addr *net.UDPAddr) {
+func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, addr *net.UDPAddr, stop chan struct{}) {
 	for {
 		select {
-		case <-np.stop:
+		case <-stop:
 			log.Info(logPrefix, "Stopping NATProxy readWriteToAddr loop")
 			return
 		default:
@@ -155,7 +156,6 @@ func NewNATProxy(ipResolver ip.Resolver) *NATProxy {
 	return &NATProxy{
 		servicePorts: make(map[services.ServiceType]int),
 		ipResolver:   ipResolver,
-		stop:         make(chan struct{}),
 	}
 }
 
@@ -204,10 +204,4 @@ func (np *NATProxy) isAvailable(serviceType services.ServiceType) bool {
 
 func (np *NATProxy) setProtectSocketCallback(socketProtect func(socket int) bool) {
 	np.socketProtect = socketProtect
-}
-
-func (np *NATProxy) close() {
-	np.once.Do(func() {
-		close(np.stop)
-	})
 }

@@ -48,6 +48,7 @@ type Pinger struct {
 	pingTarget     chan *Params
 	pingCancelled  chan struct{}
 	stop           chan struct{}
+	stopNATProxy   chan struct{}
 	once           sync.Once
 	natEventWaiter NatEventWaiter
 	configParser   ConfigParser
@@ -83,10 +84,12 @@ func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})
+	stopNATProxy := make(chan struct{})
 	return &Pinger{
 		pingTarget:     target,
 		pingCancelled:  cancel,
 		stop:           stop,
+		stopNATProxy:   stopNATProxy,
 		natEventWaiter: waiter,
 		configParser:   parser,
 		natProxy:       proxy,
@@ -100,9 +103,8 @@ type natProxy interface {
 	handOff(serviceType services.ServiceType, conn *net.UDPConn)
 	registerServicePort(serviceType services.ServiceType, port int)
 	isAvailable(serviceType services.ServiceType) bool
-	consumerHandOff(consumerPort int, conn *net.UDPConn)
+	consumerHandOff(consumerPort int, conn *net.UDPConn) chan struct{}
 	setProtectSocketCallback(socketProtect func(socket int) bool)
-	close()
 }
 
 // Params contains session parameters needed to NAT ping remote peer
@@ -178,7 +180,7 @@ func (p *Pinger) Start() {
 // Stop stops pinger loop
 func (p *Pinger) Stop() {
 	p.once.Do(func() {
-		p.natProxy.close()
+		close(p.stopNATProxy)
 		close(p.stop)
 	})
 }
@@ -207,7 +209,7 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 
 	if p.consumerPort > 0 {
 		log.Info(prefix, "Handing connection to consumer NAT proxy")
-		go p.natProxy.consumerHandOff(p.consumerPort, conn)
+		p.stopNATProxy = p.natProxy.consumerHandOff(p.consumerPort, conn)
 	}
 
 	// wait for provider to setup NAT proxy connection
@@ -353,5 +355,5 @@ func (p *Pinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {
 
 // StopNATProxy stops nat proxy launched by NATPinger
 func (p *Pinger) StopNATProxy() {
-	p.natProxy.close()
+	close(p.stopNATProxy)
 }
