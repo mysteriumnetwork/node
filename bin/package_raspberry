@@ -14,6 +14,9 @@ printf "Building Raspberry Pi image..\n"
 
 git clone https://github.com/RPi-Distro/pi-gen.git
 
+# This is for debug purpose only. Can be removed later.
+sed -i "1s|.*|#!/bin/bash -ev|" pi-gen/export-image/04-finalise/01-run.sh
+
 cp -r bin/package/raspberry/* pi-gen/
 mkdir -p pi-gen/stagemyst/00-install-deb/files/
 cp build/package/myst_linux_armhf.deb pi-gen/stagemyst/00-install-deb/files/
