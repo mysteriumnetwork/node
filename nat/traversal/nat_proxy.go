@@ -25,7 +25,6 @@ import (
 
 	log "github.com/cihub/seelog"
 
-	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/services"
 )
 
@@ -36,7 +35,6 @@ const bufferLen = 30000
 type NATProxy struct {
 	servicePorts  map[services.ServiceType]int
 	addrLast      *net.UDPAddr
-	ipResolver    ip.Resolver
 	socketProtect func(socket int) bool
 	once          sync.Once
 }
@@ -51,11 +49,11 @@ func (np *NATProxy) consumerHandOff(consumerPort int, remoteConn *net.UDPConn) c
 // Read from listener socket and write to remoteConn
 // Read from remoteConn and write to listener socket
 func (np *NATProxy) consumerProxy(consumerPort int, remoteConn *net.UDPConn, stop chan struct{}) {
-	log.Info(logPrefix, "Inside consumer NAT proxy")
+	log.Info(logPrefix, "Inside consumer NATProxy")
 
-	laddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%d", "127.0.0.1", consumerPort+1))
+	laddr, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("127.0.0.1:%d", consumerPort+1))
 	if err != nil {
-		log.Error(logPrefix, "failed to get local address for consumer NAT proxy: ", err)
+		log.Error(logPrefix, "failed to get local address for consumer NATProxy: ", err)
 		return
 	}
 
@@ -65,6 +63,7 @@ func (np *NATProxy) consumerProxy(consumerPort int, remoteConn *net.UDPConn, sto
 	fd, err := remoteConn.File()
 	if err != nil {
 		log.Error(logPrefix, "failed to fetch fd from: ", remoteConn)
+		return
 	}
 	defer fd.Close()
 
@@ -91,25 +90,25 @@ func (np *NATProxy) consumerProxy(consumerPort int, remoteConn *net.UDPConn, sto
 			proxyConn.SetReadBuffer(bufferLen)
 			proxyConn.SetWriteBuffer(bufferLen)
 
-			np.masterLoop(proxyConn, remoteConn, stop)
+			np.joinUDPStreams(proxyConn, remoteConn, stop)
 
 			proxyConn.Close()
 		}
 	}
 }
 
-func (np *NATProxy) masterLoop(conn *net.UDPConn, remoteConn *net.UDPConn, stop chan struct{}) {
-	log.Info(logPrefix, "start copying stream from consumer NAT proxy to remote remoteConn")
+func (np *NATProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, stop chan struct{}) {
+	log.Info(logPrefix, "start copying stream from consumer NATProxy to remote remoteConn")
 	for {
 		select {
 		case <-stop:
-			log.Info(logPrefix, "Stopping NATProxy masterLoop")
+			log.Info(logPrefix, "Stopping NATProxy joinUDPStreams")
 			return
 		default:
 			var buf [bufferLen]byte
 			n, addr, err := conn.ReadFromUDP(buf[0:])
 			if err != nil {
-				log.Errorf("%sFailed	 to read local process: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
+				log.Errorf("%sFailed to read local process: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
 				return
 			}
 			if n > 0 {
@@ -134,28 +133,28 @@ func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, 
 			log.Info(logPrefix, "Stopping NATProxy readWriteToAddr loop")
 			return
 		default:
-			var buf [bufferLen]byte
-			n, err := conn.Read(buf[0:])
+		}
+
+		var buf [bufferLen]byte
+		n, err := conn.Read(buf[0:])
+		if err != nil {
+			log.Errorf("%sFailed to read remote peer: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
+			return
+		}
+		if n > 0 {
+			_, err := remoteConn.WriteToUDP(buf[:n], addr)
 			if err != nil {
-				log.Errorf("%sFailed to read remote peer: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
+				log.Errorf("%sFailed to write to local process: %s cause: %s", logPrefix, remoteConn.LocalAddr().String(), err)
 				return
-			}
-			if n > 0 {
-				_, err := remoteConn.WriteToUDP(buf[:n], addr)
-				if err != nil {
-					log.Errorf("%sFailed to write to local process: %s cause: %s", logPrefix, remoteConn.LocalAddr().String(), err)
-					return
-				}
 			}
 		}
 	}
 }
 
 // NewNATProxy constructs an instance of NATProxy
-func NewNATProxy(ipResolver ip.Resolver) *NATProxy {
+func NewNATProxy() *NATProxy {
 	return &NATProxy{
 		servicePorts: make(map[services.ServiceType]int),
-		ipResolver:   ipResolver,
 	}
 }
 
@@ -185,7 +184,7 @@ func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
 }
 
 func (np *NATProxy) registerServicePort(serviceType services.ServiceType, port int) {
-	log.Infof("%sregistering service %s for port %d to NAT proxy", logPrefix, serviceType, port)
+	log.Infof("%sregistering service %s for port %d to NATProxy", logPrefix, serviceType, port)
 	np.servicePorts[serviceType] = port
 }
 

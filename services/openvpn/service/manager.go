@@ -160,7 +160,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, _ *traversal.Para
 		return nil, nil, nil, errors.Wrap(err, "failed to acquire openvpn port")
 	}
 
-	traversalParams := &traversal.Params{Port: op.Num()}
+	traversalParams := &traversal.Params{ProviderPort: op.Num()}
 
 	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
 	if sessionConfig != nil && len(sessionConfig) > 0 {
@@ -182,7 +182,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, _ *traversal.Para
 				return nil, nil, nil, errors.Wrap(err, "failed to acquire consumer port")
 			}
 
-			traversalParams.Port = pp.Num()
+			traversalParams.ProviderPort = pp.Num()
 			traversalParams.ConsumerPort = cp.Num()
 		}
 	}

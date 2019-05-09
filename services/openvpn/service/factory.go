@@ -121,7 +121,7 @@ type OpenvpnConfigNegotiator struct {
 // ProvideConfig returns the config for user
 func (ocn *OpenvpnConfigNegotiator) ProvideConfig(consumerKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
 	ocn.vpnConfig.LocalPort = params.ConsumerPort
-	ocn.vpnConfig.RemotePort = params.Port
+	ocn.vpnConfig.RemotePort = params.ProviderPort
 
 	return ocn.vpnConfig, nil, params, nil
 }

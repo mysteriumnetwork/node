@@ -79,8 +79,8 @@ type Publisher interface {
 	Publish(topic string, data interface{})
 }
 
-// NewPingerFactory returns Pinger instance
-func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier, previousStage string, publisher Publisher) *Pinger {
+// NewPinger returns Pinger instance
+func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier, previousStage string, publisher Publisher) *Pinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})
@@ -110,7 +110,7 @@ type natProxy interface {
 // Params contains session parameters needed to NAT ping remote peer
 type Params struct {
 	RequestConfig json.RawMessage
-	Port          int
+	ProviderPort  int
 	ConsumerPort  int
 	Cancel        chan struct{}
 }
@@ -150,7 +150,7 @@ func (p *Pinger) Start() {
 				continue
 			}
 
-			conn, err := p.getConnection(IP, pingParams.ConsumerPort, pingParams.Port)
+			conn, err := p.getConnection(IP, pingParams.ConsumerPort, pingParams.ProviderPort)
 			if err != nil {
 				log.Error(prefix, "failed to get connection: ", err)
 				continue
@@ -208,11 +208,11 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 	}
 
 	if p.consumerPort > 0 {
-		log.Info(prefix, "Handing connection to consumer NAT proxy")
+		log.Info(prefix, "Handing connection to consumer NATProxy")
 		p.stopNATProxy = p.natProxy.consumerHandOff(p.consumerPort, conn)
 	}
 
-	// wait for provider to setup NAT proxy connection
+	// wait for provider to setup NATProxy connection
 	time.Sleep(400 * time.Millisecond)
 
 	return nil
@@ -353,7 +353,7 @@ func (p *Pinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {
 	p.natProxy.setProtectSocketCallback(socketProtect)
 }
 
-// StopNATProxy stops nat proxy launched by NATPinger
+// StopNATProxy stops NATProxy launched by NATPinger
 func (p *Pinger) StopNATProxy() {
 	close(p.stopNATProxy)
 }

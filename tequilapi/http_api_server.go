@@ -63,7 +63,7 @@ func (server *apiServer) Wait() error {
 	return <-server.errorChannel
 }
 
-// Port method returns bind port for given http server (useful when random port is used)
+// Address method returns bind port for given http server (useful when random port is used)
 func (server *apiServer) Address() (string, error) {
 	if server.listener == nil {
 		return "", errors.New("not bound")
@@ -71,7 +71,6 @@ func (server *apiServer) Address() (string, error) {
 	return extractBoundAddress(server.listener)
 }
 
-// Port method returns bind port for given http server (useful when random port is used)
 // StartServing starts http request serving
 func (server *apiServer) StartServing() error {
 	var err error

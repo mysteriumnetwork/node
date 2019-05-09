@@ -62,7 +62,7 @@ func (consumer *createConsumer) NewRequest() (requestPtr interface{}) {
 func (consumer *createConsumer) Consume(requestPtr interface{}) (response interface{}, err error) {
 	request := requestPtr.(*CreateRequest)
 
-	config, destroyCallback, pingerParams, err := consumer.configProvider(request.Config, nil)
+	config, destroyCallback, pingerParams, err := consumer.configProvider(request.Config, &traversal.Params{})
 	if err != nil {
 		return responseInternalError, err
 	}
@@ -72,10 +72,8 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 		issuerID = request.ConsumerInfo.IssuerID
 	}
 
-	if pingerParams != nil {
-		pingerParams.RequestConfig = request.Config
-		pingerParams.Cancel = make(chan struct{})
-	}
+	pingerParams.RequestConfig = request.Config
+	pingerParams.Cancel = make(chan struct{})
 
 	sessionInstance, err := consumer.sessionCreator.Create(consumer.peerID, issuerID, request.ProposalID, config, pingerParams)
 	switch err {
