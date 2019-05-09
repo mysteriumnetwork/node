@@ -15,9 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package registry
+package discovery
 
 import (
+	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -43,6 +44,45 @@ const (
 )
 
 const logPrefix = "[discovery] "
+
+// Discovery structure holds discovery service state
+type Discovery struct {
+	identityRegistry            identity_registry.IdentityRegistry
+	ownIdentity                 identity.Identity
+	identityRegistration        identity_registry.RegistrationDataProvider
+	proposalRegistry            ProposalRegistry
+	signerCreate                identity.SignerFactory
+	signer                      identity.Signer
+	proposal                    market.ServiceProposal
+	statusChan                  chan Status
+	status                      Status
+	proposalAnnouncementStopped *sync.WaitGroup
+	unsubscribe                 func()
+	stop                        func()
+
+	sync.RWMutex
+}
+
+// NewService creates new discovery service
+func NewService(
+	identityRegistry identity_registry.IdentityRegistry,
+	identityRegistration identity_registry.RegistrationDataProvider,
+	proposalRegistry ProposalRegistry,
+	signerCreate identity.SignerFactory,
+) *Discovery {
+	return &Discovery{
+		identityRegistry:            identityRegistry,
+		identityRegistration:        identityRegistration,
+		proposalRegistry:            proposalRegistry,
+		signerCreate:                signerCreate,
+		statusChan:                  make(chan Status),
+		status:                      StatusUndefined,
+		proposalAnnouncementStopped: &sync.WaitGroup{},
+		unsubscribe:                 func() {},
+		stop:                        func() {},
+		RWMutex:                     sync.RWMutex{},
+	}
+}
 
 // Start launches discovery service
 func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
