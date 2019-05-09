@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/services"
 )
@@ -86,22 +87,12 @@ func (np *NATProxy) consumerHandOff(consumerPort int, remoteConn *net.UDPConn) {
 			remoteConn.Close()
 			return
 		default:
-			/*
-				proxyFD, err := proxyConn.File()
-				if err != nil {
-					log.Error(logPrefix, "failed to fetch fd from: ", proxyConn)
-				}
-
-				log.Info(logPrefix, "protecting local socket: ", int(proxyFD.Fd()))
-				np.socketProtect(int(proxyFD.Fd()))
-			*/
 			proxyConn.SetReadBuffer(bufferLen)
 			proxyConn.SetWriteBuffer(bufferLen)
 
 			np.masterLoop(proxyConn, remoteConn)
 
 			proxyConn.Close()
-			//			proxyFD.Close()
 		}
 	}
 }

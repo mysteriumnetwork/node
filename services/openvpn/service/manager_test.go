@@ -40,7 +40,7 @@ func (portSupplierMock) Acquire() (port.Port, error) {
 	return 0, nil
 }
 
-func (portSupplierMock) OpenvpnPort() (port.Port, error) {
+func (portSupplierMock) PortForService(string) (port.Port, error) {
 	return 0, nil
 }
 
@@ -59,5 +59,5 @@ func TestManager_ProvideConfigNotFailOnNilConfig(t *testing.T) {
 type mockConfigProvider struct{}
 
 func (cp *mockConfigProvider) ProvideConfig(consumerKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
-	return nil, nil, nil, nil
+	return nil, nil, params, nil
 }

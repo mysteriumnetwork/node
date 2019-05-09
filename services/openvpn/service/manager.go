@@ -94,7 +94,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	servicePort, err := m.ports.OpenvpnPort()
+	servicePort, err := m.ports.PortForService(openvpn_service.ServiceType)
 	if err != nil {
 		return errors.Wrap(err, "failed to acquire an unused port")
 	}
@@ -155,7 +155,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, _ *traversal.Para
 		return nil, nil, nil, errors.New("Config provider not initialized")
 	}
 
-	op, err := m.ports.OpenvpnPort()
+	op, err := m.ports.PortForService(openvpn_service.ServiceType)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to acquire openvpn port")
 	}

@@ -35,7 +35,7 @@ type Pool struct {
 // ServicePortSupplier provides port needed to run a service on
 type ServicePortSupplier interface {
 	Acquire() (Port, error)
-	OpenvpnPort() (Port, error)
+	PortForService(serviceType string) (Port, error)
 }
 
 // NewPool creates a port pool that will provide ports from range 40000-50000
@@ -75,17 +75,21 @@ func (pool *Pool) SetOpenvpnPort(port int) {
 	pool.openvpnPort = port
 }
 
-// OpenvpnPort gets fixed openvpn service port
-func (pool *Pool) OpenvpnPort() (Port, error) {
-	if pool.openvpnPort > 0 {
-		return Port(pool.openvpnPort), nil
+// PortForService returns fixed service port or allocates a new one if fixed is not defined
+func (pool *Pool) PortForService(serviceType string) (port Port, err error) {
+	switch serviceType {
+	case "openvpn":
+		if pool.openvpnPort > 0 {
+			return Port(pool.openvpnPort), nil
+		}
+		port, err = pool.Acquire()
+		if err != nil {
+			return 0, err
+		}
+		pool.openvpnPort = port.Num()
+	default:
+		return -1, errors.New("port not defined for service")
 	}
-
-	port, err := pool.Acquire()
-	if err != nil {
-		return 0, err
-	}
-	pool.openvpnPort = port.Num()
 
 	return port, nil
 }

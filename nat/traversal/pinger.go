@@ -65,7 +65,7 @@ type NatEventWaiter interface {
 
 // ConfigParser is able to parse a config from given raw json
 type ConfigParser interface {
-	Parse(config *json.RawMessage) (ip string, port int, serviceType services.ServiceType, err error)
+	Parse(config json.RawMessage) (ip string, port int, serviceType services.ServiceType, err error)
 }
 
 // PortSupplier provides port needed to run a service on
@@ -107,7 +107,7 @@ type natProxy interface {
 
 // Params contains session parameters needed to NAT ping remote peer
 type Params struct {
-	RequestConfig *json.RawMessage
+	RequestConfig json.RawMessage
 	Port          int
 	ConsumerPort  int
 	Cancel        chan struct{}

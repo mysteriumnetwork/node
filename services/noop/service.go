@@ -48,7 +48,7 @@ type Manager struct {
 
 // ProvideConfig provides the session configuration
 func (manager *Manager) ProvideConfig(publicKey json.RawMessage, params *traversal.Params) (session.ServiceConfiguration, session.DestroyCallback, *traversal.Params, error) {
-	return nil, nil, nil, nil
+	return nil, nil, params, nil
 }
 
 // Serve starts service - does block
