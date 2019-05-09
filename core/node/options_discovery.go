@@ -23,6 +23,8 @@ type DiscoveryType string
 const (
 	// DiscoveryTypeAPI defines type which discovers proposals through Mysterium API
 	DiscoveryTypeAPI = DiscoveryType("api")
+	// DiscoveryTypeBroker defines type which discovers proposals through Broker (Mysterium Communication)
+	DiscoveryTypeBroker = DiscoveryType("broker")
 )
 
 // OptionsDiscovery describes possible parameters of discovery configuration

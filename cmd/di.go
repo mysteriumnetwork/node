@@ -529,6 +529,8 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	switch options.Type {
 	case node.DiscoveryTypeAPI:
 		registry = discovery.NewRegistryAPI(di.MysteriumAPI)
+	case node.DiscoveryTypeBroker:
+		registry = discovery.NewRegistryBroker()
 	default:
 		return fmt.Errorf("unknown discovery provider: %s", options.Type)
 	}

@@ -27,7 +27,7 @@ import (
 var (
 	discoveryTypeFlag = cli.StringFlag{
 		Name:  "discovery.type",
-		Usage: fmt.Sprintf("Proposal discovery provider (%s)", node.DiscoveryTypeAPI),
+		Usage: fmt.Sprintf("Proposal discovery provider (%s, %s)", node.DiscoveryTypeAPI, node.DiscoveryTypeBroker),
 		Value: string(node.DiscoveryTypeAPI),
 	}
 	discoveryAddressFlag = cli.StringFlag{
