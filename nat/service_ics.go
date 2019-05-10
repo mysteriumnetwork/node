@@ -40,9 +40,14 @@ func getSharingScript(ifaceName, props, action string) string {
 	return `regsvr32 /s hnetcfg.dll;
 		$netShare = New-Object -ComObject HNetCfg.HNetShare;
 		$c = $netShare.EnumEveryConnection |? { $netshare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
-		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);` + action + `
-		$guid = $netShare.NetConnectionProps.Invoke($c).Guid;
-		$props = Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" -Filter "__PATH like '%$guid%'";` + props + `$props.Put();`
+		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
+		Try {
+			` + action + `
+		} Catch {
+			$guid = $netShare.NetConnectionProps.Invoke($c).Guid;
+			$props = Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" -Filter "__PATH like '%$guid%'";` + props + `$props.Put();
+			` + action + `
+		}`
 }
 
 func getPublicSharingScript(ifaceName string) string {
@@ -67,7 +72,17 @@ type serviceICS struct {
 }
 
 func (ics *serviceICS) disableICSAllInterfaces() error {
-	_, err := ics.powerShell(`Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" | foreach { $_.IsIcsPublic = 0; $_.IsIcsPrivate = 0; $_.Put() };`)
+	// Filter out invalid media (where NETCON_MEDIATYPE = NCM_NONE) because it is not an instance of INetConnection
+	// and will throw a cast error when attempting to `INetSharingConfigurationForINetConnection($conn)`
+	// Enum: https://docs.microsoft.com/en-us/windows/desktop/api/netcon/ne-netcon-tagnetcon_mediatype
+	_, err := ics.powerShell(`regsvr32 /s hnetcfg.dll;
+		$mgr = New-Object -ComObject HnetCfg.HNetShare;
+		filter IsValidMediaType { if ($mgr.NetConnectionProps($_).MediaType -gt 0) { $_ } };
+		$connections = $mgr.EnumEveryConnection | IsValidMediaType;
+		foreach ($conn in $connections) {
+			$mgr.INetSharingConfigurationForINetConnection($conn).DisableSharing()
+		};
+	`)
 	return err
 }
 
