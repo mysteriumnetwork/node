@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -196,20 +197,22 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		return
 	}
 
-	proposals, err := ce.proposalProvider.FindProposals(cr.ProviderID, cr.ServiceType, "", "")
+	// TODO Pass proposal ID directly in request
+	proposal, err := ce.proposalProvider.GetProposal(market.ProposalID{
+		ProviderID:  cr.ProviderID,
+		ServiceType: cr.ServiceType,
+	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-	if len(proposals) == 0 {
+	if proposal == nil {
 		utils.SendError(resp, errors.New("provider has no service proposals"), http.StatusBadRequest)
 		return
 	}
 
-	proposal := proposals[0]
-
 	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), proposal, connectOptions)
+	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), *proposal, connectOptions)
 
 	if err != nil {
 		switch err {

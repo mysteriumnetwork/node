@@ -272,6 +272,13 @@ type mockProposalProvider struct {
 	proposals                  []market.ServiceProposal
 }
 
+func (mpp *mockProposalProvider) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
+	if len(mpp.proposals) == 0 {
+		return nil, nil
+	}
+	return &mpp.proposals[0], nil
+}
+
 func (mpp *mockProposalProvider) FindProposals(providerID, serviceType, accessPolicyID, accessPolicySource string) ([]market.ServiceProposal, error) {
 	mpp.recordedProviderID = providerID
 	mpp.recordedServiceType = serviceType

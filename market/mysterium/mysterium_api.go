@@ -151,6 +151,19 @@ func (mApi *MysteriumAPI) PingProposal(proposal market.ServiceProposal, signer i
 	return err
 }
 
+// GetProposal fetches service proposal from discovery by exact ID
+func (mApi *MysteriumAPI) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
+	proposals, err := mApi.FindProposals(id.ProviderID, id.ServiceType, "", "")
+	if err != nil {
+		return nil, err
+	}
+	if len(proposals) == 0 {
+		return nil, nil
+	}
+
+	return &proposals[0], nil
+}
+
 // FindProposals fetches currently active service proposals from discovery
 func (mApi *MysteriumAPI) FindProposals(providerID, serviceType, accessPolicyID, accessPolicySource string) ([]market.ServiceProposal, error) {
 	values := url.Values{}

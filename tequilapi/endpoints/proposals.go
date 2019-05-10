@@ -113,6 +113,7 @@ func mapProposalsToRes(
 
 // ProposalProvider allows to fetch proposals by specified params
 type ProposalProvider interface {
+	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
 	FindProposals(providerID, serviceType, accessPolicyID, accessPolicySource string) ([]market.ServiceProposal, error)
 }
 
