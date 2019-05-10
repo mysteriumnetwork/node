@@ -17,10 +17,15 @@
 
 package nat
 
+import "os/exec"
+
 // NewService returns linux os specific nat service based on ip tables
 func NewService() NATService {
 	return &serviceIPTables{
 		ipForward: serviceIPForward{
+			CommandFactory: func(name string, arg ...string) Command {
+				return exec.Command(name, arg...)
+			},
 			CommandEnable:  []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"},
 			CommandDisable: []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=0"},
 			CommandRead:    []string{"/sbin/sysctl", "-n", "net.ipv4.ip_forward"},
