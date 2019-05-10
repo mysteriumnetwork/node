@@ -81,7 +81,7 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeDir string, outboundIP string) (*ClientConfig, error) {
+func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeDir string) (*ClientConfig, error) {
 	vpnConfig := &VPNConfig{}
 	err := json.Unmarshal(sessionConfig, vpnConfig)
 	if err != nil {

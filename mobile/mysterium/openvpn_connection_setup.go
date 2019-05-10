@@ -53,8 +53,8 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 	}
 
 	log.Info("client config after session create: ", clientConfig)
-	wrapper.natPinger.BindConsumerPort(clientConfig.LocalPort)
 	if clientConfig.LocalPort > 0 {
+		wrapper.natPinger.BindConsumerPort(clientConfig.LocalPort)
 		err := wrapper.natPinger.PingProvider(
 			clientConfig.OriginalRemoteIP,
 			clientConfig.OriginalRemotePort,
@@ -202,11 +202,10 @@ type OpenvpnConnectionFactory struct {
 // Create creates a new openvpn connection
 func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (con connection.Connection, err error) {
 	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error) {
-		outIP, err := ocf.ipResolver.GetOutboundIP()
 		if err != nil {
 			return nil, nil, err
 		}
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "", outIP)
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
 		if err != nil {
 			return nil, nil, err
 		}

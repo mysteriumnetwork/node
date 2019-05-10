@@ -357,3 +357,8 @@ func (p *Pinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {
 func (p *Pinger) StopNATProxy() {
 	close(p.stopNATProxy)
 }
+
+// Valid returns that this pinger is a valid pinger
+func (p *Pinger) Valid() bool {
+	return true
+}

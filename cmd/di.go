@@ -99,6 +99,7 @@ type NatPinger interface {
 	Stop()
 	SetProtectSocketCallback(SocketProtect func(socket int) bool)
 	StopNATProxy()
+	Valid() bool
 }
 
 // NatEventTracker is responsible for tracking NAT events

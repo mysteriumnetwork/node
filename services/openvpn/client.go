@@ -64,9 +64,8 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	c.process = proc
 	log.Infof("client config: %v", clientConfig)
 
-	c.natPinger.BindConsumerPort(clientConfig.LocalPort)
-
 	if clientConfig.VpnConfig.LocalPort > 0 {
+		c.natPinger.BindConsumerPort(clientConfig.LocalPort)
 		err = c.natPinger.PingProvider(clientConfig.OriginalRemoteIP, clientConfig.OriginalRemotePort, c.pingerStop)
 		if err != nil {
 			return err
