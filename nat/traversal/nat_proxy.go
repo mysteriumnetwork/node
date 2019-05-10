@@ -105,22 +105,22 @@ func (np *NATProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, s
 			log.Info(logPrefix, "Stopping NATProxy joinUDPStreams")
 			return
 		default:
-			var buf [bufferLen]byte
-			n, addr, err := conn.ReadFromUDP(buf[0:])
+		}
+		var buf [bufferLen]byte
+		n, addr, err := conn.ReadFromUDP(buf[0:])
+		if err != nil {
+			log.Errorf("%sFailed to read local process: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
+			return
+		}
+		if n > 0 {
+			_, err := remoteConn.Write(buf[:n])
 			if err != nil {
-				log.Errorf("%sFailed to read local process: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
+				log.Errorf("%sFailed to write remote peer: %s cause: %s", logPrefix, remoteConn.RemoteAddr().String(), err)
 				return
 			}
-			if n > 0 {
-				_, err := remoteConn.Write(buf[:n])
-				if err != nil {
-					log.Errorf("%sFailed to write remote peer: %s cause: %s", logPrefix, remoteConn.RemoteAddr().String(), err)
-					return
-				}
-				if np.addrLast != addr {
-					np.addrLast = addr
-					go np.readWriteToAddr(remoteConn, conn, addr, stop)
-				}
+			if np.addrLast != addr {
+				np.addrLast = addr
+				go np.readWriteToAddr(remoteConn, conn, addr, stop)
 			}
 		}
 	}

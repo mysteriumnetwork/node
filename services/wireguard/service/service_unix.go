@@ -69,35 +69,35 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 	key := &wg.ConsumerConfig{}
 	err := json.Unmarshal(sessionConfig, key)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	connectionEndpoint, err := manager.connectionEndpointFactory()
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	if err := connectionEndpoint.Start(nil); err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	if err := connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	config, err := connectionEndpoint.Config()
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	outIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: outIP}
 	if err := manager.natService.Add(natRule); err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	destroy := func() {

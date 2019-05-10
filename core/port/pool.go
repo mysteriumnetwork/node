@@ -76,7 +76,7 @@ func (pool *Pool) SetServicePort(serviceType string, port int) error {
 	case "openvpn":
 		pool.openvpnPort = port
 	default:
-		errors.New("service type is not defined for SetServicePort")
+		return errors.New("service type is not defined for SetServicePort")
 	}
 	return nil
 }

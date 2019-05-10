@@ -173,12 +173,12 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *
 		if m.isBehindNAT() && m.portMappingFailed() {
 			pp, err := m.ports.Acquire()
 			if err != nil {
-				return nil, nil
+				return nil, err
 			}
 
 			cp, err := m.ports.Acquire()
 			if err != nil {
-				return nil, nil
+				return nil, err
 			}
 
 			traversalParams.ProviderPort = pp.Num()
