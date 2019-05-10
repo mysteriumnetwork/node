@@ -55,6 +55,7 @@ type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outbound
 type NATPinger interface {
 	BindServicePort(serviceType services.ServiceType, port int)
 	Stop()
+	Valid() bool
 }
 
 // NATEventGetter allows us to fetch the last known NAT event
@@ -162,7 +163,7 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *
 	traversalParams = &traversal.Params{ProviderPort: op.Num()}
 
 	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
-	if sessionConfig != nil && len(sessionConfig) > 0 {
+	if sessionConfig != nil && len(sessionConfig) > 0 && m.natPinger.Valid() {
 		var c openvpn_service.ConsumerConfig
 		err := json.Unmarshal(sessionConfig, &c)
 		if err != nil {
