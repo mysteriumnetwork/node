@@ -153,7 +153,10 @@ func (mApi *MysteriumAPI) PingProposal(proposal market.ServiceProposal, signer i
 
 // GetProposal fetches service proposal from discovery by exact ID
 func (mApi *MysteriumAPI) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
-	proposals, err := mApi.FindProposals(id.ProviderID, id.ServiceType, "", "")
+	proposals, err := mApi.doProposalRequest(url.Values{
+		"node_key":     {id.ProviderID},
+		"service_type": {id.ServiceType},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -165,25 +168,26 @@ func (mApi *MysteriumAPI) GetProposal(id market.ProposalID) (*market.ServiceProp
 }
 
 // FindProposals fetches currently active service proposals from discovery
-func (mApi *MysteriumAPI) FindProposals(providerID, serviceType, accessPolicyID, accessPolicySource string) ([]market.ServiceProposal, error) {
-	values := url.Values{}
-	if providerID != "" {
-		values.Set("node_key", providerID)
+func (mApi *MysteriumAPI) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
+	query := url.Values{}
+	if filter.ProviderID != "" {
+		query.Set("node_key", filter.ProviderID)
+	}
+	if filter.ServiceType != "" {
+		query.Set("service_type", filter.ServiceType)
+	}
+	if filter.AccessPolicyID != "" {
+		query.Set("access_policy[id]", filter.AccessPolicyID)
+	}
+	if filter.AccessPolicySource != "" {
+		query.Set("access_policy[source]", filter.AccessPolicySource)
 	}
 
-	if serviceType != "" {
-		values.Set("service_type", serviceType)
-	}
+	return mApi.doProposalRequest(query)
+}
 
-	if accessPolicyID != "" {
-		values.Set("access_policy[id]", accessPolicyID)
-	}
-
-	if accessPolicySource != "" {
-		values.Set("access_policy[source]", accessPolicySource)
-	}
-
-	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", values)
+func (mApi *MysteriumAPI) doProposalRequest(query url.Values) ([]market.ServiceProposal, error) {
+	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", query)
 	if err != nil {
 		return nil, err
 	}
