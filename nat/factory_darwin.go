@@ -17,15 +17,14 @@
 
 package nat
 
-import "os/exec"
-
 // NewService returns fake nat service since there are no iptables on darwin
 func NewService() NATService {
 	return &servicePFCtl{
 		ipForward: serviceIPForward{
-			CommandEnable:  exec.Command("/usr/sbin/sysctl", "-w", "net.inet.ip.forwarding=1"),
-			CommandDisable: exec.Command("/usr/sbin/sysctl", "-w", "net.inet.ip.forwarding=0"),
-			CommandRead:    exec.Command("/usr/sbin/sysctl", "-n", "net.inet.ip.forwarding"),
+			CommandName:        "/usr/sbin/sysctl",
+			CommandEnableArgs:  []string{"-w", "net.inet.ip.forwarding=1"},
+			CommandDisableArgs: []string{"-w", "net.inet.ip.forwarding=0"},
+			CommandReadArgs:    []string{"-n", "net.inet.ip.forwarding"},
 		},
 		rules: make(map[RuleForwarding]struct{}),
 	}

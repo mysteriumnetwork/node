@@ -25,10 +25,11 @@ import (
 )
 
 type serviceIPForward struct {
-	CommandEnable  *exec.Cmd
-	CommandDisable *exec.Cmd
-	CommandRead    *exec.Cmd
-	forward        bool
+	CommandName        string
+	CommandEnableArgs  []string
+	CommandDisableArgs []string
+	CommandReadArgs    []string
+	forward            bool
 }
 
 func (service *serviceIPForward) Enable() error {
@@ -38,8 +39,8 @@ func (service *serviceIPForward) Enable() error {
 		return nil
 	}
 
-	if output, err := service.CommandEnable.CombinedOutput(); err != nil {
-		log.Warn("Failed to enable IP forwarding: ", service.CommandEnable.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+	if output, err := exec.Command(service.CommandName, service.CommandEnableArgs...).CombinedOutput(); err != nil {
+		log.Warn("Failed to enable IP forwarding: ", service.CommandEnableArgs, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 		return err
 	}
 
@@ -52,17 +53,17 @@ func (service *serviceIPForward) Disable() {
 		return
 	}
 
-	if output, err := service.CommandDisable.CombinedOutput(); err != nil {
-		log.Warn("Failed to disable IP forwarding: ", service.CommandDisable.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+	if output, err := exec.Command(service.CommandName, service.CommandDisableArgs...).CombinedOutput(); err != nil {
+		log.Warn("Failed to disable IP forwarding: ", service.CommandDisableArgs, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 	}
 
 	log.Info(natLogPrefix, "IP forwarding disabled")
 }
 
 func (service *serviceIPForward) Enabled() bool {
-	output, err := service.CommandEnable.Output()
+	output, err := exec.Command(service.CommandName, service.CommandReadArgs...).Output()
 	if err != nil {
-		log.Warn("Failed to check IP forwarding status: ", service.CommandRead.Args, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
+		log.Warn("Failed to check IP forwarding status: ", service.CommandReadArgs, " Returned exit error: ", err.Error(), " Cmd output: ", string(output))
 	}
 
 	return strings.TrimSpace(string(output)) == "1"
