@@ -78,7 +78,7 @@ func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, 
 // Create creates a new openvpn connection
 func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 	procFactory := func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error) {
-		vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory)
+		vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory, "")
 		if err != nil {
 			return nil, nil, err
 		}

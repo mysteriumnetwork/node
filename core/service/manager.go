@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -43,7 +44,7 @@ var (
 type Service interface {
 	Serve(providerID identity.Identity) error
 	Stop() error
-	ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error)
+	ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error)
 }
 
 // DialogWaiterFactory initiates communication channel which waits for incoming dialogs

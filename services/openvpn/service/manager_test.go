@@ -21,10 +21,11 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/core/port"
-
-	"github.com/mysteriumnetwork/node/session"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/mysteriumnetwork/node/session"
 )
 
 func TestManager_StopNotPanic(t *testing.T) {
@@ -39,22 +40,24 @@ func (portSupplierMock) Acquire() (port.Port, error) {
 	return 0, nil
 }
 
+func (portSupplierMock) PortForService(string) (port.Port, error) {
+	return 0, nil
+}
+
 func TestManager_ProvideConfigNotFailOnEmptyConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, ports: portSupplierMock{}}
-	fn := func(i int) int { return 0 }
-	_, _, err := m.ProvideConfig([]byte(""), fn)
+	_, err := m.ProvideConfig([]byte(""), nil)
 	assert.NoError(t, err)
 }
 
 func TestManager_ProvideConfigNotFailOnNilConfig(t *testing.T) {
 	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, ports: portSupplierMock{}}
-	fn := func(i int) int { return 0 }
-	_, _, err := m.ProvideConfig(nil, fn)
+	_, err := m.ProvideConfig(nil, nil)
 	assert.NoError(t, err)
 }
 
 type mockConfigProvider struct{}
 
-func (cp *mockConfigProvider) ProvideConfig(consumerKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
-	return nil, nil, nil
+func (cp *mockConfigProvider) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
+	return &session.ConfigParams{SessionServiceConfig: traversalParams}, nil
 }

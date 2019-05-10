@@ -24,6 +24,12 @@ import (
 // NoopPinger does nothing
 type NoopPinger struct{}
 
+// StopNATProxy does nothing
+func (np *NoopPinger) StopNATProxy() {}
+
+// SetProtectSocketCallback does nothing
+func (np *NoopPinger) SetProtectSocketCallback(SocketProtect func(socket int) bool) {}
+
 // Start does nothing
 func (np *NoopPinger) Start() {}
 

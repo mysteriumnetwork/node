@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 )
 
@@ -53,8 +54,8 @@ func (service *serviceFake) GetType() string {
 	return "fake"
 }
 
-func (service *serviceFake) ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
-	return struct{}{}, func() {}, nil
+func (service *serviceFake) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
+	return &session.ConfigParams{TraversalParams: traversalParams}, nil
 }
 
 type mockDialogWaiter struct {

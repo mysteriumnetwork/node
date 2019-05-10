@@ -48,6 +48,7 @@ type Pinger struct {
 	pingTarget     chan *Params
 	pingCancelled  chan struct{}
 	stop           chan struct{}
+	stopNATProxy   chan struct{}
 	once           sync.Once
 	natEventWaiter NatEventWaiter
 	configParser   ConfigParser
@@ -78,15 +79,17 @@ type Publisher interface {
 	Publish(topic string, data interface{})
 }
 
-// NewPingerFactory returns Pinger instance
-func NewPingerFactory(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier, previousStage string, publisher Publisher) *Pinger {
+// NewPinger returns Pinger instance
+func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier, previousStage string, publisher Publisher) *Pinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})
+	stopNATProxy := make(chan struct{})
 	return &Pinger{
 		pingTarget:     target,
 		pingCancelled:  cancel,
 		stop:           stop,
+		stopNATProxy:   stopNATProxy,
 		natEventWaiter: waiter,
 		configParser:   parser,
 		natProxy:       proxy,
@@ -100,12 +103,15 @@ type natProxy interface {
 	handOff(serviceType services.ServiceType, conn *net.UDPConn)
 	registerServicePort(serviceType services.ServiceType, port int)
 	isAvailable(serviceType services.ServiceType) bool
+	consumerHandOff(consumerPort int, conn *net.UDPConn) chan struct{}
+	setProtectSocketCallback(socketProtect func(socket int) bool)
 }
 
 // Params contains session parameters needed to NAT ping remote peer
 type Params struct {
 	RequestConfig json.RawMessage
-	Port          int
+	ProviderPort  int
+	ConsumerPort  int
 	Cancel        chan struct{}
 }
 
@@ -131,19 +137,20 @@ func (p *Pinger) Start() {
 		case pingParams := <-p.pingTarget:
 			log.Info(prefix, "Pinging peer with: ", pingParams)
 
-			IP, port, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
+			// TODO: remove port parsing for consumer config
+			IP, _, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
 			if err != nil {
 				log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", pingParams)))
 				continue
 			}
 
-			log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, port)
+			log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, pingParams.ConsumerPort)
 			if !p.natProxy.isAvailable(serviceType) {
 				log.Warn(prefix, serviceType, " NATProxy is not available for this transport protocol")
 				continue
 			}
 
-			conn, err := p.getConnection(IP, port, pingParams.Port)
+			conn, err := p.getConnection(IP, pingParams.ConsumerPort, pingParams.ProviderPort)
 			if err != nil {
 				log.Error(prefix, "failed to get connection: ", err)
 				continue
@@ -172,7 +179,10 @@ func (p *Pinger) Start() {
 
 // Stop stops pinger loop
 func (p *Pinger) Stop() {
-	p.once.Do(func() { close(p.stop) })
+	p.once.Do(func() {
+		close(p.stopNATProxy)
+		close(p.stop)
+	})
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
@@ -183,7 +193,6 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get connection")
 	}
-	defer conn.Close()
 
 	go func() {
 		err := p.ping(conn)
@@ -198,7 +207,12 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 		return err
 	}
 
-	// wait for provider to setup NAT proxy connection
+	if p.consumerPort > 0 {
+		log.Info(prefix, "Handing connection to consumer NATProxy")
+		p.stopNATProxy = p.natProxy.consumerHandOff(p.consumerPort, conn)
+	}
+
+	// wait for provider to setup NATProxy connection
 	time.Sleep(400 * time.Millisecond)
 
 	return nil
@@ -313,12 +327,11 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 		default:
 		}
 
-		var buf [512]byte
+		var buf [bufferLen]byte
 		n, err := conn.Read(buf[0:])
 		if err != nil {
-			log.Errorf(prefix, "Failed to read remote peer: %s cause: %s", conn.RemoteAddr().String(), err)
-			time.Sleep(pingInterval * time.Millisecond)
-			continue
+			log.Errorf("%sFailed to read remote peer: %s cause: %s", prefix, conn.RemoteAddr().String(), err)
+			return err
 		}
 		fmt.Println("remote peer data received: ", string(buf[:n]))
 
@@ -333,4 +346,14 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 			return errNATPunchAttemptStopped
 		}
 	}
+}
+
+// SetProtectSocketCallback sets socket protection callback to be called when new socket is created in consumer NATProxy
+func (p *Pinger) SetProtectSocketCallback(socketProtect func(socket int) bool) {
+	p.natProxy.setProtectSocketCallback(socketProtect)
+}
+
+// StopNATProxy stops NATProxy launched by NATPinger
+func (p *Pinger) StopNATProxy() {
+	close(p.stopNATProxy)
 }

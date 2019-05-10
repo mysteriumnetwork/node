@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
@@ -68,20 +69,20 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (manager *Manager) ProvideConfig(publicKey json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
 	key := &wg.ConsumerConfig{}
 	err := json.Unmarshal(publicKey, key)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	config, err := manager.connectionEndpoint.Config()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err := manager.connectionEndpoint.AddPeer(key.PublicKey, nil, config.Consumer.IPAddress.IP.String()+"/32"); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	destroy := func() {
@@ -93,7 +94,7 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func
 		}
 	}
 
-	return config, destroy, nil
+	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
 }
 
 // Serve starts service - does block

@@ -23,17 +23,19 @@ import (
 	"sync"
 
 	log "github.com/cihub/seelog"
+
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 )
 
 const logPrefix = "[service-noop] "
 
 // ErrAlreadyStarted is the error we return when the start is called multiple times
-var ErrAlreadyStarted = errors.New("Service already started")
+var ErrAlreadyStarted = errors.New("service already started")
 
 // NewManager creates new instance of Noop service
 func NewManager() *Manager {
@@ -46,8 +48,8 @@ type Manager struct {
 }
 
 // ProvideConfig provides the session configuration
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
-	return nil, nil, nil
+func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
+	return &session.ConfigParams{TraversalParams: traversalParams}, nil
 }
 
 // Serve starts service - does block

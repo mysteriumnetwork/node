@@ -28,11 +28,11 @@ import (
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
+	"github.com/mysteriumnetwork/node/nat/traversal"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/pkg/errors"
 )
 
 // NewManager creates new instance of Wireguard service
@@ -65,39 +65,39 @@ type Manager struct {
 }
 
 // ProvideConfig provides the config for consumer
-func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func(int) int) (session.ServiceConfiguration, session.DestroyCallback, error) {
+func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *traversal.Params) (*session.ConfigParams, error) {
 	key := &wg.ConsumerConfig{}
-	err := json.Unmarshal(publicKey, key)
+	err := json.Unmarshal(sessionConfig, key)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	connectionEndpoint, err := manager.connectionEndpointFactory()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err := connectionEndpoint.Start(nil); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err := connectionEndpoint.AddPeer(key.PublicKey, nil); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	config, err := connectionEndpoint.Config()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	outIP, err := manager.ipResolver.GetOutboundIP()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: outIP}
 	if err := manager.natService.Add(natRule); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to add NAT forwarding rule")
+		return nil, err
 	}
 
 	destroy := func() {
@@ -109,7 +109,7 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage, pingerPort func
 		}
 	}
 
-	return config, destroy, nil
+	return &session.ConfigParams{SessionServiceConfig: config, SessionDestroyCallback: destroy, TraversalParams: traversalParams}, nil
 }
 
 // Serve starts service - does block

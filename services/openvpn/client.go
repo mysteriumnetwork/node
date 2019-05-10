@@ -107,11 +107,7 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 	}
 
 	return &ConsumerConfig{
-		// TODO: since GetConfig is executed before Start we cannot access VPNConfig structure yet
-		// TODO skip sending port here, since provider generates port for consumer in VPNConfig
-		//Port: c.vpnClientConfig.LocalPort,
-		Port: 50221,
-		IP:   &ip,
+		IP: &ip,
 	}, nil
 }
 
