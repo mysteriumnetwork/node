@@ -40,9 +40,14 @@ func getSharingScript(ifaceName, props, action string) string {
 	return `regsvr32 /s hnetcfg.dll;
 		$netShare = New-Object -ComObject HNetCfg.HNetShare;
 		$c = $netShare.EnumEveryConnection |? { $netshare.NetConnectionProps.Invoke($_).Name -eq "` + ifaceName + `" };
-		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);` + action + `
-		$guid = $netShare.NetConnectionProps.Invoke($c).Guid;
-		$props = Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" -Filter "__PATH like '%$guid%'";` + props + `$props.Put();`
+		$config = $netShare.INetSharingConfigurationForINetConnection.Invoke($c);
+		Try {
+			` + action + `
+		} Catch {
+			$guid = $netShare.NetConnectionProps.Invoke($c).Guid;
+			$props = Get-WmiObject -Class HNet_ConnectionProperties -Namespace "ROOT\microsoft\homenet" -Filter "__PATH like '%$guid%'";` + props + `$props.Put();
+			` + action + `
+		}`
 }
 
 func getPublicSharingScript(ifaceName string) string {
