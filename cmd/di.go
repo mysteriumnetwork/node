@@ -29,12 +29,14 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
+	discovery_communication "github.com/mysteriumnetwork/node/core/discovery/communication"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -530,7 +532,8 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	case node.DiscoveryTypeAPI:
 		registry = discovery.NewRegistryAPI(di.MysteriumAPI)
 	case node.DiscoveryTypeBroker:
-		registry = discovery.NewRegistryBroker()
+		sender := discovery_communication.NewSender(nats.NewConnectionFake())
+		registry = discovery_communication.NewRegistry(sender)
 	default:
 		return fmt.Errorf("unknown discovery provider: %s", options.Type)
 	}
