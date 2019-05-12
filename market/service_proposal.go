@@ -58,6 +58,15 @@ type ServiceProposal struct {
 	AccessPolicies *[]AccessPolicy `json:"access_policies,omitempty"`
 }
 
+// UniqueID returns unique proposal composite ID
+func (proposal *ServiceProposal) UniqueID() ProposalID {
+	return ProposalID{
+		ProviderID:  proposal.ProviderID,
+		ServiceType: proposal.ServiceType,
+		ID:          proposal.ID,
+	}
+}
+
 // AccessPolicy represents the access controls for proposal
 type AccessPolicy struct {
 	ID     string `json:"id"`
