@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
@@ -286,4 +287,4 @@ func (mpp *mockProposalProvider) FindProposals(filter market.ProposalFilter) ([]
 	return mpp.proposals, nil
 }
 
-var _ ProposalProvider = &mockProposalProvider{}
+var _ discovery.ProposalFinder = &mockProposalProvider{}

@@ -28,6 +28,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -78,7 +79,7 @@ func (ssk *StubStatisticsTracker) GetSessionDuration() time.Duration {
 	return ssk.duration
 }
 
-func getMockProposalProviderWithSpecifiedProposal(providerID, serviceType string) ProposalProvider {
+func getMockProposalProviderWithSpecifiedProposal(providerID, serviceType string) discovery.ProposalFinder {
 	sampleProposal := market.ServiceProposal{
 		ID:                1,
 		ServiceType:       serviceType,
