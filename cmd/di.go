@@ -159,6 +159,7 @@ type Dependencies struct {
 	IdentitySelector     identity_selector.Handler
 
 	DiscoveryFactory service.DiscoveryFactory
+	DiscoveryFinder  discovery.ProposalFinder
 
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
@@ -395,11 +396,11 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.DiscoveryFinder)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.LocationResolver)
-	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
+	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
@@ -543,6 +544,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	di.DiscoveryFactory = func() service.Discovery {
 		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, registry, di.SignerFactory)
 	}
+	di.DiscoveryFinder = discovery_api.NewFinder(di.MysteriumAPI)
 
 	return nil
 }

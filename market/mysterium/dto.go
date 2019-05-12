@@ -17,7 +17,9 @@
 
 package mysterium
 
-import "github.com/mysteriumnetwork/node/market"
+import (
+	"github.com/mysteriumnetwork/node/market"
+)
 
 // CreateIdentityRequest represents JSON request for creating identity
 type CreateIdentityRequest struct {
@@ -53,10 +55,14 @@ type ProposalUnregisterRequest struct {
 	ServiceType string `json:"service_type"`
 }
 
-// ProposalsRequest represents JSON request for the proposals
-type ProposalsRequest struct {
-	NodeKey     string `json:"node_key"`
-	ServiceType string `json:"service_type"`
+// ProposalsQuery represents URL query for proposal listing
+type ProposalsQuery struct {
+	NodeKey            string
+	ServiceType        string
+	AccessPolicyAll    bool
+	AccessPolicyID     string
+	AccessPolicySource string
+	NodeType           string
 }
 
 // ProposalsResponse represents JSON response for the list of proposals

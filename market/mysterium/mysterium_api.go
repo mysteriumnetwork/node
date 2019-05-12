@@ -151,43 +151,29 @@ func (mApi *MysteriumAPI) PingProposal(proposal market.ServiceProposal, signer i
 	return err
 }
 
-// GetProposal fetches service proposal from discovery by exact ID
-func (mApi *MysteriumAPI) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
-	proposals, err := mApi.doProposalRequest(url.Values{
-		"node_key":     {id.ProviderID},
-		"service_type": {id.ServiceType},
-	})
-	if err != nil {
-		return nil, err
+// QueryProposals fetches currently active service proposals from discovery - by given query filter
+func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.ServiceProposal, error) {
+	values := url.Values{}
+	if query.NodeKey != "" {
+		values.Set("node_key", query.NodeKey)
 	}
-	if len(proposals) == 0 {
-		return nil, nil
+	if query.ServiceType != "" {
+		values.Set("service_type", query.ServiceType)
 	}
-
-	return &proposals[0], nil
-}
-
-// FindProposals fetches currently active service proposals from discovery
-func (mApi *MysteriumAPI) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
-	query := url.Values{}
-	if filter.ProviderID != "" {
-		query.Set("node_key", filter.ProviderID)
+	if query.AccessPolicyAll {
+		values.Set("access_policy", "*")
 	}
-	if filter.ServiceType != "" {
-		query.Set("service_type", filter.ServiceType)
+	if query.AccessPolicyID != "" {
+		values.Set("access_policy[id]", query.AccessPolicyID)
 	}
-	if filter.AccessPolicyID != "" {
-		query.Set("access_policy[id]", filter.AccessPolicyID)
+	if query.AccessPolicySource != "" {
+		values.Set("access_policy[source]", query.AccessPolicySource)
 	}
-	if filter.AccessPolicySource != "" {
-		query.Set("access_policy[source]", filter.AccessPolicySource)
+	if query.NodeType != "" {
+		values.Set("node_type", query.NodeType)
 	}
 
-	return mApi.doProposalRequest(query)
-}
-
-func (mApi *MysteriumAPI) doProposalRequest(query url.Values) ([]market.ServiceProposal, error) {
-	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", query)
+	req, err := requests.NewGetRequest(mApi.discoveryAPIAddress, "proposals", values)
 	if err != nil {
 		return nil, err
 	}
