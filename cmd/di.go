@@ -36,6 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
+	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
 	discovery_communication "github.com/mysteriumnetwork/node/core/discovery/communication"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -530,7 +531,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	var registry discovery.ProposalRegistry
 	switch options.Type {
 	case node.DiscoveryTypeAPI:
-		registry = discovery.NewRegistryAPI(di.MysteriumAPI)
+		registry = discovery_api.NewRegistry(di.MysteriumAPI)
 	case node.DiscoveryTypeBroker:
 		sender := discovery_communication.NewSender(nats.NewConnectionFake())
 		registry = discovery_communication.NewRegistry(sender)

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package discovery
+package api
 
 import (
 	"github.com/mysteriumnetwork/node/identity"
@@ -27,8 +27,8 @@ type registryAPI struct {
 	mysteriumAPI *mysterium.MysteriumAPI
 }
 
-// NewRegistryAPI create instance if API registry
-func NewRegistryAPI(mysteriumAPI *mysterium.MysteriumAPI) *registryAPI {
+// NewRegistry create instance if API registry
+func NewRegistry(mysteriumAPI *mysterium.MysteriumAPI) *registryAPI {
 	return &registryAPI{
 		mysteriumAPI: mysteriumAPI,
 	}
