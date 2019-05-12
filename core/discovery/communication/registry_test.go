@@ -52,6 +52,48 @@ func Test_Registry_RegisterProposal(t *testing.T) {
 	}
 	err := registry.RegisterProposal(newProposal, &identity.SignerFake{})
 	assert.NoError(t, err)
+
+	assert.Equal(t, "*.proposal-register", connection.GetLastMessageSubject())
+	assert.JSONEq(
+		t,
+		`{
+			"proposal": `+string(newProposalPayload)+`
+		}`,
+		string(connection.GetLastMessage()),
+	)
+}
+
+func Test_Registry_UnregisterProposal(t *testing.T) {
+	connection := nats.StartConnectionFake()
+	defer connection.Close()
+
+	registry := &registry{
+		sender: NewSender(connection),
+	}
+	err := registry.UnregisterProposal(newProposal, &identity.SignerFake{})
+	assert.NoError(t, err)
+
+	assert.Equal(t, "*.proposal-unregister", connection.GetLastMessageSubject())
+	assert.JSONEq(
+		t,
+		`{
+			"proposal": `+string(newProposalPayload)+`
+		}`,
+		string(connection.GetLastMessage()),
+	)
+}
+
+func Test_Registry_PingProposal(t *testing.T) {
+	connection := nats.StartConnectionFake()
+	defer connection.Close()
+
+	registry := &registry{
+		sender: NewSender(connection),
+	}
+	err := registry.PingProposal(newProposal, &identity.SignerFake{})
+	assert.NoError(t, err)
+
+	assert.Equal(t, "*.proposal-register", connection.GetLastMessageSubject())
 	assert.JSONEq(
 		t,
 		`{

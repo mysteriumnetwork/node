@@ -53,6 +53,13 @@ type connectionFake struct {
 	errorMock   error
 }
 
+func (conn *connectionFake) GetLastMessageSubject() string {
+	if conn.messageLast != nil {
+		return conn.messageLast.Subject
+	}
+	return ""
+}
+
 func (conn *connectionFake) GetLastMessage() []byte {
 	if conn.messageLast != nil {
 		return conn.messageLast.Data

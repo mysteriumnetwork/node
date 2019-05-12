@@ -46,18 +46,18 @@ func NewRegistry(sender communication.Sender) *registry {
 
 // RegisterProposal registers service proposal to discovery service
 func (registry *registry) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	message := &proposalRegistrationMessage{Proposal: proposal}
-	return registry.sender.Send(&registrationProducer{message: message})
+	message := &registerMessage{Proposal: proposal}
+	return registry.sender.Send(&registerProducer{message: message})
 }
 
 // UnregisterProposal unregisters a service proposal when client disconnects
 func (registry *registry) UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	// TODO implement here
-	return nil
+	message := &unregisterMessage{Proposal: proposal}
+	return registry.sender.Send(&unregisterProducer{message: message})
 }
 
 // PingProposal pings service proposal as being alive
 func (registry *registry) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	message := &proposalRegistrationMessage{Proposal: proposal}
-	return registry.sender.Send(&registrationProducer{message: message})
+	message := &registerMessage{Proposal: proposal}
+	return registry.sender.Send(&registerProducer{message: message})
 }

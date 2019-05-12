@@ -22,47 +22,47 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// proposalRegistrationMessage structure represents message that the Provider sends about newly announced Proposal
-type proposalRegistrationMessage struct {
+// registerMessage structure represents message that the Provider sends about newly announced Proposal
+type registerMessage struct {
 	Proposal market.ServiceProposal `json:"proposal"`
 }
 
-const registrationEndpoint = communication.MessageEndpoint("proposal-register")
+const registerEndpoint = communication.MessageEndpoint("proposal-register")
 
 // Dialog boilerplate below, please ignore
 
-// registrationConsumer
-type registrationConsumer struct {
-	queue chan proposalRegistrationMessage
+// registerConsumer
+type registerConsumer struct {
+	queue chan registerMessage
 }
 
 // GetMessageEndpoint returns endpoint where to receive messages
-func (pmc *registrationConsumer) GetMessageEndpoint() communication.MessageEndpoint {
-	return registrationEndpoint
+func (pmc *registerConsumer) GetMessageEndpoint() communication.MessageEndpoint {
+	return registerEndpoint
 }
 
 // NewMessage creates struct where message from endpoint will be serialized
-func (pmc *registrationConsumer) NewMessage() (messagePtr interface{}) {
-	return &proposalRegistrationMessage{}
+func (pmc *registerConsumer) NewMessage() (messagePtr interface{}) {
+	return &registerMessage{}
 }
 
 // Consume handles messages from endpoint
-func (pmc *registrationConsumer) Consume(messagePtr interface{}) error {
-	pmc.queue <- messagePtr.(proposalRegistrationMessage)
+func (pmc *registerConsumer) Consume(messagePtr interface{}) error {
+	pmc.queue <- messagePtr.(registerMessage)
 	return nil
 }
 
-// registrationProducer
-type registrationProducer struct {
-	message *proposalRegistrationMessage
+// registerProducer
+type registerProducer struct {
+	message *registerMessage
 }
 
 // GetMessageEndpoint returns endpoint where to send messages
-func (pmp *registrationProducer) GetMessageEndpoint() communication.MessageEndpoint {
-	return registrationEndpoint
+func (pmp *registerProducer) GetMessageEndpoint() communication.MessageEndpoint {
+	return registerEndpoint
 }
 
 // Produce creates message which will be serialized to endpoint
-func (pmp *registrationProducer) Produce() (requestPtr interface{}) {
+func (pmp *registerProducer) Produce() (requestPtr interface{}) {
 	return pmp.message
 }
