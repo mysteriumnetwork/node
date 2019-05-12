@@ -90,7 +90,7 @@ func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
 		Testnet:                 true,
 		ExperimentIdentityCheck: false,
-		APIAddress:              metadata.TestnetDefinition.APIAddress,
+		MysteriumAPIAddress:     metadata.TestnetDefinition.MysteriumAPIAddress,
 		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
 		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,
 		EtherPaymentsAddress:    metadata.DefaultNetwork.PaymentsContractAddress.String(),

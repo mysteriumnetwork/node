@@ -23,7 +23,7 @@ import (
 
 // NetworkDefinition structure holds all parameters which describe particular network
 type NetworkDefinition struct {
-	APIAddress                string
+	MysteriumAPIAddress       string
 	AccessPolicyOracleAddress string
 	BrokerAddress             string
 	EtherClientRPC            string
@@ -33,7 +33,7 @@ type NetworkDefinition struct {
 
 // TestnetDefinition defines parameters for test network (currently default network)
 var TestnetDefinition = NetworkDefinition{
-	APIAddress:                "https://testnet-api.mysterium.network/v1",
+	MysteriumAPIAddress:       "https://testnet-api.mysterium.network/v1",
 	AccessPolicyOracleAddress: "https://testnet-trust.mysterium.network/api/v1/access-policies/",
 	BrokerAddress:             "nats://testnet-broker.mysterium.network",
 	EtherClientRPC:            "https://ropsten.infura.io",
@@ -44,7 +44,7 @@ var TestnetDefinition = NetworkDefinition{
 // LocalnetDefinition defines parameters for local network
 // Expects discovery, broker and morqa services on localhost
 var LocalnetDefinition = NetworkDefinition{
-	APIAddress:                "http://localhost/v1",
+	MysteriumAPIAddress:       "http://localhost/v1",
 	AccessPolicyOracleAddress: "https://localhost:8081/api/v1/access-policies/",
 	BrokerAddress:             "localhost",
 	EtherClientRPC:            "http://localhost:8545",

@@ -41,7 +41,7 @@ var (
 	apiAddressFlag = cli.StringFlag{
 		Name:  "api.address",
 		Usage: "`URL` of Mysterium API",
-		Value: metadata.DefaultNetwork.APIAddress,
+		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
 	}
 
 	accessPolicyAddressFlag = cli.StringFlag{
@@ -101,7 +101,7 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ExperimentIdentityCheck: ctx.GlobalBool(identityCheckFlag.Name),
 		ExperimentNATPunching:   ctx.GlobalBool(natPunchingFlag.Name),
 
-		APIAddress:                  ctx.GlobalString(apiAddressFlag.Name),
+		MysteriumAPIAddress:         ctx.GlobalString(apiAddressFlag.Name),
 		AccessPolicyEndpointAddress: ctx.GlobalString(accessPolicyAddressFlag.Name),
 		BrokerAddress:               ctx.GlobalString(brokerAddressFlag.Name),
 

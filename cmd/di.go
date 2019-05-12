@@ -475,8 +475,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	//override defined values one by one from options
-	if options.APIAddress != metadata.DefaultNetwork.APIAddress {
-		network.APIAddress = options.APIAddress
+	if options.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
+		network.MysteriumAPIAddress = options.MysteriumAPIAddress
 	}
 
 	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
@@ -493,7 +493,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.NetworkDefinition = network
-	di.MysteriumAPI = mysterium.NewClient(network.APIAddress)
+	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
