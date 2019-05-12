@@ -23,9 +23,12 @@ import "os/exec"
 func NewService() NATService {
 	return &serviceIPTables{
 		ipForward: serviceIPForward{
-			CommandEnable:  exec.Command("sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"),
-			CommandDisable: exec.Command("sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=0"),
-			CommandRead:    exec.Command("/sbin/sysctl", "-n", "net.ipv4.ip_forward"),
+			CommandFactory: func(name string, arg ...string) Command {
+				return exec.Command(name, arg...)
+			},
+			CommandEnable:  []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=1"},
+			CommandDisable: []string{"sudo", "/sbin/sysctl", "-w", "net.ipv4.ip_forward=0"},
+			CommandRead:    []string{"/sbin/sysctl", "-n", "net.ipv4.ip_forward"},
 		},
 		rules: make(map[RuleForwarding]struct{}),
 	}

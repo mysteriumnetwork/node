@@ -23,9 +23,12 @@ import "os/exec"
 func NewService() NATService {
 	return &servicePFCtl{
 		ipForward: serviceIPForward{
-			CommandEnable:  exec.Command("/usr/sbin/sysctl", "-w", "net.inet.ip.forwarding=1"),
-			CommandDisable: exec.Command("/usr/sbin/sysctl", "-w", "net.inet.ip.forwarding=0"),
-			CommandRead:    exec.Command("/usr/sbin/sysctl", "-n", "net.inet.ip.forwarding"),
+			CommandFactory: func(name string, arg ...string) Command {
+				return exec.Command(name, arg...)
+			},
+			CommandEnable:  []string{"/usr/sbin/sysctl", "-w", "net.inet.ip.forwarding=1"},
+			CommandDisable: []string{"/usr/sbin/sysctl", "-w", "net.inet.ip.forwarding=0"},
+			CommandRead:    []string{"/usr/sbin/sysctl", "-n", "net.inet.ip.forwarding"},
 		},
 		rules: make(map[RuleForwarding]struct{}),
 	}
