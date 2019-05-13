@@ -20,6 +20,8 @@ package mysterium
 import (
 	"sync"
 
+	"encoding/json"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/cmd"
@@ -202,10 +204,13 @@ type OpenvpnConnectionFactory struct {
 // Create creates a new openvpn connection
 func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (con connection.Connection, err error) {
 	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error) {
+		sessionConfig := &openvpn.VPNConfig{}
+		err := json.Unmarshal(options.SessionConfig, sessionConfig)
 		if err != nil {
 			return nil, nil, err
 		}
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "", true)
+
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", true)
 		if err != nil {
 			return nil, nil, err
 		}
