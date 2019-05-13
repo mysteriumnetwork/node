@@ -36,7 +36,6 @@ type processFactory func(options connection.ConnectOptions) (openvpn.Process, *C
 
 // NATPinger tries to punch a hole in NAT
 type NATPinger interface {
-	BindConsumerPort(port int)
 	Stop()
 	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
 }

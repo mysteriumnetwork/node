@@ -54,7 +54,6 @@ type Pinger struct {
 	configParser   ConfigParser
 	natProxy       natProxy
 	portPool       PortSupplier
-	consumerPort   int
 	previousStage  string
 	eventPublisher Publisher
 }
@@ -262,11 +261,6 @@ func (p *Pinger) PingTarget(target *Params) {
 		log.Info(prefix, "ping target timeout: ", target)
 		return
 	}
-}
-
-// BindConsumerPort binds NATPinger to source consumer port
-func (p *Pinger) BindConsumerPort(port int) {
-	p.consumerPort = port
 }
 
 // BindServicePort register service port to forward connection to
