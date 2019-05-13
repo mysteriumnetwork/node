@@ -81,7 +81,7 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeDir string) (*ClientConfig, error) {
+func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeDir string, isMobile bool) (*ClientConfig, error) {
 	vpnConfig := &VPNConfig{}
 	err := json.Unmarshal(sessionConfig, vpnConfig)
 	if err != nil {
@@ -100,9 +100,11 @@ func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeD
 	if vpnConfig.LocalPort > 0 {
 		clientFileConfig.OriginalRemoteIP = vpnConfig.RemoteIP
 		clientFileConfig.OriginalRemotePort = vpnConfig.RemotePort
-		vpnConfig.RemoteIP = "127.0.0.1"
-		// TODO: randomize this too?
-		vpnConfig.RemotePort = vpnConfig.LocalPort + 1
+		if isMobile {
+			vpnConfig.RemoteIP = "127.0.0.1"
+			// TODO: randomize this too?
+			vpnConfig.RemotePort = vpnConfig.LocalPort + 1
+		}
 	}
 
 	clientFileConfig.VpnConfig = vpnConfig

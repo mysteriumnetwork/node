@@ -205,7 +205,7 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 		if err != nil {
 			return nil, nil, err
 		}
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "", true)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -243,6 +243,7 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 		createSession: sessionFactory,
 		natPinger:     ocf.natPinger,
 		ipResolver:    ocf.ipResolver,
+		pingerStop:    make(chan struct{}),
 	}, nil
 }
 
