@@ -103,7 +103,7 @@ type natProxy interface {
 	handOff(serviceType services.ServiceType, conn *net.UDPConn)
 	registerServicePort(serviceType services.ServiceType, port int)
 	isAvailable(serviceType services.ServiceType) bool
-	consumerHandOff(consumerPort int, conn *net.UDPConn) chan struct{}
+	consumerHandOff(consumerAddr string, conn *net.UDPConn) chan struct{}
 	setProtectSocketCallback(socketProtect func(socket int) bool)
 }
 
@@ -169,8 +169,9 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 	p.pingCancelled <- struct{}{}
 
 	if p.consumerPort > 0 {
-		log.Info(prefix, "Handing connection to consumer NATProxy")
-		p.stopNATProxy = p.natProxy.consumerHandOff(p.consumerPort, conn)
+		consumerAddr := fmt.Sprintf("127.0.0.1:%d", p.consumerPort+1)
+		log.Info(prefix, "Handing connection to consumer NATProxy: ", consumerAddr)
+		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
 	}
 	return nil
 }
