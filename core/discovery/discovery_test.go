@@ -99,12 +99,12 @@ func TestStartStopUnregisterProposal(t *testing.T) {
 
 func observeStatus(d *Discovery, status Status) Status {
 	for {
-		d.RLock()
+		d.mu.RLock()
 		if d.status == status {
-			d.RUnlock()
+			d.mu.RUnlock()
 			return d.status
 		}
-		d.RUnlock()
+		d.mu.RUnlock()
 		time.Sleep(10 * time.Millisecond)
 	}
 }

@@ -37,7 +37,7 @@ type registry struct {
 	sender communication.Sender
 }
 
-// NewRegistry create instance if Broker registry
+// NewRegistry create an instance of Broker registry
 func NewRegistry(sender communication.Sender) *registry {
 	return &registry{
 		sender: sender,

@@ -47,20 +47,21 @@ const logPrefix = "[discovery] "
 
 // Discovery structure holds discovery service state
 type Discovery struct {
-	identityRegistry            identity_registry.IdentityRegistry
-	ownIdentity                 identity.Identity
-	identityRegistration        identity_registry.RegistrationDataProvider
-	proposalRegistry            ProposalRegistry
-	signerCreate                identity.SignerFactory
-	signer                      identity.Signer
-	proposal                    market.ServiceProposal
+	identityRegistry     identity_registry.IdentityRegistry
+	ownIdentity          identity.Identity
+	identityRegistration identity_registry.RegistrationDataProvider
+	proposalRegistry     ProposalRegistry
+	signerCreate         identity.SignerFactory
+	signer               identity.Signer
+	proposal             market.ServiceProposal
+
 	statusChan                  chan Status
 	status                      Status
 	proposalAnnouncementStopped *sync.WaitGroup
 	unsubscribe                 func()
 	stop                        func()
 
-	sync.RWMutex
+	mu sync.RWMutex
 }
 
 // NewService creates new discovery service
@@ -80,14 +81,13 @@ func NewService(
 		proposalAnnouncementStopped: &sync.WaitGroup{},
 		unsubscribe:                 func() {},
 		stop:                        func() {},
-		RWMutex:                     sync.RWMutex{},
 	}
 }
 
 // Start launches discovery service
 func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
-	d.RLock()
-	defer d.RUnlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	d.ownIdentity = ownIdentity
 	d.signer = d.signerCreate(ownIdentity)
@@ -142,19 +142,19 @@ func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool) {
 
 func (d *Discovery) stopLoop() {
 	log.Info(logPrefix, "stopping discovery loop..")
-	d.RLock()
+	d.mu.RLock()
 	if d.status == WaitingForRegistration {
-		d.RUnlock()
+		d.mu.RUnlock()
 		d.unsubscribe()
-		d.RLock()
+		d.mu.RLock()
 	}
 
 	if d.status == RegisterProposal || d.status == PingProposal {
-		d.RUnlock()
+		d.mu.RUnlock()
 		d.changeStatus(UnregisterProposal)
 		return
 	}
-	d.RUnlock()
+	d.mu.RUnlock()
 }
 
 func (d *Discovery) registerIdentity() {
@@ -228,8 +228,8 @@ func (d *Discovery) checkRegistration() {
 }
 
 func (d *Discovery) changeStatus(status Status) {
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	d.status = status
 
