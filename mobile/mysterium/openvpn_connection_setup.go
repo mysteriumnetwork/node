@@ -18,9 +18,8 @@
 package mysterium
 
 import (
-	"sync"
-
 	"encoding/json"
+	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"

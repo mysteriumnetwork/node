@@ -49,8 +49,5 @@ func (np *NoopPinger) PingProvider(ip string, port int, consumerPort int, stop <
 // PingTarget does nothing
 func (np *NoopPinger) PingTarget(*Params) {}
 
-// BindConsumerPort does nothing
-func (np *NoopPinger) BindConsumerPort(port int) {}
-
 // BindServicePort does nothing
 func (np *NoopPinger) BindServicePort(serviceType services.ServiceType, port int) {}

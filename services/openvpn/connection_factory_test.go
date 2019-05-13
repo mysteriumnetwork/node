@@ -64,9 +64,6 @@ func TestConnectionFactory_CreatesConnection(t *testing.T) {
 // MockNATPinger returns a mock nat pinger, that really doesnt do much
 type MockNATPinger struct{}
 
-// BindConsumerPort does nothing
-func (mnp *MockNATPinger) BindConsumerPort(port int) {}
-
 // PingProvider does nothing
 func (mnp *MockNATPinger) PingProvider(_ string, port int, consumerPort int, _ <-chan struct{}) error {
 	return nil
