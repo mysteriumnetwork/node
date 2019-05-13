@@ -56,7 +56,7 @@ var cfg configParams
 
 func init() {
 	cfg = configParams{
-		LogLevel: "info",
+		LogLevel: "debug",
 	}
 	if metadata.VersionAsString() == "source.dev-build" {
 		cfg.LogLevel = "trace"
