@@ -85,7 +85,14 @@ func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateCha
 			return nil, nil, err
 		}
 
-		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, op.configDirectory, op.runtimeDirectory, false)
+		// override vpnClientConfig params with proxy local IP and pinger port
+		// do this only if connecting to natted provider
+		if sessionConfig.LocalPort > 0 {
+			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
+			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
+		}
+
+		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, op.configDirectory, op.runtimeDirectory)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -78,7 +78,7 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string, isMobile bool) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string) (*ClientConfig, error) {
 	// TODO Rename `vpnConfig` to `sessionConfig`
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
@@ -86,19 +86,6 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
-
-	// override vpnClientConfig params with proxy local IP and pinger port
-	// do this only if connecting to natted provider
-	if vpnConfig.LocalPort > 0 {
-		vpnConfig.OriginalRemoteIP = vpnConfig.RemoteIP
-		vpnConfig.OriginalRemotePort = vpnConfig.RemotePort
-		if isMobile {
-			vpnConfig.RemoteIP = "127.0.0.1"
-			// TODO: randomize this too?
-			vpnConfig.RemotePort = vpnConfig.LocalPort + 1
-		}
-	}
-
 	clientFileConfig.VpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort, vpnConfig.LocalPort)

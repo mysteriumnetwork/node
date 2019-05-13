@@ -210,7 +210,17 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 			return nil, nil, err
 		}
 
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", true)
+		// override vpnClientConfig params with proxy local IP and pinger port
+		// do this only if connecting to natted provider
+		if sessionConfig.LocalPort > 0 {
+			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
+			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
+			sessionConfig.RemoteIP = "127.0.0.1"
+			// TODO: randomize this too?
+			sessionConfig.RemotePort = sessionConfig.LocalPort + 1
+		}
+
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "")
 		if err != nil {
 			return nil, nil, err
 		}
