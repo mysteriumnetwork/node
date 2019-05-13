@@ -26,10 +26,8 @@ import (
 // ClientConfig represents specific "openvpn as client" configuration
 type ClientConfig struct {
 	*config.GenericConfig
-	LocalPort          int
-	VpnConfig          *VPNConfig
-	OriginalRemoteIP   string
-	OriginalRemotePort int
+	LocalPort int
+	VpnConfig *VPNConfig
 }
 
 // SetClientMode adds config arguments for openvpn behave as client
@@ -92,8 +90,8 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 	// override vpnClientConfig params with proxy local IP and pinger port
 	// do this only if connecting to natted provider
 	if vpnConfig.LocalPort > 0 {
-		clientFileConfig.OriginalRemoteIP = vpnConfig.RemoteIP
-		clientFileConfig.OriginalRemotePort = vpnConfig.RemotePort
+		vpnConfig.OriginalRemoteIP = vpnConfig.RemoteIP
+		vpnConfig.OriginalRemotePort = vpnConfig.RemotePort
 		if isMobile {
 			vpnConfig.RemoteIP = "127.0.0.1"
 			// TODO: randomize this too?

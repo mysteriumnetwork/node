@@ -66,7 +66,7 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 
 	if clientConfig.VpnConfig.LocalPort > 0 {
 		c.natPinger.BindConsumerPort(clientConfig.LocalPort)
-		err = c.natPinger.PingProvider(clientConfig.OriginalRemoteIP, clientConfig.OriginalRemotePort, c.pingerStop)
+		err = c.natPinger.PingProvider(clientConfig.VpnConfig.OriginalRemoteIP, clientConfig.VpnConfig.OriginalRemotePort, c.pingerStop)
 		if err != nil {
 			return err
 		}
@@ -113,6 +113,9 @@ func (c *Client) GetConfig() (connection.ConsumerConfig, error) {
 
 //VPNConfig structure represents VPN configuration options for given session
 type VPNConfig struct {
+	OriginalRemoteIP   string
+	OriginalRemotePort int
+
 	RemoteIP        string `json:"remote"`
 	RemotePort      int    `json:"port"`
 	LocalPort       int    `json:"lport"`

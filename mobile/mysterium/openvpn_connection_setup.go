@@ -58,8 +58,8 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 	if clientConfig.LocalPort > 0 {
 		wrapper.natPinger.BindConsumerPort(clientConfig.LocalPort)
 		err := wrapper.natPinger.PingProvider(
-			clientConfig.OriginalRemoteIP,
-			clientConfig.OriginalRemotePort,
+			clientConfig.VpnConfig.OriginalRemoteIP,
+			clientConfig.VpnConfig.OriginalRemotePort,
 			wrapper.pingerStop)
 		if err != nil {
 			return err
