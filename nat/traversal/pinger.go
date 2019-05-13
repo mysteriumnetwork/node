@@ -139,10 +139,10 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
+func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error {
 	log.Info(prefix, "NAT pinging to provider")
 
-	conn, err := p.getConnection(ip, port, p.consumerPort)
+	conn, err := p.getConnection(ip, port, consumerPort)
 	if err != nil {
 		return errors.Wrap(err, "failed to get connection")
 	}
@@ -168,8 +168,8 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 
 	p.pingCancelled <- struct{}{}
 
-	if p.consumerPort > 0 {
-		consumerAddr := fmt.Sprintf("127.0.0.1:%d", p.consumerPort+1)
+	if consumerPort > 0 {
+		consumerAddr := fmt.Sprintf("127.0.0.1:%d", consumerPort+1)
 		log.Info(prefix, "Handing connection to consumer NATProxy: ", consumerAddr)
 		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
 	}

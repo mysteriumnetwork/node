@@ -68,7 +68,9 @@ type MockNATPinger struct{}
 func (mnp *MockNATPinger) BindConsumerPort(port int) {}
 
 // PingProvider does nothing
-func (mnp *MockNATPinger) PingProvider(_ string, port int, _ <-chan struct{}) error { return nil }
+func (mnp *MockNATPinger) PingProvider(_ string, port int, consumerPort int, _ <-chan struct{}) error {
+	return nil
+}
 
 // Stop does nothing
 func (mnp *MockNATPinger) Stop() {}
