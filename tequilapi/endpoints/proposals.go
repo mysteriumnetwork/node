@@ -113,7 +113,8 @@ func mapProposalsToRes(
 
 // ProposalProvider allows to fetch proposals by specified params
 type ProposalProvider interface {
-	FindProposals(providerID, serviceType, accessPolicyID, accessPolicySource string) ([]market.ServiceProposal, error)
+	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
+	FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error)
 }
 
 type proposalsEndpoint struct {
@@ -161,13 +162,14 @@ func NewProposalsEndpoint(proposalProvider ProposalProvider, morqaClient metrics
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	providerID := req.URL.Query().Get("providerId")
-	serviceType := req.URL.Query().Get("serviceType")
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
-	accessPolicyID := req.URL.Query().Get("accessPolicyId")
-	accessPolicySource := req.URL.Query().Get("accessPolicySource")
 
-	proposals, err := pe.proposalProvider.FindProposals(providerID, serviceType, accessPolicyID, accessPolicySource)
+	proposals, err := pe.proposalProvider.FindProposals(market.ProposalFilter{
+		ProviderID:         req.URL.Query().Get("providerId"),
+		ServiceType:        req.URL.Query().Get("serviceType"),
+		AccessPolicyID:     req.URL.Query().Get("accessPolicyId"),
+		AccessPolicySource: req.URL.Query().Get("accessPolicySource"),
+	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
