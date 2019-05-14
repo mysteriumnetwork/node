@@ -38,7 +38,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
@@ -175,8 +174,6 @@ type Dependencies struct {
 	NATEventSender   NatEventSender
 	NATStatusTracker NATStatusTracker
 
-	PortPool *port.Pool
-
 	MetricsSender *metrics.Sender
 
 	UIServer UIServer
@@ -218,9 +215,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapUIServer(nodeOptions.UI)
 
 	di.bootstrapMetrics(nodeOptions)
-
-	di.PortPool = port.NewPool()
-
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
