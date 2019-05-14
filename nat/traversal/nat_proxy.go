@@ -193,7 +193,6 @@ func (np *NATProxy) getConnection(serviceType services.ServiceType) (*net.UDPCon
 	if err != nil {
 		return nil, err
 	}
-
 	return net.DialUDP("udp", nil, udpAddr)
 }
 

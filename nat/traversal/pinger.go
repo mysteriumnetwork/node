@@ -133,46 +133,49 @@ func (p *Pinger) Start() {
 	for {
 		select {
 		case <-p.stop:
+			log.Info(prefix, "stop pinger called")
 			return
 		case pingParams := <-p.pingTarget:
-			log.Info(prefix, "Pinging peer with: ", pingParams)
-
-			// TODO: remove port parsing for consumer config
-			IP, _, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
-			if err != nil {
-				log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", pingParams)))
-				continue
-			}
-
-			log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, pingParams.ConsumerPort)
-			if !p.natProxy.isAvailable(serviceType) {
-				log.Warn(prefix, serviceType, " NATProxy is not available for this transport protocol")
-				continue
-			}
-
-			conn, err := p.getConnection(IP, pingParams.ConsumerPort, pingParams.ProviderPort)
-			if err != nil {
-				log.Error(prefix, "failed to get connection: ", err)
-				continue
-			}
-
 			go func() {
-				err := p.ping(conn)
+				log.Info(prefix, "Pinging peer with: ", pingParams)
+
+				// TODO: remove port parsing for consumer config
+				IP, _, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
 				if err != nil {
-					log.Warn(prefix, "Error while pinging: ", err)
+					log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", pingParams)))
+					return
 				}
+
+				log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, pingParams.ConsumerPort)
+				if !p.natProxy.isAvailable(serviceType) {
+					log.Warn(prefix, serviceType, " NATProxy is not available for this transport protocol")
+					return
+				}
+
+				conn, err := p.getConnection(IP, pingParams.ConsumerPort, pingParams.ProviderPort)
+				if err != nil {
+					log.Error(prefix, "failed to get connection: ", err)
+					return
+				}
+
+				go func() {
+					err := p.ping(conn)
+					if err != nil {
+						log.Warn(prefix, "Error while pinging: ", err)
+					}
+				}()
+
+				err = p.pingReceiver(conn, pingParams.Cancel)
+				if err != nil {
+					log.Error(prefix, "ping receiver error: ", err)
+					return
+				}
+				p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
+
+				log.Info(prefix, "ping received, waiting for a new connection")
+
+				go p.natProxy.handOff(serviceType, conn)
 			}()
-
-			err = p.pingReceiver(conn, pingParams.Cancel)
-			if err != nil {
-				log.Error(prefix, "ping receiver error: ", err)
-				continue
-			}
-			p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
-
-			log.Info(prefix, "ping received, waiting for a new connection")
-
-			go p.natProxy.handOff(serviceType, conn)
 		}
 	}
 }
@@ -300,6 +303,7 @@ func (p *Pinger) PingTarget(target *Params) {
 		return
 	// do not block if ping target is not received
 	case <-time.After(100 * time.Millisecond):
+		log.Info(prefix, "ping target timeout: ", target)
 		return
 	}
 }
@@ -333,18 +337,9 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 			log.Errorf("%sFailed to read remote peer: %s cause: %s", prefix, conn.RemoteAddr().String(), err)
 			return err
 		}
-		fmt.Println("remote peer data received: ", string(buf[:n]))
-
-		// send another couple of pings to remote side, because only now we have a pinghole
-		// or wait for your pings to reach other end before closing pinger conn.
-		select {
-		case <-time.After(2 * pingInterval * time.Millisecond):
-			p.pingCancelled <- struct{}{}
-			return nil
-		case <-stop:
-			p.pingCancelled <- struct{}{}
-			return errNATPunchAttemptStopped
-		}
+		fmt.Println(prefix, "remote peer data received: ", string(buf[:n]))
+		p.pingCancelled <- struct{}{}
+		return nil
 	}
 }
 
