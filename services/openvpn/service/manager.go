@@ -74,6 +74,7 @@ type Manager struct {
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 	consumerConfig                 openvpn_service.ConsumerConfig
 
+	vpnServerPort            int
 	vpnServerConfigFactory   ServerConfigFactory
 	vpnServiceConfigProvider session.ConfigNegotiator
 	vpnServerFactory         ServerFactory
@@ -99,7 +100,9 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	if err != nil {
 		return errors.Wrap(err, "failed to acquire an unused port")
 	}
-	releasePorts := m.mapPort(servicePort.Num())
+	m.vpnServerPort = servicePort.Num()
+
+	releasePorts := m.mapPort(m.vpnServerPort)
 	defer releasePorts()
 
 	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
@@ -107,20 +110,20 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return
 	}
 
-	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP, servicePort.Num())
+	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP, m.vpnServerPort)
 
-	vpnServerConfig := m.vpnServerConfigFactory(primitives, servicePort.Num())
+	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)
 	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
 
 	// register service port to which NATProxy will forward connects attempts to
-	m.natPinger.BindServicePort(openvpn_service.ServiceType, servicePort.Num())
+	m.natPinger.BindServicePort(openvpn_service.ServiceType, m.vpnServerPort)
 
-	log.Info(logPrefix, "starting openvpn server on port: ", servicePort.Num())
-	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, servicePort.Num()); err != nil {
+	log.Info(logPrefix, "starting openvpn server on port: ", m.vpnServerPort)
+	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
 		return errors.Wrap(err, "failed to add firewall rule")
 	}
 	defer func() {
-		if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, servicePort.Num()); err != nil {
+		if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
 			_ = log.Error(logPrefix, "failed to delete firewall rule for OpenVPN", err)
 		}
 	}()
@@ -154,13 +157,11 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *
 	if m.vpnServiceConfigProvider == nil {
 		return nil, errors.New("Config provider not initialized")
 	}
-
-	op, err := m.ports.PortForService(openvpn_service.ServiceType)
-	if err != nil {
-		return nil, err
+	if m.vpnServerPort == 0 {
+		return nil, errors.New("Service port not initialized")
 	}
 
-	traversalParams = &traversal.Params{ProviderPort: op.Num()}
+	traversalParams = &traversal.Params{ProviderPort: m.vpnServerPort}
 
 	// Older clients do not send any sessionConfig, but we should keep back compatibility and not fail in this case.
 	if sessionConfig != nil && len(sessionConfig) > 0 && m.natPinger.Valid() {
