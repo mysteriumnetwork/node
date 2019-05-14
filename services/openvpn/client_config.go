@@ -18,7 +18,6 @@
 package openvpn
 
 import (
-	"encoding/json"
 	"strconv"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
@@ -27,10 +26,8 @@ import (
 // ClientConfig represents specific "openvpn as client" configuration
 type ClientConfig struct {
 	*config.GenericConfig
-	LocalPort          int
-	VpnConfig          *VPNConfig
-	OriginalRemoteIP   string
-	OriginalRemotePort int
+	LocalPort int
+	VpnConfig *VPNConfig
 }
 
 // SetClientMode adds config arguments for openvpn behave as client
@@ -81,30 +78,14 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(sessionConfig []byte, configDir string, runtimeDir string) (*ClientConfig, error) {
-	vpnConfig := &VPNConfig{}
-	err := json.Unmarshal(sessionConfig, vpnConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	err = NewDefaultValidator().IsValid(vpnConfig)
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string) (*ClientConfig, error) {
+	// TODO Rename `vpnConfig` to `sessionConfig`
+	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir)
-
-	// override vpnClientConfig params with proxy local IP and pinger port
-	// do this only if connecting to natted provider
-	if vpnConfig.LocalPort > 0 {
-		clientFileConfig.OriginalRemoteIP = vpnConfig.RemoteIP
-		clientFileConfig.OriginalRemotePort = vpnConfig.RemotePort
-		vpnConfig.RemoteIP = "127.0.0.1"
-		// TODO: randomize this too?
-		vpnConfig.RemotePort = vpnConfig.LocalPort + 1
-	}
-
 	clientFileConfig.VpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort, vpnConfig.LocalPort)

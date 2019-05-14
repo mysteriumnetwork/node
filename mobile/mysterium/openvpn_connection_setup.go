@@ -20,6 +20,8 @@ package mysterium
 import (
 	"sync"
 
+	"encoding/json"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/cmd"
@@ -56,8 +58,8 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 	if clientConfig.LocalPort > 0 {
 		wrapper.natPinger.BindConsumerPort(clientConfig.LocalPort)
 		err := wrapper.natPinger.PingProvider(
-			clientConfig.OriginalRemoteIP,
-			clientConfig.OriginalRemotePort,
+			clientConfig.VpnConfig.OriginalRemoteIP,
+			clientConfig.VpnConfig.OriginalRemotePort,
 			wrapper.pingerStop)
 		if err != nil {
 			return err
@@ -202,10 +204,23 @@ type OpenvpnConnectionFactory struct {
 // Create creates a new openvpn connection
 func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (con connection.Connection, err error) {
 	sessionFactory := func(options connection.ConnectOptions) (*openvpn3.Session, *openvpn.ClientConfig, error) {
+		sessionConfig := &openvpn.VPNConfig{}
+		err := json.Unmarshal(options.SessionConfig, sessionConfig)
 		if err != nil {
 			return nil, nil, err
 		}
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(options.SessionConfig, "", "")
+
+		// override vpnClientConfig params with proxy local IP and pinger port
+		// do this only if connecting to natted provider
+		if sessionConfig.LocalPort > 0 {
+			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
+			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
+			sessionConfig.RemoteIP = "127.0.0.1"
+			// TODO: randomize this too?
+			sessionConfig.RemotePort = sessionConfig.LocalPort + 1
+		}
+
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -243,6 +258,7 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 		createSession: sessionFactory,
 		natPinger:     ocf.natPinger,
 		ipResolver:    ocf.ipResolver,
+		pingerStop:    make(chan struct{}),
 	}, nil
 }
 
