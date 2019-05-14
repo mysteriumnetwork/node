@@ -79,7 +79,7 @@ type Publisher interface {
 }
 
 // NewPinger returns Pinger instance
-func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier, previousStage string, publisher Publisher) *Pinger {
+func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, previousStage string, publisher Publisher) *Pinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})
@@ -92,7 +92,6 @@ func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portP
 		natEventWaiter: waiter,
 		configParser:   parser,
 		natProxy:       proxy,
-		portPool:       portPool,
 		previousStage:  previousStage,
 		eventPublisher: publisher,
 	}

@@ -570,7 +570,6 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 			di.NATTracker,
 			config.NewConfigParser(),
 			traversal.NewNATProxy(),
-			di.PortPool,
 			mapping.StageName,
 			di.EventBus,
 		)
