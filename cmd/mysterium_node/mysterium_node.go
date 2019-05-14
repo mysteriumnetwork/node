@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/cmd/commands/service"
 	"github.com/mysteriumnetwork/node/cmd/commands/version"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli"
 )
@@ -73,6 +74,7 @@ func NewCommand() (*cli.App, error) {
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright
+	logconfig.RegisterFlags(&app.Flags)
 	if err := cmd.RegisterFlagsNode(&app.Flags); err != nil {
 		return nil, err
 	}
