@@ -40,6 +40,7 @@ import (
 	openvpn_discovery "github.com/mysteriumnetwork/node/services/openvpn/discovery"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/wireguard"
+	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -242,4 +243,15 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	if err := di.EventBus.Subscribe(service.StopTopic, serviceCleaner.Cleanup); err != nil {
 		log.Error(logPrefix, "failed to subscribe service cleaner")
 	}
+}
+
+func (di *Dependencies) registerConnections(nodeOptions node.Options) {
+	di.registerOpenvpnConnection(nodeOptions)
+	di.registerNoopConnection()
+	di.registerWireguardConnection()
+}
+
+func (di *Dependencies) registerWireguardConnection() {
+	wireguard.Bootstrap()
+	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator())
 }
