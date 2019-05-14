@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/logconfig"
 	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
 	"github.com/urfave/cli"
 )
@@ -75,6 +76,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 
 // ParseFlagsNode function fills in node options from CLI context
 func ParseFlagsNode(ctx *cli.Context) node.Options {
+	logconfig.ParseFlags(ctx)
 	return node.Options{
 		Directories: ParseFlagsDirectory(ctx),
 

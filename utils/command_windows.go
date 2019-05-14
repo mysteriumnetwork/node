@@ -20,12 +20,16 @@ package utils
 import (
 	"fmt"
 	"os/exec"
+
+	log "github.com/cihub/seelog"
 )
 
 func PowerShell(cmd string) ([]byte, error) {
+	log.Tracef("[powershell] executing: '%s'", cmd)
 	out, err := exec.Command("powershell", "-Command", cmd).CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("'powershell -Command %v': %v output: %s", cmd, RemoveErrorsAndBOMUTF8(err.Error()), RemoveErrorsAndBOMUTF8Byte(out))
 	}
+	log.Tracef("[powershell] done: '%s', raw output: '%s'", cmd, out)
 	return RemoveErrorsAndBOMUTF8Byte(out), nil
 }

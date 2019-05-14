@@ -21,8 +21,7 @@ import (
 	"bytes"
 	"text/template"
 
-	"github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/metadata"
+	log "github.com/cihub/seelog"
 )
 
 const seewayLogXMLConfigTemplate = `
@@ -36,15 +35,11 @@ const seewayLogXMLConfigTemplate = `
 </seelog>
 `
 
-type configParams struct {
-	LogLevel string
-}
-
-func (cp configParams) String() string {
+func buildXmlConfig(opts options) string {
 	tmpl := template.Must(template.New("seelogcfg").Parse(seewayLogXMLConfigTemplate))
 
 	var tpl bytes.Buffer
-	err := tmpl.Execute(&tpl, cp)
+	err := tmpl.Execute(&tpl, opts)
 	if err != nil {
 		panic(err)
 	}
@@ -52,27 +47,16 @@ func (cp configParams) String() string {
 	return tpl.String()
 }
 
-var cfg configParams
-
-func init() {
-	cfg = configParams{
-		LogLevel: "info",
-	}
-	if metadata.VersionAsString() == "source.dev-build" {
-		cfg.LogLevel = "trace"
-	}
-}
-
-// Bootstrap loads seelog package into the overall system
+// Bootstrap loads log package into the overall system
 func Bootstrap() {
-	newLogger, err := seelog.LoggerFromConfigAsString(cfg.String())
+	newLogger, err := log.LoggerFromConfigAsString(buildXmlConfig(opts))
 	if err != nil {
-		seelog.Warn("Error parsing seelog configuration", err)
+		log.Warn("error parsing log configuration", err)
 		return
 	}
-	err = seelog.UseLogger(newLogger)
+	err = log.UseLogger(newLogger)
 	if err != nil {
-		seelog.Warn("Error setting new logger for seelog", err)
+		log.Warn("error setting new logger for log", err)
 	}
-	seelog.Info("LOG LEVEL: ", cfg.LogLevel)
+	log.Infof("log level: %s", opts.LogLevel)
 }

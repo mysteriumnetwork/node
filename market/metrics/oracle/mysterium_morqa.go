@@ -47,14 +47,14 @@ func NewMorqaClient(qualityOracleAddress string) metrics.QualityOracle {
 func (m *mysteriumMorqa) ProposalsMetrics() []json.RawMessage {
 	req, err := requests.NewGetRequest(m.qualityOracleAddress, "proposals/quality", nil)
 	if err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, "Failed to create proposals metrics request", err)
+		log.Warn(mysteriumMorqaLogPrefix, "Failed to create proposals metrics request: ", err)
 		return nil
 	}
 
 	var metricsResponse metrics.ServiceMetricsResponse
 	err = m.http.DoRequestAndParseResponse(req, &metricsResponse)
 	if err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics", err)
+		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics: ", err)
 		return nil
 	}
 

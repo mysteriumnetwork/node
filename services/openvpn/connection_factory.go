@@ -18,6 +18,7 @@
 package openvpn
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -78,7 +79,20 @@ func (op *ProcessBasedConnectionFactory) newStateMiddleware(session session.ID, 
 // Create creates a new openvpn connection
 func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
 	procFactory := func(options connection.ConnectOptions) (openvpn.Process, *ClientConfig, error) {
-		vpnClientConfig, err := NewClientConfigFromSession(options.SessionConfig, op.configDirectory, op.runtimeDirectory)
+		sessionConfig := &VPNConfig{}
+		err := json.Unmarshal(options.SessionConfig, sessionConfig)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// override vpnClientConfig params with proxy local IP and pinger port
+		// do this only if connecting to natted provider
+		if sessionConfig.LocalPort > 0 {
+			sessionConfig.OriginalRemoteIP = sessionConfig.RemoteIP
+			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
+		}
+
+		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, op.configDirectory, op.runtimeDirectory)
 		if err != nil {
 			return nil, nil, err
 		}
