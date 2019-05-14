@@ -68,6 +68,7 @@ type Manager struct {
 	natService     nat.NATService
 	mapPort        func(int) (releasePortMapping func())
 	ports          port.ServicePortSupplier
+	natPingerPorts port.ServicePortSupplier
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
 
@@ -173,12 +174,12 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *
 		m.consumerConfig = c
 
 		if m.isBehindNAT() && m.portMappingFailed() {
-			pp, err := m.ports.Acquire()
+			pp, err := m.natPingerPorts.Acquire()
 			if err != nil {
 				return nil, err
 			}
 
-			cp, err := m.ports.Acquire()
+			cp, err := m.natPingerPorts.Acquire()
 			if err != nil {
 				return nil, err
 			}
