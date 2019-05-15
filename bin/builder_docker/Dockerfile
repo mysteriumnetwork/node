@@ -4,8 +4,8 @@ FROM golang:1.11 AS builder
 RUN apt-get update \
     && apt-get install -y ruby-dev build-essential \
     && rm -rf /var/cache/apt/* /var/lib/apt/lists/* \
-    && gem install ffi -v 1.9.18 \
-    && gem install fpm -v 1.9.3
+    && gem install ffi -v 1.10.0 \
+    && gem install fpm -v 1.11.0
 
 # Install development dependencies
 RUN go get \
