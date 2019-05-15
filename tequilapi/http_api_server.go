@@ -19,7 +19,6 @@ package tequilapi
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -28,33 +27,29 @@ import (
 // APIServer interface represents control methods for underlying http api server
 type APIServer interface {
 	Wait() error
-	StartServing() error
+	StartServing()
 	Stop()
 	Address() (string, error)
 }
 
 type apiServer struct {
-	errorChannel  chan error
-	handler       http.Handler
-	listenAddress string
-	listener      net.Listener
+	errorChannel chan error
+	handler      http.Handler
+	listener     net.Listener
 }
 
 // NewServer creates http api server for given address port and http handler
-func NewServer(address string, port int, handler http.Handler, corsPolicy CorsPolicy) APIServer {
+func NewServer(listener net.Listener, handler http.Handler, corsPolicy CorsPolicy) APIServer {
 	server := apiServer{
-		make(chan error, 1),
-		DisableCaching(ApplyCors(handler, corsPolicy)),
-		fmt.Sprintf("%s:%d", address, port),
-		nil}
+		errorChannel: make(chan error, 1),
+		handler:      DisableCaching(ApplyCors(handler, corsPolicy)),
+		listener:     listener,
+	}
 	return &server
 }
 
 // Stop method stops underlying http server
 func (server *apiServer) Stop() {
-	if server.listener == nil {
-		return
-	}
 	server.listener.Close()
 }
 
@@ -65,21 +60,12 @@ func (server *apiServer) Wait() error {
 
 // Address method returns bind port for given http server (useful when random port is used)
 func (server *apiServer) Address() (string, error) {
-	if server.listener == nil {
-		return "", errors.New("not bound")
-	}
 	return extractBoundAddress(server.listener)
 }
 
 // StartServing starts http request serving
-func (server *apiServer) StartServing() error {
-	var err error
-	server.listener, err = net.Listen("tcp", server.listenAddress)
-	if err != nil {
-		return err
-	}
+func (server *apiServer) StartServing() {
 	go server.serve(server.handler)
-	return nil
 }
 
 func (server *apiServer) serve(handler http.Handler) {

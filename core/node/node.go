@@ -71,10 +71,7 @@ func (node *Node) Start() error {
 		}
 	}()
 
-	err := node.httpAPIServer.StartServing()
-	if err != nil {
-		return err
-	}
+	node.httpAPIServer.StartServing()
 
 	address, err := node.httpAPIServer.Address()
 	if err != nil {

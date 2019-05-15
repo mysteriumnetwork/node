@@ -18,6 +18,7 @@
 package tequilapi
 
 import (
+	"net"
 	"strings"
 	"testing"
 
@@ -25,9 +26,12 @@ import (
 )
 
 func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
-	server := NewServer("localhost", 31337, nil, RegexpCorsPolicy{})
+	listener, err := net.Listen("tcp", "localhost:31337")
+	assert.Nil(t, err)
 
-	assert.NoError(t, server.StartServing())
+	server := NewServer(listener, nil, RegexpCorsPolicy{})
+
+	server.StartServing()
 
 	address, err := server.Address()
 	assert.NoError(t, err)
@@ -40,6 +44,8 @@ func TestLocalAPIServerPortIsAsExpected(t *testing.T) {
 }
 
 func TestStopBeforeStartingListeningDoesNotCausePanic(t *testing.T) {
-	server := NewServer("", 12345, nil, RegexpCorsPolicy{})
+	listener, err := net.Listen("tcp", "localhost:31337")
+	assert.Nil(t, err)
+	server := NewServer(listener, nil, RegexpCorsPolicy{})
 	server.Stop()
 }
