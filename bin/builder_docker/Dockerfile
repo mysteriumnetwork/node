@@ -16,4 +16,4 @@ RUN go get \
 
 WORKDIR /go/src/github.com/mysteriumnetwork/node
 
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT ["/bin/bash", "-c"]
