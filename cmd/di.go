@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"path/filepath"
 	"time"
 
@@ -73,6 +74,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[service bootstrap] "
@@ -180,6 +182,12 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
 	log.Infof("Build information (%s)", metadata.BuildAsString())
 
+	// check early for presence of an already running node
+	tequilaListener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort))
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("The port %v seems to be taken. Either you're already running a node or it is already used by another application", nodeOptions.TequilapiPort))
+	}
+
 	if err := nodeOptions.Directories.Check(); err != nil {
 		return err
 	}
@@ -205,11 +213,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
-	di.bootstrapNodeComponents(nodeOptions)
+	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
 
 	di.registerConnections(nodeOptions)
 
-	err := di.subscribeEventConsumers()
+	err = di.subscribeEventConsumers()
 	if err != nil {
 		return err
 	}
@@ -328,7 +336,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	return di.EventBus.Subscribe(event.Topic, di.NATStatusTracker.ConsumeNATEvent)
 }
 
-func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listener net.Listener) {
 	dialogFactory := func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
 		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID))
 		return dialogEstablisher.EstablishDialog(providerID, contact)
@@ -370,7 +378,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options) {
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
-	httpAPIServer := tequilapi.NewServer(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort, router, corsPolicy)
+	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
 
 	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger)
 }

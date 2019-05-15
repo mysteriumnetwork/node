@@ -18,6 +18,7 @@
 package tequilapi
 
 import (
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,9 +32,11 @@ type tequilapiTestSuite struct {
 }
 
 func (testSuite *tequilapiTestSuite) SetupSuite() {
-	testSuite.server = NewServer("localhost", 0, NewAPIRouter(), RegexpCorsPolicy{})
+	listener, err := net.Listen("tcp", "localhost:0")
+	assert.Nil(testSuite.T(), err)
+	testSuite.server = NewServer(listener, NewAPIRouter(), RegexpCorsPolicy{})
 
-	assert.NoError(testSuite.T(), testSuite.server.StartServing())
+	testSuite.server.StartServing()
 	address, err := testSuite.server.Address()
 	assert.NoError(testSuite.T(), err)
 	testSuite.client = NewTestClient(testSuite.T(), address)
