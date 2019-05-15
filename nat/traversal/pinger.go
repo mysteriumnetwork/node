@@ -119,20 +119,6 @@ type Params struct {
 func (p *Pinger) Start() {
 	log.Info(prefix, "Starting a NAT pinger")
 
-	/*
-		resultChannel := make(chan bool, 1)
-		// we make sure here that port auto configuration stage has finished
-		// but this makes no sense - no need to be aware about port auto-configuration result
-		go func() { resultChannel <- p.waitForPreviousStageResult() }()
-		select {
-		case <-p.stop:
-			return
-		case previousStageSucceeded := <-resultChannel:
-			if previousStageSucceeded {
-				return
-			}
-		}
-	*/
 	for {
 		select {
 		case <-p.stop:
@@ -174,14 +160,22 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 		return err
 	}
 
+	err = ipv4.NewConn(conn).SetTTL(128)
+	if err != nil {
+		return errors.Wrap(err, "setting ttl failed")
+	}
+	// send one last ping request to end hole punching procedure gracefully
+	err = p.sendPingRequest(conn, 128)
+	if err != nil {
+		return errors.Wrap(err, "remote ping failed")
+	}
+
+	p.pingCancelled <- struct{}{}
+
 	if p.consumerPort > 0 {
 		log.Info(prefix, "Handing connection to consumer NATProxy")
 		p.stopNATProxy = p.natProxy.consumerHandOff(p.consumerPort, conn)
 	}
-
-	// wait for provider to setup NATProxy connection
-	// time.Sleep(400 * time.Millisecond)
-
 	return nil
 }
 
@@ -302,7 +296,7 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 			return err
 		}
 		fmt.Println(prefix, "remote peer data received: ", string(buf[:n]))
-		p.pingCancelled <- struct{}{}
+
 		return nil
 	}
 }
@@ -356,6 +350,9 @@ func (p *Pinger) pingTargetConsumer(pingParams *Params) {
 		log.Error(prefix, "ping receiver error: ", err)
 		return
 	}
+
+	p.pingCancelled <- struct{}{}
+
 	p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
 
 	log.Info(prefix, "ping received, waiting for a new connection")
