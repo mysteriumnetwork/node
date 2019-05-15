@@ -119,63 +119,13 @@ type Params struct {
 func (p *Pinger) Start() {
 	log.Info(prefix, "Starting a NAT pinger")
 
-	resultChannel := make(chan bool, 1)
-	go func() { resultChannel <- p.waitForPreviousStageResult() }()
-	select {
-	case <-p.stop:
-		return
-	case previousStageSucceeded := <-resultChannel:
-		if previousStageSucceeded {
-			return
-		}
-	}
-
 	for {
 		select {
 		case <-p.stop:
 			log.Info(prefix, "stop pinger called")
 			return
 		case pingParams := <-p.pingTarget:
-			go func() {
-				log.Info(prefix, "Pinging peer with: ", pingParams)
-
-				// TODO: remove port parsing for consumer config
-				IP, _, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
-				if err != nil {
-					log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", pingParams)))
-					return
-				}
-
-				log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, pingParams.ConsumerPort)
-				if !p.natProxy.isAvailable(serviceType) {
-					log.Warn(prefix, serviceType, " NATProxy is not available for this transport protocol")
-					return
-				}
-
-				conn, err := p.getConnection(IP, pingParams.ConsumerPort, pingParams.ProviderPort)
-				if err != nil {
-					log.Error(prefix, "failed to get connection: ", err)
-					return
-				}
-
-				go func() {
-					err := p.ping(conn)
-					if err != nil {
-						log.Warn(prefix, "Error while pinging: ", err)
-					}
-				}()
-
-				err = p.pingReceiver(conn, pingParams.Cancel)
-				if err != nil {
-					log.Error(prefix, "ping receiver error: ", err)
-					return
-				}
-				p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
-
-				log.Info(prefix, "ping received, waiting for a new connection")
-
-				go p.natProxy.handOff(serviceType, conn)
-			}()
+			go p.pingTargetConsumer(pingParams)
 		}
 	}
 }
@@ -210,14 +160,22 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 		return err
 	}
 
+	err = ipv4.NewConn(conn).SetTTL(128)
+	if err != nil {
+		return errors.Wrap(err, "setting ttl failed")
+	}
+	// send one last ping request to end hole punching procedure gracefully
+	err = p.sendPingRequest(conn, 128)
+	if err != nil {
+		return errors.Wrap(err, "remote ping failed")
+	}
+
+	p.pingCancelled <- struct{}{}
+
 	if p.consumerPort > 0 {
 		log.Info(prefix, "Handing connection to consumer NATProxy")
 		p.stopNATProxy = p.natProxy.consumerHandOff(p.consumerPort, conn)
 	}
-
-	// wait for provider to setup NATProxy connection
-	time.Sleep(400 * time.Millisecond)
-
 	return nil
 }
 
@@ -338,7 +296,7 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 			return err
 		}
 		fmt.Println(prefix, "remote peer data received: ", string(buf[:n]))
-		p.pingCancelled <- struct{}{}
+
 		return nil
 	}
 }
@@ -356,4 +314,48 @@ func (p *Pinger) StopNATProxy() {
 // Valid returns that this pinger is a valid pinger
 func (p *Pinger) Valid() bool {
 	return true
+}
+
+func (p *Pinger) pingTargetConsumer(pingParams *Params) {
+	log.Info(prefix, "Pinging peer with: ", pingParams)
+
+	// TODO: remove port parsing for consumer config
+	IP, _, serviceType, err := p.configParser.Parse(pingParams.RequestConfig)
+	if err != nil {
+		log.Warn(prefix, errors.Wrap(err, fmt.Sprintf("unable to parse ping message: %v", pingParams)))
+		return
+	}
+
+	log.Infof("%sping target received: IP: %v, port: %v", prefix, IP, pingParams.ConsumerPort)
+	if !p.natProxy.isAvailable(serviceType) {
+		log.Warn(prefix, serviceType, " NATProxy is not available for this transport protocol")
+		return
+	}
+
+	conn, err := p.getConnection(IP, pingParams.ConsumerPort, pingParams.ProviderPort)
+	if err != nil {
+		log.Error(prefix, "failed to get connection: ", err)
+		return
+	}
+
+	go func() {
+		err := p.ping(conn)
+		if err != nil {
+			log.Warn(prefix, "Error while pinging: ", err)
+		}
+	}()
+
+	err = p.pingReceiver(conn, pingParams.Cancel)
+	if err != nil {
+		log.Error(prefix, "ping receiver error: ", err)
+		return
+	}
+
+	p.pingCancelled <- struct{}{}
+
+	p.eventPublisher.Publish(event.Topic, event.BuildSuccessfulEvent(StageName))
+
+	log.Info(prefix, "ping received, waiting for a new connection")
+
+	go p.natProxy.handOff(serviceType, conn)
 }

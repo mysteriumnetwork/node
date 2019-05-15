@@ -24,4 +24,4 @@ fi
 
 docker run --rm -ti \
     -v $(pwd):/go/src/github.com/mysteriumnetwork/node \
-    mysteriumnetwork/mysterium-node-builder -c "${COMMAND}"
+    mysteriumnetwork/mysterium-node-builder "${COMMAND}"
