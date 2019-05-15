@@ -97,7 +97,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}
 
-	servicePort, err := m.ports.PortForService(openvpn_service.ServiceType)
+	servicePort, err := m.ports.Acquire()
 	if err != nil {
 		return errors.Wrap(err, "failed to acquire an unused port")
 	}

@@ -138,12 +138,11 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
 
-		portPool := port.NewPool()
+		var portPool port.ServicePortSupplier
 		if transportOptions.Port != 0 {
-			err := portPool.SetServicePort(service_openvpn.ServiceType, transportOptions.Port)
-			if err != nil {
-				return nil, market.ServiceProposal{}, err
-			}
+			portPool = port.NewPoolFixed(port.Port(transportOptions.Port))
+		} else {
+			portPool = port.NewPool()
 		}
 
 		manager := openvpn_service.NewManager(
