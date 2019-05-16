@@ -36,6 +36,12 @@ type Publisher interface {
 	Publish(topic string, data interface{})
 }
 
+// WebServer represents the web server for our web
+type WebServer interface {
+	Serve() error
+	Stop()
+}
+
 // NewNode function creates new Mysterium node by given options
 func NewNode(
 	connectionManager connection.Manager,
@@ -43,6 +49,7 @@ func NewNode(
 	publisher Publisher,
 	metricsSender *metrics.Sender,
 	natPinger NatPinger,
+	webServer WebServer,
 ) *Node {
 	return &Node{
 		connectionManager: connectionManager,
@@ -50,6 +57,7 @@ func NewNode(
 		publisher:         publisher,
 		metricsSender:     metricsSender,
 		natPinger:         natPinger,
+		webServer:         webServer,
 	}
 }
 
@@ -60,6 +68,7 @@ type Node struct {
 	publisher         Publisher
 	metricsSender     *metrics.Sender
 	natPinger         NatPinger
+	webServer         WebServer
 }
 
 // Start starts Mysterium node (Tequilapi service, fetches location)
@@ -72,11 +81,17 @@ func (node *Node) Start() error {
 	}()
 
 	node.httpAPIServer.StartServing()
-
 	address, err := node.httpAPIServer.Address()
 	if err != nil {
 		return err
 	}
+
+	go func() {
+		err := node.webServer.Serve()
+		if err != nil {
+			log.Error("Web server error", err)
+		}
+	}()
 
 	node.publisher.Publish(event.Topic, event.Payload{Status: event.StatusStarted})
 
@@ -108,6 +123,9 @@ func (node *Node) Kill() error {
 
 	node.httpAPIServer.Stop()
 	log.Info("Api stopped")
+
+	node.webServer.Stop()
+	log.Info("Web server stopped")
 
 	node.natPinger.Stop()
 	log.Info("Nat pinger stopped")

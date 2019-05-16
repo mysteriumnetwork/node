@@ -38,6 +38,7 @@ type Options struct {
 
 	Openvpn  Openvpn
 	Location OptionsLocation
+	UI       OptionsUI
 	OptionsNetwork
 }
 
