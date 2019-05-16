@@ -73,8 +73,8 @@ import (
 	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+	"github.com/mysteriumnetwork/node/ui"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/mysteriumnetwork/node/web"
 	"github.com/pkg/errors"
 )
 
@@ -131,8 +131,8 @@ type CacheResolver interface {
 	HandleConnectionEvent(connection.StateEvent)
 }
 
-// WebServer represents our web server
-type WebServer interface {
+// UIServer represents our web server
+type UIServer interface {
 	Serve() error
 	Stop()
 }
@@ -180,7 +180,7 @@ type Dependencies struct {
 
 	MetricsSender *metrics.Sender
 
-	WebServer WebServer
+	UIServer UIServer
 }
 
 // Bootstrap initiates all container dependencies
@@ -216,7 +216,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	di.bootstrapWebServer(nodeOptions.UI)
+	di.bootstrapUIServer(nodeOptions.UI)
 
 	di.bootstrapMetrics(nodeOptions)
 
@@ -313,13 +313,13 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	return nil
 }
 
-func (di *Dependencies) bootstrapWebServer(opts node.OptionsUI) {
-	if opts.UIEnabled {
-		di.WebServer = web.NewServer(opts.UIPort)
+func (di *Dependencies) bootstrapUIServer(options node.OptionsUI) {
+	if options.UIEnabled {
+		di.UIServer = ui.NewServer(options.UIPort)
 		return
 	}
 
-	di.WebServer = web.NewNoopServer()
+	di.UIServer = ui.NewNoopServer()
 }
 
 func (di *Dependencies) subscribeEventConsumers() error {
@@ -400,7 +400,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger, di.WebServer)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger, di.UIServer)
 }
 
 func newSessionManagerFactory(
