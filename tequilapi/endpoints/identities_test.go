@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"bytes"
+	"github.com/mysteriumnetwork/node/identity/selector"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -49,7 +50,8 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 	params := httprouter.Params{{"id", "1234abcd"}}
 	assert.Nil(t, err)
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Unlock
+	fakeHandler := selector.NewFakeHandler()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Unlock
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
@@ -69,7 +71,8 @@ func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 	params := httprouter.Params{{"id", "1234abcd"}}
 	assert.Nil(t, err)
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Unlock
+	fakeHandler := selector.NewFakeHandler()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Unlock
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
@@ -84,8 +87,9 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
+	fakeHandler := selector.NewFakeHandler()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Unlock
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Unlock
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
@@ -114,7 +118,8 @@ func TestUnlockFailure(t *testing.T) {
 
 	mockIdm.MarkUnlockToFail()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Unlock
+	fakeHandler := selector.NewFakeHandler()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Unlock
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusForbidden, resp.Code)
@@ -134,7 +139,8 @@ func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Create
+	fakeHandler := selector.NewFakeHandler()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Create
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
@@ -151,7 +157,8 @@ func TestCreateNewIdentityNoPassphrase(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Create
+	fakeHandler := selector.NewFakeHandler()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Create
 	handlerFunc(resp, req, nil)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
@@ -177,8 +184,8 @@ func TestCreateNewIdentity(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).Create
+	fakeHandler := selector.NewFakeHandler()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Create
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -195,7 +202,8 @@ func TestListIdentities(t *testing.T) {
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	handlerFunc := NewIdentitiesEndpoint(mockIdm).List
+	fakeHandler := selector.NewFakeHandler()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(

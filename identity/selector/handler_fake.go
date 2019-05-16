@@ -18,28 +18,15 @@
 package selector
 
 import (
-	"errors"
-
 	"github.com/mysteriumnetwork/node/identity"
 )
 
 type handlerFake struct {
-	LastAddress string
 }
 
-func (hf *handlerFake) UseExisting(address, passphrase string) (identity.Identity, error) {
+func NewFakeHandler() *handlerFake {
+	return &handlerFake{}
+}
+func (hf *handlerFake) UseOrCreate(address, passphrase string) (identity.Identity, error) {
 	return identity.Identity{Address: address}, nil
-}
-
-func (hf *handlerFake) UseLast(passphrase string) (id identity.Identity, err error) {
-	if hf.LastAddress != "" {
-		id = identity.Identity{Address: hf.LastAddress}
-	} else {
-		err = errors.New("no last identity")
-	}
-	return
-}
-
-func (hf *handlerFake) UseNew(passphrase string) (identity.Identity, error) {
-	return identity.Identity{Address: "new"}, nil
 }
