@@ -41,6 +41,9 @@ type clientMap struct {
 
 // FindClientSession returns OpenVPN session instance by given session id
 func (cm *clientMap) FindClientSession(clientID int, id session.ID) (session.Session, bool, error) {
+	cm.sessionMapLock.Lock()
+	defer cm.sessionMapLock.Unlock()
+
 	sessionInstance, sessionExist := cm.sessions.Find(id)
 	if !sessionExist {
 		return session.Session{}, false, errors.New("no underlying session exists, possible break-in attempt")
