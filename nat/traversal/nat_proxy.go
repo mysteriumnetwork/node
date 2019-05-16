@@ -22,6 +22,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	log "github.com/cihub/seelog"
 
@@ -40,6 +41,7 @@ type NATProxy struct {
 }
 
 func (np *NATProxy) consumerHandOff(consumerPort int, remoteConn *net.UDPConn) chan struct{} {
+	time.Sleep(400 * time.Millisecond)
 	stop := make(chan struct{})
 	if np.socketProtect == nil {
 		// shutdown pinger session since openvpn client will connect directly (without NATProxy)
