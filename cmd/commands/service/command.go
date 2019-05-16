@@ -83,14 +83,10 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
 
 			cmdService := &serviceCommand{
-				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
-				errorChannel: errorChannel,
-				identityHandler: identity_selector.NewHandler(
-					di.IdentityManager,
-					di.MysteriumAPI,
-					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
-					di.SignerFactory),
-				ap: parseAccessPolicyFlag(ctx),
+				tequilapi:       client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
+				errorChannel:    errorChannel,
+				identityHandler: di.IdentitySelector,
+				ap:              parseAccessPolicyFlag(ctx),
 			}
 
 			go func() {
@@ -137,8 +133,7 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 }
 
 func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (identity.Identity, error) {
-	loadIdentity := identity_selector.NewLoader(sc.identityHandler, identityOptions.Identity, identityOptions.Passphrase)
-	return loadIdentity()
+	return sc.identityHandler.UseOrCreate(identityOptions.Identity, identityOptions.Passphrase)
 }
 
 func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {

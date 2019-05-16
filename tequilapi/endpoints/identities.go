@@ -23,6 +23,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -40,6 +41,11 @@ type identityList struct {
 	Identities []identityDto `json:"identities"`
 }
 
+// swagger:model MyIdentityDTO
+type myIdentityDTO struct {
+	Passphrase *string `json:"passphrase"`
+}
+
 // swagger:model IdentityCreationDTO
 type identityCreationDto struct {
 	Passphrase *string `json:"passphrase"`
@@ -51,7 +57,8 @@ type identityUnlockingDto struct {
 }
 
 type identitiesAPI struct {
-	idm identity.Manager
+	idm      identity.Manager
+	selector identity_selector.Handler
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -67,8 +74,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager) *identitiesAPI {
-	return &identitiesAPI{idm}
+func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler) *identitiesAPI {
+	return &identitiesAPI{idm, selector}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -89,6 +96,57 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 	idsSerializable := identityList{mapIdentities(idArry, idToDto)}
 
 	utils.WriteAsJSON(idsSerializable, resp)
+}
+
+// swagger:operation POST /identities Identity createIdentity
+// ---
+// summary: Creates new identity
+// description: Creates identity and stores in keystore encrypted with passphrase
+// parameters:
+//   - in: body
+//     name: body
+//     description: Parameter in body (passphrase) required for creating new identity
+//     schema:
+//       $ref: "#/definitions/IdentityCreationDTO"
+// responses:
+//   200:
+//     description: Identity created
+//     schema:
+//       "$ref": "#/definitions/IdentityDTO"
+//   400:
+//     description: Bad Request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   422:
+//     description: Parameters validation error
+//     schema:
+//       "$ref": "#/definitions/ValidationErrorDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) Me(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	myIdentityRequest, err := toMyIdentityRequest(request)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	errorMap := validateMyIdentityRequest(myIdentityRequest)
+	if errorMap.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errorMap)
+		return
+	}
+
+	id, err := endpoint.selector.UseOrCreate("", *myIdentityRequest.Passphrase)
+
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	idDto := idToDto(id)
+	utils.WriteAsJSON(idDto, resp)
 }
 
 // swagger:operation POST /identities Identity createIdentity
@@ -202,9 +260,26 @@ func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 	return identityCreationReq, nil
 }
 
+func toMyIdentityRequest(req *http.Request) (*myIdentityDTO, error) {
+	var myIdentityReq = &myIdentityDTO{}
+	err := json.NewDecoder(req.Body).Decode(&myIdentityReq)
+	if err != nil {
+		return nil, err
+	}
+	return myIdentityReq, nil
+}
+
 func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, err error) {
 	isUnlockingReq = identityUnlockingDto{}
 	err = json.NewDecoder(req.Body).Decode(&isUnlockingReq)
+	return
+}
+
+func validateMyIdentityRequest(unlockReq *myIdentityDTO) (errors *validation.FieldErrorMap) {
+	errors = validation.NewErrorMap()
+	if unlockReq.Passphrase == nil {
+		errors.ForField("passphrase").AddError("required", "Field is required")
+	}
 	return
 }
 
@@ -228,8 +303,10 @@ func validateCreationRequest(createReq *identityCreationDto) (errors *validation
 func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
+	selector identity_selector.Handler,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm)
+	idmEnd := NewIdentitiesEndpoint(idm, selector)
+	router.PUT("/me", idmEnd.Me)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)

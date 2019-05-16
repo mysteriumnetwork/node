@@ -19,9 +19,6 @@ package selector
 
 import "github.com/mysteriumnetwork/node/identity"
 
-// Handler allows selecting identity to be used
 type Handler interface {
-	UseExisting(address, passphrase string) (identity.Identity, error)
-	UseLast(passphrase string) (identity.Identity, error)
-	UseNew(passphrase string) (identity.Identity, error)
+	UseOrCreate(address, passphrase string) (identity.Identity, error)
 }
