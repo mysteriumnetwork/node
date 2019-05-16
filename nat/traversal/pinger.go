@@ -160,10 +160,6 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 		return err
 	}
 
-	err = ipv4.NewConn(conn).SetTTL(128)
-	if err != nil {
-		return errors.Wrap(err, "setting ttl failed")
-	}
 	// send one last ping request to end hole punching procedure gracefully
 	err = p.sendPingRequest(conn, 128)
 	if err != nil {
@@ -189,7 +185,8 @@ func (p *Pinger) waitForPreviousStageResult() bool {
 }
 
 func (p *Pinger) ping(conn *net.UDPConn) error {
-	n := 1
+	// Windows detects that 1 TTL is too low and throws an exception during send
+	n := 2
 	i := 0
 
 	for {
