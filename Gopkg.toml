@@ -113,3 +113,15 @@
 [[constraint]]
   revision = "f6122f5b2fbd92ace9b2819f0be4148be5690a1f"
   name = "github.com/songgao/water"
+
+[[constraint]]
+  version = "1.3.0"
+  name = "github.com/gin-contrib/cors"
+
+[[constraint]]
+  version = "1.4.0"
+  name = "github.com/gin-gonic/gin"
+
+[[constraint]]
+  version = "=0.0.1"
+  name = "github.com/mysteriumnetwork/go-dvpn-web"
