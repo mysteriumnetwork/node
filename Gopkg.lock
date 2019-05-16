@@ -753,6 +753,7 @@
     "github.com/stretchr/testify/suite",
     "github.com/urfave/cli",
     "golang.org/x/crypto/curve25519",
+    "golang.org/x/net/html",
     "golang.org/x/net/ipv4",
     "golang.org/x/sys/windows/registry",
   ]
