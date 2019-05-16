@@ -99,8 +99,8 @@
   revision = "d46933a94f05c6657d7b923fcf5ac563ee37ec79"
 
 [[constraint]]
-  revision = "9e6224e4f8a61e71ff42490fa333319006d884fd"
-  name = "github.com/mdlayher/wireguardctrl"
+  revision = "5ec88494b814a16a2a5fa7f2cfb4b94016ac5fac"
+  name = "golang.zx2c4.com/wireguard/wgctrl"
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/wireguard-go"

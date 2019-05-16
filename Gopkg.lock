@@ -253,17 +253,12 @@
   revision = "258ea9dff42c0ec7540aa4b1599d09e7bfc7973b"
 
 [[projects]]
-  digest = "1:cde3b8652a81cb1fe80b719d8f68e923ebd9c3e93340b34d1468f5b8ce050303"
-  name = "github.com/mdlayher/wireguardctrl"
-  packages = [
-    ".",
-    "internal/wgnl",
-    "internal/wgnl/internal/wgh",
-    "internal/wguser",
-    "wgtypes",
-  ]
+  digest = "1:f9ae348e1f793dcf9ed930ed47136a67343dbd6809c5c91391322267f4476892"
+  name = "github.com/microsoft/go-winio"
+  packages = ["."]
   pruneopts = "UT"
-  revision = "9e6224e4f8a61e71ff42490fa333319006d884fd"
+  revision = "1a8911d1ed007260465c3bfbbc785ac6915a0bb8"
+  version = "v0.4.12"
 
 [[projects]]
   digest = "1:c7354463195544b1ab3c1f1fadb41430947f5d28dfbf2cdbd38268c5717a5a03"
@@ -530,6 +525,21 @@
   version = "v0.3.0"
 
 [[projects]]
+  digest = "1:1578ab2391866d8c0e9ac0888669a5b8309d310a279a929ac3a1fa91be459104"
+  name = "golang.zx2c4.com/wireguard/wgctrl"
+  packages = [
+    ".",
+    "internal/wginternal",
+    "internal/wglinux",
+    "internal/wglinux/internal/wgh",
+    "internal/wgopenbsd",
+    "internal/wguser",
+    "wgtypes",
+  ]
+  pruneopts = "UT"
+  revision = "5ec88494b814a16a2a5fa7f2cfb4b94016ac5fac"
+
+[[projects]]
   digest = "1:e626376fab8608a972d47e91b3c1bbbddaecaf1d42b82be6dcc52d10a7557893"
   name = "gopkg.in/VividCortex/ewma.v1"
   packages = ["."]
@@ -612,8 +622,6 @@
     "github.com/huin/goupnp/ssdp",
     "github.com/jackpal/gateway",
     "github.com/julienschmidt/httprouter",
-    "github.com/mdlayher/wireguardctrl",
-    "github.com/mdlayher/wireguardctrl/wgtypes",
     "github.com/mitchellh/go-homedir",
     "github.com/mysteriumnetwork/go-openvpn/openvpn",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/config",
@@ -643,6 +651,8 @@
     "golang.org/x/crypto/curve25519",
     "golang.org/x/net/ipv4",
     "golang.org/x/sys/windows/registry",
+    "golang.zx2c4.com/wireguard/wgctrl",
+    "golang.zx2c4.com/wireguard/wgctrl/wgtypes",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -24,10 +24,10 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/jackpal/gateway"
-	"github.com/mdlayher/wireguardctrl"
-	"github.com/mdlayher/wireguardctrl/wgtypes"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/utils"
+	"golang.zx2c4.com/wireguard/wgctrl"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 var allowedIPs = []net.IPNet{
@@ -37,12 +37,12 @@ var allowedIPs = []net.IPNet{
 
 type client struct {
 	iface    string
-	wgClient *wireguardctrl.Client
+	wgClient *wgctrl.Client
 }
 
 // NewWireguardClient creates new wireguard kernel space client.
 func NewWireguardClient() (*client, error) {
-	wgClient, err := wireguardctrl.New()
+	wgClient, err := wgctrl.New()
 	if err != nil {
 		return nil, err
 	}
