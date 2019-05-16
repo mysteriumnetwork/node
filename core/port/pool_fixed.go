@@ -17,7 +17,7 @@
 
 package port
 
-// NewFixedPool creates new instance of PoolFixed
+// NewPoolFixed creates new instance of PoolFixed
 func NewPoolFixed(port Port) *PoolFixed {
 	return &PoolFixed{
 		port:       port,
