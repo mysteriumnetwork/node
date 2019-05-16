@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+export DH_VERBOSE := 1
+export PATH := /usr/lib/go-1.11/bin/:$(PATH)
+export GOPATH := $(CURDIR)/go
+
+override_dh_auto_build:
+	mkdir -p $(GOPATH)/src/github.com/mysteriumnetwork/
+	ln -s $(CURDIR) $(GOPATH)/src/github.com/mysteriumnetwork/node
+	cd $(GOPATH)/src/github.com/mysteriumnetwork/node; bin/build
+
+override_dh_auto_test:
+
+%:
+	dh $@
