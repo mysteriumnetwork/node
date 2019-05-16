@@ -29,7 +29,7 @@ var (
 		Value: 4449,
 	}
 	uiEnableFlag = cli.BoolFlag{
-		Name:  "ui.enabled",
+		Name:  "ui.enable",
 		Usage: "enables the ui",
 	}
 )
