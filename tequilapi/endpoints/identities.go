@@ -98,19 +98,19 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 	utils.WriteAsJSON(idsSerializable, resp)
 }
 
-// swagger:operation POST /identities Identity createIdentity
+// swagger:operation PUT /me Identity myIdentity
 // ---
-// summary: Creates new identity
-// description: Creates identity and stores in keystore encrypted with passphrase
+// summary: Returns my current identity
+// description: Tries to retrieve the last used identity, the first identity, or creates and returns a new identity
 // parameters:
 //   - in: body
 //     name: body
 //     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
-//       $ref: "#/definitions/IdentityCreationDTO"
+//       $ref: "#/definitions/MyIdentityDTO"
 // responses:
 //   200:
-//     description: Identity created
+//     description: Identity returned
 //     schema:
 //       "$ref": "#/definitions/IdentityDTO"
 //   400:
