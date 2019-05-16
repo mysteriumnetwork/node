@@ -18,9 +18,8 @@
 package mysterium
 
 import (
-	"sync"
-
 	"encoding/json"
+	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
@@ -56,11 +55,12 @@ func (wrapper *sessionWrapper) Start(options connection.ConnectOptions) error {
 
 	log.Info("client config after session create: ", clientConfig)
 	if clientConfig.LocalPort > 0 {
-		wrapper.natPinger.BindConsumerPort(clientConfig.LocalPort)
 		err := wrapper.natPinger.PingProvider(
 			clientConfig.VpnConfig.OriginalRemoteIP,
 			clientConfig.VpnConfig.OriginalRemotePort,
-			wrapper.pingerStop)
+			clientConfig.LocalPort,
+			wrapper.pingerStop,
+		)
 		if err != nil {
 			return err
 		}

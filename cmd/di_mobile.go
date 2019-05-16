@@ -1,4 +1,4 @@
-// +build linux,android
+// +build android
 
 /*
  * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
@@ -26,4 +26,8 @@ import (
 // bootstrapServices loads all the components required for running services
 func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
 	// Running services on mobile is not supported, nothing to bootstrap.
+}
+
+func (di *Dependencies) registerConnections(nodeOptions node.Options) {
+	di.registerNoopConnection()
 }

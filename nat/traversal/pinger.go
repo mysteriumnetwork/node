@@ -54,7 +54,6 @@ type Pinger struct {
 	configParser   ConfigParser
 	natProxy       natProxy
 	portPool       PortSupplier
-	consumerPort   int
 	previousStage  string
 	eventPublisher Publisher
 }
@@ -103,7 +102,7 @@ type natProxy interface {
 	handOff(serviceType services.ServiceType, conn *net.UDPConn)
 	registerServicePort(serviceType services.ServiceType, port int)
 	isAvailable(serviceType services.ServiceType) bool
-	consumerHandOff(consumerPort int, conn *net.UDPConn) chan struct{}
+	consumerHandOff(consumerAddr string, conn *net.UDPConn) chan struct{}
 	setProtectSocketCallback(socketProtect func(socket int) bool)
 }
 
@@ -139,10 +138,10 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
+func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error {
 	log.Info(prefix, "NAT pinging to provider")
 
-	conn, err := p.getConnection(ip, port, p.consumerPort)
+	conn, err := p.getConnection(ip, port, consumerPort)
 	if err != nil {
 		return errors.Wrap(err, "failed to get connection")
 	}
@@ -168,9 +167,10 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 
 	p.pingCancelled <- struct{}{}
 
-	if p.consumerPort > 0 {
-		log.Info(prefix, "Handing connection to consumer NATProxy")
-		p.stopNATProxy = p.natProxy.consumerHandOff(p.consumerPort, conn)
+	if consumerPort > 0 {
+		consumerAddr := fmt.Sprintf("127.0.0.1:%d", consumerPort+1)
+		log.Info(prefix, "Handing connection to consumer NATProxy: ", consumerAddr)
+		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
 	}
 	return nil
 }
@@ -261,11 +261,6 @@ func (p *Pinger) PingTarget(target *Params) {
 		log.Info(prefix, "ping target timeout: ", target)
 		return
 	}
-}
-
-// BindConsumerPort binds NATPinger to source consumer port
-func (p *Pinger) BindConsumerPort(port int) {
-	p.consumerPort = port
 }
 
 // BindServicePort register service port to forward connection to

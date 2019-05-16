@@ -94,9 +94,8 @@ type Storage interface {
 
 // NatPinger is responsible for pinging nat holes
 type NatPinger interface {
-	PingProvider(ip string, port int, stop <-chan struct{}) error
+	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
 	PingTarget(*traversal.Params)
-	BindConsumerPort(port int)
 	BindServicePort(serviceType services.ServiceType, port int)
 	Start()
 	Stop()
