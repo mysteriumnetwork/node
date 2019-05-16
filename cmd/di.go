@@ -73,6 +73,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+	"github.com/mysteriumnetwork/node/ui"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 )
@@ -130,6 +131,12 @@ type CacheResolver interface {
 	HandleConnectionEvent(connection.StateEvent)
 }
 
+// UIServer represents our web server
+type UIServer interface {
+	Serve() error
+	Stop()
+}
+
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
@@ -172,6 +179,8 @@ type Dependencies struct {
 	PortPool *port.Pool
 
 	MetricsSender *metrics.Sender
+
+	UIServer UIServer
 }
 
 // Bootstrap initiates all container dependencies
@@ -206,6 +215,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
 		return err
 	}
+
+	di.bootstrapUIServer(nodeOptions.UI)
 
 	di.bootstrapMetrics(nodeOptions)
 
@@ -302,6 +313,15 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	return nil
 }
 
+func (di *Dependencies) bootstrapUIServer(options node.OptionsUI) {
+	if options.UIEnabled {
+		di.UIServer = ui.NewServer(options.UIPort)
+		return
+	}
+
+	di.UIServer = ui.NewNoopServer()
+}
+
 func (di *Dependencies) subscribeEventConsumers() error {
 	// state events
 	err := di.EventBus.Subscribe(connection.SessionEventTopic, di.StatisticsTracker.ConsumeSessionEvent)
@@ -380,7 +400,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger, di.UIServer)
 }
 
 func newSessionManagerFactory(

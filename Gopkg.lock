@@ -143,6 +143,35 @@
   version = "v1.8.23"
 
 [[projects]]
+  digest = "1:cc93dd54278f6c0dd4b43588b3cf2c07b09b2a6dd4e2617edf81aa8946054c1e"
+  name = "github.com/gin-contrib/cors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5f50d4fb4e0306dcacc6f8e9bea2dcee784dbbdf"
+  version = "v1.3.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:a4b5a6b32f33323c7850fae4ec085a0fbac3be93c057b6b8cef5bcabe24645ac"
+  name = "github.com/gin-contrib/sse"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5545eab6dad3bbbd6c5ae9186383c2a9d23c0dae"
+
+[[projects]]
+  digest = "1:d8bd2a337f6ff2188e08f72c614f2f3f0fd48e6a7b37a071b197e427d77d3a47"
+  name = "github.com/gin-gonic/gin"
+  packages = [
+    ".",
+    "binding",
+    "internal/json",
+    "render",
+  ]
+  pruneopts = "UT"
+  revision = "b75d67cd51eb53c3c3a2fc406524c940021ffbda"
+  version = "v1.4.0"
+
+[[projects]]
   digest = "1:c4a2528ccbcabf90f9f3c464a5fc9e302d592861bbfd0b7135a7de8a943d0406"
   name = "github.com/go-stack/stack"
   packages = ["."]
@@ -157,6 +186,14 @@
   pruneopts = "UT"
   revision = "370558f003bfe29580cd0f698d8640daccdcc45c"
   version = "v3.1.1"
+
+[[projects]]
+  digest = "1:318f1c959a8a740366fce4b1e1eb2fd914036b4af58fbd0a003349b305f118ad"
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  pruneopts = "UT"
+  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
+  version = "v1.3.1"
 
 [[projects]]
   branch = "master"
@@ -208,6 +245,14 @@
   pruneopts = "UT"
   revision = "c9cfead9f2a36ddf3daa40ba269aa7f4bbba6b62"
   version = "v1.0.1"
+
+[[projects]]
+  digest = "1:f5a2051c55d05548d2d4fd23d244027b59fbd943217df8aa3b5e170ac2fd6e1b"
+  name = "github.com/json-iterator/go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0ff49de124c6f76f8494e194af75bde0f1a49a29"
+  version = "v1.1.6"
 
 [[projects]]
   digest = "1:ccfa094742ce1c97fd3f6481e1bf98f3d9862510eee2bc0eb56e2745396bd330"
@@ -266,6 +311,30 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "58046073cbffe2f25d425fe1331102f55cf719de"
+
+[[projects]]
+  digest = "1:33422d238f147d247752996a26574ac48dcf472976eda7f5134015f06bf16563"
+  name = "github.com/modern-go/concurrent"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94"
+  version = "1.0.3"
+
+[[projects]]
+  digest = "1:e32bdbdb7c377a07a9a46378290059822efdce5c8d96fe71940d87cb4f918855"
+  name = "github.com/modern-go/reflect2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
+  version = "1.0.1"
+
+[[projects]]
+  digest = "1:592fb910e738d4af7622a3212183cef72a4cca57e09f7a2cb0af5b66f2013e1e"
+  name = "github.com/mysteriumnetwork/go-dvpn-web"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a7801872b70262628f34bc57d17c11e2289f21d6"
+  version = "0.0.1"
 
 [[projects]]
   digest = "1:722ca4885d4c2a54e87e065857d59414791f4b3b775ad024039232a7c4832438"
@@ -394,6 +463,22 @@
   revision = "15587285ef6b6e7a3f657e2e00f9f271883bcf22"
 
 [[projects]]
+  branch = "master"
+  digest = "1:68cecd4c1137f77dfa2db1f13a0ceef2b5606d6b69d66fa69f7df1b2f2fe9afc"
+  name = "github.com/shurcooL/httpfs"
+  packages = ["vfsutil"]
+  pruneopts = "UT"
+  revision = "74dc9339e414ad069a8d04bba7e7aafd08043a25"
+
+[[projects]]
+  branch = "master"
+  digest = "1:98450c86949b8cdc4637b80c1c686ca955e503d3fbae9296d1f49c532895d281"
+  name = "github.com/shurcooL/vfsgen"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "6a9ea43bcacdf716a5c1b38efff722c07adf0069"
+
+[[projects]]
   digest = "1:b30ae084771993f574cd6416fd83352f48de2b873d51bc938b6d259fca3605a5"
   name = "github.com/songgao/water"
   packages = ["."]
@@ -431,6 +516,14 @@
   ]
   pruneopts = "UT"
   revision = "c4c61651e9e37fa117f53c5a906d3b63090d8445"
+
+[[projects]]
+  digest = "1:d0072748c62defde1ad99dde77f6ffce492a0e5aea9204077e497c7edfb86653"
+  name = "github.com/ugorji/go"
+  packages = ["codec"]
+  pruneopts = "UT"
+  revision = "2adff0894ba3bc2eeb9f9aea45fefd49802e1a13"
+  version = "v1.1.4"
 
 [[projects]]
   digest = "1:b24d38b282bacf9791408a080f606370efa3d364e4b5fd9ba0f7b87786d3b679"
@@ -564,6 +657,14 @@
   version = "v1.7.0"
 
 [[projects]]
+  digest = "1:cbc72c4c4886a918d6ab4b95e347ffe259846260f99ebdd8a198c2331cf2b2e9"
+  name = "gopkg.in/go-playground/validator.v8"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5f1438d3fca68893a817e4a66806cea46a9e4ebf"
+  version = "v8.18.2"
+
+[[projects]]
   digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
   name = "gopkg.in/mattn/go-colorable.v0"
   packages = ["."]
@@ -595,6 +696,14 @@
   pruneopts = "UT"
   revision = "c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6"
 
+[[projects]]
+  digest = "1:4d2e5a73dc1500038e504a8d78b986630e3626dc027bc030ba5c75da257cdb96"
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
+  version = "v2.2.2"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -616,6 +725,8 @@
     "github.com/ethereum/go-ethereum/event",
     "github.com/ethereum/go-ethereum/p2p/nat",
     "github.com/ethereum/go-ethereum/params",
+    "github.com/gin-contrib/cors",
+    "github.com/gin-gonic/gin",
     "github.com/gofrs/uuid",
     "github.com/huin/goupnp",
     "github.com/huin/goupnp/httpu",
@@ -623,6 +734,7 @@
     "github.com/jackpal/gateway",
     "github.com/julienschmidt/httprouter",
     "github.com/mitchellh/go-homedir",
+    "github.com/mysteriumnetwork/go-dvpn-web",
     "github.com/mysteriumnetwork/go-openvpn/openvpn",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/config",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/management",
@@ -649,6 +761,7 @@
     "github.com/stretchr/testify/suite",
     "github.com/urfave/cli",
     "golang.org/x/crypto/curve25519",
+    "golang.org/x/net/html",
     "golang.org/x/net/ipv4",
     "golang.org/x/sys/windows/registry",
     "golang.zx2c4.com/wireguard/wgctrl",
