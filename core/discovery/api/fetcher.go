@@ -41,6 +41,7 @@ type fetcher struct {
 
 	proposalsLock sync.Mutex
 	proposals     map[market.ProposalID]market.ServiceProposal
+	proposalsChan chan market.ServiceProposal
 }
 
 // NewFetcher create instance of fetcher
@@ -74,6 +75,10 @@ func (fetcher *fetcher) GetProposals() map[market.ProposalID]market.ServicePropo
 	return fetcher.proposals
 }
 
+func (fetcher *fetcher) SubscribeProposals(proposalsChan chan market.ServiceProposal) {
+	fetcher.proposalsChan = proposalsChan
+}
+
 func (fetcher *fetcher) fetchLoop() {
 	for {
 		select {
@@ -100,6 +105,9 @@ func (fetcher *fetcher) fetchDo() error {
 	fetcher.proposals = make(map[market.ProposalID]market.ServiceProposal, len(proposals))
 	for _, proposal := range proposals {
 		fetcher.proposals[proposal.UniqueID()] = proposal
+		if fetcher.proposalsChan != nil {
+			fetcher.proposalsChan <- proposal
+		}
 	}
 	return nil
 }

@@ -49,7 +49,7 @@ func (callback *fetchCallback) Fetch() ([]market.ServiceProposal, error) {
 	return callback.proposalsMock, nil
 }
 
-func Test_Fetcher_Start_InitialFetch(t *testing.T) {
+func Test_Fetcher_StartFetchesInitialProposals(t *testing.T) {
 	proposalsCurrent.Mock(proposalFirst, proposalSecond)
 	fetcher := NewFetcher(proposalsCurrent.Fetch, time.Hour)
 
@@ -70,7 +70,7 @@ func Test_Fetcher_Start_InitialFetch(t *testing.T) {
 	}()
 }
 
-func Test_Fetcher_Start_UpdatingFetch(t *testing.T) {
+func Test_Fetcher_StartFetchesNewProposals(t *testing.T) {
 	proposalsCurrent.Mock(proposalFirst)
 	fetcher := NewFetcher(proposalsCurrent.Fetch, time.Millisecond)
 
@@ -92,6 +92,50 @@ func Test_Fetcher_Start_UpdatingFetch(t *testing.T) {
 		},
 		fetcher.GetProposals(),
 	)
+}
+
+func Test_Fetcher_StartNotifiesWithInitialProposals(t *testing.T) {
+	proposalChan := make(chan market.ServiceProposal)
+	fetcher := NewFetcher(proposalsCurrent.Fetch, time.Hour)
+	fetcher.SubscribeProposals(proposalChan)
+
+	proposalsCurrent.Mock(proposalFirst, proposalSecond)
+	go func() {
+		err := fetcher.Start()
+		defer fetcher.Stop()
+
+		assert.NoError(t, err)
+	}()
+
+	assert.Exactly(t, proposalFirst, waitForProposal(t, proposalChan))
+	assert.Exactly(t, proposalSecond, waitForProposal(t, proposalChan))
+}
+
+func Test_Fetcher_StartNotifiesWithNewProposals(t *testing.T) {
+	proposalChan := make(chan market.ServiceProposal)
+	fetcher := NewFetcher(proposalsCurrent.Fetch, time.Millisecond)
+	fetcher.SubscribeProposals(proposalChan)
+
+	proposalsCurrent.Mock(proposalFirst)
+	go func() {
+		err := fetcher.Start()
+		defer fetcher.Stop()
+
+		assert.NoError(t, err)
+	}()
+
+	proposalsCurrent.Mock(proposalSecond)
+	assert.Exactly(t, proposalSecond, waitForProposal(t, proposalChan))
+}
+
+func waitForProposal(t *testing.T, proposalsChan chan market.ServiceProposal) market.ServiceProposal {
+	select {
+	case proposal := <-proposalsChan:
+		return proposal
+	case <-time.After(2 * time.Millisecond):
+		t.Log("Proposal not fetched")
+		return market.ServiceProposal{}
+	}
 }
 
 func waitABit() {
