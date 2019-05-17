@@ -22,12 +22,20 @@ import (
 )
 
 type handlerFake struct {
+	id *identity.Identity
 }
 
 // NewFakeHandler fake mock handler
 func NewFakeHandler() *handlerFake {
 	return &handlerFake{}
 }
+func (hf *handlerFake) setIdentity(id *identity.Identity) {
+	hf.id = id
+}
 func (hf *handlerFake) UseOrCreate(address, passphrase string) (identity.Identity, error) {
-	return identity.Identity{Address: address}, nil
+	if len(address) > 0 {
+		return identity.Identity{Address: address}, nil
+	}
+
+	return identity.Identity{Address: "0x000000"}, nil
 }

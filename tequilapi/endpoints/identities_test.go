@@ -40,6 +40,32 @@ var (
 	newIdentity = identity.Identity{"0x000000000000000000000000000000000000aaac"}
 )
 
+func TestCurrentIdentitySuccess(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	resp := httptest.NewRecorder()
+	req, err := http.NewRequest(
+		http.MethodPut,
+		identityUrl,
+		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
+	)
+	params := httprouter.Params{{"id", "current"}}
+	assert.Nil(t, err)
+
+	fakeHandler := selector.NewFakeHandler()
+	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Current
+	handlerFunc(resp, req, params)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	assert.JSONEq(
+		t,
+		`{
+			"id": "0x000000"
+		}`,
+		resp.Body.String(),
+	)
+}
+
 func TestUnlockIdentitySuccess(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()

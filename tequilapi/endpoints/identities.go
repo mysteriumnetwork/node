@@ -110,7 +110,7 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 //       $ref: "#/definitions/CurrentIdentityDTO"
 // responses:
 //   200:
-//     description: Identity returned
+//     description: Unlocked identity returned
 //     schema:
 //       "$ref": "#/definitions/IdentityDTO"
 //   400:
@@ -138,7 +138,7 @@ func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.R
 		return
 	}
 
-	errorMap := validateMyIdentityRequest(myIdentityRequest)
+	errorMap := validateCurrentIdentityRequest(myIdentityRequest)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
@@ -281,7 +281,7 @@ func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, er
 	return
 }
 
-func validateMyIdentityRequest(unlockReq *currentIdentityDTO) (errors *validation.FieldErrorMap) {
+func validateCurrentIdentityRequest(unlockReq *currentIdentityDTO) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
 	if unlockReq.Passphrase == nil {
 		errors.ForField("passphrase").AddError("required", "Field is required")
