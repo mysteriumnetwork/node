@@ -24,6 +24,7 @@ import (
 type handlerFake struct {
 }
 
+// NewFakeHandler fake mock handler
 func NewFakeHandler() *handlerFake {
 	return &handlerFake{}
 }

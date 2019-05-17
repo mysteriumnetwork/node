@@ -41,7 +41,7 @@ func NewHandler(
 	registry IdentityRegistry,
 	cache identity.IdentityCacheInterface,
 	signerFactory identity.SignerFactory,
-) Handler {
+) *handler {
 	return &handler{
 		manager:       manager,
 		registry:      registry,

@@ -19,10 +19,11 @@ package endpoints
 
 import (
 	"bytes"
-	"github.com/mysteriumnetwork/node/identity/selector"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/mysteriumnetwork/node/identity/selector"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
