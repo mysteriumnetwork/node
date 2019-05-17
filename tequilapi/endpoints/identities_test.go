@@ -23,8 +23,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/identity/selector"
-
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/stretchr/testify/assert"
@@ -40,6 +38,21 @@ var (
 	newIdentity = identity.Identity{"0x000000000000000000000000000000000000aaac"}
 )
 
+type selectorFake struct {
+	id *identity.Identity
+}
+
+func (hf *selectorFake) setIdentity(id *identity.Identity) {
+	hf.id = id
+}
+func (hf *selectorFake) UseOrCreate(address, passphrase string) (identity.Identity, error) {
+	if len(address) > 0 {
+		return identity.Identity{Address: address}, nil
+	}
+
+	return identity.Identity{Address: "0x000000"}, nil
+}
+
 func TestCurrentIdentitySuccess(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
 	resp := httptest.NewRecorder()
@@ -51,12 +64,13 @@ func TestCurrentIdentitySuccess(t *testing.T) {
 	params := httprouter.Params{{"id", "current"}}
 	assert.Nil(t, err)
 
-	fakeHandler := selector.NewFakeHandler()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Current
-	handlerFunc(resp, req, params)
+	endpoint := &identitiesAPI{
+		idm:      mockIdm,
+		selector: &selectorFake{},
+	}
+	endpoint.Current(resp, req, params)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-
 	assert.JSONEq(
 		t,
 		`{
@@ -77,9 +91,8 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 	params := httprouter.Params{{"id", "1234abcd"}}
 	assert.Nil(t, err)
 
-	fakeHandler := selector.NewFakeHandler()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Unlock
-	handlerFunc(resp, req, params)
+	endpoint := &identitiesAPI{idm: mockIdm}
+	endpoint.Unlock(resp, req, params)
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
 
@@ -98,15 +111,15 @@ func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 	params := httprouter.Params{{"id", "1234abcd"}}
 	assert.Nil(t, err)
 
-	fakeHandler := selector.NewFakeHandler()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Unlock
-	handlerFunc(resp, req, params)
+	endpoint := &identitiesAPI{idm: mockIdm}
+	endpoint.Unlock(resp, req, params)
 
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
 func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
@@ -114,10 +127,8 @@ func TestUnlockIdentityWithNoPassphrase(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	fakeHandler := selector.NewFakeHandler()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Unlock
-	resp := httptest.NewRecorder()
-	handlerFunc(resp, req, nil)
+	endpoint := &identitiesAPI{idm: mockIdm}
+	endpoint.Unlock(resp, req, nil)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
@@ -145,9 +156,8 @@ func TestUnlockFailure(t *testing.T) {
 
 	mockIdm.MarkUnlockToFail()
 
-	fakeHandler := selector.NewFakeHandler()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Unlock
-	handlerFunc(resp, req, params)
+	endpoint := &identitiesAPI{idm: mockIdm}
+	endpoint.Unlock(resp, req, params)
 
 	assert.Equal(t, http.StatusForbidden, resp.Code)
 
@@ -157,36 +167,32 @@ func TestUnlockFailure(t *testing.T) {
 
 func TestCreateNewIdentityEmptyPassphrase(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
 		bytes.NewBufferString(`{"passphrase": ""}`),
 	)
-
 	assert.Nil(t, err)
 
-	resp := httptest.NewRecorder()
-	fakeHandler := selector.NewFakeHandler()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Create
-	handlerFunc(resp, req, nil)
+	endpoint := &identitiesAPI{idm: mockIdm}
+	endpoint.Create(resp, req, nil)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 }
 
 func TestCreateNewIdentityNoPassphrase(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
 		bytes.NewBufferString(`{}`),
 	)
-
 	assert.Nil(t, err)
 
-	resp := httptest.NewRecorder()
-	fakeHandler := selector.NewFakeHandler()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Create
-	handlerFunc(resp, req, nil)
+	endpoint := &identitiesAPI{idm: mockIdm}
+	endpoint.Create(resp, req, nil)
 
 	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
 	assert.JSONEq(
@@ -203,6 +209,7 @@ func TestCreateNewIdentityNoPassphrase(t *testing.T) {
 
 func TestCreateNewIdentity(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	resp := httptest.NewRecorder()
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/identities",
@@ -210,10 +217,8 @@ func TestCreateNewIdentity(t *testing.T) {
 	)
 	assert.Nil(t, err)
 
-	resp := httptest.NewRecorder()
-	fakeHandler := selector.NewFakeHandler()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).Create
-	handlerFunc(resp, req, nil)
+	endpoint := &identitiesAPI{idm: mockIdm}
+	endpoint.Create(resp, req, nil)
 
 	assert.JSONEq(
 		t,
@@ -229,9 +234,8 @@ func TestListIdentities(t *testing.T) {
 	req := httptest.NewRequest("GET", "/irrelevant", nil)
 	resp := httptest.NewRecorder()
 
-	fakeHandler := selector.NewFakeHandler()
-	handlerFunc := NewIdentitiesEndpoint(mockIdm, fakeHandler).List
-	handlerFunc(resp, req, nil)
+	endpoint := &identitiesAPI{idm: mockIdm}
+	endpoint.List(resp, req, nil)
 
 	assert.JSONEq(
 		t,
