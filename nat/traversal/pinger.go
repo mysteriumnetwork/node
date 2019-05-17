@@ -124,9 +124,15 @@ func (p *Pinger) Start() {
 			log.Info(prefix, "stop pinger called")
 			return
 		case pingParams := <-p.pingTarget:
-			go p.pingTargetConsumer(pingParams)
+			if isPunchingRequired(pingParams) {
+				go p.pingTargetConsumer(pingParams)
+			}
 		}
 	}
+}
+
+func isPunchingRequired(params *Params) bool {
+	return params.ConsumerPort > 0
 }
 
 // Stop stops pinger loop
@@ -186,7 +192,7 @@ func (p *Pinger) waitForPreviousStageResult() bool {
 
 func (p *Pinger) ping(conn *net.UDPConn) error {
 	// Windows detects that 1 TTL is too low and throws an exception during send
-	n := 2
+	ttl := 0
 	i := 0
 
 	for {
@@ -201,17 +207,18 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 			// After a few attempts we're setting the value to 128 and assuming we're through.
 			// We could stop sending ping to Consumer beyond 4 hops to prevent from possible Consumer's router's
 			//  DOS block, but we plan, that Consumer at the same time will be Provider too in near future.
-			if n > 4 {
-				n = 128
+			ttl++
+
+			if ttl > 4 {
+				ttl = 128
 			}
 
-			err := p.sendPingRequest(conn, n)
+			err := p.sendPingRequest(conn, ttl)
 			if err != nil {
 				p.eventPublisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
 				return err
 			}
 
-			n++
 			i++
 
 			if i*pingInterval > pingTimeout {
@@ -284,12 +291,14 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 		var buf [bufferLen]byte
 		n, err := conn.Read(buf[0:])
 		if err != nil {
-			log.Errorf("%sFailed to read remote peer: %s cause: %s", prefix, conn.RemoteAddr().String(), err)
-			return err
+			log.Errorf("%sFailed to read remote peer: %s cause: %s - attempting to continue", prefix, conn.RemoteAddr().String(), err)
+			continue
 		}
-		fmt.Println(prefix, "remote peer data received: ", string(buf[:n]))
 
-		return nil
+		if n > 0 {
+			log.Infof(prefix, "remote peer data received: %s, len: %d", string(buf[:n]), n)
+			return nil
+		}
 	}
 }
 
