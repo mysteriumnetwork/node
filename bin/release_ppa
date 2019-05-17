@@ -1,0 +1,53 @@
+#!/bin/bash
+
+###########################################################################
+# Prepare debian/* files PPA
+#
+# Usage:
+#> bin/package_ppa version build_number distr
+
+set -e
+
+source bin/helpers/output.sh
+
+VERSION=$1
+if [ -z "$VERSION" ]; then
+    print_error "Missing version!"
+    exit 1
+fi
+
+BUILD=$2
+if [ -z "$BUILD" ]; then
+    print_error "Missing build number!"
+    exit 1
+fi
+
+DISTR=$3
+if [ -z "$DISTR" ]; then
+    print_error "Missing distr!"
+    exit 1
+fi
+
+DATE=`date -R`
+
+echo "myst ($VERSION+build$BUILD+$DISTR) $DISTR; urgency=medium
+
+  * CI build number $BUILD
+
+ -- Mysterium Team <core-services@mysterium.network>  $DATE
+" > debian/changelog
+
+debuild -S -sa -us -uc
+debsign -k 336826E2222A0B29 ../myst_${VERSION}+build${BUILD}+${DISTR}_source.changes
+
+# We have to add this configuration to enable SFTP since default FTP timeouts on Travis CI.
+echo "[myst-ppa]
+fqdn = ppa.launchpad.net
+method = sftp
+incoming = ~mysteriumnetwork/ubuntu/node/
+login = mysteriumnetwork
+allow_unsigned_uploads = 0
+" > ~/.dput.cf
+ssh-keyscan ppa.launchpad.net >> ~/.ssh/known_hosts
+
+dput myst-ppa ../myst_${VERSION}+build${BUILD}+${DISTR}_source.changes
