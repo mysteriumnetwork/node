@@ -1,6 +1,7 @@
 #!/bin/bash -ev
 
 install -m 755 files/myst_linux_armhf.deb	"${ROOTFS_DIR}/tmp/"
+install -m 644 files/default-myst-conf "${ROOTFS_DIR}/etc/default/mysterium-node"
 
 on_chroot << EOF
 echo "deb http://deb.debian.org/debian/ unstable main" | tee --append /etc/apt/sources.list.d/unstable.list
@@ -11,15 +12,6 @@ apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8B48AD6246925553 7638D0
 
 apt-get update
 apt-get -y install wireguard openvpn
-
-cat <<'confEOF' > /etc/default/mysterium-node
-# Define additional args for `myst` service (see `myst --help` for full list)
-CONF_DIR="--config-dir=/etc/mysterium-node"
-RUN_DIR="--runtime-dir=/var/run/mysterium-node"
-DATA_DIR="--data-dir=/var/lib/mysterium-node"
-DAEMON_OPTS="--tequilapi.address=0.0.0.0"
-SERVICE_OPTS="openvpn"
-confEOF
 
 dpkg -i /tmp/myst_linux_armhf.deb
 
