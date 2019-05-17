@@ -70,7 +70,7 @@ func (client *Client) NewIdentity(passphrase string) (id IdentityDTO, err error)
 	return id, err
 }
 
-// Current unlocks and returns the last used, new or first identity
+// CurrentIdentity unlocks and returns the last used, new or first identity
 func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityDTO, err error) {
 	if len(identity) == 0 {
 		identity = "current"

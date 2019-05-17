@@ -138,7 +138,6 @@ func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity
 		return nil, err
 	}
 
-
 	return &identity.Identity{Address: id.Address}, nil
 }
 
