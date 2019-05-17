@@ -132,8 +132,14 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	return <-sc.errorChannel
 }
 
-func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (identity.Identity, error) {
-	return sc.identityHandler.UseOrCreate(identityOptions.Identity, identityOptions.Passphrase)
+func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (*identity.Identity, error) {
+	id, err := sc.tequilapi.CurrentIdentity(identityOptions.Identity, identityOptions.Passphrase)
+	if err != nil {
+		return nil, err
+	}
+
+
+	return &identity.Identity{Address: id.Address}, nil
 }
 
 func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {
