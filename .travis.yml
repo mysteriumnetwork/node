@@ -16,7 +16,7 @@ before_install:
   - if [ -z "$BUILD_VERSION" ]; then
       export BUILD_VERSION=$BUILD_DEV_RELEASE;
     fi
-  - if [ -z "$PPA_VERSION" ]; then
+  - if [ "$PPA_VERSION" == "$BUILD_DEV_RELEASE" ]; then
       export PPA_VERSION=$PPA_DEV_VERSION;
     fi
 
