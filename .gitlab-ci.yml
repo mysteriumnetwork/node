@@ -41,6 +41,7 @@ install-deps:
     paths:
       - vendor/
   script:
+    - env
     - >
       go get -u \
         github.com/debber/debber-v0.3/cmd/debber \
