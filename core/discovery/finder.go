@@ -50,6 +50,9 @@ func (finder *finder) FindProposals(filter market.ProposalFilter) ([]market.Serv
 		if filter.ProviderID != "" && filter.ProviderID != proposal.ProviderID {
 			continue
 		}
+		if filter.ServiceType != "" && filter.ServiceType != proposal.ServiceType {
+			continue
+		}
 
 		proposalsFiltered = append(proposalsFiltered, proposal)
 	}
