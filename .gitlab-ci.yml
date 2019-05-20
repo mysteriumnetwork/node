@@ -42,7 +42,7 @@ install-deps:
       - vendor/
   script:
     - >
-      go get \
+      go get -u \
         github.com/debber/debber-v0.3/cmd/debber \
         golang.org/x/lint/golint \
         golang.org/x/tools/cmd/goimports \
