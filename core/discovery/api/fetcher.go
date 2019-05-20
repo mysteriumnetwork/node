@@ -19,10 +19,10 @@ package api
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -39,18 +39,17 @@ type fetcher struct {
 	fetchInterval time.Duration
 	fetchShutdown chan bool
 
-	proposalsLock sync.Mutex
-	proposals     map[market.ProposalID]market.ServiceProposal
-	proposalsChan chan market.ServiceProposal
+	proposalStorage *discovery.ProposalStorage
+	proposalChan    chan market.ServiceProposal
 }
 
 // NewFetcher create instance of fetcher
-func NewFetcher(callback FetchCallback, interval time.Duration) *fetcher {
+func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallback, interval time.Duration) *fetcher {
 	return &fetcher{
 		fetch:         callback,
 		fetchInterval: interval,
 
-		proposals: make(map[market.ProposalID]market.ServiceProposal, 0),
+		proposalStorage: proposalsStorage,
 	}
 }
 
@@ -69,14 +68,8 @@ func (fetcher *fetcher) Stop() {
 	fetcher.fetchShutdown <- true
 }
 
-func (fetcher *fetcher) GetProposals() map[market.ProposalID]market.ServiceProposal {
-	fetcher.proposalsLock.Lock()
-	defer fetcher.proposalsLock.Unlock()
-	return fetcher.proposals
-}
-
 func (fetcher *fetcher) SubscribeProposals(proposalsChan chan market.ServiceProposal) {
-	fetcher.proposalsChan = proposalsChan
+	fetcher.proposalChan = proposalsChan
 }
 
 func (fetcher *fetcher) fetchLoop() {
@@ -99,14 +92,11 @@ func (fetcher *fetcher) fetchDo() error {
 	}
 
 	log.Info(fetcherLogPrefix, fmt.Sprintf("Proposals fetched: %d", len(proposals)))
-	fetcher.proposalsLock.Lock()
-	defer fetcher.proposalsLock.Unlock()
+	fetcher.proposalStorage.AddMultiple(proposals)
 
-	fetcher.proposals = make(map[market.ProposalID]market.ServiceProposal, len(proposals))
-	for _, proposal := range proposals {
-		fetcher.proposals[proposal.UniqueID()] = proposal
-		if fetcher.proposalsChan != nil {
-			fetcher.proposalsChan <- proposal
+	if fetcher.proposalChan != nil {
+		for _, proposal := range proposals {
+			fetcher.proposalChan <- proposal
 		}
 	}
 	return nil

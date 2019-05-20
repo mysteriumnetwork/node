@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
@@ -50,30 +51,25 @@ func (callback *fetchCallback) Fetch() ([]market.ServiceProposal, error) {
 }
 
 func Test_Fetcher_StartFetchesInitialProposals(t *testing.T) {
-	proposalsCurrent.Mock(proposalFirst, proposalSecond)
-	fetcher := NewFetcher(proposalsCurrent.Fetch, time.Hour)
+	storage := discovery.NewStorage()
+	fetcher := NewFetcher(storage, proposalsCurrent.Fetch, time.Hour)
 
+	proposalsCurrent.Mock(proposalFirst, proposalSecond)
 	go func() {
 		err := fetcher.Start()
 		defer fetcher.Stop()
 
 		assert.NoError(t, err)
-		assert.Len(t, fetcher.GetProposals(), 2)
-		assert.Exactly(
-			t,
-			map[market.ProposalID]market.ServiceProposal{
-				proposalFirst.UniqueID():  proposalFirst,
-				proposalSecond.UniqueID(): proposalSecond,
-			},
-			fetcher.GetProposals(),
-		)
+		assert.Len(t, storage.Proposals(), 2)
+		assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, storage.Proposals())
 	}()
 }
 
 func Test_Fetcher_StartFetchesNewProposals(t *testing.T) {
-	proposalsCurrent.Mock(proposalFirst)
-	fetcher := NewFetcher(proposalsCurrent.Fetch, time.Millisecond)
+	storage := discovery.NewStorage()
+	fetcher := NewFetcher(storage, proposalsCurrent.Fetch, time.Millisecond)
 
+	proposalsCurrent.Mock(proposalFirst)
 	go func() {
 		err := fetcher.Start()
 		defer fetcher.Stop()
@@ -83,20 +79,15 @@ func Test_Fetcher_StartFetchesNewProposals(t *testing.T) {
 	proposalsCurrent.Mock(proposalFirst, proposalSecond)
 	waitABit()
 
-	assert.Len(t, fetcher.GetProposals(), 2)
-	assert.Exactly(
-		t,
-		map[market.ProposalID]market.ServiceProposal{
-			proposalFirst.UniqueID():  proposalFirst,
-			proposalSecond.UniqueID(): proposalSecond,
-		},
-		fetcher.GetProposals(),
-	)
+	assert.Len(t, storage.Proposals(), 2)
+	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, storage.Proposals())
 }
 
 func Test_Fetcher_StartNotifiesWithInitialProposals(t *testing.T) {
+	storage := discovery.NewStorage()
+	fetcher := NewFetcher(storage, proposalsCurrent.Fetch, time.Hour)
+
 	proposalChan := make(chan market.ServiceProposal)
-	fetcher := NewFetcher(proposalsCurrent.Fetch, time.Hour)
 	fetcher.SubscribeProposals(proposalChan)
 
 	proposalsCurrent.Mock(proposalFirst, proposalSecond)
@@ -112,8 +103,10 @@ func Test_Fetcher_StartNotifiesWithInitialProposals(t *testing.T) {
 }
 
 func Test_Fetcher_StartNotifiesWithNewProposals(t *testing.T) {
+	storage := discovery.NewStorage()
+	fetcher := NewFetcher(storage, proposalsCurrent.Fetch, time.Millisecond)
+
 	proposalChan := make(chan market.ServiceProposal)
-	fetcher := NewFetcher(proposalsCurrent.Fetch, time.Millisecond)
 	fetcher.SubscribeProposals(proposalChan)
 
 	proposalsCurrent.Mock(proposalFirst)

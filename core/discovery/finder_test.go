@@ -18,7 +18,6 @@
 package discovery
 
 import (
-	"sync"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/market"
@@ -42,7 +41,7 @@ var (
 		ProviderID:  provider2,
 	}
 
-	proposalsStorage = &fakeStorage{
+	proposalsStorage = &ProposalStorage{
 		proposals: []market.ServiceProposal{
 			proposalProvider1Streaming,
 			proposalProvider1Noop,
@@ -51,19 +50,8 @@ var (
 	}
 )
 
-type fakeStorage struct {
-	proposals []market.ServiceProposal
-	mutex     sync.Mutex
-}
-
-func (storage *fakeStorage) Proposals() []market.ServiceProposal {
-	storage.mutex.Lock()
-	defer storage.mutex.Unlock()
-	return storage.proposals
-}
-
 func Test_Finder_GetProposalExisting(t *testing.T) {
-	finder := NewFinderStorage(proposalsStorage.Proposals)
+	finder := NewFinder(proposalsStorage)
 
 	proposal, err := finder.GetProposal(market.ProposalID{ServiceType: "streaming", ProviderID: provider1})
 	assert.NoError(t, err)
@@ -72,7 +60,7 @@ func Test_Finder_GetProposalExisting(t *testing.T) {
 }
 
 func Test_Finder_GetProposalUnknown(t *testing.T) {
-	finder := NewFinderStorage(proposalsStorage.Proposals)
+	finder := NewFinder(proposalsStorage)
 
 	proposal, err := finder.GetProposal(market.ProposalID{ServiceType: "unknown", ProviderID: "0x100"})
 	assert.NoError(t, err)
@@ -80,7 +68,7 @@ func Test_Finder_GetProposalUnknown(t *testing.T) {
 }
 
 func Test_Finder_GetProposalsAll(t *testing.T) {
-	finder := NewFinderStorage(proposalsStorage.Proposals)
+	finder := NewFinder(proposalsStorage)
 
 	proposals, err := finder.FindProposals(market.ProposalFilter{})
 	assert.NoError(t, err)

@@ -21,22 +21,19 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// ProposalsStorage represents table of currently active proposals in Mysterium Discovery
-type ProposalsStorage func() []market.ServiceProposal
-
-// finderStorage implements ProposalFinder, which finds proposals from local storage
-type finderStorage struct {
-	storage ProposalsStorage
+// finder implements ProposalFinder, which finds proposals from local storage
+type finder struct {
+	storage *ProposalStorage
 }
 
-// NewFinderStorage creates instance of finderStorage
-func NewFinderStorage(fetcher ProposalsStorage) *finderStorage {
-	return &finderStorage{storage: fetcher}
+// NewFinder creates instance of local storage finder
+func NewFinder(storage *ProposalStorage) *finder {
+	return &finder{storage: storage}
 }
 
 // GetProposal fetches service proposal from discovery by exact ID
-func (finder *finderStorage) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
-	for _, proposal := range finder.storage() {
+func (finder *finder) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
+	for _, proposal := range finder.storage.Proposals() {
 		if proposal.UniqueID() == id {
 			return &proposal, nil
 		}
@@ -46,6 +43,6 @@ func (finder *finderStorage) GetProposal(id market.ProposalID) (*market.ServiceP
 }
 
 // FindProposals fetches currently active service proposals from discovery
-func (finder *finderStorage) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
-	return finder.storage(), nil
+func (finder *finder) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
+	return finder.storage.Proposals(), nil
 }
