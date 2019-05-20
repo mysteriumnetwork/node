@@ -79,10 +79,12 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 					di.EventBus)
 			}
 
-			portPool := di.PortPool
+			var portPool port.ServicePortSupplier
 			if wgOptions.Ports.IsSpecified() {
 				log.Infof("%s fixed service port range (%s) configured, using custom port pool", logPrefix, wgOptions.Ports)
 				portPool = port.NewFixedRangePool(*wgOptions.Ports)
+			} else {
+				portPool = port.NewPool()
 			}
 
 			return wireguard_service.NewManager(di.IPResolver, di.NATService, mapPort, wgOptions, portPool),
@@ -136,11 +138,11 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 
 		proposal := openvpn_discovery.NewServiceProposalWithLocation(currentLocation, transportOptions.Protocol)
 
+		var portPool port.ServicePortSupplier
 		if transportOptions.Port != 0 {
-			err := di.PortPool.SetServicePort(service_openvpn.ServiceType, transportOptions.Port)
-			if err != nil {
-				return nil, market.ServiceProposal{}, err
-			}
+			portPool = port.NewPoolFixed(port.Port(transportOptions.Port))
+		} else {
+			portPool = port.NewPool()
 		}
 
 		manager := openvpn_service.NewManager(
@@ -152,7 +154,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			di.NATPinger,
 			mapPort,
 			di.NATTracker,
-			di.PortPool,
+			portPool,
 		)
 		return manager, proposal, nil
 	}

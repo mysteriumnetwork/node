@@ -23,7 +23,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -34,24 +33,14 @@ func TestManager_StopNotPanic(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-type portSupplierMock struct{}
-
-func (portSupplierMock) Acquire() (port.Port, error) {
-	return 0, nil
-}
-
-func (portSupplierMock) PortForService(string) (port.Port, error) {
-	return 0, nil
-}
-
 func TestManager_ProvideConfigNotFailOnEmptyConfig(t *testing.T) {
-	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, ports: portSupplierMock{}}
+	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, vpnServerPort: 1000}
 	_, err := m.ProvideConfig([]byte(""), nil)
 	assert.NoError(t, err)
 }
 
 func TestManager_ProvideConfigNotFailOnNilConfig(t *testing.T) {
-	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, ports: portSupplierMock{}}
+	m := Manager{vpnServiceConfigProvider: &mockConfigProvider{}, vpnServerPort: 1000}
 	_, err := m.ProvideConfig(nil, nil)
 	assert.NoError(t, err)
 }
