@@ -10,7 +10,7 @@ RUN apt-get update \
 # Install development dependencies
 RUN go get \
     github.com/debber/debber-v0.3/cmd/debber \
-    github.com/golang/lint/golint \
+    golang.org/x/lint/golint \
     golang.org/x/tools/cmd/goimports \
     github.com/go-swagger/go-swagger/cmd/swagger
 
