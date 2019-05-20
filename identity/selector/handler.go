@@ -57,9 +57,7 @@ func (h *handler) UseOrCreate(address, passphrase string) (id identity.Identity,
 
 	identities := h.manager.GetIdentities()
 	if len(identities) == 0 {
-		id, err = h.useNew(passphrase)
-
-		return id, nil
+		return h.useNew(passphrase)
 	}
 
 	id, err = h.useLast(passphrase)
