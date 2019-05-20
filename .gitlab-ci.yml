@@ -11,7 +11,7 @@ variables:
   BUILD_DEV_RELEASE: 0.0.0-dev
   GO_PACKAGE: github.com/mysteriumnetwork/node
   GIT_CLONE_PATH: /home/gitlab-runner/go/src/$GO_PACKAGE
-  GOCACHE: "off"
+  GOFLAGS: "-count=1" # Supersedes GOCACHE=off, see: https://github.com/golang/go/issues/29378#issuecomment-449383809
 
 cache:
   key: vendor
