@@ -30,12 +30,38 @@ fi
 
 DATE=`date -R`
 
+PPA="node"
+if [ "$VERSION" == "$PPA_DEV_VERSION" ]; then
+    PPA="node-dev"
+fi
+
 echo "myst ($VERSION+build$BUILD+$DISTR) $DISTR; urgency=medium
 
   * CI build number $BUILD
 
  -- Mysterium Team <core-services@mysterium.network>  $DATE
 " > debian/changelog
+
+echo '#!/usr/bin/make -f
+
+export DH_VERBOSE := 1
+export PATH := /usr/lib/go-1.11/bin/:$(PATH)
+export GOPATH := $(CURDIR)/go
+export BUILD_COMMIT := '$BUILD_COMMIT'
+export BUILD_BRANCH := '$BUILD_BRANCH'
+export BUILD_NUMBER := '$BUILD_NUMBER'
+export BUILD_VERSION := '$BUILD_VERSION'
+
+override_dh_auto_build:
+	mkdir -p $(GOPATH)/src/github.com/mysteriumnetwork/
+	ln -s $(CURDIR) $(GOPATH)/src/github.com/mysteriumnetwork/node
+	cd $(GOPATH)/src/github.com/mysteriumnetwork/node; bin/build
+
+override_dh_auto_test:
+
+%:
+	dh \$@
+' > debian/rules; chmod +x debian/rules
 
 debuild -S -sa -us -uc
 debsign -k 336826E2222A0B29 ../myst_${VERSION}+build${BUILD}+${DISTR}_source.changes
@@ -44,7 +70,7 @@ debsign -k 336826E2222A0B29 ../myst_${VERSION}+build${BUILD}+${DISTR}_source.cha
 echo "[myst-ppa]
 fqdn = ppa.launchpad.net
 method = sftp
-incoming = ~mysteriumnetwork/ubuntu/node/
+incoming = ~mysteriumnetwork/ubuntu/$PPA/
 login = mysteriumnetwork
 allow_unsigned_uploads = 0
 " > ~/.dput.cf
