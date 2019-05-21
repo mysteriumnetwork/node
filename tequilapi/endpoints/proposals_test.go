@@ -136,8 +136,10 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	)
 	assert.Equal(t,
 		market.ProposalFilter{
-			AccessPolicyID:     "accessPolicyId",
-			AccessPolicySource: "accessPolicySource",
+			AccessPolicy: market.AccessPolicyFilter{
+				ID:     "accessPolicyId",
+				Source: "accessPolicySource",
+			},
 		},
 		mockProposalProvider.recordedFilter,
 	)

@@ -19,8 +19,13 @@ package market
 
 // ProposalFilter defines all flags for proposal filtering in discovery of Mysterium Network
 type ProposalFilter struct {
-	ProviderID         string
-	ServiceType        string
-	AccessPolicyID     string
-	AccessPolicySource string
+	ProviderID   string
+	ServiceType  string
+	AccessPolicy AccessPolicyFilter
+}
+
+// AccessPolicyFilter defines flags for proposal acccess policy filtering
+type AccessPolicyFilter struct {
+	ID     string
+	Source string
 }

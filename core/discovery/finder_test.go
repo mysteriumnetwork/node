@@ -25,22 +25,31 @@ import (
 )
 
 var (
-	provider1 = "0x1"
-	provider2 = "0x2"
+	provider1           = "0x1"
+	provider2           = "0x2"
+	accessRuleWhitelist = market.AccessPolicy{
+		ID:     "whitelist",
+		Source: "whitelist.txt",
+	}
+	accessRuleBlacklist = market.AccessPolicy{
+		ID:     "blacklist",
+		Source: "blacklist.txt",
+	}
 
 	proposalProvider1Streaming = market.ServiceProposal{
-		ServiceType: "streaming",
-		ProviderID:  provider1,
+		ServiceType:    "streaming",
+		ProviderID:     provider1,
+		AccessPolicies: &[]market.AccessPolicy{accessRuleWhitelist},
 	}
 	proposalProvider1Noop = market.ServiceProposal{
 		ServiceType: "noop",
 		ProviderID:  provider1,
 	}
 	proposalProvider2Streaming = market.ServiceProposal{
-		ServiceType: "streaming",
-		ProviderID:  provider2,
+		ServiceType:    "streaming",
+		ProviderID:     provider2,
+		AccessPolicies: &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
 	}
-
 	proposalsStorage = &ProposalStorage{
 		proposals: []market.ServiceProposal{
 			proposalProvider1Streaming,
@@ -79,7 +88,7 @@ func Test_Finder_GetProposalsAll(t *testing.T) {
 	)
 }
 
-func Test_Finder_GetProposalsByProviderID(t *testing.T) {
+func Test_Finder_ProposalsByProviderID(t *testing.T) {
 	finder := NewFinder(proposalsStorage)
 
 	proposals, err := finder.FindProposals(market.ProposalFilter{
@@ -119,4 +128,42 @@ func Test_Finder_GetProposalsByServiceType(t *testing.T) {
 		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider2Streaming},
 		proposals,
 	)
+}
+
+func Test_Finder_GetProposalsByAccessID(t *testing.T) {
+	finder := NewFinder(proposalsStorage)
+
+	proposals, err := finder.FindProposals(market.ProposalFilter{
+		AccessPolicy: market.AccessPolicyFilter{ID: "whitelist"},
+	})
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 2)
+	assert.Exactly(
+		t,
+		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider2Streaming},
+		proposals,
+	)
+
+	proposals, err = finder.FindProposals(market.ProposalFilter{
+		AccessPolicy: market.AccessPolicyFilter{ID: "blacklist"},
+	})
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 1)
+	assert.Exactly(
+		t,
+		[]market.ServiceProposal{proposalProvider2Streaming},
+		proposals,
+	)
+
+	proposals, err = finder.FindProposals(market.ProposalFilter{
+		AccessPolicy: market.AccessPolicyFilter{ID: "whitelist", Source: "unknown.txt"},
+	})
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 0)
+
+	proposals, err = finder.FindProposals(market.ProposalFilter{
+		AccessPolicy: market.AccessPolicyFilter{ID: "unknown"},
+	})
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 0)
 }

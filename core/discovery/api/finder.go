@@ -55,7 +55,7 @@ func (finder *finderAPI) FindProposals(filter market.ProposalFilter) ([]market.S
 	return finder.mysteriumAPI.QueryProposals(mysterium.ProposalsQuery{
 		NodeKey:            filter.ProviderID,
 		ServiceType:        filter.ServiceType,
-		AccessPolicyID:     filter.AccessPolicyID,
-		AccessPolicySource: filter.AccessPolicySource,
+		AccessPolicyID:     filter.AccessPolicy.ID,
+		AccessPolicySource: filter.AccessPolicy.Source,
 	})
 }
