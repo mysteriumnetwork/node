@@ -98,7 +98,7 @@ package:linux-debian-amd64:
     - bin/build
     - BINARY=build/myst/myst bin/package_debian $BUILD_VERSION amd64
 
-package:linux-debian-arm-raspberry:
+package:linux-debian-arm:
   stage: build
   tags:
     - go
@@ -106,7 +106,7 @@ package:linux-debian-arm-raspberry:
     - go get -u github.com/debber/debber-v0.3/cmd/debber
     - bin/build_xgo linux/arm
     - BINARY=build/myst/myst_linux_arm bin/package_debian $BUILD_VERSION armhf
-    - bin/package_raspberry
+    - if [[ "$CI_COMMIT_TAG" != "" ]]; then bin/package_raspberry fi
 
 package:osx-amd64:
   stage: build
