@@ -2,6 +2,7 @@ stages:
   - install
   - test
   - build
+  - release
 
 variables:
   BUILD_COMMIT: $CI_COMMIT_SHORT_SHA
@@ -24,6 +25,7 @@ before_script:
   - if [ -z "$BUILD_VERSION" ]; then
     export BUILD_VERSION=$BUILD_DEV_RELEASE;
     fi
+  - env
   - dep ensure -v
 
 after_script:
@@ -42,18 +44,17 @@ install-deps:
       - vendor/
   script:
     - env
-    - >
-      go get -u \
-        github.com/debber/debber-v0.3/cmd/debber \
-        golang.org/x/lint/golint \
-        golang.org/x/tools/cmd/goimports \
-        github.com/go-swagger/go-swagger/cmd/swagger
 
 checks:
   stage: test
   tags:
     - go
   script:
+    - |
+      go get -u \
+        golang.org/x/lint/golint \
+        golang.org/x/tools/cmd/goimports \
+        github.com/go-swagger/go-swagger/cmd/swagger
     - bin/check_golint
     - bin/check_goimports
     - bin/check_license
@@ -81,6 +82,46 @@ package:linux-amd64:
   script:
     - BINARY=build/myst/myst_linux_amd64 bin/package_standalone linux amd64
 
+package:linux-arm:
+  stage: build
+  tags:
+    - go
+  script:
+    - BINARY=build/myst/myst_linux_arm bin/package_standalone linux arm
+
+package:linux-debian-amd64:
+  stage: build
+  tags:
+    - go
+  script:
+    - go get -u github.com/debber/debber-v0.3/cmd/debber
+    - bin/build
+    - BINARY=build/myst/myst bin/package_debian $BUILD_VERSION amd64
+
+package:linux-debian-arm-raspberry:
+  stage: build
+  tags:
+    - go
+  script:
+    - go get -u github.com/debber/debber-v0.3/cmd/debber
+    - bin/build_xgo linux/arm
+    - BINARY=build/myst/myst_linux_arm bin/package_debian $BUILD_VERSION armhf
+    - bin/package_raspberry
+
+package:osx-amd64:
+  stage: build
+  tags:
+    - go
+  script:
+    - BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin amd64
+
+package:windows-amd64:
+  stage: build
+  tags:
+    - go
+  script:
+    - BINARY=build/myst/myst_windows_amd64.exe bin/package_standalone windows amd64
+
 package:ios:
   stage: build
   tags:
@@ -94,3 +135,39 @@ package:android:
     - go
   script:
     - bin/package_android amd64
+
+package:docker-alpine:
+  stage: build
+  tags:
+    - go
+  script:
+    - bin/package_docker
+    - docker save myst:alpine | gzip > myst_alpine.tgz
+
+package:docker-ubuntu:
+  stage: build
+  tags:
+    - go
+  script:
+    - bin/package_docker_ubuntu $BUILD_VERSION
+    - docker save myst:ubuntu | gzip > myst_ubuntu.tgz
+
+package:swagger-redoc-docker:
+  stage: build
+  tags:
+    - go
+  script:
+    - go get -u github.com/go-swagger/go-swagger/cmd/swagger/
+    - bin/swagger_generate
+    - bin/package_docker_docs
+    - docker save tequilapi:${BUILD_VERSION} | gzip > tequilapi_redoc.tgz
+
+release:snapshot:
+  stage: release
+  tags:
+    - go
+  script:
+    - echo $BUILD_VERSION
+#  only:
+#    refs:
+#      - master
