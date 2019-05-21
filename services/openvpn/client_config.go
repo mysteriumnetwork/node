@@ -66,6 +66,8 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 	clientConfig.SetPingTimerRemote()
 	clientConfig.SetPersistKey()
 
+	clientConfig.SetParam("auth", "none")
+
 	clientConfig.SetParam("reneg-sec", "60")
 	clientConfig.SetParam("resolv-retry", "infinite")
 	clientConfig.SetParam("redirect-gateway", "def1", "bypass-dhcp")

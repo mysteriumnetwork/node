@@ -276,6 +276,7 @@ func (p *Pinger) BindServicePort(serviceType services.ServiceType, port int) {
 
 func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 	timeout := time.After(pingTimeout * time.Millisecond)
+	buf := make([]byte, bufferLen)
 	for {
 		select {
 		case <-timeout:
@@ -287,8 +288,7 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 		default:
 		}
 
-		var buf [bufferLen]byte
-		n, err := conn.Read(buf[0:])
+		n, err := conn.Read(buf)
 		if err != nil {
 			log.Errorf("%sFailed to read remote peer: %s cause: %s - attempting to continue", prefix, conn.RemoteAddr().String(), err)
 			continue
