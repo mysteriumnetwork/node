@@ -44,7 +44,7 @@ func TestDialogEstablisher_EstablishDialog(t *testing.T) {
 	myID := identity.FromAddress("0x6B21b441D0D2Fa1d86407977A3a5C6eD90Ff1A62")
 	peerID := identity.FromAddress("0x0d1a35e53b7f3478d00B7C23838C0D48b2a81017")
 
-	connection := nats.StartConnectionFake()
+	connection := nats.StartConnectionMock()
 	connection.MockResponse(
 		"peer-topic.dialog-create",
 		[]byte(`{
@@ -82,7 +82,7 @@ func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
 	myID := identity.FromAddress("0x6B21b441D0D2Fa1d86407977A3a5C6eD90Ff1A62")
 	peerID := identity.FromAddress("0x0d1a35e53b7f3478d00B7C23838C0D48b2a81017")
 
-	connection := nats.StartConnectionFake()
+	connection := nats.StartConnectionMock()
 	connection.MockResponse(
 		"peer-topic.dialog-create",
 		[]byte(`{

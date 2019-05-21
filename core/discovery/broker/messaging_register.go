@@ -15,9 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package communication
+package broker
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
 )
@@ -48,7 +51,12 @@ func (pmc *registerConsumer) NewMessage() (messagePtr interface{}) {
 
 // Consume handles messages from endpoint
 func (pmc *registerConsumer) Consume(messagePtr interface{}) error {
-	pmc.queue <- messagePtr.(registerMessage)
+	msg, ok := messagePtr.(registerMessage)
+	if !ok {
+		return fmt.Errorf("consume received message of type %q, expected registerMessage instead", reflect.TypeOf(messagePtr))
+	}
+
+	pmc.queue <- msg
 	return nil
 }
 

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package communication
+package broker
 
 import (
 	"encoding/json"
@@ -33,7 +33,7 @@ var (
 )
 
 func Test_NewRegistry(t *testing.T) {
-	sender := NewSender(nats.NewConnectionFake())
+	sender := NewSender(nats.NewConnectionMock())
 	assert.Equal(
 		t,
 		&registry{
@@ -44,7 +44,7 @@ func Test_NewRegistry(t *testing.T) {
 }
 
 func Test_Registry_RegisterProposal(t *testing.T) {
-	connection := nats.StartConnectionFake()
+	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
 	registry := &registry{
@@ -64,7 +64,7 @@ func Test_Registry_RegisterProposal(t *testing.T) {
 }
 
 func Test_Registry_UnregisterProposal(t *testing.T) {
-	connection := nats.StartConnectionFake()
+	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
 	registry := &registry{
@@ -84,7 +84,7 @@ func Test_Registry_UnregisterProposal(t *testing.T) {
 }
 
 func Test_Registry_PingProposal(t *testing.T) {
-	connection := nats.StartConnectionFake()
+	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
 	registry := &registry{

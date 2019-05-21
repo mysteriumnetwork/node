@@ -28,7 +28,7 @@ import (
 var _ communication.Sender = &senderNATS{}
 
 func TestSenderNew(t *testing.T) {
-	connection := &connectionFake{}
+	connection := &ConnectionMock{}
 	codec := communication.NewCodecFake()
 
 	assert.Equal(

@@ -37,7 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
-	discovery_communication "github.com/mysteriumnetwork/node/core/discovery/communication"
+	discovery_broker "github.com/mysteriumnetwork/node/core/discovery/broker"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -206,7 +206,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork); err != nil {
+	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
 
@@ -465,7 +465,7 @@ func newSessionManagerFactory(
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides
-func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) (err error) {
+func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err error) {
 	network := metadata.DefaultNetwork
 
 	switch {
@@ -476,8 +476,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	//override defined values one by one from options
-	if options.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
-		network.MysteriumAPIAddress = options.MysteriumAPIAddress
+	if options.Discovery.Address != metadata.DefaultNetwork.MysteriumAPIAddress {
+		network.MysteriumAPIAddress = options.Discovery.Address
 	}
 
 	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
@@ -533,8 +533,8 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	case node.DiscoveryTypeAPI:
 		registry = discovery_api.NewRegistry(di.MysteriumAPI)
 	case node.DiscoveryTypeBroker:
-		sender := discovery_communication.NewSender(nats.NewConnectionFake())
-		registry = discovery_communication.NewRegistry(sender)
+		sender := discovery_broker.NewSender(nats.NewConnectionMock())
+		registry = discovery_broker.NewRegistry(sender)
 	default:
 		return fmt.Errorf("unknown discovery provider: %s", options.Type)
 	}
