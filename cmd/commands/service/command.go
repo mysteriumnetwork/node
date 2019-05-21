@@ -85,12 +85,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 			cmdService := &serviceCommand{
 				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 				errorChannel: errorChannel,
-				identityHandler: identity_selector.NewHandler(
-					di.IdentityManager,
-					di.MysteriumAPI,
-					identity.NewIdentityCache(nodeOptions.Directories.Keystore, "remember.json"),
-					di.SignerFactory),
-				ap: parseAccessPolicyFlag(ctx),
+				ap:           parseAccessPolicyFlag(ctx),
 			}
 
 			go func() {
@@ -124,21 +119,25 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		serviceTypes = strings.Split(arg, ",")
 	}
 
-	identity, err := sc.unlockIdentity(parseIdentityFlags(ctx))
+	providerID, err := sc.unlockIdentity(parseIdentityFlags(ctx))
 	if err != nil {
 		return err
 	}
 
-	if err := sc.runServices(ctx, identity.Address, serviceTypes); err != nil {
+	if err := sc.runServices(ctx, providerID.Address, serviceTypes); err != nil {
 		return err
 	}
 
 	return <-sc.errorChannel
 }
 
-func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (identity.Identity, error) {
-	loadIdentity := identity_selector.NewLoader(sc.identityHandler, identityOptions.Identity, identityOptions.Passphrase)
-	return loadIdentity()
+func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (*identity.Identity, error) {
+	id, err := sc.tequilapi.CurrentIdentity(identityOptions.Identity, identityOptions.Passphrase)
+	if err != nil {
+		return nil, err
+	}
+
+	return &identity.Identity{Address: id.Address}, nil
 }
 
 func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {

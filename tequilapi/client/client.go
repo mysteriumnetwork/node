@@ -70,6 +70,29 @@ func (client *Client) NewIdentity(passphrase string) (id IdentityDTO, err error)
 	return id, err
 }
 
+// CurrentIdentity unlocks and returns the last used, new or first identity
+func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityDTO, err error) {
+	if len(identity) == 0 {
+		identity = "current"
+	}
+
+	path := fmt.Sprintf("identities/%s", identity)
+	payload := struct {
+		Passphrase string `json:"passphrase"`
+	}{
+		passphrase,
+	}
+
+	response, err := client.http.Put(path, payload)
+	if err != nil {
+		return
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &id)
+	return id, err
+}
+
 // IdentityRegistrationStatus returns information of identity needed to register it on blockchain
 func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDataDTO, error) {
 	response, err := client.http.Get("identities/"+address+"/registration", url.Values{})

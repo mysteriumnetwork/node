@@ -30,14 +30,14 @@ var fakeSignerFactory = func(id identity.Identity) identity.Signer {
 var existingIdentity = identity.Identity{"existing"}
 var newIdentity = identity.Identity{"new"}
 
-func TestUseExistingSucceeds(t *testing.T) {
+func TestUseOrCreateSucceeds(t *testing.T) {
 	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	registry := &mockRegistry{}
 	cache := identity.NewIdentityCacheFake()
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	id, err := handler.UseExisting(existingIdentity.Address, "pass")
+	id, err := handler.UseOrCreate(existingIdentity.Address, "pass")
 	assert.Equal(t, existingIdentity, id)
 	assert.Nil(t, err)
 	assert.Equal(t, "", registry.registeredIdentity.Address)
@@ -46,7 +46,7 @@ func TestUseExistingSucceeds(t *testing.T) {
 	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
 }
 
-func TestUseExistingFailsWhenUnlockFails(t *testing.T) {
+func TestUseOrCreateFailsWhenUnlockFails(t *testing.T) {
 	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	identityManager.MarkUnlockToFail()
 	registry := &mockRegistry{}
@@ -54,11 +54,34 @@ func TestUseExistingFailsWhenUnlockFails(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	_, err := handler.UseExisting(existingIdentity.Address, "pass")
+	_, err := handler.UseOrCreate(existingIdentity.Address, "pass")
 	assert.Error(t, err)
 
 	assert.Equal(t, existingIdentity.Address, identityManager.LastUnlockAddress)
 	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+}
+
+func TestUseOrCreateReturnsFirstIdentity(t *testing.T) {
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity, newIdentity}, newIdentity)
+	registry := &mockRegistry{}
+	cache := identity.NewIdentityCacheFake()
+	_ = cache.StoreIdentity(existingIdentity)
+
+	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
+
+	id, err := handler.UseOrCreate("", "pass")
+	assert.Equal(t, existingIdentity, id)
+	assert.Nil(t, err)
+}
+
+func TestUseOrCreateFailsWhenIdentityNotFound(t *testing.T) {
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
+	registry := &mockRegistry{}
+	cache := identity.NewIdentityCacheFake()
+
+	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
+	_, err := handler.UseOrCreate("does-not-exist", "pass")
+	assert.NotNil(t, err)
 }
 
 func TestUseFailsWhenIdentityNotFound(t *testing.T) {
@@ -68,7 +91,7 @@ func TestUseFailsWhenIdentityNotFound(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	_, err := handler.UseExisting("does-not-exist", "pass")
+	_, err := handler.UseOrCreate("does-not-exist", "pass")
 	assert.NotNil(t, err)
 }
 
@@ -78,11 +101,11 @@ func TestUseLastSucceeds(t *testing.T) {
 	cache := identity.NewIdentityCacheFake()
 
 	fakeIdentity := identity.FromAddress("abc")
-	cache.StoreIdentity(fakeIdentity)
+	_ = cache.StoreIdentity(fakeIdentity)
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	id, err := handler.UseLast("pass")
+	id, err := handler.useLast("pass")
 	assert.Equal(t, fakeIdentity, id)
 	assert.Nil(t, err)
 
@@ -99,11 +122,11 @@ func TestUseLastFailsWhenUnlockFails(t *testing.T) {
 	cache := identity.NewIdentityCacheFake()
 
 	fakeIdentity := identity.FromAddress("abc")
-	cache.StoreIdentity(fakeIdentity)
+	_ = cache.StoreIdentity(fakeIdentity)
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	_, err := handler.UseLast("pass")
+	_, err := handler.useLast("pass")
 	assert.Error(t, err)
 
 	assert.Equal(t, "", registry.registeredIdentity.Address)
@@ -119,7 +142,7 @@ func TestUseNewSucceeds(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	id, err := handler.UseNew("pass")
+	id, err := handler.useNew("pass")
 	assert.Equal(t, newIdentity, id)
 	assert.Nil(t, err)
 
@@ -137,7 +160,7 @@ func TestUseNewFailsWhenUnlockFails(t *testing.T) {
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
-	_, err := handler.UseNew("pass")
+	_, err := handler.useNew("pass")
 	assert.Error(t, err)
 
 	assert.Equal(t, newIdentity.Address, identityManager.LastUnlockAddress)

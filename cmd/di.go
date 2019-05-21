@@ -44,6 +44,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
 	market_metrics "github.com/mysteriumnetwork/node/market/metrics"
@@ -152,6 +153,7 @@ type Dependencies struct {
 	SignerFactory        identity.SignerFactory
 	IdentityRegistry     identity_registry.IdentityRegistry
 	IdentityRegistration identity_registry.RegistrationDataProvider
+	IdentitySelector     identity_selector.Handler
 
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
@@ -377,7 +379,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.LocationResolver)
@@ -508,6 +510,13 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
 	}
+	di.IdentitySelector = identity_selector.NewHandler(
+		di.IdentityManager,
+		di.MysteriumAPI,
+		identity.NewIdentityCache(options.Directories.Keystore, "remember.json"),
+		di.SignerFactory,
+	)
+
 	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 

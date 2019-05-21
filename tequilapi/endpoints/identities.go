@@ -23,6 +23,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
+	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -40,6 +41,11 @@ type identityList struct {
 	Identities []identityDto `json:"identities"`
 }
 
+// swagger:model CurrentIdentityDTO
+type currentIdentityDTO struct {
+	Passphrase *string `json:"passphrase"`
+}
+
 // swagger:model IdentityCreationDTO
 type identityCreationDto struct {
 	Passphrase *string `json:"passphrase"`
@@ -51,7 +57,8 @@ type identityUnlockingDto struct {
 }
 
 type identitiesAPI struct {
-	idm identity.Manager
+	idm      identity.Manager
+	selector identity_selector.Handler
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -67,8 +74,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager) *identitiesAPI {
-	return &identitiesAPI{idm}
+func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler) *identitiesAPI {
+	return &identitiesAPI{idm, selector}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -89,6 +96,63 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 	idsSerializable := identityList{mapIdentities(idArry, idToDto)}
 
 	utils.WriteAsJSON(idsSerializable, resp)
+}
+
+// swagger:operation PUT /identities/current Identity currentIdentity
+// ---
+// summary: Returns my current identity
+// description: Tries to retrieve the last used identity, the first identity, or creates and returns a new identity
+// parameters:
+//   - in: body
+//     name: body
+//     description: Parameter in body (passphrase) required for creating new identity
+//     schema:
+//       $ref: "#/definitions/CurrentIdentityDTO"
+// responses:
+//   200:
+//     description: Unlocked identity returned
+//     schema:
+//       "$ref": "#/definitions/IdentityDTO"
+//   400:
+//     description: Bad Request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   422:
+//     description: Parameters validation error
+//     schema:
+//       "$ref": "#/definitions/ValidationErrorDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	// TODO: remove this hack when we replace our router
+	address := params.ByName("id")
+	if address == "current" {
+		address = ""
+	}
+
+	myIdentityRequest, err := toCurrentIdentityRequest(request)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	errorMap := validateCurrentIdentityRequest(myIdentityRequest)
+	if errorMap.HasErrors() {
+		utils.SendValidationErrorMessage(resp, errorMap)
+		return
+	}
+
+	id, err := endpoint.selector.UseOrCreate(address, *myIdentityRequest.Passphrase)
+
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	idDto := idToDto(id)
+	utils.WriteAsJSON(idDto, resp)
 }
 
 // swagger:operation POST /identities Identity createIdentity
@@ -202,9 +266,26 @@ func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 	return identityCreationReq, nil
 }
 
+func toCurrentIdentityRequest(req *http.Request) (*currentIdentityDTO, error) {
+	var currentIdentityReq = &currentIdentityDTO{}
+	err := json.NewDecoder(req.Body).Decode(&currentIdentityReq)
+	if err != nil {
+		return nil, err
+	}
+	return currentIdentityReq, nil
+}
+
 func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, err error) {
 	isUnlockingReq = identityUnlockingDto{}
 	err = json.NewDecoder(req.Body).Decode(&isUnlockingReq)
+	return
+}
+
+func validateCurrentIdentityRequest(unlockReq *currentIdentityDTO) (errors *validation.FieldErrorMap) {
+	errors = validation.NewErrorMap()
+	if unlockReq.Passphrase == nil {
+		errors.ForField("passphrase").AddError("required", "Field is required")
+	}
 	return
 }
 
@@ -228,9 +309,11 @@ func validateCreationRequest(createReq *identityCreationDto) (errors *validation
 func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
+	selector identity_selector.Handler,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm)
+	idmEnd := NewIdentitiesEndpoint(idm, selector)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
+	router.PUT("/identities/:id", idmEnd.Current)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 }

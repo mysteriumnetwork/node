@@ -41,7 +41,7 @@ func NewHandler(
 	registry IdentityRegistry,
 	cache identity.IdentityCacheInterface,
 	signerFactory identity.SignerFactory,
-) Handler {
+) *handler {
 	return &handler{
 		manager:       manager,
 		registry:      registry,
@@ -50,7 +50,25 @@ func NewHandler(
 	}
 }
 
-func (h *handler) UseExisting(address, passphrase string) (id identity.Identity, err error) {
+func (h *handler) UseOrCreate(address, passphrase string) (id identity.Identity, err error) {
+	if len(address) > 0 {
+		return h.useExisting(address, passphrase)
+	}
+
+	identities := h.manager.GetIdentities()
+	if len(identities) == 0 {
+		return h.useNew(passphrase)
+	}
+
+	id, err = h.useLast(passphrase)
+	if err != nil || !h.manager.HasIdentity(id.Address) {
+		return h.useExisting(identities[0].Address, passphrase)
+	}
+
+	return
+}
+
+func (h *handler) useExisting(address, passphrase string) (id identity.Identity, err error) {
 	id, err = h.manager.GetIdentity(address)
 	if err != nil {
 		return
@@ -64,7 +82,7 @@ func (h *handler) UseExisting(address, passphrase string) (id identity.Identity,
 	return
 }
 
-func (h *handler) UseLast(passphrase string) (identity identity.Identity, err error) {
+func (h *handler) useLast(passphrase string) (identity identity.Identity, err error) {
 	identity, err = h.cache.GetIdentity()
 	if err != nil || !h.manager.HasIdentity(identity.Address) {
 		return identity, errors.New("identity not found in cache")
@@ -77,7 +95,7 @@ func (h *handler) UseLast(passphrase string) (identity identity.Identity, err er
 	return identity, nil
 }
 
-func (h *handler) UseNew(passphrase string) (id identity.Identity, err error) {
+func (h *handler) useNew(passphrase string) (id identity.Identity, err error) {
 	// if all fails, create a new one
 	id, err = h.manager.CreateNewIdentity(passphrase)
 	if err != nil {
