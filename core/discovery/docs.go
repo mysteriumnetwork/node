@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,30 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nats
-
-import (
-	"testing"
-
-	"github.com/mysteriumnetwork/node/communication"
-	"github.com/nats-io/go-nats"
-	"github.com/stretchr/testify/assert"
-)
-
-var _ communication.Receiver = &receiverNATS{}
-
-func TestReceiverNew(t *testing.T) {
-	connection := &ConnectionMock{}
-	codec := communication.NewCodecFake()
-
-	assert.Equal(
-		t,
-		&receiverNATS{
-			connection:   connection,
-			codec:        codec,
-			messageTopic: "custom.",
-			subs:         make(map[string]*nats.Subscription),
-		},
-		NewReceiver(connection, codec, "custom"),
-	)
-}
+// Package discovery is responsible for:
+//  - handling discovery related communications
+//  - keeping track proposals in registry
+package discovery

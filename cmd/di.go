@@ -29,11 +29,15 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery"
+	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
+	discovery_broker "github.com/mysteriumnetwork/node/core/discovery/broker"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
@@ -155,6 +159,8 @@ type Dependencies struct {
 	IdentityRegistration identity_registry.RegistrationDataProvider
 	IdentitySelector     identity_selector.Handler
 
+	DiscoveryFactory service.DiscoveryFactory
+
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
 
@@ -199,7 +205,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork); err != nil {
+	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
 
@@ -209,6 +215,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapEventBus()
 	di.bootstrapIdentityComponents(nodeOptions)
+
+	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
+		return err
+	}
 
 	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
 		return err
@@ -451,7 +461,7 @@ func newSessionManagerFactory(
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides
-func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) (err error) {
+func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err error) {
 	network := metadata.DefaultNetwork
 
 	switch {
@@ -462,8 +472,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	//override defined values one by one from options
-	if options.DiscoveryAPIAddress != metadata.DefaultNetwork.DiscoveryAPIAddress {
-		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
+	if options.Discovery.Address != metadata.DefaultNetwork.MysteriumAPIAddress {
+		network.MysteriumAPIAddress = options.Discovery.Address
 	}
 
 	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
@@ -480,7 +490,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.NetworkDefinition = network
-	di.MysteriumAPI = mysterium.NewClient(network.DiscoveryAPIAddress)
+	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
@@ -520,6 +530,25 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 
+func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
+	var registry discovery.ProposalRegistry
+	switch options.Type {
+	case node.DiscoveryTypeAPI:
+		registry = discovery_api.NewRegistry(di.MysteriumAPI)
+	case node.DiscoveryTypeBroker:
+		sender := discovery_broker.NewSender(nats.NewConnectionMock())
+		registry = discovery_broker.NewRegistry(sender)
+	default:
+		return fmt.Errorf("unknown discovery provider: %s", options.Type)
+	}
+
+	di.DiscoveryFactory = func() service.Discovery {
+		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, registry, di.SignerFactory)
+	}
+
+	return nil
+}
+
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
@@ -534,7 +563,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	case node.LocationTypeOracle:
 		resolver, err = location.NewOracleResolver(options.Address), nil
 	default:
-		err = fmt.Errorf("unknown location detector type: %s", options.Type)
+		err = fmt.Errorf("unknown location provider: %s", options.Type)
 	}
 	if err != nil {
 		return err

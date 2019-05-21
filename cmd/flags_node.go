@@ -68,6 +68,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		metricsAddressFlag)
 
 	RegisterFlagsNetwork(flags)
+	RegisterFlagsDiscovery(flags)
 	openvpn_core.RegisterFlags(flags)
 	RegisterFlagsLocation(flags)
 	RegisterFlagsUI(flags)
@@ -83,16 +84,18 @@ func ParseFlagsNode(ctx *cli.Context) node.Options {
 
 		TequilapiAddress: ctx.GlobalString(tequilapiAddressFlag.Name),
 		TequilapiPort:    ctx.GlobalInt(tequilapiPortFlag.Name),
+		UI:               ParseFlagsUI(ctx),
 
 		DisableMetrics: ctx.GlobalBool(metricsDisableFlag.Name),
 		MetricsAddress: ctx.GlobalString(metricsAddressFlag.Name),
 
 		Keystore: ParseKeystoreFlags(ctx),
 
-		Openvpn:        wrapper{nodeOptions: openvpn_core.ParseFlags(ctx)},
-		Location:       ParseFlagsLocation(ctx),
-		UI:             ParseFlagsUI(ctx),
 		OptionsNetwork: ParseFlagsNetwork(ctx),
+		Discovery:      ParseFlagsDiscovery(ctx),
+		Location:       ParseFlagsLocation(ctx),
+
+		Openvpn: wrapper{nodeOptions: openvpn_core.ParseFlags(ctx)},
 	}
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,30 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nats
+package node
 
-import (
-	"testing"
+// DiscoveryType identifies proposal discovery provider
+type DiscoveryType string
 
-	"github.com/mysteriumnetwork/node/communication"
-	"github.com/nats-io/go-nats"
-	"github.com/stretchr/testify/assert"
+const (
+	// DiscoveryTypeAPI defines type which discovers proposals through Mysterium API
+	DiscoveryTypeAPI = DiscoveryType("api")
+	// DiscoveryTypeBroker defines type which discovers proposals through Broker (Mysterium Communication)
+	DiscoveryTypeBroker = DiscoveryType("broker")
 )
 
-var _ communication.Receiver = &receiverNATS{}
-
-func TestReceiverNew(t *testing.T) {
-	connection := &ConnectionMock{}
-	codec := communication.NewCodecFake()
-
-	assert.Equal(
-		t,
-		&receiverNATS{
-			connection:   connection,
-			codec:        codec,
-			messageTopic: "custom.",
-			subs:         make(map[string]*nats.Subscription),
-		},
-		NewReceiver(connection, codec, "custom"),
-	)
+// OptionsDiscovery describes possible parameters of discovery configuration
+type OptionsDiscovery struct {
+	Type    DiscoveryType
+	Address string
 }

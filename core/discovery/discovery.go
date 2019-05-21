@@ -15,9 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package registry
+package discovery
 
 import (
+	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -44,10 +45,49 @@ const (
 
 const logPrefix = "[discovery] "
 
+// Discovery structure holds discovery service state
+type Discovery struct {
+	identityRegistry     identity_registry.IdentityRegistry
+	ownIdentity          identity.Identity
+	identityRegistration identity_registry.RegistrationDataProvider
+	proposalRegistry     ProposalRegistry
+	signerCreate         identity.SignerFactory
+	signer               identity.Signer
+	proposal             market.ServiceProposal
+
+	statusChan                  chan Status
+	status                      Status
+	proposalAnnouncementStopped *sync.WaitGroup
+	unsubscribe                 func()
+	stop                        func()
+
+	mu sync.RWMutex
+}
+
+// NewService creates new discovery service
+func NewService(
+	identityRegistry identity_registry.IdentityRegistry,
+	identityRegistration identity_registry.RegistrationDataProvider,
+	proposalRegistry ProposalRegistry,
+	signerCreate identity.SignerFactory,
+) *Discovery {
+	return &Discovery{
+		identityRegistry:            identityRegistry,
+		identityRegistration:        identityRegistration,
+		proposalRegistry:            proposalRegistry,
+		signerCreate:                signerCreate,
+		statusChan:                  make(chan Status),
+		status:                      StatusUndefined,
+		proposalAnnouncementStopped: &sync.WaitGroup{},
+		unsubscribe:                 func() {},
+		stop:                        func() {},
+	}
+}
+
 // Start launches discovery service
 func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
-	d.RLock()
-	defer d.RUnlock()
+	d.mu.RLock()
+	defer d.mu.RUnlock()
 
 	d.ownIdentity = ownIdentity
 	d.signer = d.signerCreate(ownIdentity)
@@ -102,19 +142,19 @@ func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool) {
 
 func (d *Discovery) stopLoop() {
 	log.Info(logPrefix, "stopping discovery loop..")
-	d.RLock()
+	d.mu.RLock()
 	if d.status == WaitingForRegistration {
-		d.RUnlock()
+		d.mu.RUnlock()
 		d.unsubscribe()
-		d.RLock()
+		d.mu.RLock()
 	}
 
 	if d.status == RegisterProposal || d.status == PingProposal {
-		d.RUnlock()
+		d.mu.RUnlock()
 		d.changeStatus(UnregisterProposal)
 		return
 	}
-	d.RUnlock()
+	d.mu.RUnlock()
 }
 
 func (d *Discovery) registerIdentity() {
@@ -188,8 +228,8 @@ func (d *Discovery) checkRegistration() {
 }
 
 func (d *Discovery) changeStatus(status Status) {
-	d.Lock()
-	defer d.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	d.status = status
 

@@ -25,25 +25,26 @@ import (
 	"github.com/nats-io/go-nats"
 )
 
-// NewConnectionFake constructs new NATS connection
+// NewConnectionMock constructs new NATS connection
 // which delivers published messages to local subscribers
-func NewConnectionFake() *connectionFake {
-	return &connectionFake{
+func NewConnectionMock() *ConnectionMock {
+	return &ConnectionMock{
 		subscriptions: make(map[string][]nats.MsgHandler),
 		queue:         make(chan *nats.Msg),
 		queueShutdown: make(chan bool),
 	}
 }
 
-// StartConnectionFake creates connection and starts it immediately
-func StartConnectionFake() *connectionFake {
-	connection := NewConnectionFake()
+// StartConnectionMock creates connection and starts it immediately
+func StartConnectionMock() *ConnectionMock {
+	connection := NewConnectionMock()
 	connection.Start()
 
 	return connection
 }
 
-type connectionFake struct {
+// ConnectionMock acts as a local connection implementation
+type ConnectionMock struct {
 	subscriptions map[string][]nats.MsgHandler
 	queue         chan *nats.Msg
 	queueShutdown chan bool
@@ -53,31 +54,44 @@ type connectionFake struct {
 	errorMock   error
 }
 
-func (conn *connectionFake) GetLastMessage() []byte {
+// GetLastMessageSubject returns the last message subject
+func (conn *ConnectionMock) GetLastMessageSubject() string {
+	if conn.messageLast != nil {
+		return conn.messageLast.Subject
+	}
+	return ""
+}
+
+// GetLastMessage returns the last message received
+func (conn *ConnectionMock) GetLastMessage() []byte {
 	if conn.messageLast != nil {
 		return conn.messageLast.Data
 	}
 	return []byte{}
 }
 
-func (conn *connectionFake) GetLastRequest() []byte {
+// GetLastRequest gets last request data
+func (conn *ConnectionMock) GetLastRequest() []byte {
 	if conn.requestLast != nil {
 		return conn.requestLast.Data
 	}
 	return []byte{}
 }
 
-func (conn *connectionFake) MockResponse(subject string, payload []byte) {
+// MockResponse mocks the response
+func (conn *ConnectionMock) MockResponse(subject string, payload []byte) {
 	conn.Subscribe(subject, func(message *nats.Msg) {
 		conn.Publish(message.Reply, payload)
 	})
 }
 
-func (conn *connectionFake) MockError(message string) {
+// MockError mocks the error
+func (conn *ConnectionMock) MockError(message string) {
 	conn.errorMock = errors.New(message)
 }
 
-func (conn *connectionFake) MessageWait(waitChannel chan interface{}) (interface{}, error) {
+// MessageWait waits for a message to arrive
+func (conn *ConnectionMock) MessageWait(waitChannel chan interface{}) (interface{}, error) {
 	select {
 	case message := <-waitChannel:
 		return message, nil
@@ -86,7 +100,8 @@ func (conn *connectionFake) MessageWait(waitChannel chan interface{}) (interface
 	}
 }
 
-func (conn *connectionFake) Publish(subject string, payload []byte) error {
+// Publish publishes a new message
+func (conn *ConnectionMock) Publish(subject string, payload []byte) error {
 	if conn.errorMock != nil {
 		return conn.errorMock
 	}
@@ -100,7 +115,8 @@ func (conn *connectionFake) Publish(subject string, payload []byte) error {
 	return nil
 }
 
-func (conn *connectionFake) Subscribe(subject string, handler nats.MsgHandler) (*nats.Subscription, error) {
+// Subscribe subscribes to a topic
+func (conn *ConnectionMock) Subscribe(subject string, handler nats.MsgHandler) (*nats.Subscription, error) {
 	if conn.errorMock != nil {
 		return nil, conn.errorMock
 	}
@@ -110,7 +126,8 @@ func (conn *connectionFake) Subscribe(subject string, handler nats.MsgHandler) (
 	return &nats.Subscription{}, nil
 }
 
-func (conn *connectionFake) Request(subject string, payload []byte, timeout time.Duration) (*nats.Msg, error) {
+// Request sends a new request
+func (conn *ConnectionMock) Request(subject string, payload []byte, timeout time.Duration) (*nats.Msg, error) {
 	if conn.errorMock != nil {
 		return nil, conn.errorMock
 	}
@@ -136,19 +153,22 @@ func (conn *connectionFake) Request(subject string, payload []byte, timeout time
 	}
 }
 
-func (conn *connectionFake) Start() {
+// Start starts the connection mock
+func (conn *ConnectionMock) Start() {
 	go conn.queueProcessing()
 }
 
-func (conn *connectionFake) Check() error {
+// Check checks the connection mock
+func (conn *ConnectionMock) Check() error {
 	return nil
 }
 
-func (conn *connectionFake) Close() {
+// Close closes the connection mock
+func (conn *ConnectionMock) Close() {
 	conn.queueShutdown <- true
 }
 
-func (conn *connectionFake) subscriptionAdd(subject string, handler nats.MsgHandler) {
+func (conn *ConnectionMock) subscriptionAdd(subject string, handler nats.MsgHandler) {
 	subscriptions, exist := conn.subscriptions[subject]
 	if exist {
 		subscriptions = append(subscriptions, handler)
@@ -157,12 +177,12 @@ func (conn *connectionFake) subscriptionAdd(subject string, handler nats.MsgHand
 	}
 }
 
-func (conn *connectionFake) subscriptionsGet(subject string) (*[]nats.MsgHandler, bool) {
+func (conn *ConnectionMock) subscriptionsGet(subject string) (*[]nats.MsgHandler, bool) {
 	subscriptions, exist := conn.subscriptions[subject]
 	return &subscriptions, exist
 }
 
-func (conn *connectionFake) queueProcessing() {
+func (conn *ConnectionMock) queueProcessing() {
 	for {
 		select {
 		case <-conn.queueShutdown:

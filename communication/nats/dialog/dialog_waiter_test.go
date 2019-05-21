@@ -46,7 +46,7 @@ func TestDialogWaiter_Factory(t *testing.T) {
 func TestDialogWaiter_ServeDialogs(t *testing.T) {
 	peerID := identity.FromAddress("0x28bf83df144ab7a566bc8509d1fff5d5470bd4ea")
 
-	connection := nats.StartConnectionFake()
+	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
 	signer := &identity.SignerFake{}
@@ -79,7 +79,7 @@ func TestDialogWaiter_ServeDialogs(t *testing.T) {
 }
 
 func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
-	connection := nats.StartConnectionFake()
+	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
 	signer := &identity.SignerFake{}
@@ -118,7 +118,7 @@ func TestDialogWaiter_ServeDialogsTopicUUID(t *testing.T) {
 }
 
 func TestDialogWaiter_ServeDialogsRejectInvalidSignature(t *testing.T) {
-	connection := nats.StartConnectionFake()
+	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
 	signer := &identity.SignerFake{}
@@ -135,7 +135,7 @@ func TestDialogWaiter_ServeDialogsRejectInvalidSignature(t *testing.T) {
 }
 
 func TestDialogWaiter_ServeDialogsRejectConsumersUsingValidator(t *testing.T) {
-	connection := nats.StartConnectionFake()
+	connection := nats.StartConnectionMock()
 	defer connection.Close()
 
 	signer := &identity.SignerFake{}

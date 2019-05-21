@@ -23,7 +23,7 @@ services:
       --experiment-identity-check
       --localnet
       --broker-address=broker
-      --discovery-address=http://discovery/v1
+      --discovery.address=http://discovery/v1
       --ether.client.rpc=http://geth:8545
       --keystore.lightweight
       service openvpn,noop,wireguard
@@ -48,7 +48,7 @@ services:
       --ip-detector=http://ipify:3000/?format=json
       --experiment-identity-check
       --localnet
-      --discovery-address=http://discovery/v1
+      --discovery.address=http://discovery/v1
       --ether.client.rpc=http://geth:8545
       --keystore.lightweight
       daemon
