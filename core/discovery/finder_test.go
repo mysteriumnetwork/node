@@ -78,3 +78,19 @@ func Test_Finder_GetProposalsAll(t *testing.T) {
 		proposals,
 	)
 }
+
+func Test_Finder_GetProposalsByProviderID(t *testing.T) {
+	finder := NewFinder(proposalsStorage)
+
+	proposals, err := finder.FindProposals(market.ProposalFilter{
+		ProviderID: provider1,
+	})
+
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 2)
+	assert.Exactly(
+		t,
+		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop},
+		proposals,
+	)
+}

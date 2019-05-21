@@ -44,5 +44,14 @@ func (finder *finder) GetProposal(id market.ProposalID) (*market.ServiceProposal
 
 // FindProposals fetches currently active service proposals from discovery
 func (finder *finder) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
-	return finder.storage.Proposals(), nil
+	proposalsFiltered := make([]market.ServiceProposal, 0)
+	for _, proposal := range finder.storage.Proposals() {
+
+		if filter.ProviderID != "" && filter.ProviderID != proposal.ProviderID {
+			continue
+		}
+
+		proposalsFiltered = append(proposalsFiltered, proposal)
+	}
+	return proposalsFiltered, nil
 }
