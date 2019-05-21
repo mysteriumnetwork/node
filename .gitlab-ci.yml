@@ -113,7 +113,7 @@ package:linux-debian-arm:
   only:
     - master
 
-package:linux-debian-arm-raspberry:
+package:linux-raspberry-image:
   stage: build
   tags:
     - go
