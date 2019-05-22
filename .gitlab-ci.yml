@@ -1,0 +1,204 @@
+stages:
+  - install
+  - test
+  - build
+  - release
+
+variables:
+  BUILD_COMMIT: $CI_COMMIT_SHORT_SHA
+  BUILD_BRANCH: $CI_COMMIT_REF_NAME
+  BUILD_NUMBER: $CI_PIPELINE_ID
+  BUILD_VERSION: $CI_COMMIT_TAG
+  BUILD_DEV_RELEASE: 0.0.0-dev
+  GO_PACKAGE: github.com/mysteriumnetwork/node
+  GIT_CLONE_PATH: /home/gitlab-runner/go/src/$GO_PACKAGE
+  GOFLAGS: "-count=1" # Supersedes GOCACHE=off, see: https://github.com/golang/go/issues/29378#issuecomment-449383809
+
+cache:
+  key: vendor
+  untracked: true
+  policy: pull
+  paths:
+    - vendor/
+
+before_script:
+  - if [ -z "$BUILD_VERSION" ]; then
+    export BUILD_VERSION=$BUILD_DEV_RELEASE;
+    fi
+  - env
+  - dep ensure -v
+
+after_script:
+  # docker based jobs leave files owned by root
+  - sudo chown -R gitlab-runner:gitlab-runner $GOPATH
+
+install-deps:
+  stage: install
+  tags:
+    - go
+  cache:
+    key: vendor
+    untracked: true
+    policy: pull-push
+    paths:
+      - vendor/
+  script:
+    - env
+
+checks:
+  stage: test
+  tags:
+    - go
+  script:
+    - |
+      go get -u \
+        golang.org/x/lint/golint \
+        golang.org/x/tools/cmd/goimports \
+        github.com/go-swagger/go-swagger/cmd/swagger
+    - bin/check_golint
+    - bin/check_goimports
+    - bin/check_license
+    - bin/check_govet
+    - bin/check_swagger
+
+test:
+  stage: test
+  tags:
+    - go
+  script:
+    - bin/test
+
+test-e2e:
+  stage: test
+  tags:
+    - go
+  script:
+    - bin/test_e2e
+
+package:linux-amd64:
+  stage: build
+  tags:
+    - go
+  script:
+    - BINARY=build/myst/myst_linux_amd64 bin/package_standalone linux amd64
+
+package:linux-arm:
+  stage: build
+  tags:
+    - go
+  script:
+    - BINARY=build/myst/myst_linux_arm bin/package_standalone linux arm
+  only:
+    - master
+
+package:linux-debian-amd64:
+  stage: build
+  tags:
+    - go
+  script:
+    - go get -u github.com/debber/debber-v0.3/cmd/debber
+    - bin/build
+    - BINARY=build/myst/myst bin/package_debian $BUILD_VERSION amd64
+  only:
+    - master
+
+package:linux-debian-arm:
+  stage: build
+  tags:
+    - go
+  script:
+    - go get -u github.com/debber/debber-v0.3/cmd/debber
+    - bin/build_xgo linux/arm
+    - BINARY=build/myst/myst_linux_arm bin/package_debian $BUILD_VERSION armhf
+  only:
+    - master
+
+package:linux-raspberry-image:
+  stage: build
+  tags:
+    - go
+  script:
+    - go get -u github.com/debber/debber-v0.3/cmd/debber
+    - bin/build_xgo linux/arm
+    - BINARY=build/myst/myst_linux_arm bin/package_debian $BUILD_VERSION armhf
+    - bin/package_raspberry
+  only:
+    - tags
+
+package:osx-amd64:
+  stage: build
+  tags:
+    - go
+  script:
+    - BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin amd64
+  only:
+    - master
+
+package:windows-amd64:
+  stage: build
+  tags:
+    - go
+  script:
+    - BINARY=build/myst/myst_windows_amd64.exe bin/package_standalone windows amd64
+  only:
+    - master
+
+package:ios:
+  stage: build
+  tags:
+    - go
+  script:
+    - bin/package_ios amd64
+  only:
+    - master
+
+package:android:
+  stage: build
+  tags:
+    - go
+  script:
+    - bin/package_android amd64
+  only:
+    - master
+
+package:docker-alpine:
+  stage: build
+  tags:
+    - go
+  script:
+    - bin/package_docker
+    - docker save myst:alpine | gzip > myst_alpine.tgz
+  only:
+    - master
+
+package:docker-ubuntu:
+  stage: build
+  tags:
+    - go
+  script:
+    - bin/package_docker_ubuntu $BUILD_VERSION
+    - docker save myst:ubuntu | gzip > myst_ubuntu.tgz
+  only:
+    - master
+
+package:swagger-redoc-docker:
+  stage: build
+  tags:
+    - go
+  script:
+    - go get -u github.com/go-swagger/go-swagger/cmd/swagger/
+    - bin/swagger_generate
+    - bin/package_docker_docs
+    - docker save tequilapi:${BUILD_VERSION} | gzip > tequilapi_redoc.tgz
+  only:
+    - master
+
+release:snapshot:
+  stage: release
+  tags:
+    - go
+  script:
+    - echo $BUILD_VERSION
+#  only:
+#    refs:
+#      - master

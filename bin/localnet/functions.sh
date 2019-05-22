@@ -43,7 +43,7 @@ setupInfra () {
     fi
 
     echo "Waiting for db to become up"
-    while ! ${dockerComposeCmd} exec db mysqladmin ping --protocol=TCP --silent; do
+    while ! ${dockerComposeCmd} exec -T db mysqladmin ping --protocol=TCP --silent; do
         echo -n "."
         sleep 1
     done
