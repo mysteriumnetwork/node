@@ -21,7 +21,13 @@ package market
 type ProposalFilter struct {
 	ProviderID   string
 	ServiceType  string
+	Location     LocationFilter
 	AccessPolicy AccessPolicyFilter
+}
+
+// LocationFilter defines flags for proposal location filtering
+type LocationFilter struct {
+	NodeType string
 }
 
 // AccessPolicyFilter defines flags for proposal acccess policy filtering

@@ -35,20 +35,25 @@ var (
 		ID:     "blacklist",
 		Source: "blacklist.txt",
 	}
+	locationDatacenter  = market.Location{ASN: 1000, Country: "DE", City: "Berlin", NodeType: "datacenter"}
+	locationResidential = market.Location{ASN: 124, Country: "LT", City: "Vilnius", NodeType: "residential"}
 
 	proposalProvider1Streaming = market.ServiceProposal{
-		ServiceType:    "streaming",
-		ProviderID:     provider1,
-		AccessPolicies: &[]market.AccessPolicy{accessRuleWhitelist},
+		ServiceType:       "streaming",
+		ProviderID:        provider1,
+		ServiceDefinition: mockService{Location: locationDatacenter},
+		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist},
 	}
 	proposalProvider1Noop = market.ServiceProposal{
-		ServiceType: "noop",
-		ProviderID:  provider1,
+		ServiceType:       "noop",
+		ProviderID:        provider1,
+		ServiceDefinition: mockService{},
 	}
 	proposalProvider2Streaming = market.ServiceProposal{
-		ServiceType:    "streaming",
-		ProviderID:     provider2,
-		AccessPolicies: &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
+		ServiceType:       "streaming",
+		ProviderID:        provider2,
+		ServiceDefinition: mockService{Location: locationResidential},
+		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
 	}
 	proposalsStorage = &ProposalStorage{
 		proposals: []market.ServiceProposal{
@@ -58,6 +63,14 @@ var (
 		},
 	}
 )
+
+type mockService struct {
+	Location market.Location
+}
+
+func (service mockService) GetLocation() market.Location {
+	return service.Location
+}
 
 func Test_Finder_GetProposalExisting(t *testing.T) {
 	finder := NewFinder(proposalsStorage)
@@ -128,6 +141,24 @@ func Test_Finder_GetProposalsByServiceType(t *testing.T) {
 		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider2Streaming},
 		proposals,
 	)
+}
+
+func Test_Finder_GetProposalsByNodeType(t *testing.T) {
+	finder := NewFinder(proposalsStorage)
+
+	proposals, err := finder.FindProposals(market.ProposalFilter{
+		Location: market.LocationFilter{NodeType: "datacenter"},
+	})
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 1)
+	assert.Exactly(t, []market.ServiceProposal{proposalProvider1Streaming}, proposals)
+
+	proposals, err = finder.FindProposals(market.ProposalFilter{
+		Location: market.LocationFilter{NodeType: "residential"},
+	})
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 1)
+	assert.Exactly(t, []market.ServiceProposal{proposalProvider2Streaming}, proposals)
 }
 
 func Test_Finder_GetProposalsByAccessID(t *testing.T) {

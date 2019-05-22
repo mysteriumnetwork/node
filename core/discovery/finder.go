@@ -53,6 +53,9 @@ func (finder *finder) FindProposals(filter market.ProposalFilter) ([]market.Serv
 		if filter.ServiceType != "" && filter.ServiceType != proposal.ServiceType {
 			continue
 		}
+		if filter.Location != emptyFilterLocation && !filterByLocation(proposal, filter.Location) {
+			continue
+		}
 		if filter.AccessPolicy != emptyFilterAccessPolicy && !filterByAccessPolicy(proposal, filter.AccessPolicy) {
 			continue
 		}
@@ -60,6 +63,19 @@ func (finder *finder) FindProposals(filter market.ProposalFilter) ([]market.Serv
 		proposalsFiltered = append(proposalsFiltered, proposal)
 	}
 	return proposalsFiltered, nil
+}
+
+var (
+	emptyFilterLocation = market.LocationFilter{}
+)
+
+func filterByLocation(proposal market.ServiceProposal, filter market.LocationFilter) bool {
+	location := proposal.ServiceDefinition.GetLocation()
+	if filter.NodeType != "" && filter.NodeType != location.NodeType {
+		return false
+	}
+
+	return true
 }
 
 var (
