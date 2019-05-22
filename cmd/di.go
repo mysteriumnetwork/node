@@ -65,14 +65,12 @@ import (
 	"github.com/mysteriumnetwork/node/nat/upnp"
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
-	"github.com/mysteriumnetwork/node/services/openvpn"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
-	payments_noop "github.com/mysteriumnetwork/node/session/payment/noop"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -418,13 +416,6 @@ func newSessionManagerFactory(
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.BalanceTracker, error) {
-			// We want backwards compatibility for openvpn on desktop providers, so no payments for them.
-			// Splitting this as a separate case just for that reason.
-			// TODO: remove this one day.
-			if proposal.ServiceType == openvpn.ServiceType {
-				return payments_noop.NewSessionBalance(), nil
-			}
-
 			timeTracker := session.NewTracker(time.Now)
 			// TODO: set the time and proper payment info
 			payment := dto.PaymentPerTime{
