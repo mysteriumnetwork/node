@@ -199,7 +199,7 @@ func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInf
 
 func (manager *connectionManager) cleanConnection() {
 	manager.cancel()
-	for i := len(manager.cleanup) - 1; i > 0; i-- {
+	for i := len(manager.cleanup) - 1; i >= 0; i-- {
 		err := manager.cleanup[i]()
 		if err != nil {
 			log.Warn(managerLogPrefix, "cleanup error:", err)

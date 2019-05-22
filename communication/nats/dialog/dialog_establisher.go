@@ -68,6 +68,7 @@ func (establisher *dialogEstablisher) EstablishDialog(
 	peerSender := establisher.newSenderToPeer(peerAddress, peerCodec)
 	topic, err := establisher.negotiateTopic(peerSender)
 	if err != nil {
+		peerAddress.Disconnect()
 		return nil, err
 	}
 
@@ -127,8 +128,9 @@ func (establisher *dialogEstablisher) newDialogToPeer(
 	}
 
 	return &dialog{
-		peerID:   peerID,
-		Sender:   nats.NewSender(peerAddress.GetConnection(), peerCodec, topic),
-		Receiver: nats.NewReceiver(peerAddress.GetConnection(), peerCodec, topic),
+		peerID:      peerID,
+		peerAddress: peerAddress,
+		Sender:      nats.NewSender(peerAddress.GetConnection(), peerCodec, topic),
+		Receiver:    nats.NewReceiver(peerAddress.GetConnection(), peerCodec, topic),
 	}
 }
