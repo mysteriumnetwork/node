@@ -18,23 +18,30 @@
 package e2e
 
 import (
-	"errors"
+	"fmt"
 	"time"
 )
 
 type conditionChecker func() (bool, error)
 
 func waitForCondition(checkFunc conditionChecker) error {
-	for i := 0; i < 10; i++ {
+	return waitForConditionFor(10*time.Second, checkFunc)
+}
+
+func waitForConditionFor(duration time.Duration, checkFunc conditionChecker) error {
+	timeBegin := time.Now()
+	for {
 		state, err := checkFunc()
+		durationWait := time.Since(timeBegin)
 		switch {
 		case err != nil:
 			return err
 		case state:
 			return nil
+		case durationWait > duration:
+			return fmt.Errorf("state was still false after %s", durationWait)
 		case !state:
 			time.Sleep(1 * time.Second)
 		}
 	}
-	return errors.New("state was still false")
 }

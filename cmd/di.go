@@ -551,7 +551,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 
 	storage := discovery.NewStorage()
 	di.DiscoveryFinder = discovery.NewFinder(storage)
-	di.DiscoveryFetcherAPI = discovery_api.NewFetcher(storage, di.MysteriumAPI.Proposals, time.Minute)
+	di.DiscoveryFetcherAPI = discovery_api.NewFetcher(storage, di.MysteriumAPI.Proposals, 30*time.Second)
 
 	return nil
 }

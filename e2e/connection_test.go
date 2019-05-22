@@ -20,6 +20,7 @@ package e2e
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cihub/seelog"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
@@ -94,10 +95,13 @@ func identityRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 // expect exactly one proposal
 func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, serviceType string) tequilapi_client.ProposalDTO {
 	var proposals []tequilapi_client.ProposalDTO
-	err := waitForCondition(func() (state bool, stateErr error) {
-		proposals, stateErr = tequilapi.ProposalsByType(serviceType)
-		return len(proposals) == 1, stateErr
-	})
+	err := waitForConditionFor(
+		30*time.Second,
+		func() (state bool, stateErr error) {
+			proposals, stateErr = tequilapi.ProposalsByType(serviceType)
+			return len(proposals) == 1, stateErr
+		},
+	)
 	if err != nil {
 		assert.FailNowf(t, "Exactly one proposal is expected - something is not right!", "Error was: %v", err)
 	}
