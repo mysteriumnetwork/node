@@ -125,3 +125,7 @@
 [[constraint]]
   version = "=0.0.1"
   name = "github.com/mysteriumnetwork/go-dvpn-web"
+
+[[constraint]]
+  name = "github.com/magefile/mage"
+  version = "1.8.0"
