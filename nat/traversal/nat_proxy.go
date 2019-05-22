@@ -148,12 +148,16 @@ func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, 
 			log.Errorf("%sFailed to read remote peer: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
 			return
 		}
-		if n > 0 {
-			_, err := remoteConn.WriteToUDP(buf[:n], addr)
+		for i := 0; i < n; {
+			written, err := remoteConn.WriteToUDP(buf[i:n], addr)
+			if written < n {
+				log.Trace("%sPartial write of %d bytes", logPrefix, written)
+			}
 			if err != nil {
 				log.Errorf("%sFailed to write to local process: %s cause: %s", logPrefix, remoteConn.LocalAddr().String(), err)
 				return
 			}
+			i += written
 		}
 	}
 }
