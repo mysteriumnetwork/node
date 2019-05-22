@@ -151,6 +151,14 @@ func (mApi *MysteriumAPI) PingProposal(proposal market.ServiceProposal, signer i
 	return err
 }
 
+// Proposals fetches currently active service proposals from discovery
+func (mApi *MysteriumAPI) Proposals() ([]market.ServiceProposal, error) {
+	return mApi.QueryProposals(ProposalsQuery{
+		ServiceType:     "all",
+		AccessPolicyAll: true,
+	})
+}
+
 // QueryProposals fetches currently active service proposals from discovery - by given query filter
 func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.ServiceProposal, error) {
 	values := url.Values{}

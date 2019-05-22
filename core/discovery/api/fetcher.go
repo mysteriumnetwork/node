@@ -33,8 +33,8 @@ const (
 // FetchCallback does real fetch of proposals through Mysterium API
 type FetchCallback func() ([]market.ServiceProposal, error)
 
-// fetcher represents async proposal fether from Mysterium API
-type fetcher struct {
+// Fetcher represents async proposal fether from Mysterium API
+type Fetcher struct {
 	fetch         FetchCallback
 	fetchInterval time.Duration
 	fetchShutdown chan bool
@@ -43,9 +43,9 @@ type fetcher struct {
 	proposalChan    chan market.ServiceProposal
 }
 
-// NewFetcher create instance of fetcher
-func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallback, interval time.Duration) *fetcher {
-	return &fetcher{
+// NewFetcher create instance of Fetcher
+func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallback, interval time.Duration) *Fetcher {
+	return &Fetcher{
 		fetch:         callback,
 		fetchInterval: interval,
 
@@ -53,7 +53,8 @@ func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallb
 	}
 }
 
-func (fetcher *fetcher) Start() error {
+// Start begins fetching proposals to storage
+func (fetcher *Fetcher) Start() error {
 	if err := fetcher.fetchDo(); err != nil {
 		return err
 	}
@@ -64,15 +65,17 @@ func (fetcher *fetcher) Start() error {
 	return nil
 }
 
-func (fetcher *fetcher) Stop() {
+// Stop ends fetching proposals to storage
+func (fetcher *Fetcher) Stop() {
 	fetcher.fetchShutdown <- true
 }
 
-func (fetcher *fetcher) SubscribeProposals(proposalsChan chan market.ServiceProposal) {
+// SubscribeProposals allows to subscribe all fetched proposals
+func (fetcher *Fetcher) SubscribeProposals(proposalsChan chan market.ServiceProposal) {
 	fetcher.proposalChan = proposalsChan
 }
 
-func (fetcher *fetcher) fetchLoop() {
+func (fetcher *Fetcher) fetchLoop() {
 	for {
 		select {
 		case <-fetcher.fetchShutdown:
@@ -84,7 +87,7 @@ func (fetcher *fetcher) fetchLoop() {
 	}
 }
 
-func (fetcher *fetcher) fetchDo() error {
+func (fetcher *Fetcher) fetchDo() error {
 	proposals, err := fetcher.fetch()
 	if err != nil {
 		log.Warn(fetcherLogPrefix, fmt.Sprintf("Failed to fetch proposals: %s", err))

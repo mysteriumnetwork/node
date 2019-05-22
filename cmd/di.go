@@ -158,8 +158,9 @@ type Dependencies struct {
 	IdentityRegistration identity_registry.RegistrationDataProvider
 	IdentitySelector     identity_selector.Handler
 
-	DiscoveryFactory service.DiscoveryFactory
-	DiscoveryFinder  discovery.ProposalFinder
+	DiscoveryFactory    service.DiscoveryFactory
+	DiscoveryFinder     discovery.ProposalFinder
+	DiscoveryFetcherAPI *discovery_api.Fetcher
 
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
@@ -239,11 +240,12 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.registerConnections(nodeOptions)
 
-	err = di.subscribeEventConsumers()
-	if err != nil {
+	if err = di.subscribeEventConsumers(); err != nil {
 		return err
 	}
-
+	if err = di.DiscoveryFetcherAPI.Start(); err != nil {
+		return err
+	}
 	if err := di.Node.Start(); err != nil {
 		return err
 	}
@@ -292,7 +294,9 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
-
+	if di.DiscoveryFetcherAPI != nil {
+		di.DiscoveryFetcherAPI.Stop()
+	}
 	if di.Node != nil {
 		if err := di.Node.Kill(); err != nil {
 			errs = append(errs, err)
@@ -544,7 +548,10 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	di.DiscoveryFactory = func() service.Discovery {
 		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, registry, di.SignerFactory)
 	}
-	di.DiscoveryFinder = discovery_api.NewFinder(di.MysteriumAPI)
+
+	storage := discovery.NewStorage()
+	di.DiscoveryFinder = discovery.NewFinder(storage)
+	di.DiscoveryFetcherAPI = discovery_api.NewFetcher(storage, di.MysteriumAPI.Proposals, time.Minute)
 
 	return nil
 }
