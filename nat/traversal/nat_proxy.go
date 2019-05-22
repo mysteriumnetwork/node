@@ -30,7 +30,7 @@ import (
 )
 
 const logPrefix = "[NATProxy] "
-const bufferLen = 30000
+const bufferLen = 2048 * 1024
 
 // NATProxy provides traffic proxying functionality for registered services
 type NATProxy struct {
@@ -106,6 +106,7 @@ func (np *NATProxy) consumerProxy(consumerAddr string, remoteConn *net.UDPConn, 
 
 func (np *NATProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, stop chan struct{}) {
 	log.Info(logPrefix, "start copying stream from consumer NATProxy to remote remoteConn")
+	buf := make([]byte, bufferLen)
 	for {
 		select {
 		case <-stop:
@@ -113,8 +114,7 @@ func (np *NATProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, s
 			return
 		default:
 		}
-		var buf [bufferLen]byte
-		n, addr, err := conn.ReadFromUDP(buf[0:])
+		n, addr, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			log.Errorf("%sFailed to read local process: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
 			return
@@ -125,7 +125,7 @@ func (np *NATProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, s
 				log.Errorf("%sFailed to write remote peer: %s cause: %s", logPrefix, remoteConn.RemoteAddr().String(), err)
 				return
 			}
-			if np.addrLast != addr {
+			if np.addrLast.String() != addr.String() {
 				np.addrLast = addr
 				go np.readWriteToAddr(remoteConn, conn, addr, stop)
 			}
@@ -134,6 +134,7 @@ func (np *NATProxy) joinUDPStreams(conn *net.UDPConn, remoteConn *net.UDPConn, s
 }
 
 func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, addr *net.UDPAddr, stop chan struct{}) {
+	buf := make([]byte, bufferLen)
 	for {
 		select {
 		case <-stop:
@@ -142,8 +143,7 @@ func (np *NATProxy) readWriteToAddr(conn *net.UDPConn, remoteConn *net.UDPConn, 
 		default:
 		}
 
-		var buf [bufferLen]byte
-		n, err := conn.Read(buf[0:])
+		n, err := conn.Read(buf)
 		if err != nil {
 			log.Errorf("%sFailed to read remote peer: %s cause: %s", logPrefix, conn.LocalAddr().String(), err)
 			return
@@ -178,9 +178,11 @@ func (np *NATProxy) handOff(serviceType services.ServiceType, incomingConn *net.
 }
 
 func copyStreams(dstConn *net.UDPConn, srcConn *net.UDPConn) {
+	buf := make([]byte, bufferLen)
+
 	defer dstConn.Close()
 	defer srcConn.Close()
-	totalBytes, err := io.Copy(dstConn, srcConn)
+	totalBytes, err := io.CopyBuffer(dstConn, srcConn, buf)
 	if err != nil {
 		log.Error(logPrefix, "failed to writing / reading a stream to/from NATProxy: ", err)
 	}

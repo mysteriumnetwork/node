@@ -80,5 +80,7 @@ func NewServerConfig(
 	serverConfig.SetPingTimerRemote()
 	serverConfig.SetPersistKey()
 
+	serverConfig.SetParam("auth", "none")
+
 	return &serverConfig
 }
