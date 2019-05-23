@@ -18,7 +18,6 @@
 package api
 
 import (
-	"fmt"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -33,7 +32,7 @@ const (
 // FetchCallback does real fetch of proposals through Mysterium API
 type FetchCallback func() ([]market.ServiceProposal, error)
 
-// Fetcher represents async proposal fether from Mysterium API
+// Fetcher represents async proposal fetcher from Mysterium API
 type Fetcher struct {
 	fetch         FetchCallback
 	fetchInterval time.Duration
@@ -90,11 +89,11 @@ func (fetcher *Fetcher) fetchLoop() {
 func (fetcher *Fetcher) fetchDo() error {
 	proposals, err := fetcher.fetch()
 	if err != nil {
-		log.Warn(fetcherLogPrefix, fmt.Sprintf("Failed to fetch proposals: %s", err))
+		log.Warn("%s Failed to fetch proposals: %s", fetcherLogPrefix, err)
 		return err
 	}
 
-	log.Info(fetcherLogPrefix, fmt.Sprintf("Proposals fetched: %d", len(proposals)))
+	log.Infof("%s Proposals fetched: %d", fetcherLogPrefix, len(proposals))
 	fetcher.proposalStorage.AddMultiple(proposals)
 
 	if fetcher.proposalChan != nil {

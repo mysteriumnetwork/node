@@ -33,7 +33,7 @@ func NewStorage() *ProposalStorage {
 // ProposalStorage represents table of currently active proposals in Mysterium Discovery
 type ProposalStorage struct {
 	proposals []market.ServiceProposal
-	mutex     sync.Mutex
+	mutex     sync.RWMutex
 }
 
 // Proposals returns table of proposals in storage
