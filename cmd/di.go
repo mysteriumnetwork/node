@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -182,6 +183,8 @@ type Dependencies struct {
 
 	MetricsSender *metrics.Sender
 
+	BandwidthTracker *bandwidth.Tracker
+
 	UIServer UIServer
 }
 
@@ -223,6 +226,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapUIServer(nodeOptions.UI)
+
+	if err := di.bootstrapBandwidthTracker(); err != nil {
+		return err
+	}
 
 	di.bootstrapMetrics(nodeOptions)
 	di.bootstrapNATComponents(nodeOptions)
@@ -573,6 +580,16 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	}
 
 	return
+}
+
+func (di *Dependencies) bootstrapBandwidthTracker() error {
+	di.BandwidthTracker = &bandwidth.Tracker{}
+	err := di.EventBus.SubscribeAsync(connection.SessionEventTopic, di.BandwidthTracker.ConsumeSessionEvent)
+	if err != nil {
+		return err
+	}
+
+	return di.EventBus.SubscribeAsync(connection.StatisticsEventTopic, di.BandwidthTracker.ConsumeStatisticsEvent)
 }
 
 func (di *Dependencies) bootstrapMetrics(options node.Options) {
