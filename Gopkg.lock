@@ -263,6 +263,20 @@
   version = "v1.1"
 
 [[projects]]
+  digest = "1:f4e64bb62274202b95403b8ae001d0601cee01afadf60767fb0e1d239f8f1413"
+  name = "github.com/magefile/mage"
+  packages = [
+    "internal",
+    "mage",
+    "mg",
+    "parse",
+    "sh",
+  ]
+  pruneopts = "UT"
+  revision = "aedfce64c122eef47009b7f80c9771044753215d"
+  version = "v1.8.0"
+
+[[projects]]
   digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
   name = "github.com/mattn/go-colorable"
   packages = ["."]
@@ -733,6 +747,8 @@
     "github.com/huin/goupnp/ssdp",
     "github.com/jackpal/gateway",
     "github.com/julienschmidt/httprouter",
+    "github.com/magefile/mage/mage",
+    "github.com/magefile/mage/sh",
     "github.com/mitchellh/go-homedir",
     "github.com/mysteriumnetwork/go-dvpn-web",
     "github.com/mysteriumnetwork/go-openvpn/openvpn",

@@ -66,14 +66,14 @@ test:
   tags:
     - go
   script:
-    - bin/test
+    - go run mage.go test
 
 test-e2e:
   stage: test
   tags:
     - go
   script:
-    - bin/test_e2e
+    - go run mage.go -v teste2e
 
 package:linux-amd64:
   stage: build
