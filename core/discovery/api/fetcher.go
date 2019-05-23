@@ -38,8 +38,8 @@ type Fetcher struct {
 	fetchInterval time.Duration
 	fetchShutdown chan bool
 
-	proposalStorage *discovery.ProposalStorage
-	proposalChan    chan market.ServiceProposal
+	proposalStorage       *discovery.ProposalStorage
+	proposalSubscriptions []chan market.ServiceProposal
 }
 
 // NewFetcher create instance of Fetcher
@@ -48,7 +48,8 @@ func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallb
 		fetch:         callback,
 		fetchInterval: interval,
 
-		proposalStorage: proposalsStorage,
+		proposalStorage:       proposalsStorage,
+		proposalSubscriptions: make([]chan market.ServiceProposal, 0),
 	}
 }
 
@@ -71,7 +72,7 @@ func (fetcher *Fetcher) Stop() {
 
 // SubscribeProposals allows to subscribe all fetched proposals
 func (fetcher *Fetcher) SubscribeProposals(proposalsChan chan market.ServiceProposal) {
-	fetcher.proposalChan = proposalsChan
+	fetcher.proposalSubscriptions = append(fetcher.proposalSubscriptions, proposalsChan)
 }
 
 func (fetcher *Fetcher) fetchLoop() {
@@ -79,7 +80,6 @@ func (fetcher *Fetcher) fetchLoop() {
 		select {
 		case <-fetcher.fetchShutdown:
 			break
-
 		case <-time.After(fetcher.fetchInterval):
 			fetcher.fetchDo()
 		}
@@ -96,9 +96,9 @@ func (fetcher *Fetcher) fetchDo() error {
 	log.Infof("%s Proposals fetched: %d", fetcherLogPrefix, len(proposals))
 	fetcher.proposalStorage.Set(proposals...)
 
-	if fetcher.proposalChan != nil {
-		for _, proposal := range proposals {
-			fetcher.proposalChan <- proposal
+	for _, proposal := range proposals {
+		for _, subscription := range fetcher.proposalSubscriptions {
+			subscription <- proposal
 		}
 	}
 	return nil
