@@ -20,6 +20,7 @@ package test
 import (
 	"bufio"
 	"os"
+	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
@@ -66,13 +67,19 @@ func (r *runner) setup() error {
 		return errors.Wrap(err, "starting DB failed!")
 	}
 
-	for {
+	dbUp := false
+	for start := time.Now(); !dbUp && time.Since(start) < 30*time.Second; {
 		err := r.compose("exec", "-T", "db", "mysqladmin", "ping", "--protocol=TCP", "--silent")
 		if err != nil {
 			log.Info("Waiting...")
 		} else {
+			log.Info("DB is up")
+			dbUp = true
 			break
 		}
+	}
+	if !dbUp {
+		return errors.New("starting DB timed out")
 	}
 
 	log.Info("migrating DB")
