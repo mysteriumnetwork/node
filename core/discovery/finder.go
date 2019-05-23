@@ -46,59 +46,9 @@ func (finder *finder) GetProposal(id market.ProposalID) (*market.ServiceProposal
 func (finder *finder) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
 	proposalsFiltered := make([]market.ServiceProposal, 0)
 	for _, proposal := range finder.storage.Proposals() {
-
-		if filter.ProviderID != "" && filter.ProviderID != proposal.ProviderID {
-			continue
+		if filter.Matches(proposal) {
+			proposalsFiltered = append(proposalsFiltered, proposal)
 		}
-		if filter.ServiceType != "" && filter.ServiceType != proposal.ServiceType {
-			continue
-		}
-		if filter.Location != emptyFilterLocation && !filterByLocation(proposal, filter.Location) {
-			continue
-		}
-		if filter.AccessPolicy != emptyFilterAccessPolicy && !filterByAccessPolicy(proposal, filter.AccessPolicy) {
-			continue
-		}
-
-		proposalsFiltered = append(proposalsFiltered, proposal)
 	}
 	return proposalsFiltered, nil
-}
-
-var (
-	emptyFilterLocation = market.LocationFilter{}
-)
-
-func filterByLocation(proposal market.ServiceProposal, filter market.LocationFilter) bool {
-	location := proposal.ServiceDefinition.GetLocation()
-	if filter.NodeType != "" && filter.NodeType != location.NodeType {
-		return false
-	}
-
-	return true
-}
-
-var (
-	emptyFilterAccessPolicy = market.AccessPolicyFilter{}
-)
-
-func filterByAccessPolicy(proposal market.ServiceProposal, filter market.AccessPolicyFilter) bool {
-	// These proposals accepts all access lists
-	if proposal.AccessPolicies == nil {
-		return false
-	}
-
-	var match bool
-	for _, policy := range *proposal.AccessPolicies {
-		if filter.ID != "" {
-			match = filter.ID == policy.ID
-		}
-		if filter.Source != "" {
-			match = match && filter.Source == policy.Source
-		}
-		if match == true {
-			break
-		}
-	}
-	return match
 }
