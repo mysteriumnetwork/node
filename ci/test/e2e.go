@@ -83,13 +83,13 @@ func (r *runner) setup() error {
 	}
 
 	log.Info("migrating DB")
-	if err := r.compose("run", "--entrypoint", "bin/db-upgrade", "discovery"); err != nil {
+	if err := r.compose("run", "--entrypoint", "bin/db-upgrade", "mysterium-api"); err != nil {
 		return errors.Wrap(err, "migrating DB failed!")
 	}
 
-	log.Info("starting discovery")
-	if err := r.compose("up", "-d", "discovery"); err != nil {
-		return errors.Wrap(err, "starting discovery failed!")
+	log.Info("starting mysterium-api")
+	if err := r.compose("up", "-d", "mysterium-api"); err != nil {
+		return errors.Wrap(err, "starting mysterium-api failed!")
 	}
 
 	file, err := os.Open("bin/localnet/deployer/local_acc_password.txt")

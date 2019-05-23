@@ -50,16 +50,16 @@ setupInfra () {
     sleep 2 #even after successful TCP connection we still hit db not ready yet sometimes
     echo "Database is up"
 
-    ${dockerComposeCmd} run --entrypoint bin/db-upgrade discovery
+    ${dockerComposeCmd} run --entrypoint bin/db-upgrade mysterium-api
     if [ ! $? -eq 0 ]; then
         print_error "Db migration failed"
         cleanup "$@"
         exit 1
     fi
 
-    ${dockerComposeCmd} up -d discovery
+    ${dockerComposeCmd} up -d mysterium-api
     if [ ! $? -eq 0 ]; then
-        print_error "Error starting discovery services"
+        print_error "Error starting Mysterium API"
         cleanup "$@"
         exit 1
     fi
