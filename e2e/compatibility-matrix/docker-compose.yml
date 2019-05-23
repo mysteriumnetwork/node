@@ -78,7 +78,7 @@ services:
       --experiment-payments
       --localnet
       --broker-address=broker
-      --discovery.address=http://discovery/v1
+      --discovery-address=http://discovery/v1
       --ether.client.rpc=http://geth:8545
       service openvpn,noop,wireguard
       --agreed-terms-and-conditions
@@ -103,6 +103,6 @@ services:
       --experiment-identity-check
       --experiment-payments
       --localnet
-      --discovery.address=http://discovery/v1
+      --discovery-address=http://discovery/v1
       --ether.client.rpc=http://geth:8545
       daemon

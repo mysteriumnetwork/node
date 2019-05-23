@@ -206,7 +206,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
+	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork); err != nil {
 		return err
 	}
 
@@ -459,7 +459,7 @@ func newSessionManagerFactory(
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides
-func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err error) {
+func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) (err error) {
 	network := metadata.DefaultNetwork
 
 	switch {
@@ -470,8 +470,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	//override defined values one by one from options
-	if options.Discovery.Address != metadata.DefaultNetwork.MysteriumAPIAddress {
-		network.MysteriumAPIAddress = options.Discovery.Address
+	if options.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
+		network.MysteriumAPIAddress = options.MysteriumAPIAddress
 	}
 
 	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
