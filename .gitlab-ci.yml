@@ -34,8 +34,7 @@ after_script:
 
 install-deps:
   stage: install
-  tags:
-    - go
+  tags: [go]
   cache:
     key: vendor
     untracked: true
@@ -47,8 +46,7 @@ install-deps:
 
 checks:
   stage: test
-  tags:
-    - go
+  tags: [go]
   script:
     - |
       go get -u \
@@ -63,38 +61,31 @@ checks:
 
 test:
   stage: test
-  tags:
-    - go
-  script:
-    - go run mage.go test
+  tags: [go]
+  script: go run mage.go test
 
 test-e2e:
   stage: test
-  tags:
-    - go
+  tags: [go]
   script:
     - go run mage.go -v teste2e
 
 package:linux-amd64:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - BINARY=build/myst/myst_linux_amd64 bin/package_standalone linux amd64
 
 package:linux-arm:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - BINARY=build/myst/myst_linux_arm bin/package_standalone linux arm
-  only:
-    - master
+  only: [master]
 
 package:linux-debian-amd64:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - go get -u github.com/debber/debber-v0.3/cmd/debber
     - bin/build
@@ -104,8 +95,7 @@ package:linux-debian-amd64:
 
 package:linux-debian-arm:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - go get -u github.com/debber/debber-v0.3/cmd/debber
     - bin/build_xgo linux/arm
@@ -115,8 +105,7 @@ package:linux-debian-arm:
 
 package:linux-raspberry-image:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - go get -u github.com/debber/debber-v0.3/cmd/debber
     - bin/build_xgo linux/arm
@@ -127,8 +116,7 @@ package:linux-raspberry-image:
 
 package:osx-amd64:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin amd64
   only:
@@ -136,8 +124,7 @@ package:osx-amd64:
 
 package:windows-amd64:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - BINARY=build/myst/myst_windows_amd64.exe bin/package_standalone windows amd64
   only:
@@ -145,8 +132,7 @@ package:windows-amd64:
 
 package:ios:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - bin/package_ios amd64
   only:
@@ -154,8 +140,7 @@ package:ios:
 
 package:android:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - bin/package_android amd64
   only:
@@ -163,8 +148,7 @@ package:android:
 
 package:docker-alpine:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - bin/package_docker
     - docker save myst:alpine | gzip > myst_alpine.tgz
@@ -173,8 +157,7 @@ package:docker-alpine:
 
 package:docker-ubuntu:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - bin/package_docker_ubuntu $BUILD_VERSION
     - docker save myst:ubuntu | gzip > myst_ubuntu.tgz
@@ -183,8 +166,7 @@ package:docker-ubuntu:
 
 package:swagger-redoc-docker:
   stage: build
-  tags:
-    - go
+  tags: [go]
   script:
     - go get -u github.com/go-swagger/go-swagger/cmd/swagger/
     - bin/swagger_generate
@@ -195,10 +177,6 @@ package:swagger-redoc-docker:
 
 release:snapshot:
   stage: release
-  tags:
-    - go
+  tags: [go]
   script:
     - echo $BUILD_VERSION
-#  only:
-#    refs:
-#      - master
