@@ -30,6 +30,7 @@ type Options struct {
 
 	TequilapiAddress string
 	TequilapiPort    int
+	WebSocketPort   int
 
 	DisableMetrics bool
 	MetricsAddress string

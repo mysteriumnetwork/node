@@ -19,7 +19,7 @@ package cmd
 
 import (
 	"fmt"
-
+	"github.com/mysteriumnetwork/node/websocket"
 	"net"
 	"path/filepath"
 	"time"
@@ -175,6 +175,8 @@ type Dependencies struct {
 	PortPool *port.Pool
 
 	MetricsSender *metrics.Sender
+
+	WebSocket websocket.WebSocket
 }
 
 // Bootstrap initiates all container dependencies
@@ -365,6 +367,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		di.IPResolver,
 	)
 
+
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector)
@@ -378,13 +381,23 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(router, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForNAT(router, di.NATStatusTracker.Status)
+
+	di.WebSocket = websocket.NewWebSocketServer()
+	websocket.AddRoutesForWebSocket(router, di.WebSocket)
+
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
+
 	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
 
 	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger)
 }
+
+//func (di *Dependencies) bootstrapWebSocket(nodeOptions node.Options) {
+//	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
+//
+//}
 
 func newSessionManagerFactory(
 	proposal market.ServiceProposal,

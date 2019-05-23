@@ -144,7 +144,6 @@ func (endpoint *identitiesAPI) Me(resp http.ResponseWriter, request *http.Reques
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
-
 	idDto := idToDto(id)
 	utils.WriteAsJSON(idDto, resp)
 }

@@ -52,7 +52,8 @@ func allowCorsActions(resp http.ResponseWriter, req *http.Request, corsPolicy Co
 	allowedOrigin := corsPolicy.AllowedOrigin(requestOrigin)
 
 	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
-	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, HEAD, OPTIONS, PUT, DELETE")
+	resp.Header().Set("Access-Control-Allow-Credentials", "true")
 }
 
 func isPreflightCorsRequest(req *http.Request) bool {
