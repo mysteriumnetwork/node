@@ -94,7 +94,7 @@ func (fetcher *Fetcher) fetchDo() error {
 	}
 
 	log.Infof("%s Proposals fetched: %d", fetcherLogPrefix, len(proposals))
-	fetcher.proposalStorage.AddMultiple(proposals)
+	fetcher.proposalStorage.Set(proposals...)
 
 	if fetcher.proposalChan != nil {
 		for _, proposal := range proposals {

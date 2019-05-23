@@ -43,15 +43,8 @@ func (storage *ProposalStorage) Proposals() []market.ServiceProposal {
 	return storage.proposals
 }
 
-// Add puts given proposal to storage
-func (storage *ProposalStorage) Add(proposal market.ServiceProposal) {
-	storage.mutex.Lock()
-	defer storage.mutex.Unlock()
-	storage.proposals = append(storage.proposals, proposal)
-}
-
-// AddMultiple puts given multiple proposals to storage
-func (storage *ProposalStorage) AddMultiple(proposals []market.ServiceProposal) {
+// Set puts given proposal to storage
+func (storage *ProposalStorage) Set(proposals ...market.ServiceProposal) {
 	storage.mutex.Lock()
 	defer storage.mutex.Unlock()
 	storage.proposals = proposals
