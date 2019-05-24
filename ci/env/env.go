@@ -52,6 +52,9 @@ const (
 
 	// BuildNumber stores CI build number
 	BuildNumber = BuildVar("BUILD_NUMBER")
+
+	// ProjectName stores project identifier
+	ProjectName = BuildVar("PROJECT_NAME")
 )
 
 // GenerateEnvFile for sourcing in other stages
@@ -63,6 +66,7 @@ func GenerateEnvFile() error {
 		{BuildVersion, buildVersion()},
 		{PpaVersion, ppaVersion()},
 		{BuildNumber, os.Getenv("CI_PIPELINE_ID")},
+		{ProjectName, os.Getenv("CI_PROJECT_PATH_SLUG")},
 	}
 	return writeEnvVars(vars)
 }
@@ -72,7 +76,7 @@ func isReleaseBuild() bool {
 }
 
 func isMasterBuild() bool {
-	return os.Getenv("CI_COMMIT_REF_NAME") == "master"
+	return os.Getenv("CI_COMMIT_REF_NAME") == "master" && !isReleaseBuild()
 }
 
 func isPullRequestBuild() bool {

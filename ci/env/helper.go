@@ -1,5 +1,3 @@
-// +build mage
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -17,15 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package main
+package env
 
-import (
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/test"
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/env"
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/packages"
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/storage"
-)
+// ShouldReleaseArtifacts indicates if build artifacts should be uploaded/released
+func ShouldReleaseArtifacts() bool {
+	isPullRequest, _ := RequiredEnvBool(PrBuild)
+	return isPullRequest
+}

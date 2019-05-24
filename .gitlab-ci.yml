@@ -1,13 +1,13 @@
 stages:
   - install
   - test
+  - pre-release
   - build
   - release
 
 variables:
   BUILD_COMMIT: $CI_COMMIT_SHORT_SHA
   BUILD_BRANCH: $CI_COMMIT_REF_NAME
-
   GO_PACKAGE: github.com/mysteriumnetwork/node
   GIT_CLONE_PATH: /home/gitlab-runner/go/src/$GO_PACKAGE
   GOFLAGS: "-count=1" # Supersedes GOCACHE=off, see: https://github.com/golang/go/issues/29378#issuecomment-449383809
@@ -75,110 +75,70 @@ test-e2e:
   script:
     - go run mage.go -v teste2e
 
+create-bucket:
+  stage: pre-release
+  tags: [go]
+  script: go run mage.go -v MakeBucket
+
 package:linux-amd64:
   stage: build
   tags: [go]
-  script:
-    - BINARY=build/myst/myst_linux_amd64 bin/package_standalone linux amd64
+  script: go run mage.go -v PackageLinuxAmd64
 
 package:linux-arm:
   stage: build
   tags: [go]
-  script:
-    - BINARY=build/myst/myst_linux_arm bin/package_standalone linux arm
-  only: [master]
+  script: go run mage.go -v PackageLinuxArm
 
 package:linux-debian-amd64:
   stage: build
   tags: [go]
-  script:
-    - go get -u github.com/debber/debber-v0.3/cmd/debber
-    - bin/build
-    - BINARY=build/myst/myst bin/package_debian $BUILD_VERSION amd64
-  only:
-    - master
+  script: go run mage.go -v PackageLinuxDebianAmd64
 
 package:linux-debian-arm:
   stage: build
   tags: [go]
-  script:
-    - go get -u github.com/debber/debber-v0.3/cmd/debber
-    - bin/build_xgo linux/arm
-    - BINARY=build/myst/myst_linux_arm bin/package_debian $BUILD_VERSION armhf
-  only:
-    - master
+  script: go run mage.go -v PackageLinuxDebianArm
 
 package:linux-raspberry-image:
   stage: build
   tags: [go]
-  script:
-    - go get -u github.com/debber/debber-v0.3/cmd/debber
-    - bin/build_xgo linux/arm
-    - BINARY=build/myst/myst_linux_arm bin/package_debian $BUILD_VERSION armhf
-    - bin/package_raspberry
-  only:
-    - tags
+  script: go run mage.go -v PackageLinuxRaspberryImage
 
 package:osx-amd64:
   stage: build
   tags: [go]
-  script:
-    - BINARY=build/myst/myst_darwin_amd64 bin/package_standalone darwin amd64
-  only:
-    - master
+  script: go run mage.go -v PackageOsxAmd64
 
 package:windows-amd64:
   stage: build
   tags: [go]
-  script:
-    - BINARY=build/myst/myst_windows_amd64.exe bin/package_standalone windows amd64
-  only:
-    - master
+  script: go run mage.go -v PackageWindowsAmd64
 
 package:ios:
   stage: build
   tags: [go]
-  script:
-    - bin/package_ios amd64
-  only:
-    - master
+  script: go run mage.go -v PackageIOS
 
 package:android:
   stage: build
   tags: [go]
-  script:
-    - bin/package_android amd64
-  only:
-    - master
+  script: go run mage.go -v PackageAndroid
 
 package:docker-alpine:
   stage: build
   tags: [go]
-  script:
-    - bin/package_docker
-    - docker save myst:alpine | gzip > myst_alpine.tgz
-  only:
-    - master
+  script: go run mage.go -v PackageDockerAlpine
 
 package:docker-ubuntu:
   stage: build
   tags: [go]
-  script:
-    - bin/package_docker_ubuntu $BUILD_VERSION
-    - docker save myst:ubuntu | gzip > myst_ubuntu.tgz
-  only:
-    - master
+  script: go run mage.go -v PackageDockerUbuntu
 
 package:swagger-redoc-docker:
   stage: build
   tags: [go]
-  script:
-    - go get -u github.com/go-swagger/go-swagger/cmd/swagger/
-    - bin/swagger_generate
-    - bin/package_docker_docs
-    - docker save tequilapi:${BUILD_VERSION} | gzip > tequilapi_redoc.tgz
-  only:
-    - master
+  script: go run mage.go -v PackageDockerSwaggerRedoc
 
 release:snapshot:
   stage: release
