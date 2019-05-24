@@ -18,9 +18,16 @@
 package api
 
 import (
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
+	"github.com/pkg/errors"
 )
+
+// FilterQueryable defines filter serialise to query of Mysterium API
+type FilterQueryable interface {
+	ToAPIQuery() mysterium.ProposalsQuery
+}
 
 // finderAPI implements ProposalFinder, which finds proposals from Mysterium API
 type finderAPI struct {
@@ -51,11 +58,11 @@ func (finder *finderAPI) GetProposal(id market.ProposalID) (*market.ServicePropo
 }
 
 // FindProposals fetches currently active service proposals from discovery by given filter
-func (finder *finderAPI) FindProposals(filter *market.ProposalFilter) ([]market.ServiceProposal, error) {
-	return finder.mysteriumAPI.QueryProposals(mysterium.ProposalsQuery{
-		NodeKey:            filter.ProviderID,
-		ServiceType:        filter.ServiceType,
-		AccessPolicyID:     filter.AccessPolicy.ID,
-		AccessPolicySource: filter.AccessPolicy.Source,
-	})
+func (finder *finderAPI) FindProposals(filter discovery.ProposalFilter) ([]market.ServiceProposal, error) {
+	filterSupported, ok := filter.(FilterQueryable)
+	if !ok {
+		errors.New("non queryable filter given")
+	}
+
+	return finder.mysteriumAPI.QueryProposals(filterSupported.ToAPIQuery())
 }

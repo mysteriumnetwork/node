@@ -159,13 +159,11 @@ func NewProposalsEndpoint(proposalProvider discovery.ProposalFinder, morqaClient
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
 
-	proposals, err := pe.proposalProvider.FindProposals(&market.ProposalFilter{
-		ProviderID:  req.URL.Query().Get("providerId"),
-		ServiceType: req.URL.Query().Get("serviceType"),
-		AccessPolicy: market.AccessPolicyFilter{
-			ID:     req.URL.Query().Get("accessPolicyId"),
-			Source: req.URL.Query().Get("accessPolicySource"),
-		},
+	proposals, err := pe.proposalProvider.FindProposals(&proposalsFilter{
+		ProviderID:         req.URL.Query().Get("providerId"),
+		ServiceType:        req.URL.Query().Get("serviceType"),
+		AccessPolicyID:     req.URL.Query().Get("accessPolicyId"),
+		AccessPolicySource: req.URL.Query().Get("accessPolicySource"),
 	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
