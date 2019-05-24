@@ -76,11 +76,6 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			Address:       "https://testnet-location.mysterium.network/api/v1/location",
 		},
 
-		Discovery: node.OptionsDiscovery{
-			Type:    node.DiscoveryTypeAPI,
-			Address: metadata.TestnetDefinition.MysteriumAPIAddress,
-		},
-
 		OptionsNetwork: node.OptionsNetwork(*optionsNetwork),
 	})
 	if err != nil {
@@ -95,6 +90,7 @@ func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
 		Testnet:                 true,
 		ExperimentIdentityCheck: false,
+		MysteriumAPIAddress:     metadata.TestnetDefinition.MysteriumAPIAddress,
 		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
 		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,
 		EtherPaymentsAddress:    metadata.DefaultNetwork.PaymentsContractAddress.String(),

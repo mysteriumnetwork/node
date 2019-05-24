@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli"
 )
 
@@ -37,7 +36,7 @@ var (
 			"Address of specific discovery provider given in '--%s'",
 			discoveryTypeFlag.Name,
 		),
-		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
+		Value: apiAddressFlag.Value,
 	}
 )
 

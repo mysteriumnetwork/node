@@ -19,8 +19,8 @@ services:
       MYSQL_USER: myst_api
       MYSQL_PASSWORD: myst_api
 
-  discovery:
-    image: mysteriumnetwork/mysterium-api:0.4.1
+  mysterium-api:
+    image: mysteriumnetwork/mysterium-api:0.5.9
     expose:
     - 80
     environment:

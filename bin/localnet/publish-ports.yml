@@ -6,7 +6,7 @@ services:
       - 4222:4222
       - 8222:4222
 
-  discovery:
+  mysterium-api:
     ports:
     - 80:80
 
