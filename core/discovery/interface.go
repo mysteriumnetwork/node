@@ -29,8 +29,17 @@ type ProposalRegistry interface {
 	UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
 }
 
-// ProposalFinder allows to search proposals by specified params
+// ProposalReducer returns flag if given proposal matches against it's rules
+type ProposalReducer func(proposal market.ServiceProposal) bool
+
+// ProposalMatcher defines interface to fetch currently active service proposals from discovery by matching given rule
+type ProposalMatcher interface {
+	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
+	MatchProposals(match ProposalReducer) ([]market.ServiceProposal, error)
+}
+
+// ProposalFinder defines interface to fetch currently active service proposals from discovery by given filter
 type ProposalFinder interface {
 	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
-	FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error)
+	FindProposals(filter *market.ProposalFilter) ([]market.ServiceProposal, error)
 }

@@ -92,7 +92,7 @@ func Test_Finder_GetProposalUnknown(t *testing.T) {
 func Test_Finder_GetProposalsAll(t *testing.T) {
 	finder := NewFinder(proposalsStorage)
 
-	proposals, err := finder.FindProposals(market.ProposalFilter{})
+	proposals, err := finder.FindProposals(&market.ProposalFilter{})
 	assert.NoError(t, err)
 	assert.Len(t, proposals, 3)
 	assert.Exactly(t,
@@ -104,7 +104,7 @@ func Test_Finder_GetProposalsAll(t *testing.T) {
 func Test_Finder_ProposalsByProviderID(t *testing.T) {
 	finder := NewFinder(proposalsStorage)
 
-	proposals, err := finder.FindProposals(market.ProposalFilter{
+	proposals, err := finder.FindProposals(&market.ProposalFilter{
 		ProviderID: provider1,
 	})
 
@@ -120,7 +120,7 @@ func Test_Finder_ProposalsByProviderID(t *testing.T) {
 func Test_Finder_GetProposalsByServiceType(t *testing.T) {
 	finder := NewFinder(proposalsStorage)
 
-	proposals, err := finder.FindProposals(market.ProposalFilter{
+	proposals, err := finder.FindProposals(&market.ProposalFilter{
 		ServiceType: "noop",
 	})
 	assert.NoError(t, err)
@@ -131,7 +131,7 @@ func Test_Finder_GetProposalsByServiceType(t *testing.T) {
 		proposals,
 	)
 
-	proposals, err = finder.FindProposals(market.ProposalFilter{
+	proposals, err = finder.FindProposals(&market.ProposalFilter{
 		ServiceType: "streaming",
 	})
 	assert.NoError(t, err)
@@ -146,14 +146,14 @@ func Test_Finder_GetProposalsByServiceType(t *testing.T) {
 func Test_Finder_GetProposalsByNodeType(t *testing.T) {
 	finder := NewFinder(proposalsStorage)
 
-	proposals, err := finder.FindProposals(market.ProposalFilter{
+	proposals, err := finder.FindProposals(&market.ProposalFilter{
 		Location: market.LocationFilter{NodeType: "datacenter"},
 	})
 	assert.NoError(t, err)
 	assert.Len(t, proposals, 1)
 	assert.Exactly(t, []market.ServiceProposal{proposalProvider1Streaming}, proposals)
 
-	proposals, err = finder.FindProposals(market.ProposalFilter{
+	proposals, err = finder.FindProposals(&market.ProposalFilter{
 		Location: market.LocationFilter{NodeType: "residential"},
 	})
 	assert.NoError(t, err)
@@ -164,7 +164,7 @@ func Test_Finder_GetProposalsByNodeType(t *testing.T) {
 func Test_Finder_GetProposalsByAccessID(t *testing.T) {
 	finder := NewFinder(proposalsStorage)
 
-	proposals, err := finder.FindProposals(market.ProposalFilter{
+	proposals, err := finder.FindProposals(&market.ProposalFilter{
 		AccessPolicy: market.AccessPolicyFilter{ID: "whitelist"},
 	})
 	assert.NoError(t, err)
@@ -175,7 +175,7 @@ func Test_Finder_GetProposalsByAccessID(t *testing.T) {
 		proposals,
 	)
 
-	proposals, err = finder.FindProposals(market.ProposalFilter{
+	proposals, err = finder.FindProposals(&market.ProposalFilter{
 		AccessPolicy: market.AccessPolicyFilter{ID: "blacklist"},
 	})
 	assert.NoError(t, err)
@@ -186,13 +186,13 @@ func Test_Finder_GetProposalsByAccessID(t *testing.T) {
 		proposals,
 	)
 
-	proposals, err = finder.FindProposals(market.ProposalFilter{
+	proposals, err = finder.FindProposals(&market.ProposalFilter{
 		AccessPolicy: market.AccessPolicyFilter{ID: "whitelist", Source: "unknown.txt"},
 	})
 	assert.NoError(t, err)
 	assert.Len(t, proposals, 0)
 
-	proposals, err = finder.FindProposals(market.ProposalFilter{
+	proposals, err = finder.FindProposals(&market.ProposalFilter{
 		AccessPolicy: market.AccessPolicyFilter{ID: "unknown"},
 	})
 	assert.NoError(t, err)

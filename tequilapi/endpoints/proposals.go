@@ -159,7 +159,7 @@ func NewProposalsEndpoint(proposalProvider discovery.ProposalFinder, morqaClient
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
 
-	proposals, err := pe.proposalProvider.FindProposals(market.ProposalFilter{
+	proposals, err := pe.proposalProvider.FindProposals(&market.ProposalFilter{
 		ProviderID:  req.URL.Query().Get("providerId"),
 		ServiceType: req.URL.Query().Get("serviceType"),
 		AccessPolicy: market.AccessPolicyFilter{

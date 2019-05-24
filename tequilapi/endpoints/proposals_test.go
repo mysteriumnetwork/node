@@ -90,7 +90,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
-	assert.Equal(t, market.ProposalFilter{ProviderID: "0xProviderId"}, mockProposalProvider.recordedFilter)
+	assert.Equal(t, &market.ProposalFilter{ProviderID: "0xProviderId"}, mockProposalProvider.recordedFilter)
 }
 
 func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
@@ -135,7 +135,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 		resp.Body.String(),
 	)
 	assert.Equal(t,
-		market.ProposalFilter{
+		&market.ProposalFilter{
 			AccessPolicy: market.AccessPolicyFilter{
 				ID:     "accessPolicyId",
 				Source: "accessPolicySource",
@@ -273,7 +273,7 @@ func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
 }
 
 type mockProposalProvider struct {
-	recordedFilter market.ProposalFilter
+	recordedFilter *market.ProposalFilter
 	proposals      []market.ServiceProposal
 }
 
@@ -284,7 +284,7 @@ func (mpp *mockProposalProvider) GetProposal(id market.ProposalID) (*market.Serv
 	return &mpp.proposals[0], nil
 }
 
-func (mpp *mockProposalProvider) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
+func (mpp *mockProposalProvider) FindProposals(filter *market.ProposalFilter) ([]market.ServiceProposal, error) {
 	mpp.recordedFilter = filter
 	return mpp.proposals, nil
 }
