@@ -58,3 +58,30 @@ func Test_Location_FiltersByNodeType(t *testing.T) {
 	assert.False(t, match(proposalProvider1Noop))
 	assert.True(t, match(proposalProvider2Streaming))
 }
+
+func Test_AccessPolicy_FiltersByID(t *testing.T) {
+	match := AccessPolicy(accessRuleWhitelist.ID, "")
+
+	assert.False(t, match(proposalEmpty))
+	assert.True(t, match(proposalProvider1Streaming))
+	assert.False(t, match(proposalProvider1Noop))
+	assert.True(t, match(proposalProvider2Streaming))
+}
+
+func Test_AccessPolicy_FiltersBySource(t *testing.T) {
+	match := AccessPolicy("", accessRuleBlacklist.Source)
+
+	assert.False(t, match(proposalEmpty))
+	assert.False(t, match(proposalProvider1Streaming))
+	assert.False(t, match(proposalProvider1Noop))
+	assert.True(t, match(proposalProvider2Streaming))
+}
+
+func Test_AccessPolicy_FiltersByIDAndSource(t *testing.T) {
+	match := AccessPolicy(accessRuleWhitelist.ID, accessRuleWhitelist.Source)
+
+	assert.False(t, match(proposalEmpty))
+	assert.True(t, match(proposalProvider1Streaming))
+	assert.False(t, match(proposalProvider1Noop))
+	assert.True(t, match(proposalProvider2Streaming))
+}
