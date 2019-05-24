@@ -30,3 +30,35 @@ func ProviderID(proposal market.ServiceProposal) interface{} {
 func ServiceType(proposal market.ServiceProposal) interface{} {
 	return proposal.ServiceType
 }
+
+// Service selects service definition from proposal
+func Service(proposal market.ServiceProposal) interface{} {
+	return proposal.ServiceDefinition
+}
+
+// Location selects service location from proposal
+func Location(proposal market.ServiceProposal) interface{} {
+	service := proposal.ServiceDefinition
+	if service == nil {
+		return nil
+	}
+	return service.GetLocation()
+}
+
+// LocationCountry selects location country from proposal
+func LocationCountry(proposal market.ServiceProposal) interface{} {
+	service := proposal.ServiceDefinition
+	if service == nil {
+		return nil
+	}
+	return service.GetLocation().Country
+}
+
+// LocationType selects location type from proposal
+func LocationType(proposal market.ServiceProposal) interface{} {
+	service := proposal.ServiceDefinition
+	if service == nil {
+		return nil
+	}
+	return service.GetLocation().NodeType
+}

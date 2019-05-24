@@ -40,3 +40,21 @@ func Test_ServiceType(t *testing.T) {
 	assert.False(t, match(proposalProvider1Noop))
 	assert.True(t, match(proposalProvider2Streaming))
 }
+
+func Test_Location_FiltersByCountry(t *testing.T) {
+	match := Equal(LocationCountry, "DE")
+
+	assert.False(t, match(proposalEmpty))
+	assert.True(t, match(proposalProvider1Streaming))
+	assert.False(t, match(proposalProvider1Noop))
+	assert.False(t, match(proposalProvider2Streaming))
+}
+
+func Test_Location_FiltersByNodeType(t *testing.T) {
+	match := Equal(LocationType, "residential")
+
+	assert.False(t, match(proposalEmpty))
+	assert.False(t, match(proposalProvider1Streaming))
+	assert.False(t, match(proposalProvider1Noop))
+	assert.True(t, match(proposalProvider2Streaming))
+}
