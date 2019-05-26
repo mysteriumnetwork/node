@@ -22,9 +22,11 @@ import (
 )
 
 var (
-	provider1           = "0x1"
-	provider2           = "0x2"
-	accessRuleWhitelist = market.AccessPolicy{
+	provider1            = "0x1"
+	provider2            = "0x2"
+	serviceTypeStreaming = "streaming"
+	serviceTypeNoop      = "noop"
+	accessRuleWhitelist  = market.AccessPolicy{
 		ID:     "whitelist",
 		Source: "whitelist.txt",
 	}
@@ -37,19 +39,19 @@ var (
 
 	proposalEmpty              = market.ServiceProposal{}
 	proposalProvider1Streaming = market.ServiceProposal{
-		ServiceType:       "streaming",
 		ProviderID:        provider1,
+		ServiceType:       serviceTypeStreaming,
 		ServiceDefinition: mockService{Location: locationDatacenter},
 		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist},
 	}
 	proposalProvider1Noop = market.ServiceProposal{
-		ServiceType:       "noop",
 		ProviderID:        provider1,
+		ServiceType:       serviceTypeNoop,
 		ServiceDefinition: mockService{},
 	}
 	proposalProvider2Streaming = market.ServiceProposal{
-		ServiceType:       "streaming",
 		ProviderID:        provider2,
+		ServiceType:       serviceTypeStreaming,
 		ServiceDefinition: mockService{Location: locationResidential},
 		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
 	}
@@ -61,4 +63,20 @@ type mockService struct {
 
 func (service mockService) GetLocation() market.Location {
 	return service.Location
+}
+
+func conditionAlwaysMatch(_ market.ServiceProposal) bool {
+	return true
+}
+
+func conditionNeverMatch(_ market.ServiceProposal) bool {
+	return false
+}
+
+func conditionIsProvider1(provider market.ServiceProposal) bool {
+	return provider.ProviderID == provider1
+}
+
+func conditionIsStreaming(provider market.ServiceProposal) bool {
+	return provider.ServiceType == "streaming"
 }
