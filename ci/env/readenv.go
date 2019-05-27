@@ -48,3 +48,29 @@ func RequiredEnvStr(v BuildVar) (string, error) {
 	log.Debug("returning env var (str)", v)
 	return env, nil
 }
+
+// IfRelease performs func passed as an arg if current build is any kind of release
+func IfRelease(do func() error) error {
+	isRelease, err := isRelease()
+	if err != nil {
+		return err
+	}
+	if isRelease {
+		log.Info("release build detected, performing conditional action")
+		return do()
+	}
+	log.Info("not a release build, skipping conditional action")
+	return nil
+}
+
+func isRelease() (bool, error) {
+	isTag, err := RequiredEnvBool(TagBuild)
+	if err != nil {
+		return false, err
+	}
+	isSnapshot, err := RequiredEnvBool(SnapshotBuild)
+	if err != nil {
+		return false, err
+	}
+	return isTag || isSnapshot, nil
+}

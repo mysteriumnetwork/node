@@ -31,41 +31,6 @@ type envVar struct {
 	val string
 }
 
-// BuildVar env variable for CI
-type BuildVar string
-
-const (
-	// TagBuild indicates release build
-	TagBuild = BuildVar("RELEASE_BUILD")
-
-	// SnapshotBuild indicates snapshot release build (master branch)
-	SnapshotBuild = BuildVar("SNAPSHOT_BUILD")
-
-	// PrBuild indicates pull-request build
-	PrBuild = BuildVar("PR_BUILD")
-
-	// BuildVersion stores build version
-	BuildVersion = BuildVar("BUILD_VERSION")
-
-	// PpaVersion stores build version for PPA
-	PpaVersion = BuildVar("PPA_VERSION")
-
-	// BuildNumber stores CI build number
-	BuildNumber = BuildVar("BUILD_NUMBER")
-
-	// GithubOwner stores github repository's owner
-	GithubOwner = BuildVar("GITHUB_OWNER")
-
-	// GithubRepository stores github repository name
-	GithubRepository = BuildVar("GITHUB_REPO")
-
-	// GithubSnapshotRepository stores github repository name for snapshot builds
-	GithubSnapshotRepository = BuildVar("GITHUB_REPO_SNAPSHOTS")
-
-	// GithubApiToken is used for accessing github API
-	GithubApiToken = BuildVar("GITHUB_API_TOKEN")
-)
-
 // GenerateEnvFile for sourcing in other stages
 func GenerateEnvFile() error {
 	isTag := os.Getenv("BUILD_TAG") != ""
