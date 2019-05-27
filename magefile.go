@@ -27,5 +27,7 @@ import (
 	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/packages"
 	// mage:import
+	_ "github.com/mysteriumnetwork/node/ci/release"
+	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/storage"
 )

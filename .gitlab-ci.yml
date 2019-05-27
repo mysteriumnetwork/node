@@ -8,6 +8,12 @@ stages:
 variables:
   BUILD_COMMIT: $CI_COMMIT_SHORT_SHA
   BUILD_BRANCH: $CI_COMMIT_REF_NAME
+  BUILD_TAG: $CI_COMMIT_TAG
+  BUILD_NUMBER: $CI_PIPELINE_ID
+  GITHUB_OWNER: mysteriumnetwork
+  GITHUB_REPO: node
+  GITHUB_REPO_DEV_BUILD: node-builds
+
   GO_PACKAGE: github.com/mysteriumnetwork/node
   GIT_CLONE_PATH: /home/gitlab-runner/go/src/$GO_PACKAGE
   GOFLAGS: "-count=1" # Supersedes GOCACHE=off, see: https://github.com/golang/go/issues/29378#issuecomment-449383809

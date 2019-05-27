@@ -129,3 +129,11 @@
 [[constraint]]
   name = "github.com/magefile/mage"
   version = "1.8.0"
+
+[[constraint]]
+  name = "github.com/google/go-github"
+  version = "25.0.4"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/oauth2"

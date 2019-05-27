@@ -53,8 +53,17 @@ const (
 	// BuildNumber stores CI build number
 	BuildNumber = BuildVar("BUILD_NUMBER")
 
-	// ProjectName stores project identifier
-	ProjectName = BuildVar("PROJECT_NAME")
+	// GithubOwner stores github repository's owner
+	GithubOwner = BuildVar("GITHUB_OWNER")
+
+	// GithubRepository stores github repository name
+	GithubRepository = BuildVar("GITHUB_REPO")
+
+	// GithubDevBuildRepository stores github repository name for dev build
+	GithubDevBuildRepository = BuildVar("GITHUB_REPO_DEV_BUILD")
+
+	// GithubApiToken is used for accessing github API
+	GithubApiToken = BuildVar("GITHUB_API_TOKEN")
 )
 
 // GenerateEnvFile for sourcing in other stages
@@ -65,8 +74,10 @@ func GenerateEnvFile() error {
 		{PrBuild, strconv.FormatBool(isPullRequestBuild())},
 		{BuildVersion, buildVersion()},
 		{PpaVersion, ppaVersion()},
-		{BuildNumber, os.Getenv("CI_PIPELINE_ID")},
-		{ProjectName, os.Getenv("CI_PROJECT_PATH_SLUG")},
+		{BuildNumber, os.Getenv(string(BuildNumber))},
+		{GithubOwner, os.Getenv(string(GithubOwner))},
+		{GithubRepository, os.Getenv(string(GithubRepository))},
+		{GithubDevBuildRepository, os.Getenv(string(GithubDevBuildRepository))},
 	}
 	return writeEnvVars(vars)
 }
@@ -76,7 +87,7 @@ func isReleaseBuild() bool {
 }
 
 func isMasterBuild() bool {
-	return os.Getenv("CI_COMMIT_REF_NAME") == "master" && !isReleaseBuild()
+	return os.Getenv("BUILD_BRANCH") == "master" && !isReleaseBuild()
 }
 
 func isPullRequestBuild() bool {
@@ -84,14 +95,14 @@ func isPullRequestBuild() bool {
 }
 
 func releaseVersion() string {
-	return os.Getenv("CI_COMMIT_TAG")
+	return os.Getenv("BUILD_TAG")
 }
 
 func buildVersion() string {
 	if isReleaseBuild() {
 		return releaseVersion()
 	}
-	return devReleaseVersion
+	return devReleaseVersion + "_" + os.Getenv("BUILD_COMMIT")
 }
 
 func ppaVersion() string {

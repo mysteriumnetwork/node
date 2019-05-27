@@ -234,6 +234,22 @@
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
+  digest = "1:8d12b0e8334cd6770e9b9b8b48c3340b9739b1469c2f448ced070b589adaa475"
+  name = "github.com/google/go-github"
+  packages = ["github"]
+  pruneopts = "UT"
+  revision = "901030391ab7f418a984389fd3f8f65e39e5c823"
+  version = "v25.0.4"
+
+[[projects]]
+  digest = "1:a63cff6b5d8b95638bfe300385d93b2a6d9d687734b863da8e09dc834510a690"
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  pruneopts = "UT"
+  revision = "44c6ddd0a2342c386950e880b658017258da92fc"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
   name = "github.com/hashicorp/golang-lru"
   packages = [
@@ -722,11 +738,12 @@
 
 [[projects]]
   branch = "release-branch.go1.11"
-  digest = "1:09ecf78c699ad10ac1a4bcc6b6c9e4ab723e3b99e9fcbf91bd457dcb1b74876a"
+  digest = "1:b3e8f4f03b4d9629669ecfc8a97551c66d4b9574f26c227e0aed93d4b8790450"
   name = "golang.org/x/net"
   packages = [
     "bpf",
     "context",
+    "context/ctxhttp",
     "html",
     "html/atom",
     "html/charset",
@@ -738,6 +755,17 @@
   ]
   pruneopts = "UT"
   revision = "c39426892332e1bb5ec0a434a079bf82f5d30c54"
+
+[[projects]]
+  branch = "master"
+  digest = "1:8d1c112fb1679fa097e9a9255a786ee47383fa2549a3da71bcb1334a693ebcfe"
+  name = "golang.org/x/oauth2"
+  packages = [
+    ".",
+    "internal",
+  ]
+  pruneopts = "UT"
+  revision = "aaccbc9213b0974828f81aaac109d194880e3014"
 
 [[projects]]
   branch = "master"
@@ -792,6 +820,22 @@
   ]
   pruneopts = "UT"
   revision = "5ec88494b814a16a2a5fa7f2cfb4b94016ac5fac"
+
+[[projects]]
+  digest = "1:6eb6e3b6d9fffb62958cf7f7d88dbbe1dd6839436b0802e194c590667a40412a"
+  name = "google.golang.org/appengine"
+  packages = [
+    "internal",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch",
+  ]
+  pruneopts = "UT"
+  revision = "4c25cacc810c02874000e4f7071286a8e96b2515"
+  version = "v1.6.0"
 
 [[projects]]
   digest = "1:e626376fab8608a972d47e91b3c1bbbddaecaf1d42b82be6dcc52d10a7557893"
@@ -961,6 +1005,7 @@
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
     "github.com/gofrs/uuid",
+    "github.com/google/go-github/github",
     "github.com/huin/goupnp",
     "github.com/huin/goupnp/httpu",
     "github.com/huin/goupnp/ssdp",
@@ -998,6 +1043,7 @@
     "golang.org/x/crypto/curve25519",
     "golang.org/x/net/html",
     "golang.org/x/net/ipv4",
+    "golang.org/x/oauth2",
     "golang.org/x/sys/windows/registry",
     "golang.zx2c4.com/wireguard/wgctrl",
     "golang.zx2c4.com/wireguard/wgctrl/wgtypes",
