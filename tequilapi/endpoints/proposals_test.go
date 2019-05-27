@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
@@ -135,8 +136,10 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	)
 	assert.Equal(t,
 		market.ProposalFilter{
-			AccessPolicyID:     "accessPolicyId",
-			AccessPolicySource: "accessPolicySource",
+			AccessPolicy: market.AccessPolicyFilter{
+				ID:     "accessPolicyId",
+				Source: "accessPolicySource",
+			},
 		},
 		mockProposalProvider.recordedFilter,
 	)
@@ -286,4 +289,4 @@ func (mpp *mockProposalProvider) FindProposals(filter market.ProposalFilter) ([]
 	return mpp.proposals, nil
 }
 
-var _ ProposalProvider = &mockProposalProvider{}
+var _ discovery.ProposalFinder = &mockProposalProvider{}

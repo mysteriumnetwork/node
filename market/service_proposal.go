@@ -31,6 +31,7 @@ const (
 // service proposal can be marked as unsupported by deserializer, because of unknown service, payment method, or contact type
 type ServiceProposal struct {
 	// Per provider unique serial number of service description provided
+	// TODO Not supported yet
 	ID int `json:"id"`
 
 	// A version number is included in the proposal to allow extensions to the proposal format
@@ -56,6 +57,14 @@ type ServiceProposal struct {
 
 	// AccessPolicies represents the access controls for proposal
 	AccessPolicies *[]AccessPolicy `json:"access_policies,omitempty"`
+}
+
+// UniqueID returns unique proposal composite ID
+func (proposal *ServiceProposal) UniqueID() ProposalID {
+	return ProposalID{
+		ProviderID:  proposal.ProviderID,
+		ServiceType: proposal.ServiceType,
+	}
 }
 
 // AccessPolicy represents the access controls for proposal

@@ -26,5 +26,6 @@ type ProposalID struct {
 	ProviderID string
 
 	// Per provider unique serial number of service description provided
+	// TODO Not supported yet
 	ID int
 }

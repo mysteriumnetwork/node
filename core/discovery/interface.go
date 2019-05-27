@@ -28,3 +28,9 @@ type ProposalRegistry interface {
 	PingProposal(proposal market.ServiceProposal, signer identity.Signer) error
 	UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
 }
+
+// ProposalFinder allows to search proposals by specified params
+type ProposalFinder interface {
+	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
+	FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error)
+}
