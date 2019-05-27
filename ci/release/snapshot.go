@@ -18,19 +18,15 @@
 package release
 
 import (
-	"context"
 	"io/ioutil"
-	"os"
 	"path"
-	"path/filepath"
 
 	log "github.com/cihub/seelog"
-	"github.com/google/go-github/github"
 	"github.com/mysteriumnetwork/node/ci/env"
+	"github.com/mysteriumnetwork/node/ci/github"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
-	"golang.org/x/oauth2"
 )
 
 // ReleaseSnapshot releases snapshot build
@@ -58,7 +54,11 @@ func ReleaseSnapshot() error {
 	if err != nil {
 		return err
 	}
-	releaser, err := newGithubReleaser(owner, repo)
+	githubToken, err := env.RequiredEnvStr(env.GithubApiToken)
+	if err != nil {
+		return err
+	}
+	releaser, err := github.NewReleaser(owner, repo, githubToken)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func ReleaseSnapshot() error {
 	if err := storage.DownloadArtifacts(); err != nil {
 		return err
 	}
-	releaseId, err := releaser.createRelease(ver)
+	release, err := releaser.Create(ver)
 	if err != nil {
 		return err
 	}
@@ -77,69 +77,12 @@ func ReleaseSnapshot() error {
 	}
 	for _, f := range artifactFilenames {
 		p := path.Join("build/package", f.Name())
-		err := releaser.uploadAsset(releaseId, p)
+		err := release.UploadAsset(p)
 		if err != nil {
 			return errors.Wrap(err, "could not upload artifact "+p)
 		}
 	}
 
 	log.Info("artifacts uploaded successfully")
-	return nil
-}
-
-type githubReleaser struct {
-	client            *github.Client
-	owner, repository string
-}
-
-func newGithubReleaser(owner, repo string) (*githubReleaser, error) {
-	token, err := env.RequiredEnvStr(env.GithubApiToken)
-	if err != nil {
-		return nil, err
-	}
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token},
-	)
-	oauthClient := oauth2.NewClient(context.Background(), ts)
-	return &githubReleaser{
-		client:     github.NewClient(oauthClient),
-		owner:      owner,
-		repository: repo,
-	}, nil
-}
-
-func (r *githubReleaser) createRelease(name string) (int64, error) {
-	release, _, err := r.client.Repositories.CreateRelease(context.Background(), r.owner, r.repository, &github.RepositoryRelease{Name: github.String(name), TagName: github.String(name)})
-	if err != nil {
-		return 0, err
-	}
-	log.Info("created release ", *release.ID)
-	return *release.ID, nil
-}
-
-func (r *githubReleaser) uploadAssets(releaseId int64, paths []string) error {
-	for _, p := range paths {
-		err := r.uploadAsset(releaseId, p)
-		if err != nil {
-			return err
-		}
-	}
-	log.Info("artifacts uploaded successfully")
-	return nil
-}
-
-func (r *githubReleaser) uploadAsset(releaseId int64, path string) error {
-	file, err := os.OpenFile(path, os.O_RDONLY, 0755)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	asset, _, err := r.client.Repositories.UploadReleaseAsset(context.Background(), r.owner, r.repository, releaseId, &github.UploadOptions{
-		Name: filepath.Base(file.Name()),
-	}, file)
-	if err != nil {
-		return err
-	}
-	log.Info("uploaded asset ", *asset.Name)
 	return nil
 }
