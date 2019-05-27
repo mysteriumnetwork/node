@@ -27,7 +27,6 @@ import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/ip"
-	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
@@ -296,12 +295,6 @@ func (manager *connectionManager) startConnection(
 	err = manager.waitForConnectedState(stateChannel, sessionDTO.ID)
 	if err != nil {
 		return err
-	}
-
-	if !params.DisableKillSwitch {
-		// TODO: Implement fw based kill switch for respective OS
-		// we may need to wait for tun device setup to be finished
-		firewall.NewKillSwitch().Enable()
 	}
 
 	go manager.consumeConnectionStates(stateChannel)
