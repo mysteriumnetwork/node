@@ -23,6 +23,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mysteriumnetwork/node/firewall"
+
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -493,6 +495,18 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.NetworkDefinition = network
+	trustedURLs := []string{
+		network.EtherClientRPC,
+		network.MysteriumAPIAddress,
+		network.QualityOracle,
+	}
+	for _, url := range trustedURLs {
+		_, err = firewall.AllowURLAccess(url)
+		if err != nil {
+			return err
+		}
+	}
+
 	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
@@ -557,6 +571,10 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
+	_, err = firewall.AllowURLAccess(options.IPDetectorURL)
+	if err != nil {
+		return err
+	}
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
 	var resolver location.Resolver

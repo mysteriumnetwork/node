@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/firewall"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
@@ -290,6 +292,11 @@ func (manager *connectionManager) startConnection(
 		return nil
 	})
 
+	err = manager.setupTrafficBlock(params.DisableKillSwitch)
+	if err != nil {
+		return err
+	}
+
 	//consume statistics right after start - openvpn3 will publish them even before connected state
 	go manager.consumeStats(statisticsChannel)
 	err = manager.waitForConnectedState(stateChannel, sessionDTO.ID)
@@ -408,6 +415,22 @@ func (manager *connectionManager) onStateChanged(state State) {
 	case Reconnecting:
 		manager.setStatus(statusReconnecting())
 	}
+}
+
+func (manager *connectionManager) setupTrafficBlock(disableTrafficBlocking bool) error {
+	if disableTrafficBlocking {
+		return nil
+	}
+
+	removeRule, err := firewall.BlockNonTunnelTraffic(firewall.Session)
+	if err != nil {
+		return err
+	}
+	manager.cleanup = append(manager.cleanup, func() error {
+		removeRule()
+		return nil
+	})
+	return nil
 }
 
 func logDisconnectError(err error) {

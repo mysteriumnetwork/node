@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mysteriumnetwork/node/firewall"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -42,8 +44,9 @@ type Connection struct {
 	stateChannel      connection.StateChannel
 	statisticsChannel connection.StatisticsChannel
 
-	config             wg.ServiceConfig
-	connectionEndpoint wg.ConnectionEndpoint
+	config              wg.ServiceConfig
+	connectionEndpoint  wg.ConnectionEndpoint
+	removeAllowedIPRule func()
 }
 
 // Start establish wireguard connection to the service provider.
@@ -54,6 +57,12 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	}
 	c.config.Provider = config.Provider
 	c.config.Consumer.IPAddress = config.Consumer.IPAddress
+	// TODO its funny that remote IP of wireguard provider is called config.Consumer.IPAddress
+	removeAllowedIPRule, err := firewall.AllowIPAccess(config.Consumer.IPAddress.IP.String())
+	if err != nil {
+		return errors.Wrap(err, "failed to add firewall exception for wireguard remote IP")
+	}
+	c.removeAllowedIPRule = removeAllowedIPRule
 
 	// We do not need port mapping for consumer, since it initiates the session
 	fakePortMapper := func(port int) (releasePortMapping func()) {
@@ -63,6 +72,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	resourceAllocator := connectionResourceAllocator()
 	c.connectionEndpoint, err = endpoint.NewConnectionEndpoint(nil, resourceAllocator, fakePortMapper, 0)
 	if err != nil {
+		removeAllowedIPRule()
 		return errors.Wrap(err, "failed to create new connection endpoint")
 	}
 
@@ -72,6 +82,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	if err := c.connectionEndpoint.Start(&c.config); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
+		removeAllowedIPRule()
 		return errors.Wrap(err, "failed to start connection endpoint")
 	}
 
@@ -84,18 +95,21 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
+		removeAllowedIPRule()
 		return errors.Wrap(err, "failed to add peer to the connection endpoint")
 	}
 
 	if err := c.connectionEndpoint.ConfigureRoutes(c.config.Provider.Endpoint.IP); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
+		removeAllowedIPRule()
 		return errors.Wrap(err, "failed to configure routes for connection endpoint")
 	}
 
 	if err := c.waitHandshake(); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
+		removeAllowedIPRule()
 		return errors.Wrap(err, "failed while waiting for a peer handshake")
 	}
 
@@ -130,7 +144,7 @@ func (c *Connection) Stop() {
 	if err := c.connectionEndpoint.Stop(); err != nil {
 		log.Error(logPrefix, "Failed to close wireguard connection: ", err)
 	}
-
+	c.removeAllowedIPRule()
 	c.stateChannel <- connection.NotConnected
 	c.connection.Done()
 	close(c.stopChannel)
