@@ -26,23 +26,24 @@ import (
 
 // MakeBucket creates a bucket in s3 for the build (env.BuildNumber)
 func MakeBucket() error {
-	if !env.IsRelease() {
-		return nil
-	}
-	url, err := bucketUrlForBuild()
-	if err != nil {
-		return err
-	}
-	return sh.RunV("bin/s3", "mb", url)
+	return env.IfRelease(func() error {
+		url, err := bucketUrlForBuild()
+		if err != nil {
+			return err
+		}
+		return sh.RunV("bin/s3", "mb", url)
+	})
 }
 
 // RemoveBucket removes bucket
 func RemoveBucket() error {
-	url, err := bucketUrlForBuild()
-	if err != nil {
-		return err
-	}
-	return sh.RunV("bin/s3", "rb", "--force", url)
+	return env.IfRelease(func() error {
+		url, err := bucketUrlForBuild()
+		if err != nil {
+			return err
+		}
+		return sh.RunV("bin/s3", "rb", "--force", url)
+	})
 }
 
 // UploadArtifacts uploads all artifacts to s3 build bucket

@@ -68,44 +68,33 @@ const (
 
 // GenerateEnvFile for sourcing in other stages
 func GenerateEnvFile() error {
+	isTag := os.Getenv("BUILD_TAG") != ""
+	isSnapshot := os.Getenv("BUILD_BRANCH") == "master" && !isTag
+	isPr := !isSnapshot && !isTag
+	buildVersion := func() string {
+		if isTag {
+			return os.Getenv("BUILD_TAG")
+		}
+		return devReleaseVersion + "-" + os.Getenv("BUILD_COMMIT")
+	}()
+	ppaVersion := func() string {
+		if isTag {
+			return os.Getenv("BUILD_TAG")
+		}
+		return ppaDevReleaseVersion
+	}()
 	vars := []envVar{
-		{TagBuild, strconv.FormatBool(isTagBuild())},
-		{SnapshotBuild, strconv.FormatBool(isSnapshotBuild())},
-		{PrBuild, strconv.FormatBool(isPullRequestBuild())},
-		{BuildVersion, buildVersion()},
-		{PpaVersion, ppaVersion()},
+		{TagBuild, strconv.FormatBool(isTag)},
+		{SnapshotBuild, strconv.FormatBool(isSnapshot)},
+		{PrBuild, strconv.FormatBool(isPr)},
+		{BuildVersion, buildVersion},
+		{PpaVersion, ppaVersion},
 		{BuildNumber, os.Getenv(string(BuildNumber))},
 		{GithubOwner, os.Getenv(string(GithubOwner))},
 		{GithubRepository, os.Getenv(string(GithubRepository))},
 		{GithubSnapshotRepository, os.Getenv(string(GithubSnapshotRepository))},
 	}
 	return writeEnvVars(vars)
-}
-
-func isTagBuild() bool {
-	return os.Getenv("BUILD_TAG") != ""
-}
-
-func isSnapshotBuild() bool {
-	return os.Getenv("BUILD_BRANCH") == "master" && !isTagBuild()
-}
-
-func isPullRequestBuild() bool {
-	return !isSnapshotBuild() && !isTagBuild()
-}
-
-func buildVersion() string {
-	if isTagBuild() {
-		return os.Getenv("BUILD_TAG")
-	}
-	return devReleaseVersion + "-" + os.Getenv("BUILD_COMMIT")
-}
-
-func ppaVersion() string {
-	if isTagBuild() {
-		return os.Getenv("BUILD_TAG")
-	}
-	return ppaDevReleaseVersion
 }
 
 func writeEnvVars(vars []envVar) error {

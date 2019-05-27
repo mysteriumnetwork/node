@@ -17,19 +17,30 @@
 
 package env
 
-import "github.com/cihub/seelog"
+import log "github.com/cihub/seelog"
 
-// IsRelease indicates if it is any kind of release (snapshot/tag)
-func IsRelease() bool {
-	isPullRequest, _ := RequiredEnvBool(PrBuild)
-	return isPullRequest
-}
-
-// IfRelease performs func passed as an arg if `IsRelease() == true`
+// IfRelease performs func passed as an arg if current build is any kind of release
 func IfRelease(do func() error) error {
-	if IsRelease() {
+	isRelease, err := isRelease()
+	if err != nil {
+		return err
+	}
+	if isRelease {
+		log.Info("release build detected, performing conditional action")
 		return do()
 	}
-	seelog.Info("Not a release build, skipping action")
+	log.Info("not a release build, skipping conditional action")
 	return nil
+}
+
+func isRelease() (bool, error) {
+	isTag, err := RequiredEnvBool(TagBuild)
+	if err != nil {
+		return false, err
+	}
+	isSnapshot, err := RequiredEnvBool(SnapshotBuild)
+	if err != nil {
+		return false, err
+	}
+	return isTag || isSnapshot, nil
 }
