@@ -50,7 +50,7 @@ func ReleaseSnapshot() error {
 	if err != nil {
 		return err
 	}
-	repo, err := env.RequiredEnvStr(env.GithubDevBuildRepository)
+	repo, err := env.RequiredEnvStr(env.GithubSnapshotRepository)
 	if err != nil {
 		return err
 	}

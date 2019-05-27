@@ -59,8 +59,8 @@ const (
 	// GithubRepository stores github repository name
 	GithubRepository = BuildVar("GITHUB_REPO")
 
-	// GithubDevBuildRepository stores github repository name for dev build
-	GithubDevBuildRepository = BuildVar("GITHUB_REPO_DEV_BUILD")
+	// GithubSnapshotRepository stores github repository name for snapshot builds
+	GithubSnapshotRepository = BuildVar("GITHUB_REPO_SNAPSHOTS")
 
 	// GithubApiToken is used for accessing github API
 	GithubApiToken = BuildVar("GITHUB_API_TOKEN")
@@ -77,7 +77,7 @@ func GenerateEnvFile() error {
 		{BuildNumber, os.Getenv(string(BuildNumber))},
 		{GithubOwner, os.Getenv(string(GithubOwner))},
 		{GithubRepository, os.Getenv(string(GithubRepository))},
-		{GithubDevBuildRepository, os.Getenv(string(GithubDevBuildRepository))},
+		{GithubSnapshotRepository, os.Getenv(string(GithubSnapshotRepository))},
 	}
 	return writeEnvVars(vars)
 }
