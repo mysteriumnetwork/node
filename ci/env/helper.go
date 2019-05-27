@@ -17,8 +17,19 @@
 
 package env
 
-// ShouldReleaseArtifacts indicates if build artifacts should be uploaded/released
-func ShouldReleaseArtifacts() bool {
+import "github.com/cihub/seelog"
+
+// IsRelease indicates if it is any kind of release (snapshot/tag)
+func IsRelease() bool {
 	isPullRequest, _ := RequiredEnvBool(PrBuild)
 	return isPullRequest
+}
+
+// IfRelease performs func passed as an arg if `IsRelease() == true`
+func IfRelease(do func() error) error {
+	if IsRelease() {
+		return do()
+	}
+	seelog.Info("Not a release build, skipping action")
+	return nil
 }

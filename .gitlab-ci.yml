@@ -79,7 +79,7 @@ test-e2e:
   stage: test
   tags: [go]
   script:
-    - go run mage.go -v teste2e
+    - go run mage.go -v TestE2E
 
 create-bucket:
   stage: pre-release
@@ -149,5 +149,4 @@ package:swagger-redoc-docker:
 release:snapshot:
   stage: release
   tags: [go]
-  script:
-    - echo $BUILD_VERSION
+  script: go run mage.go -v ReleaseSnapshot

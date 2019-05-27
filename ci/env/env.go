@@ -35,11 +35,11 @@ type envVar struct {
 type BuildVar string
 
 const (
-	// ReleaseBuild indicates release build
-	ReleaseBuild = BuildVar("RELEASE_BUILD")
+	// TagBuild indicates release build
+	TagBuild = BuildVar("RELEASE_BUILD")
 
-	// MasterBuild indicates master branch (non-release) build
-	MasterBuild = BuildVar("MASTER_BUILD")
+	// SnapshotBuild indicates snapshot release build (master branch)
+	SnapshotBuild = BuildVar("SNAPSHOT_BUILD")
 
 	// PrBuild indicates pull-request build
 	PrBuild = BuildVar("PR_BUILD")
@@ -69,8 +69,8 @@ const (
 // GenerateEnvFile for sourcing in other stages
 func GenerateEnvFile() error {
 	vars := []envVar{
-		{ReleaseBuild, strconv.FormatBool(isReleaseBuild())},
-		{MasterBuild, strconv.FormatBool(isMasterBuild())},
+		{TagBuild, strconv.FormatBool(isTagBuild())},
+		{SnapshotBuild, strconv.FormatBool(isSnapshotBuild())},
 		{PrBuild, strconv.FormatBool(isPullRequestBuild())},
 		{BuildVersion, buildVersion()},
 		{PpaVersion, ppaVersion()},
@@ -82,32 +82,28 @@ func GenerateEnvFile() error {
 	return writeEnvVars(vars)
 }
 
-func isReleaseBuild() bool {
-	return releaseVersion() != ""
+func isTagBuild() bool {
+	return os.Getenv("BUILD_TAG") != ""
 }
 
-func isMasterBuild() bool {
-	return os.Getenv("BUILD_BRANCH") == "master" && !isReleaseBuild()
+func isSnapshotBuild() bool {
+	return os.Getenv("BUILD_BRANCH") == "master" && !isTagBuild()
 }
 
 func isPullRequestBuild() bool {
-	return !isMasterBuild() && !isReleaseBuild()
-}
-
-func releaseVersion() string {
-	return os.Getenv("BUILD_TAG")
+	return !isSnapshotBuild() && !isTagBuild()
 }
 
 func buildVersion() string {
-	if isReleaseBuild() {
-		return releaseVersion()
+	if isTagBuild() {
+		return os.Getenv("BUILD_TAG")
 	}
-	return devReleaseVersion + "_" + os.Getenv("BUILD_COMMIT")
+	return devReleaseVersion + "-" + os.Getenv("BUILD_COMMIT")
 }
 
 func ppaVersion() string {
-	if isReleaseBuild() {
-		return releaseVersion()
+	if isTagBuild() {
+		return os.Getenv("BUILD_TAG")
 	}
 	return ppaDevReleaseVersion
 }

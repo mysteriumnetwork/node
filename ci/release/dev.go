@@ -33,9 +33,19 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// ReleaseDev releases dev build
-func ReleaseDev() error {
+// ReleaseSnapshot releases snapshot build
+func ReleaseSnapshot() error {
 	logconfig.Bootstrap()
+
+	//snapshot, err := env.RequiredEnvBool(env.SnapshotBuild)
+	//if err != nil {
+	//	return err
+	//}
+	//if !snapshot {
+	//	log.Info("Not a snapshot build, skipping...")
+	//	return nil
+	//}
+
 	owner, err := env.RequiredEnvStr(env.GithubOwner)
 	if err != nil {
 		return err

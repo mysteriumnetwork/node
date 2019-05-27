@@ -26,7 +26,7 @@ import (
 
 // MakeBucket creates a bucket in s3 for the build (env.BuildNumber)
 func MakeBucket() error {
-	if !env.ShouldReleaseArtifacts() {
+	if !env.IsRelease() {
 		return nil
 	}
 	url, err := bucketUrlForBuild()

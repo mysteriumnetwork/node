@@ -35,10 +35,7 @@ func PackageLinuxAmd64() error {
 	if err := packageStandalone("build/myst/myst_linux_amd64", "linux", "amd64"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadArtifacts()
-	}
-	return nil
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 // PackageLinuxArm builds and stores linux arm package
@@ -47,10 +44,7 @@ func PackageLinuxArm() error {
 	if err := packageStandalone("build/myst/myst_linux_arm", "linux", "arm"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadArtifacts()
-	}
-	return nil
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 // PackageLinuxDebianAmd64 builds and stores debian amd64 package
@@ -65,10 +59,7 @@ func PackageLinuxDebianAmd64() error {
 	if err := packageDebian("build/myst/myst", "amd64"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadArtifacts()
-	}
-	return nil
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 // PackageLinuxDebianArm builds and stores debian arm package
@@ -83,10 +74,7 @@ func PackageLinuxDebianArm() error {
 	if err := packageDebian("build/myst/myst_linux_arm", "armhf"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadArtifacts()
-	}
-	return nil
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 // PackageLinuxRaspberryImage builds and stores raspberry image
@@ -101,13 +89,12 @@ func PackageLinuxRaspberryImage() error {
 	if err := packageDebian("build/myst/myst_linux_arm", "armhf"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
+	return env.IfRelease(func() error {
 		if err := sh.RunV("bin/package_raspberry"); err != nil {
 			return err
 		}
 		return storage.UploadArtifacts()
-	}
-	return nil
+	})
 }
 
 // PackageOsxAmd64 builds and stores OSX amd64 package
@@ -116,10 +103,7 @@ func PackageOsxAmd64() error {
 	if err := packageStandalone("build/myst/myst_darwin_amd64", "darwin", "amd64"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadArtifacts()
-	}
-	return nil
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 // PackageWindowsAmd64 builds and stores Windows amd64 package
@@ -128,10 +112,7 @@ func PackageWindowsAmd64() error {
 	if err := packageStandalone("build/myst/myst_windows_amd64.exe", "windows", "amd64"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadArtifacts()
-	}
-	return nil
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 // PackageIOS builds and stores iOS package
@@ -140,10 +121,7 @@ func PackageIOS() error {
 	if err := sh.RunV("bin/package_ios", "amd64"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadArtifacts()
-	}
-	return nil
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 // PackageAndroid builds and stores Android package
@@ -152,10 +130,7 @@ func PackageAndroid() error {
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadArtifacts()
-	}
-	return nil
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 // PackageDockerAlpine builds and stores docker alpine image
@@ -167,10 +142,7 @@ func PackageDockerAlpine() error {
 	if err := saveDockerImage("myst:alpine", "build/docker-images/myst_alpine.tgz"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadDockerImages()
-	}
-	return nil
+	return env.IfRelease(storage.UploadDockerImages)
 }
 
 // PackageDockerUbuntu builds and stores docker ubuntu image
@@ -186,10 +158,7 @@ func PackageDockerUbuntu() error {
 	if err := saveDockerImage("myst:ubuntu", "build/docker-images/myst_ubuntu.tgz"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
-		return storage.UploadDockerImages()
-	}
-	return nil
+	return env.IfRelease(storage.UploadDockerImages)
 }
 
 // PackageDockerSwaggerRedoc builds and stores docker swagger redoc image
@@ -211,15 +180,15 @@ func PackageDockerSwaggerRedoc() error {
 	if err := saveDockerImage("tequilapi:"+ver, "build/docker-images/tequilapi_redoc.tgz"); err != nil {
 		return err
 	}
-	if env.ShouldReleaseArtifacts() {
+	return env.IfRelease(func() error {
 		if err := storage.UploadSingleArtifact("tequilapi.json"); err != nil {
 			return err
 		}
 		if err := storage.UploadDockerImages(); err != nil {
 			return err
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func goGet(pkg string) error {
