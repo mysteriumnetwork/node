@@ -4,6 +4,7 @@ stages:
   - pre-release
   - build
   - release
+  - post-release
 
 variables:
   BUILD_COMMIT: $CI_COMMIT_SHORT_SHA
@@ -150,3 +151,15 @@ release:snapshot:
   stage: release
   tags: [go]
   script: go run mage.go -v ReleaseSnapshot
+
+release:goreport:
+  stage: release
+  tags: [go]
+  script: bin/release_goreport
+  only:
+    - master
+
+remove-bucket:
+  stage: post-release
+  tags: [go]
+  script: go run mage.go -v RemoveBucket

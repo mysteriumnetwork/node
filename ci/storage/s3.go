@@ -36,6 +36,15 @@ func MakeBucket() error {
 	return sh.RunV("bin/s3", "mb", url)
 }
 
+// RemoveBucket removes bucket
+func RemoveBucket() error {
+	url, err := bucketUrlForBuild()
+	if err != nil {
+		return err
+	}
+	return sh.RunV("bin/s3", "rb", "--force", url)
+}
+
 // UploadArtifacts uploads all artifacts to s3 build bucket
 func UploadArtifacts() error {
 	url, err := bucketUrlForBuild()
