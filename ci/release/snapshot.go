@@ -32,6 +32,7 @@ import (
 // ReleaseSnapshot releases snapshot build
 func ReleaseSnapshot() error {
 	logconfig.Bootstrap()
+	defer log.Flush()
 
 	snapshot, err := env.RequiredEnvBool(env.SnapshotBuild)
 	if err != nil {

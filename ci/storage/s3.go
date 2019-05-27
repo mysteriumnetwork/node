@@ -21,11 +21,14 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/node/ci/env"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
 )
 
 // MakeBucket creates a bucket in s3 for the build (env.BuildNumber)
 func MakeBucket() error {
+	logconfig.Bootstrap()
+	defer log.Flush()
 	return env.IfRelease(func() error {
 		url, err := bucketUrlForBuild()
 		if err != nil {
@@ -37,6 +40,8 @@ func MakeBucket() error {
 
 // RemoveBucket removes bucket
 func RemoveBucket() error {
+	logconfig.Bootstrap()
+	defer log.Flush()
 	return env.IfRelease(func() error {
 		url, err := bucketUrlForBuild()
 		if err != nil {
