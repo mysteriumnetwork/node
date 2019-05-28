@@ -21,9 +21,7 @@ FROM alpine:3.6
 RUN apk add --update --no-cache iptables ca-certificates openvpn bash sudo \
     && rm -rf /var/cache/apk/*
 
-ARG PREPARE_ENV=bin/helpers/prepare-run-env.sh
-
-COPY ${PREPARE_ENV} /usr/local/bin/prepare-run-env.sh
+COPY bin/helpers/prepare-run-env.sh /usr/local/bin/prepare-run-env.sh
 COPY bin/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	"github.com/mysteriumnetwork/node/market"
@@ -93,6 +94,7 @@ func NewService(
 
 // Start launches discovery service
 func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
+	log.Info(logPrefix, "starting discovery..")
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 
@@ -215,6 +217,7 @@ func (d *Discovery) checkRegistration() {
 	// check if node's identity is registered
 	registered, err := d.identityRegistry.IsRegistered(d.ownIdentity)
 	if err != nil {
+		log.Error(logPrefix, "checking identity registration failed: ", err)
 		d.changeStatus(IdentityRegisterFailed)
 		return
 	}
@@ -223,6 +226,7 @@ func (d *Discovery) checkRegistration() {
 		// if not registered - wait indefinitely for identity registration event
 		registrationData, err := d.identityRegistration.ProvideRegistrationData(d.ownIdentity)
 		if err != nil {
+			log.Error(logPrefix, "fetching identity registration data failed: ", err)
 			d.changeStatus(IdentityRegisterFailed)
 			return
 		}
