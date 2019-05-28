@@ -74,13 +74,12 @@ checks:
 test:
   stage: test
   tags: [go]
-  script: go run mage.go test
+  script: go run mage.go Test
 
 test-e2e:
   stage: test
   tags: [go]
-  script:
-    - go run mage.go -v TestE2E
+  script: go run mage.go -v TestE2E
 
 create-bucket:
   stage: pre-release
@@ -163,3 +162,4 @@ remove-bucket:
   stage: post-release
   tags: [go]
   script: go run mage.go -v RemoveBucket
+  when: always
