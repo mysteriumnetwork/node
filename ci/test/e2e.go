@@ -43,6 +43,7 @@ type runner struct {
 // TestE2E runs end-to-end tests
 func TestE2E() error {
 	logconfig.Bootstrap()
+	defer log.Flush()
 	r := newRunner()
 	defer r.cleanup()
 

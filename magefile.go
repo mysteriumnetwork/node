@@ -22,4 +22,12 @@ package main
 import (
 	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/test"
+	// mage:import
+	_ "github.com/mysteriumnetwork/node/ci/env"
+	// mage:import
+	_ "github.com/mysteriumnetwork/node/ci/packages"
+	// mage:import
+	_ "github.com/mysteriumnetwork/node/ci/release"
+	// mage:import
+	_ "github.com/mysteriumnetwork/node/ci/storage"
 )

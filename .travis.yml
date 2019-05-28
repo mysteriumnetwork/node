@@ -51,42 +51,6 @@ jobs:
       name: "Creating S3 bucket"
       if: (type != pull_request AND branch = master AND tag IS blank) OR tag IS present
 
-    # Test stage
-    - stage: test
-      script: bin/test
-      name: "Unit tests"
-
-    - script:
-      - bin/package_ios amd64
-      name: "iOS packages"
-      if: type = pull_request
-
-    - script:
-      - bin/package_android amd64
-      name: "Android packages"
-      if: type = pull_request
-
-    - script: bin/test_e2e
-      name: "End-to-end tests"
-      if: type = pull_request
-
-    - script: bin/builder_run bin/check_golint
-      name: "golint check"
-
-    - script: bin/builder_run bin/check_goimports
-      name: "goimports check"
-
-    - script: bin/check_license
-      name: "license check"
-
-    - script: bin/check_govet
-      name: "govet check"
-
-    - script:
-      - go get github.com/go-swagger/go-swagger/cmd/swagger/
-      - bin/check_swagger
-      name: "swagger check"
-
     # Build artifacts
     - stage: build
       script:
@@ -152,18 +116,6 @@ jobs:
       - docker save tequilapi:${BUILD_VERSION} | gzip > tequilapi_redoc.tgz
       - bin/s3 cp tequilapi_redoc.tgz s3://travis-$TRAVIS_BUILD_NUMBER/docker-images/
       name: "Swagger docs redoc docker image"
-
-    # Development bleeding-edge release (on master commits only)
-    - stage: release-dev
-      script:
-        - git tag -f $BUILD_VERSION
-        - git remote add gh https://${TRAVIS_REPO_SLUG%/*}:${GIT_RELEASES_API_KEY}@github.com/${TRAVIS_REPO_SLUG}.git
-        - git push -f gh $BUILD_VERSION
-      name: "Push dev git tag"
-
-    - script:
-      - bin/release_goreport
-      name: "Update Go Report Card"
 
     # Official release (on tags only)
     - stage: release
