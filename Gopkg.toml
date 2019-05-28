@@ -137,3 +137,7 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
+
+[[constraint]]
+  name = "gopkg.in/src-d/go-git.v4"
+  version = "4.11.0"
