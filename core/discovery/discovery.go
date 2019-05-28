@@ -45,6 +45,13 @@ const (
 
 const logPrefix = "[discovery] "
 
+// ProposalRegistry defines methods for proposal lifecycle - registration, keeping up to date, removal
+type ProposalRegistry interface {
+	RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
+	PingProposal(proposal market.ServiceProposal, signer identity.Signer) error
+	UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
+}
+
 // Discovery structure holds discovery service state
 type Discovery struct {
 	identityRegistry     identity_registry.IdentityRegistry
