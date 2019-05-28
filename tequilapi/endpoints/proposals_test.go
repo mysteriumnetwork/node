@@ -90,7 +90,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
-	assert.Equal(t, &proposalsFilter{ProviderID: "0xProviderId"}, mockProposalProvider.recordedFilter)
+	assert.Equal(t, &proposalsFilter{providerID: "0xProviderId"}, mockProposalProvider.recordedFilter)
 }
 
 func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
@@ -136,8 +136,8 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	)
 	assert.Equal(t,
 		&proposalsFilter{
-			AccessPolicyID:     "accessPolicyId",
-			AccessPolicySource: "accessPolicySource",
+			accessPolicyID:     "accessPolicyId",
+			accessPolicySource: "accessPolicySource",
 		},
 		mockProposalProvider.recordedFilter,
 	)

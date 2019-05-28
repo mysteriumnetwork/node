@@ -165,10 +165,10 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
 
 	proposals, err := pe.proposalProvider.FindProposals(&proposalsFilter{
-		ProviderID:         req.URL.Query().Get("providerId"),
-		ServiceType:        req.URL.Query().Get("serviceType"),
-		AccessPolicyID:     req.URL.Query().Get("accessPolicyId"),
-		AccessPolicySource: req.URL.Query().Get("accessPolicySource"),
+		providerID:         req.URL.Query().Get("providerId"),
+		serviceType:        req.URL.Query().Get("serviceType"),
+		accessPolicyID:     req.URL.Query().Get("accessPolicyId"),
+		accessPolicySource: req.URL.Query().Get("accessPolicySource"),
 	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)

@@ -37,8 +37,8 @@ import (
 var (
 	connectionSessionMock = session.History{
 		SessionID:       node_session.ID("SessionID"),
-		ProviderID:      identity.FromAddress("ProviderID"),
-		ServiceType:     "ServiceType",
+		ProviderID:      identity.FromAddress("providerID"),
+		ServiceType:     "serviceType",
 		ProviderCountry: "ProviderCountry",
 		Started:         time.Now(),
 		Updated:         time.Now(),

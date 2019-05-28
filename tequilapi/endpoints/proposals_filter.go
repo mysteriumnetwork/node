@@ -25,27 +25,27 @@ import (
 
 // proposalsFilter defines all flags for proposal filtering in discovery of Mysterium Network
 type proposalsFilter struct {
-	ProviderID         string
-	ServiceType        string
-	LocationType       string
-	AccessPolicyID     string
-	AccessPolicySource string
+	providerID         string
+	serviceType        string
+	locationType       string
+	accessPolicyID     string
+	accessPolicySource string
 }
 
 // Matches return flag if filter matches given proposal
 func (filter *proposalsFilter) Matches(proposal market.ServiceProposal) bool {
 	conditions := make([]reducer.AndCondition, 0)
-	if filter.ProviderID != "" {
-		conditions = append(conditions, reducer.Equal(reducer.ProviderID, filter.ProviderID))
+	if filter.providerID != "" {
+		conditions = append(conditions, reducer.Equal(reducer.ProviderID, filter.providerID))
 	}
-	if filter.ServiceType != "" {
-		conditions = append(conditions, reducer.Equal(reducer.ServiceType, filter.ServiceType))
+	if filter.serviceType != "" {
+		conditions = append(conditions, reducer.Equal(reducer.ServiceType, filter.serviceType))
 	}
-	if filter.LocationType != "" {
-		conditions = append(conditions, reducer.Equal(reducer.LocationType, filter.LocationType))
+	if filter.locationType != "" {
+		conditions = append(conditions, reducer.Equal(reducer.LocationType, filter.locationType))
 	}
-	if filter.AccessPolicyID != "" || filter.AccessPolicySource != "" {
-		conditions = append(conditions, reducer.AccessPolicy(filter.AccessPolicyID, filter.AccessPolicySource))
+	if filter.accessPolicyID != "" || filter.accessPolicySource != "" {
+		conditions = append(conditions, reducer.AccessPolicy(filter.accessPolicyID, filter.accessPolicySource))
 	}
 	if len(conditions) > 0 {
 		return reducer.And(conditions...)(proposal)
@@ -57,9 +57,9 @@ func (filter *proposalsFilter) Matches(proposal market.ServiceProposal) bool {
 // ToAPIQuery serialises filter to query of Mysterium API
 func (filter *proposalsFilter) ToAPIQuery() mysterium.ProposalsQuery {
 	return mysterium.ProposalsQuery{
-		NodeKey:            filter.ProviderID,
-		ServiceType:        filter.ServiceType,
-		AccessPolicyID:     filter.AccessPolicyID,
-		AccessPolicySource: filter.AccessPolicySource,
+		NodeKey:            filter.providerID,
+		ServiceType:        filter.serviceType,
+		AccessPolicyID:     filter.accessPolicyID,
+		AccessPolicySource: filter.accessPolicySource,
 	}
 }

@@ -78,7 +78,7 @@ func Test_ProposalFilter_FiltersAll(t *testing.T) {
 
 func Test_ProposalFilter_FiltersByProviderID(t *testing.T) {
 	filter := &proposalsFilter{
-		ProviderID: provider1,
+		providerID: provider1,
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
@@ -88,7 +88,7 @@ func Test_ProposalFilter_FiltersByProviderID(t *testing.T) {
 
 func Test_ProposalFilter_FiltersByServiceType(t *testing.T) {
 	filter := &proposalsFilter{
-		ServiceType: serviceTypeNoop,
+		serviceType: serviceTypeNoop,
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
@@ -96,7 +96,7 @@ func Test_ProposalFilter_FiltersByServiceType(t *testing.T) {
 	assert.False(t, filter.Matches(proposalProvider2Streaming))
 
 	filter = &proposalsFilter{
-		ServiceType: serviceTypeStreaming,
+		serviceType: serviceTypeStreaming,
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
@@ -106,7 +106,7 @@ func Test_ProposalFilter_FiltersByServiceType(t *testing.T) {
 
 func Test_ProposalFilter_FiltersByLocationType(t *testing.T) {
 	filter := &proposalsFilter{
-		LocationType: "datacenter",
+		locationType: "datacenter",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
@@ -114,7 +114,7 @@ func Test_ProposalFilter_FiltersByLocationType(t *testing.T) {
 	assert.False(t, filter.Matches(proposalProvider2Streaming))
 
 	filter = &proposalsFilter{
-		LocationType: "residential",
+		locationType: "residential",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
@@ -124,7 +124,7 @@ func Test_ProposalFilter_FiltersByLocationType(t *testing.T) {
 
 func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 	filter := &proposalsFilter{
-		AccessPolicyID: "whitelist",
+		accessPolicyID: "whitelist",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.True(t, filter.Matches(proposalProvider1Streaming))
@@ -132,7 +132,7 @@ func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 	assert.True(t, filter.Matches(proposalProvider2Streaming))
 
 	filter = &proposalsFilter{
-		AccessPolicyID: "blacklist",
+		accessPolicyID: "blacklist",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))
@@ -140,8 +140,8 @@ func Test_ProposalFilter_FiltersByAccessID(t *testing.T) {
 	assert.True(t, filter.Matches(proposalProvider2Streaming))
 
 	filter = &proposalsFilter{
-		AccessPolicyID:     "whitelist",
-		AccessPolicySource: "unknown.txt",
+		accessPolicyID:     "whitelist",
+		accessPolicySource: "unknown.txt",
 	}
 	assert.False(t, filter.Matches(proposalEmpty))
 	assert.False(t, filter.Matches(proposalProvider1Streaming))

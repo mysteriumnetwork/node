@@ -75,7 +75,7 @@ func AccessPolicy(id, source string) func(market.ServiceProposal) bool {
 		for _, policy := range *proposal.AccessPolicies {
 			match = (id == "" || policy.ID == id) &&
 				(source == "" || policy.Source == source)
-			if match == true {
+			if match {
 				break
 			}
 		}

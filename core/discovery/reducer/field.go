@@ -18,8 +18,6 @@
 package reducer
 
 import (
-	"fmt"
-
 	"github.com/mysteriumnetwork/node/market"
 )
 
@@ -73,8 +71,6 @@ func Empty(field FieldSelector) func(market.ServiceProposal) bool {
 		case []byte:
 		case []bool:
 			return len(valueTyped) == 0
-		default:
-			panic(fmt.Sprintf("unsuported field type: %s", valueTyped))
 		}
 		return false
 	})
