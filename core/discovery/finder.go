@@ -22,6 +22,9 @@ import (
 	"github.com/mysteriumnetwork/node/market/mysterium"
 )
 
+// ProposalReducer proposal match function
+type ProposalReducer func(proposal market.ServiceProposal) bool
+
 // ProposalFilter defines interface with proposal match function
 type ProposalFilter interface {
 	Matches(proposal market.ServiceProposal) bool

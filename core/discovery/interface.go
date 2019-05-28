@@ -28,11 +28,3 @@ type ProposalRegistry interface {
 	PingProposal(proposal market.ServiceProposal, signer identity.Signer) error
 	UnregisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
 }
-
-// ProposalReducer proposal match function
-type ProposalReducer func(proposal market.ServiceProposal) bool
-
-// ProposalMatcher defines interface to fetch currently active service proposals from discovery by match function
-type ProposalMatcher interface {
-	MatchProposals(match ProposalReducer) ([]market.ServiceProposal, error)
-}
