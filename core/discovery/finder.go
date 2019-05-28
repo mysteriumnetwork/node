@@ -19,7 +19,14 @@ package discovery
 
 import (
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 )
+
+// ProposalFilter defines interface with proposal match function
+type ProposalFilter interface {
+	Matches(proposal market.ServiceProposal) bool
+	ToAPIQuery() mysterium.ProposalsQuery
+}
 
 // Finder finds proposals from local storage
 type Finder struct {

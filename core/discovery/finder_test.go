@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/discovery/reducer"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,6 +54,12 @@ type filter struct {
 
 func (filter *filter) Matches(proposal market.ServiceProposal) bool {
 	return filter.serviceType == "" || proposal.ServiceType == filter.serviceType
+}
+
+func (filter *filter) ToAPIQuery() mysterium.ProposalsQuery {
+	return mysterium.ProposalsQuery{
+		ServiceType: filter.serviceType,
+	}
 }
 
 func Test_Finder_GetProposalExisting(t *testing.T) {

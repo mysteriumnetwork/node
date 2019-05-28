@@ -36,13 +36,3 @@ type ProposalReducer func(proposal market.ServiceProposal) bool
 type ProposalMatcher interface {
 	MatchProposals(match ProposalReducer) ([]market.ServiceProposal, error)
 }
-
-// ProposalFilter defines interface with proposal match function
-type ProposalFilter interface {
-	Matches(proposal market.ServiceProposal) bool
-}
-
-// ProposalFinder defines interface to fetch currently active service proposals from discovery by given filter
-type ProposalFinder interface {
-	FindProposals(filter ProposalFilter) ([]market.ServiceProposal, error)
-}

@@ -287,4 +287,4 @@ func (mpp *mockProposalProvider) FindProposals(filter discovery.ProposalFilter) 
 	return mpp.proposals, nil
 }
 
-var _ discovery.ProposalFinder = &mockProposalProvider{}
+var _ ProposalFinder = &mockProposalProvider{}
