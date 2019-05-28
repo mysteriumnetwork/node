@@ -27,7 +27,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
-	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -109,19 +108,24 @@ type SessionStatisticsTracker interface {
 	GetSessionDuration() time.Duration
 }
 
+// ProposalGetter defines interface to fetch currently active service proposal by id
+type ProposalGetter interface {
+	GetProposal(id market.ProposalID) (*market.ServiceProposal, error)
+}
+
 // ConnectionEndpoint struct represents /connection resource and it's subresources
 type ConnectionEndpoint struct {
 	manager           connection.Manager
 	ipResolver        ip.Resolver
 	statisticsTracker SessionStatisticsTracker
 	//TODO connection should use concrete proposal from connection params and avoid going to marketplace
-	proposalProvider discovery.ProposalFinder
+	proposalProvider ProposalGetter
 }
 
 const connectionLogPrefix = "[Connection] "
 
 // NewConnectionEndpoint creates and returns connection endpoint
-func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper SessionStatisticsTracker, proposalProvider discovery.ProposalFinder) *ConnectionEndpoint {
+func NewConnectionEndpoint(manager connection.Manager, ipResolver ip.Resolver, statsKeeper SessionStatisticsTracker, proposalProvider ProposalGetter) *ConnectionEndpoint {
 	return &ConnectionEndpoint{
 		manager:           manager,
 		ipResolver:        ipResolver,
@@ -323,7 +327,7 @@ func (ce *ConnectionEndpoint) GetStatistics(writer http.ResponseWriter, request 
 
 // AddRoutesForConnection adds connections routes to given router
 func AddRoutesForConnection(router *httprouter.Router, manager connection.Manager, ipResolver ip.Resolver,
-	statsKeeper SessionStatisticsTracker, proposalProvider discovery.ProposalFinder) {
+	statsKeeper SessionStatisticsTracker, proposalProvider ProposalGetter) {
 	connectionEndpoint := NewConnectionEndpoint(manager, ipResolver, statsKeeper, proposalProvider)
 	router.GET("/connection", connectionEndpoint.Status)
 	router.PUT("/connection", connectionEndpoint.Create)

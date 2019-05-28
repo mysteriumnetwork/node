@@ -19,20 +19,30 @@ package discovery
 
 import (
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 )
 
-// finder implements ProposalFinder, which finds proposals from local storage
-type finder struct {
+// ProposalReducer proposal match function
+type ProposalReducer func(proposal market.ServiceProposal) bool
+
+// ProposalFilter defines interface with proposal match function
+type ProposalFilter interface {
+	Matches(proposal market.ServiceProposal) bool
+	ToAPIQuery() mysterium.ProposalsQuery
+}
+
+// Finder finds proposals from local storage
+type Finder struct {
 	storage *ProposalStorage
 }
 
-// NewFinder creates instance of local storage finder
-func NewFinder(storage *ProposalStorage) *finder {
-	return &finder{storage: storage}
+// NewFinder creates instance of local storage Finder
+func NewFinder(storage *ProposalStorage) *Finder {
+	return &Finder{storage: storage}
 }
 
 // GetProposal fetches service proposal from discovery by exact ID
-func (finder *finder) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
+func (finder *Finder) GetProposal(id market.ProposalID) (*market.ServiceProposal, error) {
 	for _, proposal := range finder.storage.Proposals() {
 		if proposal.UniqueID() == id {
 			return &proposal, nil
@@ -42,13 +52,18 @@ func (finder *finder) GetProposal(id market.ProposalID) (*market.ServiceProposal
 	return nil, nil
 }
 
-// FindProposals fetches currently active service proposals from discovery
-func (finder *finder) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
+// MatchProposals fetches currently active service proposals from discovery by match function
+func (finder *Finder) MatchProposals(match ProposalReducer) ([]market.ServiceProposal, error) {
 	proposalsFiltered := make([]market.ServiceProposal, 0)
 	for _, proposal := range finder.storage.Proposals() {
-		if filter.Matches(proposal) {
+		if match(proposal) {
 			proposalsFiltered = append(proposalsFiltered, proposal)
 		}
 	}
 	return proposalsFiltered, nil
+}
+
+// FindProposals fetches currently active service proposals from discovery by given filter
+func (finder *Finder) FindProposals(filter ProposalFilter) ([]market.ServiceProposal, error) {
+	return finder.MatchProposals(filter.Matches)
 }

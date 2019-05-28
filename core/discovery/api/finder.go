@@ -18,6 +18,7 @@
 package api
 
 import (
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 )
@@ -50,12 +51,7 @@ func (finder *finderAPI) GetProposal(id market.ProposalID) (*market.ServicePropo
 	return &proposals[0], nil
 }
 
-// FindProposals fetches currently active service proposals from discovery
-func (finder *finderAPI) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
-	return finder.mysteriumAPI.QueryProposals(mysterium.ProposalsQuery{
-		NodeKey:            filter.ProviderID,
-		ServiceType:        filter.ServiceType,
-		AccessPolicyID:     filter.AccessPolicy.ID,
-		AccessPolicySource: filter.AccessPolicy.Source,
-	})
+// FindProposals fetches currently active service proposals from discovery by given filter
+func (finder *finderAPI) FindProposals(filter discovery.ProposalFilter) ([]market.ServiceProposal, error) {
+	return finder.mysteriumAPI.QueryProposals(filter.ToAPIQuery())
 }

@@ -112,13 +112,18 @@ func mapProposalsToRes(
 	return proposalsResArry
 }
 
+// ProposalFinder defines interface to fetch currently active service proposals from discovery by given filter
+type ProposalFinder interface {
+	FindProposals(filter discovery.ProposalFilter) ([]market.ServiceProposal, error)
+}
+
 type proposalsEndpoint struct {
-	proposalProvider     discovery.ProposalFinder
+	proposalProvider     ProposalFinder
 	mysteriumMorqaClient metrics.QualityOracle
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(proposalProvider discovery.ProposalFinder, morqaClient metrics.QualityOracle) *proposalsEndpoint {
+func NewProposalsEndpoint(proposalProvider ProposalFinder, morqaClient metrics.QualityOracle) *proposalsEndpoint {
 	return &proposalsEndpoint{proposalProvider, morqaClient}
 }
 
@@ -159,13 +164,11 @@ func NewProposalsEndpoint(proposalProvider discovery.ProposalFinder, morqaClient
 func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	fetchConnectCounts := req.URL.Query().Get("fetchConnectCounts")
 
-	proposals, err := pe.proposalProvider.FindProposals(market.ProposalFilter{
-		ProviderID:  req.URL.Query().Get("providerId"),
-		ServiceType: req.URL.Query().Get("serviceType"),
-		AccessPolicy: market.AccessPolicyFilter{
-			ID:     req.URL.Query().Get("accessPolicyId"),
-			Source: req.URL.Query().Get("accessPolicySource"),
-		},
+	proposals, err := pe.proposalProvider.FindProposals(&proposalsFilter{
+		providerID:         req.URL.Query().Get("providerId"),
+		serviceType:        req.URL.Query().Get("serviceType"),
+		accessPolicyID:     req.URL.Query().Get("accessPolicyId"),
+		accessPolicySource: req.URL.Query().Get("accessPolicySource"),
 	})
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
@@ -182,7 +185,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalProvider discovery.ProposalFinder, morqaClient metrics.QualityOracle) {
+func AddRoutesForProposals(router *httprouter.Router, proposalProvider ProposalFinder, morqaClient metrics.QualityOracle) {
 	pe := NewProposalsEndpoint(proposalProvider, morqaClient)
 	router.GET("/proposals", pe.List)
 }

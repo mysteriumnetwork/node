@@ -20,40 +20,24 @@ package discovery
 import (
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/discovery/reducer"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	provider1           = "0x1"
-	provider2           = "0x2"
-	accessRuleWhitelist = market.AccessPolicy{
-		ID:     "whitelist",
-		Source: "whitelist.txt",
-	}
-	accessRuleBlacklist = market.AccessPolicy{
-		ID:     "blacklist",
-		Source: "blacklist.txt",
-	}
-	locationDatacenter  = market.Location{ASN: 1000, Country: "DE", City: "Berlin", NodeType: "datacenter"}
-	locationResidential = market.Location{ASN: 124, Country: "LT", City: "Vilnius", NodeType: "residential"}
-
 	proposalProvider1Streaming = market.ServiceProposal{
-		ServiceType:       "streaming",
-		ProviderID:        provider1,
-		ServiceDefinition: mockService{Location: locationDatacenter},
-		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist},
+		ServiceType: "streaming",
+		ProviderID:  "0x1",
 	}
 	proposalProvider1Noop = market.ServiceProposal{
-		ServiceType:       "noop",
-		ProviderID:        provider1,
-		ServiceDefinition: mockService{},
+		ServiceType: "noop",
+		ProviderID:  "0x1",
 	}
 	proposalProvider2Streaming = market.ServiceProposal{
-		ServiceType:       "streaming",
-		ProviderID:        provider2,
-		ServiceDefinition: mockService{Location: locationResidential},
-		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
+		ServiceType: "streaming",
+		ProviderID:  "0x2",
 	}
 	proposalsStorage = &ProposalStorage{
 		proposals: []market.ServiceProposal{
@@ -64,18 +48,24 @@ var (
 	}
 )
 
-type mockService struct {
-	Location market.Location
+type filter struct {
+	serviceType string
 }
 
-func (service mockService) GetLocation() market.Location {
-	return service.Location
+func (filter *filter) Matches(proposal market.ServiceProposal) bool {
+	return filter.serviceType == "" || proposal.ServiceType == filter.serviceType
+}
+
+func (filter *filter) ToAPIQuery() mysterium.ProposalsQuery {
+	return mysterium.ProposalsQuery{
+		ServiceType: filter.serviceType,
+	}
 }
 
 func Test_Finder_GetProposalExisting(t *testing.T) {
 	finder := NewFinder(proposalsStorage)
 
-	proposal, err := finder.GetProposal(market.ProposalID{ServiceType: "streaming", ProviderID: provider1})
+	proposal, err := finder.GetProposal(market.ProposalID{ServiceType: "streaming", ProviderID: "0x1"})
 	assert.NoError(t, err)
 	assert.NotNil(t, proposal)
 	assert.Exactly(t, proposalProvider1Streaming, *proposal)
@@ -89,112 +79,42 @@ func Test_Finder_GetProposalUnknown(t *testing.T) {
 	assert.Nil(t, proposal)
 }
 
-func Test_Finder_GetProposalsAll(t *testing.T) {
+func Test_Finder_MatchProposals(t *testing.T) {
 	finder := NewFinder(proposalsStorage)
 
-	proposals, err := finder.FindProposals(market.ProposalFilter{})
+	proposals, err := finder.MatchProposals(reducer.All())
 	assert.NoError(t, err)
 	assert.Len(t, proposals, 3)
 	assert.Exactly(t,
 		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop, proposalProvider2Streaming},
 		proposals,
 	)
-}
 
-func Test_Finder_ProposalsByProviderID(t *testing.T) {
-	finder := NewFinder(proposalsStorage)
-
-	proposals, err := finder.FindProposals(market.ProposalFilter{
-		ProviderID: provider1,
-	})
-
-	assert.NoError(t, err)
-	assert.Len(t, proposals, 2)
-	assert.Exactly(
-		t,
-		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop},
-		proposals,
-	)
-}
-
-func Test_Finder_GetProposalsByServiceType(t *testing.T) {
-	finder := NewFinder(proposalsStorage)
-
-	proposals, err := finder.FindProposals(market.ProposalFilter{
-		ServiceType: "noop",
-	})
+	proposals, err = finder.MatchProposals(reducer.Equal(reducer.ProviderID, "0x2"))
 	assert.NoError(t, err)
 	assert.Len(t, proposals, 1)
-	assert.Exactly(
-		t,
-		[]market.ServiceProposal{proposalProvider1Noop},
-		proposals,
-	)
-
-	proposals, err = finder.FindProposals(market.ProposalFilter{
-		ServiceType: "streaming",
-	})
-	assert.NoError(t, err)
-	assert.Len(t, proposals, 2)
-	assert.Exactly(
-		t,
-		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider2Streaming},
-		proposals,
-	)
-}
-
-func Test_Finder_GetProposalsByNodeType(t *testing.T) {
-	finder := NewFinder(proposalsStorage)
-
-	proposals, err := finder.FindProposals(market.ProposalFilter{
-		Location: market.LocationFilter{NodeType: "datacenter"},
-	})
-	assert.NoError(t, err)
-	assert.Len(t, proposals, 1)
-	assert.Exactly(t, []market.ServiceProposal{proposalProvider1Streaming}, proposals)
-
-	proposals, err = finder.FindProposals(market.ProposalFilter{
-		Location: market.LocationFilter{NodeType: "residential"},
-	})
-	assert.NoError(t, err)
-	assert.Len(t, proposals, 1)
-	assert.Exactly(t, []market.ServiceProposal{proposalProvider2Streaming}, proposals)
-}
-
-func Test_Finder_GetProposalsByAccessID(t *testing.T) {
-	finder := NewFinder(proposalsStorage)
-
-	proposals, err := finder.FindProposals(market.ProposalFilter{
-		AccessPolicy: market.AccessPolicyFilter{ID: "whitelist"},
-	})
-	assert.NoError(t, err)
-	assert.Len(t, proposals, 2)
-	assert.Exactly(
-		t,
-		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider2Streaming},
-		proposals,
-	)
-
-	proposals, err = finder.FindProposals(market.ProposalFilter{
-		AccessPolicy: market.AccessPolicyFilter{ID: "blacklist"},
-	})
-	assert.NoError(t, err)
-	assert.Len(t, proposals, 1)
-	assert.Exactly(
-		t,
+	assert.Exactly(t,
 		[]market.ServiceProposal{proposalProvider2Streaming},
 		proposals,
 	)
+}
 
-	proposals, err = finder.FindProposals(market.ProposalFilter{
-		AccessPolicy: market.AccessPolicyFilter{ID: "whitelist", Source: "unknown.txt"},
-	})
-	assert.NoError(t, err)
-	assert.Len(t, proposals, 0)
+func Test_Finder_FindProposals(t *testing.T) {
+	finder := NewFinder(proposalsStorage)
 
-	proposals, err = finder.FindProposals(market.ProposalFilter{
-		AccessPolicy: market.AccessPolicyFilter{ID: "unknown"},
-	})
+	proposals, err := finder.FindProposals(&filter{})
 	assert.NoError(t, err)
-	assert.Len(t, proposals, 0)
+	assert.Len(t, proposals, 3)
+	assert.Exactly(t,
+		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider1Noop, proposalProvider2Streaming},
+		proposals,
+	)
+
+	proposals, err = finder.FindProposals(&filter{"streaming"})
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 2)
+	assert.Exactly(t,
+		[]market.ServiceProposal{proposalProvider1Streaming, proposalProvider2Streaming},
+		proposals,
+	)
 }

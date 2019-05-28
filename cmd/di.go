@@ -159,7 +159,7 @@ type Dependencies struct {
 	IdentitySelector     identity_selector.Handler
 
 	DiscoveryFactory    service.DiscoveryFactory
-	DiscoveryFinder     discovery.ProposalFinder
+	DiscoveryFinder     *discovery.Finder
 	DiscoveryFetcherAPI *discovery_api.Fetcher
 
 	IPResolver       ip.Resolver
