@@ -35,6 +35,8 @@ type envVar struct {
 	val string
 }
 
+var buildTime = time.Now().UTC()
+
 // GenerateEnvFile for sourcing in other stages
 func GenerateEnvFile() error {
 	version, err := buildVersion()
@@ -111,9 +113,9 @@ func snapshotVersion() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s+1snapshot+%s+%s",
+	return fmt.Sprintf("%s-1snapshot-%s-%s",
 		latestRelease.TagName,
-		time.Now().UTC().Format("20060102T1504"),
+		buildTime.Format("20060102T1504"),
 		gitHead.Hash().String()[:8]), nil
 }
 
