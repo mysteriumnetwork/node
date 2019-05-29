@@ -25,6 +25,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication/nats"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	nats_lib "github.com/nats-io/go-nats"
@@ -83,17 +84,18 @@ func NewAddressForContact(contact market.Contact) (*AddressNATS, error) {
 // NewAddressWithConnection constructs NATS address to already active NATS connection
 func NewAddressWithConnection(connection nats.Connection, topic string) *AddressNATS {
 	return &AddressNATS{
-		topic:      topic,
-		connection: connection,
+		topic:       topic,
+		connection:  connection,
+		removeRules: func() {},
 	}
 }
 
 // AddressNATS structure defines details how NATS connection can be established
 type AddressNATS struct {
-	servers []string
-	topic   string
-
-	connection nats.Connection
+	servers     []string
+	topic       string
+	removeRules func()
+	connection  nats.Connection
 }
 
 // Connect establishes connection to broker
@@ -107,6 +109,12 @@ func (address *AddressNATS) Connect() (err error) {
 	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Disconnected") }
 	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Reconnected") }
 
+	removeRules, err := allowServersAccess(options.Servers)
+	if err != nil {
+		return err
+	}
+	address.removeRules = removeRules
+
 	conn, err := options.Connect()
 	address.connection = connection{conn}
 	if err != nil {
@@ -116,11 +124,31 @@ func (address *AddressNATS) Connect() (err error) {
 	return
 }
 
+func allowServersAccess(servers []string) (func(), error) {
+	var removeRules []func()
+	removeAllRules := func() {
+		for _, removeRule := range removeRules {
+			removeRule()
+		}
+	}
+	for _, server := range servers {
+		removeRule, err := firewall.AllowURLAccess(server)
+		if err != nil {
+			removeAllRules()
+			return nil, err
+		}
+		removeRules = append(removeRules, removeRule)
+	}
+	return removeAllRules, nil
+}
+
 // Disconnect stops currently established connection
 func (address *AddressNATS) Disconnect() {
 	if address.connection != nil {
 		address.connection.Close()
 	}
+	address.removeRules()
+	address.removeRules = func() {}
 }
 
 // GetConnection returns currently established connection
