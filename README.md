@@ -1,7 +1,7 @@
 # Mysterium Node - decentralized VPN built on blockchain
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/mysteriumnetwork/node)](https://goreportcard.com/report/github.com/mysteriumnetwork/node)
-[![Build Status](https://travis-ci.com/mysteriumnetwork/node.svg?branch=master)](https://travis-ci.com/mysteriumnetwork/node)
+[![pipeline status](https://gitlab.com/mysteriumnetwork/node/badges/master/pipeline.svg)](https://gitlab.com/mysteriumnetwork/node/pipelines)
 [![pullreminders](https://pullreminders.com/badge.svg)](https://pullreminders.com?ref=badge)
 
 Cross-platform software to run a node in Mysterium Network. It contains Mysterium server (node),
