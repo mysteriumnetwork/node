@@ -21,7 +21,7 @@ Currently node supports OpenVPN as its underlying VPN transport.
 
 To run a node as docker container You will need [docker](https://www.docker.com/).
 You should be able to run a node on any OS that supports docker.
-Tested on these OSes so far: _Dabian 9_, _Ubuntu 16.04_ and _Centos 7_.
+Tested on these OSes so far: _Debian 9_, _Ubuntu 16.04_ and _Centos 7_.
 
 You can check latest docker node versions here: https://hub.docker.com/r/mysteriumnetwork/myst/
 
