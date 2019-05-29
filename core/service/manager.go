@@ -134,24 +134,24 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 
 	instance := Instance{
 		id:           id,
-		state:        Starting,
 		options:      options,
 		service:      service,
 		proposal:     proposal,
 		dialogWaiter: dialogWaiter,
 		discovery:    discovery,
 	}
+	instance.SetState(Starting)
 
 	manager.servicePool.Add(&instance)
 
 	go func() {
-		instance.state = Running
+		instance.SetState(Running)
 		serveErr := service.Serve(providerID)
 		if serveErr != nil {
 			log.Error("Service serve failed: ", serveErr)
 		}
 
-		instance.state = NotRunning
+		instance.SetState(NotRunning)
 
 		// TODO: fix https://github.com/mysteriumnetwork/node/issues/855
 		stopErr := manager.servicePool.Stop(id)

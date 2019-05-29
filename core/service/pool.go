@@ -19,6 +19,7 @@ package service
 
 import (
 	"errors"
+	"github.com/mysteriumnetwork/node/websocket"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/communication"
@@ -175,4 +176,22 @@ func (i *Instance) Proposal() market.ServiceProposal {
 // State returns the service instance state.
 func (i *Instance) State() State {
 	return i.state
+}
+
+type InstanceSocket struct {
+	Id         string `json:"id"`
+	Status     string `json:"status"`
+	ProviderID string `json:"providerId"`
+	Type       string `json:"type"`
+}
+
+func (i *Instance) SetState(state State) {
+	i.state = state
+	proposal := i.Proposal()
+	websocket.Instance.ServiceUpdateStatusAction(InstanceSocket{
+		Id:         string(i.id),
+		ProviderID: proposal.ProviderID,
+		Type:       proposal.ServiceType,
+		Status:     string(i.State()),
+	})
 }

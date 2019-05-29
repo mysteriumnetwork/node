@@ -59,10 +59,10 @@ type accessPoliciesRequest struct {
 }
 
 // swagger:model ServiceListDTO
-type serviceList []serviceInfo
+type serviceList []ServiceInfo
 
 // swagger:model ServiceInfoDTO
-type serviceInfo struct {
+type ServiceInfo struct {
 	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
 	ID string `json:"id"`
 
@@ -346,9 +346,9 @@ func (se *ServiceEndpoint) toServiceOptions(serviceType string, value *json.RawM
 	return options
 }
 
-func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInfo {
+func toServiceInfoResponse(id service.ID, instance *service.Instance) ServiceInfo {
 	proposal := instance.Proposal()
-	return serviceInfo{
+	return ServiceInfo{
 		ID:         string(id),
 		ProviderID: proposal.ProviderID,
 		Type:       proposal.ServiceType,
@@ -359,7 +359,7 @@ func toServiceInfoResponse(id service.ID, instance *service.Instance) serviceInf
 }
 
 func toServiceListResponse(instances map[service.ID]*service.Instance) serviceList {
-	res := make([]serviceInfo, 0)
+	res := make([]ServiceInfo, 0)
 	for id, instance := range instances {
 		res = append(res, toServiceInfoResponse(id, instance))
 	}
