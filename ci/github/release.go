@@ -35,7 +35,8 @@ type Releaser struct {
 
 // Release represents a Github release
 type Release struct {
-	Id int64
+	Id      int64
+	TagName string
 	*Releaser
 }
 
@@ -58,8 +59,17 @@ func (r *Releaser) Create(name string) (*Release, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Info("created release ", *release.ID)
-	return &Release{Id: *release.ID, Releaser: r}, nil
+	log.Infof("created release ID: %v, tag: %v", *release.ID, *release.TagName)
+	return &Release{Id: *release.ID, TagName: *release.TagName, Releaser: r}, nil
+}
+
+// Latest finds the latest Github release
+func (r *Releaser) Latest() (*Release, error) {
+	release, _, err := r.client.Repositories.GetLatestRelease(context.Background(), r.owner, r.repository)
+	if err != nil {
+		return nil, err
+	}
+	return &Release{Id: *release.ID, TagName: *release.TagName, Releaser: r}, nil
 }
 
 // UploadAsset uploads asset to the release

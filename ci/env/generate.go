@@ -21,9 +21,13 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
+
+	"github.com/mysteriumnetwork/node/ci/github"
+	"github.com/pkg/errors"
+	"gopkg.in/src-d/go-git.v4"
 )
 
-const devReleaseVersion = "0.0.0-dev"
 const ppaDevReleaseVersion = "0.0.0"
 
 type envVar struct {
@@ -31,35 +35,88 @@ type envVar struct {
 	val string
 }
 
+var buildTime = time.Now().UTC()
+
 // GenerateEnvFile for sourcing in other stages
 func GenerateEnvFile() error {
-	isTag := os.Getenv("BUILD_TAG") != ""
-	isSnapshot := os.Getenv("BUILD_BRANCH") == "master" && !isTag
-	isPr := !isSnapshot && !isTag
-	buildVersion := func() string {
-		if isTag {
-			return os.Getenv("BUILD_TAG")
-		}
-		return devReleaseVersion + "-" + os.Getenv("BUILD_COMMIT")
-	}()
-	ppaVersion := func() string {
-		if isTag {
-			return os.Getenv("BUILD_TAG")
-		}
-		return ppaDevReleaseVersion
-	}()
+	version, err := buildVersion()
+	if err != nil {
+		return err
+	}
+	ppaVersion, err := ppaVersion()
+	if err != nil {
+		return err
+	}
 	vars := []envVar{
-		{TagBuild, strconv.FormatBool(isTag)},
-		{SnapshotBuild, strconv.FormatBool(isSnapshot)},
-		{PrBuild, strconv.FormatBool(isPr)},
-		{BuildVersion, buildVersion},
-		{PpaVersion, ppaVersion},
-		{BuildNumber, os.Getenv(string(BuildNumber))},
-		{GithubOwner, os.Getenv(string(GithubOwner))},
-		{GithubRepository, os.Getenv(string(GithubRepository))},
-		{GithubSnapshotRepository, os.Getenv(string(GithubSnapshotRepository))},
+		{TagBuild, strconv.FormatBool(isTag())},
+		{SnapshotBuild, strconv.FormatBool(isSnapshot())},
+		{PRBuild, strconv.FormatBool(isPR())},
+		{BuildVersion, version},
+		{PPAVersion, ppaVersion},
+		{BuildNumber, Str(BuildNumber)},
+		{GithubOwner, Str(GithubOwner)},
+		{GithubRepository, Str(GithubRepository)},
+		{GithubSnapshotRepository, Str(GithubSnapshotRepository)},
 	}
 	return writeEnvVars(vars)
+}
+
+func isTag() bool {
+	return Str(BuildTag) != ""
+}
+
+func isSnapshot() bool {
+	return Str(BuildBranch) == "master" && !isTag()
+}
+
+func isPR() bool {
+	return !isSnapshot() && !isTag()
+}
+
+func ppaVersion() (string, error) {
+	if isTag() {
+		return Str(BuildTag), EnsureEnvVars(BuildTag)
+	}
+	return ppaDevReleaseVersion, nil
+}
+
+func buildVersion() (string, error) {
+	if isTag() {
+		return Str(BuildTag), EnsureEnvVars(BuildTag)
+	}
+	if isPR() {
+		// TODO find a format for branch version, perhaps similar to snapshot?
+		return fmt.Sprintf("0.0.0-branch%s", Str(BuildBranchSafe)), nil
+	}
+	return snapshotVersion()
+}
+
+func snapshotVersion() (string, error) {
+	if err := EnsureEnvVars(GithubOwner, GithubRepository, GithubAPIToken); err != nil {
+		return "", err
+	}
+	releaser, err := github.NewReleaser(Str(GithubOwner), Str(GithubRepository), Str(GithubAPIToken))
+	if err != nil {
+		return "", err
+	}
+	latestRelease, err := releaser.Latest()
+	if err != nil {
+		return "", err
+	} else if latestRelease == nil {
+		return "", errors.Errorf("could not find latest release in githubRepo %s/%s", Str(GithubOwner), Str(GithubRepository))
+	}
+	gitLocalRepo, err := git.PlainOpen("./")
+	if err != nil {
+		return "", err
+	}
+	gitHead, err := gitLocalRepo.Head()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s-1snapshot-%s-%s",
+		latestRelease.TagName,
+		buildTime.Format("20060102T1504"),
+		gitHead.Hash().String()[:8]), nil
 }
 
 func writeEnvVars(vars []envVar) error {

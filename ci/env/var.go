@@ -17,7 +17,7 @@
 
 package env
 
-// BuildVar env variable required for CI build.
+// BuildVar env variables used in CI build.
 // Some of them will be calculated when generating env file, others should be passed though env.
 type BuildVar string
 
@@ -28,17 +28,26 @@ const (
 	// SnapshotBuild indicates snapshot release build (master branch)
 	SnapshotBuild = BuildVar("SNAPSHOT_BUILD")
 
-	// PrBuild indicates pull-request build
-	PrBuild = BuildVar("PR_BUILD")
+	// PRBuild indicates pull-request build
+	PRBuild = BuildVar("PR_BUILD")
 
 	// BuildVersion stores build version
 	BuildVersion = BuildVar("BUILD_VERSION")
 
-	// PpaVersion stores build version for PPA
-	PpaVersion = BuildVar("PPA_VERSION")
+	// PPAVersion stores build version for PPA
+	PPAVersion = BuildVar("PPA_VERSION")
 
 	// BuildNumber stores CI build number
 	BuildNumber = BuildVar("BUILD_NUMBER")
+
+	// BuildTag stores git tag for build
+	BuildTag = BuildVar("BUILD_TAG")
+
+	// BuildBranch stores branch name
+	BuildBranch = BuildVar("BUILD_BRANCH")
+
+	// BuildBranchSafe stores branch name, with special characters replaced with hyphens
+	BuildBranchSafe = BuildVar("BUILD_BRANCH_SAFE")
 
 	// GithubOwner stores github repository's owner
 	GithubOwner = BuildVar("GITHUB_OWNER")
@@ -49,6 +58,6 @@ const (
 	// GithubSnapshotRepository stores github repository name for snapshot builds
 	GithubSnapshotRepository = BuildVar("GITHUB_SNAPSHOT_REPO")
 
-	// GithubApiToken is used for accessing github API
-	GithubApiToken = BuildVar("GITHUB_API_TOKEN")
+	// GithubAPIToken is used for accessing github API
+	GithubAPIToken = BuildVar("GITHUB_API_TOKEN")
 )
