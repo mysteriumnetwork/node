@@ -36,9 +36,8 @@ type processFactory func(options connection.ConnectOptions) (openvpn.Process, *C
 
 // NATPinger tries to punch a hole in NAT
 type NATPinger interface {
-	BindConsumerPort(port int)
 	Stop()
-	PingProvider(ip string, port int, stop <-chan struct{}) error
+	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
 }
 
 // Client takes in the openvpn process and works with it
@@ -65,8 +64,12 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	log.Infof("client config: %v", clientConfig)
 
 	if clientConfig.VpnConfig.LocalPort > 0 {
-		c.natPinger.BindConsumerPort(clientConfig.LocalPort)
-		err = c.natPinger.PingProvider(clientConfig.VpnConfig.OriginalRemoteIP, clientConfig.VpnConfig.OriginalRemotePort, c.pingerStop)
+		err = c.natPinger.PingProvider(
+			clientConfig.VpnConfig.OriginalRemoteIP,
+			clientConfig.VpnConfig.OriginalRemotePort,
+			clientConfig.LocalPort,
+			c.pingerStop,
+		)
 		if err != nil {
 			return err
 		}

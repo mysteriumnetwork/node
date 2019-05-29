@@ -56,7 +56,7 @@ func (consumer *bytesMessageConsumer) Consume(messagePtr interface{}) error {
 }
 
 func TestMessageBytesSend(t *testing.T) {
-	connection := StartConnectionFake()
+	connection := StartConnectionMock()
 	defer connection.Close()
 
 	sender := &senderNATS{
@@ -72,7 +72,7 @@ func TestMessageBytesSend(t *testing.T) {
 }
 
 func TestMessageBytesReceive(t *testing.T) {
-	connection := StartConnectionFake()
+	connection := StartConnectionMock()
 	defer connection.Close()
 
 	receiver := &receiverNATS{

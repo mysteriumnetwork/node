@@ -54,7 +54,6 @@ type Pinger struct {
 	configParser   ConfigParser
 	natProxy       natProxy
 	portPool       PortSupplier
-	consumerPort   int
 	previousStage  string
 	eventPublisher Publisher
 }
@@ -80,7 +79,7 @@ type Publisher interface {
 }
 
 // NewPinger returns Pinger instance
-func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portPool PortSupplier, previousStage string, publisher Publisher) *Pinger {
+func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, previousStage string, publisher Publisher) *Pinger {
 	target := make(chan *Params)
 	cancel := make(chan struct{})
 	stop := make(chan struct{})
@@ -93,7 +92,6 @@ func NewPinger(waiter NatEventWaiter, parser ConfigParser, proxy natProxy, portP
 		natEventWaiter: waiter,
 		configParser:   parser,
 		natProxy:       proxy,
-		portPool:       portPool,
 		previousStage:  previousStage,
 		eventPublisher: publisher,
 	}
@@ -103,7 +101,7 @@ type natProxy interface {
 	handOff(serviceType services.ServiceType, conn *net.UDPConn)
 	registerServicePort(serviceType services.ServiceType, port int)
 	isAvailable(serviceType services.ServiceType) bool
-	consumerHandOff(consumerPort int, conn *net.UDPConn) chan struct{}
+	consumerHandOff(consumerAddr string, conn *net.UDPConn) chan struct{}
 	setProtectSocketCallback(socketProtect func(socket int) bool)
 }
 
@@ -125,9 +123,15 @@ func (p *Pinger) Start() {
 			log.Info(prefix, "stop pinger called")
 			return
 		case pingParams := <-p.pingTarget:
-			go p.pingTargetConsumer(pingParams)
+			if isPunchingRequired(pingParams) {
+				go p.pingTargetConsumer(pingParams)
+			}
 		}
 	}
+}
+
+func isPunchingRequired(params *Params) bool {
+	return params.ConsumerPort > 0
 }
 
 // Stop stops pinger loop
@@ -139,10 +143,10 @@ func (p *Pinger) Stop() {
 }
 
 // PingProvider pings provider determined by destination provided in sessionConfig
-func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
+func (p *Pinger) PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error {
 	log.Info(prefix, "NAT pinging to provider")
 
-	conn, err := p.getConnection(ip, port, p.consumerPort)
+	conn, err := p.getConnection(ip, port, consumerPort)
 	if err != nil {
 		return errors.Wrap(err, "failed to get connection")
 	}
@@ -160,10 +164,6 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 		return err
 	}
 
-	err = ipv4.NewConn(conn).SetTTL(128)
-	if err != nil {
-		return errors.Wrap(err, "setting ttl failed")
-	}
 	// send one last ping request to end hole punching procedure gracefully
 	err = p.sendPingRequest(conn, 128)
 	if err != nil {
@@ -172,9 +172,10 @@ func (p *Pinger) PingProvider(ip string, port int, stop <-chan struct{}) error {
 
 	p.pingCancelled <- struct{}{}
 
-	if p.consumerPort > 0 {
-		log.Info(prefix, "Handing connection to consumer NATProxy")
-		p.stopNATProxy = p.natProxy.consumerHandOff(p.consumerPort, conn)
+	if consumerPort > 0 {
+		consumerAddr := fmt.Sprintf("127.0.0.1:%d", consumerPort+1)
+		log.Info(prefix, "Handing connection to consumer NATProxy: ", consumerAddr)
+		p.stopNATProxy = p.natProxy.consumerHandOff(consumerAddr, conn)
 	}
 	return nil
 }
@@ -189,7 +190,8 @@ func (p *Pinger) waitForPreviousStageResult() bool {
 }
 
 func (p *Pinger) ping(conn *net.UDPConn) error {
-	n := 1
+	// Windows detects that 1 TTL is too low and throws an exception during send
+	ttl := 0
 	i := 0
 
 	for {
@@ -204,17 +206,18 @@ func (p *Pinger) ping(conn *net.UDPConn) error {
 			// After a few attempts we're setting the value to 128 and assuming we're through.
 			// We could stop sending ping to Consumer beyond 4 hops to prevent from possible Consumer's router's
 			//  DOS block, but we plan, that Consumer at the same time will be Provider too in near future.
-			if n > 4 {
-				n = 128
+			ttl++
+
+			if ttl > 4 {
+				ttl = 128
 			}
 
-			err := p.sendPingRequest(conn, n)
+			err := p.sendPingRequest(conn, ttl)
 			if err != nil {
 				p.eventPublisher.Publish(event.Topic, event.BuildFailureEvent(StageName, err))
 				return err
 			}
 
-			n++
 			i++
 
 			if i*pingInterval > pingTimeout {
@@ -266,11 +269,6 @@ func (p *Pinger) PingTarget(target *Params) {
 	}
 }
 
-// BindConsumerPort binds NATPinger to source consumer port
-func (p *Pinger) BindConsumerPort(port int) {
-	p.consumerPort = port
-}
-
 // BindServicePort register service port to forward connection to
 func (p *Pinger) BindServicePort(serviceType services.ServiceType, port int) {
 	p.natProxy.registerServicePort(serviceType, port)
@@ -278,6 +276,7 @@ func (p *Pinger) BindServicePort(serviceType services.ServiceType, port int) {
 
 func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 	timeout := time.After(pingTimeout * time.Millisecond)
+	buf := make([]byte, bufferLen)
 	for {
 		select {
 		case <-timeout:
@@ -289,15 +288,16 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 		default:
 		}
 
-		var buf [bufferLen]byte
-		n, err := conn.Read(buf[0:])
+		n, err := conn.Read(buf)
 		if err != nil {
-			log.Errorf("%sFailed to read remote peer: %s cause: %s", prefix, conn.RemoteAddr().String(), err)
-			return err
+			log.Errorf("%sFailed to read remote peer: %s cause: %s - attempting to continue", prefix, conn.RemoteAddr().String(), err)
+			continue
 		}
-		fmt.Println(prefix, "remote peer data received: ", string(buf[:n]))
 
-		return nil
+		if n > 0 {
+			log.Infof(prefix, "remote peer data received: %s, len: %d", string(buf[:n]), n)
+			return nil
+		}
 	}
 }
 

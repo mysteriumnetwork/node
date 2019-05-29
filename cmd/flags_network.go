@@ -18,6 +18,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/urfave/cli"
@@ -38,21 +40,26 @@ var (
 		Usage: "Enables experimental identity check",
 	}
 
-	discoveryAddressFlag = cli.StringFlag{
+	apiAddressFlag = cli.StringFlag{
+		Name:  "api.address",
+		Usage: "URL of Mysterium API",
+		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
+	}
+	apiAddressFlagDepreciated = cli.StringFlag{
 		Name:  "discovery-address",
-		Usage: "`URL` of discovery service",
-		Value: metadata.DefaultNetwork.DiscoveryAPIAddress,
+		Usage: fmt.Sprintf("URL of Mysterium API (DEPRECIATED, start using '--%s')", apiAddressFlag.Name),
+		Value: apiAddressFlag.Value,
 	}
 
 	accessPolicyAddressFlag = cli.StringFlag{
 		Name:  "access-policy-address",
-		Usage: "`URL` of trust oracle endpoint for retrieving lists of access policies",
+		Usage: "URL of trust oracle endpoint for retrieving lists of access policies",
 		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
 	}
 
 	brokerAddressFlag = cli.StringFlag{
 		Name:  "broker-address",
-		Usage: "`URI` of message broker",
+		Usage: "URI of message broker",
 		Value: metadata.DefaultNetwork.BrokerAddress,
 	}
 
@@ -86,7 +93,8 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		testFlag, localnetFlag,
 		identityCheckFlag,
 		natPunchingFlag,
-		discoveryAddressFlag, brokerAddressFlag,
+		apiAddressFlag, apiAddressFlagDepreciated,
+		brokerAddressFlag,
 		etherRPCFlag, etherContractPaymentsFlag,
 		qualityOracleFlag, accessPolicyAddressFlag,
 	)
@@ -101,7 +109,7 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		ExperimentIdentityCheck: ctx.GlobalBool(identityCheckFlag.Name),
 		ExperimentNATPunching:   ctx.GlobalBool(natPunchingFlag.Name),
 
-		DiscoveryAPIAddress:         ctx.GlobalString(discoveryAddressFlag.Name),
+		MysteriumAPIAddress:         ctx.GlobalString(apiAddressFlag.Name),
 		AccessPolicyEndpointAddress: ctx.GlobalString(accessPolicyAddressFlag.Name),
 		BrokerAddress:               ctx.GlobalString(brokerAddressFlag.Name),
 

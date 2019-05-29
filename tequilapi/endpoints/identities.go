@@ -41,8 +41,8 @@ type identityList struct {
 	Identities []identityDto `json:"identities"`
 }
 
-// swagger:model MyIdentityDTO
-type myIdentityDTO struct {
+// swagger:model CurrentIdentityDTO
+type currentIdentityDTO struct {
 	Passphrase *string `json:"passphrase"`
 }
 
@@ -98,7 +98,7 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 	utils.WriteAsJSON(idsSerializable, resp)
 }
 
-// swagger:operation PUT /me Identity myIdentity
+// swagger:operation PUT /identities/current Identity currentIdentity
 // ---
 // summary: Returns my current identity
 // description: Tries to retrieve the last used identity, the first identity, or creates and returns a new identity
@@ -107,10 +107,10 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 //     name: body
 //     description: Parameter in body (passphrase) required for creating new identity
 //     schema:
-//       $ref: "#/definitions/MyIdentityDTO"
+//       $ref: "#/definitions/CurrentIdentityDTO"
 // responses:
 //   200:
-//     description: Identity returned
+//     description: Unlocked identity returned
 //     schema:
 //       "$ref": "#/definitions/IdentityDTO"
 //   400:
@@ -125,25 +125,32 @@ func (endpoint *identitiesAPI) List(resp http.ResponseWriter, request *http.Requ
 //     description: Internal server error
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (endpoint *identitiesAPI) Me(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
-	myIdentityRequest, err := toMyIdentityRequest(request)
+func (endpoint *identitiesAPI) Current(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	// TODO: remove this hack when we replace our router
+	address := params.ByName("id")
+	if address == "current" {
+		address = ""
+	}
+
+	myIdentityRequest, err := toCurrentIdentityRequest(request)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
 	}
 
-	errorMap := validateMyIdentityRequest(myIdentityRequest)
+	errorMap := validateCurrentIdentityRequest(myIdentityRequest)
 	if errorMap.HasErrors() {
 		utils.SendValidationErrorMessage(resp, errorMap)
 		return
 	}
 
-	id, err := endpoint.selector.UseOrCreate("", *myIdentityRequest.Passphrase)
+	id, err := endpoint.selector.UseOrCreate(address, *myIdentityRequest.Passphrase)
 
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
+
 	idDto := idToDto(id)
 	utils.WriteAsJSON(idDto, resp)
 }
@@ -259,13 +266,13 @@ func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 	return identityCreationReq, nil
 }
 
-func toMyIdentityRequest(req *http.Request) (*myIdentityDTO, error) {
-	var myIdentityReq = &myIdentityDTO{}
-	err := json.NewDecoder(req.Body).Decode(&myIdentityReq)
+func toCurrentIdentityRequest(req *http.Request) (*currentIdentityDTO, error) {
+	var currentIdentityReq = &currentIdentityDTO{}
+	err := json.NewDecoder(req.Body).Decode(&currentIdentityReq)
 	if err != nil {
 		return nil, err
 	}
-	return myIdentityReq, nil
+	return currentIdentityReq, nil
 }
 
 func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, err error) {
@@ -274,7 +281,7 @@ func toUnlockRequest(req *http.Request) (isUnlockingReq identityUnlockingDto, er
 	return
 }
 
-func validateMyIdentityRequest(unlockReq *myIdentityDTO) (errors *validation.FieldErrorMap) {
+func validateCurrentIdentityRequest(unlockReq *currentIdentityDTO) (errors *validation.FieldErrorMap) {
 	errors = validation.NewErrorMap()
 	if unlockReq.Passphrase == nil {
 		errors.ForField("passphrase").AddError("required", "Field is required")
@@ -305,8 +312,8 @@ func AddRoutesForIdentities(
 	selector identity_selector.Handler,
 ) {
 	idmEnd := NewIdentitiesEndpoint(idm, selector)
-	router.PUT("/me", idmEnd.Me)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
+	router.PUT("/identities/:id", idmEnd.Current)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
 }

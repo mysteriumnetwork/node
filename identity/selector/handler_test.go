@@ -46,7 +46,7 @@ func TestUseOrCreateSucceeds(t *testing.T) {
 	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
 }
 
-func TestUUseOrCreateFailsWhenUnlockFails(t *testing.T) {
+func TestUseOrCreateFailsWhenUnlockFails(t *testing.T) {
 	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
 	identityManager.MarkUnlockToFail()
 	registry := &mockRegistry{}
@@ -80,9 +80,91 @@ func TestUseOrCreateFailsWhenIdentityNotFound(t *testing.T) {
 	cache := identity.NewIdentityCacheFake()
 
 	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
+	_, err := handler.UseOrCreate("does-not-exist", "pass")
+	assert.NotNil(t, err)
+}
+
+func TestUseFailsWhenIdentityNotFound(t *testing.T) {
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
+	registry := &mockRegistry{}
+	cache := identity.NewIdentityCacheFake()
+
+	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
 
 	_, err := handler.UseOrCreate("does-not-exist", "pass")
 	assert.NotNil(t, err)
+}
+
+func TestUseLastSucceeds(t *testing.T) {
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
+	registry := &mockRegistry{}
+	cache := identity.NewIdentityCacheFake()
+
+	fakeIdentity := identity.FromAddress("abc")
+	_ = cache.StoreIdentity(fakeIdentity)
+
+	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
+
+	id, err := handler.useLast("pass")
+	assert.Equal(t, fakeIdentity, id)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "", registry.registeredIdentity.Address)
+
+	assert.Equal(t, "abc", identityManager.LastUnlockAddress)
+	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+}
+
+func TestUseLastFailsWhenUnlockFails(t *testing.T) {
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
+	identityManager.MarkUnlockToFail()
+	registry := &mockRegistry{}
+	cache := identity.NewIdentityCacheFake()
+
+	fakeIdentity := identity.FromAddress("abc")
+	_ = cache.StoreIdentity(fakeIdentity)
+
+	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
+
+	_, err := handler.useLast("pass")
+	assert.Error(t, err)
+
+	assert.Equal(t, "", registry.registeredIdentity.Address)
+
+	assert.Equal(t, "abc", identityManager.LastUnlockAddress)
+	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+}
+
+func TestUseNewSucceeds(t *testing.T) {
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
+	registry := &mockRegistry{}
+	cache := identity.NewIdentityCacheFake()
+
+	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
+
+	id, err := handler.useNew("pass")
+	assert.Equal(t, newIdentity, id)
+	assert.Nil(t, err)
+
+	assert.Equal(t, newIdentity, registry.registeredIdentity)
+
+	assert.Equal(t, newIdentity.Address, identityManager.LastUnlockAddress)
+	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
+}
+
+func TestUseNewFailsWhenUnlockFails(t *testing.T) {
+	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)
+	identityManager.MarkUnlockToFail()
+	registry := &mockRegistry{}
+	cache := identity.NewIdentityCacheFake()
+
+	handler := NewHandler(identityManager, registry, cache, fakeSignerFactory)
+
+	_, err := handler.useNew("pass")
+	assert.Error(t, err)
+
+	assert.Equal(t, newIdentity.Address, identityManager.LastUnlockAddress)
+	assert.Equal(t, "pass", identityManager.LastUnlockPassphrase)
 }
 
 type fakeSigner struct {

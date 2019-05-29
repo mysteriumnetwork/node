@@ -30,16 +30,20 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mysteriumnetwork/node/blockchain"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/discovery"
+	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
+	discovery_broker "github.com/mysteriumnetwork/node/core/discovery/broker"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
@@ -63,18 +67,17 @@ import (
 	"github.com/mysteriumnetwork/node/nat/upnp"
 	"github.com/mysteriumnetwork/node/services"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
-	"github.com/mysteriumnetwork/node/services/openvpn"
 	service_openvpn "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
-	payments_noop "github.com/mysteriumnetwork/node/session/payment/noop"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+	"github.com/mysteriumnetwork/node/ui"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 )
@@ -95,9 +98,8 @@ type Storage interface {
 
 // NatPinger is responsible for pinging nat holes
 type NatPinger interface {
-	PingProvider(ip string, port int, stop <-chan struct{}) error
+	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
 	PingTarget(*traversal.Params)
-	BindConsumerPort(port int)
 	BindServicePort(serviceType services.ServiceType, port int)
 	Start()
 	Stop()
@@ -132,6 +134,12 @@ type CacheResolver interface {
 	HandleConnectionEvent(connection.StateEvent)
 }
 
+// UIServer represents our web server
+type UIServer interface {
+	Serve() error
+	Stop()
+}
+
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
@@ -150,6 +158,10 @@ type Dependencies struct {
 	IdentityRegistry     identity_registry.IdentityRegistry
 	IdentityRegistration identity_registry.RegistrationDataProvider
 	IdentitySelector     identity_selector.Handler
+
+	DiscoveryFactory    service.DiscoveryFactory
+	DiscoveryFinder     *discovery.Finder
+	DiscoveryFetcherAPI *discovery_api.Fetcher
 
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
@@ -172,11 +184,13 @@ type Dependencies struct {
 	NATEventSender   NatEventSender
 	NATStatusTracker NATStatusTracker
 
-	PortPool *port.Pool
-
 	MetricsSender *metrics.Sender
 
-	WebSocket websocket.WebSocket
+	BandwidthTracker *bandwidth.Tracker
+	
+	UIServer UIServer
+
+    WebSocket websocket.WebSocket
 }
 
 // Bootstrap initiates all container dependencies
@@ -208,25 +222,33 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapEventBus()
 	di.bootstrapIdentityComponents(nodeOptions)
 
+	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
+		return err
+	}
+
 	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
 		return err
 	}
 
+	di.bootstrapUIServer(nodeOptions.UI)
+
+	if err := di.bootstrapBandwidthTracker(); err != nil {
+		return err
+	}
+
 	di.bootstrapMetrics(nodeOptions)
-
-	di.PortPool = port.NewPool()
-
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
 
 	di.registerConnections(nodeOptions)
 
-	err = di.subscribeEventConsumers()
-	if err != nil {
+	if err = di.subscribeEventConsumers(); err != nil {
 		return err
 	}
-
+	if err = di.DiscoveryFetcherAPI.Start(); err != nil {
+		return err
+	}
 	if err := di.Node.Start(); err != nil {
 		return err
 	}
@@ -275,7 +297,9 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
-
+	if di.DiscoveryFetcherAPI != nil {
+		di.DiscoveryFetcherAPI.Stop()
+	}
 	if di.Node != nil {
 		if err := di.Node.Kill(); err != nil {
 			errs = append(errs, err)
@@ -305,6 +329,15 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	di.Storage = localStorage
 	return nil
+}
+
+func (di *Dependencies) bootstrapUIServer(options node.OptionsUI) {
+	if options.UIEnabled {
+		di.UIServer = ui.NewServer(options.UIPort)
+		return
+	}
+
+	di.UIServer = ui.NewNoopServer()
 }
 
 func (di *Dependencies) subscribeEventConsumers() error {
@@ -367,15 +400,14 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		di.IPResolver,
 	)
 
-
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector)
-	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.MysteriumAPI)
+	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.DiscoveryFinder)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.LocationResolver)
-	tequilapi_endpoints.AddRoutesForProposals(router, di.MysteriumAPI, di.MysteriumMorqaClient)
+	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
@@ -388,16 +420,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
-
 	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger, di.UIServer)
 }
-
-//func (di *Dependencies) bootstrapWebSocket(nodeOptions node.Options) {
-//	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
-//
-//}
 
 func newSessionManagerFactory(
 	proposal market.ServiceProposal,
@@ -409,13 +435,6 @@ func newSessionManagerFactory(
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.BalanceTracker, error) {
-			// We want backwards compatibility for openvpn on desktop providers, so no payments for them.
-			// Splitting this as a separate case just for that reason.
-			// TODO: remove this one day.
-			if proposal.ServiceType == openvpn.ServiceType {
-				return payments_noop.NewSessionBalance(), nil
-			}
-
 			timeTracker := session.NewTracker(time.Now)
 			// TODO: set the time and proper payment info
 			payment := dto.PaymentPerTime{
@@ -463,8 +482,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	//override defined values one by one from options
-	if options.DiscoveryAPIAddress != metadata.DefaultNetwork.DiscoveryAPIAddress {
-		network.DiscoveryAPIAddress = options.DiscoveryAPIAddress
+	if options.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
+		network.MysteriumAPIAddress = options.MysteriumAPIAddress
 	}
 
 	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
@@ -481,7 +500,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.NetworkDefinition = network
-	di.MysteriumAPI = mysterium.NewClient(network.DiscoveryAPIAddress)
+	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
@@ -521,6 +540,29 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 
+func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
+	var registry discovery.ProposalRegistry
+	switch options.Type {
+	case node.DiscoveryTypeAPI:
+		registry = discovery_api.NewRegistry(di.MysteriumAPI)
+	case node.DiscoveryTypeBroker:
+		sender := discovery_broker.NewSender(nats.NewConnectionMock())
+		registry = discovery_broker.NewRegistry(sender)
+	default:
+		return fmt.Errorf("unknown discovery provider: %s", options.Type)
+	}
+
+	di.DiscoveryFactory = func() service.Discovery {
+		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, registry, di.SignerFactory)
+	}
+
+	storage := discovery.NewStorage()
+	di.DiscoveryFinder = discovery.NewFinder(storage)
+	di.DiscoveryFetcherAPI = discovery_api.NewFetcher(storage, di.MysteriumAPI.Proposals, 30*time.Second)
+
+	return nil
+}
+
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
@@ -535,7 +577,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	case node.LocationTypeOracle:
 		resolver, err = location.NewOracleResolver(options.Address), nil
 	default:
-		err = fmt.Errorf("unknown location detector type: %s", options.Type)
+		err = fmt.Errorf("unknown location provider: %s", options.Type)
 	}
 	if err != nil {
 		return err
@@ -556,6 +598,16 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	return
 }
 
+func (di *Dependencies) bootstrapBandwidthTracker() error {
+	di.BandwidthTracker = &bandwidth.Tracker{}
+	err := di.EventBus.SubscribeAsync(connection.SessionEventTopic, di.BandwidthTracker.ConsumeSessionEvent)
+	if err != nil {
+		return err
+	}
+
+	return di.EventBus.SubscribeAsync(connection.StatisticsEventTopic, di.BandwidthTracker.ConsumeStatisticsEvent)
+}
+
 func (di *Dependencies) bootstrapMetrics(options node.Options) {
 	loader := &upnp.GatewayLoader{}
 
@@ -574,7 +626,6 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 			di.NATTracker,
 			config.NewConfigParser(),
 			traversal.NewNATProxy(),
-			di.PortPool,
 			mapping.StageName,
 			di.EventBus,
 		)

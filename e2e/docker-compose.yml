@@ -7,7 +7,7 @@ services:
       dockerfile: bin/docker/alpine/Dockerfile
     depends_on:
       - broker
-      - discovery
+      - mysterium-api
       - ipify
     cap_add:
       - NET_ADMIN
@@ -23,7 +23,7 @@ services:
       --experiment-identity-check
       --localnet
       --broker-address=broker
-      --discovery-address=http://discovery/v1
+      --api.address=http://mysterium-api/v1
       --ether.client.rpc=http://geth:8545
       --keystore.lightweight
       service openvpn,noop,wireguard
@@ -38,7 +38,7 @@ services:
       dockerfile: bin/docker/alpine/Dockerfile
     depends_on:
       - broker
-      - discovery
+      - mysterium-api
       - ipify
     cap_add:
       - NET_ADMIN
@@ -48,7 +48,7 @@ services:
       --ip-detector=http://ipify:3000/?format=json
       --experiment-identity-check
       --localnet
-      --discovery-address=http://discovery/v1
+      --api.address=http://mysterium-api/v1
       --ether.client.rpc=http://geth:8545
       --keystore.lightweight
       daemon

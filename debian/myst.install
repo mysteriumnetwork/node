@@ -1,0 +1,7 @@
+go/src/github.com/mysteriumnetwork/node/build/myst/myst usr/bin
+
+go/src/github.com/mysteriumnetwork/node/bin/package/config/linux/* etc/mysterium-node
+go/src/github.com/mysteriumnetwork/node/bin/package/config/common/* etc/mysterium-node
+go/src/github.com/mysteriumnetwork/node/bin/package/sudoers/* etc/sudoers.d
+go/src/github.com/mysteriumnetwork/node/bin/package/installation/* usr/lib/mysterium-node/installation
+go/src/github.com/mysteriumnetwork/node/INSTALL.md usr/share/doc/mysterium-node

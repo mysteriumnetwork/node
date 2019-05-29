@@ -78,7 +78,7 @@ func (ssk *StubStatisticsTracker) GetSessionDuration() time.Duration {
 	return ssk.duration
 }
 
-func getMockProposalProviderWithSpecifiedProposal(providerID, serviceType string) ProposalProvider {
+func getMockProposalProviderWithSpecifiedProposal(providerID, serviceType string) *mockProposalProvider {
 	sampleProposal := market.ServiceProposal{
 		ID:                1,
 		ServiceType:       serviceType,

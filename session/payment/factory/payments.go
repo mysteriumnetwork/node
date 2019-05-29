@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/payment"
-	"github.com/mysteriumnetwork/node/session/payment/noop"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/node/session/promise/issuers"
 	"github.com/pkg/errors"
@@ -48,15 +47,6 @@ func PaymentIssuerFactoryFunc(nodeOptions node.Options, signerFactory identity.S
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 	return paymentIssuerFactory(signerFactory)
-}
-
-func noopPaymentIssuerFactory(initialState promise.PaymentInfo,
-	paymentDefinition dto.PaymentPerTime,
-	messageChan chan balance.Message,
-	dialog communication.Dialog,
-	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
-	return noop.NewSessionBalance(), nil
-
 }
 
 func paymentIssuerFactory(signerFactory identity.SignerFactory) func(

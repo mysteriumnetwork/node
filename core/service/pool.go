@@ -24,7 +24,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
-	discovery_registry "github.com/mysteriumnetwork/node/market/proposals/registry"
 	"github.com/mysteriumnetwork/node/utils"
 )
 
@@ -140,7 +139,7 @@ func NewInstance(
 	service RunnableService,
 	proposal market.ServiceProposal,
 	dialog communication.DialogWaiter,
-	discovery *discovery_registry.Discovery,
+	discovery Discovery,
 ) *Instance {
 	return &Instance{
 		options:      options,

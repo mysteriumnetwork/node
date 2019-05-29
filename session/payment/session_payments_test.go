@@ -22,11 +22,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/promises"
+	"github.com/stretchr/testify/assert"
 )
 
 type MockPeerPromiseSender struct {
@@ -133,4 +132,13 @@ func Test_SessionPayments_ErrsOnBalanceMissmatch(t *testing.T) {
 
 	balanceChannel <- balance.Message{Balance: 100, SequenceID: 1}
 	<-testDone
+}
+
+func Test_SessionPayments_NoPanicOnSecondStop(t *testing.T) {
+	balanceChannel := make(chan balance.Message, 1)
+	promiseSender := newPromiseSender()
+	cpo := NewTestSessionPayments(balanceChannel, promiseSender, promiseTracker, balanceTracker)
+	go cpo.Start()
+	cpo.Stop()
+	cpo.Stop()
 }

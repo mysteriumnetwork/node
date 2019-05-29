@@ -30,7 +30,9 @@ type options struct {
 	LogLevel string
 }
 
-var opts options
+var opts = options{
+	LogLevel: log.DebugStr,
+}
 
 var (
 	logLevel = cli.StringFlag{

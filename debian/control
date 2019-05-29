@@ -1,0 +1,29 @@
+Source: myst
+Section: devel
+Priority: optional
+Maintainer: Mysterium Team <core-services@mysterium.network>
+Build-Depends:
+ dh-golang,
+ debhelper (>= 8.0.0),
+ golang-1.11,
+Standards-Version: 3.9.7
+Homepage: https://mysterium.network
+Vcs-Git: git://github.com/mysteriumnetwork/node.git
+Vcs-Browser: https://github.com/mysteriumnetwork/node
+XS-Go-Import-Path: github.com/mysteriumnetwork/node
+
+Package: myst
+Architecture: any
+Built-Using: ${misc:Built-Using}
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ sudo,
+ resolvconf,
+ openvpn (>= 2.4.0),
+ ca-certificates,
+ iptables,
+ iproute2,
+ wireguard,
+Description: Mysterium Node - VPN server and client for Mysterium Network
+ Mysterium Node - decentralized VPN built on blockchain

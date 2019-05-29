@@ -1,0 +1,3 @@
+Unattended-Upgrade::Allowed-Origins {
+  "LP-PPA-mysteriumnetwork-node:bionic";
+};

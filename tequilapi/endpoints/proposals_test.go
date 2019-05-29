@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/stretchr/testify/assert"
 )
@@ -89,7 +90,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
         }`,
 		resp.Body.String(),
 	)
-	assert.Equal(t, market.ProposalFilter{ProviderID: "0xProviderId"}, mockProposalProvider.recordedFilter)
+	assert.Equal(t, &proposalsFilter{providerID: "0xProviderId"}, mockProposalProvider.recordedFilter)
 }
 
 func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
@@ -134,9 +135,9 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 		resp.Body.String(),
 	)
 	assert.Equal(t,
-		market.ProposalFilter{
-			AccessPolicyID:     "accessPolicyId",
-			AccessPolicySource: "accessPolicySource",
+		&proposalsFilter{
+			accessPolicyID:     "accessPolicyId",
+			accessPolicySource: "accessPolicySource",
 		},
 		mockProposalProvider.recordedFilter,
 	)
@@ -270,7 +271,7 @@ func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
 }
 
 type mockProposalProvider struct {
-	recordedFilter market.ProposalFilter
+	recordedFilter discovery.ProposalFilter
 	proposals      []market.ServiceProposal
 }
 
@@ -281,9 +282,9 @@ func (mpp *mockProposalProvider) GetProposal(id market.ProposalID) (*market.Serv
 	return &mpp.proposals[0], nil
 }
 
-func (mpp *mockProposalProvider) FindProposals(filter market.ProposalFilter) ([]market.ServiceProposal, error) {
+func (mpp *mockProposalProvider) FindProposals(filter discovery.ProposalFilter) ([]market.ServiceProposal, error) {
 	mpp.recordedFilter = filter
 	return mpp.proposals, nil
 }
 
-var _ ProposalProvider = &mockProposalProvider{}
+var _ ProposalFinder = &mockProposalProvider{}

@@ -9,10 +9,15 @@ env:
     - BUILD_NUMBER=$TRAVIS_BUILD_NUMBER
     - BUILD_VERSION=$TRAVIS_TAG
     - BUILD_DEV_RELEASE=0.0.0-dev
+    - PPA_DEV_VERSION=0.0.0
+    - PPA_VERSION=$TRAVIS_TAG
 
 before_install:
   - if [ -z "$BUILD_VERSION" ]; then
       export BUILD_VERSION=$BUILD_DEV_RELEASE;
+    fi
+  - if [ "$PPA_VERSION" == "$BUILD_DEV_RELEASE" ]; then
+      export PPA_VERSION=$PPA_DEV_VERSION;
     fi
 
 after_failure:
@@ -45,42 +50,6 @@ jobs:
     - script: bin/s3 mb s3://travis-$TRAVIS_BUILD_NUMBER
       name: "Creating S3 bucket"
       if: (type != pull_request AND branch = master AND tag IS blank) OR tag IS present
-
-    # Test stage
-    - stage: test
-      script: bin/test
-      name: "Unit tests"
-
-    - script:
-      - bin/package_ios amd64
-      name: "iOS packages"
-      if: type = pull_request
-
-    - script:
-      - bin/package_android amd64
-      name: "Android packages"
-      if: type = pull_request
-
-    - script: bin/test_e2e
-      name: "End-to-end tests"
-      if: type = pull_request
-
-    - script: bin/builder_run bin/check_golint
-      name: "golint check"
-
-    - script: bin/builder_run bin/check_goimports
-      name: "goimports check"
-
-    - script: bin/check_license
-      name: "license check"
-
-    - script: bin/check_govet
-      name: "govet check"
-
-    - script:
-      - go get github.com/go-swagger/go-swagger/cmd/swagger/
-      - bin/check_swagger
-      name: "swagger check"
 
     # Build artifacts
     - stage: build
@@ -148,18 +117,6 @@ jobs:
       - bin/s3 cp tequilapi_redoc.tgz s3://travis-$TRAVIS_BUILD_NUMBER/docker-images/
       name: "Swagger docs redoc docker image"
 
-    # Development bleeding-edge release (on master commits only)
-    - stage: release-dev
-      script:
-        - git tag -f $BUILD_VERSION
-        - git remote add gh https://${TRAVIS_REPO_SLUG%/*}:${GIT_RELEASES_API_KEY}@github.com/${TRAVIS_REPO_SLUG}.git
-        - git push -f gh $BUILD_VERSION
-      name: "Push dev git tag"
-
-    - script:
-      - bin/release_goreport
-      name: "Update Go Report Card"
-
     # Official release (on tags only)
     - stage: release
       script: bin/s3 sync s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts build/package
@@ -173,6 +130,7 @@ jobs:
         api_key: "$GIT_RELEASES_API_KEY"
         on:
           tags: true
+
     - script:
       - bin/s3 sync s3://travis-$TRAVIS_BUILD_NUMBER/docker-images build/docker
       - docker load -i build/docker/myst_alpine.tgz
@@ -181,17 +139,37 @@ jobs:
       - bin/release_docker $TRAVIS_TAG
       - if [[ $TRAVIS_TAG != *-rc* ]] && [[ $TRAVIS_TAG != *-dev ]]; then bin/release_docker latest; fi
       name: "Pushing release to hub.docker.com"
+
     - script:
       - bin/s3 sync s3://travis-$TRAVIS_BUILD_NUMBER/build-artifacts build/package
       - openssl aes-256-cbc -K $encrypted_2698a83519b3_key -iv $encrypted_2698a83519b3_iv -in bin/package/android/key.gpg.enc -out bin/package/android/key.gpg -d
       - gpg --import bin/package/android/key.gpg
-      - gpg --list-keys
       - bin/release_android "$TRAVIS_TAG"
       name: "Publish Android SDK to the Sonatype and Maven Central"
+
     - script:
       - bin/travis_scripts/trigger_desktop_app_build
       name: "Trigger Desktop APP build"
       if: tag = env(BUILD_DEV_RELEASE)
+
+    - script:
+      - openssl aes-256-cbc -K $encrypted_2698a83519b3_key -iv $encrypted_2698a83519b3_iv -in bin/package/android/key.gpg.enc -out bin/package/android/key.gpg -d
+      - gpg --import bin/package/android/key.gpg
+      - openssl aes-256-cbc -K $encrypted_2c668321e34e_key -iv $encrypted_2c668321e34e_iv -in bin/package/ppa/ppa_key.enc -out ~/.ssh/id_rsa -d
+      - chmod 600 ~/.ssh/id_rsa
+      - bin/release_ppa "$PPA_VERSION" "$BUILD_NUMBER" xenial
+      - bin/release_ppa "$PPA_VERSION" "$BUILD_NUMBER" bionic
+      name: "Publish DEB packages to the PPA"
+      addons:
+        apt:
+          packages:
+          - devscripts
+          - fakeroot
+          - dh-make
+          - dput
+          - debhelper
+          - python-paramiko
+
 
     - stage: cleanup
       script:

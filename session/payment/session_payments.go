@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/session/balance"
@@ -46,6 +47,7 @@ type SessionPayments struct {
 	peerPromiseSender PeerPromiseSender
 	promiseTracker    PromiseTracker
 	balanceTracker    BalanceTracker
+	once              sync.Once
 }
 
 // NewSessionPayments returns a new instance of consumer payment orchestrator
@@ -139,5 +141,7 @@ func calculateBalanceDifference(yourBalance, myBalance uint64) uint64 {
 
 // Stop stops the payment orchestrator
 func (cpo *SessionPayments) Stop() {
-	close(cpo.stop)
+	cpo.once.Do(func() {
+		close(cpo.stop)
+	})
 }

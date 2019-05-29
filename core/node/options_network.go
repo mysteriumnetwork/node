@@ -25,7 +25,7 @@ type OptionsNetwork struct {
 	ExperimentIdentityCheck bool
 	ExperimentNATPunching   bool
 
-	DiscoveryAPIAddress         string
+	MysteriumAPIAddress         string
 	AccessPolicyEndpointAddress string
 	BrokerAddress               string
 
