@@ -34,32 +34,16 @@ func ReleaseSnapshot() error {
 	logconfig.Bootstrap()
 	defer log.Flush()
 
-	snapshot, err := env.RequiredEnvBool(env.SnapshotBuild)
-	if err != nil {
+	if err := env.EnsureEnvVars(env.SnapshotBuild, env.GithubOwner, env.GithubSnapshotRepository, env.BuildVersion, env.GithubAPIToken); err != nil {
 		return err
 	}
-	if !snapshot {
+
+	if !env.Bool(env.SnapshotBuild) {
 		log.Info("not a snapshot build, skipping ReleaseSnapshot action...")
 		return nil
 	}
 
-	owner, err := env.RequiredEnvStr(env.GithubOwner)
-	if err != nil {
-		return err
-	}
-	repo, err := env.RequiredEnvStr(env.GithubSnapshotRepository)
-	if err != nil {
-		return err
-	}
-	ver, err := env.RequiredEnvStr(env.BuildVersion)
-	if err != nil {
-		return err
-	}
-	githubToken, err := env.RequiredEnvStr(env.GithubApiToken)
-	if err != nil {
-		return err
-	}
-	releaser, err := github.NewReleaser(owner, repo, githubToken)
+	releaser, err := github.NewReleaser(env.Str(env.GithubOwner), env.Str(env.GithubSnapshotRepository), env.Str(env.GithubAPIToken))
 	if err != nil {
 		return err
 	}
@@ -67,7 +51,7 @@ func ReleaseSnapshot() error {
 	if err := storage.DownloadArtifacts(); err != nil {
 		return err
 	}
-	release, err := releaser.Create(ver)
+	release, err := releaser.Create(env.Str(env.BuildVersion))
 	if err != nil {
 		return err
 	}

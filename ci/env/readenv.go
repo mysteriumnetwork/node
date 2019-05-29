@@ -22,31 +22,20 @@ import (
 	"strconv"
 
 	log "github.com/cihub/seelog"
-	"github.com/pkg/errors"
 )
 
-// RequiredEnvBool reads a mandatory env var to bool
-func RequiredEnvBool(v BuildVar) (bool, error) {
+// Bool reads a bool env var.
+// EnsureEnvVars should be called first to ensure it has a specified value.
+func Bool(v BuildVar) bool {
 	env := os.Getenv(string(v))
-	if env == "" {
-		return false, errors.New(string(v) + " is not defined")
-	}
-	b, err := strconv.ParseBool(env)
-	if err != nil {
-		return false, errors.Wrap(err, "failed to parse env var to bool: "+string(v))
-	}
-	log.Debug("returning env var (bool)", v)
-	return b, nil
+	val, _ := strconv.ParseBool(env)
+	return val
 }
 
-// RequiredEnvStr reads a mandatory env var to string
-func RequiredEnvStr(v BuildVar) (string, error) {
-	env := os.Getenv(string(v))
-	if env == "" {
-		return "", errors.New(string(v) + " is not defined")
-	}
-	log.Debug("returning env var (str)", v)
-	return env, nil
+// Str reads a string env var.
+// EnsureEnvVars should be called first to ensure it has a specified value.
+func Str(v BuildVar) string {
+	return os.Getenv(string(v))
 }
 
 // IfRelease performs func passed as an arg if current build is any kind of release
@@ -64,13 +53,8 @@ func IfRelease(do func() error) error {
 }
 
 func isRelease() (bool, error) {
-	isTag, err := RequiredEnvBool(TagBuild)
-	if err != nil {
+	if err := EnsureEnvVars(TagBuild, SnapshotBuild); err != nil {
 		return false, err
 	}
-	isSnapshot, err := RequiredEnvBool(SnapshotBuild)
-	if err != nil {
-		return false, err
-	}
-	return isTag || isSnapshot, nil
+	return Bool(TagBuild) || Bool(SnapshotBuild), nil
 }

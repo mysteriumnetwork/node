@@ -159,11 +159,10 @@ func PackageDockerAlpine() error {
 func PackageDockerUbuntu() error {
 	logconfig.Bootstrap()
 	defer log.Flush()
-	ver, err := env.RequiredEnvStr(env.BuildVersion)
-	if err != nil {
+	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
 		return err
 	}
-	if err := sh.RunV("bin/package_docker_ubuntu", ver); err != nil {
+	if err := sh.RunV("bin/package_docker_ubuntu", env.Str(env.BuildVersion)); err != nil {
 		return err
 	}
 	if err := saveDockerImage("myst:ubuntu", "build/docker-images/myst_ubuntu.tgz"); err != nil {
@@ -176,6 +175,9 @@ func PackageDockerUbuntu() error {
 func PackageDockerSwaggerRedoc() error {
 	logconfig.Bootstrap()
 	defer log.Flush()
+	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
+		return err
+	}
 	if err := goGet("github.com/go-swagger/go-swagger/cmd/swagger"); err != nil {
 		return err
 	}
@@ -185,11 +187,7 @@ func PackageDockerSwaggerRedoc() error {
 	if err := sh.RunV("bin/package_docker_docs"); err != nil {
 		return err
 	}
-	ver, err := env.RequiredEnvStr(env.BuildVersion)
-	if err != nil {
-		return err
-	}
-	if err := saveDockerImage("tequilapi:"+ver, "build/docker-images/tequilapi_redoc.tgz"); err != nil {
+	if err := saveDockerImage("tequilapi:"+env.Str(env.BuildVersion), "build/docker-images/tequilapi_redoc.tgz"); err != nil {
 		return err
 	}
 	return env.IfRelease(func() error {
@@ -216,14 +214,13 @@ func packageStandalone(binaryPath, os, arch string) error {
 }
 
 func packageDebian(binaryPath, arch string) error {
+	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
+		return err
+	}
 	envs := map[string]string{
 		"BINARY": binaryPath,
 	}
-	ver, err := env.RequiredEnvStr(env.BuildVersion)
-	if err != nil {
-		return err
-	}
-	return sh.RunWith(envs, "bin/package_debian", ver, arch)
+	return sh.RunWith(envs, "bin/package_debian", env.Str(env.BuildVersion), arch)
 }
 
 func saveDockerImage(image, outputPath string) error {

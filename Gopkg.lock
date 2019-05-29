@@ -1047,6 +1047,7 @@
     "golang.org/x/sys/windows/registry",
     "golang.zx2c4.com/wireguard/wgctrl",
     "golang.zx2c4.com/wireguard/wgctrl/wgtypes",
+    "gopkg.in/src-d/go-git.v4",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

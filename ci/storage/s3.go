@@ -107,18 +107,9 @@ func Copy(source, target string) error {
 }
 
 func bucketUrlForBuild() (string, error) {
-	buildNumber, err := env.RequiredEnvStr(env.BuildNumber)
-	if err != nil {
+	if err := env.EnsureEnvVars(env.BuildNumber, env.GithubOwner, env.GithubRepository); err != nil {
 		return "", err
 	}
-	owner, err := env.RequiredEnvStr(env.GithubOwner)
-	if err != nil {
-		return "", err
-	}
-	projectName, err := env.RequiredEnvStr(env.GithubRepository)
-	if err != nil {
-		return "", err
-	}
-	bucket := owner + "-" + projectName + "-" + buildNumber
+	bucket := env.Str(env.GithubOwner) + "-" + env.Str(env.GithubRepository) + "-" + env.Str(env.BuildNumber)
 	return "s3://" + bucket, nil
 }
