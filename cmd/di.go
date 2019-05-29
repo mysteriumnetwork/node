@@ -23,8 +23,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mysteriumnetwork/node/firewall"
-
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -49,6 +47,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
