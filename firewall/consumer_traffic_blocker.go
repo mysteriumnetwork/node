@@ -47,8 +47,22 @@ func BlockNonTunnelTraffic(scope Scope) (RemoveRule, error) {
 }
 
 // AllowURLAccess adds exception to blocked traffic for specified URL (host part is usually taken)
-func AllowURLAccess(url string) (RemoveRule, error) {
-	return currentBlocker.AllowURLAccess(url)
+func AllowURLAccess(urls ...string) (RemoveRule, error) {
+	var ruleRemovers []func()
+	removeAll := func() {
+		for _, ruleRemover := range ruleRemovers {
+			ruleRemover()
+		}
+	}
+	for _, url := range urls {
+		remover, err := currentBlocker.AllowURLAccess(url)
+		if err != nil {
+			removeAll()
+			return nil, err
+		}
+		ruleRemovers = append(ruleRemovers, remover)
+	}
+	return removeAll, nil
 }
 
 // AllowIPAccess adds IP based exception to underlying blocker implementation

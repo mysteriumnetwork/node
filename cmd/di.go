@@ -494,16 +494,13 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.NetworkDefinition = network
-	trustedURLs := []string{
+
+	if _, err := firewall.AllowURLAccess(
 		network.EtherClientRPC,
 		network.MysteriumAPIAddress,
 		network.QualityOracle,
-	}
-	for _, url := range trustedURLs {
-		_, err = firewall.AllowURLAccess(url)
-		if err != nil {
-			return err
-		}
+	); err != nil {
+		return err
 	}
 
 	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)

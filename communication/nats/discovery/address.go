@@ -23,9 +23,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/firewall"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication/nats"
-	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	nats_lib "github.com/nats-io/go-nats"
@@ -109,7 +110,7 @@ func (address *AddressNATS) Connect() (err error) {
 	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Disconnected") }
 	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Reconnected") }
 
-	removeRules, err := allowServersAccess(options.Servers)
+	removeRules, err := firewall.AllowURLAccess(address.servers...)
 	if err != nil {
 		return err
 	}
@@ -122,24 +123,6 @@ func (address *AddressNATS) Connect() (err error) {
 	}
 
 	return
-}
-
-func allowServersAccess(servers []string) (func(), error) {
-	var removeRules []func()
-	removeAllRules := func() {
-		for _, removeRule := range removeRules {
-			removeRule()
-		}
-	}
-	for _, server := range servers {
-		removeRule, err := firewall.AllowURLAccess(server)
-		if err != nil {
-			removeAllRules()
-			return nil, err
-		}
-		removeRules = append(removeRules, removeRule)
-	}
-	return removeAllRules, nil
 }
 
 // Disconnect stops currently established connection
