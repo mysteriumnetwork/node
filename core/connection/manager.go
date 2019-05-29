@@ -416,8 +416,8 @@ func (manager *connectionManager) onStateChanged(state State) {
 	}
 }
 
-func (manager *connectionManager) setupTrafficBlock(disableTrafficBlocking bool) error {
-	if disableTrafficBlocking {
+func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
+	if disableKillSwitch {
 		return nil
 	}
 
