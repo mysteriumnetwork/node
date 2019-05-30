@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package websocket
 
 import (
@@ -14,9 +31,6 @@ import (
 )
 
 const serviceUpdateStatus = "server/SERVICE_UPDATE_STATUS"
-
-// Instance of websocket server
-var Instance WebSocket
 
 // WebSocket struct
 type WebSocket struct {
@@ -110,7 +124,6 @@ func NewWebSocketServer() WebSocket {
 	webSocket.connections = make(map[*net.Conn]bool)
 	webSocket.actions = make(chan action)
 	go webSocket.listenActions()
-	Instance = webSocket
 	log.Info("[Websocket] Init socket instance")
 	return webSocket
 }

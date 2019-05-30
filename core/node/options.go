@@ -17,6 +17,8 @@
 
 package node
 
+import "github.com/mysteriumnetwork/node/websocket"
+
 // Openvpn interface is abstraction over real openvpn options to unblock mobile development
 // will disappear as soon as go-openvpn will unify common factory for openvpn creation
 type Openvpn interface {
@@ -28,12 +30,12 @@ type Openvpn interface {
 type Options struct {
 	Directories OptionsDirectory
 
-	TequilapiAddress string
-	TequilapiPort    int
-	UI               OptionsUI
-
-	DisableMetrics bool
-	MetricsAddress string
+	TequilapiAddress  string
+	TequilapiPort     int
+	UI                OptionsUI
+	WebsocketInstance websocket.WebSocket
+	DisableMetrics    bool
+	MetricsAddress    string
 
 	Keystore OptionsKeystore
 

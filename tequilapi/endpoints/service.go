@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/mysteriumnetwork/node/websocket"
+
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
@@ -92,6 +94,7 @@ type ServiceEndpoint struct {
 	serviceManager          ServiceManager
 	accessPolicyEndpointURL string
 	optionsParser           map[string]ServiceOptionsParser
+	webSocket               websocket.WebSocket
 }
 
 // ServiceOptionsParser parses request to service specific options
@@ -105,11 +108,12 @@ var (
 )
 
 // NewServiceEndpoint creates and returns service endpoint
-func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string) *ServiceEndpoint {
+func NewServiceEndpoint(serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string, webSocket websocket.WebSocket) *ServiceEndpoint {
 	return &ServiceEndpoint{
 		serviceManager:          serviceManager,
 		optionsParser:           optionsParser,
 		accessPolicyEndpointURL: accessPolicyEndpointURL,
+		webSocket:               webSocket,
 	}
 }
 
@@ -209,7 +213,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 
 	ap := getAccessPolicyData(sr, se.accessPolicyEndpointURL)
 
-	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, ap, sr.Options)
+	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, ap, sr.Options, se.webSocket)
 	if err == service.ErrorLocation {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -285,8 +289,8 @@ func (se *ServiceEndpoint) isAlreadyRunning(sr serviceRequest) bool {
 }
 
 // AddRoutesForService adds service routes to given router
-func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string) {
-	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, accessPolicyEndpointURL)
+func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManager, optionsParser map[string]ServiceOptionsParser, accessPolicyEndpointURL string, webSocket websocket.WebSocket) {
+	serviceEndpoint := NewServiceEndpoint(serviceManager, optionsParser, accessPolicyEndpointURL, webSocket)
 
 	router.GET("/services", serviceEndpoint.ServiceList)
 	router.POST("/services", serviceEndpoint.ServiceStart)
@@ -386,7 +390,7 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 
 // ServiceManager represents service manager that will be used for manipulation node services.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error)
+	Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options, websocket websocket.WebSocket) (service.ID, error)
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error

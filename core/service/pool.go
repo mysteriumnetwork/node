@@ -186,10 +186,10 @@ type instanceSocket struct {
 }
 
 // SetState - Set instance state and send new state to websocket
-func (i *Instance) SetState(state State) {
+func (i *Instance) SetState(state State, socket websocket.WebSocket) {
 	i.state = state
 	proposal := i.Proposal()
-	websocket.Instance.ServiceUpdateStatusAction(instanceSocket{
+	socket.ServiceUpdateStatusAction(instanceSocket{
 		Id:         string(i.id),
 		ProviderID: proposal.ProviderID,
 		Type:       proposal.ServiceType,
