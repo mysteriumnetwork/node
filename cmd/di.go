@@ -47,6 +47,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -493,6 +494,15 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.NetworkDefinition = network
+
+	if _, err := firewall.AllowURLAccess(
+		network.EtherClientRPC,
+		network.MysteriumAPIAddress,
+		network.QualityOracle,
+	); err != nil {
+		return err
+	}
+
 	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)
 	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
@@ -557,6 +567,10 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
+	_, err = firewall.AllowURLAccess(options.IPDetectorURL)
+	if err != nil {
+		return err
+	}
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
 	var resolver location.Resolver

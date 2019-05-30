@@ -20,6 +20,8 @@ package openvpn
 import (
 	"sync"
 
+	"github.com/mysteriumnetwork/node/firewall"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -42,14 +44,14 @@ type NATPinger interface {
 
 // Client takes in the openvpn process and works with it
 type Client struct {
-	process        openvpn.Process
-	processFactory processFactory
-	ipResolver     ip.Resolver
-	natPinger      NATPinger
-	publicIP       string
-	pingerStop     chan struct{}
-
-	stopOnce sync.Once
+	process             openvpn.Process
+	processFactory      processFactory
+	ipResolver          ip.Resolver
+	natPinger           NATPinger
+	publicIP            string
+	pingerStop          chan struct{}
+	removeAllowedIPRule func()
+	stopOnce            sync.Once
 }
 
 // Start starts the connection
@@ -62,6 +64,11 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 	}
 	c.process = proc
 	log.Infof("client config: %v", clientConfig)
+	removeAllowedIPRule, err := firewall.AllowIPAccess(clientConfig.VpnConfig.RemoteIP)
+	if err != nil {
+		return err
+	}
+	c.removeAllowedIPRule = removeAllowedIPRule
 
 	if clientConfig.VpnConfig.LocalPort > 0 {
 		err = c.natPinger.PingProvider(
@@ -71,10 +78,15 @@ func (c *Client) Start(options connection.ConnectOptions) error {
 			c.pingerStop,
 		)
 		if err != nil {
+			removeAllowedIPRule()
 			return err
 		}
 	}
-	return c.process.Start()
+	err = c.process.Start()
+	if err != nil {
+		removeAllowedIPRule()
+	}
+	return err
 }
 
 // Wait waits for the connection to exit
@@ -91,6 +103,7 @@ func (c *Client) Stop() {
 		if c.process != nil {
 			c.process.Stop()
 		}
+		c.removeAllowedIPRule()
 		close(c.pingerStop)
 	})
 }

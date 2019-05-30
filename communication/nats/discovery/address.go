@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mysteriumnetwork/node/firewall"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/identity"
@@ -83,17 +85,18 @@ func NewAddressForContact(contact market.Contact) (*AddressNATS, error) {
 // NewAddressWithConnection constructs NATS address to already active NATS connection
 func NewAddressWithConnection(connection nats.Connection, topic string) *AddressNATS {
 	return &AddressNATS{
-		topic:      topic,
-		connection: connection,
+		topic:       topic,
+		connection:  connection,
+		removeRules: func() {},
 	}
 }
 
 // AddressNATS structure defines details how NATS connection can be established
 type AddressNATS struct {
-	servers []string
-	topic   string
-
-	connection nats.Connection
+	servers     []string
+	topic       string
+	removeRules func()
+	connection  nats.Connection
 }
 
 // Connect establishes connection to broker
@@ -106,6 +109,12 @@ func (address *AddressNATS) Connect() (err error) {
 	options.PingInterval = 10 * time.Second
 	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Disconnected") }
 	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Reconnected") }
+
+	removeRules, err := firewall.AllowURLAccess(address.servers...)
+	if err != nil {
+		return err
+	}
+	address.removeRules = removeRules
 
 	conn, err := options.Connect()
 	address.connection = connection{conn}
@@ -121,6 +130,8 @@ func (address *AddressNATS) Disconnect() {
 	if address.connection != nil {
 		address.connection.Close()
 	}
+	address.removeRules()
+	address.removeRules = func() {}
 }
 
 // GetConnection returns currently established connection

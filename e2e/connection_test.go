@@ -129,7 +129,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.NoError(t, err)
 
 	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, serviceType, tequilapi_client.ConnectOptions{
-		DisableKillSwitch: true,
+		DisableKillSwitch: false,
 	})
 
 	assert.NoError(t, err)

@@ -111,7 +111,10 @@ func TestNewAddressForContact_UnknownDefinition(t *testing.T) {
 }
 
 func TestAddress_Disconnect_EmptyAddress(t *testing.T) {
-	address := &AddressNATS{}
+	// TODO what is the point of this test?
+	address := &AddressNATS{
+		removeRules: func() {},
+	}
 	address.Disconnect()
 }
 

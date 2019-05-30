@@ -291,17 +291,16 @@ func (manager *connectionManager) startConnection(
 		return nil
 	})
 
+	err = manager.setupTrafficBlock(params.DisableKillSwitch)
+	if err != nil {
+		return err
+	}
+
 	//consume statistics right after start - openvpn3 will publish them even before connected state
 	go manager.consumeStats(statisticsChannel)
 	err = manager.waitForConnectedState(stateChannel, sessionDTO.ID)
 	if err != nil {
 		return err
-	}
-
-	if !params.DisableKillSwitch {
-		// TODO: Implement fw based kill switch for respective OS
-		// we may need to wait for tun device setup to be finished
-		firewall.NewKillSwitch().Enable()
 	}
 
 	go manager.consumeConnectionStates(stateChannel)
@@ -415,6 +414,22 @@ func (manager *connectionManager) onStateChanged(state State) {
 	case Reconnecting:
 		manager.setStatus(statusReconnecting())
 	}
+}
+
+func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) error {
+	if disableKillSwitch {
+		return nil
+	}
+
+	removeRule, err := firewall.BlockNonTunnelTraffic(firewall.Session)
+	if err != nil {
+		return err
+	}
+	manager.cleanup = append(manager.cleanup, func() error {
+		removeRule()
+		return nil
+	})
+	return nil
 }
 
 func logDisconnectError(err error) {
