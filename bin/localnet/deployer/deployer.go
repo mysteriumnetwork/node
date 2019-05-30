@@ -25,8 +25,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/mysteriumnetwork/node/blockchain/generated"
 	"github.com/mysteriumnetwork/payments/cli/helpers"
 	"github.com/mysteriumnetwork/payments/contracts/abigen"
 	"github.com/mysteriumnetwork/payments/mysttoken"
@@ -52,17 +56,67 @@ func main() {
 	checkError("backend lookup", err)
 	<-synced
 
+	// we still need to deploy legacy contracts to blockchain to be backwards compatible with current usage
+	deployLegacyContracts(transactor, client)
+
+	deployPaymentsv2Contracts(transactor, client)
+}
+
+func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.Client) {
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	mystTokenAddress, tx, _, err := generated.DeployMystToken(transactor, client)
+	checkError("Deploy token v2", err)
+	checkTxStatus(client, tx)
+	fmt.Println("v2 token address: ", mystTokenAddress.String())
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	mystDexAddress, tx, _, err := generated.DeployMystDEX(transactor, client)
+	checkError("Deploy mystDex v2", err)
+	checkTxStatus(client, tx)
+	fmt.Println("v2 mystDEX address: ", mystDexAddress.String())
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	channelImplAddress, tx, _, err := generated.DeployChannelImplementation(transactor, client)
+	checkError("Deploy channel impl v2", err)
+	checkTxStatus(client, tx)
+	fmt.Println("v2 channel impl address: ", channelImplAddress.String())
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	accountantImplAddress, tx, _, err := generated.DeployAccountantImplementation(transactor, client)
+	checkError("Deploy accountant impl v2", err)
+	checkTxStatus(client, tx)
+	fmt.Println("v2 accountant impl address: ", accountantImplAddress.String())
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	registrationFee := big.NewInt(0)
+	minimalStake := big.NewInt(0)
+	registryAddress, tx, _, err := generated.DeployRegistry(
+		transactor,
+		client,
+		mystTokenAddress,
+		mystDexAddress,
+		channelImplAddress,
+		accountantImplAddress,
+		registrationFee,
+		minimalStake,
+	)
+	checkError("Deploy registry v2", err)
+	checkTxStatus(client, tx)
+	fmt.Println("v2 registry address: ", registryAddress.String())
+}
+
+func deployLegacyContracts(transactor *bind.TransactOpts, client *ethclient.Client) uint64 {
 	mystTokenAddress, tx, _, err := mysttoken.DeployMystToken(transactor, client)
 	checkError("Deploy token", err)
 	checkTxStatus(client, tx)
-	fmt.Println("Token: ", mystTokenAddress.String())
+	fmt.Println("(deprecated) Token: ", mystTokenAddress.String())
 
-	transactor.Nonce = big.NewInt(int64(tx.Nonce() + 1))
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
 	paymentsAddress, tx, _, err := abigen.DeployIdentityPromises(transactor, client, mystTokenAddress, big.NewInt(100))
 	checkError("Deploy payments", err)
 	checkTxStatus(client, tx)
-
-	fmt.Println("Payments: ", paymentsAddress.String())
+	fmt.Println("(deprecated) Payments: ", paymentsAddress.String())
+	return tx.Nonce()
 }
 
 func checkError(context string, err error) {
@@ -91,4 +145,10 @@ func checkTxStatus(client *ethclient.Client, tx *types.Transaction) {
 		fmt.Println("Receipt status expected to be 1")
 		os.Exit(1)
 	}
+}
+
+func lookupLastNonce(addr common.Address, client *ethclient.Client) *big.Int {
+	nonce, err := client.NonceAt(context.Background(), addr, nil)
+	checkError("Lookup last nonce", err)
+	return big.NewInt(int64(nonce))
 }
