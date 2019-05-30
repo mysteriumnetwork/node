@@ -122,7 +122,7 @@ var fakeOptionsParser = map[string]ServiceOptionsParser{
 
 func Test_AddRoutesForServiceAddsRoutes(t *testing.T) {
 	router := httprouter.New()
-	AddRoutesForService(router, &mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint)
+	AddRoutesForService(router, &mockServiceManager{}, fakeOptionsParser, mockAccessPolicyEndpoint, websocket.WebSocket{})
 
 	tests := []struct {
 		method         string
