@@ -12,18 +12,21 @@ import (
 	"net/http"
 )
 
-const ServiceUpdateStatus = "server/SERVICE_UPDATE_STATUS"
+const serviceUpdateStatus = "server/SERVICE_UPDATE_STATUS"
 
+// Instance of websocket server
 var Instance WebSocket
 
+// WebSocket struct
 type WebSocket struct {
 	Server      *socketio.Server
 	connections map[*net.Conn]bool
 	actions     chan action
 }
-// send new service instance status to websocket
+
+// ServiceUpdateStatusAction - send new service instance status to websocket
 func (webSocket WebSocket) ServiceUpdateStatusAction(payload interface{}) {
-	webSocket.actions <- action{ServiceUpdateStatus, payload}
+	webSocket.actions <- action{serviceUpdateStatus, payload}
 }
 
 type action struct {
@@ -31,7 +34,7 @@ type action struct {
 	Payload interface{} `json:"payload"`
 }
 
-// add websockets to routes
+// AddRoutesForWebSocket - add websockets to routes
 func AddRoutesForWebSocket(router *httprouter.Router, ws WebSocket) {
 	router.GET("/ws/", ws.handler)
 }
@@ -39,7 +42,7 @@ func AddRoutesForWebSocket(router *httprouter.Router, ws WebSocket) {
 func (webSocket WebSocket) handler(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	conn, _, _, err := ws.UpgradeHTTP(request, writer)
 	if err != nil {
-		// handle error
+		_ = log.Error("[Websocket] UpgradeHTTP error", err)
 	}
 	log.Info("[Websocket] add new connection", conn)
 	webSocket.connections[&conn] = true
@@ -100,7 +103,7 @@ func (webSocket WebSocket) listenActions() {
 	}
 }
 
-// create new websocket server
+// NewWebSocketServer - create new websocket server
 func NewWebSocketServer() WebSocket {
 	webSocket := WebSocket{}
 	webSocket.connections = make(map[*net.Conn]bool)

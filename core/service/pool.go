@@ -184,7 +184,7 @@ type instanceSocket struct {
 	Type       string `json:"type"`
 }
 
-// Set instance state and send new state to websocket
+// SetState - Set instance state and send new state to websocket
 func (i *Instance) SetState(state State) {
 	i.state = state
 	proposal := i.Proposal()

@@ -19,6 +19,7 @@ package selector
 
 import "github.com/mysteriumnetwork/node/identity"
 
+// Handler interface
 type Handler interface {
 	UseOrCreate(address, passphrase string) (identity.Identity, error)
 }
