@@ -17,4 +17,11 @@
 
 package blockchain
 
-//go:generate go run abi/abigen.go --githubrepo=mysteriumnetwork/payments-smart-contracts -githubrelease=v0.0.1 --contracts=IdentityRegistry.json,IdentityImplementation.json --out=generated --pkg=generated
+/*
+ * Tool for binding smart contract abis/bytecode from github repo to go lang
+ * List of smart contracts are json files which are looked up in artifacts attached to github release tag
+ * Exact contracts which are needed (and their deployment order) can be
+ * looked up in migration script here: https://github.com/mysteriumnetwork/payments-smart-contracts/blob/master/migrations/2_deploy_contracts.js
+ */
+
+//go:generate go run abi/abigen.go --githubrepo=mysteriumnetwork/payments-smart-contracts -githubrelease=v0.0.2 --contracts=MystToken.json,MystDEX.json,ChannelImplementation.json,AccountantImplementation.json,Registry.json --out=generated --pkg=generated

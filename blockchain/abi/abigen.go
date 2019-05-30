@@ -125,7 +125,7 @@ func loadFromGitRepo(githubRepo string, contractList []string) ([]truffleArtifac
 			return nil, fmt.Errorf("error executing GET: %s", err.Error())
 		}
 		if resp.StatusCode != 200 {
-			return nil, fmt.Errorf("unexpected status response status code: %d", resp.StatusCode)
+			return nil, fmt.Errorf("unexpected status. GET %s response code: %d", url, resp.StatusCode)
 		}
 		artifact, err := parseTruffleArtifact(resp.Body)
 		if err != nil {
