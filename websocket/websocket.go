@@ -2,14 +2,15 @@ package websocket
 
 import (
 	"encoding/json"
-	log "github.com/cihub/seelog"
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
-	"github.com/googollee/go-socket.io"
-	"github.com/julienschmidt/httprouter"
 	"io"
 	"net"
 	"net/http"
+
+	log "github.com/cihub/seelog"
+	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
+	socketio "github.com/googollee/go-socket.io"
+	"github.com/julienschmidt/httprouter"
 )
 
 const serviceUpdateStatus = "server/SERVICE_UPDATE_STATUS"

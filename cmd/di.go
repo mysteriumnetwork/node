@@ -19,10 +19,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/mysteriumnetwork/node/websocket"
 	"net"
 	"path/filepath"
 	"time"
+
+	"github.com/mysteriumnetwork/node/websocket"
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -187,10 +188,10 @@ type Dependencies struct {
 	MetricsSender *metrics.Sender
 
 	BandwidthTracker *bandwidth.Tracker
-	
+
 	UIServer UIServer
 
-    WebSocket websocket.WebSocket
+	WebSocket websocket.WebSocket
 }
 
 // Bootstrap initiates all container dependencies

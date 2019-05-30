@@ -20,7 +20,7 @@ package mysterium
 import (
 	"path/filepath"
 
-	"github.com/mitchellh/go-homedir"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -60,8 +60,6 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 
 		TequilapiAddress: "127.0.0.1",
 		TequilapiPort:    4050,
-
-		WebSocketPort:    4060,
 
 		DisableMetrics: false,
 		MetricsAddress: "http://metrics.mysterium.network:8091",

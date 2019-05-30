@@ -19,8 +19,9 @@ package service
 
 import (
 	"errors"
-	"github.com/mysteriumnetwork/node/websocket"
 	"sync"
+
+	"github.com/mysteriumnetwork/node/websocket"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
