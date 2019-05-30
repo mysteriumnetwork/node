@@ -21,11 +21,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/mysteriumnetwork/node/websocket"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/mysteriumnetwork/node/websocket"
 )
 
 // ID represent unique identifier of the running service.

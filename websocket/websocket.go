@@ -37,10 +37,11 @@ type WebSocket struct {
 	Server      *socketio.Server
 	connections map[*net.Conn]bool
 	actions     chan action
+	isListen    bool
 }
 
 // ServiceUpdateStatusAction - send new service instance status to websocket
-func (webSocket WebSocket) ServiceUpdateStatusAction(payload interface{}) {
+func (webSocket *WebSocket) ServiceUpdateStatusAction(payload interface{}) {
 	webSocket.actions <- action{serviceUpdateStatus, payload}
 }
 
@@ -54,18 +55,22 @@ func AddRoutesForWebSocket(router *httprouter.Router, ws WebSocket) {
 	router.GET("/ws/", ws.handler)
 }
 
-func (webSocket WebSocket) handler(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (webSocket *WebSocket) handler(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	conn, _, _, err := ws.UpgradeHTTP(request, writer)
 	if err != nil {
 		_ = log.Error("[Websocket] UpgradeHTTP error", err)
 	}
 	log.Info("[Websocket] add new connection", conn)
+
 	webSocket.connections[&conn] = true
+	if !webSocket.isListen {
+		go webSocket.listenActions()
+	}
 	go func() {
 		defer func() {
 			delete(webSocket.connections, &conn)
 			_ = log.Error("[Websocket] delete connection. reason: DEFER CLOSE")
-			conn.Close()
+			_ = conn.Close()
 		}()
 
 		var (
@@ -97,7 +102,7 @@ func (webSocket WebSocket) handler(writer http.ResponseWriter, request *http.Req
 
 }
 
-func (webSocket WebSocket) dispatch(action action) {
+func (webSocket *WebSocket) dispatch(action action) {
 	bytes, _ := json.Marshal(action)
 	for conn := range webSocket.connections {
 		log.Info("[Websocket] send to %v data=%v", *conn, string(bytes))
@@ -109,13 +114,24 @@ func (webSocket WebSocket) dispatch(action action) {
 	}
 }
 
-func (webSocket WebSocket) listenActions() {
+func (webSocket *WebSocket) listenActions() {
+	if webSocket.isListen {
+		return
+	}
+	webSocket.isListen = true
 	for {
+		println("infinity -", len(webSocket.connections))
+		if len(webSocket.connections) == 0 {
+			break
+		}
 		action := <-webSocket.actions
+
 		if action.Type != "" {
 			webSocket.dispatch(action)
 		}
 	}
+	webSocket.isListen = false
+	return
 }
 
 // NewWebSocketServer - create new websocket server
@@ -123,7 +139,6 @@ func NewWebSocketServer() WebSocket {
 	webSocket := WebSocket{}
 	webSocket.connections = make(map[*net.Conn]bool)
 	webSocket.actions = make(chan action)
-	go webSocket.listenActions()
 	log.Info("[Websocket] Init socket instance")
 	return webSocket
 }

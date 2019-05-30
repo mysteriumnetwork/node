@@ -23,6 +23,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/julienschmidt/httprouter"
+
 	"github.com/mysteriumnetwork/node/websocket"
 
 	log "github.com/cihub/seelog"
@@ -374,7 +376,10 @@ func (di *Dependencies) subscribeEventConsumers() error {
 
 	return di.EventBus.Subscribe(event.Topic, di.NATStatusTracker.ConsumeNATEvent)
 }
-
+func (di *Dependencies) bootstrapWebsocket(router *httprouter.Router) {
+	di.WebSocket = websocket.NewWebSocketServer()
+	websocket.AddRoutesForWebSocket(router, di.WebSocket)
+}
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listener net.Listener) {
 	dialogFactory := func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
 		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID))
@@ -402,8 +407,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	)
 
 	router := tequilapi.NewAPIRouter()
-	di.WebSocket = websocket.NewWebSocketServer()
-	websocket.AddRoutesForWebSocket(router, di.WebSocket)
+
+	di.bootstrapWebsocket(router)
+
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.DiscoveryFinder)
