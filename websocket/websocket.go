@@ -19,28 +19,29 @@ var Instance WebSocket
 type WebSocket struct {
 	Server      *socketio.Server
 	connections map[*net.Conn]bool
-	Actions     chan Action
+	actions     chan action
 }
-
+// send new service instance status to websocket
 func (webSocket WebSocket) ServiceUpdateStatusAction(payload interface{}) {
-	webSocket.Actions <- Action{ServiceUpdateStatus, payload}
+	webSocket.actions <- action{ServiceUpdateStatus, payload}
 }
 
-type Action struct {
+type action struct {
 	Type    string      `json:"type"`
 	Payload interface{} `json:"payload"`
 }
 
+// add websockets to routes
 func AddRoutesForWebSocket(router *httprouter.Router, ws WebSocket) {
-	router.GET("/ws/", ws.Handler)
+	router.GET("/ws/", ws.handler)
 }
 
-func (webSocket WebSocket) Handler(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (webSocket WebSocket) handler(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	conn, _, _, err := ws.UpgradeHTTP(request, writer)
 	if err != nil {
 		// handle error
 	}
-	log.Info("[Websocket] ADD CONN", conn)
+	log.Info("[Websocket] add new connection", conn)
 	webSocket.connections[&conn] = true
 	go func() {
 		defer func() {
@@ -57,14 +58,14 @@ func (webSocket WebSocket) Handler(writer http.ResponseWriter, request *http.Req
 		for {
 			header, err := reader.NextFrame()
 			if err != nil {
-				// handle error
+				_ = log.Error("[Websocket] read header error", err)
 			}
 
 			// Reset writer to write frame with right operation code.
 			writer.Reset(conn, state, header.OpCode)
 			//
 			if _, err = io.Copy(writer, reader); err != nil {
-				// handle error
+				_ = log.Error("[Websocket] copy error", err)
 			}
 			if err = writer.Flush(); err != nil {
 				// handle error
@@ -78,10 +79,10 @@ func (webSocket WebSocket) Handler(writer http.ResponseWriter, request *http.Req
 
 }
 
-func (webSocket WebSocket) Dispatch(action Action) {
+func (webSocket WebSocket) dispatch(action action) {
 	bytes, _ := json.Marshal(action)
 	for conn := range webSocket.connections {
-		log.Info("[Websocket] send to %v data=%v", *conn,string(bytes))
+		log.Info("[Websocket] send to %v data=%v", *conn, string(bytes))
 		err := wsutil.WriteServerText(*conn, bytes)
 
 		if err != nil {
@@ -90,26 +91,21 @@ func (webSocket WebSocket) Dispatch(action Action) {
 	}
 }
 
-func (webSocket WebSocket) ListenActions() {
+func (webSocket WebSocket) listenActions() {
 	for {
-		action := <-webSocket.Actions
+		action := <-webSocket.actions
 		if action.Type != "" {
-			webSocket.Dispatch(action)
+			webSocket.dispatch(action)
 		}
 	}
 }
 
-type Test struct {
-	Id    int    `json:"id"`
-	State string `json:"state"`
-	Some  string
-}
-
+// create new websocket server
 func NewWebSocketServer() WebSocket {
 	webSocket := WebSocket{}
 	webSocket.connections = make(map[*net.Conn]bool)
-	webSocket.Actions = make(chan Action)
-	go webSocket.ListenActions()
+	webSocket.actions = make(chan action)
+	go webSocket.listenActions()
 	Instance = webSocket
 	log.Info("[Websocket] Init socket instance")
 	return webSocket

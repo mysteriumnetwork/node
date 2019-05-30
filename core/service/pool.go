@@ -177,17 +177,18 @@ func (i *Instance) State() State {
 	return i.state
 }
 
-type InstanceSocket struct {
+type instanceSocket struct {
 	Id         string `json:"id"`
 	Status     string `json:"status"`
 	ProviderID string `json:"providerId"`
 	Type       string `json:"type"`
 }
 
+// Set instance state and send new state to websocket
 func (i *Instance) SetState(state State) {
 	i.state = state
 	proposal := i.Proposal()
-	websocket.Instance.ServiceUpdateStatusAction(InstanceSocket{
+	websocket.Instance.ServiceUpdateStatusAction(instanceSocket{
 		Id:         string(i.id),
 		ProviderID: proposal.ProviderID,
 		Type:       proposal.ServiceType,
