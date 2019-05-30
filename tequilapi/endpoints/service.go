@@ -61,6 +61,7 @@ type accessPoliciesRequest struct {
 // swagger:model ServiceListDTO
 type serviceList []ServiceInfo
 
+// ServiceInfo struct
 // swagger:model ServiceInfoDTO
 type ServiceInfo struct {
 	// example: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
