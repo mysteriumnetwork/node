@@ -25,9 +25,12 @@ type Resolver interface {
 	GetOutboundIP() (string, error)
 }
 
+// delcared as var for override in test
+var checkAddress = "8.8.8.8:53"
+
 // GetOutbound provides an outbound IP address of the current system.
 func GetOutbound() (net.IP, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:53")
+	conn, err := net.Dial("udp4", checkAddress)
 	if err != nil {
 		return nil, err
 	}

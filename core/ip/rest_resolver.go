@@ -69,6 +69,7 @@ func (client *clientRest) GetPublicIP() (string, error) {
 	return ipResponse.IP, nil
 }
 
+// TODO this function doesnt depend on restClient and is independent - maybe it can be removed at all?
 func (client *clientRest) GetOutboundIP() (string, error) {
 	ip, err := GetOutbound()
 	return ip.String(), err
