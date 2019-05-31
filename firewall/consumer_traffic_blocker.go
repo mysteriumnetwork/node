@@ -17,6 +17,12 @@
 
 package firewall
 
+import (
+	"net"
+	"net/url"
+	"sync"
+)
+
 // RemoveRule type defines function for removal of created rule
 type RemoveRule func()
 
@@ -32,37 +38,84 @@ const (
 	none Scope = "none"
 )
 
-var currentBlocker Blocker = NoopBlocker{
-	LogPrefix: "[Noop firewall] ",
+type trafficBlocker struct {
+	lock             sync.Mutex
+	vendor           BlockVendor
+	trafficLockScope Scope
 }
 
-// Configure firewall with specified actual Blocker implementation
-func Configure(blocker Blocker) {
-	currentBlocker = blocker
+func (tb *trafficBlocker) SwitchVendor(blocker BlockVendor) {
+	tb.lock.Lock()
+	defer tb.lock.Unlock()
+	tb.vendor = blocker
 }
 
-// BlockNonTunnelTraffic effectively disallows any outgoing traffic from consumer node with specified scope
-func BlockNonTunnelTraffic(scope Scope) (RemoveRule, error) {
-	return currentBlocker.BlockNonTunnelTraffic(scope)
+func (tb *trafficBlocker) BlockOutgoingTraffic(scope Scope) (RemoveRule, error) {
+	tb.lock.Lock()
+	defer tb.lock.Unlock()
+	if tb.trafficLockScope == Global {
+		// nothing can override global lock
+		return func() {}, nil
+	}
+	tb.trafficLockScope = scope
+	return tb.vendor.BlockOutgoingTraffic()
 }
 
-// AllowURLAccess adds exception to blocked traffic for specified URL (host part is usually taken)
-func AllowURLAccess(urls ...string) (RemoveRule, error) {
+func (tb *trafficBlocker) AllowIPAccess(ip string) (RemoveRule, error) {
+	return tb.vendor.AllowIPAccess(ip)
+}
+
+func (tb *trafficBlocker) AllowURLAccess(rawURLs ...string) (RemoveRule, error) {
 	var ruleRemovers []func()
 	removeAll := func() {
 		for _, ruleRemover := range ruleRemovers {
 			ruleRemover()
 		}
 	}
-	for _, url := range urls {
-		remover, err := currentBlocker.AllowURLAccess(url)
+	for _, rawURL := range rawURLs {
+		parsed, err := url.Parse(rawURL)
 		if err != nil {
 			removeAll()
 			return nil, err
 		}
-		ruleRemovers = append(ruleRemovers, remover)
+
+		ips, err := net.LookupIP(parsed.Hostname())
+		if err != nil {
+			removeAll()
+			return nil, err
+		}
+
+		for _, ip := range ips {
+			remover, err := tb.AllowIPAccess(ip.String())
+			if err != nil {
+				removeAll()
+				return nil, err
+			}
+			ruleRemovers = append(ruleRemovers, remover)
+		}
 	}
 	return removeAll, nil
+
+}
+
+var currentBlocker = &trafficBlocker{
+	vendor:           NoopVendor{LogPrefix: "[Noop firewall] "},
+	trafficLockScope: none,
+}
+
+// Configure firewall with specified actual BlockVendor implementation
+func Configure(blocker BlockVendor) {
+	currentBlocker.SwitchVendor(blocker)
+}
+
+// BlockNonTunnelTraffic effectively disallows any outgoing traffic from consumer node with specified scope
+func BlockNonTunnelTraffic(scope Scope) (RemoveRule, error) {
+	return currentBlocker.BlockOutgoingTraffic(scope)
+}
+
+// AllowURLAccess adds exception to blocked traffic for specified URL (host part is usually taken)
+func AllowURLAccess(rawURLs ...string) (RemoveRule, error) {
+	return currentBlocker.AllowURLAccess(rawURLs...)
 }
 
 // AllowIPAccess adds IP based exception to underlying blocker implementation
@@ -70,9 +123,9 @@ func AllowIPAccess(ip string) (RemoveRule, error) {
 	return currentBlocker.AllowIPAccess(ip)
 }
 
-// Blocker interface neededs to be satisfied by any blocker implementations
-type Blocker interface {
-	BlockNonTunnelTraffic(scope Scope) (RemoveRule, error)
-	AllowURLAccess(url string) (RemoveRule, error)
+// BlockVendor interface neededs to be satisfied by any implementations which provide firewall capabilities, like iptables
+type BlockVendor interface {
+	BlockOutgoingTraffic() (RemoveRule, error)
 	AllowIPAccess(ip string) (RemoveRule, error)
+	Reset()
 }
