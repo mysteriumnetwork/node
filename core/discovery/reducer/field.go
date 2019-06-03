@@ -34,26 +34,6 @@ func Field(field FieldSelector, reducer FieldCondition) func(market.ServicePropo
 	}
 }
 
-// Equal matches proposal if field value is equal to expected value
-func Equal(field FieldSelector, valueExpected interface{}) func(market.ServiceProposal) bool {
-	return Field(field, func(value interface{}) bool {
-		return value == valueExpected
-	})
-}
-
-// In matches proposal if field value exists in array
-func In(field FieldSelector, valuesExpected ...interface{}) func(market.ServiceProposal) bool {
-	return Field(field, func(value interface{}) bool {
-		//for i := 0; i < len(valuesExpected); i++ {
-		for _, valueExpected := range valuesExpected {
-			if value == valueExpected {
-				return true
-			}
-		}
-		return false
-	})
-}
-
 // Empty matches proposal if given field is empty
 func Empty(field FieldSelector) func(market.ServiceProposal) bool {
 	return Field(field, func(value interface{}) bool {

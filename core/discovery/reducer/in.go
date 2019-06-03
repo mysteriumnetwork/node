@@ -18,27 +18,27 @@
 package reducer
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/mysteriumnetwork/node/market"
 )
 
-func Test_Field(t *testing.T) {
-	match := Field(fieldProviderID, func(value interface{}) bool {
-		return value == provider1
+// In matches proposal if field value exists in array
+func In(field FieldSelector, valuesExpected ...interface{}) func(market.ServiceProposal) bool {
+	return Field(field, func(value interface{}) bool {
+		for _, valueExpected := range valuesExpected {
+			if value == valueExpected {
+				return true
+			}
+		}
+		return false
 	})
-
-	assert.False(t, match(proposalEmpty))
-	assert.True(t, match(proposalProvider1Streaming))
-	assert.True(t, match(proposalProvider1Noop))
-	assert.False(t, match(proposalProvider2Streaming))
 }
 
-func Test_Empty(t *testing.T) {
-	match := Empty(fieldProviderID)
+// InString matches proposal if string value exists in array
+func InString(field FieldSelector, valuesExpected ...string) func(market.ServiceProposal) bool {
+	valuesExpectedTyped := make([]interface{}, len(valuesExpected))
+	for i, value := range valuesExpected {
+		valuesExpectedTyped[i] = value
+	}
 
-	assert.True(t, match(proposalEmpty))
-	assert.False(t, match(proposalProvider1Streaming))
-	assert.False(t, match(proposalProvider1Noop))
-	assert.False(t, match(proposalProvider2Streaming))
+	return In(field, valuesExpectedTyped...)
 }
