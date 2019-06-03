@@ -89,7 +89,7 @@ func (fetcher *Fetcher) fetchLoop() {
 func (fetcher *Fetcher) fetchDo() error {
 	proposals, err := fetcher.fetch()
 	if err != nil {
-		log.Warn("%s Failed to fetch proposals: %s", fetcherLogPrefix, err)
+		log.Warnf("%s Failed to fetch proposals: %s", fetcherLogPrefix, err)
 		return err
 	}
 
