@@ -3,7 +3,7 @@
 source bin/helpers/output.sh
 
 
-PROJECT_FILE="bin/localnet/docker-compose.yml"
+PROJECT_FILE="e2e/traversal/docker-compose.yml"
 
 setupDockerComposeCmd() {
     projectName=$1; shift;
@@ -28,7 +28,7 @@ setupInfra () {
     fi
 
 
-    ${dockerComposeCmd} up -d broker geth
+    ${dockerComposeCmd} up -d broker geth ipify
     if [ ! $? -eq 0 ]; then
         print_error "Error starting other services"
         cleanup "$@"
