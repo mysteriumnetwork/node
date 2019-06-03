@@ -1,10 +1,14 @@
-package firewall
+package iptables
 
 import (
 	"bufio"
 	"bytes"
 	"os/exec"
 	"strings"
+
+	"github.com/pkg/errors"
+
+	"github.com/mysteriumnetwork/node/firewall"
 
 	log "github.com/cihub/seelog"
 )
@@ -36,7 +40,7 @@ var iptablesExec = func(args ...string) ([]string, error) {
 	args = append([]string{"/sbin/iptables"}, args...)
 	output, err := exec.Command("sudo", args...).Output()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "iptables cmd error")
 	}
 	outputScanner := bufio.NewScanner(bytes.NewBuffer(output))
 	var lines []string
@@ -101,11 +105,11 @@ type IptablesBlocker struct {
 	outboundIP string
 }
 
-func (ib IptablesBlocker) BlockOutgoingTraffic() (RemoveRule, error) {
+func (ib IptablesBlocker) BlockOutgoingTraffic() (firewall.RemoveRule, error) {
 	return iptablesAddWithRemoval(outputChain, sourceIP, ib.outboundIP, jumpTo, killswitchChain)
 }
 
-func NewIptablesBlocker(outboundIP string) *IptablesBlocker {
+func NewBlocker(outboundIP string) *IptablesBlocker {
 	return &IptablesBlocker{
 		outboundIP: outboundIP,
 	}
@@ -129,7 +133,7 @@ func (IptablesBlocker) Reset() {
 	}
 }
 
-func iptablesAddWithRemoval(args ...string) (RemoveRule, error) {
+func iptablesAddWithRemoval(args ...string) (firewall.RemoveRule, error) {
 	addRule := append([]string{addRule}, args...)
 	removeRule := append([]string{removeRule}, args...)
 	if _, err := iptablesExec(addRule...); err != nil {
@@ -143,8 +147,8 @@ func iptablesAddWithRemoval(args ...string) (RemoveRule, error) {
 	}, nil
 }
 
-func (IptablesBlocker) AllowIPAccess(ip string) (RemoveRule, error) {
+func (IptablesBlocker) AllowIPAccess(ip string) (firewall.RemoveRule, error) {
 	return iptablesAddWithRemoval(killswitchChain, destinationIP, ip, jumpTo, accept)
 }
 
-var _ BlockVendor = (*IptablesBlocker)(nil)
+var _ firewall.BlockVendor = (*IptablesBlocker)(nil)

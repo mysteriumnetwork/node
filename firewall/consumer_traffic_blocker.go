@@ -18,7 +18,6 @@
 package firewall
 
 import (
-	"net"
 	"net/url"
 	"sync"
 )
@@ -79,20 +78,12 @@ func (tb *trafficBlocker) AllowURLAccess(rawURLs ...string) (RemoveRule, error) 
 			return nil, err
 		}
 
-		ips, err := net.LookupIP(parsed.Hostname())
+		remover, err := tb.AllowIPAccess(parsed.Hostname())
 		if err != nil {
 			removeAll()
 			return nil, err
 		}
-
-		for _, ip := range ips {
-			remover, err := tb.AllowIPAccess(ip.String())
-			if err != nil {
-				removeAll()
-				return nil, err
-			}
-			ruleRemovers = append(ruleRemovers, remover)
-		}
+		ruleRemovers = append(ruleRemovers, remover)
 	}
 	return removeAll, nil
 
