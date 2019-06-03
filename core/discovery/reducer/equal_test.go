@@ -32,6 +32,15 @@ func Test_Equal(t *testing.T) {
 	assert.False(t, match(proposalProvider2Streaming))
 }
 
+func Test_EqualInt(t *testing.T) {
+	match := EqualInt(fieldID, 1)
+
+	assert.False(t, match(proposalEmpty))
+	assert.False(t, match(proposalProvider1Streaming))
+	assert.False(t, match(proposalProvider1Noop))
+	assert.False(t, match(proposalProvider2Streaming))
+}
+
 func Test_EqualString(t *testing.T) {
 	match := EqualString(fieldProviderID, provider1)
 

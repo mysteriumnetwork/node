@@ -42,3 +42,13 @@ func InString(field FieldSelector, valuesExpected ...string) func(market.Service
 
 	return In(field, valuesExpectedTyped...)
 }
+
+// InInt matches proposal if integer value exists in array
+func InInt(field FieldSelector, valuesExpected ...int) func(market.ServiceProposal) bool {
+	valuesExpectedTyped := make([]interface{}, len(valuesExpected))
+	for i, value := range valuesExpected {
+		valuesExpectedTyped[i] = value
+	}
+
+	return In(field, valuesExpectedTyped...)
+}

@@ -32,6 +32,15 @@ func Test_In(t *testing.T) {
 	assert.True(t, match(proposalProvider2Streaming))
 }
 
+func Test_InInt(t *testing.T) {
+	match := InInt(fieldID, 1, 2, 3)
+
+	assert.False(t, match(proposalEmpty))
+	assert.False(t, match(proposalProvider1Streaming))
+	assert.False(t, match(proposalProvider1Noop))
+	assert.False(t, match(proposalProvider2Streaming))
+}
+
 func Test_InString(t *testing.T) {
 	match := InString(fieldProviderID, provider1, provider2)
 

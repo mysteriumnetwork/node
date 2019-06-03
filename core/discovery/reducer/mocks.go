@@ -81,6 +81,10 @@ func conditionIsStreaming(provider market.ServiceProposal) bool {
 	return provider.ServiceType == "streaming"
 }
 
+func fieldID(proposal market.ServiceProposal) interface{} {
+	return proposal.ID
+}
+
 func fieldProviderID(proposal market.ServiceProposal) interface{} {
 	return proposal.ProviderID
 }

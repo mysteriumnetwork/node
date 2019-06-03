@@ -28,6 +28,11 @@ func Equal(field FieldSelector, valueExpected interface{}) func(market.ServicePr
 	})
 }
 
+// EqualInt matches proposal if integer value is equal to expected value
+func EqualInt(field FieldSelector, valueExpected int) func(market.ServiceProposal) bool {
+	return Equal(field, valueExpected)
+}
+
 // EqualString matches proposal if string value is equal to expected value
 func EqualString(field FieldSelector, valueExpected string) func(market.ServiceProposal) bool {
 	return Equal(field, valueExpected)
