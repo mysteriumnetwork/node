@@ -30,9 +30,6 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 )
 
-// StopTopic is used in event bus to announce that service was stopped
-const StopTopic = "Service stop"
-
 var (
 	// ErrorLocation error indicates that action (i.e. disconnect)
 	ErrorLocation = errors.New("failed to detect service location")
@@ -80,6 +77,7 @@ func NewManager(
 		dialogWaiterFactory:  dialogWaiterFactory,
 		dialogHandlerFactory: dialogHandlerFactory,
 		discoveryFactory:     discoveryFactory,
+		eventPublisher:       eventPublisher,
 	}
 }
 
@@ -92,6 +90,7 @@ type Manager struct {
 	servicePool     *Pool
 
 	discoveryFactory DiscoveryFactory
+	eventPublisher   Publisher
 }
 
 // Start starts an instance of the given service type if knows one in service registry.
@@ -145,13 +144,14 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	manager.servicePool.Add(&instance)
 
 	go func() {
-		instance.state = Running
+		instance.setState(Running)
+
+		manager.eventPublisher.Publish(StartTopic, instance.ToEvent())
+
 		serveErr := service.Serve(providerID)
 		if serveErr != nil {
 			log.Error("Service serve failed: ", serveErr)
 		}
-
-		instance.state = NotRunning
 
 		// TODO: fix https://github.com/mysteriumnetwork/node/issues/855
 		stopErr := manager.servicePool.Stop(id)

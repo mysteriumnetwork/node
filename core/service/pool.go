@@ -101,7 +101,10 @@ func (p *Pool) stop(id ID) error {
 	}
 
 	p.del(id)
-	p.eventPublisher.Publish(StopTopic, instance)
+
+	instance.setState(NotRunning)
+	p.eventPublisher.Publish(StopTopic, instance.ToEvent())
+
 	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
 
@@ -159,6 +162,8 @@ type Instance struct {
 	proposal     market.ServiceProposal
 	dialogWaiter communication.DialogWaiter
 	discovery    Discovery
+
+	stateLock sync.RWMutex
 }
 
 // Options returns options used to start service
@@ -173,5 +178,25 @@ func (i *Instance) Proposal() market.ServiceProposal {
 
 // State returns the service instance state.
 func (i *Instance) State() State {
+	i.stateLock.RLock()
+	defer i.stateLock.RUnlock()
 	return i.state
+}
+
+func (i *Instance) setState(newState State) {
+	i.stateLock.Lock()
+	defer i.stateLock.Unlock()
+	i.state = newState
+}
+
+// ToEvent returns an event representation of the instance
+func (i *Instance) ToEvent() EventPayload {
+	i.stateLock.RLock()
+	defer i.stateLock.RUnlock()
+	return EventPayload{
+		ID:         string(i.id),
+		ProviderID: i.proposal.ProviderID,
+		Type:       i.proposal.ServiceType,
+		Status:     string(i.state),
+	}
 }

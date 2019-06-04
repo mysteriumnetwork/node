@@ -19,6 +19,7 @@ package service
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,9 +32,12 @@ type mockService struct {
 type mockPublisher struct {
 	publishedTopic string
 	publishedData  interface{}
+	lock           sync.Mutex
 }
 
 func (mockPublisher *mockPublisher) Publish(topic string, data interface{}) {
+	mockPublisher.lock.Lock()
+	defer mockPublisher.lock.Unlock()
 	mockPublisher.publishedTopic = topic
 	mockPublisher.publishedData = data
 }
