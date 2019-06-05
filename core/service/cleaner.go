@@ -27,8 +27,8 @@ type SessionStorage interface {
 	RemoveForService(serviceID string)
 }
 
-// Cleanup removes sessions of stopped service
-func (cleaner *Cleaner) Cleanup(event EventPayload) {
+// HandleServiceStatus removes sessions of stopped service
+func (cleaner *Cleaner) HandleServiceStatus(event EventPayload) {
 	if event.Status == string(NotRunning) {
 		cleaner.SessionStorage.RemoveForService(event.ID)
 	}

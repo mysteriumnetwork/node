@@ -62,7 +62,8 @@ func Test_Pool_Add(t *testing.T) {
 
 func Test_Pool_StopAllSuccess(t *testing.T) {
 	instance := &Instance{
-		service: &mockService{},
+		service:        &mockService{},
+		eventPublisher: &mockPublisher{},
 	}
 
 	pool := NewPool(&mockPublisher{})
@@ -74,7 +75,7 @@ func Test_Pool_StopAllSuccess(t *testing.T) {
 
 func Test_Pool_StopDoesNotStop(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{id: "test id", service: service}
+	instance := &Instance{id: "test id", service: service, eventPublisher: &mockPublisher{}}
 
 	pool := NewPool(&mockPublisher{})
 	pool.Add(instance)
@@ -91,7 +92,7 @@ func Test_Pool_StopReturnsErrIfInstanceDoesNotExist(t *testing.T) {
 
 func Test_Pool_StopAllDoesNotStopOneInstance(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{id: "test id", service: service}
+	instance := &Instance{id: "test id", service: service, eventPublisher: &mockPublisher{}}
 
 	pool := NewPool(&mockPublisher{})
 	pool.Add(instance)
