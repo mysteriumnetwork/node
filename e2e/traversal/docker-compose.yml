@@ -66,9 +66,9 @@ services:
     privileged: true
     volumes:
       - geth-runtime:/ethereum/geth-runtime
-      - ./geth/genesis.json:/ethereum/genesis.json
-      - ./geth/keystore:/ethereum/keystore
-      - ./geth/node_acc_password.txt:/ethereum/node_acc_password.txt
+      - ../../bin/localnet/geth/genesis.json:/ethereum/genesis.json
+      - ../../bin/localnet/geth/keystore:/ethereum/keystore
+      - ../../bin/localnet/geth/node_acc_password.txt:/ethereum/node_acc_password.txt
     command: >
       --syncmode 'full'
       --port 30311

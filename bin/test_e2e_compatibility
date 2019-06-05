@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+PROJECT_FILE="bin/localnet/docker-compose.yml"
+
 source bin/localnet/functions.sh
 
 function printResults {
