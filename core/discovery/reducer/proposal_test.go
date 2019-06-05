@@ -24,7 +24,7 @@ import (
 )
 
 func Test_ProviderID(t *testing.T) {
-	match := Equal(ProviderID, provider1)
+	match := EqualString(ProviderID, provider1)
 
 	assert.False(t, match(proposalEmpty))
 	assert.True(t, match(proposalProvider1Streaming))
@@ -33,7 +33,7 @@ func Test_ProviderID(t *testing.T) {
 }
 
 func Test_ServiceType(t *testing.T) {
-	match := Equal(ServiceType, serviceTypeStreaming)
+	match := EqualString(ServiceType, serviceTypeStreaming)
 
 	assert.False(t, match(proposalEmpty))
 	assert.True(t, match(proposalProvider1Streaming))
@@ -42,7 +42,7 @@ func Test_ServiceType(t *testing.T) {
 }
 
 func Test_Location_FiltersByCountry(t *testing.T) {
-	match := Equal(LocationCountry, "DE")
+	match := EqualString(LocationCountry, "DE")
 
 	assert.False(t, match(proposalEmpty))
 	assert.True(t, match(proposalProvider1Streaming))
@@ -51,7 +51,7 @@ func Test_Location_FiltersByCountry(t *testing.T) {
 }
 
 func Test_Location_FiltersByNodeType(t *testing.T) {
-	match := Equal(LocationType, "residential")
+	match := EqualString(LocationType, "residential")
 
 	assert.False(t, match(proposalEmpty))
 	assert.False(t, match(proposalProvider1Streaming))

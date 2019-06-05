@@ -27,34 +27,14 @@ type FieldSelector func(proposal market.ServiceProposal) interface{}
 // FieldCondition returns flag if field value matches against it's rules
 type FieldCondition func(value interface{}) bool
 
-// Field matches proposal if given FieldCondition passes
+// Field returns a matcher for checking proposal's field value with custom callback
 func Field(field FieldSelector, reducer FieldCondition) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
 		return reducer(field(proposal))
 	}
 }
 
-// Equal matches proposal if field value is equal to expected value
-func Equal(field FieldSelector, valueExpected interface{}) func(market.ServiceProposal) bool {
-	return Field(field, func(value interface{}) bool {
-		return value == valueExpected
-	})
-}
-
-// In matches proposal if field value exists in array
-func In(field FieldSelector, valuesExpected ...interface{}) func(market.ServiceProposal) bool {
-	return Field(field, func(value interface{}) bool {
-		//for i := 0; i < len(valuesExpected); i++ {
-		for _, valueExpected := range valuesExpected {
-			if value == valueExpected {
-				return true
-			}
-		}
-		return false
-	})
-}
-
-// Empty matches proposal if given field is empty
+// Empty returns a matcher for checking if given field is empty
 func Empty(field FieldSelector) func(market.ServiceProposal) bool {
 	return Field(field, func(value interface{}) bool {
 		switch valueTyped := value.(type) {

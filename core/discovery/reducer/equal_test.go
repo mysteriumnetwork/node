@@ -23,10 +23,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Field(t *testing.T) {
-	match := Field(fieldProviderID, func(value interface{}) bool {
-		return value == provider1
-	})
+func Test_EqualInt(t *testing.T) {
+	match := EqualInt(fieldID, 1)
+
+	assert.False(t, match(proposalEmpty))
+	assert.False(t, match(proposalProvider1Streaming))
+	assert.False(t, match(proposalProvider1Noop))
+	assert.False(t, match(proposalProvider2Streaming))
+}
+
+func Test_EqualString(t *testing.T) {
+	match := EqualString(fieldProviderID, provider1)
 
 	assert.False(t, match(proposalEmpty))
 	assert.True(t, match(proposalProvider1Streaming))
@@ -34,11 +41,11 @@ func Test_Field(t *testing.T) {
 	assert.False(t, match(proposalProvider2Streaming))
 }
 
-func Test_Empty(t *testing.T) {
-	match := Empty(fieldProviderID)
+func Test_Equal(t *testing.T) {
+	match := Equal(Location, locationResidential)
 
-	assert.True(t, match(proposalEmpty))
+	assert.False(t, match(proposalEmpty))
 	assert.False(t, match(proposalProvider1Streaming))
 	assert.False(t, match(proposalProvider1Noop))
-	assert.False(t, match(proposalProvider2Streaming))
+	assert.True(t, match(proposalProvider2Streaming))
 }

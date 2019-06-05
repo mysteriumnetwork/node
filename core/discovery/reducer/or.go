@@ -24,7 +24,7 @@ import (
 // OrCondition defines sub condition given for Or()
 type OrCondition func(market.ServiceProposal) bool
 
-// Or matches proposal if one of given conditions passes
+// Or returns a matcher for checking if one of given conditions passes
 func Or(conditions ...OrCondition) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
 		var match bool

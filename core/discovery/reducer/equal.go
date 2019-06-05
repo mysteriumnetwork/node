@@ -21,9 +21,19 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// All returns a matcher for returning proposals, without checking any condition
-func All() func(market.ServiceProposal) bool {
-	return func(_ market.ServiceProposal) bool {
-		return true
-	}
+// EqualInt returns a matcher for checking if proposal's integer field value equal to given value
+func EqualInt(field FieldSelector, valueExpected int) func(market.ServiceProposal) bool {
+	return Equal(field, valueExpected)
+}
+
+// EqualString returns a matcher for checking if proposal's string field value equal to given value
+func EqualString(field FieldSelector, valueExpected string) func(market.ServiceProposal) bool {
+	return Equal(field, valueExpected)
+}
+
+// Equal returns a matcher for checking if proposal's field value equal to given value
+func Equal(field FieldSelector, valueExpected interface{}) func(market.ServiceProposal) bool {
+	return Field(field, func(value interface{}) bool {
+		return value == valueExpected
+	})
 }

@@ -23,22 +23,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Field(t *testing.T) {
-	match := Field(fieldProviderID, func(value interface{}) bool {
-		return value == provider1
-	})
+func Test_Composition(t *testing.T) {
+	match := And(
+		Or(
+			EqualString(ServiceType, serviceTypeStreaming),
+			EqualString(ServiceType, serviceTypeNoop),
+		),
+		InString(ProviderID, provider1, provider2),
+		Not(In(Location, locationDatacenter, locationResidential)),
+	)
 
 	assert.False(t, match(proposalEmpty))
-	assert.True(t, match(proposalProvider1Streaming))
-	assert.True(t, match(proposalProvider1Noop))
-	assert.False(t, match(proposalProvider2Streaming))
-}
-
-func Test_Empty(t *testing.T) {
-	match := Empty(fieldProviderID)
-
-	assert.True(t, match(proposalEmpty))
 	assert.False(t, match(proposalProvider1Streaming))
-	assert.False(t, match(proposalProvider1Noop))
+	assert.True(t, match(proposalProvider1Noop))
 	assert.False(t, match(proposalProvider2Streaming))
 }

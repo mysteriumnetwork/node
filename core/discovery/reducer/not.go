@@ -18,27 +18,15 @@
 package reducer
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/mysteriumnetwork/node/market"
 )
 
-func Test_Field(t *testing.T) {
-	match := Field(fieldProviderID, func(value interface{}) bool {
-		return value == provider1
-	})
+// Condition defines sub condition given for Not()
+type Condition func(market.ServiceProposal) bool
 
-	assert.False(t, match(proposalEmpty))
-	assert.True(t, match(proposalProvider1Streaming))
-	assert.True(t, match(proposalProvider1Noop))
-	assert.False(t, match(proposalProvider2Streaming))
-}
-
-func Test_Empty(t *testing.T) {
-	match := Empty(fieldProviderID)
-
-	assert.True(t, match(proposalEmpty))
-	assert.False(t, match(proposalProvider1Streaming))
-	assert.False(t, match(proposalProvider1Noop))
-	assert.False(t, match(proposalProvider2Streaming))
+// Not returns a matcher for checking if given conditions is negated
+func Not(condition Condition) func(market.ServiceProposal) bool {
+	return func(proposal market.ServiceProposal) bool {
+		return !condition(proposal)
+	}
 }

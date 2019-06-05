@@ -24,7 +24,7 @@ import (
 // AndCondition defines sub condition given for And()
 type AndCondition func(market.ServiceProposal) bool
 
-// And matches proposal if all given conditions passes
+// And returns a matcher for checking if all given conditions passes
 func And(conditions ...AndCondition) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
 		var match bool
