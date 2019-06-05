@@ -63,7 +63,7 @@ func LocationType(proposal market.ServiceProposal) interface{} {
 	return service.GetLocation().NodeType
 }
 
-// AccessPolicy matches if proposal allows given access policy
+// AccessPolicy returns a matcher for checking if proposal allows given access policy
 func AccessPolicy(id, source string) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
 		// These proposals accepts all access lists

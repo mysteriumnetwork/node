@@ -24,7 +24,7 @@ import (
 // Condition defines sub condition given for Not()
 type Condition func(market.ServiceProposal) bool
 
-// Not matches all proposals, which negates given condition
+// Not returns a matcher for checking if given conditions is negated
 func Not(condition Condition) func(market.ServiceProposal) bool {
 	return func(proposal market.ServiceProposal) bool {
 		return !condition(proposal)

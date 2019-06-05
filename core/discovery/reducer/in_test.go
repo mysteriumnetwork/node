@@ -23,15 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_In(t *testing.T) {
-	match := In(fieldProviderID, provider1, provider2)
-
-	assert.False(t, match(proposalEmpty))
-	assert.True(t, match(proposalProvider1Streaming))
-	assert.True(t, match(proposalProvider1Noop))
-	assert.True(t, match(proposalProvider2Streaming))
-}
-
 func Test_InInt(t *testing.T) {
 	match := InInt(fieldID, 1, 2, 3)
 
@@ -47,5 +38,14 @@ func Test_InString(t *testing.T) {
 	assert.False(t, match(proposalEmpty))
 	assert.True(t, match(proposalProvider1Streaming))
 	assert.True(t, match(proposalProvider1Noop))
+	assert.True(t, match(proposalProvider2Streaming))
+}
+
+func Test_In(t *testing.T) {
+	match := In(Location, locationDatacenter, locationResidential)
+
+	assert.False(t, match(proposalEmpty))
+	assert.True(t, match(proposalProvider1Streaming))
+	assert.False(t, match(proposalProvider1Noop))
 	assert.True(t, match(proposalProvider2Streaming))
 }

@@ -21,19 +21,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// In matches proposal if field value exists in array
-func In(field FieldSelector, valuesExpected ...interface{}) func(market.ServiceProposal) bool {
-	return Field(field, func(value interface{}) bool {
-		for _, valueExpected := range valuesExpected {
-			if value == valueExpected {
-				return true
-			}
-		}
-		return false
-	})
-}
-
-// InString matches proposal if string value exists in array
+// InString returns a matcher for checking if proposal's string field value exists in given array of values
 func InString(field FieldSelector, valuesExpected ...string) func(market.ServiceProposal) bool {
 	valuesExpectedTyped := make([]interface{}, len(valuesExpected))
 	for i, value := range valuesExpected {
@@ -43,7 +31,7 @@ func InString(field FieldSelector, valuesExpected ...string) func(market.Service
 	return In(field, valuesExpectedTyped...)
 }
 
-// InInt matches proposal if integer value exists in array
+// InInt returns a matcher for checking if proposal's integer field value exists in given array of values
 func InInt(field FieldSelector, valuesExpected ...int) func(market.ServiceProposal) bool {
 	valuesExpectedTyped := make([]interface{}, len(valuesExpected))
 	for i, value := range valuesExpected {
@@ -51,4 +39,16 @@ func InInt(field FieldSelector, valuesExpected ...int) func(market.ServicePropos
 	}
 
 	return In(field, valuesExpectedTyped...)
+}
+
+// In returns a matcher for checking if proposal's field value exists in given array of values
+func In(field FieldSelector, valuesExpected ...interface{}) func(market.ServiceProposal) bool {
+	return Field(field, func(value interface{}) bool {
+		for _, valueExpected := range valuesExpected {
+			if value == valueExpected {
+				return true
+			}
+		}
+		return false
+	})
 }

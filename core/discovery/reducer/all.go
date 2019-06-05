@@ -21,7 +21,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// All matches all proposals, without checking any condition
+// All returns a matcher for returning proposals, without checking any condition
 func All() func(market.ServiceProposal) bool {
 	return func(_ market.ServiceProposal) bool {
 		return true

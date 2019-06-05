@@ -21,19 +21,19 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 )
 
-// Equal matches proposal if field value is equal to expected value
-func Equal(field FieldSelector, valueExpected interface{}) func(market.ServiceProposal) bool {
-	return Field(field, func(value interface{}) bool {
-		return value == valueExpected
-	})
-}
-
-// EqualInt matches proposal if integer value is equal to expected value
+// EqualInt returns a matcher for checking if proposal's integer field value equal to given value
 func EqualInt(field FieldSelector, valueExpected int) func(market.ServiceProposal) bool {
 	return Equal(field, valueExpected)
 }
 
-// EqualString matches proposal if string value is equal to expected value
+// EqualString returns a matcher for checking if proposal's string field value equal to given value
 func EqualString(field FieldSelector, valueExpected string) func(market.ServiceProposal) bool {
 	return Equal(field, valueExpected)
+}
+
+// Equal returns a matcher for checking if proposal's field value equal to given value
+func Equal(field FieldSelector, valueExpected interface{}) func(market.ServiceProposal) bool {
+	return Field(field, func(value interface{}) bool {
+		return value == valueExpected
+	})
 }
