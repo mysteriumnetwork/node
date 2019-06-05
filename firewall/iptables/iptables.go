@@ -6,11 +6,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
-
-	"github.com/mysteriumnetwork/node/firewall"
-
 	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -101,21 +99,21 @@ func setupKillSwitchChain() error {
 	return nil
 }
 
-type IptablesBlocker struct {
+type Iptables struct {
 	outboundIP string
 }
 
-func (ib IptablesBlocker) BlockOutgoingTraffic() (firewall.RemoveRule, error) {
-	return iptablesAddWithRemoval(outputChain, sourceIP, ib.outboundIP, jumpTo, killswitchChain)
+func (b Iptables) BlockOutgoingTraffic() (firewall.RemoveRule, error) {
+	return iptablesAddWithRemoval(outputChain, sourceIP, b.outboundIP, jumpTo, killswitchChain)
 }
 
-func NewBlocker(outboundIP string) *IptablesBlocker {
-	return &IptablesBlocker{
+func New(outboundIP string) *Iptables {
+	return &Iptables{
 		outboundIP: outboundIP,
 	}
 }
 
-func (ib IptablesBlocker) Setup() error {
+func (b Iptables) Setup() error {
 	if err := checkVersion(); err != nil {
 		return err
 	}
@@ -127,7 +125,7 @@ func (ib IptablesBlocker) Setup() error {
 	return setupKillSwitchChain()
 }
 
-func (IptablesBlocker) Reset() {
+func (Iptables) Reset() {
 	if err := cleanupStaleRules(); err != nil {
 		_ = log.Warn(logPrefix, "Error cleaning up iptables rules, you might want to do it yourself: ", err)
 	}
@@ -147,8 +145,8 @@ func iptablesAddWithRemoval(args ...string) (firewall.RemoveRule, error) {
 	}, nil
 }
 
-func (IptablesBlocker) AllowIPAccess(ip string) (firewall.RemoveRule, error) {
+func (Iptables) AllowIPAccess(ip string) (firewall.RemoveRule, error) {
 	return iptablesAddWithRemoval(killswitchChain, destinationIP, ip, jumpTo, accept)
 }
 
-var _ firewall.BlockVendor = (*IptablesBlocker)(nil)
+var _ firewall.Vendor = (*Iptables)(nil)

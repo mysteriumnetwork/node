@@ -375,7 +375,7 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
-
+	firewall.Reset()
 	log.Flush()
 	return nil
 }

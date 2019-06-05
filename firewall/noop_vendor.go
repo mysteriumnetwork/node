@@ -19,7 +19,7 @@ package firewall
 
 import log "github.com/cihub/seelog"
 
-// NoopVendor is a BlockVendor implementation which only logs allow requests with no effects
+// NoopVendor is a Vendor implementation which only logs allow requests with no effects
 // used by default
 type NoopVendor struct {
 	LogPrefix string
@@ -47,4 +47,4 @@ func (nb NoopVendor) logRemoval(vals ...interface{}) RemoveRule {
 	}
 }
 
-var _ BlockVendor = NoopVendor{}
+var _ Vendor = NoopVendor{}

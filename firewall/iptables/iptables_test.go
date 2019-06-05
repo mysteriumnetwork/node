@@ -24,7 +24,7 @@ func TestBlockerSetupIsSuccesful(t *testing.T) {
 	}
 	iptablesExec = mockedExec.IptablesExec
 
-	blocker := NewBlocker("1.1.1.1")
+	blocker := New("1.1.1.1")
 	assert.NoError(t, blocker.Setup())
 	assert.True(t, mockedExec.VerifyCalledWithArgs(addChain, killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs(addRule, killswitchChain, jumpTo, reject))
@@ -55,7 +55,7 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 	}
 	iptablesExec = mockedExec.IptablesExec
 
-	blocker := NewBlocker("1.1.1.1")
+	blocker := New("1.1.1.1")
 	assert.NoError(t, blocker.Setup())
 	assert.True(t, mockedExec.VerifyCalledWithArgs(removeRule, outputChain, sourceIP, "5.5.5.5", jumpTo, killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs(removeChainRules, killswitchChain))
@@ -89,7 +89,7 @@ func TestBlockerResetIsSuccessful(t *testing.T) {
 	}
 	iptablesExec = mockedExec.IptablesExec
 
-	blocker := NewBlocker("1.1.1.1")
+	blocker := New("1.1.1.1")
 	blocker.Reset()
 
 	assert.True(t, mockedExec.VerifyCalledWithArgs(removeRule, outputChain, sourceIP, "1.1.1.1", jumpTo, killswitchChain))
@@ -103,7 +103,7 @@ func TestBlockerBlocksAllOutgoingTraffic(t *testing.T) {
 	}
 	iptablesExec = mockedExec.IptablesExec
 
-	blocker := NewBlocker("1.1.1.1")
+	blocker := New("1.1.1.1")
 
 	removeRuleFunc, err := blocker.BlockOutgoingTraffic()
 	assert.NoError(t, err)
@@ -119,7 +119,7 @@ func TestBlockerAddsAllowedIP(t *testing.T) {
 	}
 	iptablesExec = mockedExec.IptablesExec
 
-	blocker := NewBlocker("1.1.1.1")
+	blocker := New("1.1.1.1")
 
 	removeRuleFunc, err := blocker.AllowIPAccess("2.2.2.2")
 	assert.NoError(t, err)
