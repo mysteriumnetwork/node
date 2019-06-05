@@ -28,7 +28,7 @@ setupInfra () {
     fi
 
 
-    ${dockerComposeCmd} up -d broker geth
+    ${dockerComposeCmd} up -d broker geth ipify
     if [ ! $? -eq 0 ]; then
         print_error "Error starting other services"
         cleanup "$@"
