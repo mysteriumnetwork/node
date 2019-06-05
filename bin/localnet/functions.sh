@@ -2,9 +2,6 @@
 
 source bin/helpers/output.sh
 
-
-PROJECT_FILE="bin/localnet/docker-compose.yml"
-
 setupDockerComposeCmd() {
     projectName=$1; shift;
 
@@ -27,8 +24,16 @@ setupInfra () {
         exit 1
     fi
 
+    if [[ ${NET_ENV} == "localnet" ]]; then
+        SERVICES="broker geth"
+    fi
 
-    ${dockerComposeCmd} up -d broker geth ipify
+    if [[ ${NET_ENV} == "traversal" ]]; then
+        SERVICES="broker geth ipify"
+    fi
+
+    echo "Starting services: ${SERVICES}"
+    ${dockerComposeCmd} up -d ${SERVICES}
     if [ ! $? -eq 0 ]; then
         print_error "Error starting other services"
         cleanup "$@"

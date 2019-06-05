@@ -2,6 +2,9 @@
 
 set -e
 
-source bin/localnet/functions.sh
+NET_ENV=localnet
+PROJECT_FILE="bin/${NET_ENV}/docker-compose.yml"
 
-cleanup "localnet"
+source bin/${NET_ENV}/functions.sh
+
+cleanup "${NET_ENV}"

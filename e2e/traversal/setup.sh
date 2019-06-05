@@ -2,6 +2,9 @@
 
 set -e
 
-source e2e/traversal/functions.sh
+NET_ENV=traversal
+PROJECT_FILE="e2e/${NET_ENV}/docker-compose.yml"
 
-setup "traversal" "e2e/traversal/publish-ports.yml"
+source bin/localnet/functions.sh
+
+setup "${NET_ENV}" "e2e/${NET_ENV}/publish-ports.yml"

@@ -94,7 +94,7 @@ func NewService(
 
 // Start launches discovery service
 func (d *Discovery) Start(ownIdentity identity.Identity, proposal market.ServiceProposal) {
-	log.Info(logPrefix, "starting discovery..")
+	log.Info(logPrefix, "starting discovery...")
 	d.mu.RLock()
 	defer d.mu.RUnlock()
 

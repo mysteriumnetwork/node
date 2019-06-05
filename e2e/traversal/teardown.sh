@@ -2,6 +2,9 @@
 
 set -e
 
-source e2e/traversal/functions.sh
+NET_ENV=traversal
+PROJECT_FILE="e2e/${NET_ENV}/docker-compose.yml"
 
-cleanup "traversal"
+source bin/localnet/functions.sh
+
+cleanup "${NET_ENV}"
