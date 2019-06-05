@@ -28,6 +28,8 @@ type SessionStorage interface {
 }
 
 // Cleanup removes sessions of stopped service
-func (cleaner *Cleaner) Cleanup(instance EventPayload) {
-	cleaner.SessionStorage.RemoveForService(instance.ID)
+func (cleaner *Cleaner) Cleanup(event EventPayload) {
+	if event.Status == string(NotRunning) {
+		cleaner.SessionStorage.RemoveForService(event.ID)
+	}
 }

@@ -143,13 +143,13 @@ func (h *Handler) stop() {
 	h.stopOnce.Do(func() { close(h.stopChan) })
 }
 
-func (h *Handler) send(e Event) error {
+func (h *Handler) send(e Event) {
 	marshaled, err := json.Marshal(e)
 	if err != nil {
 		log.Error(logPrefix, "could not marshal sse message", err)
+		return
 	}
 	h.messages <- string(marshaled)
-	return nil
 }
 
 // ConsumeServiceStateEvent consumes the service state event

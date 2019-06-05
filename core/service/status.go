@@ -17,11 +17,8 @@
 
 package service
 
-// StopTopic is used in event bus to announce that service was stopped
-const StopTopic = "Service stop"
-
-// StartTopic is used in event bus to announce that service was started
-const StartTopic = "Service start"
+// StatusTopic is used in event bus to announce the service status
+const StatusTopic = "Service status"
 
 // EventPayload represents the service event related information
 type EventPayload struct {

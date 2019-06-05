@@ -103,7 +103,6 @@ func (p *Pool) stop(id ID) error {
 	p.del(id)
 
 	instance.setState(NotRunning)
-	p.eventPublisher.Publish(StopTopic, instance.ToEvent())
 
 	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
@@ -155,13 +154,14 @@ func NewInstance(
 
 // Instance represents a run service
 type Instance struct {
-	id           ID
-	state        State
-	options      Options
-	service      RunnableService
-	proposal     market.ServiceProposal
-	dialogWaiter communication.DialogWaiter
-	discovery    Discovery
+	id             ID
+	state          State
+	options        Options
+	service        RunnableService
+	proposal       market.ServiceProposal
+	dialogWaiter   communication.DialogWaiter
+	discovery      Discovery
+	eventPublisher Publisher
 
 	stateLock sync.RWMutex
 }
@@ -187,12 +187,12 @@ func (i *Instance) setState(newState State) {
 	i.stateLock.Lock()
 	defer i.stateLock.Unlock()
 	i.state = newState
+
+	i.eventPublisher.Publish(StatusTopic, i.toEvent())
 }
 
-// ToEvent returns an event representation of the instance
-func (i *Instance) ToEvent() EventPayload {
-	i.stateLock.RLock()
-	defer i.stateLock.RUnlock()
+// toEvent returns an event representation of the instance
+func (i *Instance) toEvent() EventPayload {
 	return EventPayload{
 		ID:         string(i.id),
 		ProviderID: i.proposal.ProviderID,

@@ -132,21 +132,20 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 	discovery.Start(providerID, proposal)
 
 	instance := Instance{
-		id:           id,
-		state:        Starting,
-		options:      options,
-		service:      service,
-		proposal:     proposal,
-		dialogWaiter: dialogWaiter,
-		discovery:    discovery,
+		id:             id,
+		state:          Starting,
+		options:        options,
+		service:        service,
+		proposal:       proposal,
+		dialogWaiter:   dialogWaiter,
+		discovery:      discovery,
+		eventPublisher: manager.eventPublisher,
 	}
 
 	manager.servicePool.Add(&instance)
 
 	go func() {
 		instance.setState(Running)
-
-		manager.eventPublisher.Publish(StartTopic, instance.ToEvent())
 
 		serveErr := service.Serve(providerID)
 		if serveErr != nil {

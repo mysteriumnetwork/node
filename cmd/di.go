@@ -282,11 +282,7 @@ func (di *Dependencies) registerNoopConnection() {
 // bootstrapSSEHandler bootstraps the SSEHandler and all of its dependencies
 func (di *Dependencies) bootstrapSSEHandler() error {
 	di.SSEHandler = sse.NewHandler()
-	err := di.EventBus.SubscribeAsync(service.StartTopic, di.SSEHandler.ConsumeServiceStateEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(service.StopTopic, di.SSEHandler.ConsumeServiceStateEvent)
+	err := di.EventBus.SubscribeAsync(service.StatusTopic, di.SSEHandler.ConsumeServiceStateEvent)
 	if err != nil {
 		return err
 	}

@@ -114,7 +114,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	eventBus.lock.Lock()
 	defer eventBus.lock.Unlock()
 
-	assert.Equal(t, StopTopic, eventBus.publishedTopic)
+	assert.Equal(t, StatusTopic, eventBus.publishedTopic)
 
 	expectedPayload := EventPayload{ID: string(serviceID), ProviderID: "", Type: "", Status: "NotRunning"}
 	assert.Equal(t, expectedPayload, eventBus.publishedData)
