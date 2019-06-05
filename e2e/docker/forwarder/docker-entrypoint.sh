@@ -23,4 +23,4 @@ if [ -n "$DEFAULT_ROUTE" ]; then
     setDefaultRoute ${DEFAULT_ROUTE}
 fi
 
-named -c /etc/bind/named.conf -g -u named
+dnsmasq --keep-in-foreground --bind-dynamic
