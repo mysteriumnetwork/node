@@ -78,7 +78,7 @@ func (et *Tracker) WaitForEvent() Event {
 
 // Event represents a NAT traversal related event
 type Event struct {
-	Stage      string
-	Successful bool
-	Error      error
+	Stage      string `json:"stage"`
+	Successful bool   `json:"successful"`
+	Error      error  `json:"error,omitempty"`
 }

@@ -77,6 +77,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
+	"github.com/mysteriumnetwork/node/tequilapi/sse"
 	"github.com/mysteriumnetwork/node/ui"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
@@ -188,7 +189,8 @@ type Dependencies struct {
 
 	BandwidthTracker *bandwidth.Tracker
 
-	UIServer UIServer
+	UIServer   UIServer
+	SSEHandler *sse.Handler
 }
 
 // Bootstrap initiates all container dependencies
@@ -234,6 +236,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	if err := di.bootstrapSSEHandler(); err != nil {
+		return err
+	}
+
 	di.bootstrapMetrics(nodeOptions)
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
@@ -271,6 +277,21 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 func (di *Dependencies) registerNoopConnection() {
 	service_noop.Bootstrap()
 	di.ConnectionRegistry.Register(service_noop.ServiceType, service_noop.NewConnectionCreator())
+}
+
+// bootstrapSSEHandler bootstraps the SSEHandler and all of its dependencies
+func (di *Dependencies) bootstrapSSEHandler() error {
+	di.SSEHandler = sse.NewHandler()
+	err := di.EventBus.SubscribeAsync(service.StatusTopic, di.SSEHandler.ConsumeServiceStateEvent)
+	if err != nil {
+		return err
+	}
+	err = di.EventBus.Subscribe(nodevent.Topic, di.SSEHandler.ConsumeNodeEvent)
+	if err != nil {
+		return err
+	}
+	err = di.EventBus.SubscribeAsync(event.Topic, di.SSEHandler.ConsumeNATEvent)
+	return err
 }
 
 // Shutdown stops container
@@ -411,6 +432,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(router, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForNAT(router, di.NATStatusTracker.Status)
+	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
+
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()

@@ -101,9 +101,21 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.NoError(t, err)
 
+	services := manager.servicePool.List()
+
+	var serviceID ID
+	for k := range services {
+		serviceID = services[k].id
+	}
+
 	err = manager.Stop(id)
 	assert.NoError(t, err)
 
-	assert.Equal(t, StopTopic, eventBus.publishedTopic)
-	assert.Equal(t, &mockCopy, eventBus.publishedData.(*Instance).service)
+	eventBus.lock.Lock()
+	defer eventBus.lock.Unlock()
+
+	assert.Equal(t, StatusTopic, eventBus.publishedTopic)
+
+	expectedPayload := EventPayload{ID: string(serviceID), ProviderID: "", Type: "", Status: "NotRunning"}
+	assert.Equal(t, expectedPayload, eventBus.publishedData)
 }

@@ -17,6 +17,17 @@
 
 package service
 
+// StatusTopic is used in event bus to announce the service status
+const StatusTopic = "Service status"
+
+// EventPayload represents the service event related information
+type EventPayload struct {
+	ID         string `json:"id"`
+	ProviderID string `json:"providerId"`
+	Type       string `json:"type"`
+	Status     string `json:"status"`
+}
+
 // State represents list of possible service states
 type State string
 

@@ -15,21 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package service
+package endpoints
 
-// Cleaner cleans up when service is stopped
-type Cleaner struct {
-	SessionStorage SessionStorage
+import (
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+)
+
+// SSEHandler represents the sse handler
+type SSEHandler interface {
+	Sub(resp http.ResponseWriter, req *http.Request, params httprouter.Params)
 }
 
-// SessionStorage keeps sessions and allows removing them by proposal id
-type SessionStorage interface {
-	RemoveForService(serviceID string)
-}
-
-// HandleServiceStatus removes sessions of stopped service
-func (cleaner *Cleaner) HandleServiceStatus(event EventPayload) {
-	if event.Status == string(NotRunning) {
-		cleaner.SessionStorage.RemoveForService(event.ID)
-	}
+// AddRoutesForSSE adds route for sse
+func AddRoutesForSSE(router *httprouter.Router, handler SSEHandler) {
+	router.GET("/events", handler.Sub)
 }

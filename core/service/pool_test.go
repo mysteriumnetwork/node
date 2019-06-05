@@ -19,6 +19,7 @@ package service
 
 import (
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,9 +32,12 @@ type mockService struct {
 type mockPublisher struct {
 	publishedTopic string
 	publishedData  interface{}
+	lock           sync.Mutex
 }
 
 func (mockPublisher *mockPublisher) Publish(topic string, data interface{}) {
+	mockPublisher.lock.Lock()
+	defer mockPublisher.lock.Unlock()
 	mockPublisher.publishedTopic = topic
 	mockPublisher.publishedData = data
 }
@@ -58,7 +62,8 @@ func Test_Pool_Add(t *testing.T) {
 
 func Test_Pool_StopAllSuccess(t *testing.T) {
 	instance := &Instance{
-		service: &mockService{},
+		service:        &mockService{},
+		eventPublisher: &mockPublisher{},
 	}
 
 	pool := NewPool(&mockPublisher{})
@@ -70,7 +75,7 @@ func Test_Pool_StopAllSuccess(t *testing.T) {
 
 func Test_Pool_StopDoesNotStop(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{id: "test id", service: service}
+	instance := &Instance{id: "test id", service: service, eventPublisher: &mockPublisher{}}
 
 	pool := NewPool(&mockPublisher{})
 	pool.Add(instance)
@@ -87,7 +92,7 @@ func Test_Pool_StopReturnsErrIfInstanceDoesNotExist(t *testing.T) {
 
 func Test_Pool_StopAllDoesNotStopOneInstance(t *testing.T) {
 	service := &mockService{killErr: errors.New("I dont want to stop")}
-	instance := &Instance{id: "test id", service: service}
+	instance := &Instance{id: "test id", service: service, eventPublisher: &mockPublisher{}}
 
 	pool := NewPool(&mockPublisher{})
 	pool.Add(instance)
