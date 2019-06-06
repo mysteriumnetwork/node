@@ -590,10 +590,6 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.Options) {
-	// warm up the loader as the load takes up to a couple of secs
-	loader := &upnp.GatewayLoader{}
-	go loader.Get()
-
 	var transport metrics.Transport
 	if options.DisableMetrics {
 		transport = metrics.NewNoopTransport()
@@ -601,7 +597,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.Options) {
 		transport = metrics.NewElasticSearchTransport(options.MetricsAddress, 10*time.Second)
 	}
 
-	di.QualityMetricsSender = metrics.NewSender(transport, metadata.VersionAsString(), loader.HumanReadable)
+	di.QualityMetricsSender = metrics.NewSender(transport, metadata.VersionAsString())
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
@@ -668,7 +664,10 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
 
-	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP)
+	// warm up the loader as the load takes up to a couple of secs
+	loader := &upnp.GatewayLoader{}
+	go loader.Get()
+	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
 
 	var lastStageName string
 	if options.ExperimentNATPunching {
