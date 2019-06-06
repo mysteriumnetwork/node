@@ -20,33 +20,8 @@ package sse
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service"
-	natEvent "github.com/mysteriumnetwork/node/nat/event"
 )
-
-func TestHandler_ConsumeNATEvent(t *testing.T) {
-	h := NewHandler()
-	me := natEvent.Event{
-		Stage: "somestage",
-	}
-	h.ConsumeNATEvent(me)
-
-	assert.Equal(t, `{"payload":{"stage":"somestage","successful":false},"type":"nat"}`, <-h.messages)
-}
-
-func TestHandler_ConsumeServiceStateEvent(t *testing.T) {
-	h := NewHandler()
-
-	me := service.EventPayload{
-		Status: "somestage",
-	}
-	h.ConsumeServiceStateEvent(me)
-
-	assert.Equal(t, `{"payload":{"id":"","providerId":"","type":"","status":"somestage"},"type":"service-status"}`, <-h.messages)
-}
 
 func TestHandler_Stops(t *testing.T) {
 	h := NewHandler()

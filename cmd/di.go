@@ -44,6 +44,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/state"
+	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -71,6 +73,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
+	sessionevent "github.com/mysteriumnetwork/node/session/event"
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
 	"github.com/mysteriumnetwork/node/session/promise"
@@ -189,6 +192,8 @@ type Dependencies struct {
 
 	BandwidthTracker *bandwidth.Tracker
 
+	StateKeeper *state.Keeper
+
 	UIServer   UIServer
 	SSEHandler *sse.Handler
 }
@@ -244,6 +249,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
+	di.bootstrapStateKeeper(nodeOptions)
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
 
 	di.registerConnections(nodeOptions)
@@ -259,6 +265,27 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	return nil
+}
+
+func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
+	var lastStageName string
+	if options.ExperimentNATPunching {
+		lastStageName = traversal.StageName
+	} else {
+		lastStageName = mapping.StageName
+	}
+	tracker := nat.NewStatusTracker(lastStageName)
+
+	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage)
+	err := di.EventBus.SubscribeAsync(service.StatusTopic, di.StateKeeper.ConsumeServiceStateEvent)
+	if err != nil {
+		return err
+	}
+	err = di.EventBus.SubscribeAsync(sessionevent.Topic, di.StateKeeper.ConsumeSessionEvent)
+	if err != nil {
+		return err
+	}
+	return di.EventBus.SubscribeAsync(event.Topic, di.StateKeeper.ConsumeNATEvent)
 }
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
@@ -283,15 +310,11 @@ func (di *Dependencies) registerNoopConnection() {
 // bootstrapSSEHandler bootstraps the SSEHandler and all of its dependencies
 func (di *Dependencies) bootstrapSSEHandler() error {
 	di.SSEHandler = sse.NewHandler()
-	err := di.EventBus.SubscribeAsync(service.StatusTopic, di.SSEHandler.ConsumeServiceStateEvent)
+	err := di.EventBus.Subscribe(nodevent.Topic, di.SSEHandler.ConsumeNodeEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(nodevent.Topic, di.SSEHandler.ConsumeNodeEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(event.Topic, di.SSEHandler.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(statevent.Topic, di.SSEHandler.ConsumeStateEvent)
 	return err
 }
 

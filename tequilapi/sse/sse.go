@@ -26,8 +26,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service"
-	natEvent "github.com/mysteriumnetwork/node/nat/event"
+	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/pkg/errors"
 )
 
@@ -47,6 +46,8 @@ const (
 	NATEvent EventType = "nat"
 	// ServiceStatusEvent represents the service status event type
 	ServiceStatusEvent EventType = "service-status"
+	// StateChangeEvent represents the state change
+	StateChangeEvent EventType = "state-change"
 )
 
 // Handler represents an sse handler
@@ -152,14 +153,6 @@ func (h *Handler) send(e Event) {
 	h.messages <- string(marshaled)
 }
 
-// ConsumeServiceStateEvent consumes the service state event
-func (h *Handler) ConsumeServiceStateEvent(event service.EventPayload) {
-	h.send(Event{
-		Type:    ServiceStatusEvent,
-		Payload: event,
-	})
-}
-
 // ConsumeNodeEvent consumes the node state event
 func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 	if e.Status == nodeEvent.StatusStarted {
@@ -172,10 +165,10 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 	}
 }
 
-// ConsumeNATEvent consumes a given NAT event
-func (h *Handler) ConsumeNATEvent(e natEvent.Event) {
+// ConsumeStateEvent consumes the state change event
+func (h *Handler) ConsumeStateEvent(event stateEvent.State) {
 	h.send(Event{
-		Type:    NATEvent,
-		Payload: e,
+		Type:    StateChangeEvent,
+		Payload: event,
 	})
 }
