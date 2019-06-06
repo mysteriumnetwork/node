@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package metrics
+package quality
 
 // NewNoopTransport creates transport which ignores requests to send metrics
 func NewNoopTransport() Transport {

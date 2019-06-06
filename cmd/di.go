@@ -44,6 +44,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state"
 	statevent "github.com/mysteriumnetwork/node/core/state/event"
@@ -60,7 +61,6 @@ import (
 	"github.com/mysteriumnetwork/node/market/metrics/oracle"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/event"
@@ -178,7 +178,7 @@ type Dependencies struct {
 	DiscoveryFinder     *discovery.Finder
 	DiscoveryFetcherAPI *discovery_api.Fetcher
 
-	QualityMetricsSender *metrics.Sender
+	QualityMetricsSender *quality.Sender
 
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
@@ -626,13 +626,13 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
-	var transport metrics.Transport
+	var transport quality.Transport
 	switch options.Type {
 	case node.QualityTypeMORQA:
 		_, err = firewall.AllowURLAccess(options.Address)
-		transport = metrics.NewElasticSearchTransport(options.Address, 10*time.Second)
+		transport = quality.NewElasticSearchTransport(options.Address, 10*time.Second)
 	case node.QualityTypeNone:
-		transport = metrics.NewNoopTransport()
+		transport = quality.NewNoopTransport()
 	default:
 		err = fmt.Errorf("unknown Quality Oracle provider: %s", options.Type)
 	}
@@ -640,7 +640,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 		return err
 	}
 
-	di.QualityMetricsSender = metrics.NewSender(transport, metadata.VersionAsString())
+	di.QualityMetricsSender = quality.NewSender(transport, metadata.VersionAsString())
 	return nil
 }
 
