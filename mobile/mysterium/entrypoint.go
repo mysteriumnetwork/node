@@ -67,16 +67,15 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			UseLightweight: true,
 		},
 
-		Location: node.OptionsLocation{
-			IPDetectorURL: "https://api.ipify.org/?format=json",
-			Type:          node.LocationTypeOracle,
-			Address:       "https://testnet-location.mysterium.network/api/v1/location",
-		},
-
 		OptionsNetwork: node.OptionsNetwork(*optionsNetwork),
 		Quality: node.OptionsQuality{
 			Type:    node.QualityTypeMORQA,
 			Address: "http://metrics.mysterium.network:8091",
+		},
+		Location: node.OptionsLocation{
+			IPDetectorURL: "https://api.ipify.org/?format=json",
+			Type:          node.LocationTypeOracle,
+			Address:       "https://testnet-location.mysterium.network/api/v1/location",
 		},
 	})
 	if err != nil {
