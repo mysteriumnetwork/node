@@ -21,7 +21,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/metrics"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/tequilapi"
 )
 
@@ -47,7 +47,7 @@ func NewNode(
 	connectionManager connection.Manager,
 	tequilapiServer tequilapi.APIServer,
 	publisher Publisher,
-	metricsSender *metrics.Sender,
+	metricsSender *quality.Sender,
 	natPinger NatPinger,
 	uiServer UIServer,
 ) *Node {
@@ -66,7 +66,7 @@ type Node struct {
 	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
 	publisher         Publisher
-	metricsSender     *metrics.Sender
+	metricsSender     *quality.Sender
 	natPinger         NatPinger
 	uiServer          UIServer
 }
