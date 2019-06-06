@@ -25,6 +25,15 @@ const appName = "myst"
 const startupEventName = "startup"
 const natMappingEventName = "nat_mapping"
 
+// NewSender creates metrics sender with appropriate transport
+func NewSender(transport Transport, appVersion string, gatewayLoader func() []map[string]string) *Sender {
+	return &Sender{
+		Transport:     transport,
+		AppVersion:    appVersion,
+		GatewayLoader: gatewayLoader,
+	}
+}
+
 // Sender builds events and sends them using given transport
 type Sender struct {
 	Transport     Transport
