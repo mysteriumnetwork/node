@@ -1,7 +1,7 @@
 FROM golang:1.11-alpine AS builder
 
 # Install packages
-RUN apk add --update --no-cache bash gcc musl-dev make conntrack-tools tcpdump \
+RUN apk add --update --no-cache bash gcc musl-dev make \
     && rm -rf /var/cache/apk/*
 
 ARG BUILD_BRANCH=$BUILD_BRANCH
@@ -18,7 +18,7 @@ RUN bin/build
 FROM alpine:3.6
 
 # Install packages
-RUN apk add --update --no-cache iptables ca-certificates openvpn bash sudo curl \
+RUN apk add --update --no-cache iptables ca-certificates openvpn bash sudo \
     && rm -rf /var/cache/apk/*
 
 COPY bin/helpers/prepare-run-env.sh /usr/local/bin/prepare-run-env.sh

@@ -24,43 +24,66 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
-	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
+
+	"github.com/mysteriumnetwork/node/logconfig"
 )
-
-const projectName = "node_e2e_test"
-
-var composeFiles = []string{
-	"bin/localnet/docker-compose.yml",
-	"e2e/docker-compose.yml",
-}
 
 type runner struct {
 	compose         func(args ...string) error
 	etherPassphrase string
+	testEnv         string
 }
 
-// TestE2E runs end-to-end tests
-func TestE2E() error {
+func prepareTestRunner(composeFiles []string, testEnv string) (*runner, error) {
 	logconfig.Bootstrap()
 	defer log.Flush()
-	r := newRunner()
-	defer r.cleanup()
+	r := newRunner(composeFiles, testEnv)
 
-	if err := r.setup(); err != nil {
-		return err
+	if err := r.setupCoreEnv(); err != nil {
+		return nil, err
 	}
 
-	return r.test()
+	if err := r.setupBasicEnv(); err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
-func (r *runner) setup() error {
+// TestE2EBasic runs end-to-end tests
+func TestE2EBasic() error {
+	composeFiles := []string{
+		"bin/localnet/docker-compose.yml",
+		"e2e/docker-compose.yml",
+	}
+	runner, err := prepareTestRunner(composeFiles, "node_e2e_basic_test")
+	if err != nil {
+		return err
+	}
+	defer runner.cleanup()
+	return runner.test()
+}
+
+// TestE2ENAT runs end-to-end tests in NAT environment
+func TestE2ENAT() error {
+	composeFiles := []string{
+		"e2e/traversal/docker-compose.yml",
+	}
+	runner, err := prepareTestRunner(composeFiles, "node_e2e_nat_test")
+	if err != nil {
+		return err
+	}
+	defer runner.cleanup()
+	return runner.test()
+}
+
+func (r *runner) setupCoreEnv() error {
 	log.Info("initializing geth node")
 	if err := r.compose("run", "geth", "init", "genesis.json"); err != nil {
 		return errors.Wrap(err, "initializing geth node failed!")
 	}
 	log.Info("starting other services")
-	if err := r.compose("up", "-d", "broker", "geth"); err != nil {
+	if err := r.compose("up", "-d", "broker", "geth", "ipify"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
 	log.Info("starting DB")
@@ -118,16 +141,29 @@ func (r *runner) setup() error {
 	if err := r.compose("build"); err != nil {
 		return errors.Wrap(err, "building app images failed!")
 	}
-	log.Info("starting app containers")
-	if err := r.compose("up", "-d", "myst-provider", "myst-consumer", "ipify"); err != nil {
-		return errors.Wrap(err, "starting app containers failed!")
-	}
 
 	return nil
 }
 
+func (r *runner) setupBasicEnv() error {
+	log.Info("starting app containers")
+	if err := r.compose("up", "-d", "myst-provider", "myst-consumer"); err != nil {
+		return errors.Wrap(err, "starting app containers failed!")
+	}
+	return nil
+}
+
 func (r *runner) test() error {
-	log.Info("running tests")
+	log.Info("running tests for env: ", r.testEnv)
+
+	var consumerServices string
+
+	if r.testEnv == "basic" {
+		consumerServices = "openvpn,noop,wireguard"
+	} else {
+		consumerServices = "openvpn"
+	}
+
 	err := r.compose("run", "go-runner",
 		"go", "test", "-v", "./e2e/...", "-args",
 		"--deployer.keystore-directory=../bin/localnet/deployer/keystore",
@@ -138,6 +174,7 @@ func (r *runner) test() error {
 		"--consumer.tequilapi-host=myst-consumer",
 		"--consumer.tequilapi-port=4050",
 		"--geth.url=http://geth:8545",
+		"--consumer.services", consumerServices,
 	)
 	return errors.Wrap(err, "tests failed!")
 }
@@ -150,16 +187,17 @@ func (r *runner) cleanup() {
 	}
 }
 
-func newRunner() *runner {
+func newRunner(composeFiles []string, testEnv string) *runner {
 	fileArgs := make([]string, 0)
 	for _, f := range composeFiles {
 		fileArgs = append(fileArgs, "-f", f)
 	}
 	var args []string
 	args = append(args, fileArgs...)
-	args = append(args, "-p", projectName)
+	args = append(args, "-p", testEnv)
 
 	return &runner{
 		compose: sh.RunCmd("docker-compose", args...),
+		testEnv: testEnv,
 	}
 }

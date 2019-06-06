@@ -189,6 +189,8 @@ services:
       --ip-detector=http://ipify:3000/?format=json
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=http://geth:8545
+      --experiment-identity-check=true
+      --ether.contract.payments=0x1955141ba8e77a5B56efBa8522034352c94f77Ea
       --keystore.lightweight
       daemon
     dns: 172.30.0.254
@@ -214,10 +216,12 @@ services:
     command: >
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
-      --location.country=e2e-traversal
+      --location.country=e2e-land
+      --experiment-identity-check=true
       --broker-address=broker
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=http://geth:8545
+      --ether.contract.payments=0x1955141ba8e77a5B56efBa8522034352c94f77Ea
       --keystore.lightweight
       service openvpn
       --agreed-terms-and-conditions
@@ -238,6 +242,12 @@ services:
     networks:
       public:
         ipv4_address: 172.30.0.222
+      public2:
+        ipv4_address: 172.31.0.222
+      priv1:
+        ipv4_address: 10.100.0.222
+      priv2:
+        ipv4_address: 10.100.1.222
 
 networks:
   public:
