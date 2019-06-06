@@ -23,8 +23,9 @@ import (
 	"time"
 
 	"github.com/cihub/seelog"
-	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/stretchr/testify/assert"
+
+	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 )
 
 var (
