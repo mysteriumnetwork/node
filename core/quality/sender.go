@@ -25,6 +25,11 @@ const appName = "myst"
 const startupEventName = "startup"
 const natMappingEventName = "nat_mapping"
 
+// Transport allows sending events
+type Transport interface {
+	SendEvent(Event) error
+}
+
 // NewSender creates metrics sender with appropriate transport
 func NewSender(transport Transport, appVersion string) *Sender {
 	return &Sender{
@@ -37,11 +42,6 @@ func NewSender(transport Transport, appVersion string) *Sender {
 type Sender struct {
 	Transport  Transport
 	AppVersion string
-}
-
-// Transport allows sending events
-type Transport interface {
-	SendEvent(Event) error
 }
 
 // Event contains data about event, which is sent using transport

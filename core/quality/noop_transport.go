@@ -18,7 +18,7 @@
 package quality
 
 // NewNoopTransport creates transport which ignores requests to send metrics
-func NewNoopTransport() Transport {
+func NewNoopTransport() *noopTransport {
 	return &noopTransport{}
 }
 
