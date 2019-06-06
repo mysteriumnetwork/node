@@ -25,11 +25,6 @@ import (
 
 const mysteriumMetricsLogPrefix = "[Mysterium.metrics] "
 
-// QualityOracle allows to interact with a quality oracle service (MORQA)
-type QualityOracle interface {
-	ProposalsMetrics() []json.RawMessage
-}
-
 // ServiceMetricsResponse represents response from the quality oracle service
 type ServiceMetricsResponse struct {
 	Connects []json.RawMessage `json:"connects"`
