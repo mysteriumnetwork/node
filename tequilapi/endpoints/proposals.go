@@ -23,8 +23,8 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/discovery"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/market/metrics"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
@@ -119,11 +119,11 @@ type ProposalFinder interface {
 
 type proposalsEndpoint struct {
 	proposalProvider     ProposalFinder
-	mysteriumMorqaClient metrics.QualityOracle
+	mysteriumMorqaClient quality.QualityOracle
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(proposalProvider ProposalFinder, morqaClient metrics.QualityOracle) *proposalsEndpoint {
+func NewProposalsEndpoint(proposalProvider ProposalFinder, morqaClient quality.QualityOracle) *proposalsEndpoint {
 	return &proposalsEndpoint{proposalProvider, morqaClient}
 }
 
@@ -185,25 +185,25 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalProvider ProposalFinder, morqaClient metrics.QualityOracle) {
+func AddRoutesForProposals(router *httprouter.Router, proposalProvider ProposalFinder, morqaClient quality.QualityOracle) {
 	pe := NewProposalsEndpoint(proposalProvider, morqaClient)
 	router.GET("/proposals", pe.List)
 }
 
 func noMetrics(p proposalRes) proposalRes { return p }
 
-func addMetrics(mc metrics.QualityOracle) func(p proposalRes) proposalRes {
+func addMetrics(mc quality.QualityOracle) func(p proposalRes) proposalRes {
 	receivedMetrics := mc.ProposalsMetrics()
 	proposalsMetrics := make(map[string]json.RawMessage, len(receivedMetrics))
 	var proposal struct{ ProposalID proposalRes }
 
 	for _, m := range receivedMetrics {
-		json, err := metrics.Parse(m, &proposal)
+		proposalMetric, err := quality.Parse(m, &proposal)
 		if err != nil {
 			return noMetrics
 		}
 		p := proposal.ProposalID
-		proposalsMetrics[p.ProviderID+"-"+p.ServiceType] = json
+		proposalsMetrics[p.ProviderID+"-"+p.ServiceType] = proposalMetric
 	}
 
 	return func(p proposalRes) proposalRes {

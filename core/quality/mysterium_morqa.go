@@ -15,14 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package oracle
+package quality
 
 import (
 	"encoding/json"
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/market/metrics"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
@@ -36,7 +35,7 @@ type mysteriumMorqa struct {
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
-func NewMorqaClient(qualityOracleAddress string) metrics.QualityOracle {
+func NewMorqaClient(qualityOracleAddress string) QualityOracle {
 	return &mysteriumMorqa{
 		requests.NewHTTPClient(1 * time.Minute),
 		qualityOracleAddress,
@@ -51,7 +50,7 @@ func (m *mysteriumMorqa) ProposalsMetrics() []json.RawMessage {
 		return nil
 	}
 
-	var metricsResponse metrics.ServiceMetricsResponse
+	var metricsResponse ServiceMetricsResponse
 	err = m.http.DoRequestAndParseResponse(req, &metricsResponse)
 	if err != nil {
 		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics: ", err)
