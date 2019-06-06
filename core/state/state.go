@@ -126,6 +126,7 @@ func (k *Keeper) updateSessionState(e interface{}) {
 		result[i] = stateEvent.ServiceSession{
 			ID:         string(sessions[i].ID),
 			ConsumerID: sessions[i].ConsumerID.Address,
+			CreatedAt:  sessions[i].CreatedAt,
 		}
 	}
 

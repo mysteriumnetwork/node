@@ -124,12 +124,6 @@ type NatEventSender interface {
 	ConsumeNATEvent(event event.Event)
 }
 
-// NATStatusTracker tracks status of NAT traversal by consuming NAT events
-type NATStatusTracker interface {
-	Status() nat.Status
-	ConsumeNATEvent(event event.Event)
-}
-
 // CacheResolver caches the location resolution results
 type CacheResolver interface {
 	location.Resolver
@@ -185,10 +179,9 @@ type Dependencies struct {
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 
-	NATPinger        NatPinger
-	NATTracker       NatEventTracker
-	NATEventSender   NatEventSender
-	NATStatusTracker NATStatusTracker
+	NATPinger      NatPinger
+	NATTracker     NatEventTracker
+	NATEventSender NatEventSender
 
 	BandwidthTracker *bandwidth.Tracker
 
@@ -279,9 +272,11 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	} else {
 		lastStageName = mapping.StageName
 	}
+
 	tracker := nat.NewStatusTracker(lastStageName)
 
 	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage)
+
 	err := di.EventBus.SubscribeAsync(service.StatusTopic, di.StateKeeper.ConsumeServiceStateEvent)
 	if err != nil {
 		return err
@@ -415,11 +410,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 	err = di.EventBus.Subscribe(event.Topic, di.NATTracker.ConsumeNATEvent)
-	if err != nil {
-		return err
-	}
-
-	return di.EventBus.Subscribe(event.Topic, di.NATStatusTracker.ConsumeNATEvent)
+	return err
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listener net.Listener) {
@@ -457,10 +448,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForLocation(router, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser, nodeOptions.AccessPolicyEndpointAddress)
-	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
+	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(router, nodeOptions.AccessPolicyEndpointAddress)
-	tequilapi_endpoints.AddRoutesForNAT(router, di.NATStatusTracker.Status)
+	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
@@ -707,12 +698,4 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	loader := &upnp.GatewayLoader{}
 	go loader.Get()
 	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
-
-	var lastStageName string
-	if options.ExperimentNATPunching {
-		lastStageName = traversal.StageName
-	} else {
-		lastStageName = mapping.StageName
-	}
-	di.NATStatusTracker = nat.NewStatusTracker(lastStageName)
 }
