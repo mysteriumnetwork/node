@@ -250,6 +250,11 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
 	di.bootstrapStateKeeper(nodeOptions)
+
+	if err := di.bootstrapSSEHandler(); err != nil {
+		return err
+	}
+
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
 
 	di.registerConnections(nodeOptions)
@@ -309,7 +314,7 @@ func (di *Dependencies) registerNoopConnection() {
 
 // bootstrapSSEHandler bootstraps the SSEHandler and all of its dependencies
 func (di *Dependencies) bootstrapSSEHandler() error {
-	di.SSEHandler = sse.NewHandler()
+	di.SSEHandler = sse.NewHandler(di.StateKeeper)
 	err := di.EventBus.Subscribe(nodevent.Topic, di.SSEHandler.ConsumeNodeEvent)
 	if err != nil {
 		return err

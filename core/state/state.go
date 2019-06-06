@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/state/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
@@ -52,14 +53,14 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 		serviceSessionStorage: serviceSessionStorage,
 	}
 	k.debouncers = map[string]func(interface{}){
-		"service": debounce(k.debouncedServiceEventConsumer, time.Millisecond*200),
+		"service": debounce(k.updateServiceState, time.Millisecond*200),
 		"nat":     debounce(k.updateNatStatus, time.Millisecond*200),
 		"session": debounce(k.updateSessionState, time.Millisecond*200),
 	}
 	return k
 }
 
-func (k *Keeper) debouncedServiceEventConsumer(e interface{}) {
+func (k *Keeper) updateServiceState(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	k.updateServices()
@@ -154,4 +155,11 @@ func debounce(f func(interface{}), d time.Duration) func(interface{}) {
 	return func(e interface{}) {
 		go func() { incoming <- e }()
 	}
+}
+
+func (k *Keeper) GetState() event.State {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+
+	return *k.state
 }
