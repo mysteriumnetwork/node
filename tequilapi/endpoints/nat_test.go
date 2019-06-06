@@ -18,66 +18,43 @@
 package endpoints
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/nat"
-	"github.com/pkg/errors"
+	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/stretchr/testify/assert"
 )
 
-type mockNATStatusProvider struct {
-	mockStatus nat.Status
+type mockStateProvider struct {
+	stateToReturn stateEvent.State
 }
 
-func (mockProvider *mockNATStatusProvider) Status() nat.Status {
-	return mockProvider.mockStatus
+func (msp *mockStateProvider) Get() stateEvent.State {
+	return msp.stateToReturn
 }
 
 func Test_NATStatus_ReturnsStatusSuccessful_WithSuccessfulEvent(t *testing.T) {
-	testResponse(
-		t,
-		nat.Status{Status: statusSuccessful},
-		`{
-			"status": "successful"
-		}`,
-	)
-}
+	provider := mockStateProvider{stateToReturn: stateEvent.State{
+		NATStatus: stateEvent.NATStatus{
+			Status: "something",
+			Error:  "maybe",
+		},
+	}}
 
-func Test_NATStatus_ReturnsStatusFailureAndError_WithFailureEvent(t *testing.T) {
-	testResponse(
-		t,
-		nat.Status{Status: statusFailure, Error: errors.New("mock error")},
-		`{
-			"status": "failure",
-			"error": "mock error"
-		}`,
-	)
-}
-
-func Test_NATStatus_ReturnsStatusNotFinished_WhenEventIsNotAvailable(t *testing.T) {
-	testResponse(
-		t,
-		nat.Status{Status: statusNotFinished},
-		`{
-			"status": "not_finished"
-		}`,
-	)
-}
-
-func testResponse(t *testing.T, mockStatus nat.Status, expectedJson string) {
-	provider := mockNATStatusProvider{mockStatus: mockStatus}
+	expectedJSON, err := json.Marshal(provider.stateToReturn.NATStatus)
+	assert.Nil(t, err)
 
 	req, err := http.NewRequest(http.MethodGet, "/nat/status", nil)
 	assert.Nil(t, err)
 	resp := httptest.NewRecorder()
 	router := httprouter.New()
-	AddRoutesForNAT(router, provider.Status)
+	AddRoutesForNAT(router, provider.Get)
 
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, expectedJson, resp.Body.String())
+	assert.JSONEq(t, string(expectedJSON), resp.Body.String())
 }

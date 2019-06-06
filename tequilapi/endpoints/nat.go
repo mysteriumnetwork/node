@@ -22,16 +22,10 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
-	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 type stateProvider func() stateEvent.State
-
-// NATEvents allows retrieving last traversal event
-type NATEvents interface {
-	LastEvent() *event.Event
-}
 
 // NATEndpoint struct represents endpoints about NAT traversal
 type NATEndpoint struct {

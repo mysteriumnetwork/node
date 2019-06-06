@@ -21,10 +21,19 @@ import (
 	"testing"
 
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
+	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 )
 
+type mockStateProvider struct {
+	stateToreturn stateEvent.State
+}
+
+func (msp *mockStateProvider) GetState() stateEvent.State {
+	return msp.stateToreturn
+}
+
 func TestHandler_Stops(t *testing.T) {
-	h := NewHandler()
+	h := NewHandler(&mockStateProvider{})
 
 	wait := make(chan struct{})
 	go func() {
@@ -37,7 +46,7 @@ func TestHandler_Stops(t *testing.T) {
 }
 
 func TestHandler_ConsumeNodeEvent_Stops(t *testing.T) {
-	h := NewHandler()
+	h := NewHandler(&mockStateProvider{})
 	me := nodeEvent.Payload{
 		Status: nodeEvent.StatusStopped,
 	}
@@ -46,7 +55,7 @@ func TestHandler_ConsumeNodeEvent_Stops(t *testing.T) {
 }
 
 func TestHandler_ConsumeNodeEvent_Starts(t *testing.T) {
-	h := NewHandler()
+	h := NewHandler(&mockStateProvider{})
 	me := nodeEvent.Payload{
 		Status: nodeEvent.StatusStarted,
 	}

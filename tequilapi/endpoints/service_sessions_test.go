@@ -24,26 +24,17 @@ import (
 	"testing"
 	"time"
 
+	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/session"
 )
 
 var (
-	serviceSessionMock = session.Session{
-		ID:         session.ID("session1"),
-		ConsumerID: identity.FromAddress("consumer1"),
+	serviceSessionMock = stateEvent.ServiceSession{
+		ID:         "session1",
+		ConsumerID: "consumer1",
+		CreatedAt:  time.Now(),
 	}
 )
-
-func Test_ServiceSessionsEndpoint_SessionToDto(t *testing.T) {
-	se := serviceSessionMock
-	sessionDTO := serviceSessionToDto(se)
-
-	assert.Equal(t, string(serviceSessionMock.ID), sessionDTO.ID)
-	assert.Equal(t, serviceSessionMock.ConsumerID.Address, sessionDTO.ConsumerID)
-}
 
 func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	req, err := http.NewRequest(
@@ -53,16 +44,18 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	)
 	assert.Nil(t, err)
 
-	anotherSession := session.Session{
-		ID:         session.ID("session2"),
-		ConsumerID: identity.FromAddress("consumer1"),
+	anotherSession := stateEvent.ServiceSession{
+		ID:         "session2",
+		ConsumerID: "consumer1",
 		CreatedAt:  time.Now(),
 	}
 
-	ssm := &serviceSessionStorageMock{
-		sessionsToReturn: []session.Session{
-			serviceSessionMock,
-			anotherSession,
+	ssm := &stateProviderMock{
+		stateToReturn: stateEvent.State{
+			Sessions: []stateEvent.ServiceSession{
+				serviceSessionMock,
+				anotherSession,
+			},
 		},
 	}
 
@@ -73,14 +66,20 @@ func Test_ServiceSessionsEndpoint_List(t *testing.T) {
 	parsedResponse := &serviceSessionsList{}
 	err = json.Unmarshal(resp.Body.Bytes(), parsedResponse)
 	assert.Nil(t, err)
-	assert.EqualValues(t, serviceSessionToDto(serviceSessionMock), parsedResponse.Sessions[0])
-	assert.EqualValues(t, serviceSessionToDto(anotherSession), parsedResponse.Sessions[1])
+	assert.Equal(t, serviceSessionMock.ConsumerID, parsedResponse.Sessions[0].ConsumerID)
+	assert.Equal(t, serviceSessionMock.ID, parsedResponse.Sessions[0].ID)
+	assert.True(t, serviceSessionMock.CreatedAt.Equal(parsedResponse.Sessions[0].CreatedAt))
+
+	assert.Equal(t, anotherSession.ConsumerID, parsedResponse.Sessions[1].ConsumerID)
+	assert.Equal(t, anotherSession.ID, parsedResponse.Sessions[1].ID)
+	assert.True(t, anotherSession.CreatedAt.Equal(parsedResponse.Sessions[1].CreatedAt))
+
 }
 
-type serviceSessionStorageMock struct {
-	sessionsToReturn []session.Session
+type stateProviderMock struct {
+	stateToReturn stateEvent.State
 }
 
-func (ssm *serviceSessionStorageMock) GetAll() []session.Session {
-	return ssm.sessionsToReturn
+func (spm *stateProviderMock) GetState() stateEvent.State {
+	return spm.stateToReturn
 }

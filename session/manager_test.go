@@ -18,12 +18,14 @@
 package session
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,6 +42,23 @@ var (
 		ConsumerID: consumerID,
 	}
 )
+
+type mockPublisher struct {
+	published sessionEvent.Payload
+	lock      sync.Mutex
+}
+
+func (mp *mockPublisher) Publish(topic string, data interface{}) {
+	mp.lock.Lock()
+	mp.published = data.(sessionEvent.Payload)
+	mp.lock.Unlock()
+}
+
+func (mp *mockPublisher) getLast() sessionEvent.Payload {
+	mp.lock.Lock()
+	defer mp.lock.Unlock()
+	return mp.published
+}
 
 func generateSessionID() (ID, error) {
 	return expectedID, nil
@@ -64,7 +83,9 @@ func mockBalanceTrackerFactory(consumer, provider, issuer identity.Identity) (Ba
 func TestManager_Create_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
-	sessionStore := NewStorageMemory()
+	mp := &mockPublisher{}
+	sessionStore := NewStorageMemory(mp)
+
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
@@ -84,7 +105,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 }
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
-	sessionStore := NewStorageMemory()
+	sessionStore := NewStorageMemory(&mockPublisher{})
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
