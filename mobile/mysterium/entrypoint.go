@@ -61,9 +61,6 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		TequilapiAddress: "127.0.0.1",
 		TequilapiPort:    4050,
 
-		DisableMetrics: false,
-		MetricsAddress: "http://metrics.mysterium.network:8091",
-
 		Openvpn: embeddedLibCheck{},
 
 		Keystore: node.OptionsKeystore{
@@ -77,6 +74,10 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		},
 
 		OptionsNetwork: node.OptionsNetwork(*optionsNetwork),
+		Quality: node.OptionsQuality{
+			Type:    node.QualityTypeMORQA,
+			Address: "http://metrics.mysterium.network:8091",
+		},
 	})
 	if err != nil {
 		return nil, err

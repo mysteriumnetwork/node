@@ -225,8 +225,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
 		return err
 	}
-	di.bootstrapQualityComponents(nodeOptions)
-
+	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
+		return err
+	}
 	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
 		return err
 	}
@@ -589,15 +590,23 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	return nil
 }
 
-func (di *Dependencies) bootstrapQualityComponents(options node.Options) {
+func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
 	var transport metrics.Transport
-	if options.DisableMetrics {
+	switch options.Type {
+	case node.QualityTypeMORQA:
+		_, err = firewall.AllowURLAccess(options.Address)
+		transport = metrics.NewElasticSearchTransport(options.Address, 10*time.Second)
+	case node.QualityTypeNone:
 		transport = metrics.NewNoopTransport()
-	} else {
-		transport = metrics.NewElasticSearchTransport(options.MetricsAddress, 10*time.Second)
+	default:
+		err = fmt.Errorf("unknown Quality Oracle provider: %s", options.Type)
+	}
+	if err != nil {
+		return
 	}
 
 	di.QualityMetricsSender = metrics.NewSender(transport, metadata.VersionAsString())
+	return
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {

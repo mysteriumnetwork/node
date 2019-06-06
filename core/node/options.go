@@ -39,6 +39,7 @@ type Options struct {
 
 	OptionsNetwork
 	Discovery OptionsDiscovery
+	Quality   OptionsQuality
 	Location  OptionsLocation
 
 	Openvpn Openvpn
