@@ -159,7 +159,7 @@ type Dependencies struct {
 
 	NetworkDefinition    metadata.NetworkDefinition
 	MysteriumAPI         *mysterium.MysteriumAPI
-	MysteriumMorqaClient quality.QualityOracle
+	MysteriumMorqaClient *quality.MysteriumMORQA
 	EtherClient          *ethclient.Client
 
 	NATService           nat.NATService

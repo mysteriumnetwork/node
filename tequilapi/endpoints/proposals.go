@@ -117,14 +117,22 @@ type ProposalFinder interface {
 	FindProposals(filter discovery.ProposalFilter) ([]market.ServiceProposal, error)
 }
 
+// QualityFinder allows to fetch proposal quality data
+type QualityFinder interface {
+	ProposalsMetrics() []json.RawMessage
+}
+
 type proposalsEndpoint struct {
-	proposalProvider     ProposalFinder
-	mysteriumMorqaClient quality.QualityOracle
+	proposalProvider ProposalFinder
+	qualityProvider  QualityFinder
 }
 
 // NewProposalsEndpoint creates and returns proposal creation endpoint
-func NewProposalsEndpoint(proposalProvider ProposalFinder, morqaClient quality.QualityOracle) *proposalsEndpoint {
-	return &proposalsEndpoint{proposalProvider, morqaClient}
+func NewProposalsEndpoint(proposalProvider ProposalFinder, qualityProvider QualityFinder) *proposalsEndpoint {
+	return &proposalsEndpoint{
+		proposalProvider: proposalProvider,
+		qualityProvider:  qualityProvider,
+	}
 }
 
 // swagger:operation GET /proposals Proposal listProposals
@@ -177,7 +185,7 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 
 	addMetricsToRes := noMetrics
 	if fetchConnectCounts == "true" {
-		addMetricsToRes = addMetrics(pe.mysteriumMorqaClient)
+		addMetricsToRes = addMetrics(pe.qualityProvider)
 	}
 
 	proposalsRes := proposalsRes{mapProposalsToRes(proposals, proposalToRes, addMetricsToRes)}
@@ -185,14 +193,14 @@ func (pe *proposalsEndpoint) List(resp http.ResponseWriter, req *http.Request, p
 }
 
 // AddRoutesForProposals attaches proposals endpoints to router
-func AddRoutesForProposals(router *httprouter.Router, proposalProvider ProposalFinder, morqaClient quality.QualityOracle) {
-	pe := NewProposalsEndpoint(proposalProvider, morqaClient)
+func AddRoutesForProposals(router *httprouter.Router, proposalProvider ProposalFinder, qualityProvider QualityFinder) {
+	pe := NewProposalsEndpoint(proposalProvider, qualityProvider)
 	router.GET("/proposals", pe.List)
 }
 
 func noMetrics(p proposalRes) proposalRes { return p }
 
-func addMetrics(mc quality.QualityOracle) func(p proposalRes) proposalRes {
+func addMetrics(mc QualityFinder) func(p proposalRes) proposalRes {
 	receivedMetrics := mc.ProposalsMetrics()
 	proposalsMetrics := make(map[string]json.RawMessage, len(receivedMetrics))
 	var proposal struct{ ProposalID proposalRes }
