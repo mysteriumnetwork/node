@@ -610,9 +610,8 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
-	_, err = firewall.AllowURLAccess(options.IPDetectorURL)
-	if err != nil {
-		return err
+	if _, err = firewall.AllowURLAccess(options.IPDetectorURL); err != nil {
+		return
 	}
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
@@ -625,24 +624,27 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	case node.LocationTypeMMDB:
 		resolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
 	case node.LocationTypeOracle:
+		if _, err = firewall.AllowURLAccess(options.Address); err != nil {
+			return
+		}
 		resolver, err = location.NewOracleResolver(options.Address), nil
 	default:
 		err = fmt.Errorf("unknown location provider: %s", options.Type)
 	}
 	if err != nil {
-		return err
+		return
 	}
 
 	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
 
 	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.LocationResolver.HandleConnectionEvent)
 	if err != nil {
-		return err
+		return
 	}
 
 	err = di.EventBus.SubscribeAsync(nodevent.Topic, di.LocationResolver.HandleNodeEvent)
 	if err != nil {
-		return err
+		return
 	}
 
 	return
