@@ -50,6 +50,8 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		currentDir = appPath
 	}
 
+	network := node.OptionsNetwork(*optionsNetwork)
+
 	err := di.Bootstrap(node.Options{
 		Directories: node.OptionsDirectory{
 			Data:     dataDir,
@@ -67,10 +69,14 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 			UseLightweight: true,
 		},
 
-		OptionsNetwork: node.OptionsNetwork(*optionsNetwork),
+		OptionsNetwork: network,
 		Quality: node.OptionsQuality{
 			Type:    node.QualityTypeMORQA,
 			Address: "http://metrics.mysterium.network:8091",
+		},
+		Discovery: node.OptionsDiscovery{
+			Type:    node.DiscoveryTypeAPI,
+			Address: network.MysteriumAPIAddress,
 		},
 		Location: node.OptionsLocation{
 			IPDetectorURL: "https://api.ipify.org/?format=json",
