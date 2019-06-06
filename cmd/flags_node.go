@@ -39,16 +39,6 @@ var (
 		Name:  "keystore.lightweight",
 		Usage: "Determines the scrypt memory complexity. If set to true, will use 4MB blocks instead of the standard 256MB ones",
 	}
-
-	metricsDisableFlag = cli.BoolFlag{
-		Name:  "metrics.disable",
-		Usage: "Opt-out from sending usage metrics",
-	}
-	metricsAddressFlag = cli.StringFlag{
-		Name:  "metrics.address",
-		Usage: "Address of metrics service",
-		Value: "http://metrics.mysterium.network:8091",
-	}
 )
 
 // ParseKeystoreFlags parses the keystore options for node
@@ -64,11 +54,11 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		return err
 	}
 
-	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag, keystoreLightweightFlag, metricsDisableFlag,
-		metricsAddressFlag)
+	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag, keystoreLightweightFlag)
 
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsDiscovery(flags)
+	RegisterFlagsQuality(flags)
 	openvpn_core.RegisterFlags(flags)
 	RegisterFlagsLocation(flags)
 	RegisterFlagsUI(flags)
@@ -86,13 +76,11 @@ func ParseFlagsNode(ctx *cli.Context) node.Options {
 		TequilapiPort:    ctx.GlobalInt(tequilapiPortFlag.Name),
 		UI:               ParseFlagsUI(ctx),
 
-		DisableMetrics: ctx.GlobalBool(metricsDisableFlag.Name),
-		MetricsAddress: ctx.GlobalString(metricsAddressFlag.Name),
-
 		Keystore: ParseKeystoreFlags(ctx),
 
 		OptionsNetwork: ParseFlagsNetwork(ctx),
 		Discovery:      ParseFlagsDiscovery(ctx),
+		Quality:        ParseFlagsQuality(ctx),
 		Location:       ParseFlagsLocation(ctx),
 
 		Openvpn: wrapper{nodeOptions: openvpn_core.ParseFlags(ctx)},
