@@ -54,8 +54,6 @@ import (
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
-	market_metrics "github.com/mysteriumnetwork/node/market/metrics"
-	"github.com/mysteriumnetwork/node/market/metrics/oracle"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/money"
@@ -147,7 +145,7 @@ type Dependencies struct {
 
 	NetworkDefinition    metadata.NetworkDefinition
 	MysteriumAPI         *mysterium.MysteriumAPI
-	MysteriumMorqaClient market_metrics.QualityOracle
+	MysteriumMorqaClient quality.QualityOracle
 	EtherClient          *ethclient.Client
 
 	NATService           nat.NATService
@@ -528,7 +526,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	}
 
 	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)
-	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
+	di.MysteriumMorqaClient = quality.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
