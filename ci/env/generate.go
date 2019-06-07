@@ -25,7 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/ci/github"
 	"github.com/pkg/errors"
-	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4"
 )
 
 const ppaDevReleaseVersion = "0.0.0"

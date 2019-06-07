@@ -134,8 +134,6 @@ services:
       - NET_ADMIN
     environment:
       - EXT_NAT=172.30.0.1
-    volumes:
-      - ../../e2e/config/named.conf:/etc/bind/named.conf
     networks:
       - localnet_default
       - public
@@ -154,8 +152,6 @@ services:
       - NET_ADMIN
     depends_on:
       - router
-    volumes:
-      - ../../e2e/config/named.conf:/etc/bind/named.conf
     environment:
       - GATEWAY=172.30.0.2
     dns: 172.30.0.2
@@ -176,8 +172,6 @@ services:
       - NET_ADMIN
     depends_on:
       - router
-    volumes:
-      - ../../e2e/config/named.conf:/etc/bind/named.conf
     environment:
       - GATEWAY=172.31.0.254
     dns: 172.31.0.254
