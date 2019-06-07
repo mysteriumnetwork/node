@@ -37,7 +37,7 @@ type State struct {
 // swagger:model NATStatusDTO
 type NATStatus struct {
 	Status string `json:"status"`
-	Error  string `json:"error,omitempty"`
+	Error  string `json:"error"`
 }
 
 // ServiceInfo stores the information about a service

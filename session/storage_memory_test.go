@@ -150,6 +150,9 @@ func TestStorage_PublishesEventsOnDelete(t *testing.T) {
 	mp := &mockPublisher{}
 	sessionStore := NewStorageMemory(mp)
 	sessionStore.Add(instance)
+
+	time.Sleep(time.Millisecond * 5)
+
 	sessionStore.Remove(instance.ID)
 
 	// since we're shooting the event in an asynchronous fashion, try every microsecond to see if we already have it
