@@ -1,130 +1,130 @@
-version: '2.4'
+version: '3.7'
 
 services:
-  ipify:
-    image: owlab/ipify
-    expose:
-      - 3000
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
-    dns: 172.30.0.254
-    networks:
-      public:
-        ipv4_address: 172.30.0.10
-      public2:
-        ipv4_address: 172.31.0.10
+#  ipify:
+#    image: owlab/ipify
+#    expose:
+#      - 3000
+#    cap_add:
+#      - NET_ADMIN
+#    sysctls:
+#      - net.ipv4.conf.default.rp_filter=0
+#      - net.ipv4.conf.all.rp_filter=0
+#      - net.ipv4.conf.eth0.rp_filter=0
+#      - net.ipv4.conf.eth1.rp_filter=0
+#    dns: 172.30.0.254
+#    networks:
+#      public:
+#        ipv4_address: 172.30.0.10
+#      public2:
+#        ipv4_address: 172.31.0.10
 
-  broker:
-    image: nats
-    expose:
-      - 4222
-      - 8222
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
-    dns: 172.30.0.254
-    networks:
-      public:
-        ipv4_address: 172.30.0.30
-      public2:
-        ipv4_address: 172.31.0.30
-
-  db:
-    image: percona:5.7
-    cap_add:
-      - NET_ADMIN
-    restart: always
-    expose:
-      - 3306
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: myst_api
-      MYSQL_USER: myst_api
-      MYSQL_PASSWORD: myst_api
-    dns: 172.30.0.254
-    networks:
-      public:
-        ipv4_address: 172.30.0.201
-      public2:
-        ipv4_address: 172.31.0.201
-
-  geth:
-    image: mysteriumnetwork/geth:1.8.23
-    expose:
-      - 8545
-    cap_add:
-      - NET_ADMIN
-    privileged: true
-    volumes:
-      - geth-runtime:/ethereum/geth-runtime
-      - ../../bin/localnet/geth/genesis.json:/ethereum/genesis.json
-      - ../../bin/localnet/geth/keystore:/ethereum/keystore
-      - ../../bin/localnet/geth/node_acc_password.txt:/ethereum/node_acc_password.txt
-    command: >
-      --syncmode 'full'
-      --port 30311
-      --rpc
-      --rpcaddr '0.0.0.0'
-      --rpcport 8545
-      --rpcapi personal,db,eth,net,web3,txpool,miner
-      --networkid 69
-      --gasprice '1'
-      --unlock '0xd9786b6ee6caf5cd0ef88301fc40de83bfac5594'
-      --password node_acc_password.txt
-      --rpcvhosts *
-      --rpccorsdomain *
-      --mine
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
-    dns: 172.30.0.254
-    networks:
-      public:
-        ipv4_address: 172.30.0.202
-      public2:
-        ipv4_address: 172.31.0.202
-
-  mysterium-api:
-    image: mysteriumnetwork/mysterium-api:0.5.9
-    expose:
-      - 80
-    cap_add:
-      - NET_ADMIN
-    sysctls:
-      - net.ipv4.conf.default.rp_filter=0
-      - net.ipv4.conf.all.rp_filter=0
-      - net.ipv4.conf.eth0.rp_filter=0
-      - net.ipv4.conf.eth1.rp_filter=0
-    environment:
-      APP_PORT: 80
-      DB_HOST: db
-      DB_NAME: myst_api
-      DB_USER: myst_api
-      DB_PASSWORD: myst_api
-      ETHER_RPC_URL: "http://geth:8545"
-      IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
-      ETHER_MINING_MODE: "poa"
-      DISCOVERY_VERIFY_IDENTITY: "false"
-    depends_on:
-      - db
-      - geth
-    dns: 172.30.0.254
-    networks:
-      public:
-        ipv4_address: 172.30.0.200
-      public2:
-        ipv4_address: 172.31.0.200
+#  broker:
+#    image: nats
+#    expose:
+#      - 4222
+#      - 8222
+#    cap_add:
+#      - NET_ADMIN
+#    sysctls:
+#      - net.ipv4.conf.default.rp_filter=0
+#      - net.ipv4.conf.all.rp_filter=0
+#      - net.ipv4.conf.eth0.rp_filter=0
+#      - net.ipv4.conf.eth1.rp_filter=0
+#    dns: 172.30.0.254
+#    networks:
+#      public:
+#        ipv4_address: 172.30.0.30
+#      public2:
+#        ipv4_address: 172.31.0.30
+#
+#  db:
+#    image: percona:5.7
+#    cap_add:
+#      - NET_ADMIN
+#    restart: always
+#    expose:
+#      - 3306
+#    environment:
+#      MYSQL_ROOT_PASSWORD: root
+#      MYSQL_DATABASE: myst_api
+#      MYSQL_USER: myst_api
+#      MYSQL_PASSWORD: myst_api
+#    dns: 172.30.0.254
+#    networks:
+#      public:
+#        ipv4_address: 172.30.0.201
+#      public2:
+#        ipv4_address: 172.31.0.201
+#
+#  geth:
+#    image: mysteriumnetwork/geth:1.8.23
+#    expose:
+#      - 8545
+#    cap_add:
+#      - NET_ADMIN
+#    privileged: true
+#    volumes:
+#      - geth-runtime:/ethereum/geth-runtime
+#      - ../../bin/localnet/geth/genesis.json:/ethereum/genesis.json
+#      - ../../bin/localnet/geth/keystore:/ethereum/keystore
+#      - ../../bin/localnet/geth/node_acc_password.txt:/ethereum/node_acc_password.txt
+#    command: >
+#      --syncmode 'full'
+#      --port 30311
+#      --rpc
+#      --rpcaddr '0.0.0.0'
+#      --rpcport 8545
+#      --rpcapi personal,db,eth,net,web3,txpool,miner
+#      --networkid 69
+#      --gasprice '1'
+#      --unlock '0xd9786b6ee6caf5cd0ef88301fc40de83bfac5594'
+#      --password node_acc_password.txt
+#      --rpcvhosts *
+#      --rpccorsdomain *
+#      --mine
+#    sysctls:
+#      - net.ipv4.conf.default.rp_filter=0
+#      - net.ipv4.conf.all.rp_filter=0
+#      - net.ipv4.conf.eth0.rp_filter=0
+#      - net.ipv4.conf.eth1.rp_filter=0
+#    dns: 172.30.0.254
+#    networks:
+#      public:
+#        ipv4_address: 172.30.0.202
+#      public2:
+#        ipv4_address: 172.31.0.202
+#
+#  mysterium-api:
+#    image: mysteriumnetwork/mysterium-api:0.5.9
+#    expose:
+#      - 80
+#    cap_add:
+#      - NET_ADMIN
+#    sysctls:
+#      - net.ipv4.conf.default.rp_filter=0
+#      - net.ipv4.conf.all.rp_filter=0
+#      - net.ipv4.conf.eth0.rp_filter=0
+#      - net.ipv4.conf.eth1.rp_filter=0
+#    environment:
+#      APP_PORT: 80
+#      DB_HOST: db
+#      DB_NAME: myst_api
+#      DB_USER: myst_api
+#      DB_PASSWORD: myst_api
+#      ETHER_RPC_URL: "http://geth:8545"
+#      IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
+#      ETHER_MINING_MODE: "poa"
+#      DISCOVERY_VERIFY_IDENTITY: "false"
+#    depends_on:
+#      - db
+#      - geth
+#    dns: 172.30.0.254
+#    networks:
+#      public:
+#        ipv4_address: 172.30.0.200
+#      public2:
+#        ipv4_address: 172.31.0.200
 
   router:
     build:
@@ -134,11 +134,17 @@ services:
       - NET_ADMIN
     environment:
       - EXT_NAT=172.30.0.1
+    volumes:
+      - ../../e2e/config/named.conf:/etc/bind/named.conf
     networks:
-      public:
-        ipv4_address: 172.30.0.254
-      public2:
-        ipv4_address: 172.31.0.254
+      - localnet_default
+      - public
+      - public2
+
+#      public:
+#        ipv4_address: 172.30.0.254
+#      public2:
+#        ipv4_address: 172.31.0.254
 
   forwarder:
     build:
@@ -148,13 +154,19 @@ services:
       - NET_ADMIN
     depends_on:
       - router
+    volumes:
+      - ../../e2e/config/named.conf:/etc/bind/named.conf
     environment:
-      - GATEWAY=172.30.0.254
+      - GATEWAY=172.30.0.2
+    dns: 172.30.0.2
     networks:
-      public:
-        ipv4_address: 172.30.0.2
-      priv1:
-        ipv4_address: 10.100.0.2
+      - public
+      - priv1
+
+#      public:
+#        ipv4_address: 172.30.0.2
+#      priv1:
+#        ipv4_address: 10.100.0.2
 
   forwarder2:
     build:
@@ -164,6 +176,8 @@ services:
       - NET_ADMIN
     depends_on:
       - router
+    volumes:
+      - ../../e2e/config/named.conf:/etc/bind/named.conf
     environment:
       - GATEWAY=172.31.0.254
     dns: 172.31.0.254
@@ -271,5 +285,8 @@ networks:
     ipam:
       config:
         - subnet: 10.100.1.0/24
+  localnet_default:
+      external: true
+
 volumes:
   geth-runtime:
