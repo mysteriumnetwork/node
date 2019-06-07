@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
@@ -29,6 +30,11 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 )
+
+// DefaultDebounceDuration is the default time interval suggested for debouncing
+const DefaultDebounceDuration = time.Millisecond * 200
+
+const logPrefix = "[state keeper]"
 
 type natStatusProvider interface {
 	Status() nat.Status
@@ -60,7 +66,7 @@ type Keeper struct {
 }
 
 // NewKeeper returns a new instance of the keeper
-func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, serviceLister serviceLister, serviceSessionStorage serviceSessionStorage) *Keeper {
+func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, serviceLister serviceLister, serviceSessionStorage serviceSessionStorage, debounceDuration time.Duration) *Keeper {
 	k := &Keeper{
 		state: &stateEvent.State{
 			NATStatus: stateEvent.NATStatus{
@@ -73,9 +79,9 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 		serviceSessionStorage: serviceSessionStorage,
 	}
 	k.debouncers = map[string]func(interface{}){
-		"service": debounce(k.updateServiceState, time.Millisecond*200),
-		"nat":     debounce(k.updateNatStatus, time.Millisecond*200),
-		"session": debounce(k.updateSessionState, time.Millisecond*200),
+		"service": debounce(k.updateServiceState, debounceDuration),
+		"nat":     debounce(k.updateNatStatus, debounceDuration),
+		"session": debounce(k.updateSessionState, debounceDuration),
 	}
 	return k
 }
@@ -124,11 +130,16 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 
 	event, ok := e.(natEvent.Event)
 	if !ok {
+		log.Warn(logPrefix, "received a non nat event on nat status call - ignoring")
 		return
 	}
 
 	k.natStatusProvider.ConsumeNATEvent(event)
-	k.state.NATStatus = stateEvent.NATStatus{Status: k.natStatusProvider.Status().Status}
+	status := k.natStatusProvider.Status()
+	k.state.NATStatus = stateEvent.NATStatus{Status: status.Status}
+	if status.Error != nil {
+		k.state.NATStatus.Error = status.Error.Error()
+	}
 
 	go k.publisher.Publish(stateEvent.Topic, *k.state)
 }

@@ -275,7 +275,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 
 	tracker := nat.NewStatusTracker(lastStageName)
 
-	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage)
+	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage, state.DefaultDebounceDuration)
 
 	err := di.EventBus.SubscribeAsync(service.StatusTopic, di.StateKeeper.ConsumeServiceStateEvent)
 	if err != nil {
