@@ -15,30 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ui
+package noop
 
 import "sync"
 
-// NoopServer doesn't do much really
-type NoopServer struct {
+// Server doesn't do much really
+type Server struct {
 	iSimulateWork chan error
 	once          sync.Once
 }
 
-// NewNoopServer returns a new noop server
-func NewNoopServer() *NoopServer {
-	return &NoopServer{
+// NewServer returns a new noop server
+func NewServer() *Server {
+	return &Server{
 		iSimulateWork: make(chan error),
 	}
 }
 
 // Serve blocks
-func (s *NoopServer) Serve() error {
+func (s *Server) Serve() error {
 	return <-s.iSimulateWork
 }
 
 // Stop stops the blocking of serve
-func (s *NoopServer) Stop() {
+func (s *Server) Stop() {
 	s.once.Do(func() {
 		close(s.iSimulateWork)
 	})

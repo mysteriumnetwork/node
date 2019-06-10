@@ -81,7 +81,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/tequilapi/sse"
-	"github.com/mysteriumnetwork/node/ui"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 )
@@ -374,15 +373,6 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 
 	di.Storage = localStorage
 	return nil
-}
-
-func (di *Dependencies) bootstrapUIServer(options node.OptionsUI) {
-	if options.UIEnabled {
-		di.UIServer = ui.NewServer(options.UIPort)
-		return
-	}
-
-	di.UIServer = ui.NewNoopServer()
 }
 
 func (di *Dependencies) subscribeEventConsumers() error {

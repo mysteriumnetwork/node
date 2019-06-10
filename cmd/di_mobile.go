@@ -21,6 +21,7 @@ package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/ui/noop"
 )
 
 // bootstrapServices loads all the components required for running services
@@ -30,4 +31,8 @@ func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
 
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerNoopConnection()
+}
+
+func (di *Dependencies) bootstrapUIServer(options node.OptionsUI) {
+	di.UIServer = noop.NewServer()
 }

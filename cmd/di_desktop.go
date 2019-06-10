@@ -42,6 +42,8 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/ui"
+	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 )
 
 // bootstrapServices loads all the components required for running services
@@ -252,4 +254,13 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 func (di *Dependencies) registerWireguardConnection() {
 	wireguard.Bootstrap()
 	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator())
+}
+
+func (di *Dependencies) bootstrapUIServer(options node.OptionsUI) {
+	if options.UIEnabled {
+		di.UIServer = ui.NewServer(options.UIPort)
+		return
+	}
+
+	di.UIServer = uinoop.NewServer()
 }
