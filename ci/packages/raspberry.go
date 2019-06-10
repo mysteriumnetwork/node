@@ -100,11 +100,11 @@ func configureRaspbianImage(raspbianImagePath string) error {
 		}
 	}()
 
-	_ = os.MkdirAll(raspbianMountPoint, 0755)
+	_ = shell.NewCmdf("sudo mkdir -p %s", raspbianMountPoint).Run()
 	if err := shell.NewCmdf("sudo mount --options rw %s %s", loopDevice+"p2", raspbianMountPoint).Run(); err != nil {
 		return err
 	}
-	_ = os.MkdirAll(raspbianMountPoint+"/boot", 0755)
+	_ = shell.NewCmdf("sudo mkdir -p %s", raspbianMountPoint+"/boot").Run()
 	if err := shell.NewCmdf("sudo mount --options rw %s %s", loopDevice+"p1", raspbianMountPoint+"/boot").Run(); err != nil {
 		return err
 	}
