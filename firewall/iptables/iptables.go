@@ -18,7 +18,8 @@ const (
 	killswitchChain = "CONSUMER_KILL_SWITCH"
 
 	addChain         = "-N"
-	addRule          = "-A"
+	appendRule       = "-A"
+	insertRule       = "-I"
 	listRules        = "-S"
 	removeRule       = "-D"
 	removeChainRules = "-F"
@@ -27,6 +28,11 @@ const (
 	jumpTo        = "-j"
 	sourceIP      = "-s"
 	destinationIP = "-d"
+	module        = "-m"
+
+	conntrack    = "conntrack"
+	ct_state     = "--ctstate"
+	ct_state_new = "NEW"
 
 	reject = "REJECT"
 	accept = "ACCEPT"
@@ -36,8 +42,10 @@ const (
 
 var iptablesExec = func(args ...string) ([]string, error) {
 	args = append([]string{"/sbin/iptables"}, args...)
+	log.Trace(logPrefix, "[cmd] ", args)
 	output, err := exec.Command("sudo", args...).Output()
 	if err != nil {
+		log.Trace(logPrefix, "[cmd error] ", err)
 		return nil, errors.Wrap(err, "iptables cmd error")
 	}
 	outputScanner := bufio.NewScanner(bytes.NewBuffer(output))
@@ -67,7 +75,7 @@ func cleanupStaleRules() error {
 	for _, rule := range rules {
 		//detect if any references exist in OUTPUT chain like -j CONSUMER_KILL_SWITCH
 		if strings.HasSuffix(rule, killswitchChain) {
-			deleteRule := strings.Replace(rule, addRule, removeRule, 1)
+			deleteRule := strings.Replace(rule, appendRule, removeRule, 1)
 			if _, err := iptablesExec(deleteRule); err != nil {
 				return err
 			}
@@ -93,7 +101,7 @@ func setupKillSwitchChain() error {
 		return err
 	}
 	// by default all packets going to kill switch chain are rejected
-	if _, err := iptablesExec(addRule, killswitchChain, jumpTo, reject); err != nil {
+	if _, err := iptablesExec(appendRule, killswitchChain, module, conntrack, ct_state, ct_state_new, jumpTo, reject); err != nil {
 		return err
 	}
 	return nil
@@ -104,7 +112,7 @@ type Iptables struct {
 }
 
 func (b Iptables) BlockOutgoingTraffic() (firewall.RemoveRule, error) {
-	return iptablesAddWithRemoval(outputChain, sourceIP, b.outboundIP, jumpTo, killswitchChain)
+	return addRuleWithRemoval(appendTo(outputChain).ruleSpec(sourceIP, b.outboundIP, jumpTo, killswitchChain))
 }
 
 func New(outboundIP string) *Iptables {
@@ -131,22 +139,20 @@ func (Iptables) Reset() {
 	}
 }
 
-func iptablesAddWithRemoval(args ...string) (firewall.RemoveRule, error) {
-	addRule := append([]string{addRule}, args...)
-	removeRule := append([]string{removeRule}, args...)
-	if _, err := iptablesExec(addRule...); err != nil {
+func addRuleWithRemoval(chain chainInfo) (firewall.RemoveRule, error) {
+	if _, err := iptablesExec(chain.applyArgs()...); err != nil {
 		return nil, err
 	}
 	return func() {
-		_, err := iptablesExec(removeRule...)
+		_, err := iptablesExec(chain.removeArgs()...)
 		if err != nil {
-			_ = log.Warn(logPrefix, "Error deleting rule: ", removeRule, " you might wanna do it yourself. Error was: ", err)
+			_ = log.Warn(logPrefix, "Error executing rule: ", chain.removeArgs(), " you might wanna do it yourself. Error was: ", err)
 		}
 	}, nil
 }
 
 func (Iptables) AllowIPAccess(ip string) (firewall.RemoveRule, error) {
-	return iptablesAddWithRemoval(killswitchChain, destinationIP, ip, jumpTo, accept)
+	return addRuleWithRemoval(insertAt(killswitchChain, 1).ruleSpec(destinationIP, ip, jumpTo, accept))
 }
 
 var _ firewall.Vendor = (*Iptables)(nil)

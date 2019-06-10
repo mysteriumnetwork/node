@@ -27,7 +27,7 @@ func TestBlockerSetupIsSuccesful(t *testing.T) {
 	blocker := New("1.1.1.1")
 	assert.NoError(t, blocker.Setup())
 	assert.True(t, mockedExec.VerifyCalledWithArgs(addChain, killswitchChain))
-	assert.True(t, mockedExec.VerifyCalledWithArgs(addRule, killswitchChain, jumpTo, reject))
+	assert.True(t, mockedExec.VerifyCalledWithArgs(appendRule, killswitchChain, module, conntrack, ct_state, ct_state_new, jumpTo, reject))
 }
 
 func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
@@ -61,7 +61,7 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 	assert.True(t, mockedExec.VerifyCalledWithArgs(removeChainRules, killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs(removeChain, killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs(addChain, killswitchChain))
-	assert.True(t, mockedExec.VerifyCalledWithArgs(addRule, killswitchChain, jumpTo, reject))
+	assert.True(t, mockedExec.VerifyCalledWithArgs(appendRule, killswitchChain, module, conntrack, ct_state, ct_state_new, jumpTo, reject))
 
 }
 
@@ -107,7 +107,7 @@ func TestBlockerBlocksAllOutgoingTraffic(t *testing.T) {
 
 	removeRuleFunc, err := blocker.BlockOutgoingTraffic()
 	assert.NoError(t, err)
-	assert.True(t, mockedExec.VerifyCalledWithArgs(addRule, outputChain, sourceIP, "1.1.1.1", jumpTo, killswitchChain))
+	assert.True(t, mockedExec.VerifyCalledWithArgs(appendRule, outputChain, sourceIP, "1.1.1.1", jumpTo, killswitchChain))
 
 	removeRuleFunc()
 	assert.True(t, mockedExec.VerifyCalledWithArgs(removeRule, outputChain, sourceIP, "1.1.1.1", jumpTo, killswitchChain))
@@ -123,7 +123,7 @@ func TestBlockerAddsAllowedIP(t *testing.T) {
 
 	removeRuleFunc, err := blocker.AllowIPAccess("2.2.2.2")
 	assert.NoError(t, err)
-	assert.True(t, mockedExec.VerifyCalledWithArgs(addRule, killswitchChain, destinationIP, "2.2.2.2", jumpTo, accept))
+	assert.True(t, mockedExec.VerifyCalledWithArgs(insertRule, killswitchChain, "1", destinationIP, "2.2.2.2", jumpTo, accept))
 
 	removeRuleFunc()
 	assert.True(t, mockedExec.VerifyCalledWithArgs(removeRule, killswitchChain, destinationIP, "2.2.2.2", jumpTo, accept))

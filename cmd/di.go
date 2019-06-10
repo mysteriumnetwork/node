@@ -52,6 +52,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/mysteriumnetwork/node/firewall/iptables"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -222,6 +223,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	if err := nodeOptions.Directories.Check(); err != nil {
+		return err
+	}
+
+	if err := di.bootstrapFirewall(nodeOptions.Firewall); err != nil {
 		return err
 	}
 
@@ -722,4 +727,25 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	loader := &upnp.GatewayLoader{}
 	go loader.Get()
 	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
+}
+
+func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
+	if options.EnableKillSwitch {
+		ip, err := ip.GetOutbound()
+		if err != nil {
+			return err
+		}
+		killSwitchVendor := iptables.New(ip)
+		if err := killSwitchVendor.Setup(); err != nil {
+			return err
+		}
+		firewall.Configure(killSwitchVendor)
+	}
+	if options.BlockAlways {
+		_, err := firewall.BlockNonTunnelTraffic(firewall.Global)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -42,7 +42,8 @@ type Options struct {
 	Quality   OptionsQuality
 	Location  OptionsLocation
 
-	Openvpn Openvpn
+	Openvpn  Openvpn
+	Firewall OptionsFirewall
 }
 
 // OptionsKeystore stores the keystore configuration
