@@ -27,6 +27,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
+	"github.com/mysteriumnetwork/node/ui/discovery"
 	"github.com/pkg/errors"
 )
 
@@ -34,7 +35,8 @@ const logPrefix = "[dvpn-web-server] "
 
 // Server represents our web UI server
 type Server struct {
-	srv *http.Server
+	srv       *http.Server
+	discovery discovery.LANDiscovery
 }
 
 // NewServer creates a new instance of the server for the given port
@@ -50,13 +52,22 @@ func NewServer(port int) *Server {
 	}
 
 	return &Server{
-		srv: srv,
+		srv:       srv,
+		discovery: discovery.NewLANDiscoveryService(port),
 	}
 }
 
 // Serve starts the server
 func (s *Server) Serve() error {
 	log.Info(logPrefix, "server starting on: ", s.srv.Addr)
+
+	go func() {
+		err := s.discovery.Start()
+		if err != nil {
+			log.Error(logPrefix, "failed to start local discovery service: ", err)
+		}
+	}()
+
 	err := s.srv.ListenAndServe()
 	if err != http.ErrServerClosed {
 		return errors.Wrap(err, "dvpn web server crashed")
@@ -66,10 +77,15 @@ func (s *Server) Serve() error {
 
 // Stop stops the server
 func (s *Server) Stop() {
+	err := s.discovery.Stop()
+	if err != nil {
+		log.Error(logPrefix, "failed to stop local discovery service: ", err)
+	}
+
 	// give the server a few seconds to shut down properly in case a request is waiting somewhere
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	err := s.srv.Shutdown(ctx)
+	err = s.srv.Shutdown(ctx)
 	if err != nil {
 		log.Error(logPrefix, "server exit error: ", err)
 	}

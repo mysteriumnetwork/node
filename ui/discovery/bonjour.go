@@ -15,41 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ui
+package discovery
 
 import (
-	"net/http"
-	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/html"
+	"github.com/oleksandr/bonjour"
 )
 
-func Test_Server_ServesHTML(t *testing.T) {
-	s := NewServer(55555)
-	s.discovery = &mockDiscovery{}
-	serverError := make(chan error)
-	go func() {
-		err := s.Serve()
-		serverError <- err
-	}()
-
-	time.Sleep(time.Millisecond * 5)
-
-	resp, err := http.Get("http://:55555/")
-	assert.Nil(t, err)
-
-	defer resp.Body.Close()
-
-	_, err = html.Parse(resp.Body)
-	assert.Nil(t, err)
-
-	s.Stop()
-	assert.Nil(t, <-serverError)
+type bonjourServer struct {
+	port   int
+	server *bonjour.Server
 }
 
-type mockDiscovery struct{}
+func newBonjourServer(uiPort int) *bonjourServer {
+	return &bonjourServer{
+		port: uiPort,
+	}
+}
 
-func (md *mockDiscovery) Start() error { return nil }
-func (md *mockDiscovery) Stop() error  { return nil }
+func (bs *bonjourServer) Start() (err error) {
+	bs.server, err = bonjour.Register("Mysterium Node", "_mysterium-node._tcp", "", bs.port, nil, nil)
+	return err
+}
+
+func (bs *bonjourServer) Stop() (err error) {
+	bs.server.Shutdown()
+	return nil
+}

@@ -365,6 +365,13 @@
   version = "0.5"
 
 [[projects]]
+  digest = "1:8f57afa9ef1d9205094e9d89b9cb4ecb3123f342c4eb0053d7631181b511e6e4"
+  name = "github.com/koron/go-ssdp"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4a0ed625a78b6858dc8d3a55fb7728968b712122"
+
+[[projects]]
   digest = "1:f4e64bb62274202b95403b8ae001d0601cee01afadf60767fb0e1d239f8f1413"
   name = "github.com/magefile/mage"
   packages = [
@@ -428,6 +435,14 @@
   pruneopts = "UT"
   revision = "1a8911d1ed007260465c3bfbbc785ac6915a0bb8"
   version = "v0.4.12"
+
+[[projects]]
+  digest = "1:fc5013a7a6f9600051ad48b059fef4a3035e8692d1c54ffd8dccfaa8ebe0b505"
+  name = "github.com/miekg/dns"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ba6747e8a94115e9dc7738afb87850687611df1b"
+  version = "v1.0.12"
 
 [[projects]]
   digest = "1:c7354463195544b1ab3c1f1fadb41430947f5d28dfbf2cdbd38268c5717a5a03"
@@ -540,6 +555,13 @@
   pruneopts = "UT"
   revision = "cc3e4b2381762c56dbcdf9f93be03349a1dc1c14"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:1a0539f293ad62dd34cce1c5cc11b0aa2c1c322b2352682e22ecf5aecaf4a8bd"
+  name = "github.com/oleksandr/bonjour"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5dcf00d8b228be86307f952f550f2191d956b9e2"
 
 [[projects]]
   digest = "1:e88d6836f8adbe7e9c08e08527ec4a5337436a63e06718e023fbd9c63cda976b"
@@ -1056,6 +1078,7 @@
     "github.com/huin/goupnp/ssdp",
     "github.com/jackpal/gateway",
     "github.com/julienschmidt/httprouter",
+    "github.com/koron/go-ssdp",
     "github.com/magefile/mage/mage",
     "github.com/magefile/mage/sh",
     "github.com/mholt/archiver",
@@ -1080,6 +1103,7 @@
     "github.com/mysteriumnetwork/wireguard-go/device",
     "github.com/mysteriumnetwork/wireguard-go/tun",
     "github.com/nats-io/go-nats",
+    "github.com/oleksandr/bonjour",
     "github.com/oschwald/geoip2-golang",
     "github.com/pkg/errors",
     "github.com/songgao/water",
