@@ -26,8 +26,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service"
-	natEvent "github.com/mysteriumnetwork/node/nat/event"
+	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/pkg/errors"
 )
 
@@ -47,26 +46,34 @@ const (
 	NATEvent EventType = "nat"
 	// ServiceStatusEvent represents the service status event type
 	ServiceStatusEvent EventType = "service-status"
+	// StateChangeEvent represents the state change
+	StateChangeEvent EventType = "state-change"
 )
 
 // Handler represents an sse handler
 type Handler struct {
-	clients     map[chan string]struct{}
-	newClients  chan chan string
-	deadClients chan chan string
-	messages    chan string
-	stopOnce    sync.Once
-	stopChan    chan struct{}
+	clients       map[chan string]struct{}
+	newClients    chan chan string
+	deadClients   chan chan string
+	messages      chan string
+	stopOnce      sync.Once
+	stopChan      chan struct{}
+	stateProvider stateProvider
+}
+
+type stateProvider interface {
+	GetState() stateEvent.State
 }
 
 // NewHandler returns a new instance of handler
-func NewHandler() *Handler {
+func NewHandler(stateProvider stateProvider) *Handler {
 	return &Handler{
-		clients:     make(map[chan string]struct{}),
-		newClients:  make(chan (chan string)),
-		deadClients: make(chan (chan string)),
-		messages:    make(chan string, 20),
-		stopChan:    make(chan struct{}),
+		clients:       make(map[chan string]struct{}),
+		newClients:    make(chan (chan string)),
+		deadClients:   make(chan (chan string)),
+		messages:      make(chan string, 20),
+		stopChan:      make(chan struct{}),
+		stateProvider: stateProvider,
 	}
 }
 
@@ -87,7 +94,17 @@ func (h *Handler) Sub(resp http.ResponseWriter, req *http.Request, params httpro
 	resp.Header().Set("Cache-Control", "no-cache")
 	resp.Header().Set("Connection", "keep-alive")
 
-	messageChan := make(chan string)
+	messageChan := make(chan string, 1)
+	err := h.sendInitialState(messageChan)
+	if err != nil {
+		resp.WriteHeader(http.StatusBadRequest)
+		resp.Header().Set("Content-type", "application/json; charset=utf-8")
+		writeErr := json.NewEncoder(resp).Encode(err)
+		if writeErr != nil {
+			http.Error(resp, "Http response write error", http.StatusInternalServerError)
+		}
+	}
+
 	h.newClients <- messageChan
 
 	go func() {
@@ -113,6 +130,19 @@ func (h *Handler) Sub(resp http.ResponseWriter, req *http.Request, params httpro
 			return
 		}
 	}
+}
+
+func (h *Handler) sendInitialState(messageChan chan string) error {
+	res, err := json.Marshal(Event{
+		Type:    StateChangeEvent,
+		Payload: h.stateProvider.GetState(),
+	})
+	if err != nil {
+		return err
+	}
+
+	messageChan <- string(res)
+	return nil
 }
 
 func (h *Handler) serve() {
@@ -152,14 +182,6 @@ func (h *Handler) send(e Event) {
 	h.messages <- string(marshaled)
 }
 
-// ConsumeServiceStateEvent consumes the service state event
-func (h *Handler) ConsumeServiceStateEvent(event service.EventPayload) {
-	h.send(Event{
-		Type:    ServiceStatusEvent,
-		Payload: event,
-	})
-}
-
 // ConsumeNodeEvent consumes the node state event
 func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 	if e.Status == nodeEvent.StatusStarted {
@@ -172,10 +194,10 @@ func (h *Handler) ConsumeNodeEvent(e nodeEvent.Payload) {
 	}
 }
 
-// ConsumeNATEvent consumes a given NAT event
-func (h *Handler) ConsumeNATEvent(e natEvent.Event) {
+// ConsumeStateEvent consumes the state change event
+func (h *Handler) ConsumeStateEvent(event stateEvent.State) {
 	h.send(Event{
-		Type:    NATEvent,
-		Payload: e,
+		Type:    StateChangeEvent,
+		Payload: event,
 	})
 }

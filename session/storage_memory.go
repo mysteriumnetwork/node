@@ -19,20 +19,28 @@ package session
 
 import (
 	"sync"
+
+	"github.com/mysteriumnetwork/node/session/event"
 )
 
+type publisher interface {
+	Publish(topic string, data interface{})
+}
+
 // NewStorageMemory initiates new session storage
-func NewStorageMemory() *StorageMemory {
+func NewStorageMemory(publisher publisher) *StorageMemory {
 	return &StorageMemory{
-		sessions: make(map[ID]Session),
-		lock:     sync.Mutex{},
+		sessions:  make(map[ID]Session),
+		lock:      sync.Mutex{},
+		publisher: publisher,
 	}
 }
 
 // StorageMemory maintains all currents sessions in memory
 type StorageMemory struct {
-	sessions map[ID]Session
-	lock     sync.Mutex
+	sessions  map[ID]Session
+	lock      sync.Mutex
+	publisher publisher
 }
 
 // Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
@@ -41,6 +49,10 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 	defer storage.lock.Unlock()
 
 	storage.sessions[sessionInstance.ID] = sessionInstance
+	go storage.publisher.Publish(event.Topic, event.Payload{
+		ID:     string(sessionInstance.ID),
+		Action: event.Created,
+	})
 }
 
 // GetAll returns all sessions in storage
@@ -80,6 +92,10 @@ func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 	delete(storage.sessions, id)
+	go storage.publisher.Publish(event.Topic, event.Payload{
+		ID:     string(id),
+		Action: event.Removed,
+	})
 }
 
 // RemoveForService removes all sessions which belong to given service

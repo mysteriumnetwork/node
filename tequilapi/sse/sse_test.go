@@ -18,38 +18,31 @@
 package sse
 
 import (
+	"bufio"
+	"context"
+	"fmt"
+	"net"
+	"net/http"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
-
+	"github.com/julienschmidt/httprouter"
 	nodeEvent "github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/service"
-	natEvent "github.com/mysteriumnetwork/node/nat/event"
+	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestHandler_ConsumeNATEvent(t *testing.T) {
-	h := NewHandler()
-	me := natEvent.Event{
-		Stage: "somestage",
-	}
-	h.ConsumeNATEvent(me)
-
-	assert.Equal(t, `{"payload":{"stage":"somestage","successful":false},"type":"nat"}`, <-h.messages)
+type mockStateProvider struct {
+	stateToreturn stateEvent.State
 }
 
-func TestHandler_ConsumeServiceStateEvent(t *testing.T) {
-	h := NewHandler()
-
-	me := service.EventPayload{
-		Status: "somestage",
-	}
-	h.ConsumeServiceStateEvent(me)
-
-	assert.Equal(t, `{"payload":{"id":"","providerId":"","type":"","status":"somestage"},"type":"service-status"}`, <-h.messages)
+func (msp *mockStateProvider) GetState() stateEvent.State {
+	return msp.stateToreturn
 }
 
 func TestHandler_Stops(t *testing.T) {
-	h := NewHandler()
+	h := NewHandler(&mockStateProvider{})
 
 	wait := make(chan struct{})
 	go func() {
@@ -62,7 +55,7 @@ func TestHandler_Stops(t *testing.T) {
 }
 
 func TestHandler_ConsumeNodeEvent_Stops(t *testing.T) {
-	h := NewHandler()
+	h := NewHandler(&mockStateProvider{})
 	me := nodeEvent.Payload{
 		Status: nodeEvent.StatusStopped,
 	}
@@ -71,7 +64,7 @@ func TestHandler_ConsumeNodeEvent_Stops(t *testing.T) {
 }
 
 func TestHandler_ConsumeNodeEvent_Starts(t *testing.T) {
-	h := NewHandler()
+	h := NewHandler(&mockStateProvider{})
 	me := nodeEvent.Payload{
 		Status: nodeEvent.StatusStarted,
 	}
@@ -83,4 +76,65 @@ func TestHandler_ConsumeNodeEvent_Starts(t *testing.T) {
 	h.newClients <- make(chan string)
 
 	h.stop()
+}
+
+func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
+	msp := &mockStateProvider{}
+	h := NewHandler(msp)
+	go h.serve()
+	defer h.stop()
+	laddr := net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0}
+	listener, err := net.ListenTCP("tcp4", &laddr)
+	assert.Nil(t, err)
+	addr := listener.Addr()
+	port := addr.(*net.TCPAddr).Port
+	defer listener.Close()
+
+	router := httprouter.New()
+	router.GET("/whatever", h.Sub)
+	serveExit := make(chan error)
+	go func() {
+		err = http.Serve(listener, router)
+		serveExit <- err
+	}()
+
+	time.Sleep(time.Millisecond * 50)
+	w := fmt.Sprintf("http://127.0.0.1:%v/whatever", port)
+	req, _ := http.NewRequest("GET", w, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	req = req.WithContext(ctx)
+	c := http.Client{}
+	resp, err := c.Do(req)
+	assert.Nil(t, err)
+	results := make(chan string)
+	go func() {
+		reader := bufio.NewReader(resp.Body)
+		for {
+			line, err := reader.ReadBytes('\n')
+			if err != nil {
+				return
+			}
+			stringified := strings.Join(strings.Fields(strings.TrimSpace(string(line))), " ")
+			if len(stringified) > 0 {
+				results <- stringified
+			}
+		}
+	}()
+
+	initialState := <-results
+	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"","error":""},"serviceInfo":null,"sessions":null},"type":"state-change"}`, initialState)
+
+	changedState := msp.GetState()
+	changedState.NATStatus = stateEvent.NATStatus{
+		Status: "mass panic",
+		Error:  "cookie prices rise drastically",
+	}
+	h.ConsumeStateEvent(changedState)
+
+	newState := <-results
+	assert.Equal(t, `data: {"payload":{"natStatus":{"status":"mass panic","error":"cookie prices rise drastically"},"serviceInfo":null,"sessions":null},"type":"state-change"}`, newState)
+	cancel()
+	listener.Close()
+
+	<-serveExit
 }

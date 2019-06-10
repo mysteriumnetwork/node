@@ -20,6 +20,7 @@ package service
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -111,11 +112,24 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 	err = manager.Stop(id)
 	assert.NoError(t, err)
 
+	time.Sleep(time.Millisecond * 30)
+
 	eventBus.lock.Lock()
 	defer eventBus.lock.Unlock()
 
 	assert.Equal(t, StatusTopic, eventBus.publishedTopic)
 
+	var matchFound bool
 	expectedPayload := EventPayload{ID: string(serviceID), ProviderID: "", Type: "", Status: "NotRunning"}
-	assert.Equal(t, expectedPayload, eventBus.publishedData)
+	for i := range eventBus.publishedData {
+		e, ok := eventBus.publishedData[i].(EventPayload)
+		if !ok {
+			continue
+		}
+		if e.Status == expectedPayload.Status && e.ID == expectedPayload.ID {
+			matchFound = true
+			break
+		}
+	}
+	assert.True(t, matchFound)
 }

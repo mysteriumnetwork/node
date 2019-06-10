@@ -44,6 +44,8 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/state"
+	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/eventbus"
@@ -71,6 +73,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
+	sessionevent "github.com/mysteriumnetwork/node/session/event"
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
 	"github.com/mysteriumnetwork/node/session/promise"
@@ -118,12 +121,6 @@ type NatEventTracker interface {
 
 // NatEventSender is responsible for sending NAT events to metrics server
 type NatEventSender interface {
-	ConsumeNATEvent(event event.Event)
-}
-
-// NATStatusTracker tracks status of NAT traversal by consuming NAT events
-type NATStatusTracker interface {
-	Status() nat.Status
 	ConsumeNATEvent(event event.Event)
 }
 
@@ -182,12 +179,13 @@ type Dependencies struct {
 	ServiceRegistry       *service.Registry
 	ServiceSessionStorage *session.StorageMemory
 
-	NATPinger        NatPinger
-	NATTracker       NatEventTracker
-	NATEventSender   NatEventSender
-	NATStatusTracker NATStatusTracker
+	NATPinger      NatPinger
+	NATTracker     NatEventTracker
+	NATEventSender NatEventSender
 
 	BandwidthTracker *bandwidth.Tracker
+
+	StateKeeper *state.Keeper
 
 	UIServer   UIServer
 	SSEHandler *sse.Handler
@@ -244,6 +242,14 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
+	if err := di.bootstrapStateKeeper(nodeOptions); err != nil {
+		return err
+	}
+
+	if err := di.bootstrapSSEHandler(); err != nil {
+		return err
+	}
+
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
 
 	di.registerConnections(nodeOptions)
@@ -259,6 +265,29 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	return nil
+}
+
+func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
+	var lastStageName string
+	if options.ExperimentNATPunching {
+		lastStageName = traversal.StageName
+	} else {
+		lastStageName = mapping.StageName
+	}
+
+	tracker := nat.NewStatusTracker(lastStageName)
+
+	di.StateKeeper = state.NewKeeper(tracker, di.EventBus, di.ServicesManager, di.ServiceSessionStorage, state.DefaultDebounceDuration)
+
+	err := di.EventBus.SubscribeAsync(service.StatusTopic, di.StateKeeper.ConsumeServiceStateEvent)
+	if err != nil {
+		return err
+	}
+	err = di.EventBus.SubscribeAsync(sessionevent.Topic, di.StateKeeper.ConsumeSessionEvent)
+	if err != nil {
+		return err
+	}
+	return di.EventBus.SubscribeAsync(event.Topic, di.StateKeeper.ConsumeNATEvent)
 }
 
 func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
@@ -282,16 +311,12 @@ func (di *Dependencies) registerNoopConnection() {
 
 // bootstrapSSEHandler bootstraps the SSEHandler and all of its dependencies
 func (di *Dependencies) bootstrapSSEHandler() error {
-	di.SSEHandler = sse.NewHandler()
-	err := di.EventBus.SubscribeAsync(service.StatusTopic, di.SSEHandler.ConsumeServiceStateEvent)
+	di.SSEHandler = sse.NewHandler(di.StateKeeper)
+	err := di.EventBus.Subscribe(nodevent.Topic, di.SSEHandler.ConsumeNodeEvent)
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.Subscribe(nodevent.Topic, di.SSEHandler.ConsumeNodeEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(event.Topic, di.SSEHandler.ConsumeNATEvent)
+	err = di.EventBus.Subscribe(statevent.Topic, di.SSEHandler.ConsumeStateEvent)
 	return err
 }
 
@@ -387,11 +412,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 	err = di.EventBus.Subscribe(event.Topic, di.NATTracker.ConsumeNATEvent)
-	if err != nil {
-		return err
-	}
-
-	return di.EventBus.Subscribe(event.Topic, di.NATStatusTracker.ConsumeNATEvent)
+	return err
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listener net.Listener) {
@@ -429,10 +450,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForLocation(router, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.MysteriumMorqaClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser, nodeOptions.AccessPolicyEndpointAddress)
-	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.ServiceSessionStorage)
+	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
 	tequilapi_endpoints.AddRoutesForAccessPolicies(router, nodeOptions.AccessPolicyEndpointAddress)
-	tequilapi_endpoints.AddRoutesForNAT(router, di.NATStatusTracker.Status)
+	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
@@ -679,12 +700,4 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	loader := &upnp.GatewayLoader{}
 	go loader.Get()
 	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
-
-	var lastStageName string
-	if options.ExperimentNATPunching {
-		lastStageName = traversal.StageName
-	} else {
-		lastStageName = mapping.StageName
-	}
-	di.NATStatusTracker = nat.NewStatusTracker(lastStageName)
 }

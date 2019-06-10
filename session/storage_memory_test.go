@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -93,7 +94,8 @@ func TestStorage_Remove(t *testing.T) {
 
 func TestStorage_RemoveNonExisting(t *testing.T) {
 	storage := &StorageMemory{
-		sessions: map[ID]Session{},
+		sessions:  map[ID]Session{},
+		publisher: &mockPublisher{},
 	}
 	storage.Remove(sessionExisting.ID)
 	assert.Len(t, storage.sessions, 0)
@@ -111,9 +113,66 @@ func TestStorage_Remove_Does_Not_Panic(t *testing.T) {
 	assert.Len(t, storage.sessions, 1)
 }
 
+func TestStorage_PublishesEventsOnCreate(t *testing.T) {
+	instance := expectedSession
+	mp := &mockPublisher{}
+	sessionStore := NewStorageMemory(mp)
+
+	sessionStore.Add(instance)
+
+	// since we're shooting the event in an asynchronous fashion, try every millisecond to see if we already have it
+	attempts := 0
+	for range time.After(time.Microsecond) {
+		if attempts > 1000 {
+			assert.Fail(t, "no change after a 1000 attempts")
+			break
+		}
+		attempts++
+		if mp.getLast().Action == sessionEvent.Created {
+			break
+		}
+	}
+
+	assert.Equal(t, sessionEvent.Payload{
+		Action: sessionEvent.Created,
+		ID:     string(expectedID),
+	}, mp.published)
+}
+
+func TestStorage_PublishesEventsOnDelete(t *testing.T) {
+	instance := expectedSession
+	mp := &mockPublisher{}
+	sessionStore := NewStorageMemory(mp)
+	sessionStore.Add(instance)
+
+	time.Sleep(time.Millisecond * 5)
+
+	sessionStore.Remove(instance.ID)
+
+	// since we're shooting the event in an asynchronous fashion, try every microsecond to see if we already have it
+	attempts := 0
+
+	for range time.After(time.Microsecond) {
+		if attempts > 1000 {
+			assert.Fail(t, "no change after a 1000 attempts")
+			break
+		}
+		attempts++
+		if mp.getLast().Action == sessionEvent.Removed {
+			break
+		}
+	}
+
+	assert.Equal(t, sessionEvent.Payload{
+		Action: sessionEvent.Removed,
+		ID:     string(expectedID),
+	}, mp.published)
+}
+
 func mockStorage(sessionInstance Session) *StorageMemory {
 	return &StorageMemory{
-		sessions: map[ID]Session{sessionInstance.ID: sessionInstance},
+		sessions:  map[ID]Session{sessionInstance.ID: sessionInstance},
+		publisher: &mockPublisher{},
 	}
 }
 
@@ -122,7 +181,7 @@ var benchmarkStorageGetAllResult int
 
 func Benchmark_Storage_GetAll(b *testing.B) {
 	// Findings are as follows - with 100k sessions, we should be fine with a performance of 0.04s on my mac
-	storage := NewStorageMemory()
+	storage := NewStorageMemory(&mockPublisher{})
 	sessionsToStore := 100000
 	for i := 0; i < sessionsToStore; i++ {
 		storage.Add(Session{ID: ID(fmt.Sprintf("ID%v", i)), CreatedAt: time.Now()})

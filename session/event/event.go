@@ -15,20 +15,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package endpoints
+package event
 
-import (
-	"net/http"
+// Topic represents the session change topic
+const Topic = "Session change"
 
-	"github.com/julienschmidt/httprouter"
+// Action represents the different actions that might happen on a session
+type Action string
+
+const (
+	// Created indicates a session has been created
+	Created Action = "Created"
+	// Removed indicates a session has been removed
+	Removed Action = "Removed"
 )
 
-// SSEHandler represents the sse handler
-type SSEHandler interface {
-	Sub(resp http.ResponseWriter, req *http.Request, params httprouter.Params)
-}
-
-// AddRoutesForSSE adds route for sse
-func AddRoutesForSSE(router *httprouter.Router, handler SSEHandler) {
-	router.GET("/events/state", handler.Sub)
+// Payload represents the event payload
+type Payload struct {
+	Action Action
+	ID     string
 }

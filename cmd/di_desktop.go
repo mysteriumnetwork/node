@@ -181,7 +181,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 		log.Warn(logPrefix, "Failed to enable NAT forwarding: ", err)
 	}
 	di.ServiceRegistry = service.NewRegistry()
-	di.ServiceSessionStorage = session.NewStorageMemory()
+	di.ServiceSessionStorage = session.NewStorageMemory(di.EventBus)
 
 	registeredIdentityValidator := func(peerID identity.Identity) error {
 		registered, err := di.IdentityRegistry.IsRegistered(peerID)

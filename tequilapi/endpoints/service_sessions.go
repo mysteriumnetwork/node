@@ -22,38 +22,28 @@ import (
 	"sort"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/mysteriumnetwork/node/session"
+	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 // serviceSessionsList defines session list representable as json
 // swagger:model ServiceSessionListDTO
 type serviceSessionsList struct {
-	Sessions []serviceSession `json:"sessions"`
+	Sessions []stateEvent.ServiceSession `json:"sessions"`
 }
 
-// serviceSession represents the session object
-// swagger:model ServiceSessionDTO
-type serviceSession struct {
-	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
-	ID string `json:"id"`
-
-	// example: 0x0000000000000000000000000000000000000001
-	ConsumerID string `json:"consumerId"`
-}
-
-type serviceSessionStorage interface {
-	GetAll() []session.Session
+type stateStorage interface {
+	GetState() stateEvent.State
 }
 
 type serviceSessionsEndpoint struct {
-	sessionStorage serviceSessionStorage
+	stateStorage stateStorage
 }
 
 // NewServiceSessionsEndpoint creates and returns sessions endpoint
-func NewServiceSessionsEndpoint(sessionStorage serviceSessionStorage) *serviceSessionsEndpoint {
+func NewServiceSessionsEndpoint(stateStorage stateStorage) *serviceSessionsEndpoint {
 	return &serviceSessionsEndpoint{
-		sessionStorage: sessionStorage,
+		stateStorage: stateStorage,
 	}
 }
 
@@ -67,33 +57,18 @@ func NewServiceSessionsEndpoint(sessionStorage serviceSessionStorage) *serviceSe
 //     schema:
 //       "$ref": "#/definitions/ServiceSessionListDTO"
 func (endpoint *serviceSessionsEndpoint) List(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	sessions := endpoint.sessionStorage.GetAll()
+	sessions := endpoint.stateStorage.GetState().Sessions
 
 	sort.Slice(sessions, func(i, j int) bool { return sessions[i].CreatedAt.Before(sessions[j].CreatedAt) })
 
 	sessionsSerializable := serviceSessionsList{
-		Sessions: mapServiceSessions(sessions, serviceSessionToDto),
+		Sessions: sessions,
 	}
 	utils.WriteAsJSON(sessionsSerializable, resp)
 }
 
 // AddRoutesForServiceSessions attaches service sessions endpoints to router
-func AddRoutesForServiceSessions(router *httprouter.Router, sessionStorage serviceSessionStorage) {
-	sessionsEndpoint := NewServiceSessionsEndpoint(sessionStorage)
+func AddRoutesForServiceSessions(router *httprouter.Router, stateStorage stateStorage) {
+	sessionsEndpoint := NewServiceSessionsEndpoint(stateStorage)
 	router.GET("/service-sessions", sessionsEndpoint.List)
-}
-
-func serviceSessionToDto(se session.Session) serviceSession {
-	return serviceSession{
-		ID:         string(se.ID),
-		ConsumerID: se.ConsumerID.Address,
-	}
-}
-
-func mapServiceSessions(sessions []session.Session, f func(session.Session) serviceSession) []serviceSession {
-	dtoArray := make([]serviceSession, len(sessions))
-	for i, se := range sessions {
-		dtoArray[i] = f(se)
-	}
-	return dtoArray
 }
