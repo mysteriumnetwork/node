@@ -602,16 +602,16 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 		err = fmt.Errorf("unknown Quality Oracle provider: %s", options.Type)
 	}
 	if err != nil {
-		return
+		return err
 	}
 
 	di.QualityMetricsSender = metrics.NewSender(transport, metadata.VersionAsString())
-	return
+	return nil
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	if _, err = firewall.AllowURLAccess(options.IPDetectorURL); err != nil {
-		return
+		return err
 	}
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
@@ -625,29 +625,29 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 		resolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
 	case node.LocationTypeOracle:
 		if _, err = firewall.AllowURLAccess(options.Address); err != nil {
-			return
+			return err
 		}
 		resolver, err = location.NewOracleResolver(options.Address), nil
 	default:
 		err = fmt.Errorf("unknown location provider: %s", options.Type)
 	}
 	if err != nil {
-		return
+		return err
 	}
 
 	di.LocationResolver = location.NewCache(resolver, time.Minute*5)
 
 	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.LocationResolver.HandleConnectionEvent)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = di.EventBus.SubscribeAsync(nodevent.Topic, di.LocationResolver.HandleNodeEvent)
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }
 
 func (di *Dependencies) bootstrapBandwidthTracker() error {
