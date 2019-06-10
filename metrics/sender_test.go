@@ -38,13 +38,9 @@ func (transport *mockEventsTransport) SendEvent(event Event) error {
 	return transport.mockResponse
 }
 
-func mockGatewayLoader() []map[string]string {
-	return nil
-}
-
 func TestSender_SendStartupEvent_SendsToTransport(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
-	sender := &Sender{Transport: mockTransport, AppVersion: "test version", GatewayLoader: mockGatewayLoader}
+	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
 	err := sender.SendStartupEvent()
 	assert.NoError(t, err)
@@ -59,7 +55,7 @@ func TestSender_SendStartupEvent_SendsToTransport(t *testing.T) {
 func TestSender_SendStartupEvent_ReturnsTransportErrors(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	mockTransport.mockResponse = errors.New("mock error")
-	sender := &Sender{Transport: mockTransport, AppVersion: "test version", GatewayLoader: mockGatewayLoader}
+	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
 	err := sender.SendStartupEvent()
 	assert.Error(t, err)
@@ -67,9 +63,9 @@ func TestSender_SendStartupEvent_ReturnsTransportErrors(t *testing.T) {
 
 func TestSender_SendNATMappingSuccessEvent_SendsToTransport(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
-	sender := &Sender{Transport: mockTransport, AppVersion: "test version", GatewayLoader: mockGatewayLoader}
+	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
-	err := sender.SendNATMappingSuccessEvent("port_mapping")
+	err := sender.SendNATMappingSuccessEvent("port_mapping", nil)
 	assert.NoError(t, err)
 
 	sentEvent := mockTransport.sentEvent
@@ -82,9 +78,9 @@ func TestSender_SendNATMappingSuccessEvent_SendsToTransport(t *testing.T) {
 func TestSender_SendNATMappingSuccessEvent_ReturnsTransportErrors(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	mockTransport.mockResponse = errors.New("mock error")
-	sender := &Sender{Transport: mockTransport, AppVersion: "test version", GatewayLoader: mockGatewayLoader}
+	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
-	err := sender.SendNATMappingSuccessEvent("port_mapping")
+	err := sender.SendNATMappingSuccessEvent("port_mapping", nil)
 	assert.Error(t, err)
 }
 
@@ -92,17 +88,13 @@ func TestSender_SendNATMappingFailEvent_SendsToTransport(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 
 	mockGateways := []map[string]string{
-		map[string]string{
-			"test": "test",
-		},
+		{"test": "test"},
 	}
 
-	sender := &Sender{Transport: mockTransport, AppVersion: "test version", GatewayLoader: func() []map[string]string {
-		return mockGateways
-	}}
+	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
 	mockError := errors.New("mock nat mapping error")
-	err := sender.SendNATMappingFailEvent("hole_punching", mockError)
+	err := sender.SendNATMappingFailEvent("hole_punching", mockGateways, mockError)
 	assert.NoError(t, err)
 
 	sentEvent := mockTransport.sentEvent
@@ -119,8 +111,8 @@ func TestSender_SendNATMappingFailEvent_SendsToTransport(t *testing.T) {
 func TestSender_SendNATMappingFailEvent_ReturnsTransportErrors(t *testing.T) {
 	mockTransport := buildMockEventsTransport(nil)
 	mockTransport.mockResponse = errors.New("mock error")
-	sender := &Sender{Transport: mockTransport, AppVersion: "test version", GatewayLoader: mockGatewayLoader}
+	sender := &Sender{Transport: mockTransport, AppVersion: "test version"}
 
-	err := sender.SendNATMappingFailEvent("hole_punching", errors.New("mock nat mapping error"))
+	err := sender.SendNATMappingFailEvent("hole_punching", nil, errors.New("mock nat mapping error"))
 	assert.Error(t, err)
 }

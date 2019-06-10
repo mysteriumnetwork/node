@@ -25,11 +25,18 @@ const appName = "myst"
 const startupEventName = "startup"
 const natMappingEventName = "nat_mapping"
 
+// NewSender creates metrics sender with appropriate transport
+func NewSender(transport Transport, appVersion string) *Sender {
+	return &Sender{
+		Transport:  transport,
+		AppVersion: appVersion,
+	}
+}
+
 // Sender builds events and sends them using given transport
 type Sender struct {
-	Transport     Transport
-	AppVersion    string
-	GatewayLoader func() []map[string]string
+	Transport  Transport
+	AppVersion string
 }
 
 // Transport allows sending events
@@ -63,15 +70,15 @@ func (sender *Sender) SendStartupEvent() error {
 }
 
 // SendNATMappingSuccessEvent sends event about successful NAT mapping
-func (sender *Sender) SendNATMappingSuccessEvent(stage string) error {
-	context := natMappingContext{Stage: stage, Successful: true, Gateways: sender.GatewayLoader()}
+func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[string]string) error {
+	context := natMappingContext{Stage: stage, Successful: true, Gateways: gateways}
 	return sender.sendEvent(natMappingEventName, context)
 }
 
 // SendNATMappingFailEvent sends event about failed NAT mapping
-func (sender *Sender) SendNATMappingFailEvent(stage string, err error) error {
+func (sender *Sender) SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) error {
 	errorMessage := err.Error()
-	context := natMappingContext{Stage: stage, Successful: false, ErrorMessage: &errorMessage, Gateways: sender.GatewayLoader()}
+	context := natMappingContext{Stage: stage, Successful: false, ErrorMessage: &errorMessage, Gateways: gateways}
 	return sender.sendEvent(natMappingEventName, context)
 }
 

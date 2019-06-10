@@ -30,21 +30,24 @@ type mockMetricsSender struct {
 	successSent   bool
 	failErrorSent error
 	stageSent     string
+	gatewaysSent  []map[string]string
 }
 
 func buildMockMetricsSender(mockResponse error) *mockMetricsSender {
 	return &mockMetricsSender{mockResponse: mockResponse, successSent: false}
 }
 
-func (sender *mockMetricsSender) SendNATMappingSuccessEvent(stage string) error {
+func (sender *mockMetricsSender) SendNATMappingSuccessEvent(stage string, gateways []map[string]string) error {
 	sender.successSent = true
 	sender.stageSent = stage
+	sender.gatewaysSent = gateways
 	return nil
 }
 
-func (sender *mockMetricsSender) SendNATMappingFailEvent(stage string, err error) error {
+func (sender *mockMetricsSender) SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) error {
 	sender.failErrorSent = err
 	sender.stageSent = stage
+	sender.gatewaysSent = gateways
 	return nil
 }
 
@@ -57,21 +60,31 @@ func (resolver *mockIPResolver) GetPublicIP() (string, error) {
 	return resolver.mockIp, resolver.mockErr
 }
 
+var (
+	mockGateways = []map[string]string{
+		{"test": "test"},
+	}
+	mockGatewayLoader = func() []map[string]string {
+		return mockGateways
+	}
+)
+
 func Test_EventsSender_ConsumeNATEvent_SendsSuccessEvent(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := mockIPResolver{mockIp: "1st ip"}
-	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP, mockGatewayLoader)
 
 	sender.ConsumeNATEvent(Event{Stage: "hole_punching", Successful: true})
 
 	assert.True(t, mockMetricsSender.successSent)
 	assert.Equal(t, "hole_punching", mockMetricsSender.stageSent)
+	assert.Equal(t, mockGateways, mockMetricsSender.gatewaysSent)
 }
 
 func Test_EventsSender_ConsumeNATEvent_WithSameIp_DoesNotSendSuccessEventAgain(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := mockIPResolver{mockIp: "1st ip"}
-	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP, mockGatewayLoader)
 
 	sender.ConsumeNATEvent(Event{Successful: true})
 
@@ -79,12 +92,13 @@ func Test_EventsSender_ConsumeNATEvent_WithSameIp_DoesNotSendSuccessEventAgain(t
 
 	sender.ConsumeNATEvent(Event{Successful: true})
 	assert.False(t, mockMetricsSender.successSent)
+	assert.Equal(t, mockGateways, mockMetricsSender.gatewaysSent)
 }
 
 func Test_EventsSender_ConsumeNATEvent_WithDifferentIP_SendsSuccessEventAgain(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := &mockIPResolver{mockIp: "1st ip"}
-	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP, mockGatewayLoader)
 
 	sender.ConsumeNATEvent(Event{Successful: true})
 
@@ -93,34 +107,37 @@ func Test_EventsSender_ConsumeNATEvent_WithDifferentIP_SendsSuccessEventAgain(t 
 	mockIPResolver.mockIp = "2nd ip"
 	sender.ConsumeNATEvent(Event{Successful: true})
 	assert.True(t, mockMetricsSender.successSent)
+	assert.Equal(t, mockGateways, mockMetricsSender.gatewaysSent)
 }
 
 func Test_EventsSender_ConsumeNATEvent_WhenIPResolverFails_DoesNotSendEvent(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := &mockIPResolver{mockErr: errors.New("mock error")}
-	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP, mockGatewayLoader)
 
 	sender.ConsumeNATEvent(Event{Successful: true})
 
 	assert.False(t, mockMetricsSender.successSent)
+	assert.Nil(t, mockMetricsSender.gatewaysSent)
 }
 
 func Test_EventsSender_ConsumeNATEvent_SendsFailureEvent(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := mockIPResolver{mockIp: "1st ip"}
-	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP, mockGatewayLoader)
 
 	testErr := errors.New("test error")
 	sender.ConsumeNATEvent(Event{Stage: "hole_punching", Successful: false, Error: testErr})
 
 	assert.Equal(t, testErr, mockMetricsSender.failErrorSent)
 	assert.Equal(t, "hole_punching", mockMetricsSender.stageSent)
+	assert.Equal(t, mockGateways, mockMetricsSender.gatewaysSent)
 }
 
 func Test_EventsSender_ConsumeNATEvent_WithFailuresOfDifferentStages_SendsBothEvents(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := &mockIPResolver{mockIp: "1st ip"}
-	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP, mockGatewayLoader)
 
 	testErr1 := errors.New("test error 1")
 	sender.ConsumeNATEvent(Event{Successful: false, Error: testErr1, Stage: "test 1"})
@@ -128,12 +145,13 @@ func Test_EventsSender_ConsumeNATEvent_WithFailuresOfDifferentStages_SendsBothEv
 	sender.ConsumeNATEvent(Event{Successful: false, Error: testErr2, Stage: "test 2"})
 
 	assert.Equal(t, testErr2, mockMetricsSender.failErrorSent)
+	assert.Equal(t, mockGateways, mockMetricsSender.gatewaysSent)
 }
 
 func Test_EventsSender_ConsumeNATEvent_WithSuccessAndFailureOnSameIp_SendsBothEvents(t *testing.T) {
 	mockMetricsSender := buildMockMetricsSender(nil)
 	mockIPResolver := &mockIPResolver{mockIp: "1st ip"}
-	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP)
+	sender := NewSender(mockMetricsSender, mockIPResolver.GetPublicIP, mockGatewayLoader)
 
 	sender.ConsumeNATEvent(Event{Successful: true})
 	testErr := errors.New("test error")
@@ -141,4 +159,5 @@ func Test_EventsSender_ConsumeNATEvent_WithSuccessAndFailureOnSameIp_SendsBothEv
 
 	assert.True(t, mockMetricsSender.successSent)
 	assert.Equal(t, mockMetricsSender.failErrorSent, testErr)
+	assert.Equal(t, mockGateways, mockMetricsSender.gatewaysSent)
 }

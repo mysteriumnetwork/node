@@ -34,7 +34,7 @@ var (
 	locationTypeFlag = cli.StringFlag{
 		Name: "location.type",
 		Usage: fmt.Sprintf(
-			"Location autodetect provider (%s, %s, %s, %s)",
+			"Location autodetect adapter. Options: { %s, %s, %s, %s }",
 			node.LocationTypeOracle,
 			node.LocationTypeBuiltin,
 			node.LocationTypeMMDB,
@@ -45,7 +45,7 @@ var (
 	locationAddressFlag = cli.StringFlag{
 		Name: "location.address",
 		Usage: fmt.Sprintf(
-			"Address of specific location provider given in '--%s'",
+			"Address of specific location adapter given in '--%s'",
 			locationTypeFlag.Name,
 		),
 		Value: "https://testnet-location.mysterium.network/api/v1/location",

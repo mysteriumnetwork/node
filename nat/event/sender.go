@@ -27,20 +27,26 @@ const senderLogPrefix = "[traversal-events-sender] "
 type Sender struct {
 	metricsSender metricsSender
 	ipResolver    ipResolver
+	gatewayLoader func() []map[string]string
 	lastIp        string
 	lastEvent     *Event
 }
 
 type metricsSender interface {
-	SendNATMappingSuccessEvent(stage string) error
-	SendNATMappingFailEvent(stage string, err error) error
+	SendNATMappingSuccessEvent(stage string, gateways []map[string]string) error
+	SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) error
 }
 
 type ipResolver func() (string, error)
 
 // NewSender returns a new instance of events sender
-func NewSender(metricsSender metricsSender, ipResolver ipResolver) *Sender {
-	return &Sender{metricsSender: metricsSender, ipResolver: ipResolver, lastIp: ""}
+func NewSender(metricsSender metricsSender, ipResolver ipResolver, gatewayLoader func() []map[string]string) *Sender {
+	return &Sender{
+		metricsSender: metricsSender,
+		ipResolver:    ipResolver,
+		lastIp:        "",
+		gatewayLoader: gatewayLoader,
+	}
 }
 
 // ConsumeNATEvent sends received event to server
@@ -65,10 +71,10 @@ func (es *Sender) ConsumeNATEvent(event Event) {
 
 func (es *Sender) sendNATEvent(event Event) error {
 	if event.Successful {
-		return es.metricsSender.SendNATMappingSuccessEvent(event.Stage)
+		return es.metricsSender.SendNATMappingSuccessEvent(event.Stage, es.gatewayLoader())
 	}
 
-	return es.metricsSender.SendNATMappingFailEvent(event.Stage, event.Error)
+	return es.metricsSender.SendNATMappingFailEvent(event.Stage, es.gatewayLoader(), event.Error)
 }
 
 func (es *Sender) matchesLastEvent(event Event) bool {

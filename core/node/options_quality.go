@@ -15,20 +15,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package metrics
+package node
 
-import (
-	"time"
+// QualityType identifies Quality Oracle provider
+type QualityType string
+
+const (
+	// QualityTypeMORQA defines type which uses Mysterium MORQA as Quality Oracle provider
+	QualityTypeMORQA = QualityType("morqa")
+	// QualityTypeNone defines type which disables Quality Oracle
+	QualityTypeNone = QualityType("none")
 )
 
-// NewSender creates metrics sender with appropriate transport
-func NewSender(disableMetrics bool, metricsAddress, appVersion string, gatewayLoader func() []map[string]string) *Sender {
-	var transport Transport
-	if disableMetrics {
-		transport = NewNoopTransport()
-	} else {
-		transport = NewElasticSearchTransport(metricsAddress, 10*time.Second)
-	}
-
-	return &Sender{Transport: transport, AppVersion: appVersion, GatewayLoader: gatewayLoader}
+// OptionsQuality describes possible parameters of Quality Oracle configuration
+type OptionsQuality struct {
+	Type    QualityType
+	Address string
 }

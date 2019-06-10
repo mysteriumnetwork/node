@@ -164,6 +164,8 @@ type Dependencies struct {
 	DiscoveryFinder     *discovery.Finder
 	DiscoveryFetcherAPI *discovery_api.Fetcher
 
+	QualityMetricsSender *metrics.Sender
+
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
 
@@ -184,8 +186,6 @@ type Dependencies struct {
 	NATTracker       NatEventTracker
 	NATEventSender   NatEventSender
 	NATStatusTracker NATStatusTracker
-
-	MetricsSender *metrics.Sender
 
 	BandwidthTracker *bandwidth.Tracker
 
@@ -225,7 +225,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
 		return err
 	}
-
+	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
+		return err
+	}
 	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
 		return err
 	}
@@ -240,7 +242,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	di.bootstrapMetrics(nodeOptions)
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
@@ -439,7 +440,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.MetricsSender, di.NATPinger, di.UIServer)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.QualityMetricsSender, di.NATPinger, di.UIServer)
 }
 
 func newSessionManagerFactory(
@@ -589,9 +590,27 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	return nil
 }
 
-func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
-	_, err = firewall.AllowURLAccess(options.IPDetectorURL)
+func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
+	var transport metrics.Transport
+	switch options.Type {
+	case node.QualityTypeMORQA:
+		_, err = firewall.AllowURLAccess(options.Address)
+		transport = metrics.NewElasticSearchTransport(options.Address, 10*time.Second)
+	case node.QualityTypeNone:
+		transport = metrics.NewNoopTransport()
+	default:
+		err = fmt.Errorf("unknown Quality Oracle provider: %s", options.Type)
+	}
 	if err != nil {
+		return err
+	}
+
+	di.QualityMetricsSender = metrics.NewSender(transport, metadata.VersionAsString())
+	return nil
+}
+
+func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
+	if _, err = firewall.AllowURLAccess(options.IPDetectorURL); err != nil {
 		return err
 	}
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
@@ -605,6 +624,9 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	case node.LocationTypeMMDB:
 		resolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
 	case node.LocationTypeOracle:
+		if _, err = firewall.AllowURLAccess(options.Address); err != nil {
+			return err
+		}
 		resolver, err = location.NewOracleResolver(options.Address), nil
 	default:
 		err = fmt.Errorf("unknown location provider: %s", options.Type)
@@ -625,7 +647,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 		return err
 	}
 
-	return
+	return nil
 }
 
 func (di *Dependencies) bootstrapBandwidthTracker() error {
@@ -636,16 +658,6 @@ func (di *Dependencies) bootstrapBandwidthTracker() error {
 	}
 
 	return di.EventBus.SubscribeAsync(connection.StatisticsEventTopic, di.BandwidthTracker.ConsumeStatisticsEvent)
-}
-
-func (di *Dependencies) bootstrapMetrics(options node.Options) {
-	loader := &upnp.GatewayLoader{}
-
-	// warm up the loader as the load takes up to a couple of secs
-	go loader.Get()
-
-	appVersion := metadata.VersionAsString()
-	di.MetricsSender = metrics.NewSender(options.DisableMetrics, options.MetricsAddress, appVersion, loader.HumanReadable)
 }
 
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
@@ -663,7 +675,10 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
 
-	di.NATEventSender = event.NewSender(di.MetricsSender, di.IPResolver.GetPublicIP)
+	// warm up the loader as the load takes up to a couple of secs
+	loader := &upnp.GatewayLoader{}
+	go loader.Get()
+	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
 
 	var lastStageName string
 	if options.ExperimentNATPunching {

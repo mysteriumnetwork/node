@@ -50,6 +50,8 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		currentDir = appPath
 	}
 
+	network := node.OptionsNetwork(*optionsNetwork)
+
 	err := di.Bootstrap(node.Options{
 		Directories: node.OptionsDirectory{
 			Data:     dataDir,
@@ -61,22 +63,26 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		TequilapiAddress: "127.0.0.1",
 		TequilapiPort:    4050,
 
-		DisableMetrics: false,
-		MetricsAddress: "http://metrics.mysterium.network:8091",
-
 		Openvpn: embeddedLibCheck{},
 
 		Keystore: node.OptionsKeystore{
 			UseLightweight: true,
 		},
 
+		OptionsNetwork: network,
+		Quality: node.OptionsQuality{
+			Type:    node.QualityTypeMORQA,
+			Address: "http://metrics.mysterium.network:8091",
+		},
+		Discovery: node.OptionsDiscovery{
+			Type:    node.DiscoveryTypeAPI,
+			Address: network.MysteriumAPIAddress,
+		},
 		Location: node.OptionsLocation{
 			IPDetectorURL: "https://api.ipify.org/?format=json",
 			Type:          node.LocationTypeOracle,
 			Address:       "https://testnet-location.mysterium.network/api/v1/location",
 		},
-
-		OptionsNetwork: node.OptionsNetwork(*optionsNetwork),
 	})
 	if err != nil {
 		return nil, err
