@@ -31,6 +31,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/gofrs/uuid"
 	"github.com/koron/go-ssdp"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/pkg/errors"
 )
@@ -54,24 +55,23 @@ const deviceDescriptionTemplate = `<?xml version="1.0"?>
 		<modelNumber>{{.Version}}</modelNumber>
 		<modelURL>https://mysterium.network/node/</modelURL>
 
-		<serialNumber>1234</serialNumber>
 		<UDN>uuid:{{.UUID}}</UDN>
 		<presentationURL>{{.URL}}</presentationURL>
 	</device>
 </root>`
 
 type ssdpServer struct {
-	url  string
-	uuid string
-	ssdp *ssdp.Advertiser
-	quit chan struct{}
-	once sync.Once
+	uiPort int
+	uuid   string
+	ssdp   *ssdp.Advertiser
+	quit   chan struct{}
+	once   sync.Once
 }
 
-func newSSDPServer(url string) *ssdpServer {
+func newSSDPServer(uiPort int) *ssdpServer {
 	return &ssdpServer{
-		url:  url,
-		quit: make(chan struct{}),
+		uiPort: uiPort,
+		quit:   make(chan struct{}),
 	}
 }
 
@@ -91,7 +91,7 @@ func (ss *ssdpServer) Start() (err error) {
 		"uuid:"+ss.uuid+"::upnp:rootdevice", // USN: ID
 		url.String(),                        // LOCATION: location header
 		runtime.GOOS+" UPnP/1.1 node/"+metadata.VersionAsString(), // SERVER: server header
-		1800) // cache control, max-age
+		1800) // cache control, max-age. A duration for which the advertisement is valid
 	if err != nil {
 		return errors.Wrap(err, "failed to start SSDP advertiser")
 	}
@@ -121,12 +121,17 @@ func (ss *ssdpServer) Stop() error {
 }
 
 func (ss *ssdpServer) serveDeviceDescriptionDocument() (url.URL, error) {
+	outIP, err := ip.GetOutbound()
+	if err != nil {
+		return url.URL{}, err
+	}
+
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return url.URL{}, err
 	}
 
-	deviceDoc := ss.deviceDescription()
+	deviceDoc := ss.deviceDescription(outIP)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
@@ -139,36 +144,24 @@ func (ss *ssdpServer) serveDeviceDescriptionDocument() (url.URL, error) {
 		listener.Close()
 	}()
 
-	host := getOutboundIP()
 	port := listener.Addr().(*net.TCPAddr).Port
 	return url.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s:%d", host, port),
+		Host:   fmt.Sprintf("%s:%d", outIP, port),
 	}, nil
 }
 
-func (ss *ssdpServer) deviceDescription() string {
+func (ss *ssdpServer) deviceDescription(ip net.IP) string {
 	var buf bytes.Buffer
 	deviceDescription := template.Must(template.New("SSDPDeviceDescription").Parse(deviceDescriptionTemplate))
 	_ = deviceDescription.Execute(&buf,
 		struct{ URL, Version, UUID string }{
-			ss.url,
+			fmt.Sprintf("http://%s:%d/", ip, ss.uiPort),
 			metadata.VersionAsString(),
 			ss.uuid,
 		})
 
 	return buf.String()
-}
-
-func getOutboundIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:53")
-	if err != nil {
-		log.Error(ssdpLogPrefix, "Failed to get Outbound IP: ", err)
-		return nil
-	}
-	defer conn.Close()
-
-	return conn.LocalAddr().(*net.UDPAddr).IP
 }
 
 func generateUUID() (string, error) {

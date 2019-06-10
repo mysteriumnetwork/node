@@ -18,7 +18,6 @@
 package ip
 
 import (
-	"net"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -71,13 +70,6 @@ func (client *clientRest) GetPublicIP() (string, error) {
 }
 
 func (client *clientRest) GetOutboundIP() (string, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:53")
-	if err != nil {
-		return "", err
-	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	log.Trace("[Detect Outbound IP] ", "IP detected: ", localAddr.IP.String())
-	return localAddr.IP.String(), nil
+	ip, err := GetOutbound()
+	return ip.String(), err
 }

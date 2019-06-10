@@ -18,7 +18,6 @@
 package discovery
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -36,10 +35,8 @@ type multiDiscovery struct {
 
 // NewLANDiscoveryService creates SSDP and Bonjour services for LAN discovery.
 func NewLANDiscoveryService(uiPort int) *multiDiscovery {
-	outIP := getOutboundIP()
-	url := fmt.Sprintf("http://%s:%d/", outIP, uiPort)
 	return &multiDiscovery{
-		ssdp:    newSSDPServer(url),
+		ssdp:    newSSDPServer(uiPort),
 		bonjour: newBonjourServer(uiPort),
 	}
 }

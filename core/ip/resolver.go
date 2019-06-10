@@ -17,8 +17,21 @@
 
 package ip
 
+import "net"
+
 // Resolver allows resolving current IP
 type Resolver interface {
 	GetPublicIP() (string, error)
 	GetOutboundIP() (string, error)
+}
+
+// GetOutbound provides an outbound IP address of the current system.
+func GetOutbound() (net.IP, error) {
+	conn, err := net.Dial("udp", "8.8.8.8:53")
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	return conn.LocalAddr().(*net.UDPAddr).IP, nil
 }
