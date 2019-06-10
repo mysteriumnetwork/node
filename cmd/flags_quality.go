@@ -28,17 +28,17 @@ var (
 	qualityTypeFlag = cli.StringFlag{
 		Name: "quality.type",
 		Usage: fmt.Sprintf(
-			"Quality Oracle provider (%s, %s - %s)",
+			"Quality Oracle adapter. Options:  (%s, %s - %s)",
 			node.QualityTypeMORQA,
 			node.QualityTypeNone,
-			"opt-out from sending usage metrics",
+			"opt-out from sending quality metrics",
 		),
 		Value: string(node.QualityTypeMORQA),
 	}
 	qualityAddressFlag = cli.StringFlag{
 		Name: "quality.address",
 		Usage: fmt.Sprintf(
-			"Address of specific Quality Oracle provider given in '--%s'",
+			"Address of specific Quality Oracle adapter given in '--%s'",
 			qualityTypeFlag.Name,
 		),
 		Value: "http://metrics.mysterium.network:8091",
