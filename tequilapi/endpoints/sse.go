@@ -30,5 +30,5 @@ type SSEHandler interface {
 
 // AddRoutesForSSE adds route for sse
 func AddRoutesForSSE(router *httprouter.Router, handler SSEHandler) {
-	router.GET("/events", handler.Sub)
+	router.GET("/events/state", handler.Sub)
 }
