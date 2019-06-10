@@ -42,6 +42,39 @@
   version = "v2.2.1"
 
 [[projects]]
+  digest = "1:43f99b9aa2ac54938ff8bc617488a802d738340a168c0f9501a37644750c33d7"
+  name = "github.com/aws/aws-sdk-go-v2"
+  packages = [
+    "aws",
+    "aws/awserr",
+    "aws/defaults",
+    "aws/ec2metadata",
+    "aws/ec2rolecreds",
+    "aws/endpointcreds",
+    "aws/endpoints",
+    "aws/external",
+    "aws/signer/v4",
+    "aws/stscreds",
+    "internal/awsutil",
+    "internal/ini",
+    "internal/sdk",
+    "private/protocol",
+    "private/protocol/query",
+    "private/protocol/query/queryutil",
+    "private/protocol/rest",
+    "private/protocol/restxml",
+    "private/protocol/xml",
+    "private/protocol/xml/xmlutil",
+    "service/s3",
+    "service/s3/s3iface",
+    "service/s3/s3manager",
+    "service/sts",
+  ]
+  pruneopts = "UT"
+  revision = "098e15df3044cf1b04a222c1c33c3e6135ac89f3"
+  version = "v0.9.0"
+
+[[projects]]
   digest = "1:2c00f064ba355903866cbfbf3f7f4c0fe64af6638cc7d1b8bdcf3181bc67f1d8"
   name = "github.com/btcsuite/btcd"
   packages = ["btcec"]
@@ -299,6 +332,13 @@
   packages = ["io"]
   pruneopts = "UT"
   revision = "d14ea06fba99483203c19d92cfcd13ebe73135f4"
+
+[[projects]]
+  digest = "1:bb81097a5b62634f3e9fec1014657855610c82d19b9a40c17612e32651e35dca"
+  name = "github.com/jmespath/go-jmespath"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c2b33e84"
 
 [[projects]]
   digest = "1:f5a2051c55d05548d2d4fd23d244027b59fbd943217df8aa3b5e170ac2fd6e1b"
@@ -987,6 +1027,11 @@
   input-imports = [
     "github.com/asaskevich/EventBus",
     "github.com/asdine/storm",
+    "github.com/aws/aws-sdk-go-v2/aws",
+    "github.com/aws/aws-sdk-go-v2/aws/endpoints",
+    "github.com/aws/aws-sdk-go-v2/aws/external",
+    "github.com/aws/aws-sdk-go-v2/service/s3",
+    "github.com/aws/aws-sdk-go-v2/service/s3/s3manager",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
     "github.com/ethereum/go-ethereum",
@@ -1013,6 +1058,7 @@
     "github.com/julienschmidt/httprouter",
     "github.com/magefile/mage/mage",
     "github.com/magefile/mage/sh",
+    "github.com/mholt/archiver",
     "github.com/mitchellh/go-homedir",
     "github.com/mysteriumnetwork/go-dvpn-web",
     "github.com/mysteriumnetwork/go-openvpn/openvpn",

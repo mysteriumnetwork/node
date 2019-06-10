@@ -18,12 +18,141 @@
 package storage
 
 import (
+	"context"
+	"os"
+	"path/filepath"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/endpoints"
+	awsExternal "github.com/aws/aws-sdk-go-v2/aws/external"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
 	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
+	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/ci/env"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
 )
+
+// Storage wraps AWS S3 client, configures for s3.mysterium.network
+// and provides convenience methods
+type Storage struct {
+	*s3.Client
+}
+
+var cacheDir string
+
+const cacheDirPermissions = 0700
+
+func init() {
+	var err error
+	cacheDir, err = homedir.Expand("~/.myst-build-cache")
+	if err != nil {
+		_, _ = os.Stderr.WriteString("failed to determine cache directory")
+		os.Exit(1)
+	}
+	err = os.Mkdir(cacheDir, cacheDirPermissions)
+	if err != nil && !os.IsExist(err) {
+		_, _ = os.Stderr.WriteString("failed to create storage cache directory")
+		os.Exit(1)
+	}
+}
+
+// NewClient returns *s3.Client, configured to work with https://s3.mysterium.network storage
+func NewClient() (*Storage, error) {
+	cfg, err := awsExternal.LoadDefaultAWSConfig()
+	if err != nil {
+		return nil, err
+	}
+	cfg.EndpointResolver = aws.ResolveWithEndpointURL("https://s3.mysterium.network")
+	cfg.Region = endpoints.EuCentral1RegionID
+	client := s3.New(cfg)
+	client.ForcePathStyle = true
+	return &Storage{client}, nil
+}
+
+// ListObjects lists objects in storage bucket
+func (s *Storage) ListObjects(bucket string) ([]s3.Object, error) {
+	req := s.ListObjectsV2Request(&s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+	})
+	if err := req.Build(); err != nil {
+		return nil, err
+	}
+	res, err := req.Send(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return res.Contents, nil
+}
+
+// FindObject finds an object in storage bucket satisfying given predicate
+func (s *Storage) FindObject(bucket string, predicate func(s3.Object) bool) (*s3.Object, error) {
+	objects, err := s.ListObjects(bucket)
+	if err != nil {
+		return nil, err
+	}
+	for _, obj := range objects {
+		if predicate(obj) {
+			return &obj, nil
+		}
+	}
+	return nil, nil
+}
+
+// GetCacheableFile finds a file in a storage bucket satisfying given predicate. If a local copy with the same size
+// does not exist, downloads the file. Otherwise, returns a cached copy.
+func (s *Storage) GetCacheableFile(bucket string, predicate func(s3.Object) bool) (string, error) {
+	object, err := s.FindObject(bucket, predicate)
+	if err != nil {
+		return "", errors.Wrap(err, "could not find file in bucket")
+	}
+	remoteFilename := aws.StringValue(object.Key)
+	remoteFileSize := aws.Int64Value(object.Size)
+
+	localFilename := filepath.Join(cacheDir, remoteFilename)
+	localFileInfo, err := os.Stat(localFilename)
+
+	var download bool
+	switch {
+	case err == nil && localFileInfo.Size() != remoteFileSize:
+		log.Infof(
+			"cached copy found: %s, but size mismatched, expected: %d, found: %d",
+			localFilename, remoteFileSize, localFileInfo.Size(),
+		)
+		download = true
+	case err != nil && os.IsNotExist(err):
+		log.Infof("cached copy not found: %s", localFilename)
+		download = true
+	case err != nil:
+		return "", errors.Wrap(err, "error looking up cached copy")
+	}
+
+	if download {
+		log.Infof("downloading file from the bucket")
+		file, err := os.OpenFile(localFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, cacheDirPermissions)
+		if err != nil {
+			return "", err
+		}
+		defer file.Close()
+
+		downloader := s3manager.NewDownloaderWithClient(s)
+
+		numBytes, err := downloader.Download(file, &s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(remoteFilename),
+		})
+		if err != nil {
+			return "", err
+		}
+		log.Infof("downloaded file: %s (%dMB)", localFilename, numBytes/1024/1024)
+	} else {
+		log.Infof("returning cached copy")
+	}
+
+	return localFilename, nil
+}
 
 // MakeBucket creates a bucket in s3 for the build (env.BuildNumber)
 func MakeBucket() error {

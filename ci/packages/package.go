@@ -24,6 +24,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
+
 	"github.com/mysteriumnetwork/node/ci/env"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -79,27 +80,6 @@ func PackageLinuxDebianArm() error {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)
-}
-
-// PackageLinuxRaspberryImage builds and stores raspberry image
-func PackageLinuxRaspberryImage() error {
-	logconfig.Bootstrap()
-	defer log.Flush()
-	if err := goGet("github.com/debber/debber-v0.3/cmd/debber"); err != nil {
-		return err
-	}
-	if err := sh.RunV("bin/build_xgo", "linux/arm"); err != nil {
-		return err
-	}
-	if err := packageDebian("build/myst/myst_linux_arm", "armhf"); err != nil {
-		return err
-	}
-	return env.IfRelease(func() error {
-		if err := sh.RunV("bin/package_raspberry"); err != nil {
-			return err
-		}
-		return storage.UploadArtifacts()
-	})
 }
 
 // PackageOsxAmd64 builds and stores OSX amd64 package
