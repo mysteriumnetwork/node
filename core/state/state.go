@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
-	sessionEvent "github.com/mysteriumnetwork/node/session/event"
 )
 
 // DefaultDebounceDuration is the default time interval suggested for debouncing
@@ -62,7 +61,10 @@ type Keeper struct {
 	publisher             publisher
 	serviceLister         serviceLister
 	serviceSessionStorage serviceSessionStorage
-	debouncers            map[string]func(interface{})
+
+	ConsumeServiceStateEvent func(e interface{})
+	ConsumeNATEvent          func(e interface{})
+	ConsumeSessionEvent      func(e interface{})
 }
 
 // NewKeeper returns a new instance of the keeper
@@ -78,24 +80,17 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 		serviceLister:         serviceLister,
 		serviceSessionStorage: serviceSessionStorage,
 	}
-	k.debouncers = map[string]func(interface{}){
-		"service": debounce(k.updateServiceState, debounceDuration),
-		"nat":     debounce(k.updateNatStatus, debounceDuration),
-		"session": debounce(k.updateSessionState, debounceDuration),
-	}
+	k.ConsumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
+	k.ConsumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
+	k.ConsumeSessionEvent = debounce(k.updateSessionState, debounceDuration)
 	return k
 }
 
-func (k *Keeper) updateServiceState(e interface{}) {
+func (k *Keeper) updateServiceState(_ interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	k.updateServices()
 	go k.publisher.Publish(stateEvent.Topic, *k.state)
-}
-
-// ConsumeServiceStateEvent consumes the service state event
-func (k *Keeper) ConsumeServiceStateEvent(event service.EventPayload) {
-	k.debouncers["service"](event)
 }
 
 func (k *Keeper) updateServices() {
@@ -119,11 +114,6 @@ func (k *Keeper) updateServices() {
 	k.state.Services = result
 }
 
-// ConsumeNATEvent consumes a given NAT event
-func (k *Keeper) ConsumeNATEvent(event natEvent.Event) {
-	k.debouncers["nat"](event)
-}
-
 func (k *Keeper) updateNatStatus(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
@@ -144,12 +134,7 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 	go k.publisher.Publish(stateEvent.Topic, *k.state)
 }
 
-// ConsumeSessionEvent handles as session change event
-func (k *Keeper) ConsumeSessionEvent(event sessionEvent.Payload) {
-	k.debouncers["session"](event)
-}
-
-func (k *Keeper) updateSessionState(e interface{}) {
+func (k *Keeper) updateSessionState(_ interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
