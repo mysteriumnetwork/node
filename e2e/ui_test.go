@@ -18,9 +18,7 @@
 package e2e
 
 import (
-	"log"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -47,10 +45,7 @@ func TestLANDiscoverySSDP(t *testing.T) {
 
 func TestLANDiscoveryBonjour(t *testing.T) {
 	resolver, err := bonjour.NewResolver(nil)
-	if err != nil {
-		log.Println("Failed to initialize resolver:", err.Error())
-		os.Exit(1)
-	}
+	assert.NoError(t, err)
 	defer func() { resolver.Exit <- true }()
 
 	results := make(chan *bonjour.ServiceEntry)
