@@ -122,22 +122,16 @@ func TestStorage_PublishesEventsOnCreate(t *testing.T) {
 
 	// since we're shooting the event in an asynchronous fashion, try every millisecond to see if we already have it
 	attempts := 0
-	// functions are really just easier to exit from than nested blocks
-	func() {
-		for {
-			select {
-			case <-time.After(time.Microsecond):
-				if attempts > 1000 {
-					assert.Fail(t, "no change after a 1000 attempts")
-					return
-				}
-				attempts++
-				if mp.getLast().Action == sessionEvent.Created {
-					return
-				}
-			}
+	for range time.After(time.Microsecond) {
+		if attempts > 1000 {
+			assert.Fail(t, "no change after a 1000 attempts")
+			break
 		}
-	}()
+		attempts++
+		if mp.getLast().Action == sessionEvent.Created {
+			break
+		}
+	}
 
 	assert.Equal(t, sessionEvent.Payload{
 		Action: sessionEvent.Created,
@@ -158,22 +152,16 @@ func TestStorage_PublishesEventsOnDelete(t *testing.T) {
 	// since we're shooting the event in an asynchronous fashion, try every microsecond to see if we already have it
 	attempts := 0
 
-	// functions are really just easier to exit from than nested blocks
-	func() {
-		for {
-			select {
-			case <-time.After(time.Microsecond):
-				if attempts > 1000 {
-					assert.Fail(t, "no change after a 1000 attempts")
-					return
-				}
-				attempts++
-				if mp.getLast().Action == sessionEvent.Removed {
-					return
-				}
-			}
+	for range time.After(time.Microsecond) {
+		if attempts > 1000 {
+			assert.Fail(t, "no change after a 1000 attempts")
+			break
 		}
-	}()
+		attempts++
+		if mp.getLast().Action == sessionEvent.Removed {
+			break
+		}
+	}
 
 	assert.Equal(t, sessionEvent.Payload{
 		Action: sessionEvent.Removed,

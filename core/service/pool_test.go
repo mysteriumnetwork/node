@@ -31,7 +31,7 @@ type mockService struct {
 
 type mockPublisher struct {
 	publishedTopic string
-	publishedData  interface{}
+	publishedData  []interface{}
 	lock           sync.Mutex
 }
 
@@ -39,7 +39,7 @@ func (mockPublisher *mockPublisher) Publish(topic string, data interface{}) {
 	mockPublisher.lock.Lock()
 	defer mockPublisher.lock.Unlock()
 	mockPublisher.publishedTopic = topic
-	mockPublisher.publishedData = data
+	mockPublisher.publishedData = append(mockPublisher.publishedData, data)
 }
 
 func (mr *mockService) Stop() error {

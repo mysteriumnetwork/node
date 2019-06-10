@@ -242,7 +242,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.bootstrapNATComponents(nodeOptions)
 	di.bootstrapServices(nodeOptions)
-	di.bootstrapStateKeeper(nodeOptions)
+	if err := di.bootstrapStateKeeper(nodeOptions); err != nil {
+		return err
+	}
 
 	if err := di.bootstrapSSEHandler(); err != nil {
 		return err

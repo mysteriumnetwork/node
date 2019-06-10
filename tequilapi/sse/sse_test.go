@@ -102,7 +102,7 @@ func TestHandler_SendsInitialAndFollowingStates(t *testing.T) {
 	w := fmt.Sprintf("http://127.0.0.1:%v/whatever", port)
 	req, _ := http.NewRequest("GET", w, nil)
 	ctx, cancel := context.WithCancel(context.Background())
-	req.WithContext(ctx)
+	req = req.WithContext(ctx)
 	c := http.Client{}
 	resp, err := c.Do(req)
 	assert.Nil(t, err)

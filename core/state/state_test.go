@@ -56,10 +56,8 @@ func Test_Debounce_CallsOnceInInterval(t *testing.T) {
 		f(struct{}{})
 	}
 
-	select {
-	case <-time.After(duration * 5):
-		assert.Equal(t, 1, dt.get())
-	}
+	time.Sleep(duration * 5)
+	assert.Equal(t, 1, dt.get())
 }
 
 var mockNATStatus = nat.Status{
@@ -99,12 +97,6 @@ func (mp *mockPublisher) Publish(topic string, data interface{}) {
 	defer mp.lock.Unlock()
 	mp.publishedData = data
 	mp.publishedTopic = topic
-}
-
-func (mp *mockPublisher) getLast() (string, interface{}) {
-	mp.lock.Lock()
-	defer mp.lock.Unlock()
-	return mp.publishedTopic, mp.publishedData
 }
 
 type serviceListerMock struct {
@@ -165,10 +157,8 @@ func Test_ConsumesNATEvents(t *testing.T) {
 		})
 	}
 
-	select {
-	case <-time.After(duration * 3):
-		assert.Equal(t, 1, natProvider.getTimesCalled())
-	}
+	time.Sleep(duration * 3)
+	assert.Equal(t, 1, natProvider.getTimesCalled())
 
 	assert.Equal(t, natProvider.statusToReturn.Error.Error(), keeper.GetState().NATStatus.Error)
 	assert.Equal(t, natProvider.statusToReturn.Status, keeper.GetState().NATStatus.Status)
@@ -196,10 +186,9 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 		keeper.ConsumeSessionEvent(sessionEvent.Payload{})
 	}
 
-	select {
-	case <-time.After(duration * 3):
-		assert.Equal(t, 1, sessionStorage.getTimesCalled())
-	}
+	time.Sleep(duration * 3)
+	assert.Equal(t, 1, sessionStorage.getTimesCalled())
+
 	assert.Equal(t, string(expected.ID), keeper.GetState().Sessions[0].ID)
 	assert.Equal(t, expected.ConsumerID.Address, keeper.GetState().Sessions[0].ConsumerID)
 	assert.True(t, expected.CreatedAt.Equal(keeper.GetState().Sessions[0].CreatedAt))

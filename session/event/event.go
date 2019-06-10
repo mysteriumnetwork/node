@@ -23,7 +23,7 @@ const Topic = "Session change"
 // Action represents the different actions that might happen on a session
 type Action string
 
-var (
+const (
 	// Created indicates a session has been created
 	Created Action = "Created"
 	// Removed indicates a session has been removed
