@@ -33,18 +33,19 @@ type runner struct {
 	compose         func(args ...string) error
 	etherPassphrase string
 	testEnv         string
+	services        string
 }
 
-func prepareTestRunner(composeFiles []string, testEnv string) (*runner, error) {
+func prepareTestRunner(composeFiles []string, testEnv, services string) (*runner, error) {
 	logconfig.Bootstrap()
 	defer log.Flush()
-	r := newRunner(composeFiles, testEnv)
+	r := newRunner(composeFiles, testEnv, services)
 
-	if err := r.setupCoreEnv(); err != nil {
+	if err := r.startAppContainers(); err != nil {
 		return nil, err
 	}
 
-	if err := r.setupBasicEnv(); err != nil {
+	if err := r.startProviderConsumerNodes(); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -56,7 +57,7 @@ func TestE2EBasic() error {
 		"bin/localnet/docker-compose.yml",
 		"e2e/docker-compose.yml",
 	}
-	runner, err := prepareTestRunner(composeFiles, "node_e2e_basic_test")
+	runner, err := prepareTestRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard")
 	if err != nil {
 		return err
 	}
@@ -69,7 +70,7 @@ func TestE2ENAT() error {
 	composeFiles := []string{
 		"e2e/traversal/docker-compose.yml",
 	}
-	runner, err := prepareTestRunner(composeFiles, "node_e2e_nat_test")
+	runner, err := prepareTestRunner(composeFiles, "node_e2e_nat_test", "openvpn")
 	if err != nil {
 		return err
 	}
@@ -77,7 +78,7 @@ func TestE2ENAT() error {
 	return runner.test()
 }
 
-func (r *runner) setupCoreEnv() error {
+func (r *runner) startAppContainers() error {
 	log.Info("initializing geth node")
 	if err := r.compose("run", "geth", "init", "genesis.json"); err != nil {
 		return errors.Wrap(err, "initializing geth node failed!")
@@ -137,15 +138,15 @@ func (r *runner) setupCoreEnv() error {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}
 
+	return nil
+}
+
+func (r *runner) startProviderConsumerNodes() error {
 	log.Info("building app images")
 	if err := r.compose("build"); err != nil {
 		return errors.Wrap(err, "building app images failed!")
 	}
 
-	return nil
-}
-
-func (r *runner) setupBasicEnv() error {
 	log.Info("starting app containers")
 	if err := r.compose("up", "-d", "myst-provider", "myst-consumer"); err != nil {
 		return errors.Wrap(err, "starting app containers failed!")
@@ -155,14 +156,6 @@ func (r *runner) setupBasicEnv() error {
 
 func (r *runner) test() error {
 	log.Info("running tests for env: ", r.testEnv)
-
-	var consumerServices string
-
-	if r.testEnv == "basic" {
-		consumerServices = "openvpn,noop,wireguard"
-	} else {
-		consumerServices = "openvpn"
-	}
 
 	err := r.compose("run", "go-runner",
 		"go", "test", "-v", "./e2e/...", "-args",
@@ -174,7 +167,7 @@ func (r *runner) test() error {
 		"--consumer.tequilapi-host=myst-consumer",
 		"--consumer.tequilapi-port=4050",
 		"--geth.url=http://geth:8545",
-		"--consumer.services", consumerServices,
+		"--consumer.services", r.services,
 	)
 	return errors.Wrap(err, "tests failed!")
 }
@@ -187,7 +180,7 @@ func (r *runner) cleanup() {
 	}
 }
 
-func newRunner(composeFiles []string, testEnv string) *runner {
+func newRunner(composeFiles []string, testEnv, services string) *runner {
 	fileArgs := make([]string, 0)
 	for _, f := range composeFiles {
 		fileArgs = append(fileArgs, "-f", f)
@@ -197,7 +190,8 @@ func newRunner(composeFiles []string, testEnv string) *runner {
 	args = append(args, "-p", testEnv)
 
 	return &runner{
-		compose: sh.RunCmd("docker-compose", args...),
-		testEnv: testEnv,
+		compose:  sh.RunCmd("docker-compose", args...),
+		testEnv:  testEnv,
+		services: services,
 	}
 }
