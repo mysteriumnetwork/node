@@ -122,9 +122,9 @@ func TestStorage_PublishesEventsOnCreate(t *testing.T) {
 
 	// since we're shooting the event in an asynchronous fashion, try every millisecond to see if we already have it
 	attempts := 0
-	for range time.After(time.Microsecond) {
-		if attempts > 1000 {
-			assert.Fail(t, "no change after a 1000 attempts")
+	for range time.After(time.Millisecond) {
+		if attempts > 50 {
+			assert.Fail(t, "no change after a 50 attempts")
 			break
 		}
 		attempts++
@@ -152,9 +152,9 @@ func TestStorage_PublishesEventsOnDelete(t *testing.T) {
 	// since we're shooting the event in an asynchronous fashion, try every microsecond to see if we already have it
 	attempts := 0
 
-	for range time.After(time.Microsecond) {
-		if attempts > 1000 {
-			assert.Fail(t, "no change after a 1000 attempts")
+	for range time.After(time.Millisecond) {
+		if attempts > 50 {
+			assert.Fail(t, "no change after a 50 attempts")
 			break
 		}
 		attempts++
