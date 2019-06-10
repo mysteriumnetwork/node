@@ -84,6 +84,9 @@ func configureRaspbianImage(raspbianImagePath string) error {
 		"DEBIAN_FRONTEND": "noninteractive",
 	}
 
+	if err := shell.NewCmd("sudo apt-get update").Run(); err != nil {
+		return err
+	}
 	if err := shell.NewCmd("sudo apt-get install -y qemu qemu-user-static binfmt-support systemd-container").RunWith(envs); err != nil {
 		return err
 	}
