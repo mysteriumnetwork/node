@@ -1,10 +1,16 @@
-#!/usr/bin/env bash
+#!/bin/bash
+set -e
 
 setDefaultRoute() {
     GW=$1;
     ip route del default
     ip route add default via ${GW}
 }
+
+if [ -n "$EXT_NAT" ]; then
+    echo "external NAT for containers via: ${EXT_NAT}"
+    iptables -t nat -A POSTROUTING -o `ip r get ${EXT_NAT} | awk '{ print $3 }'` ! -d 172.16.0.0/12 -j MASQUERADE
+fi
 
 if [ -n "$GATEWAY" ]; then
     echo "new gateway: ${GATEWAY}"
@@ -17,16 +23,4 @@ if [ -n "$DEFAULT_ROUTE" ]; then
     setDefaultRoute ${DEFAULT_ROUTE}
 fi
 
-if [ -n "$PUBLIC_ROUTE" ]; then
-    echo "adding route: ${PUBLIC_ROUTE}"
-    eval ${PUBLIC_ROUTE}
-fi
-
-if [ ! -d "$OS_DIR_RUN" ]; then
-    mkdir -p $OS_DIR_RUN
-fi
-
-if [ ! -d "$OS_DIR_DATA" ]; then
-    mkdir -p $OS_DIR_DATA
-fi
-
+dnsmasq --keep-in-foreground --bind-dynamic

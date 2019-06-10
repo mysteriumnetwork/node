@@ -2,6 +2,9 @@
 
 set -e
 
-source bin/localnet/functions.sh
+NET_ENV=localnet
+PROJECT_FILE="bin/${NET_ENV}/docker-compose.yml"
 
-setup "localnet" "bin/localnet/publish-ports.yml"
+source bin/${NET_ENV}/functions.sh
+
+setup "${NET_ENV}" "bin/${NET_ENV}/publish-ports.yml"

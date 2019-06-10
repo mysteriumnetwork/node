@@ -15,7 +15,6 @@ ADD . .
 RUN bin/build
 
 
-
 FROM alpine:3.6
 
 # Install packages

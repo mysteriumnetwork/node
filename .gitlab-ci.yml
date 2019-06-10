@@ -77,10 +77,15 @@ test:
   tags: [go]
   script: go run mage.go Test
 
-test-e2e:
+test-e2e-basic:
   stage: test
   tags: [go]
-  script: go run mage.go -v TestE2E
+  script: go run mage.go -v TestE2EBasic
+
+test-e2e-nat:
+  stage: test
+  tags: [go]
+  script: go run mage.go -v TestE2ENAT
 
 create-bucket:
   stage: pre-release
