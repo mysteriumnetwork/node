@@ -81,7 +81,8 @@ func cleanupStaleRules() error {
 		//detect if any references exist in OUTPUT chain like -j CONSUMER_KILL_SWITCH
 		if strings.HasSuffix(rule, killswitchChain) {
 			deleteRule := strings.Replace(rule, appendRule, removeRule, 1)
-			if _, err := iptablesExec(deleteRule); err != nil {
+			deleteRuleArgs := strings.Split(deleteRule, " ")
+			if _, err := iptablesExec(deleteRuleArgs...); err != nil {
 				return err
 			}
 		}
