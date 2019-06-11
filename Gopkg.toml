@@ -123,7 +123,7 @@
   name = "github.com/gin-gonic/gin"
 
 [[constraint]]
-  version = "=0.0.3"
+  version = "=0.0.5"
   name = "github.com/mysteriumnetwork/go-dvpn-web"
 
 [[constraint]]
