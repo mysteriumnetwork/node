@@ -35,7 +35,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-const raspbianMountPoint = "/mnt/rpi"
+const (
+	raspbianMountPoint = "/mnt/rpi"
+	setupDir           = "/home/myst-setup.tmp"
+	mountedSetupDir    = raspbianMountPoint + setupDir
+)
 
 // PackageLinuxRaspberryImage builds and stores raspberry image
 func PackageLinuxRaspberryImage() error {
@@ -120,8 +124,6 @@ func configureRaspbianImage(raspbianImagePath string) error {
 		return err
 	}
 
-	setupDir := "/home/pi/myst-setup"
-	mountedSetupDir := raspbianMountPoint + setupDir
 	if err := shell.NewCmdf("sudo mkdir -p %s", mountedSetupDir).Run(); err != nil {
 		return err
 	}
@@ -131,7 +133,10 @@ func configureRaspbianImage(raspbianImagePath string) error {
 	if err := shell.NewCmdf("sudo cp -r bin/package/raspberry/files/. %s", mountedSetupDir).Run(); err != nil {
 		return err
 	}
-	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev setup.sh", raspbianMountPoint, setupDir).Run(); err != nil {
+	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev 0-setup-user.sh", raspbianMountPoint, setupDir).Run(); err != nil {
+		return err
+	}
+	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev 1-setup-node.sh", raspbianMountPoint, setupDir).Run(); err != nil {
 		return err
 	}
 	if err := shell.NewCmdf("sudo rm -r %s", mountedSetupDir).Run(); err != nil {
