@@ -22,6 +22,7 @@ func AllowIPAccess(ip string) (RemoveRule, error) {
 	return trackingBlocker.AllowIPAccess(ip)
 }
 
+// Reset firewall state - usually called when cleanup is needed (during shutdown)
 func Reset() {
 	trackingBlocker.vendor.Reset()
 }

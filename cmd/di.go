@@ -23,6 +23,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mysteriumnetwork/node/firewall/vnd"
+
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -52,7 +54,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
-	"github.com/mysteriumnetwork/node/firewall/iptables"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -668,7 +669,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	case node.LocationTypeMMDB:
 		resolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
 	case node.LocationTypeOracle:
-		if _, err = firewall.AllowURLAccess(options.Address); err != nil {
+		if _, err := firewall.AllowURLAccess(options.Address); err != nil {
 			return err
 		}
 		resolver, err = location.NewOracleResolver(options.Address), nil
@@ -731,15 +732,11 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
 	if options.EnableKillSwitch {
-		ip, err := ip.GetOutbound()
+		fwVendor, err := vnd.SetupVendor()
 		if err != nil {
 			return err
 		}
-		killSwitchVendor := iptables.New(ip)
-		if err := killSwitchVendor.Setup(); err != nil {
-			return err
-		}
-		firewall.Configure(killSwitchVendor)
+		firewall.Configure(fwVendor)
 	}
 	if options.BlockAlways {
 		_, err := firewall.BlockNonTunnelTraffic(firewall.Global)

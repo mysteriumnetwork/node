@@ -30,6 +30,11 @@ const (
 	destinationIP = "-d"
 	module        = "-m"
 
+	protocol        = "-p"
+	tcp             = "tcp"
+	udp             = "udp"
+	destinationPort = "--dport"
+
 	conntrack    = "conntrack"
 	ct_state     = "--ctstate"
 	ct_state_new = "NEW"
@@ -43,7 +48,7 @@ const (
 var iptablesExec = func(args ...string) ([]string, error) {
 	args = append([]string{"/sbin/iptables"}, args...)
 	log.Trace(logPrefix, "[cmd] ", args)
-	output, err := exec.Command("sudo", args...).Output()
+	output, err := exec.Command("sudo", args...).CombinedOutput()
 	if err != nil {
 		log.Trace(logPrefix, "[cmd error] ", err)
 		return nil, errors.Wrap(err, "iptables cmd error")
@@ -104,6 +109,16 @@ func setupKillSwitchChain() error {
 	if _, err := iptablesExec(appendRule, killswitchChain, module, conntrack, ct_state, ct_state_new, jumpTo, reject); err != nil {
 		return err
 	}
+
+	// TODO for now always allow outgoing DNS traffic, BUT it should be exposed as separate firewall call
+	if _, err := iptablesExec(insertRule, killswitchChain, "1", protocol, udp, destinationPort, "53", jumpTo, accept); err != nil {
+		return err
+	}
+	// TCP DNS is not so popular - but for the sake of humanity, lets allow it too
+	if _, err := iptablesExec(insertRule, killswitchChain, "1", protocol, tcp, destinationPort, "53", jumpTo, accept); err != nil {
+		return err
+	}
+
 	return nil
 }
 
