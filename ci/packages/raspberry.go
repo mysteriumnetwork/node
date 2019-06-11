@@ -54,13 +54,10 @@ func PackageLinuxRaspberryImage() error {
 	if err := packageDebian("build/myst/myst_linux_arm", "armhf"); err != nil {
 		return err
 	}
-	return env.IfRelease(func() error {
-		err := buildMystRaspbianImage()
-		if err != nil {
-			return err
-		}
-		return storage.UploadArtifacts()
-	})
+	if err := buildMystRaspbianImage(); err != nil {
+		return err
+	}
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 func buildMystRaspbianImage() error {
