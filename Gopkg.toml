@@ -149,3 +149,11 @@
 [[constraint]]
   name = "github.com/mholt/archiver"
   version = "3.1.1"
+
+[[constraint]]
+  name = "github.com/oleksandr/bonjour"
+  revision = "5dcf00d8b228be86307f952f550f2191d956b9e2"
+
+[[constraint]]
+  name = "github.com/koron/go-ssdp"
+  revision = "4a0ed625a78b6858dc8d3a55fb7728968b712122"

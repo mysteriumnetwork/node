@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,23 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ip
+package discovery
 
-import "net"
+import (
+	"github.com/oleksandr/bonjour"
+)
 
-// Resolver allows resolving current IP
-type Resolver interface {
-	GetPublicIP() (string, error)
-	GetOutboundIP() (string, error)
+type bonjourServer struct {
+	port   int
+	server *bonjour.Server
 }
 
-// GetOutbound provides an outbound IP address of the current system.
-func GetOutbound() (net.IP, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:53")
-	if err != nil {
-		return nil, err
+func newBonjourServer(uiPort int) *bonjourServer {
+	return &bonjourServer{
+		port: uiPort,
 	}
-	defer conn.Close()
+}
 
-	return conn.LocalAddr().(*net.UDPAddr).IP, nil
+func (bs *bonjourServer) Start() (err error) {
+	bs.server, err = bonjour.Register("Mysterium Node", "_mysterium-node._tcp", "", bs.port, nil, nil)
+	return err
+}
+
+func (bs *bonjourServer) Stop() (err error) {
+	bs.server.Shutdown()
+	return nil
 }

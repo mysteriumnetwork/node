@@ -28,15 +28,14 @@ import (
 
 func Test_Server_ServesHTML(t *testing.T) {
 	s := NewServer(55555)
+	s.discovery = &mockDiscovery{}
 	serverError := make(chan error)
 	go func() {
 		err := s.Serve()
 		serverError <- err
 	}()
 
-	select {
-	case <-time.After(time.Millisecond * 5):
-	}
+	time.Sleep(time.Millisecond * 5)
 
 	resp, err := http.Get("http://:55555/")
 	assert.Nil(t, err)
@@ -49,3 +48,8 @@ func Test_Server_ServesHTML(t *testing.T) {
 	s.Stop()
 	assert.Nil(t, <-serverError)
 }
+
+type mockDiscovery struct{}
+
+func (md *mockDiscovery) Start() error { return nil }
+func (md *mockDiscovery) Stop() error  { return nil }

@@ -14,9 +14,9 @@ services:
       - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
-      public:
+      public0:
         ipv4_address: 172.30.0.10
-      public2:
+      public1:
         ipv4_address: 172.31.0.10
 
   broker:
@@ -33,9 +33,9 @@ services:
       - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
-      public:
+      public0:
         ipv4_address: 172.30.0.30
-      public2:
+      public1:
         ipv4_address: 172.31.0.30
 
   db:
@@ -52,9 +52,9 @@ services:
       MYSQL_PASSWORD: myst_api
     dns: 172.30.0.254
     networks:
-      public:
+      public0:
         ipv4_address: 172.30.0.201
-      public2:
+      public1:
         ipv4_address: 172.31.0.201
 
   geth:
@@ -90,9 +90,9 @@ services:
       - net.ipv4.conf.eth1.rp_filter=0
     dns: 172.30.0.254
     networks:
-      public:
+      public0:
         ipv4_address: 172.30.0.202
-      public2:
+      public1:
         ipv4_address: 172.31.0.202
 
   mysterium-api:
@@ -121,9 +121,9 @@ services:
       - geth
     dns: 172.30.0.254
     networks:
-      public:
+      public0:
         ipv4_address: 172.30.0.200
-      public2:
+      public1:
         ipv4_address: 172.31.0.200
 
   router:
@@ -135,9 +135,9 @@ services:
     environment:
       - EXT_NAT=172.30.0.1
     networks:
-      public:
+      public0:
         ipv4_address: 172.30.0.254
-      public2:
+      public1:
         ipv4_address: 172.31.0.254
 
   forwarder:
@@ -151,10 +151,10 @@ services:
     environment:
       - GATEWAY=172.30.0.254
     networks:
-      public:
+      public0:
         ipv4_address: 172.30.0.2
       priv1:
-        ipv4_address: 10.100.0.2
+        ipv4_address: 10.100.1.2
 
   forwarder2:
     build:
@@ -168,17 +168,17 @@ services:
       - GATEWAY=172.31.0.254
     dns: 172.31.0.254
     networks:
-      public2:
+      public1:
         ipv4_address: 172.31.0.2
-      priv2:
-        ipv4_address: 10.100.1.2
+      priv0:
+        ipv4_address: 10.100.0.2
 
   myst-consumer:
     build:
       context: ../..
       dockerfile: bin/docker/alpine/Dockerfile
     environment:
-      - DEFAULT_ROUTE=10.100.0.2
+      - DEFAULT_ROUTE=10.100.1.2
     depends_on:
       - forwarder
     cap_add:
@@ -196,14 +196,14 @@ services:
     dns: 172.30.0.254
     networks:
       priv1:
-        ipv4_address: 10.100.0.101
+        ipv4_address: 10.100.1.101
 
   myst-provider:
     build:
       context: ../..
       dockerfile: bin/docker/alpine/Dockerfile
     environment:
-      - DEFAULT_ROUTE=10.100.1.2
+      - DEFAULT_ROUTE=10.100.0.2
     depends_on:
       - forwarder2
     cap_add:
@@ -223,6 +223,7 @@ services:
       --ether.client.rpc=http://geth:8545
       --ether.contract.payments=0x1955141ba8e77a5B56efBa8522034352c94f77Ea
       --keystore.lightweight
+      --ui.enable
       service openvpn
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
@@ -230,8 +231,8 @@ services:
       --openvpn.port=3000
     dns: 172.31.0.254
     networks:
-      priv2:
-        ipv4_address: 10.100.1.102
+      priv0:
+        ipv4_address: 10.100.0.102
 
   go-runner:
     image: golang:1.11
@@ -240,33 +241,33 @@ services:
     working_dir: /go/src/github.com/mysteriumnetwork/node
     dns: 172.30.0.254
     networks:
-      public:
+      public0:
         ipv4_address: 172.30.0.222
-      public2:
+      public1:
         ipv4_address: 172.31.0.222
-      priv1:
+      priv0:
         ipv4_address: 10.100.0.222
-      priv2:
+      priv1:
         ipv4_address: 10.100.1.222
 
 networks:
-  public:
+  public0:
     driver: "bridge"
     ipam:
       driver: default
       config:
         - subnet: 172.30.0.0/24
-  public2:
+  public1:
     driver: "bridge"
     ipam:
       config:
         - subnet: 172.31.0.0/24
-  priv1:
+  priv0:
     driver: "bridge"
     ipam:
       config:
         - subnet: 10.100.0.0/24
-  priv2:
+  priv1:
     driver: "bridge"
     ipam:
       config:
