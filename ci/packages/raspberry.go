@@ -73,6 +73,9 @@ func buildMystRaspbianImage() error {
 	if err := archiver.DefaultZip.Archive([]string{imagePath}, "build/package/mystberry.zip"); err != nil {
 		return err
 	}
+	if err := os.Remove(imagePath); err != nil {
+		return err
+	}
 	return nil
 }
 
