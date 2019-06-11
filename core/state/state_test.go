@@ -50,13 +50,13 @@ func (dt *debounceTester) get() int {
 
 func Test_Debounce_CallsOnceInInterval(t *testing.T) {
 	dt := &debounceTester{}
-	duration := time.Microsecond * 1000
+	duration := time.Millisecond * 10
 	f := debounce(dt.do, duration)
 	for i := 1; i < 10; i++ {
 		f(struct{}{})
 	}
 
-	time.Sleep(duration * 5)
+	time.Sleep(duration * 2)
 	assert.Equal(t, 1, dt.get())
 }
 
