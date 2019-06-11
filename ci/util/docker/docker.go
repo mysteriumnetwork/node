@@ -1,5 +1,3 @@
-// +build mage
-
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -17,19 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package main
+package docker
 
-import (
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/test"
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/env"
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/packages"
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/release"
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/storage"
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/util/docker"
-)
+import "github.com/mysteriumnetwork/node/ci/util/shell"
+
+// RemoveDanglingData removes dangling docker data: containers stopped, volumes without containers, images without containers
+func RemoveDanglingData() error {
+	return shell.NewCmd("docker system prune -f").Run()
+}

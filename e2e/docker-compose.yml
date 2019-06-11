@@ -26,7 +26,6 @@ services:
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=http://geth:8545
       --keystore.lightweight
-      --ui.enable
       service openvpn,noop,wireguard
       --agreed-terms-and-conditions
       --identity=0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5

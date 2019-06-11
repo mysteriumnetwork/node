@@ -169,3 +169,9 @@ remove-bucket:
   tags: [go]
   script: go run mage.go -v RemoveBucket
   when: always
+
+docker-prune:
+  stage: post-release
+  tags: [go]
+  script: go run mage.go -v RemoveDanglingData
+  when: always

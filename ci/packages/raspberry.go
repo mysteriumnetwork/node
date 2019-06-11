@@ -35,7 +35,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-const raspbianMountPoint = "/mnt/rpi"
+const (
+	raspbianMountPoint = "/mnt/rpi"
+	setupDir           = "/home/myst-setup.tmp"
+	mountedSetupDir    = raspbianMountPoint + setupDir
+)
 
 // PackageLinuxRaspberryImage builds and stores raspberry image
 func PackageLinuxRaspberryImage() error {
@@ -50,13 +54,10 @@ func PackageLinuxRaspberryImage() error {
 	if err := packageDebian("build/myst/myst_linux_arm", "armhf"); err != nil {
 		return err
 	}
-	return env.IfRelease(func() error {
-		err := buildMystRaspbianImage()
-		if err != nil {
-			return err
-		}
-		return storage.UploadArtifacts()
-	})
+	if err := buildMystRaspbianImage(); err != nil {
+		return err
+	}
+	return env.IfRelease(storage.UploadArtifacts)
 }
 
 func buildMystRaspbianImage() error {
@@ -71,6 +72,9 @@ func buildMystRaspbianImage() error {
 		return err
 	}
 	if err := archiver.DefaultZip.Archive([]string{imagePath}, "build/package/mystberry.zip"); err != nil {
+		return err
+	}
+	if err := os.Remove(imagePath); err != nil {
 		return err
 	}
 	return nil
@@ -117,8 +121,6 @@ func configureRaspbianImage(raspbianImagePath string) error {
 		return err
 	}
 
-	setupDir := "/home/pi/myst-setup"
-	mountedSetupDir := raspbianMountPoint + setupDir
 	if err := shell.NewCmdf("sudo mkdir -p %s", mountedSetupDir).Run(); err != nil {
 		return err
 	}
@@ -128,7 +130,10 @@ func configureRaspbianImage(raspbianImagePath string) error {
 	if err := shell.NewCmdf("sudo cp -r bin/package/raspberry/files/. %s", mountedSetupDir).Run(); err != nil {
 		return err
 	}
-	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev setup.sh", raspbianMountPoint, setupDir).Run(); err != nil {
+	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev 0-setup-user.sh", raspbianMountPoint, setupDir).Run(); err != nil {
+		return err
+	}
+	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev 1-setup-node.sh", raspbianMountPoint, setupDir).Run(); err != nil {
 		return err
 	}
 	if err := shell.NewCmdf("sudo rm -r %s", mountedSetupDir).Run(); err != nil {

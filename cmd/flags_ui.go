@@ -28,7 +28,7 @@ var (
 		Usage: "the port to run ui on",
 		Value: 4449,
 	}
-	uiEnableFlag = cli.BoolFlag{
+	uiEnableFlag = cli.BoolTFlag{
 		Name:  "ui.enable",
 		Usage: "enables the ui",
 	}

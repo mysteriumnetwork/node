@@ -3,6 +3,8 @@
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export DEBIAN_FRONTEND="noninteractive"
 
+sed -i -e 's/#PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+
 install -m 644 default-myst-conf /etc/default/mysterium-node
 
 if [[ "${RELEASE_BUILD}" == "true" ]]; then
