@@ -13,7 +13,8 @@ Currently node supports OpenVPN as its underlying VPN transport.
 
 - Homepage https://mysterium.network
 - [Whitepaper](https://mysterium.network/whitepaper.pdf)
-- [Latest](https://github.com/mysteriumnetwork/node/releases/latest) release
+- [Latest release](https://github.com/mysteriumnetwork/node/releases/latest)
+- [Snapshot builds](https://github.com/mysteriumnetwork/node-builds/releases) - bleeding edge, use at your own risk
 - [Installation guide](./INSTALL.md)
 - [Node wiki](https://github.com/mysteriumnetwork/node/wiki/)
 
