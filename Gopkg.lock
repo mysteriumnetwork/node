@@ -468,6 +468,13 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:a45c3b83d39a5b86d8962fcf4c6d0dc1505e87256756e5744669711193bbf84e"
+  name = "github.com/msteinert/pam"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f29b9f28d6f9a1f6c4e6fd5db731999eb946574b"
+
+[[projects]]
   digest = "1:cfbcf9fb8d404e10e2baaec500de4ead4db3341c66bb2a114b3866d00d0f0dc6"
   name = "github.com/mysteriumnetwork/go-dvpn-web"
   packages = [
@@ -1083,6 +1090,7 @@
     "github.com/magefile/mage/sh",
     "github.com/mholt/archiver",
     "github.com/mitchellh/go-homedir",
+    "github.com/msteinert/pam",
     "github.com/mysteriumnetwork/go-dvpn-web",
     "github.com/mysteriumnetwork/go-openvpn/openvpn",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/config",

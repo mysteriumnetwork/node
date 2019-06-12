@@ -1,3 +1,5 @@
+//+build !linux
+
 /*
  * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
@@ -15,11 +17,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package auth
 
-// OptionsUI describes possible parameters of ui configuration
-type OptionsUI struct {
-	UIEnabled bool
-	UIAuth    bool
-	UIPort    int
+import (
+	"errors"
+)
+
+type noAuth struct{}
+
+func newAuth() *noAuth {
+	return &noAuth{}
+}
+
+func (na *noAuth) Auth(header string) error {
+	return errors.New("auth is not implemented for this OS")
 }

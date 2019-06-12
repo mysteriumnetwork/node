@@ -21,12 +21,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
+	"github.com/mysteriumnetwork/node/ui/auth"
 	"github.com/mysteriumnetwork/node/ui/discovery"
 	"github.com/pkg/errors"
 )
@@ -40,12 +42,23 @@ type Server struct {
 }
 
 // NewServer creates a new instance of the server for the given port
-func NewServer(port int) *Server {
+func NewServer(port int, authEnabled bool) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
-	r.StaticFS("/", godvpnweb.Assets)
+
+	auth := auth.NewAuth(authEnabled)
+	authorized := r.Group("/", func(c *gin.Context) {
+		if err := auth.Auth(c.GetHeader("Authorization")); err != nil {
+			c.Header("WWW-Authenticate", "Basic realm="+strconv.Quote("Authorization required"))
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		c.Next()
+	})
+
+	authorized.StaticFS("/", godvpnweb.Assets)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%v", port),
 		Handler: r,

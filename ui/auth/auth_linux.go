@@ -15,11 +15,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node
+package auth
 
-// OptionsUI describes possible parameters of ui configuration
-type OptionsUI struct {
-	UIEnabled bool
-	UIAuth    bool
-	UIPort    int
+import (
+	"github.com/msteinert/pam"
+)
+
+type pamAuth struct{}
+
+func newAuth() *pamAuth {
+	return &pamAuth{}
+}
+
+func (pa *pamAuth) Auth(header string) error {
+	user, password, err := parseBasicAuthHeader
+	if err != nil {
+		return err
+	}
+
+	t, err := pam.StartFunc("", user, func(_ pam.Style, _ string) (string, error) {
+		return password, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return t.Authenticate(0)
 }
