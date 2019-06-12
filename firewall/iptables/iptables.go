@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package iptables
 
 import (
@@ -123,20 +140,24 @@ func setupKillSwitchChain() error {
 	return nil
 }
 
+// Iptables represent Iptables based implementation of firewall Vendor interface
 type Iptables struct {
 	outboundIP string
 }
 
-func (b Iptables) BlockOutgoingTraffic() (firewall.RemoveRule, error) {
-	return addRuleWithRemoval(appendTo(outputChain).ruleSpec(sourceIP, b.outboundIP, jumpTo, killswitchChain))
-}
-
+// New initializes and returns Iptables with defined outboundIP
 func New(outboundIP string) *Iptables {
 	return &Iptables{
 		outboundIP: outboundIP,
 	}
 }
 
+// BlockOutgoingTraffic starts blocking outgoing traffic and returns functiont to remove block
+func (b Iptables) BlockOutgoingTraffic() (firewall.RemoveRule, error) {
+	return addRuleWithRemoval(appendTo(outputChain).ruleSpec(sourceIP, b.outboundIP, jumpTo, killswitchChain))
+}
+
+// Setup prepares Iptables default rules and chains
 func (b Iptables) Setup() error {
 	if err := checkVersion(); err != nil {
 		return err
@@ -149,6 +170,7 @@ func (b Iptables) Setup() error {
 	return setupKillSwitchChain()
 }
 
+// Reset tries to cleanup all changes made by setup and leave system in the state before setup
 func (Iptables) Reset() {
 	if err := cleanupStaleRules(); err != nil {
 		_ = log.Warn(logPrefix, "Error cleaning up iptables rules, you might want to do it yourself: ", err)
@@ -167,6 +189,7 @@ func addRuleWithRemoval(chain chainInfo) (firewall.RemoveRule, error) {
 	}, nil
 }
 
+// AllowIPAccess add ip to exceptions of blocked traffic and return function to remove exception
 func (Iptables) AllowIPAccess(ip string) (firewall.RemoveRule, error) {
 	return addRuleWithRemoval(insertAt(killswitchChain, 1).ruleSpec(destinationIP, ip, jumpTo, accept))
 }

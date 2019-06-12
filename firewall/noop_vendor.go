@@ -25,10 +25,12 @@ type NoopVendor struct {
 	LogPrefix string
 }
 
+// Reset noop vendor (just log call)
 func (nb NoopVendor) Reset() {
 	log.Info(nb.LogPrefix, "Rules reset was requested")
 }
 
+// BlockOutgoingTraffic just logs the call
 func (nb NoopVendor) BlockOutgoingTraffic() (RemoveRule, error) {
 	log.Info(nb.LogPrefix, "Outgoing traffic block requested")
 	return nb.logRemoval("Outgoing traffic block removed"), nil
