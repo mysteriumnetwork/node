@@ -20,6 +20,5 @@ package node
 // OptionsUI describes possible parameters of ui configuration
 type OptionsUI struct {
 	UIEnabled bool
-	UIAuth    bool
 	UIPort    int
 }

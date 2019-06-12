@@ -23,22 +23,20 @@ import (
 	"strings"
 )
 
-// Auth provides an authorization method for builtin UI.
-type Auth interface {
-	Auth(header string) error
+// Auth provides an authentication method for builtin UI.
+type Auth struct{}
+
+// NewAuth creates an authenticator
+func NewAuth() *Auth {
+	return &Auth{}
 }
 
-// NewAuth creates basic auth authorizer based on the provider flag.
-func NewAuth(authEnabled bool) Auth {
-	if authEnabled {
-		return newAuth()
+// AuthenticateHttpBasic authenticates user using http basic auth header
+func (a *Auth) AuthenticateHttpBasic(header string) error {
+	_, _, err := parseBasicAuthHeader(header)
+	if err != nil {
+		return err
 	}
-	return &noopAuth{}
-}
-
-type noopAuth struct{}
-
-func (na *noopAuth) Auth(_ string) error {
 	return nil
 }
 

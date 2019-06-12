@@ -28,10 +28,6 @@ var (
 		Usage: "the port to run ui on",
 		Value: 4449,
 	}
-	uiAuthFlag = cli.BoolFlag{
-		Name:  "ui.auth",
-		Usage: "enables the ui authorization",
-	}
 	uiEnableFlag = cli.BoolTFlag{
 		Name:  "ui.enable",
 		Usage: "enables the ui",
@@ -40,14 +36,13 @@ var (
 
 // RegisterFlagsUI function register UI flags to flag list
 func RegisterFlagsUI(flags *[]cli.Flag) {
-	*flags = append(*flags, uiPortFlag, uiEnableFlag, uiAuthFlag)
+	*flags = append(*flags, uiPortFlag, uiEnableFlag)
 }
 
 // ParseFlagsUI function fills in UI options from CLI context
 func ParseFlagsUI(ctx *cli.Context) node.OptionsUI {
 	return node.OptionsUI{
 		UIEnabled: ctx.GlobalBool(uiEnableFlag.Name),
-		UIAuth:    ctx.GlobalBool(uiAuthFlag.Name),
 		UIPort:    ctx.GlobalInt(uiPortFlag.Name),
 	}
 }

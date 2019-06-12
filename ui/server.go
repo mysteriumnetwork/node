@@ -42,15 +42,15 @@ type Server struct {
 }
 
 // NewServer creates a new instance of the server for the given port
-func NewServer(port int, authEnabled bool) *Server {
+func NewServer(port int) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
 
-	auth := auth.NewAuth(authEnabled)
+	authenticator := auth.NewAuth()
 	authorized := r.Group("/", func(c *gin.Context) {
-		if err := auth.Auth(c.GetHeader("Authorization")); err != nil {
+		if err := authenticator.AuthenticateHttpBasic(c.GetHeader("Authorization")); err != nil {
 			c.Header("WWW-Authenticate", "Basic realm="+strconv.Quote("Authorization required"))
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
