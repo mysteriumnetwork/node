@@ -26,8 +26,15 @@ import (
 	"golang.org/x/net/html"
 )
 
+type openMindedAuthenticator struct {
+}
+
+func (n openMindedAuthenticator) AuthenticateHTTPBasic(header string) error {
+	return nil
+}
+
 func Test_Server_ServesHTML(t *testing.T) {
-	s := NewServer(55555)
+	s := NewServer(55555, &openMindedAuthenticator{})
 	s.discovery = &mockDiscovery{}
 	serverError := make(chan error)
 	go func() {

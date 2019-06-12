@@ -45,6 +45,15 @@ func (b *Bolt) Store(bucket string, data interface{}) error {
 	return b.db.From(bucket).Save(data)
 }
 
+// StoreOrUpdate stores or updates struct in the given bucket
+func (b *Bolt) StoreOrUpdate(bucket string, data interface{}) error {
+	err := b.db.From(bucket).Save(data)
+	if err == storm.ErrAlreadyExists {
+		err = b.db.From(bucket).Update(data)
+	}
+	return err
+}
+
 // GetAllFrom allows to get all structs from the bucket
 func (b *Bolt) GetAllFrom(bucket string, data interface{}) error {
 	return b.db.From(bucket).All(data)

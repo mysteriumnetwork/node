@@ -24,20 +24,24 @@ import (
 )
 
 // Auth provides an authentication method for builtin UI.
-type Auth struct{}
-
-// NewAuth creates an authenticator
-func NewAuth() *Auth {
-	return &Auth{}
+type Auth struct {
+	storage Storage
 }
 
-// AuthenticateHttpBasic authenticates user using http basic auth header
-func (a *Auth) AuthenticateHttpBasic(header string) error {
-	_, _, err := parseBasicAuthHeader(header)
+// NewAuth creates an authenticator
+func NewAuth(storage Storage) *Auth {
+	return &Auth{
+		storage: storage,
+	}
+}
+
+// AuthenticateHTTPBasic authenticates user using http basic auth header
+func (a *Auth) AuthenticateHTTPBasic(header string) error {
+	username, password, err := parseBasicAuthHeader(header)
 	if err != nil {
 		return err
 	}
-	return nil
+	return NewCredentials(username, password, a.storage).Validate()
 }
 
 func parseBasicAuthHeader(header string) (user, password string, err error) {

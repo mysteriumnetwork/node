@@ -28,7 +28,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
-	"github.com/mysteriumnetwork/node/ui/auth"
 	"github.com/mysteriumnetwork/node/ui/discovery"
 	"github.com/pkg/errors"
 )
@@ -41,16 +40,21 @@ type Server struct {
 	discovery discovery.LANDiscovery
 }
 
+// Authenticator handles web UI auth
+type Authenticator interface {
+	AuthenticateHTTPBasic(header string) error
+}
+
 // NewServer creates a new instance of the server for the given port
-func NewServer(port int) *Server {
+func NewServer(port int, authenticator Authenticator) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
 
-	authenticator := auth.NewAuth()
 	authorized := r.Group("/", func(c *gin.Context) {
-		if err := authenticator.AuthenticateHttpBasic(c.GetHeader("Authorization")); err != nil {
+		if err := authenticator.AuthenticateHTTPBasic(c.GetHeader("Authorization")); err != nil {
+			log.Warn(logPrefix, "authentication failed: ", err)
 			c.Header("WWW-Authenticate", "Basic realm="+strconv.Quote("Authorization required"))
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
