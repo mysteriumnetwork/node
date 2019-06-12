@@ -24,4 +24,4 @@ package blockchain
  * looked up in migration script here: https://github.com/mysteriumnetwork/payments-smart-contracts/blob/master/migrations/2_deploy_contracts.js
  */
 
-//go:generate go run abi/abigen.go --githubrepo=mysteriumnetwork/payments-smart-contracts -githubrelease=v0.0.2 --contracts=MystToken.json,MystDEX.json,ChannelImplementation.json,AccountantImplementation.json,Registry.json --out=generated --pkg=generated
+//go:generate go run abi/abigen.go --githubrepo=mysteriumnetwork/payments-smart-contracts -githubrelease=v0.0.3 --contracts=MystToken.json,MystDEX.json,ChannelImplementation.json,AccountantImplementation.json,Registry.json --out=generated --pkg=generated
