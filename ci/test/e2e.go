@@ -58,10 +58,10 @@ func TestE2EBasic() error {
 		"e2e/docker-compose.yml",
 	}
 	runner, err := prepareTestRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard")
+	defer runner.cleanup()
 	if err != nil {
 		return err
 	}
-	defer runner.cleanup()
 	return runner.test()
 }
 
@@ -71,10 +71,10 @@ func TestE2ENAT() error {
 		"e2e/traversal/docker-compose.yml",
 	}
 	runner, err := prepareTestRunner(composeFiles, "node_e2e_nat_test", "openvpn")
+	defer runner.cleanup()
 	if err != nil {
 		return err
 	}
-	defer runner.cleanup()
 	return runner.test()
 }
 
