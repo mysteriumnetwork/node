@@ -12,7 +12,7 @@ func SetupVendor() (*iptables.Iptables, error) {
 	if err != nil {
 		return nil, err
 	}
-	iptables := iptables.New(ip)
+	iptables := iptables.New(ip.String())
 	if err := iptables.Setup(); err != nil {
 		return nil, err
 	}
