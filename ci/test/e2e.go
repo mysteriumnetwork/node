@@ -36,30 +36,20 @@ type runner struct {
 	services        string
 }
 
-func prepareTestRunner(composeFiles []string, testEnv, services string) (*runner, error) {
+func init() {
 	logconfig.Bootstrap()
-	defer log.Flush()
-	r := newRunner(composeFiles, testEnv, services)
-
-	if err := r.startAppContainers(); err != nil {
-		return nil, err
-	}
-
-	if err := r.startProviderConsumerNodes(); err != nil {
-		return nil, err
-	}
-	return r, nil
 }
 
 // TestE2EBasic runs end-to-end tests
 func TestE2EBasic() error {
+	defer log.Flush()
 	composeFiles := []string{
 		"bin/localnet/docker-compose.yml",
 		"e2e/docker-compose.yml",
 	}
-	runner, err := prepareTestRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard")
+	runner := newRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard")
 	defer runner.cleanup()
-	if err != nil {
+	if err := runner.init(); err != nil {
 		return err
 	}
 	return runner.test()
@@ -67,15 +57,28 @@ func TestE2EBasic() error {
 
 // TestE2ENAT runs end-to-end tests in NAT environment
 func TestE2ENAT() error {
+	defer log.Flush()
 	composeFiles := []string{
 		"e2e/traversal/docker-compose.yml",
 	}
-	runner, err := prepareTestRunner(composeFiles, "node_e2e_nat_test", "openvpn")
+	runner := newRunner(composeFiles, "node_e2e_nat_test", "openvpn")
 	defer runner.cleanup()
-	if err != nil {
+	if err := runner.init(); err != nil {
 		return err
 	}
 	return runner.test()
+}
+
+// TODO this can be merged into runner.test() itself
+func (r *runner) init() error {
+	if err := r.startAppContainers(); err != nil {
+		return err
+	}
+
+	if err := r.startProviderConsumerNodes(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *runner) startAppContainers() error {
