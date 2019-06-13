@@ -769,10 +769,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f25a1d244f700c4b01b1671b8b13ff0ded11211a8c5539a2128923d9d510eb71"
+  digest = "1:f37d8367806b8c9459868094204a97d253147dd9b1052982f00a70078002cd7f"
   name = "golang.org/x/crypto"
   packages = [
+    "bcrypt",
     "blake2s",
+    "blowfish",
     "cast5",
     "chacha20poly1305",
     "curve25519",
@@ -1110,6 +1112,7 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/suite",
     "github.com/urfave/cli",
+    "golang.org/x/crypto/bcrypt",
     "golang.org/x/crypto/curve25519",
     "golang.org/x/net/html",
     "golang.org/x/net/ipv4",
