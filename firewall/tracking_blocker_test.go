@@ -121,13 +121,13 @@ func (mockedVendor) Reset() {
 }
 
 func (mv *mockedVendor) increaseRef(ref string) (RemoveRule, error) {
-	mv.requests[ref] = mv.requests[ref] + 1
+	mv.requests[ref] += 1
 	return mv.decreaseRef(ref), nil
 }
 
 func (mv *mockedVendor) decreaseRef(ref string) RemoveRule {
 	return func() {
-		mv.requests[ref] = mv.requests[ref] - 1
+		mv.requests[ref] -= 1
 	}
 }
 
