@@ -27,6 +27,8 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
+	"github.com/urfave/cli"
+
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -37,7 +39,6 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/utils"
-	"github.com/urfave/cli"
 )
 
 const cliCommandName = "cli"
@@ -376,21 +377,26 @@ func (c *cliApp) payout(argsString string) {
 	action := args[0]
 	switch action {
 	case "set":
-		payoutSignature := "payout set <identity> <ethAddress>"
+		payoutSignature := "payout set <identity> <ethAddress> <referralCode>"
 		if len(args) < 2 {
 			info("Please provide identity. You can select one by pressing tab.\n", payoutSignature)
 			return
 		}
 
 		var identity, ethAddress string
-		if len(args) == 3 {
+		if len(args) > 2 {
 			identity, ethAddress = args[1], args[2]
 		} else {
 			info("Please type in identity and Ethereum address.\n", payoutSignature)
 			return
 		}
 
-		err := c.tequilapi.Payout(identity, ethAddress)
+		var referralCode string
+		if len(args) == 4 {
+			referralCode = args[3]
+		}
+
+		err := c.tequilapi.Payout(identity, ethAddress, referralCode)
 		if err != nil {
 			warn(err)
 			return

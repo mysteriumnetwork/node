@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
@@ -33,17 +34,19 @@ type payoutInfo struct {
 	// in Ethereum address format
 	// required: true
 	// example: 0x000000000000000000000000000000000000000a
-	EthAddress string `json:"ethAddress"`
+	EthAddress   string `json:"ethAddress"`
+	ReferralCode string `json:"referral_code"`
 }
 
 type payoutInfoResponse struct {
-	EthAddress string `json:"eth_address"`
+	EthAddress   string `json:"eth_address"`
+	ReferralCode string `json:"referral_code"`
 }
 
 // PayoutInfoRegistry allows to register payout info
 type PayoutInfoRegistry interface {
 	GetPayoutInfo(id identity.Identity, signer identity.Signer) (*mysterium.PayoutInfoResponse, error)
-	UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error
+	UpdatePayoutInfo(id identity.Identity, ethAddress string, referralCode string, signer identity.Signer) error
 }
 
 type payoutEndpoint struct {
@@ -66,7 +69,8 @@ func (endpoint *payoutEndpoint) GetPayoutInfo(resp http.ResponseWriter, request 
 	}
 
 	response := &payoutInfoResponse{
-		EthAddress: payoutInfo.EthAddress,
+		EthAddress:   payoutInfo.EthAddress,
+		ReferralCode: payoutInfo.ReferralCode,
 	}
 	utils.WriteAsJSON(response, resp)
 }
@@ -116,7 +120,12 @@ func (endpoint *payoutEndpoint) UpdatePayoutInfo(resp http.ResponseWriter, reque
 		return
 	}
 
-	err = endpoint.payoutInfoRegistry.UpdatePayoutInfo(id, payoutInfoReq.EthAddress, endpoint.signerFactory(id))
+	err = endpoint.payoutInfoRegistry.UpdatePayoutInfo(
+		id,
+		payoutInfoReq.EthAddress,
+		payoutInfoReq.ReferralCode,
+		endpoint.signerFactory(id),
+	)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
