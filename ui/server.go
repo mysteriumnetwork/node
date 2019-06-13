@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -39,13 +40,29 @@ type Server struct {
 	discovery discovery.LANDiscovery
 }
 
+// Authenticator handles web UI auth
+type Authenticator interface {
+	AuthenticateHTTPBasic(header string) error
+}
+
 // NewServer creates a new instance of the server for the given port
-func NewServer(port int) *Server {
+func NewServer(port int, authenticator Authenticator) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
-	r.StaticFS("/", godvpnweb.Assets)
+
+	authorized := r.Group("/", func(c *gin.Context) {
+		if err := authenticator.AuthenticateHTTPBasic(c.GetHeader("Authorization")); err != nil {
+			log.Warn(logPrefix, "authentication failed: ", err)
+			c.Header("WWW-Authenticate", "Basic realm="+strconv.Quote("Authorization required"))
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		c.Next()
+	})
+
+	authorized.StaticFS("/", godvpnweb.Assets)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%v", port),
 		Handler: r,

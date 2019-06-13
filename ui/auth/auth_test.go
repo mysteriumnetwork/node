@@ -15,48 +15,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ui
+package auth
 
 import (
-	"net/http"
+	"encoding/base64"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/html"
 )
 
-type openMindedAuthenticator struct {
+func Test_parseBasicAuthHeader(t *testing.T) {
+	header := "Basic " + base64.StdEncoding.EncodeToString([]byte("user:secret"))
+	user, pass, err := parseBasicAuthHeader(header)
+	assert.NoError(t, err)
+	assert.Equal(t, "user", user)
+	assert.Equal(t, "secret", pass)
 }
 
-func (n openMindedAuthenticator) AuthenticateHTTPBasic(header string) error {
-	return nil
+func Test_parseBasicAuthHeaderIncorrect(t *testing.T) {
+	header := "Basic " + base64.StdEncoding.EncodeToString([]byte("secretuser"))
+	_, _, err := parseBasicAuthHeader(header)
+	assert.EqualError(t, err, "incorrect basic auth header")
+
+	header = "Basic " + base64.StdEncoding.EncodeToString([]byte("s:e:c:r:e:t:u:s:e:r"))
+	_, _, err = parseBasicAuthHeader(header)
+	assert.EqualError(t, err, "incorrect basic auth header")
 }
-
-func Test_Server_ServesHTML(t *testing.T) {
-	s := NewServer(55555, &openMindedAuthenticator{})
-	s.discovery = &mockDiscovery{}
-	serverError := make(chan error)
-	go func() {
-		err := s.Serve()
-		serverError <- err
-	}()
-
-	time.Sleep(time.Millisecond * 5)
-
-	resp, err := http.Get("http://:55555/")
-	assert.Nil(t, err)
-
-	defer resp.Body.Close()
-
-	_, err = html.Parse(resp.Body)
-	assert.Nil(t, err)
-
-	s.Stop()
-	assert.Nil(t, <-serverError)
-}
-
-type mockDiscovery struct{}
-
-func (md *mockDiscovery) Start() error { return nil }
-func (md *mockDiscovery) Stop() error  { return nil }
