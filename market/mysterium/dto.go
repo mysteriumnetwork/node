@@ -28,12 +28,14 @@ type CreateIdentityRequest struct {
 
 // UpdatePayoutInfoRequest represents JSON request for creating payout info request
 type UpdatePayoutInfoRequest struct {
-	EthAddress string `json:"payout_eth_address"`
+	EthAddress   string `json:"payout_eth_address"`
+	ReferralCode string `json:"referral_code"`
 }
 
 // PayoutInfoResponse represents json response for payout info
 type PayoutInfoResponse struct {
-	EthAddress string `json:"eth_address"`
+	EthAddress   string `json:"eth_address"`
+	ReferralCode string `json:"referral_code"`
 }
 
 // NodeRegisterRequest represents JSON for node registration request

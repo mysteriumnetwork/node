@@ -25,21 +25,27 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market/mysterium"
-	"github.com/stretchr/testify/assert"
 )
 
 type mockPayoutInfoRegistry struct {
-	recordedID         identity.Identity
-	recordedEthAddress string
-	mockID             identity.Identity
-	mockEthAddress     string
+	recordedID           identity.Identity
+	recordedEthAddress   string
+	recordedReferralCode string
+
+	mockID           identity.Identity
+	mockEthAddress   string
+	mockReferralCode string
 }
 
-func (mock *mockPayoutInfoRegistry) UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error {
+func (mock *mockPayoutInfoRegistry) UpdatePayoutInfo(id identity.Identity, ethAddress string, referralCode string,
+	signer identity.Signer) error {
 	mock.recordedID = id
 	mock.recordedEthAddress = ethAddress
+	mock.recordedReferralCode = referralCode
 	return nil
 }
 
@@ -48,7 +54,7 @@ func (mock *mockPayoutInfoRegistry) GetPayoutInfo(id identity.Identity, signer i
 		return nil, errors.New("payout info for identity is not mocked")
 	}
 
-	return &mysterium.PayoutInfoResponse{EthAddress: mock.mockEthAddress}, nil
+	return &mysterium.PayoutInfoResponse{EthAddress: mock.mockEthAddress, ReferralCode: mock.mockReferralCode}, nil
 }
 
 var mockSignerFactory = func(id identity.Identity) identity.Signer { return nil }
@@ -84,7 +90,7 @@ func TestUpdatePayoutInfo(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
-		bytes.NewBufferString(`{"ethAddress": "1234payout"}`),
+		bytes.NewBufferString(`{"ethAddress": "1234payout", "referral_code": "1234referral"}`),
 	)
 	assert.NoError(t, err)
 
@@ -96,12 +102,17 @@ func TestUpdatePayoutInfo(t *testing.T) {
 
 	assert.Equal(t, "1234abcd", mockPayoutInfoRegistry.recordedID.Address)
 	assert.Equal(t, "1234payout", mockPayoutInfoRegistry.recordedEthAddress)
+	assert.Equal(t, "1234referral", mockPayoutInfoRegistry.recordedReferralCode)
 	assert.Equal(t, http.StatusOK, resp.Code)
 }
 
 func TestGetPayoutInfo_ReturnsPayoutInfo(t *testing.T) {
 	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
-	mockPayoutInfoRegistry := &mockPayoutInfoRegistry{mockID: existingIdentities[0], mockEthAddress: "mock eth address"}
+	mockPayoutInfoRegistry := &mockPayoutInfoRegistry{
+		mockID:           existingIdentities[0],
+		mockEthAddress:   "mock eth address",
+		mockReferralCode: "mock referral code",
+	}
 	handlerFunc := NewPayoutEndpoint(mockIdm, mockSignerFactory, mockPayoutInfoRegistry).GetPayoutInfo
 
 	resp := httptest.NewRecorder()
@@ -116,7 +127,7 @@ func TestGetPayoutInfo_ReturnsPayoutInfo(t *testing.T) {
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, `{"eth_address": "mock eth address"}`, resp.Body.String())
+	assert.JSONEq(t, `{"eth_address": "mock eth address", "referral_code": "mock referral code"}`, resp.Body.String())
 }
 
 func TestGetPayoutInfo_ReturnsError_WhenPayoutInfoFindingFails(t *testing.T) {

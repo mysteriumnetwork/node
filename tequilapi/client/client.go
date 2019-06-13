@@ -238,12 +238,14 @@ func (client *Client) Unlock(identity, passphrase string) error {
 }
 
 // Payout registers payout address for identity
-func (client *Client) Payout(identity, ethAddress string) error {
+func (client *Client) Payout(identity, ethAddress string, referralCode string) error {
 	path := fmt.Sprintf("identities/%s/payout", identity)
 	payload := struct {
-		EthAddress string `json:"ethAddress"`
+		EthAddress   string `json:"ethAddress"`
+		ReferralCode string `json:"referral_code"`
 	}{
 		ethAddress,
+		referralCode,
 	}
 
 	response, err := client.http.Put(path, payload)

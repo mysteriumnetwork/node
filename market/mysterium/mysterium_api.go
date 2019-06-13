@@ -23,6 +23,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/requests"
@@ -81,10 +82,12 @@ func (mApi *MysteriumAPI) GetPayoutInfo(id identity.Identity, signer identity.Si
 }
 
 // UpdatePayoutInfo registers given payout info next to identity to discovery service
-func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error {
+func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress string, referralCode string,
+	signer identity.Signer) error {
 	path := fmt.Sprintf("identities/%s/payout", id.Address)
 	requestBody := UpdatePayoutInfoRequest{
-		EthAddress: ethAddress,
+		EthAddress:   ethAddress,
+		ReferralCode: referralCode,
 	}
 	req, err := requests.NewSignedPutRequest(mApi.discoveryAPIAddress, path, requestBody, signer)
 	if err != nil {
