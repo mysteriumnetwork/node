@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
+	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
@@ -81,7 +82,6 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi"
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/tequilapi/sse"
-	"github.com/mysteriumnetwork/node/ui/auth"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 )
