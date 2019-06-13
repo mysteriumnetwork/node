@@ -89,8 +89,9 @@ const logPrefix = "[service bootstrap] "
 
 // Storage stores persistent objects for future usage
 type Storage interface {
+	GetValue(bucket string, key interface{}, to interface{}) error
+	SetValue(bucket string, key interface{}, to interface{}) error
 	Store(issuer string, data interface{}) error
-	StoreOrUpdate(bucket string, to interface{}) error
 	Delete(issuer string, data interface{}) error
 	Update(bucket string, object interface{}) error
 	GetAllFrom(bucket string, data interface{}) error

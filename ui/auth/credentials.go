@@ -18,6 +18,7 @@
 package auth
 
 import (
+	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
@@ -25,15 +26,14 @@ import (
 
 // Storage for Credentials
 type Storage interface {
-	StoreOrUpdate(bucket string, data interface{}) error
-	GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error
+	GetValue(bucket string, key interface{}, to interface{}) error
+	SetValue(bucket string, key interface{}, to interface{}) error
 }
 
 const (
-	initialUsername          = "myst"
-	initialPassword          = "mystberry"
-	credentialsStorageBucket = "app-credentials"
-	credentialsStorageID     = 1
+	username            = "myst"
+	initialPassword     = "mystberry"
+	credentialsDBBucket = "app-credentials"
 )
 
 // Credentials verifies/sets user credentials for web UI
@@ -60,32 +60,33 @@ func NewCredentials(username, password string, db Storage) *Credentials {
 
 // Validate username and password against stored Credentials
 func (credentials *Credentials) Validate() (err error) {
-	var sc *storeCredentials
-	sc, err = credentials.loadOrInitialize()
+	var storedHash string
+	storedHash, err = credentials.loadOrInitialize()
 	if err != nil {
 		return errors.Wrap(err, "could not load credentials")
 	}
-	if credentials.username != sc.Username {
+	if credentials.username != username {
 		return errors.New("bad credentials")
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(sc.PasswordHash), []byte(credentials.password))
+	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(credentials.password))
 	if err != nil {
 		return errors.Wrap(err, "bad credentials")
 	}
 	return nil
 }
 
-func (credentials *Credentials) loadOrInitialize() (s *storeCredentials, err error) {
-	var sc = &storeCredentials{}
-	err = credentials.db.GetOneByField(credentialsStorageBucket, "ID", credentialsStorageID, sc)
+func (credentials *Credentials) loadOrInitialize() (s string, err error) {
+	var storedHash string
+	err = credentials.db.GetValue(credentialsDBBucket, username, &storedHash)
 	if err == storage.ErrNotFound {
-		err = NewCredentials(initialUsername, initialPassword, credentials.db).Set()
+		log.Info("[web-ui-auth] credentials not found, initializing to default")
+		err = NewCredentials(username, initialPassword, credentials.db).Set()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to set initial credentials")
+			return "", errors.Wrap(err, "failed to set initial credentials")
 		}
-		err = credentials.db.GetOneByField(credentialsStorageBucket, "ID", credentialsStorageID, sc)
+		err = credentials.db.GetValue(credentialsDBBucket, username, &storedHash)
 	}
-	return sc, err
+	return storedHash, err
 }
 
 // Set new Credentials
@@ -95,12 +96,7 @@ func (credentials *Credentials) Set() (err error) {
 	if err != nil {
 		return errors.Wrap(err, "unable to generate password hash")
 	}
-	sc := &storeCredentials{
-		ID:           credentialsStorageID,
-		Username:     credentials.username,
-		PasswordHash: string(passwordHash),
-	}
-	err = credentials.db.StoreOrUpdate(credentialsStorageBucket, sc)
+	err = credentials.db.SetValue(credentialsDBBucket, credentials.username, string(passwordHash))
 	if err != nil {
 		return errors.Wrap(err, "unable to set credentials")
 	}

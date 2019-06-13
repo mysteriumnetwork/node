@@ -40,18 +40,19 @@ func openDB(name string) (*Bolt, error) {
 	return &Bolt{db}, errors.Wrap(err, "failed to open boltDB")
 }
 
+// GetValue gets key value
+func (b *Bolt) GetValue(bucket string, key interface{}, to interface{}) error {
+	return b.db.Get(bucket, key, to)
+}
+
+// SetValue sets key value
+func (b *Bolt) SetValue(bucket string, key interface{}, to interface{}) error {
+	return b.db.Set(bucket, key, to)
+}
+
 // Store allows to keep struct grouped by the bucket
 func (b *Bolt) Store(bucket string, data interface{}) error {
 	return b.db.From(bucket).Save(data)
-}
-
-// StoreOrUpdate stores or updates struct in the given bucket
-func (b *Bolt) StoreOrUpdate(bucket string, data interface{}) error {
-	err := b.db.From(bucket).Save(data)
-	if err == storm.ErrAlreadyExists {
-		err = b.db.From(bucket).Update(data)
-	}
-	return err
 }
 
 // GetAllFrom allows to get all structs from the bucket
