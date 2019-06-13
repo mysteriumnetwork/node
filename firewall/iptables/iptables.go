@@ -152,7 +152,7 @@ func New(outboundIP string) *Iptables {
 	}
 }
 
-// BlockOutgoingTraffic starts blocking outgoing traffic and returns functiont to remove block
+// BlockOutgoingTraffic starts blocking outgoing traffic and returns function to remove the block
 func (b Iptables) BlockOutgoingTraffic() (firewall.RemoveRule, error) {
 	return addRuleWithRemoval(appendTo(outputChain).ruleSpec(sourceIP, b.outboundIP, jumpTo, killswitchChain))
 }

@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBlockerSetupIsSuccesful(t *testing.T) {
+func TestBlockerSetupIsSuccessful(t *testing.T) {
 	mockedExec := &mockedCmdExec{
 		mocks: map[string]cmdExecResult{
 			"--version": {

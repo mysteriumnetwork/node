@@ -25,7 +25,7 @@ type Resolver interface {
 	GetOutboundIP() (string, error)
 }
 
-// delcared as var for override in test
+// declared as var for override in test
 var checkAddress = "8.8.8.8:53"
 
 // GetOutbound provides an outbound IP address of the current system.

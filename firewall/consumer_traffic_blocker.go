@@ -30,8 +30,8 @@ func BlockNonTunnelTraffic(scope Scope) (RemoveRule, error) {
 }
 
 // AllowURLAccess adds exception to blocked traffic for specified URL (host part is usually taken)
-func AllowURLAccess(URLs ...string) (RemoveRule, error) {
-	return trackingBlocker.AllowURLAccess(URLs...)
+func AllowURLAccess(urls ...string) (RemoveRule, error) {
+	return trackingBlocker.AllowURLAccess(urls...)
 }
 
 // AllowIPAccess adds IP based exception to underlying blocker implementation
