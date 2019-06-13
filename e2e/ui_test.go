@@ -18,12 +18,13 @@
 package e2e
 
 import (
+	"encoding/base64"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
-	ssdp "github.com/koron/go-ssdp"
+	"github.com/koron/go-ssdp"
 	"github.com/oleksandr/bonjour"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,8 +63,11 @@ func TestLANDiscoveryBonjour(t *testing.T) {
 	}
 }
 
-func TestBuiltinUIAccassable(t *testing.T) {
-	resp, err := http.Get("http://" + *providerTequilapiHost + ":4449")
+func TestBuiltinUIAccessible(t *testing.T) {
+	req, err := http.NewRequest("GET", "http://"+*providerTequilapiHost+":4449", nil)
+	assert.NoError(t, err)
+	req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte("myst:mystberry")))
+	resp, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
