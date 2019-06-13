@@ -43,7 +43,6 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/ui"
-	"github.com/mysteriumnetwork/node/ui/auth"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 )
 
@@ -259,7 +258,7 @@ func (di *Dependencies) registerWireguardConnection() {
 
 func (di *Dependencies) bootstrapUIServer(options node.OptionsUI) {
 	if options.UIEnabled {
-		di.UIServer = ui.NewServer(options.UIPort, auth.NewAuth(di.Storage))
+		di.UIServer = ui.NewServer(options.UIPort, di.Authenticator)
 		return
 	}
 

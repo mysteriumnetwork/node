@@ -42,13 +42,6 @@ type Credentials struct {
 	db                 Storage
 }
 
-// storeCredentials - struct stored in DB
-type storeCredentials struct {
-	ID           int
-	Username     string
-	PasswordHash string
-}
-
 // NewCredentials instance
 func NewCredentials(username, password string, db Storage) *Credentials {
 	return &Credentials{
@@ -92,7 +85,7 @@ func (credentials *Credentials) loadOrInitialize() (s string, err error) {
 // Set new Credentials
 func (credentials *Credentials) Set() (err error) {
 	var passwordHash []byte
-	passwordHash, err = bcrypt.GenerateFromPassword([]byte(initialPassword), bcrypt.DefaultCost)
+	passwordHash, err = bcrypt.GenerateFromPassword([]byte(credentials.password), bcrypt.DefaultCost)
 	if err != nil {
 		return errors.Wrap(err, "unable to generate password hash")
 	}

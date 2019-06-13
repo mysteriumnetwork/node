@@ -21,27 +21,45 @@ import (
 	"encoding/base64"
 	"errors"
 	"strings"
+
+	log "github.com/cihub/seelog"
 )
 
-// Auth provides an authentication method for builtin UI.
-type Auth struct {
+// Authenticator provides an authentication method for builtin UI.
+type Authenticator struct {
 	storage Storage
 }
 
-// NewAuth creates an authenticator
-func NewAuth(storage Storage) *Auth {
-	return &Auth{
+// NewAuthenticator creates an authenticator
+func NewAuthenticator(storage Storage) *Authenticator {
+	return &Authenticator{
 		storage: storage,
 	}
 }
 
 // AuthenticateHTTPBasic authenticates user using http basic auth header
-func (a *Auth) AuthenticateHTTPBasic(header string) error {
+func (a *Authenticator) AuthenticateHTTPBasic(header string) error {
 	username, password, err := parseBasicAuthHeader(header)
 	if err != nil {
 		return err
 	}
 	return NewCredentials(username, password, a.storage).Validate()
+}
+
+// ChangePassword changes user password
+func (a *Authenticator) ChangePassword(username, oldPassword, newPassword string) (err error) {
+	err = NewCredentials(username, oldPassword, a.storage).Validate()
+	if err != nil {
+		log.Info("bad credentials for changing password: ", err)
+		return ErrUnauthorized
+	}
+	err = NewCredentials(username, newPassword, a.storage).Set()
+	if err != nil {
+		log.Infof("error changing password: ", err)
+		return err
+	}
+	log.Infof("%s user password changed successfully", username)
+	return nil
 }
 
 func parseBasicAuthHeader(header string) (user, password string, err error) {
