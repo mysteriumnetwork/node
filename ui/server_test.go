@@ -29,7 +29,7 @@ import (
 type openMindedAuthenticator struct {
 }
 
-func (n openMindedAuthenticator) AuthenticateHTTPBasic(header string) error {
+func (n openMindedAuthenticator) Authenticate(username, password string) error {
 	return nil
 }
 

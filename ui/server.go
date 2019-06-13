@@ -40,20 +40,16 @@ type Server struct {
 	discovery discovery.LANDiscovery
 }
 
-// Authenticator handles web UI auth
-type Authenticator interface {
-	AuthenticateHTTPBasic(header string) error
-}
-
 // NewServer creates a new instance of the server for the given port
-func NewServer(port int, authenticator Authenticator) *Server {
+func NewServer(port int, auth authenticator) *Server {
+	wauth := newWebAuthenticator(auth)
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
 
 	authorized := r.Group("/", func(c *gin.Context) {
-		if err := authenticator.AuthenticateHTTPBasic(c.GetHeader("Authorization")); err != nil {
+		if err := wauth.authenticateHTTPBasic(c.GetHeader("Authorization")); err != nil {
 			log.Warn(logPrefix, "authentication failed: ", err)
 			c.Header("WWW-Authenticate", "Basic realm="+strconv.Quote("Authorization required"))
 			c.AbortWithStatus(http.StatusUnauthorized)

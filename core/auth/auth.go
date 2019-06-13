@@ -18,10 +18,6 @@
 package auth
 
 import (
-	"encoding/base64"
-	"errors"
-	"strings"
-
 	log "github.com/cihub/seelog"
 )
 
@@ -37,12 +33,8 @@ func NewAuthenticator(storage Storage) *Authenticator {
 	}
 }
 
-// AuthenticateHTTPBasic authenticates user using http basic auth header
-func (a *Authenticator) AuthenticateHTTPBasic(header string) error {
-	username, password, err := parseBasicAuthHeader(header)
-	if err != nil {
-		return err
-	}
+// Authenticate authenticates user by password
+func (a *Authenticator) Authenticate(username, password string) error {
 	return NewCredentials(username, password, a.storage).Validate()
 }
 
@@ -60,19 +52,4 @@ func (a *Authenticator) ChangePassword(username, oldPassword, newPassword string
 	}
 	log.Infof("%s user password changed successfully", username)
 	return nil
-}
-
-func parseBasicAuthHeader(header string) (user, password string, err error) {
-	header = strings.TrimPrefix(header, "Basic ")
-	out, err := base64.StdEncoding.DecodeString(header)
-	if err != nil {
-		return "", "", err
-	}
-
-	cred := strings.Split(string(out), ":")
-	if len(cred) != 2 {
-		return "", "", errors.New("incorrect basic auth header")
-	}
-
-	return cred[0], cred[1], nil
 }

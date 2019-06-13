@@ -104,7 +104,7 @@ type Storage interface {
 
 // Authenticator provides authentication for Tequilapi and UI
 type Authenticator interface {
-	AuthenticateHTTPBasic(header string) error
+	Authenticate(username, password string) error
 	ChangePassword(username, oldPassword, newPassword string) (err error)
 }
 

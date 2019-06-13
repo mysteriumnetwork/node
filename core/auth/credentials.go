@@ -82,7 +82,7 @@ func (credentials *Credentials) loadOrInitialize() (s string, err error) {
 	return storedHash, err
 }
 
-// Set new Credentials
+// Set new credentials
 func (credentials *Credentials) Set() (err error) {
 	var passwordHash []byte
 	passwordHash, err = bcrypt.GenerateFromPassword([]byte(credentials.password), bcrypt.DefaultCost)
