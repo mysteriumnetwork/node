@@ -44,7 +44,7 @@ func TestBlockerSetupIsSuccessful(t *testing.T) {
 	blocker := New("1.1.1.1")
 	assert.NoError(t, blocker.Setup())
 	assert.True(t, mockedExec.VerifyCalledWithArgs(addChain, killswitchChain))
-	assert.True(t, mockedExec.VerifyCalledWithArgs(appendRule, killswitchChain, module, conntrack, ct_state, ct_state_new, jumpTo, reject))
+	assert.True(t, mockedExec.VerifyCalledWithArgs(appendRule, killswitchChain, module, conntrack, ctState, ctStateNew, jumpTo, reject))
 }
 
 func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
@@ -78,7 +78,7 @@ func TestBlockerSetupIsSucessfulIfPreviousCleanupFailed(t *testing.T) {
 	assert.True(t, mockedExec.VerifyCalledWithArgs(removeChainRules, killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs(removeChain, killswitchChain))
 	assert.True(t, mockedExec.VerifyCalledWithArgs(addChain, killswitchChain))
-	assert.True(t, mockedExec.VerifyCalledWithArgs(appendRule, killswitchChain, module, conntrack, ct_state, ct_state_new, jumpTo, reject))
+	assert.True(t, mockedExec.VerifyCalledWithArgs(appendRule, killswitchChain, module, conntrack, ctState, ctStateNew, jumpTo, reject))
 
 }
 

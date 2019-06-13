@@ -52,9 +52,9 @@ const (
 	udp             = "udp"
 	destinationPort = "--dport"
 
-	conntrack    = "conntrack"
-	ct_state     = "--ctstate"
-	ct_state_new = "NEW"
+	conntrack  = "conntrack"
+	ctState    = "--ctstate"
+	ctStateNew = "NEW"
 
 	reject = "REJECT"
 	accept = "ACCEPT"
@@ -124,7 +124,7 @@ func setupKillSwitchChain() error {
 		return err
 	}
 	// by default all packets going to kill switch chain are rejected
-	if _, err := iptablesExec(appendRule, killswitchChain, module, conntrack, ct_state, ct_state_new, jumpTo, reject); err != nil {
+	if _, err := iptablesExec(appendRule, killswitchChain, module, conntrack, ctState, ctStateNew, jumpTo, reject); err != nil {
 		return err
 	}
 
