@@ -30,7 +30,7 @@ fi
 
 DATE=`date -R`
 
-PPA="node"
+PPA="node-pre"
 if [ "$VERSION" == "$PPA_DEV_VERSION" ]; then
     PPA="node-dev"
 fi
