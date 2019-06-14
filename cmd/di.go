@@ -35,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
+	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	discovery_api "github.com/mysteriumnetwork/node/core/discovery/api"
@@ -99,6 +100,12 @@ type Storage interface {
 	GetLast(bucket string, to interface{}) error
 	GetBuckets() []string
 	Close() error
+}
+
+// Authenticator provides authentication for Tequilapi and UI
+type Authenticator interface {
+	Authenticate(username, password string) error
+	ChangePassword(username, oldPassword, newPassword string) (err error)
 }
 
 // NatPinger is responsible for pinging nat holes
@@ -188,8 +195,9 @@ type Dependencies struct {
 
 	StateKeeper *state.Keeper
 
-	UIServer   UIServer
-	SSEHandler *sse.Handler
+	Authenticator Authenticator
+	UIServer      UIServer
+	SSEHandler    *sse.Handler
 }
 
 // Bootstrap initiates all container dependencies
@@ -231,6 +239,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	di.bootstrapAuthenticator()
 	di.bootstrapUIServer(nodeOptions.UI)
 
 	if err := di.bootstrapBandwidthTracker(); err != nil {
@@ -435,6 +444,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
+	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator)
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.DiscoveryFinder)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
@@ -661,6 +671,10 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	}
 
 	return nil
+}
+
+func (di *Dependencies) bootstrapAuthenticator() {
+	di.Authenticator = auth.NewAuthenticator(di.Storage)
 }
 
 func (di *Dependencies) bootstrapBandwidthTracker() error {
