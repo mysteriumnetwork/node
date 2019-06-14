@@ -33,8 +33,8 @@ type Sender struct {
 }
 
 type metricsSender interface {
-	SendNATMappingSuccessEvent(stage string, gateways []map[string]string) error
-	SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) error
+	SendNATMappingSuccessEvent(stage string, gateways []map[string]string)
+	SendNATMappingFailEvent(stage string, gateways []map[string]string, err error)
 }
 
 type ipResolver func() (string, error)
@@ -60,21 +60,18 @@ func (es *Sender) ConsumeNATEvent(event Event) {
 		return
 	}
 
-	err = es.sendNATEvent(event)
-	if err != nil {
-		log.Warnf(senderLogPrefix, "sending event failed: ", err)
-	}
+	es.sendNATEvent(event)
 
 	es.lastIp = publicIP
 	es.lastEvent = &event
 }
 
-func (es *Sender) sendNATEvent(event Event) error {
+func (es *Sender) sendNATEvent(event Event) {
 	if event.Successful {
-		return es.metricsSender.SendNATMappingSuccessEvent(event.Stage, es.gatewayLoader())
+		es.metricsSender.SendNATMappingSuccessEvent(event.Stage, es.gatewayLoader())
+	} else {
+		es.metricsSender.SendNATMappingFailEvent(event.Stage, es.gatewayLoader(), event.Error)
 	}
-
-	return es.metricsSender.SendNATMappingFailEvent(event.Stage, es.gatewayLoader(), event.Error)
 }
 
 func (es *Sender) matchesLastEvent(event Event) bool {

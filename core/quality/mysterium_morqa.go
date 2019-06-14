@@ -82,19 +82,16 @@ func (m *MysteriumMORQA) ProposalsMetrics() []json.RawMessage {
 func (m *MysteriumMORQA) SendMetric(event *metrics.Event) error {
 	request, err := m.newRequestBinary(http.MethodPost, "metrics", event)
 	if err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, err)
 		return err
 	}
 
 	response, err := m.http.Do(request)
 	if err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, err)
 		return err
 	}
 	defer response.Body.Close()
 
 	if err = parseResponseError(response); err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, err)
 		return err
 	}
 
