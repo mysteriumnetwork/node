@@ -94,8 +94,8 @@ func TestStorage_Remove(t *testing.T) {
 
 func TestStorage_RemoveNonExisting(t *testing.T) {
 	storage := &StorageMemory{
-		sessions:  map[ID]Session{},
-		publisher: &mockPublisher{},
+		sessions: map[ID]Session{},
+		bus:      &mockPublisher{},
 	}
 	storage.Remove(sessionExisting.ID)
 	assert.Len(t, storage.sessions, 0)
@@ -171,8 +171,8 @@ func TestStorage_PublishesEventsOnDelete(t *testing.T) {
 
 func mockStorage(sessionInstance Session) *StorageMemory {
 	return &StorageMemory{
-		sessions:  map[ID]Session{sessionInstance.ID: sessionInstance},
-		publisher: &mockPublisher{},
+		sessions: map[ID]Session{sessionInstance.ID: sessionInstance},
+		bus:      &mockPublisher{},
 	}
 }
 

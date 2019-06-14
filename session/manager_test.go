@@ -54,6 +54,10 @@ func (mp *mockPublisher) Publish(topic string, data interface{}) {
 	mp.lock.Unlock()
 }
 
+func (mp *mockPublisher) SubscribeAsync(topic string, f interface{}) error {
+	return nil
+}
+
 func (mp *mockPublisher) getLast() sessionEvent.Payload {
 	mp.lock.Lock()
 	defer mp.lock.Unlock()

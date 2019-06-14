@@ -24,6 +24,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
+	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/bytecount"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/core/location"
@@ -35,7 +36,14 @@ import (
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_session "github.com/mysteriumnetwork/node/services/openvpn/session"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/event"
 )
+
+const statisticsReportingIntervalInSeconds = 30
+
+type publisher interface {
+	Publish(topic string, data interface{})
+}
 
 // NewManager creates new instance of Openvpn service
 func NewManager(nodeOptions node.Options,
@@ -47,10 +55,24 @@ func NewManager(nodeOptions node.Options,
 	mapPort func(int) (releasePortMapping func()),
 	natEventGetter NATEventGetter,
 	portPool port.ServicePortSupplier,
+	publisher publisher,
 ) *Manager {
-	sessionValidator := openvpn_session.NewValidator(sessionMap, identity.NewExtractor())
+	clientMap := openvpn_session.NewClientMap(sessionMap)
 
-	serverFactory := newServerFactory(nodeOptions, sessionValidator)
+	sessionValidator := openvpn_session.NewValidator(clientMap, identity.NewExtractor())
+
+	callback := func(sbc bytecount.SessionByteCount) {
+		sessions := clientMap.GetClientSessions(sbc.ClientID)
+		if len(sessions) > 0 {
+			publisher.Publish(event.DataTransfered, event.DataTransferEventPayload{
+				ID:   string(sessions[0]),
+				Up:   int64(sbc.BytesOut),
+				Down: int64(sbc.BytesIn),
+			})
+		}
+	}
+
+	serverFactory := newServerFactory(nodeOptions, sessionValidator, callback)
 
 	return &Manager{
 		publicIP:                       location.PubIP,
@@ -83,13 +105,14 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 	}
 }
 
-func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator) ServerFactory {
+func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, callback func(bytecount.SessionByteCount)) ServerFactory {
 	return func(config *openvpn_service.ServerConfig) openvpn.Process {
 		return openvpn.CreateNewProcess(
 			nodeOptions.Openvpn.BinaryPath(),
 			config.GenericConfig,
 			auth.NewMiddleware(sessionValidator.Validate),
 			state.NewMiddleware(vpnStateCallback),
+			bytecount.NewMiddleware(callback, statisticsReportingIntervalInSeconds),
 		)
 	}
 }

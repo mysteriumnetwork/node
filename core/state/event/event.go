@@ -61,4 +61,8 @@ type ServiceSession struct {
 	ConsumerID string `json:"consumerId"`
 	// example: 2019-06-06T11:04:43.910035Z
 	CreatedAt time.Time `json:"createdAt"`
+	// example: 12345
+	BytesUp int64 `json:"bytesUp"`
+	// example: 23451
+	BytesDown int64 `json:"bytesDown"`
 }

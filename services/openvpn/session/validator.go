@@ -18,8 +18,6 @@
 package session
 
 import (
-	"sync"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session"
 )
@@ -34,13 +32,9 @@ type Validator struct {
 }
 
 // NewValidator return Validator instance
-func NewValidator(sessionMap SessionMap, extractor identity.Extractor) *Validator {
+func NewValidator(clientMap *clientMap, extractor identity.Extractor) *Validator {
 	return &Validator{
-		clientMap: &clientMap{
-			sessions:         sessionMap,
-			sessionClientIDs: make(map[session.ID]int),
-			sessionMapLock:   sync.Mutex{},
-		},
+		clientMap:         clientMap,
 		identityExtractor: extractor,
 	}
 }

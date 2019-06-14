@@ -31,7 +31,7 @@ func mockValidator(identityToExtract identity.Identity) *Validator {
 		session.Session{},
 		false,
 	}
-	return NewValidator(mockSessions, mockExtractor)
+	return NewValidator(NewClientMap(mockSessions), mockExtractor)
 }
 
 func mockValidatorWithSession(identityToExtract identity.Identity, sessionInstance session.Session) *Validator {
@@ -43,7 +43,7 @@ func mockValidatorWithSession(identityToExtract identity.Identity, sessionInstan
 		sessionInstance,
 		true,
 	}
-	return NewValidator(mockSessions, mockExtractor)
+	return NewValidator(NewClientMap(mockSessions), mockExtractor)
 }
 
 // mockIdentityExtractor mocked identity extractor

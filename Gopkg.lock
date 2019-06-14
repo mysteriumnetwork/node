@@ -479,7 +479,7 @@
   version = "0.0.7"
 
 [[projects]]
-  digest = "1:722ca4885d4c2a54e87e065857d59414791f4b3b775ad024039232a7c4832438"
+  digest = "1:4d5402ba3b77f26c810297827842889cf315bfc7a64ff7a0e6a477e2bf1823ce"
   name = "github.com/mysteriumnetwork/go-openvpn"
   packages = [
     "openvpn",
@@ -488,14 +488,15 @@
     "openvpn/middlewares/client/auth",
     "openvpn/middlewares/client/bytescount",
     "openvpn/middlewares/server/auth",
+    "openvpn/middlewares/server/bytecount",
     "openvpn/middlewares/state",
     "openvpn/tls",
     "openvpn/tunnel",
     "openvpn3",
   ]
   pruneopts = "T"
-  revision = "123097496fe71e64e9f5752127a257e3dce0631b"
-  version = "0.0.13"
+  revision = "39a3593d80f134010ecf7505eed440f070f7e575"
+  version = "0.0.14"
 
 [[projects]]
   digest = "1:8a20b209f06b19844908cf0367975d0966d6c188e5381ebd9327d6cd5d2ab990"
@@ -1092,6 +1093,7 @@
     "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/auth",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/client/bytescount",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth",
+    "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/bytecount",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/tls",
     "github.com/mysteriumnetwork/go-openvpn/openvpn3",
