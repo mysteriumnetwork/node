@@ -78,7 +78,7 @@ func (m *MysteriumMORQA) ProposalsMetrics() []json.RawMessage {
 	return metricsResponse.Connects
 }
 
-// SentEvent metric event to oracle
+// SendMetric submits new metric
 func (m *MysteriumMORQA) SendMetric(event *metrics.Event) error {
 	request, err := m.newRequestBinary(http.MethodPost, "metrics", event)
 	if err != nil {
