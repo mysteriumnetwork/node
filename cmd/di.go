@@ -631,16 +631,19 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
-	if _, err = firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
+	if _, err := firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
 		return err
 	}
-	di.QualityClient = quality.NewMorqaClient(di.NetworkDefinition.QualityOracle, 5*time.Second)
+	di.QualityClient = quality.NewMorqaClient(di.NetworkDefinition.QualityOracle, 30*time.Second)
 
 	var transport quality.Transport
 	switch options.Type {
+	case node.QualityTypeElastic:
+		_, err = firewall.AllowURLAccess(options.Address)
+		transport = quality.NewElasticSearchTransport(options.Address, 10*time.Second)
 	case node.QualityTypeMORQA:
 		_, err = firewall.AllowURLAccess(options.Address)
-		transport = quality.NewMORQATransport(di.QualityClient, quality.NewNoopTransport())
+		transport = quality.NewMORQATransport(di.QualityClient)
 	case node.QualityTypeNone:
 		transport = quality.NewNoopTransport()
 	default:

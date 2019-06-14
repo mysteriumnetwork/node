@@ -28,12 +28,13 @@ var (
 	qualityTypeFlag = cli.StringFlag{
 		Name: "quality.type",
 		Usage: fmt.Sprintf(
-			"Quality Oracle adapter. Options:  (%s, %s - %s)",
+			"Quality Oracle adapter. Options:  (%s, %s, %s - %s)",
+			node.QualityTypeElastic,
 			node.QualityTypeMORQA,
 			node.QualityTypeNone,
 			"opt-out from sending quality metrics",
 		),
-		Value: string(node.QualityTypeMORQA),
+		Value: string(node.QualityTypeElastic),
 	}
 	qualityAddressFlag = cli.StringFlag{
 		Name: "quality.address",

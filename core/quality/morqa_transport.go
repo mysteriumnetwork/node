@@ -18,6 +18,8 @@
 package quality
 
 import (
+	"fmt"
+
 	"github.com/mysteriumnetwork/metrics"
 )
 
@@ -26,27 +28,22 @@ var (
 )
 
 // NewMORQATransport creates transport allowing to send events to Mysterium Quality Oracle - MORQA
-func NewMORQATransport(morqaClient *MysteriumMORQA, backupTransport Transport) *morqaTransport {
+func NewMORQATransport(morqaClient *MysteriumMORQA) *morqaTransport {
 	return &morqaTransport{
-		morqaClient:     morqaClient,
-		backupTransport: backupTransport,
+		morqaClient: morqaClient,
 	}
 }
 
 type morqaTransport struct {
-	morqaClient     *MysteriumMORQA
-	backupTransport Transport
+	morqaClient *MysteriumMORQA
 }
 
 func (transport *morqaTransport) SendEvent(event Event) error {
 	if metric := mapEventToMetric(event); metric != emptyMetric {
-		err := transport.morqaClient.SendMetric(metric)
-		if err != nil {
-			return err
-		}
+		return transport.morqaClient.SendMetric(metric)
 	}
 
-	return transport.backupTransport.SendEvent(event)
+	return fmt.Errorf("event not implemented")
 }
 
 func mapEventToMetric(event Event) *metrics.Event {
