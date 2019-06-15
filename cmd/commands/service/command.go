@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
@@ -74,26 +75,26 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				os.Exit(2)
 			}
 
-			errorChannel := make(chan error)
+			quit := make(chan error)
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			if err := di.Bootstrap(nodeOptions); err != nil {
 				return err
 			}
-			go func() { errorChannel <- di.Node.Wait() }()
+			go func() { quit <- di.Node.Wait() }()
 
-			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
+			cmd.RegisterSignalCallback(func() { quit <- nil })
 
 			cmdService := &serviceCommand{
 				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
-				errorChannel: errorChannel,
+				errorChannel: quit,
 				ap:           parseAccessPolicyFlag(ctx),
 			}
 
 			go func() {
-				errorChannel <- cmdService.Run(ctx)
+				quit <- cmdService.Run(ctx)
 			}()
 
-			return <-errorChannel
+			return describeQuit(<-quit)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
@@ -103,6 +104,15 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	registerFlags(&command.Flags)
 
 	return command
+}
+
+func describeQuit(err error) error {
+	if err == nil {
+		seelog.Info("stopping application")
+	} else {
+		seelog.Errorf("terminating application due to error: %+v\n", err)
+	}
+	return err
 }
 
 // serviceCommand represent entrypoint for service command with top level components

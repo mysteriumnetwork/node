@@ -20,12 +20,14 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
+	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -64,9 +66,18 @@ func NewCommand() *cli.Command {
 			}
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
 
-			return cmdCLI.Run()
+			return describeQuit(cmdCLI.Run())
 		},
 	}
+}
+
+func describeQuit(err error) error {
+	if err == nil || err == io.EOF || err == readline.ErrInterrupt {
+		seelog.Info("stopping application")
+		return nil
+	}
+	seelog.Errorf("terminating application due to error: %+v\n", err)
+	return err
 }
 
 // cliApp describes CLI based Mysterium UI

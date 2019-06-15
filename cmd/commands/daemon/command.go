@@ -18,6 +18,7 @@
 package daemon
 
 import (
+	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/urfave/cli"
 )
@@ -31,18 +32,27 @@ func NewCommand() *cli.Command {
 		Usage:     "Starts Mysterium Tequilapi service",
 		ArgsUsage: " ",
 		Action: func(ctx *cli.Context) error {
-			errorChannel := make(chan error, 2)
+			quit := make(chan error, 2)
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
-			go func() { errorChannel <- di.Node.Wait() }()
+			go func() { quit <- di.Node.Wait() }()
 
-			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
+			cmd.RegisterSignalCallback(func() { quit <- nil })
 
-			return <-errorChannel
+			return describeQuit(<-quit)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
 		},
 	}
+}
+
+func describeQuit(err error) error {
+	if err == nil {
+		seelog.Info("stopping application")
+	} else {
+		seelog.Errorf("terminating application due to error: %+v\n", err)
+	}
+	return err
 }
