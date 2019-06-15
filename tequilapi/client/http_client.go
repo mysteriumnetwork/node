@@ -44,7 +44,7 @@ func newHTTPClient(baseURL string, logPrefix string, ua string) *httpClient {
 	return &httpClient{
 		http: &http.Client{
 			Transport: &http.Transport{},
-			Timeout:   time.Second * 120,
+			Timeout:   100 * time.Second,
 		},
 		baseURL:   baseURL,
 		logPrefix: logPrefix,

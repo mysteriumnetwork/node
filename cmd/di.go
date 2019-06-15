@@ -633,7 +633,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	if _, err := firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
 		return err
 	}
-	di.QualityClient = quality.NewMorqaClient(di.NetworkDefinition.QualityOracle, 30*time.Second)
+	di.QualityClient = quality.NewMorqaClient(di.NetworkDefinition.QualityOracle, 20*time.Second)
 
 	var transport quality.Transport
 	switch options.Type {

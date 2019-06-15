@@ -43,7 +43,7 @@ type MysteriumAPI struct {
 // NewClient creates Mysterium centralized api instance with real communication
 func NewClient(discoveryAPIAddress string) *MysteriumAPI {
 	return &MysteriumAPI{
-		requests.NewHTTPClient(1 * time.Minute),
+		requests.NewHTTPClient(20 * time.Second),
 		discoveryAPIAddress,
 	}
 }
