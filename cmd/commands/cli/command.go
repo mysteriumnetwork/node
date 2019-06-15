@@ -18,7 +18,6 @@
 package cli
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -27,8 +26,6 @@ import (
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/urfave/cli"
-
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -39,6 +36,8 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/pkg/errors"
+	"github.com/urfave/cli"
 )
 
 const cliCommandName = "cli"

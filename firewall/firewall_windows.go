@@ -18,11 +18,11 @@
 package firewall
 
 import (
-	"errors"
 	"fmt"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/pkg/errors"
 )
 
 const (

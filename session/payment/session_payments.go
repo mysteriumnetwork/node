@@ -19,7 +19,6 @@ package payment
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/promises"
+	"github.com/pkg/errors"
 )
 
 // PeerPromiseSender knows how to send a promise message to the peer

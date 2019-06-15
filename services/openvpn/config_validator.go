@@ -22,10 +22,11 @@ import (
 	"bytes"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"net"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // ValidateConfig is function which takes VPNConfig as argument, checks it and returns error if validation fails

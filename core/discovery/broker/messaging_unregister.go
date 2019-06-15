@@ -18,11 +18,11 @@
 package broker
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/pkg/errors"
 )
 
 // unregisterMessage structure represents message that the Provider sends about de-announced Proposal
@@ -53,7 +53,7 @@ func (pmc *unregisterConsumer) NewMessage() (messagePtr interface{}) {
 func (pmc *unregisterConsumer) Consume(messagePtr interface{}) error {
 	msg, ok := messagePtr.(unregisterMessage)
 	if !ok {
-		return fmt.Errorf("consume received message of type %q, expected unregisterMessage instead", reflect.TypeOf(messagePtr))
+		return errors.Errorf("consume received message of type %q, expected unregisterMessage instead", reflect.TypeOf(messagePtr))
 	}
 
 	pmc.queue <- msg

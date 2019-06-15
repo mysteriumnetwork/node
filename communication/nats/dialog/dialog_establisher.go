@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats/discovery"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/pkg/errors"
 )
 
 // NewDialogEstablisher constructs new DialogEstablisher which works thru NATS connection.
@@ -60,7 +61,7 @@ func (establisher *dialogEstablisher) EstablishDialog(
 	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", peerContact))
 	peerAddress, err := establisher.peerAddressFactory(peerContact)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to: %#v. %s", peerContact, err)
+		return nil, errors.Errorf("failed to connect to: %#v. %s", peerContact, err)
 	}
 
 	peerCodec := establisher.newCodecForPeer(peerID)
@@ -86,10 +87,10 @@ func (establisher *dialogEstablisher) negotiateTopic(sender communication.Sender
 		},
 	})
 	if err != nil {
-		return "", fmt.Errorf("dialog creation error. %s", err)
+		return "", errors.Errorf("dialog creation error. %s", err)
 	}
 	if response.(*dialogCreateResponse).Reason != 200 {
-		return "", fmt.Errorf("dialog creation rejected. %#v", response)
+		return "", errors.Errorf("dialog creation rejected. %#v", response)
 	}
 
 	return response.(*dialogCreateResponse).Topic, nil

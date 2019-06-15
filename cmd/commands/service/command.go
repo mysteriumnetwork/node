@@ -31,6 +31,7 @@ import (
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -194,7 +195,7 @@ func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Opti
 	if f, ok := serviceTypesFlagsParser[serviceType]; ok {
 		return f(ctx), nil
 	}
-	return service.OptionsIdentity{}, fmt.Errorf("unknown service type: %q", serviceType)
+	return service.OptionsIdentity{}, errors.Errorf("unknown service type: %q", serviceType)
 }
 
 func printTermWarning(licenseCommandName string) {

@@ -19,16 +19,15 @@ package session
 
 import (
 	"encoding/json"
-	"errors"
 	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
-
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	"github.com/pkg/errors"
 	sevent "github.com/mysteriumnetwork/node/session/event"
 )
 

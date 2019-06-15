@@ -20,7 +20,7 @@ package core
 import (
 	"bufio"
 	"bytes"
-	"errors"
+
 	"io"
 	"net/textproto"
 	"os/exec"
@@ -28,6 +28,7 @@ import (
 	"syscall"
 
 	log "github.com/cihub/seelog"
+	"github.com/pkg/errors"
 )
 
 // NodeOptions describes possible parameters of Openvpn configuration

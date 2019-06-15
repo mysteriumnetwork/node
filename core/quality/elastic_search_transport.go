@@ -18,12 +18,12 @@
 package quality
 
 import (
-	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/mysteriumnetwork/node/requests"
+	"github.com/pkg/errors"
 )
 
 // NewElasticSearchTransport creates transport allowing to send events to ElasticSearch through HTTP
@@ -53,16 +53,16 @@ func (transport *elasticSearchTransport) SendEvent(event Event) error {
 
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return fmt.Errorf("error while reading response body: %v", err)
+		return errors.Errorf("error while reading response body: %v", err)
 	}
 	body := string(bodyBytes)
 
 	if response.StatusCode != 200 {
-		return fmt.Errorf("unexpected response status: %v, body: %v", response.Status, body)
+		return errors.Errorf("unexpected response status: %v, body: %v", response.Status, body)
 	}
 
 	if strings.ToUpper(body) != "OK" {
-		return fmt.Errorf("unexpected response body: %v", body)
+		return errors.Errorf("unexpected response body: %v", body)
 	}
 
 	return nil

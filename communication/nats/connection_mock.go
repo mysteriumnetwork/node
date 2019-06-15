@@ -18,11 +18,10 @@
 package nats
 
 import (
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/nats-io/go-nats"
+	"github.com/pkg/errors"
 )
 
 // NewConnectionMock constructs new NATS connection
@@ -149,7 +148,7 @@ func (conn *ConnectionMock) Request(subject string, payload []byte, timeout time
 	case response := <-responseCh:
 		return response, nil
 	case <-time.After(timeout):
-		return nil, fmt.Errorf("request '%s' timeout", subject)
+		return nil, errors.Errorf("request '%s' timeout", subject)
 	}
 }
 

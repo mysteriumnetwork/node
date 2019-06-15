@@ -20,9 +20,8 @@
 package mysterium
 
 import (
-	"errors"
-
 	"github.com/mysteriumnetwork/wireguard-go/tun"
+	"github.com/pkg/errors"
 )
 
 func newDeviceFromFd(_ int) (tun.TUNDevice, error) {

@@ -23,6 +23,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/pkg/errors"
 )
 
 const senderLogPrefix = "[NATS.Sender] "
@@ -51,7 +52,7 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 
 	messageData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
-		err = fmt.Errorf("failed to encode message '%s'. %s", messageTopic, err)
+		err = errors.Errorf("failed to encode message '%s'. %s", messageTopic, err)
 		return err
 	}
 
@@ -62,7 +63,7 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 	log.Debug(senderLogPrefix, fmt.Sprintf("Message '%s' sending: %s", messageTopic, messageData))
 	err = sender.connection.Publish(messageTopic, messageData)
 	if err != nil {
-		err = fmt.Errorf("failed to send message '%s'. %s", messageTopic, err)
+		err = errors.Errorf("failed to send message '%s'. %s", messageTopic, err)
 		return err
 	}
 
@@ -75,7 +76,7 @@ func (sender *senderNATS) Request(producer communication.RequestProducer) (respo
 
 	requestData, err := sender.codec.Pack(producer.Produce())
 	if err != nil {
-		err = fmt.Errorf("failed to pack request '%s'. %s", requestTopic, err)
+		err = errors.Errorf("failed to pack request '%s'. %s", requestTopic, err)
 		return
 	}
 
@@ -86,14 +87,14 @@ func (sender *senderNATS) Request(producer communication.RequestProducer) (respo
 	log.Debug(senderLogPrefix, fmt.Sprintf("Request '%s' sending: %s", requestTopic, requestData))
 	msg, err := sender.connection.Request(requestTopic, requestData, sender.timeoutRequest)
 	if err != nil {
-		err = fmt.Errorf("failed to send request '%s'. %s", requestTopic, err)
+		err = errors.Errorf("failed to send request '%s'. %s", requestTopic, err)
 		return
 	}
 
 	log.Debug(senderLogPrefix, fmt.Sprintf("Received response for '%s': %s", requestTopic, msg.Data))
 	err = sender.codec.Unpack(msg.Data, responsePtr)
 	if err != nil {
-		err = fmt.Errorf("failed to unpack response '%s'. %s", requestTopic, err)
+		err = errors.Errorf("failed to unpack response '%s'. %s", requestTopic, err)
 		log.Error(receiverLogPrefix, err)
 		return
 	}

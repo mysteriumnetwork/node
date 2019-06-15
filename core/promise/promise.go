@@ -21,12 +21,12 @@ package promise
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
+	"github.com/pkg/errors"
 )
 
 const endpoint = "promise-create"

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/pkg/errors"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication/nats"
@@ -68,12 +69,12 @@ func NewAddressFromHostAndID(uri string, myID identity.Identity, serviceType str
 // NewAddressForContact extracts NATS address from given contact structure
 func NewAddressForContact(contact market.Contact) (*AddressNATS, error) {
 	if contact.Type != TypeContactNATSV1 {
-		return nil, fmt.Errorf("invalid contact type: %s", contact.Type)
+		return nil, errors.Errorf("invalid contact type: %s", contact.Type)
 	}
 
 	contactNats, ok := contact.Definition.(ContactNATSV1)
 	if !ok {
-		return nil, fmt.Errorf("invalid contact definition: %#v", contact.Definition)
+		return nil, errors.Errorf("invalid contact definition: %#v", contact.Definition)
 	}
 
 	return &AddressNATS{

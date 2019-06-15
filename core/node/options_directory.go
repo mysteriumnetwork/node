@@ -18,8 +18,8 @@
 package node
 
 import (
-	"errors"
 	"os"
+	"github.com/pkg/errors"
 )
 
 // OptionsDirectory describes data structure holding directories as parameters

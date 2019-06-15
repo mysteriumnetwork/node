@@ -615,7 +615,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 		sender := discovery_broker.NewSender(nats.NewConnectionMock())
 		registry = discovery_broker.NewRegistry(sender)
 	default:
-		return fmt.Errorf("unknown discovery provider: %s", options.Type)
+		return errors.Errorf("unknown discovery provider: %s", options.Type)
 	}
 
 	di.DiscoveryFactory = func() service.Discovery {
@@ -646,7 +646,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	case node.QualityTypeNone:
 		transport = quality.NewNoopTransport()
 	default:
-		err = fmt.Errorf("unknown Quality Oracle provider: %s", options.Type)
+		err = errors.Errorf("unknown Quality Oracle provider: %s", options.Type)
 	}
 	if err != nil {
 		return err
@@ -675,7 +675,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 		}
 		resolver, err = location.NewOracleResolver(options.Address), nil
 	default:
-		err = fmt.Errorf("unknown location provider: %s", options.Type)
+		err = errors.Errorf("unknown location provider: %s", options.Type)
 	}
 	if err != nil {
 		return err

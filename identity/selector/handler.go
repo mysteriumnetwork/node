@@ -18,9 +18,8 @@
 package selector
 
 import (
-	"errors"
-
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/pkg/errors"
 )
 
 // IdentityRegistry exposes identity registration method

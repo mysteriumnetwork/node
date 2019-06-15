@@ -20,8 +20,6 @@
 package payment
 
 import (
-	"errors"
-	"fmt"
 	"math"
 	"sync/atomic"
 	"time"
@@ -30,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/pkg/errors"
 )
 
 // PromiseStorage stores the promises and issues new sequenceID's
@@ -229,7 +228,7 @@ func (sb *SessionBalance) sendBalance() error {
 
 	// if we're ever in a situation where the unconsumed amount is zero, but the balance is not - something is definitely not right
 	if p.UnconsumedAmount == 0 && currentBalance != 0 {
-		return fmt.Errorf("unconsumed amount is 0, while balance is %v", currentBalance)
+		return errors.Errorf("unconsumed amount is 0, while balance is %v", currentBalance)
 	}
 
 	err = sb.promiseStorage.Update(sb.issuerID, promise.StoredPromise{

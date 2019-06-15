@@ -19,10 +19,10 @@ package session
 
 import (
 	"encoding/json"
-	"errors"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/pkg/errors"
 )
 
 type createProducer struct {

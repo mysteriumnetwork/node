@@ -18,8 +18,9 @@
 package communication
 
 import (
-	"fmt"
 	"reflect"
+
+	"github.com/pkg/errors"
 )
 
 // NewCodecBytes returns codec which:
@@ -47,7 +48,7 @@ func (codec *codecBytes) Pack(payloadPtr interface{}) ([]byte, error) {
 		return []byte(payload), nil
 	}
 
-	return []byte{}, fmt.Errorf("Cant pack payload: %#v", payloadPtr)
+	return []byte{}, errors.Errorf("Cant pack payload: %#v", payloadPtr)
 }
 
 func (codec *codecBytes) Unpack(data []byte, payloadPtr interface{}) error {
@@ -58,6 +59,6 @@ func (codec *codecBytes) Unpack(data []byte, payloadPtr interface{}) error {
 
 	default:
 		payloadValue := reflect.ValueOf(payloadPtr)
-		return fmt.Errorf("Cant unpack to payload: %s", payloadValue.Type().String())
+		return errors.Errorf("Cant unpack to payload: %s", payloadValue.Type().String())
 	}
 }

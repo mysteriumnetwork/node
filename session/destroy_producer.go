@@ -18,11 +18,11 @@
 package session
 
 import (
-	"errors"
 	"fmt"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/pkg/errors"
 )
 
 const sessionDestroyPrefix = "[session.DestroyProducer] "
