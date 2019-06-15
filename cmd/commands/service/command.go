@@ -145,7 +145,7 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (*identity.Identity, error) {
 	id, err := sc.tequilapi.CurrentIdentity(identityOptions.Identity, identityOptions.Passphrase)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unlock identity")
 	}
 
 	return &identity.Identity{Address: id.Address}, nil
@@ -166,7 +166,7 @@ func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, servi
 func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options) {
 	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap)
 	if err != nil {
-		sc.errorChannel <- err
+		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", serviceType)
 	}
 }
 

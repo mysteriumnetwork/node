@@ -51,7 +51,7 @@ func (gl *GatewayLoader) Get() []GatewayDevice {
 func (gl *GatewayLoader) load() {
 	gateways, err := discoverGateways()
 	if err != nil {
-		_ = log.Error(logPrefix, errors.Wrap(err, "error discovering UPnP devices"))
+		log.Error(logPrefix, errors.Wrap(err, "error discovering UPnP devices"))
 		return
 	}
 	gl.gateways = gateways

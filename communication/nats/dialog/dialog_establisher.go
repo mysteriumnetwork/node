@@ -61,7 +61,7 @@ func (establisher *dialogEstablisher) EstablishDialog(
 	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", peerContact))
 	peerAddress, err := establisher.peerAddressFactory(peerContact)
 	if err != nil {
-		return nil, errors.Errorf("failed to connect to: %#v. %s", peerContact, err)
+		return nil, errors.Wrapf(err, "failed to connect to: %#v", peerContact)
 	}
 
 	peerCodec := establisher.newCodecForPeer(peerID)
@@ -87,7 +87,7 @@ func (establisher *dialogEstablisher) negotiateTopic(sender communication.Sender
 		},
 	})
 	if err != nil {
-		return "", errors.Errorf("dialog creation error. %s", err)
+		return "", errors.Wrapf(err, "dialog creation error")
 	}
 	if response.(*dialogCreateResponse).Reason != 200 {
 		return "", errors.Errorf("dialog creation rejected. %#v", response)

@@ -85,7 +85,7 @@ func discoverGateways() ([]GatewayDevice, error) {
 	for _, response := range responses {
 		device, err := parseDiscoveryResponse(response)
 		if err != nil {
-			_ = log.Warnf("%s error parsing discovery response %v", logPrefix, err)
+			log.Warnf("%s error parsing discovery response %v", logPrefix, err)
 			continue
 		}
 		if !isGateway(device) {

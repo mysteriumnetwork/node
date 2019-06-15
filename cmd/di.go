@@ -657,7 +657,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	if _, err = firewall.AllowURLAccess(options.IPDetectorURL); err != nil {
-		return err
+		return errors.Wrap(err, "failed to add firewall exception")
 	}
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 

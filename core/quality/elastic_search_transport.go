@@ -53,7 +53,7 @@ func (transport *elasticSearchTransport) SendEvent(event Event) error {
 
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return errors.Errorf("error while reading response body: %v", err)
+		return errors.Wrapf(err, "error while reading response body")
 	}
 	body := string(bodyBytes)
 
