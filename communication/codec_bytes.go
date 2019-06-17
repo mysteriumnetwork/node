@@ -48,7 +48,7 @@ func (codec *codecBytes) Pack(payloadPtr interface{}) ([]byte, error) {
 		return []byte(payload), nil
 	}
 
-	return []byte{}, errors.Errorf("Cant pack payload: %#v", payloadPtr)
+	return []byte{}, errors.Errorf("can't pack payload: %#v", payloadPtr)
 }
 
 func (codec *codecBytes) Unpack(data []byte, payloadPtr interface{}) error {
@@ -59,6 +59,6 @@ func (codec *codecBytes) Unpack(data []byte, payloadPtr interface{}) error {
 
 	default:
 		payloadValue := reflect.ValueOf(payloadPtr)
-		return errors.Errorf("Cant unpack to payload: %s", payloadValue.Type().String())
+		return errors.Errorf("can't unpack to payload: %s", payloadValue.Type().String())
 	}
 }
