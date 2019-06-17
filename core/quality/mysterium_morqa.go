@@ -15,14 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package oracle
+package quality
 
 import (
 	"encoding/json"
 	"time"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/market/metrics"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
@@ -30,28 +29,29 @@ const (
 	mysteriumMorqaLogPrefix = "[Mysterium.morqa] "
 )
 
-type mysteriumMorqa struct {
+// MysteriumMORQA HTTP client for Mysterium QualityOracle - MORQA
+type MysteriumMORQA struct {
 	http                 requests.HTTPTransport
 	qualityOracleAddress string
 }
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
-func NewMorqaClient(qualityOracleAddress string) metrics.QualityOracle {
-	return &mysteriumMorqa{
+func NewMorqaClient(qualityOracleAddress string) *MysteriumMORQA {
+	return &MysteriumMORQA{
 		requests.NewHTTPClient(1 * time.Minute),
 		qualityOracleAddress,
 	}
 }
 
 // ProposalsMetrics returns a list of proposals connection metrics
-func (m *mysteriumMorqa) ProposalsMetrics() []json.RawMessage {
+func (m *MysteriumMORQA) ProposalsMetrics() []json.RawMessage {
 	req, err := requests.NewGetRequest(m.qualityOracleAddress, "proposals/quality", nil)
 	if err != nil {
 		log.Warn(mysteriumMorqaLogPrefix, "Failed to create proposals metrics request: ", err)
 		return nil
 	}
 
-	var metricsResponse metrics.ServiceMetricsResponse
+	var metricsResponse ServiceMetricsResponse
 	err = m.http.DoRequestAndParseResponse(req, &metricsResponse)
 	if err != nil {
 		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics: ", err)

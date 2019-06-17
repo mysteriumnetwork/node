@@ -67,7 +67,7 @@ func TestProposalsEndpointListByNodeId(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(mockProposalProvider, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(mockProposalProvider, &mockQualityProvider{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -111,7 +111,7 @@ func TestProposalsEndpointAcceptsAccessPolicyParams(t *testing.T) {
 	req.URL.RawQuery = query.Encode()
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(mockProposalProvider, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(mockProposalProvider, &mockQualityProvider{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -156,7 +156,7 @@ func TestProposalsEndpointList(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(proposalProvider, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(proposalProvider, &mockQualityProvider{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -205,7 +205,7 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	assert.Nil(t, err)
 
 	resp := httptest.NewRecorder()
-	handlerFunc := NewProposalsEndpoint(proposalProvider, &mysteriumMorqaFake{}).List
+	handlerFunc := NewProposalsEndpoint(proposalProvider, &mockQualityProvider{}).List
 	handlerFunc(resp, req, nil)
 
 	assert.JSONEq(
@@ -250,10 +250,10 @@ func TestProposalsEndpointListFetchConnectCounts(t *testing.T) {
 	)
 }
 
-type mysteriumMorqaFake struct{}
+type mockQualityProvider struct{}
 
 // ProposalsMetrics returns a list of proposals connection metrics
-func (m *mysteriumMorqaFake) ProposalsMetrics() []json.RawMessage {
+func (m *mockQualityProvider) ProposalsMetrics() []json.RawMessage {
 	for _, proposal := range serviceProposals {
 		return []json.RawMessage{json.RawMessage(`{
 			"proposalID": {

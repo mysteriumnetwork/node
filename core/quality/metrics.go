@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package metrics
+package quality
 
 import (
 	"encoding/json"
@@ -24,11 +24,6 @@ import (
 )
 
 const mysteriumMetricsLogPrefix = "[Mysterium.metrics] "
-
-// QualityOracle allows to interact with a quality oracle service (MORQA)
-type QualityOracle interface {
-	ProposalsMetrics() []json.RawMessage
-}
 
 // ServiceMetricsResponse represents response from the quality oracle service
 type ServiceMetricsResponse struct {

@@ -44,6 +44,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state"
 	statevent "github.com/mysteriumnetwork/node/core/state/event"
@@ -56,11 +57,8 @@ import (
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
-	market_metrics "github.com/mysteriumnetwork/node/market/metrics"
-	"github.com/mysteriumnetwork/node/market/metrics/oracle"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/mysteriumnetwork/node/metrics"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/event"
@@ -159,10 +157,9 @@ type UIServer interface {
 type Dependencies struct {
 	Node *node.Node
 
-	NetworkDefinition    metadata.NetworkDefinition
-	MysteriumAPI         *mysterium.MysteriumAPI
-	MysteriumMorqaClient market_metrics.QualityOracle
-	EtherClient          *ethclient.Client
+	NetworkDefinition metadata.NetworkDefinition
+	MysteriumAPI      *mysterium.MysteriumAPI
+	EtherClient       *ethclient.Client
 
 	NATService           nat.NATService
 	Storage              Storage
@@ -178,7 +175,8 @@ type Dependencies struct {
 	DiscoveryFinder     *discovery.Finder
 	DiscoveryFetcherAPI *discovery_api.Fetcher
 
-	QualityMetricsSender *metrics.Sender
+	QualityMetricsSender *quality.Sender
+	QualityClient        *quality.MysteriumMORQA
 
 	IPResolver       ip.Resolver
 	LocationResolver CacheResolver
@@ -462,7 +460,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.LocationResolver)
 	tequilapi_endpoints.AddRoutesForLocation(router, di.LocationResolver)
-	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.MysteriumMorqaClient)
+	tequilapi_endpoints.AddRoutesForProposals(router, di.DiscoveryFinder, di.QualityClient)
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
@@ -539,6 +537,10 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 		network.MysteriumAPIAddress = options.MysteriumAPIAddress
 	}
 
+	if options.QualityOracle != metadata.DefaultNetwork.QualityOracle {
+		network.QualityOracle = options.QualityOracle
+	}
+
 	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
 		network.BrokerAddress = options.BrokerAddress
 	}
@@ -557,13 +559,11 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	if _, err := firewall.AllowURLAccess(
 		network.EtherClientRPC,
 		network.MysteriumAPIAddress,
-		network.QualityOracle,
 	); err != nil {
 		return err
 	}
 
 	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)
-	di.MysteriumMorqaClient = oracle.NewMorqaClient(network.QualityOracle)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
@@ -626,21 +626,25 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 }
 
 func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
-	var transport metrics.Transport
+	var transport quality.Transport
 	switch options.Type {
 	case node.QualityTypeMORQA:
 		_, err = firewall.AllowURLAccess(options.Address)
-		transport = metrics.NewElasticSearchTransport(options.Address, 10*time.Second)
+		transport = quality.NewElasticSearchTransport(options.Address, 10*time.Second)
 	case node.QualityTypeNone:
-		transport = metrics.NewNoopTransport()
+		transport = quality.NewNoopTransport()
 	default:
 		err = fmt.Errorf("unknown Quality Oracle provider: %s", options.Type)
 	}
 	if err != nil {
 		return err
 	}
+	di.QualityMetricsSender = quality.NewSender(transport, metadata.VersionAsString())
 
-	di.QualityMetricsSender = metrics.NewSender(transport, metadata.VersionAsString())
+	if _, err := firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
+		return err
+	}
+	di.QualityClient = quality.NewMorqaClient(di.NetworkDefinition.QualityOracle)
 	return nil
 }
 
