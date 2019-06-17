@@ -18,12 +18,18 @@
 package quality
 
 import (
+	"fmt"
 	"time"
+
+	log "github.com/cihub/seelog"
 )
 
-const appName = "myst"
-const startupEventName = "startup"
-const natMappingEventName = "nat_mapping"
+const (
+	appName             = "myst"
+	startupEventName    = "startup"
+	natMappingEventName = "nat_mapping"
+	logPrefix           = "[quality-oracle] "
+)
 
 // Transport allows sending events
 type Transport interface {
@@ -65,25 +71,41 @@ type natMappingContext struct {
 }
 
 // SendStartupEvent sends startup event
-func (sender *Sender) SendStartupEvent() error {
-	return sender.sendEvent(startupEventName, nil)
+func (sender *Sender) SendStartupEvent() {
+	sender.sendEvent(startupEventName, nil)
 }
 
 // SendNATMappingSuccessEvent sends event about successful NAT mapping
-func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[string]string) error {
-	context := natMappingContext{Stage: stage, Successful: true, Gateways: gateways}
-	return sender.sendEvent(natMappingEventName, context)
+func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[string]string) {
+	sender.sendEvent(natMappingEventName, natMappingContext{
+		Stage:      stage,
+		Successful: true,
+		Gateways:   gateways,
+	})
 }
 
 // SendNATMappingFailEvent sends event about failed NAT mapping
-func (sender *Sender) SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) error {
+func (sender *Sender) SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) {
 	errorMessage := err.Error()
-	context := natMappingContext{Stage: stage, Successful: false, ErrorMessage: &errorMessage, Gateways: gateways}
-	return sender.sendEvent(natMappingEventName, context)
+	sender.sendEvent(natMappingEventName, natMappingContext{
+		Stage:        stage,
+		Successful:   false,
+		ErrorMessage: &errorMessage,
+		Gateways:     gateways,
+	})
 }
 
-func (sender *Sender) sendEvent(eventName string, context interface{}) error {
-	app := appInfo{Name: appName, Version: sender.AppVersion}
-	event := Event{Application: app, EventName: eventName, CreatedAt: time.Now().Unix(), Context: context}
-	return sender.Transport.SendEvent(event)
+func (sender *Sender) sendEvent(eventName string, context interface{}) {
+	err := sender.Transport.SendEvent(Event{
+		Application: appInfo{
+			Name:    appName,
+			Version: sender.AppVersion,
+		},
+		EventName: eventName,
+		CreatedAt: time.Now().Unix(),
+		Context:   context,
+	})
+	if err != nil {
+		log.Warn(logPrefix, fmt.Sprintf(`Failed to send metric "%s". %s`, eventName, err))
+	}
 }

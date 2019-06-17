@@ -499,6 +499,14 @@
   version = "0.0.14"
 
 [[projects]]
+  branch = "master"
+  digest = "1:ef19d273bca8368da97ab851fd14f1afbfa4358c378a9dee3ed4e50bef6409d5"
+  name = "github.com/mysteriumnetwork/metrics"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e10352387a0b66e2f1cb447bbc910ff360b6873e"
+
+[[projects]]
   digest = "1:8a20b209f06b19844908cf0367975d0966d6c188e5381ebd9327d6cd5d2ab990"
   name = "github.com/mysteriumnetwork/payments"
   packages = [
@@ -1075,6 +1083,7 @@
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
     "github.com/gofrs/uuid",
+    "github.com/golang/protobuf/proto",
     "github.com/google/go-github/github",
     "github.com/huin/goupnp",
     "github.com/huin/goupnp/httpu",
@@ -1097,6 +1106,7 @@
     "github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/state",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/tls",
     "github.com/mysteriumnetwork/go-openvpn/openvpn3",
+    "github.com/mysteriumnetwork/metrics",
     "github.com/mysteriumnetwork/payments/cli/helpers",
     "github.com/mysteriumnetwork/payments/contracts/abigen",
     "github.com/mysteriumnetwork/payments/identity",

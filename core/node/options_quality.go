@@ -21,6 +21,8 @@ package node
 type QualityType string
 
 const (
+	// QualityTypeElastic defines type which uses ElasticSearch as Quality Oracle provider
+	QualityTypeElastic = QualityType("elastic")
 	// QualityTypeMORQA defines type which uses Mysterium MORQA as Quality Oracle provider
 	QualityTypeMORQA = QualityType("morqa")
 	// QualityTypeNone defines type which disables Quality Oracle

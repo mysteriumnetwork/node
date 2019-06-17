@@ -295,7 +295,7 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 		}
 
 		if n > 0 {
-			log.Infof(prefix, "remote peer data received: %s, len: %d", string(buf[:n]), n)
+			log.Infof(prefix, "%sRemote peer data received: %s, len: %d", string(buf[:n]), n)
 			return nil
 		}
 	}

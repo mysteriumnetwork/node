@@ -73,12 +73,7 @@ type Node struct {
 
 // Start starts Mysterium node (Tequilapi service, fetches location)
 func (node *Node) Start() error {
-	go func() {
-		err := node.metricsSender.SendStartupEvent()
-		if err != nil {
-			log.Warn("Failed to send startup event: ", err)
-		}
-	}()
+	go node.metricsSender.SendStartupEvent()
 
 	node.httpAPIServer.StartServing()
 	address, err := node.httpAPIServer.Address()
