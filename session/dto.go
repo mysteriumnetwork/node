@@ -32,15 +32,21 @@ type BalanceTracker interface {
 	Stop()
 }
 
+// DataTransfered represents the data transfered on each session
+type DataTransfered struct {
+	Up, Down int64
+}
+
 // Session structure holds all required information about current session between service consumer and provider
 type Session struct {
-	ID         ID
-	ConsumerID identity.Identity
-	Config     ServiceConfiguration
-	serviceID  string
-	CreatedAt  time.Time
-	Last       bool
-	done       chan struct{}
+	ID             ID
+	ConsumerID     identity.Identity
+	Config         ServiceConfiguration
+	serviceID      string
+	CreatedAt      time.Time
+	DataTransfered DataTransfered
+	Last           bool
+	done           chan struct{}
 }
 
 // ServiceConfiguration defines service configuration from underlying transport mechanism to be passed to remote party

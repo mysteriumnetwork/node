@@ -20,8 +20,6 @@
 package cmd
 
 import (
-	"errors"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -44,15 +42,21 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
+	"github.com/pkg/errors"
 )
 
 // bootstrapServices loads all the components required for running services
-func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
-	di.bootstrapServiceComponents(nodeOptions)
+func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
+	err := di.bootstrapServiceComponents(nodeOptions)
+	if err != nil {
+		return errors.Wrap(err, "service bootstrap failed")
+	}
 
 	di.bootstrapServiceOpenvpn(nodeOptions)
 	di.bootstrapServiceNoop(nodeOptions)
 	di.bootstrapServiceWireguard(nodeOptions)
+
+	return nil
 }
 
 func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
@@ -156,6 +160,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 			mapPort,
 			di.NATTracker,
 			portPool,
+			di.EventBus,
 		)
 		return manager, proposal, nil
 	}
@@ -177,13 +182,19 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 }
 
 // bootstrapServiceComponents initiates ServicesManager dependency
-func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) error {
 	di.NATService = nat.NewService()
 	if err := di.NATService.Enable(); err != nil {
 		log.Warn(logPrefix, "Failed to enable NAT forwarding: ", err)
 	}
 	di.ServiceRegistry = service.NewRegistry()
-	di.ServiceSessionStorage = session.NewStorageMemory(di.EventBus)
+	storage := session.NewEventBasedStorage(di.EventBus, session.NewStorageMemory())
+	di.ServiceSessionStorage = storage
+
+	err := storage.Subscribe()
+	if err != nil {
+		return errors.Wrap(err, "could not bootstrap service components")
+	}
 
 	registeredIdentityValidator := func(peerID identity.Identity) error {
 		registered, err := di.IdentityRegistry.IsRegistered(peerID)
@@ -243,6 +254,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) {
 	if err := di.EventBus.Subscribe(service.StatusTopic, serviceCleaner.HandleServiceStatus); err != nil {
 		log.Error(logPrefix, "failed to subscribe service cleaner")
 	}
+
+	return nil
 }
 
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {

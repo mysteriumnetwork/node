@@ -39,6 +39,14 @@ type clientMap struct {
 	sessionMapLock   sync.Mutex
 }
 
+// NewClientMap creates a new instance of client map
+func NewClientMap(sessionMap SessionMap) *clientMap {
+	return &clientMap{
+		sessions:         sessionMap,
+		sessionClientIDs: make(map[session.ID]int),
+	}
+}
+
 // FindClientSession returns OpenVPN session instance by given session id
 func (cm *clientMap) FindClientSession(clientID int, id session.ID) (session.Session, bool, error) {
 	cm.sessionMapLock.Lock()
@@ -65,6 +73,20 @@ func (cm *clientMap) UpdateClientSession(clientID int, id session.ID) bool {
 	}
 
 	return cm.sessionClientIDs[id] == clientID
+}
+
+// GetClientSessions returns the list of sessions for client found in the client map
+func (cm *clientMap) GetClientSessions(clientID int) []session.ID {
+	cm.sessionMapLock.Lock()
+	defer cm.sessionMapLock.Unlock()
+	res := make([]session.ID, 0)
+
+	for k, v := range cm.sessionClientIDs {
+		if v == clientID {
+			res = append(res, k)
+		}
+	}
+	return res
 }
 
 // RemoveSession removes given session from underlying session managers

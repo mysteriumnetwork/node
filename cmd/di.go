@@ -102,6 +102,15 @@ type Storage interface {
 	Close() error
 }
 
+type serviceSessionStorage interface {
+	Add(sessionInstance session.Session)
+	GetAll() []session.Session
+	UpdateDataTransfer(id session.ID, up, down int64)
+	Find(id session.ID) (session.Session, bool)
+	Remove(id session.ID)
+	RemoveForService(serviceID string)
+}
+
 // Authenticator provides authentication for Tequilapi and UI
 type Authenticator interface {
 	Authenticate(username, password string) error
@@ -185,7 +194,7 @@ type Dependencies struct {
 
 	ServicesManager       *service.Manager
 	ServiceRegistry       *service.Registry
-	ServiceSessionStorage *session.StorageMemory
+	ServiceSessionStorage serviceSessionStorage
 
 	NATPinger      NatPinger
 	NATTracker     NatEventTracker
@@ -251,7 +260,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapNATComponents(nodeOptions)
-	di.bootstrapServices(nodeOptions)
+	if err := di.bootstrapServices(nodeOptions); err != nil {
+		return err
+	}
+
 	if err := di.bootstrapStateKeeper(nodeOptions); err != nil {
 		return err
 	}
@@ -468,7 +480,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 
 func newSessionManagerFactory(
 	proposal market.ServiceProposal,
-	sessionStorage *session.StorageMemory,
+	sessionStorage serviceSessionStorage,
 	promiseStorage session_payment.PromiseStorage,
 	natPingerChan func(*traversal.Params),
 	natTracker NatEventTracker,

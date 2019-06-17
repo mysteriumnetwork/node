@@ -25,8 +25,9 @@ import (
 )
 
 // bootstrapServices loads all the components required for running services
-func (di *Dependencies) bootstrapServices(nodeOptions node.Options) {
+func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
 	// Running services on mobile is not supported, nothing to bootstrap.
+	return nil
 }
 
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {

@@ -19,28 +19,21 @@ package session
 
 import (
 	"sync"
-
-	"github.com/mysteriumnetwork/node/session/event"
 )
 
-type publisher interface {
-	Publish(topic string, data interface{})
-}
-
 // NewStorageMemory initiates new session storage
-func NewStorageMemory(publisher publisher) *StorageMemory {
-	return &StorageMemory{
-		sessions:  make(map[ID]Session),
-		lock:      sync.Mutex{},
-		publisher: publisher,
+func NewStorageMemory() *StorageMemory {
+	sm := &StorageMemory{
+		sessions: make(map[ID]Session),
+		lock:     sync.Mutex{},
 	}
+	return sm
 }
 
-// StorageMemory maintains all currents sessions in memory
+// StorageMemory maintains all current sessions in memory
 type StorageMemory struct {
-	sessions  map[ID]Session
-	lock      sync.Mutex
-	publisher publisher
+	sessions map[ID]Session
+	lock     sync.Mutex
 }
 
 // Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
@@ -49,10 +42,6 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 	defer storage.lock.Unlock()
 
 	storage.sessions[sessionInstance.ID] = sessionInstance
-	go storage.publisher.Publish(event.Topic, event.Payload{
-		ID:     string(sessionInstance.ID),
-		Action: event.Created,
-	})
 }
 
 // GetAll returns all sessions in storage
@@ -87,22 +76,29 @@ func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	return Session{}, false
 }
 
+// UpdateDataTransfer updates the data transfer info on the session
+func (storage *StorageMemory) UpdateDataTransfer(id ID, up, down int64) {
+	storage.lock.Lock()
+	defer storage.lock.Unlock()
+	if instance, found := storage.sessions[id]; found {
+		instance.DataTransfered.Down = down
+		instance.DataTransfered.Up = up
+		storage.sessions[id] = instance
+	}
+}
+
 // Remove removes given session from underlying storage
 func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 	delete(storage.sessions, id)
-	go storage.publisher.Publish(event.Topic, event.Payload{
-		ID:     string(id),
-		Action: event.Removed,
-	})
 }
 
 // RemoveForService removes all sessions which belong to given service
-func (storage *StorageMemory) RemoveForService(serviceId string) {
+func (storage *StorageMemory) RemoveForService(serviceID string) {
 	sessions := storage.GetAll()
 	for _, session := range sessions {
-		if session.serviceID == serviceId {
+		if session.serviceID == serviceID {
 			storage.Remove(session.ID)
 		}
 	}

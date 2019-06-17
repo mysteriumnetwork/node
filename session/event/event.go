@@ -20,6 +20,15 @@ package event
 // Topic represents the session change topic
 const Topic = "Session change"
 
+// DataTransfered represents the data transfer topic
+const DataTransfered = "Session data transfered"
+
+// DataTransferEventPayload represents the data transfer event
+type DataTransferEventPayload struct {
+	ID       string
+	Up, Down int64
+}
+
 // Action represents the different actions that might happen on a session
 type Action string
 
@@ -28,6 +37,8 @@ const (
 	Created Action = "Created"
 	// Removed indicates a session has been removed
 	Removed Action = "Removed"
+	// Updated indicates a session has been updated
+	Updated Action = "Updated"
 )
 
 // Payload represents the event payload
