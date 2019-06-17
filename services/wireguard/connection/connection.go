@@ -57,8 +57,7 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 	}
 	c.config.Provider = config.Provider
 	c.config.Consumer.IPAddress = config.Consumer.IPAddress
-	// TODO its funny that remote IP of wireguard provider is called config.Consumer.IPAddress
-	removeAllowedIPRule, err := firewall.AllowIPAccess(config.Consumer.IPAddress.IP.String())
+	removeAllowedIPRule, err := firewall.AllowIPAccess(config.Provider.Endpoint.IP.String())
 	if err != nil {
 		return errors.Wrap(err, "failed to add firewall exception for wireguard remote IP")
 	}

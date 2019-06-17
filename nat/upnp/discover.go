@@ -22,6 +22,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/mysteriumnetwork/node/firewall"
+
 	log "github.com/cihub/seelog"
 	"github.com/huin/goupnp"
 	"github.com/huin/goupnp/httpu"
@@ -67,6 +69,12 @@ func discoverGateways() ([]GatewayDevice, error) {
 		return nil, err
 	}
 	defer client.Close()
+
+	// this IP address used to discover gateways - allow it
+	if _, err := firewall.AllowIPAccess("239.255.255.250"); err != nil {
+		return nil, err
+	}
+
 	responses, err := ssdp.SSDPRawSearch(client, ssdp.UPNPRootDevice, 2, 3)
 	if err != nil {
 		return nil, err

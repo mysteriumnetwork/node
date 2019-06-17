@@ -1,5 +1,7 @@
+//+build !linux
+
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,26 +17,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ip
+package vnd
 
-import "net"
+import (
+	"github.com/mysteriumnetwork/node/firewall"
+)
 
-// Resolver allows resolving current IP
-type Resolver interface {
-	GetPublicIP() (string, error)
-	GetOutboundIP() (string, error)
-}
-
-// declared as var for override in test
-var checkAddress = "8.8.8.8:53"
-
-// GetOutbound provides an outbound IP address of the current system.
-func GetOutbound() (net.IP, error) {
-	conn, err := net.Dial("udp4", checkAddress)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	return conn.LocalAddr().(*net.UDPAddr).IP, nil
+// SetupVendor initializes default vendor or OSes which do not support it
+func SetupVendor() (firewall.Vendor, error) {
+	return firewall.NoopVendor{
+		LogPrefix: "[Noop firewall]",
+	}, nil
 }

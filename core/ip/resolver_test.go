@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,24 +17,15 @@
 
 package ip
 
-import "net"
+import (
+	"testing"
 
-// Resolver allows resolving current IP
-type Resolver interface {
-	GetPublicIP() (string, error)
-	GetOutboundIP() (string, error)
-}
+	"github.com/stretchr/testify/assert"
+)
 
-// declared as var for override in test
-var checkAddress = "8.8.8.8:53"
-
-// GetOutbound provides an outbound IP address of the current system.
-func GetOutbound() (net.IP, error) {
-	conn, err := net.Dial("udp4", checkAddress)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	return conn.LocalAddr().(*net.UDPAddr).IP, nil
+func TestLocalhostOutboundIPIsReturned(t *testing.T) {
+	checkAddress = "localhost:5555"
+	ip, err := GetOutbound()
+	assert.NoError(t, err)
+	assert.Equal(t, "127.0.0.1", ip.String())
 }

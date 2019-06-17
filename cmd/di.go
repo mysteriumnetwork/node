@@ -52,6 +52,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/mysteriumnetwork/node/firewall/vnd"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_registry "github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -225,6 +226,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	if err := di.bootstrapFirewall(nodeOptions.Firewall); err != nil {
+		return err
+	}
+
 	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork); err != nil {
 		return err
 	}
@@ -375,7 +380,7 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
-
+	firewall.Reset()
 	log.Flush()
 	return nil
 }
@@ -663,7 +668,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	case node.LocationTypeMMDB:
 		resolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
 	case node.LocationTypeOracle:
-		if _, err = firewall.AllowURLAccess(options.Address); err != nil {
+		if _, err := firewall.AllowURLAccess(options.Address); err != nil {
 			return err
 		}
 		resolver, err = location.NewOracleResolver(options.Address), nil
@@ -722,4 +727,17 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	loader := &upnp.GatewayLoader{}
 	go loader.Get()
 	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
+}
+
+func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
+	fwVendor, err := vnd.SetupVendor()
+	if err != nil {
+		return err
+	}
+	firewall.Configure(fwVendor)
+	if options.BlockAlways {
+		_, err := firewall.BlockNonTunnelTraffic(firewall.Global)
+		return err
+	}
+	return nil
 }

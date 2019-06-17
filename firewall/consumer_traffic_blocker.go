@@ -17,62 +17,36 @@
 
 package firewall
 
-// RemoveRule type defines function for removal of created rule
-type RemoveRule func()
+var trackingBlocker = newTrackingBlocker()
 
-// Scope type represents scope of blocking consumer traffic
-type Scope string
-
-const (
-	// Global scope overrides session scope and is not affected by session scope calls
-	Global Scope = "global"
-	// Session scope block is applied before connection session begins and is removed when session ends
-	Session Scope = "session"
-	// internal state to mark that no blocks are in effect
-	none Scope = "none"
-)
-
-var currentBlocker Blocker = NoopBlocker{
-	LogPrefix: "[Noop firewall] ",
-}
-
-// Configure firewall with specified actual Blocker implementation
-func Configure(blocker Blocker) {
-	currentBlocker = blocker
+// Configure blocker with specified actual Vendor implementation
+func Configure(vendor Vendor) {
+	trackingBlocker.SwitchVendor(vendor)
 }
 
 // BlockNonTunnelTraffic effectively disallows any outgoing traffic from consumer node with specified scope
 func BlockNonTunnelTraffic(scope Scope) (RemoveRule, error) {
-	return currentBlocker.BlockNonTunnelTraffic(scope)
+	return trackingBlocker.BlockOutgoingTraffic(scope)
 }
 
 // AllowURLAccess adds exception to blocked traffic for specified URL (host part is usually taken)
 func AllowURLAccess(urls ...string) (RemoveRule, error) {
-	var ruleRemovers []func()
-	removeAll := func() {
-		for _, ruleRemover := range ruleRemovers {
-			ruleRemover()
-		}
-	}
-	for _, url := range urls {
-		remover, err := currentBlocker.AllowURLAccess(url)
-		if err != nil {
-			removeAll()
-			return nil, err
-		}
-		ruleRemovers = append(ruleRemovers, remover)
-	}
-	return removeAll, nil
+	return trackingBlocker.AllowURLAccess(urls...)
 }
 
 // AllowIPAccess adds IP based exception to underlying blocker implementation
 func AllowIPAccess(ip string) (RemoveRule, error) {
-	return currentBlocker.AllowIPAccess(ip)
+	return trackingBlocker.AllowIPAccess(ip)
 }
 
-// Blocker interface neededs to be satisfied by any blocker implementations
-type Blocker interface {
-	BlockNonTunnelTraffic(scope Scope) (RemoveRule, error)
-	AllowURLAccess(url string) (RemoveRule, error)
+// Reset firewall state - usually called when cleanup is needed (during shutdown)
+func Reset() {
+	trackingBlocker.vendor.Reset()
+}
+
+// Vendor interface neededs to be satisfied by any implementations which provide firewall capabilities, like iptables
+type Vendor interface {
+	BlockOutgoingTraffic() (RemoveRule, error)
 	AllowIPAccess(ip string) (RemoveRule, error)
+	Reset()
 }

@@ -19,35 +19,34 @@ package firewall
 
 import log "github.com/cihub/seelog"
 
-// NoopBlocker is a Blocker implementation which only logs allow requests with no effects
+// NoopVendor is a Vendor implementation which only logs allow requests with no effects
 // used by default
-type NoopBlocker struct {
+type NoopVendor struct {
 	LogPrefix string
 }
 
-// BlockNonTunnelTraffic method simply logs block request
-func (nb NoopBlocker) BlockNonTunnelTraffic(scope Scope) (RemoveRule, error) {
-	log.Info(nb.LogPrefix, "Non tunneled traffic block requested. Scope: ", scope)
-	return nb.logRemoval("Block for scope: ", scope, " removed"), nil
+// Reset noop vendor (just log call)
+func (nb NoopVendor) Reset() {
+	log.Info(nb.LogPrefix, "Rules reset was requested")
 }
 
-// AllowURLAccess method logs url for which access was requested
-func (nb NoopBlocker) AllowURLAccess(url string) (RemoveRule, error) {
-	log.Info(nb.LogPrefix, "Allow ", url, " access")
-	return nb.logRemoval("Rule for ", url, " removed"), nil
+// BlockOutgoingTraffic just logs the call
+func (nb NoopVendor) BlockOutgoingTraffic() (RemoveRule, error) {
+	log.Info(nb.LogPrefix, "Outgoing traffic block requested")
+	return nb.logRemoval("Outgoing traffic block removed"), nil
 }
 
 // AllowIPAccess logs ip for which access was requested
-func (nb NoopBlocker) AllowIPAccess(ip string) (RemoveRule, error) {
+func (nb NoopVendor) AllowIPAccess(ip string) (RemoveRule, error) {
 	log.Info(nb.LogPrefix, "Allow ", ip, " access")
 	return nb.logRemoval("Rule for ip: ", ip, " removed"), nil
 }
 
-func (nb NoopBlocker) logRemoval(vals ...interface{}) RemoveRule {
+func (nb NoopVendor) logRemoval(vals ...interface{}) RemoveRule {
 	return func() {
 		vals := append([]interface{}{nb.LogPrefix}, vals...)
 		log.Info(vals...)
 	}
 }
 
-var _ Blocker = NoopBlocker{}
+var _ Vendor = NoopVendor{}
