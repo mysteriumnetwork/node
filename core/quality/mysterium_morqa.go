@@ -35,14 +35,14 @@ const (
 	mysteriumMorqaAgentName = "goclient-v0.1"
 )
 
-// HttpClient sends actual HTTP requests
-type HttpClient interface {
+// HTTPClient sends actual HTTP requests
+type HTTPClient interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
 // MysteriumMORQA HTTP client for Mysterium QualityOracle - MORQA
 type MysteriumMORQA struct {
-	http    HttpClient
+	http    HTTPClient
 	baseURL string
 }
 
@@ -64,14 +64,14 @@ func (m *MysteriumMORQA) ProposalsMetrics() []json.RawMessage {
 
 	response, err := m.http.Do(request)
 	if err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, err)
+		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics: ", err)
 		return nil
 	}
 	defer response.Body.Close()
 
 	var metricsResponse ServiceMetricsResponse
 	if err = parseResponseJSON(response, &metricsResponse); err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, err)
+		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics: ", err)
 		return nil
 	}
 
@@ -91,11 +91,7 @@ func (m *MysteriumMORQA) SendMetric(event *metrics.Event) error {
 	}
 	defer response.Body.Close()
 
-	if err = parseResponseError(response); err != nil {
-		return err
-	}
-
-	return nil
+	return parseResponseError(response)
 }
 
 func (m *MysteriumMORQA) newRequest(method, path string, body []byte) (*http.Request, error) {
@@ -129,7 +125,7 @@ func (m *MysteriumMORQA) newRequestBinary(method, path string, payload proto.Mes
 
 	request, err := m.newRequest(method, path, payloadBody)
 	request.Header.Set("Content-Type", "application/octet-stream")
-	return request, nil
+	return request, err
 }
 
 func parseResponseJSON(response *http.Response, dto interface{}) error {

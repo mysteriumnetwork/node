@@ -30,15 +30,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// func mockMORQATransport() *morqaTransport {
-// 	morqaClient := &MysteriumMORQA{
-// 		http:    &http.Client{Timeout: 5 * time.Second},
-// 		baseURL: qualityOracleAddress,
-// 	}
-//
-// 	NewMORQATransport(NewMorqaClient(), NewNoopTransport())
-// }
-
 var (
 	eventStartup = Event{
 		EventName:   startupEventName,
