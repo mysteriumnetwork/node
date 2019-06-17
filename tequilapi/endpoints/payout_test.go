@@ -41,10 +41,16 @@ type mockPayoutInfoRegistry struct {
 	mockReferralCode string
 }
 
-func (mock *mockPayoutInfoRegistry) UpdatePayoutInfo(id identity.Identity, ethAddress string, referralCode string,
+func (mock *mockPayoutInfoRegistry) UpdatePayoutInfo(id identity.Identity, ethAddress string,
 	signer identity.Signer) error {
 	mock.recordedID = id
 	mock.recordedEthAddress = ethAddress
+	return nil
+}
+
+func (mock *mockPayoutInfoRegistry) UpdateReferralInfo(id identity.Identity, referralCode string,
+	signer identity.Signer) error {
+	mock.recordedID = id
 	mock.recordedReferralCode = referralCode
 	return nil
 }
@@ -102,6 +108,25 @@ func TestUpdatePayoutInfo(t *testing.T) {
 
 	assert.Equal(t, "1234abcd", mockPayoutInfoRegistry.recordedID.Address)
 	assert.Equal(t, "1234payout", mockPayoutInfoRegistry.recordedEthAddress)
+	assert.Equal(t, "1234referral", mockPayoutInfoRegistry.recordedReferralCode)
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
+func TestUpdateReferralInfo(t *testing.T) {
+	mockIdm := identity.NewIdentityManagerFake(existingIdentities, newIdentity)
+	req, err := http.NewRequest(
+		http.MethodPut,
+		"/irrelevant",
+		bytes.NewBufferString(`{"referral_code": "1234referral"}`),
+	)
+	assert.NoError(t, err)
+
+	resp := httptest.NewRecorder()
+	mockPayoutInfoRegistry := &mockPayoutInfoRegistry{}
+	handlerFunc := NewPayoutEndpoint(mockIdm, mockSignerFactory, mockPayoutInfoRegistry).UpdateReferralInfo
+	params := httprouter.Params{{"id", "1234abcd"}}
+	handlerFunc(resp, req, params)
+
 	assert.Equal(t, "1234referral", mockPayoutInfoRegistry.recordedReferralCode)
 	assert.Equal(t, http.StatusOK, resp.Code)
 }

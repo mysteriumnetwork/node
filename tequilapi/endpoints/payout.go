@@ -34,7 +34,13 @@ type payoutInfo struct {
 	// in Ethereum address format
 	// required: true
 	// example: 0x000000000000000000000000000000000000000a
-	EthAddress   string `json:"ethAddress"`
+	EthAddress string `json:"ethAddress"`
+}
+
+// swagger:model ReferralInfoDTO
+type referralInfo struct {
+	// required: true
+	// example: ABC123
 	ReferralCode string `json:"referral_code"`
 }
 
@@ -46,7 +52,8 @@ type payoutInfoResponse struct {
 // PayoutInfoRegistry allows to register payout info
 type PayoutInfoRegistry interface {
 	GetPayoutInfo(id identity.Identity, signer identity.Signer) (*mysterium.PayoutInfoResponse, error)
-	UpdatePayoutInfo(id identity.Identity, ethAddress string, referralCode string, signer identity.Signer) error
+	UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error
+	UpdateReferralInfo(id identity.Identity, referralCode string, signer identity.Signer) error
 }
 
 type payoutEndpoint struct {
@@ -123,6 +130,57 @@ func (endpoint *payoutEndpoint) UpdatePayoutInfo(resp http.ResponseWriter, reque
 	err = endpoint.payoutInfoRegistry.UpdatePayoutInfo(
 		id,
 		payoutInfoReq.EthAddress,
+		endpoint.signerFactory(id),
+	)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+}
+
+// swagger:operation PUT /identities/{id}/referral Identity updateReferralInfo
+// ---
+// summary: Registers referral info
+// description: Registers referral code for identity
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity stored in keystore
+//   type: string
+//   required: true
+// - in: body
+//   name: body
+//   description: Parameter in body (referral_code) is required
+//   schema:
+//     $ref: "#/definitions/ReferralInfoDTO"
+// responses:
+//   200:
+//     description: Referral info registered
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   422:
+//     description: Parameters validation error
+//     schema:
+//       "$ref": "#/definitions/ValidationErrorDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *payoutEndpoint) UpdateReferralInfo(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := identity.FromAddress(params.ByName("id"))
+
+	payoutInfoReq, err := toReferralInfoRequest(request)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	err = endpoint.payoutInfoRegistry.UpdateReferralInfo(
+		id,
 		payoutInfoReq.ReferralCode,
 		endpoint.signerFactory(id),
 	)
@@ -138,6 +196,12 @@ func toPayoutInfoRequest(req *http.Request) (*payoutInfo, error) {
 	var payoutReq = &payoutInfo{}
 	err := json.NewDecoder(req.Body).Decode(&payoutReq)
 	return payoutReq, err
+}
+
+func toReferralInfoRequest(req *http.Request) (*referralInfo, error) {
+	var referralReq = &referralInfo{}
+	err := json.NewDecoder(req.Body).Decode(&referralReq)
+	return referralReq, err
 }
 
 func validatePayoutInfoRequest(req *payoutInfo) (errors *validation.FieldErrorMap) {
@@ -159,4 +223,5 @@ func AddRoutesForPayout(
 	idmEnd := NewPayoutEndpoint(idm, signerFactory, payoutInfoRegistry)
 	router.GET("/identities/:id/payout", idmEnd.GetPayoutInfo)
 	router.PUT("/identities/:id/payout", idmEnd.UpdatePayoutInfo)
+	router.PUT("/identities/:id/referral", idmEnd.UpdateReferralInfo)
 }

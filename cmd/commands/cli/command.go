@@ -377,7 +377,7 @@ func (c *cliApp) payout(argsString string) {
 	action := args[0]
 	switch action {
 	case "set":
-		payoutSignature := "payout set <identity> <ethAddress> <referralCode>"
+		payoutSignature := "payout set <identity> <ethAddress>"
 		if len(args) < 2 {
 			info("Please provide identity. You can select one by pressing tab.\n", payoutSignature)
 			return
@@ -391,12 +391,7 @@ func (c *cliApp) payout(argsString string) {
 			return
 		}
 
-		var referralCode string
-		if len(args) == 4 {
-			referralCode = args[3]
-		}
-
-		err := c.tequilapi.Payout(identity, ethAddress, referralCode)
+		err := c.tequilapi.Payout(identity, ethAddress)
 		if err != nil {
 			warn(err)
 			return
