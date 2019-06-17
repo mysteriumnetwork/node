@@ -19,6 +19,5 @@ package node
 
 // OptionsFirewall represent firewall control options
 type OptionsFirewall struct {
-	EnableKillSwitch bool
-	BlockAlways      bool
+	BlockAlways bool
 }

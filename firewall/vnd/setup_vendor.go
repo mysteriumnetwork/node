@@ -20,12 +20,12 @@
 package vnd
 
 import (
-	"errors"
-
 	"github.com/mysteriumnetwork/node/firewall"
 )
 
 // SetupVendor initializes default vendor or OSes which do not support it
 func SetupVendor() (firewall.Vendor, error) {
-	return nil, errors.New("this OS doesn't support kill switch")
+	return firewall.NoopVendor{
+		LogPrefix: "[Noop firewall]",
+	}, nil
 }

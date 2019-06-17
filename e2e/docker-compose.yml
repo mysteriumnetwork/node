@@ -51,7 +51,6 @@ services:
       --api.address=http://mysterium-api/v1
       --ether.client.rpc=http://geth:8545
       --keystore.lightweight
-      --firewall.killSwitch
       --firewall.killSwitch.always
       daemon
 

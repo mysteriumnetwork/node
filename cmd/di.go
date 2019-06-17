@@ -730,13 +730,11 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
-	if options.EnableKillSwitch {
-		fwVendor, err := vnd.SetupVendor()
-		if err != nil {
-			return err
-		}
-		firewall.Configure(fwVendor)
+	fwVendor, err := vnd.SetupVendor()
+	if err != nil {
+		return err
 	}
+	firewall.Configure(fwVendor)
 	if options.BlockAlways {
 		_, err := firewall.BlockNonTunnelTraffic(firewall.Global)
 		return err

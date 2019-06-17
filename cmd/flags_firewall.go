@@ -23,10 +23,6 @@ import (
 )
 
 var (
-	enableKillSwitch = cli.BoolFlag{
-		Name:  "firewall.killSwitch",
-		Usage: "Enable consumer outgoing non tunneled traffic blocking during connections",
-	}
 	alwaysBlock = cli.BoolFlag{
 		Name:  "firewall.killSwitch.always",
 		Usage: "Always block non-tunneled outgoing consumer traffic",
@@ -35,13 +31,12 @@ var (
 
 // RegisterFirewallFlags registers flags to control firewall killswitch
 func RegisterFirewallFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, enableKillSwitch, alwaysBlock)
+	*flags = append(*flags, alwaysBlock)
 }
 
 // ParseFirewallFlags parses registered flags and puts them into options structure
 func ParseFirewallFlags(ctx *cli.Context) node.OptionsFirewall {
 	return node.OptionsFirewall{
-		EnableKillSwitch: ctx.GlobalBool(enableKillSwitch.Name),
-		BlockAlways:      ctx.GlobalBool(alwaysBlock.Name),
+		BlockAlways: ctx.GlobalBool(alwaysBlock.Name),
 	}
 }
