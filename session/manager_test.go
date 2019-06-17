@@ -50,8 +50,8 @@ type mockPublisher struct {
 
 func (mp *mockPublisher) Publish(topic string, data interface{}) {
 	mp.lock.Lock()
+	defer mp.lock.Unlock()
 	mp.published = data.(sessionEvent.Payload)
-	mp.lock.Unlock()
 }
 
 func (mp *mockPublisher) SubscribeAsync(topic string, f interface{}) error {
@@ -87,8 +87,7 @@ func mockBalanceTrackerFactory(consumer, provider, issuer identity.Identity) (Ba
 func TestManager_Create_StoresSession(t *testing.T) {
 	expectedResult := expectedSession
 
-	mp := &mockPublisher{}
-	sessionStore := NewStorageMemory(mp)
+	sessionStore := NewStorageMemory()
 
 	natPinger := func(*traversal.Params) {}
 
@@ -109,7 +108,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 }
 
 func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
-	sessionStore := NewStorageMemory(&mockPublisher{})
+	sessionStore := NewStorageMemory()
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,

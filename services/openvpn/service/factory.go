@@ -41,7 +41,7 @@ import (
 
 const statisticsReportingIntervalInSeconds = 30
 
-type publisher interface {
+type eventPublisher interface {
 	Publish(topic string, data interface{})
 }
 
@@ -55,7 +55,7 @@ func NewManager(nodeOptions node.Options,
 	mapPort func(int) (releasePortMapping func()),
 	natEventGetter NATEventGetter,
 	portPool port.ServicePortSupplier,
-	publisher publisher,
+	publisher eventPublisher,
 ) *Manager {
 	clientMap := openvpn_session.NewClientMap(sessionMap)
 
@@ -63,12 +63,14 @@ func NewManager(nodeOptions node.Options,
 
 	callback := func(sbc bytecount.SessionByteCount) {
 		sessions := clientMap.GetClientSessions(sbc.ClientID)
-		if len(sessions) > 0 {
+		if len(sessions) == 1 {
 			publisher.Publish(event.DataTransfered, event.DataTransferEventPayload{
 				ID:   string(sessions[0]),
 				Up:   int64(sbc.BytesOut),
 				Down: int64(sbc.BytesIn),
 			})
+		} else {
+			log.Warnf("could not map sessions - expected a single session to exist for a user, got %v sessions instead", len(sessions))
 		}
 	}
 

@@ -145,8 +145,8 @@ func (k *Keeper) updateSessionState(_ interface{}) {
 			ID:         string(sessions[i].ID),
 			ConsumerID: sessions[i].ConsumerID.Address,
 			CreatedAt:  sessions[i].CreatedAt,
-			BytesUp:    sessions[i].DataTransfered.Up,
-			BytesDown:  sessions[i].DataTransfered.Down,
+			BytesOut:   sessions[i].DataTransfered.Up,
+			BytesIn:    sessions[i].DataTransfered.Down,
 		}
 	}
 

@@ -19,24 +19,14 @@ package session
 
 import (
 	"sync"
-
-	"github.com/mysteriumnetwork/node/session/event"
 )
 
-type bus interface {
-	Publish(topic string, data interface{})
-	SubscribeAsync(topic string, f interface{}) error
-}
-
 // NewStorageMemory initiates new session storage
-func NewStorageMemory(bus bus) *StorageMemory {
+func NewStorageMemory() *StorageMemory {
 	sm := &StorageMemory{
 		sessions: make(map[ID]Session),
 		lock:     sync.Mutex{},
-		bus:      bus,
 	}
-	// intentionally ignoring the error here, it will only error in case ConsumeDataTransferedEvent is not a function
-	_ = bus.SubscribeAsync(event.DataTransfered, sm.ConsumeDataTransferedEvent)
 	return sm
 }
 
@@ -44,7 +34,6 @@ func NewStorageMemory(bus bus) *StorageMemory {
 type StorageMemory struct {
 	sessions map[ID]Session
 	lock     sync.Mutex
-	bus      bus
 }
 
 // Add puts given session to storage. Multiple sessions per peerID is possible in case different services are used
@@ -53,10 +42,6 @@ func (storage *StorageMemory) Add(sessionInstance Session) {
 	defer storage.lock.Unlock()
 
 	storage.sessions[sessionInstance.ID] = sessionInstance
-	go storage.bus.Publish(event.Topic, event.Payload{
-		ID:     string(sessionInstance.ID),
-		Action: event.Created,
-	})
 }
 
 // GetAll returns all sessions in storage
@@ -91,21 +76,10 @@ func (storage *StorageMemory) Find(id ID) (Session, bool) {
 	return Session{}, false
 }
 
-// ConsumeDataTransferedEvent consumes the data transfer event
-func (storage *StorageMemory) ConsumeDataTransferedEvent(e event.DataTransferEventPayload) {
+// UpdateDataTransfer updates the data transfer info on the session
+func (storage *StorageMemory) UpdateDataTransfer(id ID, up, down int64) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
-	// From a server perspective, bytes up are the actual bytes the client downloaded(aka the bytes we pushed to the consumer)
-	// To lessen the confusion, I suggest having the bytes reversed on the session instance.
-	// This way, the session will show that it downloaded the bytes in a manner that is easier to comprehend.
-	storage.updateDataTransfer(ID(e.ID), e.Down, e.Up)
-	go storage.bus.Publish(event.Topic, event.Payload{
-		ID:     e.ID,
-		Action: event.Updated,
-	})
-}
-
-func (storage *StorageMemory) updateDataTransfer(id ID, up, down int64) {
 	if instance, found := storage.sessions[id]; found {
 		instance.DataTransfered.Down = down
 		instance.DataTransfered.Up = up
@@ -118,17 +92,13 @@ func (storage *StorageMemory) Remove(id ID) {
 	storage.lock.Lock()
 	defer storage.lock.Unlock()
 	delete(storage.sessions, id)
-	go storage.bus.Publish(event.Topic, event.Payload{
-		ID:     string(id),
-		Action: event.Removed,
-	})
 }
 
 // RemoveForService removes all sessions which belong to given service
-func (storage *StorageMemory) RemoveForService(serviceId string) {
+func (storage *StorageMemory) RemoveForService(serviceID string) {
 	sessions := storage.GetAll()
 	for _, session := range sessions {
-		if session.serviceID == serviceId {
+		if session.serviceID == serviceID {
 			storage.Remove(session.ID)
 		}
 	}
