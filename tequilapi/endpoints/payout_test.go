@@ -96,7 +96,7 @@ func TestUpdatePayoutInfo(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
-		bytes.NewBufferString(`{"ethAddress": "1234payout", "referral_code": "1234referral"}`),
+		bytes.NewBufferString(`{"ethAddress": "1234payout", "referralCode": "1234referral"}`),
 	)
 	assert.NoError(t, err)
 
@@ -116,7 +116,7 @@ func TestUpdateReferralInfo(t *testing.T) {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		"/irrelevant",
-		bytes.NewBufferString(`{"referral_code": "1234referral"}`),
+		bytes.NewBufferString(`{"referralCode": "1234referral"}`),
 	)
 	assert.NoError(t, err)
 
@@ -151,7 +151,7 @@ func TestGetPayoutInfo_ReturnsPayoutInfo(t *testing.T) {
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, `{"eth_address": "mock eth address", "referral_code": "mock referral code"}`, resp.Body.String())
+	assert.JSONEq(t, `{"ethAddress": "mock eth address", "referralCode": "mock referral code"}`, resp.Body.String())
 }
 
 func TestGetPayoutInfo_ReturnsError_WhenPayoutInfoFindingFails(t *testing.T) {

@@ -41,12 +41,12 @@ type payoutInfo struct {
 type referralInfo struct {
 	// required: true
 	// example: ABC123
-	ReferralCode string `json:"referral_code"`
+	ReferralCode string `json:"referralCode"`
 }
 
 type payoutInfoResponse struct {
-	EthAddress   string `json:"eth_address"`
-	ReferralCode string `json:"referral_code"`
+	EthAddress   string `json:"ethAddress"`
+	ReferralCode string `json:"referralCode"`
 }
 
 // PayoutInfoRegistry allows to register payout info
