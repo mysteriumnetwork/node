@@ -20,11 +20,9 @@ package boltdb
 import (
 	"sort"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations"
 )
 
-const migrationLogPrefix = "[migrator] "
 const migrationIndexBucketName = "migrations"
 
 // Migrator represents the component responsible for running migrations on bolt db
@@ -63,12 +61,12 @@ func (m *Migrator) migrate(migration migrations.Migration) error {
 	if err != nil || isRun {
 		return err
 	}
-	log.Info(migrationLogPrefix, "running migration ", migration.Name)
+	log.Info("running migration ", migration.Name)
 	err = migration.Migrate(m.db.db)
 	if err != nil {
 		return err
 	}
-	log.Info(migrationLogPrefix, "saving migration ", migration.Name)
+	log.Info("saving migration ", migration.Name)
 	return m.saveMigrationRun(migration)
 }
 

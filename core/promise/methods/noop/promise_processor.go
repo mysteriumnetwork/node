@@ -18,11 +18,9 @@
 package noop
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
@@ -31,8 +29,6 @@ import (
 )
 
 const (
-	processorLogPrefix = "[promise-processor] "
-
 	balanceNotifying = balanceState("Notifying")
 	balanceStopped   = balanceState("Stopped")
 )
@@ -126,7 +122,7 @@ func (processor *PromiseProcessor) getBalanceState() balanceState {
 }
 
 func (processor *PromiseProcessor) balanceSend(message promise.BalanceMessage) error {
-	log.Info(processorLogPrefix, fmt.Sprintf("Notifying balance %s", message.Balance.String()))
+	log.Infof("notifying balance %s", message.Balance.String())
 	return processor.dialog.Send(&promise.BalanceMessageProducer{
 		Message: message,
 	})

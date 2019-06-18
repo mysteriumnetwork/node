@@ -20,7 +20,6 @@
 package cmd
 
 import (
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
@@ -86,7 +85,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 
 			var portPool port.ServicePortSupplier
 			if wgOptions.Ports.IsSpecified() {
-				log.Infof("%s fixed service port range (%s) configured, using custom port pool", logPrefix, wgOptions.Ports)
+				log.Infof("fixed service port range (%s) configured, using custom port pool", wgOptions.Ports)
 				portPool = port.NewFixedRangePool(*wgOptions.Ports)
 			} else {
 				portPool = port.NewPool()
@@ -185,7 +184,7 @@ func (di *Dependencies) bootstrapServiceNoop(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) error {
 	di.NATService = nat.NewService()
 	if err := di.NATService.Enable(); err != nil {
-		log.Warn(logPrefix, "Failed to enable NAT forwarding: ", err)
+		log.Warn("Failed to enable NAT forwarding: ", err)
 	}
 	di.ServiceRegistry = service.NewRegistry()
 	storage := session.NewEventBasedStorage(di.EventBus, session.NewStorageMemory())
@@ -252,7 +251,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
 	if err := di.EventBus.Subscribe(service.StatusTopic, serviceCleaner.HandleServiceStatus); err != nil {
-		log.Error(logPrefix, "failed to subscribe service cleaner")
+		log.Error("failed to subscribe service cleaner")
 	}
 
 	return nil

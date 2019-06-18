@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -36,8 +35,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
 )
-
-const managerLogPrefix = "[connection-manager] "
 
 var (
 	// ErrNoConnection error indicates that action applied to manager expects active connection (i.e. disconnect)
@@ -202,7 +199,7 @@ func (manager *connectionManager) cleanConnection() {
 	for i := len(manager.cleanup) - 1; i >= 0; i-- {
 		err := manager.cleanup[i]()
 		if err != nil {
-			log.Warn(managerLogPrefix, "cleanup error:", err)
+			log.Warn("cleanup error:", err)
 		}
 	}
 	manager.cleanup = make([]func() error, 0)
@@ -270,7 +267,7 @@ func (manager *connectionManager) startConnection(
 
 	defer func() {
 		if err != nil {
-			log.Info(managerLogPrefix, "Cancelling connection initiation: ", err)
+			log.Info("cancelling connection initiation: ", err)
 			logDisconnectError(manager.Disconnect())
 		}
 	}()
@@ -343,24 +340,24 @@ func (manager *connectionManager) Disconnect() error {
 func (manager *connectionManager) payForService(payments PaymentIssuer) {
 	err := payments.Start()
 	if err != nil {
-		log.Error(managerLogPrefix, "payment error: ", err)
+		log.Error("payment error: ", err)
 		err = manager.Disconnect()
 		if err != nil {
-			log.Error(managerLogPrefix, "could not disconnect gracefully:", err)
+			log.Error("could not disconnect gracefully:", err)
 		}
 	}
 }
 
 func warnOnClean() {
-	log.Warn(managerLogPrefix, "Trying to close when there is nothing to close. Possible bug or race condition")
+	log.Warn("trying to close when there is nothing to close. Possible bug or race condition")
 }
 
 func (manager *connectionManager) connectionWaiter(connection Connection) {
 	err := connection.Wait()
 	if err != nil {
-		log.Warn(managerLogPrefix, "Connection exited with error: ", err)
+		log.Warn("connection exited with error: ", err)
 	} else {
-		log.Info(managerLogPrefix, "Connection exited")
+		log.Info("connection exited")
 	}
 
 	logDisconnectError(manager.Disconnect())
@@ -392,7 +389,7 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 		manager.onStateChanged(state)
 	}
 
-	log.Debug(managerLogPrefix, "State updater stopCalled")
+	log.Debug("state updater stopCalled")
 	logDisconnectError(manager.Disconnect())
 }
 
@@ -434,6 +431,6 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 
 func logDisconnectError(err error) {
 	if err != nil && err != ErrNoConnection {
-		log.Error(managerLogPrefix, "Disconnect error", err)
+		log.Error("disconnect error", err)
 	}
 }

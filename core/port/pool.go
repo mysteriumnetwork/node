@@ -21,7 +21,6 @@ import (
 	"math/rand"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/pkg/errors"
 )
 
@@ -64,7 +63,7 @@ func (pool *Pool) Acquire() (port Port, err error) {
 	if !available {
 		p, err = pool.seekAvailablePort()
 	}
-	log.Infof("%ssupplying port %v, err %v", logPrefix, p, err)
+	log.Infof("supplying port %v, err %v", p, err)
 	return Port(p), errors.Wrap(err, "could not acquire port")
 }
 

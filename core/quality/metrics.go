@@ -19,11 +19,7 @@ package quality
 
 import (
 	"encoding/json"
-
-	log "github.com/cihub/seelog"
 )
-
-const mysteriumMetricsLogPrefix = "[Mysterium.metrics] "
 
 // ServiceMetricsResponse represents response from the quality oracle service
 type ServiceMetricsResponse struct {
@@ -37,18 +33,18 @@ func Parse(msg json.RawMessage, proposal interface{}) ([]byte, error) {
 	}
 
 	if err := json.Unmarshal(msg, &proposal); err != nil {
-		log.Warn(mysteriumMetricsLogPrefix, "Failed to parse proposal info")
+		log.Warn("failed to parse proposal info")
 		return nil, err
 	}
 
 	if err := json.Unmarshal(msg, &metrics); err != nil {
-		log.Warn(mysteriumMetricsLogPrefix, "Failed to parse metrics")
+		log.Warn("failed to parse metrics")
 		return nil, err
 	}
 
 	out, err := json.Marshal(metrics)
 	if err != nil {
-		log.Warn(mysteriumMetricsLogPrefix, "Failed to marshal metrics JSON")
+		log.Warn("failed to marshal metrics JSON")
 		return nil, err
 	}
 	return out, err

@@ -18,7 +18,6 @@
 package node
 
 import (
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/quality"
@@ -90,7 +89,7 @@ func (node *Node) Start() error {
 
 	node.publisher.Publish(event.Topic, event.Payload{Status: event.StatusStarted})
 
-	log.Infof("Api started on: %v", address)
+	log.Infof("API started on: %v", address)
 	go node.natPinger.Start()
 
 	return nil
@@ -108,22 +107,22 @@ func (node *Node) Kill() error {
 	if err != nil {
 		switch err {
 		case connection.ErrNoConnection:
-			log.Info("No active connection - proceeding")
+			log.Info("no active connection - proceeding")
 		default:
 			return err
 		}
 	} else {
-		log.Info("Connection closed")
+		log.Info("connection closed")
 	}
 
 	node.httpAPIServer.Stop()
-	log.Info("Api stopped")
+	log.Info("API stopped")
 
 	node.uiServer.Stop()
-	log.Info("Web server stopped")
+	log.Info("web server stopped")
 
 	node.natPinger.Stop()
-	log.Info("Nat pinger stopped")
+	log.Info("NAT pinger stopped")
 
 	return nil
 }

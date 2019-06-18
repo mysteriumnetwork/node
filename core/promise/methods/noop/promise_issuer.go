@@ -18,16 +18,11 @@
 package noop
 
 import (
-	"fmt"
-
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 )
-
-const issuerLogPrefix = "[promise-issuer] "
 
 // PromiseIssuer issues promises in such way, that no actual money is added to promise
 type PromiseIssuer struct {
@@ -83,9 +78,9 @@ func (issuer *PromiseIssuer) subscribePromiseBalance() error {
 
 func (issuer *PromiseIssuer) processBalanceMessage(message promise.BalanceMessage) error {
 	if !message.Accepted {
-		log.Warn(issuerLogPrefix, fmt.Sprintf("Promise balance rejected: %s", message.Balance.String()))
+		log.Warnf("promise balance rejected: %s", message.Balance.String())
 	}
 
-	log.Info(issuerLogPrefix, fmt.Sprintf("Promise balance notified: %s", message.Balance.String()))
+	log.Infof("promise balance notified: %s", message.Balance.String())
 	return nil
 }

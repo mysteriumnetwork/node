@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/core/state/event"
 	stateEvent "github.com/mysteriumnetwork/node/core/state/event"
@@ -32,8 +31,6 @@ import (
 
 // DefaultDebounceDuration is the default time interval suggested for debouncing
 const DefaultDebounceDuration = time.Millisecond * 200
-
-const logPrefix = "[state keeper]"
 
 type natStatusProvider interface {
 	Status() nat.Status
@@ -120,7 +117,7 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 
 	event, ok := e.(natEvent.Event)
 	if !ok {
-		log.Warn(logPrefix, "received a non nat event on nat status call - ignoring")
+		log.Warn("received a non nat event on nat status call - ignoring")
 		return
 	}
 

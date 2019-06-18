@@ -17,10 +17,6 @@
 
 package port
 
-// Port (networking)
-type Port int
+import "github.com/mysteriumnetwork/node/logconfig"
 
-// Num returns port's numeric value
-func (p Port) Num() int {
-	return int(p)
-}
+var log = logconfig.NewLogger()

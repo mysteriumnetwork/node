@@ -25,13 +25,11 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/golang/protobuf/proto"
 	"github.com/mysteriumnetwork/metrics"
 )
 
 const (
-	mysteriumMorqaLogPrefix = "[Mysterium.morqa] "
 	mysteriumMorqaAgentName = "goclient-v0.1"
 )
 
@@ -58,20 +56,20 @@ func NewMorqaClient(baseURL string, timeout time.Duration) *MysteriumMORQA {
 func (m *MysteriumMORQA) ProposalsMetrics() []json.RawMessage {
 	request, err := m.newRequestJSON(http.MethodGet, "proposals/quality", nil)
 	if err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, "Failed to create proposals metrics request: ", err)
+		log.Warn("failed to create proposals metrics request: ", err)
 		return nil
 	}
 
 	response, err := m.http.Do(request)
 	if err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics: ", err)
+		log.Warn("failed to request or parse proposals metrics: ", err)
 		return nil
 	}
 	defer response.Body.Close()
 
 	var metricsResponse ServiceMetricsResponse
 	if err = parseResponseJSON(response, &metricsResponse); err != nil {
-		log.Warn(mysteriumMorqaLogPrefix, "Failed to request or parse proposals metrics: ", err)
+		log.Warn("failed to request or parse proposals metrics: ", err)
 		return nil
 	}
 

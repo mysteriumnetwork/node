@@ -17,10 +17,6 @@
 
 package auth
 
-import (
-	log "github.com/cihub/seelog"
-)
-
 // Authenticator provides an authentication method for builtin UI.
 type Authenticator struct {
 	storage Storage

@@ -18,17 +18,13 @@
 package quality
 
 import (
-	"fmt"
 	"time"
-
-	log "github.com/cihub/seelog"
 )
 
 const (
 	appName             = "myst"
 	startupEventName    = "startup"
 	natMappingEventName = "nat_mapping"
-	logPrefix           = "[quality-oracle] "
 )
 
 // Transport allows sending events
@@ -106,6 +102,6 @@ func (sender *Sender) sendEvent(eventName string, context interface{}) {
 		Context:   context,
 	})
 	if err != nil {
-		log.Warn(logPrefix, fmt.Sprintf(`Failed to send metric "%s". %s`, eventName, err))
+		log.Warnf("Failed to send metric %q. %s", eventName, err)
 	}
 }
