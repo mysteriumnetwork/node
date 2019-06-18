@@ -48,6 +48,19 @@ func NewClient(discoveryAPIAddress string) *MysteriumAPI {
 	}
 }
 
+// IdentityExists checks if given identity is registered in discovery
+func (mApi *MysteriumAPI) IdentityExists(id identity.Identity, signer identity.Signer) (bool, error) {
+	req, err := requests.NewSignedGetRequest(mApi.discoveryAPIAddress, fmt.Sprintf("identities/%s", id.Address), signer)
+	if err != nil {
+		return false, err
+	}
+	res, err := mApi.http.Do(req)
+	if err != nil {
+		return false, err
+	}
+	return res.StatusCode == 200, nil
+}
+
 // RegisterIdentity registers given identity to discovery service
 func (mApi *MysteriumAPI) RegisterIdentity(id identity.Identity, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "identities", CreateIdentityRequest{
