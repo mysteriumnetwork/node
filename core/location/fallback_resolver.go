@@ -18,11 +18,8 @@
 package location
 
 import (
-	log "github.com/cihub/seelog"
 	"github.com/pkg/errors"
 )
-
-const fallbackResolverLogPrefix = "[fallback-resolver] "
 
 // ErrLocationResolutionFailed represents a failure to resolve location and running out of fallbacks to try
 var ErrLocationResolutionFailed = errors.New("location resolution failed")
@@ -41,10 +38,11 @@ func NewFallbackResolver(resolvers []Resolver) *FallbackResolver {
 
 // DetectLocation allows us to detect our current location
 func (fr *FallbackResolver) DetectLocation() (Location, error) {
+	log.Debug("detecting with fallback resolver")
 	for _, v := range fr.LocationResolvers {
 		loc, err := v.DetectLocation()
 		if err != nil {
-			log.Warn(fallbackResolverLogPrefix, "could not resolve location", err)
+			log.Warn("could not resolve location", err)
 		} else {
 			return loc, err
 		}

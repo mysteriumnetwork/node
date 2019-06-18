@@ -28,6 +28,7 @@ import (
 
 // NewBuiltInResolver returns new db resolver initialized from built in data
 func NewBuiltInResolver(ipResolver ip.Resolver) (*DBResolver, error) {
+	log.Debug("detecting with built-in resolver")
 	dbBytes, err := gendb.LoadData()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load builtin db")

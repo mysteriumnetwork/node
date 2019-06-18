@@ -20,13 +20,8 @@ package api
 import (
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
-)
-
-const (
-	fetcherLogPrefix = "[proposal-fetcher-api] "
 )
 
 // FetchCallback does real fetch of proposals through Mysterium API
@@ -89,11 +84,11 @@ func (fetcher *Fetcher) fetchLoop() {
 func (fetcher *Fetcher) fetchDo() error {
 	proposals, err := fetcher.fetch()
 	if err != nil {
-		log.Warnf("%s Failed to fetch proposals: %s", fetcherLogPrefix, err)
+		log.Warnf("failed to fetch proposals: %s", err)
 		return err
 	}
 
-	log.Infof("%s Proposals fetched: %d", fetcherLogPrefix, len(proposals))
+	log.Infof("proposals fetched: %d", len(proposals))
 	fetcher.proposalStorage.Set(proposals...)
 
 	for _, proposal := range proposals {

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/identity"
@@ -246,7 +245,7 @@ func (md *mockDialog) Close() error {
 	defer md.Unlock()
 
 	md.closed = true
-	log.Info(mockDialogLog, "Dialog closed")
+	log.Info(mockDialogLog, "dialog closed")
 	return nil
 }
 

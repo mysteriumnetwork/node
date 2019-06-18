@@ -54,6 +54,7 @@ func NewFailingResolver(err error) *StaticResolver {
 
 // DetectLocation detects current IP-address provides location information for the IP.
 func (d *StaticResolver) DetectLocation() (Location, error) {
+	log.Debug("detecting with static resolver")
 	pubIP, err := d.ipResolver.GetPublicIP()
 	if err != nil {
 		return Location{}, errors.Wrap(err, "failed to get public IP")

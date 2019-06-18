@@ -20,8 +20,6 @@ package node
 import (
 	"errors"
 	"os"
-
-	log "github.com/cihub/seelog"
 )
 
 // OptionsDirectory describes data structure holding directories as parameters
@@ -63,7 +61,7 @@ func (options *OptionsDirectory) Check() error {
 func ensureOrCreateDir(dir string) error {
 	err := ensureDirExists(dir)
 	if os.IsNotExist(err) {
-		log.Info("[Directory config checker] ", "Directory: ", dir, " does not exit. Creating new one")
+		log.Info("directory: ", dir, " does not exit, creating a new one")
 		return os.MkdirAll(dir, 0700)
 	}
 	return err

@@ -46,6 +46,7 @@ func NewExternalDBResolver(databasePath string, ipResolver ip.Resolver) (*DBReso
 
 // DetectLocation detects current IP-address provides location information for the IP.
 func (r *DBResolver) DetectLocation() (loc Location, err error) {
+	log.Debug("detecting with DB resolver")
 	ipAddress, err := r.ipResolver.GetPublicIP()
 	if err != nil {
 		return Location{}, errors.Wrap(err, "failed to get public IP")

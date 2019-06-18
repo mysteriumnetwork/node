@@ -20,7 +20,6 @@ package main
 import (
 	"os"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/cmd"
 	command_cli "github.com/mysteriumnetwork/node/cmd/commands/cli"
 	"github.com/mysteriumnetwork/node/cmd/commands/daemon"
@@ -33,6 +32,7 @@ import (
 )
 
 var (
+	log              = logconfig.NewLogger()
 	licenseCopyright = metadata.LicenseCopyright(
 		"run command 'license --warranty'",
 		"run command 'license --conditions'",
@@ -48,14 +48,14 @@ var (
 func main() {
 	app, err := NewCommand()
 	if err != nil {
-		log.Error("Failed to create command: ", err)
+		log.Error("failed to create command: ", err)
 		log.Flush()
 		os.Exit(1)
 	}
 
 	err = app.Run(os.Args)
 	if err != nil {
-		log.Error("Failed to execute command: ", err)
+		log.Error("failed to execute command: ", err)
 		log.Flush()
 		os.Exit(1)
 	}

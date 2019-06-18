@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	log "github.com/cihub/seelog"
 	"github.com/gofrs/uuid"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"

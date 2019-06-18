@@ -20,12 +20,10 @@ package ip
 import (
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
 const apiClient = "goclient-v0.1"
-const ipAPILogPrefix = "[ip-detector.api] "
 
 // NewResolver creates new ip-detector resolver with default timeout of one minute
 func NewResolver(url string) Resolver {
@@ -56,7 +54,7 @@ func (client *clientRest) GetPublicIP() (string, error) {
 	request.Header.Set("User-Agent", apiClient)
 	request.Header.Set("Accept", "application/json")
 	if err != nil {
-		log.Critical(ipAPILogPrefix, err)
+		log.Critical(err)
 		return "", err
 	}
 
@@ -65,7 +63,7 @@ func (client *clientRest) GetPublicIP() (string, error) {
 		return "", err
 	}
 
-	log.Trace(ipAPILogPrefix, "IP detected: ", ipResponse.IP)
+	log.Trace("IP detected: ", ipResponse.IP)
 	return ipResponse.IP, nil
 }
 

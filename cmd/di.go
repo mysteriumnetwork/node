@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -84,8 +83,6 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 )
-
-const logPrefix = "[service bootstrap] "
 
 // Storage stores persistent objects for future usage
 type Storage interface {
@@ -714,7 +711,7 @@ func (di *Dependencies) bootstrapBandwidthTracker() error {
 func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	di.NATTracker = event.NewTracker()
 	if options.ExperimentNATPunching {
-		log.Trace(logPrefix + "experimental NAT punching enabled, creating a pinger")
+		log.Trace("experimental NAT punching enabled, creating a pinger")
 		di.NATPinger = traversal.NewPinger(
 			di.NATTracker,
 			config.NewConfigParser(),

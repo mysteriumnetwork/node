@@ -18,7 +18,6 @@
 package auth
 
 import (
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/storage"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
@@ -72,7 +71,7 @@ func (credentials *Credentials) loadOrInitialize() (s string, err error) {
 	var storedHash string
 	err = credentials.db.GetValue(credentialsDBBucket, username, &storedHash)
 	if err == storage.ErrNotFound {
-		log.Info("[web-ui-auth] credentials not found, initializing to default")
+		log.Info("credentials not found, initializing to default")
 		err = NewCredentials(username, initialPassword, credentials.db).Set()
 		if err != nil {
 			return "", errors.Wrap(err, "failed to set initial credentials")

@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/asdine/storm"
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/identity"
@@ -84,7 +83,7 @@ func MigrateSessionToHistory(db *storm.DB) error {
 		if err != nil {
 			rollbackError := tx.Rollback()
 			if rollbackError != nil {
-				log.Critical("[migrateSessionToHistory] rollback failed!", err)
+				log.Critical("migrate session to history rollback failed!", err)
 			}
 			return err
 		}

@@ -21,12 +21,9 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/connection"
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 )
-
-const locationCacheLogPrefix = "[location-cache] "
 
 // Cache allows us to cache location resolution
 type Cache struct {
@@ -90,11 +87,11 @@ func (c *Cache) HandleConnectionEvent(se connection.StateEvent) {
 
 	loc, err := c.fetchAndSave()
 	if err != nil {
-		log.Error(locationCacheLogPrefix, "location update failed", err)
+		log.Error("location update failed", err)
 		// reset time so a fetch is tried the next time a get is called
 		c.lastFetched = time.Time{}
 	} else {
-		log.Trace(locationCacheLogPrefix, "location update succeeded", loc)
+		log.Trace("location update succeeded", loc)
 	}
 }
 
@@ -109,8 +106,8 @@ func (c *Cache) HandleNodeEvent(se nodevent.Payload) {
 	var err error
 	c.origin, err = c.locationDetector.DetectLocation()
 	if err != nil {
-		log.Warn(locationCacheLogPrefix, "Failed to detect original location: ", err)
+		log.Warn("failed to detect original location: ", err)
 	} else {
-		log.Tracef("%sOriginal location detected: %s (%s)", locationCacheLogPrefix, c.origin.Country, c.origin.NodeType)
+		log.Tracef("original location detected: %s (%s)", c.origin.Country, c.origin.NodeType)
 	}
 }

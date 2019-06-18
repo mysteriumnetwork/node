@@ -21,7 +21,6 @@ import (
 	"net"
 	"strconv"
 
-	log "github.com/cihub/seelog"
 	"github.com/pkg/errors"
 )
 
@@ -34,7 +33,7 @@ func available(port int) (bool, error) {
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		log.Infof("%s cannot listen on UDP port %v: %v", logPrefix, port, err)
+		log.Infof("cannot listen on UDP port %v: %v", port, err)
 		return false, nil
 	}
 	defer conn.Close()

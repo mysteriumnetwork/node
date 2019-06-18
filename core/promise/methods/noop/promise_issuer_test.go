@@ -71,7 +71,7 @@ func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Len(t, logs, 1)
-	assert.Equal(t, "[promise-issuer] Promise balance notified: 1000000000TEST", logs[0])
+	assert.Contains(t, logs[0], "promise balance notified: 1000000000TEST")
 }
 
 func testToken(amount float64) money.Money {

@@ -20,12 +20,9 @@ package location
 import (
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/pkg/errors"
 )
-
-const oracleResolverLogPrefix = "[location.Oracle.Resolver] "
 
 type oracleResolver struct {
 	http                  requests.HTTPTransport
@@ -42,9 +39,10 @@ func NewOracleResolver(address string) *oracleResolver {
 
 // DetectLocation detects current IP-address provides location information for the IP.
 func (o *oracleResolver) DetectLocation() (location Location, err error) {
+	log.Debug("detecting with oracle resolver")
 	request, err := requests.NewGetRequest(o.oracleResolverAddress, "", nil)
 	if err != nil {
-		log.Error(oracleResolverLogPrefix, err)
+		log.Error(err)
 		return Location{}, errors.Wrap(err, "failed to create request")
 	}
 

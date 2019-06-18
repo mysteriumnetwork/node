@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package port
+package logconfig
 
-// Port (networking)
-type Port int
+import (
+	"github.com/cihub/seelog"
+)
 
-// Num returns port's numeric value
-func (p Port) Num() int {
-	return int(p)
+// ReplaceLogger replaces by disposing logger that was previously used
+func ReplaceLogger(loggerNew seelog.LoggerInterface) (loggerOld seelog.LoggerInterface) {
+	loggerOld = seelog.Current
+	seelog.ReplaceLogger(loggerNew)
+
+	return loggerOld
 }
