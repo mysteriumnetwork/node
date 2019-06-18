@@ -162,10 +162,6 @@ func (endpoint *payoutEndpoint) UpdatePayoutInfo(resp http.ResponseWriter, reque
 //     description: Bad request
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-//   422:
-//     description: Parameters validation error
-//     schema:
-//       "$ref": "#/definitions/ValidationErrorDTO"
 //   500:
 //     description: Internal server error
 //     schema:
@@ -173,7 +169,7 @@ func (endpoint *payoutEndpoint) UpdatePayoutInfo(resp http.ResponseWriter, reque
 func (endpoint *payoutEndpoint) UpdateReferralInfo(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	id := identity.FromAddress(params.ByName("id"))
 
-	payoutInfoReq, err := toReferralInfoRequest(request)
+	referralInfoReq, err := toReferralInfoRequest(request)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusBadRequest)
 		return
@@ -181,7 +177,7 @@ func (endpoint *payoutEndpoint) UpdateReferralInfo(resp http.ResponseWriter, req
 
 	err = endpoint.payoutInfoRegistry.UpdateReferralInfo(
 		id,
-		payoutInfoReq.ReferralCode,
+		referralInfoReq.ReferralCode,
 		endpoint.signerFactory(id),
 	)
 	if err != nil {

@@ -108,7 +108,6 @@ func TestUpdatePayoutInfo(t *testing.T) {
 
 	assert.Equal(t, "1234abcd", mockPayoutInfoRegistry.recordedID.Address)
 	assert.Equal(t, "1234payout", mockPayoutInfoRegistry.recordedEthAddress)
-	assert.Equal(t, "1234referral", mockPayoutInfoRegistry.recordedReferralCode)
 	assert.Equal(t, http.StatusOK, resp.Code)
 }
 
