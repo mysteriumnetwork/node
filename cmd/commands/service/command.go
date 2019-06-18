@@ -21,13 +21,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
@@ -37,6 +38,8 @@ import (
 )
 
 const serviceCommandName = "service"
+
+var log = logconfig.NewLogger()
 
 var (
 	identityFlag = cli.StringFlag{
@@ -108,9 +111,9 @@ func NewCommand(licenseCommandName string) *cli.Command {
 
 func describeQuit(err error) error {
 	if err == nil {
-		seelog.Info("stopping application")
+		log.Info("stopping application")
 	} else {
-		seelog.Errorf("terminating application due to error: %+v\n", err)
+		log.Errorf("terminating application due to error: %+v\n", err)
 	}
 	return err
 }
@@ -130,10 +133,8 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		serviceTypes = strings.Split(arg, ",")
 	}
 
-	providerID, err := sc.unlockIdentity(parseIdentityFlags(ctx))
-	if err != nil {
-		return err
-	}
+	providerID := sc.unlockIdentity(parseIdentityFlags(ctx))
+	log.Infof("unlocked identity: %v", providerID.Address)
 
 	if err := sc.runServices(ctx, providerID.Address, serviceTypes); err != nil {
 		return err
@@ -142,13 +143,18 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	return <-sc.errorChannel
 }
 
-func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (*identity.Identity, error) {
-	id, err := sc.tequilapi.CurrentIdentity(identityOptions.Identity, identityOptions.Passphrase)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unlock identity")
-	}
+const retryRate = 10 * time.Second
 
-	return &identity.Identity{Address: id.Address}, nil
+func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) *identity.Identity {
+	for {
+		id, err := sc.tequilapi.CurrentIdentity(identityOptions.Identity, identityOptions.Passphrase)
+		if err == nil {
+			return &identity.Identity{Address: id.Address}
+		}
+		log.Warnf("failed to get current identity: %v", err)
+		log.Warnf("retrying in %vs...", retryRate.Seconds())
+		time.Sleep(retryRate)
+	}
 }
 
 func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {
