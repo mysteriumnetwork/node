@@ -82,12 +82,10 @@ func (mApi *MysteriumAPI) GetPayoutInfo(id identity.Identity, signer identity.Si
 }
 
 // UpdatePayoutInfo registers given payout info next to identity to discovery service
-func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress string, referralCode string,
-	signer identity.Signer) error {
+func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error {
 	path := fmt.Sprintf("identities/%s/payout", id.Address)
 	requestBody := UpdatePayoutInfoRequest{
-		EthAddress:   ethAddress,
-		ReferralCode: referralCode,
+		EthAddress: ethAddress,
 	}
 	req, err := requests.NewSignedPutRequest(mApi.discoveryAPIAddress, path, requestBody, signer)
 	if err != nil {
@@ -97,6 +95,24 @@ func (mApi *MysteriumAPI) UpdatePayoutInfo(id identity.Identity, ethAddress stri
 	err = mApi.http.DoRequest(req)
 	if err == nil {
 		log.Info(mysteriumAPILogPrefix, "Payout address ", ethAddress, " registered")
+	}
+	return err
+}
+
+// UpdateReferralInfo registers given referral code next to identity to discovery service
+func (mApi *MysteriumAPI) UpdateReferralInfo(id identity.Identity, referralCode string, signer identity.Signer) error {
+	path := fmt.Sprintf("identities/%s/referral", id.Address)
+	requestBody := UpdateReferralInfoRequest{
+		ReferralCode: referralCode,
+	}
+	req, err := requests.NewSignedPutRequest(mApi.discoveryAPIAddress, path, requestBody, signer)
+	if err != nil {
+		return err
+	}
+
+	err = mApi.http.DoRequest(req)
+	if err == nil {
+		log.Info(mysteriumAPILogPrefix, "Referral code submitted for ", id.Address)
 	}
 	return err
 }
