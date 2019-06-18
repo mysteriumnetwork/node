@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
@@ -183,7 +184,7 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// shoot a few events to see if we'll debounce
-		keeper.ConsumeSessionEvent(sessionEvent.Payload{})
+		keeper.ConsumeSessionStateEvent(sessionEvent.Payload{})
 	}
 
 	time.Sleep(duration * 3)
@@ -192,6 +193,39 @@ func Test_ConsumesSessionEvents(t *testing.T) {
 	assert.Equal(t, string(expected.ID), keeper.GetState().Sessions[0].ID)
 	assert.Equal(t, expected.ConsumerID.Address, keeper.GetState().Sessions[0].ConsumerID)
 	assert.True(t, expected.CreatedAt.Equal(keeper.GetState().Sessions[0].CreatedAt))
+}
+
+func Test_ConsumesSessionAcknowledgeEvents(t *testing.T) {
+	myID := "test"
+	expected := event.ServiceSession{
+		ID:        myID,
+		ServiceID: myID,
+	}
+
+	natProvider := &natStatusProviderMock{
+		statusToReturn: mockNATStatus,
+	}
+	publisher := &mockPublisher{}
+	sl := &serviceListerMock{}
+	sessionStorage := &serviceSessionStorageMock{
+		sessionsToReturn: []session.Session{},
+	}
+
+	duration := time.Millisecond * 3
+	keeper := NewKeeper(natProvider, publisher, sl, sessionStorage, duration)
+	keeper.state.Services = []event.ServiceInfo{
+		{ID: myID},
+	}
+	keeper.state.Sessions = []event.ServiceSession{
+		expected,
+	}
+
+	keeper.ConsumeSessionStateEvent(sessionEvent.Payload{
+		Action: sessionEvent.Acknowledged,
+		ID:     string(expected.ID),
+	})
+
+	assert.Equal(t, 1, keeper.state.Services[0].ConnectionStatistics.Successful)
 }
 
 func Test_ConsumesServiceEvents(t *testing.T) {
@@ -230,4 +264,101 @@ func Test_ConsumesServiceEvents(t *testing.T) {
 	assert.Equal(t, expected.Options(), actual.Options)
 	assert.Equal(t, string(expected.State()), actual.Status)
 	assert.EqualValues(t, expected.Proposal(), actual.Proposal)
+}
+
+func Test_getServiceByID(t *testing.T) {
+
+	natProvider := &natStatusProviderMock{
+		statusToReturn: mockNATStatus,
+	}
+	publisher := &mockPublisher{}
+	sl := &serviceListerMock{
+		servicesToReturn: map[service.ID]*service.Instance{},
+	}
+
+	sessionStorage := &serviceSessionStorageMock{}
+
+	duration := time.Millisecond * 3
+	keeper := NewKeeper(natProvider, publisher, sl, sessionStorage, duration)
+	myID := "test"
+	keeper.state.Services = []event.ServiceInfo{
+		{ID: myID},
+		{ID: "mock"},
+	}
+
+	s, found := keeper.getServiceByID(myID)
+	assert.True(t, found)
+
+	assert.EqualValues(t, keeper.state.Services[0], s)
+
+	_, found = keeper.getServiceByID("something else")
+	assert.False(t, found)
+}
+
+func Test_getSessionByID(t *testing.T) {
+
+	natProvider := &natStatusProviderMock{
+		statusToReturn: mockNATStatus,
+	}
+	publisher := &mockPublisher{}
+	sl := &serviceListerMock{
+		servicesToReturn: map[service.ID]*service.Instance{},
+	}
+
+	sessionStorage := &serviceSessionStorageMock{}
+
+	duration := time.Millisecond * 3
+	keeper := NewKeeper(natProvider, publisher, sl, sessionStorage, duration)
+	myID := "test"
+	keeper.state.Sessions = []event.ServiceSession{
+		{ID: myID},
+		{ID: "mock"},
+	}
+
+	s, found := keeper.getSessionByID(myID)
+	assert.True(t, found)
+
+	assert.EqualValues(t, keeper.state.Sessions[0], s)
+
+	_, found = keeper.getServiceByID("something else")
+	assert.False(t, found)
+}
+
+func Test_incrementConnectionCount(t *testing.T) {
+	expected := service.Instance{}
+	var id service.ID
+
+	natProvider := &natStatusProviderMock{
+		statusToReturn: mockNATStatus,
+	}
+	publisher := &mockPublisher{}
+	sl := &serviceListerMock{
+		servicesToReturn: map[service.ID]*service.Instance{
+			id: &expected,
+		},
+	}
+
+	sessionStorage := &serviceSessionStorageMock{}
+
+	duration := time.Millisecond * 3
+	keeper := NewKeeper(natProvider, publisher, sl, sessionStorage, duration)
+	myID := "test"
+	keeper.state.Services = []event.ServiceInfo{
+		{ID: myID},
+		{ID: "mock"},
+	}
+
+	keeper.incrementConnectCount(myID, false)
+	s, found := keeper.getServiceByID(myID)
+	assert.True(t, found)
+
+	assert.Equal(t, 1, s.ConnectionStatistics.Attempted)
+	assert.Equal(t, 0, s.ConnectionStatistics.Successful)
+
+	keeper.incrementConnectCount(myID, true)
+	s, found = keeper.getServiceByID(myID)
+	assert.True(t, found)
+
+	assert.Equal(t, 1, s.ConnectionStatistics.Successful)
+	assert.Equal(t, 1, s.ConnectionStatistics.Attempted)
 }

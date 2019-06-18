@@ -27,6 +27,7 @@ import (
 	"github.com/mysteriumnetwork/node/nat"
 	natEvent "github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/session"
+	sevent "github.com/mysteriumnetwork/node/session/event"
 )
 
 // DefaultDebounceDuration is the default time interval suggested for debouncing
@@ -52,16 +53,18 @@ type serviceSessionStorage interface {
 // Keeper keeps track of state through eventual consistency.
 // This should become the de-facto place to get your info about node.
 type Keeper struct {
-	state                 *stateEvent.State
-	lock                  sync.RWMutex
-	natStatusProvider     natStatusProvider
-	publisher             publisher
-	serviceLister         serviceLister
-	serviceSessionStorage serviceSessionStorage
+	state                  *stateEvent.State
+	lock                   sync.RWMutex
+	natStatusProvider      natStatusProvider
+	publisher              publisher
+	serviceLister          serviceLister
+	serviceSessionStorage  serviceSessionStorage
+	sessionConnectionCount map[string]event.ConnectionStatistics
 
-	ConsumeServiceStateEvent func(e interface{})
-	ConsumeNATEvent          func(e interface{})
-	ConsumeSessionEvent      func(e interface{})
+	ConsumeServiceStateEvent     func(e interface{})
+	ConsumeNATEvent              func(e interface{})
+	consumeSessionEventDebounced func(e interface{})
+	announceStateChanges         func(e interface{})
 }
 
 // NewKeeper returns a new instance of the keeper
@@ -76,11 +79,19 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 		publisher:             publisher,
 		serviceLister:         serviceLister,
 		serviceSessionStorage: serviceSessionStorage,
+
+		sessionConnectionCount: make(map[string]event.ConnectionStatistics, 0),
 	}
 	k.ConsumeServiceStateEvent = debounce(k.updateServiceState, debounceDuration)
 	k.ConsumeNATEvent = debounce(k.updateNatStatus, debounceDuration)
-	k.ConsumeSessionEvent = debounce(k.updateSessionState, debounceDuration)
+	k.consumeSessionEventDebounced = debounce(k.updateSessionState, debounceDuration)
+	k.announceStateChanges = debounce(k.announceState, debounceDuration)
 	return k
+}
+
+func (k *Keeper) announceState(state interface{}) {
+	s := state.(stateEvent.State)
+	k.publisher.Publish(stateEvent.Topic, s)
 }
 
 func (k *Keeper) updateServiceState(_ interface{}) {
@@ -90,25 +101,72 @@ func (k *Keeper) updateServiceState(_ interface{}) {
 	go k.publisher.Publish(stateEvent.Topic, *k.state)
 }
 
+// ConsumeSessionStateEvent consumes the session change events
+func (k *Keeper) ConsumeSessionStateEvent(e sevent.Payload) {
+	if e.Action == sevent.Acknowledged {
+		k.consumeSessionAcknowledgeEvent(e)
+		return
+	}
+
+	k.consumeSessionEventDebounced(e)
+}
+
+func (k *Keeper) consumeSessionAcknowledgeEvent(e sevent.Payload) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	if e.Action != sevent.Acknowledged {
+		return
+	}
+	session, found := k.getSessionByID(e.ID)
+	if !found {
+		return
+	}
+
+	service, found := k.getServiceByID(session.ServiceID)
+	if !found {
+		return
+	}
+
+	k.incrementConnectCount(service.ID, true)
+
+	go k.announceStateChanges(*k.state)
+}
+
 func (k *Keeper) updateServices() {
 	services := k.serviceLister.List()
 	result := make([]stateEvent.ServiceInfo, len(services))
 
 	i := 0
-	for k, v := range services {
+	for key, v := range services {
 		proposal := v.Proposal()
+
+		// merge in the connection statistics
+		match, _ := k.getServiceByID(string(key))
+
 		result[i] = stateEvent.ServiceInfo{
-			ID:         string(k),
-			ProviderID: proposal.ProviderID,
-			Type:       proposal.ServiceType,
-			Options:    v.Options(),
-			Status:     string(v.State()),
-			Proposal:   proposal,
+			ID:                   string(key),
+			ProviderID:           proposal.ProviderID,
+			Type:                 proposal.ServiceType,
+			Options:              v.Options(),
+			Status:               string(v.State()),
+			Proposal:             proposal,
+			ConnectionStatistics: match.ConnectionStatistics,
 		}
 		i++
 	}
 
 	k.state.Services = result
+}
+
+func (k *Keeper) getServiceByID(id string) (se stateEvent.ServiceInfo, found bool) {
+	for i := range k.state.Services {
+		if k.state.Services[i].ID == id {
+			se = k.state.Services[i]
+			found = true
+			return
+		}
+	}
+	return
 }
 
 func (k *Keeper) updateNatStatus(e interface{}) {
@@ -128,14 +186,15 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 		k.state.NATStatus.Error = status.Error.Error()
 	}
 
-	go k.publisher.Publish(stateEvent.Topic, *k.state)
+	go k.announceStateChanges(*k.state)
 }
 
-func (k *Keeper) updateSessionState(_ interface{}) {
+func (k *Keeper) updateSessionState(e interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
 	sessions := k.serviceSessionStorage.GetAll()
+	newSessions := make([]stateEvent.ServiceSession, 0)
 	result := make([]stateEvent.ServiceSession, len(sessions))
 	for i := range sessions {
 		result[i] = stateEvent.ServiceSession{
@@ -144,11 +203,47 @@ func (k *Keeper) updateSessionState(_ interface{}) {
 			CreatedAt:  sessions[i].CreatedAt,
 			BytesOut:   sessions[i].DataTransfered.Up,
 			BytesIn:    sessions[i].DataTransfered.Down,
+			ServiceID:  sessions[i].ServiceID,
+		}
+
+		// each new session counts as an additional attempt, mark them for further use
+		_, found := k.getSessionByID(string(result[i].ID))
+		if !found {
+			newSessions = append(newSessions, result[i])
 		}
 	}
 
+	for i := range newSessions {
+		k.incrementConnectCount(newSessions[i].ServiceID, false)
+	}
+
 	k.state.Sessions = result
-	go k.publisher.Publish(stateEvent.Topic, *k.state)
+
+	go k.announceStateChanges(*k.state)
+}
+
+func (k *Keeper) getSessionByID(id string) (ss stateEvent.ServiceSession, found bool) {
+	for i := range k.state.Sessions {
+		if k.state.Sessions[i].ID == id {
+			ss = k.state.Sessions[i]
+			found = true
+			return
+		}
+	}
+	return
+}
+
+func (k *Keeper) incrementConnectCount(serviceID string, isSuccess bool) {
+	for i := range k.state.Services {
+		if k.state.Services[i].ID == serviceID {
+			if isSuccess {
+				k.state.Services[i].ConnectionStatistics.Successful++
+			} else {
+				k.state.Services[i].ConnectionStatistics.Attempted++
+			}
+			break
+		}
+	}
 }
 
 // GetState returns the current state

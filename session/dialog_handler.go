@@ -40,6 +40,7 @@ type handler struct {
 	configProvider        ConfigProvider
 	promiseLoader         PromiseLoader
 	receiverID            identity.Identity
+	publisher             publisher
 }
 
 // Handle starts serving services in given Dialog instance
@@ -57,7 +58,14 @@ func (handler *handler) subscribeSessionRequests(dialog communication.Dialog) er
 			receiverID:     handler.receiverID,
 		},
 	)
+	if err != nil {
+		return err
+	}
 
+	err = dialog.Receive(&acknowledgeMessageConsumer{
+		PeerID:       dialog.PeerID(),
+		Acknowledger: handler.sessionManagerFactory(dialog),
+	})
 	if err != nil {
 		return err
 	}

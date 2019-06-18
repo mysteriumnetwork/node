@@ -40,16 +40,23 @@ type NATStatus struct {
 	Error  string `json:"error"`
 }
 
+// ConnectionStatistics shows the successful and attempted connection count
+type ConnectionStatistics struct {
+	Attempted  int `json:"attempted"`
+	Successful int `json:"successful"`
+}
+
 // ServiceInfo stores the information about a service
 type ServiceInfo struct {
-	ID             string                 `json:"id"`
-	ProviderID     string                 `json:"providerId"`
-	Type           string                 `json:"type"`
-	Options        interface{}            `json:"options"`
-	Status         string                 `json:"status"`
-	Proposal       market.ServiceProposal `json:"proposal"`
-	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
-	Sessions       []ServiceSession       `json:"serviceSession,omitempty"`
+	ID                   string                 `json:"id"`
+	ProviderID           string                 `json:"providerId"`
+	Type                 string                 `json:"type"`
+	Options              interface{}            `json:"options"`
+	Status               string                 `json:"status"`
+	Proposal             market.ServiceProposal `json:"proposal"`
+	AccessPolicies       *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
+	Sessions             []ServiceSession       `json:"serviceSession,omitempty"`
+	ConnectionStatistics ConnectionStatistics   `json:"connectionStatistics"`
 }
 
 // ServiceSession represents the session object
@@ -65,4 +72,6 @@ type ServiceSession struct {
 	BytesOut int64 `json:"bytesOut"`
 	// example: 23451
 	BytesIn int64 `json:"bytesIn"`
+	// example: 4cfb0324-daf6-4ad8-448b-e61fe0a1f918
+	ServiceID string `json:"serviceId"`
 }

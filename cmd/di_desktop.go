@@ -238,7 +238,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.PromiseStorage,
 			di.NATPinger.PingTarget,
 			di.NATTracker,
-			serviceID)
+			serviceID,
+			di.EventBus)
 		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))
 	}
 	di.ServicesManager = service.NewManager(

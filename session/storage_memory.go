@@ -98,7 +98,7 @@ func (storage *StorageMemory) Remove(id ID) {
 func (storage *StorageMemory) RemoveForService(serviceID string) {
 	sessions := storage.GetAll()
 	for _, session := range sessions {
-		if session.serviceID == serviceID {
+		if session.ServiceID == serviceID {
 			storage.Remove(session.ID)
 		}
 	}

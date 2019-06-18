@@ -42,7 +42,7 @@ type Session struct {
 	ID             ID
 	ConsumerID     identity.Identity
 	Config         ServiceConfiguration
-	serviceID      string
+	ServiceID      string
 	CreatedAt      time.Time
 	DataTransfered DataTransfered
 	Last           bool

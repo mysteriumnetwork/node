@@ -305,7 +305,7 @@ func (di *Dependencies) bootstrapStateKeeper(options node.Options) error {
 	if err != nil {
 		return err
 	}
-	err = di.EventBus.SubscribeAsync(sessionevent.Topic, di.StateKeeper.ConsumeSessionEvent)
+	err = di.EventBus.SubscribeAsync(sessionevent.Topic, di.StateKeeper.ConsumeSessionStateEvent)
 	if err != nil {
 		return err
 	}
@@ -485,6 +485,7 @@ func newSessionManagerFactory(
 	natPingerChan func(*traversal.Params),
 	natTracker NatEventTracker,
 	serviceID string,
+	eventbus eventbus.EventBus,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.BalanceTracker, error) {
@@ -519,6 +520,7 @@ func newSessionManagerFactory(
 			natPingerChan,
 			natTracker,
 			serviceID,
+			eventbus,
 		)
 	}
 }
