@@ -19,9 +19,6 @@ package upnp
 
 import (
 	"sync"
-
-	log "github.com/cihub/seelog"
-	"github.com/pkg/errors"
 )
 
 // GatewayLoader fetches the gateways once and keeps them stored for further use
@@ -51,7 +48,7 @@ func (gl *GatewayLoader) Get() []GatewayDevice {
 func (gl *GatewayLoader) load() {
 	gateways, err := discoverGateways()
 	if err != nil {
-		_ = log.Error(logPrefix, errors.Wrap(err, "error discovering UPnP devices"))
+		log.Error("error discovering UPnP devices: ", err)
 		return
 	}
 	gl.gateways = gateways

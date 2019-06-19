@@ -18,7 +18,6 @@
 package promise
 
 import (
-	"errors"
 	"sort"
 	"strings"
 	"sync"
@@ -26,6 +25,7 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/pkg/errors"
 )
 
 const promiseBucketPrefix = "stored-promise-"

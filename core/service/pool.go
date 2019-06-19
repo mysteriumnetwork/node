@@ -18,12 +18,12 @@
 package service
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/pkg/errors"
 )
 
 // ID represent unique identifier of the running service.

@@ -60,7 +60,7 @@ func (waiter *dialogWaiter) Start() (market.Contact, error) {
 
 	err := waiter.address.Connect()
 	if err != nil {
-		return market.Contact{}, fmt.Errorf("failed to start my connection with: %v", waiter.address.GetContact())
+		return market.Contact{}, errors.Errorf("failed to start my connection with: %v", waiter.address.GetContact())
 	}
 
 	return waiter.address.GetContact(), nil

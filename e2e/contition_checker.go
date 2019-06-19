@@ -18,8 +18,9 @@
 package e2e
 
 import (
-	"fmt"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type conditionChecker func() (bool, error)
@@ -39,7 +40,7 @@ func waitForConditionFor(duration time.Duration, checkFunc conditionChecker) err
 		case state:
 			return nil
 		case durationWait > duration:
-			return fmt.Errorf("state was still false after %s", durationWait)
+			return errors.Errorf("state was still false after %s", durationWait)
 		case !state:
 			time.Sleep(1 * time.Second)
 		}

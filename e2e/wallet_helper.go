@@ -19,7 +19,6 @@ package e2e
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"math/big"
 	"os"
@@ -36,6 +35,7 @@ import (
 	"github.com/mysteriumnetwork/payments/cli/helpers"
 	"github.com/mysteriumnetwork/payments/contracts/abigen"
 	"github.com/mysteriumnetwork/payments/mysttoken"
+	"github.com/pkg/errors"
 )
 
 var (

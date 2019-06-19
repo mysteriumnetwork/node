@@ -31,7 +31,7 @@ func fetchAllowedIDs(ap *[]market.AccessPolicy) (allowedIDs []identity.Identity,
 		return nil, nil
 	}
 
-	client := requests.NewHTTPClient(time.Minute)
+	client := requests.NewHTTPClient(20 * time.Second)
 
 	var ruleSet market.AccessPolicyRuleSet
 	for _, p := range *ap {

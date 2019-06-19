@@ -1,7 +1,5 @@
-// +build !linux
-
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package mysterium
+package upnp
 
-import (
-	"github.com/mysteriumnetwork/wireguard-go/tun"
-	"github.com/pkg/errors"
-)
+import "github.com/mysteriumnetwork/node/logconfig"
 
-func newDeviceFromFd(_ int) (tun.TUNDevice, error) {
-	return nil, errors.New("not implemented")
-}
+var log = logconfig.NewLogger()

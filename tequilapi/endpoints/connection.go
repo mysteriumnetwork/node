@@ -19,7 +19,6 @@ package endpoints
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"time"
 
@@ -32,6 +31,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
+	"github.com/pkg/errors"
 )
 
 // statusConnectCancelled indicates that connect request was cancelled by user. Since there is no such concept in REST

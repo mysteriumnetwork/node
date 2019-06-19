@@ -18,9 +18,10 @@
 package utils
 
 import (
-	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // SplitCommand parses command arguments from string and returns command with split arguments
@@ -37,7 +38,7 @@ func SplitCommand(command string, commandArguments string) *exec.Cmd {
 // It returns an combined stderr and stdout output and exit code in case of error.
 func SudoExec(args ...string) error {
 	if out, err := exec.Command("sudo", args...).CombinedOutput(); err != nil {
-		return fmt.Errorf("'sudo %v': %v output: %s", strings.Join(args, " "), err, out)
+		return errors.Errorf("'sudo %v': %v output: %s", strings.Join(args, " "), err, out)
 	}
 	return nil
 }

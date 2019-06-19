@@ -19,7 +19,6 @@ package connection
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/pkg/errors"
 )
 
 var (

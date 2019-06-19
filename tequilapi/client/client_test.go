@@ -18,7 +18,6 @@
 package client
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -85,7 +84,7 @@ func TestConnectionErrorIsReturnedByClientInsteadOfDoubleParsing(t *testing.T) {
 
 	_, err := client.Connect("consumer", "provider", "service", ConnectOptions{})
 	assert.Error(t, err)
-	assert.Equal(t, errors.New("server response invalid: Internal server error (http://test-api-whatever/connection). Possible error: me haz faild"), err)
+	assert.EqualError(t, err, "server response invalid: Internal server error (http://test-api-whatever/connection). Possible error: me haz faild")
 	//when doing http request, response body should always be closed by client - otherwise persistent connections are leaking
 	assert.True(t, responseBody.Closed)
 }

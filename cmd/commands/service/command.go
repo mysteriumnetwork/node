@@ -21,20 +21,25 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
 const serviceCommandName = "service"
+
+var log = logconfig.NewLogger()
 
 var (
 	identityFlag = cli.StringFlag{
@@ -73,26 +78,26 @@ func NewCommand(licenseCommandName string) *cli.Command {
 				os.Exit(2)
 			}
 
-			errorChannel := make(chan error)
+			quit := make(chan error)
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			if err := di.Bootstrap(nodeOptions); err != nil {
 				return err
 			}
-			go func() { errorChannel <- di.Node.Wait() }()
+			go func() { quit <- di.Node.Wait() }()
 
-			cmd.RegisterSignalCallback(func() { errorChannel <- nil })
+			cmd.RegisterSignalCallback(func() { quit <- nil })
 
 			cmdService := &serviceCommand{
 				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
-				errorChannel: errorChannel,
+				errorChannel: quit,
 				ap:           parseAccessPolicyFlag(ctx),
 			}
 
 			go func() {
-				errorChannel <- cmdService.Run(ctx)
+				quit <- cmdService.Run(ctx)
 			}()
 
-			return <-errorChannel
+			return describeQuit(<-quit)
 		},
 		After: func(ctx *cli.Context) error {
 			return di.Shutdown()
@@ -102,6 +107,15 @@ func NewCommand(licenseCommandName string) *cli.Command {
 	registerFlags(&command.Flags)
 
 	return command
+}
+
+func describeQuit(err error) error {
+	if err == nil {
+		log.Info("stopping application")
+	} else {
+		log.Errorf("terminating application due to error: %+v\n", err)
+	}
+	return err
 }
 
 // serviceCommand represent entrypoint for service command with top level components
@@ -119,10 +133,8 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 		serviceTypes = strings.Split(arg, ",")
 	}
 
-	providerID, err := sc.unlockIdentity(parseIdentityFlags(ctx))
-	if err != nil {
-		return err
-	}
+	providerID := sc.unlockIdentity(parseIdentityFlags(ctx))
+	log.Infof("unlocked identity: %v", providerID.Address)
 
 	if err := sc.runServices(ctx, providerID.Address, serviceTypes); err != nil {
 		return err
@@ -131,13 +143,17 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	return <-sc.errorChannel
 }
 
-func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) (*identity.Identity, error) {
-	id, err := sc.tequilapi.CurrentIdentity(identityOptions.Identity, identityOptions.Passphrase)
-	if err != nil {
-		return nil, err
+func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) *identity.Identity {
+	const retryRate = 10 * time.Second
+	for {
+		id, err := sc.tequilapi.CurrentIdentity(identityOptions.Identity, identityOptions.Passphrase)
+		if err == nil {
+			return &identity.Identity{Address: id.Address}
+		}
+		log.Warnf("failed to get current identity: %v", err)
+		log.Warnf("retrying in %vs...", retryRate.Seconds())
+		time.Sleep(retryRate)
 	}
-
-	return &identity.Identity{Address: id.Address}, nil
 }
 
 func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, serviceTypes []string) error {
@@ -155,7 +171,7 @@ func (sc *serviceCommand) runServices(ctx *cli.Context, providerID string, servi
 func (sc *serviceCommand) runService(providerID, serviceType string, options service.Options) {
 	_, err := sc.tequilapi.ServiceStart(providerID, serviceType, options, sc.ap)
 	if err != nil {
-		sc.errorChannel <- err
+		sc.errorChannel <- errors.Wrapf(err, "failed to run service %s", serviceType)
 	}
 }
 
@@ -194,7 +210,7 @@ func parseFlagsByServiceType(ctx *cli.Context, serviceType string) (service.Opti
 	if f, ok := serviceTypesFlagsParser[serviceType]; ok {
 		return f(ctx), nil
 	}
-	return service.OptionsIdentity{}, fmt.Errorf("unknown service type: %q", serviceType)
+	return service.OptionsIdentity{}, errors.Errorf("unknown service type: %q", serviceType)
 }
 
 func printTermWarning(licenseCommandName string) {

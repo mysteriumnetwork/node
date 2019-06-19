@@ -19,10 +19,10 @@ package dialog
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/pkg/errors"
 )
 
 // NewCodecSecured returns codec which:
@@ -72,7 +72,7 @@ func (codec *codecSecured) Unpack(data []byte, payloadPtr interface{}) error {
 	}
 
 	if !codec.verifier.Verify(envelope.Payload, identity.SignatureBase64(envelope.Signature)) {
-		return fmt.Errorf("invalid message signature '%s'", envelope.Signature)
+		return errors.Errorf("invalid message signature '%s'", envelope.Signature)
 	}
 
 	return codec.codecPacker.Unpack(envelope.Payload, payloadPtr)

@@ -32,7 +32,7 @@ type oracleResolver struct {
 // NewOracleResolver returns new db resolver initialized from Location Oracle service
 func NewOracleResolver(address string) *oracleResolver {
 	return &oracleResolver{
-		requests.NewHTTPClient(1 * time.Minute),
+		requests.NewHTTPClient(20 * time.Second),
 		address,
 	}
 }

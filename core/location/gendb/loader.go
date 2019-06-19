@@ -20,9 +20,10 @@ package gendb
 import (
 	"compress/gzip"
 	"encoding/base64"
-	"errors"
 	"io/ioutil"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // EncodedDataLoader returns emmbeded database as byte array

@@ -18,11 +18,11 @@
 package broker
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/pkg/errors"
 )
 
 // registerMessage structure represents message that the Provider sends about newly announced Proposal
@@ -53,7 +53,7 @@ func (pmc *registerConsumer) NewMessage() (messagePtr interface{}) {
 func (pmc *registerConsumer) Consume(messagePtr interface{}) error {
 	msg, ok := messagePtr.(registerMessage)
 	if !ok {
-		return fmt.Errorf("consume received message of type %q, expected registerMessage instead", reflect.TypeOf(messagePtr))
+		return errors.Errorf("consume received message of type %q, expected registerMessage instead", reflect.TypeOf(messagePtr))
 	}
 
 	pmc.queue <- msg

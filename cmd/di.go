@@ -615,7 +615,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 		sender := discovery_broker.NewSender(nats.NewConnectionMock())
 		registry = discovery_broker.NewRegistry(sender)
 	default:
-		return fmt.Errorf("unknown discovery provider: %s", options.Type)
+		return errors.Errorf("unknown discovery provider: %s", options.Type)
 	}
 
 	di.DiscoveryFactory = func() service.Discovery {
@@ -633,7 +633,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	if _, err := firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
 		return err
 	}
-	di.QualityClient = quality.NewMorqaClient(di.NetworkDefinition.QualityOracle, 30*time.Second)
+	di.QualityClient = quality.NewMorqaClient(di.NetworkDefinition.QualityOracle, 20*time.Second)
 
 	var transport quality.Transport
 	switch options.Type {
@@ -646,7 +646,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	case node.QualityTypeNone:
 		transport = quality.NewNoopTransport()
 	default:
-		err = fmt.Errorf("unknown Quality Oracle provider: %s", options.Type)
+		err = errors.Errorf("unknown Quality Oracle provider: %s", options.Type)
 	}
 	if err != nil {
 		return err
@@ -657,7 +657,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
 	if _, err = firewall.AllowURLAccess(options.IPDetectorURL); err != nil {
-		return err
+		return errors.Wrap(err, "failed to add firewall exception")
 	}
 	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
 
@@ -675,7 +675,7 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 		}
 		resolver, err = location.NewOracleResolver(options.Address), nil
 	default:
-		err = fmt.Errorf("unknown location provider: %s", options.Type)
+		err = errors.Errorf("unknown location provider: %s", options.Type)
 	}
 	if err != nil {
 		return err

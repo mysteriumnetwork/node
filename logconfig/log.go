@@ -18,6 +18,7 @@
 package logconfig
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/cihub/seelog"
@@ -33,7 +34,17 @@ func NewLogger() *Logger {
 	pkg := retrieveCallInfo().packageName
 	localPkg := strings.Replace(pkg, "github.com/mysteriumnetwork/node/", "", 1)
 	return &Logger{
-		prefix: "[" + localPkg + "] ",
+		prefix: fmt.Sprintf("[%s] ", localPkg),
+	}
+}
+
+// NewNamespaceLogger provides a package name and a namespace prefix.
+// Should be used if there is a need for more than one logger in the package.
+func NewNamespaceLogger(ns string) *Logger {
+	pkg := retrieveCallInfo().packageName
+	localPkg := strings.Replace(pkg, "github.com/mysteriumnetwork/node/", "", 1)
+	return &Logger{
+		prefix: fmt.Sprintf("[%s:%s] ", localPkg, ns),
 	}
 }
 
