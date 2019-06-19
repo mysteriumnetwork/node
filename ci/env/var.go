@@ -60,4 +60,10 @@ const (
 
 	// GithubAPIToken is used for accessing github API
 	GithubAPIToken = BuildVar("GITHUB_API_TOKEN")
+
+	// DockerHubUsername is hub.docker.com username under which to push snapshot builds
+	DockerHubUsername = BuildVar("DOCKERHUB_USERNAME")
+
+	// DockerHubPassword is hub.docker.com password of DockerHubUsername
+	DockerHubPassword = BuildVar("DOCKERHUB_PASSWORD")
 )
