@@ -41,7 +41,7 @@ func TestCorsHeadersAreAppliedToResponse(t *testing.T) {
 
 	ApplyCors(mock, testCorsPolicy).ServeHTTP(respRecorder, req)
 
-	assert.Equal(t, "https://wallet.mysterium.network", respRecorder.Header().Get("Access-Control-Allow-Origin"))
+	assert.Equal(t, "*", respRecorder.Header().Get("Access-Control-Allow-Origin"))
 	assert.NotEmpty(t, respRecorder.Header().Get("Access-Control-Allow-Methods"))
 	assert.True(t, mock.wasCalled)
 }

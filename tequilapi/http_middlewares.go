@@ -47,11 +47,11 @@ func ApplyCors(original http.Handler, corsPolicy CorsPolicy) http.Handler {
 	return corsHandler{originalHandler: original, corsPolicy: corsPolicy}
 }
 
-func allowCorsActions(resp http.ResponseWriter, req *http.Request, corsPolicy CorsPolicy) {
-	requestOrigin := req.Header.Get("Origin")
-	allowedOrigin := corsPolicy.AllowedOrigin(requestOrigin)
+func allowCorsActions(resp http.ResponseWriter, _ *http.Request, _ CorsPolicy) {
+	//requestOrigin := req.Header.Get("Origin")
+	//allowedOrigin := corsPolicy.AllowedOrigin(requestOrigin)
 
-	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+	resp.Header().Set("Access-Control-Allow-Origin", "*")
 	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 }
 
