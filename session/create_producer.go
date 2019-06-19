@@ -78,3 +78,11 @@ func RequestSessionCreate(sender communication.Sender, proposalID int, config in
 	}
 	return
 }
+
+// AcknowledgeSession lets the provider know we've successfully established a connection
+func AcknowledgeSession(sender communication.Sender, sessionID string) error {
+	ack := NewAcknowledgeSender(sender)
+	return ack.Send(AcknowledgeMessage{
+		SessionID: sessionID,
+	})
+}

@@ -20,6 +20,7 @@ package session
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -92,7 +93,7 @@ func TestManager_Create_StoresSession(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
-		&MockNatEventTracker{}, "test service id")
+		&MockNatEventTracker{}, "test service id", &mockPublisher{})
 
 	pingerParams := &traversal.Params{}
 	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, pingerParams)
@@ -112,7 +113,7 @@ func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
-		&MockNatEventTracker{}, "test service id")
+		&MockNatEventTracker{}, "test service id", &mockPublisher{})
 
 	pingerParams := &traversal.Params{}
 	sessionInstance, err := manager.Create(consumerID, consumerID, 69, nil, pingerParams)
@@ -125,4 +126,59 @@ type MockNatEventTracker struct {
 
 func (mnet *MockNatEventTracker) LastEvent() *event.Event {
 	return &event.Event{}
+}
+
+func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
+	sessionStore := NewStorageMemory()
+	natPinger := func(*traversal.Params) {}
+
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
+		&MockNatEventTracker{}, "test service id", &mockPublisher{})
+	err := manager.Acknowledge(consumerID, "")
+	assert.Exactly(t, err, ErrorSessionNotExists)
+}
+
+func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
+	sessionStore := NewStorageMemory()
+	natPinger := func(*traversal.Params) {}
+
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
+		&MockNatEventTracker{}, "test service id", &mockPublisher{})
+
+	pingerParams := &traversal.Params{}
+	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, pingerParams)
+	assert.Nil(t, err)
+
+	err = manager.Acknowledge(identity.FromAddress("some other id"), string(sessionInstance.ID))
+	assert.Exactly(t, err, ErrorWrongSessionOwner)
+}
+
+func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
+	sessionStore := NewStorageMemory()
+	natPinger := func(*traversal.Params) {}
+
+	mp := &mockPublisher{}
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
+		&MockNatEventTracker{}, "test service id", mp)
+
+	pingerParams := &traversal.Params{}
+	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, pingerParams)
+	assert.Nil(t, err)
+
+	err = manager.Acknowledge(consumerID, string(sessionInstance.ID))
+	assert.Nil(t, err)
+
+	attempts := 0
+	for range time.After(time.Millisecond) {
+		p := mp.getLast()
+		if p.Action == sessionEvent.Acknowledged {
+			assert.Equal(t, string(sessionInstance.ID), p.ID)
+			return
+		}
+		attempts++
+		if attempts > 50 {
+			assert.Fail(t, "no event published")
+			return
+		}
+	}
 }

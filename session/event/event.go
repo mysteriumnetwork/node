@@ -39,6 +39,8 @@ const (
 	Removed Action = "Removed"
 	// Updated indicates a session has been updated
 	Updated Action = "Updated"
+	// Acknowledged indicates a session has been reported as a success from consumer side
+	Acknowledged Action = "Acknowledged"
 )
 
 // Payload represents the event payload

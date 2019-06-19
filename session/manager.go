@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
 	"github.com/mysteriumnetwork/node/nat/traversal"
+	sevent "github.com/mysteriumnetwork/node/session/event"
 )
 
 var (
@@ -50,6 +51,10 @@ type ConfigParams struct {
 	SessionServiceConfig   ServiceConfiguration
 	SessionDestroyCallback DestroyCallback
 	TraversalParams        *traversal.Params
+}
+
+type publisher interface {
+	Publish(topic string, data interface{})
 }
 
 // ConfigNegotiator is able to handle config negotiations
@@ -95,6 +100,7 @@ func NewManager(
 	natPingerChan func(*traversal.Params),
 	natEventGetter NATEventGetter,
 	serviceId string,
+	publisher publisher,
 ) *Manager {
 	return &Manager{
 		currentProposal:       currentProposal,
@@ -104,6 +110,7 @@ func NewManager(
 		natPingerChan:         natPingerChan,
 		natEventGetter:        natEventGetter,
 		serviceId:             serviceId,
+		publisher:             publisher,
 
 		creationLock: sync.Mutex{},
 	}
@@ -119,6 +126,7 @@ type Manager struct {
 	natPingerChan         func(*traversal.Params)
 	natEventGetter        NATEventGetter
 	serviceId             string
+	publisher             publisher
 
 	creationLock sync.Mutex
 }
@@ -137,7 +145,7 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	if err != nil {
 		return
 	}
-	sessionInstance.serviceID = manager.serviceId
+	sessionInstance.ServiceID = manager.serviceId
 	sessionInstance.ConsumerID = consumerID
 	sessionInstance.done = make(chan struct{})
 	sessionInstance.Config = config
@@ -169,6 +177,28 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	manager.natPingerChan(pingerParams)
 	manager.sessionStorage.Add(sessionInstance)
 	return sessionInstance, nil
+}
+
+// Acknowledge marks the session as successfuly established as far as the consumer is concerned.
+func (manager *Manager) Acknowledge(consumerID identity.Identity, sessionID string) error {
+	manager.creationLock.Lock()
+	defer manager.creationLock.Unlock()
+	sessionInstance, found := manager.sessionStorage.Find(ID(sessionID))
+
+	if !found {
+		return ErrorSessionNotExists
+	}
+
+	if sessionInstance.ConsumerID != consumerID {
+		return ErrorWrongSessionOwner
+	}
+
+	manager.publisher.Publish(sevent.Topic, sevent.Payload{
+		Action: sevent.Acknowledged,
+		ID:     sessionID,
+	})
+
+	return nil
 }
 
 // Destroy destroys session by given sessionID

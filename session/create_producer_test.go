@@ -52,6 +52,12 @@ func TestProducer_RequestSessionCreate(t *testing.T) {
 	assert.Nil(t, paymentInfo)
 }
 
+func TestProducer_SessionAcknowledge(t *testing.T) {
+	sender := &fakeSender{}
+	err := AcknowledgeSession(sender, string(successfullSessionID))
+	assert.NoError(t, err)
+}
+
 type fakeSender struct {
 	lastRequest communication.RequestProducer
 }

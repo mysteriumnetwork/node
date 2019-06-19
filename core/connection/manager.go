@@ -54,9 +54,10 @@ type Creator func(serviceType string, stateChannel StateChannel, statisticsChann
 
 // SessionInfo contains all the relevant info of the current session
 type SessionInfo struct {
-	SessionID  session.ID
-	ConsumerID identity.Identity
-	Proposal   market.ServiceProposal
+	SessionID   session.ID
+	ConsumerID  identity.Identity
+	Proposal    market.ServiceProposal
+	acknowledge func()
 }
 
 // Publisher is responsible for publishing given events
@@ -238,6 +239,12 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		SessionID:  s.ID,
 		ConsumerID: consumerID,
 		Proposal:   proposal,
+		acknowledge: func() {
+			err := session.AcknowledgeSession(dialog, string(s.ID))
+			if err != nil {
+				log.Warn("acknowledge failed", err)
+			}
+		},
 	}
 
 	manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
@@ -373,6 +380,7 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 
 			switch state {
 			case Connected:
+				manager.sessionInfo.acknowledge()
 				manager.onStateChanged(state)
 				return nil
 			default:
