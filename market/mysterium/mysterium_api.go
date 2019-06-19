@@ -43,9 +43,22 @@ type MysteriumAPI struct {
 // NewClient creates Mysterium centralized api instance with real communication
 func NewClient(discoveryAPIAddress string) *MysteriumAPI {
 	return &MysteriumAPI{
-		requests.NewHTTPClient(1 * time.Minute),
+		requests.NewHTTPClient(20 * time.Second),
 		discoveryAPIAddress,
 	}
+}
+
+// IdentityExists checks if given identity is registered in discovery
+func (mApi *MysteriumAPI) IdentityExists(id identity.Identity, signer identity.Signer) (bool, error) {
+	req, err := requests.NewSignedGetRequest(mApi.discoveryAPIAddress, fmt.Sprintf("identities/%s", id.Address), signer)
+	if err != nil {
+		return false, err
+	}
+	res, err := mApi.http.Do(req)
+	if err != nil {
+		return false, err
+	}
+	return res.StatusCode == 200, nil
 }
 
 // RegisterIdentity registers given identity to discovery service

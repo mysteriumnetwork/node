@@ -27,6 +27,7 @@ import (
 	"time"
 
 	log "github.com/cihub/seelog"
+	"github.com/pkg/errors"
 )
 
 type httpClientInterface interface {
@@ -44,7 +45,7 @@ func newHTTPClient(baseURL string, logPrefix string, ua string) *httpClient {
 	return &httpClient{
 		http: &http.Client{
 			Transport: &http.Transport{},
-			Timeout:   time.Second * 120,
+			Timeout:   100 * time.Second,
 		},
 		baseURL:   baseURL,
 		logPrefix: logPrefix,
@@ -136,7 +137,7 @@ func parseResponseError(response *http.Response) error {
 			message = parsedBody.Message
 		}
 		// TODO these errors are ugly long and hard to check against - consider return error structs or specific error constants
-		return fmt.Errorf("server response invalid: %s (%s). Possible error: %s", response.Status, response.Request.URL, message)
+		return errors.Errorf("server response invalid: %s (%s). Possible error: %s", response.Status, response.Request.URL, message)
 	}
 
 	return nil

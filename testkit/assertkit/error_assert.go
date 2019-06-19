@@ -1,7 +1,5 @@
-// +build !linux
-
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package mysterium
+package assertkit
 
-import (
-	"github.com/mysteriumnetwork/wireguard-go/tun"
-	"github.com/pkg/errors"
-)
+import "github.com/stretchr/testify/assert"
 
-func newDeviceFromFd(_ int) (tun.TUNDevice, error) {
-	return nil, errors.New("not implemented")
+// EqualOptionalError follows semantics of `assert.EqualError` when errString is not empty.
+// Otherwise, `assert.NoError` is called.
+func EqualOptionalError(t assert.TestingT, theError error, errString string, msgAndArgs ...interface{}) bool {
+	if errString == "" {
+		return assert.NoError(t, theError, msgAndArgs)
+	}
+	return assert.EqualError(t, theError, errString, msgAndArgs)
 }

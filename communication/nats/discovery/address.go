@@ -24,15 +24,16 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/pkg/errors"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	nats_lib "github.com/nats-io/go-nats"
 )
 
-const natsLogPrefix = "[NATS] "
+var log = logconfig.NewLogger()
 
 // NewAddress creates NATS address to known host or cluster of hosts
 func NewAddress(topic string, addresses ...string) *AddressNATS {
@@ -68,12 +69,12 @@ func NewAddressFromHostAndID(uri string, myID identity.Identity, serviceType str
 // NewAddressForContact extracts NATS address from given contact structure
 func NewAddressForContact(contact market.Contact) (*AddressNATS, error) {
 	if contact.Type != TypeContactNATSV1 {
-		return nil, fmt.Errorf("invalid contact type: %s", contact.Type)
+		return nil, errors.Errorf("invalid contact type: %s", contact.Type)
 	}
 
 	contactNats, ok := contact.Definition.(ContactNATSV1)
 	if !ok {
-		return nil, fmt.Errorf("invalid contact definition: %#v", contact.Definition)
+		return nil, errors.Errorf("invalid contact definition: %#v", contact.Definition)
 	}
 
 	return &AddressNATS{
@@ -107,8 +108,8 @@ func (address *AddressNATS) Connect() (err error) {
 	options.ReconnectWait = BrokerReconnectWait
 	options.Timeout = BrokerTimeout
 	options.PingInterval = 10 * time.Second
-	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Disconnected") }
-	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn(natsLogPrefix, "Reconnected") }
+	options.DisconnectedCB = func(nc *nats_lib.Conn) { log.Warn("disconnected") }
+	options.ReconnectedCB = func(nc *nats_lib.Conn) { log.Warn("reconnected") }
 
 	removeRules, err := firewall.AllowURLAccess(address.servers...)
 	if err != nil {

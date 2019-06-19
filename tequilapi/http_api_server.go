@@ -18,10 +18,11 @@
 package tequilapi
 
 import (
-	"errors"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // APIServer interface represents control methods for underlying http api server

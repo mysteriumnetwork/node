@@ -18,8 +18,6 @@
 package promise
 
 import (
-	"errors"
-	"fmt"
 	"reflect"
 	"sort"
 	"sync"
@@ -27,6 +25,7 @@ import (
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -512,7 +511,7 @@ func (ms *mockStorage) Store(bucket string, object interface{}) error {
 	sp, ok := object.(*StoredPromise)
 	if !ok {
 		providedType := reflect.TypeOf(object)
-		return fmt.Errorf("mockStorage.Store expects *StoredPromise but got %v instead", providedType)
+		return errors.Errorf("mockStorage.Store expects *StoredPromise but got %v instead", providedType)
 	}
 
 	spToStore := *sp
@@ -531,7 +530,7 @@ func (ms *mockStorage) GetAllFrom(bucket string, array interface{}) error {
 	casted, ok := array.(*[]StoredPromise)
 	if !ok {
 		providedType := reflect.TypeOf(array)
-		return fmt.Errorf("mockStorage.Store expects *[]StoredPromise but got %v instead", providedType)
+		return errors.Errorf("mockStorage.Store expects *[]StoredPromise but got %v instead", providedType)
 	}
 
 	if _, ok := ms.inMemStorage[bucket]; ok {
@@ -547,7 +546,7 @@ func (ms *mockStorage) Update(bucket string, data interface{}) error {
 	casted, ok := data.(*StoredPromise)
 	if !ok {
 		providedType := reflect.TypeOf(data)
-		return fmt.Errorf("mockStorage.Update expects *StoredPromise but got %v instead", providedType)
+		return errors.Errorf("mockStorage.Update expects *StoredPromise but got %v instead", providedType)
 	}
 	if _, ok := ms.inMemStorage[bucket]; ok {
 		for i := range ms.inMemStorage[bucket] {
@@ -568,10 +567,10 @@ func (ms *mockStorage) GetOneByField(bucket string, fieldName string, key interf
 	casted, ok := to.(*StoredPromise)
 	if !ok {
 		providedType := reflect.TypeOf(to)
-		return fmt.Errorf("mockStorage.GetOneByField expects *StoredPromise but got %v instead", providedType)
+		return errors.Errorf("mockStorage.GetOneByField expects *StoredPromise but got %v instead", providedType)
 	}
 	if fieldName != "SequenceID" {
-		return fmt.Errorf("mockStorage.GetOneByField expects a fieldname of SequenceID but got %v instead", fieldName)
+		return errors.Errorf("mockStorage.GetOneByField expects a fieldname of SequenceID but got %v instead", fieldName)
 	}
 
 	if _, ok := ms.inMemStorage[bucket]; ok {
@@ -598,7 +597,7 @@ func (ms *mockStorage) GetLast(bucket string, to interface{}) error {
 	casted, ok := to.(*StoredPromise)
 	if !ok {
 		providedType := reflect.TypeOf(to)
-		return fmt.Errorf("mockStorage.GetLast expects *StoredPromise but got %v instead", providedType)
+		return errors.Errorf("mockStorage.GetLast expects *StoredPromise but got %v instead", providedType)
 	}
 	if _, ok := ms.inMemStorage[bucket]; ok {
 		copy := ms.inMemStorage[bucket][len(ms.inMemStorage[bucket])-1]

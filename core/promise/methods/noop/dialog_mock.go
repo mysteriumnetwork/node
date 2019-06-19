@@ -18,13 +18,13 @@
 package noop
 
 import (
-	"errors"
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/promise"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/pkg/errors"
 )
 
 type fakeDialog struct {

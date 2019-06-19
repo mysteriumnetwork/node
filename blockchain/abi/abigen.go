@@ -19,7 +19,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -29,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/pkg/errors"
 )
 
 var pkgName = flag.String("pkg", "", "Same as abigen tool from ethereum project")
@@ -122,10 +122,10 @@ func loadFromGitRepo(githubRepo string, contractList []string) ([]truffleArtifac
 		url := fmt.Sprintf(smartContractRepoUrl, githubRepo, *githubRelease, contractName)
 		resp, err := httpClient.Get(url)
 		if err != nil {
-			return nil, fmt.Errorf("error executing GET: %s", err.Error())
+			return nil, errors.Wrap(err, "error executing GET")
 		}
 		if resp.StatusCode != 200 {
-			return nil, fmt.Errorf("unexpected status. GET %s response code: %d", url, resp.StatusCode)
+			return nil, errors.Errorf("unexpected status. GET %s response code: %d", url, resp.StatusCode)
 		}
 		artifact, err := parseTruffleArtifact(resp.Body)
 		if err != nil {

@@ -18,19 +18,18 @@
 package cli
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	"log"
+	"io"
+	stdlog "log"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
-	"github.com/urfave/cli"
-
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
@@ -39,6 +38,8 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/pkg/errors"
+	"github.com/urfave/cli"
 )
 
 const cliCommandName = "cli"
@@ -51,6 +52,8 @@ const serviceHelp = `service <action> [args]
 	sessions
 
 	example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --access-policy.list=mysterium --openvpn.port=1194 --openvpn.proto=UDP`
+
+var log = logconfig.NewLogger()
 
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
@@ -65,9 +68,18 @@ func NewCommand() *cli.Command {
 			}
 			cmd.RegisterSignalCallback(utils.SoftKiller(cmdCLI.Kill))
 
-			return cmdCLI.Run()
+			return describeQuit(cmdCLI.Run())
 		},
 	}
+}
+
+func describeQuit(err error) error {
+	if err == nil || err == io.EOF || err == readline.ErrInterrupt {
+		log.Info("stopping application")
+		return nil
+	}
+	log.Errorf("terminating application due to error: %+v\n", err)
+	return err
 }
 
 // cliApp describes CLI based Mysterium UI
@@ -112,7 +124,7 @@ func (c *cliApp) Run() (err error) {
 		return err
 	}
 	// TODO Should overtake output of CommandRun
-	log.SetOutput(c.reader.Stderr())
+	stdlog.SetOutput(c.reader.Stderr())
 
 	for {
 		line, err := c.reader.Readline()

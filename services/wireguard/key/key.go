@@ -20,8 +20,8 @@ package key
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
 
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/curve25519"
 )
 
@@ -46,7 +46,7 @@ func PrivateKeyToPublicKey(key string) (string, error) {
 func GeneratePrivateKey() (string, error) {
 	randomBytes := make([]byte, keyLength)
 	if _, err := rand.Read(randomBytes); err != nil {
-		return "", fmt.Errorf("GeneratePrivateKey failed to read random bytes: %v", err)
+		return "", errors.Wrapf(err, "failed to generate random bytes for private key")
 	}
 
 	// https://cr.yp.to/ecdh.html

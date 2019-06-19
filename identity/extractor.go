@@ -18,9 +18,8 @@
 package identity
 
 import (
-	"errors"
-
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/pkg/errors"
 )
 
 // Extractor is able to message signer's identity

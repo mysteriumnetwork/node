@@ -96,7 +96,7 @@ func TestDialogEstablisher_CreateDialogWhenResponseHijacked(t *testing.T) {
 
 	dialogInstance, err := establisher.EstablishDialog(peerID, market.Contact{})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "dialog creation error. failed to unpack response 'peer-topic.dialog-create'. invalid message signature ")
+	assert.Contains(t, err.Error(), "dialog creation error: failed to unpack response 'peer-topic.dialog-create': invalid message signature ")
 	assert.Nil(t, dialogInstance)
 }
 

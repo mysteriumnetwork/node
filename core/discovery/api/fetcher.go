@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/discovery"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/pkg/errors"
 )
 
 // FetchCallback does real fetch of proposals through Mysterium API
@@ -51,7 +52,7 @@ func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallb
 // Start begins fetching proposals to storage
 func (fetcher *Fetcher) Start() error {
 	if err := fetcher.fetchDo(); err != nil {
-		return err
+		log.Warn(errors.Wrap(err, "initial proposal fetch failed, continuing"))
 	}
 
 	fetcher.fetchShutdown = make(chan bool, 1)

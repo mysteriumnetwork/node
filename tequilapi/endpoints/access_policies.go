@@ -51,7 +51,7 @@ type accessPoliciesEndpoint struct {
 // NewAccessPoliciesEndpoint creates and returns access policies endpoint
 func NewAccessPoliciesEndpoint(accessPolicyEndpointURL string) *accessPoliciesEndpoint {
 	return &accessPoliciesEndpoint{
-		http:                    requests.NewHTTPClient(1 * time.Minute),
+		http:                    requests.NewHTTPClient(20 * time.Second),
 		accessPolicyEndpointURL: accessPolicyEndpointURL,
 	}
 }

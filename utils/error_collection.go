@@ -18,9 +18,10 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // ErrorCollection knows how to combine multiple error strings

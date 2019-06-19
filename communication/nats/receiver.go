@@ -18,15 +18,15 @@
 package nats
 
 import (
-	"fmt"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
-	nats "github.com/nats-io/go-nats"
+	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/nats-io/go-nats"
+	"github.com/pkg/errors"
 )
 
-const receiverLogPrefix = "[NATS.Receiver] "
+var rlog = logconfig.NewNamespaceLogger("receiver")
 
 // NewReceiver constructs new Receiver's instance which works through NATS connection.
 // Codec packs/unpacks messages to byte payloads.
@@ -53,19 +53,19 @@ func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) er
 	messageTopic := receiver.messageTopic + string(consumer.GetMessageEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
-		log.Debug(receiverLogPrefix, fmt.Sprintf("Message '%s' received: %s", messageTopic, msg.Data))
+		rlog.Debugf("message %q received: %s", messageTopic, msg.Data)
 		messagePtr := consumer.NewMessage()
 		err := receiver.codec.Unpack(msg.Data, messagePtr)
 		if err != nil {
-			err = fmt.Errorf("failed to unpack message '%s'. %s", messageTopic, err)
-			log.Error(receiverLogPrefix, err)
+			err = errors.Wrapf(err, "failed to unpack message %q", messageTopic)
+			rlog.Error(err)
 			return
 		}
 
 		err = consumer.Consume(messagePtr)
 		if err != nil {
-			err = fmt.Errorf("failed to process message '%s'. %s", messageTopic, err)
-			log.Error(receiverLogPrefix, err)
+			err = errors.Wrapf(err, "failed to process message %q", messageTopic)
+			rlog.Error(err)
 			return
 		}
 	}
@@ -75,7 +75,7 @@ func (receiver *receiverNATS) Receive(consumer communication.MessageConsumer) er
 
 	subscription, err := receiver.connection.Subscribe(messageTopic, messageHandler)
 	if err != nil {
-		err = fmt.Errorf("failed subscribe message '%s'. %s", messageTopic, err)
+		err = errors.Wrapf(err, "failed subscribe message '%s'", messageTopic)
 		return err
 	}
 	receiver.subs[messageTopic] = subscription
@@ -88,9 +88,9 @@ func (receiver *receiverNATS) Unsubscribe() {
 
 	for topic, s := range receiver.subs {
 		if err := s.Unsubscribe(); err != nil {
-			log.Error(receiverLogPrefix, "failed to unsubscribed from topic: ", topic)
+			rlog.Error("failed to unsubscribe from topic: ", topic)
 		}
-		log.Info(receiverLogPrefix, topic, " unsubscribed")
+		rlog.Infof(" unsubscribed from %s", topic)
 	}
 }
 
@@ -98,34 +98,34 @@ func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) er
 	requestTopic := receiver.messageTopic + string(consumer.GetRequestEndpoint())
 
 	messageHandler := func(msg *nats.Msg) {
-		log.Debug(receiverLogPrefix, fmt.Sprintf("Request '%s' received: %s", requestTopic, msg.Data))
+		rlog.Debugf("request %q received: %s", requestTopic, msg.Data)
 		requestPtr := consumer.NewRequest()
 		err := receiver.codec.Unpack(msg.Data, requestPtr)
 		if err != nil {
-			err = fmt.Errorf("failed to unpack request '%s'. %s", requestTopic, err)
-			log.Error(receiverLogPrefix, err)
+			err = errors.Wrapf(err, "failed to unpack request '%s'", requestTopic)
+			rlog.Error(err)
 			return
 		}
 
 		response, err := consumer.Consume(requestPtr)
 		if err != nil {
-			err = fmt.Errorf("failed to process request '%s'. %s", requestTopic, err)
-			log.Error(receiverLogPrefix, err)
+			err = errors.Wrapf(err, "failed to process request '%s'", requestTopic)
+			rlog.Error(err)
 			return
 		}
 
 		responseData, err := receiver.codec.Pack(response)
 		if err != nil {
-			err = fmt.Errorf("failed to pack response '%s'. %s", requestTopic, err)
-			log.Error(receiverLogPrefix, err)
+			err = errors.Wrapf(err, "failed to pack response '%s'", requestTopic)
+			rlog.Error(err)
 			return
 		}
 
-		log.Debug(receiverLogPrefix, fmt.Sprintf("Request '%s' response: %s", requestTopic, responseData))
+		rlog.Debugf("request %q response: %s", requestTopic, responseData)
 		err = receiver.connection.Publish(msg.Reply, responseData)
 		if err != nil {
-			err = fmt.Errorf("failed to send response '%s'. %s", requestTopic, err)
-			log.Error(receiverLogPrefix, err)
+			err = errors.Wrapf(err, "failed to send response '%s'", requestTopic)
+			rlog.Error(err)
 			return
 		}
 	}
@@ -134,15 +134,15 @@ func (receiver *receiverNATS) Respond(consumer communication.RequestConsumer) er
 	defer receiver.mu.Unlock()
 
 	if subscription, ok := receiver.subs[requestTopic]; ok && subscription.IsValid() {
-		log.Debug(receiverLogPrefix, fmt.Sprintf("Already subscribed to '%s' topic", requestTopic))
+		rlog.Debugf("already subscribed to %q topic", requestTopic)
 		return nil
 	}
 
-	log.Debug(receiverLogPrefix, fmt.Sprintf("Request '%s' topic has been subscribed to", requestTopic))
+	rlog.Debugf("request %q topic has been subscribed to", requestTopic)
 
 	subscription, err := receiver.connection.Subscribe(requestTopic, messageHandler)
 	if err != nil {
-		err = fmt.Errorf("failed subscribe request '%s'. %s", requestTopic, err)
+		err = errors.Wrapf(err, "failed subscribe request '%s'", requestTopic)
 		return err
 	}
 

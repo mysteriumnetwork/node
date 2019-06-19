@@ -18,7 +18,6 @@
 package statistics
 
 import (
-	"errors"
 	"sync"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market/mysterium"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/pkg/errors"
 )
 
 const statsSenderLogPrefix = "[session-stats-sender] "

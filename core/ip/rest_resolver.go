@@ -27,7 +27,7 @@ const apiClient = "goclient-v0.1"
 
 // NewResolver creates new ip-detector resolver with default timeout of one minute
 func NewResolver(url string) Resolver {
-	return NewResolverWithTimeout(url, 1*time.Minute)
+	return NewResolverWithTimeout(url, 20*time.Second)
 }
 
 // NewResolverWithTimeout creates new ip-detector resolver with specified timeout

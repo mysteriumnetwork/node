@@ -19,13 +19,13 @@ package kernelspace
 
 import (
 	"encoding/base64"
-	"errors"
 	"net"
 
 	log "github.com/cihub/seelog"
 	"github.com/jackpal/gateway"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/pkg/errors"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )

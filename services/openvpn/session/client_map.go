@@ -18,10 +18,10 @@
 package session
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/pkg/errors"
 )
 
 // SessionMap defines map of current sessions

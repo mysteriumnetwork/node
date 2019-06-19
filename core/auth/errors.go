@@ -17,7 +17,7 @@
 
 package auth
 
-import "errors"
+import "github.com/pkg/errors"
 
 var (
 	// ErrUnauthorized unauthorized

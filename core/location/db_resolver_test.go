@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/testkit/assertkit"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,10 +49,6 @@ func TestResolverResolveCountry(t *testing.T) {
 		fmt.Println(got, err)
 
 		assert.Equal(t, tt.want, got.Country, tt.ip)
-		if tt.wantErr != "" {
-			assert.EqualError(t, err, tt.wantErr, tt.ip)
-		} else {
-			assert.NoError(t, err, tt.ip)
-		}
+		assertkit.EqualOptionalError(t, err, tt.wantErr, tt.ip)
 	}
 }

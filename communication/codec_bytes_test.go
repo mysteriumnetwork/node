@@ -18,9 +18,9 @@
 package communication
 
 import (
-	"errors"
 	"testing"
 
+	"github.com/mysteriumnetwork/node/testkit/assertkit"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,14 +28,14 @@ var _ Codec = &codecBytes{}
 
 func TestCodecBytesPack(t *testing.T) {
 	table := []struct {
-		payload       interface{}
-		expectedData  []byte
-		expectedError error
+		payload          interface{}
+		expectedData     []byte
+		expectedErrorMsg string
 	}{
-		{`hello`, []byte(`hello`), nil},
-		{`hello "name"`, []byte(`hello "name"`), nil},
-		{nil, []byte{}, nil},
-		{true, []byte{}, errors.New("Cant pack payload: true")},
+		{`hello`, []byte(`hello`), ""},
+		{`hello "name"`, []byte(`hello "name"`), ""},
+		{nil, []byte{}, ""},
+		{true, []byte{}, "can't pack payload: true"},
 	}
 
 	codec := codecBytes{}
@@ -43,7 +43,7 @@ func TestCodecBytesPack(t *testing.T) {
 		data, err := codec.Pack(tt.payload)
 
 		assert.Exactly(t, tt.expectedData, data)
-		assert.Exactly(t, tt.expectedError, err)
+		assertkit.EqualOptionalError(t, err, tt.expectedErrorMsg)
 	}
 }
 
@@ -54,7 +54,7 @@ func TestCodecBytesUnpackToString(t *testing.T) {
 	err := codec.Unpack([]byte(`hello`), &payload)
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "Cant unpack to payload: *string")
+	assert.EqualError(t, err, "can't unpack to payload: *string")
 }
 
 func TestCodecBytesUnpackToByte(t *testing.T) {
@@ -64,7 +64,7 @@ func TestCodecBytesUnpackToByte(t *testing.T) {
 	err := codec.Unpack([]byte(`hello`), payload)
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "Cant unpack to payload: []uint8")
+	assert.EqualError(t, err, "can't unpack to payload: []uint8")
 }
 
 func TestCodecBytesUnpack(t *testing.T) {

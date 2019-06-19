@@ -19,17 +19,16 @@ package noop
 
 import (
 	"encoding/json"
-	"errors"
 	"sync"
 
 	log "github.com/cihub/seelog"
-
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/money"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/pkg/errors"
 )
 
 const logPrefix = "[service-noop] "

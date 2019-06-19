@@ -178,6 +178,10 @@ type mockRegistry struct {
 	registeredIdentity identity.Identity
 }
 
+func (mr *mockRegistry) IdentityExists(identity.Identity, identity.Signer) (bool, error) {
+	return true, nil
+}
+
 func (mr *mockRegistry) RegisterIdentity(ID identity.Identity, signer identity.Signer) error {
 	mr.registeredIdentity = ID
 	return nil

@@ -125,7 +125,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	}
 	defer func() {
 		if err := firewall.RemoveInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
-			_ = log.Error(logPrefix, "failed to delete firewall rule for OpenVPN", err)
+			log.Error(logPrefix, "failed to delete firewall rule for OpenVPN", err)
 		}
 	}()
 

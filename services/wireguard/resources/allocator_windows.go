@@ -18,11 +18,11 @@
 package resources
 
 import (
-	"errors"
 	"net"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/pkg/errors"
 )
 
 // MaxConnections sets the limit to the maximum number of wireguard connections.

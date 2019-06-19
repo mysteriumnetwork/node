@@ -18,7 +18,6 @@
 package identity
 
 import (
-	"errors"
 	"os"
 	"testing"
 
@@ -58,7 +57,7 @@ func TestIdentityCache_GetIdentityWithNoCache(t *testing.T) {
 
 	_, err := cache.GetIdentity()
 
-	assert.Equal(t, errors.New("cache file does not exist"), err)
+	assert.EqualError(t, err, "cache file does not exist")
 }
 
 func TestIdentityCache_cacheExists(t *testing.T) {
