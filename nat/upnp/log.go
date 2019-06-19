@@ -15,15 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package assert
+package upnp
 
-import "github.com/stretchr/testify/assert"
+import "github.com/mysteriumnetwork/node/logconfig"
 
-// EqualOptionalError follows semantics of `assert.EqualError` when errString is not empty.
-// Otherwise, `assert.NoError` is called.
-func EqualOptionalError(t assert.TestingT, theError error, errString string, msgAndArgs ...interface{}) bool {
-	if errString == "" {
-		return assert.NoError(t, theError, msgAndArgs)
-	}
-	return assert.EqualError(t, theError, errString, msgAndArgs)
-}
+var log = logconfig.NewLogger()

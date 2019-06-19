@@ -18,15 +18,14 @@
 package nats
 
 import (
-	"fmt"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
 )
 
-const senderLogPrefix = "[NATS.Sender] "
+var slog = logconfig.NewNamespaceLogger("sender")
 
 // NewSender constructs new Sender's instance which works thru NATS connection.
 // Codec packs/unpacks messages to byte payloads.
@@ -57,10 +56,10 @@ func (sender *senderNATS) Send(producer communication.MessageProducer) error {
 	}
 
 	if err := sender.connection.Check(); err != nil {
-		log.Warn(senderLogPrefix, "Connection failed: ", err)
+		slog.Warn("connection failed: ", err)
 	}
 
-	log.Debug(senderLogPrefix, fmt.Sprintf("Message '%s' sending: %s", messageTopic, messageData))
+	slog.Debugf("Message %q sending: %s", messageTopic, messageData)
 	err = sender.connection.Publish(messageTopic, messageData)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to send message '%s'", messageTopic)
@@ -81,21 +80,21 @@ func (sender *senderNATS) Request(producer communication.RequestProducer) (respo
 	}
 
 	if err := sender.connection.Check(); err != nil {
-		log.Warn(senderLogPrefix, "Connection failed: ", err)
+		slog.Warn("connection failed: ", err)
 	}
 
-	log.Debug(senderLogPrefix, fmt.Sprintf("Request '%s' sending: %s", requestTopic, requestData))
+	slog.Debugf("request %q sending: %s", requestTopic, requestData)
 	msg, err := sender.connection.Request(requestTopic, requestData, sender.timeoutRequest)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to send request '%s'", requestTopic)
 		return
 	}
 
-	log.Debug(senderLogPrefix, fmt.Sprintf("Received response for '%s': %s", requestTopic, msg.Data))
+	slog.Debugf("received response for %q: %s", requestTopic, msg.Data)
 	err = sender.codec.Unpack(msg.Data, responsePtr)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to unpack response '%s'", requestTopic)
-		log.Error(receiverLogPrefix, err)
+		slog.Error(err)
 		return
 	}
 

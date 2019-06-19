@@ -18,10 +18,12 @@
 package daemon
 
 import (
-	"github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/urfave/cli"
 )
+
+var log = logconfig.NewLogger()
 
 // NewCommand function creates run command
 func NewCommand() *cli.Command {
@@ -50,9 +52,9 @@ func NewCommand() *cli.Command {
 
 func describeQuit(err error) error {
 	if err == nil {
-		seelog.Info("stopping application")
+		log.Info("stopping application")
 	} else {
-		seelog.Errorf("terminating application due to error: %+v\n", err)
+		log.Errorf("terminating application due to error: %+v\n", err)
 	}
 	return err
 }

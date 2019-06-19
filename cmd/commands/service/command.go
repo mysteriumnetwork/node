@@ -143,9 +143,8 @@ func (sc *serviceCommand) Run(ctx *cli.Context) (err error) {
 	return <-sc.errorChannel
 }
 
-const retryRate = 10 * time.Second
-
 func (sc *serviceCommand) unlockIdentity(identityOptions service.OptionsIdentity) *identity.Identity {
+	const retryRate = 10 * time.Second
 	for {
 		id, err := sc.tequilapi.CurrentIdentity(identityOptions.Identity, identityOptions.Passphrase)
 		if err == nil {

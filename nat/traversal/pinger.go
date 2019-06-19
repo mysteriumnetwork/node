@@ -290,12 +290,12 @@ func (p *Pinger) pingReceiver(conn *net.UDPConn, stop <-chan struct{}) error {
 
 		n, err := conn.Read(buf)
 		if err != nil {
-			log.Errorf("%sFailed to read remote peer: %s cause: %s - attempting to continue", prefix, conn.RemoteAddr().String(), err)
+			log.Errorf("%sfailed to read remote peer: %s cause: %s - attempting to continue", prefix, conn.RemoteAddr().String(), err)
 			continue
 		}
 
 		if n > 0 {
-			log.Infof(prefix, "%sRemote peer data received: %s, len: %d", string(buf[:n]), n)
+			log.Infof("%sremote peer data received: %s, len: %d", prefix, string(buf[:n]), n)
 			return nil
 		}
 	}

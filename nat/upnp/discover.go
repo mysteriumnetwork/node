@@ -24,14 +24,11 @@ import (
 
 	"github.com/mysteriumnetwork/node/firewall"
 
-	log "github.com/cihub/seelog"
 	"github.com/huin/goupnp"
 	"github.com/huin/goupnp/httpu"
 	"github.com/huin/goupnp/ssdp"
 	"github.com/pkg/errors"
 )
-
-const logPrefix = "[upnp]"
 
 // GatewayDevice represents a scanned gateway device
 type GatewayDevice struct {
@@ -57,9 +54,9 @@ func (device GatewayDevice) String() string {
 }
 
 func printGatewayInfo(gateways []GatewayDevice) {
-	log.Infof("%s UPnP gateways detected: %d", logPrefix, len(gateways))
+	log.Infof("UPnP gateways detected: %d", len(gateways))
 	for _, device := range gateways {
-		log.Infof("%s UPnP gateway detected %v", logPrefix, device)
+		log.Infof("UPnP gateway detected %v", device)
 	}
 }
 
@@ -85,11 +82,11 @@ func discoverGateways() ([]GatewayDevice, error) {
 	for _, response := range responses {
 		device, err := parseDiscoveryResponse(response)
 		if err != nil {
-			log.Warnf("%s error parsing discovery response %v", logPrefix, err)
+			log.Warnf("error parsing discovery response %v", err)
 			continue
 		}
 		if !isGateway(device) {
-			log.Debugf("%s not a gateway device: %v", logPrefix, device)
+			log.Debugf("not a gateway device: %v", device)
 			continue
 		}
 

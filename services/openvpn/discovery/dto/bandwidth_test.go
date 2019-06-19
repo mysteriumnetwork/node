@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/mysteriumnetwork/node/datasize"
-	assert2 "github.com/mysteriumnetwork/node/testkit/assert"
+	"github.com/mysteriumnetwork/node/testkit/assertkit"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -81,6 +81,6 @@ func TestBandwidthUnserialize(t *testing.T) {
 		err := json.Unmarshal([]byte(test.json), &model)
 
 		assert.Equal(t, test.expectedModel, model)
-		assert2.EqualOptionalError(t, err, test.expectedErrorMsg)
+		assertkit.EqualOptionalError(t, err, test.expectedErrorMsg)
 	}
 }

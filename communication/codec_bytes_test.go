@@ -20,7 +20,7 @@ package communication
 import (
 	"testing"
 
-	assert2 "github.com/mysteriumnetwork/node/testkit/assert"
+	"github.com/mysteriumnetwork/node/testkit/assertkit"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,7 +43,7 @@ func TestCodecBytesPack(t *testing.T) {
 		data, err := codec.Pack(tt.payload)
 
 		assert.Exactly(t, tt.expectedData, data)
-		assert2.EqualOptionalError(t, err, tt.expectedErrorMsg)
+		assertkit.EqualOptionalError(t, err, tt.expectedErrorMsg)
 	}
 }
 
