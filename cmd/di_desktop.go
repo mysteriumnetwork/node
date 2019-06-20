@@ -269,9 +269,9 @@ func (di *Dependencies) registerWireguardConnection() {
 	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator())
 }
 
-func (di *Dependencies) bootstrapUIServer(options node.OptionsUI) {
-	if options.UIEnabled {
-		di.UIServer = ui.NewServer(options.UIPort, di.Authenticator)
+func (di *Dependencies) bootstrapUIServer(options node.Options) {
+	if options.UI.UIEnabled {
+		di.UIServer = ui.NewServer(options.UI.UIPort, options.TequilapiPort, di.Authenticator)
 		return
 	}
 
