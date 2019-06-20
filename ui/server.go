@@ -20,8 +20,11 @@ package ui
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"net/http/httputil"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -33,6 +36,8 @@ import (
 )
 
 const logPrefix = "[dvpn-web-server] "
+const tequilapiUrlPrefix = "/tequilapi"
+const tequilapiHost = "127.0.0.1"
 
 // Server represents our web UI server
 type Server struct {
@@ -40,25 +45,76 @@ type Server struct {
 	discovery discovery.LANDiscovery
 }
 
+// ReverseTequilapiProxy proxies UIServer requests to the TequilAPI server
+func ReverseTequilapiProxy(tequilapiPort int) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// skip non Tequilapi routes
+		if !strings.Contains(c.Request.URL.Path, tequilapiUrlPrefix) {
+			return
+		}
+
+		proxy := &httputil.ReverseProxy{
+			Director: func(req *http.Request) {
+				req.URL.Scheme = "http"
+				req.URL.Host = tequilapiHost + ":" + strconv.Itoa(tequilapiPort)
+				req.URL.Path = strings.Replace(req.URL.Path, tequilapiUrlPrefix, "", 1)
+				req.URL.Path = strings.TrimRight(req.URL.Path, "/")
+			},
+			ModifyResponse: func(res *http.Response) error {
+				res.Header.Set("Access-Control-Allow-Origin", "*")
+				res.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+				return nil
+			},
+		}
+		proxy.Transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   24 * time.Hour,
+				KeepAlive: 24 * time.Hour,
+			}).DialContext,
+		}
+
+		defer func() {
+			if err := recover(); err != nil {
+				if err == http.ErrAbortHandler {
+					// ignore streaming errors (SSE)
+					// there's nothing we can do about them
+				} else {
+					panic(err)
+				}
+			}
+		}()
+
+		proxy.FlushInterval = 10 * time.Millisecond
+		proxy.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
 // NewServer creates a new instance of the server for the given port
-func NewServer(port int, auth authenticator) *Server {
-	wauth := newWebAuthenticator(auth)
+func NewServer(port int, tequilapiPort int, auth authenticator) *Server {
+	webAuth := newWebAuthenticator(auth)
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
 
-	authorized := r.Group("/", func(c *gin.Context) {
-		if err := wauth.authenticateHTTPBasic(c.GetHeader("Authorization")); err != nil {
+	// authenticate all routes
+	r.Use(func(c *gin.Context) {
+		if err := webAuth.authenticateHTTPBasic(c.GetHeader("Authorization")); err != nil {
 			log.Warn(logPrefix, "authentication failed: ", err)
 			c.Header("WWW-Authenticate", "Basic realm="+strconv.Quote("Authorization required"))
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+
 		c.Next()
 	})
 
-	authorized.StaticFS("/", godvpnweb.Assets)
+	r.NoRoute(ReverseTequilapiProxy(tequilapiPort))
+
+	r.StaticFS("/", godvpnweb.Assets)
+
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%v", port),
 		Handler: r,

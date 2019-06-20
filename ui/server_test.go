@@ -34,7 +34,7 @@ func (n openMindedAuthenticator) Authenticate(username, password string) error {
 }
 
 func Test_Server_ServesHTML(t *testing.T) {
-	s := NewServer(55555, &openMindedAuthenticator{})
+	s := NewServer(55555, 55554, &openMindedAuthenticator{})
 	s.discovery = &mockDiscovery{}
 	serverError := make(chan error)
 	go func() {

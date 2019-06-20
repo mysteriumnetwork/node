@@ -249,7 +249,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapAuthenticator()
-	di.bootstrapUIServer(nodeOptions.UI)
+	di.bootstrapUIServer(nodeOptions)
 
 	if err := di.bootstrapBandwidthTracker(); err != nil {
 		return err
