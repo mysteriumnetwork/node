@@ -34,6 +34,6 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerNoopConnection()
 }
 
-func (di *Dependencies) bootstrapUIServer(options node.OptionsUI) {
+func (di *Dependencies) bootstrapUIServer(options node.Options) {
 	di.UIServer = noop.NewServer()
 }
