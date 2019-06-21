@@ -75,6 +75,7 @@ func (h *handler) UseOrCreate(address, passphrase string) (id identity.Identity,
 }
 
 func (h *handler) useExisting(address, passphrase string) (id identity.Identity, err error) {
+	log.Trace("attempting to use existing identity")
 	id, err = h.manager.GetIdentity(address)
 	if err != nil {
 		return id, err
@@ -100,19 +101,23 @@ func (h *handler) useExisting(address, passphrase string) (id identity.Identity,
 }
 
 func (h *handler) useLast(passphrase string) (identity identity.Identity, err error) {
+	log.Trace("attempting to use last identity")
 	identity, err = h.cache.GetIdentity()
 	if err != nil || !h.manager.HasIdentity(identity.Address) {
 		return identity, errors.New("identity not found in cache")
 	}
+	log.Tracef("found identity in cache: %s", identity.Address)
 
 	if err = h.manager.Unlock(identity.Address, passphrase); err != nil {
-		return
+		return identity, errors.Wrap(err, "failed to unlock identity")
 	}
+	log.Tracef("unlocked identity: %s", identity.Address)
 
 	return identity, nil
 }
 
 func (h *handler) useNew(passphrase string) (id identity.Identity, err error) {
+	log.Trace("attempting to use new identity")
 	// if all fails, create a new one
 	id, err = h.manager.CreateNewIdentity(passphrase)
 	if err != nil {
