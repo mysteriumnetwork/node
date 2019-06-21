@@ -138,6 +138,11 @@ release:snapshot:
   tags: [go]
   script: go run mage.go -v ReleaseSnapshot
 
+release:docker-snapshot:
+  stage: release
+  tags: [go]
+  script: go run mage.go -v ReleaseDockerSnapshot
+
 release:goreport:
   stage: release
   tags: [go]

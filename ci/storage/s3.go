@@ -216,6 +216,15 @@ func DownloadArtifacts() error {
 	return Sync(url+"/build-artifacts", "build/package")
 }
 
+// DownloadDockerImages fetches image archives from s3 bucket
+func DownloadDockerImages() error {
+	url, err := bucketUrlForBuild()
+	if err != nil {
+		return err
+	}
+	return Sync(url+"/docker-images", "build/docker-images")
+}
+
 // Sync syncs directories and S3 prefixes.
 // Recursively copies new and updated files from the source directory to the destination.
 func Sync(source, target string) error {
