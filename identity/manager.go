@@ -21,6 +21,8 @@
 package identity
 
 import (
+	"sync"
+
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
@@ -28,12 +30,15 @@ import (
 
 type identityManager struct {
 	keystoreManager Keystore
+	unlocked        map[string]bool // Currently unlocked addresses
+	unlockedMu      sync.RWMutex
 }
 
 // NewIdentityManager creates and returns new identityManager
 func NewIdentityManager(keystore Keystore) *identityManager {
 	return &identityManager{
 		keystoreManager: keystore,
+		unlocked:        map[string]bool{},
 	}
 }
 
@@ -87,12 +92,27 @@ func (idm *identityManager) HasIdentity(address string) bool {
 }
 
 func (idm *identityManager) Unlock(address string, passphrase string) error {
+	idm.unlockedMu.Lock()
+	defer idm.unlockedMu.Unlock()
+
+	if idm.unlocked[address] {
+		log.Tracef("unlocked identity found in cache, skipping keystore: %s", address)
+		return nil
+	}
+
 	account, err := idm.findAccount(address)
 	if err != nil {
 		return err
 	}
 
-	return idm.keystoreManager.Unlock(account, passphrase)
+	err = idm.keystoreManager.Unlock(account, passphrase)
+	if err != nil {
+		return errors.Wrapf(err, "keystore failed to unlock identity: %s", address)
+	}
+	log.Tracef("caching unlocked address: %s", address)
+	idm.unlocked[address] = true
+
+	return nil
 }
 
 func (idm *identityManager) findAccount(address string) (accounts.Account, error) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,17 +17,6 @@
 
 package identity
 
-import (
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-)
+import "github.com/mysteriumnetwork/node/logconfig"
 
-// NewKeystoreFilesystem create new keystore, which keeps keys in filesystem
-func NewKeystoreFilesystem(directory string, lightweight bool) *keystore.KeyStore {
-	if lightweight {
-		log.Trace("using lightweight keystore")
-		return keystore.NewKeyStore(directory, keystore.LightScryptN, keystore.LightScryptP)
-	}
-
-	log.Trace("using heavyweight keystore")
-	return keystore.NewKeyStore(directory, keystore.StandardScryptN, keystore.StandardScryptP)
-}
+var log = logconfig.NewLogger()
