@@ -85,6 +85,8 @@ func ReleaseDockerSnapshot() error {
 func pushDockerImage(localImageName string, buildVersion string, remoteRepoName string) error {
 	parts := strings.Split(localImageName, ":")
 	tagName := fmt.Sprintf("%s:%s-%s", remoteRepoName, parts[1], buildVersion)
+	// docker and repositories don't like upper case letters in references
+	tagName = strings.ToLower(tagName)
 	log.Info("Tagging ", localImageName, " as ", tagName)
 	if err := exec.Command("docker", "tag", localImageName, tagName).Run(); err != nil {
 		return err
