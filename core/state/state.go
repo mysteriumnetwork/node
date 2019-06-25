@@ -89,16 +89,15 @@ func NewKeeper(natStatusProvider natStatusProvider, publisher publisher, service
 	return k
 }
 
-func (k *Keeper) announceState(state interface{}) {
-	s := state.(stateEvent.State)
-	k.publisher.Publish(stateEvent.Topic, s)
+func (k *Keeper) announceState(_ interface{}) {
+	k.publisher.Publish(stateEvent.Topic, *k.state)
 }
 
 func (k *Keeper) updateServiceState(_ interface{}) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	k.updateServices()
-	go k.publisher.Publish(stateEvent.Topic, *k.state)
+	go k.announceStateChanges(nil)
 }
 
 // ConsumeSessionStateEvent consumes the session change events
@@ -129,7 +128,7 @@ func (k *Keeper) consumeSessionAcknowledgeEvent(e sevent.Payload) {
 
 	k.incrementConnectCount(service.ID, true)
 
-	go k.announceStateChanges(*k.state)
+	go k.announceStateChanges(nil)
 }
 
 func (k *Keeper) updateServices() {
@@ -186,7 +185,7 @@ func (k *Keeper) updateNatStatus(e interface{}) {
 		k.state.NATStatus.Error = status.Error.Error()
 	}
 
-	go k.announceStateChanges(*k.state)
+	go k.announceStateChanges(nil)
 }
 
 func (k *Keeper) updateSessionState(e interface{}) {
@@ -219,7 +218,7 @@ func (k *Keeper) updateSessionState(e interface{}) {
 
 	k.state.Sessions = result
 
-	go k.announceStateChanges(*k.state)
+	go k.announceStateChanges(nil)
 }
 
 func (k *Keeper) getSessionByID(id string) (ss stateEvent.ServiceSession, found bool) {
