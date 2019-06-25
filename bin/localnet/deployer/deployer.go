@@ -29,7 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/node/blockchain/generated"
+	"github.com/mysteriumnetwork/payment-bindings/generated"
 	"github.com/mysteriumnetwork/payments/cli/helpers"
 	"github.com/mysteriumnetwork/payments/contracts/abigen"
 	"github.com/mysteriumnetwork/payments/mysttoken"

@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/node/blockchain"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -81,6 +80,7 @@ import (
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/tequilapi/sse"
 	"github.com/mysteriumnetwork/node/utils"
+	payment_bindings "github.com/mysteriumnetwork/payment-bindings"
 	"github.com/pkg/errors"
 )
 
@@ -570,7 +570,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
-	if di.EtherClient, err = blockchain.NewClient(network.EtherClientRPC); err != nil {
+	if di.EtherClient, err = payment_bindings.NewClient(network.EtherClientRPC); err != nil {
 		return err
 	}
 
