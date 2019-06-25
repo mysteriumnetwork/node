@@ -507,6 +507,17 @@
   revision = "e10352387a0b66e2f1cb447bbc910ff360b6873e"
 
 [[projects]]
+  digest = "1:c04cef54bc45a0077b9fd9221ef7c9c1991f3db5b1ba7634ce5f0acb5c91907e"
+  name = "github.com/mysteriumnetwork/payment-bindings"
+  packages = [
+    ".",
+    "generated",
+  ]
+  pruneopts = "UT"
+  revision = "b47f77609e844522248298221a676ddf9b4f0deb"
+  version = "0.0.1"
+
+[[projects]]
   digest = "1:8a20b209f06b19844908cf0367975d0966d6c188e5381ebd9327d6cd5d2ab990"
   name = "github.com/mysteriumnetwork/payments"
   packages = [
@@ -1067,9 +1078,7 @@
     "github.com/aws/aws-sdk-go-v2/service/s3/s3manager",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
-    "github.com/ethereum/go-ethereum",
     "github.com/ethereum/go-ethereum/accounts",
-    "github.com/ethereum/go-ethereum/accounts/abi",
     "github.com/ethereum/go-ethereum/accounts/abi/bind",
     "github.com/ethereum/go-ethereum/accounts/keystore",
     "github.com/ethereum/go-ethereum/common",
@@ -1077,7 +1086,6 @@
     "github.com/ethereum/go-ethereum/core/types",
     "github.com/ethereum/go-ethereum/crypto",
     "github.com/ethereum/go-ethereum/ethclient",
-    "github.com/ethereum/go-ethereum/event",
     "github.com/ethereum/go-ethereum/p2p/nat",
     "github.com/ethereum/go-ethereum/params",
     "github.com/gin-contrib/cors",
@@ -1107,6 +1115,8 @@
     "github.com/mysteriumnetwork/go-openvpn/openvpn/tls",
     "github.com/mysteriumnetwork/go-openvpn/openvpn3",
     "github.com/mysteriumnetwork/metrics",
+    "github.com/mysteriumnetwork/payment-bindings",
+    "github.com/mysteriumnetwork/payment-bindings/generated",
     "github.com/mysteriumnetwork/payments/cli/helpers",
     "github.com/mysteriumnetwork/payments/contracts/abigen",
     "github.com/mysteriumnetwork/payments/identity",
