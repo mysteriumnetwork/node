@@ -62,6 +62,7 @@ func ReverseTequilapiProxy(tequilapiPort int) gin.HandlerFunc {
 			},
 			ModifyResponse: func(res *http.Response) error {
 				res.Header.Set("Access-Control-Allow-Origin", "*")
+				res.Header.Set("Access-Control-Allow-Headers", "*")
 				res.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 
 				return nil
