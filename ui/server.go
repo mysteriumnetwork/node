@@ -47,6 +47,15 @@ type Server struct {
 
 // ReverseTequilapiProxy proxies UIServer requests to the TequilAPI server
 func ReverseTequilapiProxy(tequilapiPort int) gin.HandlerFunc {
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   20 * time.Second,
+			KeepAlive: 20 * time.Second,
+		}).DialContext,
+		MaxIdleConnsPerHost: 5,
+		IdleConnTimeout:     15,
+	}
 	return func(c *gin.Context) {
 		// skip non Tequilapi routes
 		if !strings.Contains(c.Request.URL.Path, tequilapiUrlPrefix) {
@@ -67,13 +76,7 @@ func ReverseTequilapiProxy(tequilapiPort int) gin.HandlerFunc {
 
 				return nil
 			},
-		}
-		proxy.Transport = &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   24 * time.Hour,
-				KeepAlive: 24 * time.Hour,
-			}).DialContext,
+			Transport: transport,
 		}
 
 		defer func() {
