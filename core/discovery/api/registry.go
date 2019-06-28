@@ -46,5 +46,5 @@ func (registry *registryAPI) UnregisterProposal(proposal market.ServiceProposal,
 
 // PingProposal pings service proposal as being alive
 func (registry *registryAPI) PingProposal(proposal market.ServiceProposal, signer identity.Signer) error {
-	return registry.mysteriumAPI.RegisterProposal(proposal, signer)
+	return registry.mysteriumAPI.PingProposal(proposal, signer)
 }
