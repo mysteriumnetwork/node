@@ -18,28 +18,51 @@ Currently node supports OpenVPN as its underlying VPN transport.
 - [Installation guide](./INSTALL.md)
 - [Node wiki](https://github.com/mysteriumnetwork/node/wiki/)
 
-### Prerequisites
+## Installation options
 
-To run a node as docker container You will need [docker](https://www.docker.com/).
+### Debian/raspbian
+
+Install latest stable release:
+```bash
+curl https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh | sudo bash
+```
+
+Or install latest snapshot (development build):
+```bash
+curl https://raw.githubusercontent.com/mysteriumnetwork/node/master/install.sh | SNAPSHOT=true sudo -E bash
+```
+
+Service logs:
+```bash
+sudo journalctl -u mysterium-node.service
+```
+
+Service status:
+```bash
+sudo systemctl status mysterium-node.service
+```
+
+### Docker
+
+To run a node as docker container you will need [docker](https://www.docker.com/).
 You should be able to run a node on any OS that supports docker.
 Tested on these OSes so far: _Debian 9_, _Ubuntu 16.04_ and _Centos 7_.
 
-You can check latest docker node versions here: https://hub.docker.com/r/mysteriumnetwork/myst/
+You can get latest node docker images here: https://hub.docker.com/r/mysteriumnetwork/myst/
 
-
-### Installation
-
-Go to [docker](https://www.docker.com/) on how to get a recent docker version for Your OS.
-
-### Running
+Run node:
 ```bash
 sudo docker run --cap-add NET_ADMIN --net host --name myst -d mysteriumnetwork/myst service --agreed-terms-and-conditions
 ```
-### Debugging
+
+Access service logs:
 ```bash
 sudo docker logs -f myst
 ```
-More detailed installation options described [here](./INSTALL.md).
+
+### Further information
+
+More installation options are described in the [installation guide](http://docs.mysterium.network/en/latest/user-guide/installation/).  
 For possible issues while running a node refer to our [FAQ](https://github.com/mysteriumnetwork/node/wiki/Node-operation) section.
 
 ## Built With
