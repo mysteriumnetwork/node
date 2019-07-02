@@ -241,9 +241,6 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
 		return err
 	}
-	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
-		return err
-	}
 	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
 		return err
 	}
@@ -276,6 +273,9 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 
 	di.registerConnections(nodeOptions)
 
+	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
+		return err
+	}
 	if err = di.subscribeEventConsumers(); err != nil {
 		return err
 	}
@@ -425,7 +425,24 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 	err = di.EventBus.Subscribe(event.Topic, di.NATTracker.ConsumeNATEvent)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Quality metrics
+	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.QualityMetricsSender.SendSessionEvent)
+	if err != nil {
+		return err
+	}
+	err = di.EventBus.SubscribeAsync(connection.SessionEventTopic, di.QualityMetricsSender.SendSessionEvent)
+	if err != nil {
+		return err
+	}
+	err = di.EventBus.SubscribeAsync(connection.StatisticsEventTopic, di.QualityMetricsSender.SendSessionData)
+	if err != nil {
+		return err
+	}
+	return di.EventBus.SubscribeAsync(nodevent.Topic, di.QualityMetricsSender.SendStartupEvent)
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listener net.Listener) {
@@ -475,7 +492,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
 
-	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.QualityMetricsSender, di.NATPinger, di.UIServer)
+	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.NATPinger, di.UIServer)
 }
 
 func newSessionManagerFactory(
@@ -633,7 +650,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	if _, err := firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
 		return err
 	}
-	di.QualityClient = quality.NewMorqaClient(di.NetworkDefinition.QualityOracle, 20*time.Second)
+	di.QualityClient = quality.NewMorqaClient(options.Address, 20*time.Second)
 
 	var transport quality.Transport
 	switch options.Type {
@@ -651,7 +668,12 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	if err != nil {
 		return err
 	}
-	di.QualityMetricsSender = quality.NewSender(transport, metadata.VersionAsString())
+	di.QualityMetricsSender = quality.NewSender(transport, metadata.VersionAsString(), di.ConnectionManager, di.LocationResolver)
+
+	// warm up the loader as the load takes up to a couple of secs
+	loader := &upnp.GatewayLoader{}
+	go loader.Get()
+	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
 	return nil
 }
 
@@ -724,11 +746,6 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
-
-	// warm up the loader as the load takes up to a couple of secs
-	loader := &upnp.GatewayLoader{}
-	go loader.Get()
-	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {

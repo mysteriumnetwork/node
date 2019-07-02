@@ -53,7 +53,7 @@ func TestMORQATransport_SendEvent_HandlesSuccess(t *testing.T) {
 		t,
 		metrics.Event{
 			IsProvider: false,
-			TargetId:   "0x1",
+			TargetId:   "",
 			Metric: &metrics.Event_VersionPayload{
 				VersionPayload: &metrics.VersionPayload{
 					Version: "test version",

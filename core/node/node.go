@@ -20,7 +20,6 @@ package node
 import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/node/event"
-	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/tequilapi"
 )
 
@@ -46,7 +45,6 @@ func NewNode(
 	connectionManager connection.Manager,
 	tequilapiServer tequilapi.APIServer,
 	publisher Publisher,
-	metricsSender *quality.Sender,
 	natPinger NatPinger,
 	uiServer UIServer,
 ) *Node {
@@ -54,7 +52,6 @@ func NewNode(
 		connectionManager: connectionManager,
 		httpAPIServer:     tequilapiServer,
 		publisher:         publisher,
-		metricsSender:     metricsSender,
 		natPinger:         natPinger,
 		uiServer:          uiServer,
 	}
@@ -65,15 +62,12 @@ type Node struct {
 	connectionManager connection.Manager
 	httpAPIServer     tequilapi.APIServer
 	publisher         Publisher
-	metricsSender     *quality.Sender
 	natPinger         NatPinger
 	uiServer          UIServer
 }
 
 // Start starts Mysterium node (Tequilapi service, fetches location)
 func (node *Node) Start() error {
-	go node.metricsSender.SendStartupEvent()
-
 	node.httpAPIServer.StartServing()
 	address, err := node.httpAPIServer.Address()
 	if err != nil {

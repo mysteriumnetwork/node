@@ -161,3 +161,7 @@
 [[constraint]]
   name = "github.com/koron/go-ssdp"
   revision = "4a0ed625a78b6858dc8d3a55fb7728968b712122"
+
+[[constraint]]
+  name = "github.com/mysteriumnetwork/metrics"
+  revision = "6a3d4c1c3fbd536609ded8cfef335ec2852cd63e"
