@@ -23,10 +23,6 @@ import (
 	"github.com/mysteriumnetwork/metrics"
 )
 
-var (
-	emptyMetric = &metrics.Event{}
-)
-
 // NewMORQATransport creates transport allowing to send events to Mysterium Quality Oracle - MORQA
 func NewMORQATransport(morqaClient *MysteriumMORQA) *morqaTransport {
 	return &morqaTransport{
@@ -39,7 +35,7 @@ type morqaTransport struct {
 }
 
 func (transport *morqaTransport) SendEvent(event Event) error {
-	if metric := mapEventToMetric(event); metric != emptyMetric {
+	if metric := mapEventToMetric(event); metric != nil {
 		return transport.morqaClient.SendMetric(metric)
 	}
 
@@ -50,14 +46,49 @@ func mapEventToMetric(event Event) *metrics.Event {
 	switch event.EventName {
 	case startupEventName:
 		return &metrics.Event{
-			IsProvider: false,
-			TargetId:   "0x1",
 			Metric: &metrics.Event_VersionPayload{
 				VersionPayload: &metrics.VersionPayload{
 					Version: event.Application.Version,
 				},
 			},
 		}
+	case sessionEventName:
+		context := event.Context.(sessionEventContext)
+		return &metrics.Event{
+			Signature:  context.Consumer,
+			TargetId:   context.Provider,
+			IsProvider: false,
+			Metric: &metrics.Event_SessionEventPayload{
+				SessionEventPayload: &metrics.SessionEventPayload{
+					Event: context.Event,
+					Session: &metrics.SessionPayload{
+						Id:             context.ID,
+						ServiceType:    context.ServiceType,
+						ProviderContry: context.ProviderCountry,
+						ConsumerContry: context.ConsumerCountry,
+					},
+				},
+			},
+		}
+	case sessionDataName:
+		context := event.Context.(sessionDataContext)
+		return &metrics.Event{
+			Signature:  context.Consumer,
+			TargetId:   context.Provider,
+			IsProvider: false,
+			Metric: &metrics.Event_SessionStatisticsPayload{
+				SessionStatisticsPayload: &metrics.SessionStatisticsPayload{
+					BytesSent:     context.Tx,
+					BytesReceived: context.Rx,
+					Session: &metrics.SessionPayload{
+						Id:             context.ID,
+						ServiceType:    context.ServiceType,
+						ProviderContry: context.ProviderCountry,
+						ConsumerContry: context.ConsumerCountry,
+					},
+				},
+			},
+		}
 	}
-	return emptyMetric
+	return nil
 }
