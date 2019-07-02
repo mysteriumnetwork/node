@@ -45,50 +45,60 @@ func (transport *morqaTransport) SendEvent(event Event) error {
 func mapEventToMetric(event Event) *metrics.Event {
 	switch event.EventName {
 	case startupEventName:
-		return &metrics.Event{
-			Metric: &metrics.Event_VersionPayload{
-				VersionPayload: &metrics.VersionPayload{
-					Version: event.Application.Version,
-				},
-			},
-		}
+		return nodeVersionToMetricsEvent(event.Application.Version)
 	case sessionEventName:
-		context := event.Context.(sessionEventContext)
-		return &metrics.Event{
-			Signature:  context.Consumer,
-			TargetId:   context.Provider,
-			IsProvider: false,
-			Metric: &metrics.Event_SessionEventPayload{
-				SessionEventPayload: &metrics.SessionEventPayload{
-					Event: context.Event,
-					Session: &metrics.SessionPayload{
-						Id:             context.ID,
-						ServiceType:    context.ServiceType,
-						ProviderContry: context.ProviderCountry,
-						ConsumerContry: context.ConsumerCountry,
-					},
-				},
-			},
-		}
+		return sessionEventToMetricsEvent(event.Context.(sessionEventContext))
 	case sessionDataName:
-		context := event.Context.(sessionDataContext)
-		return &metrics.Event{
-			Signature:  context.Consumer,
-			TargetId:   context.Provider,
-			IsProvider: false,
-			Metric: &metrics.Event_SessionStatisticsPayload{
-				SessionStatisticsPayload: &metrics.SessionStatisticsPayload{
-					BytesSent:     context.Tx,
-					BytesReceived: context.Rx,
-					Session: &metrics.SessionPayload{
-						Id:             context.ID,
-						ServiceType:    context.ServiceType,
-						ProviderContry: context.ProviderCountry,
-						ConsumerContry: context.ConsumerCountry,
-					},
-				},
-			},
-		}
+		return sessionDataToMetricsEvent(event.Context.(sessionDataContext))
 	}
 	return nil
+}
+
+func nodeVersionToMetricsEvent(version string) *metrics.Event {
+	return &metrics.Event{
+		Metric: &metrics.Event_VersionPayload{
+			VersionPayload: &metrics.VersionPayload{
+				Version: version,
+			},
+		},
+	}
+}
+
+func sessionEventToMetricsEvent(context sessionEventContext) *metrics.Event {
+	return &metrics.Event{
+		Signature:  context.Consumer,
+		TargetId:   context.Provider,
+		IsProvider: false,
+		Metric: &metrics.Event_SessionEventPayload{
+			SessionEventPayload: &metrics.SessionEventPayload{
+				Event: context.Event,
+				Session: &metrics.SessionPayload{
+					Id:             context.ID,
+					ServiceType:    context.ServiceType,
+					ProviderContry: context.ProviderCountry,
+					ConsumerContry: context.ConsumerCountry,
+				},
+			},
+		},
+	}
+}
+
+func sessionDataToMetricsEvent(context sessionDataContext) *metrics.Event {
+	return &metrics.Event{
+		Signature:  context.Consumer,
+		TargetId:   context.Provider,
+		IsProvider: false,
+		Metric: &metrics.Event_SessionStatisticsPayload{
+			SessionStatisticsPayload: &metrics.SessionStatisticsPayload{
+				BytesSent:     context.Tx,
+				BytesReceived: context.Rx,
+				Session: &metrics.SessionPayload{
+					Id:             context.ID,
+					ServiceType:    context.ServiceType,
+					ProviderContry: context.ProviderCountry,
+					ConsumerContry: context.ConsumerCountry,
+				},
+			},
+		},
+	}
 }
