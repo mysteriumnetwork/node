@@ -425,7 +425,24 @@ func (di *Dependencies) subscribeEventConsumers() error {
 		return err
 	}
 	err = di.EventBus.Subscribe(event.Topic, di.NATTracker.ConsumeNATEvent)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Quality metrics
+	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.QualityMetricsSender.SendSessionEvent)
+	if err != nil {
+		return err
+	}
+	err = di.EventBus.SubscribeAsync(connection.SessionEventTopic, di.QualityMetricsSender.SendSessionEvent)
+	if err != nil {
+		return err
+	}
+	err = di.EventBus.SubscribeAsync(connection.StatisticsEventTopic, di.QualityMetricsSender.SendSessionData)
+	if err != nil {
+		return err
+	}
+	return di.EventBus.SubscribeAsync(nodevent.Topic, di.QualityMetricsSender.SendStartupEvent)
 }
 
 func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listener net.Listener) {
@@ -653,19 +670,11 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	}
 	di.QualityMetricsSender = quality.NewSender(transport, metadata.VersionAsString(), di.ConnectionManager, di.LocationResolver)
 
-	err = di.EventBus.SubscribeAsync(connection.StateEventTopic, di.QualityMetricsSender.SendSessionEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(connection.SessionEventTopic, di.QualityMetricsSender.SendSessionEvent)
-	if err != nil {
-		return err
-	}
-	err = di.EventBus.SubscribeAsync(connection.StatisticsEventTopic, di.QualityMetricsSender.SendSessionData)
-	if err != nil {
-		return err
-	}
-	return di.EventBus.SubscribeAsync(nodevent.Topic, di.QualityMetricsSender.SendStartupEvent)
+	// warm up the loader as the load takes up to a couple of secs
+	loader := &upnp.GatewayLoader{}
+	go loader.Get()
+	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
+	return nil
 }
 
 func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
@@ -737,11 +746,6 @@ func (di *Dependencies) bootstrapNATComponents(options node.Options) {
 	} else {
 		di.NATPinger = &traversal.NoopPinger{}
 	}
-
-	// warm up the loader as the load takes up to a couple of secs
-	loader := &upnp.GatewayLoader{}
-	go loader.Get()
-	di.NATEventSender = event.NewSender(di.QualityMetricsSender, di.IPResolver.GetPublicIP, loader.HumanReadable)
 }
 
 func (di *Dependencies) bootstrapFirewall(options node.OptionsFirewall) error {
