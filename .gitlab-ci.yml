@@ -4,7 +4,7 @@ stages:
   - pre-release
   - build
   - release-snapshot
-  - release
+  - release-tag
   - post-release
 
 variables:
@@ -150,6 +150,11 @@ release-snapshot:goreport:
   script: bin/release_goreport
   only:
     - master
+
+release-tag:release:
+  stage: release-tag
+  tags: [go]
+  script: go run mage.go -v ReleaseTag
 
 remove-bucket:
   stage: post-release
