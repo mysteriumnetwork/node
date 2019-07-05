@@ -271,7 +271,7 @@ func (di *Dependencies) registerWireguardConnection() {
 
 func (di *Dependencies) bootstrapUIServer(options node.Options) {
 	if options.UI.UIEnabled {
-		di.UIServer = ui.NewServer(options.UI.UIPort, options.TequilapiPort)
+		di.UIServer = ui.NewServer(options.UI.UIPort, options.TequilapiPort, di.JWTAuthenticator)
 		return
 	}
 

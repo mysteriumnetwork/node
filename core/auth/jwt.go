@@ -18,6 +18,8 @@ type JWTToken struct {
 	ExpirationTime time.Time
 }
 
+const JWTCookieName string = "token"
+
 type jwtClaims struct {
 	Username string `json:"username"`
 	jwt.StandardClaims
@@ -70,7 +72,7 @@ func (jwtAuth *JwtAuthenticator) ValidateToken(token string) (bool, error) {
 	})
 
 	if tkn == nil || !tkn.Valid {
-		return false, nil
+		return false, errors.New("Invalid JWT token")
 	}
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {

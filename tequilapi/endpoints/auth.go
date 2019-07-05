@@ -96,9 +96,12 @@ func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.R
 	}
 
 	http.SetCookie(httpRes, &http.Cookie{
-		Name:    "token",
-		Value:   jwtToken.Token,
-		Expires: jwtToken.ExpirationTime,
+		Name:     auth.JWTCookieName,
+		Value:    jwtToken.Token,
+		Expires:  jwtToken.ExpirationTime,
+		HttpOnly: true,
+		Secure:   false,
+		Path:     "/",
 	})
 }
 
@@ -153,6 +156,9 @@ func toChangePasswordRequest(req *http.Request) (*changePasswordRequest, error) 
 	return &cpReq, nil
 }
 
+// TequilapiLoginEndpointPath used by UIServer to know which endpoint doesn't need auth
+const TequilapiLoginEndpointPath = "/auth/login"
+
 // AddRoutesForAuthentication registers /auth endpoints in Tequilapi
 func AddRoutesForAuthentication(
 	router *httprouter.Router,
@@ -164,5 +170,5 @@ func AddRoutesForAuthentication(
 		jwtAuthenticator: jwtAuth,
 	}
 	router.PUT("/auth/password", api.ChangePassword)
-	router.POST("/auth/login", api.Login)
+	router.POST(TequilapiLoginEndpointPath, api.Login)
 }
