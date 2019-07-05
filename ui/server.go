@@ -96,24 +96,11 @@ func ReverseTequilapiProxy(tequilapiPort int) gin.HandlerFunc {
 }
 
 // NewServer creates a new instance of the server for the given port
-func NewServer(port int, tequilapiPort int, auth authenticator) *Server {
-	webAuth := newWebAuthenticator(auth)
+func NewServer(port int, tequilapiPort int) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
-
-	// authenticate all routes
-	r.Use(func(c *gin.Context) {
-		if err := webAuth.authenticateHTTPBasic(c.GetHeader("Authorization")); err != nil {
-			log.Warn(logPrefix, "authentication failed: ", err)
-			c.Header("WWW-Authenticate", "Basic realm="+strconv.Quote("Authorization required"))
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		c.Next()
-	})
 
 	r.NoRoute(ReverseTequilapiProxy(tequilapiPort))
 

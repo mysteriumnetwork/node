@@ -22,15 +22,29 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/mysteriumnetwork/node/core/auth"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
 type authenticationAPI struct {
-	passwordChanger passwordChanger
+	jwtAuthenticator jwtAuthenticator
+	authenticator    authenticator
 }
 
-type passwordChanger interface {
+type jwtAuthenticator interface {
+	CreateToken(username string) (auth.JWTToken, error)
+}
+
+type authenticator interface {
+	CheckCredentials(username, password string) error
 	ChangePassword(username, oldPassword, newPassword string) error
+}
+
+// swagger:model LoginRequest
+type loginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 // swagger:model ChangePasswordRequest
@@ -38,6 +52,54 @@ type changePasswordRequest struct {
 	Username    string `json:"username"`
 	OldPassword string `json:"old_password"`
 	NewPassword string `json:"new_password"`
+}
+
+// swagger:operation PUT /auth/password Authentication changePassword
+// ---
+// summary: Change password
+// description: Changes user password
+// parameters:
+//   - in: body
+//     name: body
+//     schema:
+//       $ref: "#/definitions/ChangePasswordRequest"
+// responses:
+//   200:
+//     description: Password changed successfully
+//   400:
+//     description: Body parsing error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   401:
+//     description: Unauthorized
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.Request, _ httprouter.Params) {
+	var req *loginRequest
+	var err error
+
+	req, err = toLoginRequest(httpReq)
+	if err != nil {
+		utils.SendError(httpRes, err, http.StatusBadRequest)
+		return
+	}
+	err = api.authenticator.CheckCredentials(req.Username, req.Password)
+	if err != nil {
+		utils.SendError(httpRes, err, http.StatusUnauthorized)
+		return
+	}
+
+	jwtToken, err := api.jwtAuthenticator.CreateToken(req.Username)
+	if err != nil {
+		utils.SendError(httpRes, err, http.StatusUnauthorized)
+		return
+	}
+
+	http.SetCookie(httpRes, &http.Cookie{
+		Name:    "token",
+		Value:   jwtToken.Token,
+		Expires: jwtToken.ExpirationTime,
+	})
 }
 
 // swagger:operation PUT /auth/password Authentication changePassword
@@ -68,11 +130,19 @@ func (api *authenticationAPI) ChangePassword(httpRes http.ResponseWriter, httpRe
 		utils.SendError(httpRes, err, http.StatusBadRequest)
 		return
 	}
-	err = api.passwordChanger.ChangePassword(req.Username, req.OldPassword, req.NewPassword)
+	err = api.authenticator.ChangePassword(req.Username, req.OldPassword, req.NewPassword)
 	if err != nil {
 		utils.SendError(httpRes, err, http.StatusUnauthorized)
 		return
 	}
+}
+
+func toLoginRequest(req *http.Request) (*loginRequest, error) {
+	var loginReq = loginRequest{}
+	if err := json.NewDecoder(req.Body).Decode(&loginReq); err != nil {
+		return nil, err
+	}
+	return &loginReq, nil
 }
 
 func toChangePasswordRequest(req *http.Request) (*changePasswordRequest, error) {
@@ -86,10 +156,13 @@ func toChangePasswordRequest(req *http.Request) (*changePasswordRequest, error) 
 // AddRoutesForAuthentication registers /auth endpoints in Tequilapi
 func AddRoutesForAuthentication(
 	router *httprouter.Router,
-	passwordChanger passwordChanger,
+	auth authenticator,
+	jwtAuth jwtAuthenticator,
 ) {
 	api := &authenticationAPI{
-		passwordChanger: passwordChanger,
+		authenticator:    auth,
+		jwtAuthenticator: jwtAuth,
 	}
 	router.PUT("/auth/password", api.ChangePassword)
+	router.POST("/auth/login", api.Login)
 }
