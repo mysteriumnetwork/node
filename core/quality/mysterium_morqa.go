@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mysteriumnetwork/metrics"
 )
 
@@ -35,7 +36,7 @@ const (
 
 // HTTPClient sends actual HTTP requests
 type HTTPClient interface {
-	Do(*http.Request) (*http.Response, error)
+	Do(*retryablehttp.Request) (*http.Response, error)
 }
 
 // MysteriumMORQA HTTP client for Mysterium QualityOracle - MORQA
@@ -46,8 +47,17 @@ type MysteriumMORQA struct {
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
 func NewMorqaClient(baseURL string, timeout time.Duration) *MysteriumMORQA {
+	httpClient := &retryablehttp.Client{
+		HTTPClient:   &http.Client{Timeout: timeout},
+		Logger:       nil,
+		RetryWaitMin: timeout,
+		RetryWaitMax: 10 * timeout,
+		RetryMax:     10,
+		CheckRetry:   retryablehttp.DefaultRetryPolicy,
+		Backoff:      retryablehttp.DefaultBackoff,
+	}
 	return &MysteriumMORQA{
-		http:    &http.Client{Timeout: timeout},
+		http:    httpClient,
 		baseURL: baseURL,
 	}
 }
@@ -92,19 +102,19 @@ func (m *MysteriumMORQA) SendMetric(event *metrics.Event) error {
 	return parseResponseError(response)
 }
 
-func (m *MysteriumMORQA) newRequest(method, path string, body []byte) (*http.Request, error) {
+func (m *MysteriumMORQA) newRequest(method, path string, body []byte) (*retryablehttp.Request, error) {
 	url := m.baseURL
 	if len(path) > 0 {
 		url = fmt.Sprintf("%v/%v", url, path)
 	}
 
-	request, err := http.NewRequest(method, url, bytes.NewBuffer(body))
+	request, err := retryablehttp.NewRequest(method, url, bytes.NewBuffer(body))
 	request.Header.Set("User-Agent", mysteriumMorqaAgentName)
 	request.Header.Set("Accept", "application/json")
 	return request, err
 }
 
-func (m *MysteriumMORQA) newRequestJSON(method, path string, payload interface{}) (*http.Request, error) {
+func (m *MysteriumMORQA) newRequestJSON(method, path string, payload interface{}) (*retryablehttp.Request, error) {
 	payloadBody, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -115,7 +125,7 @@ func (m *MysteriumMORQA) newRequestJSON(method, path string, payload interface{}
 	return req, err
 }
 
-func (m *MysteriumMORQA) newRequestBinary(method, path string, payload proto.Message) (*http.Request, error) {
+func (m *MysteriumMORQA) newRequestBinary(method, path string, payload proto.Message) (*retryablehttp.Request, error) {
 	payloadBody, err := proto.Marshal(payload)
 	if err != nil {
 		return nil, err
