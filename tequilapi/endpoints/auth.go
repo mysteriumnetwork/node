@@ -54,18 +54,18 @@ type changePasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
-// swagger:operation PUT /auth/password Authentication changePassword
+// swagger:operation POST /auth/login Authentication Login
 // ---
-// summary: Change password
-// description: Changes user password
+// summary: Login
+// description: Checks user credentials and sets JWT session cookie
 // parameters:
 //   - in: body
 //     name: body
 //     schema:
-//       $ref: "#/definitions/ChangePasswordRequest"
+//       $ref: "#/definitions/LoginRequest"
 // responses:
 //   200:
-//     description: Password changed successfully
+//     description: Logged in successfully
 //   400:
 //     description: Body parsing error
 //     schema:
@@ -91,7 +91,7 @@ func (api *authenticationAPI) Login(httpRes http.ResponseWriter, httpReq *http.R
 
 	jwtToken, err := api.jwtAuthenticator.CreateToken(req.Username)
 	if err != nil {
-		utils.SendError(httpRes, err, http.StatusUnauthorized)
+		utils.SendError(httpRes, err, http.StatusBadRequest)
 		return
 	}
 

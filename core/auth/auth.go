@@ -29,7 +29,7 @@ func NewAuthenticator(storage Storage) *Authenticator {
 	}
 }
 
-// Authenticate authenticates user by password
+// CheckCredentials authenticates user by password
 func (a *Authenticator) CheckCredentials(username, password string) error {
 	return NewCredentials(username, password, a.storage).Validate()
 }
