@@ -3,6 +3,7 @@ stages:
   - test
   - pre-release
   - build
+  - release-snapshot
   - release
   - post-release
 
@@ -133,18 +134,18 @@ package:swagger-redoc-docker:
   tags: [go]
   script: go run mage.go -v PackageDockerSwaggerRedoc
 
-release:snapshot:
-  stage: release
+release-snapshot:release:
+  stage: release-snapshot
   tags: [go]
   script: go run mage.go -v ReleaseSnapshot
 
-release:docker-snapshot:
-  stage: release
+release-snapshot:docker:
+  stage: release-snapshot
   tags: [go]
   script: go run mage.go -v ReleaseDockerSnapshot
 
-release:goreport:
-  stage: release
+release-snapshot:goreport:
+  stage: release-snapshot
   tags: [go]
   script: bin/release_goreport
   only:
