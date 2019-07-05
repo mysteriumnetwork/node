@@ -50,8 +50,8 @@ func NewMorqaClient(baseURL string, timeout time.Duration) *MysteriumMORQA {
 	httpClient := &retryablehttp.Client{
 		HTTPClient:   &http.Client{Timeout: timeout},
 		Logger:       nil,
-		RetryWaitMin: 1,
-		RetryWaitMax: 60,
+		RetryWaitMin: timeout,
+		RetryWaitMax: 10 * timeout,
 		RetryMax:     10,
 		CheckRetry:   retryablehttp.DefaultRetryPolicy,
 		Backoff:      retryablehttp.DefaultBackoff,
