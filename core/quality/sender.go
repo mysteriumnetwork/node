@@ -206,6 +206,9 @@ func (sender *Sender) session() connection.SessionInfo {
 	sender.mu.RLock()
 	defer sender.mu.RUnlock()
 
+	if sender.currentSession == nil {
+		return connection.SessionInfo{}
+	}
 	return *sender.currentSession
 }
 

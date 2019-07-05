@@ -283,6 +283,22 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:af105c7c5dc0b4ae41991f122cae860b9600f7d226072c2a83127048c991660c"
+  name = "github.com/hashicorp/go-cleanhttp"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "eda1e5db218aad1db63ca4642c8906b26bcf2744"
+  version = "v0.5.1"
+
+[[projects]]
+  digest = "1:351c9fafe916b099211b6e05749afdf5eef2d9aa297691827825628ec395d8c4"
+  name = "github.com/hashicorp/go-retryablehttp"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "85a8ee556d7323a4faf0f4c17ee900e9ff1482e8"
+  version = "v0.5.4"
+
+[[projects]]
   digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
   name = "github.com/hashicorp/golang-lru"
   packages = [
@@ -1092,6 +1108,7 @@
     "github.com/gofrs/uuid",
     "github.com/golang/protobuf/proto",
     "github.com/google/go-github/github",
+    "github.com/hashicorp/go-retryablehttp",
     "github.com/huin/goupnp",
     "github.com/huin/goupnp/httpu",
     "github.com/huin/goupnp/ssdp",

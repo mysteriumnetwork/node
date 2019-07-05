@@ -111,21 +111,7 @@ func TestMORQATransport_SendEvent_HandlesFatalErrors(t *testing.T) {
 	err := transport.SendEvent(eventStartup)
 
 	assert.EqualError(t, err, fmt.Sprintf(
-		"server response invalid: 500 Internal Server Error (%s/metrics). Possible error: ",
-		server.URL,
-	))
-}
-
-func TestMORQATransport_SendEvent_WithUnexpectedErrors(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-
-	transport := &morqaTransport{morqaClient: NewMorqaClient(server.URL, 10*time.Millisecond)}
-	err := transport.SendEvent(eventStartup)
-
-	assert.EqualError(t, err, fmt.Sprintf(
-		"server response invalid: 500 Internal Server Error (%s/metrics). Possible error: unexpected end of JSON input",
+		"POST %s/metrics giving up after 11 attempts",
 		server.URL,
 	))
 }
