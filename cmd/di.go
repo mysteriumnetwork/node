@@ -26,6 +26,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	payment_bindings "github.com/mysteriumnetwork/payment-bindings"
+	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -80,8 +83,6 @@ import (
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/tequilapi/sse"
 	"github.com/mysteriumnetwork/node/utils"
-	payment_bindings "github.com/mysteriumnetwork/payment-bindings"
-	"github.com/pkg/errors"
 )
 
 // Storage stores persistent objects for future usage
@@ -107,10 +108,16 @@ type serviceSessionStorage interface {
 	RemoveForService(serviceID string)
 }
 
+// JWTAuthenticator provides authentication for Tequilapi and UI
+type JWTAuthenticator interface {
+	CreateToken(username string) (token auth.JWT, err error)
+	ValidateToken(token string) (bool, error)
+}
+
 // Authenticator provides authentication for Tequilapi and UI
 type Authenticator interface {
-	Authenticate(username, password string) error
-	ChangePassword(username, oldPassword, newPassword string) (err error)
+	CheckCredentials(username, password string) error
+	ChangePassword(username, oldPassword, newPassword string) error
 }
 
 // NatPinger is responsible for pinging nat holes
@@ -200,9 +207,10 @@ type Dependencies struct {
 
 	StateKeeper *state.Keeper
 
-	Authenticator Authenticator
-	UIServer      UIServer
-	SSEHandler    *sse.Handler
+	Authenticator    Authenticator
+	JWTAuthenticator JWTAuthenticator
+	UIServer         UIServer
+	SSEHandler       *sse.Handler
 }
 
 // Bootstrap initiates all container dependencies
@@ -244,8 +252,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
 		return err
 	}
+	if err := di.bootstrapAuthenticator(); err != nil {
+		return err
+	}
 
-	di.bootstrapAuthenticator()
 	di.bootstrapUIServer(nodeOptions)
 
 	if err := di.bootstrapBandwidthTracker(); err != nil {
@@ -473,7 +483,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
-	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator)
+	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
 	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.IPResolver, di.StatisticsTracker, di.DiscoveryFinder)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
@@ -718,8 +728,15 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	return nil
 }
 
-func (di *Dependencies) bootstrapAuthenticator() {
+func (di *Dependencies) bootstrapAuthenticator() error {
+	key, err := auth.NewJWTEncryptionKey(di.Storage)
+	if err != nil {
+		return err
+	}
 	di.Authenticator = auth.NewAuthenticator(di.Storage)
+	di.JWTAuthenticator = auth.NewJWTAuthenticator(key)
+
+	return nil
 }
 
 func (di *Dependencies) bootstrapBandwidthTracker() error {

@@ -26,15 +26,15 @@ import (
 	"golang.org/x/net/html"
 )
 
-type openMindedAuthenticator struct {
+type jwtAuth struct {
 }
 
-func (n openMindedAuthenticator) Authenticate(username, password string) error {
-	return nil
+func (j *jwtAuth) ValidateToken(token string) (bool, error) {
+	return false, nil
 }
 
 func Test_Server_ServesHTML(t *testing.T) {
-	s := NewServer(55555, 55554, &openMindedAuthenticator{})
+	s := NewServer(55555, 55554, &jwtAuth{})
 	s.discovery = &mockDiscovery{}
 	serverError := make(chan error)
 	go func() {
