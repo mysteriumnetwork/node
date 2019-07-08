@@ -22,11 +22,13 @@ import (
 	"net"
 	"path/filepath"
 	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	payment_bindings "github.com/mysteriumnetwork/payment-bindings"
 	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -108,7 +110,7 @@ type serviceSessionStorage interface {
 
 // JWTAuthenticator provides authentication for Tequilapi and UI
 type JWTAuthenticator interface {
-	CreateToken(username string) (token auth.JWTToken, err error)
+	CreateToken(username string) (token auth.JWT, err error)
 	ValidateToken(token string) (bool, error)
 }
 
@@ -250,8 +252,10 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
 		return err
 	}
+	if err := di.bootstrapAuthenticator(); err != nil {
+		return err
+	}
 
-	di.bootstrapAuthenticator()
 	di.bootstrapUIServer(nodeOptions)
 
 	if err := di.bootstrapBandwidthTracker(); err != nil {
@@ -724,9 +728,15 @@ func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation
 	return nil
 }
 
-func (di *Dependencies) bootstrapAuthenticator() {
+func (di *Dependencies) bootstrapAuthenticator() error {
+	key, err := auth.NewJWTEncryptionKey(di.Storage)
+	if err != nil {
+		return err
+	}
 	di.Authenticator = auth.NewAuthenticator(di.Storage)
-	di.JWTAuthenticator = auth.NewJWTAuthenticator(di.Storage)
+	di.JWTAuthenticator = auth.NewJWTAuthenticator(key)
+
+	return nil
 }
 
 func (di *Dependencies) bootstrapBandwidthTracker() error {

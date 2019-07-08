@@ -28,6 +28,7 @@ import (
 	"github.com/gin-gonic/gin"
 	godvpnweb "github.com/mysteriumnetwork/go-dvpn-web"
 	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/ui/discovery"
 )
 

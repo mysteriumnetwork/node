@@ -33,7 +33,7 @@ type authenticationAPI struct {
 }
 
 type jwtAuthenticator interface {
-	CreateToken(username string) (auth.JWTToken, error)
+	CreateToken(username string) (auth.JWT, error)
 }
 
 type authenticator interface {

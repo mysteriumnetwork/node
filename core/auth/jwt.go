@@ -18,7 +18,6 @@
 package auth
 
 import (
-	"math/rand"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -27,15 +26,17 @@ import (
 
 // JWTAuthenticator contains JWT handling methods
 type JWTAuthenticator struct {
-	storage       Storage
 	encryptionKey []byte
 }
 
-// JWTToken contains token details
-type JWTToken struct {
+// JWT contains token details
+type JWT struct {
 	Token          string
 	ExpirationTime time.Time
 }
+
+// JWTEncryptionKey contains the encryption key for JWT
+type JWTEncryptionKey []byte
 
 // JWTCookieName name of the cookie JWT token is stored in
 const JWTCookieName string = "token"
@@ -45,27 +46,19 @@ type jwtClaims struct {
 	jwt.StandardClaims
 }
 
-type jwtKey []byte
-
 const expiresIn = 48 * time.Hour
-const encryptionKeyBucket = "jwt"
-const encryptionKeyName = "jwt-encryption-key"
 
 // NewJWTAuthenticator creates a new JWT authentication instance
-func NewJWTAuthenticator(storage Storage) *JWTAuthenticator {
+func NewJWTAuthenticator(encryptionKey JWTEncryptionKey) *JWTAuthenticator {
 	auth := &JWTAuthenticator{
-		storage: storage,
+		encryptionKey,
 	}
 
 	return auth
 }
 
 // CreateToken creates a new JWT token
-func (jwtAuth *JWTAuthenticator) CreateToken(username string) (JWTToken, error) {
-	if err := jwtAuth.ensureEncryptionKeyIsSet(); err != nil {
-		return JWTToken{}, err
-	}
-
+func (jwtAuth *JWTAuthenticator) CreateToken(username string) (JWT, error) {
 	expirationTime := jwtAuth.getExpirationTime()
 	claims := &jwtClaims{
 		Username: username,
@@ -77,69 +70,30 @@ func (jwtAuth *JWTAuthenticator) CreateToken(username string) (JWTToken, error) 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(jwtAuth.encryptionKey)
 	if err != nil {
-		return JWTToken{}, err
+		return JWT{}, err
 	}
 
-	return JWTToken{Token: tokenString, ExpirationTime: expirationTime}, nil
+	return JWT{Token: tokenString, ExpirationTime: expirationTime}, nil
 }
 
 // ValidateToken validates a JWT token
 func (jwtAuth *JWTAuthenticator) ValidateToken(token string) (bool, error) {
-	if err := jwtAuth.ensureEncryptionKeyIsSet(); err != nil {
-		return false, err
-	}
 	claims := &jwtClaims{}
 
 	tkn, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
 		return jwtAuth.encryptionKey, nil
 	})
+	if err != nil {
+		return false, err
+	}
 
 	if tkn == nil || !tkn.Valid {
 		return false, errors.New("invalid JWT token")
-	}
-	if err != nil {
-		if err == jwt.ErrSignatureInvalid {
-			return false, err
-		}
 	}
 
 	return true, nil
 }
 
-func (jwtAuth *JWTAuthenticator) ensureEncryptionKeyIsSet() error {
-	if jwtAuth.encryptionKey == nil {
-		return jwtAuth.setupEncryptionKey()
-	}
-
-	return nil
-}
-
-func (jwtAuth *JWTAuthenticator) setupEncryptionKey() error {
-	key := jwtKey{}
-	err := jwtAuth.storage.GetValue(encryptionKeyBucket, encryptionKeyName, &key)
-	if err != nil {
-		key = generateRandomKey(64)
-		err := jwtAuth.storage.SetValue(encryptionKeyBucket, encryptionKeyName, key)
-		if err != nil {
-			return errors.Wrap(err, "failed to store JWT encryption key")
-		}
-	}
-
-	jwtAuth.encryptionKey = key
-
-	return nil
-}
-
 func (jwtAuth *JWTAuthenticator) getExpirationTime() time.Time {
 	return time.Now().Add(expiresIn)
-}
-
-func generateRandomKey(length int) []byte {
-	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
-	key := make([]byte, length)
-	for i := range key {
-		key[i] = chars[rand.Intn(len(chars))]
-	}
-	return key
 }
