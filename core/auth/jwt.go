@@ -25,8 +25,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// JwtAuthenticator contains JWT handling methods
-type JwtAuthenticator struct {
+// JWTAuthenticator contains JWT handling methods
+type JWTAuthenticator struct {
 	storage       Storage
 	encryptionKey []byte
 }
@@ -52,8 +52,8 @@ const encryptionKeyBucket = "jwt"
 const encryptionKeyName = "jwt-encryption-key"
 
 // NewJWTAuthenticator creates a new JWT authentication instance
-func NewJWTAuthenticator(storage Storage) *JwtAuthenticator {
-	auth := &JwtAuthenticator{
+func NewJWTAuthenticator(storage Storage) *JWTAuthenticator {
+	auth := &JWTAuthenticator{
 		storage: storage,
 	}
 
@@ -61,7 +61,7 @@ func NewJWTAuthenticator(storage Storage) *JwtAuthenticator {
 }
 
 // CreateToken creates a new JWT token
-func (jwtAuth *JwtAuthenticator) CreateToken(username string) (JWTToken, error) {
+func (jwtAuth *JWTAuthenticator) CreateToken(username string) (JWTToken, error) {
 	if err := jwtAuth.ensureEncryptionKeyIsSet(); err != nil {
 		return JWTToken{}, err
 	}
@@ -84,7 +84,7 @@ func (jwtAuth *JwtAuthenticator) CreateToken(username string) (JWTToken, error) 
 }
 
 // ValidateToken validates a JWT token
-func (jwtAuth *JwtAuthenticator) ValidateToken(token string) (bool, error) {
+func (jwtAuth *JWTAuthenticator) ValidateToken(token string) (bool, error) {
 	if err := jwtAuth.ensureEncryptionKeyIsSet(); err != nil {
 		return false, err
 	}
@@ -95,7 +95,7 @@ func (jwtAuth *JwtAuthenticator) ValidateToken(token string) (bool, error) {
 	})
 
 	if tkn == nil || !tkn.Valid {
-		return false, errors.New("Invalid JWT token")
+		return false, errors.New("invalid JWT token")
 	}
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
@@ -106,7 +106,7 @@ func (jwtAuth *JwtAuthenticator) ValidateToken(token string) (bool, error) {
 	return true, nil
 }
 
-func (jwtAuth *JwtAuthenticator) ensureEncryptionKeyIsSet() error {
+func (jwtAuth *JWTAuthenticator) ensureEncryptionKeyIsSet() error {
 	if jwtAuth.encryptionKey == nil {
 		return jwtAuth.setupEncryptionKey()
 	}
@@ -114,14 +114,14 @@ func (jwtAuth *JwtAuthenticator) ensureEncryptionKeyIsSet() error {
 	return nil
 }
 
-func (jwtAuth *JwtAuthenticator) setupEncryptionKey() error {
+func (jwtAuth *JWTAuthenticator) setupEncryptionKey() error {
 	key := jwtKey{}
 	err := jwtAuth.storage.GetValue(encryptionKeyBucket, encryptionKeyName, &key)
 	if err != nil {
 		key = generateRandomKey(64)
 		err := jwtAuth.storage.SetValue(encryptionKeyBucket, encryptionKeyName, key)
 		if err != nil {
-			return errors.Wrap(err, "Failed to store JWT encryption key")
+			return errors.Wrap(err, "failed to store JWT encryption key")
 		}
 	}
 
@@ -130,7 +130,7 @@ func (jwtAuth *JwtAuthenticator) setupEncryptionKey() error {
 	return nil
 }
 
-func (jwtAuth *JwtAuthenticator) getExpirationTime() time.Time {
+func (jwtAuth *JWTAuthenticator) getExpirationTime() time.Time {
 	return time.Now().Add(expiresIn)
 }
 

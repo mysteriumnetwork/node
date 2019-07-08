@@ -22,13 +22,11 @@ import (
 	"net"
 	"path/filepath"
 	"time"
-
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	payment_bindings "github.com/mysteriumnetwork/payment-bindings"
 	"github.com/pkg/errors"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
