@@ -492,15 +492,23 @@
   version = "1.0.1"
 
 [[projects]]
-  digest = "1:ed88a8e081f4d6af941897194d0060514df8f8d5b50198ecf136cc9a605ca253"
+  branch = "master"
+  digest = "1:afd182c0d676c2d00fe096cdfa8bc6b667c1c90fffdd5fbcdbfbfb8f79b18732"
+  name = "github.com/mysteriumnetwork/go-ci"
+  packages = ["git"]
+  pruneopts = "UT"
+  revision = "a7564c72a4855e7bbb186829e6f83b1cd42089a7"
+
+[[projects]]
+  digest = "1:f86350175b06fb974fbec16907e3239325fdb6f43020de3a5da2a7d87dfd2093"
   name = "github.com/mysteriumnetwork/go-dvpn-web"
   packages = [
     ".",
     "ci/command",
   ]
   pruneopts = "UT"
-  revision = "96987f0738c5bf430780c8b2ae611c070967858d"
-  version = "0.0.13"
+  revision = "0ecc379b40f60b463889f8045d3d30e5b66f2eb5"
+  version = "0.0.16"
 
 [[projects]]
   digest = "1:4d5402ba3b77f26c810297827842889cf315bfc7a64ff7a0e6a477e2bf1823ce"
