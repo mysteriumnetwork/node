@@ -29,29 +29,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ReleaseSnapshot releases snapshot build
-func ReleaseSnapshot() error {
-	logconfig.Bootstrap()
-	defer log.Flush()
-
-	if err := env.EnsureEnvVars(env.SnapshotBuild, env.GithubOwner, env.GithubSnapshotRepository, env.BuildVersion, env.GithubAPIToken); err != nil {
-		return err
-	}
-
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info("not a snapshot build, skipping ReleaseSnapshot action...")
-		return nil
-	}
-
-	releaser, err := github.NewReleaser(env.Str(env.GithubOwner), env.Str(env.GithubSnapshotRepository), env.Str(env.GithubAPIToken))
+// release releases build/package files to github
+func releaseGithub(owner, repo, token, version string, createTag bool) error {
+	releaser, err := github.NewReleaser(owner, repo, token)
 	if err != nil {
 		return err
 	}
-
 	if err := storage.DownloadArtifacts(); err != nil {
 		return err
 	}
-	release, err := releaser.Create(env.Str(env.BuildVersion))
+
+	var release *github.Release
+	if createTag {
+		release, err = releaser.Create(version)
+	} else {
+		release, err = releaser.Find(version)
+	}
 	if err != nil {
 		return err
 	}
@@ -70,4 +63,62 @@ func ReleaseSnapshot() error {
 
 	log.Info("artifacts uploaded successfully")
 	return nil
+}
+
+// ReleaseSnapshot releases snapshot to github
+func ReleaseSnapshot() error {
+	logconfig.Bootstrap()
+	defer log.Flush()
+
+	err := env.EnsureEnvVars(
+		env.SnapshotBuild,
+		env.GithubOwner,
+		env.GithubSnapshotRepository,
+		env.BuildVersion,
+		env.GithubAPIToken,
+	)
+	if err != nil {
+		return err
+	}
+	if !env.Bool(env.SnapshotBuild) {
+		log.Info("not a snapshot build, skipping ReleaseSnapshot action...")
+		return nil
+	}
+
+	return releaseGithub(
+		env.Str(env.GithubOwner),
+		env.Str(env.GithubSnapshotRepository),
+		env.Str(env.GithubAPIToken),
+		env.Str(env.BuildVersion),
+		true,
+	)
+}
+
+// ReleaseTag releases tag to github
+func ReleaseTag() error {
+	logconfig.Bootstrap()
+	defer log.Flush()
+
+	err := env.EnsureEnvVars(
+		env.SnapshotBuild,
+		env.GithubOwner,
+		env.GithubRepository,
+		env.BuildVersion,
+		env.GithubAPIToken,
+	)
+	if err != nil {
+		return err
+	}
+	if !env.Bool(env.TagBuild) {
+		log.Info("not a tag build, skipping ReleaseTag action...")
+		return nil
+	}
+
+	return releaseGithub(
+		env.Str(env.GithubOwner),
+		env.Str(env.GithubRepository),
+		env.Str(env.GithubAPIToken),
+		env.Str(env.BuildVersion),
+		false,
+	)
 }
