@@ -17,7 +17,7 @@
 
 package docker
 
-import "github.com/mysteriumnetwork/node/ci/util/shell"
+import "github.com/mysteriumnetwork/go-ci/shell"
 
 // RemoveDanglingData removes dangling docker data: containers stopped, volumes without containers, images without containers
 func RemoveDanglingData() error {

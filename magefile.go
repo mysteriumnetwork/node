@@ -21,9 +21,9 @@ package main
 
 import (
 	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/test"
+	_ "github.com/mysteriumnetwork/go-ci/env"
 	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/env"
+	_ "github.com/mysteriumnetwork/node/ci/test"
 	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/packages"
 	// mage:import

@@ -275,12 +275,12 @@
   revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 
 [[projects]]
-  digest = "1:8d12b0e8334cd6770e9b9b8b48c3340b9739b1469c2f448ced070b589adaa475"
+  digest = "1:37e7a8e714c63d708d95293b33d7044402ebc44ecb263e8b6961608cf9173235"
   name = "github.com/google/go-github"
   packages = ["github"]
   pruneopts = "UT"
-  revision = "901030391ab7f418a984389fd3f8f65e39e5c823"
-  version = "v25.0.4"
+  revision = "cad32f26bbd0216620995d028657c304c95a5eab"
+  version = "v26.1.3"
 
 [[projects]]
   digest = "1:a63cff6b5d8b95638bfe300385d93b2a6d9d687734b863da8e09dc834510a690"
@@ -493,11 +493,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:afd182c0d676c2d00fe096cdfa8bc6b667c1c90fffdd5fbcdbfbfb8f79b18732"
+  digest = "1:27482365f0a4d85d707c4222eadd7b960a8932e42527192489e3d8450dd0fb79"
   name = "github.com/mysteriumnetwork/go-ci"
-  packages = ["git"]
+  packages = [
+    "env",
+    "git",
+    "github",
+    "shell",
+  ]
   pruneopts = "UT"
-  revision = "a7564c72a4855e7bbb186829e6f83b1cd42089a7"
+  revision = "402b9613cf7feada8371c806eb935d45f9b537a8"
 
 [[projects]]
   digest = "1:ae45c4747f99c2df81c89048519ecfe1179e2bff01b2bd82fe77d7a27738e2ac"
@@ -1124,7 +1129,6 @@
     "github.com/gin-gonic/gin",
     "github.com/gofrs/uuid",
     "github.com/golang/protobuf/proto",
-    "github.com/google/go-github/github",
     "github.com/hashicorp/go-retryablehttp",
     "github.com/huin/goupnp",
     "github.com/huin/goupnp/httpu",
@@ -1136,6 +1140,9 @@
     "github.com/magefile/mage/sh",
     "github.com/mholt/archiver",
     "github.com/mitchellh/go-homedir",
+    "github.com/mysteriumnetwork/go-ci/env",
+    "github.com/mysteriumnetwork/go-ci/github",
+    "github.com/mysteriumnetwork/go-ci/shell",
     "github.com/mysteriumnetwork/go-dvpn-web",
     "github.com/mysteriumnetwork/go-openvpn/openvpn",
     "github.com/mysteriumnetwork/go-openvpn/openvpn/config",
@@ -1171,11 +1178,9 @@
     "golang.org/x/crypto/curve25519",
     "golang.org/x/net/html",
     "golang.org/x/net/ipv4",
-    "golang.org/x/oauth2",
     "golang.org/x/sys/windows/registry",
     "golang.zx2c4.com/wireguard/wgctrl",
     "golang.zx2c4.com/wireguard/wgctrl/wgtypes",
-    "gopkg.in/src-d/go-git.v4",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

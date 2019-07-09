@@ -27,10 +27,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	log "github.com/cihub/seelog"
 	"github.com/mholt/archiver"
-	"github.com/mysteriumnetwork/node/ci/env"
+	"github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/ci/util/device"
-	"github.com/mysteriumnetwork/node/ci/util/shell"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
 )
