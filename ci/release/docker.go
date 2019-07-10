@@ -33,69 +33,110 @@ import (
 )
 
 const dockerImagesDir = "build/docker-images"
-const mystSnapshotsRepo = "mysteriumnetwork/myst-snapshots"
 
-// ReleaseDockerSnapshot uploads docker snapshot images to myst snapshots repo
-func ReleaseDockerSnapshot() error {
-	logconfig.Bootstrap()
-	defer log.Flush()
+type dockerReleasable struct {
+	partialLocalName string
+	repository       string
+	tags             []string
+}
 
-	if err := env.EnsureEnvVars(env.SnapshotBuild, env.BuildVersion, env.DockerHubPassword, env.DockerHubUsername); err != nil {
-		return err
-	}
-
-	if !env.Bool(env.SnapshotBuild) {
-		log.Info("not a snapshot build, skipping ReleaseSnapshot action...")
-		return nil
-	}
-
-	if err := storage.DownloadDockerImages(); err != nil {
-		return err
-	}
-
-	if err := dockerLogin(env.Str(env.DockerHubUsername), env.Str(env.DockerHubPassword)); err != nil {
+func releaseDockerHub(username, password string, releasables []dockerReleasable) error {
+	err := dockerLogin(username, password)
+	if err != nil {
 		return err
 	}
 	defer dockerLogout()
 
-	dockerImageArchives, err := listDockerImageArchives()
+	err = storage.DownloadDockerImages()
+	if err != nil {
+		return err
+	}
+	archives, err := listDockerImageArchives()
 	if err != nil {
 		return err
 	}
 
-	for _, dockerImageArchive := range dockerImageArchives {
-		log.Info("Restoring from: ", dockerImageArchive)
-		imageName, err := restoreDockerImage(dockerImageArchive)
+	for _, archive := range archives {
+		log.Info("Restoring from: ", archive)
+		imageName, err := restoreDockerImage(archive)
 		if err != nil {
 			return err
 		}
 		log.Info("Restored image: ", imageName)
 
-		if err := pushDockerImage(imageName, env.Str(env.BuildVersion), mystSnapshotsRepo); err != nil {
-			return err
+		var releasable *dockerReleasable
+		for _, r := range releasables {
+			if !strings.Contains(imageName, r.partialLocalName) {
+				continue
+			}
+			releasable = &r
+		}
+		if releasable == nil {
+			log.Info("Image didn't match any releasable definition, skipping: ", imageName)
+			continue
 		}
 
-		if err := removeDockerImage(imageName); err != nil {
+		for _, tag := range releasable.tags {
+			err = pushDockerImage(imageName, releasable.repository, tag)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = removeDockerImage(imageName)
+		if err != nil {
 			return err
 		}
 	}
+
 	return nil
+}
+
+// ReleaseDockerSnapshot uploads docker snapshot images to myst snapshots repo in docker hub
+func ReleaseDockerSnapshot() error {
+	logconfig.Bootstrap()
+	defer log.Flush()
+
+	err := env.EnsureEnvVars(
+		env.SnapshotBuild,
+		env.BuildVersion,
+		env.DockerHubPassword,
+		env.DockerHubUsername,
+	)
+	if err != nil {
+		return err
+	}
+
+	if !env.Bool(env.SnapshotBuild) {
+		log.Info("not a snapshot build, skipping ReleaseDockerSnapshot action...")
+		return nil
+	}
+
+	releasables := []dockerReleasable{
+		{partialLocalName: "myst:alpine", repository: "mysteriumnetwork/myst-snapshots", tags: []string{
+			env.Str(env.BuildVersion) + "-alpine",
+		}},
+		{partialLocalName: "myst:ubuntu", repository: "mysteriumnetwork/myst-snapshots", tags: []string{
+			env.Str(env.BuildVersion) + "-ubuntu",
+		}},
+	}
+	return releaseDockerHub(env.Str(env.DockerHubUsername), env.Str(env.DockerHubPassword), releasables)
 }
 
 func pushDockerImage(localImageName string, buildVersion string, remoteRepoName string) error {
 	parts := strings.Split(localImageName, ":")
 	tagName := fmt.Sprintf("%s:%s-%s", remoteRepoName, parts[1], buildVersion)
 	// docker and repositories don't like upper case letters in references
-	tagName = strings.ToLower(tagName)
-	log.Info("Tagging ", localImageName, " as ", tagName)
-	if err := exec.Command("docker", "tag", localImageName, tagName).Run(); err != nil {
+	imageName = strings.ToLower(imageName)
+	log.Info("Tagging ", localImageName, " as ", imageName)
+	if err := exec.Command("docker", "tag", localImageName, imageName).Run(); err != nil {
 		return err
 	}
-	log.Info("Pushing ", tagName, " to remote repo")
-	if err := exec.Command("docker", "push", tagName).Run(); err != nil {
+	log.Info("Pushing ", imageName, " to remote repo")
+	if err := exec.Command("docker", "push", imageName).Run(); err != nil {
 		return err
 	}
-	return removeDockerImage(tagName)
+	return removeDockerImage(imageName)
 }
 
 func dockerLogin(username, password string) error {
