@@ -10,30 +10,31 @@ set -e
 
 source bin/helpers/output.sh
 
-VERSION=$1
+PPA=$1
+if [ -z "$PPA" ]; then
+    print_error "Missing PPA repository name!"
+    exit 1
+fi
+
+VERSION=$2
 if [ -z "$VERSION" ]; then
     print_error "Missing version!"
     exit 1
 fi
 
-BUILD=$2
+BUILD=$3
 if [ -z "$BUILD" ]; then
     print_error "Missing build number!"
     exit 1
 fi
 
-DISTR=$3
+DISTR=$4
 if [ -z "$DISTR" ]; then
     print_error "Missing distr!"
     exit 1
 fi
 
 DATE=`date -R`
-
-PPA="node-pre"
-if [ "$VERSION" == "$PPA_DEV_VERSION" ]; then
-    PPA="node-dev"
-fi
 
 echo "myst ($VERSION+build$BUILD+$DISTR) $DISTR; urgency=medium
 

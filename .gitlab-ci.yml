@@ -144,6 +144,11 @@ release-snapshot:docker:
   tags: [go]
   script: go run mage.go -v ReleaseDockerSnapshot
 
+release-snapshot:debian-ppa:
+  stage: release-snapshot
+  tags: [go]
+  script: go run mage.go -v ReleaseDebianPPASnapshot
+
 release-snapshot:goreport:
   stage: release-snapshot
   tags: [go]
@@ -160,6 +165,11 @@ release-tag:docker:
   stage: release-tag
   tags: [go]
   script: go run mage.go -v ReleaseDockerTag
+
+release-tag:debian-ppa:
+  stage: release-tag
+  tags: [go]
+  script: go run mage.go -v ReleaseDebianPPAPreRelease
 
 release-tag:android-sdk:
   stage: release-tag
