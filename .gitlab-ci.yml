@@ -156,6 +156,11 @@ release-tag:release:
   tags: [go]
   script: go run mage.go -v ReleaseTag
 
+release-tag:docker:
+  stage: release-tag
+  tags: [go]
+  script: go run mage.go -v ReleaseDockerTag
+
 remove-bucket:
   stage: post-release
   tags: [go]

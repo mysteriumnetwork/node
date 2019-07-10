@@ -123,9 +123,46 @@ func ReleaseDockerSnapshot() error {
 	return releaseDockerHub(env.Str(env.DockerHubUsername), env.Str(env.DockerHubPassword), releasables)
 }
 
-func pushDockerImage(localImageName string, buildVersion string, remoteRepoName string) error {
-	parts := strings.Split(localImageName, ":")
-	tagName := fmt.Sprintf("%s:%s-%s", remoteRepoName, parts[1], buildVersion)
+// ReleaseDockerTag uploads docker tag release images to docker hub
+func ReleaseDockerTag() error {
+	logconfig.Bootstrap()
+	defer log.Flush()
+
+	err := env.EnsureEnvVars(
+		env.TagBuild,
+		env.BuildVersion,
+		env.DockerHubPassword,
+		env.DockerHubUsername,
+	)
+	if err != nil {
+		return err
+	}
+
+	if !env.Bool(env.TagBuild) {
+		log.Info("not a tag build, skipping ReleaseDockerTag action...")
+		return nil
+	}
+
+	releasables := []dockerReleasable{
+		{partialLocalName: "myst:alpine", repository: "mysteriumnetwork/myst", tags: []string{
+			env.Str(env.BuildVersion) + "-alpine",
+			"latest-alpine",
+			"latest",
+		}},
+		{partialLocalName: "myst:ubuntu", repository: "mysteriumnetwork/myst", tags: []string{
+			env.Str(env.BuildVersion) + "-ubuntu",
+			"latest-ubuntu",
+		}},
+		{partialLocalName: "tequilapi:", repository: "mysteriumnetwork/documentation", tags: []string{
+			env.Str(env.BuildVersion),
+			"latest",
+		}},
+	}
+	return releaseDockerHub(env.Str(env.DockerHubUsername), env.Str(env.DockerHubPassword), releasables)
+}
+
+func pushDockerImage(localImageName, repository, tag string) error {
+	imageName := fmt.Sprintf("%s:%s", repository, tag)
 	// docker and repositories don't like upper case letters in references
 	imageName = strings.ToLower(imageName)
 	log.Info("Tagging ", localImageName, " as ", imageName)
