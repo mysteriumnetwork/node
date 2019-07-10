@@ -275,7 +275,7 @@ func (manager *connectionManager) startConnection(
 	defer func() {
 		if err != nil {
 			log.Info("cancelling connection initiation: ", err)
-			logDisconnectError(manager.Disconnect())
+			manager.Cancel()
 		}
 	}()
 
@@ -323,6 +323,13 @@ func (manager *connectionManager) setStatus(cs Status) {
 	manager.statusLock.Lock()
 	manager.status = cs
 	manager.statusLock.Unlock()
+}
+
+func (manager *connectionManager) Cancel() {
+	status := statusCanceled()
+	manager.setStatus(status)
+	manager.onStateChanged(status.State)
+	logDisconnectError(manager.Disconnect())
 }
 
 func (manager *connectionManager) Disconnect() error {

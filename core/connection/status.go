@@ -38,6 +38,8 @@ const (
 	Reconnecting = State("Reconnecting")
 	// Unknown means that we could not map the underlying transport state to our state
 	Unknown = State("Unknown")
+	// Canceled means that connection initialization was started, but failed never reaching Connected state
+	Canceled = State("Canceled")
 )
 
 // Status holds connection state, session id and proposal of the connection
@@ -65,4 +67,8 @@ func statusReconnecting() Status {
 
 func statusDisconnecting() Status {
 	return Status{State: Disconnecting}
+}
+
+func statusCanceled() Status {
+	return Status{State: Canceled}
 }
