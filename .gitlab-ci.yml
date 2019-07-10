@@ -161,6 +161,11 @@ release-tag:docker:
   tags: [go]
   script: go run mage.go -v ReleaseDockerTag
 
+release-tag:android-sdk:
+  stage: release-tag
+  tags: [go]
+  script: go run mage.go -v ReleaseAndroidSDK
+
 remove-bucket:
   stage: post-release
   tags: [go]
