@@ -21,6 +21,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/mysteriumnetwork/node/ci/storage"
 )
 
 // ReleaseAndroidSDK releases Android SDK to sonatype/maven central
@@ -35,6 +36,10 @@ func ReleaseAndroidSDK() error {
 	if !env.Bool(env.TagBuild) {
 		log.Info("not a tag build, skipping ReleaseAndroidSDK action...")
 		return nil
+	}
+	err = storage.DownloadArtifacts()
+	if err != nil {
+		return err
 	}
 	err = shell.NewCmd("gpg --import $SONATYPE_GPG_KEY").Run()
 	if err != nil {
