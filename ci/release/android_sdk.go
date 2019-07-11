@@ -15,25 +15,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package env
+package release
 
 import (
-	"os"
-
-	"github.com/pkg/errors"
+	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/mysteriumnetwork/node/ci/storage"
 )
 
-// EnsureEnvVars ensures that specified environment variables have a value.
-// Purpose is to reduce boilerplate in mage target when reading multiple env vars.
-func EnsureEnvVars(vars ...BuildVar) error {
-	missingVars := make([]BuildVar, 0)
-	for _, v := range vars {
-		if os.Getenv(string(v)) == "" {
-			missingVars = append(missingVars, v)
-		}
+// ReleaseAndroidSDK releases Android SDK to sonatype/maven central
+func ReleaseAndroidSDK() error {
+	err := env.EnsureEnvVars(
+		env.TagBuild,
+		env.BuildVersion,
+	)
+	if err != nil {
+		return err
 	}
-	if len(missingVars) > 0 {
-		return errors.Errorf("the following environment variables are missing: %v", missingVars)
+	if !env.Bool(env.TagBuild) {
+		log.Info("not a tag build, skipping ReleaseAndroidSDK action...")
+		return nil
 	}
-	return nil
+	err = storage.DownloadArtifacts()
+	if err != nil {
+		return err
+	}
+	return shell.NewCmdf("bin/release_android %s", env.Str(env.BuildVersion)).Run()
 }

@@ -20,7 +20,7 @@ package device
 import (
 	"strings"
 
-	"github.com/mysteriumnetwork/node/ci/util/shell"
+	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/pkg/errors"
 )
 

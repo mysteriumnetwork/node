@@ -20,10 +20,9 @@
 package main
 
 import (
+	"github.com/mysteriumnetwork/go-ci/env"
 	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/test"
-	// mage:import
-	_ "github.com/mysteriumnetwork/node/ci/env"
 	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/packages"
 	// mage:import
@@ -33,3 +32,8 @@ import (
 	// mage:import
 	_ "github.com/mysteriumnetwork/node/ci/util/docker"
 )
+
+// GenerateEnvFile generates env file for further stages
+func GenerateEnvFile() error {
+	return env.GenerateEnvFile()
+}

@@ -1,5 +1,0 @@
-IMG_NAME=mystberry
-FIRST_USER_NAME=myst
-FIRST_USER_PASS=mystberry
-STAGE_LIST="stage0 stage1 stage2 stagemyst"
-ENABLE_SSH=1

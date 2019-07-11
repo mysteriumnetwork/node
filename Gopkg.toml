@@ -135,18 +135,6 @@
   version = "1.8.0"
 
 [[constraint]]
-  name = "github.com/google/go-github"
-  version = "25.0.4"
-
-[[constraint]]
-  branch = "master"
-  name = "golang.org/x/oauth2"
-
-[[constraint]]
-  name = "gopkg.in/src-d/go-git.v4"
-  version = "4.11.0"
-
-[[constraint]]
   name = "github.com/aws/aws-sdk-go-v2"
   version = "0.9.0"
 
@@ -169,3 +157,7 @@
 [[constraint]]
   name = "github.com/hashicorp/go-retryablehttp"
   version = "0.5.4"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mysteriumnetwork/go-ci"

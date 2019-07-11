@@ -3,7 +3,8 @@ stages:
   - test
   - pre-release
   - build
-  - release
+  - release-snapshot
+  - release-tag
   - post-release
 
 variables:
@@ -133,22 +134,47 @@ package:swagger-redoc-docker:
   tags: [go]
   script: go run mage.go -v PackageDockerSwaggerRedoc
 
-release:snapshot:
-  stage: release
+release-snapshot:release:
+  stage: release-snapshot
   tags: [go]
-  script: go run mage.go -v ReleaseSnapshot
+  script: go run mage.go -v ReleaseGithubSnapshot
 
-release:docker-snapshot:
-  stage: release
+release-snapshot:docker:
+  stage: release-snapshot
   tags: [go]
   script: go run mage.go -v ReleaseDockerSnapshot
 
-release:goreport:
-  stage: release
+release-snapshot:debian-ppa:
+  stage: release-snapshot
+  tags: [go]
+  script: go run mage.go -v ReleaseDebianPPASnapshot
+
+release-snapshot:goreport:
+  stage: release-snapshot
   tags: [go]
   script: bin/release_goreport
   only:
     - master
+
+release-tag:release:
+  stage: release-tag
+  tags: [go]
+  script: go run mage.go -v ReleaseGithubTag
+
+release-tag:docker:
+  stage: release-tag
+  tags: [go]
+  script: go run mage.go -v ReleaseDockerTag
+
+release-tag:debian-ppa:
+  stage: release-tag
+  tags: [go]
+  script: go run mage.go -v ReleaseDebianPPAPreRelease
+
+release-tag:android-sdk:
+  stage: release-tag
+  tags: [go]
+  script: go run mage.go -v ReleaseAndroidSDK
 
 remove-bucket:
   stage: post-release

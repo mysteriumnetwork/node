@@ -25,7 +25,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
 
-	"github.com/mysteriumnetwork/node/ci/env"
+	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
 )

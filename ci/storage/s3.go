@@ -30,7 +30,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
 	"github.com/mitchellh/go-homedir"
-	"github.com/mysteriumnetwork/node/ci/env"
+	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
 )
