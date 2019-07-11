@@ -18,6 +18,8 @@
 package release
 
 import (
+	"strings"
+
 	log "github.com/cihub/seelog"
 	cenv "github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
@@ -59,6 +61,11 @@ func releaseDebianPPA(opts *releaseDebianOpts) error {
 	return nil
 }
 
+func ppaVersion(buildVersion string) string {
+	// PPA treats minus as previous version
+	return strings.Replace(buildVersion, "-", "+", -1)
+}
+
 // ReleaseDebianPPASnapshot releases to node-dev PPA
 func ReleaseDebianPPASnapshot() error {
 	err := cenv.EnsureEnvVars(
@@ -77,7 +84,7 @@ func ReleaseDebianPPASnapshot() error {
 	//}
 	return releaseDebianPPA(&releaseDebianOpts{
 		repository:      "node-dev",
-		version:         cenv.Str(cenv.BuildVersion),
+		version:         ppaVersion(cenv.Str(cenv.BuildVersion)),
 		buildNumber:     cenv.Str(cenv.BuildNumber),
 		launchpadSSHKey: cenv.Str(env.LaunchpadSSHKey),
 	})
@@ -98,9 +105,10 @@ func ReleaseDebianPPAPreRelease() error {
 		log.Info("not a tag build, skipping ReleaseDebianPPAPreRelease action...")
 		return nil
 	}
+
 	return releaseDebianPPA(&releaseDebianOpts{
 		repository:      "node-pre",
-		version:         cenv.Str(cenv.BuildVersion),
+		version:         ppaVersion(cenv.Str(cenv.BuildVersion)),
 		buildNumber:     cenv.Str(cenv.BuildNumber),
 		launchpadSSHKey: cenv.Str(env.LaunchpadSSHKey),
 	})
