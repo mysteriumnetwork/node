@@ -27,30 +27,13 @@ import (
 )
 
 type releaseDebianOpts struct {
-	repository      string
-	version         string
-	buildNumber     string
-	launchpadSSHKey string
+	repository  string
+	version     string
+	buildNumber string
 }
 
 func releaseDebianPPA(opts *releaseDebianOpts) error {
-	err := shell.NewCmd("mkdir -p ~/.ssh").Run()
-	if err != nil {
-		return err
-	}
-	err = shell.NewCmd("chmod 0700 ~/.ssh").Run()
-	if err != nil {
-		return err
-	}
-	err = shell.NewCmdf("cp -f %s ~/.ssh/id_rsa", opts.launchpadSSHKey).Run()
-	if err != nil {
-		return err
-	}
-	err = shell.NewCmd("chmod 600 ~/.ssh/id_rsa").Run()
-	if err != nil {
-		return err
-	}
-	err = shell.NewCmdf("gpg --import %s", cenv.Str(env.SigningGPGKey)).Run()
+	err := shell.NewCmdf("gpg --import %s", cenv.Str(env.SigningGPGKey)).Run()
 	if err != nil {
 		return err
 	}
@@ -76,7 +59,6 @@ func ReleaseDebianPPASnapshot() error {
 		cenv.SnapshotBuild,
 		cenv.BuildVersion,
 		cenv.BuildNumber,
-		env.LaunchpadSSHKey,
 	)
 	if err != nil {
 		return err
@@ -87,10 +69,9 @@ func ReleaseDebianPPASnapshot() error {
 	//	return nil
 	//}
 	return releaseDebianPPA(&releaseDebianOpts{
-		repository:      "node-dev",
-		version:         ppaVersion(cenv.Str(cenv.BuildVersion)),
-		buildNumber:     cenv.Str(cenv.BuildNumber),
-		launchpadSSHKey: cenv.Str(env.LaunchpadSSHKey),
+		repository:  "node-dev",
+		version:     ppaVersion(cenv.Str(cenv.BuildVersion)),
+		buildNumber: cenv.Str(cenv.BuildNumber),
 	})
 }
 
@@ -100,7 +81,6 @@ func ReleaseDebianPPAPreRelease() error {
 		cenv.TagBuild,
 		cenv.BuildVersion,
 		cenv.BuildNumber,
-		env.LaunchpadSSHKey,
 	)
 	if err != nil {
 		return err
@@ -111,9 +91,8 @@ func ReleaseDebianPPAPreRelease() error {
 	}
 
 	return releaseDebianPPA(&releaseDebianOpts{
-		repository:      "node-pre",
-		version:         ppaVersion(cenv.Str(cenv.BuildVersion)),
-		buildNumber:     cenv.Str(cenv.BuildNumber),
-		launchpadSSHKey: cenv.Str(env.LaunchpadSSHKey),
+		repository:  "node-pre",
+		version:     ppaVersion(cenv.Str(cenv.BuildVersion)),
+		buildNumber: cenv.Str(cenv.BuildNumber),
 	})
 }

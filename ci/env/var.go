@@ -20,8 +20,6 @@ package env
 import "github.com/mysteriumnetwork/go-ci/env"
 
 const (
-	// LaunchpadSSHKey SSH key for publishing to launchpad
-	LaunchpadSSHKey = env.BuildVar("LAUNCHPAD_SSH_KEY")
 	// SigningGPGKey GPG key for signing packages
 	SigningGPGKey = env.BuildVar("SIGNING_GPG_KEY")
 )
