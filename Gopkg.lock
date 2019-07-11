@@ -500,15 +500,15 @@
   revision = "a7564c72a4855e7bbb186829e6f83b1cd42089a7"
 
 [[projects]]
-  digest = "1:f86350175b06fb974fbec16907e3239325fdb6f43020de3a5da2a7d87dfd2093"
+  digest = "1:ae45c4747f99c2df81c89048519ecfe1179e2bff01b2bd82fe77d7a27738e2ac"
   name = "github.com/mysteriumnetwork/go-dvpn-web"
   packages = [
     ".",
     "ci/command",
   ]
   pruneopts = "UT"
-  revision = "0ecc379b40f60b463889f8045d3d30e5b66f2eb5"
-  version = "0.0.16"
+  revision = "b5cb0c1dc529bd00de762dd5391399e1c9f01605"
+  version = "0.0.17"
 
 [[projects]]
   digest = "1:4d5402ba3b77f26c810297827842889cf315bfc7a64ff7a0e6a477e2bf1823ce"
