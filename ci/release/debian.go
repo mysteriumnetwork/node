@@ -24,7 +24,14 @@ import (
 	"github.com/mysteriumnetwork/node/ci/env"
 )
 
-func releaseDebianPPA(repository, version, buildNumber string) error {
+type releaseDebianOpts struct {
+	repository      string
+	version         string
+	buildNumber     string
+	launchpadSSHKey string
+}
+
+func releaseDebianPPA(opts *releaseDebianOpts) error {
 	err := shell.NewCmd("mkdir -p ~/.ssh").Run()
 	if err != nil {
 		return err
@@ -33,7 +40,7 @@ func releaseDebianPPA(repository, version, buildNumber string) error {
 	if err != nil {
 		return err
 	}
-	err = shell.NewCmdf("cp -f %s ~/.ssh/id_rsa", cenv.Str(env.LaunchpadSSHKey)).Run()
+	err = shell.NewCmdf("cp -f %s ~/.ssh/id_rsa", opts.launchpadSSHKey).Run()
 	if err != nil {
 		return err
 	}
@@ -41,11 +48,11 @@ func releaseDebianPPA(repository, version, buildNumber string) error {
 	if err != nil {
 		return err
 	}
-	err = shell.NewCmdf("bin/release_ppa %s %s %s %s", repository, version, buildNumber, "xenial").Run()
+	err = shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, "xenial").Run()
 	if err != nil {
 		return err
 	}
-	err = shell.NewCmdf("bin/release_ppa %s %s %s %s", repository, version, buildNumber, "bionic").Run()
+	err = shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, "bionic").Run()
 	if err != nil {
 		return err
 	}
@@ -68,7 +75,12 @@ func ReleaseDebianPPASnapshot() error {
 	//	log.Info("not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
 	//	return nil
 	//}
-	return releaseDebianPPA("node-dev", cenv.Str(cenv.BuildVersion), cenv.Str(cenv.BuildNumber))
+	return releaseDebianPPA(&releaseDebianOpts{
+		repository:      "node-dev",
+		version:         cenv.Str(cenv.BuildVersion),
+		buildNumber:     cenv.Str(cenv.BuildNumber),
+		launchpadSSHKey: cenv.Str(env.LaunchpadSSHKey),
+	})
 }
 
 // ReleaseDebianPPAPreRelease releases to node-pre PPA (which is then manually promoted to node PPA)
@@ -86,5 +98,10 @@ func ReleaseDebianPPAPreRelease() error {
 		log.Info("not a tag build, skipping ReleaseDebianPPAPreRelease action...")
 		return nil
 	}
-	return releaseDebianPPA("node-pre", cenv.Str(cenv.BuildVersion), cenv.Str(cenv.BuildNumber))
+	return releaseDebianPPA(&releaseDebianOpts{
+		repository:      "node-pre",
+		version:         cenv.Str(cenv.BuildVersion),
+		buildNumber:     cenv.Str(cenv.BuildNumber),
+		launchpadSSHKey: cenv.Str(env.LaunchpadSSHKey),
+	})
 }

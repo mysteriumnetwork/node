@@ -29,9 +29,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+type releaseGithubOpts struct {
+	owner      string
+	repository string
+	version    string
+	token      string
+	createTag  bool
+}
+
 // release releases build/package files to github
-func releaseGithub(owner, repo, token, version string, createTag bool) error {
-	releaser, err := github.NewReleaser(owner, repo, token)
+func releaseGithub(opts *releaseGithubOpts) error {
+	releaser, err := github.NewReleaser(opts.owner, opts.repository, opts.token)
 	if err != nil {
 		return err
 	}
@@ -40,10 +48,10 @@ func releaseGithub(owner, repo, token, version string, createTag bool) error {
 	}
 
 	var release *github.Release
-	if createTag {
-		release, err = releaser.Create(version)
+	if opts.createTag {
+		release, err = releaser.Create(opts.version)
 	} else {
-		release, err = releaser.Find(version)
+		release, err = releaser.Find(opts.version)
 	}
 	if err != nil {
 		return err
@@ -65,8 +73,8 @@ func releaseGithub(owner, repo, token, version string, createTag bool) error {
 	return nil
 }
 
-// ReleaseSnapshot releases snapshot to github
-func ReleaseSnapshot() error {
+// ReleaseGithubSnapshot releases snapshot to github
+func ReleaseGithubSnapshot() error {
 	logconfig.Bootstrap()
 	defer log.Flush()
 
@@ -81,21 +89,21 @@ func ReleaseSnapshot() error {
 		return err
 	}
 	if !env.Bool(env.SnapshotBuild) {
-		log.Info("not a snapshot build, skipping ReleaseSnapshot action...")
+		log.Info("not a snapshot build, skipping ReleaseGithubSnapshot action...")
 		return nil
 	}
 
-	return releaseGithub(
-		env.Str(env.GithubOwner),
-		env.Str(env.GithubSnapshotRepository),
-		env.Str(env.GithubAPIToken),
-		env.Str(env.BuildVersion),
-		true,
-	)
+	return releaseGithub(&releaseGithubOpts{
+		owner:      env.Str(env.GithubOwner),
+		repository: env.Str(env.GithubSnapshotRepository),
+		version:    env.Str(env.BuildVersion),
+		token:      env.Str(env.GithubAPIToken),
+		createTag:  true,
+	})
 }
 
-// ReleaseTag releases tag to github
-func ReleaseTag() error {
+// ReleaseGithubTag releases tag to github
+func ReleaseGithubTag() error {
 	logconfig.Bootstrap()
 	defer log.Flush()
 
@@ -110,15 +118,15 @@ func ReleaseTag() error {
 		return err
 	}
 	if !env.Bool(env.TagBuild) {
-		log.Info("not a tag build, skipping ReleaseTag action...")
+		log.Info("not a tag build, skipping ReleaseGithubTag action...")
 		return nil
 	}
 
-	return releaseGithub(
-		env.Str(env.GithubOwner),
-		env.Str(env.GithubRepository),
-		env.Str(env.GithubAPIToken),
-		env.Str(env.BuildVersion),
-		false,
-	)
+	return releaseGithub(&releaseGithubOpts{
+		owner:      env.Str(env.GithubOwner),
+		repository: env.Str(env.GithubRepository),
+		version:    env.Str(env.BuildVersion),
+		token:      env.Str(env.GithubAPIToken),
+		createTag:  false, // Tag is already created manually - which is release process trigger
+	})
 }

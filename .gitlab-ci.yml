@@ -137,7 +137,7 @@ package:swagger-redoc-docker:
 release-snapshot:release:
   stage: release-snapshot
   tags: [go]
-  script: go run mage.go -v ReleaseSnapshot
+  script: go run mage.go -v ReleaseGithubSnapshot
 
 release-snapshot:docker:
   stage: release-snapshot
@@ -159,7 +159,7 @@ release-snapshot:goreport:
 release-tag:release:
   stage: release-tag
   tags: [go]
-  script: go run mage.go -v ReleaseTag
+  script: go run mage.go -v ReleaseGithubTag
 
 release-tag:docker:
   stage: release-tag

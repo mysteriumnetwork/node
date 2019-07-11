@@ -40,8 +40,14 @@ type dockerReleasable struct {
 	tags             []string
 }
 
-func releaseDockerHub(username, password string, releasables []dockerReleasable) error {
-	err := dockerLogin(username, password)
+type releaseDockerHubOpts struct {
+	username    string
+	password    string
+	releasables []dockerReleasable
+}
+
+func releaseDockerHub(opts *releaseDockerHubOpts) error {
+	err := dockerLogin(opts.username, opts.password)
 	if err != nil {
 		return err
 	}
@@ -65,7 +71,7 @@ func releaseDockerHub(username, password string, releasables []dockerReleasable)
 		log.Info("Restored image: ", imageName)
 
 		var releasable *dockerReleasable
-		for _, r := range releasables {
+		for _, r := range opts.releasables {
 			if !strings.Contains(imageName, r.partialLocalName) {
 				continue
 			}
@@ -92,7 +98,7 @@ func releaseDockerHub(username, password string, releasables []dockerReleasable)
 	return nil
 }
 
-// ReleaseDockerSnapshot uploads docker snapshot images to myst snapshots repo in docker hub
+// ReleaseDockerSnapshot uploads docker snapshot images to myst snapshots repository in docker hub
 func ReleaseDockerSnapshot() error {
 	logconfig.Bootstrap()
 	defer log.Flush()
@@ -120,7 +126,11 @@ func ReleaseDockerSnapshot() error {
 			env.Str(env.BuildVersion) + "-ubuntu",
 		}},
 	}
-	return releaseDockerHub(env.Str(env.DockerHubUsername), env.Str(env.DockerHubPassword), releasables)
+	return releaseDockerHub(&releaseDockerHubOpts{
+		username:    env.Str(env.DockerHubUsername),
+		password:    env.Str(env.DockerHubPassword),
+		releasables: releasables,
+	})
 }
 
 // ReleaseDockerTag uploads docker tag release images to docker hub
@@ -174,8 +184,11 @@ func ReleaseDockerTag() error {
 			}},
 		}
 	}
-
-	return releaseDockerHub(env.Str(env.DockerHubUsername), env.Str(env.DockerHubPassword), releasables)
+	return releaseDockerHub(&releaseDockerHubOpts{
+		username:    env.Str(env.DockerHubUsername),
+		password:    env.Str(env.DockerHubPassword),
+		releasables: releasables,
+	})
 }
 
 func pushDockerImage(localImageName, repository, tag string) error {
@@ -186,7 +199,7 @@ func pushDockerImage(localImageName, repository, tag string) error {
 	if err := exec.Command("docker", "tag", localImageName, imageName).Run(); err != nil {
 		return err
 	}
-	log.Info("Pushing ", imageName, " to remote repo")
+	log.Info("Pushing ", imageName, " to remote repository")
 	if err := exec.Command("docker", "push", imageName).Run(); err != nil {
 		return err
 	}
