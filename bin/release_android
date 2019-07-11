@@ -19,7 +19,7 @@ fi
 
 URL="https://oss.sonatype.org/service/local/staging/deploy/maven2"
 
-if [ "$VERSION" == "0.0.0-dev" ]; then
+if [ "$SNAPSHOT_BUILD" == "true" ]; then
     VERSION="0.0.0-SNAPSHOT"
     URL=https://oss.sonatype.org/content/repositories/snapshots
 fi
@@ -34,7 +34,7 @@ mvn gpg:sign-and-deploy-file -e -X \
     -DpomFile=bin/package/android/mvn.pom \
     -Dfile=build/package/Mysterium.aar
 
-if [ "$VERSION" == "0.0.0-SNAPSHOT" ]; then
+if [ "$SNAPSHOT_BUILD" == "true" ]; then
     exit 0 # For snapshot versions, we don't need to do extra release steps. Stopping here.
 fi
 

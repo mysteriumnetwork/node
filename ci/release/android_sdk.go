@@ -19,23 +19,21 @@ package release
 
 import (
 	log "github.com/cihub/seelog"
-	cenv "github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
-	"github.com/mysteriumnetwork/node/ci/env"
 	"github.com/mysteriumnetwork/node/ci/storage"
 )
 
 // ReleaseAndroidSDK releases Android SDK to sonatype/maven central
 func ReleaseAndroidSDK() error {
-	err := cenv.EnsureEnvVars(
-		cenv.TagBuild,
-		cenv.BuildVersion,
-		env.SigningGPGKey,
+	err := env.EnsureEnvVars(
+		env.TagBuild,
+		env.BuildVersion,
 	)
 	if err != nil {
 		return err
 	}
-	if !cenv.Bool(cenv.TagBuild) {
+	if !env.Bool(env.TagBuild) {
 		log.Info("not a tag build, skipping ReleaseAndroidSDK action...")
 		return nil
 	}
@@ -43,9 +41,5 @@ func ReleaseAndroidSDK() error {
 	if err != nil {
 		return err
 	}
-	err = shell.NewCmdf("gpg --import %s", cenv.Str(env.SigningGPGKey)).Run()
-	if err != nil {
-		return err
-	}
-	return shell.NewCmdf("bin/release_android %s", cenv.Str(cenv.BuildVersion)).Run()
+	return shell.NewCmdf("bin/release_android %s", env.Str(env.BuildVersion)).Run()
 }

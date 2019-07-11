@@ -21,9 +21,8 @@ import (
 	"strings"
 
 	log "github.com/cihub/seelog"
-	cenv "github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
-	"github.com/mysteriumnetwork/node/ci/env"
 )
 
 type releaseDebianOpts struct {
@@ -33,11 +32,7 @@ type releaseDebianOpts struct {
 }
 
 func releaseDebianPPA(opts *releaseDebianOpts) error {
-	err := shell.NewCmdf("gpg --import %s", cenv.Str(env.SigningGPGKey)).Run()
-	if err != nil {
-		return err
-	}
-	err = shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, "xenial").Run()
+	err := shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, "xenial").Run()
 	if err != nil {
 		return err
 	}
@@ -55,44 +50,44 @@ func ppaVersion(buildVersion string) string {
 
 // ReleaseDebianPPASnapshot releases to node-dev PPA
 func ReleaseDebianPPASnapshot() error {
-	err := cenv.EnsureEnvVars(
-		cenv.SnapshotBuild,
-		cenv.BuildVersion,
-		cenv.BuildNumber,
+	err := env.EnsureEnvVars(
+		env.SnapshotBuild,
+		env.BuildVersion,
+		env.BuildNumber,
 	)
 	if err != nil {
 		return err
 	}
 	// TODO uncomment after testing
-	//if !cenv.Bool(cenv.SnapshotBuild) {
+	//if !env.Bool(env.SnapshotBuild) {
 	//	log.Info("not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
 	//	return nil
 	//}
 	return releaseDebianPPA(&releaseDebianOpts{
 		repository:  "node-dev",
-		version:     ppaVersion(cenv.Str(cenv.BuildVersion)),
-		buildNumber: cenv.Str(cenv.BuildNumber),
+		version:     ppaVersion(env.Str(env.BuildVersion)),
+		buildNumber: env.Str(env.BuildNumber),
 	})
 }
 
 // ReleaseDebianPPAPreRelease releases to node-pre PPA (which is then manually promoted to node PPA)
 func ReleaseDebianPPAPreRelease() error {
-	err := cenv.EnsureEnvVars(
-		cenv.TagBuild,
-		cenv.BuildVersion,
-		cenv.BuildNumber,
+	err := env.EnsureEnvVars(
+		env.TagBuild,
+		env.BuildVersion,
+		env.BuildNumber,
 	)
 	if err != nil {
 		return err
 	}
-	if !cenv.Bool(cenv.TagBuild) {
+	if !env.Bool(env.TagBuild) {
 		log.Info("not a tag build, skipping ReleaseDebianPPAPreRelease action...")
 		return nil
 	}
 
 	return releaseDebianPPA(&releaseDebianOpts{
 		repository:  "node-pre",
-		version:     ppaVersion(cenv.Str(cenv.BuildVersion)),
-		buildNumber: cenv.Str(cenv.BuildNumber),
+		version:     ppaVersion(env.Str(env.BuildVersion)),
+		buildNumber: env.Str(env.BuildNumber),
 	})
 }
