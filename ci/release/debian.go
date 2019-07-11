@@ -50,6 +50,10 @@ func releaseDebianPPA(opts *releaseDebianOpts) error {
 	if err != nil {
 		return err
 	}
+	err = shell.NewCmdf("gpg --import %s", cenv.Str(env.SigningGPGKey)).Run()
+	if err != nil {
+		return err
+	}
 	err = shell.NewCmdf("bin/release_ppa %s %s %s %s", opts.repository, opts.version, opts.buildNumber, "xenial").Run()
 	if err != nil {
 		return err

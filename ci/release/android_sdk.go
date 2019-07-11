@@ -30,7 +30,7 @@ func ReleaseAndroidSDK() error {
 	err := cenv.EnsureEnvVars(
 		cenv.TagBuild,
 		cenv.BuildVersion,
-		env.SonatypeGPGKey,
+		env.SigningGPGKey,
 	)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func ReleaseAndroidSDK() error {
 	if err != nil {
 		return err
 	}
-	err = shell.NewCmdf("gpg --import %s", cenv.Str(env.SonatypeGPGKey)).Run()
+	err = shell.NewCmdf("gpg --import %s", cenv.Str(env.SigningGPGKey)).Run()
 	if err != nil {
 		return err
 	}
