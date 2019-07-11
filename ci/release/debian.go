@@ -19,12 +19,21 @@ package release
 
 import (
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/go-ci/env"
+	cenv "github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/mysteriumnetwork/node/ci/env"
 )
 
 func releaseDebianPPA(repository, version, buildNumber string) error {
-	err := shell.NewCmd("cp -f $LAUNCHPAD_SSH_KEY ~/.ssh/id_rsa").Run()
+	err := shell.NewCmd("mkdir -p ~/.ssh").Run()
+	if err != nil {
+		return err
+	}
+	err = shell.NewCmd("chmod 0700 ~/.ssh").Run()
+	if err != nil {
+		return err
+	}
+	err = shell.NewCmdf("cp -f %s ~/.ssh/id_rsa", cenv.Str(env.LaunchpadSSHKey)).Run()
 	if err != nil {
 		return err
 	}
@@ -45,35 +54,37 @@ func releaseDebianPPA(repository, version, buildNumber string) error {
 
 // ReleaseDebianPPASnapshot releases to node-dev PPA
 func ReleaseDebianPPASnapshot() error {
-	err := env.EnsureEnvVars(
-		env.SnapshotBuild,
-		env.BuildVersion,
-		env.BuildNumber,
+	err := cenv.EnsureEnvVars(
+		cenv.SnapshotBuild,
+		cenv.BuildVersion,
+		cenv.BuildNumber,
+		env.LaunchpadSSHKey,
 	)
 	if err != nil {
 		return err
 	}
 	// TODO uncomment after testing
-	//if !env.Bool(env.SnapshotBuild) {
+	//if !cenv.Bool(cenv.SnapshotBuild) {
 	//	log.Info("not a snapshot build, skipping ReleaseDebianPPASnapshot action...")
 	//	return nil
 	//}
-	return releaseDebianPPA("node-dev", env.Str(env.BuildVersion), env.Str(env.BuildNumber))
+	return releaseDebianPPA("node-dev", cenv.Str(cenv.BuildVersion), cenv.Str(cenv.BuildNumber))
 }
 
 // ReleaseDebianPPAPreRelease releases to node-pre PPA (which is then manually promoted to node PPA)
 func ReleaseDebianPPAPreRelease() error {
-	err := env.EnsureEnvVars(
-		env.TagBuild,
-		env.BuildVersion,
-		env.BuildNumber,
+	err := cenv.EnsureEnvVars(
+		cenv.TagBuild,
+		cenv.BuildVersion,
+		cenv.BuildNumber,
+		env.LaunchpadSSHKey,
 	)
 	if err != nil {
 		return err
 	}
-	if !env.Bool(env.TagBuild) {
+	if !cenv.Bool(cenv.TagBuild) {
 		log.Info("not a tag build, skipping ReleaseDebianPPAPreRelease action...")
 		return nil
 	}
-	return releaseDebianPPA("node-pre", env.Str(env.BuildVersion), env.Str(env.BuildNumber))
+	return releaseDebianPPA("node-pre", cenv.Str(cenv.BuildVersion), cenv.Str(cenv.BuildNumber))
 }
