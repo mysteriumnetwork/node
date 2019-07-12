@@ -133,7 +133,7 @@ func configureRaspbianImage(raspbianImagePath string) error {
 	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev 0-setup-user.sh", raspbianMountPoint, setupDir).Run(); err != nil {
 		return err
 	}
-	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev 1-setup-node.sh", raspbianMountPoint, setupDir).Run(); err != nil {
+	if err := shell.NewCmdf("sudo systemd-nspawn --setenv=RELEASE_BUILD=%s --directory=%s --chdir=%s bash -ev 1-setup-node.sh", env.Str(env.TagBuild), raspbianMountPoint, setupDir).Run(); err != nil {
 		return err
 	}
 	if err := shell.NewCmdf("sudo rm -r %s", mountedSetupDir).Run(); err != nil {
