@@ -19,7 +19,7 @@ printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' | tee --append
 
 apt-get -y install raspberrypi-kernel-headers dirmngr
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8B48AD6246925553 7638D0442B90D010 04EE7237B7D453EC ECCB6A56B22C536D
-apt-get update
+apt-get update --allow-releaseinfo-change
 apt-get -y install wireguard openvpn
 
 chmod 755 myst_linux_armhf.deb
