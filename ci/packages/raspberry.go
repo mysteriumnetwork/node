@@ -150,7 +150,7 @@ func fetchRaspbianImage() (filename string, err error) {
 
 	log.Infof("looking up raspbian image file")
 	localRaspbianZip, err := storageClient.GetCacheableFile("raspbian", func(object s3.Object) bool {
-		return strings.Contains(aws.StringValue(object.Key), "-raspbian-stretch-lite")
+		return strings.Contains(aws.StringValue(object.Key), "-raspbian-buster-lite")
 	})
 	if err != nil {
 		return "", err
