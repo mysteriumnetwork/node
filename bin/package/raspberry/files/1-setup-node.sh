@@ -3,14 +3,22 @@
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export DEBIAN_FRONTEND="noninteractive"
 
+add_apt_source() {
+  local src=$1
+  local src_file=$2
+  # Check if the source is missing from source file (do not add repeated entries)
+  grep -qF "$src" "$src_file" || echo "$src" | tee -a "$src_file"
+}
+
 systemctl enable ssh
 sed -i -e 's/#PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 
 install -m 644 default-myst-conf /etc/default/mysterium-node
 
-echo "deb http://deb.debian.org/debian/ unstable main" | tee --append /etc/apt/sources.list.d/unstable.list
-echo "deb http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu bionic main " | tee --append /etc/apt/sources.list.d/mysterium.list
+add_apt_source "deb http://deb.debian.org/debian/ unstable main" "/etc/apt/sources.list.d/unstable.list"
 printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' | tee --append /etc/apt/preferences.d/limit-unstable
+
+add_apt_source "deb http://ppa.launchpad.net/mysteriumnetwork/node/ubuntu bionic main" "/etc/apt/sources.list.d/mysterium.list"
 
 apt-get -y install raspberrypi-kernel-headers dirmngr
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8B48AD6246925553 7638D0442B90D010 04EE7237B7D453EC ECCB6A56B22C536D
