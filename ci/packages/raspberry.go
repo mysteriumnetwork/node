@@ -117,6 +117,17 @@ func configureRaspbianImage(raspbianImagePath string) error {
 			log.Warn(err)
 		}
 	}()
+	err = shell.NewCmdf("sudo sed -i s/^/#/g %s", raspbianMountPoint+"/etc/ld.so.preload").Run()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = shell.NewCmdf("sudo sed -i s/^#//g %s", raspbianMountPoint+"/etc/ld.so.preload").Run()
+		if err != nil {
+			log.Warn(err)
+		}
+	}()
+
 	if err := shell.NewCmdf("sudo cp /usr/bin/qemu-arm-static %s", raspbianMountPoint+"/usr/bin").Run(); err != nil {
 		return err
 	}
@@ -133,7 +144,7 @@ func configureRaspbianImage(raspbianImagePath string) error {
 	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev 0-setup-user.sh", raspbianMountPoint, setupDir).Run(); err != nil {
 		return err
 	}
-	if err := shell.NewCmdf("sudo systemd-nspawn --directory=%s --chdir=%s bash -ev 1-setup-node.sh", raspbianMountPoint, setupDir).Run(); err != nil {
+	if err := shell.NewCmdf("sudo systemd-nspawn --setenv=RELEASE_BUILD=%s --directory=%s --chdir=%s bash -ev 1-setup-node.sh", env.Str(env.TagBuild), raspbianMountPoint, setupDir).Run(); err != nil {
 		return err
 	}
 	if err := shell.NewCmdf("sudo rm -r %s", mountedSetupDir).Run(); err != nil {
@@ -150,7 +161,7 @@ func fetchRaspbianImage() (filename string, err error) {
 
 	log.Infof("looking up raspbian image file")
 	localRaspbianZip, err := storageClient.GetCacheableFile("raspbian", func(object s3.Object) bool {
-		return strings.Contains(aws.StringValue(object.Key), "-raspbian-stretch-lite")
+		return strings.Contains(aws.StringValue(object.Key), "-raspbian-buster-lite")
 	})
 	if err != nil {
 		return "", err
