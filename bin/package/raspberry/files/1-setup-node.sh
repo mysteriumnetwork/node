@@ -31,6 +31,7 @@ apt-get -y install \
 if [[ "${RELEASE_BUILD}" == "true" ]]; then
   echo "Release build, setting up auto-update"
   install --mode=644 unattended-upgrades /etc/apt/apt.conf.d/50unattended-upgrades
+  install --mode=644 auto-upgrades /etc/apt/apt.conf.d/20auto-upgrades
 fi
 
 # Install myst
