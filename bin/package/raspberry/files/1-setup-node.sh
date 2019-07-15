@@ -13,7 +13,7 @@ add_apt_source() {
 # Enable SSH access
 touch /boot/ssh
 
-install -m 644 default-myst-conf /etc/default/mysterium-node
+install --mode=644 default-myst-conf /etc/default/mysterium-node
 
 add_apt_source "deb http://deb.debian.org/debian/ unstable main" "/etc/apt/sources.list.d/unstable.list"
 printf 'Package: *\nPin: release a=unstable\nPin-Priority: 150\n' | tee --append /etc/apt/preferences.d/limit-unstable
@@ -26,10 +26,12 @@ apt-get -y install \
   wireguard \
   openvpn
 
-apt-get -y install unattended-upgrades
+apt-get -y install \
+  unattended-upgrades
+
 if [[ "${RELEASE_BUILD}" == "true" ]]; then
   echo "Release build, setting up auto-update"
-  install -m 644 unattended-upgrades /etc/apt/apt.conf.d/51unattended-upgrades-myst
+  install --mode=644 unattended-upgrades /etc/apt/apt.conf.d/50unattended-upgrades
 fi
 
 chmod 755 myst_linux_armhf.deb
