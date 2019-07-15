@@ -10,8 +10,8 @@ add_apt_source() {
   grep -qF "$src" "$src_file" || echo "$src" | tee -a "$src_file"
 }
 
-systemctl enable ssh
-sed -i -e 's/#PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+# Enable SSH access
+touch /boot/ssh
 
 install -m 644 default-myst-conf /etc/default/mysterium-node
 
