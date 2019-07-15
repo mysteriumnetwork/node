@@ -44,8 +44,17 @@ func releaseDebianPPA(opts *releaseDebianOpts) error {
 }
 
 func ppaVersion(buildVersion string) string {
+	// Using e.g. 0.10.0-rc makes it >= than actual release 0.10.0
+	// W: myst source: rc-version-greater-than-expected-version 0.10.0+rc2+build71088039+bionic > 0.10.0
+	// (consider using 0.10.0~rc2+build71088039+bionic)
+	ver := strings.Replace(buildVersion, "-rc", "~rc", -1)
+	// Using ~rc makes it >= ~rc2, so always use a number suffix, starting from rc1
+	if strings.HasSuffix(ver, "~rc") {
+		ver = strings.Replace(ver, "~rc", "~rc1", -1)
+	}
 	// PPA treats minus as previous version
-	return strings.Replace(buildVersion, "-", "+", -1)
+	ver = strings.Replace(ver, "-", "+", -1)
+	return ver
 }
 
 // ReleaseDebianPPASnapshot releases to node-dev PPA
