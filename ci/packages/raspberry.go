@@ -117,6 +117,17 @@ func configureRaspbianImage(raspbianImagePath string) error {
 			log.Warn(err)
 		}
 	}()
+	err = shell.NewCmdf("sudo sed -i s/^/#/g %s", raspbianMountPoint+"/etc/ld.so.preload").Run()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = shell.NewCmdf("sudo sed -i s/^#//g %s", raspbianMountPoint+"/etc/ld.so.preload").Run()
+		if err != nil {
+			log.Warn(err)
+		}
+	}()
+
 	if err := shell.NewCmdf("sudo cp /usr/bin/qemu-arm-static %s", raspbianMountPoint+"/usr/bin").Run(); err != nil {
 		return err
 	}
