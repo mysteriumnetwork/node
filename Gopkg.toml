@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/payments"
-  version = "0.0.10"
+  revision = "cfa3998b6ba14d2ff76a52618f1608129efd97b8"
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/payment-bindings"

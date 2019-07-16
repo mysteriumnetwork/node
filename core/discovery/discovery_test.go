@@ -42,8 +42,7 @@ func discoveryWithMockedDependencies() *Discovery {
 		signerCreate: func(id identity.Identity) identity.Signer {
 			return &identity.SignerFake{}
 		},
-		identityRegistration: &identity_registry.FakeRegistrationDataProvider{},
-		proposalRegistry:     &mockedProposalRegistry{},
+		proposalRegistry: &mockedProposalRegistry{},
 	}
 }
 

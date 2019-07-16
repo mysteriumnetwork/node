@@ -21,30 +21,30 @@ import (
 	"context"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/payments/contracts/abigen"
+	"github.com/mysteriumnetwork/payments/bindings"
 )
 
 const logPrefix = "[registry] "
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
 func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryAddress common.Address) (*contractRegistry, error) {
-	contract, err := abigen.NewIdentityPromisesCaller(registryAddress, contractBackend)
+	contract, err := bindings.NewRegistryCaller(registryAddress, contractBackend)
 	if err != nil {
 		return nil, err
 	}
 
-	contractSession := &abigen.IdentityPromisesCallerSession{
+	contractSession := &bindings.RegistryCallerSession{
 		Contract: contract,
 		CallOpts: bind.CallOpts{
 			Pending: false, //we want to find out true registration status - not pending transactions
 		},
 	}
 
-	filterer, err := abigen.NewIdentityPromisesFilterer(registryAddress, contractBackend)
+	filterer, err := bindings.NewRegistryFilterer(registryAddress, contractBackend)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +56,8 @@ func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryA
 }
 
 type contractRegistry struct {
-	contractSession *abigen.IdentityPromisesCallerSession
-	filterer        *abigen.IdentityPromisesFilterer
+	contractSession *bindings.RegistryCallerSession
+	filterer        *bindings.RegistryFilterer
 }
 
 func (registry *contractRegistry) IsRegistered(id identity.Identity) (bool, error) {
@@ -104,7 +104,7 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 			case <-stopLoop:
 				registrationEvent <- Cancelled
 			case <-time.After(1 * time.Second):
-				logIterator, err := registry.filterer.FilterRegistered(filterOps, identities)
+				logIterator, err := registry.filterer.FilterRegisteredIdentity(filterOps, identities)
 				if err != nil {
 					registrationEvent <- Cancelled
 					log.Error(logPrefix, err)

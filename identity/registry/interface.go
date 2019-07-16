@@ -17,18 +17,10 @@
 
 package registry
 
-import (
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/payments/registry"
-)
+import "github.com/mysteriumnetwork/node/identity"
 
 // IdentityRegistry enables identity registration actions
 type IdentityRegistry interface {
 	IsRegistered(identity.Identity) (bool, error)
 	SubscribeToRegistrationEvent(identity.Identity) (registeredEvent chan RegistrationEvent, unsubscribe func())
-}
-
-// RegistrationDataProvider provides registration information for given identity required to register it on blockchain
-type RegistrationDataProvider interface {
-	ProvideRegistrationData(identity.Identity) (*registry.RegistrationData, error)
 }

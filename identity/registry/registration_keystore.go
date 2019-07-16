@@ -19,9 +19,6 @@ package registry
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/payments/registry"
 )
 
 // NewRegistrationDataProvider creates registration data provider backed up by identity which is managed by keystore
@@ -35,8 +32,8 @@ type keystoreRegistrationDataProvider struct {
 	ks *keystore.KeyStore
 }
 
-func (kpg *keystoreRegistrationDataProvider) ProvideRegistrationData(id identity.Identity) (*registry.RegistrationData, error) {
-	identityHolder := registry.FromKeystore(kpg.ks, common.HexToAddress(id.Address))
+// func (kpg *keystoreRegistrationDataProvider) ProvideRegistrationData(id identity.Identity) (*registry.RegistrationData, error) {
+// 	identityHolder := registry.FromKeystore(kpg.ks, common.HexToAddress(id.Address))
 
-	return registry.CreateRegistrationData(identityHolder)
-}
+// 	return registry.CreateRegistrationData(identityHolder)
+// }

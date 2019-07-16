@@ -32,9 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/params"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
-	"github.com/mysteriumnetwork/payments/cli/helpers"
-	"github.com/mysteriumnetwork/payments/contracts/abigen"
-	"github.com/mysteriumnetwork/payments/mysttoken"
+	"github.com/mysteriumnetwork/payments/bindings"
 	"github.com/pkg/errors"
 )
 
@@ -54,28 +52,15 @@ type CliWallet struct {
 	txOpts           *bind.TransactOpts
 	Owner            common.Address
 	backend          *ethclient.Client
-	identityRegistry abigen.IdentityPromisesTransactorSession
-	tokens           mysttoken.MystTokenTransactorSession
+	identityRegistry bindings.RegistryTransactorSession
+	tokens           bindings.MystTokenTransactorSession
 	ks               *keystore.KeyStore
 }
 
 // RegisterIdentity registers identity with given data on behalf of user
 func (wallet *CliWallet) RegisterIdentity(dto tequilapi_client.RegistrationDataDTO) error {
-	var Pub1 [32]byte
-	var Pub2 [32]byte
-	var S [32]byte
-	var R [32]byte
-
-	copy(Pub1[:], common.FromHex(dto.PublicKey.Part1))
-	copy(Pub2[:], common.FromHex(dto.PublicKey.Part2))
-	copy(R[:], common.FromHex(dto.Signature.R))
-	copy(S[:], common.FromHex(dto.Signature.S))
-
-	tx, err := wallet.identityRegistry.RegisterIdentity(Pub1, Pub2, dto.Signature.V, R, S)
-	if err != nil {
-		return err
-	}
-	return wallet.checkTxResult(tx)
+	// TODO: this needs to be implemented
+	return nil
 }
 
 // GiveEther transfers ether to given address
@@ -176,14 +161,21 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 		return nil, err
 	}
 
-	transactor := helpers.CreateNewKeystoreTransactor(ks, &ownerAcc)
-
-	tokensContract, err := mysttoken.NewMystTokenTransactor(tokenAddress, ehtClient)
+	chainID, err := ehtClient.NetworkID(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	paymentsContract, err := abigen.NewIdentityPromisesTransactor(paymentsAddress, ehtClient)
+	transactor := &bind.TransactOpts{
+		From: ownerAcc.Address,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			return ks.SignTx(ownerAcc, tx, chainID)
+		},
+		Context:  context.Background(),
+		GasLimit: 1000000,
+	}
+
+	tokensContract, err := bindings.NewMystTokenTransactor(tokenAddress, ehtClient)
 	if err != nil {
 		return nil, err
 	}
@@ -192,12 +184,8 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 		txOpts:  transactor,
 		Owner:   owner,
 		backend: ehtClient,
-		tokens: mysttoken.MystTokenTransactorSession{
+		tokens: bindings.MystTokenTransactorSession{
 			Contract:     tokensContract,
-			TransactOpts: *transactor,
-		},
-		identityRegistry: abigen.IdentityPromisesTransactorSession{
-			Contract:     paymentsContract,
 			TransactOpts: *transactor,
 		},
 		ks: ks,

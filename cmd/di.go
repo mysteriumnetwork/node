@@ -166,15 +166,14 @@ type Dependencies struct {
 	MysteriumAPI      *mysterium.MysteriumAPI
 	EtherClient       *ethclient.Client
 
-	NATService           nat.NATService
-	Storage              Storage
-	Keystore             *keystore.KeyStore
-	PromiseStorage       *promise.Storage
-	IdentityManager      identity.Manager
-	SignerFactory        identity.SignerFactory
-	IdentityRegistry     identity_registry.IdentityRegistry
-	IdentityRegistration identity_registry.RegistrationDataProvider
-	IdentitySelector     identity_selector.Handler
+	NATService       nat.NATService
+	Storage          Storage
+	Keystore         *keystore.KeyStore
+	PromiseStorage   *promise.Storage
+	IdentityManager  identity.Manager
+	SignerFactory    identity.SignerFactory
+	IdentityRegistry identity_registry.IdentityRegistry
+	IdentitySelector identity_selector.Handler
 
 	DiscoveryFactory    service.DiscoveryFactory
 	DiscoveryFinder     *discovery.Finder
@@ -495,7 +494,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
 
-	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
+	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
@@ -628,7 +627,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 		di.SignerFactory,
 	)
 
-	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
@@ -644,7 +642,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	}
 
 	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, registry, di.SignerFactory)
+		return discovery.NewService(di.IdentityRegistry, registry, di.SignerFactory)
 	}
 
 	storage := discovery.NewStorage()

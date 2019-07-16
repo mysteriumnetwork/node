@@ -90,14 +90,6 @@
   revision = "f899737d7f2764dc13e4d01ff00108ec58f766a9"
 
 [[projects]]
-  digest = "1:e04c00d619875ce5fa67180891984a9b1fadcc031af36bcd7a3509cbdad1df15"
-  name = "github.com/cheggaaa/pb"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "c112833d014c77e8bde723fd0158e3156951639f"
-  version = "v2.0.6"
-
-[[projects]]
   digest = "1:454adc7f974228ff789428b6dc098638c57a64aa0718f0bd61e53d3cd39d7a75"
   name = "github.com/chzyer/readline"
   packages = ["."]
@@ -152,14 +144,6 @@
   version = "v0.0.1"
 
 [[projects]]
-  digest = "1:edb569dd02419a41ddd98768cc0e7aec922ef19dae139731e5ca750afcf6f4c5"
-  name = "github.com/edsrzf/mmap-go"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "188cc3b666ba704534fa4f96e9e61f21f1e1ba7c"
-  version = "v1.0.0"
-
-[[projects]]
   digest = "1:b498b36dbb2b306d1c5205ee5236c9e60352be8f9eea9bf08186723a9f75b4f3"
   name = "github.com/emirpasic/gods"
   packages = [
@@ -182,29 +166,15 @@
     "accounts",
     "accounts/abi",
     "accounts/abi/bind",
-    "accounts/abi/bind/backends",
     "accounts/keystore",
     "common",
-    "common/bitutil",
     "common/hexutil",
     "common/math",
     "common/mclock",
     "common/prque",
-    "consensus",
-    "consensus/ethash",
-    "consensus/misc",
-    "core",
-    "core/bloombits",
-    "core/rawdb",
-    "core/state",
     "core/types",
-    "core/vm",
     "crypto",
-    "crypto/bn256",
-    "crypto/bn256/cloudflare",
-    "crypto/bn256/google",
     "crypto/secp256k1",
-    "eth/filters",
     "ethclient",
     "ethdb",
     "event",
@@ -315,17 +285,6 @@
   version = "v0.5.4"
 
 [[projects]]
-  digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
-  name = "github.com/hashicorp/golang-lru"
-  packages = [
-    ".",
-    "simplelru",
-  ]
-  pruneopts = "UT"
-  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
-  version = "v0.5.0"
-
-[[projects]]
   digest = "1:c00cc6d95a674b4b923ac069d364445043bc67836e9bd8aeff8440cfbe6a2cc7"
   name = "github.com/huin/goupnp"
   packages = [
@@ -416,14 +375,6 @@
   pruneopts = "UT"
   revision = "aedfce64c122eef47009b7f80c9771044753215d"
   version = "v1.8.0"
-
-[[projects]]
-  digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
-  name = "github.com/mattn/go-colorable"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
-  version = "v0.0.9"
 
 [[projects]]
   digest = "1:d4d17353dbd05cb52a2a52b7fe1771883b682806f68db442b436294926bbfafb"
@@ -551,31 +502,19 @@
   revision = "6a3d4c1c3fbd536609ded8cfef335ec2852cd63e"
 
 [[projects]]
-  digest = "1:c04cef54bc45a0077b9fd9221ef7c9c1991f3db5b1ba7634ce5f0acb5c91907e"
+  digest = "1:029f45ade56061c7bcd195f87c34e6d1ab486748e6fbb2730c57c12f82bc52a6"
   name = "github.com/mysteriumnetwork/payment-bindings"
-  packages = [
-    ".",
-    "generated",
-  ]
+  packages = ["."]
   pruneopts = "UT"
   revision = "b47f77609e844522248298221a676ddf9b4f0deb"
   version = "0.0.1"
 
 [[projects]]
-  digest = "1:8a20b209f06b19844908cf0367975d0966d6c188e5381ebd9327d6cd5d2ab990"
+  digest = "1:cf40b9b05e87a23b2dc55f1fd2fdc72e3188fd1a498fbd62793524f76446e253"
   name = "github.com/mysteriumnetwork/payments"
-  packages = [
-    "cli/helpers",
-    "contracts/abigen",
-    "identity",
-    "mysttoken",
-    "promises",
-    "registry",
-    "test_utils",
-  ]
+  packages = ["bindings"]
   pruneopts = "T"
-  revision = "c60d83ad4ee5bf2da3f68bee2d6d4ecbf795fce1"
-  version = "v0.0.10"
+  revision = "cfa3998b6ba14d2ff76a52618f1608129efd97b8"
 
 [[projects]]
   digest = "1:6af00f84f6fdf9a971d5447f7f74b8b1dde177dbdd2102070a91130ab08036d1"
@@ -825,7 +764,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f37d8367806b8c9459868094204a97d253147dd9b1052982f00a70078002cd7f"
+  digest = "1:10ca588335c1a1f03989d3a47b83ec2220c07b0ee9e5c06a5a51e84f9b2c6ab9"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -846,7 +785,6 @@
     "openpgp/s2k",
     "pbkdf2",
     "poly1305",
-    "ripemd160",
     "scrypt",
     "sha3",
     "ssh",
@@ -958,60 +896,12 @@
   version = "v1.6.0"
 
 [[projects]]
-  digest = "1:e626376fab8608a972d47e91b3c1bbbddaecaf1d42b82be6dcc52d10a7557893"
-  name = "gopkg.in/VividCortex/ewma.v1"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "b24eb346a94c3ba12c1da1e564dbac1b498a77ce"
-  version = "v1.1.1"
-
-[[projects]]
-  digest = "1:256938e7d43c73bd5e7bb97dd281d1ebe294b2928403ee1fbec96249915d1150"
-  name = "gopkg.in/cheggaaa/pb.v2"
-  packages = ["termutil"]
-  pruneopts = "UT"
-  revision = "c112833d014c77e8bde723fd0158e3156951639f"
-  version = "v2.0.6"
-
-[[projects]]
-  digest = "1:865079840386857c809b72ce300be7580cb50d3d3129ce11bf9aa6ca2bc1934a"
-  name = "gopkg.in/fatih/color.v1"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4"
-  version = "v1.7.0"
-
-[[projects]]
   digest = "1:cbc72c4c4886a918d6ab4b95e347ffe259846260f99ebdd8a198c2331cf2b2e9"
   name = "gopkg.in/go-playground/validator.v8"
   packages = ["."]
   pruneopts = "UT"
   revision = "5f1438d3fca68893a817e4a66806cea46a9e4ebf"
   version = "v8.18.2"
-
-[[projects]]
-  digest = "1:c658e84ad3916da105a761660dcaeb01e63416c8ec7bc62256a9b411a05fcd67"
-  name = "gopkg.in/mattn/go-colorable.v0"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
-  version = "v0.0.9"
-
-[[projects]]
-  digest = "1:d4d17353dbd05cb52a2a52b7fe1771883b682806f68db442b436294926bbfafb"
-  name = "gopkg.in/mattn/go-isatty.v0"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
-  version = "v0.0.3"
-
-[[projects]]
-  digest = "1:e2d1d410fb367567c2b53ed9e2d719d3c1f0891397bb2fa49afd747cfbf1e8e4"
-  name = "gopkg.in/mattn/go-runewidth.v0"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "9e777a8366cce605130a531d2cd6363d07ad7317"
-  version = "v0.0.2"
 
 [[projects]]
   branch = "v2"
@@ -1126,7 +1016,9 @@
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
     "github.com/dgrijalva/jwt-go",
+    "github.com/ethereum/go-ethereum",
     "github.com/ethereum/go-ethereum/accounts",
+    "github.com/ethereum/go-ethereum/accounts/abi",
     "github.com/ethereum/go-ethereum/accounts/abi/bind",
     "github.com/ethereum/go-ethereum/accounts/keystore",
     "github.com/ethereum/go-ethereum/common",
@@ -1134,8 +1026,8 @@
     "github.com/ethereum/go-ethereum/core/types",
     "github.com/ethereum/go-ethereum/crypto",
     "github.com/ethereum/go-ethereum/ethclient",
+    "github.com/ethereum/go-ethereum/log",
     "github.com/ethereum/go-ethereum/p2p/nat",
-    "github.com/ethereum/go-ethereum/params",
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
     "github.com/gofrs/uuid",
@@ -1167,14 +1059,7 @@
     "github.com/mysteriumnetwork/go-openvpn/openvpn3",
     "github.com/mysteriumnetwork/metrics",
     "github.com/mysteriumnetwork/payment-bindings",
-    "github.com/mysteriumnetwork/payment-bindings/generated",
-    "github.com/mysteriumnetwork/payments/cli/helpers",
-    "github.com/mysteriumnetwork/payments/contracts/abigen",
-    "github.com/mysteriumnetwork/payments/identity",
-    "github.com/mysteriumnetwork/payments/mysttoken",
-    "github.com/mysteriumnetwork/payments/promises",
-    "github.com/mysteriumnetwork/payments/registry",
-    "github.com/mysteriumnetwork/payments/test_utils",
+    "github.com/mysteriumnetwork/payments/bindings",
     "github.com/mysteriumnetwork/wireguard-go/device",
     "github.com/mysteriumnetwork/wireguard-go/tun",
     "github.com/nats-io/go-nats",

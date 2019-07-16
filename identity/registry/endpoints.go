@@ -20,38 +20,10 @@ package registry
 import (
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
-
-// SignatureDTO represents Elliptic Curve signature parts
-//
-// swagger:model DecomposedSignatureDTO
-type SignatureDTO struct {
-	// S part of signature
-	// example: "0x1321313212312..."
-	R string `json:"r"`
-	// R part of signature
-	// example: "0x1234563564354..."
-	S string `json:"s"`
-	// Sign - 27 or 28 as expected by ethereum ecrecover function
-	// example: 27
-	V uint8 `json:"v"`
-}
-
-// PublicKeyPartsDTO represents ECDSA public key with first byte stripped (0x04) and splitted into two 32 bytes size arrays
-//
-// swagger:model PublicKeyPartsDTO
-type PublicKeyPartsDTO struct {
-	// First 32 bytes of public key in hex representation
-	// example: "0x1321313212312..."
-	Part1 string `json:"part1"`
-	// Last 32 bytes of public key inx hex representation
-	// example: "0x1321313212312..."
-	Part2 string `json:"part2"`
-}
 
 // RegistrationDataDTO represents registration status and needed data for registering of given identity
 //
@@ -59,20 +31,14 @@ type PublicKeyPartsDTO struct {
 type RegistrationDataDTO struct {
 	// Returns true if identity is registered in payments smart contract
 	Registered bool `json:"registered"`
-
-	PublicKey PublicKeyPartsDTO `json:"publicKey"`
-
-	Signature SignatureDTO `json:"signature"`
 }
 
 type registrationEndpoint struct {
-	dataProvider   RegistrationDataProvider
 	statusProvider IdentityRegistry
 }
 
-func newRegistrationEndpoint(dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) *registrationEndpoint {
+func newRegistrationEndpoint(statusProvider IdentityRegistry) *registrationEndpoint {
 	return &registrationEndpoint{
-		dataProvider:   dataProvider,
 		statusProvider: statusProvider,
 	}
 }
@@ -105,32 +71,16 @@ func (endpoint *registrationEndpoint) IdentityRegistrationData(resp http.Respons
 		return
 	}
 
-	registrationData, err := endpoint.dataProvider.ProvideRegistrationData(id)
-	if err != nil {
-		utils.SendError(resp, err, http.StatusInternalServerError)
-		return
-	}
-
 	registrationDataDTO := &RegistrationDataDTO{
 		Registered: isRegistered,
-		PublicKey: PublicKeyPartsDTO{
-			Part1: hexutil.Encode(registrationData.PublicKey.Part1),
-			Part2: hexutil.Encode(registrationData.PublicKey.Part2),
-		},
-		Signature: SignatureDTO{
-			R: hexutil.Encode(registrationData.Signature.R[:]),
-			S: hexutil.Encode(registrationData.Signature.S[:]),
-			V: registrationData.Signature.V,
-		},
 	}
 	utils.WriteAsJSON(registrationDataDTO, resp)
 }
 
 // AddIdentityRegistrationEndpoint adds identity registration data endpoint to given http router
-func AddIdentityRegistrationEndpoint(router *httprouter.Router, dataProvider RegistrationDataProvider, statusProvider IdentityRegistry) {
+func AddIdentityRegistrationEndpoint(router *httprouter.Router, statusProvider IdentityRegistry) {
 
 	registrationEndpoint := newRegistrationEndpoint(
-		dataProvider,
 		statusProvider,
 	)
 
