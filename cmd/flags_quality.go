@@ -34,7 +34,7 @@ var (
 			node.QualityTypeNone,
 			"opt-out from sending quality metrics",
 		),
-		Value: string(node.QualityTypeElastic),
+		Value: string(node.QualityTypeMORQA),
 	}
 	qualityAddressFlag = cli.StringFlag{
 		Name: "quality.address",
@@ -42,7 +42,7 @@ var (
 			"Address of specific Quality Oracle adapter given in '--%s'",
 			qualityTypeFlag.Name,
 		),
-		Value: "http://metrics.mysterium.network:8091",
+		Value: "https://quality.mysterium.network/api/v1",
 	}
 )
 
