@@ -3,6 +3,7 @@
 [Unit]
 Description=Server for decentralised VPN built on blockchain
 Documentation=https://mysterium.network/
+Requires=network-online.target
 After=network-online.target
 
 [Service]
