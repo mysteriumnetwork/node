@@ -72,7 +72,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		OptionsNetwork: network,
 		Quality: node.OptionsQuality{
 			Type:    node.QualityTypeMORQA,
-			Address: "http://metrics.mysterium.network:8091",
+			Address: "https://quality.mysterium.network/api/v1",
 		},
 		Discovery: node.OptionsDiscovery{
 			Type:    node.DiscoveryTypeAPI,
