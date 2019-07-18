@@ -278,14 +278,14 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapSSEHandler(); err != nil {
 		return err
 	}
+	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
+		return err
+	}
 
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
 
 	di.registerConnections(nodeOptions)
 
-	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
-		return err
-	}
 	if err = di.subscribeEventConsumers(); err != nil {
 		return err
 	}
