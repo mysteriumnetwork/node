@@ -28,11 +28,14 @@ import (
 
 // LogOptions log options
 type LogOptions struct {
-	LogLevel string
+	logLevelInt log.LogLevel
+	LogLevel    string
 }
 
-var currentLogOptions = LogOptions{
-	LogLevel: log.DebugStr,
+// CurrentLogOptions current log options
+var CurrentLogOptions = LogOptions{
+	logLevelInt: log.DebugLvl,
+	LogLevel:    log.DebugStr,
 }
 
 var (
@@ -59,5 +62,14 @@ func RegisterFlags(flags *[]cli.Flag) {
 
 // ParseFlags parses logger CLI flags from context
 func ParseFlags(ctx *cli.Context) LogOptions {
-	return LogOptions{ctx.GlobalString("log-level")}
+	level := ctx.GlobalString("log-level")
+	levelInt, found := log.LogLevelFromString(level)
+	if !found {
+		levelInt = log.DebugLvl
+		level = log.DebugStr
+	}
+	return LogOptions{
+		logLevelInt: levelInt,
+		LogLevel:    level,
+	}
 }

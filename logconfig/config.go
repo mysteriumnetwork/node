@@ -50,9 +50,9 @@ func buildXmlConfig(opts LogOptions) string {
 // BootstrapWith loads log package into the overall system
 func BootstrapWith(opts *LogOptions) {
 	if opts != nil {
-		currentLogOptions = *opts
+		CurrentLogOptions = *opts
 	}
-	newLogger, err := log.LoggerFromConfigAsString(buildXmlConfig(currentLogOptions))
+	newLogger, err := log.LoggerFromConfigAsString(buildXmlConfig(CurrentLogOptions))
 	if err != nil {
 		log.Warn("error parsing log configuration", err)
 		return
@@ -61,7 +61,7 @@ func BootstrapWith(opts *LogOptions) {
 	if err != nil {
 		log.Warn("error setting new logger for log", err)
 	}
-	log.Infof("log level: %s", currentLogOptions.LogLevel)
+	log.Infof("log level: %s", CurrentLogOptions.LogLevel)
 }
 
 // Bootstrap loads log package into the overall system with debug defaults
