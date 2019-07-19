@@ -109,6 +109,7 @@ func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
 		Testnet:                 true,
 		ExperimentIdentityCheck: false,
+		ExperimentNATPunching:   true,
 		MysteriumAPIAddress:     metadata.TestnetDefinition.MysteriumAPIAddress,
 		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
 		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,
