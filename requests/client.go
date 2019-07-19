@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/mysteriumnetwork/node/logconfig/httptrace"
 	"github.com/pkg/errors"
 )
 
@@ -66,6 +67,8 @@ func (c *client) DoRequestAndParseResponse(req *http.Request, resp interface{}) 
 		return err
 	}
 	defer response.Body.Close()
+
+	httptrace.TraceRequestResponse(req, response)
 
 	err = parseResponseError(response)
 	if err != nil {
