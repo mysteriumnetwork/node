@@ -215,7 +215,7 @@ type Dependencies struct {
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
-	logconfig.Bootstrap()
+	logconfig.BootstrapWith(&nodeOptions.LogOptions)
 	nats_discovery.Bootstrap()
 
 	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())

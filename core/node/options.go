@@ -17,6 +17,8 @@
 
 package node
 
+import "github.com/mysteriumnetwork/node/logconfig"
+
 // Openvpn interface is abstraction over real openvpn options to unblock mobile development
 // will disappear as soon as go-openvpn will unify common factory for openvpn creation
 type Openvpn interface {
@@ -37,6 +39,7 @@ type Options struct {
 
 	Keystore OptionsKeystore
 
+	logconfig.LogOptions
 	OptionsNetwork
 	Discovery OptionsDiscovery
 	Quality   OptionsQuality

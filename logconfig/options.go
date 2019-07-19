@@ -26,11 +26,12 @@ import (
 	"github.com/urfave/cli"
 )
 
-type options struct {
+// LogOptions log options
+type LogOptions struct {
 	LogLevel string
 }
 
-var opts = options{
+var currentLogOptions = LogOptions{
 	LogLevel: log.DebugStr,
 }
 
@@ -57,6 +58,6 @@ func RegisterFlags(flags *[]cli.Flag) {
 }
 
 // ParseFlags parses logger CLI flags from context
-func ParseFlags(ctx *cli.Context) {
-	opts = options{ctx.GlobalString("log-level")}
+func ParseFlags(ctx *cli.Context) LogOptions {
+	return LogOptions{ctx.GlobalString("log-level")}
 }
