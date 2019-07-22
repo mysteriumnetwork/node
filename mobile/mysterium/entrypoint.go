@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 
 	"github.com/mitchellh/go-homedir"
+
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/logconfig"

@@ -90,6 +90,14 @@
   revision = "f899737d7f2764dc13e4d01ff00108ec58f766a9"
 
 [[projects]]
+  digest = "1:26f2a28a9077d5b11df8af4cee2bcff1e1dd414a1b3f1fac99aa7d23439e4bf1"
+  name = "github.com/cheggaaa/pb"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "40231cf7fa00b7c9098939b6a9e6f54f4b3ce020"
+  version = "v3.0.1"
+
+[[projects]]
   digest = "1:454adc7f974228ff789428b6dc098638c57a64aa0718f0bd61e53d3cd39d7a75"
   name = "github.com/chzyer/readline"
   packages = ["."]
@@ -385,6 +393,14 @@
   version = "v0.0.3"
 
 [[projects]]
+  digest = "1:0356f3312c9bd1cbeda81505b7fd437501d8e778ab66998ef69f00d7f9b3a0d7"
+  name = "github.com/mattn/go-runewidth"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3ee7d812e62a0804a7d0a324e0249ca2db3476d3"
+  version = "v0.0.4"
+
+[[projects]]
   branch = "master"
   digest = "1:8bc6c6b7a56ce25f3c6754c5b5ae6cc3d07c212a9d13e7bdbab1021319cbce08"
   name = "github.com/mdlayher/genetlink"
@@ -510,11 +526,15 @@
   version = "0.0.1"
 
 [[projects]]
-  digest = "1:cf40b9b05e87a23b2dc55f1fd2fdc72e3188fd1a498fbd62793524f76446e253"
+  digest = "1:0abbbc810046da21005f565fcffdf9cd971f1d677ee67b930814e12cf37583c0"
   name = "github.com/mysteriumnetwork/payments"
-  packages = ["bindings"]
+  packages = [
+    "bindings",
+    "crypto",
+    "registration",
+  ]
   pruneopts = "T"
-  revision = "cfa3998b6ba14d2ff76a52618f1608129efd97b8"
+  revision = "90d1f0b5ee8efe3c5748fc9eb1027fa6c9a10fdd"
 
 [[projects]]
   digest = "1:6af00f84f6fdf9a971d5447f7f74b8b1dde177dbdd2102070a91130ab08036d1"
@@ -1013,6 +1033,7 @@
     "github.com/aws/aws-sdk-go-v2/aws/external",
     "github.com/aws/aws-sdk-go-v2/service/s3",
     "github.com/aws/aws-sdk-go-v2/service/s3/s3manager",
+    "github.com/cheggaaa/pb",
     "github.com/chzyer/readline",
     "github.com/cihub/seelog",
     "github.com/dgrijalva/jwt-go",
@@ -1028,6 +1049,7 @@
     "github.com/ethereum/go-ethereum/ethclient",
     "github.com/ethereum/go-ethereum/log",
     "github.com/ethereum/go-ethereum/p2p/nat",
+    "github.com/ethereum/go-ethereum/params",
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
     "github.com/gofrs/uuid",
@@ -1060,6 +1082,7 @@
     "github.com/mysteriumnetwork/metrics",
     "github.com/mysteriumnetwork/payment-bindings",
     "github.com/mysteriumnetwork/payments/bindings",
+    "github.com/mysteriumnetwork/payments/registration",
     "github.com/mysteriumnetwork/wireguard-go/device",
     "github.com/mysteriumnetwork/wireguard-go/tun",
     "github.com/nats-io/go-nats",

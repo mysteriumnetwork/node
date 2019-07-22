@@ -42,9 +42,10 @@ type Options struct {
 
 	logconfig.LogOptions
 	OptionsNetwork
-	Discovery OptionsDiscovery
-	Quality   OptionsQuality
-	Location  OptionsLocation
+	Discovery  OptionsDiscovery
+	Quality    OptionsQuality
+	Location   OptionsLocation
+	Transactor OptionsTransactor
 
 	Openvpn  Openvpn
 	Firewall OptionsFirewall

@@ -28,6 +28,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mysteriumnetwork/metrics"
+
 	"github.com/mysteriumnetwork/node/logconfig/httptrace"
 )
 

@@ -51,6 +51,7 @@ import (
 	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
+	"github.com/mysteriumnetwork/node/core/transactor"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/firewall/vnd"
@@ -158,6 +159,12 @@ type UIServer interface {
 	Stop()
 }
 
+// Transactor represents interface to Transactor service
+type Transactor interface {
+	FetchFees() (transactor.Fees, error)
+	RegisterIdentity(identity string, regReqDTO *transactor.IdentityRegistrationRequestDTO) error
+}
+
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
@@ -210,6 +217,7 @@ type Dependencies struct {
 	JWTAuthenticator JWTAuthenticator
 	UIServer         UIServer
 	SSEHandler       *sse.Handler
+	Transactor       Transactor
 }
 
 // Bootstrap initiates all container dependencies
@@ -479,6 +487,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		di.EventBus,
 	)
 
+	di.Transactor = transactor.NewTransactor(
+		nodeOptions.Transactor.TransactorEndpointAddress,
+		nodeOptions.Transactor.RegistryAddress,
+		nodeOptions.Transactor.AccountantID,
+		di.SignerFactory,
+	)
+
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
@@ -493,6 +508,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForAccessPolicies(nodeOptions.BindAddress, router, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 

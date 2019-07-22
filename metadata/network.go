@@ -29,6 +29,9 @@ type NetworkDefinition struct {
 	EtherClientRPC            string
 	QualityOracle             string
 	PaymentsContractAddress   common.Address
+	TransactorAddress         string
+	RegistryAddress           string
+	AccountantID              string
 }
 
 // TestnetDefinition defines parameters for test network (currently default network)
@@ -39,6 +42,9 @@ var TestnetDefinition = NetworkDefinition{
 	EtherClientRPC:            "https://ropsten.infura.io",
 	QualityOracle:             "https://testnet-morqa.mysterium.network/api/v1",
 	PaymentsContractAddress:   common.HexToAddress("0xbe5F9CCea12Df756bF4a5Baf4c29A10c3ee7C83B"),
+	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
+	RegistryAddress:           "0xE6b3a5c92e7c1f9543A0aEE9A93fE2F6B584c1f7",
+	AccountantID:              "0x5a10863FeB6f3BcaEe9C960D0c24F4887cF15053",
 }
 
 // LocalnetDefinition defines parameters for local network

@@ -65,6 +65,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsDiscovery(flags)
 	RegisterFlagsQuality(flags)
+	RegisterFlagsTransactor(flags)
 	openvpn_core.RegisterFlags(flags)
 	RegisterFlagsLocation(flags)
 	RegisterFlagsUI(flags)
@@ -90,6 +91,7 @@ func ParseFlagsNode(ctx *cli.Context) node.Options {
 		Discovery:      ParseFlagsDiscovery(ctx),
 		Quality:        ParseFlagsQuality(ctx),
 		Location:       ParseFlagsLocation(ctx),
+		Transactor:     ParseFlagsTransactor(ctx),
 
 		Openvpn: wrapper{nodeOptions: openvpn_core.ParseFlags(ctx)},
 
