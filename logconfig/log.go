@@ -108,6 +108,11 @@ func (l Logger) Critical(v ...interface{}) error {
 	return seelog.Critical(append([]interface{}{l.prefix}, v...)...)
 }
 
+// IsTrace indicates if trace should be logged
+func (Logger) IsTrace() bool {
+	return CurrentLogOptions.logLevelInt <= seelog.TraceLvl
+}
+
 // Flush flushes logs to output
 func (l Logger) Flush() {
 	seelog.Flush()

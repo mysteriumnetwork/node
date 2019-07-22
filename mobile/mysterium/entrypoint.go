@@ -23,6 +23,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 )
 
@@ -34,8 +35,11 @@ type MobileNode struct {
 // MobileNetworkOptions alias for node.OptionsNetwork to be visible from mobile framework
 type MobileNetworkOptions node.OptionsNetwork
 
+// MobileLogOptions alias for logconfig.LogOptions
+type MobileLogOptions logconfig.LogOptions
+
 // NewNode function creates new Node
-func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode, error) {
+func NewNode(appPath string, logOptions *MobileLogOptions, optionsNetwork *MobileNetworkOptions) (*MobileNode, error) {
 	var di cmd.Dependencies
 
 	var dataDir, currentDir string
@@ -51,8 +55,10 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 	}
 
 	network := node.OptionsNetwork(*optionsNetwork)
+	log := logconfig.LogOptions(*logOptions)
 
 	err := di.Bootstrap(node.Options{
+		LogOptions: log,
 		Directories: node.OptionsDirectory{
 			Data:     dataDir,
 			Storage:  filepath.Join(dataDir, "db"),
@@ -72,7 +78,7 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 		OptionsNetwork: network,
 		Quality: node.OptionsQuality{
 			Type:    node.QualityTypeMORQA,
-			Address: "http://metrics.mysterium.network:8091",
+			Address: "https://quality.mysterium.network/api/v1",
 		},
 		Discovery: node.OptionsDiscovery{
 			Type:    node.DiscoveryTypeAPI,
@@ -91,11 +97,19 @@ func NewNode(appPath string, optionsNetwork *MobileNetworkOptions) (*MobileNode,
 	return &MobileNode{di: di}, nil
 }
 
+// DefaultLogOptions default logging options for mobile
+func DefaultLogOptions() *MobileLogOptions {
+	return &MobileLogOptions{
+		LogLevel: "debug",
+	}
+}
+
 // DefaultNetworkOptions returns default network options to connect with
 func DefaultNetworkOptions() *MobileNetworkOptions {
 	return &MobileNetworkOptions{
 		Testnet:                 true,
 		ExperimentIdentityCheck: false,
+		ExperimentNATPunching:   true,
 		MysteriumAPIAddress:     metadata.TestnetDefinition.MysteriumAPIAddress,
 		BrokerAddress:           metadata.TestnetDefinition.BrokerAddress,
 		EtherClientRPC:          metadata.TestnetDefinition.EtherClientRPC,

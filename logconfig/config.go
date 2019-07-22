@@ -35,7 +35,7 @@ const seewayLogXMLConfigTemplate = `
 </seelog>
 `
 
-func buildXmlConfig(opts options) string {
+func buildXmlConfig(opts LogOptions) string {
 	tmpl := template.Must(template.New("seelogcfg").Parse(seewayLogXMLConfigTemplate))
 
 	var tpl bytes.Buffer
@@ -47,9 +47,12 @@ func buildXmlConfig(opts options) string {
 	return tpl.String()
 }
 
-// Bootstrap loads log package into the overall system
-func Bootstrap() {
-	newLogger, err := log.LoggerFromConfigAsString(buildXmlConfig(opts))
+// BootstrapWith loads log package into the overall system
+func BootstrapWith(opts *LogOptions) {
+	if opts != nil {
+		CurrentLogOptions = *opts
+	}
+	newLogger, err := log.LoggerFromConfigAsString(buildXmlConfig(CurrentLogOptions))
 	if err != nil {
 		log.Warn("error parsing log configuration", err)
 		return
@@ -58,5 +61,14 @@ func Bootstrap() {
 	if err != nil {
 		log.Warn("error setting new logger for log", err)
 	}
-	log.Infof("log level: %s", opts.LogLevel)
+	log.Infof("log level: %s", CurrentLogOptions.LogLevel)
+}
+
+// Bootstrap loads log package into the overall system with debug defaults
+func Bootstrap() {
+	BootstrapWith(
+		&LogOptions{
+			LogLevel: "Debug",
+		},
+	)
 }

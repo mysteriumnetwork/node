@@ -215,7 +215,7 @@ type Dependencies struct {
 
 // Bootstrap initiates all container dependencies
 func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
-	logconfig.Bootstrap()
+	logconfig.BootstrapWith(&nodeOptions.LogOptions)
 	nats_discovery.Bootstrap()
 
 	log.Infof("Starting Mysterium Node (%s)", metadata.VersionAsString())
@@ -278,14 +278,14 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapSSEHandler(); err != nil {
 		return err
 	}
+	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
+		return err
+	}
 
 	di.bootstrapNodeComponents(nodeOptions, tequilaListener)
 
 	di.registerConnections(nodeOptions)
 
-	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
-		return err
-	}
 	if err = di.subscribeEventConsumers(); err != nil {
 		return err
 	}

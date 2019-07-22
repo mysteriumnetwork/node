@@ -28,6 +28,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/logconfig/httptrace"
 )
 
 const (
@@ -47,14 +48,17 @@ type MysteriumMORQA struct {
 
 // NewMorqaClient creates Mysterium Morqa client with a real communication
 func NewMorqaClient(baseURL string, timeout time.Duration) *MysteriumMORQA {
+	traceLog := &httptrace.HTTPTraceLog{}
 	httpClient := &retryablehttp.Client{
-		HTTPClient:   &http.Client{Timeout: timeout},
-		Logger:       nil,
-		RetryWaitMin: timeout,
-		RetryWaitMax: 10 * timeout,
-		RetryMax:     10,
-		CheckRetry:   retryablehttp.DefaultRetryPolicy,
-		Backoff:      retryablehttp.DefaultBackoff,
+		HTTPClient:      &http.Client{Timeout: timeout},
+		Logger:          traceLog,
+		RequestLogHook:  traceLog.LogRequest,
+		ResponseLogHook: traceLog.LogResponse,
+		RetryWaitMin:    timeout,
+		RetryWaitMax:    10 * timeout,
+		RetryMax:        10,
+		CheckRetry:      retryablehttp.DefaultRetryPolicy,
+		Backoff:         retryablehttp.DefaultBackoff,
 	}
 	return &MysteriumMORQA{
 		http:    httpClient,
@@ -64,7 +68,7 @@ func NewMorqaClient(baseURL string, timeout time.Duration) *MysteriumMORQA {
 
 // ProposalsMetrics returns a list of proposals connection metrics
 func (m *MysteriumMORQA) ProposalsMetrics() []json.RawMessage {
-	request, err := m.newRequestJSON(http.MethodGet, "proposals/quality", nil)
+	request, err := m.newRequestJSON(http.MethodGet, "providers/sessions", nil)
 	if err != nil {
 		log.Warn("failed to create proposals metrics request: ", err)
 		return nil
