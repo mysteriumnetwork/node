@@ -51,9 +51,17 @@ func NewFetcher(proposalsStorage *discovery.ProposalStorage, callback FetchCallb
 
 // Start begins fetching proposals to storage
 func (fetcher *Fetcher) Start() error {
-	if err := fetcher.fetchDo(); err != nil {
-		log.Warn(errors.Wrap(err, "initial proposal fetch failed, continuing"))
-	}
+	go func() {
+		// FIXME: fix via mobile DI (remove override* methods and configure tunnels via node.Boostrap()?)
+		// Add 2 sec delay to complete service startup due to mobile DI flow being a bit different:
+		// service definitions are registered via `OverrideOpenvpnConnection`.
+		// Definitions must be available at the time of the fetch, otherwise valid proposals will be discarded
+		// and user will have to wait for another 30 seconds for them to be populated.
+		time.Sleep(2 * time.Second)
+		if err := fetcher.fetchDo(); err != nil {
+			log.Warn(errors.Wrap(err, "initial proposal fetch failed, continuing"))
+		}
+	}()
 
 	fetcher.fetchShutdown = make(chan bool, 1)
 	go fetcher.fetchLoop()
