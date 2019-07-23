@@ -50,6 +50,10 @@ func (callback *fetchCallback) Fetch() ([]market.ServiceProposal, error) {
 	return callback.proposalsMock, nil
 }
 
+func waitForInitialFetch() {
+	time.Sleep(2*time.Second + 100*time.Millisecond)
+}
+
 func Test_Fetcher_StartFetchesInitialProposals(t *testing.T) {
 	storage := discovery.NewStorage()
 	fetcher := NewFetcher(storage, proposalsCurrent.Fetch, time.Hour)
@@ -59,7 +63,9 @@ func Test_Fetcher_StartFetchesInitialProposals(t *testing.T) {
 	defer fetcher.Stop()
 	assert.NoError(t, err)
 
-	// Initial fetch should be do instantly
+	waitForInitialFetch()
+
+	// Initial fetch should be done after initial delay
 	assert.Len(t, storage.Proposals(), 2)
 	assert.Exactly(t, []market.ServiceProposal{proposalFirst, proposalSecond}, storage.Proposals())
 }
@@ -71,6 +77,8 @@ func Test_Fetcher_StartFetchesNewProposals(t *testing.T) {
 	err := fetcher.Start()
 	defer fetcher.Stop()
 	assert.NoError(t, err)
+
+	waitForInitialFetch()
 
 	// Following fetches should be done asynchronously
 	proposalsCurrent.Mock(proposalFirst, proposalSecond)
@@ -93,6 +101,8 @@ func Test_Fetcher_StartNotifiesWithInitialProposals(t *testing.T) {
 		defer fetcher.Stop()
 		assert.NoError(t, err)
 	}()
+
+	waitForInitialFetch()
 
 	assert.Exactly(t, proposalFirst, waitForProposal(t, proposalChan))
 	assert.Exactly(t, proposalSecond, waitForProposal(t, proposalChan))

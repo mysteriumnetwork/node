@@ -96,7 +96,7 @@ package:linux-debian-arm:
 
 package:linux-raspberry-image:
   stage: build
-  tags: [go]
+  tags: [go,high_performance]
   script: go run mage.go -v PackageLinuxRaspberryImage
 
 package:osx-amd64:
