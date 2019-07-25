@@ -22,6 +22,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/service"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 // Options describes options which are required to start Openvpn service
@@ -31,16 +32,16 @@ type Options struct {
 }
 
 var (
-	protocolFlag = cli.StringFlag{
+	protocolFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "openvpn.proto",
 		Usage: "Openvpn protocol to use. Options: { udp, tcp }",
 		Value: defaultOptions.Protocol,
-	}
-	portFlag = cli.IntFlag{
+	})
+	portFlag = altsrc.NewIntFlag(cli.IntFlag{
 		Name:  "openvpn.port",
 		Usage: "Openvpn port to use. If not specified, random port will be used",
 		Value: defaultOptions.Port,
-	}
+	})
 	defaultOptions = Options{
 		Protocol: "udp",
 		Port:     0,

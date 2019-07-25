@@ -22,22 +22,23 @@ import (
 
 	"github.com/mysteriumnetwork/node/core/node"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	discoveryTypeFlag = cli.StringFlag{
+	discoveryTypeFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "discovery.type",
 		Usage: fmt.Sprintf("Proposal discovery adapter. Options: { %s, %s }", node.DiscoveryTypeAPI, node.DiscoveryTypeBroker),
 		Value: string(node.DiscoveryTypeAPI),
-	}
-	discoveryAddressFlag = cli.StringFlag{
+	})
+	discoveryAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name: "discovery.address",
 		Usage: fmt.Sprintf(
 			"Address of specific discovery adapter given in '--%s'",
 			discoveryTypeFlag.Name,
 		),
 		Value: apiAddressFlag.Value,
-	}
+	})
 )
 
 // RegisterFlagsDiscovery function register discovery flags to flag list

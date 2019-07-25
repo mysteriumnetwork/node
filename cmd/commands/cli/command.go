@@ -41,6 +41,7 @@ import (
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 const cliCommandName = "cli"
@@ -102,11 +103,11 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --conditions'",
 ))
 
-var accessPolicyFlag = cli.StringFlag{
+var accessPolicyFlag = altsrc.NewStringFlag(cli.StringFlag{
 	Name:  "access-policy.list",
 	Usage: "access policy lists to use in order to limit access to the service. Accepts a comma separated list. For example: mysterium,private",
 	Value: "",
-}
+})
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *cliApp) Run() (err error) {

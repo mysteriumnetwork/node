@@ -26,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 // Options describes options which are required to start Wireguard service
@@ -36,20 +37,20 @@ type Options struct {
 }
 
 var (
-	delayFlag = cli.IntFlag{
+	delayFlag = altsrc.NewIntFlag(cli.IntFlag{
 		Name:  "wireguard.connect.delay",
 		Usage: "Consumer is delayed by specified time if provider is behind NAT",
 		Value: DefaultOptions.ConnectDelay,
-	}
-	ports = cli.StringFlag{
+	})
+	ports = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "wireguard.listen.ports",
 		Usage: "Range of listen ports (e.g. 52820:53075)",
-	}
-	subnet = cli.StringFlag{
+	})
+	subnet = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "wireguard.allowed.subnet",
 		Usage: "Subnet allowed for using by the wireguard services",
 		Value: DefaultOptions.Subnet.String(),
-	}
+	})
 )
 
 // DefaultOptions is a wireguard service configuration that will be used if no options provided.

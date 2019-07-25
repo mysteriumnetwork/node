@@ -22,23 +22,24 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	tequilapiAddressFlag = cli.StringFlag{
+	tequilapiAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "tequilapi.address",
 		Usage: "IP address of interface to listen for incoming connections",
 		Value: "127.0.0.1",
-	}
-	tequilapiPortFlag = cli.IntFlag{
+	})
+	tequilapiPortFlag = altsrc.NewIntFlag(cli.IntFlag{
 		Name:  "tequilapi.port",
 		Usage: "Port for listening incoming api requests",
 		Value: 4050,
-	}
-	keystoreLightweightFlag = cli.BoolFlag{
+	})
+	keystoreLightweightFlag = altsrc.NewBoolFlag(cli.BoolFlag{
 		Name:  "keystore.lightweight",
 		Usage: "Determines the scrypt memory complexity. If set to true, will use 4MB blocks instead of the standard 256MB ones",
-	}
+	})
 )
 
 // ParseKeystoreFlags parses the keystore options for node

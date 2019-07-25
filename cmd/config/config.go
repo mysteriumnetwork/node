@@ -20,7 +20,6 @@ package config
 import (
 	"path"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
@@ -31,11 +30,10 @@ var log = logconfig.NewLogger()
 
 // LoadConfigurationFile loads configuration values from config file in home directory
 func LoadConfigurationFile(ctx *cli.Context) error {
-	home, err := homedir.Dir()
-	if err != nil {
-		return errors.Wrap(err, "failed to determine home directory")
-	}
-	configSource, err := altsrc.NewTomlSourceFromFile(path.Join(home, ".config/myst/config.toml"))
+	configDir := ctx.GlobalString("config-dir")
+	log.Info("using config directory: ", configDir)
+
+	configSource, err := altsrc.NewTomlSourceFromFile(path.Join(configDir, "config.toml"))
 	if err != nil {
 		return errors.Wrap(err, "failed to load config file")
 	}

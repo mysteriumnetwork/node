@@ -19,14 +19,15 @@ package core
 
 import (
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	binaryFlag = cli.StringFlag{
+	binaryFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "openvpn.binary",
 		Usage: "openvpn binary to use for Open VPN connections",
 		Value: "openvpn",
-	}
+	})
 )
 
 // RegisterFlags function register Openvpn flags to flag list

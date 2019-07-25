@@ -23,67 +23,68 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	testFlag = cli.BoolFlag{
+	testFlag = altsrc.NewBoolFlag(cli.BoolFlag{
 		Name:  "testnet",
 		Usage: "Defines test network configuration",
-	}
-	localnetFlag = cli.BoolFlag{
+	})
+	localnetFlag = altsrc.NewBoolFlag(cli.BoolFlag{
 		Name:  "localnet",
 		Usage: "Defines network configuration which expects locally deployed broker and discovery services",
-	}
+	})
 
-	identityCheckFlag = cli.BoolFlag{
+	identityCheckFlag = altsrc.NewBoolFlag(cli.BoolFlag{
 		Name:  "experiment-identity-check",
 		Usage: "Enables experimental identity check",
-	}
+	})
 
-	apiAddressFlag = cli.StringFlag{
+	apiAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "api.address",
 		Usage: "URL of Mysterium API",
 		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
-	}
-	apiAddressFlagDepreciated = cli.StringFlag{
+	})
+	apiAddressFlagDepreciated = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "discovery-address",
 		Usage: fmt.Sprintf("URL of Mysterium API (DEPRECIATED, start using '--%s')", apiAddressFlag.Name),
 		Value: apiAddressFlag.Value,
-	}
+	})
 
-	accessPolicyAddressFlag = cli.StringFlag{
+	accessPolicyAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "access-policy-address",
 		Usage: "URL of trust oracle endpoint for retrieving lists of access policies",
 		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
-	}
+	})
 
-	brokerAddressFlag = cli.StringFlag{
+	brokerAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "broker-address",
 		Usage: "URI of message broker",
 		Value: metadata.DefaultNetwork.BrokerAddress,
-	}
+	})
 
-	etherRPCFlag = cli.StringFlag{
+	etherRPCFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "ether.client.rpc",
 		Usage: "URL or IPC socket to connect to ethereum node, anything what ethereum client accepts - works",
 		Value: metadata.DefaultNetwork.EtherClientRPC,
-	}
-	etherContractPaymentsFlag = cli.StringFlag{
+	})
+	etherContractPaymentsFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "ether.contract.payments",
 		Usage: "Address of payments contract",
 		Value: metadata.DefaultNetwork.PaymentsContractAddress.String(),
-	}
+	})
 
-	qualityOracleFlag = cli.StringFlag{
+	qualityOracleFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "quality-oracle.address",
 		Usage: "Address of the quality oracle service",
 		Value: metadata.DefaultNetwork.QualityOracle,
-	}
+	})
 
-	natPunchingFlag = cli.BoolTFlag{
+	natPunchingFlag = altsrc.NewBoolTFlag(cli.BoolTFlag{
 		Name:  "experiment-natpunching",
 		Usage: "Enables experimental NAT hole punching",
-	}
+	})
 )
 
 // RegisterFlagsNetwork function register network flags to flag list

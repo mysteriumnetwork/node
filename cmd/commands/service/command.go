@@ -44,27 +44,27 @@ const serviceCommandName = "service"
 var log = logconfig.NewLogger()
 
 var (
-	identityFlag = cli.StringFlag{
+	identityFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "identity",
 		Usage: "Keystore's identity used to provide service. If not given identity will be created automatically",
 		Value: "",
-	}
-	identityPassphraseFlag = cli.StringFlag{
+	})
+	identityPassphraseFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "identity.passphrase",
 		Usage: "Used to unlock keystore's identity",
 		Value: "",
-	}
+	})
 
-	agreedTermsConditionsFlag = cli.BoolFlag{
+	agreedTermsConditionsFlag = altsrc.NewBoolFlag(cli.BoolFlag{
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
-	}
+	})
 
-	accessPolicyListFlag = cli.StringFlag{
+	accessPolicyListFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "access-policy.list",
 		Usage: "Comma separated list that determines the allowed identities on our service.",
 		Value: "",
-	}
+	})
 )
 
 // NewCommand function creates service command
@@ -200,6 +200,7 @@ func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 // parseAccessPolicyFlag fetches the access policy data from CLI context
 func parseAccessPolicyFlag(ctx *cli.Context) client.AccessPoliciesRequest {
 	policies := ctx.String(accessPolicyListFlag.Name)
+	log.Info("Using access policies: ", policies)
 	if policies == "" {
 		return client.AccessPoliciesRequest{}
 	}
