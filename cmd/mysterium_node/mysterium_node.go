@@ -28,7 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/cmd/commands/version"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (

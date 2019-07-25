@@ -23,7 +23,7 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (

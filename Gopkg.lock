@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:9f3b30d9f8e0d7040f729b82dcbc8f0dead820a133b3147ce355fc451f32d761"
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005"
+  version = "v0.3.1"
+
+[[projects]]
   digest = "1:f96ba6ecca7ba87b1dddd70ae38cfc4ce5ea844f58d1f728e121d2e29cdfb8a2"
   name = "github.com/allegro/bigcache"
   packages = [
@@ -792,14 +800,6 @@
   version = "v0.5.6"
 
 [[projects]]
-  digest = "1:b24d38b282bacf9791408a080f606370efa3d364e4b5fd9ba0f7b87786d3b679"
-  name = "github.com/urfave/cli"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
-  version = "v1.20.0"
-
-[[projects]]
   digest = "1:172f94a6b3644a8f9e6b5e5b7fc9fe1e42d424f52a0300b2e7ab1e57db73f85d"
   name = "github.com/xanzy/ssh-agent"
   packages = ["."]
@@ -1086,6 +1086,17 @@
   version = "v4.11.0"
 
 [[projects]]
+  digest = "1:5f1425074efce8ad776450fda6bdd11e816c825771ba56654493d5fdeac27322"
+  name = "gopkg.in/urfave/cli.v1"
+  packages = [
+    ".",
+    "altsrc",
+  ]
+  pruneopts = "UT"
+  revision = "cfb38830724cc34fedffe9a2a29fb54fa9169cd1"
+  version = "v1.20.0"
+
+[[projects]]
   digest = "1:78d374b493e747afa9fbb2119687e3740a7fb8d0ebabddfef0a012593aaecbb3"
   name = "gopkg.in/warnings.v0"
   packages = ["."]
@@ -1173,7 +1184,6 @@
     "github.com/songgao/water",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/suite",
-    "github.com/urfave/cli",
     "golang.org/x/crypto/bcrypt",
     "golang.org/x/crypto/curve25519",
     "golang.org/x/net/html",
@@ -1181,6 +1191,8 @@
     "golang.org/x/sys/windows/registry",
     "golang.zx2c4.com/wireguard/wgctrl",
     "golang.zx2c4.com/wireguard/wgctrl/wgtypes",
+    "gopkg.in/urfave/cli.v1",
+    "gopkg.in/urfave/cli.v1/altsrc",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

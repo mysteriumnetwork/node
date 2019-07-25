@@ -18,7 +18,7 @@
 package core
 
 import (
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (

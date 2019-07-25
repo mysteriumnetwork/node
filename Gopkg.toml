@@ -85,11 +85,6 @@
     name = "github.com/mysteriumnetwork/payments"
     unused-packages = false
 
-
-[[constraint]]
-  name = "github.com/urfave/cli"
-  version = "1.20.0"
-
 [[constraint]]
   name = "github.com/asdine/storm"
   version = "2.2.1"
@@ -161,3 +156,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/mysteriumnetwork/go-ci"
+
+[[constraint]]
+  name = "gopkg.in/urfave/cli.v1"
+  version = "1.20.0"

@@ -21,7 +21,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/logconfig"
 	openvpn_core "github.com/mysteriumnetwork/node/services/openvpn/core"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (

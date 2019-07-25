@@ -20,7 +20,7 @@ package daemon
 import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var log = logconfig.NewLogger()

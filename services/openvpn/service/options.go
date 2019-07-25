@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // Options describes options which are required to start Openvpn service

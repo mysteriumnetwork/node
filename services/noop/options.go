@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 
 	"github.com/mysteriumnetwork/node/core/service"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // ParseFlags function fills in Noop options from CLI context
