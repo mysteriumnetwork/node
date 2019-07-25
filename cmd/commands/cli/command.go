@@ -28,6 +28,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/cmd/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -58,8 +59,9 @@ var log = logconfig.NewLogger()
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
 	return &cli.Command{
-		Name:  cliCommandName,
-		Usage: "Starts a CLI client with a Tequilapi",
+		Name:   cliCommandName,
+		Usage:  "Starts a CLI client with a Tequilapi",
+		Before: config.LoadConfigurationFileQuietly,
 		Action: func(ctx *cli.Context) error {
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			cmdCLI := &cliApp{

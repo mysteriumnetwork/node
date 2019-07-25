@@ -25,6 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
+	"github.com/mysteriumnetwork/node/cmd/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -35,6 +36,7 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 const serviceCommandName = "service"
@@ -72,6 +74,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		Name:      serviceCommandName,
 		Usage:     "Starts and publishes services on Mysterium Network",
 		ArgsUsage: "comma separated list of services to start",
+		Before:    config.LoadConfigurationFileQuietly,
 		Action: func(ctx *cli.Context) error {
 			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
 				printTermWarning(licenseCommandName)
