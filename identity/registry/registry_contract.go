@@ -24,8 +24,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/payments/bindings"
+
+	"github.com/mysteriumnetwork/node/identity"
 )
 
 const logPrefix = "[registry] "

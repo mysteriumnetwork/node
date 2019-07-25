@@ -22,28 +22,28 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/registration"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
 type transactor struct {
 	http            requests.HTTPTransport
 	endpointAddress string
-	registryAddress string
-	accountantID    string
 	signerFactory   identity.SignerFactory
 	regReq          *IdentityRegistrationRequest
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(endpointAddress, registryAddress, accountantID string, signerFactory identity.SignerFactory) *transactor {
+func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID string, signerFactory identity.SignerFactory) *transactor {
 	return &transactor{
-		http:            requests.NewHTTPClient(20 * time.Second),
+		http:            requests.NewHTTPClient(bindAddress, 20*time.Second),
 		endpointAddress: endpointAddress,
 		signerFactory:   signerFactory,
 		regReq:          &IdentityRegistrationRequest{RegistryAddress: registryAddress, AccountantID: accountantID},
@@ -127,8 +127,19 @@ func (t *transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 
 func (t *transactor) fillIdentityRegistrationRequest(id string, regReqDTO *IdentityRegistrationRequestDTO) error {
 	t.regReq.Stake = regReqDTO.Stake
-	t.regReq.Beneficiary = regReqDTO.Beneficiary
 	t.regReq.Fee = regReqDTO.Fee
+
+	if regReqDTO.Beneficiary == "" {
+		// TODO: inject ChannelImplAddress through constructor
+		channelAddress, err := pc.GenerateChannelAddress(id, t.regReq.RegistryAddress, metadata.TestnetDefinition.ChannelImplAddress)
+		if err != nil {
+			return errors.Wrap(err, "failed to calculate channel address")
+		}
+
+		t.regReq.Beneficiary = channelAddress
+	} else {
+		t.regReq.Beneficiary = regReqDTO.Beneficiary
+	}
 
 	signer := t.signerFactory(identity.FromAddress(id))
 
@@ -139,7 +150,7 @@ func (t *transactor) fillIdentityRegistrationRequest(id string, regReqDTO *Ident
 
 	signatureHex := common.Bytes2Hex(sig)
 	t.regReq.Signature = strings.ToLower(fmt.Sprintf("0x%v", signatureHex))
-
+	log.Info("regReq: %v", t.regReq)
 	t.regReq.Identity = id
 
 	return nil
@@ -165,8 +176,15 @@ func (t *transactor) signRegistrationRequest(signer identity.Signer) ([]byte, er
 	}
 
 	message := req.GetMessage()
-	hash := crypto.Keccak256Hash(message)
 
-	signature, err := signer.Sign(hash.Bytes())
+	signature, err := signer.Sign(message)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to sign a registration request")
+	}
+
+	err = pc.ReformatSignatureVForBC(signature.Bytes())
+	if err != nil {
+		return nil, errors.Wrap(err, "signature reformat failed")
+	}
 	return signature.Bytes(), err
 }

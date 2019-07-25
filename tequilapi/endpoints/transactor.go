@@ -98,13 +98,15 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 
 	regReqDTO := &transactor.IdentityRegistrationRequestDTO{}
 
-	err := json.NewDecoder(request.Body).Decode(&regReqDTO)
-	if err != nil {
-		utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
-		return
+	if request.ContentLength > 0 {
+		err := json.NewDecoder(request.Body).Decode(&regReqDTO)
+		if err != nil {
+			utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
+			return
+		}
 	}
 
-	err = te.transactor.RegisterIdentity(identity, regReqDTO)
+	err := te.transactor.RegisterIdentity(identity, regReqDTO)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
 		return
