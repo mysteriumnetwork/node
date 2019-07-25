@@ -53,7 +53,7 @@ const serviceHelp = `service <action> [args]
 	list
 	sessions
 
-	example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --access-policy.list=mysterium --openvpn.port=1194 --openvpn.proto=UDP`
+	example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --openvpn.port=1194 --openvpn.proto=UDP`
 
 var log = logconfig.NewLogger()
 
