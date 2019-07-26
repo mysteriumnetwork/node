@@ -21,11 +21,12 @@ import (
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	qualityTypeFlag = cli.StringFlag{
+	qualityTypeFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name: "quality.type",
 		Usage: fmt.Sprintf(
 			"Quality Oracle adapter. Options:  (%s, %s, %s - %s)",
@@ -35,15 +36,15 @@ var (
 			"opt-out from sending quality metrics",
 		),
 		Value: string(node.QualityTypeMORQA),
-	}
-	qualityAddressFlag = cli.StringFlag{
+	})
+	qualityAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name: "quality.address",
 		Usage: fmt.Sprintf(
 			"Address of specific Quality Oracle adapter given in '--%s'",
 			qualityTypeFlag.Name,
 		),
 		Value: "https://quality.mysterium.network/api/v1",
-	}
+	})
 )
 
 // RegisterFlagsQuality function register Quality Oracle flags to flag list

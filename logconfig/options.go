@@ -23,7 +23,8 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/metadata"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 // LogOptions log options
@@ -39,8 +40,8 @@ var CurrentLogOptions = LogOptions{
 }
 
 var (
-	logLevel = cli.StringFlag{
-		Name: "log-level, l",
+	logLevel = altsrc.NewStringFlag(cli.StringFlag{
+		Name: "log-level",
 		Usage: func() string {
 			allLevels := []string{log.TraceStr, log.DebugStr, log.InfoStr, log.WarnStr, log.ErrorStr, log.CriticalStr, log.OffStr}
 			return fmt.Sprintf("Set the logging level (%s)", strings.Join(allLevels, "|"))
@@ -52,7 +53,7 @@ var (
 			}
 			return level
 		}(),
-	}
+	})
 )
 
 // RegisterFlags registers logger CLI flags

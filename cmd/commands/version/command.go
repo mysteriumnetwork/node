@@ -20,7 +20,7 @@ package version
 import (
 	"fmt"
 
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // NewCommand function creates version command

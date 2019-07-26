@@ -36,5 +36,7 @@ fi
 
 # Install myst
 install --mode=644 default-myst-conf /etc/default/mysterium-node
+mkdir -p /etc/mysterium-node
+install --mode=644 config.toml /etc/mysterium-node/config.toml
 chmod 755 myst_linux_armhf.deb
 yes | dpkg -i myst_linux_armhf.deb

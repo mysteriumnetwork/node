@@ -25,6 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
+	"github.com/mysteriumnetwork/node/cmd/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -34,7 +35,8 @@ import (
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 const serviceCommandName = "service"
@@ -42,27 +44,27 @@ const serviceCommandName = "service"
 var log = logconfig.NewLogger()
 
 var (
-	identityFlag = cli.StringFlag{
+	identityFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "identity",
 		Usage: "Keystore's identity used to provide service. If not given identity will be created automatically",
 		Value: "",
-	}
-	identityPassphraseFlag = cli.StringFlag{
+	})
+	identityPassphraseFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "identity.passphrase",
 		Usage: "Used to unlock keystore's identity",
 		Value: "",
-	}
+	})
 
-	agreedTermsConditionsFlag = cli.BoolFlag{
+	agreedTermsConditionsFlag = altsrc.NewBoolFlag(cli.BoolFlag{
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
-	}
+	})
 
-	accessPolicyListFlag = cli.StringFlag{
+	accessPolicyListFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "access-policy.list",
 		Usage: "Comma separated list that determines the allowed identities on our service.",
 		Value: "",
-	}
+	})
 )
 
 // NewCommand function creates service command
@@ -72,6 +74,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		Name:      serviceCommandName,
 		Usage:     "Starts and publishes services on Mysterium Network",
 		ArgsUsage: "comma separated list of services to start",
+		Before:    config.LoadConfigurationFileQuietly,
 		Action: func(ctx *cli.Context) error {
 			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
 				printTermWarning(licenseCommandName)
@@ -197,6 +200,7 @@ func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 // parseAccessPolicyFlag fetches the access policy data from CLI context
 func parseAccessPolicyFlag(ctx *cli.Context) client.AccessPoliciesRequest {
 	policies := ctx.String(accessPolicyListFlag.Name)
+	log.Info("Using access policies: ", policies)
 	if policies == "" {
 		return client.AccessPoliciesRequest{}
 	}

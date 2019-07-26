@@ -19,8 +19,9 @@ package daemon
 
 import (
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/cmd/config"
 	"github.com/mysteriumnetwork/node/logconfig"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var log = logconfig.NewLogger()
@@ -33,6 +34,7 @@ func NewCommand() *cli.Command {
 		Name:      "daemon",
 		Usage:     "Starts Mysterium Tequilapi service",
 		ArgsUsage: " ",
+		Before:    config.LoadConfigurationFileQuietly,
 		Action: func(ctx *cli.Context) error {
 			quit := make(chan error, 2)
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {

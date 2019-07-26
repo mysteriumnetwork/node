@@ -21,17 +21,18 @@ import (
 	"fmt"
 
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	ipDetectorURLFlag = cli.StringFlag{
+	ipDetectorURLFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "ip-detector",
 		Usage: "Address (URL form) of ip detection service",
 		Value: "https://testnet-location.mysterium.network/api/v1/location",
-	}
+	})
 
-	locationTypeFlag = cli.StringFlag{
+	locationTypeFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name: "location.type",
 		Usage: fmt.Sprintf(
 			"Location autodetect adapter. Options: { %s, %s, %s, %s }",
@@ -41,30 +42,30 @@ var (
 			node.LocationTypeManual,
 		),
 		Value: string(node.LocationTypeOracle),
-	}
-	locationAddressFlag = cli.StringFlag{
+	})
+	locationAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name: "location.address",
 		Usage: fmt.Sprintf(
 			"Address of specific location adapter given in '--%s'",
 			locationTypeFlag.Name,
 		),
 		Value: "https://testnet-location.mysterium.network/api/v1/location",
-	}
-	locationCountryFlag = cli.StringFlag{
+	})
+	locationCountryFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "location.country",
 		Usage: "Service location country",
 		Value: "",
-	}
-	locationCityFlag = cli.StringFlag{
+	})
+	locationCityFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "location.city",
 		Usage: "Service location city",
 		Value: "",
-	}
-	locationNodeTypeFlag = cli.StringFlag{
+	})
+	locationNodeTypeFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "location.node-type",
 		Usage: "Service location node type",
 		Value: "",
-	}
+	})
 )
 
 // RegisterFlagsLocation function register location flags to flag list

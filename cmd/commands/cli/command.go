@@ -28,6 +28,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
+	"github.com/mysteriumnetwork/node/cmd/config"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -39,7 +40,8 @@ import (
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 const cliCommandName = "cli"
@@ -51,15 +53,16 @@ const serviceHelp = `service <action> [args]
 	list
 	sessions
 
-	example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --access-policy.list=mysterium --openvpn.port=1194 --openvpn.proto=UDP`
+	example: service start 0x7d5ee3557775aed0b85d691b036769c17349db23 openvpn --openvpn.port=1194 --openvpn.proto=UDP`
 
 var log = logconfig.NewLogger()
 
 // NewCommand constructs CLI based Mysterium UI with possibility to control quiting
 func NewCommand() *cli.Command {
 	return &cli.Command{
-		Name:  cliCommandName,
-		Usage: "Starts a CLI client with a Tequilapi",
+		Name:   cliCommandName,
+		Usage:  "Starts a CLI client with a Tequilapi",
+		Before: config.LoadConfigurationFileQuietly,
 		Action: func(ctx *cli.Context) error {
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			cmdCLI := &cliApp{
@@ -100,11 +103,11 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --conditions'",
 ))
 
-var accessPolicyFlag = cli.StringFlag{
+var accessPolicyFlag = altsrc.NewStringFlag(cli.StringFlag{
 	Name:  "access-policy.list",
 	Usage: "access policy lists to use in order to limit access to the service. Accepts a comma separated list. For example: mysterium,private",
 	Value: "",
-}
+})
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *cliApp) Run() (err error) {

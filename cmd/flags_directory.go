@@ -23,7 +23,7 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 const (
@@ -69,11 +69,11 @@ func RegisterFlagsDirectory(flags *[]cli.Flag) error {
 func ParseFlagsDirectory(ctx *cli.Context) node.OptionsDirectory {
 	dataDir := ctx.GlobalString(dataDirFlag)
 	return node.OptionsDirectory{
-		dataDir,
-		filepath.Join(dataDir, "db"),
-		filepath.Join(dataDir, "keystore"),
-		ctx.GlobalString(configDirFlag),
-		ctx.GlobalString(runtimeDirFlag),
+		Data:     dataDir,
+		Storage:  filepath.Join(dataDir, "db"),
+		Keystore: filepath.Join(dataDir, "keystore"),
+		Config:   ctx.GlobalString(configDirFlag),
+		Runtime:  ctx.GlobalString(runtimeDirFlag),
 	}
 }
 
