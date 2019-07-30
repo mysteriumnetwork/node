@@ -96,7 +96,7 @@ func (r *runner) startAppContainers() error {
 	}
 
 	dbUp := false
-	for start := time.Now(); !dbUp && time.Since(start) < 30*time.Second; {
+	for start := time.Now(); !dbUp && time.Since(start) < 60*time.Second; {
 		err := r.compose("exec", "-T", "db", "mysqladmin", "ping", "--protocol=TCP", "--silent")
 		if err != nil {
 			log.Info("Waiting...")

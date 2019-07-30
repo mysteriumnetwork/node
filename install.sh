@@ -112,7 +112,8 @@ install_dependencies() {
     echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable.list
     printf 'Package: *\nPin: release a=unstable\nPin-Priority: 90\n' > /etc/apt/preferences.d/limit-unstable
     apt-get install dirmngr
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 7638D0442B90D010 04EE7237B7D453EC
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 04EE7237B7D453EC
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ECCB6A56B22C536D
     apt-get update
     apt-get install -y wireguard
 }
