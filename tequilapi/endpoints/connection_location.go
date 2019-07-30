@@ -22,6 +22,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
@@ -29,15 +30,53 @@ import (
 // ConnectionLocationEndpoint struct represents /connection/location resource and it's subresources.
 type ConnectionLocationEndpoint struct {
 	manager          connection.Manager
+	ipResolver       ip.Resolver
 	locationResolver location.Resolver
 }
 
 // NewConnectionLocationEndpoint creates and returns connection location endpoint.
-func NewConnectionLocationEndpoint(manager connection.Manager, locationResolver location.Resolver) *ConnectionLocationEndpoint {
+func NewConnectionLocationEndpoint(
+	manager connection.Manager,
+	ipResolver ip.Resolver,
+	locationResolver location.Resolver,
+) *ConnectionLocationEndpoint {
 	return &ConnectionLocationEndpoint{
 		manager:          manager,
+		ipResolver:       ipResolver,
 		locationResolver: locationResolver,
 	}
+}
+
+// GetIP responds with current ip, using its ip resolver
+// swagger:operation GET /connection/ip Connection connectionIP
+// ---
+// summary: Returns IP address
+// description: Returns current public IP address
+// responses:
+//   200:
+//     description: Public IP address
+//     schema:
+//       "$ref": "#/definitions/IPDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   503:
+//     description: Service unavailable
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (le *ConnectionLocationEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ipAddress, err := le.ipResolver.GetPublicIP()
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
+	}
+
+	response := ipResponse{
+		IP: ipAddress,
+	}
+
+	utils.WriteAsJSON(response, writer)
 }
 
 // GetConnectionLocation responds with current connection location
@@ -70,9 +109,14 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.Response
 }
 
 // AddRoutesForConnectionLocation adds connection location routes to given router
-func AddRoutesForConnectionLocation(router *httprouter.Router, manager connection.Manager,
-	locationResolver location.Resolver) {
+func AddRoutesForConnectionLocation(
+	router *httprouter.Router,
+	manager connection.Manager,
+	ipResolver ip.Resolver,
+	locationResolver location.Resolver,
+) {
 
-	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, locationResolver)
+	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, ipResolver, locationResolver)
+	router.GET("/connection/ip", connectionLocationEndpoint.GetIP)
 	router.GET("/connection/location", connectionLocationEndpoint.GetConnectionLocation)
 }

@@ -25,19 +25,24 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 
-	AddRoutesForConnectionLocation(router, &mockConnectionManager{
-		onStatusReturn: connection.Status{
-			State: connection.Connected,
+	AddRoutesForConnectionLocation(
+		router,
+		&mockConnectionManager{
+			onStatusReturn: connection.Status{
+				State: connection.Connected,
+			},
 		},
-	}, &locationResolverMock{
-		ip: "1.2.3.4",
-	})
+		ip.NewResolverMock("123.123.123.123"),
+		&locationResolverMock{ip: "1.2.3.4"},
+	)
 
 	tests := []struct {
 		method         string
@@ -46,6 +51,10 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 		expectedStatus int
 		expectedJSON   string
 	}{
+		{
+			http.MethodGet, "/connection/ip", "",
+			http.StatusOK, `{"ip": "123.123.123.123"}`,
+		},
 		{
 			http.MethodGet, "/connection/location", "",
 			http.StatusOK,
@@ -77,7 +86,7 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 func TestAddRoutesForConnectionLocationFailOnDisconnectedState(t *testing.T) {
 	router := httprouter.New()
 
-	AddRoutesForConnectionLocation(router, &mockConnectionManager{}, &locationResolverMock{ip: "1.2.3.4"})
+	AddRoutesForConnectionLocation(router, &mockConnectionManager{}, ip.NewResolverMock("123.123.123.123"), &locationResolverMock{ip: "1.2.3.4"})
 
 	tests := []struct {
 		method         string
@@ -104,4 +113,40 @@ func TestAddRoutesForConnectionLocationFailOnDisconnectedState(t *testing.T) {
 			assert.Equal(t, "", resp.Body.String())
 		}
 	}
+}
+
+func TestGetIPEndpointSucceeds(t *testing.T) {
+	manager := mockConnectionManager{}
+	ipResolver := ip.NewResolverMock("123.123.123.123")
+	endpoint := NewConnectionLocationEndpoint(&manager, ipResolver, nil)
+	resp := httptest.NewRecorder()
+
+	endpoint.GetIP(resp, nil, nil)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"ip": "123.123.123.123"
+		}`,
+		resp.Body.String(),
+	)
+}
+
+func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
+	manager := mockConnectionManager{}
+	ipResolver := ip.NewResolverMockFailing(errors.New("fake error"))
+	endpoint := NewConnectionLocationEndpoint(&manager, ipResolver, nil)
+	resp := httptest.NewRecorder()
+
+	endpoint.GetIP(resp, nil, nil)
+
+	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
+	assert.JSONEq(
+		t,
+		`{
+			"message": "fake error"
+		}`,
+		resp.Body.String(),
+	)
 }
