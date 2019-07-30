@@ -106,8 +106,8 @@ func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDa
 	return status, err
 }
 
-// Connect initiates a new connection to a host identified by providerID
-func (client *Client) Connect(consumerID, providerID, serviceType string, options ConnectOptions) (status StatusDTO, err error) {
+// ConnectionCreate initiates a new connection to a host identified by providerID
+func (client *Client) ConnectionCreate(consumerID, providerID, serviceType string, options ConnectOptions) (status StatusDTO, err error) {
 	payload := struct {
 		Identity    string         `json:"consumerId"`
 		ProviderID  string         `json:"providerId"`
@@ -127,8 +127,8 @@ func (client *Client) Connect(consumerID, providerID, serviceType string, option
 	return status, err
 }
 
-// Disconnect terminates current connection
-func (client *Client) Disconnect() (err error) {
+// ConnectionDestroy terminates current connection
+func (client *Client) ConnectionDestroy() (err error) {
 	response, err := client.http.Delete("connection", nil)
 	if err != nil {
 		return
@@ -151,8 +151,8 @@ func (client *Client) ConnectionStatistics() (StatisticsDTO, error) {
 	return statistics, err
 }
 
-// Status returns connection status
-func (client *Client) Status() (StatusDTO, error) {
+// ConnectionStatus returns connection status
+func (client *Client) ConnectionStatus() (StatusDTO, error) {
 	response, err := client.http.Get("connection", url.Values{})
 	if err != nil {
 		return StatusDTO{}, err
@@ -162,6 +162,21 @@ func (client *Client) Status() (StatusDTO, error) {
 	var status StatusDTO
 	err = parseResponseJSON(response, &status)
 	return status, err
+}
+
+// ConnectionIP returns public ip
+func (client *Client) ConnectionIP() (string, error) {
+	response, err := client.http.Get("connection/ip", url.Values{})
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	var ipData struct {
+		IP string `json:"ip"`
+	}
+	err = parseResponseJSON(response, &ipData)
+	return ipData.IP, err
 }
 
 // Healthcheck returns a healthcheck info
@@ -202,21 +217,6 @@ func (client *Client) Proposals() ([]ProposalDTO, error) {
 	var proposals ProposalList
 	err = parseResponseJSON(response, &proposals)
 	return proposals.Proposals, err
-}
-
-// GetIP returns public ip
-func (client *Client) GetIP() (string, error) {
-	response, err := client.http.Get("connection/ip", url.Values{})
-	if err != nil {
-		return "", err
-	}
-	defer response.Body.Close()
-
-	var ipData struct {
-		IP string `json:"ip"`
-	}
-	err = parseResponseJSON(response, &ipData)
-	return ipData.IP, err
 }
 
 // Unlock allows using identity in following commands

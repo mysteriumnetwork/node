@@ -311,7 +311,7 @@ func (c *cliApp) connect(argsString string) {
 	args := strings.Fields(argsString)
 
 	if len(args) < 3 {
-		info("Please type in the provider identity. Connect <consumer-identity> <provider-identity> <service-type> [disable-kill-switch]")
+		info("Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [disable-kill-switch]")
 		return
 	}
 
@@ -342,7 +342,7 @@ func (c *cliApp) connect(argsString string) {
 
 	status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	_, err = c.tequilapi.Connect(consumerID, providerID, serviceType, connectOptions)
+	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, serviceType, connectOptions)
 	if err != nil {
 		warn(err)
 		return
@@ -421,7 +421,7 @@ func (c *cliApp) payout(argsString string) {
 }
 
 func (c *cliApp) disconnect() {
-	err := c.tequilapi.Disconnect()
+	err := c.tequilapi.ConnectionDestroy()
 	if err != nil {
 		warn(err)
 		return
@@ -431,7 +431,7 @@ func (c *cliApp) disconnect() {
 }
 
 func (c *cliApp) status() {
-	status, err := c.tequilapi.Status()
+	status, err := c.tequilapi.ConnectionStatus()
 	if err != nil {
 		warn(err)
 	} else {
@@ -517,7 +517,7 @@ func (c *cliApp) fetchProposals() []tequilapi_client.ProposalDTO {
 }
 
 func (c *cliApp) ip() {
-	ip, err := c.tequilapi.GetIP()
+	ip, err := c.tequilapi.ConnectionIP()
 	if err != nil {
 		warn(err)
 		return
