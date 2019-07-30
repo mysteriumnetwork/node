@@ -179,6 +179,18 @@ func (client *Client) ConnectionIP() (string, error) {
 	return ipData.IP, err
 }
 
+// ConnectionLocation returns current location
+func (client *Client) ConnectionLocation() (location LocationDTO, err error) {
+	response, err := client.http.Get("connection/location", url.Values{})
+	if err != nil {
+		return location, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &location)
+	return location, err
+}
+
 // Healthcheck returns a healthcheck info
 func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
 	response, err := client.http.Get("healthcheck", url.Values{})
@@ -189,6 +201,18 @@ func (client *Client) Healthcheck() (healthcheck HealthcheckDTO, err error) {
 	defer response.Body.Close()
 	err = parseResponseJSON(response, &healthcheck)
 	return healthcheck, err
+}
+
+// OriginLocation returns original location
+func (client *Client) OriginLocation() (location LocationDTO, err error) {
+	response, err := client.http.Get("location", url.Values{})
+	if err != nil {
+		return location, err
+	}
+	defer response.Body.Close()
+
+	err = parseResponseJSON(response, &location)
+	return location, err
 }
 
 // ProposalsByType fetches proposals by given type

@@ -30,27 +30,30 @@ import (
 type locationResponse struct {
 	// IP address
 	// example: 1.2.3.4
-	IP string
+	IP string `json:"ip"`
 	// Autonomous system number
 	// example: 62179
-	ASN int
+	ASN int `json:"asn"`
 	// Internet Service Provider name
 	// example: Telia Lietuva, AB
-	ISP string
+	ISP string `json:"isp"`
 
 	// Continent
 	// example: EU
-	Continent string
+	Continent string `json:"continent"`
 	// Node Country
 	// example: LT
-	Country string
+	Country string `json:"country"`
 	// Node City
 	// example: Vilnius
-	City string
+	City string `json:"city"`
 
-	// Node type
+	// User type (data_center, residential, etc.)
 	// example: residential
-	UserType string
+	UserType string `json:"userType"`
+	// User type (DEPRECIATED)
+	// example: residential
+	NodeType string `json:"node_type"`
 }
 
 // LocationEndpoint struct represents /location resource and it's subresources
@@ -86,7 +89,17 @@ func (le *LocationEndpoint) GetLocation(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	utils.WriteAsJSON(currentLocation, writer)
+	response := locationResponse{
+		IP:        currentLocation.IP,
+		ASN:       currentLocation.ASN,
+		ISP:       currentLocation.ISP,
+		Continent: currentLocation.Continent,
+		Country:   currentLocation.Country,
+		City:      currentLocation.City,
+		UserType:  currentLocation.NodeType,
+		NodeType:  currentLocation.NodeType,
+	}
+	utils.WriteAsJSON(response, writer)
 }
 
 // AddRoutesForLocation adds location routes to given router

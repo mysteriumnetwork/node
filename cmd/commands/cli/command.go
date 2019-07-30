@@ -161,7 +161,7 @@ func (c *cliApp) handleActions(line string) {
 		{"status", c.status},
 		{"healthcheck", c.healthcheck},
 		{"nat", c.natStatus},
-		{"ip", c.ip},
+		{"location", c.location},
 		{"disconnect", c.disconnect},
 		{"stop", c.stopClient},
 	}
@@ -439,12 +439,27 @@ func (c *cliApp) status() {
 		info("SID:", status.SessionID)
 	}
 
+	ip, err := c.tequilapi.ConnectionIP()
+	if err != nil {
+		warn(err)
+	} else {
+		info("IP:", ip)
+	}
+
+	location, err := c.tequilapi.ConnectionLocation()
+	if err != nil {
+		warn(err)
+	} else {
+		info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
+	}
+
 	if status.Status == statusConnected {
+		info("Proposal:", status.Proposal)
+
 		statistics, err := c.tequilapi.ConnectionStatistics()
 		if err != nil {
 			warn(err)
 		} else {
-			info("Proposal:", status.Proposal)
 			info(fmt.Sprintf("Connection duration: %ds", statistics.Duration))
 			info("Bytes sent:", statistics.BytesSent)
 			info("Bytes received:", statistics.BytesReceived)
@@ -516,18 +531,18 @@ func (c *cliApp) fetchProposals() []tequilapi_client.ProposalDTO {
 	return proposals
 }
 
-func (c *cliApp) ip() {
-	ip, err := c.tequilapi.ConnectionIP()
+func (c *cliApp) location() {
+	location, err := c.tequilapi.OriginLocation()
 	if err != nil {
 		warn(err)
 		return
 	}
 
-	info("IP:", ip)
+	info(fmt.Sprintf("Location: %s, %s (%s - %s)", location.City, location.Country, location.UserType, location.ISP))
 }
 
 func (c *cliApp) help() {
-	info("Mysterium CLI tequilapi commands:")
+	info("Mysterium CLI tequipilapi commands:")
 	fmt.Println(c.completer.Tree("  "))
 }
 
@@ -706,7 +721,7 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 		readline.PcItem("healthcheck"),
 		readline.PcItem("nat"),
 		readline.PcItem("proposals"),
-		readline.PcItem("ip"),
+		readline.PcItem("location"),
 		readline.PcItem("disconnect"),
 		readline.PcItem("help"),
 		readline.PcItem("quit"),

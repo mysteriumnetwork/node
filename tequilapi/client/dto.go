@@ -55,11 +55,11 @@ func (p ProposalDTO) String() string {
 
 // ServiceDefinitionDTO describes service of proposal
 type ServiceDefinitionDTO struct {
-	LocationOriginate LocationDTO `json:"locationOriginate"`
+	LocationOriginate ServiceLocationDTO `json:"locationOriginate"`
 }
 
-// LocationDTO describes location
-type LocationDTO struct {
+// ServiceLocationDTO describes location of proposal
+type ServiceLocationDTO struct {
 	Country string `json:"country"`
 }
 
@@ -81,11 +81,24 @@ type HealthcheckDTO struct {
 	BuildInfo BuildInfoDTO `json:"buildInfo"`
 }
 
-// BuildInfoDTO holds info about build
+// BuildInfoDTO holds info
 type BuildInfoDTO struct {
 	Commit      string `json:"commit"`
 	Branch      string `json:"branch"`
 	BuildNumber string `json:"buildNumber"`
+}
+
+// LocationDTO describes location metadata
+type LocationDTO struct {
+	IP  string `json:"ip"`
+	ASN int    `json:"asn"`
+	ISP string `json:"isp"`
+
+	Continent string `json:"continent"`
+	Country   string `json:"country"`
+	City      string `json:"city"`
+
+	UserType string `json:"userType"`
 }
 
 // RegistrationDataDTO holds input data required to register new myst identity on blockchain smart contract
