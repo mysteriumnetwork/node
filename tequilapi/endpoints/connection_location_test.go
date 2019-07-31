@@ -32,7 +32,8 @@ import (
 )
 
 type locationResolverMock struct {
-	ip string
+	ip       string
+	ipOrigin string
 }
 
 func (r *locationResolverMock) DetectLocation() (location.Location, error) {
@@ -49,9 +50,24 @@ func (r *locationResolverMock) DetectLocation() (location.Location, error) {
 	return loc, nil
 }
 
+func (r *locationResolverMock) GetOrigin() (location.Location, error) {
+	loc := location.Location{
+		ASN:       62179,
+		City:      "Vilnius",
+		Continent: "EU",
+		Country:   "LT",
+		IP:        r.ipOrigin,
+		ISP:       "Telia Lietuva, AB",
+		NodeType:  "residential",
+	}
+
+	return loc, nil
+}
+
 func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 	router := httprouter.New()
 
+	locationResolver := &locationResolverMock{ip: "1.2.3.4", ipOrigin: "1.2.3.1"}
 	AddRoutesForConnectionLocation(
 		router,
 		&mockConnectionManager{
@@ -60,7 +76,8 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 			},
 		},
 		ip.NewResolverMock("123.123.123.123"),
-		&locationResolverMock{ip: "1.2.3.4"},
+		locationResolver,
+		locationResolver,
 	)
 
 	tests := []struct {
@@ -96,7 +113,7 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 				"city": "Vilnius",
 				"continent": "EU",
 				"country": "LT",
-				"ip": "1.2.3.4",
+				"ip": "1.2.3.1",
 				"isp": "Telia Lietuva, AB",
 				"userType": "residential",
 				"node_type": "residential"
@@ -117,45 +134,13 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 	}
 }
 
-func TestAddRoutesForConnectionLocationFailOnDisconnectedState(t *testing.T) {
-	router := httprouter.New()
-
-	AddRoutesForConnectionLocation(router, &mockConnectionManager{}, ip.NewResolverMock("123.123.123.123"), &locationResolverMock{ip: "1.2.3.4"})
-
-	tests := []struct {
-		method         string
-		path           string
-		body           string
-		expectedStatus int
-		expectedJSON   string
-	}{
-		{
-			http.MethodGet, "/connection/location", "",
-			http.StatusServiceUnavailable,
-			`{"message":"Connection is not connected"}`,
-		},
-	}
-
-	for _, test := range tests {
-		resp := httptest.NewRecorder()
-		req := httptest.NewRequest(test.method, test.path, strings.NewReader(test.body))
-		router.ServeHTTP(resp, req)
-		assert.Equal(t, test.expectedStatus, resp.Code)
-		if test.expectedJSON != "" {
-			assert.JSONEq(t, test.expectedJSON, resp.Body.String())
-		} else {
-			assert.Equal(t, "", resp.Body.String())
-		}
-	}
-}
-
 func TestGetIPEndpointSucceeds(t *testing.T) {
 	manager := mockConnectionManager{}
 	ipResolver := ip.NewResolverMock("123.123.123.123")
-	endpoint := NewConnectionLocationEndpoint(&manager, ipResolver, nil)
+	endpoint := NewConnectionLocationEndpoint(&manager, ipResolver, nil, nil)
 	resp := httptest.NewRecorder()
 
-	endpoint.GetIP(resp, nil, nil)
+	endpoint.GetConnectionIP(resp, nil, nil)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
 	assert.JSONEq(
@@ -170,10 +155,10 @@ func TestGetIPEndpointSucceeds(t *testing.T) {
 func TestGetIPEndpointReturnsErrorWhenIPDetectionFails(t *testing.T) {
 	manager := mockConnectionManager{}
 	ipResolver := ip.NewResolverMockFailing(errors.New("fake error"))
-	endpoint := NewConnectionLocationEndpoint(&manager, ipResolver, nil)
+	endpoint := NewConnectionLocationEndpoint(&manager, ipResolver, nil, nil)
 	resp := httptest.NewRecorder()
 
-	endpoint.GetIP(resp, nil, nil)
+	endpoint.GetConnectionIP(resp, nil, nil)
 
 	assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
 	assert.JSONEq(

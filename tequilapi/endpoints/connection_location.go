@@ -72,9 +72,10 @@ func locationToRes(l location.Location) locationResponse {
 
 // ConnectionLocationEndpoint struct represents /connection/location resource and it's subresources.
 type ConnectionLocationEndpoint struct {
-	manager          connection.Manager
-	ipResolver       ip.Resolver
-	locationResolver location.Resolver
+	manager                connection.Manager
+	ipResolver             ip.Resolver
+	locationResolver       location.Resolver
+	locationOriginResolver location.OriginResolver
 }
 
 // NewConnectionLocationEndpoint creates and returns connection location endpoint.
@@ -82,16 +83,18 @@ func NewConnectionLocationEndpoint(
 	manager connection.Manager,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
+	locationOriginResolver location.OriginResolver,
 ) *ConnectionLocationEndpoint {
 	return &ConnectionLocationEndpoint{
-		manager:          manager,
-		ipResolver:       ipResolver,
-		locationResolver: locationResolver,
+		manager:                manager,
+		ipResolver:             ipResolver,
+		locationResolver:       locationResolver,
+		locationOriginResolver: locationOriginResolver,
 	}
 }
 
-// GetIP responds with current ip, using its ip resolver
-// swagger:operation GET /connection/ip Connection connectionIP
+// GetConnectionIP responds with current ip, using its ip resolver
+// swagger:operation GET /connection/ip Connection getConnectionIP
 // ---
 // summary: Returns IP address
 // description: Returns current public IP address
@@ -108,7 +111,7 @@ func NewConnectionLocationEndpoint(
 //     description: Service unavailable
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (le *ConnectionLocationEndpoint) GetIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+func (le *ConnectionLocationEndpoint) GetConnectionIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
 	ipAddress, err := le.ipResolver.GetPublicIP()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
@@ -136,11 +139,6 @@ func (le *ConnectionLocationEndpoint) GetIP(writer http.ResponseWriter, request 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	if le.manager.Status().State != connection.Connected {
-		utils.SendErrorMessage(writer, "Connection is not connected", http.StatusServiceUnavailable)
-		return
-	}
-
 	currentLocation, err := le.locationResolver.DetectLocation()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
@@ -150,8 +148,8 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.Response
 	utils.WriteAsJSON(locationToRes(currentLocation), writer)
 }
 
-// GetLocation responds with original locations
-// swagger:operation GET /location Location getLocation
+// GetOriginLocation responds with original locations
+// swagger:operation GET /location Location getOriginLocation
 // ---
 // summary: Returns original location
 // description: Returns original locations
@@ -164,14 +162,14 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.Response
 //     description: Service unavailable
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
-func (le *ConnectionLocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	currentLocation, err := le.locationResolver.DetectLocation()
+func (le *ConnectionLocationEndpoint) GetOriginLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	originLocation, err := le.locationOriginResolver.GetOrigin()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return
 	}
 
-	utils.WriteAsJSON(locationToRes(currentLocation), writer)
+	utils.WriteAsJSON(locationToRes(originLocation), writer)
 }
 
 // AddRoutesForConnectionLocation adds connection location routes to given router
@@ -180,10 +178,11 @@ func AddRoutesForConnectionLocation(
 	manager connection.Manager,
 	ipResolver ip.Resolver,
 	locationResolver location.Resolver,
+	locationOriginResolver location.OriginResolver,
 ) {
 
-	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, ipResolver, locationResolver)
-	router.GET("/connection/ip", connectionLocationEndpoint.GetIP)
+	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, ipResolver, locationResolver, locationOriginResolver)
+	router.GET("/connection/ip", connectionLocationEndpoint.GetConnectionIP)
 	router.GET("/connection/location", connectionLocationEndpoint.GetConnectionLocation)
-	router.GET("/location", connectionLocationEndpoint.GetLocation)
+	router.GET("/location", connectionLocationEndpoint.GetOriginLocation)
 }
