@@ -40,6 +40,11 @@ var (
 		Name:  "keystore.lightweight",
 		Usage: "Determines the scrypt memory complexity. If set to true, will use 4MB blocks instead of the standard 256MB ones",
 	})
+	bindAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "bind.address",
+		Usage: "IP address to bind to",
+		Value: "0.0.0.0",
+	})
 )
 
 // ParseKeystoreFlags parses the keystore options for node
@@ -55,7 +60,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		return err
 	}
 
-	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag, keystoreLightweightFlag)
+	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag, keystoreLightweightFlag, bindAddressFlag)
 
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsDiscovery(flags)
@@ -77,6 +82,7 @@ func ParseFlagsNode(ctx *cli.Context) node.Options {
 		TequilapiAddress: ctx.GlobalString(tequilapiAddressFlag.Name),
 		TequilapiPort:    ctx.GlobalInt(tequilapiPortFlag.Name),
 		UI:               ParseFlagsUI(ctx),
+		BindAddress:      ctx.GlobalString(bindAddressFlag.Name),
 
 		Keystore: ParseKeystoreFlags(ctx),
 

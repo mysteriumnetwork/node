@@ -101,6 +101,7 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 			nodeOptions.Directories.Config,
 			"10.8.0.0", "255.255.255.0",
 			secPrimitives,
+			nodeOptions.BindAddress,
 			port,
 			serviceOptions.Protocol,
 		)

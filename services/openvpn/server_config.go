@@ -55,6 +55,7 @@ func NewServerConfig(
 	configDir string,
 	network, netmask string,
 	secPrimitives *tls.Primitives,
+	bindAddress string,
 	port int,
 	protocol string,
 ) *ServerConfig {
@@ -81,6 +82,6 @@ func NewServerConfig(
 	serverConfig.SetPersistKey()
 
 	serverConfig.SetParam("auth", "none")
-
+	serverConfig.SetParam("local", bindAddress)
 	return &serverConfig
 }
