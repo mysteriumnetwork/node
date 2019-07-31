@@ -27,6 +27,49 @@ import (
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
+// swagger:model LocationDTO
+type locationResponse struct {
+	// IP address
+	// example: 1.2.3.4
+	IP string `json:"ip"`
+	// Autonomous system number
+	// example: 62179
+	ASN int `json:"asn"`
+	// Internet Service Provider name
+	// example: Telia Lietuva, AB
+	ISP string `json:"isp"`
+
+	// Continent
+	// example: EU
+	Continent string `json:"continent"`
+	// Node Country
+	// example: LT
+	Country string `json:"country"`
+	// Node City
+	// example: Vilnius
+	City string `json:"city"`
+
+	// User type (data_center, residential, etc.)
+	// example: residential
+	UserType string `json:"userType"`
+	// User type (DEPRECIATED)
+	// example: residential
+	NodeType string `json:"node_type"`
+}
+
+func locationToRes(l location.Location) locationResponse {
+	return locationResponse{
+		IP:        l.IP,
+		ASN:       l.ASN,
+		ISP:       l.ISP,
+		Continent: l.Continent,
+		Country:   l.Country,
+		City:      l.City,
+		UserType:  l.NodeType,
+		NodeType:  l.NodeType,
+	}
+}
+
 // ConnectionLocationEndpoint struct represents /connection/location resource and it's subresources.
 type ConnectionLocationEndpoint struct {
 	manager          connection.Manager
@@ -75,7 +118,6 @@ func (le *ConnectionLocationEndpoint) GetIP(writer http.ResponseWriter, request 
 	response := ipResponse{
 		IP: ipAddress,
 	}
-
 	utils.WriteAsJSON(response, writer)
 }
 
@@ -105,7 +147,31 @@ func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.Response
 		return
 	}
 
-	utils.WriteAsJSON(currentLocation, writer)
+	utils.WriteAsJSON(locationToRes(currentLocation), writer)
+}
+
+// GetLocation responds with original locations
+// swagger:operation GET /location Location getLocation
+// ---
+// summary: Returns original location
+// description: Returns original locations
+// responses:
+//   200:
+//     description: Original locations
+//     schema:
+//       "$ref": "#/definitions/LocationDTO"
+//   503:
+//     description: Service unavailable
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (le *ConnectionLocationEndpoint) GetLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	currentLocation, err := le.locationResolver.DetectLocation()
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
+	}
+
+	utils.WriteAsJSON(locationToRes(currentLocation), writer)
 }
 
 // AddRoutesForConnectionLocation adds connection location routes to given router
@@ -119,4 +185,5 @@ func AddRoutesForConnectionLocation(
 	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, ipResolver, locationResolver)
 	router.GET("/connection/ip", connectionLocationEndpoint.GetIP)
 	router.GET("/connection/location", connectionLocationEndpoint.GetConnectionLocation)
+	router.GET("/location", connectionLocationEndpoint.GetLocation)
 }

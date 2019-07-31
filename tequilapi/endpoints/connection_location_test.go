@@ -26,9 +26,28 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
+
+type locationResolverMock struct {
+	ip string
+}
+
+func (r *locationResolverMock) DetectLocation() (location.Location, error) {
+	loc := location.Location{
+		ASN:       62179,
+		City:      "Vilnius",
+		Continent: "EU",
+		Country:   "LT",
+		IP:        r.ip,
+		ISP:       "Telia Lietuva, AB",
+		NodeType:  "residential",
+	}
+
+	return loc, nil
+}
 
 func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 	router := httprouter.New()
@@ -65,6 +84,21 @@ func TestAddRoutesForConnectionLocationAddsRoutes(t *testing.T) {
 				"country": "LT",
 				"ip": "1.2.3.4",
 				"isp": "Telia Lietuva, AB",
+				"userType": "residential",
+				"node_type": "residential"
+			}`,
+		},
+		{
+			http.MethodGet, "/location", "",
+			http.StatusOK,
+			`{
+				"asn": 62179,
+				"city": "Vilnius",
+				"continent": "EU",
+				"country": "LT",
+				"ip": "1.2.3.4",
+				"isp": "Telia Lietuva, AB",
+				"userType": "residential",
 				"node_type": "residential"
 			}`,
 		},
