@@ -115,33 +115,33 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	err := topUpAccount(consumerID)
 	assert.Nil(t, err)
 
-	connectionStatus, err := tequilapi.Status()
+	connectionStatus, err := tequilapi.ConnectionStatus()
 	assert.NoError(t, err)
 	assert.Equal(t, "NotConnected", connectionStatus.Status)
 
-	nonVpnIP, err := tequilapi.GetIP()
+	nonVpnIP, err := tequilapi.ConnectionIP()
 	assert.NoError(t, err)
 	seelog.Info("Original consumer IP: ", nonVpnIP)
 
 	err = waitForCondition(func() (bool, error) {
-		status, err := tequilapi.Status()
+		status, err := tequilapi.ConnectionStatus()
 		return status.Status == "NotConnected", err
 	})
 	assert.NoError(t, err)
 
-	connectionStatus, err = tequilapi.Connect(consumerID, proposal.ProviderID, serviceType, tequilapi_client.ConnectOptions{
+	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, serviceType, tequilapi_client.ConnectOptions{
 		DisableKillSwitch: false,
 	})
 
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {
-		status, err := tequilapi.Status()
+		status, err := tequilapi.ConnectionStatus()
 		return status.Status == "Connected", err
 	})
 	assert.NoError(t, err)
 
-	vpnIP, err := tequilapi.GetIP()
+	vpnIP, err := tequilapi.ConnectionIP()
 	assert.NoError(t, err)
 	seelog.Info("Changed consumer IP: ", vpnIP)
 
@@ -160,11 +160,11 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	assert.Equal(t, connectionStatus.SessionID, se.SessionID)
 	assert.Equal(t, "New", se.Status)
 
-	err = tequilapi.Disconnect()
+	err = tequilapi.ConnectionDestroy()
 	assert.NoError(t, err)
 
 	err = waitForCondition(func() (bool, error) {
-		status, err := tequilapi.Status()
+		status, err := tequilapi.ConnectionStatus()
 		return status.Status == "NotConnected", err
 	})
 	assert.NoError(t, err)

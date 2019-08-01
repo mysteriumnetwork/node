@@ -46,9 +46,9 @@ var (
 		Usage: "URL of Mysterium API",
 		Value: metadata.DefaultNetwork.MysteriumAPIAddress,
 	})
-	apiAddressFlagDepreciated = altsrc.NewStringFlag(cli.StringFlag{
+	apiAddressFlagDeprecated = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "discovery-address",
-		Usage: fmt.Sprintf("URL of Mysterium API (DEPRECIATED, start using '--%s')", apiAddressFlag.Name),
+		Usage: fmt.Sprintf("URL of Mysterium API (DEPRECATED, start using '--%s')", apiAddressFlag.Name),
 		Value: apiAddressFlag.Value,
 	})
 
@@ -94,7 +94,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		testFlag, localnetFlag,
 		identityCheckFlag,
 		natPunchingFlag,
-		apiAddressFlag, apiAddressFlagDepreciated,
+		apiAddressFlag, apiAddressFlagDeprecated,
 		brokerAddressFlag,
 		etherRPCFlag, etherContractPaymentsFlag,
 		qualityOracleFlag, accessPolicyAddressFlag,

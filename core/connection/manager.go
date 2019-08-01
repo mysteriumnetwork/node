@@ -24,7 +24,6 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
-	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -85,7 +84,6 @@ type connectionManager struct {
 	paymentIssuerFactory PaymentIssuerFactory
 	newConnection        Creator
 	eventPublisher       Publisher
-	resolver             ip.Resolver
 
 	//these are populated by Connect at runtime
 	ctx         context.Context
@@ -104,7 +102,6 @@ func NewManager(
 	paymentIssuerFactory PaymentIssuerFactory,
 	connectionCreator Creator,
 	eventPublisher Publisher,
-	resolver ip.Resolver,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:            dialogCreator,
@@ -113,7 +110,6 @@ func NewManager(
 		status:               statusNotConnected(),
 		eventPublisher:       eventPublisher,
 		cleanup:              make([]func() error, 0),
-		resolver:             resolver,
 	}
 }
 
@@ -360,10 +356,6 @@ func (manager *connectionManager) payForService(payments PaymentIssuer) {
 			log.Error("could not disconnect gracefully:", err)
 		}
 	}
-}
-
-func warnOnClean() {
-	log.Warn("trying to close when there is nothing to close. Possible bug or race condition")
 }
 
 func (manager *connectionManager) connectionWaiter(connection Connection) {

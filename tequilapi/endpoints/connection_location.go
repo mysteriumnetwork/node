@@ -22,22 +22,106 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 )
 
+// swagger:model LocationDTO
+type locationResponse struct {
+	// IP address
+	// example: 1.2.3.4
+	IP string `json:"ip"`
+	// Autonomous system number
+	// example: 62179
+	ASN int `json:"asn"`
+	// Internet Service Provider name
+	// example: Telia Lietuva, AB
+	ISP string `json:"isp"`
+
+	// Continent
+	// example: EU
+	Continent string `json:"continent"`
+	// Node Country
+	// example: LT
+	Country string `json:"country"`
+	// Node City
+	// example: Vilnius
+	City string `json:"city"`
+
+	// User type (data_center, residential, etc.)
+	// example: residential
+	UserType string `json:"userType"`
+	// User type (DEPRECATED)
+	// example: residential
+	NodeType string `json:"node_type"`
+}
+
+func locationToRes(l location.Location) locationResponse {
+	return locationResponse{
+		IP:        l.IP,
+		ASN:       l.ASN,
+		ISP:       l.ISP,
+		Continent: l.Continent,
+		Country:   l.Country,
+		City:      l.City,
+		UserType:  l.NodeType,
+		NodeType:  l.NodeType,
+	}
+}
+
 // ConnectionLocationEndpoint struct represents /connection/location resource and it's subresources.
 type ConnectionLocationEndpoint struct {
-	manager          connection.Manager
-	locationResolver location.Resolver
+	manager                connection.Manager
+	ipResolver             ip.Resolver
+	locationResolver       location.Resolver
+	locationOriginResolver location.OriginResolver
 }
 
 // NewConnectionLocationEndpoint creates and returns connection location endpoint.
-func NewConnectionLocationEndpoint(manager connection.Manager, locationResolver location.Resolver) *ConnectionLocationEndpoint {
+func NewConnectionLocationEndpoint(
+	manager connection.Manager,
+	ipResolver ip.Resolver,
+	locationResolver location.Resolver,
+	locationOriginResolver location.OriginResolver,
+) *ConnectionLocationEndpoint {
 	return &ConnectionLocationEndpoint{
-		manager:          manager,
-		locationResolver: locationResolver,
+		manager:                manager,
+		ipResolver:             ipResolver,
+		locationResolver:       locationResolver,
+		locationOriginResolver: locationOriginResolver,
 	}
+}
+
+// GetConnectionIP responds with current ip, using its ip resolver
+// swagger:operation GET /connection/ip Connection getConnectionIP
+// ---
+// summary: Returns IP address
+// description: Returns current public IP address
+// responses:
+//   200:
+//     description: Public IP address
+//     schema:
+//       "$ref": "#/definitions/IPDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   503:
+//     description: Service unavailable
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (le *ConnectionLocationEndpoint) GetConnectionIP(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	ipAddress, err := le.ipResolver.GetPublicIP()
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
+	}
+
+	response := ipResponse{
+		IP: ipAddress,
+	}
+	utils.WriteAsJSON(response, writer)
 }
 
 // GetConnectionLocation responds with current connection location
@@ -55,24 +139,50 @@ func NewConnectionLocationEndpoint(manager connection.Manager, locationResolver 
 //     schema:
 //       "$ref": "#/definitions/ErrorMessageDTO"
 func (le *ConnectionLocationEndpoint) GetConnectionLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-	if le.manager.Status().State != connection.Connected {
-		utils.SendErrorMessage(writer, "Connection is not connected", http.StatusServiceUnavailable)
-		return
-	}
-
 	currentLocation, err := le.locationResolver.DetectLocation()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusServiceUnavailable)
 		return
 	}
 
-	utils.WriteAsJSON(currentLocation, writer)
+	utils.WriteAsJSON(locationToRes(currentLocation), writer)
+}
+
+// GetOriginLocation responds with original locations
+// swagger:operation GET /location Location getOriginLocation
+// ---
+// summary: Returns original location
+// description: Returns original locations
+// responses:
+//   200:
+//     description: Original locations
+//     schema:
+//       "$ref": "#/definitions/LocationDTO"
+//   503:
+//     description: Service unavailable
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (le *ConnectionLocationEndpoint) GetOriginLocation(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	originLocation, err := le.locationOriginResolver.GetOrigin()
+	if err != nil {
+		utils.SendError(writer, err, http.StatusServiceUnavailable)
+		return
+	}
+
+	utils.WriteAsJSON(locationToRes(originLocation), writer)
 }
 
 // AddRoutesForConnectionLocation adds connection location routes to given router
-func AddRoutesForConnectionLocation(router *httprouter.Router, manager connection.Manager,
-	locationResolver location.Resolver) {
+func AddRoutesForConnectionLocation(
+	router *httprouter.Router,
+	manager connection.Manager,
+	ipResolver ip.Resolver,
+	locationResolver location.Resolver,
+	locationOriginResolver location.OriginResolver,
+) {
 
-	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, locationResolver)
+	connectionLocationEndpoint := NewConnectionLocationEndpoint(manager, ipResolver, locationResolver, locationOriginResolver)
+	router.GET("/connection/ip", connectionLocationEndpoint.GetConnectionIP)
 	router.GET("/connection/location", connectionLocationEndpoint.GetConnectionLocation)
+	router.GET("/location", connectionLocationEndpoint.GetOriginLocation)
 }
