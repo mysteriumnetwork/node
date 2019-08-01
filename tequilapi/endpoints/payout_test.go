@@ -48,6 +48,10 @@ func (mock *mockPayoutInfoRegistry) UpdatePayoutInfo(id identity.Identity, ethAd
 	return nil
 }
 
+func (mock *mockPayoutInfoRegistry) UpdateEmail(id identity.Identity, email string, signer identity.Signer) error {
+	return nil
+}
+
 func (mock *mockPayoutInfoRegistry) UpdateReferralInfo(id identity.Identity, referralCode string,
 	signer identity.Signer) error {
 	mock.recordedID = id

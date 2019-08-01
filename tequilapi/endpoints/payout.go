@@ -44,9 +44,16 @@ type referralInfo struct {
 	ReferralCode string `json:"referralCode"`
 }
 
+// swagger:model EmailInfoDTO
+type emailInfo struct {
+	// required: true
+	Email string `json:"email"`
+}
+
 type payoutInfoResponse struct {
 	EthAddress   string `json:"ethAddress"`
 	ReferralCode string `json:"referralCode"`
+	Email        string `json:"email"`
 }
 
 // PayoutInfoRegistry allows to register payout info
@@ -54,6 +61,7 @@ type PayoutInfoRegistry interface {
 	GetPayoutInfo(id identity.Identity, signer identity.Signer) (*mysterium.PayoutInfoResponse, error)
 	UpdatePayoutInfo(id identity.Identity, ethAddress string, signer identity.Signer) error
 	UpdateReferralInfo(id identity.Identity, referralCode string, signer identity.Signer) error
+	UpdateEmail(id identity.Identity, email string, signer identity.Signer) error
 }
 
 type payoutEndpoint struct {
@@ -78,6 +86,7 @@ func (endpoint *payoutEndpoint) GetPayoutInfo(resp http.ResponseWriter, request 
 	response := &payoutInfoResponse{
 		EthAddress:   payoutInfo.EthAddress,
 		ReferralCode: payoutInfo.ReferralCode,
+		Email:        payoutInfo.Email,
 	}
 	utils.WriteAsJSON(response, resp)
 }
@@ -188,10 +197,64 @@ func (endpoint *payoutEndpoint) UpdateReferralInfo(resp http.ResponseWriter, req
 	resp.WriteHeader(http.StatusOK)
 }
 
+// swagger:operation PUT /identities/{id}/email Identity updateEmail
+// ---
+// summary: Registers email
+// description: Registers email for identity
+// parameters:
+// - name: id
+//   in: path
+//   description: Identity stored in keystore
+//   type: string
+//   required: true
+// - in: body
+//   name: body
+//   description: Parameter in body (email) is required
+//   schema:
+//     $ref: "#/definitions/EmailDTO"
+// responses:
+//   200:
+//     description: Email updated
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (endpoint *payoutEndpoint) UpdateEmail(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	id := identity.FromAddress(params.ByName("id"))
+
+	emailReq, err := toEmailRequest(request)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusBadRequest)
+		return
+	}
+
+	err = endpoint.payoutInfoRegistry.UpdateEmail(
+		id,
+		emailReq.Email,
+		endpoint.signerFactory(id),
+	)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
+}
+
 func toPayoutInfoRequest(req *http.Request) (*payoutInfo, error) {
 	var payoutReq = &payoutInfo{}
 	err := json.NewDecoder(req.Body).Decode(&payoutReq)
 	return payoutReq, err
+}
+
+func toEmailRequest(req *http.Request) (*emailInfo, error) {
+	var referralReq = &emailInfo{}
+	err := json.NewDecoder(req.Body).Decode(&referralReq)
+	return referralReq, err
 }
 
 func toReferralInfoRequest(req *http.Request) (*referralInfo, error) {
@@ -220,4 +283,5 @@ func AddRoutesForPayout(
 	router.GET("/identities/:id/payout", idmEnd.GetPayoutInfo)
 	router.PUT("/identities/:id/payout", idmEnd.UpdatePayoutInfo)
 	router.PUT("/identities/:id/referral", idmEnd.UpdateReferralInfo)
+	router.PUT("/identities/:id/email", idmEnd.UpdateEmail)
 }
