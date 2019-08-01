@@ -18,10 +18,9 @@
 package cmd
 
 import (
-	"github.com/urfave/cli"
-
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var (

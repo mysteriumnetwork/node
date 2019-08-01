@@ -1082,6 +1082,7 @@
     "github.com/mysteriumnetwork/metrics",
     "github.com/mysteriumnetwork/payment-bindings",
     "github.com/mysteriumnetwork/payments/bindings",
+    "github.com/mysteriumnetwork/payments/crypto",
     "github.com/mysteriumnetwork/payments/registration",
     "github.com/mysteriumnetwork/wireguard-go/device",
     "github.com/mysteriumnetwork/wireguard-go/tun",
