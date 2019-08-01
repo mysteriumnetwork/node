@@ -199,7 +199,7 @@ func (endpoint *payoutEndpoint) UpdateReferralInfo(resp http.ResponseWriter, req
 
 // swagger:operation PUT /identities/{id}/email Identity updateEmail
 // ---
-// summary: Registers email
+// summary: Registers emailpayout_test.go
 // description: Registers email for identity
 // parameters:
 // - name: id
