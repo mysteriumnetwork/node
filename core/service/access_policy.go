@@ -26,12 +26,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-func fetchAllowedIDs(ap *[]market.AccessPolicy) (allowedIDs []identity.Identity, err error) {
+func fetchAllowedIDs(srcIP string, ap *[]market.AccessPolicy) (allowedIDs []identity.Identity, err error) {
 	if ap == nil {
 		return nil, nil
 	}
 
-	client := requests.NewHTTPClient(20 * time.Second)
+	client := requests.NewHTTPClient(srcIP, 20*time.Second)
 
 	var ruleSet market.AccessPolicyRuleSet
 	for _, p := range *ap {

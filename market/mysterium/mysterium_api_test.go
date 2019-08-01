@@ -27,6 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const bindAllAddress = "0.0.0.0"
+
 func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testing.T) {
 
 	address, err := createHTTPServer(func(writer http.ResponseWriter, request *http.Request) {
@@ -34,7 +36,7 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 	})
 	assert.NoError(t, err)
 
-	transport := requests.NewHTTPClient(50 * time.Millisecond)
+	transport := requests.NewHTTPClient(bindAllAddress, 50*time.Millisecond)
 	req, err := http.NewRequest(http.MethodGet, "http://"+address+"/", nil)
 	assert.NoError(t, err)
 

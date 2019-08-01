@@ -26,11 +26,12 @@ import (
 
 // SetupVendor initializes linux specific firewall vendor
 func SetupVendor() (*iptables.Iptables, error) {
-	ip, err := ip.GetOutbound()
+	resolver := ip.NewResolver("0.0.0.0", "")
+	ip, err := resolver.GetOutboundIPAsString()
 	if err != nil {
 		return nil, err
 	}
-	iptables := iptables.New(ip.String())
+	iptables := iptables.New(ip)
 	if err := iptables.Setup(); err != nil {
 		return nil, err
 	}

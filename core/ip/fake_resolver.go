@@ -17,6 +17,8 @@
 
 package ip
 
+import "net"
+
 // NewResolverMock returns mockResolver which resolves statically entered IP
 func NewResolverMock(ipAddress string) Resolver {
 	return &mockResolver{
@@ -42,6 +44,12 @@ func (client *mockResolver) GetPublicIP() (string, error) {
 	return client.ipAddress, client.error
 }
 
-func (client *mockResolver) GetOutboundIP() (string, error) {
+func (client *mockResolver) GetOutboundIP() (net.IP, error) {
+	ipAddress := net.ParseIP(client.ipAddress)
+	localIPAddress := net.UDPAddr{IP: ipAddress}
+	return localIPAddress.IP, client.error
+}
+
+func (client *mockResolver) GetOutboundIPAsString() (string, error) {
 	return client.ipAddress, client.error
 }

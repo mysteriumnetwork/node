@@ -127,7 +127,7 @@ func (ce *connectionEndpoint) Config() (wg.ServiceConfig, error) {
 	if err != nil {
 		return wg.ServiceConfig{}, err
 	}
-	outIP, err := ce.ipResolver.GetOutboundIP()
+	outIP, err := ce.ipResolver.GetOutboundIPAsString()
 	if err != nil {
 		return wg.ServiceConfig{}, err
 	}

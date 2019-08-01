@@ -26,6 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const bindAllAddress = "0.0.0.0"
+
 func Test_Get_AccessPolicies_ReturnsAccessPolicies(t *testing.T) {
 	mockResponse := `
 	{
@@ -46,7 +48,7 @@ func Test_Get_AccessPolicies_ReturnsAccessPolicies(t *testing.T) {
 	server := newTestServer(http.StatusOK, mockResponse)
 
 	router := httprouter.New()
-	AddRoutesForAccessPolicies(router, server.URL)
+	AddRoutesForAccessPolicies(bindAllAddress, router, server.URL)
 
 	req, err := http.NewRequest(
 		http.MethodGet,
@@ -66,7 +68,7 @@ func Test_Get_AccessPolicies_WhenRequestFails_ReturnsError(t *testing.T) {
 	server := newTestServer(http.StatusInternalServerError, `{"error": "something bad"}`)
 
 	router := httprouter.New()
-	AddRoutesForAccessPolicies(router, server.URL)
+	AddRoutesForAccessPolicies(bindAllAddress, router, server.URL)
 
 	req, err := http.NewRequest(
 		http.MethodGet,
