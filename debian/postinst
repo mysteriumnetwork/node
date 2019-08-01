@@ -26,7 +26,7 @@ function install_systemd {
         && cp -f $OS_DIR_INSTALLATION/systemd.service $OS_DIR_SYSTEMD/mysterium-node.service \
         && systemctl enable systemd-networkd.service \
         && systemctl enable mysterium-node \
-        && systemctl start mysterium-node
+        && systemctl restart mysterium-node
 }
 
 function install_update_rcd {
