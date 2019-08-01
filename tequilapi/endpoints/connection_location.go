@@ -52,7 +52,7 @@ type locationResponse struct {
 	// User type (data_center, residential, etc.)
 	// example: residential
 	UserType string `json:"userType"`
-	// User type (DEPRECIATED)
+	// User type (DEPRECATED)
 	// example: residential
 	NodeType string `json:"node_type"`
 }

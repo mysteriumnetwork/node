@@ -81,7 +81,7 @@ type HealthcheckDTO struct {
 	BuildInfo BuildInfoDTO `json:"buildInfo"`
 }
 
-// BuildInfoDTO holds info
+// BuildInfoDTO holds info about build
 type BuildInfoDTO struct {
 	Commit      string `json:"commit"`
 	Branch      string `json:"branch"`

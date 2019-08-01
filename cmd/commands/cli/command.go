@@ -542,7 +542,7 @@ func (c *cliApp) location() {
 }
 
 func (c *cliApp) help() {
-	info("Mysterium CLI tequipilapi commands:")
+	info("Mysterium CLI commands:")
 	fmt.Println(c.completer.Tree("  "))
 }
 
