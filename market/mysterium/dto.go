@@ -36,10 +36,16 @@ type UpdateReferralInfoRequest struct {
 	ReferralCode string `json:"referral_code"`
 }
 
+// UpdateEmailRequest represents JSON request for email update
+type UpdateEmailRequest struct {
+	Email string `json:"email"`
+}
+
 // PayoutInfoResponse represents json response for payout info
 type PayoutInfoResponse struct {
 	EthAddress   string `json:"eth_address"`
 	ReferralCode string `json:"referral_code"`
+	Email        string `json:"email"`
 }
 
 // NodeRegisterRequest represents JSON for node registration request

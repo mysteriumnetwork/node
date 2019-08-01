@@ -39,12 +39,17 @@ type mockPayoutInfoRegistry struct {
 	mockID           identity.Identity
 	mockEthAddress   string
 	mockReferralCode string
+	mockEmail        string
 }
 
 func (mock *mockPayoutInfoRegistry) UpdatePayoutInfo(id identity.Identity, ethAddress string,
 	signer identity.Signer) error {
 	mock.recordedID = id
 	mock.recordedEthAddress = ethAddress
+	return nil
+}
+
+func (mock *mockPayoutInfoRegistry) UpdateEmail(id identity.Identity, email string, signer identity.Signer) error {
 	return nil
 }
 
@@ -136,6 +141,7 @@ func TestGetPayoutInfo_ReturnsPayoutInfo(t *testing.T) {
 		mockID:           existingIdentities[0],
 		mockEthAddress:   "mock eth address",
 		mockReferralCode: "mock referral code",
+		mockEmail:        "",
 	}
 	handlerFunc := NewPayoutEndpoint(mockIdm, mockSignerFactory, mockPayoutInfoRegistry).GetPayoutInfo
 
@@ -151,7 +157,12 @@ func TestGetPayoutInfo_ReturnsPayoutInfo(t *testing.T) {
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.JSONEq(t, `{"ethAddress": "mock eth address", "referralCode": "mock referral code"}`, resp.Body.String())
+	assert.JSONEq(t, `{
+		"ethAddress": "mock eth address",
+		"referralCode": "mock referral code",
+		"email": ""
+	}`,
+		resp.Body.String())
 }
 
 func TestGetPayoutInfo_ReturnsError_WhenPayoutInfoFindingFails(t *testing.T) {

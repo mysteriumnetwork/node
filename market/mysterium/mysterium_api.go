@@ -130,6 +130,24 @@ func (mApi *MysteriumAPI) UpdateReferralInfo(id identity.Identity, referralCode 
 	return err
 }
 
+// UpdateEmail registers given email next to identity to discovery service
+func (mApi *MysteriumAPI) UpdateEmail(id identity.Identity, email string, signer identity.Signer) error {
+	path := fmt.Sprintf("identities/%s/email", id.Address)
+	requestBody := UpdateEmailRequest{
+		Email: email,
+	}
+	req, err := requests.NewSignedPutRequest(mApi.discoveryAPIAddress, path, requestBody, signer)
+	if err != nil {
+		return err
+	}
+
+	err = mApi.http.DoRequest(req)
+	if err == nil {
+		log.Info(mysteriumAPILogPrefix, "Email submitted for ", id.Address)
+	}
+	return err
+}
+
 // RegisterProposal registers service proposal to discovery service
 func (mApi *MysteriumAPI) RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error {
 	req, err := requests.NewSignedPostRequest(mApi.discoveryAPIAddress, "register_proposal", NodeRegisterRequest{
