@@ -41,5 +41,5 @@ func ReleaseAndroidSDK() error {
 	if err != nil {
 		return err
 	}
-	return shell.NewCmdf("bin/release_android %s", env.Str(env.BuildVersion)).Run()
+	return shell.NewCmdf("bash -ev bin/release_android %s", env.Str(env.BuildVersion)).Run()
 }
