@@ -211,7 +211,7 @@ func (endpoint *payoutEndpoint) UpdateReferralInfo(resp http.ResponseWriter, req
 //   name: body
 //   description: Parameter in body (email) is required
 //   schema:
-//     $ref: "#/definitions/EmailDTO"
+//     $ref: "#/definitions/EmailInfoDTO"
 // responses:
 //   200:
 //     description: Email updated
