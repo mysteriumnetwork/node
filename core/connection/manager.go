@@ -370,6 +370,7 @@ func (manager *connectionManager) connectionWaiter(connection Connection) {
 }
 
 func (manager *connectionManager) waitForConnectedState(stateChannel <-chan State, sessionID session.ID) error {
+	log.Trace("waiting for connected state")
 	for {
 		select {
 		case state, more := <-stateChannel:
@@ -379,7 +380,8 @@ func (manager *connectionManager) waitForConnectedState(stateChannel <-chan Stat
 
 			switch state {
 			case Connected:
-				manager.sessionInfo.acknowledge()
+				log.Trace("connected started event received")
+				go manager.sessionInfo.acknowledge()
 				manager.onStateChanged(state)
 				return nil
 			default:
@@ -407,6 +409,7 @@ func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer
 }
 
 func (manager *connectionManager) onStateChanged(state State) {
+	log.Trace("onStateChanged called")
 	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
 		State:       state,
 		SessionInfo: manager.sessionInfo,
@@ -414,6 +417,7 @@ func (manager *connectionManager) onStateChanged(state State) {
 
 	switch state {
 	case Connected:
+		log.Trace("connected state issued")
 		manager.setStatus(statusConnected(manager.sessionInfo.SessionID, manager.sessionInfo.Proposal))
 	case Reconnecting:
 		manager.setStatus(statusReconnecting())

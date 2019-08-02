@@ -85,12 +85,6 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 		return errors.Wrap(err, "failed to start connection endpoint")
 	}
 
-	// Provider requests to delay consumer connection since it might be in a process of setting up NAT traversal for given consumer
-	if config.Consumer.ConnectDelay > 0 {
-		log.Infof("%s delaying connect for %v milliseconds", logPrefix, config.Consumer.ConnectDelay)
-		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
-	}
-
 	if err := c.connectionEndpoint.AddPeer(c.config.Provider.PublicKey, &c.config.Provider.Endpoint); err != nil {
 		c.stateChannel <- connection.NotConnected
 		c.connection.Done()
