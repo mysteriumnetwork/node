@@ -51,12 +51,14 @@ func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID s
 }
 
 // Fees represents fees applied by Transactor
+// swagger:model Fees
 type Fees struct {
 	Transaction  uint64 `json:"transaction"`
 	Registration uint64 `json:"registration"`
 }
 
 // IdentityRegistrationRequestDTO represents the identity registration user input parameters
+// swagger:model IdentityRegistrationRequestDTO
 type IdentityRegistrationRequestDTO struct {
 	// Stake is used by Provider, default 0
 	Stake uint64 `json:"stake,omitempty"`

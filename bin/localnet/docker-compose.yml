@@ -29,38 +29,21 @@ services:
       DB_NAME: myst_api
       DB_USER: myst_api
       DB_PASSWORD: myst_api
-      ETHER_RPC_URL: "http://geth:8545"
+      ETHER_RPC_URL: "http://ganache:8545"
       IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
       ETHER_MINING_MODE: "poa"
       DISCOVERY_VERIFY_IDENTITY: "false"
     depends_on:
     - db
-    - geth
+    - ganache
 
-  #private blockchain with single miner and single node
-  geth:
-    image: mysteriumnetwork/geth:1.8.23
+  #private blockchain
+  ganache:
+    image: trufflesuite/ganache-cli:latest
     expose:
       - 8545
-    volumes:
-      - geth-runtime:/ethereum/geth-runtime
-      - ./geth/genesis.json:/ethereum/genesis.json
-      - ./geth/keystore:/ethereum/keystore
-      - ./geth/node_acc_password.txt:/ethereum/node_acc_password.txt
     command: >
-      --syncmode 'full'
-      --port 30311
-      --rpc
-      --rpcaddr '0.0.0.0'
-      --rpcport 8545
-      --rpcapi personal,db,eth,net,web3,txpool,miner
-      --networkid 69
-      --gasprice '1'
-      --unlock '0xd9786b6ee6caf5cd0ef88301fc40de83bfac5594'
-      --password node_acc_password.txt
-      --rpcvhosts *
-      --rpccorsdomain *
-      --mine
+      --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
   go-runner:
@@ -68,6 +51,3 @@ services:
     volumes:
       - $GOPATH:/go
     working_dir: /go/src/github.com/mysteriumnetwork/node
-
-volumes:
-  geth-runtime:

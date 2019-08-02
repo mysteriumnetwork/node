@@ -10,6 +10,6 @@ services:
     ports:
     - 80:80
 
-  geth:
+  ganache:
     ports:
     - 8545:8545

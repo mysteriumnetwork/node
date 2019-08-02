@@ -39,7 +39,7 @@ $dockerComposeCmd build && $dockerComposeCmd up -d myst-provider myst-consumer i
 if [ ! $? -eq 0 ]
 then
     print_error "Image building failed"
-    cleanup $projectName
+    # cleanup $projectName
     exit 1
 fi
 
@@ -60,10 +60,10 @@ if [ ! $? -eq 0 ]
 then
     print_error "Tests failed"
     cat e2e_tests.log
-    cleanup $projectName
+    # cleanup $projectName
     exit 1
 fi
 
 print_success "Tests passed"
-cleanup $projectName
+# cleanup $projectName
 exit 0
