@@ -121,7 +121,9 @@ func (ss *ssdpServer) Stop() error {
 }
 
 func (ss *ssdpServer) serveDeviceDescriptionDocument() (url.URL, error) {
-	outIP, err := ip.GetOutbound()
+	resolver := ip.NewResolver("0.0.0.0", "")
+
+	outIP, err := resolver.GetOutboundIP()
 	if err != nil {
 		return url.URL{}, err
 	}

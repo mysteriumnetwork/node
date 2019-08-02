@@ -93,7 +93,7 @@ func ParseFlags(ctx *cli.Context) service.Options {
 	}
 }
 
-// ParseJSONOptions function fills in Openvpn options from JSON request
+// ParseJSONOptions function fills in Wireguard options from JSON request
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
 	if request == nil {
 		return DefaultOptions, nil

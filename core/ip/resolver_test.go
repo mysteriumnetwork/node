@@ -25,7 +25,8 @@ import (
 
 func TestLocalhostOutboundIPIsReturned(t *testing.T) {
 	checkAddress = "localhost:5555"
-	ip, err := GetOutbound()
+	resolver := NewResolver("127.0.0.1", "")
+	ip, err := resolver.GetOutboundIPAsString()
 	assert.NoError(t, err)
-	assert.Equal(t, "127.0.0.1", ip.String())
+	assert.Equal(t, "127.0.0.1", ip)
 }

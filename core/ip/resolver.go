@@ -17,24 +17,94 @@
 
 package ip
 
-import "net"
+import (
+	"net"
+	"time"
 
-// Resolver allows resolving current IP
+	"github.com/pkg/errors"
+
+	"github.com/mysteriumnetwork/node/requests"
+)
+
+const apiClient = "goclient-v0.1"
+
+// Resolver allows resolving current public and outbound IPs
 type Resolver interface {
+	GetOutboundIPAsString() (string, error)
+	GetOutboundIP() (net.IP, error)
 	GetPublicIP() (string, error)
-	GetOutboundIP() (string, error)
+}
+
+// ResolverImpl represents data required to operate resolving
+type ResolverImpl struct {
+	bindAddress string
+	url         string
+	http        requests.HTTPTransport
+}
+
+// NewResolver creates new ip-detector resolver with default timeout of one minute
+func NewResolver(bindAddress, url string) *ResolverImpl {
+	return NewResolverWithTimeout(bindAddress, url, 20*time.Second)
+}
+
+// NewResolverWithTimeout creates new ip-detector resolver with specified timeout
+func NewResolverWithTimeout(bindAddress, url string, timeout time.Duration) *ResolverImpl {
+	return &ResolverImpl{
+		bindAddress: bindAddress,
+		url:         url,
+		http:        requests.NewHTTPClient(bindAddress, timeout),
+	}
+}
+
+type ipResponse struct {
+	IP string `json:"IP"`
 }
 
 // declared as var for override in test
 var checkAddress = "8.8.8.8:53"
 
-// GetOutbound provides an outbound IP address of the current system.
-func GetOutbound() (net.IP, error) {
-	conn, err := net.Dial("udp4", checkAddress)
+// GetOutboundIPAsString returns current outbound IP as string for current system
+func (r *ResolverImpl) GetOutboundIPAsString() (string, error) {
+	ip, err := r.GetOutboundIP()
 	if err != nil {
-		return nil, err
+		return "", nil
+	}
+	return ip.String(), nil
+}
+
+// GetOutboundIP returns current outbound IP for current system
+func (r *ResolverImpl) GetOutboundIP() (net.IP, error) {
+	ipAddress := net.ParseIP(r.bindAddress)
+	localIPAddress := net.UDPAddr{IP: ipAddress}
+
+	dialer := net.Dialer{LocalAddr: &localIPAddress}
+
+	conn, err := dialer.Dial("udp4", checkAddress)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to determine outbound IP")
 	}
 	defer conn.Close()
 
 	return conn.LocalAddr().(*net.UDPAddr).IP, nil
+}
+
+// GetPublicIP returns current public IP
+func (r *ResolverImpl) GetPublicIP() (string, error) {
+	var ipResponse ipResponse
+
+	request, err := requests.NewGetRequest(r.url, "", nil)
+	request.Header.Set("User-Agent", apiClient)
+	request.Header.Set("Accept", "application/json")
+	if err != nil {
+		log.Critical(err)
+		return "", err
+	}
+
+	err = r.http.DoRequestAndParseResponse(request, &ipResponse)
+	if err != nil {
+		return "", err
+	}
+
+	log.Trace("IP detected: ", ipResponse.IP)
+	return ipResponse.IP, nil
 }

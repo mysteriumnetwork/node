@@ -235,7 +235,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork); err != nil {
+	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork, nodeOptions.BindAddress); err != nil {
 		return err
 	}
 
@@ -249,7 +249,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapDiscoveryComponents(nodeOptions.Discovery); err != nil {
 		return err
 	}
-	if err := di.bootstrapLocationComponents(nodeOptions.Location, nodeOptions.Directories.Config); err != nil {
+	if err := di.bootstrapLocationComponents(nodeOptions); err != nil {
 		return err
 	}
 	if err := di.bootstrapAuthenticator(); err != nil {
@@ -278,7 +278,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.bootstrapSSEHandler(); err != nil {
 		return err
 	}
-	if err := di.bootstrapQualityComponents(nodeOptions.Quality); err != nil {
+	if err := di.bootstrapQualityComponents(nodeOptions.BindAddress, nodeOptions.Quality); err != nil {
 		return err
 	}
 
@@ -491,7 +491,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForService(router, di.ServicesManager, serviceTypesRequestParser, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForServiceSessions(router, di.StateKeeper)
 	tequilapi_endpoints.AddRoutesForPayout(router, di.IdentityManager, di.SignerFactory, di.MysteriumAPI)
-	tequilapi_endpoints.AddRoutesForAccessPolicies(router, nodeOptions.AccessPolicyEndpointAddress)
+	tequilapi_endpoints.AddRoutesForAccessPolicies(nodeOptions.BindAddress, router, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
 
@@ -551,7 +551,7 @@ func newSessionManagerFactory(
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides
-func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) (err error) {
+func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork, bindAddress string) (err error) {
 	network := metadata.DefaultNetwork
 
 	switch {
@@ -592,7 +592,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork) 
 		return err
 	}
 
-	di.MysteriumAPI = mysterium.NewClient(network.MysteriumAPIAddress)
+	di.MysteriumAPI = mysterium.NewClient(bindAddress, network.MysteriumAPIAddress)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = payment_bindings.NewClient(network.EtherClientRPC); err != nil {
@@ -654,7 +654,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	return nil
 }
 
-func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) (err error) {
+func (di *Dependencies) bootstrapQualityComponents(bindAddress string, options node.OptionsQuality) (err error) {
 	if _, err := firewall.AllowURLAccess(di.NetworkDefinition.QualityOracle); err != nil {
 		return err
 	}
@@ -664,7 +664,7 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	switch options.Type {
 	case node.QualityTypeElastic:
 		_, err = firewall.AllowURLAccess(options.Address)
-		transport = quality.NewElasticSearchTransport(options.Address, 10*time.Second)
+		transport = quality.NewElasticSearchTransport(bindAddress, options.Address, 10*time.Second)
 	case node.QualityTypeMORQA:
 		_, err = firewall.AllowURLAccess(options.Address)
 		transport = quality.NewMORQATransport(di.QualityClient)
@@ -685,27 +685,27 @@ func (di *Dependencies) bootstrapQualityComponents(options node.OptionsQuality) 
 	return nil
 }
 
-func (di *Dependencies) bootstrapLocationComponents(options node.OptionsLocation, configDirectory string) (err error) {
-	if _, err = firewall.AllowURLAccess(options.IPDetectorURL); err != nil {
+func (di *Dependencies) bootstrapLocationComponents(options node.Options) (err error) {
+	if _, err = firewall.AllowURLAccess(options.Location.IPDetectorURL); err != nil {
 		return errors.Wrap(err, "failed to add firewall exception")
 	}
-	di.IPResolver = ip.NewResolver(options.IPDetectorURL)
+	di.IPResolver = ip.NewResolver(options.BindAddress, options.Location.IPDetectorURL)
 
 	var resolver location.Resolver
-	switch options.Type {
+	switch options.Location.Type {
 	case node.LocationTypeManual:
-		resolver = location.NewStaticResolver(options.Country, options.City, options.NodeType, di.IPResolver)
+		resolver = location.NewStaticResolver(options.Location.Country, options.Location.City, options.Location.NodeType, di.IPResolver)
 	case node.LocationTypeBuiltin:
 		resolver, err = location.NewBuiltInResolver(di.IPResolver)
 	case node.LocationTypeMMDB:
-		resolver, err = location.NewExternalDBResolver(filepath.Join(configDirectory, options.Address), di.IPResolver)
+		resolver, err = location.NewExternalDBResolver(filepath.Join(options.Directories.Config, options.Location.Address), di.IPResolver)
 	case node.LocationTypeOracle:
-		if _, err := firewall.AllowURLAccess(options.Address); err != nil {
+		if _, err := firewall.AllowURLAccess(options.Location.Address); err != nil {
 			return err
 		}
-		resolver, err = location.NewOracleResolver(options.Address), nil
+		resolver, err = location.NewOracleResolver(options.BindAddress, options.Location.Address), nil
 	default:
-		err = errors.Errorf("unknown location provider: %s", options.Type)
+		err = errors.Errorf("unknown location provider: %s", options.Location.Type)
 	}
 	if err != nil {
 		return err

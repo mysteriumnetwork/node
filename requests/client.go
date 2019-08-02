@@ -20,6 +20,7 @@ package requests
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"time"
 
@@ -35,9 +36,15 @@ type HTTPTransport interface {
 }
 
 // NewHTTPClient creates a new HTTP client.
-func NewHTTPClient(timeout time.Duration) *client {
+func NewHTTPClient(srcIP string, timeout time.Duration) *client {
+	ipAddress := net.ParseIP(srcIP)
+	localIPAddress := net.TCPAddr{IP: ipAddress}
+
 	return &client{
 		&http.Client{Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				LocalAddr: &localIPAddress,
+			}).DialContext,
 			//dont cache tcp connections - first requests after state change (direct -> tunneled and vice versa) will always fail
 			//as stale tcp states are not closed after switch. Probably some kind of CloseIdleConnections will help in the future
 			DisableKeepAlives: true,

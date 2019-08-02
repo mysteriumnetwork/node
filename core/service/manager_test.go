@@ -31,6 +31,8 @@ var (
 	serviceType = "the-very-awesome-test-service-type"
 )
 
+const bindAllAddress = "0.0.0.0"
+
 func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 	registry := NewRegistry()
 	mockCopy := *serviceMock
@@ -47,6 +49,7 @@ func TestManager_StartRemovesServiceFromPoolIfServiceCrashes(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&mockPublisher{},
+		bindAllAddress,
 	)
 	_, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -71,6 +74,7 @@ func TestManager_StartDoesNotCrashIfStoppedByUser(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		&mockPublisher{},
+		bindAllAddress,
 	)
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})
 	assert.Nil(t, err)
@@ -97,6 +101,7 @@ func TestManager_StopSendsEvent_SucceedsAndPublishesEvent(t *testing.T) {
 		MockDialogHandlerFactory,
 		discoveryFactory,
 		eventBus,
+		bindAllAddress,
 	)
 
 	id, err := manager.Start(identity.FromAddress(proposalMock.ProviderID), serviceType, nil, struct{}{})

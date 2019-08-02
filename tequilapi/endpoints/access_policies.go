@@ -49,9 +49,9 @@ type accessPoliciesEndpoint struct {
 }
 
 // NewAccessPoliciesEndpoint creates and returns access policies endpoint
-func NewAccessPoliciesEndpoint(accessPolicyEndpointURL string) *accessPoliciesEndpoint {
+func NewAccessPoliciesEndpoint(srcIP, accessPolicyEndpointURL string) *accessPoliciesEndpoint {
 	return &accessPoliciesEndpoint{
-		http:                    requests.NewHTTPClient(20 * time.Second),
+		http:                    requests.NewHTTPClient(srcIP, 20*time.Second),
 		accessPolicyEndpointURL: accessPolicyEndpointURL,
 	}
 }
@@ -86,7 +86,7 @@ func (ape *accessPoliciesEndpoint) List(resp http.ResponseWriter, req *http.Requ
 }
 
 // AddRoutesForAccessPolicies attaches access policies endpoints to router
-func AddRoutesForAccessPolicies(router *httprouter.Router, accessPolicyEndpointURL string) {
-	ape := NewAccessPoliciesEndpoint(accessPolicyEndpointURL)
+func AddRoutesForAccessPolicies(bindAddress string, router *httprouter.Router, accessPolicyEndpointURL string) {
+	ape := NewAccessPoliciesEndpoint(bindAddress, accessPolicyEndpointURL)
 	router.GET("/access-policies", ape.List)
 }

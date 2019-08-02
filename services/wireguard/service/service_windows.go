@@ -110,7 +110,7 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 		return err
 	}
 
-	outIP, err := manager.ipResolver.GetOutboundIP()
+	outIP, err := manager.ipResolver.GetOutboundIPAsString()
 	if err != nil {
 		return err
 	}

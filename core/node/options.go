@@ -32,6 +32,7 @@ type Options struct {
 
 	TequilapiAddress string
 	TequilapiPort    int
+	BindAddress      string
 	UI               OptionsUI
 
 	DisableMetrics bool

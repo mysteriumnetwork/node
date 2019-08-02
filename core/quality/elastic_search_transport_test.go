@@ -28,6 +28,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const bindAllAddress = "0.0.0.0"
+
 func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 	invoked := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +54,7 @@ func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 	app := appInfo{Name: "test app", Version: "test version"}
 	event := Event{Application: app}
 
-	transport := NewElasticSearchTransport(server.URL, time.Second)
+	transport := NewElasticSearchTransport(bindAllAddress, server.URL, time.Second)
 	transport.SendEvent(event)
 
 	assert.True(t, invoked)
@@ -66,7 +68,7 @@ func TestElasticSearchTransport_SendEvent_WithUnexpectedStatus(t *testing.T) {
 		invoked = true
 	}))
 
-	transport := NewElasticSearchTransport(server.URL, time.Second)
+	transport := NewElasticSearchTransport(bindAllAddress, server.URL, time.Second)
 	transport.SendEvent(Event{})
 
 	assert.True(t, invoked)
@@ -79,7 +81,7 @@ func TestElasticSearchTransport_SendEvent_WithUnexpectedResponse(t *testing.T) {
 		invoked = true
 	}))
 
-	transport := NewElasticSearchTransport(server.URL, time.Second)
+	transport := NewElasticSearchTransport(bindAllAddress, server.URL, time.Second)
 	transport.SendEvent(Event{})
 
 	assert.True(t, invoked)

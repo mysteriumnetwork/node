@@ -66,7 +66,7 @@ func (di *Dependencies) bootstrapServiceWireguard(nodeOptions node.Options) {
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
-			outIP, err := di.IPResolver.GetOutboundIP()
+			outIP, err := di.IPResolver.GetOutboundIPAsString()
 			if err != nil {
 				return nil, market.ServiceProposal{}, err
 			}
@@ -107,7 +107,7 @@ func (di *Dependencies) bootstrapServiceOpenvpn(nodeOptions node.Options) {
 		if err != nil {
 			return nil, market.ServiceProposal{}, err
 		}
-		outIP, err := di.IPResolver.GetOutboundIP()
+		outIP, err := di.IPResolver.GetOutboundIPAsString()
 		if err != nil {
 			return nil, market.ServiceProposal{}, err
 		}
@@ -248,6 +248,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 		newDialogHandler,
 		di.DiscoveryFactory,
 		di.EventBus,
+		nodeOptions.BindAddress,
 	)
 
 	serviceCleaner := service.Cleaner{SessionStorage: di.ServiceSessionStorage}
