@@ -24,7 +24,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/services/wireguard"
@@ -186,6 +185,12 @@ func newTunnDevice(wgTunnSetup WireguardTunnelSetup, config *wireguard.ServiceCo
 	wgTunnSetup.AddRoute("0.0.0.0", 1)
 	wgTunnSetup.AddRoute("128.0.0.0", 1)
 
+	// Provider requests to delay consumer connection since it might be in a process of setting up NAT traversal for given consumer
+	if config.Consumer.ConnectDelay > 0 {
+		log.Infof("%s delaying tunnel creation for %v milliseconds", logPrefix, config.Consumer.ConnectDelay)
+		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
+	}
+
 	fd, err := wgTunnSetup.Establish()
 	if err != nil {
 		return nil, err
@@ -212,11 +217,7 @@ type wireguardConnection struct {
 }
 
 func (wg *wireguardConnection) Start(options connection.ConnectOptions) error {
-	var config wireguard.ServiceConfig
-	if err := json.Unmarshal(options.SessionConfig, &config); err != nil {
-		return errors.Wrap(err, "failed to unmarshal connection config")
-	}
-
+	log.Trace("creating device")
 	device, err := wg.deviceFactory(options)
 	if err != nil {
 		return errors.Wrap(err, "failed to start wireguard connection")
@@ -225,20 +226,17 @@ func (wg *wireguardConnection) Start(options connection.ConnectOptions) error {
 	wg.device = device
 	wg.stateChannel <- connection.Connecting
 
-	if config.Consumer.ConnectDelay > 0 {
-		log.Infof("%s delaying connect for %v milliseconds", logPrefix, config.Consumer.ConnectDelay)
-		time.Sleep(time.Duration(config.Consumer.ConnectDelay) * time.Millisecond)
-	}
-
 	if err := wg.doInit(); err != nil {
 		return errors.Wrap(err, "failed to start wireguard connection")
 	}
 
+	log.Trace("emitting connected event")
 	wg.stateChannel <- connection.Connected
 	return nil
 }
 
 func (wg *wireguardConnection) doInit() error {
+	log.Trace("starting doInit()")
 	wg.stopCompleted.Add(1)
 	go wg.runPeriodically(time.Second)
 

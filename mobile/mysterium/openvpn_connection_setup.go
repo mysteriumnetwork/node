@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn3"
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/consumer"
