@@ -262,7 +262,6 @@ func (md *mockDialog) Unsubscribe() {
 }
 
 func (md *mockDialog) Send(producer communication.MessageProducer) error {
-	md.assertNotClosed()
 	return nil
 }
 
