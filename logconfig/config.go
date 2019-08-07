@@ -68,7 +68,7 @@ func BootstrapWith(opts *LogOptions) {
 func Bootstrap() {
 	BootstrapWith(
 		&LogOptions{
-			LogLevel: "Debug",
+			LogLevel: log.DebugStr,
 		},
 	)
 }
