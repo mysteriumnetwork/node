@@ -130,7 +130,7 @@ func waitForProposal(t *testing.T, proposalsChan chan market.ServiceProposal) ma
 	select {
 	case proposal := <-proposalsChan:
 		return proposal
-	case <-time.After(2 * time.Millisecond):
+	case <-time.After(20 * time.Millisecond):
 		t.Log("Proposal not fetched")
 		return market.ServiceProposal{}
 	}
