@@ -34,7 +34,7 @@ func (j *jwtAuth) ValidateToken(token string) (bool, error) {
 }
 
 func Test_Server_ServesHTML(t *testing.T) {
-	s := NewServer(55555, 55554, &jwtAuth{})
+	s := NewServer("localhost", 55555, 55554, &jwtAuth{})
 	s.discovery = &mockDiscovery{}
 	serverError := make(chan error)
 	go func() {
