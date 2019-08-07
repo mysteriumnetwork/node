@@ -34,7 +34,6 @@ import (
 
 const logPrefix = "[dvpn-web-server] "
 const tequilapiUrlPrefix = "/tequilapi"
-const tequilapiHost = "127.0.0.1"
 
 // Server represents our web UI server
 type Server struct {
@@ -47,17 +46,17 @@ type jwtAuthenticator interface {
 }
 
 // NewServer creates a new instance of the server for the given port
-func NewServer(port int, tequilapiPort int, authenticator jwtAuthenticator) *Server {
+func NewServer(bindAddress string, port int, tequilapiPort int, authenticator jwtAuthenticator) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(cors.Default())
-	r.NoRoute(ReverseTequilapiProxy(tequilapiPort, authenticator))
+	r.NoRoute(ReverseTequilapiProxy(bindAddress, tequilapiPort, authenticator))
 
 	r.StaticFS("/", godvpnweb.Assets)
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%v", port),
+		Addr:    fmt.Sprintf("%v:%v", bindAddress, port),
 		Handler: r,
 	}
 
