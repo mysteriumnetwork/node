@@ -89,7 +89,7 @@ services:
       -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
       -balanceCheckInterval 1s
     volumes:
-      - "../../bin/deployer/keystore:/keystore"
+      - "../../bin/localnet/deployer/keystore:/keystore"
     dns: 172.30.0.254
     networks:
       public0:
