@@ -19,11 +19,12 @@ package registry
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/mysteriumnetwork/payments/bindings"
 
 	"github.com/mysteriumnetwork/node/identity"
@@ -32,7 +33,7 @@ import (
 const logPrefix = "[registry] "
 
 // NewIdentityRegistryContract creates identity registry service which uses blockchain for information
-func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryAddress common.Address) (*contractRegistry, error) {
+func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryAddress, accountantAddress common.Address) (*contractRegistry, error) {
 	contract, err := bindings.NewRegistryCaller(registryAddress, contractBackend)
 	if err != nil {
 		return nil, err
@@ -49,16 +50,17 @@ func NewIdentityRegistryContract(contractBackend bind.ContractBackend, registryA
 	if err != nil {
 		return nil, err
 	}
-
 	return &contractRegistry{
 		contractSession,
 		filterer,
+		accountantAddress,
 	}, nil
 }
 
 type contractRegistry struct {
-	contractSession *bindings.RegistryCallerSession
-	filterer        *bindings.RegistryFilterer
+	contractSession   *bindings.RegistryCallerSession
+	filterer          *bindings.RegistryFilterer
+	accountantAddress common.Address
 }
 
 func (registry *contractRegistry) IsRegistered(id identity.Identity) (bool, error) {
@@ -90,7 +92,7 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 	}
 
 	identities := []common.Address{
-		common.HexToAddress(id.Address),
+		registry.accountantAddress,
 	}
 
 	filterOps := &bind.FilterOpts{
@@ -104,6 +106,8 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 			select {
 			case <-stopLoop:
 				registrationEvent <- Cancelled
+				return
+			// TODO: adjust  this time to something more appropriate
 			case <-time.After(1 * time.Second):
 				logIterator, err := registry.filterer.FilterRegisteredIdentity(filterOps, identities)
 				if err != nil {
@@ -118,7 +122,11 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 				for {
 					next := logIterator.Next()
 					if next {
-						registrationEvent <- Registered
+						ev := *logIterator.Event
+						if strings.ToLower(ev.IdentityHash.Hex()) == strings.ToLower(id.Address) {
+							registrationEvent <- Registered
+							return
+						}
 					} else {
 						err = logIterator.Error()
 						if err != nil {
@@ -127,8 +135,6 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 						break
 					}
 				}
-			case <-time.After(30 * time.Second):
-				log.Trace(logPrefix, "no identity registration, sleeping for 1s")
 			}
 		}
 	}()

@@ -27,8 +27,9 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/payments"
-  revision = "90d1f0b5ee8efe3c5748fc9eb1027fa6c9a10fdd"
+  revision = "d9d76504abff11401435f68e867d1c878853bd9d"
 
+# TODO: remove this
 [[constraint]]
   name = "github.com/mysteriumnetwork/payment-bindings"
   version = "0.0.1"

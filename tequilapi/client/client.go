@@ -20,7 +20,10 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
+
+	"github.com/mysteriumnetwork/node/core/transactor"
 )
 
 // NewClient returns a new instance of Client
@@ -91,6 +94,27 @@ func (client *Client) CurrentIdentity(identity, passphrase string) (id IdentityD
 
 	err = parseResponseJSON(response, &id)
 	return id, err
+}
+
+// RegisterIdentity registers identity
+func (client *Client) RegisterIdentity(address, beneficiary string, stake, fee uint64) error {
+	payload := transactor.IdentityRegistrationRequestDTO{
+		Stake:       stake,
+		Fee:         fee,
+		Beneficiary: beneficiary,
+	}
+
+	response, err := client.http.Post("identities/"+address+"/register", payload)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("expected 202 got %v", response.StatusCode)
+	}
+
+	return nil
 }
 
 // IdentityRegistrationStatus returns information of identity needed to register it on blockchain

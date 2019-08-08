@@ -115,7 +115,7 @@ func (t *transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 		return errors.Wrap(err, "identity request validation failed")
 	}
 
-	req, err := requests.NewPostRequest(t.endpointAddress, "/identity/register", t.regReq)
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/register", t.regReq)
 	if err != nil {
 		return errors.Wrap(err, "identity request to Transactor failed")
 	}

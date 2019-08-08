@@ -242,7 +242,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork, nodeOptions.BindAddress); err != nil {
+	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
 
@@ -567,36 +567,37 @@ func newSessionManagerFactory(
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides
-func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork, bindAddress string) (err error) {
+func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err error) {
+	optionsNetwork := options.OptionsNetwork
 	network := metadata.DefaultNetwork
 
 	switch {
-	case options.Testnet:
+	case optionsNetwork.Testnet:
 		network = metadata.TestnetDefinition
-	case options.Localnet:
+	case optionsNetwork.Localnet:
 		network = metadata.LocalnetDefinition
 	}
 
 	//override defined values one by one from options
-	if options.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
-		network.MysteriumAPIAddress = options.MysteriumAPIAddress
+	if optionsNetwork.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
+		network.MysteriumAPIAddress = optionsNetwork.MysteriumAPIAddress
 	}
 
-	if options.QualityOracle != metadata.DefaultNetwork.QualityOracle {
-		network.QualityOracle = options.QualityOracle
+	if optionsNetwork.QualityOracle != metadata.DefaultNetwork.QualityOracle {
+		network.QualityOracle = optionsNetwork.QualityOracle
 	}
 
-	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
-		network.BrokerAddress = options.BrokerAddress
+	if optionsNetwork.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
+		network.BrokerAddress = optionsNetwork.BrokerAddress
 	}
 
-	normalizedAddress := common.HexToAddress(options.EtherPaymentsAddress)
+	normalizedAddress := common.HexToAddress(optionsNetwork.EtherPaymentsAddress)
 	if normalizedAddress != metadata.DefaultNetwork.PaymentsContractAddress {
 		network.PaymentsContractAddress = normalizedAddress
 	}
 
-	if options.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
-		network.EtherClientRPC = options.EtherClientRPC
+	if optionsNetwork.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
+		network.EtherClientRPC = optionsNetwork.EtherClientRPC
 	}
 
 	di.NetworkDefinition = network
@@ -604,11 +605,12 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork, 
 	if _, err := firewall.AllowURLAccess(
 		network.EtherClientRPC,
 		network.MysteriumAPIAddress,
+		options.Transactor.TransactorEndpointAddress,
 	); err != nil {
 		return err
 	}
 
-	di.MysteriumAPI = mysterium.NewClient(bindAddress, network.MysteriumAPIAddress)
+	di.MysteriumAPI = mysterium.NewClient(options.BindAddress, network.MysteriumAPIAddress)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
 	if di.EtherClient, err = payment_bindings.NewClient(network.EtherClientRPC); err != nil {
@@ -616,8 +618,9 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork, 
 	}
 
 	log.Info("Using Eth contract at address: ", network.PaymentsContractAddress.String())
-	if options.ExperimentIdentityCheck {
-		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress); err != nil {
+	log.Info("options.ExperimentIdentityCheck", optionsNetwork.ExperimentIdentityCheck)
+	if optionsNetwork.ExperimentIdentityCheck {
+		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress, common.HexToAddress(options.Transactor.AccountantID)); err != nil {
 			return err
 		}
 	} else {

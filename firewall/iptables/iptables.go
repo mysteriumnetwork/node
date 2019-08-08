@@ -67,7 +67,7 @@ var iptablesExec = func(args ...string) ([]string, error) {
 	log.Trace(logPrefix, "[cmd] ", args)
 	output, err := exec.Command("sudo", args...).CombinedOutput()
 	if err != nil {
-		log.Trace(logPrefix, "[cmd error] ", err)
+		log.Trace(logPrefix, "[cmd error] ", err, " ", args, " ", string(output))
 		return nil, errors.Wrap(err, "iptables cmd error")
 	}
 	outputScanner := bufio.NewScanner(bytes.NewBuffer(output))

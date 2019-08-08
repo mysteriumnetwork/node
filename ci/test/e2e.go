@@ -47,7 +47,7 @@ func TestE2EBasic() error {
 		"e2e/docker-compose.yml",
 	}
 	runner := newRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard")
-	// defer runner.cleanup()
+	runner.cleanup()
 	if err := runner.init(); err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (r *runner) startAppContainers() error {
 		"--keystore.directory=bin/localnet/deployer/keystore",
 		fmt.Sprintf("--ether.address=%v", "0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7"),
 		fmt.Sprintf("--ether.passphrase=%v", r.etherPassphrase),
-		"--geth.url=http://ganache:8545")
+		"--geth.url=ws://ganache:8545")
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}
@@ -154,7 +154,7 @@ func (r *runner) test() error {
 		"--provider.tequilapi-port=4050",
 		"--consumer.tequilapi-host=myst-consumer",
 		"--consumer.tequilapi-port=4050",
-		"--geth.url=http://ganache:8545",
+		"--geth.url=ws://ganache:8545",
 		"--consumer.services", r.services,
 	)
 	return errors.Wrap(err, "tests failed!")

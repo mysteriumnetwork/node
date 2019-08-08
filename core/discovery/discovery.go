@@ -119,7 +119,6 @@ func (d *Discovery) Stop() {
 }
 
 func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool) {
-
 	for {
 		select {
 		case <-stopLoop:

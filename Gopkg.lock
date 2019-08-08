@@ -526,7 +526,7 @@
   version = "0.0.1"
 
 [[projects]]
-  digest = "1:0abbbc810046da21005f565fcffdf9cd971f1d677ee67b930814e12cf37583c0"
+  digest = "1:c841c8f63d0d6c6bb1c40f86056d7491cd1fd6eb9a38eb31a6134734174475b0"
   name = "github.com/mysteriumnetwork/payments"
   packages = [
     "bindings",
@@ -534,7 +534,7 @@
     "registration",
   ]
   pruneopts = "T"
-  revision = "90d1f0b5ee8efe3c5748fc9eb1027fa6c9a10fdd"
+  revision = "d9d76504abff11401435f68e867d1c878853bd9d"
 
 [[projects]]
   digest = "1:6af00f84f6fdf9a971d5447f7f74b8b1dde177dbdd2102070a91130ab08036d1"
