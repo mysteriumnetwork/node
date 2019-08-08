@@ -47,7 +47,7 @@ func TestE2EBasic() error {
 		"e2e/docker-compose.yml",
 	}
 	runner := newRunner(composeFiles, "node_e2e_basic_test", "openvpn,noop,wireguard")
-	runner.cleanup()
+	defer runner.cleanup()
 	if err := runner.init(); err != nil {
 		return err
 	}

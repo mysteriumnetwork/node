@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	payment_bindings "github.com/mysteriumnetwork/payment-bindings"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/communication"
@@ -613,7 +612,8 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	di.MysteriumAPI = mysterium.NewClient(options.BindAddress, network.MysteriumAPIAddress)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
-	if di.EtherClient, err = payment_bindings.NewClient(network.EtherClientRPC); err != nil {
+
+	if di.EtherClient, err = ethclient.Dial(network.EtherClientRPC); err != nil {
 		return err
 	}
 

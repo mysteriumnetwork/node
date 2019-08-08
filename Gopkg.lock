@@ -518,14 +518,6 @@
   revision = "6a3d4c1c3fbd536609ded8cfef335ec2852cd63e"
 
 [[projects]]
-  digest = "1:029f45ade56061c7bcd195f87c34e6d1ab486748e6fbb2730c57c12f82bc52a6"
-  name = "github.com/mysteriumnetwork/payment-bindings"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "b47f77609e844522248298221a676ddf9b4f0deb"
-  version = "0.0.1"
-
-[[projects]]
   digest = "1:c841c8f63d0d6c6bb1c40f86056d7491cd1fd6eb9a38eb31a6134734174475b0"
   name = "github.com/mysteriumnetwork/payments"
   packages = [
@@ -1079,7 +1071,6 @@
     "github.com/mysteriumnetwork/go-openvpn/openvpn/tls",
     "github.com/mysteriumnetwork/go-openvpn/openvpn3",
     "github.com/mysteriumnetwork/metrics",
-    "github.com/mysteriumnetwork/payment-bindings",
     "github.com/mysteriumnetwork/payments/bindings",
     "github.com/mysteriumnetwork/payments/crypto",
     "github.com/mysteriumnetwork/payments/registration",
