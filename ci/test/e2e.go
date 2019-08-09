@@ -82,7 +82,7 @@ func (r *runner) init() error {
 
 func (r *runner) startAppContainers() error {
 	log.Info("starting other services")
-	if err := r.compose("up", "-d", "broker", "ganache", "ipify", "transactor"); err != nil {
+	if err := r.compose("up", "-d", "broker", "ganache", "ipify"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
 	log.Info("starting DB")
@@ -103,6 +103,11 @@ func (r *runner) startAppContainers() error {
 	}
 	if !dbUp {
 		return errors.New("starting DB timed out")
+	}
+
+	log.Info("starting transactor")
+	if err := r.compose("up", "-d", "transactor"); err != nil {
+		return errors.Wrap(err, "starting transactor failed!")
 	}
 
 	log.Info("migrating DB")

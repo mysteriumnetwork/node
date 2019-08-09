@@ -63,7 +63,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 			if i != len(servicesInFlag)-1 {
 				// this allows the nats to reconnect properly before starting a new service test
-				time.Sleep(time.Second * 10)
+				time.Sleep(time.Second * 5)
 			}
 		}
 	})

@@ -68,6 +68,11 @@ services:
     command: >
       --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
     dns: 172.30.0.254
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
     networks:
       public0:
         ipv4_address: 172.30.0.202
@@ -80,6 +85,11 @@ services:
       PORT: 8888
     expose:
       - 8888
+    sysctls:
+      - net.ipv4.conf.default.rp_filter=0
+      - net.ipv4.conf.all.rp_filter=0
+      - net.ipv4.conf.eth0.rp_filter=0
+      - net.ipv4.conf.eth1.rp_filter=0
     depends_on:
       - ganache
     command: >
