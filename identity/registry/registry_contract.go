@@ -19,7 +19,6 @@ package registry
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -91,8 +90,12 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 		stopLoop <- true
 	}
 
-	identities := []common.Address{
+	accountantIdentities := []common.Address{
 		registry.accountantAddress,
+	}
+
+	userIdentities := []common.Address{
+		common.HexToAddress(id.Address),
 	}
 
 	filterOps := &bind.FilterOpts{
@@ -109,7 +112,7 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 				return
 			// TODO: adjust  this time to something more appropriate
 			case <-time.After(1 * time.Second):
-				logIterator, err := registry.filterer.FilterRegisteredIdentity(filterOps, identities)
+				logIterator, err := registry.filterer.FilterRegisteredIdentity(filterOps, userIdentities, accountantIdentities)
 				if err != nil {
 					registrationEvent <- Cancelled
 					log.Error(logPrefix, err)
@@ -122,18 +125,14 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 				for {
 					next := logIterator.Next()
 					if next {
-						ev := *logIterator.Event
-						if strings.ToLower(ev.IdentityHash.Hex()) == strings.ToLower(id.Address) {
-							registrationEvent <- Registered
-							return
-						}
-					} else {
-						err = logIterator.Error()
-						if err != nil {
-							log.Error(logPrefix, err)
-						}
-						break
+						registrationEvent <- Registered
+						return
 					}
+					err = logIterator.Error()
+					if err != nil {
+						log.Error(logPrefix, err)
+					}
+					break
 				}
 			}
 		}
