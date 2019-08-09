@@ -82,7 +82,7 @@ func (r *runner) init() error {
 
 func (r *runner) startAppContainers() error {
 	log.Info("starting other services")
-	if err := r.compose("up", "-d", "broker", "ganache", "ipify"); err != nil {
+	if err := r.compose("up", "-d", "broker", "ganache", "ipify", "transactor"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
 	log.Info("starting DB")
