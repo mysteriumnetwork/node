@@ -31,7 +31,7 @@ import (
 )
 
 var identityRegData = `{
-  "beneficiary": "fundsCanBeTransferredTo",
+  "beneficiary": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c",
   "fee": 1,
   "stake": 0
 }`
@@ -42,7 +42,7 @@ func Test_RegisterIdentity(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, "registryAddress", "accountantID", fakeSignerFactory)
+	tr := transactor.NewTransactor(server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -96,6 +96,17 @@ var fakeSignerFactory = func(id identity.Identity) identity.Signer {
 type fakeSigner struct {
 }
 
+func pad(b []byte, size int) []byte {
+	if len(b) >= size {
+		return b
+	}
+	tmp := make([]byte, size)
+	copy(tmp[size-len(b):], b)
+	return tmp
+}
+
 func (fs *fakeSigner) Sign(message []byte) (identity.Signature, error) {
-	return identity.SignatureBase64("deadbeef"), nil
+	b := make([]byte, 65)
+	b = pad(b, 65)
+	return identity.SignatureBytes(b), nil
 }

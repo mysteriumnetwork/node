@@ -37,7 +37,8 @@ type transactor struct {
 	http            requests.HTTPTransport
 	endpointAddress string
 	signerFactory   identity.SignerFactory
-	regReq          *IdentityRegistrationRequest
+	registryAddress string
+	accountantID    string
 }
 
 // NewTransactor creates and returns new Transactor instance
@@ -46,7 +47,8 @@ func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID s
 		http:            requests.NewHTTPClient(bindAddress, 20*time.Second),
 		endpointAddress: endpointAddress,
 		signerFactory:   signerFactory,
-		regReq:          &IdentityRegistrationRequest{RegistryAddress: registryAddress, AccountantID: accountantID},
+		registryAddress: registryAddress,
+		accountantID:    accountantID,
 	}
 }
 
@@ -104,18 +106,17 @@ func (t *transactor) FetchFees() (Fees, error) {
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
 func (t *transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistrationRequestDTO) error {
-
-	err := t.fillIdentityRegistrationRequest(id, regReqDTO)
+	regReq, err := t.fillIdentityRegistrationRequest(id, *regReqDTO)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill in identity request")
 	}
 
-	err = t.validateRegisterIdentityRequest()
+	err = t.validateRegisterIdentityRequest(regReq)
 	if err != nil {
 		return errors.Wrap(err, "identity request validation failed")
 	}
 
-	req, err := requests.NewPostRequest(t.endpointAddress, "identity/register", t.regReq)
+	req, err := requests.NewPostRequest(t.endpointAddress, "identity/register", regReq)
 	if err != nil {
 		return errors.Wrap(err, "identity request to Transactor failed")
 	}
@@ -127,54 +128,56 @@ func (t *transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 	return nil
 }
 
-func (t *transactor) fillIdentityRegistrationRequest(id string, regReqDTO *IdentityRegistrationRequestDTO) error {
-	t.regReq.Stake = regReqDTO.Stake
-	t.regReq.Fee = regReqDTO.Fee
+func (t *transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {
+	regReq := IdentityRegistrationRequest{RegistryAddress: t.registryAddress, AccountantID: t.accountantID}
+
+	regReq.Stake = regReqDTO.Stake
+	regReq.Fee = regReqDTO.Fee
 
 	if regReqDTO.Beneficiary == "" {
 		// TODO: inject ChannelImplAddress through constructor
-		channelAddress, err := pc.GenerateChannelAddress(id, t.regReq.RegistryAddress, metadata.TestnetDefinition.ChannelImplAddress)
+		channelAddress, err := pc.GenerateChannelAddress(id, regReq.RegistryAddress, metadata.TestnetDefinition.ChannelImplAddress)
 		if err != nil {
-			return errors.Wrap(err, "failed to calculate channel address")
+			return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to calculate channel address")
 		}
 
-		t.regReq.Beneficiary = channelAddress
+		regReq.Beneficiary = channelAddress
 	} else {
-		t.regReq.Beneficiary = regReqDTO.Beneficiary
+		regReq.Beneficiary = regReqDTO.Beneficiary
 	}
 
 	signer := t.signerFactory(identity.FromAddress(id))
 
-	sig, err := t.signRegistrationRequest(signer)
+	sig, err := t.signRegistrationRequest(signer, regReq)
 	if err != nil {
-		return errors.Wrap(err, "failed to sign identity registration request")
+		return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to sign identity registration request")
 	}
 
 	signatureHex := common.Bytes2Hex(sig)
-	t.regReq.Signature = strings.ToLower(fmt.Sprintf("0x%v", signatureHex))
-	log.Info("regReq: %v", t.regReq)
-	t.regReq.Identity = id
+	regReq.Signature = strings.ToLower(fmt.Sprintf("0x%v", signatureHex))
+	log.Info("regReq: %v", regReq)
+	regReq.Identity = id
 
-	return nil
+	return regReq, nil
 }
 
-func (t *transactor) validateRegisterIdentityRequest() error {
-	if t.regReq.AccountantID == "" {
+func (t *transactor) validateRegisterIdentityRequest(regReq IdentityRegistrationRequest) error {
+	if regReq.AccountantID == "" {
 		return errors.New("AccountantID is required")
 	}
-	if t.regReq.RegistryAddress == "" {
+	if regReq.RegistryAddress == "" {
 		return errors.New("RegistryAddress is required")
 	}
 	return nil
 }
 
-func (t *transactor) signRegistrationRequest(signer identity.Signer) ([]byte, error) {
+func (t *transactor) signRegistrationRequest(signer identity.Signer, regReq IdentityRegistrationRequest) ([]byte, error) {
 	req := registration.Request{
-		RegistryAddress: strings.ToLower(t.regReq.RegistryAddress),
-		AccountantID:    strings.ToLower(t.regReq.AccountantID),
-		Stake:           t.regReq.Stake,
-		Fee:             t.regReq.Fee,
-		Beneficiary:     strings.ToLower(t.regReq.Beneficiary),
+		RegistryAddress: strings.ToLower(regReq.RegistryAddress),
+		AccountantID:    strings.ToLower(regReq.AccountantID),
+		Stake:           regReq.Stake,
+		Fee:             regReq.Fee,
+		Beneficiary:     strings.ToLower(regReq.Beneficiary),
 	}
 
 	message := req.GetMessage()
