@@ -82,8 +82,8 @@ func (service *serviceIPTables) Disable() (err error) {
 
 func iptables(action string, rule RuleForwarding) error {
 	arguments := "/sbin/iptables --table nat --" + action + " POSTROUTING --source " +
-		rule.SourceAddress + " ! --destination " +
-		rule.SourceAddress + " --jump SNAT --to " +
+		rule.SourceSubnet + " ! --destination " +
+		rule.SourceSubnet + " --jump SNAT --to " +
 		rule.TargetIP
 	cmd := utils.SplitCommand("sudo", arguments)
 	if output, err := cmd.CombinedOutput(); err != nil {
@@ -91,6 +91,6 @@ func iptables(action string, rule RuleForwarding) error {
 		return errors.Wrap(err, string(output))
 	}
 
-	log.Info(natLogPrefix, "Action '"+action+"' applied for forwarding packets from '", rule.SourceAddress, "' to IP: ", rule.TargetIP)
+	log.Info(natLogPrefix, "Action '"+action+"' applied for forwarding packets from '", rule.SourceSubnet, "' to IP: ", rule.TargetIP)
 	return nil
 }

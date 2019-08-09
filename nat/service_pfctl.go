@@ -96,7 +96,7 @@ func (service *servicePFCtl) enableRules() error {
 		if err != nil {
 			return err
 		}
-		natRule += fmt.Sprintf("nat on %v inet from %v to any -> %v\n", iface, rule.SourceAddress, rule.TargetIP)
+		natRule += fmt.Sprintf("nat on %v inet from %v to any -> %v\n", iface, rule.SourceSubnet, rule.TargetIP)
 	}
 
 	arguments := fmt.Sprintf(`echo "%v" | /sbin/pfctl -vEf -`, natRule)

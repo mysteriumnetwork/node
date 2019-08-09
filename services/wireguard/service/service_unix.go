@@ -95,7 +95,7 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 		return nil, err
 	}
 
-	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: outIP}
+	natRule := nat.RuleForwarding{SourceSubnet: config.Consumer.IPAddress.String(), TargetIP: outIP}
 	if err := manager.natService.Add(natRule); err != nil {
 		return nil, err
 	}

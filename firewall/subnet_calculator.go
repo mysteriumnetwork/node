@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,18 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package nat
+package firewall
 
-// NATService describes fake nat service for darwin
-type NATService interface {
-	Enable() error
-	Add(rule RuleForwarding) error
-	Del(rule RuleForwarding) error
-	Disable() error
-}
+import (
+	"fmt"
+	"net"
+)
 
-// RuleForwarding describes fake nat rule
-type RuleForwarding struct {
-	SourceSubnet string
-	TargetIP     string
+// SimplifiedSubnet returns IP subnet in x.x.x.x/yy format
+func SimplifiedSubnet(subnet, netmask string) string {
+	mask := net.IPMask(net.ParseIP(netmask).To4())
+	length, _ := mask.Size()
+
+	return fmt.Sprintf("%s/%d", subnet, length)
 }

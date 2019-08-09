@@ -129,7 +129,7 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 		}
 	}()
 
-	natRule := nat.RuleForwarding{SourceAddress: config.Consumer.IPAddress.String(), TargetIP: outIP}
+	natRule := nat.RuleForwarding{SourceSubnet: config.Consumer.IPAddress.String(), TargetIP: outIP}
 	if err := manager.natService.Add(natRule); err != nil {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
 	}

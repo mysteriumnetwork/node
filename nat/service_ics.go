@@ -130,9 +130,9 @@ func (ics *serviceICS) enableRemoteAccessService() error {
 
 // Add enables internet connection sharing for the local interface.
 func (ics *serviceICS) Add(rule RuleForwarding) error {
-	_, ipnet, err := net.ParseCIDR(rule.SourceAddress)
+	_, ipnet, err := net.ParseCIDR(rule.SourceSubnet)
 	if err != nil {
-		log.Warnf("%s Failed to parse IP-address: %s", natLogPrefix, rule.SourceAddress)
+		log.Warnf("%s Failed to parse IP-address: %s", natLogPrefix, rule.SourceSubnet)
 	}
 
 	ip := incrementIP(ipnet.IP)

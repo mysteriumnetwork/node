@@ -23,6 +23,8 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
+	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -34,7 +36,6 @@ import (
 	"github.com/mysteriumnetwork/node/services"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/pkg/errors"
 )
 
 const logPrefix = "[service-openvpn] "
@@ -90,8 +91,8 @@ type Manager struct {
 // Serve starts service - does block
 func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	err = m.natService.Add(nat.RuleForwarding{
-		SourceAddress: "10.8.0.0/24",
-		TargetIP:      m.outboundIP,
+		SourceSubnet: firewall.SimplifiedSubnet(m.serviceOptions.Subnet, m.serviceOptions.Netmask),
+		TargetIP:     m.outboundIP,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to add NAT forwarding rule")
@@ -145,8 +146,8 @@ func (m *Manager) Stop() (err error) {
 
 	if m.natService != nil {
 		return m.natService.Del(nat.RuleForwarding{
-			SourceAddress: "10.8.0.0/24",
-			TargetIP:      m.outboundIP,
+			SourceSubnet: firewall.SimplifiedSubnet(m.serviceOptions.Subnet, m.serviceOptions.Netmask),
+			TargetIP:     m.outboundIP,
 		})
 	}
 

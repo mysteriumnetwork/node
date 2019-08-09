@@ -40,9 +40,9 @@ func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
 }
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
-	request := json.RawMessage(`{"port": 1123, "protocol": "udp"}`)
+	request := json.RawMessage(`{"port": 1123, "protocol": "udp", "subnet": "10.10.10.0", "netmask": "255.255.255.0"}`)
 	options, err := ParseJSONOptions(&request)
 
 	assert.NoError(t, err)
-	assert.Equal(t, Options{"udp", 1123}, options)
+	assert.Equal(t, Options{Protocol: "udp", Port: 1123, Subnet: "10.10.10.0", Netmask: "255.255.255.0"}, options)
 }
