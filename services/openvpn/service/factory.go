@@ -99,7 +99,7 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 		return openvpn_service.NewServerConfig(
 			nodeOptions.Directories.Runtime,
 			nodeOptions.Directories.Config,
-			"10.8.0.0", "255.255.255.0",
+			serviceOptions.Subnet, serviceOptions.Netmask,
 			secPrimitives,
 			nodeOptions.BindAddress,
 			port,

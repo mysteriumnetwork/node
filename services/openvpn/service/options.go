@@ -20,15 +20,18 @@ package service
 import (
 	"encoding/json"
 
-	"github.com/mysteriumnetwork/node/core/service"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
+
+	"github.com/mysteriumnetwork/node/core/service"
 )
 
 // Options describes options which are required to start Openvpn service
 type Options struct {
 	Protocol string `json:"protocol"`
 	Port     int    `json:"port"`
+	Subnet   string `json:"subnet"`
+	Netmask  string `json:"netmask"`
 }
 
 var (
@@ -42,15 +45,27 @@ var (
 		Usage: "Openvpn port to use. If not specified, random port will be used",
 		Value: defaultOptions.Port,
 	})
+	subnetFlag = altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "openvpn.subnet",
+		Usage: "Openvpn subnet that will be used to connecting VPN clients",
+		Value: defaultOptions.Subnet,
+	})
+	netmaskFlag = altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "openvpn.netmask",
+		Usage: "Openvpn subnet netmask ",
+		Value: defaultOptions.Netmask,
+	})
 	defaultOptions = Options{
 		Protocol: "udp",
 		Port:     0,
+		Subnet:   "10.8.0.0",
+		Netmask:  "255.255.255.0",
 	}
 )
 
 // RegisterFlags function register Openvpn flags to flag list
 func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, protocolFlag, portFlag)
+	*flags = append(*flags, protocolFlag, portFlag, subnetFlag, netmaskFlag)
 }
 
 // ParseFlags function fills in Openvpn options from CLI context
@@ -58,6 +73,8 @@ func ParseFlags(ctx *cli.Context) service.Options {
 	return Options{
 		Protocol: ctx.String(protocolFlag.Name),
 		Port:     ctx.Int(portFlag.Name),
+		Subnet:   ctx.String(subnetFlag.Name),
+		Netmask:  ctx.String(netmaskFlag.Name),
 	}
 }
 
