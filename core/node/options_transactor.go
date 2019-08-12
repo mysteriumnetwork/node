@@ -15,22 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package promise
+package node
 
-import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/mysteriumnetwork/node/session/promise/model"
-)
-
-// ExtraData represents the extra data in the promise
-type ExtraData struct {
-	ConsumerAddress common.Address
+// OptionsTransactor describes possible parameters for interaction with transactor
+type OptionsTransactor struct {
+	TransactorEndpointAddress string
+	RegistryAddress           string
+	AccountantID              string
 }
-
-// Hash returns the hash of the extra data
-func (extra ExtraData) Hash() []byte {
-	return crypto.Keccak256(extra.ConsumerAddress.Bytes())
-}
-
-var _ model.ExtraData = ExtraData{}

@@ -25,7 +25,7 @@ import (
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
-	"github.com/mysteriumnetwork/payments/promises"
+	"github.com/mysteriumnetwork/node/session/promise/model"
 	"github.com/pkg/errors"
 )
 
@@ -37,7 +37,7 @@ type PeerPromiseSender interface {
 // PromiseTracker keeps track of promises
 type PromiseTracker interface {
 	AlignStateWithProvider(providerState promise.State) error
-	ExtendPromise(amountToAdd uint64) (promises.IssuedPromise, error)
+	ExtendPromise(amountToAdd uint64) (model.IssuedPromise, error)
 }
 
 // SessionPayments orchestrates the ping pong of balance received from provider -> promise sent to provider flow

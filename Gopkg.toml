@@ -27,11 +27,7 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/payments"
-  version = "0.0.10"
-
-[[constraint]]
-  name = "github.com/mysteriumnetwork/payment-bindings"
-  version = "0.0.1"
+  revision = "003973d4b083f7b6d938001e8102231962de6100"
 
 [[constraint]]
   name = "github.com/chzyer/readline"

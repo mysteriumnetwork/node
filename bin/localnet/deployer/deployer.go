@@ -25,63 +25,72 @@ import (
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/mysteriumnetwork/payment-bindings/generated"
-	"github.com/mysteriumnetwork/payments/cli/helpers"
-	"github.com/mysteriumnetwork/payments/contracts/abigen"
-	"github.com/mysteriumnetwork/payments/mysttoken"
+	"github.com/mysteriumnetwork/payments/bindings"
 )
 
 func main() {
-
 	keyStoreDir := flag.String("keystore.directory", "", "Directory of keystore")
 	etherAddress := flag.String("ether.address", "", "Account inside keystore to use for deployment")
-	etherPassphrase := flag.String("ether.passphrase", "", "Passphrase for account unlocking")
+	etherPassword := flag.String("ether.passphrase", "", "key of the account")
 	ethRPC := flag.String("geth.url", "", "RPC url of ethereum client")
-
 	flag.Parse()
 
-	ks := helpers.GetKeystore(*keyStoreDir)
+	addr := common.HexToAddress(*etherAddress)
 
-	acc, err := helpers.GetUnlockedAcc(*etherAddress, *etherPassphrase, ks)
-	checkError("Unlock acc", err)
+	ks := keystore.NewKeyStore(*keyStoreDir, keystore.StandardScryptN, keystore.StandardScryptP)
 
-	transactor := helpers.CreateNewKeystoreTransactor(ks, acc)
+	acc, err := ks.Find(accounts.Account{Address: addr})
+	checkError("find account", err)
 
-	client, synced, err := helpers.LookupBackend(*ethRPC)
-	checkError("backend lookup", err)
-	<-synced
+	err = ks.Unlock(acc, *etherPassword)
+	checkError("unlock account", err)
 
-	// we still need to deploy legacy contracts to blockchain to be backwards compatible with current usage
-	deployLegacyContracts(transactor, client)
+	client, err := ethclient.Dial(*ethRPC)
+	checkError("lookup backend", err)
+
+	chainID, err := client.NetworkID(context.Background())
+	checkError("lookup chainid", err)
+
+	transactor := &bind.TransactOpts{
+		From: addr,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			return ks.SignTx(acc, tx, chainID)
+		},
+		Context:  context.Background(),
+		GasLimit: 5000000,
+	}
 
 	deployPaymentsv2Contracts(transactor, client)
 }
 
 func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.Client) {
+	time.Sleep(time.Second * 3)
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	mystTokenAddress, tx, _, err := generated.DeployMystToken(transactor, client)
+	mystTokenAddress, tx, _, err := bindings.DeployMystToken(transactor, client)
 	checkError("Deploy token v2", err)
 	checkTxStatus(client, tx)
 	fmt.Println("v2 token address: ", mystTokenAddress.String())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	mystDexAddress, tx, _, err := generated.DeployMystDEX(transactor, client)
+	mystDexAddress, tx, _, err := bindings.DeployMystDEX(transactor, client)
 	checkError("Deploy mystDex v2", err)
 	checkTxStatus(client, tx)
 	fmt.Println("v2 mystDEX address: ", mystDexAddress.String())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	channelImplAddress, tx, _, err := generated.DeployChannelImplementation(transactor, client)
+	channelImplAddress, tx, _, err := bindings.DeployChannelImplementation(transactor, client)
 	checkError("Deploy channel impl v2", err)
 	checkTxStatus(client, tx)
 	fmt.Println("v2 channel impl address: ", channelImplAddress.String())
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	accountantImplAddress, tx, _, err := generated.DeployAccountantImplementation(transactor, client)
+	accountantImplAddress, tx, _, err := bindings.DeployAccountantImplementation(transactor, client)
 	checkError("Deploy accountant impl v2", err)
 	checkTxStatus(client, tx)
 	fmt.Println("v2 accountant impl address: ", accountantImplAddress.String())
@@ -89,7 +98,7 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
 	registrationFee := big.NewInt(0)
 	minimalStake := big.NewInt(0)
-	registryAddress, tx, _, err := generated.DeployRegistry(
+	registryAddress, tx, _, err := bindings.DeployRegistry(
 		transactor,
 		client,
 		mystTokenAddress,
@@ -100,22 +109,44 @@ func deployPaymentsv2Contracts(transactor *bind.TransactOpts, client *ethclient.
 		minimalStake,
 	)
 	checkError("Deploy registry v2", err)
-	checkTxStatus(client, tx)
 	fmt.Println("v2 registry address: ", registryAddress.String())
-}
-
-func deployLegacyContracts(transactor *bind.TransactOpts, client *ethclient.Client) uint64 {
-	mystTokenAddress, tx, _, err := mysttoken.DeployMystToken(transactor, client)
-	checkError("Deploy token", err)
 	checkTxStatus(client, tx)
-	fmt.Println("(deprecated) Token: ", mystTokenAddress.String())
+
+	ts, err := bindings.NewMystTokenTransactor(mystTokenAddress, client)
+	checkError("myst transactor", err)
 
 	transactor.Nonce = lookupLastNonce(transactor.From, client)
-	paymentsAddress, tx, _, err := abigen.DeployIdentityPromises(transactor, client, mystTokenAddress, big.NewInt(100))
-	checkError("Deploy payments", err)
+	tx, err = ts.Mint(transactor, transactor.From, big.NewInt(10000000000))
+	checkError("mint myst", err)
 	checkTxStatus(client, tx)
-	fmt.Println("(deprecated) Payments: ", paymentsAddress.String())
-	return tx.Nonce()
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	tx, err = ts.IncreaseAllowance(transactor, registryAddress, big.NewInt(10000000000))
+	checkError("allow myst", err)
+	checkTxStatus(client, tx)
+
+	rt, err := bindings.NewRegistryTransactor(registryAddress, client)
+	checkError("registry transactor", err)
+
+	transactor.Nonce = lookupLastNonce(transactor.From, client)
+	tx, err = rt.RegisterAccountant(
+		transactor,
+		transactor.From,
+		big.NewInt(1000000),
+	)
+
+	checkError("register accountant", err)
+	checkTxStatus(client, tx)
+
+	rc, err := bindings.NewRegistryCaller(registryAddress, client)
+	checkError("registry caller", err)
+
+	accs, err := rc.GetAccountantAddress(&bind.CallOpts{
+		Context: context.Background(),
+		From:    transactor.From,
+	}, transactor.From)
+	checkError("get accountant address", err)
+	fmt.Println("registered accountant", accs.Hex())
 }
 
 func checkError(context string, err error) {
@@ -124,9 +155,13 @@ func checkError(context string, err error) {
 		os.Exit(1)
 	}
 }
+func lookupLastNonce(addr common.Address, client *ethclient.Client) *big.Int {
+	nonce, err := client.NonceAt(context.Background(), addr, nil)
+	checkError("Lookup last nonce", err)
+	return big.NewInt(int64(nonce))
+}
 
 func checkTxStatus(client *ethclient.Client, tx *types.Transaction) {
-
 	//wait for transaction to be mined at most 10 seconds
 	for i := 0; i < 10; i++ {
 		_, pending, err := client.TransactionByHash(context.Background(), tx.Hash())
@@ -144,10 +179,4 @@ func checkTxStatus(client *ethclient.Client, tx *types.Transaction) {
 		fmt.Println("Receipt status expected to be 1")
 		os.Exit(1)
 	}
-}
-
-func lookupLastNonce(addr common.Address, client *ethclient.Client) *big.Int {
-	nonce, err := client.NonceAt(context.Background(), addr, nil)
-	checkError("Lookup last nonce", err)
-	return big.NewInt(int64(nonce))
 }

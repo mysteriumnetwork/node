@@ -18,8 +18,7 @@
 package test
 
 import (
-	"bufio"
-	"os"
+	"fmt"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -52,6 +51,7 @@ func TestE2EBasic() error {
 	if err := runner.init(); err != nil {
 		return err
 	}
+
 	return runner.test()
 }
 
@@ -66,6 +66,7 @@ func TestE2ENAT() error {
 	if err := runner.init(); err != nil {
 		return err
 	}
+
 	return runner.test()
 }
 
@@ -82,12 +83,8 @@ func (r *runner) init() error {
 }
 
 func (r *runner) startAppContainers() error {
-	log.Info("initializing geth node")
-	if err := r.compose("run", "geth", "init", "genesis.json"); err != nil {
-		return errors.Wrap(err, "initializing geth node failed!")
-	}
 	log.Info("starting other services")
-	if err := r.compose("up", "-d", "broker", "geth", "ipify"); err != nil {
+	if err := r.compose("up", "-d", "broker", "ganache", "ipify"); err != nil {
 		return errors.Wrap(err, "starting other services failed!")
 	}
 	log.Info("starting DB")
@@ -110,6 +107,11 @@ func (r *runner) startAppContainers() error {
 		return errors.New("starting DB timed out")
 	}
 
+	log.Info("starting transactor")
+	if err := r.compose("up", "-d", "transactor"); err != nil {
+		return errors.Wrap(err, "starting transactor failed!")
+	}
+
 	log.Info("migrating DB")
 	if err := r.compose("run", "--entrypoint", "bin/db-upgrade", "mysterium-api"); err != nil {
 		return errors.Wrap(err, "migrating DB failed!")
@@ -120,23 +122,13 @@ func (r *runner) startAppContainers() error {
 		return errors.Wrap(err, "starting mysterium-api failed!")
 	}
 
-	file, err := os.Open("bin/localnet/deployer/local_acc_password.txt")
-	if err != nil {
-		return errors.Wrap(err, "failed to read ether passphrase!")
-	}
-	scanner := bufio.NewScanner(file)
-	if !scanner.Scan() {
-		return errors.New("failed to read ether passphrase!")
-	}
-	r.etherPassphrase = scanner.Text()
-
 	log.Info("deploying contracts")
-	err = r.compose("run", "go-runner",
+	err := r.compose("run", "go-runner",
 		"go", "run", "bin/localnet/deployer/deployer.go",
 		"--keystore.directory=bin/localnet/deployer/keystore",
-		"--ether.address=0xa754f0d31411d88e46aed455fa79b9fced122497",
-		"--ether.passphrase", r.etherPassphrase,
-		"--geth.url=http://geth:8545")
+		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
+		fmt.Sprintf("--ether.passphrase=%v", r.etherPassphrase),
+		"--geth.url=ws://ganache:8545")
 	if err != nil {
 		return errors.Wrap(err, "failed to deploy contracts!")
 	}
@@ -163,13 +155,13 @@ func (r *runner) test() error {
 	err := r.compose("run", "go-runner",
 		"go", "test", "-v", "./e2e/...", "-args",
 		"--deployer.keystore-directory=../bin/localnet/deployer/keystore",
-		"--deployer.address=0xa754f0d31411d88e46aed455fa79b9fced122497",
+		"--deployer.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
 		"--deployer.passphrase", r.etherPassphrase,
 		"--provider.tequilapi-host=myst-provider",
 		"--provider.tequilapi-port=4050",
 		"--consumer.tequilapi-host=myst-consumer",
 		"--consumer.tequilapi-port=4050",
-		"--geth.url=http://geth:8545",
+		"--geth.url=ws://ganache:8545",
 		"--consumer.services", r.services,
 	)
 	return errors.Wrap(err, "tests failed!")

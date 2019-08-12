@@ -20,13 +20,13 @@ package promise
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/payments/promises"
+	"github.com/mysteriumnetwork/node/session/promise/model"
 )
 
 // Issuer interface defines method to sign (issue) provided promise data and return promise with signature
 // used by promise issuer (i.e. service consumer or 3d party)
 type Issuer interface {
-	Issue(promise promises.Promise) (promises.IssuedPromise, error)
+	Issue(promise model.Promise) (model.IssuedPromise, error)
 }
 
 // State defines current state of promise data (seq number and amount)
@@ -68,8 +68,8 @@ func (t *ConsumerTracker) AlignStateWithProvider(providerState State) error {
 }
 
 // ExtendPromise issues a promise with the amount added to the promise
-func (t *ConsumerTracker) ExtendPromise(amountToAdd uint64) (promises.IssuedPromise, error) {
-	promise := promises.Promise{
+func (t *ConsumerTracker) ExtendPromise(amountToAdd uint64) (model.IssuedPromise, error) {
+	promise := model.Promise{
 		Extra: ExtraData{
 			ConsumerAddress: common.HexToAddress(t.consumer.Address),
 		},

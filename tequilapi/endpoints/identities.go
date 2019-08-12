@@ -22,8 +22,13 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	pc "github.com/mysteriumnetwork/payments/crypto"
+	"github.com/pkg/errors"
+
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -56,9 +61,16 @@ type identityUnlockingDto struct {
 	Passphrase *string `json:"passphrase"`
 }
 
+// swagger:model StatusDTO
+type statusDTO struct {
+	ChannelAddress string `json:"channel_address"`
+	IsRegistered   bool   `json:"is_registered"`
+}
+
 type identitiesAPI struct {
 	idm      identity.Manager
 	selector identity_selector.Handler
+	registry registry.IdentityRegistry
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -74,8 +86,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler) *identitiesAPI {
-	return &identitiesAPI{idm, selector}
+func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler, registry registry.IdentityRegistry) *identitiesAPI {
+	return &identitiesAPI{idm, selector, registry}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -257,6 +269,31 @@ func (endpoint *identitiesAPI) Unlock(resp http.ResponseWriter, request *http.Re
 	resp.WriteHeader(http.StatusAccepted)
 }
 
+func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Request, params httprouter.Params) {
+	// TODO: remove this hack when we replace our router
+	identityAddress := params.ByName("id")
+	if identityAddress == "current" {
+		identityAddress = ""
+	}
+
+	// TODO: pass channel impl through cli flags
+	channelAddress, err := pc.GenerateChannelAddress(identityAddress, metadata.TestnetDefinition.RegistryAddress, metadata.TestnetDefinition.ChannelImplAddress)
+
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed to calculate channel address"), http.StatusInternalServerError)
+		return
+	}
+
+	isRegistered, err := endpoint.registry.IsRegistered(identity.FromAddress(identityAddress))
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed to check identity registration status"), http.StatusInternalServerError)
+		return
+	}
+
+	status := &statusDTO{ChannelAddress: channelAddress, IsRegistered: isRegistered}
+	utils.WriteAsJSON(status, resp)
+}
+
 func toCreateRequest(req *http.Request) (*identityCreationDto, error) {
 	var identityCreationReq = &identityCreationDto{}
 	err := json.NewDecoder(req.Body).Decode(&identityCreationReq)
@@ -310,10 +347,12 @@ func AddRoutesForIdentities(
 	router *httprouter.Router,
 	idm identity.Manager,
 	selector identity_selector.Handler,
+	identityRegistry registry.IdentityRegistry,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, selector)
+	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id", idmEnd.Current)
 	router.PUT("/identities/:id/unlock", idmEnd.Unlock)
+	router.GET("/identities/:id/status", idmEnd.Status)
 }

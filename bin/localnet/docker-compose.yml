@@ -29,38 +29,40 @@ services:
       DB_NAME: myst_api
       DB_USER: myst_api
       DB_PASSWORD: myst_api
-      ETHER_RPC_URL: "http://geth:8545"
+      ETHER_RPC_URL: "ws://ganache:8545"
       IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
       ETHER_MINING_MODE: "poa"
       DISCOVERY_VERIFY_IDENTITY: "false"
     depends_on:
     - db
-    - geth
+    - ganache
 
-  #private blockchain with single miner and single node
-  geth:
-    image: mysteriumnetwork/geth:1.8.23
+  #private blockchain
+  ganache:
+    image: trufflesuite/ganache-cli:v6.6.0-beta.0
+    ports:
+      - 8545:8545
     expose:
       - 8545
-    volumes:
-      - geth-runtime:/ethereum/geth-runtime
-      - ./geth/genesis.json:/ethereum/genesis.json
-      - ./geth/keystore:/ethereum/keystore
-      - ./geth/node_acc_password.txt:/ethereum/node_acc_password.txt
     command: >
-      --syncmode 'full'
-      --port 30311
-      --rpc
-      --rpcaddr '0.0.0.0'
-      --rpcport 8545
-      --rpcapi personal,db,eth,net,web3,txpool,miner
-      --networkid 69
-      --gasprice '1'
-      --unlock '0xd9786b6ee6caf5cd0ef88301fc40de83bfac5594'
-      --password node_acc_password.txt
-      --rpcvhosts *
-      --rpccorsdomain *
-      --mine
+      --mnemonic "amused glory pen avocado toilet dragon entry kitchen cliff retreat canyon danger"
+
+  transactor:
+    image: mysteriumnetwork/transactor:latest
+    environment:
+      PORT: 8888
+    expose:
+      - 8888
+    depends_on:
+      - ganache
+    command: >
+      -mystSCAddress 0x427C2BAD22335710Aec5e477f3E3AdCd313A9bcb
+      -rpcEndpoint ws://ganache:8545
+      -registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -ourIdentity 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -balanceCheckInterval 1s
+    volumes:
+      - "./deployer/keystore:/keystore"
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
   go-runner:
@@ -68,6 +70,3 @@ services:
     volumes:
       - $GOPATH:/go
     working_dir: /go/src/github.com/mysteriumnetwork/node
-
-volumes:
-  geth-runtime:

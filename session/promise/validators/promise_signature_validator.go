@@ -21,7 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/promise"
-	"github.com/mysteriumnetwork/payments/promises"
+	"github.com/mysteriumnetwork/node/session/promise/model"
 )
 
 // IssuedPromiseValidator validates issued promises
@@ -42,8 +42,8 @@ func NewIssuedPromiseValidator(consumerID, receiverID, issuerID identity.Identit
 
 // Validate checks if the issued promise is valid or not
 func (ipv *IssuedPromiseValidator) Validate(promiseMsg promise.Message) bool {
-	issuedPromise := promises.IssuedPromise{
-		Promise: promises.Promise{
+	issuedPromise := model.IssuedPromise{
+		Promise: model.Promise{
 			Extra: promise.ExtraData{
 				ConsumerAddress: ipv.consumer,
 			},

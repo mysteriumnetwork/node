@@ -24,7 +24,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
-	"github.com/mysteriumnetwork/payments/promises"
+	"github.com/mysteriumnetwork/node/session/promise/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,7 +41,7 @@ func (mpps *MockPeerPromiseSender) Send(p promise.Message) error {
 }
 
 type MockPromiseTracker struct {
-	promiseToReturn promises.IssuedPromise
+	promiseToReturn model.IssuedPromise
 	errToReturn     error
 }
 
@@ -50,13 +50,13 @@ func (mpt *MockPromiseTracker) AlignStateWithProvider(providerState promise.Stat
 	return nil
 }
 
-func (mpt *MockPromiseTracker) ExtendPromise(amountToAdd uint64) (promises.IssuedPromise, error) {
+func (mpt *MockPromiseTracker) ExtendPromise(amountToAdd uint64) (model.IssuedPromise, error) {
 	return mpt.promiseToReturn, mpt.errToReturn
 }
 
 var (
-	promiseToReturn = promises.IssuedPromise{
-		Promise: promises.Promise{
+	promiseToReturn = model.IssuedPromise{
+		Promise: model.Promise{
 			SeqNo:  1,
 			Amount: 0,
 		},

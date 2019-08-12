@@ -20,30 +20,27 @@ package issuers
 import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/promise"
-	payments_identity "github.com/mysteriumnetwork/payments/identity"
-	"github.com/mysteriumnetwork/payments/promises"
+	"github.com/mysteriumnetwork/node/session/promise/model"
 )
 
 // LocalIssuer issues signed promise by using identity.Signer (usually based on local keystore)
 type LocalIssuer struct {
-	paymentsSigner payments_identity.Signer
+	identitySigner identity.Signer
 }
 
 // NewLocalIssuer creates local issuer based on provided identity signer
 func NewLocalIssuer(signer identity.Signer) *LocalIssuer {
 	return &LocalIssuer{
-		paymentsSigner: paymentsSignerAdapter{
-			identitySigner: signer,
-		},
+		identitySigner: signer,
 	}
 }
 
 // Issue issues the given promise
-func (li LocalIssuer) Issue(promise promises.Promise) (promises.IssuedPromise, error) {
-	signed, err := promises.SignByPayer(&promise, li.paymentsSigner)
+func (li LocalIssuer) Issue(promise model.Promise) (model.IssuedPromise, error) {
+	signed, err := model.SignByPayer(&promise, li.identitySigner)
 	if err != nil {
 		// TODO this looks ugly - align interface or discard pointers to structs?
-		return promises.IssuedPromise{}, err
+		return model.IssuedPromise{}, err
 	}
 	return *signed, nil
 }
@@ -56,10 +53,10 @@ type paymentsSignerAdapter struct {
 	identitySigner identity.Signer
 }
 
-func (psa paymentsSignerAdapter) Sign(data ...[]byte) ([]byte, error) {
+func (psa paymentsSignerAdapter) Sign(data []byte) ([]byte, error) {
 	var message []byte
 	for _, dataSlice := range data {
-		message = append(message, dataSlice...)
+		message = append(message, dataSlice)
 	}
 
 	sig, err := psa.identitySigner.Sign(message)
@@ -68,5 +65,3 @@ func (psa paymentsSignerAdapter) Sign(data ...[]byte) ([]byte, error) {
 	}
 	return sig.Bytes(), nil
 }
-
-var _ payments_identity.Signer = paymentsSignerAdapter{}

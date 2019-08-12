@@ -18,28 +18,44 @@
 package validators
 
 import (
+	"crypto/ecdsa"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/session/promise"
-	"github.com/mysteriumnetwork/payments/promises"
-	"github.com/mysteriumnetwork/payments/test_utils"
+	"github.com/mysteriumnetwork/node/session/promise/model"
 	"github.com/stretchr/testify/assert"
 )
 
 var payerKey, _ = crypto.ToECDSA(common.FromHex("0x0b4eef4e99796ebfffe5046488525cd906ebc87b30f86ca6bd21b19dc2b319db"))
-var payerSigner = test_utils.NewPrivateKeySigner(payerKey)
+var payerSigner = NewPrivateKeySigner(payerKey)
 var payerAddress = crypto.PubkeyToAddress(payerKey.PublicKey)
+
+type privateKeySigner struct {
+	privateKey *ecdsa.PrivateKey
+}
+
+func NewPrivateKeySigner(key *ecdsa.PrivateKey) *privateKeySigner {
+	return &privateKeySigner{
+		privateKey: key,
+	}
+}
+
+func (pkh *privateKeySigner) Sign(data []byte) (identity.Signature, error) {
+	sig, err := crypto.Sign(crypto.Keccak256(data), pkh.privateKey)
+	return identity.SignatureBytes(sig), err
+}
 
 func TestPromiseSignatureValidatorReturnsTrueForReceivedValidMessage(t *testing.T) {
 	serviceConsumer := common.HexToAddress("0x1122334455")
 	serviceProvider := common.HexToAddress("0x1122334455")
 
 	//payer agrees to transfer 1000 tokens to service provaider on behalf of service consumer
-	issuedPromise, err := promises.SignByPayer(
-		&promises.Promise{
+	issuedPromise, err := model.SignByPayer(
+		&model.Promise{
 			Extra: promise.ExtraData{
 				ConsumerAddress: serviceConsumer,
 			},

@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	payment_bindings "github.com/mysteriumnetwork/payment-bindings"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/communication"
@@ -51,6 +50,7 @@ import (
 	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
+	"github.com/mysteriumnetwork/node/core/transactor"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/firewall/vnd"
@@ -158,6 +158,12 @@ type UIServer interface {
 	Stop()
 }
 
+// Transactor represents interface to Transactor service
+type Transactor interface {
+	FetchFees() (transactor.Fees, error)
+	RegisterIdentity(identity string, regReqDTO *transactor.IdentityRegistrationRequestDTO) error
+}
+
 // Dependencies is DI container for top level components which is reused in several places
 type Dependencies struct {
 	Node *node.Node
@@ -166,15 +172,14 @@ type Dependencies struct {
 	MysteriumAPI      *mysterium.MysteriumAPI
 	EtherClient       *ethclient.Client
 
-	NATService           nat.NATService
-	Storage              Storage
-	Keystore             *keystore.KeyStore
-	PromiseStorage       *promise.Storage
-	IdentityManager      identity.Manager
-	SignerFactory        identity.SignerFactory
-	IdentityRegistry     identity_registry.IdentityRegistry
-	IdentityRegistration identity_registry.RegistrationDataProvider
-	IdentitySelector     identity_selector.Handler
+	NATService       nat.NATService
+	Storage          Storage
+	Keystore         *keystore.KeyStore
+	PromiseStorage   *promise.Storage
+	IdentityManager  identity.Manager
+	SignerFactory    identity.SignerFactory
+	IdentityRegistry identity_registry.IdentityRegistry
+	IdentitySelector identity_selector.Handler
 
 	DiscoveryFactory    service.DiscoveryFactory
 	DiscoveryFinder     *discovery.Finder
@@ -211,6 +216,7 @@ type Dependencies struct {
 	JWTAuthenticator JWTAuthenticator
 	UIServer         UIServer
 	SSEHandler       *sse.Handler
+	Transactor       Transactor
 }
 
 // Bootstrap initiates all container dependencies
@@ -235,7 +241,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
-	if err := di.bootstrapNetworkComponents(nodeOptions.OptionsNetwork, nodeOptions.BindAddress); err != nil {
+	if err := di.bootstrapNetworkComponents(nodeOptions); err != nil {
 		return err
 	}
 
@@ -480,10 +486,18 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		di.EventBus,
 	)
 
+	di.Transactor = transactor.NewTransactor(
+		nodeOptions.BindAddress,
+		nodeOptions.Transactor.TransactorEndpointAddress,
+		nodeOptions.Transactor.RegistryAddress,
+		nodeOptions.Transactor.AccountantID,
+		di.SignerFactory,
+	)
+
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
-	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector)
+	tequilapi_endpoints.AddRoutesForIdentities(router, di.IdentityManager, di.IdentitySelector, di.IdentityRegistry)
 	tequilapi_endpoints.AddRoutesForConnection(router, di.ConnectionManager, di.StatisticsTracker, di.DiscoveryFinder)
 	tequilapi_endpoints.AddRoutesForConnectionSessions(router, di.SessionStorage)
 	tequilapi_endpoints.AddRoutesForConnectionLocation(router, di.ConnectionManager, di.IPResolver, di.LocationResolver, di.LocationResolver)
@@ -494,8 +508,9 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForAccessPolicies(nodeOptions.BindAddress, router, nodeOptions.AccessPolicyEndpointAddress)
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
+	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
 
-	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistration, di.IdentityRegistry)
+	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 
 	corsPolicy := tequilapi.NewMysteriumCorsPolicy()
 	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
@@ -551,36 +566,37 @@ func newSessionManagerFactory(
 }
 
 // function decides on network definition combined from testnet/localnet flags and possible overrides
-func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork, bindAddress string) (err error) {
+func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err error) {
+	optionsNetwork := options.OptionsNetwork
 	network := metadata.DefaultNetwork
 
 	switch {
-	case options.Testnet:
+	case optionsNetwork.Testnet:
 		network = metadata.TestnetDefinition
-	case options.Localnet:
+	case optionsNetwork.Localnet:
 		network = metadata.LocalnetDefinition
 	}
 
 	//override defined values one by one from options
-	if options.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
-		network.MysteriumAPIAddress = options.MysteriumAPIAddress
+	if optionsNetwork.MysteriumAPIAddress != metadata.DefaultNetwork.MysteriumAPIAddress {
+		network.MysteriumAPIAddress = optionsNetwork.MysteriumAPIAddress
 	}
 
-	if options.QualityOracle != metadata.DefaultNetwork.QualityOracle {
-		network.QualityOracle = options.QualityOracle
+	if optionsNetwork.QualityOracle != metadata.DefaultNetwork.QualityOracle {
+		network.QualityOracle = optionsNetwork.QualityOracle
 	}
 
-	if options.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
-		network.BrokerAddress = options.BrokerAddress
+	if optionsNetwork.BrokerAddress != metadata.DefaultNetwork.BrokerAddress {
+		network.BrokerAddress = optionsNetwork.BrokerAddress
 	}
 
-	normalizedAddress := common.HexToAddress(options.EtherPaymentsAddress)
+	normalizedAddress := common.HexToAddress(optionsNetwork.EtherPaymentsAddress)
 	if normalizedAddress != metadata.DefaultNetwork.PaymentsContractAddress {
 		network.PaymentsContractAddress = normalizedAddress
 	}
 
-	if options.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
-		network.EtherClientRPC = options.EtherClientRPC
+	if optionsNetwork.EtherClientRPC != metadata.DefaultNetwork.EtherClientRPC {
+		network.EtherClientRPC = optionsNetwork.EtherClientRPC
 	}
 
 	di.NetworkDefinition = network
@@ -588,20 +604,23 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.OptionsNetwork, 
 	if _, err := firewall.AllowURLAccess(
 		network.EtherClientRPC,
 		network.MysteriumAPIAddress,
+		options.Transactor.TransactorEndpointAddress,
 	); err != nil {
 		return err
 	}
 
-	di.MysteriumAPI = mysterium.NewClient(bindAddress, network.MysteriumAPIAddress)
+	di.MysteriumAPI = mysterium.NewClient(options.BindAddress, network.MysteriumAPIAddress)
 
 	log.Info("Using Eth endpoint: ", network.EtherClientRPC)
-	if di.EtherClient, err = payment_bindings.NewClient(network.EtherClientRPC); err != nil {
+
+	if di.EtherClient, err = ethclient.Dial(network.EtherClientRPC); err != nil {
 		return err
 	}
 
 	log.Info("Using Eth contract at address: ", network.PaymentsContractAddress.String())
-	if options.ExperimentIdentityCheck {
-		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress); err != nil {
+	log.Info("options.ExperimentIdentityCheck: ", optionsNetwork.ExperimentIdentityCheck)
+	if optionsNetwork.ExperimentIdentityCheck {
+		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress, common.HexToAddress(options.Transactor.AccountantID)); err != nil {
 			return err
 		}
 	} else {
@@ -628,7 +647,6 @@ func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 		di.SignerFactory,
 	)
 
-	di.IdentityRegistration = identity_registry.NewRegistrationDataProvider(di.Keystore)
 }
 
 func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscovery) error {
@@ -644,7 +662,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	}
 
 	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, di.IdentityRegistration, registry, di.SignerFactory)
+		return discovery.NewService(di.IdentityRegistry, registry, di.SignerFactory)
 	}
 
 	storage := discovery.NewStorage()

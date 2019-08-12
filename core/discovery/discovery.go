@@ -51,13 +51,12 @@ type ProposalRegistry interface {
 
 // Discovery structure holds discovery service state
 type Discovery struct {
-	identityRegistry     identity_registry.IdentityRegistry
-	ownIdentity          identity.Identity
-	identityRegistration identity_registry.RegistrationDataProvider
-	proposalRegistry     ProposalRegistry
-	signerCreate         identity.SignerFactory
-	signer               identity.Signer
-	proposal             market.ServiceProposal
+	identityRegistry identity_registry.IdentityRegistry
+	ownIdentity      identity.Identity
+	proposalRegistry ProposalRegistry
+	signerCreate     identity.SignerFactory
+	signer           identity.Signer
+	proposal         market.ServiceProposal
 
 	statusChan                  chan Status
 	status                      Status
@@ -71,13 +70,11 @@ type Discovery struct {
 // NewService creates new discovery service
 func NewService(
 	identityRegistry identity_registry.IdentityRegistry,
-	identityRegistration identity_registry.RegistrationDataProvider,
 	proposalRegistry ProposalRegistry,
 	signerCreate identity.SignerFactory,
 ) *Discovery {
 	return &Discovery{
 		identityRegistry:            identityRegistry,
-		identityRegistration:        identityRegistration,
 		proposalRegistry:            proposalRegistry,
 		signerCreate:                signerCreate,
 		statusChan:                  make(chan Status),
@@ -122,7 +119,6 @@ func (d *Discovery) Stop() {
 }
 
 func (d *Discovery) mainDiscoveryLoop(stopLoop chan bool) {
-
 	for {
 		select {
 		case <-stopLoop:
@@ -219,14 +215,7 @@ func (d *Discovery) checkRegistration() {
 	}
 
 	if !registered {
-		// if not registered - wait indefinitely for identity registration event
-		registrationData, err := d.identityRegistration.ProvideRegistrationData(d.ownIdentity)
-		if err != nil {
-			log.Error("fetching identity registration data failed: ", err)
-			d.changeStatus(IdentityRegisterFailed)
-			return
-		}
-		identity_registry.PrintRegistrationData(registrationData)
+		// TODO: Maybe register here?
 		log.Infof("identity %s not registered, delaying proposal registration until identity is registered", d.ownIdentity.Address)
 		d.changeStatus(IdentityUnregistered)
 		return

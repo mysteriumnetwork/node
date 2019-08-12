@@ -22,6 +22,7 @@ import (
 	"net/http/httputil"
 
 	"github.com/hashicorp/go-retryablehttp"
+
 	"github.com/mysteriumnetwork/node/logconfig"
 )
 

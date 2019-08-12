@@ -22,7 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/payments/promises"
+	"github.com/mysteriumnetwork/node/session/promise/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +40,7 @@ func TestCurrentStatePromiseWithAddedAmountIsIssued(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
-		promises.Promise{
+		model.Promise{
 			Receiver: common.HexToAddress(provider.Address),
 			Extra: ExtraData{
 				ConsumerAddress: common.HexToAddress(consumer.Address),
@@ -77,8 +77,8 @@ func TestIncreasedSeqNumberIsAccepted(t *testing.T) {
 type mockedIssuer struct {
 }
 
-func (issuer mockedIssuer) Issue(promise promises.Promise) (promises.IssuedPromise, error) {
-	return promises.IssuedPromise{
+func (issuer mockedIssuer) Issue(promise model.Promise) (model.IssuedPromise, error) {
+	return model.IssuedPromise{
 		Promise:         promise,
 		IssuerSignature: []byte("0xdeadbeef"),
 	}, nil

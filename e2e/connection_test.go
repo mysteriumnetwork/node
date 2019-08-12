@@ -37,7 +37,6 @@ var (
 func TestConsumerConnectsToProvider(t *testing.T) {
 	tequilapiProvider := newTequilapiProvider()
 	tequilapiConsumer := newTequilapiConsumer()
-
 	t.Run("ProviderRegistersIdentityFlow", func(t *testing.T) {
 		registrationData, err := tequilapiProvider.IdentityRegistrationStatus(providerID)
 		assert.NoError(t, err)
@@ -54,12 +53,17 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 
 	t.Run("ConsumerConnectFlow", func(t *testing.T) {
 		servicesInFlag := strings.Split(*consumerServices, ",")
-		for _, serviceType := range servicesInFlag {
+		for i, serviceType := range servicesInFlag {
 			if _, ok := serviceTypeAssertionMap[serviceType]; ok {
 				t.Run(serviceType, func(t *testing.T) {
 					proposal := consumerPicksProposal(t, tequilapiConsumer, serviceType)
 					consumerConnectFlow(t, tequilapiConsumer, consumerID, serviceType, proposal)
 				})
+			}
+
+			if i != len(servicesInFlag)-1 {
+				// this allows the nats to reconnect properly before starting a new service test
+				time.Sleep(time.Second * 5)
 			}
 		}
 	})
@@ -77,19 +81,15 @@ func identityRegistrationFlow(t *testing.T, tequilapi *tequilapi_client.Client, 
 	err := tequilapi.Unlock(id, idPassphrase)
 	assert.NoError(t, err)
 
-	registrationData, err := tequilapi.IdentityRegistrationStatus(id)
+	err = tequilapi.RegisterIdentity(id, id, 0, 0)
 	assert.NoError(t, err)
-	assert.False(t, registrationData.Registered)
-
-	err = registerIdentity(registrationData)
-	assert.NoError(t, err)
-	seelog.Info("Registered identity: ", id)
 
 	// now we check identity again
 	err = waitForCondition(func() (bool, error) {
 		regStatus, err := tequilapi.IdentityRegistrationStatus(id)
 		return regStatus.Registered, err
 	})
+
 	assert.NoError(t, err)
 }
 
