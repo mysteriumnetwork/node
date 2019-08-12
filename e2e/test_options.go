@@ -64,8 +64,8 @@ func newEthClient() (*ethclient.Client, error) {
 	return ethClient, nil
 }
 
-func lookupBackend(rpcUrl string) (*ethclient.Client, chan bool, error) {
-	ethClient, err := ethclient.Dial(rpcUrl)
+func lookupBackend(rpcURL string) (*ethclient.Client, chan bool, error) {
+	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		return nil, nil, err
 	}

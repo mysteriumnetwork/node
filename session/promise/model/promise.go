@@ -31,6 +31,7 @@ type ExtraData interface {
 	Hash() []byte
 }
 
+const receiverPrefix = "Receiver prefix:"
 const emptyExtra = "emptyextra"
 
 // EmptyExtra represents an empty extra data
@@ -99,7 +100,7 @@ type ReceivedPromise struct {
 	ReceiverSignature []byte
 }
 
-// SignByPayer allows the payer to sign the promis
+// SignByPayer allows the payer to sign the promise
 func SignByPayer(promise *Promise, payer identity.Signer) (*IssuedPromise, error) {
 	signature, err := payer.Sign(append([]byte(issuerPrefix), promise.Bytes()...))
 	if err != nil {
@@ -112,8 +113,6 @@ func SignByPayer(promise *Promise, payer identity.Signer) (*IssuedPromise, error
 	}, nil
 }
 
-const receiverPrefix = "Receiver prefix:"
-
 // SignByReceiver allows the receiver to sign the promise
 func SignByReceiver(promise *IssuedPromise, receiver identity.Signer) (*ReceivedPromise, error) {
 	payerAddr, err := promise.IssuerAddress()
@@ -124,5 +123,5 @@ func SignByReceiver(promise *IssuedPromise, receiver identity.Signer) (*Received
 	return &ReceivedPromise{
 		*promise,
 		sig.Bytes(),
-	}, nil
+	}, err
 }

@@ -97,11 +97,7 @@ func (t *transactor) FetchFees() (Fees, error) {
 	}
 
 	err = t.http.DoRequestAndParseResponse(req, &f)
-	if err != nil {
-		return f, err
-	}
-
-	return f, nil
+	return f, err
 }
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
@@ -121,11 +117,7 @@ func (t *transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 		return errors.Wrap(err, "identity request to Transactor failed")
 	}
 
-	err = t.http.DoRequest(req)
-	if err != nil {
-		return err
-	}
-	return nil
+	return t.http.DoRequest(req)
 }
 
 func (t *transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {

@@ -19,7 +19,6 @@ package registry
 
 import (
 	"context"
-	"time"
 
 	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -98,42 +97,28 @@ func (registry *contractRegistry) SubscribeToRegistrationEvent(id identity.Ident
 		common.HexToAddress(id.Address),
 	}
 
-	filterOps := &bind.FilterOpts{
-		Start:   0,
-		End:     nil,
+	filterOps := &bind.WatchOpts{
 		Context: context.Background(),
 	}
 
 	go func() {
-		for {
-			select {
-			case <-stopLoop:
-				registrationEvent <- Cancelled
-				return
-			// TODO: adjust  this time to something more appropriate
-			case <-time.After(1 * time.Second):
-				logIterator, err := registry.filterer.FilterRegisteredIdentity(filterOps, userIdentities, accountantIdentities)
-				if err != nil {
-					registrationEvent <- Cancelled
-					log.Error(logPrefix, err)
-					return
-				}
-				if logIterator == nil {
-					registrationEvent <- Cancelled
-					return
-				}
-				for {
-					next := logIterator.Next()
-					if next {
-						registrationEvent <- Registered
-						return
-					}
-					err = logIterator.Error()
-					if err != nil {
-						log.Error(logPrefix, err)
-					}
-					break
-				}
+		log.Info("waiting on", "identities", userIdentities[0].Hex(), "accountant", accountantIdentities[0].Hex())
+		sink := make(chan *bindings.RegistryRegisteredIdentity)
+		subscription, err := registry.filterer.WatchRegisteredIdentity(filterOps, sink, userIdentities, accountantIdentities)
+		defer subscription.Unsubscribe()
+		if err != nil {
+			registrationEvent <- Cancelled
+			log.Error(logPrefix, err)
+			return
+		}
+		select {
+		case <-stopLoop:
+			registrationEvent <- Cancelled
+		case <-sink:
+			registrationEvent <- Registered
+		case err := <-subscription.Err():
+			if err != nil {
+				log.Error("subscription error", err)
 			}
 		}
 	}()

@@ -61,7 +61,7 @@ func NewTransactorEndpoint(transactor Transactor) *transactorEndpoint {
 func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	fees, err := te.transactor.FetchFees()
 	if err != nil {
-		utils.SendError(resp, err, http.StatusBadRequest)
+		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
 	}
 	utils.WriteAsJSON(fees, resp)

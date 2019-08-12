@@ -51,6 +51,7 @@ func TestE2EBasic() error {
 	if err := runner.init(); err != nil {
 		return err
 	}
+
 	return runner.test()
 }
 
@@ -65,6 +66,7 @@ func TestE2ENAT() error {
 	if err := runner.init(); err != nil {
 		return err
 	}
+
 	return runner.test()
 }
 
@@ -124,7 +126,7 @@ func (r *runner) startAppContainers() error {
 	err := r.compose("run", "go-runner",
 		"go", "run", "bin/localnet/deployer/deployer.go",
 		"--keystore.directory=bin/localnet/deployer/keystore",
-		fmt.Sprintf("--ether.address=%v", "0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7"),
+		"--ether.address=0x354Bd098B4eF8c9E70B7F21BE2d455DF559705d7",
 		fmt.Sprintf("--ether.passphrase=%v", r.etherPassphrase),
 		"--geth.url=ws://ganache:8545")
 	if err != nil {

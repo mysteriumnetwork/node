@@ -29,7 +29,6 @@ services:
       DB_NAME: myst_api
       DB_USER: myst_api
       DB_PASSWORD: myst_api
-      # ws://ganache:8545
       ETHER_RPC_URL: "ws://ganache:8545"
       IDENTITY_CONTRACT: "0x1955141ba8e77a5B56efBa8522034352c94f77Ea"
       ETHER_MINING_MODE: "poa"

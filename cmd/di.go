@@ -618,7 +618,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	}
 
 	log.Info("Using Eth contract at address: ", network.PaymentsContractAddress.String())
-	log.Info("options.ExperimentIdentityCheck", optionsNetwork.ExperimentIdentityCheck)
+	log.Info("options.ExperimentIdentityCheck: ", optionsNetwork.ExperimentIdentityCheck)
 	if optionsNetwork.ExperimentIdentityCheck {
 		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress, common.HexToAddress(options.Transactor.AccountantID)); err != nil {
 			return err

@@ -31,9 +31,3 @@ func NewRegistrationDataProvider(ks *keystore.KeyStore) *keystoreRegistrationDat
 type keystoreRegistrationDataProvider struct {
 	ks *keystore.KeyStore
 }
-
-// func (kpg *keystoreRegistrationDataProvider) ProvideRegistrationData(id identity.Identity) (*registry.RegistrationData, error) {
-// 	identityHolder := registry.FromKeystore(kpg.ks, common.HexToAddress(id.Address))
-
-// 	return registry.CreateRegistrationData(identityHolder)
-// }

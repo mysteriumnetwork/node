@@ -21,7 +21,6 @@ import (
 	"context"
 	"flag"
 	"math/big"
-	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -49,12 +48,11 @@ var (
 
 // CliWallet represents operations which can be done with user controlled account
 type CliWallet struct {
-	txOpts           *bind.TransactOpts
-	Owner            common.Address
-	backend          *ethclient.Client
-	identityRegistry bindings.RegistryTransactorSession
-	tokens           bindings.MystTokenTransactorSession
-	ks               *keystore.KeyStore
+	txOpts  *bind.TransactOpts
+	Owner   common.Address
+	backend *ethclient.Client
+	tokens  bindings.MystTokenTransactorSession
+	ks      *keystore.KeyStore
 }
 
 // RegisterIdentity registers identity with given data on behalf of user
@@ -194,44 +192,6 @@ func newCliWallet(owner common.Address, passphrase string, ks *keystore.KeyStore
 
 func initKeyStore(path string) *keystore.KeyStore {
 	return keystore.NewKeyStore(path, keystore.StandardScryptN, keystore.StandardScryptP)
-}
-
-func registerIdentity(registrationData tequilapi_client.RegistrationDataDTO) error {
-	defer os.RemoveAll("testdataoutput")
-
-	//deployer account - owner of contracts, and can issue tokens
-	masterAccWallet, err := NewDeployerWallet()
-	if err != nil {
-		return err
-	}
-
-	//random user
-	userWallet, err := NewUserWallet("testdataoutput")
-	if err != nil {
-		return err
-	}
-
-	//user gets some ethers from master acc
-	err = masterAccWallet.GiveEther(userWallet.Owner, 1, params.Ether)
-	if err != nil {
-		return err
-	}
-
-	//user buys some tokens in exchange
-	err = masterAccWallet.GiveTokens(userWallet.Owner, 1000)
-	if err != nil {
-		return err
-	}
-
-	//user allows payments to take some tokens
-	err = userWallet.ApproveForPayments(1000)
-	if err != nil {
-		return err
-	}
-
-	//user registers identity
-	err = userWallet.RegisterIdentity(registrationData)
-	return err
 }
 
 func topUpAccount(id string) error {
