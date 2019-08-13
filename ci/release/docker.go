@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/pkg/errors"
 )
 
 const dockerImagesDir = "build/docker-images"
@@ -71,16 +72,18 @@ func releaseDockerHub(opts *releaseDockerHubOpts) error {
 		log.Info("Restored image: ", imageName)
 
 		var releasable *dockerReleasable
-		for _, r := range opts.releasables {
-			if !strings.Contains(imageName, r.partialLocalName) {
-				continue
+		for i := range opts.releasables {
+			r := &opts.releasables[i]
+			if strings.Contains(imageName, r.partialLocalName) {
+				releasable = r
+				break
 			}
-			releasable = &r
 		}
 		if releasable == nil {
-			log.Info("Image didn't match any releasable definition, skipping: ", imageName)
+			log.Info("image didn't match any releasable definition, skipping: ", imageName)
 			continue
 		}
+		log.Debug("resolved releasable info: ", releasable)
 
 		for _, tag := range releasable.tags {
 			err = pushDockerImage(imageName, releasable.repository, tag)
@@ -197,22 +200,23 @@ func pushDockerImage(localImageName, repository, tag string) error {
 	imageName = strings.ToLower(imageName)
 	log.Info("Tagging ", localImageName, " as ", imageName)
 	if err := exec.Command("docker", "tag", localImageName, imageName).Run(); err != nil {
-		return err
+		return errors.Wrapf(err, "error tagging docker image %q as %q", localImageName, imageName)
 	}
 	log.Info("Pushing ", imageName, " to remote repository")
 	if err := exec.Command("docker", "push", imageName).Run(); err != nil {
-		return err
+		return errors.Wrapf(err, "error pushing docker image %q", imageName)
 	}
 	return removeDockerImage(imageName)
 }
 
 func dockerLogin(username, password string) error {
-	return exec.Command("docker", "login", "-u", username, "-p", password).Run()
+	err := exec.Command("docker", "login", "-u", username, "-p", password).Run()
+	return errors.Wrap(err, "error logging into docker")
 }
 
 func dockerLogout() {
 	if err := exec.Command("docker", "logout").Run(); err != nil {
-		log.Warn("Error loging out from docker: ", err)
+		log.Warn("error logging out from docker: ", err)
 	}
 }
 
@@ -275,5 +279,6 @@ func restoreDockerImage(archiveFile string) (restoredImage string, err error) {
 
 func removeDockerImage(imageName string) error {
 	log.Info("Removing: ", imageName)
-	return exec.Command("docker", "image", "rm", imageName).Run()
+	err := exec.Command("docker", "image", "rm", imageName).Run()
+	return errors.Wrapf(err, "error removing docker image %q", imageName)
 }
