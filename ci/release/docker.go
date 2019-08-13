@@ -72,9 +72,10 @@ func releaseDockerHub(opts *releaseDockerHubOpts) error {
 		log.Info("Restored image: ", imageName)
 
 		var releasable *dockerReleasable
-		for _, r := range opts.releasables {
+		for i := range opts.releasables {
+			r := &opts.releasables[i]
 			if strings.Contains(imageName, r.partialLocalName) {
-				releasable = &r
+				releasable = r
 				break
 			}
 		}
@@ -82,8 +83,8 @@ func releaseDockerHub(opts *releaseDockerHubOpts) error {
 			log.Info("image didn't match any releasable definition, skipping: ", imageName)
 			continue
 		}
-
 		log.Debug("resolved releasable info: ", releasable)
+
 		for _, tag := range releasable.tags {
 			err = pushDockerImage(imageName, releasable.repository, tag)
 			if err != nil {
