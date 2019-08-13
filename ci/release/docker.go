@@ -72,10 +72,10 @@ func releaseDockerHub(opts *releaseDockerHubOpts) error {
 
 		var releasable *dockerReleasable
 		for _, r := range opts.releasables {
-			if !strings.Contains(imageName, r.partialLocalName) {
-				continue
+			if strings.Contains(imageName, r.partialLocalName) {
+				releasable = &r
+				break
 			}
-			releasable = &r
 		}
 		if releasable == nil {
 			log.Info("Image didn't match any releasable definition, skipping: ", imageName)
