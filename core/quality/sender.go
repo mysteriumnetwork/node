@@ -18,6 +18,7 @@
 package quality
 
 import (
+	"runtime"
 	"sync"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node/event"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 const (
@@ -32,6 +34,7 @@ const (
 	sessionDataName     = "session_data"
 	sessionEventName    = "session_event"
 	startupEventName    = "startup"
+	proposalEventName   = "proposal_event"
 	natMappingEventName = "nat_mapping"
 )
 
@@ -71,6 +74,8 @@ type Event struct {
 type appInfo struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
+	OS      string `json:"os"`
+	Arch    string `json:"arch"`
 }
 
 type natMappingContext struct {
@@ -167,6 +172,11 @@ func (sender *Sender) SendStartupEvent(e event.Payload) {
 	sender.sendEvent(startupEventName, e.Status)
 }
 
+// SendProposalEvent sends provider proposal event.
+func (sender *Sender) SendProposalEvent(p market.ServiceProposal) {
+	sender.sendEvent(proposalEventName, p)
+}
+
 // SendNATMappingSuccessEvent sends event about successful NAT mapping
 func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[string]string) {
 	sender.sendEvent(natMappingEventName, natMappingContext{
@@ -191,6 +201,8 @@ func (sender *Sender) sendEvent(eventName string, context interface{}) {
 	err := sender.Transport.SendEvent(Event{
 		Application: appInfo{
 			Name:    appName,
+			OS:      runtime.GOOS,
+			Arch:    runtime.GOARCH,
 			Version: sender.AppVersion,
 		},
 		EventName: eventName,

@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/mysteriumnetwork/metrics"
+	"github.com/mysteriumnetwork/node/market"
 )
 
 // NewMORQATransport creates transport allowing to send events to Mysterium Quality Oracle - MORQA
@@ -45,20 +46,24 @@ func (transport *morqaTransport) SendEvent(event Event) error {
 func mapEventToMetric(event Event) *metrics.Event {
 	switch event.EventName {
 	case startupEventName:
-		return nodeVersionToMetricsEvent(event.Application.Version)
+		return nodeVersionToMetricsEvent(event.Application)
 	case sessionEventName:
 		return sessionEventToMetricsEvent(event.Context.(sessionEventContext))
 	case sessionDataName:
 		return sessionDataToMetricsEvent(event.Context.(sessionDataContext))
+	case proposalEventName:
+		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal), event.Application)
 	}
 	return nil
 }
 
-func nodeVersionToMetricsEvent(version string) *metrics.Event {
+func nodeVersionToMetricsEvent(info appInfo) *metrics.Event {
 	return &metrics.Event{
 		Metric: &metrics.Event_VersionPayload{
 			VersionPayload: &metrics.VersionPayload{
-				Version: version,
+				Version: info.Version,
+				Os:      info.OS,
+				Arch:    info.Arch,
 			},
 		},
 	}
@@ -97,6 +102,22 @@ func sessionDataToMetricsEvent(context sessionDataContext) *metrics.Event {
 					ServiceType:    context.ServiceType,
 					ProviderContry: context.ProviderCountry,
 					ConsumerContry: context.ConsumerCountry,
+				},
+			},
+		},
+	}
+}
+
+func proposalEventToMetricsEvent(context market.ServiceProposal, info appInfo) *metrics.Event {
+	return &metrics.Event{
+		Metric: &metrics.Event_ProposalPayload{
+			ProposalPayload: &metrics.ProposalPayload{
+				ProviderId:  context.ProviderID,
+				ServiceType: context.ServiceType,
+				Version: &metrics.VersionPayload{
+					Version: info.Version,
+					Os:      info.OS,
+					Arch:    info.Arch,
 				},
 			},
 		},
