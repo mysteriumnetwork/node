@@ -143,7 +143,7 @@
 
 [[constraint]]
   name = "github.com/mysteriumnetwork/metrics"
-  revision = "6a3d4c1c3fbd536609ded8cfef335ec2852cd63e"
+  revision = "d31dff44856dd2ee40604b136504d4780eb050be"
 
 [[constraint]]
   name = "github.com/hashicorp/go-retryablehttp"
