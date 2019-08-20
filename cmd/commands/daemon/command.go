@@ -19,7 +19,7 @@ package daemon
 
 import (
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/cmd/config"
+	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"gopkg.in/urfave/cli.v1"
 )
