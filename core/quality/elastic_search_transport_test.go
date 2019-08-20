@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 	"time"
 
@@ -40,7 +41,9 @@ func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 		assert.JSONEq(t, `{
 			"application": {
 				"name": "test app",
-				"version": "test version"
+				"version": "test version",
+				"os": "`+runtime.GOOS+`",
+				"arch": "`+runtime.GOARCH+`"
 			},
 			"createdAt": 0,
 			"eventName": "",
@@ -51,7 +54,7 @@ func TestElasticSearchTransport_SendEvent_Success(t *testing.T) {
 		invoked = true
 	}))
 
-	app := appInfo{Name: "test app", Version: "test version"}
+	app := appInfo{Name: "test app", Version: "test version", OS: runtime.GOOS, Arch: runtime.GOARCH}
 	event := Event{Application: app}
 
 	transport := NewElasticSearchTransport(bindAllAddress, server.URL, time.Second)

@@ -43,6 +43,7 @@ func discoveryWithMockedDependencies() *Discovery {
 			return &identity.SignerFake{}
 		},
 		proposalRegistry: &mockedProposalRegistry{},
+		eventPublisher:   &mockedEventPublisher{},
 	}
 }
 
@@ -124,3 +125,7 @@ func (mockedProposalRegistry) UnregisterProposal(proposal market.ServiceProposal
 }
 
 var _ ProposalRegistry = &mockedProposalRegistry{}
+
+type mockedEventPublisher struct{}
+
+func (mep *mockedEventPublisher) Publish(_ string, _ interface{}) {}
