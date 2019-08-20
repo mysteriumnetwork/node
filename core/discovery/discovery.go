@@ -42,6 +42,16 @@ const (
 	StatusUndefined
 )
 
+const (
+	// ProposalEventTopic represent proposal events topic.
+	ProposalEventTopic = "proposalEvent"
+)
+
+// Publisher is responsible for publishing given events.
+type Publisher interface {
+	Publish(topic string, data interface{})
+}
+
 // ProposalRegistry defines methods for proposal lifecycle - registration, keeping up to date, removal
 type ProposalRegistry interface {
 	RegisterProposal(proposal market.ServiceProposal, signer identity.Signer) error
@@ -57,6 +67,7 @@ type Discovery struct {
 	signerCreate     identity.SignerFactory
 	signer           identity.Signer
 	proposal         market.ServiceProposal
+	eventPublisher   Publisher
 
 	statusChan                  chan Status
 	status                      Status
@@ -72,10 +83,12 @@ func NewService(
 	identityRegistry identity_registry.IdentityRegistry,
 	proposalRegistry ProposalRegistry,
 	signerCreate identity.SignerFactory,
+	eventPublisher Publisher,
 ) *Discovery {
 	return &Discovery{
 		identityRegistry:            identityRegistry,
 		proposalRegistry:            proposalRegistry,
+		eventPublisher:              eventPublisher,
 		signerCreate:                signerCreate,
 		statusChan:                  make(chan Status),
 		status:                      StatusUndefined,
@@ -183,6 +196,7 @@ func (d *Discovery) registerProposal() {
 		d.changeStatus(RegisterProposal)
 		return
 	}
+	d.eventPublisher.Publish(ProposalEventTopic, d.proposal)
 	d.changeStatus(PingProposal)
 }
 
@@ -192,6 +206,7 @@ func (d *Discovery) pingProposal() {
 	if err != nil {
 		log.Error("failed to ping proposal: ", err)
 	}
+	d.eventPublisher.Publish(ProposalEventTopic, d.proposal)
 	d.changeStatus(PingProposal)
 }
 

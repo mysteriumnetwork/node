@@ -511,11 +511,11 @@
   version = "0.0.16"
 
 [[projects]]
-  digest = "1:84efbaa951ec2aa314983681aa4b7475bbbac7b51f2ea29419485c4dd6957094"
+  digest = "1:f78ce6071db036a1653802bf44e833758380dbbfeda3db42c82bcdf92538012f"
   name = "github.com/mysteriumnetwork/metrics"
   packages = ["."]
   pruneopts = "UT"
-  revision = "6a3d4c1c3fbd536609ded8cfef335ec2852cd63e"
+  revision = "d31dff44856dd2ee40604b136504d4780eb050be"
 
 [[projects]]
   digest = "1:c5ad635f870d28aad93598707182c6dd67659b3692003bc5ad5fdf195d548f1c"

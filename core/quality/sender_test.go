@@ -19,6 +19,7 @@ package quality
 
 import (
 	"errors"
+	"runtime"
 	"testing"
 
 	"github.com/mysteriumnetwork/node/core/node/event"
@@ -47,7 +48,7 @@ func TestSender_SendStartupEvent_SendsToTransport(t *testing.T) {
 
 	sentEvent := mockTransport.sentEvent
 	assert.Equal(t, "startup", sentEvent.EventName)
-	assert.Equal(t, appInfo{Name: "myst", Version: "test version"}, sentEvent.Application)
+	assert.Equal(t, appInfo{Name: "myst", Version: "test version", OS: runtime.GOOS, Arch: runtime.GOARCH}, sentEvent.Application)
 	assert.NotZero(t, sentEvent.CreatedAt)
 }
 
@@ -59,7 +60,7 @@ func TestSender_SendNATMappingSuccessEvent_SendsToTransport(t *testing.T) {
 
 	sentEvent := mockTransport.sentEvent
 	assert.Equal(t, "nat_mapping", sentEvent.EventName)
-	assert.Equal(t, appInfo{Name: "myst", Version: "test version"}, sentEvent.Application)
+	assert.Equal(t, appInfo{Name: "myst", Version: "test version", OS: runtime.GOOS, Arch: runtime.GOARCH}, sentEvent.Application)
 	assert.NotZero(t, sentEvent.CreatedAt)
 	assert.Equal(t, natMappingContext{Successful: true, Stage: "port_mapping"}, sentEvent.Context)
 }
@@ -77,7 +78,7 @@ func TestSender_SendNATMappingFailEvent_SendsToTransport(t *testing.T) {
 
 	sentEvent := mockTransport.sentEvent
 	assert.Equal(t, "nat_mapping", sentEvent.EventName)
-	assert.Equal(t, appInfo{Name: "myst", Version: "test version"}, sentEvent.Application)
+	assert.Equal(t, appInfo{Name: "myst", Version: "test version", OS: runtime.GOOS, Arch: runtime.GOARCH}, sentEvent.Application)
 	assert.NotZero(t, sentEvent.CreatedAt)
 	c := sentEvent.Context.(natMappingContext)
 	assert.False(t, c.Successful)

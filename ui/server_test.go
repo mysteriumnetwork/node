@@ -42,7 +42,7 @@ func Test_Server_ServesHTML(t *testing.T) {
 		serverError <- err
 	}()
 
-	time.Sleep(time.Millisecond * 5)
+	time.Sleep(time.Millisecond * 100)
 
 	resp, err := http.Get("http://:55555/")
 	assert.Nil(t, err)

@@ -26,8 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/pkg/errors"
-
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
@@ -83,6 +81,7 @@ import (
 	tequilapi_endpoints "github.com/mysteriumnetwork/node/tequilapi/endpoints"
 	"github.com/mysteriumnetwork/node/tequilapi/sse"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/pkg/errors"
 )
 
 // Storage stores persistent objects for future usage
@@ -458,6 +457,10 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	if err != nil {
 		return err
 	}
+	err = di.EventBus.SubscribeAsync(discovery.ProposalEventTopic, di.QualityMetricsSender.SendProposalEvent)
+	if err != nil {
+		return err
+	}
 	return di.EventBus.SubscribeAsync(nodevent.Topic, di.QualityMetricsSender.SendStartupEvent)
 }
 
@@ -662,7 +665,7 @@ func (di *Dependencies) bootstrapDiscoveryComponents(options node.OptionsDiscove
 	}
 
 	di.DiscoveryFactory = func() service.Discovery {
-		return discovery.NewService(di.IdentityRegistry, registry, di.SignerFactory)
+		return discovery.NewService(di.IdentityRegistry, registry, di.SignerFactory, di.EventBus)
 	}
 
 	storage := discovery.NewStorage()
