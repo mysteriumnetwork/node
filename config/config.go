@@ -27,13 +27,15 @@ import (
 )
 
 var log = logconfig.NewLogger()
+var configFilePath string
 
 // LoadConfigurationFile loads configuration values from config file in home directory
 func LoadConfigurationFile(ctx *cli.Context) error {
 	configDir := ctx.GlobalString("config-dir")
 	log.Info("using config directory: ", configDir)
 
-	configSource, err := altsrc.NewTomlSourceFromFile(path.Join(configDir, "config.toml"))
+	configFilePath = path.Join(configDir, "config.toml")
+	configSource, err := altsrc.NewTomlSourceFromFile(configFilePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to load config file")
 	}
