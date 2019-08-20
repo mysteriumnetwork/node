@@ -18,6 +18,7 @@
 package config
 
 import (
+	"os"
 	"path"
 
 	"github.com/mysteriumnetwork/node/logconfig"
@@ -27,15 +28,25 @@ import (
 )
 
 var log = logconfig.NewLogger()
-var configFilePath string
+
+type configLocation struct {
+	dir      string
+	filePath string
+}
+
+var location = configLocation{}
 
 // LoadConfigurationFile loads configuration values from config file in home directory
 func LoadConfigurationFile(ctx *cli.Context) error {
-	configDir := ctx.GlobalString("config-dir")
-	log.Info("using config directory: ", configDir)
+	location = resolveLocation(ctx)
+	log.Infof("using config location: %+v", location)
 
-	configFilePath = path.Join(configDir, "config.toml")
-	configSource, err := altsrc.NewTomlSourceFromFile(configFilePath)
+	err := createConfigIfNotExists(location)
+	if err != nil {
+		return err
+	}
+
+	configSource, err := altsrc.NewTomlSourceFromFile(location.filePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to load config file")
 	}
@@ -43,6 +54,49 @@ func LoadConfigurationFile(ctx *cli.Context) error {
 	err = altsrc.ApplyInputSourceValues(ctx, configSource, flags)
 	if err != nil {
 		return errors.Wrap(err, "failed to apply configuration from config file")
+	}
+	return nil
+}
+
+func resolveLocation(ctx *cli.Context) configLocation {
+	dir := ctx.GlobalString("config-dir")
+	return configLocation{
+		dir:      dir,
+		filePath: path.Join(dir, "config.toml"),
+	}
+}
+
+func createConfigIfNotExists(location configLocation) error {
+	err := createDirIfNotExists(location.dir)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(location.filePath); os.IsNotExist(err) {
+		log.Info("config file does not exist, attempting to create: ", location.filePath)
+		_, err := os.Create(location.filePath)
+		if err != nil {
+			return errors.Wrap(err, "failed to create config file")
+		}
+	}
+	return nil
+}
+
+func createDirIfNotExists(dir string) error {
+	err := dirExists(dir)
+	if os.IsNotExist(err) {
+		log.Info("directory does not exist, creating a new one: ", dir)
+		return os.MkdirAll(dir, 0700)
+	}
+	return err
+}
+
+func dirExists(dir string) error {
+	fileStat, err := os.Stat(dir)
+	if err != nil {
+		return err
+	}
+	if isDir := fileStat.IsDir(); !isDir {
+		return errors.New("directory expected")
 	}
 	return nil
 }
