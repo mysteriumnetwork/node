@@ -113,11 +113,14 @@ func (ss *ssdpServer) Stop() error {
 		close(ss.quit)
 	})
 
-	if err := ss.ssdp.Bye(); err != nil {
-		log.Error(ssdpLogPrefix, "failed to send SSDP bye message", err)
+	if ss.ssdp != nil {
+		if err := ss.ssdp.Bye(); err != nil {
+			log.Error(ssdpLogPrefix, "failed to send SSDP bye message", err)
+		}
+		return errors.Wrap(ss.ssdp.Close(), "failed to send SSDP bye message")
 	}
 
-	return errors.Wrap(ss.ssdp.Close(), "failed to send SSDP bye message")
+	return nil
 }
 
 func (ss *ssdpServer) serveDeviceDescriptionDocument() (url.URL, error) {

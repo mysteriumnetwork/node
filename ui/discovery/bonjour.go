@@ -38,6 +38,8 @@ func (bs *bonjourServer) Start() (err error) {
 }
 
 func (bs *bonjourServer) Stop() (err error) {
-	bs.server.Shutdown()
+	if bs.server != nil {
+		bs.server.Shutdown()
+	}
 	return nil
 }
