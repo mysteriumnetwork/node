@@ -26,6 +26,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -36,6 +37,7 @@ import (
 	"github.com/mysteriumnetwork/node/services"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 const logPrefix = "[service-openvpn] "
@@ -72,6 +74,7 @@ type Manager struct {
 	natPingerPorts port.ServicePortSupplier
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
+	dnsServer      *dns.Server
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 	consumerConfig                 openvpn_service.ConsumerConfig
@@ -107,6 +110,12 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	releasePorts := m.mapPort(m.vpnServerPort)
 	defer releasePorts()
 
+	m.dnsServer = dns.NewServer(":53", dns.ResolveViaConfigured())
+	log.Info(logPrefix, "Starting DNS on: ", m.dnsServer.Addr)
+	if err = m.dnsServer.Run(); err != nil {
+		return errors.Wrap(err, "failed to start DNS server")
+	}
+
 	primitives, err := primitiveFactory(m.currentLocation, providerID.Address)
 	if err != nil {
 		return
@@ -120,7 +129,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	// register service port to which NATProxy will forward connects attempts to
 	m.natPinger.BindServicePort(openvpn_service.ServiceType, m.vpnServerPort)
 
-	log.Info(logPrefix, "starting openvpn server on port: ", m.vpnServerPort)
+	log.Info(logPrefix, "Starting openvpn server on port: ", m.vpnServerPort)
 	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
 		return errors.Wrap(err, "failed to add firewall rule")
 	}
@@ -133,25 +142,31 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	if err = m.vpnServer.Start(); err != nil {
 		return
 	}
-	log.Info(logPrefix, "openvpn server waiting")
+	log.Info(logPrefix, "Openvpn server waiting")
 
 	return m.vpnServer.Wait()
 }
 
 // Stop stops service
-func (m *Manager) Stop() (err error) {
+func (m *Manager) Stop() error {
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
 	}
 
+	errStop := utils.ErrorCollection{}
+	if m.dnsServer != nil {
+		errStop.Add(m.dnsServer.Stop())
+	}
+
 	if m.natService != nil {
-		return m.natService.Del(nat.RuleForwarding{
+		err := m.natService.Del(nat.RuleForwarding{
 			SourceSubnet: firewall.SimplifiedSubnet(m.serviceOptions.Subnet, m.serviceOptions.Netmask),
 			TargetIP:     m.outboundIP,
 		})
+		errStop.Add(err)
 	}
 
-	return nil
+	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
