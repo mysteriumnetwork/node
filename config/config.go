@@ -18,106 +18,134 @@
 package config
 
 import (
-	"os"
-	"path"
+	"io/ioutil"
+	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/mysteriumnetwork/node/utils/jsonutil"
 	"github.com/pkg/errors"
-	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
+	"github.com/spf13/cast"
 )
 
 var log = logconfig.NewLogger()
 
-type configLocation struct {
-	dir      string
-	filePath string
+// Config stores app configuration: default values + user configuration + CLI flags
+type Config struct {
+	userConfigLocation string
+	defaults           map[string]interface{}
+	user               map[string]interface{}
+	cli                map[string]interface{}
 }
 
-var location = configLocation{}
+// Current global configuration instance
+var Current *Config
 
-// LoadConfigurationFile loads configuration values from config file in home directory
-func LoadConfigurationFile(ctx *cli.Context) error {
-	location = resolveLocation(ctx)
-	log.Infof("using config location: %+v", location)
+func init() {
+	Current = NewConfig()
+}
 
-	err := createConfigIfNotExists(location)
-	if err != nil {
-		return err
+// NewConfig creates a new configuration instance
+func NewConfig() *Config {
+	return &Config{
+		userConfigLocation: "",
+		defaults:           make(map[string]interface{}),
+		user:               make(map[string]interface{}),
+		cli:                make(map[string]interface{}),
 	}
+}
 
-	configSource, err := altsrc.NewTomlSourceFromFile(location.filePath)
+func (cfg *Config) userConfigLoaded() bool {
+	return cfg.userConfigLocation != ""
+}
+
+// LoadUserConfig loads and remembers user config location
+func (cfg *Config) LoadUserConfig(location string) error {
+	log.Debug("loading user configuration: ", location)
+	cfg.userConfigLocation = location
+	_, err := toml.DecodeFile(cfg.userConfigLocation, &cfg.user)
 	if err != nil {
-		return errors.Wrap(err, "failed to load config file")
+		return errors.Wrap(err, "failed to decode configuration file")
 	}
-	flags := allFlags(ctx)
-	err = altsrc.ApplyInputSourceValues(ctx, configSource, flags)
-	if err != nil {
-		return errors.Wrap(err, "failed to apply configuration from config file")
-	}
+	log.Info("user configuration loaded: \n", jsonutil.ToJson(cfg))
 	return nil
 }
 
-func resolveLocation(ctx *cli.Context) configLocation {
-	dir := ctx.GlobalString("config-dir")
-	return configLocation{
-		dir:      dir,
-		filePath: path.Join(dir, "config.toml"),
+// SaveUserConfig saves user configuration to the file from which it was loaded
+func (cfg *Config) SaveUserConfig() error {
+	log.Debug("saving user configuration")
+	if !cfg.userConfigLoaded() {
+		return errors.New("user configuration cannot be saved, because it must be loaded first")
 	}
-}
-
-func createConfigIfNotExists(location configLocation) error {
-	err := createDirIfNotExists(location.dir)
+	var out strings.Builder
+	err := toml.NewEncoder(&out).Encode(cfg.user)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to write configuration as toml")
 	}
-	if _, err := os.Stat(location.filePath); os.IsNotExist(err) {
-		log.Info("config file does not exist, attempting to create: ", location.filePath)
-		_, err := os.Create(location.filePath)
-		if err != nil {
-			return errors.Wrap(err, "failed to create config file")
-		}
+	err = ioutil.WriteFile(cfg.userConfigLocation, []byte(out.String()), 0700)
+	if err != nil {
+		return errors.Wrap(err, "failed to write configuration to file")
 	}
+	log.Info("user configuration written: \n", jsonutil.ToJson(cfg.user))
 	return nil
 }
 
-func createDirIfNotExists(dir string) error {
-	err := dirExists(dir)
-	if os.IsNotExist(err) {
-		log.Info("directory does not exist, creating a new one: ", dir)
-		return os.MkdirAll(dir, 0700)
-	}
-	return err
+// SetDefault sets default value for key
+func (cfg *Config) SetDefault(key string, value interface{}) {
+	cfg.set(&cfg.defaults, key, value)
 }
 
-func dirExists(dir string) error {
-	fileStat, err := os.Stat(dir)
-	if err != nil {
-		return err
-	}
-	if isDir := fileStat.IsDir(); !isDir {
-		return errors.New("directory expected")
-	}
-	return nil
+// SetUser sets user configuration value for key
+func (cfg *Config) SetUser(key string, value interface{}) {
+	cfg.set(&cfg.user, key, value)
 }
 
-// LoadConfigurationFileQuietly like LoadConfigurationFile, but instead of returning an error,
-// it logs it on a `warn` level.
-// `error` is specified as a return to adhere to `cli.BeforeFunc` for convenience.
-func LoadConfigurationFileQuietly(ctx *cli.Context) error {
-	err := LoadConfigurationFile(ctx)
-	if err != nil {
-		_ = log.Warn(err)
-	}
-	return nil
+// SetCLI sets value passed via CLI flag for key
+func (cfg *Config) SetCLI(key string, value interface{}) {
+	cfg.set(&cfg.cli, key, value)
 }
 
-func allFlags(ctx *cli.Context) []cli.Flag {
-	var flags []cli.Flag
-	flags = append(flags, ctx.App.Flags...)
-	flags = append(flags, ctx.Command.Flags...)
-	for _, cmd := range ctx.Command.Subcommands {
-		flags = append(flags, cmd.Flags...)
+// set internal method for setting value in a certain configuration value map
+func (cfg *Config) set(configMap *map[string]interface{}, key string, value interface{}) {
+	key = strings.ToLower(key)
+	segments := strings.Split(key, ".")
+
+	lastKey := strings.ToLower(segments[len(segments)-1])
+	deepestMap := deepSearch(*configMap, segments[0:len(segments)-1])
+
+	// set innermost value
+	deepestMap[lastKey] = value
+}
+
+// Get gets stored config value as-is
+func (cfg *Config) Get(key string) interface{} {
+	segments := strings.Split(strings.ToLower(key), ".")
+	cliValue := cfg.searchMap(cfg.cli, segments)
+	if cliValue != nil {
+		log.Debug("returning CLI value ", key, ": ", cliValue)
+		return cliValue
 	}
-	return flags
+	userValue := cfg.searchMap(cfg.user, segments)
+	if userValue != nil {
+		log.Debug("returning user config value ", key, ": ", userValue)
+		return userValue
+	}
+	defaultValue := cfg.searchMap(cfg.defaults, segments)
+	log.Debug("returning default value ", key, ": ", defaultValue)
+	return defaultValue
+}
+
+// GetInt gets config value as int
+func (cfg *Config) GetInt(key string) int {
+	return cast.ToInt(cfg.Get(key))
+}
+
+// GetString gets config value as string
+func (cfg *Config) GetString(key string) string {
+	return cast.ToString(cfg.Get(key))
+}
+
+// GetBool gets config value as bool
+func (cfg *Config) GetBool(key string) bool {
+	return cast.ToBool(cfg.Get(key))
 }

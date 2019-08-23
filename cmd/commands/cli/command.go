@@ -28,7 +28,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/mysteriumnetwork/node/cmd"
-	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
@@ -62,7 +62,7 @@ func NewCommand() *cli.Command {
 	return &cli.Command{
 		Name:   cliCommandName,
 		Usage:  "Starts a CLI client with a Tequilapi",
-		Before: config.LoadConfigurationFileQuietly,
+		Before: clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
 			nodeOptions := cmd.ParseFlagsNode(ctx)
 			cmdCLI := &cliApp{
@@ -786,7 +786,8 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, tequi
 	case wireguard.ServiceType:
 		return wireguard_service.ParseFlags(ctx), ap, nil
 	case openvpn.ServiceType:
-		return openvpn_service.ParseFlags(ctx), ap, nil
+		openvpn_service.Configure(ctx)
+		return openvpn_service.ConfiguredOptions(), ap, nil
 	}
 
 	return nil, ap, errors.New("service type not found")

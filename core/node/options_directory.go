@@ -67,7 +67,7 @@ func ensureDirExists(dir string) error {
 		return err
 	}
 	if isDir := fileStat.IsDir(); !isDir {
-		return errors.New("directory expected")
+		return errors.Errorf("directory expected: %s", dir)
 	}
 	return nil
 }

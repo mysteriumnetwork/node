@@ -25,7 +25,7 @@ import (
 
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/cmd/commands/license"
-	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
@@ -74,7 +74,7 @@ func NewCommand(licenseCommandName string) *cli.Command {
 		Name:      serviceCommandName,
 		Usage:     "Starts and publishes services on Mysterium Network",
 		ArgsUsage: "comma separated list of services to start",
-		Before:    config.LoadConfigurationFileQuietly,
+		Before:    clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
 			if !ctx.Bool(agreedTermsConditionsFlag.Name) {
 				printTermWarning(licenseCommandName)

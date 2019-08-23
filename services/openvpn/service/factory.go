@@ -21,7 +21,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/bytecount"
@@ -99,7 +98,8 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 		return openvpn_service.NewServerConfig(
 			nodeOptions.Directories.Runtime,
 			nodeOptions.Directories.Config,
-			serviceOptions.Subnet, serviceOptions.Netmask,
+			serviceOptions.Subnet,
+			serviceOptions.Netmask,
 			secPrimitives,
 			nodeOptions.BindAddress,
 			port,
@@ -191,7 +191,7 @@ You should probably need to do port forwarding on your router: %s:%v -> %s:%v.`,
 
 // primitiveFactory takes in the country and providerID and forms the tls primitives out of it
 func primitiveFactory(currentCountry, providerID string) (*tls.Primitives, error) {
-	log.Info(logPrefix, "Country detected: ", currentCountry)
+	log.Info("country detected: ", currentCountry)
 
 	caSubject := pkix.Name{
 		Country:            []string{currentCountry},
