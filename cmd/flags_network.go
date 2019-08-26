@@ -58,6 +58,12 @@ var (
 		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
 	})
 
+	mmnAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "mmn-address",
+		Usage: "URL of my.mysterium.network API",
+		Value: metadata.DefaultNetwork.MMNAddress,
+	})
+
 	brokerAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "broker-address",
 		Usage: "URI of message broker",

@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/mapping"
 	service_noop "github.com/mysteriumnetwork/node/services/noop"
@@ -41,6 +42,9 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
+
+	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -277,4 +281,15 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) {
 	}
 
 	di.UIServer = uinoop.NewServer()
+}
+
+func (di *Dependencies) bootstrapMMN(options node.Options) {
+	info, err := mmn.GetNodeInformation()
+	if err != nil {
+		log.Error("Failed to get NodeInformation for MMN", err.Error())
+		return
+	}
+	fmt.Println(info.Mac, info.LocalIP)
+	client := mmn.NewMMNClient(options.MMN.Address)
+	client.RegisterNode(*info)
 }

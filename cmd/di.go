@@ -267,7 +267,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapUIServer(nodeOptions)
-
+	di.bootstrapMMN(nodeOptions)
 	if err := di.bootstrapBandwidthTracker(); err != nil {
 		return err
 	}
