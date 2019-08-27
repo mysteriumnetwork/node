@@ -108,14 +108,22 @@ func newServerConfigFactory(nodeOptions node.Options, serviceOptions Options) Se
 	}
 }
 
-func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, callback func(bytecount.SessionByteCount)) ServerFactory {
-	return func(config *openvpn_service.ServerConfig) openvpn.Process {
+func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_session.Validator, statsCallback func(bytecount.SessionByteCount)) ServerFactory {
+	return func(config *openvpn_service.ServerConfig, stateChannel chan openvpn.State) openvpn.Process {
+		stateCallback := func(state openvpn.State) {
+			stateChannel <- state
+			//this is the last state - close channel (according to best practices of go - channel writer controls channel)
+			if state == openvpn.ProcessExited {
+				close(stateChannel)
+			}
+		}
+
 		return openvpn.CreateNewProcess(
 			nodeOptions.Openvpn.BinaryPath(),
 			config.GenericConfig,
 			auth.NewMiddleware(sessionValidator.Validate),
-			state.NewMiddleware(vpnStateCallback),
-			bytecount.NewMiddleware(callback, statisticsReportingIntervalInSeconds),
+			state.NewMiddleware(stateCallback),
+			bytecount.NewMiddleware(statsCallback, statisticsReportingIntervalInSeconds),
 		)
 	}
 }
