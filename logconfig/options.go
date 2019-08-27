@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	log "github.com/cihub/seelog"
-	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 )
@@ -48,9 +47,6 @@ var (
 		}(),
 		Value: func() string {
 			level := log.DebugStr
-			if metadata.VersionAsString() == "source.dev-build" {
-				level = log.TraceStr
-			}
 			return level
 		}(),
 	})
