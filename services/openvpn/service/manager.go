@@ -19,6 +19,7 @@ package service
 
 import (
 	"encoding/json"
+	"net"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -79,6 +80,7 @@ type Manager struct {
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 	consumerConfig                 openvpn_service.ConsumerConfig
 
+	vpnNetwork               net.IPNet
 	vpnServerPort            int
 	vpnServerConfigFactory   ServerConfigFactory
 	vpnServiceConfigProvider session.ConfigNegotiator
@@ -93,8 +95,12 @@ type Manager struct {
 
 // Serve starts service - does block
 func (m *Manager) Serve(providerID identity.Identity) (err error) {
+	m.vpnNetwork = net.IPNet{
+		IP:   net.ParseIP(m.serviceOptions.Subnet),
+		Mask: net.IPMask(net.ParseIP(m.serviceOptions.Netmask).To4()),
+	}
 	err = m.natService.Add(nat.RuleForwarding{
-		SourceSubnet: firewall.SimplifiedSubnet(m.serviceOptions.Subnet, m.serviceOptions.Netmask),
+		SourceSubnet: m.vpnNetwork.String(),
 		TargetIP:     m.outboundIP,
 	})
 	if err != nil {
@@ -138,7 +144,10 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to start Openvpn server")
 	}
 
-	m.dnsServer = dns.NewServer("10.8.0.1:53", dns.ResolveViaConfigured())
+	m.dnsServer = dns.NewServer(
+		net.JoinHostPort(providerIP(m.vpnNetwork).String(), "53"),
+		dns.ResolveViaConfigured(),
+	)
 	log.Info(logPrefix, "Starting DNS on: ", m.dnsServer.Addr)
 	if err = m.dnsServer.Run(); err != nil {
 		return errors.Wrap(err, "failed to start DNS server")
@@ -161,7 +170,7 @@ func (m *Manager) Stop() error {
 
 	if m.natService != nil {
 		err := m.natService.Del(nat.RuleForwarding{
-			SourceSubnet: firewall.SimplifiedSubnet(m.serviceOptions.Subnet, m.serviceOptions.Netmask),
+			SourceSubnet: m.vpnNetwork.String(),
 			TargetIP:     m.outboundIP,
 		})
 		errStop.Add(err)
@@ -255,4 +264,10 @@ func (m *Manager) portMappingFailed() bool {
 		return true
 	}
 	return event.Stage == mapping.StageName && !event.Successful
+}
+
+func providerIP(subnet net.IPNet) net.IP {
+	ip := subnet.IP
+	ip[len(ip)-1] = byte(1)
+	return ip
 }
