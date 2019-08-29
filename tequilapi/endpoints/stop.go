@@ -20,7 +20,6 @@ package endpoints
 import (
 	"net/http"
 
-	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
 )
 

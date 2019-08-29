@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
@@ -119,8 +118,6 @@ type ConnectionEndpoint struct {
 	//TODO connection should use concrete proposal from connection params and avoid going to marketplace
 	proposalProvider ProposalGetter
 }
-
-const connectionLogPrefix = "[Connection] "
 
 // NewConnectionEndpoint creates and returns connection endpoint
 func NewConnectionEndpoint(manager connection.Manager, statsKeeper SessionStatisticsTracker, proposalProvider ProposalGetter) *ConnectionEndpoint {
@@ -223,7 +220,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 		case connection.ErrConnectionCancelled:
 			utils.SendError(resp, err, statusConnectCancelled)
 		default:
-			log.Error(connectionLogPrefix, err)
+			log.Error(err)
 			utils.SendError(resp, err, http.StatusInternalServerError)
 		}
 		return
