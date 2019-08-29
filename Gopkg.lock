@@ -1055,6 +1055,7 @@
     "github.com/magefile/mage/mage",
     "github.com/magefile/mage/sh",
     "github.com/mholt/archiver",
+    "github.com/miekg/dns",
     "github.com/mitchellh/go-homedir",
     "github.com/mysteriumnetwork/go-ci/env",
     "github.com/mysteriumnetwork/go-ci/github",

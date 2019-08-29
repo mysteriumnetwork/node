@@ -19,6 +19,7 @@ package service
 
 import (
 	"encoding/json"
+	"net"
 
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
@@ -26,6 +27,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
@@ -36,6 +38,7 @@ import (
 	"github.com/mysteriumnetwork/node/services"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 const logPrefix = "[service-openvpn] "
@@ -44,7 +47,7 @@ const logPrefix = "[service-openvpn] "
 type ServerConfigFactory func(secPrimitives *tls.Primitives, port int) *openvpn_service.ServerConfig
 
 // ServerFactory initiates Openvpn server instance during runtime
-type ServerFactory func(*openvpn_service.ServerConfig) openvpn.Process
+type ServerFactory func(*openvpn_service.ServerConfig, chan openvpn.State) openvpn.Process
 
 // ProposalFactory prepares service proposal during runtime
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
@@ -72,10 +75,12 @@ type Manager struct {
 	natPingerPorts port.ServicePortSupplier
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
+	dnsServer      *dns.Server
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 	consumerConfig                 openvpn_service.ConsumerConfig
 
+	vpnNetwork               net.IPNet
 	vpnServerPort            int
 	vpnServerConfigFactory   ServerConfigFactory
 	vpnServiceConfigProvider session.ConfigNegotiator
@@ -90,8 +95,12 @@ type Manager struct {
 
 // Serve starts service - does block
 func (m *Manager) Serve(providerID identity.Identity) (err error) {
+	m.vpnNetwork = net.IPNet{
+		IP:   net.ParseIP(m.serviceOptions.Subnet),
+		Mask: net.IPMask(net.ParseIP(m.serviceOptions.Netmask).To4()),
+	}
 	err = m.natService.Add(nat.RuleForwarding{
-		SourceSubnet: firewall.SimplifiedSubnet(m.serviceOptions.Subnet, m.serviceOptions.Netmask),
+		SourceSubnet: m.vpnNetwork.String(),
 		TargetIP:     m.outboundIP,
 	})
 	if err != nil {
@@ -115,12 +124,13 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP, m.vpnServerPort)
 
 	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)
-	m.vpnServer = m.vpnServerFactory(vpnServerConfig)
+	stateChannel := make(chan openvpn.State, 10)
+	m.vpnServer = m.vpnServerFactory(vpnServerConfig, stateChannel)
 
 	// register service port to which NATProxy will forward connects attempts to
 	m.natPinger.BindServicePort(openvpn_service.ServiceType, m.vpnServerPort)
 
-	log.Info(logPrefix, "starting openvpn server on port: ", m.vpnServerPort)
+	log.Info(logPrefix, "Starting openvpn server on port: ", m.vpnServerPort)
 	if err := firewall.AddInboundRule(m.serviceOptions.Protocol, m.vpnServerPort); err != nil {
 		return errors.Wrap(err, "failed to add firewall rule")
 	}
@@ -130,28 +140,43 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		}
 	}()
 
-	if err = m.vpnServer.Start(); err != nil {
-		return
+	if err := m.startServer(m.vpnServer, stateChannel); err != nil {
+		return errors.Wrap(err, "failed to start Openvpn server")
 	}
-	log.Info(logPrefix, "openvpn server waiting")
 
+	m.dnsServer = dns.NewServer(
+		net.JoinHostPort(providerIP(m.vpnNetwork).String(), "53"),
+		dns.ResolveViaConfigured(),
+	)
+	log.Info(logPrefix, "Starting DNS on: ", m.dnsServer.Addr)
+	if err = m.dnsServer.Run(); err != nil {
+		return errors.Wrap(err, "failed to start DNS server")
+	}
+
+	log.Info(logPrefix, "Openvpn server waiting")
 	return m.vpnServer.Wait()
 }
 
 // Stop stops service
-func (m *Manager) Stop() (err error) {
+func (m *Manager) Stop() error {
 	if m.vpnServer != nil {
 		m.vpnServer.Stop()
 	}
 
-	if m.natService != nil {
-		return m.natService.Del(nat.RuleForwarding{
-			SourceSubnet: firewall.SimplifiedSubnet(m.serviceOptions.Subnet, m.serviceOptions.Netmask),
-			TargetIP:     m.outboundIP,
-		})
+	errStop := utils.ErrorCollection{}
+	if m.dnsServer != nil {
+		errStop.Add(m.dnsServer.Stop())
 	}
 
-	return nil
+	if m.natService != nil {
+		err := m.natService.Del(nat.RuleForwarding{
+			SourceSubnet: m.vpnNetwork.String(),
+			TargetIP:     m.outboundIP,
+		})
+		errStop.Add(err)
+	}
+
+	return errStop.Errorf("ErrorCollection(%s)", ", ")
 }
 
 // ProvideConfig takes session creation config from end consumer and provides the service configuration to the end consumer
@@ -193,6 +218,38 @@ func (m *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalParams *
 	return m.vpnServiceConfigProvider.ProvideConfig(sessionConfig, traversalParams)
 }
 
+func (m *Manager) startServer(server openvpn.Process, stateChannel chan openvpn.State) error {
+	if err := m.vpnServer.Start(); err != nil {
+		return err
+	}
+
+	// Wait for started state
+	for {
+		state, more := <-stateChannel
+		if !more {
+			return errors.New("process failed to start")
+		}
+		if state == openvpn.ConnectedState {
+			break
+		}
+	}
+
+	// Consume server states
+	go func() {
+		for state := range stateChannel {
+			switch state {
+			case openvpn.ProcessStarted:
+				log.Info(logPrefix, "Openvpn service booting up")
+			case openvpn.ProcessExited:
+				log.Info(logPrefix, "Openvpn service exited")
+			}
+		}
+	}()
+
+	log.Info(logPrefix, "Openvpn service started successfully")
+	return nil
+}
+
 func (m *Manager) isBehindNAT() bool {
 	return m.outboundIP != m.publicIP
 }
@@ -209,13 +266,8 @@ func (m *Manager) portMappingFailed() bool {
 	return event.Stage == mapping.StageName && !event.Successful
 }
 
-func vpnStateCallback(state openvpn.State) {
-	switch state {
-	case openvpn.ProcessStarted:
-		log.Info(logPrefix, "Openvpn service booting up")
-	case openvpn.ConnectedState:
-		log.Info(logPrefix, "Openvpn service started successfully")
-	case openvpn.ProcessExited:
-		log.Info(logPrefix, "Openvpn service exited")
-	}
+func providerIP(subnet net.IPNet) net.IP {
+	ip := subnet.IP
+	ip[len(ip)-1] = byte(1)
+	return ip
 }

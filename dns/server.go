@@ -15,17 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package firewall
+package dns
 
 import (
-	"fmt"
-	"net"
+	"github.com/miekg/dns"
 )
 
-// SimplifiedSubnet returns IP subnet in x.x.x.x/yy format
-func SimplifiedSubnet(subnet, netmask string) string {
-	mask := net.IPMask(net.ParseIP(netmask).To4())
-	length, _ := mask.Size()
+// NewServer returns new instance of API server
+func NewServer(addr string, handler dns.Handler) *Server {
+	server := new(Server)
+	server.Addr = addr
+	server.dnsServer = &dns.Server{
+		Addr:    addr,
+		Net:     "udp",
+		Handler: handler,
+	}
+	return server
+}
 
-	return fmt.Sprintf("%s/%d", subnet, length)
+// Server defines DNS server with all handler attached to it
+type Server struct {
+	Addr      string
+	dnsServer *dns.Server
+}
+
+// Run starts DNS server
+func (server *Server) Run() error {
+	return server.dnsServer.ListenAndServe()
+}
+
+// Stop shutdowns Proxy server
+func (server *Server) Stop() error {
+	return server.dnsServer.Shutdown()
 }
