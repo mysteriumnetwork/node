@@ -105,6 +105,11 @@ func (cfg *Config) SetCLI(key string, value interface{}) {
 	cfg.set(&cfg.cli, key, value)
 }
 
+// RemoveCLI removes configured CLI flag value by key
+func (cfg *Config) RemoveCLI(key string) {
+	cfg.remove(&cfg.cli, key)
+}
+
 // set internal method for setting value in a certain configuration value map
 func (cfg *Config) set(configMap *map[string]interface{}, key string, value interface{}) {
 	key = strings.ToLower(key)
@@ -115,6 +120,18 @@ func (cfg *Config) set(configMap *map[string]interface{}, key string, value inte
 
 	// set innermost value
 	deepestMap[lastKey] = value
+}
+
+// remove internal method for removing a configured value in a certain configuration map
+func (cfg *Config) remove(configMap *map[string]interface{}, key string) {
+	key = strings.ToLower(key)
+	segments := strings.Split(key, ".")
+
+	lastKey := strings.ToLower(segments[len(segments)-1])
+	deepestMap := deepSearch(*configMap, segments[0:len(segments)-1])
+
+	// set innermost value
+	delete(deepestMap, lastKey)
 }
 
 // Get gets stored config value as-is

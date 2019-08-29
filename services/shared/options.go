@@ -54,7 +54,7 @@ func configureDefaults() {
 }
 
 func configureCLI(ctx *cli.Context) {
-	cliflags.SetStringIfPresent(config.Current, accessPoliciesFlag.Name, ctx)
+	cliflags.SetString(config.Current, accessPoliciesFlag.Name, ctx)
 }
 
 // ConfiguredOptions returns effective shared service options

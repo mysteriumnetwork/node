@@ -78,10 +78,10 @@ func configureDefaults() {
 }
 
 func configureCLI(ctx *cli.Context) {
-	cliflags.SetStringIfPresent(config.Current, protocolFlag.Name, ctx)
-	cliflags.SetIntIfPresent(config.Current, portFlag.Name, ctx)
-	cliflags.SetStringIfPresent(config.Current, subnetFlag.Name, ctx)
-	cliflags.SetStringIfPresent(config.Current, netmaskFlag.Name, ctx)
+	cliflags.SetString(config.Current, protocolFlag.Name, ctx)
+	cliflags.SetInt(config.Current, portFlag.Name, ctx)
+	cliflags.SetString(config.Current, subnetFlag.Name, ctx)
+	cliflags.SetString(config.Current, netmaskFlag.Name, ctx)
 }
 
 // ConfiguredOptions returns effective OpenVPN service options from configuration

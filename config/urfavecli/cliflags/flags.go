@@ -24,23 +24,32 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-// SetStringIfPresent helper to register string CLI flag value from urfave/cli.Context
-func SetStringIfPresent(cfg *config.Config, name string, ctx *cli.Context) {
+// SetString helper to register string CLI flag value from urfave/cli.Context.
+// Removes configured value if CLI flag value is not present.
+func SetString(cfg *config.Config, name string, ctx *cli.Context) {
 	if ctx.IsSet(name) {
 		cfg.SetCLI(name, ctx.String(name))
+	} else {
+		cfg.RemoveCLI(name)
 	}
 }
 
-// SetIntIfPresent helper to register int CLI flag value from urfave/cli.Context
-func SetIntIfPresent(cfg *config.Config, name string, ctx *cli.Context) {
+// SetInt helper to register int CLI flag value from urfave/cli.Context.
+// Removes configured value if CLI flag value is not present.
+func SetInt(cfg *config.Config, name string, ctx *cli.Context) {
 	if ctx.IsSet(name) {
 		cfg.SetCLI(name, ctx.Int(name))
+	} else {
+		cfg.RemoveCLI(name)
 	}
 }
 
-// SetBoolIfPresent helper to register bool CLI flag value from urfave/cli.Context
-func SetBoolIfPresent(cfg *config.Config, name string, ctx *cli.Context) {
+// SetBool helper to register bool CLI flag value from urfave/cli.Context.
+// Removes configured value if CLI flag value is not present.
+func SetBool(cfg *config.Config, name string, ctx *cli.Context) {
 	if ctx.IsSet(name) {
 		cfg.SetCLI(name, ctx.Bool(name))
+	} else {
+		cfg.RemoveCLI(name)
 	}
 }
