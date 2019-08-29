@@ -18,7 +18,7 @@ RUN bin/build
 FROM alpine:3.6
 
 # Install packages
-RUN apk add --update --no-cache iptables ca-certificates openvpn bash sudo \
+RUN apk add --update --no-cache iptables ca-certificates openvpn bash sudo openresolv \
     && rm -rf /var/cache/apk/*
 
 COPY bin/helpers/prepare-run-env.sh /usr/local/bin/prepare-run-env.sh
