@@ -774,7 +774,8 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, share
 	case noop.ServiceType:
 		return noop.ParseFlags(ctx), shared.ConfiguredOptions(), nil
 	case wireguard.ServiceType:
-		return wireguard_service.ParseFlags(ctx), shared.ConfiguredOptions(), nil
+		wireguard_service.Configure(ctx)
+		return wireguard_service.ConfiguredOptions(), shared.ConfiguredOptions(), nil
 	case openvpn.ServiceType:
 		openvpn_service.Configure(ctx)
 		return openvpn_service.ConfiguredOptions(), shared.ConfiguredOptions(), nil

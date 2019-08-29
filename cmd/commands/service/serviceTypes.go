@@ -36,6 +36,9 @@ var (
 			openvpn_service.Configure(ctx)
 			return openvpn_service.ConfiguredOptions()
 		},
-		wireguard.ServiceType: wireguard_service.ParseFlags,
+		wireguard.ServiceType: func(ctx *cli.Context) service.Options {
+			wireguard_service.Configure(ctx)
+			return wireguard_service.ConfiguredOptions()
+		},
 	}
 )

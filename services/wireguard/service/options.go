@@ -21,13 +21,16 @@ import (
 	"encoding/json"
 	"net"
 
-	log "github.com/cihub/seelog"
+	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/config/urfavecli/cliflags"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
 )
+
+var log = logconfig.NewLogger()
 
 // Options describes options which are required to start Wireguard service
 type Options struct {
@@ -37,57 +40,74 @@ type Options struct {
 }
 
 var (
-	delayFlag = altsrc.NewIntFlag(cli.IntFlag{
+	delayFlag = cli.IntFlag{
 		Name:  "wireguard.connect.delay",
 		Usage: "Consumer is delayed by specified time if provider is behind NAT",
 		Value: DefaultOptions.ConnectDelay,
-	})
-	ports = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	ports = cli.StringFlag{
 		Name:  "wireguard.listen.ports",
 		Usage: "Range of listen ports (e.g. 52820:53075)",
-	})
-	subnet = altsrc.NewStringFlag(cli.StringFlag{
+	}
+	subnet = cli.StringFlag{
 		Name:  "wireguard.allowed.subnet",
 		Usage: "Subnet allowed for using by the wireguard services",
 		Value: DefaultOptions.Subnet.String(),
-	})
+	}
+	// DefaultOptions is a wireguard service configuration that will be used if no options provided.
+	DefaultOptions = Options{
+		ConnectDelay: 2000,
+		Ports:        port.UnspecifiedRange(),
+		Subnet: net.IPNet{
+			IP:   net.ParseIP("10.182.0.0"),
+			Mask: net.IPv4Mask(255, 255, 0, 0),
+		},
+	}
 )
-
-// DefaultOptions is a wireguard service configuration that will be used if no options provided.
-var DefaultOptions = Options{
-	ConnectDelay: 2000,
-	Ports:        port.UnspecifiedRange(),
-	Subnet: net.IPNet{
-		IP:   net.ParseIP("10.182.0.0"),
-		Mask: net.IPv4Mask(255, 255, 0, 0),
-	}}
 
 // RegisterFlags function register Wireguard flags to flag list
 func RegisterFlags(flags *[]cli.Flag) {
 	*flags = append(*flags, delayFlag, ports, subnet)
 }
 
-// ParseFlags function fills in Wireguard options from CLI context
-func ParseFlags(ctx *cli.Context) service.Options {
-	_, ipnet, err := net.ParseCIDR(ctx.String(subnet.Name))
+// Configure parses CLI flags and registers value to configuration
+func Configure(ctx *cli.Context) {
+	configureDefaults()
+	configureCLI(ctx)
+}
+
+func configureDefaults() {
+	config.Current.SetDefault(delayFlag.Name, DefaultOptions.ConnectDelay)
+	config.Current.SetDefault(ports.Name, DefaultOptions.Ports)
+	config.Current.SetDefault(subnet.Name, DefaultOptions.Subnet)
+}
+
+func configureCLI(ctx *cli.Context) {
+	cliflags.SetInt(config.Current, delayFlag.Name, ctx)
+	cliflags.SetString(config.Current, ports.Name, ctx)
+	cliflags.SetString(config.Current, subnet.Name, ctx)
+}
+
+// ConfiguredOptions returns effective Wireguard service options from configuration
+func ConfiguredOptions() Options {
+	_, ipnet, err := net.ParseCIDR(config.Current.GetString(subnet.Name))
 	if err != nil {
-		log.Warn(logPrefix, "Failed to parse subnet option, using default value. ", err)
+		log.Warn("Failed to parse subnet option, using default value. ", err)
 		ipnet = &DefaultOptions.Subnet
 	}
 
-	portRange, err := port.ParseRange(ctx.String(ports.Name))
+	portRange, err := port.ParseRange(config.Current.GetString(ports.Name))
 	if err != nil {
-		log.Warn(logPrefix, "Failed to parse listen port range, using default value. ", err)
+		log.Warn("Failed to parse listen port range, using default value. ", err)
 		portRange = port.UnspecifiedRange()
 	}
 	if portRange.Capacity() > resources.MaxConnections {
-		log.Warnf(logPrefix, "Specified port range exceeds maximum number of connections allowed for the platform (%d), "+
+		log.Warnf("Specified port range exceeds maximum number of connections allowed for the platform (%d), "+
 			"using default value", resources.MaxConnections)
 		portRange = port.UnspecifiedRange()
 	}
-
 	return Options{
-		ConnectDelay: ctx.Int(delayFlag.Name),
+		ConnectDelay: config.Current.GetInt(delayFlag.Name),
 		Ports:        portRange,
 		Subnet:       *ipnet,
 	}
@@ -95,8 +115,9 @@ func ParseFlags(ctx *cli.Context) service.Options {
 
 // ParseJSONOptions function fills in Wireguard options from JSON request
 func ParseJSONOptions(request *json.RawMessage) (service.Options, error) {
+	var requestOptions = ConfiguredOptions()
 	if request == nil {
-		return DefaultOptions, nil
+		return requestOptions, nil
 	}
 
 	opts := DefaultOptions

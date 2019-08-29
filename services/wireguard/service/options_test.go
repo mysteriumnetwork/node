@@ -27,6 +27,7 @@ import (
 )
 
 func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
+	configureDefaults()
 	options, err := ParseJSONOptions(nil)
 
 	assert.NoError(t, err)
@@ -34,6 +35,7 @@ func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
 }
 
 func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
+	configureDefaults()
 	request := json.RawMessage(`{}`)
 	options, err := ParseJSONOptions(&request)
 
@@ -42,6 +44,7 @@ func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
 }
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
+	configureDefaults()
 	request := json.RawMessage(`{"connectDelay": 3000, "ports": "52820:53075", "subnet":"10.10.0.0/16"}`)
 	options, err := ParseJSONOptions(&request)
 

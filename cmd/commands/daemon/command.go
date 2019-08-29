@@ -23,6 +23,7 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
 	"github.com/mysteriumnetwork/node/services/shared"
+	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -41,6 +42,7 @@ func NewCommand() *cli.Command {
 			quit := make(chan error, 2)
 			shared.Configure(ctx)
 			openvpn_service.Configure(ctx)
+			wireguard_service.Configure(ctx)
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
