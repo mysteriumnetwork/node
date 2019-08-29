@@ -15,7 +15,9 @@
 #     foreign_option_3='dhcp-option DOMAIN be.bnc.ch'
 #
 
-[ -x /sbin/resolvconf ] || exit 0
+RESOLVCONFBIN=$(which resolvconf)
+
+[ -x $RESOLVCONFBIN ] || exit 0
 [ "$script_type" ] || exit 0
 [ "$dev" ] || exit 0
 
@@ -43,15 +45,14 @@ case "$script_type" in
         fi
     done
     R=""
-    [ "$SRCHS" ] && R="search $SRCHS
-"
+    [ "$SRCHS" ] && R="search $SRCHS\n"
+
     for NS in $NMSRVRS ; do
-            R="${R}nameserver $NS
-"
+            R="${R}nameserver $NS\n"
     done
-    echo -n "$R" | sudo /sbin/resolvconf -a "${dev}.openvpn"
+    echo -e -n "$R" | sudo $RESOLVCONFBIN -a "${dev}.openvpn"
     ;;
   down)
-    sudo /sbin/resolvconf -d "${dev}.openvpn"
+    sudo $RESOLVCONFBIN -d "${dev}.openvpn"
     ;;
 esac
