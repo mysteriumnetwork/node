@@ -32,14 +32,13 @@ import (
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/metadata"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/shared"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
 )
-
-const serviceCommandName = "service"
 
 var log = logconfig.NewLogger()
 
@@ -54,16 +53,9 @@ var (
 		Usage: "Used to unlock keystore's identity",
 		Value: "",
 	})
-
 	agreedTermsConditionsFlag = altsrc.NewBoolFlag(cli.BoolFlag{
 		Name:  "agreed-terms-and-conditions",
 		Usage: "Agree with terms & conditions",
-	})
-
-	accessPolicyListFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "access-policy.list",
-		Usage: "Comma separated list that determines the allowed identities on our service.",
-		Value: "",
 	})
 )
 
@@ -71,7 +63,7 @@ var (
 func NewCommand(licenseCommandName string) *cli.Command {
 	var di cmd.Dependencies
 	command := &cli.Command{
-		Name:      serviceCommandName,
+		Name:      "service",
 		Usage:     "Starts and publishes services on Mysterium Network",
 		ArgsUsage: "comma separated list of services to start",
 		Before:    clicontext.LoadUserConfigQuietly,
@@ -90,10 +82,13 @@ func NewCommand(licenseCommandName string) *cli.Command {
 
 			cmd.RegisterSignalCallback(func() { quit <- nil })
 
+			shared.Configure(ctx)
 			cmdService := &serviceCommand{
 				tequilapi:    client.NewClient(nodeOptions.TequilapiAddress, nodeOptions.TequilapiPort),
 				errorChannel: quit,
-				ap:           parseAccessPolicyFlag(ctx),
+				ap: client.AccessPoliciesRequest{
+					IDs: shared.ConfiguredOptions().AccessPolicies,
+				},
 			}
 
 			go func() {
@@ -182,9 +177,10 @@ func (sc *serviceCommand) runService(providerID, serviceType string, options ser
 func registerFlags(flags *[]cli.Flag) {
 	*flags = append(*flags,
 		agreedTermsConditionsFlag,
-		identityFlag, identityPassphraseFlag,
-		accessPolicyListFlag,
+		identityFlag,
+		identityPassphraseFlag,
 	)
+	shared.RegisterFlags(flags)
 	openvpn_service.RegisterFlags(flags)
 	wireguard_service.RegisterFlags(flags)
 }
@@ -194,19 +190,6 @@ func parseIdentityFlags(ctx *cli.Context) service.OptionsIdentity {
 	return service.OptionsIdentity{
 		Identity:   ctx.String(identityFlag.Name),
 		Passphrase: ctx.String(identityPassphraseFlag.Name),
-	}
-}
-
-// parseAccessPolicyFlag fetches the access policy data from CLI context
-func parseAccessPolicyFlag(ctx *cli.Context) client.AccessPoliciesRequest {
-	policies := ctx.String(accessPolicyListFlag.Name)
-	log.Info("Using access policies: ", policies)
-	if policies == "" {
-		return client.AccessPoliciesRequest{}
-	}
-	splits := strings.Split(policies, ",")
-	return client.AccessPoliciesRequest{
-		IDs: splits,
 	}
 }
 

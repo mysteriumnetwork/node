@@ -35,13 +35,13 @@ import (
 	"github.com/mysteriumnetwork/node/services/noop"
 	"github.com/mysteriumnetwork/node/services/openvpn"
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	shared "github.com/mysteriumnetwork/node/services/shared"
 	"github.com/mysteriumnetwork/node/services/wireguard"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	tequilapi_client "github.com/mysteriumnetwork/node/tequilapi/client"
 	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 	"gopkg.in/urfave/cli.v1"
-	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 const cliCommandName = "cli"
@@ -102,12 +102,6 @@ var versionSummary = metadata.VersionAsSummary(metadata.LicenseCopyright(
 	"type 'license --warranty'",
 	"type 'license --conditions'",
 ))
-
-var accessPolicyFlag = altsrc.NewStringFlag(cli.StringFlag{
-	Name:  "access-policy.list",
-	Usage: "access policy lists to use in order to limit access to the service. Accepts a comma separated list. For example: mysterium,private",
-	Value: "",
-})
 
 // Run runs CLI interface synchronously, in the same thread while blocking it
 func (c *cliApp) Run() (err error) {
@@ -239,13 +233,17 @@ func (c *cliApp) service(argsString string) {
 }
 
 func (c *cliApp) serviceStart(providerID, serviceType string, args ...string) {
-	opts, accessPolicy, err := parseStartFlags(serviceType, args...)
+	opts, sharedOpts, err := parseStartFlags(serviceType, args...)
 	if err != nil {
 		info("Failed to parse service options:", err)
 		return
 	}
 
-	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, accessPolicy)
+	ap := tequilapi_client.AccessPoliciesRequest{
+		IDs: sharedOpts.AccessPolicies,
+	}
+
+	service, err := c.tequilapi.ServiceStart(providerID, serviceType, opts, ap)
 	if err != nil {
 		info("Failed to start service: ", err)
 		return
@@ -754,12 +752,11 @@ func newAutocompleter(tequilapi *tequilapi_client.Client, proposals []tequilapi_
 	)
 }
 
-func parseStartFlags(serviceType string, args ...string) (service.Options, tequilapi_client.AccessPoliciesRequest, error) {
-	var ap tequilapi_client.AccessPoliciesRequest
+func parseStartFlags(serviceType string, args ...string) (service.Options, shared.Options, error) {
 	var flags []cli.Flag
+	shared.RegisterFlags(&flags)
 	openvpn_service.RegisterFlags(&flags)
 	wireguard_service.RegisterFlags(&flags)
-	flags = append(flags, accessPolicyFlag)
 
 	set := flag.NewFlagSet("", flag.ContinueOnError)
 	for _, f := range flags {
@@ -767,28 +764,21 @@ func parseStartFlags(serviceType string, args ...string) (service.Options, tequi
 	}
 
 	if err := set.Parse(args); err != nil {
-		return nil, ap, err
+		return nil, shared.Options{}, err
 	}
 
 	ctx := cli.NewContext(nil, set, nil)
 
-	apFlagValue := ctx.String(accessPolicyFlag.Name)
-	if len(apFlagValue) > 0 {
-		splits := strings.Split(ctx.String(accessPolicyFlag.Name), ",")
-		ap = tequilapi_client.AccessPoliciesRequest{
-			IDs: splits,
-		}
-	}
-
+	shared.Configure(ctx)
 	switch serviceType {
 	case noop.ServiceType:
-		return noop.ParseFlags(ctx), ap, nil
+		return noop.ParseFlags(ctx), shared.ConfiguredOptions(), nil
 	case wireguard.ServiceType:
-		return wireguard_service.ParseFlags(ctx), ap, nil
+		return wireguard_service.ParseFlags(ctx), shared.ConfiguredOptions(), nil
 	case openvpn.ServiceType:
 		openvpn_service.Configure(ctx)
-		return openvpn_service.ConfiguredOptions(), ap, nil
+		return openvpn_service.ConfiguredOptions(), shared.ConfiguredOptions(), nil
 	}
 
-	return nil, ap, errors.New("service type not found")
+	return nil, shared.Options{}, errors.New("service type not found")
 }

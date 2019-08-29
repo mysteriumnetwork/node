@@ -21,6 +21,8 @@ import (
 	"github.com/mysteriumnetwork/node/cmd"
 	"github.com/mysteriumnetwork/node/config/urfavecli/clicontext"
 	"github.com/mysteriumnetwork/node/logconfig"
+	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn/service"
+	"github.com/mysteriumnetwork/node/services/shared"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -30,13 +32,15 @@ var log = logconfig.NewLogger()
 func NewCommand() *cli.Command {
 	var di cmd.Dependencies
 
-	return &cli.Command{
+	command := &cli.Command{
 		Name:      "daemon",
 		Usage:     "Starts Mysterium Tequilapi service",
 		ArgsUsage: " ",
 		Before:    clicontext.LoadUserConfigQuietly,
 		Action: func(ctx *cli.Context) error {
 			quit := make(chan error, 2)
+			shared.Configure(ctx)
+			openvpn_service.Configure(ctx)
 			if err := di.Bootstrap(cmd.ParseFlagsNode(ctx)); err != nil {
 				return err
 			}
@@ -50,6 +54,8 @@ func NewCommand() *cli.Command {
 			return di.Shutdown()
 		},
 	}
+
+	return command
 }
 
 func describeQuit(err error) error {
