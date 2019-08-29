@@ -90,6 +90,11 @@ func (cfg *Config) SaveUserConfig() error {
 	return nil
 }
 
+// GetUserConfig returns user configuration
+func (cfg *Config) GetUserConfig() map[string]interface{} {
+	return cfg.user
+}
+
 // SetDefault sets default value for key
 func (cfg *Config) SetDefault(key string, value interface{}) {
 	cfg.set(&cfg.defaults, key, value)

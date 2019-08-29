@@ -512,6 +512,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForNAT(router, di.StateKeeper.GetState)
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
+	tequilapi_endpoints.AddRoutesForConfig(router)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 
