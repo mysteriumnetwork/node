@@ -20,14 +20,14 @@ package jsonutil
 import (
 	"encoding/json"
 
-	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/pkg/errors"
 )
 
-var log = logconfig.NewLogger()
-
 // ToJson marshals v to a JSON string
-func ToJson(v interface{}) string {
+func ToJson(v interface{}) (string, error) {
 	bytes, err := json.Marshal(&v)
-	log.Warnf("failed to marshal to JSON string: %v", err)
-	return string(bytes)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to marshal as JSON string: %+v", v)
+	}
+	return string(bytes), nil
 }

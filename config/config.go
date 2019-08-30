@@ -67,7 +67,11 @@ func (cfg *Config) LoadUserConfig(location string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to decode configuration file")
 	}
-	log.Info("user configuration loaded: \n", jsonutil.ToJson(cfg))
+	cfgJson, err := jsonutil.ToJson(cfg.user)
+	if err != nil {
+		return err
+	}
+	log.Info("user configuration loaded: \n", cfgJson)
 	return nil
 }
 
@@ -86,7 +90,11 @@ func (cfg *Config) SaveUserConfig() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to write configuration to file")
 	}
-	log.Info("user configuration written: \n", jsonutil.ToJson(cfg.user))
+	cfgJson, err := jsonutil.ToJson(cfg.user)
+	if err != nil {
+		return err
+	}
+	log.Info("user configuration written: \n", cfgJson)
 	return nil
 }
 
@@ -108,6 +116,11 @@ func (cfg *Config) SetUser(key string, value interface{}) {
 // SetCLI sets value passed via CLI flag for key
 func (cfg *Config) SetCLI(key string, value interface{}) {
 	cfg.set(&cfg.cli, key, value)
+}
+
+// RemoveUser removes user configuration value for key
+func (cfg *Config) RemoveUser(key string) {
+	cfg.remove(&cfg.user, key)
 }
 
 // RemoveCLI removes configured CLI flag value by key
