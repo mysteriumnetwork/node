@@ -25,10 +25,14 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/mysteriumnetwork/node/core/service"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/market"
+	"github.com/mysteriumnetwork/node/services/shared"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
+
+var log = logconfig.NewLogger()
 
 // swagger:model ServiceRequestDTO
 type serviceRequest struct {
@@ -206,6 +210,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 		return
 	}
 
+	log.Infof("service start options: %+v", sr)
 	ap := getAccessPolicyData(sr, se.accessPolicyEndpointURL)
 
 	id, err := se.serviceManager.Start(identity.FromAddress(sr.ProviderID), sr.Type, ap, sr.Options)
@@ -294,20 +299,20 @@ func AddRoutesForService(router *httprouter.Router, serviceManager ServiceManage
 }
 
 func (se *ServiceEndpoint) toServiceRequest(req *http.Request) (serviceRequest, error) {
-	var jsonData struct {
+	jsonData := struct {
 		ProviderID     string                `json:"providerId"`
 		Type           string                `json:"type"`
 		Options        *json.RawMessage      `json:"options"`
 		AccessPolicies accessPoliciesRequest `json:"accessPolicies"`
+	}{
+		AccessPolicies: accessPoliciesRequest{
+			Ids: shared.ConfiguredOptions().AccessPolicies,
+		},
 	}
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&jsonData); err != nil {
 		return serviceRequest{}, err
-	}
-
-	if jsonData.AccessPolicies.Ids == nil {
-		jsonData.AccessPolicies.Ids = []string{}
 	}
 
 	sr := serviceRequest{

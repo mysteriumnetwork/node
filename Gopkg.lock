@@ -685,6 +685,14 @@
   revision = "f6122f5b2fbd92ace9b2819f0be4148be5690a1f"
 
 [[projects]]
+  digest = "1:08d65904057412fc0270fc4812a1c90c594186819243160dc779a402d4b6d0bc"
+  name = "github.com/spf13/cast"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8c9545af88b134710ab1cd196795e7f2388358d7"
+  version = "v1.3.0"
+
+[[projects]]
   digest = "1:e4ed0afd67bf7be353921665cdac50834c867ff1bba153efc0745b755a7f5905"
   name = "github.com/src-d/gcfg"
   packages = [
@@ -1018,6 +1026,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/BurntSushi/toml",
     "github.com/asaskevich/EventBus",
     "github.com/asdine/storm",
     "github.com/aws/aws-sdk-go-v2/aws",
@@ -1082,6 +1091,7 @@
     "github.com/oschwald/geoip2-golang",
     "github.com/pkg/errors",
     "github.com/songgao/water",
+    "github.com/spf13/cast",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/suite",
     "golang.org/x/crypto/bcrypt",

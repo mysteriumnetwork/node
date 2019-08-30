@@ -24,8 +24,6 @@ import (
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 )
 
-const logPrefix = "[service-wireguard] "
-
 // GetProposal returns the proposal for wireguard service
 func GetProposal(location location.Location) market.ServiceProposal {
 	marketLocation := market.Location{

@@ -31,8 +31,14 @@ var (
 	serviceTypes = []string{"openvpn", "wireguard", "noop"}
 
 	serviceTypesFlagsParser = map[string]func(ctx *cli.Context) service.Options{
-		noop.ServiceType:      noop.ParseFlags,
-		openvpn.ServiceType:   openvpn_service.ParseFlags,
-		wireguard.ServiceType: wireguard_service.ParseFlags,
+		noop.ServiceType: noop.ParseFlags,
+		openvpn.ServiceType: func(ctx *cli.Context) service.Options {
+			openvpn_service.Configure(ctx)
+			return openvpn_service.ConfiguredOptions()
+		},
+		wireguard.ServiceType: func(ctx *cli.Context) service.Options {
+			wireguard_service.Configure(ctx)
+			return wireguard_service.ConfiguredOptions()
+		},
 	}
 )

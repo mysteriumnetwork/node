@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -87,10 +86,10 @@ func (manager *Manager) ProvideConfig(publicKey json.RawMessage, traversalParams
 
 	destroy := func() {
 		if err := manager.resourceAllocator.ReleaseIPNet(config.Consumer.IPAddress); err != nil {
-			log.Error(logPrefix, "failed to release IP network", err)
+			log.Error("failed to release IP network", err)
 		}
 		if err := manager.connectionEndpoint.RemovePeer(key.PublicKey); err != nil {
-			log.Error(logPrefix, "failed to remove peer: ", key.PublicKey, err)
+			log.Error("failed to remove peer: ", key.PublicKey, err)
 		}
 	}
 
@@ -125,7 +124,7 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 	}
 	defer func() {
 		if err := firewall.RemoveInboundRule("UDP", config.Provider.Endpoint.Port); err != nil {
-			log.Error(logPrefix, "Failed to delete firewall rule for Wireguard", err)
+			log.Error("failed to delete firewall rule for Wireguard", err)
 		}
 	}()
 
@@ -135,7 +134,7 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 	}
 
 	manager.connectionEndpoint = connectionEndpoint
-	log.Info(logPrefix, "Wireguard service started successfully")
+	log.Info("wireguard service started successfully")
 
 	manager.wg.Wait()
 	return nil
@@ -147,6 +146,6 @@ func (manager *Manager) Stop() error {
 
 	manager.connectionEndpoint.Stop()
 
-	log.Info(logPrefix, "Wireguard service stopped")
+	log.Info("wireguard service stopped")
 	return nil
 }

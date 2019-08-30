@@ -39,13 +39,6 @@ type OptionsDirectory struct {
 
 // Check checks that configured dirs exist (which should contain info) and runtime dirs are created (if not exist)
 func (options *OptionsDirectory) Check() error {
-
-	if options.Config != "" {
-		err := ensureDirExists(options.Config)
-		if err != nil {
-			return err
-		}
-	}
 	err := ensureOrCreateDir(options.Runtime)
 	if err != nil {
 		return err
@@ -62,7 +55,7 @@ func (options *OptionsDirectory) Check() error {
 func ensureOrCreateDir(dir string) error {
 	err := ensureDirExists(dir)
 	if os.IsNotExist(err) {
-		log.Info("directory: ", dir, " does not exit, creating a new one")
+		log.Info("directory does not exist, creating a new one: ", dir)
 		return os.MkdirAll(dir, 0700)
 	}
 	return err
@@ -74,7 +67,7 @@ func ensureDirExists(dir string) error {
 		return err
 	}
 	if isDir := fileStat.IsDir(); !isDir {
-		return errors.New("directory expected")
+		return errors.Errorf("directory expected: %s", dir)
 	}
 	return nil
 }

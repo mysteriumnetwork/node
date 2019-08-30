@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/identity"
@@ -102,10 +101,10 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 
 	destroy := func() {
 		if err := manager.natService.Del(natRule); err != nil {
-			log.Error(logPrefix, "failed to delete NAT forwarding rule: ", err)
+			log.Error("failed to delete NAT forwarding rule: ", err)
 		}
 		if err := connectionEndpoint.Stop(); err != nil {
-			log.Error(logPrefix, "failed to stop connection endpoint: ", err)
+			log.Error("failed to stop connection endpoint: ", err)
 		}
 	}
 
@@ -115,7 +114,7 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 // Serve starts service - does block
 func (manager *Manager) Serve(providerID identity.Identity) error {
 	manager.wg.Add(1)
-	log.Info(logPrefix, "Wireguard service started successfully")
+	log.Info("wireguard service started successfully")
 
 	manager.wg.Wait()
 	return nil
@@ -125,6 +124,6 @@ func (manager *Manager) Serve(providerID identity.Identity) error {
 func (manager *Manager) Stop() error {
 	manager.wg.Done()
 
-	log.Info(logPrefix, "Wireguard service stopped")
+	log.Info("wireguard service stopped")
 	return nil
 }

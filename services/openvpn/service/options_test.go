@@ -25,6 +25,7 @@ import (
 )
 
 func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
+	configureDefaults()
 	options, err := ParseJSONOptions(nil)
 
 	assert.NoError(t, err)
@@ -32,6 +33,7 @@ func Test_ParseJSONOptions_HandlesNil(t *testing.T) {
 }
 
 func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
+	configureDefaults()
 	request := json.RawMessage(`{}`)
 	options, err := ParseJSONOptions(&request)
 
@@ -40,9 +42,15 @@ func Test_ParseJSONOptions_HandlesEmptyRequest(t *testing.T) {
 }
 
 func Test_ParseJSONOptions_ValidRequest(t *testing.T) {
+	configureDefaults()
 	request := json.RawMessage(`{"port": 1123, "protocol": "udp", "subnet": "10.10.10.0", "netmask": "255.255.255.0"}`)
 	options, err := ParseJSONOptions(&request)
 
 	assert.NoError(t, err)
-	assert.Equal(t, Options{Protocol: "udp", Port: 1123, Subnet: "10.10.10.0", Netmask: "255.255.255.0"}, options)
+	assert.Equal(t, Options{
+		Protocol: "udp",
+		Port:     1123,
+		Subnet:   "10.10.10.0",
+		Netmask:  "255.255.255.0",
+	}, options)
 }
