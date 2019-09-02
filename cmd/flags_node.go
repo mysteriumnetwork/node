@@ -76,9 +76,10 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 
 // ParseFlagsNode function fills in node options from CLI context
 func ParseFlagsNode(ctx *cli.Context) node.Options {
+	dirs := ParseFlagsDirectory(ctx)
 	return node.Options{
-		LogOptions:  logconfig.ParseFlags(ctx),
-		Directories: ParseFlagsDirectory(ctx),
+		LogOptions:  logconfig.ParseFlags(ctx, dirs.Data),
+		Directories: dirs,
 
 		TequilapiAddress: ctx.GlobalString(tequilapiAddressFlag.Name),
 		TequilapiPort:    ctx.GlobalInt(tequilapiPortFlag.Name),
