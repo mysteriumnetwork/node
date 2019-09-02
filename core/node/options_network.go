@@ -32,5 +32,7 @@ type OptionsNetwork struct {
 	EtherClientRPC       string
 	EtherPaymentsAddress string
 
+	EnableDNS bool
+
 	QualityOracle string
 }

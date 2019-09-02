@@ -85,6 +85,11 @@ var (
 		Name:  "experiment-natpunching",
 		Usage: "Enables experimental NAT hole punching",
 	})
+
+	enableDNSFlag = altsrc.NewBoolTFlag(cli.BoolTFlag{
+		Name:  "enable-dns-configuration",
+		Usage: "Enable DNS servers configuration for connection",
+	})
 )
 
 // RegisterFlagsNetwork function register network flags to flag list
@@ -98,6 +103,7 @@ func RegisterFlagsNetwork(flags *[]cli.Flag) {
 		brokerAddressFlag,
 		etherRPCFlag, etherContractPaymentsFlag,
 		qualityOracleFlag, accessPolicyAddressFlag,
+		enableDNSFlag,
 	)
 }
 
@@ -118,5 +124,7 @@ func ParseFlagsNetwork(ctx *cli.Context) node.OptionsNetwork {
 		EtherPaymentsAddress: ctx.GlobalString(etherContractPaymentsFlag.Name),
 
 		QualityOracle: ctx.GlobalString(qualityOracleFlag.Name),
+
+		EnableDNS: ctx.GlobalBool(enableDNSFlag.Name),
 	}
 }

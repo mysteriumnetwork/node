@@ -47,8 +47,9 @@ type Options struct {
 	Location   OptionsLocation
 	Transactor OptionsTransactor
 
-	Openvpn  Openvpn
-	Firewall OptionsFirewall
+	EnableDNS bool
+	Openvpn   Openvpn
+	Firewall  OptionsFirewall
 }
 
 // OptionsKeystore stores the keystore configuration

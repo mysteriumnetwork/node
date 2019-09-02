@@ -42,7 +42,7 @@ func fakeSignerFactory(_ identity.Identity) identity.Signer {
 }
 
 func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", false, fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	channel := make(chan connection.State)
 	statisticsChannel := make(chan consumer.SessionStatistics)
 	connectionOptions := connection.ConnectOptions{}
@@ -53,7 +53,7 @@ func TestConnectionFactory_ErrorsOnInvalidConfig(t *testing.T) {
 }
 
 func TestConnectionFactory_CreatesConnection(t *testing.T) {
-	factory := NewProcessBasedConnectionFactory("./", "./", "./", fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
+	factory := NewProcessBasedConnectionFactory("./", "./", "./", false, fakeSignerFactory, ip.NewResolverMock("1.1.1.1"), &MockNATPinger{})
 	channel := make(chan connection.State)
 	statisticsChannel := make(chan consumer.SessionStatistics)
 	conn, err := factory.Create(channel, statisticsChannel)

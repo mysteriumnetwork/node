@@ -20,6 +20,7 @@ package service
 import (
 	"crypto/x509/pkix"
 	"encoding/json"
+	"net"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
@@ -135,6 +136,10 @@ func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, servi
 		return &OpenvpnConfigNegotiator{
 			natEventGetter: natEventGetter,
 			vpnConfig: &openvpn_service.VPNConfig{
+				DNS: providerIP(net.IPNet{
+					IP:   net.ParseIP(serviceOptions.Subnet),
+					Mask: net.IPMask(net.ParseIP(serviceOptions.Netmask).To4()),
+				}).String(),
 				RemoteIP:        serverIP,
 				RemotePort:      port,
 				RemoteProtocol:  serviceOptions.Protocol,

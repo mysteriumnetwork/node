@@ -20,12 +20,11 @@ package openvpn
 import (
 	"sync"
 
-	"github.com/mysteriumnetwork/node/firewall"
-
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/ip"
+	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/nat/traversal"
 	"github.com/pkg/errors"
 )
@@ -132,6 +131,7 @@ type VPNConfig struct {
 	OriginalRemoteIP   string
 	OriginalRemotePort int
 
+	DNS             string `json:"dns"`
 	RemoteIP        string `json:"remote"`
 	RemotePort      int    `json:"port"`
 	LocalPort       int    `json:"lport"`
