@@ -62,7 +62,6 @@ services:
       --ether.client.rpc=ws://ganache:8545
       --keystore.lightweight
       --firewall.killSwitch.always
-      --enable-dns-configuration=false
       daemon
 
   #'external' IP detection
