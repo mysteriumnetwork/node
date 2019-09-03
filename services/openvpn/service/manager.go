@@ -23,8 +23,6 @@ import (
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
-	"github.com/pkg/errors"
-
 	"github.com/mysteriumnetwork/node/core/port"
 	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/firewall"
@@ -38,6 +36,7 @@ import (
 	openvpn_service "github.com/mysteriumnetwork/node/services/openvpn"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/utils"
+	"github.com/pkg/errors"
 )
 
 // ServerConfigFactory callback generates session config for remote client
@@ -50,7 +49,7 @@ type ServerFactory func(*openvpn_service.ServerConfig, chan openvpn.State) openv
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
 // SessionConfigNegotiatorFactory initiates ConfigProvider instance during runtime
-type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, outboundIP, publicIP string, port int) session.ConfigNegotiator
+type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, serverIP, outboundIP, publicIP string, port int) session.ConfigNegotiator
 
 // NATPinger defined Pinger interface for Provider
 type NATPinger interface {
@@ -118,7 +117,8 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return
 	}
 
-	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, m.outboundIP, m.publicIP, m.vpnServerPort)
+	dnsIP := providerIP(m.vpnNetwork).String()
+	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, dnsIP, m.outboundIP, m.publicIP, m.vpnServerPort)
 
 	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)
 	stateChannel := make(chan openvpn.State, 10)
@@ -141,10 +141,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return errors.Wrap(err, "failed to start Openvpn server")
 	}
 
-	m.dnsServer = dns.NewServer(
-		net.JoinHostPort(providerIP(m.vpnNetwork).String(), "53"),
-		dns.ResolveViaConfigured(),
-	)
+	m.dnsServer = dns.NewServer(net.JoinHostPort(dnsIP, "53"), dns.ResolveViaConfigured())
 	log.Info("Starting DNS on: ", m.dnsServer.Addr)
 	if err = m.dnsServer.Run(); err != nil {
 		return errors.Wrap(err, "failed to start DNS server")

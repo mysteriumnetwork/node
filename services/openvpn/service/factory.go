@@ -20,7 +20,6 @@ package service
 import (
 	"crypto/x509/pkix"
 	"encoding/json"
-	"net"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/middlewares/server/auth"
@@ -131,15 +130,12 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 
 // newSessionConfigNegotiatorFactory returns function generating session config for remote client
 func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options, natEventGetter NATEventGetter, portPool port.ServicePortSupplier) SessionConfigNegotiatorFactory {
-	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string, port int) session.ConfigNegotiator {
+	return func(secPrimitives *tls.Primitives, dnsIP, outboundIP, publicIP string, port int) session.ConfigNegotiator {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP, networkOptions.Localnet)
 		return &OpenvpnConfigNegotiator{
 			natEventGetter: natEventGetter,
 			vpnConfig: &openvpn_service.VPNConfig{
-				DNS: providerIP(net.IPNet{
-					IP:   net.ParseIP(serviceOptions.Subnet),
-					Mask: net.IPMask(net.ParseIP(serviceOptions.Netmask).To4()),
-				}).String(),
+				DNS:             dnsIP,
 				RemoteIP:        serverIP,
 				RemotePort:      port,
 				RemoteProtocol:  serviceOptions.Protocol,

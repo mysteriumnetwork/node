@@ -23,7 +23,6 @@ import (
 	"io"
 	stdlog "log"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -308,25 +307,34 @@ func (c *cliApp) serviceGet(id string) {
 func (c *cliApp) connect(argsString string) {
 	args := strings.Fields(argsString)
 
+	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [disable-kill-switch] [enable-dns]"
 	if len(args) < 3 {
-		info("Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [disable-kill-switch]")
+		info(helpMsg)
 		return
 	}
 
 	consumerID, providerID, serviceType := args[0], args[1], args[2]
 
-	var disableKill bool
+	var disableKillSwitch bool
+	var enableDNS bool
 	var err error
-	if len(args) > 3 {
-		disableKillStr := args[3]
-		disableKill, err = strconv.ParseBool(disableKillStr)
-		if err != nil {
-			info("Please use true / false for <disable-kill-switch>")
+	for _, arg := range args[3:] {
+		switch arg {
+		case "enable-dns":
+			enableDNS = true
+		case "disable-kill-switch":
+			disableKillSwitch = true
+		default:
+			warn("Unexpected arg:", arg)
+			info(helpMsg)
 			return
 		}
 	}
 
-	connectOptions := tequilapi_client.ConnectOptions{DisableKillSwitch: disableKill}
+	connectOptions := tequilapi_client.ConnectOptions{
+		EnableDNS:         enableDNS,
+		DisableKillSwitch: disableKillSwitch,
+	}
 
 	if consumerID == "new" {
 		id, err := c.tequilapi.NewIdentity(identityDefaultPassphrase)

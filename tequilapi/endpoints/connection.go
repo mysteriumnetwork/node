@@ -43,6 +43,7 @@ type ConnectOptions struct {
 	// required: false
 	// example: true
 	DisableKillSwitch bool `json:"killSwitch"`
+	EnableDNS         bool `json:"enableDNS"`
 }
 
 // swagger:model ConnectionRequestDTO
@@ -311,7 +312,10 @@ func toConnectionRequest(req *http.Request) (*connectionRequest, error) {
 }
 
 func getConnectOptions(cr *connectionRequest) connection.ConnectParams {
-	return connection.ConnectParams{DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch}
+	return connection.ConnectParams{
+		DisableKillSwitch: cr.ConnectOptions.DisableKillSwitch,
+		EnableDNS:         cr.ConnectOptions.EnableDNS,
+	}
 }
 
 func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap {

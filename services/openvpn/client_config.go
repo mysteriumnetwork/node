@@ -19,7 +19,6 @@ package openvpn
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/config"
 )
@@ -88,9 +87,7 @@ func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeD
 
 	clientFileConfig := newClientConfig(runtimeDir, configDir, enableDNS)
 	if enableDNS && len(vpnConfig.DNS) > 0 {
-		for _, dns := range strings.Split(vpnConfig.DNS, ",") {
-			clientFileConfig.SetParam("dhcp-option", "DNS", dns)
-		}
+		clientFileConfig.SetParam("dhcp-option", "DNS", vpnConfig.DNS)
 	}
 	clientFileConfig.VpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)

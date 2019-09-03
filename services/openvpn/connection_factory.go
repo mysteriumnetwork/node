@@ -39,7 +39,6 @@ type ProcessBasedConnectionFactory struct {
 	openvpnBinary    string
 	configDirectory  string
 	runtimeDirectory string
-	enableDNS        bool
 	signerFactory    identity.SignerFactory
 	ipResolver       ip.Resolver
 	natPinger        NATPinger
@@ -48,7 +47,6 @@ type ProcessBasedConnectionFactory struct {
 // NewProcessBasedConnectionFactory creates a new ProcessBasedConnectionFactory
 func NewProcessBasedConnectionFactory(
 	openvpnBinary, configDirectory, runtimeDirectory string,
-	enableDNS bool,
 	signerFactory identity.SignerFactory,
 	resolver ip.Resolver,
 	natPinger NATPinger,
@@ -57,7 +55,6 @@ func NewProcessBasedConnectionFactory(
 		openvpnBinary:    openvpnBinary,
 		configDirectory:  configDirectory,
 		runtimeDirectory: runtimeDirectory,
-		enableDNS:        enableDNS,
 		signerFactory:    signerFactory,
 		ipResolver:       resolver,
 		natPinger:        natPinger,
@@ -95,7 +92,7 @@ func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateCha
 			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
 		}
 
-		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, op.configDirectory, op.runtimeDirectory, op.enableDNS)
+		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, op.configDirectory, op.runtimeDirectory, options.EnableDNS)
 		if err != nil {
 			return nil, nil, err
 		}

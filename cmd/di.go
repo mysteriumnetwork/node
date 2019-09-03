@@ -334,7 +334,6 @@ func (di *Dependencies) registerOpenvpnConnection(nodeOptions node.Options) {
 		nodeOptions.Openvpn.BinaryPath(),
 		nodeOptions.Directories.Config,
 		nodeOptions.Directories.Runtime,
-		nodeOptions.OptionsNetwork.EnableDNS,
 		di.SignerFactory,
 		di.IPResolver,
 		di.NATPinger,
