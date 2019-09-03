@@ -262,12 +262,12 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 	di.registerOpenvpnConnection(nodeOptions)
 	di.registerNoopConnection()
-	di.registerWireguardConnection()
+	di.registerWireguardConnection(nodeOptions)
 }
 
-func (di *Dependencies) registerWireguardConnection() {
+func (di *Dependencies) registerWireguardConnection(nodeOptions node.Options) {
 	wireguard.Bootstrap()
-	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator())
+	di.ConnectionRegistry.Register(wireguard.ServiceType, wireguard_connection.NewConnectionCreator(nodeOptions.Directories.Config))
 }
 
 func (di *Dependencies) bootstrapUIServer(options node.Options) {

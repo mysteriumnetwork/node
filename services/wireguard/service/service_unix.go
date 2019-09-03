@@ -21,10 +21,12 @@ package service
 
 import (
 	"encoding/json"
+	"net"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -89,6 +91,19 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 		return nil, err
 	}
 
+	config.Consumer.DNS = providerIP(config.Consumer.IPAddress).String()
+	dnsServer := dns.NewServer(
+		net.JoinHostPort(config.Consumer.DNS, "53"),
+		dns.ResolveViaConfigured(),
+	)
+
+	go func() {
+		log.Info("starting DNS on: ", dnsServer.Addr)
+		if err := dnsServer.Run(); err != nil {
+			_ = log.Error("failed to start DNS server: ", err)
+		}
+	}()
+
 	outIP, err := manager.ipResolver.GetOutboundIPAsString()
 	if err != nil {
 		return nil, err
@@ -100,11 +115,14 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 	}
 
 	destroy := func() {
+		if err := dnsServer.Stop(); err != nil {
+			_ = log.Error("failed to stop DNS server", err)
+		}
 		if err := manager.natService.Del(natRule); err != nil {
-			log.Error("failed to delete NAT forwarding rule: ", err)
+			_ = log.Error("failed to delete NAT forwarding rule: ", err)
 		}
 		if err := connectionEndpoint.Stop(); err != nil {
-			log.Error("failed to stop connection endpoint: ", err)
+			_ = log.Error("failed to stop connection endpoint: ", err)
 		}
 	}
 
@@ -126,4 +144,13 @@ func (manager *Manager) Stop() error {
 
 	log.Info("wireguard service stopped")
 	return nil
+}
+
+func providerIP(subnet net.IPNet) net.IP {
+	dup := make(net.IP, len(subnet.IP))
+	copy(dup, subnet.IP)
+	if len(dup) > 0 {
+		dup[len(dup)-1] = byte(1)
+	}
+	return dup
 }

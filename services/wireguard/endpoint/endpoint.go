@@ -101,6 +101,11 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 	return ce.wgClient.ConfigureDevice(ce.iface, deviceConfig, ce.ipAddr)
 }
 
+// InterfaceName returns a connection endpoint interface name.
+func (ce *connectionEndpoint) InterfaceName() string {
+	return ce.iface
+}
+
 // AddPeer adds new wireguard peer to the wireguard network interface.
 func (ce *connectionEndpoint) AddPeer(publicKey string, endpoint *net.UDPAddr, allowedIP ...string) error {
 	return ce.wgClient.AddPeer(ce.iface, peerInfo{endpoint, publicKey}, allowedIP...)

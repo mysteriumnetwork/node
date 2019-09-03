@@ -66,6 +66,7 @@ type ConnectionEndpoint interface {
 	PeerStats() (Stats, error)
 	ConfigureRoutes(ip net.IP) error
 	Config() (ServiceConfig, error)
+	InterfaceName() string
 	Stop() error
 }
 
@@ -107,6 +108,7 @@ type ServiceConfig struct {
 	Consumer struct {
 		PrivateKey   string `json:"-"`
 		IPAddress    net.IPNet
+		DNS          string
 		ConnectDelay int
 	}
 }
@@ -120,6 +122,7 @@ func (s ServiceConfig) MarshalJSON() ([]byte, error) {
 	type consumer struct {
 		PrivateKey   string `json:"private_key"`
 		IPAddress    string `json:"ip_address"`
+		DNS          string `json:"dns"`
 		ConnectDelay int    `json:"connect_delay"`
 	}
 
@@ -134,6 +137,7 @@ func (s ServiceConfig) MarshalJSON() ([]byte, error) {
 		consumer{
 			IPAddress:    s.Consumer.IPAddress.String(),
 			ConnectDelay: s.Consumer.ConnectDelay,
+			DNS:          s.Consumer.DNS,
 		},
 	})
 }
@@ -147,6 +151,7 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 	type consumer struct {
 		PrivateKey   string `json:"private_key"`
 		IPAddress    string `json:"ip_address"`
+		DNS          string `json:"dns"`
 		ConnectDelay int    `json:"connect_delay"`
 	}
 	var config struct {
@@ -169,6 +174,7 @@ func (s *ServiceConfig) UnmarshalJSON(data []byte) error {
 
 	s.Provider.Endpoint = *endpoint
 	s.Provider.PublicKey = config.Provider.PublicKey
+	s.Consumer.DNS = config.Consumer.DNS
 	s.Consumer.IPAddress = *ipnet
 	s.Consumer.IPAddress.IP = ip
 	s.Consumer.ConnectDelay = config.Consumer.ConnectDelay
