@@ -49,7 +49,7 @@ type ServerFactory func(*openvpn_service.ServerConfig, chan openvpn.State) openv
 type ProposalFactory func(currentLocation market.Location) market.ServiceProposal
 
 // SessionConfigNegotiatorFactory initiates ConfigProvider instance during runtime
-type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, serverIP, outboundIP, publicIP string, port int) session.ConfigNegotiator
+type SessionConfigNegotiatorFactory func(secPrimitives *tls.Primitives, dnsIP, outboundIP, publicIP string, port int) session.ConfigNegotiator
 
 // NATPinger defined Pinger interface for Provider
 type NATPinger interface {
