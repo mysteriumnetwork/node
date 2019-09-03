@@ -117,7 +117,7 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		return
 	}
 
-	dnsIP := providerIP(m.vpnNetwork).String()
+	dnsIP := utils.FirstIP(m.vpnNetwork).String()
 	m.vpnServiceConfigProvider = m.sessionConfigNegotiatorFactory(primitives, dnsIP, m.outboundIP, m.publicIP, m.vpnServerPort)
 
 	vpnServerConfig := m.vpnServerConfigFactory(primitives, m.vpnServerPort)
@@ -258,10 +258,4 @@ func (m *Manager) portMappingFailed() bool {
 		return true
 	}
 	return event.Stage == mapping.StageName && !event.Successful
-}
-
-func providerIP(subnet net.IPNet) net.IP {
-	ip := subnet.IP
-	ip[len(ip)-1] = byte(1)
-	return ip
 }

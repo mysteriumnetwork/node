@@ -26,6 +26,7 @@ import (
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 const logPrefix = "[wireguard-connection-endpoint] "
@@ -86,7 +87,7 @@ func (ce *connectionEndpoint) Start(config *wg.ServiceConfig) error {
 			return err
 		}
 		ce.ipAddr = ipAddr
-		ce.ipAddr.IP = providerIP(ce.ipAddr)
+		ce.ipAddr.IP = utils.FirstIP(ce.ipAddr)
 		ce.endpoint.IP = net.ParseIP(pubIP)
 		ce.endpoint.Port = port
 		ce.releasePortMapping = ce.mapPort(port)
@@ -206,9 +207,4 @@ func (p peerInfo) Endpoint() *net.UDPAddr {
 }
 func (p peerInfo) PublicKey() string {
 	return p.publicKey
-}
-
-func providerIP(subnet net.IPNet) net.IP {
-	subnet.IP[len(subnet.IP)-1] = byte(1)
-	return subnet.IP
 }

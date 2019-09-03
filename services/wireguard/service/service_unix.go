@@ -34,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 // NewManager creates new instance of Wireguard service
@@ -91,7 +92,7 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 		return nil, err
 	}
 
-	config.Consumer.DNS = providerIP(config.Consumer.IPAddress).String()
+	config.Consumer.DNS = utils.FirstIP(config.Consumer.IPAddress).String()
 	dnsServer := dns.NewServer(
 		net.JoinHostPort(config.Consumer.DNS, "53"),
 		dns.ResolveViaConfigured(),
@@ -144,13 +145,4 @@ func (manager *Manager) Stop() error {
 
 	log.Info("wireguard service stopped")
 	return nil
-}
-
-func providerIP(subnet net.IPNet) net.IP {
-	dup := make(net.IP, len(subnet.IP))
-	copy(dup, subnet.IP)
-	if len(dup) > 0 {
-		dup[len(dup)-1] = byte(1)
-	}
-	return dup
 }
