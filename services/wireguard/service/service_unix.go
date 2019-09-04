@@ -101,7 +101,7 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 	go func() {
 		log.Info("starting DNS on: ", dnsServer.Addr)
 		if err := dnsServer.Run(); err != nil {
-			_ = log.Error("failed to start DNS server: ", err)
+			log.Error("failed to start DNS server: ", err)
 		}
 	}()
 
@@ -117,13 +117,13 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 
 	destroy := func() {
 		if err := dnsServer.Stop(); err != nil {
-			_ = log.Error("failed to stop DNS server", err)
+			log.Error("failed to stop DNS server", err)
 		}
 		if err := manager.natService.Del(natRule); err != nil {
-			_ = log.Error("failed to delete NAT forwarding rule: ", err)
+			log.Error("failed to delete NAT forwarding rule: ", err)
 		}
 		if err := connectionEndpoint.Stop(); err != nil {
-			_ = log.Error("failed to stop connection endpoint: ", err)
+			log.Error("failed to stop connection endpoint: ", err)
 		}
 	}
 

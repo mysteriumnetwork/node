@@ -173,7 +173,7 @@ func (b Iptables) Setup() error {
 // Reset tries to cleanup all changes made by setup and leave system in the state before setup
 func (Iptables) Reset() {
 	if err := cleanupStaleRules(); err != nil {
-		_ = log.Warn(logPrefix, "Error cleaning up iptables rules, you might want to do it yourself: ", err)
+		log.Warn(logPrefix, "Error cleaning up iptables rules, you might want to do it yourself: ", err)
 	}
 }
 
@@ -184,7 +184,7 @@ func addRuleWithRemoval(chain chainInfo) (firewall.RemoveRule, error) {
 	return func() {
 		_, err := iptablesExec(chain.removeArgs()...)
 		if err != nil {
-			_ = log.Warn(logPrefix, "Error executing rule: ", chain.removeArgs(), " you might wanna do it yourself. Error was: ", err)
+			log.Warn(logPrefix, "Error executing rule: ", chain.removeArgs(), " you might wanna do it yourself. Error was: ", err)
 		}
 	}, nil
 }
