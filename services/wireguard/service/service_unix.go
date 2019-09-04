@@ -98,8 +98,8 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 		dns.ResolveViaConfigured(),
 	)
 
+	log.Info("starting DNS on: ", dnsServer.Addr)
 	go func() {
-		log.Info("starting DNS on: ", dnsServer.Addr)
 		if err := dnsServer.Run(); err != nil {
 			log.Error("failed to start DNS server: ", err)
 		}

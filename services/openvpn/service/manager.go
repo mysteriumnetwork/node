@@ -142,10 +142,12 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 	}
 
 	m.dnsServer = dns.NewServer(net.JoinHostPort(dnsIP, "53"), dns.ResolveViaConfigured())
-	log.Info("Starting DNS on: ", m.dnsServer.Addr)
-	if err = m.dnsServer.Run(); err != nil {
-		return errors.Wrap(err, "failed to start DNS server")
-	}
+	log.Info("starting DNS on: ", m.dnsServer.Addr)
+	go func() {
+		if err := m.dnsServer.Run(); err != nil {
+			log.Error("failed to start DNS server: ", err)
+		}
+	}()
 
 	log.Info("OpenVPN server waiting")
 	return m.vpnServer.Wait()
