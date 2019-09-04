@@ -94,18 +94,18 @@ func (l Logger) Info(v ...interface{}) {
 }
 
 // Warn warn log
-func (l Logger) Warn(v ...interface{}) error {
-	return seelog.Warn(append([]interface{}{l.prefix}, v...)...)
+func (l Logger) Warn(v ...interface{}) {
+	_ = seelog.Warn(append([]interface{}{l.prefix}, v...)...)
 }
 
 // Error error log
-func (l Logger) Error(v ...interface{}) error {
-	return seelog.Error(append([]interface{}{l.prefix}, v...)...)
+func (l Logger) Error(v ...interface{}) {
+	_ = seelog.Error(append([]interface{}{l.prefix}, v...)...)
 }
 
 // Critical critical log
-func (l Logger) Critical(v ...interface{}) error {
-	return seelog.Critical(append([]interface{}{l.prefix}, v...)...)
+func (l Logger) Critical(v ...interface{}) {
+	_ = seelog.Critical(append([]interface{}{l.prefix}, v...)...)
 }
 
 // IsTrace indicates if trace should be logged

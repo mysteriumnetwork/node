@@ -71,8 +71,6 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 	clientConfig.SetParam("reneg-sec", "60")
 	clientConfig.SetParam("resolv-retry", "infinite")
 	clientConfig.SetParam("redirect-gateway", "def1", "bypass-dhcp")
-	clientConfig.SetParam("dhcp-option", "DNS", "208.67.222.222")
-	clientConfig.SetParam("dhcp-option", "DNS", "208.67.220.220")
 
 	return &clientConfig
 }
@@ -80,14 +78,17 @@ func defaultClientConfig(runtimeDir string, scriptSearchPath string) *ClientConf
 // NewClientConfigFromSession creates client configuration structure for given VPNConfig, configuration dir to store serialized file args, and
 // configuration filename to store other args
 // TODO this will become the part of openvpn service consumer separate package
-func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string) (*ClientConfig, error) {
+func NewClientConfigFromSession(vpnConfig *VPNConfig, configDir string, runtimeDir string, enableDNS bool) (*ClientConfig, error) {
 	// TODO Rename `vpnConfig` to `sessionConfig`
 	err := NewDefaultValidator().IsValid(vpnConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	clientFileConfig := newClientConfig(runtimeDir, configDir)
+	clientFileConfig := newClientConfig(runtimeDir, configDir, enableDNS)
+	if enableDNS && len(vpnConfig.DNS) > 0 {
+		clientFileConfig.SetParam("dhcp-option", "DNS", vpnConfig.DNS)
+	}
 	clientFileConfig.VpnConfig = vpnConfig
 	clientFileConfig.SetReconnectRetry(2)
 	clientFileConfig.SetClientMode(vpnConfig.RemoteIP, vpnConfig.RemotePort, vpnConfig.LocalPort)

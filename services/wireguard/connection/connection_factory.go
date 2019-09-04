@@ -24,7 +24,9 @@ import (
 )
 
 // Factory is the wireguard connection factory
-type Factory struct{}
+type Factory struct {
+	configDir string
+}
 
 // Create creates a new wireguard connection
 func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel connection.StatisticsChannel) (connection.Connection, error) {
@@ -40,10 +42,13 @@ func (f *Factory) Create(stateChannel connection.StateChannel, statisticsChannel
 		stateChannel:      stateChannel,
 		statisticsChannel: statisticsChannel,
 		config:            config,
+		configDir:         f.configDir,
 	}, nil
 }
 
 // NewConnectionCreator creates wireguard connections
-func NewConnectionCreator() connection.Factory {
-	return &Factory{}
+func NewConnectionCreator(configDir string) connection.Factory {
+	return &Factory{
+		configDir: configDir,
+	}
 }

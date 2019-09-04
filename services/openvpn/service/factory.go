@@ -130,11 +130,12 @@ func newServerFactory(nodeOptions node.Options, sessionValidator *openvpn_sessio
 
 // newSessionConfigNegotiatorFactory returns function generating session config for remote client
 func newSessionConfigNegotiatorFactory(networkOptions node.OptionsNetwork, serviceOptions Options, natEventGetter NATEventGetter, portPool port.ServicePortSupplier) SessionConfigNegotiatorFactory {
-	return func(secPrimitives *tls.Primitives, outboundIP, publicIP string, port int) session.ConfigNegotiator {
+	return func(secPrimitives *tls.Primitives, dnsIP, outboundIP, publicIP string, port int) session.ConfigNegotiator {
 		serverIP := vpnServerIP(serviceOptions, outboundIP, publicIP, networkOptions.Localnet)
 		return &OpenvpnConfigNegotiator{
 			natEventGetter: natEventGetter,
 			vpnConfig: &openvpn_service.VPNConfig{
+				DNS:             dnsIP,
 				RemoteIP:        serverIP,
 				RemotePort:      port,
 				RemoteProtocol:  serviceOptions.Protocol,

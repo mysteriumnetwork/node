@@ -53,7 +53,7 @@ func LoadUserConfig(ctx *cli.Context) error {
 func LoadUserConfigQuietly(ctx *cli.Context) error {
 	err := LoadUserConfig(ctx)
 	if err != nil {
-		_ = log.Warn(err)
+		log.Warn(err)
 	}
 	return nil
 }

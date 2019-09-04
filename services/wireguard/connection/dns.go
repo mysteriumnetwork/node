@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package connection
 
-func newClientConfig(runtimeDir string, scriptSearchPath string, enableDNS bool) *ClientConfig {
-	clientConfig := defaultClientConfig(runtimeDir, scriptSearchPath)
-	if enableDNS {
-		clientConfig.SetFlag("register-dns")
-	}
-	return clientConfig
+import (
+	"os"
+	"os/exec"
+	"path"
+)
+
+func setDNS(configDir, dev, dns string) error {
+	cmd := exec.Command(path.Join(configDir, "update-resolv-conf"))
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "script_type=up", "dev="+dev, "foreign_option_1=dhcp-option DNS "+dns)
+	return cmd.Run()
+}
+
+func cleanDNS(configDir, dev string) error {
+	cmd := exec.Command(path.Join(configDir, "update-resolv-conf"))
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "script_type=down", "dev="+dev)
+	return cmd.Run()
 }

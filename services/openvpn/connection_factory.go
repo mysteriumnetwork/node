@@ -92,7 +92,7 @@ func (op *ProcessBasedConnectionFactory) Create(stateChannel connection.StateCha
 			sessionConfig.OriginalRemotePort = sessionConfig.RemotePort
 		}
 
-		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, op.configDirectory, op.runtimeDirectory)
+		vpnClientConfig, err := NewClientConfigFromSession(sessionConfig, op.configDirectory, op.runtimeDirectory, options.EnableDNS)
 		if err != nil {
 			return nil, nil, err
 		}

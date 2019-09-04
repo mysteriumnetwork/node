@@ -62,14 +62,15 @@ YFcPCscvdnZ1U8hTUaREZmDB2w9eaGyCM4YXAg==
 
 func TestValidatorReturnsNilErrorOnValidVPNConfig(t *testing.T) {
 	vpnConfig := &VPNConfig{
-		"",
-		0,
-		"1.2.3.4",
-		10999,
-		1194,
-		"tcp",
-		tlsTestKey,
-		caCertificate,
+		OriginalRemoteIP:   "",
+		OriginalRemotePort: 0,
+		DNS:                "",
+		RemoteIP:           "1.2.3.4",
+		RemotePort:         10999,
+		LocalPort:          1194,
+		RemoteProtocol:     "tcp",
+		TLSPresharedKey:    tlsTestKey,
+		CACertificate:      caCertificate,
 	}
 	assert.NoError(t, NewDefaultValidator().IsValid(vpnConfig))
 }

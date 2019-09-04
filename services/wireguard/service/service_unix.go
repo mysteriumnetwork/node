@@ -21,10 +21,12 @@ package service
 
 import (
 	"encoding/json"
+	"net"
 	"sync"
 
 	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -32,6 +34,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/resources"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/utils"
 )
 
 // NewManager creates new instance of Wireguard service
@@ -89,6 +92,19 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 		return nil, err
 	}
 
+	config.Consumer.DNS = utils.FirstIP(config.Consumer.IPAddress).String()
+	dnsServer := dns.NewServer(
+		net.JoinHostPort(config.Consumer.DNS, "53"),
+		dns.ResolveViaConfigured(),
+	)
+
+	log.Info("starting DNS on: ", dnsServer.Addr)
+	go func() {
+		if err := dnsServer.Run(); err != nil {
+			log.Error("failed to start DNS server: ", err)
+		}
+	}()
+
 	outIP, err := manager.ipResolver.GetOutboundIPAsString()
 	if err != nil {
 		return nil, err
@@ -100,6 +116,9 @@ func (manager *Manager) ProvideConfig(sessionConfig json.RawMessage, traversalPa
 	}
 
 	destroy := func() {
+		if err := dnsServer.Stop(); err != nil {
+			log.Error("failed to stop DNS server", err)
+		}
 		if err := manager.natService.Del(natRule); err != nil {
 			log.Error("failed to delete NAT forwarding rule: ", err)
 		}

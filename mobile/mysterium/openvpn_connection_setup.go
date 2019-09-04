@@ -219,7 +219,7 @@ func (ocf *OpenvpnConnectionFactory) Create(stateChannel connection.StateChannel
 			sessionConfig.RemotePort = sessionConfig.LocalPort + 1
 		}
 
-		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "")
+		vpnClientConfig, err := openvpn.NewClientConfigFromSession(sessionConfig, "", "", false)
 		if err != nil {
 			return nil, nil, err
 		}

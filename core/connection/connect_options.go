@@ -27,6 +27,7 @@ import (
 type ConnectParams struct {
 	// kill switch option restricting communication only through VPN
 	DisableKillSwitch bool
+	EnableDNS         bool
 }
 
 // ConnectOptions represents the params we need to ensure a successful connection
@@ -35,5 +36,6 @@ type ConnectOptions struct {
 	ProviderID    identity.Identity
 	Proposal      market.ServiceProposal
 	SessionID     session.ID
+	EnableDNS     bool
 	SessionConfig []byte
 }

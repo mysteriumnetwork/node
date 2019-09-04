@@ -23,18 +23,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/firewall"
-
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/firewall"
+	"github.com/mysteriumnetwork/node/logconfig"
 	wg "github.com/mysteriumnetwork/node/services/wireguard"
 	endpoint "github.com/mysteriumnetwork/node/services/wireguard/endpoint"
 	"github.com/mysteriumnetwork/node/services/wireguard/key"
 	"github.com/pkg/errors"
 )
 
-const logPrefix = "[connection-wireguard] "
+var log = logconfig.NewLogger()
 
 // Connection which does wireguard tunneling.
 type Connection struct {
@@ -47,6 +46,8 @@ type Connection struct {
 	config              wg.ServiceConfig
 	connectionEndpoint  wg.ConnectionEndpoint
 	removeAllowedIPRule func()
+
+	configDir string
 }
 
 // Start establish wireguard connection to the service provider.
@@ -108,6 +109,15 @@ func (c *Connection) Start(options connection.ConnectOptions) (err error) {
 
 	go c.runPeriodically(time.Second)
 
+	if options.EnableDNS {
+		if err := setDNS(c.configDir, c.connectionEndpoint.InterfaceName(), config.Consumer.DNS); err != nil {
+			c.stateChannel <- connection.NotConnected
+			c.connection.Done()
+			removeAllowedIPRule()
+			return errors.Wrap(err, "failed to configure DNS")
+		}
+	}
+
 	c.stateChannel <- connection.Connected
 	return nil
 }
@@ -134,8 +144,11 @@ func (c *Connection) Stop() {
 	c.stateChannel <- connection.Disconnecting
 	c.sendStats()
 
+	if err := cleanDNS(c.configDir, c.connectionEndpoint.InterfaceName()); err != nil {
+		log.Error("failed to clear DNS: ", err)
+	}
 	if err := c.connectionEndpoint.Stop(); err != nil {
-		log.Error(logPrefix, "Failed to close wireguard connection: ", err)
+		log.Error("failed to close wireguard connection: ", err)
 	}
 	c.removeAllowedIPRule()
 	c.stateChannel <- connection.NotConnected
@@ -160,7 +173,7 @@ func (c *Connection) runPeriodically(duration time.Duration) {
 func (c *Connection) sendStats() {
 	stats, err := c.connectionEndpoint.PeerStats()
 	if err != nil {
-		log.Error(logPrefix, "failed to receive peer stats: ", err)
+		log.Error("failed to receive peer stats: ", err)
 		return
 	}
 	c.statisticsChannel <- consumer.SessionStatistics{

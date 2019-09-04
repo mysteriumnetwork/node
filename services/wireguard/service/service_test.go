@@ -96,6 +96,7 @@ func waitABit() {
 
 type mockConnectionEndpoint struct{}
 
+func (mce *mockConnectionEndpoint) InterfaceName() string                               { return "mce0" }
 func (mce *mockConnectionEndpoint) Stop() error                                         { return nil }
 func (mce *mockConnectionEndpoint) Start(_ *wg.ServiceConfig) error                     { return nil }
 func (mce *mockConnectionEndpoint) Config() (wg.ServiceConfig, error)                   { return wg.ServiceConfig{}, nil }

@@ -21,10 +21,13 @@ package openvpn
 
 import "github.com/mysteriumnetwork/go-openvpn/openvpn/config"
 
-func newClientConfig(runtimeDir string, scriptSearchPath string) *ClientConfig {
+func newClientConfig(runtimeDir string, scriptSearchPath string, enableDNS bool) *ClientConfig {
 	clientConfig := defaultClientConfig(runtimeDir, scriptSearchPath)
-	clientConfig.SetScriptParam("up", config.QuotedPath("update-resolv-conf"))
-	clientConfig.SetScriptParam("down", config.QuotedPath("update-resolv-conf"))
+
+	if enableDNS {
+		clientConfig.SetScriptParam("up", config.QuotedPath("update-resolv-conf"))
+		clientConfig.SetScriptParam("down", config.QuotedPath("update-resolv-conf"))
+	}
 
 	return clientConfig
 }

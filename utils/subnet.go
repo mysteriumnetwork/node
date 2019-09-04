@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package openvpn
+package utils
 
-func newClientConfig(runtimeDir string, scriptSearchPath string, enableDNS bool) *ClientConfig {
-	clientConfig := defaultClientConfig(runtimeDir, scriptSearchPath)
-	if enableDNS {
-		clientConfig.SetFlag("register-dns")
+import "net"
+
+// FirstIP returns a first IP from the subnet.
+func FirstIP(subnet net.IPNet) net.IP {
+	ip := make(net.IP, len(subnet.IP))
+	copy(ip, subnet.IP)
+	dup := ip.Mask(subnet.Mask)
+	inc(dup)
+	if subnet.Contains(dup) {
+		return dup
 	}
-	return clientConfig
+	return ip
+}
+
+func inc(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
 }

@@ -124,6 +124,7 @@ type SignatureDTO struct {
 // ConnectOptions copied from tequilapi endpoint
 type ConnectOptions struct {
 	DisableKillSwitch bool `json:"killSwitch"`
+	EnableDNS         bool `json:"enableDNS"`
 }
 
 // ConnectionSessionListDTO copied from tequilapi endpoint
