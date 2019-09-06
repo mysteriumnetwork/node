@@ -43,8 +43,6 @@ import (
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 
-	"fmt"
-
 	"github.com/pkg/errors"
 )
 
@@ -284,12 +282,17 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapMMN(options node.Options) {
-	info, err := mmn.GetNodeInformation()
+	err := di.EventBus.SubscribeAsync("identity-unlocked", func(param string) {
+		info, err := mmn.GetNodeInformation()
+		if err != nil {
+			log.Error("Failed to get NodeInformation for MMN", err.Error())
+			return
+		}
+		info.Identity = param
+		client := mmn.NewMMNClient(options.MMN.Address)
+		client.RegisterNode(*info)
+	})
 	if err != nil {
-		log.Error("Failed to get NodeInformation for MMN", err.Error())
-		return
+		log.Error("Failed to get register to mmn event", err.Error())
 	}
-	fmt.Println(info.Mac, info.LocalIP)
-	client := mmn.NewMMNClient(options.MMN.Address)
-	client.RegisterNode(*info)
 }

@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/pkg/errors"
 )
 
@@ -32,13 +33,15 @@ type identityManager struct {
 	keystoreManager Keystore
 	unlocked        map[string]bool // Currently unlocked addresses
 	unlockedMu      sync.RWMutex
+	eventBus        eventbus.EventBus
 }
 
 // NewIdentityManager creates and returns new identityManager
-func NewIdentityManager(keystore Keystore) *identityManager {
+func NewIdentityManager(keystore Keystore, eventBus eventbus.EventBus) *identityManager {
 	return &identityManager{
 		keystoreManager: keystore,
 		unlocked:        map[string]bool{},
+		eventBus:        eventBus,
 	}
 }
 
@@ -111,6 +114,11 @@ func (idm *identityManager) Unlock(address string, passphrase string) error {
 	}
 	log.Tracef("caching unlocked address: %s", address)
 	idm.unlocked[address] = true
+
+	// TODO: remove this nil check and fix all the tests
+	if idm.eventBus != nil {
+		go idm.eventBus.Publish("identity-unlocked", address)
+	}
 
 	return nil
 }

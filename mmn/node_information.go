@@ -19,6 +19,7 @@ type NodeInformation struct {
 	OS          string `json:"os"`
 	Arch        string `json:"arch"`
 	NodeVersion string `json:"node_version"`
+	Identity    string `json:"identity"`
 }
 
 func GetNodeInformation() (*NodeInformation, error) {
