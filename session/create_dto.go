@@ -54,7 +54,14 @@ type SessionDto struct {
 	Config json.RawMessage `json:"config"`
 }
 
+// PaymentVersion represents the different payment versions we have
+type PaymentVersion string
+
+// PaymentVersionV2 represents the new pingpong version
+const PaymentVersionV2 PaymentVersion = "v2"
+
 // ConsumerInfo represents the consumer related information
 type ConsumerInfo struct {
 	IssuerID identity.Identity `json:"issuerID"`
+	Supports PaymentVersion    `json:"supports"`
 }

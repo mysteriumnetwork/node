@@ -83,7 +83,8 @@ type Storage interface {
 }
 
 // BalanceTrackerFactory returns a new instance of balance tracker
-type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (BalanceTracker, error)
+type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (PaymentEngine, error)
+type PaymentEngineFactory func() (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
@@ -96,6 +97,7 @@ func NewManager(
 	idGenerator IDGenerator,
 	sessionStorage Storage,
 	balanceTrackerFactory BalanceTrackerFactory,
+	paymentEngineFactory PaymentEngineFactory,
 	natPingerChan func(*traversal.Params),
 	natEventGetter NATEventGetter,
 	serviceId string,
@@ -110,8 +112,8 @@ func NewManager(
 		natEventGetter:        natEventGetter,
 		serviceId:             serviceId,
 		publisher:             publisher,
-
-		creationLock: sync.Mutex{},
+		paymentEngineFactory:  paymentEngineFactory,
+		creationLock:          sync.Mutex{},
 	}
 }
 
@@ -121,6 +123,7 @@ type Manager struct {
 	generateID            IDGenerator
 	sessionStorage        Storage
 	balanceTrackerFactory BalanceTrackerFactory
+	paymentEngineFactory  PaymentEngineFactory
 	provideConfig         ConfigProvider
 	natPingerChan         func(*traversal.Params)
 	natEventGetter        NATEventGetter
@@ -131,7 +134,7 @@ type Manager struct {
 }
 
 // Create creates session instance. Multiple sessions per peerID is possible in case different services are used
-func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.Identity, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (sessionInstance Session, err error) {
+func (manager *Manager) Create(consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingerParams *traversal.Params) (sessionInstance Session, err error) {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()
 
@@ -150,22 +153,35 @@ func (manager *Manager) Create(consumerID identity.Identity, issuerID identity.I
 	sessionInstance.Config = config
 	sessionInstance.CreatedAt = time.Now().UTC()
 
-	balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), issuerID)
-	if err != nil {
-		return
+	// TODO: this whole block needs to go when we deprecate the old payment pingpong
+	var paymentEngine PaymentEngine
+	if consumerInfo.Supports == PaymentVersionV2 {
+		log.Info("using new payments")
+		engine, err := manager.paymentEngineFactory()
+		if err != nil {
+			return sessionInstance, err
+		}
+		paymentEngine = engine
+	} else {
+		log.Info("using legacy payments")
+		balanceTracker, err := manager.balanceTrackerFactory(consumerID, identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.IssuerID)
+		if err != nil {
+			return sessionInstance, err
+		}
+		paymentEngine = balanceTracker
 	}
 
 	// stop the balance tracker once the session is finished
 	go func() {
 		<-sessionInstance.done
 		close(pingerParams.Cancel)
-		balanceTracker.Stop()
+		paymentEngine.Stop()
 	}()
 
 	go func() {
-		err := balanceTracker.Start()
+		err := paymentEngine.Start()
 		if err != nil {
-			log.Error(managerLogPrefix, "balance tracker error: ", err)
+			log.Error(managerLogPrefix, "payment engine error: ", err)
 			destroyErr := manager.Destroy(consumerID, string(sessionInstance.ID))
 			if destroyErr != nil {
 				log.Error(managerLogPrefix, "session cleanup failed: ", err)

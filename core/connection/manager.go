@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 )
 
@@ -78,10 +79,14 @@ type PaymentIssuerFactory func(
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (PaymentIssuer, error)
 
+// PaymentEngineFactory creates a new payment issuer from the given params
+type PaymentEngineFactory func(invoice chan crypto.Invoice, dialog communication.Dialog, consumer identity.Identity) (PaymentIssuer, error)
+
 type connectionManager struct {
 	//these are passed on creation
 	newDialog            DialogCreator
 	paymentIssuerFactory PaymentIssuerFactory
+	paymentEngineFactory PaymentEngineFactory
 	newConnection        Creator
 	eventPublisher       Publisher
 
@@ -100,6 +105,7 @@ type connectionManager struct {
 func NewManager(
 	dialogCreator DialogCreator,
 	paymentIssuerFactory PaymentIssuerFactory,
+	paymentEngineFactory PaymentEngineFactory,
 	connectionCreator Creator,
 	eventPublisher Publisher,
 ) *connectionManager {
@@ -109,6 +115,7 @@ func NewManager(
 		newConnection:        connectionCreator,
 		status:               statusNotConnected(),
 		eventPublisher:       eventPublisher,
+		paymentEngineFactory: paymentEngineFactory,
 		cleanup:              make([]func() error, 0),
 	}
 }
@@ -161,12 +168,16 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 
 func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID identity.Identity) error {
 	var promiseState promise.PaymentInfo
+	var useNewPayments bool
 	if paymentInfo != nil {
 		promiseState.FreeCredit = paymentInfo.FreeCredit
 		promiseState.LastPromise = paymentInfo.LastPromise
-	}
 
-	messageChan := make(chan balance.Message, 1)
+		// if the server indicates that it will launch the new payments, so should we
+		if paymentInfo.Supports == string(session.PaymentVersionV2) {
+			useNewPayments = true
+		}
+	}
 
 	// TODO: set the time and proper payment info
 	payment := dto.PaymentPerTime{
@@ -177,9 +188,23 @@ func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInf
 		Duration: time.Minute,
 	}
 
-	payments, err := manager.paymentIssuerFactory(promiseState, payment, messageChan, dialog, consumerID, providerID)
-	if err != nil {
-		return err
+	var payments PaymentIssuer
+	if useNewPayments {
+		log.Info("using new payments")
+		invoices := make(chan crypto.Invoice)
+		p, err := manager.paymentEngineFactory(invoices, dialog, consumerID)
+		if err != nil {
+			return err
+		}
+		payments = p
+	} else {
+		log.Info("using old payments")
+		messageChan := make(chan balance.Message, 1)
+		p, err := manager.paymentIssuerFactory(promiseState, payment, messageChan, dialog, consumerID, providerID)
+		if err != nil {
+			return err
+		}
+		payments = p
 	}
 
 	manager.cleanup = append(manager.cleanup, func() error {
@@ -221,6 +246,7 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 	consumerInfo := session.ConsumerInfo{
 		// TODO: once we're supporting payments from another identity make the changes accordingly
 		IssuerID: consumerID,
+		Supports: session.PaymentVersionV2,
 	}
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)

@@ -32,6 +32,7 @@ import (
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -46,6 +47,12 @@ type testContext struct {
 	mockStatistics        consumer.SessionStatistics
 	fakeResolver          ip.Resolver
 	sync.RWMutex
+}
+
+func mockPaymentEngineFactory(invoice chan crypto.Invoice, dialog communication.Dialog, consumer identity.Identity) (PaymentIssuer, error) {
+	return &MockPaymentIssuer{
+		stopChan: make(chan struct{}),
+	}, nil
 }
 
 var (
@@ -123,6 +130,7 @@ func (tc *testContext) SetupTest() {
 	tc.connManager = NewManager(
 		dialogCreator,
 		mockPaymentFactory,
+		mockPaymentEngineFactory,
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
 	)

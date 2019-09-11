@@ -81,7 +81,11 @@ func (m mockBalanceTracker) Stop() {
 
 }
 
-func mockBalanceTrackerFactory(consumer, provider, issuer identity.Identity) (BalanceTracker, error) {
+func mockBalanceTrackerFactory(consumer, provider, issuer identity.Identity) (PaymentEngine, error) {
+	return &mockBalanceTracker{}, nil
+}
+
+func mockPaymentEngineFactory() (PaymentEngine, error) {
 	return &mockBalanceTracker{}, nil
 }
 
@@ -92,11 +96,11 @@ func TestManager_Create_StoresSession(t *testing.T) {
 
 	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
 		&MockNatEventTracker{}, "test service id", &mockPublisher{})
 
 	pingerParams := &traversal.Params{}
-	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, pingerParams)
+	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	expectedResult.done = sessionInstance.done
 	assert.NoError(t, err)
 
@@ -112,11 +116,11 @@ func TestManager_Create_RejectsUnknownProposal(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
 		&MockNatEventTracker{}, "test service id", &mockPublisher{})
 
 	pingerParams := &traversal.Params{}
-	sessionInstance, err := manager.Create(consumerID, consumerID, 69, nil, pingerParams)
+	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, 69, nil, pingerParams)
 	assert.Exactly(t, err, ErrorInvalidProposal)
 	assert.Exactly(t, Session{}, sessionInstance)
 }
@@ -132,7 +136,7 @@ func TestManager_AcknowledgeSession_RejectsUnknown(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
 		&MockNatEventTracker{}, "test service id", &mockPublisher{})
 	err := manager.Acknowledge(consumerID, "")
 	assert.Exactly(t, err, ErrorSessionNotExists)
@@ -142,11 +146,11 @@ func TestManager_AcknowledgeSession_RejectsBadClient(t *testing.T) {
 	sessionStore := NewStorageMemory()
 	natPinger := func(*traversal.Params) {}
 
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
 		&MockNatEventTracker{}, "test service id", &mockPublisher{})
 
 	pingerParams := &traversal.Params{}
-	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, pingerParams)
+	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(identity.FromAddress("some other id"), string(sessionInstance.ID))
@@ -158,11 +162,11 @@ func TestManager_AcknowledgeSession_PublishesEvent(t *testing.T) {
 	natPinger := func(*traversal.Params) {}
 
 	mp := &mockPublisher{}
-	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, natPinger,
+	manager := NewManager(currentProposal, generateSessionID, sessionStore, mockBalanceTrackerFactory, mockPaymentEngineFactory, natPinger,
 		&MockNatEventTracker{}, "test service id", mp)
 
 	pingerParams := &traversal.Params{}
-	sessionInstance, err := manager.Create(consumerID, consumerID, currentProposalID, nil, pingerParams)
+	sessionInstance, err := manager.Create(consumerID, ConsumerInfo{IssuerID: consumerID}, currentProposalID, nil, pingerParams)
 	assert.Nil(t, err)
 
 	err = manager.Acknowledge(consumerID, string(sessionInstance.ID))

@@ -37,6 +37,7 @@ type Message struct {
 type PaymentInfo struct {
 	LastPromise LastPromise `json:"lastPromise"`
 	FreeCredit  uint64      `json:"freeCredit"`
+	Supports    string      `json:"supported"`
 }
 
 // LastPromise represents the last known promise to the provider
