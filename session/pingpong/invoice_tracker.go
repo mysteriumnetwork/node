@@ -19,6 +19,7 @@ package pingpong
 
 import (
 	"math"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -54,6 +55,7 @@ type InvoiceTracker struct {
 	exchangeMessageWaitTimeout      time.Duration
 	notReceivedExchangeMessageCount uint64
 	maxNotReceivedExchangeMessages  uint64
+	once                            sync.Once
 }
 
 // NewInvoiceTracker creates a new instancec of invoice tracker
@@ -70,16 +72,17 @@ func NewInvoiceTracker(
 		exchangeMessageChan:            exchangeMessageChan,
 		exchangeMessageWaitTimeout:     exchangeMessageWaitTimeout,
 		chargePeriod:                   chargePeriod,
-		maxNotReceivedExchangeMessages: calculateMaxNotReceivedexchangeMessageCount(chargePeriodLeeway, chargePeriod),
+		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(chargePeriodLeeway, chargePeriod),
 	}
 }
 
-func calculateMaxNotReceivedexchangeMessageCount(chargeLeeway, chargePeriod time.Duration) uint64 {
+func calculateMaxNotReceivedExchangeMessageCount(chargeLeeway, chargePeriod time.Duration) uint64 {
 	return uint64(math.Round(float64(chargeLeeway) / float64(chargePeriod)))
 }
 
 // Start stars the invoice tracker
 func (it *InvoiceTracker) Start() error {
+	log.Debug("Starting...")
 	// give the consumer a second to start up his payments before sending the first request
 	firstSend := time.After(time.Second)
 	for {
@@ -158,11 +161,16 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 		}
 	case <-time.After(it.exchangeMessageWaitTimeout):
 		return ErrExchangeWaitTimeout
+	case <-it.stop:
+		return nil
 	}
 	return nil
 }
 
 // Stop stops the invoice tracker
 func (it *InvoiceTracker) Stop() {
-	close(it.stop)
+	it.once.Do(func() {
+		log.Debug("Stopping...")
+		close(it.stop)
+	})
 }

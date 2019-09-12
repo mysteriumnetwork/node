@@ -27,8 +27,8 @@ type InvoiceRequest struct {
 	Invoice crypto.Invoice `json:"invoice"`
 }
 
-const endpointInvoice = "session-invoice"
-const messageEndpointInvoice = communication.MessageEndpoint(endpointInvoice)
+const invoiceEndpoint = "session-invoice"
+const invoiceMessageEndpoint = communication.MessageEndpoint(invoiceEndpoint)
 
 // InvoiceSender is responsible for sending the invoice messages
 type InvoiceSender struct {
@@ -81,7 +81,7 @@ type invoiceMessageConsumer struct {
 
 // GetMessageEndpoint returns endpoint where to receive messages
 func (imc *invoiceMessageConsumer) GetMessageEndpoint() communication.MessageEndpoint {
-	return messageEndpointInvoice
+	return invoiceMessageEndpoint
 }
 
 // NewRequest creates struct where request from endpoint will be serialized
@@ -96,7 +96,7 @@ type invoiceMessageProducer struct {
 
 // GetMessageEndpoint returns endpoint where to receive messages
 func (imp *invoiceMessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
-	return messageEndpointInvoice
+	return invoiceMessageEndpoint
 }
 
 // Produce produces a request message

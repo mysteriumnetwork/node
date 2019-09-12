@@ -84,6 +84,8 @@ type Storage interface {
 
 // BalanceTrackerFactory returns a new instance of balance tracker
 type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (PaymentEngine, error)
+
+// PaymentEngineFactory creates a new instance of payment engine
 type PaymentEngineFactory func() (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
