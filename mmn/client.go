@@ -15,22 +15,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package mmn
 
 import (
-	"gopkg.in/urfave/cli.v1"
+	"time"
 
-	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/requests"
 )
 
-// RegisterFlagsMMN function register mmn flags to flag list
-func RegisterFlagsMMN(flags *[]cli.Flag) {
-	*flags = append(*flags, mmnAddressFlag)
+// NewClient returns MMN API client
+func NewClient(srcIp string, mmnAddress string) *client {
+	return &client{
+		http:       requests.NewHTTPClient(srcIp, 20*time.Second),
+		mmnAddress: mmnAddress,
+	}
 }
 
-// ParseFlagsMMN function fills in mmn options from CLI context
-func ParseFlagsMMN(ctx *cli.Context) node.OptionsMMN {
-	return node.OptionsMMN{
-		Address: ctx.GlobalString(mmnAddressFlag.Name),
+type client struct {
+	http       requests.HTTPTransport
+	mmnAddress string
+}
+
+func (m *client) RegisterNode(information *NodeInformation) error {
+	req, err := requests.NewPostRequest(m.mmnAddress, "api/v1/node", information)
+	if err != nil {
+		return err
 	}
+
+	if err = m.http.DoRequest(req); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -282,16 +282,10 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapMMN(options node.Options) {
-	err := di.EventBus.SubscribeAsync("identity-unlocked", func(param string) {
-		info, err := mmn.GetNodeInformation()
-		if err != nil {
-			log.Error("Failed to get NodeInformation for MMN", err.Error())
-			return
-		}
-		info.Identity = param
-		client := mmn.NewMMNClient(options.MMN.Address)
-		client.RegisterNode(*info)
-	})
+	client := mmn.NewClient(options.BindAddress, options.MMN.Address)
+
+	err := di.EventBus.SubscribeAsync(identity.IdentityUnlockTopic, mmn.OnIdentityUnlockCallback(client))
+
 	if err != nil {
 		log.Error("Failed to get register to mmn event", err.Error())
 	}

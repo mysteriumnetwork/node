@@ -1,18 +1,35 @@
+/*
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package mmn
 
 import (
-	"encoding/json"
-	"fmt"
 	"net"
 	"os/exec"
 	"runtime"
 	"strings"
 
 	log "github.com/cihub/seelog"
+	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/metadata"
 )
 
+// NodeInformation contains node information to be sent to MMN
 type NodeInformation struct {
 	MACAddress  string `json:"mac_address"`
 	LocalIP     string `json:"local_ip"`
@@ -22,15 +39,32 @@ type NodeInformation struct {
 	Identity    string `json:"identity"`
 }
 
-func GetNodeInformation() (*NodeInformation, error) {
+// OnIdentityUnlockCallback sends node information to MMN on identity unlock
+func OnIdentityUnlockCallback(client *client) func(string) {
+	return func(identity string) {
+		info, err := getNodeInformation()
+		if err != nil {
+			log.Error(errors.Wrap(err, "failed to get NodeInformation for MMN"))
+			return
+		}
+		info.Identity = identity
+		if err = client.RegisterNode(info); err != nil {
+			log.Error(errors.Wrap(err, "failed to send NodeInformation to MMN"))
+		}
+	}
+}
+
+func getNodeInformation() (*NodeInformation, error) {
 	var mac, ip string
 	ip, err := getLocalNetworkIP()
 
-	if err == nil {
-		mac, err = getMACAddress(ip)
-		if err != nil {
-			mac = ""
-		}
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get local network IP")
+	}
+
+	mac, err = getMACAddress(ip)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get MAC address")
 	}
 
 	info := &NodeInformation{
@@ -40,9 +74,6 @@ func GetNodeInformation() (*NodeInformation, error) {
 		OS:          getOS(),
 		NodeVersion: metadata.VersionAsString(),
 	}
-
-	j, _ := json.Marshal(info)
-	fmt.Println(string(j))
 
 	return info, nil
 }
@@ -63,7 +94,7 @@ func getOSByCommand(os string, command string, args ...string) string {
 	if runtime.GOOS == os {
 		output, err := exec.Command(command, args...).Output()
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Error(errors.Wrap(err, "failed to get OS information for "+os+" using "+command))
 			return ""
 		}
 		return string(output)

@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/eventbus"
 )
 
+// IdentityUnlockTopic is the channel name for identity unlock event
 const IdentityUnlockTopic = "identity-unlocked"
 
 type identityManager struct {
