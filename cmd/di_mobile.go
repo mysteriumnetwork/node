@@ -21,6 +21,8 @@ package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/ui/noop"
 )
 
