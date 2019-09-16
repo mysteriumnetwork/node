@@ -26,8 +26,8 @@ import (
 // ID represents session id type
 type ID string
 
-// BalanceTracker is responsible for interacting with the consumer in regards to payments
-type BalanceTracker interface {
+// PaymentEngine is responsible for interacting with the consumer in regards to payments
+type PaymentEngine interface {
 	Start() error
 	Stop()
 }

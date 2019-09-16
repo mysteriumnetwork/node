@@ -20,17 +20,13 @@ package connection
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
-	"github.com/mysteriumnetwork/node/money"
-	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
-	"github.com/mysteriumnetwork/node/session/balance"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/pkg/errors"
 )
@@ -70,18 +66,15 @@ type PaymentIssuer interface {
 	Stop()
 }
 
-// PaymentIssuerFactory creates a new payment issuer from the given params
-type PaymentIssuerFactory func(
-	initialState promise.PaymentInfo,
-	paymentDefinition dto.PaymentPerTime,
-	messageChan chan balance.Message,
+// PaymentEngineFactory creates a new payment issuer from the given params
+type PaymentEngineFactory func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (PaymentIssuer, error)
 
 type connectionManager struct {
 	//these are passed on creation
 	newDialog            DialogCreator
-	paymentIssuerFactory PaymentIssuerFactory
+	paymentEngineFactory PaymentEngineFactory
 	newConnection        Creator
 	eventPublisher       Publisher
 
@@ -99,16 +92,16 @@ type connectionManager struct {
 // NewManager creates connection manager with given dependencies
 func NewManager(
 	dialogCreator DialogCreator,
-	paymentIssuerFactory PaymentIssuerFactory,
+	paymentEngineFactory PaymentEngineFactory,
 	connectionCreator Creator,
 	eventPublisher Publisher,
 ) *connectionManager {
 	return &connectionManager{
 		newDialog:            dialogCreator,
-		paymentIssuerFactory: paymentIssuerFactory,
 		newConnection:        connectionCreator,
 		status:               statusNotConnected(),
 		eventPublisher:       eventPublisher,
+		paymentEngineFactory: paymentEngineFactory,
 		cleanup:              make([]func() error, 0),
 	}
 }
@@ -160,28 +153,10 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 }
 
 func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID identity.Identity) error {
-	var promiseState promise.PaymentInfo
-	if paymentInfo != nil {
-		promiseState.FreeCredit = paymentInfo.FreeCredit
-		promiseState.LastPromise = paymentInfo.LastPromise
-	}
-
-	messageChan := make(chan balance.Message, 1)
-
-	// TODO: set the time and proper payment info
-	payment := dto.PaymentPerTime{
-		Price: money.Money{
-			Currency: money.CurrencyMyst,
-			Amount:   uint64(0),
-		},
-		Duration: time.Minute,
-	}
-
-	payments, err := manager.paymentIssuerFactory(promiseState, payment, messageChan, dialog, consumerID, providerID)
+	payments, err := manager.paymentEngineFactory(paymentInfo, dialog, consumerID, providerID)
 	if err != nil {
 		return err
 	}
-
 	manager.cleanup = append(manager.cleanup, func() error {
 		payments.Stop()
 		return nil
@@ -220,7 +195,8 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 
 	consumerInfo := session.ConsumerInfo{
 		// TODO: once we're supporting payments from another identity make the changes accordingly
-		IssuerID: consumerID,
+		IssuerID:       consumerID,
+		PaymentVersion: session.PaymentVersionV2,
 	}
 
 	s, paymentInfo, err := session.RequestSessionCreate(dialog, proposal.ID, sessionCreateConfig, consumerInfo)

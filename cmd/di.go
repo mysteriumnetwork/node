@@ -75,6 +75,7 @@ import (
 	sessionevent "github.com/mysteriumnetwork/node/session/event"
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
+	"github.com/mysteriumnetwork/node/session/pingpong"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/node/session/promise/validators"
 	"github.com/mysteriumnetwork/node/tequilapi"
@@ -481,7 +482,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory),
+		pingpong.BackwardsCompatibleExchangeFactoryFunc(di.Keystore, nodeOptions, di.SignerFactory),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 	)
@@ -529,7 +530,7 @@ func newSessionManagerFactory(
 	eventbus eventbus.EventBus,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
-		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.BalanceTracker, error) {
+		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
 			timeTracker := session.NewTracker(time.Now)
 			// TODO: set the time and proper payment info
 			payment := dto.PaymentPerTime{
@@ -553,11 +554,14 @@ func newSessionManagerFactory(
 			validator := validators.NewIssuedPromiseValidator(consumerID, receiverID, issuerID)
 			return session_payment.NewSessionBalance(sender, tracker, promiseChan, payment_factory.BalanceSendPeriod, payment_factory.PromiseWaitTimeout, validator, promiseStorage, consumerID, receiverID, issuerID), nil
 		}
+
+		paymentEngineFactory := pingpong.InvoiceFactoryCreator(dialog, payment_factory.BalanceSendPeriod, payment_factory.PromiseWaitTimeout)
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
 			sessionStorage,
 			providerBalanceTrackerFactory,
+			paymentEngineFactory,
 			natPingerChan,
 			natTracker,
 			serviceID,

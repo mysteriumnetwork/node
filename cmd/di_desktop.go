@@ -231,7 +231,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			allowedIdentityValidator,
 		), nil
 	}
-	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator, serviceID string) communication.DialogHandler {
+	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator, serviceID string) (communication.DialogHandler, error) {
 		sessionManagerFactory := newSessionManagerFactory(
 			proposal,
 			di.ServiceSessionStorage,
@@ -240,7 +240,7 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.NATTracker,
 			serviceID,
 			di.EventBus)
-		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID))
+		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID)), nil
 	}
 	di.ServicesManager = service.NewManager(
 		di.ServiceRegistry,

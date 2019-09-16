@@ -142,9 +142,9 @@ type managerFake struct {
 }
 
 // Create function creates and returns fake session
-func (manager *managerFake) Create(consumerID, issuerID identity.Identity, proposalID int, config ServiceConfiguration, pingParams *traversal.Params) (Session, error) {
+func (manager *managerFake) Create(consumerID identity.Identity, consumerInfo ConsumerInfo, proposalID int, config ServiceConfiguration, pingParams *traversal.Params) (Session, error) {
 	manager.lastConsumerID = consumerID
-	manager.lastIssuerID = issuerID
+	manager.lastIssuerID = consumerInfo.IssuerID
 	manager.lastProposalID = proposalID
 	return manager.returnSession, manager.returnError
 }

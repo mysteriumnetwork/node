@@ -47,7 +47,7 @@ type Service interface {
 type DialogWaiterFactory func(providerID identity.Identity, serviceType string, allowedIDs []identity.Identity) (communication.DialogWaiter, error)
 
 // DialogHandlerFactory initiates instance which is able to handle incoming dialogs
-type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator, string) communication.DialogHandler
+type DialogHandlerFactory func(market.ServiceProposal, session.ConfigNegotiator, string) (communication.DialogHandler, error)
 
 // DiscoveryFactory initiates instance which is able announce service discoverability
 type DiscoveryFactory func() Discovery
@@ -125,7 +125,11 @@ func (manager *Manager) Start(providerID identity.Identity, serviceType string, 
 		return id, err
 	}
 
-	dialogHandler := manager.dialogHandlerFactory(proposal, service, string(id))
+	dialogHandler, err := manager.dialogHandlerFactory(proposal, service, string(id))
+	if err != nil {
+		return id, err
+	}
+
 	if err = dialogWaiter.ServeDialogs(dialogHandler); err != nil {
 		return id, err
 	}
