@@ -17,34 +17,6 @@
 
 package mmn
 
-import (
-	"time"
+import "github.com/mysteriumnetwork/node/logconfig"
 
-	"github.com/mysteriumnetwork/node/requests"
-)
-
-// NewClient returns MMN API client
-func NewClient(srcIp string, mmnAddress string) *client {
-	return &client{
-		http:       requests.NewHTTPClient(srcIp, 20*time.Second),
-		mmnAddress: mmnAddress,
-	}
-}
-
-type client struct {
-	http       requests.HTTPTransport
-	mmnAddress string
-}
-
-func (m *client) RegisterNode(information *NodeInformation) error {
-	req, err := requests.NewPostRequest(m.mmnAddress, "node", information)
-	if err != nil {
-		return err
-	}
-
-	if err = m.http.DoRequest(req); err != nil {
-		return err
-	}
-
-	return nil
-}
+var log = logconfig.NewLogger()

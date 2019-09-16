@@ -18,14 +18,13 @@
 package mmn
 
 import (
-	"net"
 	"os/exec"
 	"runtime"
 	"strings"
 
-	log "github.com/cihub/seelog"
 	"github.com/pkg/errors"
 
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/metadata"
 )
 
@@ -40,42 +39,44 @@ type NodeInformation struct {
 }
 
 // OnIdentityUnlockCallback sends node information to MMN on identity unlock
-func OnIdentityUnlockCallback(client *client) func(string) {
+func OnIdentityUnlockCallback(client *client, resolver ip.Resolver) func(string) {
 	return func(identity string) {
-		info, err := getNodeInformation()
+		outboundIp, err := resolver.GetOutboundIPAsString()
+		if err != nil {
+			log.Error(errors.Wrap(err, "failed to get Outbound IP"))
+		}
+
+		mac, err := ip.GetMACAddressForIP(outboundIp)
+		if err != nil {
+			log.Error(errors.Wrap(err, "failed to MAC address"))
+		}
+
+		info := getNodeInformation()
 		if err != nil {
 			log.Error(errors.Wrap(err, "failed to get NodeInformation for MMN"))
 			return
 		}
+
+		info.MACAddress = mac
+		info.LocalIP = outboundIp
 		info.Identity = identity
+
 		if err = client.RegisterNode(info); err != nil {
 			log.Error(errors.Wrap(err, "failed to send NodeInformation to MMN"))
 		}
+
+		log.Info("Registered node to MMN")
 	}
 }
 
-func getNodeInformation() (*NodeInformation, error) {
-	var mac, ip string
-	ip, err := getLocalNetworkIP()
-
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get local network IP")
-	}
-
-	mac, err = getMACAddress(ip)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get MAC address")
-	}
-
+func getNodeInformation() *NodeInformation {
 	info := &NodeInformation{
-		MACAddress:  mac,
-		LocalIP:     ip,
 		Arch:        runtime.GOOS + "/" + runtime.GOARCH,
 		OS:          getOS(),
 		NodeVersion: metadata.VersionAsString(),
 	}
 
-	return info, nil
+	return info
 }
 
 func getOS() string {
@@ -101,56 +102,4 @@ func getOSByCommand(os string, command string, args ...string) string {
 	}
 
 	return ""
-}
-
-func getLocalNetworkIP() (ip string, err error) {
-	addresses, err := net.InterfaceAddrs()
-
-	if err != nil {
-		log.Error("Failed to get network interface addresses", err)
-		return "", err
-	}
-
-	for _, address := range addresses {
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				ip = ipnet.IP.String()
-			}
-		}
-	}
-
-	return
-}
-
-func getMACAddress(ip string) (string, error) {
-	var currentNetworkHardwareName string
-	interfaces, _ := net.Interfaces()
-	for _, i := range interfaces {
-
-		if addresses, err := i.Addrs(); err == nil {
-			for _, addr := range addresses {
-				// only interested in the name with current IP address
-				if strings.Contains(addr.String(), ip) {
-					currentNetworkHardwareName = i.Name
-				}
-			}
-		}
-	}
-
-	netInterface, err := net.InterfaceByName(currentNetworkHardwareName)
-
-	if err != nil {
-		log.Error("Failed to get MAC address", err)
-
-		return "", err
-	}
-
-	macAddress, err := net.ParseMAC(netInterface.HardwareAddr.String())
-
-	if err != nil {
-		log.Error("Failed to validate MAC address", err)
-		return "", err
-	}
-
-	return macAddress.String(), nil
 }
