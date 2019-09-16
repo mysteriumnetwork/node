@@ -45,6 +45,11 @@ var (
 		Usage: "IP address to bind to",
 		Value: "0.0.0.0",
 	})
+	feedbackURLFlag = cli.StringFlag{
+		Name:  "feedback.url",
+		Usage: "URL of Feedback API",
+		Value: "https://feedback.mysterium.network",
+	}
 )
 
 // ParseKeystoreFlags parses the keystore options for node
@@ -60,7 +65,7 @@ func RegisterFlagsNode(flags *[]cli.Flag) error {
 		return err
 	}
 
-	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag, keystoreLightweightFlag, bindAddressFlag)
+	*flags = append(*flags, tequilapiAddressFlag, tequilapiPortFlag, keystoreLightweightFlag, bindAddressFlag, feedbackURLFlag)
 
 	RegisterFlagsNetwork(flags)
 	RegisterFlagsDiscovery(flags)
@@ -85,6 +90,7 @@ func ParseFlagsNode(ctx *cli.Context) node.Options {
 		TequilapiPort:    ctx.GlobalInt(tequilapiPortFlag.Name),
 		UI:               ParseFlagsUI(ctx),
 		BindAddress:      ctx.GlobalString(bindAddressFlag.Name),
+		FeedbackURL:      ctx.GlobalString(feedbackURLFlag.Name),
 
 		Keystore: ParseKeystoreFlags(ctx),
 

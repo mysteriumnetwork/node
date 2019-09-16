@@ -50,6 +50,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/storage/boltdb/migrations/history"
 	"github.com/mysteriumnetwork/node/core/transactor"
 	"github.com/mysteriumnetwork/node/eventbus"
+	"github.com/mysteriumnetwork/node/feedback"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/firewall/vnd"
 	"github.com/mysteriumnetwork/node/identity"
@@ -217,6 +218,9 @@ type Dependencies struct {
 	UIServer         UIServer
 	SSEHandler       *sse.Handler
 	Transactor       Transactor
+
+	LogCollector *logconfig.Collector
+	Reporter     *feedback.Reporter
 }
 
 // Bootstrap initiates all container dependencies
@@ -462,7 +466,7 @@ func (di *Dependencies) subscribeEventConsumers() error {
 	return di.EventBus.SubscribeAsync(nodevent.Topic, di.QualityMetricsSender.SendStartupEvent)
 }
 
-func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listener net.Listener) {
+func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listener net.Listener) error {
 	dialogFactory := func(consumerID, providerID identity.Identity, contact market.Contact) (communication.Dialog, error) {
 		dialogEstablisher := nats_dialog.NewDialogEstablisher(consumerID, di.SignerFactory(consumerID))
 		return dialogEstablisher.EstablishDialog(providerID, contact)
@@ -495,6 +499,13 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		di.SignerFactory,
 	)
 
+	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
+	reporter, err := feedback.NewReporter(di.LogCollector, di.IdentityManager, nodeOptions.FeedbackURL)
+	if err != nil {
+		return err
+	}
+	di.Reporter = reporter
+
 	router := tequilapi.NewAPIRouter()
 	tequilapi_endpoints.AddRouteForStop(router, utils.SoftKiller(di.Shutdown))
 	tequilapi_endpoints.AddRoutesForAuthentication(router, di.Authenticator, di.JWTAuthenticator)
@@ -511,6 +522,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForSSE(router, di.SSEHandler)
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
 	tequilapi_endpoints.AddRoutesForConfig(router)
+	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 
@@ -518,6 +530,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	httpAPIServer := tequilapi.NewServer(listener, router, corsPolicy)
 
 	di.Node = node.NewNode(di.ConnectionManager, httpAPIServer, di.EventBus, di.NATPinger, di.UIServer)
+	return nil
 }
 
 func newSessionManagerFactory(
