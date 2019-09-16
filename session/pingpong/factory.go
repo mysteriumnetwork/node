@@ -23,8 +23,14 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/core/connection"
+	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/balance"
+	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
+	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
@@ -43,15 +49,52 @@ func InvoiceFactoryCreator(dialog communication.Dialog, balanceSendPeriod, promi
 	}
 }
 
-// ExchangeMessageFactoryCreator returns a payment engine factory
-func ExchangeMessageFactoryCreator(keystore *keystore.KeyStore) connection.PaymentEngineFactory {
-	return func(invoice chan crypto.Invoice, dialog communication.Dialog, consumer identity.Identity) (connection.PaymentIssuer, error) {
-		sender := NewExchangeSender(dialog)
-		listener := NewInvoiceListener(invoice)
-		err := dialog.Receive(listener.GetConsumer())
-		if err != nil {
-			return nil, err
+// BackwardsCompatibleExchangeFactoryFunc returns a backwards compatible version of the exchange factory
+func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options node.Options, signer identity.SignerFactory) func(paymentInfo *promise.PaymentInfo,
+	dialog communication.Dialog,
+	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
+	return func(paymentInfo *promise.PaymentInfo,
+		dialog communication.Dialog,
+		consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
+		var promiseState promise.PaymentInfo
+		payment := dto.PaymentPerTime{
+			Price: money.Money{
+				Currency: money.CurrencyMyst,
+				Amount:   uint64(0),
+			},
+			Duration: time.Minute,
 		}
-		return NewExchangeMessageTracker(invoice, sender, keystore, consumer), nil
+		var useNewPayments bool
+		if paymentInfo != nil {
+			promiseState.FreeCredit = paymentInfo.FreeCredit
+			promiseState.LastPromise = paymentInfo.LastPromise
+
+			// if the server indicates that it will launch the new payments, so should we
+			if paymentInfo.Supports == string(session.PaymentVersionV2) {
+				useNewPayments = true
+			}
+		}
+		var payments connection.PaymentIssuer
+		if useNewPayments {
+			log.Info("using new payments")
+			invoices := make(chan crypto.Invoice)
+			sender := NewExchangeSender(dialog)
+			listener := NewInvoiceListener(invoices)
+			err := dialog.Receive(listener.GetConsumer())
+			if err != nil {
+				return nil, err
+			}
+			payments = NewExchangeMessageTracker(invoices, sender, keystore, consumer)
+		} else {
+			log.Info("using old payments")
+			messageChan := make(chan balance.Message, 1)
+			pFunc := payment_factory.PaymentIssuerFactoryFunc(options, signer)
+			p, err := pFunc(promiseState, payment, messageChan, dialog, consumer, provider)
+			if err != nil {
+				return nil, err
+			}
+			payments = p
+		}
+		return payments, nil
 	}
 }

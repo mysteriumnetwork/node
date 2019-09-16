@@ -482,8 +482,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		payment_factory.PaymentIssuerFactoryFunc(nodeOptions, di.SignerFactory),
-		pingpong.ExchangeMessageFactoryCreator(di.Keystore),
+		pingpong.BackwardsCompatibleExchangeFactoryFunc(di.Keystore, nodeOptions, di.SignerFactory),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 	)

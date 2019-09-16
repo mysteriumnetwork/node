@@ -71,7 +71,7 @@ func (consumer *createConsumer) Consume(requestPtr interface{}) (response interf
 	issuerID := consumer.peerID
 	if request.ConsumerInfo != nil {
 		issuerID = request.ConsumerInfo.IssuerID
-		if request.ConsumerInfo.Supports == PaymentVersionV2 {
+		if request.ConsumerInfo.PaymentVersion == PaymentVersionV2 {
 			indicateNewVersion = true
 		}
 	} else {

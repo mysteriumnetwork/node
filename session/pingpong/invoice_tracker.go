@@ -40,9 +40,6 @@ var ErrExchangeWaitTimeout = errors.New("did not get a new exchange message")
 // ErrExchangeValidationFailed indicates that there was an error with the exchange signature
 var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 
-// errBoltNotFound indicates that bolt did not find a record
-var errBoltNotFound = errors.New("not found")
-
 const chargePeriodLeeway = time.Hour * 2
 
 // InvoiceTracker keeps tab of invoices and sends them to the consumer
@@ -58,7 +55,7 @@ type InvoiceTracker struct {
 	once                            sync.Once
 }
 
-// NewInvoiceTracker creates a new instancec of invoice tracker
+// NewInvoiceTracker creates a new instance of invoice tracker
 func NewInvoiceTracker(
 	peer identity.Identity,
 	peerInvoiceSender PeerInvoiceSender,
