@@ -21,8 +21,6 @@ package cmd
 
 import (
 	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/mmn"
 	"github.com/mysteriumnetwork/node/ui/noop"
 )
 
@@ -41,14 +39,4 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapMMN(options node.Options) {
-	client := mmn.NewClient(options.BindAddress, options.MMN.Address)
-
-	err := di.EventBus.SubscribeAsync(
-		identity.IdentityUnlockTopic,
-		mmn.OnIdentityUnlockCallback(client, di.IPResolver),
-	)
-
-	if err != nil {
-		log.Error("Failed to get register to mmn event", err.Error())
-	}
 }
