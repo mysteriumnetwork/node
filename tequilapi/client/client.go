@@ -147,6 +147,8 @@ func (client *Client) ConnectionCreate(consumerID, providerID, serviceType strin
 	if err != nil {
 		return StatusDTO{}, err
 	}
+	defer response.Body.Close()
+
 	err = parseResponseJSON(response, &status)
 	return status, err
 }
@@ -415,6 +417,7 @@ func (client *Client) NATStatus() (NATStatusDTO, error) {
 	if err != nil {
 		return status, err
 	}
+	defer response.Body.Close()
 
 	err = parseResponseJSON(response, &status)
 	return status, err
