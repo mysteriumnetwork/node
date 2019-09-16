@@ -37,3 +37,16 @@ func (di *Dependencies) registerConnections(nodeOptions node.Options) {
 func (di *Dependencies) bootstrapUIServer(options node.Options) {
 	di.UIServer = noop.NewServer()
 }
+
+func (di *Dependencies) bootstrapMMN(options node.Options) {
+	client := mmn.NewClient(options.BindAddress, options.MMN.Address)
+
+	err := di.EventBus.SubscribeAsync(
+		identity.IdentityUnlockTopic,
+		mmn.OnIdentityUnlockCallback(client, di.IPResolver),
+	)
+
+	if err != nil {
+		log.Error("Failed to get register to mmn event", err.Error())
+	}
+}
