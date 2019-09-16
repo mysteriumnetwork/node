@@ -21,12 +21,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mysteriumnetwork/node/eventbus"
 )
 
 func Test_UnlockAndSignAndVerify(t *testing.T) {
 	ks := NewKeystoreFilesystem("test_data", true)
 
-	manager := NewIdentityManager(ks, nil)
+	manager := NewIdentityManager(ks, eventbus.New())
 	err := manager.Unlock("0x53a835143c0ef3bbcbfa796d7eb738ca7dd28f68", "")
 	assert.NoError(t, err)
 

@@ -25,9 +25,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/pkg/errors"
+
+	"github.com/mysteriumnetwork/node/eventbus"
 )
+
+const IdentityUnlockTopic = "identity-unlocked"
 
 type identityManager struct {
 	keystoreManager Keystore
@@ -115,10 +118,7 @@ func (idm *identityManager) Unlock(address string, passphrase string) error {
 	log.Tracef("caching unlocked address: %s", address)
 	idm.unlocked[address] = true
 
-	// TODO: remove this nil check and fix all the tests
-	if idm.eventBus != nil {
-		go idm.eventBus.Publish("identity-unlocked", address)
-	}
+	go idm.eventBus.Publish(IdentityUnlockTopic, address)
 
 	return nil
 }

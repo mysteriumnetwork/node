@@ -23,15 +23,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mysteriumnetwork/node/eventbus"
 )
 
-func newManager(accountValue string) *identityManager {
+func newManager(accountValue string, bus eventbus.EventBus) *identityManager {
 	return &identityManager{
 		keystoreManager: &keyStoreFake{
 			AccountsMock: []accounts.Account{
 				addressToAccount(accountValue),
 			},
 		},
+		eventBus: bus,
+		unlocked: map[string]bool{},
 	}
 }
 
@@ -44,7 +48,7 @@ func newManagerWithError(errorMock error) *identityManager {
 }
 
 func TestManager_CreateNewIdentity(t *testing.T) {
-	manager := newManager("0x000000000000000000000000000000000000000A")
+	manager := newManager("0x000000000000000000000000000000000000000A", eventbus.New())
 	identity, err := manager.CreateNewIdentity("")
 
 	assert.NoError(t, err)
@@ -61,7 +65,7 @@ func TestManager_CreateNewIdentityError(t *testing.T) {
 }
 
 func TestManager_GetIdentities(t *testing.T) {
-	manager := newManager("0x000000000000000000000000000000000000000A")
+	manager := newManager("0x000000000000000000000000000000000000000A", eventbus.New())
 
 	assert.Equal(
 		t,
@@ -73,7 +77,7 @@ func TestManager_GetIdentities(t *testing.T) {
 }
 
 func TestManager_GetIdentity(t *testing.T) {
-	manager := newManager("0x000000000000000000000000000000000000000A")
+	manager := newManager("0x000000000000000000000000000000000000000A", eventbus.New())
 
 	identity, err := manager.GetIdentity("0x000000000000000000000000000000000000000A")
 	assert.NoError(t, err)
@@ -89,7 +93,7 @@ func TestManager_GetIdentity(t *testing.T) {
 }
 
 func TestManager_HasIdentity(t *testing.T) {
-	manager := newManager("0x000000000000000000000000000000000000000A")
+	manager := newManager("0x000000000000000000000000000000000000000A", eventbus.New())
 
 	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000A"))
 	assert.True(t, manager.HasIdentity("0x000000000000000000000000000000000000000a"))
