@@ -28,6 +28,15 @@ const seewayLogXMLConfigTemplate = `
 <seelog minlevel="{{.LogLevel}}">
 	<outputs formatid="main">
 		<console/>
+		{{ if (ne .Filepath "") }}
+		<rollingfile
+			formatid="main"
+			filename="{{.Filepath}}"
+			maxrolls="7"
+			type="date"
+			datepattern="2006.01.02"
+		/>
+		{{ end }}
 	</outputs>
 	<formats>
 		<format id="main" format="%UTCDate(2006-01-02T15:04:05.999999999) [%Level] %Msg%n"/>
@@ -54,14 +63,17 @@ func BootstrapWith(opts *LogOptions) {
 	}
 	newLogger, err := log.LoggerFromConfigAsString(buildXmlConfig(CurrentLogOptions))
 	if err != nil {
-		log.Warn("error parsing log configuration", err)
+		log.Warn("Error parsing log configuration", err)
 		return
 	}
 	err = log.UseLogger(newLogger)
 	if err != nil {
-		log.Warn("error setting new logger for log", err)
+		log.Warn("Error setting new logger for log", err)
 	}
-	log.Infof("log level: %s", CurrentLogOptions.LogLevel)
+	log.Infof("Log level: %s", CurrentLogOptions.LogLevel)
+	if CurrentLogOptions.Filepath != "" {
+		log.Infof("Log file path: %s", CurrentLogOptions.Filepath)
+	}
 }
 
 // Bootstrap loads log package into the overall system with debug defaults

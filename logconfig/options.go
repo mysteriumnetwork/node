@@ -19,6 +19,7 @@ package logconfig
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	log "github.com/cihub/seelog"
@@ -30,6 +31,7 @@ import (
 type LogOptions struct {
 	logLevelInt log.LogLevel
 	LogLevel    string
+	Filepath    string
 }
 
 // CurrentLogOptions current log options
@@ -58,7 +60,7 @@ func RegisterFlags(flags *[]cli.Flag) {
 }
 
 // ParseFlags parses logger CLI flags from context
-func ParseFlags(ctx *cli.Context) LogOptions {
+func ParseFlags(ctx *cli.Context, logDir string) LogOptions {
 	level := ctx.GlobalString("log-level")
 	levelInt, found := log.LogLevelFromString(level)
 	if !found {
@@ -68,5 +70,6 @@ func ParseFlags(ctx *cli.Context) LogOptions {
 	return LogOptions{
 		logLevelInt: levelInt,
 		LogLevel:    level,
+		Filepath:    path.Join(logDir, "mysterium-node.log"),
 	}
 }

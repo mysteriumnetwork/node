@@ -467,6 +467,14 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:9deb68c9db68b22052a30fe5cf89f4eb1a3eb3df86d13e3e96edf68dd3d1a9fc"
+  name = "github.com/mysteriumnetwork/feedback"
+  packages = ["client"]
+  pruneopts = "UT"
+  revision = "56edce8b45948049265f664b8a07b43cc0b80fb8"
+  version = "v1.1.1"
+
+[[projects]]
   branch = "master"
   digest = "1:99107f962731360fa2f26b2241e2ed66d597044d2f999008965bbe25746ba4ce"
   name = "github.com/mysteriumnetwork/go-ci"
@@ -1066,6 +1074,7 @@
     "github.com/mholt/archiver",
     "github.com/miekg/dns",
     "github.com/mitchellh/go-homedir",
+    "github.com/mysteriumnetwork/feedback/client",
     "github.com/mysteriumnetwork/go-ci/env",
     "github.com/mysteriumnetwork/go-ci/github",
     "github.com/mysteriumnetwork/go-ci/shell",
