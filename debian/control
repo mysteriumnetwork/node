@@ -5,7 +5,7 @@ Maintainer: Mysterium Team <core-services@mysterium.network>
 Build-Depends:
  dh-golang,
  debhelper (>= 8.0.0),
- golang-1.11,
+ golang-1.13,
 Standards-Version: 3.9.7
 Homepage: https://mysterium.network
 Vcs-Git: git://github.com/mysteriumnetwork/node.git

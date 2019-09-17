@@ -253,7 +253,7 @@ services:
         ipv4_address: 10.100.0.102
 
   go-runner:
-    image: golang:1.11
+    image: golang:1.13
     volumes:
       - $GOPATH:/go
     working_dir: /go/src/github.com/mysteriumnetwork/node

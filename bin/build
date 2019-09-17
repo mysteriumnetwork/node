@@ -16,12 +16,16 @@
 #> brew install readelf
 #> readelf -d build/myst/myst
 
-. ./bin/helpers/functions.sh
-. ./bin/helpers/output.sh
+source bin/helpers/functions.sh
+source bin/helpers/output.sh
 
 export GOOS=${GOOS:-`go env GOHOSTOS`}
 export GOARCH=${GOARCH:-`go env GOHOSTARCH`}
 export GOBIN=`pwd`/build/myst
+# TODO(anjmao): Remove GO111MODULE and GOPROXY once mysteriumnetwork/mysterium-node-builder uses go1.13.
+export GO111MODULE="on"
+export GOPROXY="https://proxy.golang.org"
+
 echo "Compiling 'myst' for '$GOOS/$GOARCH'.."
 
 go build -ldflags="-w -s $(get_linker_ldflags)" -o $GOBIN/myst cmd/mysterium_node/mysterium_node.go

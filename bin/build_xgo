@@ -23,21 +23,23 @@ if [ -z "$XGO_TARGETS" ]; then
     exit 1
 fi
 
-if ! [ -x "$(command -v xgo)" ]; then
-    go get github.com/karalabe/xgo
-fi
-
 DIR_BUILD="build/myst"
 mkdir -p ${DIR_BUILD}
 DIR_TEMP=`mktemp -d ${DIR_BUILD}/${tempname}.XXXXXX`
 
-xgo \
-    --go=1.11 \
-    --targets="$XGO_TARGETS" \
-    --dest=${DIR_TEMP} \
-    --out=myst \
-    --ldflags="-w -s $(get_linker_ldflags)" \
-    $(pwd)/cmd/mysterium_node
+docker run --rm \
+    -v "$PWD"/$DIR_TEMP:/build \
+    -v "$GOPATH"/xgo-cache:/deps-cache:ro \
+    -v "$PWD":/source \
+    -e PACK=./cmd/mysterium_node \
+    -e OUT=myst \
+    -e FLAG_V=false \
+    -e FLAG_X=false \
+    -e FLAG_RACE=false \
+    -e FLAG_LDFLAGS="-w -s $(get_linker_ldflags)" \
+    -e FLAG_BUILDMODE=default \
+    -e TARGETS="$XGO_TARGETS" \
+    anjmao/xgo:go-1.13.1
 
 # Remove version from binary name:
 #  - myst-darwin-10.6-amd64 -> myst_darwin_amd64

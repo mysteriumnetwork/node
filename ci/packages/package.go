@@ -18,14 +18,17 @@
 package packages
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"text/template"
 
+	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/go-ci/env"
 	"github.com/mysteriumnetwork/go-ci/shell"
+	"github.com/mysteriumnetwork/go-ci/util"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/rs/zerolog/log"
@@ -99,6 +102,8 @@ func PackageWindowsAmd64() error {
 
 // PackageIOS builds and stores iOS package
 func PackageIOS() error {
+	mg.Deps(checkVend, vendordModules)
+
 	logconfig.Bootstrap()
 	if err := sh.RunV("bin/package_ios", "amd64"); err != nil {
 		return err
@@ -108,6 +113,8 @@ func PackageIOS() error {
 
 // PackageAndroid builds and stores Android package
 func PackageAndroid() error {
+	mg.Deps(checkVend, vendordModules)
+
 	logconfig.Bootstrap()
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
 		return err
@@ -199,6 +206,27 @@ func PackageDockerSwaggerRedoc() error {
 		}
 		return nil
 	})
+}
+
+// vendordModules uses vend tool to create vendor directory from installed go modules.
+// This is a temporary solution needed for ios and android builds since gomobile
+// does not support go modules yet and go mod vendor does not include c dependencies.
+func vendordModules() error {
+	return sh.RunV("vend")
+}
+
+func checkVend() error {
+	path, _ := util.GetGoBinaryPath("vend")
+	if path != "" {
+		fmt.Println("Tool 'vend' already installed")
+		return nil
+	}
+	err := goGet("go get github.com/nomad-software/vend")
+	if err != nil {
+		fmt.Println("could not go get vend")
+		return err
+	}
+	return nil
 }
 
 func goGet(pkg string) error {

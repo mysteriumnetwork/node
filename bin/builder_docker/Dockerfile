@@ -1,4 +1,4 @@
-FROM golang:1.11 AS builder
+FROM golang:1.13 AS builder
 
 # Install FPM
 RUN apt-get update \
@@ -8,7 +8,7 @@ RUN apt-get update \
     && gem install fpm -v 1.11.0
 
 # Install development dependencies
-RUN go get \
+RUN GO111MODULE=off go get \
     github.com/debber/debber-v0.3/cmd/debber \
     golang.org/x/lint/golint \
     golang.org/x/tools/cmd/goimports \

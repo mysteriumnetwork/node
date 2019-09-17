@@ -68,7 +68,7 @@ services:
 
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
   go-runner:
-    image: golang:1.11
+    image: golang:1.13
     volumes:
       - $GOPATH:/go
     working_dir: /go/src/github.com/mysteriumnetwork/node
