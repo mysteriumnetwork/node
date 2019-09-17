@@ -22,11 +22,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/payments/crypto"
-
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
 

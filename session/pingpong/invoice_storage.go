@@ -25,6 +25,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ErrNotFound represents an error that indicates that there's no such invoice
+var ErrNotFound = errors.New("entry does not exist")
+
 type bucketName string
 
 const receivedInvoices bucketName = "received_invoices"
@@ -89,9 +92,6 @@ type InvoiceStorage struct {
 	bolt persistentStorage
 	lock sync.Mutex
 }
-
-// ErrNotFound represents an error that indicates that there's no such invoice
-var ErrNotFound = errors.New("entry does not exist")
 
 var errBoltNotFound = "not found"
 
