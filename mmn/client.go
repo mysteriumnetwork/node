@@ -42,9 +42,5 @@ func (m *client) RegisterNode(information *NodeInformation) error {
 		return err
 	}
 
-	if err = m.http.DoRequest(req); err != nil {
-		return err
-	}
-
-	return nil
+	return m.http.DoRequest(req)
 }

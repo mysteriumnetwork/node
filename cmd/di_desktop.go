@@ -282,6 +282,10 @@ func (di *Dependencies) bootstrapUIServer(options node.Options) {
 }
 
 func (di *Dependencies) bootstrapMMN(options node.Options) {
+	if !options.MMN.Enabled {
+		return
+	}
+
 	client := mmn.NewClient(options.BindAddress, options.MMN.Address)
 
 	err := di.EventBus.SubscribeAsync(

@@ -20,10 +20,11 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
+
+	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (
@@ -56,12 +57,6 @@ var (
 		Name:  "access-policy-address",
 		Usage: "URL of trust oracle endpoint for retrieving lists of access policies",
 		Value: metadata.DefaultNetwork.AccessPolicyOracleAddress,
-	})
-
-	mmnAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "mmn-address",
-		Usage: "URL of my.mysterium.network API",
-		Value: metadata.DefaultNetwork.MMNAddress,
 	})
 
 	brokerAddressFlag = altsrc.NewStringFlag(cli.StringFlag{

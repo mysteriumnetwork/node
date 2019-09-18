@@ -18,10 +18,12 @@
 package mmn
 
 import (
-	"os/exec"
+	"crypto/sha256"
+	"encoding/hex"
 	"runtime"
 	"strings"
 
+	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/core/ip"
@@ -30,7 +32,7 @@ import (
 
 // NodeInformation contains node information to be sent to MMN
 type NodeInformation struct {
-	MACAddress  string `json:"mac_address"`
+	MACAddress  string `json:"mac_address"` // SHA256 hash
 	LocalIP     string `json:"local_ip"`
 	OS          string `json:"os"`
 	Arch        string `json:"arch"`
@@ -56,8 +58,10 @@ func OnIdentityUnlockCallback(client *client, resolver ip.Resolver) func(string)
 			log.Error(errors.Wrap(err, "failed to get NodeInformation for MMN"))
 			return
 		}
+		
+		sha256Bytes := sha256.Sum256([]byte(mac))
 
-		info.MACAddress = mac
+		info.MACAddress = hex.EncodeToString(sha256Bytes[:])
 		info.LocalIP = outboundIp
 		info.Identity = identity
 
@@ -65,7 +69,7 @@ func OnIdentityUnlockCallback(client *client, resolver ip.Resolver) func(string)
 			log.Error(errors.Wrap(err, "failed to send NodeInformation to MMN"))
 		}
 
-		log.Info("Registered node to MMN")
+		log.Info("Registered node to MMN", info)
 	}
 }
 
@@ -80,25 +84,22 @@ func getNodeInformation() *NodeInformation {
 }
 
 func getOS() string {
-	if output := getOSByCommand("darwin", "sw_vers", "-productVersion"); len(output) > 0 {
-		return "MAC OS X - " + strings.TrimSpace(string(output))
-	}
-
-	if output := getOSByCommand("linux", "lsb_release", "-d"); len(output) > 0 {
-		return strings.TrimSpace(strings.Replace(string(output), "Description:", "", 1))
-	}
-
-	return ""
-}
-
-func getOSByCommand(os string, command string, args ...string) string {
-	if runtime.GOOS == os {
-		output, err := exec.Command(command, args...).Output()
+	switch runtime.GOOS {
+	case "darwin":
+		output, err := shell.NewCmd("sw_vers -productVersion").Output()
 		if err != nil {
-			log.Error(errors.Wrap(err, "failed to get OS information for "+os+" using "+command))
+			log.Error(errors.Wrap(err, "failed to get OS information"))
 			return ""
 		}
-		return string(output)
+		return "MAC OS X - " + strings.TrimSpace(string(output))
+
+	case "linux":
+		output, err := shell.NewCmd("lsb_release -d").Output()
+		if err != nil {
+			log.Error(errors.Wrap(err, "failed to get OS information"))
+			return ""
+		}
+		return strings.TrimSpace(strings.Replace(string(output), "Description:", "", 1))
 	}
 
 	return ""

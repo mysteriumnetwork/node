@@ -19,18 +19,35 @@ package cmd
 
 import (
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 
 	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/metadata"
+)
+
+var (
+	mmnAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
+		Name:  "mymysterium.address",
+		Usage: "URL of my.mysterium.network API",
+		Value: metadata.DefaultNetwork.MMNAddress,
+	})
+
+	mmnEnabledFlag = altsrc.NewBoolTFlag(cli.BoolTFlag{
+		Name:  "mymysterium.enabled",
+		Usage: "Enables my.mysterium.network integration",
+	})
 )
 
 // RegisterFlagsMMN function register mmn flags to flag list
 func RegisterFlagsMMN(flags *[]cli.Flag) {
 	*flags = append(*flags, mmnAddressFlag)
+	*flags = append(*flags, mmnEnabledFlag)
 }
 
 // ParseFlagsMMN function fills in mmn options from CLI context
 func ParseFlagsMMN(ctx *cli.Context) node.OptionsMMN {
 	return node.OptionsMMN{
 		Address: ctx.GlobalString(mmnAddressFlag.Name),
+		Enabled: ctx.GlobalBoolT(mmnEnabledFlag.Name),
 	}
 }
