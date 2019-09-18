@@ -58,7 +58,7 @@ func OnIdentityUnlockCallback(client *client, resolver ip.Resolver) func(string)
 			log.Error(errors.Wrap(err, "failed to get NodeInformation for MMN"))
 			return
 		}
-		
+
 		sha256Bytes := sha256.Sum256([]byte(mac))
 
 		info.MACAddress = hex.EncodeToString(sha256Bytes[:])
