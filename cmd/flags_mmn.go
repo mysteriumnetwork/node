@@ -27,7 +27,7 @@ import (
 
 var (
 	mmnAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
-		Name:  "mymysterium.address",
+		Name:  "mymysterium.url",
 		Usage: "URL of my.mysterium.network API",
 		Value: metadata.DefaultNetwork.MMNAddress,
 	})
