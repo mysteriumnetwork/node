@@ -290,7 +290,7 @@ func (di *Dependencies) bootstrapMMN(options node.Options) {
 
 	err := di.EventBus.SubscribeAsync(
 		identity.IdentityUnlockTopic,
-		mmn.OnIdentityUnlockCallback(client, di.IPResolver),
+		mmn.CollectNodeData(client, di.IPResolver),
 	)
 
 	if err != nil {

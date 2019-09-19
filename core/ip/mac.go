@@ -26,7 +26,7 @@ import (
 
 // GetMACAddressForIP finds MAC address
 func GetMACAddressForIP(ip string) (string, error) {
-	var currentNetworkHardwareName string
+	var matchedInterface string
 	interfaces, err := net.Interfaces()
 	if err != nil {
 		return "", errors.Wrap(err, "failed to retrieve network interfaces")
@@ -37,13 +37,13 @@ func GetMACAddressForIP(ip string) (string, error) {
 			for _, addr := range addresses {
 				// only interested in the name with current IP address
 				if strings.Contains(addr.String(), ip) {
-					currentNetworkHardwareName = i.Name
+					matchedInterface = i.Name
 				}
 			}
 		}
 	}
 
-	netInterface, err := net.InterfaceByName(currentNetworkHardwareName)
+	netInterface, err := net.InterfaceByName(matchedInterface)
 
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get MAC address")

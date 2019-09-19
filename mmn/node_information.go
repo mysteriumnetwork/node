@@ -40,8 +40,8 @@ type NodeInformation struct {
 	Identity    string `json:"identity"`
 }
 
-// OnIdentityUnlockCallback sends node information to MMN on identity unlock
-func OnIdentityUnlockCallback(client *client, resolver ip.Resolver) func(string) {
+// CollectNodeData sends node information to MMN on identity unlock
+func CollectNodeData(client *client, resolver ip.Resolver) func(string) {
 	return func(identity string) {
 		outboundIp, err := resolver.GetOutboundIPAsString()
 		if err != nil {
@@ -69,7 +69,7 @@ func OnIdentityUnlockCallback(client *client, resolver ip.Resolver) func(string)
 			log.Error(errors.Wrap(err, "failed to send NodeInformation to MMN"))
 		}
 
-		log.Info("Registered node to MMN", info)
+		log.Info("Registered node to my.mysterium.network")
 	}
 }
 
