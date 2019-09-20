@@ -26,19 +26,26 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+
+	"github.com/mysteriumnetwork/node/eventbus"
 )
+
+// IdentityUnlockTopic is the channel name for identity unlock event
+const IdentityUnlockTopic = "identity-unlocked"
 
 type identityManager struct {
 	keystoreManager Keystore
 	unlocked        map[string]bool // Currently unlocked addresses
 	unlockedMu      sync.RWMutex
+	eventBus        eventbus.EventBus
 }
 
 // NewIdentityManager creates and returns new identityManager
-func NewIdentityManager(keystore Keystore) *identityManager {
+func NewIdentityManager(keystore Keystore, eventBus eventbus.EventBus) *identityManager {
 	return &identityManager{
 		keystoreManager: keystore,
 		unlocked:        map[string]bool{},
+		eventBus:        eventBus,
 	}
 }
 
@@ -111,6 +118,8 @@ func (idm *identityManager) Unlock(address string, passphrase string) error {
 	}
 	log.Tracef("caching unlocked address: %s", address)
 	idm.unlocked[address] = true
+
+	go idm.eventBus.Publish(IdentityUnlockTopic, address)
 
 	return nil
 }

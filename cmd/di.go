@@ -267,7 +267,7 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	}
 
 	di.bootstrapUIServer(nodeOptions)
-
+	di.bootstrapMMN(nodeOptions)
 	if err := di.bootstrapBandwidthTracker(); err != nil {
 		return err
 	}
@@ -654,7 +654,7 @@ func (di *Dependencies) bootstrapEventBus() {
 
 func (di *Dependencies) bootstrapIdentityComponents(options node.Options) {
 	di.Keystore = identity.NewKeystoreFilesystem(options.Directories.Keystore, options.Keystore.UseLightweight)
-	di.IdentityManager = identity.NewIdentityManager(di.Keystore)
+	di.IdentityManager = identity.NewIdentityManager(di.Keystore, di.EventBus)
 	di.SignerFactory = func(id identity.Identity) identity.Signer {
 		return identity.NewSigner(di.Keystore, id)
 	}

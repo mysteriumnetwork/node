@@ -20,10 +20,11 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/urfave/cli.v1/altsrc"
+
+	"github.com/mysteriumnetwork/node/core/node"
+	"github.com/mysteriumnetwork/node/metadata"
 )
 
 var (

@@ -1,7 +1,5 @@
-// +build android
-
 /*
- * Copyright (C) 2018 The "MysteriumNetwork/node" Authors.
+ * Copyright (C) 2019 The "MysteriumNetwork/node" Authors.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,26 +15,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cmd
+package mmn
 
 import (
-	"github.com/mysteriumnetwork/node/core/node"
-	"github.com/mysteriumnetwork/node/ui/noop"
+	"time"
+
+	"github.com/mysteriumnetwork/node/requests"
 )
 
-// bootstrapServices loads all the components required for running services
-func (di *Dependencies) bootstrapServices(nodeOptions node.Options) error {
-	// Running services on mobile is not supported, nothing to bootstrap.
-	return nil
+// NewClient returns MMN API client
+func NewClient(srcIp string, mmnAddress string) *client {
+	return &client{
+		http:       requests.NewHTTPClient(srcIp, 20*time.Second),
+		mmnAddress: mmnAddress,
+	}
 }
 
-func (di *Dependencies) registerConnections(nodeOptions node.Options) {
-	di.registerNoopConnection()
+type client struct {
+	http       requests.HTTPTransport
+	mmnAddress string
 }
 
-func (di *Dependencies) bootstrapUIServer(options node.Options) {
-	di.UIServer = noop.NewServer()
-}
+func (m *client) RegisterNode(information *NodeInformation) error {
+	req, err := requests.NewPostRequest(m.mmnAddress, "node", information)
+	if err != nil {
+		return err
+	}
 
-func (di *Dependencies) bootstrapMMN(options node.Options) {
+	return m.http.DoRequest(req)
 }
