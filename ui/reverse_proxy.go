@@ -52,9 +52,11 @@ func buildReverseProxy(bindAddress string, transport *http.Transport, tequilapiP
 			req.URL.Path = strings.TrimRight(req.URL.Path, "/")
 		},
 		ModifyResponse: func(res *http.Response) error {
-			res.Header.Set("Access-Control-Allow-Origin", "*")
-			res.Header.Set("Access-Control-Allow-Headers", "*")
-			res.Header.Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			// remove TequilAPI CORS headers
+			// these will be overwritten by Gin middleware
+			res.Header.Del("Access-Control-Allow-Origin")
+			res.Header.Del("Access-Control-Allow-Headers")
+			res.Header.Del("Access-Control-Allow-Methods")
 			return nil
 		},
 		Transport: transport,

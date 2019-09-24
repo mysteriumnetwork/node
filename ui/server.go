@@ -45,13 +45,29 @@ type jwtAuthenticator interface {
 	ValidateToken(token string) (bool, error)
 }
 
+var corsConfig = cors.Config{
+	AllowMethods: []string{"*"},
+	AllowHeaders: []string{
+		"Origin",
+		"Content-Length",
+		"Content-Type",
+		"Cache-Control",
+		"X-XSRF-TOKEN",
+		"X-CSRF-TOKEN",
+	},
+	AllowCredentials: true,
+	AllowOriginFunc: func(origin string) bool {
+		return true
+	},
+}
+
 // NewServer creates a new instance of the server for the given port
 func NewServer(bindAddress string, port int, tequilapiPort int, authenticator jwtAuthenticator) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(cors.Default())
 	r.NoRoute(ReverseTequilapiProxy(bindAddress, tequilapiPort, authenticator))
+	r.Use(cors.New(corsConfig))
 
 	r.StaticFS("/", godvpnweb.Assets)
 
