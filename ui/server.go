@@ -46,7 +46,17 @@ type jwtAuthenticator interface {
 }
 
 var corsConfig = cors.Config{
-	AllowMethods: []string{"*"},
+	AllowMethods: []string{
+		"GET",
+		"HEAD",
+		"POST",
+		"PUT",
+		"DELETE",
+		"CONNECT",
+		"OPTIONS",
+		"TRACE",
+		"PATCH",
+	},
 	AllowHeaders: []string{
 		"Origin",
 		"Content-Length",
