@@ -74,7 +74,6 @@ func (imc *invoiceMessageConsumer) Consume(requestPtr interface{}) (err error) {
 }
 
 // Dialog boilerplate below, please ignore
-
 type invoiceMessageConsumer struct {
 	queue chan crypto.Invoice
 }

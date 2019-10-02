@@ -24,31 +24,31 @@ import (
 )
 
 var (
-	transactorAddressFlag = cli.StringFlag{
-		Name:  "transactor.address",
-		Usage: "transactor URL address",
-		Value: metadata.DefaultNetwork.TransactorAddress,
+	accountantAddressFlag = cli.StringFlag{
+		Name:  "accountant.address",
+		Usage: "accountant URL address",
+		Value: metadata.DefaultNetwork.AccountantAddress,
 	}
-	registryAddressFlag = cli.StringFlag{
-		Name:  "transactor.registry-address",
-		Usage: "registry contract address used to register identity",
-		Value: metadata.DefaultNetwork.RegistryAddress,
+	accountantIDFlag = cli.StringFlag{
+		Name:  "accountant.accountant-id",
+		Usage: "accountant contract address used to register identity",
+		Value: metadata.DefaultNetwork.AccountantID,
 	}
 )
 
-// RegisterFlagsTransactor function register network flags to flag list
-func RegisterFlagsTransactor(flags *[]cli.Flag) {
+// RegisterFlagsAccountant function register network flags to flag list
+func RegisterFlagsAccountant(flags *[]cli.Flag) {
 	*flags = append(
 		*flags,
-		transactorAddressFlag,
-		registryAddressFlag,
+		accountantAddressFlag,
+		accountantIDFlag,
 	)
 }
 
-// ParseFlagsTransactor function fills in transactor options from CLI context
-func ParseFlagsTransactor(ctx *cli.Context) node.OptionsTransactor {
-	return node.OptionsTransactor{
-		TransactorEndpointAddress: ctx.GlobalString(transactorAddressFlag.Name),
-		RegistryAddress:           ctx.GlobalString(registryAddressFlag.Name),
+// ParseFlagsAccountant function fills in accountant options from CLI context
+func ParseFlagsAccountant(ctx *cli.Context) node.OptionsAccountant {
+	return node.OptionsAccountant{
+		AccountantEndpointAddress: ctx.GlobalString(accountantAddressFlag.Name),
+		AccountantID:              ctx.GlobalString(accountantIDFlag.Name),
 	}
 }

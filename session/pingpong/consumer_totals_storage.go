@@ -20,7 +20,6 @@ package pingpong
 import (
 	"sync"
 
-	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 )
 
@@ -40,38 +39,18 @@ func NewConsumerTotalsStorage(bolt persistentStorage) *ConsumerTotalsStorage {
 }
 
 // Store stores the given amount as promised for the given channel
-func (cts *ConsumerTotalsStorage) Store(channelAddress string, amount uint64) error {
+func (cts *ConsumerTotalsStorage) Store(providerAddress string, amount uint64) error {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
-	return cts.bolt.SetValue(consumerTotalStorageBucketName, channelAddress, amount)
-}
-
-// ChannelAddressParams contains all the params required for channel address generation
-type ChannelAddressParams struct {
-	Identity, Registry, ChannelImplementation string
-}
-
-// ToChannelAddress converts the channel address params to a channel address
-func (cap ChannelAddressParams) ToChannelAddress() (string, error) {
-	addr, err := crypto.GenerateChannelAddress(cap.Identity, cap.Registry, cap.ChannelImplementation)
-	return addr, errors.Wrap(err, "could not generate channel address")
-}
-
-// GenerateAndStore generates the channel address and stores the given amount as promised
-func (cts *ConsumerTotalsStorage) GenerateAndStore(cap ChannelAddressParams, amount uint64) error {
-	addr, err := cap.ToChannelAddress()
-	if err != nil {
-		return err
-	}
-	return cts.Store(addr, amount)
+	return cts.bolt.SetValue(consumerTotalStorageBucketName, providerAddress, amount)
 }
 
 // Get fetches the amount as promised for the given channel
-func (cts *ConsumerTotalsStorage) Get(channelAddress string) (uint64, error) {
+func (cts *ConsumerTotalsStorage) Get(providerAddress string) (uint64, error) {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 	var res uint64
-	err := cts.bolt.GetValue(consumerTotalStorageBucketName, channelAddress, &res)
+	err := cts.bolt.GetValue(consumerTotalStorageBucketName, providerAddress, &res)
 	if err != nil {
 		// wrap the error to an error we can check for
 		if err.Error() == errBoltNotFound {
