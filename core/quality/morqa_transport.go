@@ -109,11 +109,14 @@ func sessionDataToMetricsEvent(context sessionDataContext) *metrics.Event {
 }
 
 func proposalEventToMetricsEvent(context market.ServiceProposal, info appInfo) *metrics.Event {
+	location := context.ServiceDefinition.GetLocation()
 	return &metrics.Event{
 		Metric: &metrics.Event_ProposalPayload{
 			ProposalPayload: &metrics.ProposalPayload{
 				ProviderId:  context.ProviderID,
 				ServiceType: context.ServiceType,
+				NodeType:    location.NodeType,
+				Country:     location.Country,
 				Version: &metrics.VersionPayload{
 					Version: info.Version,
 					Os:      info.OS,
