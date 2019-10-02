@@ -30,6 +30,7 @@ type NetworkDefinition struct {
 	QualityOracle             string
 	PaymentsContractAddress   common.Address
 	TransactorAddress         string
+	AccountantAddress         string
 	RegistryAddress           string
 	AccountantID              string
 	ChannelImplAddress        string
@@ -47,6 +48,7 @@ var TestnetDefinition = NetworkDefinition{
 	TransactorAddress:         "https://testnet-transactor.mysterium.network/api/v1",
 	RegistryAddress:           "0xE6b3a5c92e7c1f9543A0aEE9A93fE2F6B584c1f7",
 	AccountantID:              "0xf28DB7aDf64A2811202B149aa4733A1FB9100e5c",
+	AccountantAddress:         "https://testnet-accountant.mysterium.network/api/v1",
 	ChannelImplAddress:        "0xa26b684d8dBa935DD34544FBd3Ab4d7FDe1C4D07",
 	MMNAddress:                "https://my.mysterium.network/api/v1",
 }

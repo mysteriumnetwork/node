@@ -17,8 +17,8 @@
 
 package node
 
-// OptionsTransactor describes possible parameters for interaction with transactor
-type OptionsTransactor struct {
-	TransactorEndpointAddress string
-	RegistryAddress           string
+// OptionsAccountant describes possible parameters for interaction with Accountant
+type OptionsAccountant struct {
+	AccountantEndpointAddress string
+	AccountantID              string
 }

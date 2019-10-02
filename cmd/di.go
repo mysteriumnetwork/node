@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mysteriumnetwork/node/requests"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -168,7 +170,11 @@ type Dependencies struct {
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
 
-	Shaper shaper.Shaper
+	Shaper                   shaper.Shaper
+	ProviderInvoiceStorage   *pingpong.ProviderInvoiceStorage
+	ConsumerInvoiceStorage   *pingpong.ConsumerInvoiceStorage
+	ConsumerTotalsStorage    *pingpong.ConsumerTotalsStorage
+	AccountantPromiseStorage *pingpong.AccountantPromiseStorage
 }
 
 // Bootstrap initiates all container dependencies
@@ -369,6 +375,12 @@ func (di *Dependencies) bootstrapStorage(path string) error {
 	}
 
 	di.Storage = localStorage
+
+	invoiceStorage := pingpong.NewInvoiceStorage(di.Storage)
+	di.ProviderInvoiceStorage = pingpong.NewProviderInvoiceStorage(invoiceStorage)
+	di.ConsumerInvoiceStorage = pingpong.NewConsumerInvoiceStorage(invoiceStorage)
+	di.ConsumerTotalsStorage = pingpong.NewConsumerTotalsStorage(di.Storage)
+	di.AccountantPromiseStorage = pingpong.NewAccountantPromiseStorage(di.Storage)
 	return nil
 }
 
@@ -444,7 +456,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		pingpong.BackwardsCompatibleExchangeFactoryFunc(di.Keystore, nodeOptions, di.SignerFactory),
+		pingpong.BackwardsCompatibleExchangeFactoryFunc(di.Keystore, nodeOptions, di.SignerFactory, di.ConsumerInvoiceStorage, di.ConsumerTotalsStorage),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 		connectivity.NewStatusSender(),
@@ -459,7 +471,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		nodeOptions.BindAddress,
 		nodeOptions.Transactor.TransactorEndpointAddress,
 		nodeOptions.Transactor.RegistryAddress,
-		nodeOptions.Transactor.AccountantID,
+		nodeOptions.Accountant.AccountantID,
 		channelImplementation,
 		di.SignerFactory,
 	)
@@ -511,8 +523,12 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 }
 
 func newSessionManagerFactory(
+	nodeOptions node.Options,
 	proposal market.ServiceProposal,
 	sessionStorage *session.EventBasedStorage,
+	providerInvoiceStorage *pingpong.ProviderInvoiceStorage,
+	consumerInvoiceStorage *pingpong.ConsumerInvoiceStorage,
+	accountantPromiseStorage *pingpong.AccountantPromiseStorage,
 	promiseStorage session_payment.PromiseStorage,
 	natPingerChan func(*traversal.Params),
 	natTracker *event.Tracker,
@@ -545,7 +561,22 @@ func newSessionManagerFactory(
 			return session_payment.NewSessionBalance(sender, tracker, promiseChan, payment_factory.BalanceSendPeriod, payment_factory.PromiseWaitTimeout, validator, promiseStorage, consumerID, receiverID, issuerID), nil
 		}
 
-		paymentEngineFactory := pingpong.InvoiceFactoryCreator(dialog, payment_factory.BalanceSendPeriod, payment_factory.PromiseWaitTimeout)
+		paymentEngineFactory := pingpong.InvoiceFactoryCreator(
+			dialog, payment_factory.BalanceSendPeriod,
+			payment_factory.PromiseWaitTimeout, providerInvoiceStorage,
+			dto.PaymentPerTime{
+				Price: money.Money{
+					Currency: money.CurrencyMyst,
+					Amount:   uint64(1),
+				},
+				Duration: time.Minute,
+			},
+			// TODO: code accountant address in here from node options
+
+			pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress),
+			accountantPromiseStorage,
+			identity.FromAddress(nodeOptions.Accountant.AccountantID),
+		)
 		return session.NewManager(
 			proposal,
 			session.GenerateUUID,
@@ -615,7 +646,7 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 	log.Info().Msg("Using Eth contract at address: " + network.PaymentsContractAddress.String())
 	log.Info().Msg("options.ExperimentIdentityCheck: " + strconv.FormatBool(optionsNetwork.ExperimentIdentityCheck))
 	if optionsNetwork.ExperimentIdentityCheck {
-		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress, common.HexToAddress(options.Transactor.AccountantID)); err != nil {
+		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress, common.HexToAddress(options.Accountant.AccountantID)); err != nil {
 			return err
 		}
 	} else {

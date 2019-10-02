@@ -48,6 +48,7 @@ type Options struct {
 	Quality    OptionsQuality
 	Location   OptionsLocation
 	Transactor OptionsTransactor
+	Accountant OptionsAccountant
 
 	Openvpn  Openvpn
 	Firewall OptionsFirewall

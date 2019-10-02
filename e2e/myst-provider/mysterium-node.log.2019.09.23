@@ -1,0 +1,84 @@
+2019-09-23T07:26:29.6216407 [Info] Log level: debug
+2019-09-23T07:26:29.6216652 [Info] Log file path: /var/lib/mysterium-node/mysterium-node.log
+2019-09-23T07:26:29.6217699 [Info] [cmd] Starting Mysterium Node (source.dev-build)
+2019-09-23T07:26:29.6217879 [Info] [cmd] Build information (Branch: <unknown>. Build id: dev-build. Commit: )
+2019-09-23T07:26:29.6281902 [Info] [iptables] [version check] iptables v1.6.1
+2019-09-23T07:26:29.6389105 [Info] [iptables] [setup] Got error while listing kill switch chain rules. Probably nothing to worry about. Err: iptables cmd error: exit status 1
+2019-09-23T07:26:29.6623714 [Info] [cmd] Using Eth endpoint: ws://ganache:8545
+2019-09-23T07:26:29.6722201 [Info] [cmd] Using Eth contract at address: 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+2019-09-23T07:26:29.6722446 [Info] [cmd] options.ExperimentIdentityCheck: true
+2019-09-23T07:26:29.6959659 [Info] [nat] IP forwarding already enabled
+2019-09-23T07:26:29.7067142 [Info] [feedback] Using feedback API at: https://feedback.mysterium.network
+2019-09-23T07:26:29.707506 [Info] [core/node] API started on: [::]:4050
+2019-09-23T07:26:29.7077142 [Info] [dvpn-web-server] server starting on: 0.0.0.0:4449
+2019-09-23T07:26:29.7080199 [Debug] [config] returning default value access-policy.list: 
+2019-09-23T07:26:29.7081732 [Debug] [core/location] detecting with static resolver
+2019-09-23T07:26:29.7092818 [Info] [NATPinger] Starting a NAT pinger
+2019-09-23T07:26:29.7127798 [Debug] [identity/selector] using existing identity
+2019-09-23T07:26:30.4314885 [Error] [mmn] failed to get OS information: failed to run "lsb_release -d: exec: "lsb_release": executable file not found in $PATH"
+2019-09-23T07:26:30.447788 [Info] [identity/selector] existing identity is not registered, attempting to register
+2019-09-23T07:26:30.6645353 [Error] [mmn] failed to send NodeInformation to MMN: server response invalid: 500 Internal Server Error (https://my.mysterium.network/api/v1/node)
+2019-09-23T07:26:30.6645637 [Info] [mmn] Registered node to my.mysterium.network
+2019-09-23T07:26:30.7726854 [Info] [Mysterium.api] Identity registered: 0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
+2019-09-23T07:26:30.7760559 [Info] [cmd/commands/service] unlocked identity: 0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5
+2019-09-23T07:26:30.77614 [Debug] [config] returning default value openvpn.proto: udp
+2019-09-23T07:26:30.7761584 [Debug] [config] returning CLI value openvpn.port: 3000
+2019-09-23T07:26:30.7761742 [Debug] [config] returning default value openvpn.subnet: 10.8.0.0
+2019-09-23T07:26:30.7761862 [Debug] [config] returning default value openvpn.netmask: 255.255.255.0
+2019-09-23T07:26:30.7762118 [Debug] [config] returning default value wireguard.allowed.subnet: {10.182.0.0 ffff0000}
+2019-09-23T07:26:30.8207496 [Warn] [services/wireguard/service] Failed to parse subnet option, using default value. invalid CIDR address: 
+2019-09-23T07:26:30.8223061 [Debug] [config] returning default value access-policy.list: 
+2019-09-23T07:26:30.8240481 [Debug] [config] returning default value access-policy.list: 
+2019-09-23T07:26:30.8249438 [Debug] [config] returning default value wireguard.listen.ports: 0:0
+2019-09-23T07:26:30.8258775 [Info] [tequilapi/endpoints] service start options: {ProviderID:0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5 Type:noop Options:<nil> AccessPolicies:{Ids:[]}}
+2019-09-23T07:26:30.8266205 [Debug] [config] returning default value openvpn.proto: udp
+2019-09-23T07:26:30.8266804 [Debug] [config] returning default value wireguard.connect.delay: 2000
+2019-09-23T07:26:30.8289354 [Debug] [core/location] detecting with static resolver
+2019-09-23T07:26:30.8298061 [Debug] [config] returning CLI value openvpn.port: 3000
+2019-09-23T07:26:30.8303457 [Debug] [config] returning default value openvpn.subnet: 10.8.0.0
+2019-09-23T07:26:30.8303736 [Debug] [config] returning default value openvpn.netmask: 255.255.255.0
+2019-09-23T07:26:30.8304262 [Info] [tequilapi/endpoints] service start options: {ProviderID:0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5 Type:openvpn Options:{Protocol:udp Port:3000 Subnet:10.8.0.0 Netmask:255.255.255.0} AccessPolicies:{Ids:[]}}
+2019-09-23T07:26:30.8314053 [Debug] [config] returning default value access-policy.list: 
+2019-09-23T07:26:30.8344326 [Debug] [config] returning default value wireguard.allowed.subnet: {10.182.0.0 ffff0000}
+2019-09-23T07:26:30.838065 [Warn] [services/wireguard/service] Failed to parse subnet option, using default value. invalid CIDR address: 
+2019-09-23T07:26:30.8387525 [Debug] [config] returning default value wireguard.listen.ports: 0:0
+2019-09-23T07:26:30.8388007 [Debug] [config] returning default value wireguard.connect.delay: 2000
+2019-09-23T07:26:30.8388592 [Info] [tequilapi/endpoints] service start options: {ProviderID:0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5 Type:wireguard Options:{ConnectDelay:2000 Ports:0:0 Subnet:{IP:10.182.0.0 Mask:ffff0000}} AccessPolicies:{Ids:[]}}
+2019-09-23T07:26:30.8409177 [Info] [NATS.DialogWaiter] Connecting to: {nats/v1 {0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5.noop [nats://broker:4222]}}
+2019-09-23T07:26:30.8420975 [Info] [services/openvpn/core] OpenVPN 2.4.4 x86_64-alpine-linux-musl [SSL (OpenSSL)] [LZO] [LZ4] [EPOLL] [MH/PKTINFO] [AEAD] built on Nov 23 2017
+2019-09-23T07:26:30.8424134 [Info] [services/openvpn/core] library versions: LibreSSL 2.5.5, LZO 2.10
+2019-09-23T07:26:30.842441 [Info] [services/openvpn/core] Originally developed by James Yonan
+2019-09-23T07:26:30.8424633 [Info] [services/openvpn/core] Copyright (C) 2002-2017 OpenVPN Technologies, Inc. <sales@openvpn.net>
+2019-09-23T07:26:30.8448382 [Debug] [core/location] detecting with static resolver
+2019-09-23T07:26:30.8458112 [Info] [services/openvpn/core] Compile time defines: enable_async_push='no' enable_comp_stub='no' enable_crypto='yes' enable_crypto_ofb_cfb='yes' enable_debug='yes' enable_def_auth='yes' enable_dlopen='unknown' enable_dlopen_self='unknown' enable_dlopen_self_static='unknown' enable_fast_install='yes' enable_fragment='yes' enable_iproute2='yes' enable_libtool_lock='yes' enable_lz4='yes' enable_lzo='yes' enable_management='yes' enable_multihome='yes' enable_pam_dlopen='no' enable_pedantic='no' enable_pf='yes' enable_pkcs11='no' enable_plugin_auth_pam='yes' enable_plugin_down_root='yes' enable_plugins='yes' enable_port_share='yes' enable_selinux='no' enable_server='yes' enable_shared='yes' enable_shared_with_static_runtimes='no' enable_small='no' enable_static='yes' enable_strict='no' enable_strict_options='no' enable_systemd='no' enable_werror='no' enable_win32_dll='yes' enable_x509_alt_username='no' with_crypto_library='openssl' with_gnu_ld='yes' with_mem_check='no' with_sysroot='no'
+2019-09-23T07:26:30.8499911 [Info] [NATS.DialogWaiter] Connecting to: {nats/v1 {0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5.wireguard [nats://broker:4222]}}
+2019-09-23T07:26:30.8500516 [Debug] [core/location] detecting with static resolver
+2019-09-23T07:26:30.8536987 [Info] [NATS.DialogWaiter] Connecting to: {nats/v1 {0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5.openvpn [nats://broker:4222]}}
+2019-09-23T07:26:30.8827416 [Debug] [communication/nats:receiver] request "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5.openvpn.dialog-create" topic has been subscribed to
+2019-09-23T07:26:30.8828293 [Info] [core/discovery] starting discovery...
+2019-09-23T07:26:30.8828919 [Debug] [communication/nats:receiver] request "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5.wireguard.dialog-create" topic has been subscribed to
+2019-09-23T07:26:30.8844481 [Info] [core/discovery] starting discovery...
+2019-09-23T07:26:30.8853364 [Debug] [communication/nats:receiver] request "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5.noop.dialog-create" topic has been subscribed to
+2019-09-23T07:26:30.8866196 [Info] [core/discovery] starting discovery...
+2019-09-23T07:26:30.8866635 [Info] [services/wireguard/service] wireguard service started successfully
+2019-09-23T07:26:30.887184 [Info] [service-noop] Noop service started successfully
+2019-09-23T07:26:30.8962896 [Info] [nat] Action 'append' applied for forwarding packets from '10.8.0.0/24' to IP: 172.19.0.9
+2019-09-23T07:26:30.8963928 [Info] [services/openvpn/service] country detected: e2e-land
+2019-09-23T07:26:30.8979977 [Info] [NATProxy] registering service openvpn for port 3000 to NATProxy
+2019-09-23T07:26:30.8980789 [Info] [services/openvpn/service] Starting OpenVPN server on port: 3000
+2019-09-23T07:26:30.909288 [Info] [linux tun service] /dev/net/tun device node created
+2019-09-23T07:26:30.9160535 [Info] [linux tun service] tun0 device created
+2019-09-23T07:26:30.9161522 [Info] [client-management] Binding to socket: 127.0.0.1:0
+2019-09-23T07:26:30.9162485 [Info] [client-management] Waiting for incoming connection on: 127.0.0.1:38219
+2019-09-23T07:26:30.9168379 [Info] [openvpn-process] Starting cmd: openvpn with arguments: [--port 3000 --server 10.8.0.0 255.255.255.0 --topology subnet --tls-server --dh none --explicit-exit-notify --ca /var/run/mysterium-node/ca.crt --cert /var/run/mysterium-node/server.crt --key /var/run/mysterium-node/server.key --tls-crypt /var/run/mysterium-node/ta.key --cipher AES-256-GCM --verb 3 --tls-version-min 1.2 --management-client-auth --verify-client-cert none --tls-cipher TLS-ECDHE-ECDSA-WITH-AES-256-GCM-SHA384 --reneg-sec 60 --keepalive 10 60 --ping-timer-rem --persist-key --auth none --local 0.0.0.0 --iproute /etc/mysterium-node/nonpriv-ip --persist-tun --dev tun0 --management 127.0.0.1 38219 --management-client]
+2019-09-23T07:26:30.924494 [Info] [client-management] New connection started
+2019-09-23T07:26:30.9247026 [Debug] [client-management] Line received: >INFO:OpenVPN Management Interface Version 1 -- type 'help' for more info
+2019-09-23T07:26:30.9360188 [Debug] [client-management] Line received: SUCCESS: real-time state notification set to ON
+2019-09-23T07:26:30.9361059 [Debug] [client-management] Line received: 1569223590,CONNECTING,,,,,,
+2019-09-23T07:26:30.9361402 [Debug] [client-management] Line received: 1569223590,ASSIGN_IP,,10.8.0.1,,,,
+2019-09-23T07:26:30.9361717 [Debug] [client-management] Line received: 1569223590,CONNECTED,SUCCESS,10.8.0.1,,,,
+2019-09-23T07:26:30.9382399 [Debug] [client-management] Line received: END
+2019-09-23T07:26:30.9398577 [Info] [services/openvpn/service] OpenVPN service started successfully
+2019-09-23T07:26:30.9398938 [Info] [services/openvpn/service] starting DNS on: 10.8.0.1:53
+2019-09-23T07:26:30.9399151 [Info] [services/openvpn/service] OpenVPN server waiting
+2019-09-23T07:26:30.9458843 [Debug] [client-management] Line received: SUCCESS: bytecount interval changed

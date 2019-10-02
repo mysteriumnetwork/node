@@ -36,8 +36,16 @@ import (
 )
 
 // InvoiceFactoryCreator returns a payment engine factory
-func InvoiceFactoryCreator(dialog communication.Dialog, balanceSendPeriod, promiseTimeout time.Duration) func() (session.PaymentEngine, error) {
-	return func() (session.PaymentEngine, error) {
+func InvoiceFactoryCreator(
+	dialog communication.Dialog,
+	balanceSendPeriod, promiseTimeout time.Duration,
+	invoiceStorage providerInvoiceStorage,
+	paymentInfo dto.PaymentPerTime,
+	accountantCaller accountantCaller,
+	accountantPromiseStorage accountantPromiseStorage,
+	accountantID identity.Identity,
+) func(identity.Identity) (session.PaymentEngine, error) {
+	return func(providerID identity.Identity) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
 		listener := NewExchangeListener(exchangeChan)
 		invoiceSender := NewInvoiceSender(dialog)
@@ -45,13 +53,28 @@ func InvoiceFactoryCreator(dialog communication.Dialog, balanceSendPeriod, promi
 		if err != nil {
 			return nil, err
 		}
-		paymentEngine := NewInvoiceTracker(dialog.PeerID(), invoiceSender, balanceSendPeriod, exchangeChan, promiseTimeout)
+		timeTracker := session.NewTracker(time.Now)
+		deps := InvoiceTrackerDeps{
+			Peer:                       dialog.PeerID(),
+			PeerInvoiceSender:          invoiceSender,
+			InvoiceStorage:             invoiceStorage,
+			TimeTracker:                &timeTracker,
+			ChargePeriod:               balanceSendPeriod,
+			ExchangeMessageChan:        exchangeChan,
+			ExchangeMessageWaitTimeout: promiseTimeout,
+			PaymentInfo:                paymentInfo,
+			ProviderID:                 providerID,
+			AccountantCaller:           accountantCaller,
+			AccountantPromiseStorage:   accountantPromiseStorage,
+			AccountantID:               accountantID,
+		}
+		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
 	}
 }
 
 // BackwardsCompatibleExchangeFactoryFunc returns a backwards compatible version of the exchange factory
-func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options node.Options, signer identity.SignerFactory) func(paymentInfo *promise.PaymentInfo,
+func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options node.Options, signer identity.SignerFactory, invoiceStorage consumerInvoiceStorage, totalStorage consumerTotalsStorage) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 	return func(paymentInfo *promise.PaymentInfo,
@@ -79,13 +102,27 @@ func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options
 		if useNewPayments {
 			log.Info().Msg("Using new payments")
 			invoices := make(chan crypto.Invoice)
-			sender := NewExchangeSender(dialog)
 			listener := NewInvoiceListener(invoices)
 			err := dialog.Receive(listener.GetConsumer())
 			if err != nil {
 				return nil, err
 			}
-			payments = NewExchangeMessageTracker(invoices, sender, keystore, consumer)
+			timeTracker := session.NewTracker(time.Now)
+			deps := ExchangeMessageTrackerDeps{
+				InvoiceChan:               invoices,
+				PeerExchangeMessageSender: NewExchangeSender(dialog),
+				ConsumerInvoiceStorage:    invoiceStorage,
+				ConsumerTotalsStorage:     totalStorage,
+				TimeTracker:               &timeTracker,
+				Ks:                        keystore,
+				Identity:                  consumer,
+				Peer:                      dialog.PeerID(),
+				PaymentInfo: dto.PaymentPerTime{
+					Price:    money.NewMoney(1, money.CurrencyMyst),
+					Duration: 1 * time.Minute,
+				},
+			}
+			payments = NewExchangeMessageTracker(deps)
 		} else {
 			log.Info().Msg("Using old payments")
 			messageChan := make(chan balance.Message, 1)

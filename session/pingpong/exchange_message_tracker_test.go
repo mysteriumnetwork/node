@@ -24,7 +24,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -55,12 +59,25 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 	}
 
 	invoiceChan := make(chan crypto.Invoice)
-	exchangeMessageTracker := NewExchangeMessageTracker(
-		invoiceChan,
-		mockSender,
-		ks,
-		identity.FromAddress(acc.Address.Hex()),
-	)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewConsumerInvoiceStorage(NewInvoiceStorage(bolt))
+	totalsStorage := NewConsumerTotalsStorage(bolt)
+	deps := ExchangeMessageTrackerDeps{
+		InvoiceChan:               invoiceChan,
+		PeerExchangeMessageSender: mockSender,
+		ConsumerInvoiceStorage:    invoiceStorage,
+		ConsumerTotalsStorage:     totalsStorage,
+		TimeTracker:               &tracker,
+		Ks:                        ks,
+		Identity:                  identity.FromAddress(acc.Address.Hex()),
+		Peer:                      identity.FromAddress("some peer"),
+		PaymentInfo:               dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+	}
+	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 
 	go func() {
 		time.Sleep(time.Nanosecond * 10)
@@ -88,31 +105,53 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 	}
 
 	invoiceChan := make(chan crypto.Invoice)
-	exchangeMessageTracker := NewExchangeMessageTracker(
-		invoiceChan,
-		mockSender,
-		ks,
-		identity.FromAddress(acc.Address.Hex()),
-	)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewConsumerInvoiceStorage(NewInvoiceStorage(bolt))
+	totalsStorage := NewConsumerTotalsStorage(bolt)
+	deps := ExchangeMessageTrackerDeps{
+		InvoiceChan:               invoiceChan,
+		PeerExchangeMessageSender: mockSender,
+		ConsumerInvoiceStorage:    invoiceStorage,
+		ConsumerTotalsStorage:     totalsStorage,
+		TimeTracker:               &tracker,
+		Ks:                        ks,
+		Identity:                  identity.FromAddress(acc.Address.Hex()),
+		Peer:                      identity.FromAddress("some peer"),
+		PaymentInfo:               dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+	}
+	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 
 	mockInvoice := crypto.Invoice{
 		AgreementID:    1,
-		AgreementTotal: 1,
-		Fee:            1,
+		AgreementTotal: 0,
+		Fee:            0,
 		Hashlock:       "lock",
-		Provider:       "provider",
+		Provider:       deps.Peer.Address,
 	}
 
+	testDone := make(chan struct{}, 0)
+
 	defer exchangeMessageTracker.Stop()
-	go exchangeMessageTracker.Start()
+	go func() {
+		err := exchangeMessageTracker.Start()
+		assert.Nil(t, err)
+		testDone <- struct{}{}
+	}()
 
 	invoiceChan <- mockInvoice
 
 	exchangeMessage := <-mockSender.chanToWriteTo
+	exchangeMessageTracker.Stop()
 	addr, err := exchangeMessage.RecoverConsumerIdentity()
 	assert.Nil(t, err)
 
 	assert.Equal(t, acc.Address.Hex(), addr.Hex())
+
+	<-testDone
 }
 
 func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
@@ -129,13 +168,25 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 	}
 
 	invoiceChan := make(chan crypto.Invoice)
-	exchangeMessageTracker := NewExchangeMessageTracker(
-		invoiceChan,
-		mockSender,
-		ks,
-		identity.FromAddress(acc.Address.Hex()),
-	)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
 
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewConsumerInvoiceStorage(NewInvoiceStorage(bolt))
+	totalsStorage := NewConsumerTotalsStorage(bolt)
+	deps := ExchangeMessageTrackerDeps{
+		InvoiceChan:               invoiceChan,
+		PeerExchangeMessageSender: mockSender,
+		ConsumerInvoiceStorage:    invoiceStorage,
+		ConsumerTotalsStorage:     totalsStorage,
+		TimeTracker:               &tracker,
+		Ks:                        ks,
+		Identity:                  identity.FromAddress(acc.Address.Hex()),
+		Peer:                      identity.FromAddress("some peer"),
+		PaymentInfo:               dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+	}
+	exchangeMessageTracker := NewExchangeMessageTracker(deps)
 	defer exchangeMessageTracker.Stop()
 	errChan := make(chan error)
 	go func() { errChan <- exchangeMessageTracker.Start() }()

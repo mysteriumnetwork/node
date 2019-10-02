@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"crypto/rand"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -25,14 +26,35 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
+// ErrConsumerPromiseValidationFailed represents an error where consumer tries to cheat us with incorrect promises
+var ErrConsumerPromiseValidationFailed = errors.New("consumer failed to issue promise for the correct amount")
+
 // PeerInvoiceSender allows to send invoices
 type PeerInvoiceSender interface {
 	Send(crypto.Invoice) error
+}
+
+type providerInvoiceStorage interface {
+	Get(consumerIdentity identity.Identity) (crypto.Invoice, error)
+	Store(consumerIdentity identity.Identity, invoice crypto.Invoice) error
+	GetNewAgreementID() (uint64, error)
+	StoreR(agreementID uint64, r string) error
+}
+
+type accountantPromiseStorage interface {
+	Store(accountantID identity.Identity, promise crypto.Promise) error
+	Get(accountantID identity.Identity) (crypto.Promise, error)
+}
+
+type accountantCaller interface {
+	RequestPromise(em crypto.ExchangeMessage) (crypto.Promise, error)
+	RevealR(r string, provider string, agreementID uint64) error
 }
 
 // ErrExchangeWaitTimeout indicates that we did not get an exchange message in time
@@ -51,26 +73,55 @@ type InvoiceTracker struct {
 	exchangeMessageChan             chan crypto.ExchangeMessage
 	chargePeriod                    time.Duration
 	exchangeMessageWaitTimeout      time.Duration
+	accountantFailureCount          uint64
 	notReceivedExchangeMessageCount uint64
 	maxNotReceivedExchangeMessages  uint64
 	once                            sync.Once
+	invoiceStorage                  providerInvoiceStorage
+	accountantPromiseStorage        accountantPromiseStorage
+	timeTracker                     timeTracker
+	paymentInfo                     dto.PaymentPerTime
+	providerID                      identity.Identity
+	accountantID                    identity.Identity
+	lastInvoice                     lastInvoice
+	lastExchangeMessage             crypto.ExchangeMessage
+	accountantCaller                accountantCaller
+}
+
+// InvoiceTrackerDeps contains all the deps needed for invoice tracker
+type InvoiceTrackerDeps struct {
+	Peer                       identity.Identity
+	PeerInvoiceSender          PeerInvoiceSender
+	InvoiceStorage             providerInvoiceStorage
+	TimeTracker                timeTracker
+	ChargePeriod               time.Duration
+	ExchangeMessageChan        chan crypto.ExchangeMessage
+	ExchangeMessageWaitTimeout time.Duration
+	PaymentInfo                dto.PaymentPerTime
+	ProviderID                 identity.Identity
+	AccountantID               identity.Identity
+	AccountantCaller           accountantCaller
+	AccountantPromiseStorage   accountantPromiseStorage
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker
 func NewInvoiceTracker(
-	peer identity.Identity,
-	peerInvoiceSender PeerInvoiceSender,
-	chargePeriod time.Duration,
-	exchangeMessageChan chan crypto.ExchangeMessage,
-	exchangeMessageWaitTimeout time.Duration) *InvoiceTracker {
+	itd InvoiceTrackerDeps) *InvoiceTracker {
 	return &InvoiceTracker{
-		peer:                           peer,
+		peer:                           itd.Peer,
 		stop:                           make(chan struct{}),
-		peerInvoiceSender:              peerInvoiceSender,
-		exchangeMessageChan:            exchangeMessageChan,
-		exchangeMessageWaitTimeout:     exchangeMessageWaitTimeout,
-		chargePeriod:                   chargePeriod,
-		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(chargePeriodLeeway, chargePeriod),
+		peerInvoiceSender:              itd.PeerInvoiceSender,
+		exchangeMessageChan:            itd.ExchangeMessageChan,
+		exchangeMessageWaitTimeout:     itd.ExchangeMessageWaitTimeout,
+		chargePeriod:                   itd.ChargePeriod,
+		invoiceStorage:                 itd.InvoiceStorage,
+		timeTracker:                    itd.TimeTracker,
+		paymentInfo:                    itd.PaymentInfo,
+		providerID:                     itd.ProviderID,
+		accountantCaller:               itd.AccountantCaller,
+		accountantPromiseStorage:       itd.AccountantPromiseStorage,
+		accountantID:                   itd.AccountantID,
+		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(chargePeriodLeeway, itd.ChargePeriod),
 	}
 }
 
@@ -78,9 +129,33 @@ func calculateMaxNotReceivedExchangeMessageCount(chargeLeeway, chargePeriod time
 	return uint64(math.Round(float64(chargeLeeway) / float64(chargePeriod)))
 }
 
+func (it *InvoiceTracker) generateInitialInvoice() error {
+	agreementID, err := it.invoiceStorage.GetNewAgreementID()
+	if err != nil {
+		return errors.Wrap(err, "could not get new agreement id")
+	}
+	// TODO: set fee
+	r := make([]byte, 64)
+	rand.Read(r)
+	invoice := crypto.CreateInvoice(agreementID, it.paymentInfo.GetPrice().Amount, 0, r)
+	invoice.Provider = it.providerID.Address
+	it.lastInvoice = lastInvoice{
+		invoice: invoice,
+		r:       r,
+	}
+	return errors.Wrap(it.invoiceStorage.StoreR(agreementID, common.Bytes2Hex(r)), "could  not store r")
+}
+
 // Start stars the invoice tracker
 func (it *InvoiceTracker) Start() error {
 	log.Debug().Msg("Starting...")
+	it.timeTracker.StartTracking()
+
+	err := it.generateInitialInvoice()
+	if err != nil {
+		return err
+	}
+
 	// give the consumer a second to start up his payments before sending the first request
 	firstSend := time.After(time.Second)
 	for {
@@ -114,9 +189,20 @@ func (it *InvoiceTracker) getNotReceivedExchangeMessageCount() uint64 {
 }
 
 func (it *InvoiceTracker) sendInvoiceExpectExchangeMessage() error {
-	err := it.sendInvoice()
+	// TODO: this should be calculated according to the passed in payment period
+	shouldBe := uint64(math.Trunc(it.timeTracker.Elapsed().Minutes() * float64(it.paymentInfo.GetPrice().Amount) * 100000000))
+
+	// TODO: fill in the fee
+	invoice := crypto.CreateInvoice(it.lastInvoice.invoice.AgreementID, shouldBe, 0, it.lastInvoice.r)
+	invoice.Provider = it.providerID.Address
+	err := it.peerInvoiceSender.Send(invoice)
 	if err != nil {
 		return err
+	}
+
+	err = it.invoiceStorage.Store(it.peer, invoice)
+	if err != nil {
+		return errors.Wrap(err, "could not store invoice")
 	}
 
 	err = it.receiveExchangeMessageOrTimeout()
@@ -144,11 +230,16 @@ func (it *InvoiceTracker) handleExchangeMessageReceiveError(err error) error {
 	return err
 }
 
-func (it *InvoiceTracker) sendInvoice() error {
-	// TODO: a ton of actions should go here
+func (it *InvoiceTracker) incrementAccountantFailureCount() {
+	atomic.AddUint64(&it.accountantFailureCount, 1)
+}
 
-	// TODO: fill the fields
-	return it.peerInvoiceSender.Send(crypto.Invoice{AgreementID: 1234})
+func (it *InvoiceTracker) resetAccountantFailureCount() {
+	atomic.SwapUint64(&it.accountantFailureCount, 0)
+}
+
+func (it *InvoiceTracker) getAccountantFailureCount() uint64 {
+	return atomic.LoadUint64(&it.accountantFailureCount)
 }
 
 func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
@@ -157,6 +248,23 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 		if res := pm.ValidateExchangeMessage(common.HexToAddress(it.peer.Address)); !res {
 			return ErrExchangeValidationFailed
 		}
+		if pm.Promise.Amount < it.lastExchangeMessage.AgreementTotal {
+			return ErrConsumerPromiseValidationFailed
+		}
+		promise, err := it.accountantCaller.RequestPromise(pm)
+		if err != nil {
+			it.incrementAccountantFailureCount()
+			if it.getAccountantFailureCount() > 3 {
+				return errors.Wrap(err, "could not call accountant")
+			}
+			return nil
+		}
+		it.resetAccountantFailureCount()
+		err = it.accountantPromiseStorage.Store(it.accountantID, promise)
+		if err != nil {
+			return errors.Wrap(err, "could not store accountant promise")
+		}
+		log.Debug("accountant promise stored")
 	case <-time.After(it.exchangeMessageWaitTimeout):
 		return ErrExchangeWaitTimeout
 	case <-it.stop:

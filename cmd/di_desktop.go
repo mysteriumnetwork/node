@@ -238,8 +238,12 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 	}
 	newDialogHandler := func(proposal market.ServiceProposal, configProvider session.ConfigNegotiator, serviceID string) (communication.DialogHandler, error) {
 		sessionManagerFactory := newSessionManagerFactory(
+			nodeOptions,
 			proposal,
 			di.ServiceSessionStorage,
+			di.ProviderInvoiceStorage,
+			di.ConsumerInvoiceStorage,
+			di.AccountantPromiseStorage,
 			di.PromiseStorage,
 			di.NATPinger.PingTarget,
 			di.NATTracker,

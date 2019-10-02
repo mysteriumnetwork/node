@@ -18,7 +18,13 @@
 package pingpong
 
 import (
+	"fmt"
+	"math"
+	"strings"
 	"sync"
+	"time"
+
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -28,9 +34,33 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// ErrWrongProvider represents an issue where the wrong provider is supplied
+var ErrWrongProvider = errors.New("wrong provider supplied")
+
+// ErrFeeChanged represents an issue where the provider switches the fee mid session
+var ErrFeeChanged = errors.New("wrong fee provided")
+
+// ErrProviderOvercharge represents an issue where the provider is trying to overcharge us
+var ErrProviderOvercharge = errors.New("provider is overcharging")
+
 // PeerExchangeMessageSender allows for sending of exchange messages
 type PeerExchangeMessageSender interface {
 	Send(crypto.ExchangeMessage) error
+}
+
+type consumerInvoiceStorage interface {
+	Get(providerIdentity identity.Identity) (crypto.Invoice, error)
+	Store(providerIdentity identity.Identity, invoice crypto.Invoice) error
+}
+
+type consumerTotalsStorage interface {
+	Store(providerAddress string, amount uint64) error
+	Get(providerAddress string) (uint64, error)
+}
+
+type timeTracker interface {
+	StartTracking()
+	Elapsed() time.Duration
 }
 
 // ExchangeMessageTracker keeps track of exchange messages and sends them to the provider
@@ -41,16 +71,45 @@ type ExchangeMessageTracker struct {
 	once                      sync.Once
 	keystore                  *keystore.KeyStore
 	identity                  identity.Identity
+	peer                      identity.Identity
+
+	consumerInvoiceStorage consumerInvoiceStorage
+	consumerTotalsStorage  consumerTotalsStorage
+	timeTracker            timeTracker
+	paymentInfo            dto.PaymentPerTime
+	lastInvoice            lastInvoice
+}
+
+type lastInvoice struct {
+	invoice crypto.Invoice
+	r       []byte
+}
+
+// ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker
+type ExchangeMessageTrackerDeps struct {
+	InvoiceChan               chan crypto.Invoice
+	PeerExchangeMessageSender PeerExchangeMessageSender
+	ConsumerInvoiceStorage    consumerInvoiceStorage
+	ConsumerTotalsStorage     consumerTotalsStorage
+	TimeTracker               timeTracker
+	Ks                        *keystore.KeyStore
+	Identity, Peer            identity.Identity
+	PaymentInfo               dto.PaymentPerTime
 }
 
 // NewExchangeMessageTracker returns a new instance of exchange message tracker
-func NewExchangeMessageTracker(invoiceChan chan crypto.Invoice, peerExchangeMessageSender PeerExchangeMessageSender, ks *keystore.KeyStore, identity identity.Identity) *ExchangeMessageTracker {
+func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessageTracker {
 	return &ExchangeMessageTracker{
 		stop:                      make(chan struct{}),
-		peerExchangeMessageSender: peerExchangeMessageSender,
-		invoiceChan:               invoiceChan,
-		keystore:                  ks,
-		identity:                  identity,
+		peerExchangeMessageSender: emtd.PeerExchangeMessageSender,
+		invoiceChan:               emtd.InvoiceChan,
+		keystore:                  emtd.Ks,
+		consumerInvoiceStorage:    emtd.ConsumerInvoiceStorage,
+		consumerTotalsStorage:     emtd.ConsumerTotalsStorage,
+		identity:                  emtd.Identity,
+		timeTracker:               emtd.TimeTracker,
+		peer:                      emtd.Peer,
+		paymentInfo:               emtd.PaymentInfo,
 	}
 }
 
@@ -60,22 +119,113 @@ var ErrInvoiceMissmatch = errors.New("invoice mismatch")
 // Start starts the message exchange tracker. Blocks.
 func (emt *ExchangeMessageTracker) Start() error {
 	log.Debug().Msg("Starting...")
+
+	emt.timeTracker.StartTracking()
 	for {
 		select {
 		case <-emt.stop:
 			return nil
 		case invoice := <-emt.invoiceChan:
 			log.Debug().Msgf("Invoice received: %v", invoice)
-			err := emt.issueExchangeMessage(invoice)
+			err := emt.isInvoiceOK(invoice)
+			if err != nil {
+				return errors.Wrap(err, "invoice not valid")
+			}
+
+			err = emt.issueExchangeMessage(invoice)
 			if err != nil {
 				return err
 			}
+
+			err = emt.consumerInvoiceStorage.Store(emt.peer, invoice)
+			if err != nil {
+				return errors.Wrap(err, "could not store invoice")
+			}
+
+			emt.memorizeLastInvoice(invoice)
 		}
 	}
 }
 
+const grandTotalKey = "consumer_grand_total"
+
+func (emt *ExchangeMessageTracker) memorizeLastInvoice(invoice crypto.Invoice) {
+	emt.lastInvoice = lastInvoice{
+		invoice: invoice,
+	}
+}
+
+func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
+	res, err := emt.consumerTotalsStorage.Get(grandTotalKey)
+	if err != nil {
+		if err == ErrNotFound {
+			log.Debug("no previous invoice grand total, assuming zero")
+			return 0, nil
+		}
+	}
+	return res, errors.Wrap(err, "could not get previous grand total")
+}
+
+func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) error {
+	res, err := emt.consumerTotalsStorage.Get(grandTotalKey)
+	if err != nil {
+		if err == ErrNotFound {
+			log.Debug("no previous invoice grand total, assuming zero")
+		} else {
+			return errors.Wrap(err, "could not get previous grand total")
+		}
+	}
+	return emt.consumerTotalsStorage.Store(grandTotalKey, res+amount)
+}
+
+func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
+	if strings.ToLower(invoice.Provider) != strings.ToLower(emt.peer.Address) {
+		return ErrWrongProvider
+	}
+
+	// TODO: this should be changed once we add in the fee
+	if invoice.Fee != 0 {
+		return ErrFeeChanged
+	}
+
+	// TODO: this should be calculated according to the passed in payment period
+	shouldBe := uint64(math.Trunc(emt.timeTracker.Elapsed().Minutes() * float64(emt.paymentInfo.GetPrice().Amount)))
+	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
+	if invoice.AgreementTotal > upperBound {
+		log.Debug("provider trying to overcharge")
+		return ErrProviderOvercharge
+	}
+
+	return nil
+}
+
 func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) error {
-	msg, err := crypto.CreateExchangeMessage(invoice, 10, "", emt.keystore, common.HexToAddress(emt.identity.Address))
+	previous, err := emt.consumerInvoiceStorage.Get(emt.peer)
+	if err != nil {
+		if err == ErrNotFound {
+			// do nothing, really
+			log.Debug("no previous invoice found, assuming zero")
+		} else {
+			return errors.Wrap(err, fmt.Sprintf("could not get previous total for peer %q", invoice.Provider))
+		}
+	}
+
+	diff := invoice.AgreementTotal - previous.AgreementTotal
+	totalPromised, err := emt.getGrandTotalPromised()
+	if err != nil {
+		return err
+	}
+
+	// This is a new agreement, we need to take in the agreement total and just add it to total promised
+	if previous.AgreementID != invoice.AgreementID {
+		diff = invoice.AgreementTotal
+	}
+
+	amountToPromise := totalPromised + diff
+
+	log.Debugf("loaded previous state: already promised: %v", totalPromised)
+	log.Debugf("incrementing promised amount by %v", diff)
+	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, "", emt.keystore, common.HexToAddress(emt.identity.Address))
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}
@@ -85,7 +235,15 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
 
-	return nil
+	log.Debug("em sent")
+
+	// TODO: we'd probably want to check if we have enough balance here
+	err = emt.incrementGrandTotalPromised(diff)
+	if err != nil {
+		return errors.Wrap(err, "could not increment grand total")
+	}
+
+	return emt.consumerTotalsStorage.Store(emt.peer.Address, invoice.AgreementTotal)
 }
 
 // Stop stops the message tracker

@@ -20,11 +20,16 @@ package pingpong
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/mysteriumnetwork/node/core/storage/boltdb"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/money"
+	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
+	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,6 +46,16 @@ func (mpis *MockPeerInvoiceSender) Send(invoice crypto.Invoice) error {
 	return mpis.mockError
 }
 
+type mockAccountantCaller struct{}
+
+func (mac *mockAccountantCaller) RequestPromise(em crypto.ExchangeMessage) (crypto.Promise, error) {
+	return crypto.Promise{}, nil
+}
+
+func (mac *mockAccountantCaller) RevealR(r string, provider string, agreementID uint64) error {
+	return nil
+}
+
 func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	dir, err := ioutil.TempDir("", "invoice_tracker_test")
 	assert.Nil(t, err)
@@ -55,13 +70,28 @@ func Test_InvoiceTracker_Start_Stop(t *testing.T) {
 	}
 
 	exchangeMessageChan := make(chan crypto.ExchangeMessage)
-	invoiceTracker := NewInvoiceTracker(
-		identity.FromAddress(acc.Address.Hex()),
-		mockSender,
-		time.Nanosecond,
-		exchangeMessageChan,
-		time.Second,
-	)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
+	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
+	deps := InvoiceTrackerDeps{
+		Peer:                       identity.FromAddress("some peer"),
+		PeerInvoiceSender:          mockSender,
+		InvoiceStorage:             invoiceStorage,
+		TimeTracker:                &tracker,
+		ChargePeriod:               time.Nanosecond,
+		ExchangeMessageChan:        exchangeMessageChan,
+		ExchangeMessageWaitTimeout: time.Second,
+		PaymentInfo:                dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantCaller:           &mockAccountantCaller{},
+		AccountantPromiseStorage:   accountantPromiseStorage,
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
 
 	go func() {
 		time.Sleep(time.Nanosecond * 10)
@@ -86,13 +116,28 @@ func Test_InvoiceTracker_BubblesErrors(t *testing.T) {
 	}
 
 	exchangeMessageChan := make(chan crypto.ExchangeMessage)
-	invoiceTracker := NewInvoiceTracker(
-		identity.FromAddress(acc.Address.Hex()),
-		mockSender,
-		time.Nanosecond,
-		exchangeMessageChan,
-		time.Nanosecond*10,
-	)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
+
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
+	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
+	deps := InvoiceTrackerDeps{
+		Peer:                       identity.FromAddress("some peer"),
+		PeerInvoiceSender:          mockSender,
+		InvoiceStorage:             invoiceStorage,
+		TimeTracker:                &tracker,
+		ChargePeriod:               time.Nanosecond,
+		ExchangeMessageChan:        exchangeMessageChan,
+		ExchangeMessageWaitTimeout: time.Second,
+		PaymentInfo:                dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantCaller:           &mockAccountantCaller{},
+		AccountantPromiseStorage:   accountantPromiseStorage,
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
 
 	defer invoiceTracker.Stop()
 
@@ -119,21 +164,38 @@ func Test_InvoiceTracker_SendsInvoice(t *testing.T) {
 	}
 
 	exchangeMessageChan := make(chan crypto.ExchangeMessage)
-	invoiceTracker := NewInvoiceTracker(
-		identity.FromAddress(acc.Address.Hex()),
-		mockSender,
-		time.Nanosecond,
-		exchangeMessageChan,
-		time.Second,
-	)
+	bolt, err := boltdb.NewStorage(dir)
+	assert.Nil(t, err)
+	defer bolt.Close()
 
+	tracker := session.NewTracker(time.Now)
+	invoiceStorage := NewProviderInvoiceStorage(NewInvoiceStorage(bolt))
+	accountantPromiseStorage := NewAccountantPromiseStorage(bolt)
+	deps := InvoiceTrackerDeps{
+		Peer:                       identity.FromAddress("some peer"),
+		PeerInvoiceSender:          mockSender,
+		InvoiceStorage:             invoiceStorage,
+		TimeTracker:                &tracker,
+		ChargePeriod:               time.Nanosecond,
+		ExchangeMessageChan:        exchangeMessageChan,
+		ExchangeMessageWaitTimeout: time.Second,
+		PaymentInfo:                dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
+		ProviderID:                 identity.FromAddress(acc.Address.Hex()),
+		AccountantID:               identity.FromAddress(acc.Address.Hex()),
+		AccountantCaller:           &mockAccountantCaller{},
+		AccountantPromiseStorage:   accountantPromiseStorage,
+	}
+	invoiceTracker := NewInvoiceTracker(deps)
 	defer invoiceTracker.Stop()
 
 	errChan := make(chan error)
 	go func() { errChan <- invoiceTracker.Start() }()
 
 	invoice := <-mockSender.chanToWriteTo
-	assert.Equal(t, crypto.Invoice{AgreementID: 1234}, invoice)
+	assert.Equal(t, uint64(1), invoice.AgreementID)
+	assert.True(t, invoice.AgreementTotal > 0)
+	assert.Len(t, invoice.Hashlock, 64)
+	assert.Equal(t, strings.ToLower(acc.Address.Hex()), strings.ToLower(invoice.Provider))
 }
 
 func Test_calculateMaxNotReceivedExchangeMessageCount(t *testing.T) {
