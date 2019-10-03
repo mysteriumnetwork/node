@@ -77,12 +77,6 @@ type ExchangeMessageTracker struct {
 	consumerTotalsStorage  consumerTotalsStorage
 	timeTracker            timeTracker
 	paymentInfo            dto.PaymentPerTime
-	lastInvoice            lastInvoice
-}
-
-type lastInvoice struct {
-	invoice crypto.Invoice
-	r       []byte
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker
@@ -142,18 +136,11 @@ func (emt *ExchangeMessageTracker) Start() error {
 				return errors.Wrap(err, "could not store invoice")
 			}
 
-			emt.memorizeLastInvoice(invoice)
 		}
 	}
 }
 
 const grandTotalKey = "consumer_grand_total"
-
-func (emt *ExchangeMessageTracker) memorizeLastInvoice(invoice crypto.Invoice) {
-	emt.lastInvoice = lastInvoice{
-		invoice: invoice,
-	}
-}
 
 func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
 	res, err := emt.consumerTotalsStorage.Get(grandTotalKey)
@@ -183,7 +170,7 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrWrongProvider
 	}
 
-	// TODO: this should be changed once we add in the fee
+	// TODO: this should be changed once we add in the fee support
 	if invoice.Fee != 0 {
 		return ErrFeeChanged
 	}
@@ -199,21 +186,21 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 	return nil
 }
 
-func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) error {
+func (emt *ExchangeMessageTracker) calculateAmountToPromise(invoice crypto.Invoice) (toPromise uint64, diff uint64, err error) {
 	previous, err := emt.consumerInvoiceStorage.Get(emt.peer)
 	if err != nil {
 		if err == ErrNotFound {
 			// do nothing, really
 			log.Debug("no previous invoice found, assuming zero")
 		} else {
-			return errors.Wrap(err, fmt.Sprintf("could not get previous total for peer %q", invoice.Provider))
+			return 0, 0, errors.Wrap(err, fmt.Sprintf("could not get previous total for peer %q", invoice.Provider))
 		}
 	}
 
-	diff := invoice.AgreementTotal - previous.AgreementTotal
+	diff = invoice.AgreementTotal - previous.AgreementTotal
 	totalPromised, err := emt.getGrandTotalPromised()
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 
 	// This is a new agreement, we need to take in the agreement total and just add it to total promised
@@ -221,21 +208,27 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 		diff = invoice.AgreementTotal
 	}
 
-	amountToPromise := totalPromised + diff
-
 	log.Debugf("loaded previous state: already promised: %v", totalPromised)
 	log.Debugf("incrementing promised amount by %v", diff)
+	amountToPromise := totalPromised + diff
+	return amountToPromise, diff, nil
+}
+
+func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) error {
+	amountToPromise, diff, err := emt.calculateAmountToPromise(invoice)
+	if err != nil {
+		return errors.Wrap(err, "could not calculate amount to promise")
+	}
+
 	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, "", emt.keystore, common.HexToAddress(emt.identity.Address))
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}
-	log.Debug().Msgf("Sending message %v", *msg)
+
 	err = emt.peerExchangeMessageSender.Send(*msg)
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to send exchange message")
 	}
-
-	log.Debug("em sent")
 
 	// TODO: we'd probably want to check if we have enough balance here
 	err = emt.incrementGrandTotalPromised(diff)

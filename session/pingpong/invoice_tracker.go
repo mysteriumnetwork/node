@@ -65,6 +65,11 @@ var ErrExchangeValidationFailed = errors.New("exchange validation failed")
 
 const chargePeriodLeeway = time.Hour * 2
 
+type lastInvoice struct {
+	invoice crypto.Invoice
+	r       []byte
+}
+
 // InvoiceTracker keeps tab of invoices and sends them to the consumer
 type InvoiceTracker struct {
 	peer                            identity.Identity

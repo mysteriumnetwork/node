@@ -137,4 +137,23 @@ func TestProviderInvoiceStorage(t *testing.T) {
 	invoice, err = providerStorage.Get(identityTwo)
 	assert.NoError(t, err)
 	assert.EqualValues(t, invoiceOne, invoice)
+
+	// test R storage
+	var agreementID1 uint64 = 1
+	r1 := "my r"
+	err = providerStorage.StoreR(agreementID1, r1)
+	assert.NoError(t, err)
+
+	var agreementID2 uint64 = 1222
+	r2 := "my other r"
+	err = providerStorage.StoreR(agreementID2, r2)
+	assert.NoError(t, err)
+
+	r, err := providerStorage.GetR(agreementID2)
+	assert.NoError(t, err)
+	assert.Equal(t, r2, r)
+
+	r, err = providerStorage.GetR(agreementID1)
+	assert.NoError(t, err)
+	assert.Equal(t, r1, r)
 }
