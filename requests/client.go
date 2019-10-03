@@ -65,7 +65,7 @@ func (c *client) DoRequest(req *http.Request) error {
 	}
 	defer response.Body.Close()
 
-	return parseResponseError(response)
+	return ParseResponseError(response)
 }
 
 func (c *client) DoRequestAndParseResponse(req *http.Request, resp interface{}) error {
@@ -77,15 +77,15 @@ func (c *client) DoRequestAndParseResponse(req *http.Request, resp interface{}) 
 
 	httptrace.TraceRequestResponse(req, response)
 
-	err = parseResponseError(response)
+	err = ParseResponseError(response)
 	if err != nil {
 		return err
 	}
 
-	return parseResponseJSON(response, &resp)
+	return ParseResponseJSON(response, &resp)
 }
 
-func parseResponseJSON(response *http.Response, dto interface{}) error {
+func ParseResponseJSON(response *http.Response, dto interface{}) error {
 	responseJSON, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func parseResponseJSON(response *http.Response, dto interface{}) error {
 	return nil
 }
 
-func parseResponseError(response *http.Response) error {
+func ParseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return errors.Errorf("server response invalid: %s (%s)", response.Status, response.Request.URL)
 	}

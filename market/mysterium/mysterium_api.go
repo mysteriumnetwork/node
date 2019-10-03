@@ -18,7 +18,9 @@
 package mysterium
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -38,13 +40,14 @@ const (
 type MysteriumAPI struct {
 	http                requests.HTTPTransport
 	discoveryAPIAddress string
+	latestProposalsEtag string
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
 func NewClient(srcIP, discoveryAPIAddress string) *MysteriumAPI {
 	return &MysteriumAPI{
-		requests.NewHTTPClient(srcIP, 20*time.Second),
-		discoveryAPIAddress,
+		http:                requests.NewHTTPClient(srcIP, 20*time.Second),
+		discoveryAPIAddress: discoveryAPIAddress,
 	}
 }
 
@@ -235,12 +238,28 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add("If-None-Match", mApi.latestProposalsEtag)
 
-	var proposalsResponse ProposalsResponse
-	err = mApi.http.DoRequestAndParseResponse(req, &proposalsResponse)
+	res, err := mApi.http.Do(req)
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusNotModified {
+		return nil, errors.New("node already contains newest proposals")
+	}
+
+	if err := requests.ParseResponseError(res); err != nil {
+		return nil, err
+	}
+
+	var proposalsResponse ProposalsResponse
+	if err := requests.ParseResponseJSON(res, &proposalsResponse); err != nil {
+		return nil, fmt.Errorf("cannot parse proposals response: %v", err)
+	}
+
+	mApi.latestProposalsEtag = res.Header.Get("ETag")
 	total := len(proposalsResponse.Proposals)
 	supported := supportedProposalsOnly(proposalsResponse.Proposals)
 	log.Trace(mysteriumAPILogPrefix, "Total proposals: ", total, " supported: ", len(supported))
