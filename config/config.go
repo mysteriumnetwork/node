@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/utils/jsonutil"
 	"github.com/pkg/errors"
@@ -30,12 +31,18 @@ import (
 
 var log = logconfig.NewLogger()
 
+// Topic returns event bus topic for the given config key to listen for its updates
+func Topic(configKey string) string {
+	return "config:" + configKey
+}
+
 // Config stores app configuration: default values + user configuration + CLI flags
 type Config struct {
 	userConfigLocation string
 	defaults           map[string]interface{}
 	user               map[string]interface{}
 	cli                map[string]interface{}
+	eventBus           eventbus.EventBus
 }
 
 // Current global configuration instance
@@ -57,6 +64,11 @@ func NewConfig() *Config {
 
 func (cfg *Config) userConfigLoaded() bool {
 	return cfg.userConfigLocation != ""
+}
+
+// EnableEventPublishing enables config event publishing to the event bus
+func (cfg *Config) EnableEventPublishing(eb eventbus.EventBus) {
+	cfg.eventBus = eb
 }
 
 // LoadUserConfig loads and remembers user config location
@@ -110,6 +122,9 @@ func (cfg *Config) SetDefault(key string, value interface{}) {
 
 // SetUser sets user configuration value for key
 func (cfg *Config) SetUser(key string, value interface{}) {
+	if cfg.eventBus != nil {
+		cfg.eventBus.Publish(Topic(key), value)
+	}
 	cfg.set(&cfg.user, key, value)
 }
 

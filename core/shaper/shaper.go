@@ -24,6 +24,7 @@ import (
 
 	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/node/config"
+	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/services/shared"
 	"github.com/pkg/errors"
@@ -43,14 +44,10 @@ func newNoopShaper() *noopShaper {
 	return &noopShaper{}
 }
 
-// TargetInterface noop
-func (noopShaper) TargetInterface(interfaceName string) {
-	_ = log.Errorf("target interface %s: noop", interfaceName)
-}
-
-// Apply noop
-func (noopShaper) Apply() error {
-	return errors.New("shaper is noop: apply will not take effect")
+// Start noop
+func (noopShaper) Start(interfaceName string) error {
+	log.Info("Noop shaper: nothing will happen to interface %s", interfaceName)
+	return nil
 }
 
 // cmd shell command to be executed with args
@@ -60,14 +57,18 @@ type cmd func(args ...string) error
 type wonderShaper struct {
 	runCmd          cmd
 	targetInterface string
+	eventBus        eventbus.EventBus
 }
 
-func newWonderShaper() (*wonderShaper, error) {
+func newWonderShaper(eventBus eventbus.EventBus) (*wonderShaper, error) {
 	path, err := healthcheck("wondershaper")
 	if err != nil {
 		return nil, errors.Wrap(err, "wondershaper healthcheck failed")
 	}
-	return &wonderShaper{runCmd: sh.RunCmd(path)}, nil
+	return &wonderShaper{
+		runCmd:   sh.RunCmd(path),
+		eventBus: eventBus,
+	}, nil
 }
 
 // healthcheck checks wondershaper status on the first network interface:
@@ -96,13 +97,18 @@ func healthcheck(cmd string) (path string, err error) {
 	return path, nil
 }
 
-// TargetInterface targets specific network interface
-func (s *wonderShaper) TargetInterface(interfaceName string) {
+// Start applies current shaping configuration for the specified interface
+// and then continuously ensures it by listening to configuration updates
+func (s *wonderShaper) Start(interfaceName string) error {
 	s.targetInterface = interfaceName
+	err := s.eventBus.SubscribeAsync(config.Topic(shared.ShaperEnabledFlag.Name), s.apply)
+	if err != nil {
+		return err
+	}
+	return s.apply()
 }
 
-// Apply applies current shaping rules
-func (s *wonderShaper) Apply() error {
+func (s *wonderShaper) apply() error {
 	enabled := config.Current.GetBool(shared.ShaperEnabledFlag.Name)
 	if enabled {
 		log.Info("Shaper enabled, limiting bandwidth")

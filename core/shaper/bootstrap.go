@@ -17,17 +17,18 @@
 
 package shaper
 
+import "github.com/mysteriumnetwork/node/eventbus"
+
 // Shaper shapes traffic on a network interface
 type Shaper interface {
-	// TargetInterface targets network interface for applying shaping configuration
-	TargetInterface(interfaceName string)
-	// Apply applies current shaping configuration to the target interface
-	Apply() error
+	// Start applies current shaping configuration for the specified interface
+	// and then continuously ensures it
+	Start(interfaceName string) error
 }
 
 // Bootstrap creates a shaper: either a wondershaper (linux-only, if binary exists), or a noop
-func Bootstrap() (shaper Shaper) {
-	shaper, err := newWonderShaper()
+func Bootstrap(eventBus eventbus.EventBus) (shaper Shaper) {
+	shaper, err := newWonderShaper(eventBus)
 	if err != nil {
 		log.Error("Could not create wonder shaper, using noop: ", err)
 		shaper = newNoopShaper()

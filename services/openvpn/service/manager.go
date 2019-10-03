@@ -151,10 +151,9 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 		}
 	}()
 
-	m.shaper.TargetInterface(m.vpnServer.DeviceName())
-	err = m.shaper.Apply()
+	err = m.shaper.Start(m.vpnServer.DeviceName())
 	if err != nil {
-		log.Error("Could not apply traffic shaper: ", err)
+		log.Error("Could not start traffic shaper: ", err)
 	}
 
 	log.Info("OpenVPN server waiting")
