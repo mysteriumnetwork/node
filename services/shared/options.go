@@ -28,6 +28,7 @@ import (
 // Options describes options shared among multiple services
 type Options struct {
 	AccessPolicies []string
+	ShaperEnabled  bool
 }
 
 var (
@@ -36,11 +37,19 @@ var (
 		Usage: "Comma separated list that determines the allowed identities on our service.",
 		Value: "",
 	}
+	// ShaperEnabledFlag reflects configuration setting of shaper being enabled
+	ShaperEnabledFlag = cli.BoolFlag{
+		Name:  "shaper.enabled",
+		Usage: "Limit service bandwidth",
+	}
 )
 
 // RegisterFlags registers shared service CLI flags
 func RegisterFlags(flags *[]cli.Flag) {
-	*flags = append(*flags, accessPoliciesFlag)
+	*flags = append(*flags,
+		accessPoliciesFlag,
+		ShaperEnabledFlag,
+	)
 }
 
 // Configure parses shared service CLI flags and registers values to the configuration
@@ -50,11 +59,13 @@ func Configure(ctx *cli.Context) {
 }
 
 func configureDefaults() {
-	config.Current.SetDefault("access-policy.list", "")
+	config.Current.SetDefault(accessPoliciesFlag.Name, "")
+	config.Current.SetDefault(ShaperEnabledFlag.Name, false)
 }
 
 func configureCLI(ctx *cli.Context) {
 	cliflags.SetString(config.Current, accessPoliciesFlag.Name, ctx)
+	cliflags.SetBool(config.Current, ShaperEnabledFlag.Name, ctx)
 }
 
 // ConfiguredOptions returns effective shared service options
@@ -68,5 +79,6 @@ func ConfiguredOptions() Options {
 	}
 	return Options{
 		AccessPolicies: policies,
+		ShaperEnabled:  config.Current.GetBool(ShaperEnabledFlag.Name),
 	}
 }
