@@ -29,6 +29,7 @@ import (
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/nat"
 	"github.com/mysteriumnetwork/node/nat/traversal"
@@ -55,6 +56,7 @@ func NewManager(nodeOptions node.Options,
 	natEventGetter NATEventGetter,
 	portPool port.ServicePortSupplier,
 	publisher eventPublisher,
+	shaper shaper.Shaper,
 ) *Manager {
 	clientMap := openvpn_session.NewClientMap(sessionMap)
 
@@ -89,6 +91,7 @@ func NewManager(nodeOptions node.Options,
 		mapPort:                        mapPort,
 		natEventGetter:                 natEventGetter,
 		ports:                          portPool,
+		shaper:                         shaper,
 	}
 }
 
