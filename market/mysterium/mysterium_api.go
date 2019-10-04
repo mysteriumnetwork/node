@@ -43,9 +43,10 @@ type MysteriumAPI struct {
 	http                requests.HTTPTransport
 	discoveryAPIAddress string
 
-	latestProposalsMux  sync.Mutex
-	latestProposalsEtag string
-	latestProposals     []market.ServiceProposal
+	latestProposalsEtagMux sync.RWMutex
+	latestProposalsEtag    string
+	latestProposalsMux     sync.RWMutex
+	latestProposals        []market.ServiceProposal
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
@@ -244,10 +245,7 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	if err != nil {
 		return nil, err
 	}
-
-	mApi.latestProposalsMux.Lock()
-	defer mApi.latestProposalsMux.Unlock()
-	req.Header.Add("If-None-Match", mApi.latestProposalsEtag)
+	req.Header.Add("If-None-Match", mApi.getLatestProposalsEtag())
 
 	res, err := mApi.http.Do(req)
 	if err != nil {
@@ -256,7 +254,7 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusNotModified {
-		return mApi.latestProposals, nil
+		return mApi.getLatestProposals(), nil
 	}
 
 	if err := requests.ParseResponseError(res); err != nil {
@@ -268,12 +266,37 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 		return nil, errors.Wrap(err, "cannot parse proposals response")
 	}
 
-	mApi.latestProposalsEtag = res.Header.Get("ETag")
+	mApi.setLatestProposalsEtag(res.Header.Get("ETag"))
+
 	total := len(proposalsResponse.Proposals)
 	supported := supportedProposalsOnly(proposalsResponse.Proposals)
-	mApi.latestProposals = supported
+	mApi.setLatestProposals(supported)
 	log.Trace(mysteriumAPILogPrefix, "Total proposals: ", total, " supported: ", len(supported))
 	return supported, nil
+}
+
+func (mApi *MysteriumAPI) getLatestProposalsEtag() string {
+	mApi.latestProposalsEtagMux.RLock()
+	defer mApi.latestProposalsEtagMux.RUnlock()
+	return mApi.latestProposalsEtag
+}
+
+func (mApi *MysteriumAPI) setLatestProposalsEtag(etag string) {
+	mApi.latestProposalsEtagMux.Lock()
+	defer mApi.latestProposalsEtagMux.Unlock()
+	mApi.latestProposalsEtag = etag
+}
+
+func (mApi *MysteriumAPI) getLatestProposals() []market.ServiceProposal {
+	mApi.latestProposalsMux.RLock()
+	defer mApi.latestProposalsMux.RUnlock()
+	return mApi.latestProposals
+}
+
+func (mApi *MysteriumAPI) setLatestProposals(proposals []market.ServiceProposal) {
+	mApi.latestProposalsMux.Lock()
+	defer mApi.latestProposalsMux.Unlock()
+	mApi.latestProposals = proposals
 }
 
 // SendSessionStats sends session statistics
