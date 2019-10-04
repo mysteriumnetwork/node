@@ -24,6 +24,7 @@ import (
 	"github.com/mysteriumnetwork/go-openvpn/openvpn"
 	"github.com/mysteriumnetwork/go-openvpn/openvpn/tls"
 	"github.com/mysteriumnetwork/node/core/port"
+	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/dns"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
@@ -72,6 +73,7 @@ type Manager struct {
 	natPinger      NATPinger
 	natEventGetter NATEventGetter
 	dnsServer      *dns.Server
+	shaper         shaper.Shaper
 
 	sessionConfigNegotiatorFactory SessionConfigNegotiatorFactory
 	consumerConfig                 openvpn_service.ConsumerConfig
@@ -148,6 +150,11 @@ func (m *Manager) Serve(providerID identity.Identity) (err error) {
 			log.Error("failed to start DNS server: ", err)
 		}
 	}()
+
+	err = m.shaper.Start(m.vpnServer.DeviceName())
+	if err != nil {
+		log.Error("Could not start traffic shaper: ", err)
+	}
 
 	log.Info("OpenVPN server waiting")
 	return m.vpnServer.Wait()

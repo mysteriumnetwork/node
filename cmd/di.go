@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/communication/nats"
 	nats_dialog "github.com/mysteriumnetwork/node/communication/nats/dialog"
 	nats_discovery "github.com/mysteriumnetwork/node/communication/nats/discovery"
+	appconfig "github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/consumer/bandwidth"
 	consumer_session "github.com/mysteriumnetwork/node/consumer/session"
 	"github.com/mysteriumnetwork/node/consumer/statistics"
@@ -44,6 +45,7 @@ import (
 	nodevent "github.com/mysteriumnetwork/node/core/node/event"
 	"github.com/mysteriumnetwork/node/core/quality"
 	"github.com/mysteriumnetwork/node/core/service"
+	"github.com/mysteriumnetwork/node/core/shaper"
 	"github.com/mysteriumnetwork/node/core/state"
 	statevent "github.com/mysteriumnetwork/node/core/state/event"
 	"github.com/mysteriumnetwork/node/core/storage/boltdb"
@@ -221,6 +223,8 @@ type Dependencies struct {
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
+
+	Shaper shaper.Shaper
 }
 
 // Bootstrap initiates all container dependencies
@@ -272,6 +276,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 		return err
 	}
 
+	di.Shaper = shaper.Bootstrap(di.EventBus)
+
 	if err := di.bootstrapServices(nodeOptions); err != nil {
 		return err
 	}
@@ -303,6 +309,8 @@ func (di *Dependencies) Bootstrap(nodeOptions node.Options) error {
 	if err := di.Node.Start(); err != nil {
 		return err
 	}
+
+	appconfig.Current.EnableEventPublishing(di.EventBus)
 
 	return nil
 }
