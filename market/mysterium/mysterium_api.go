@@ -43,8 +43,9 @@ type MysteriumAPI struct {
 	http                requests.HTTPTransport
 	discoveryAPIAddress string
 
-	latestProposalsEtag    string
-	latestProposalsEtagMux sync.Mutex
+	latestProposalsMux  sync.Mutex
+	latestProposalsEtag string
+	latestProposals     []market.ServiceProposal
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
@@ -52,6 +53,7 @@ func NewClient(srcIP, discoveryAPIAddress string) *MysteriumAPI {
 	return &MysteriumAPI{
 		http:                requests.NewHTTPClient(srcIP, 20*time.Second),
 		discoveryAPIAddress: discoveryAPIAddress,
+		latestProposals:     []market.ServiceProposal{},
 	}
 }
 
@@ -243,18 +245,18 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 		return nil, err
 	}
 
-	mApi.latestProposalsEtagMux.Lock()
-	defer mApi.latestProposalsEtagMux.Unlock()
+	mApi.latestProposalsMux.Lock()
+	defer mApi.latestProposalsMux.Unlock()
 	req.Header.Add("If-None-Match", mApi.latestProposalsEtag)
 
 	res, err := mApi.http.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "cannot fetch proposals")
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusNotModified {
-		return nil, errors.New("node already contains newest proposals")
+		return mApi.latestProposals, nil
 	}
 
 	if err := requests.ParseResponseError(res); err != nil {
@@ -269,6 +271,7 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	mApi.latestProposalsEtag = res.Header.Get("ETag")
 	total := len(proposalsResponse.Proposals)
 	supported := supportedProposalsOnly(proposalsResponse.Proposals)
+	mApi.latestProposals = supported
 	log.Trace(mysteriumAPILogPrefix, "Total proposals: ", total, " supported: ", len(supported))
 	return supported, nil
 }
