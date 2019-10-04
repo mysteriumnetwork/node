@@ -18,10 +18,11 @@
 package mysterium
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -40,7 +41,9 @@ const (
 type MysteriumAPI struct {
 	http                requests.HTTPTransport
 	discoveryAPIAddress string
-	latestProposalsEtag string
+
+	latestProposalsEtag    string
+	latestProposalsEtagMux sync.Mutex
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
@@ -238,6 +241,9 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	if err != nil {
 		return nil, err
 	}
+
+	mApi.latestProposalsEtagMux.Lock()
+	defer mApi.latestProposalsEtagMux.Unlock()
 	req.Header.Add("If-None-Match", mApi.latestProposalsEtag)
 
 	res, err := mApi.http.Do(req)
@@ -256,7 +262,7 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 
 	var proposalsResponse ProposalsResponse
 	if err := requests.ParseResponseJSON(res, &proposalsResponse); err != nil {
-		return nil, fmt.Errorf("cannot parse proposals response: %v", err)
+		return nil, errors.Wrap(err, "cannot parse proposals response")
 	}
 
 	mApi.latestProposalsEtag = res.Header.Get("ETag")

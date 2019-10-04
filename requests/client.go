@@ -85,6 +85,7 @@ func (c *client) DoRequestAndParseResponse(req *http.Request, resp interface{}) 
 	return ParseResponseJSON(response, &resp)
 }
 
+// ParseResponseJSON parses http.Response into given struct.
 func ParseResponseJSON(response *http.Response, dto interface{}) error {
 	responseJSON, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -99,6 +100,7 @@ func ParseResponseJSON(response *http.Response, dto interface{}) error {
 	return nil
 }
 
+// ParseResponseError parses http.Response error.
 func ParseResponseError(response *http.Response) error {
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return errors.Errorf("server response invalid: %s (%s)", response.Status, response.Request.URL)
