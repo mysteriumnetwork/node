@@ -100,6 +100,9 @@ func healthcheck(cmd string) (path string, err error) {
 // Start applies current shaping configuration for the specified interface
 // and then continuously ensures it by listening to configuration updates
 func (s *wonderShaper) Start(interfaceName string) error {
+	if interfaceName == "" {
+		return errors.New("interface name is empty")
+	}
 	s.targetInterface = interfaceName
 	err := s.eventBus.SubscribeAsync(config.Topic(shared.ShaperEnabledFlag.Name), s.apply)
 	if err != nil {
@@ -119,13 +122,11 @@ func (s *wonderShaper) apply() error {
 }
 
 func (s *wonderShaper) limitBandwidth() error {
-	iface := "tun0"
-	err := s.runCmd(iface, strconv.Itoa(limitKbps), strconv.Itoa(limitKbps))
-	return errors.Wrap(err, "could not limit bandwidth on "+iface)
+	err := s.runCmd(s.targetInterface, strconv.Itoa(limitKbps), strconv.Itoa(limitKbps))
+	return errors.Wrap(err, "could not limit bandwidth on "+s.targetInterface)
 }
 
 func (s *wonderShaper) unlimitBandwidth() error {
-	iface := "tun0"
-	err := s.runCmd("clear", iface)
-	return errors.Wrap(err, "could not unlimit bandwidth on "+iface)
+	err := s.runCmd("clear", s.targetInterface)
+	return errors.Wrap(err, "could not unlimit bandwidth on "+s.targetInterface)
 }
