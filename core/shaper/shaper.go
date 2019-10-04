@@ -22,11 +22,11 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/magefile/mage/sh"
 	"github.com/mysteriumnetwork/node/config"
 	"github.com/mysteriumnetwork/node/eventbus"
 	"github.com/mysteriumnetwork/node/logconfig"
 	"github.com/mysteriumnetwork/node/services/shared"
+	"github.com/mysteriumnetwork/node/utils"
 	"github.com/pkg/errors"
 )
 
@@ -50,12 +50,9 @@ func (noopShaper) Start(interfaceName string) error {
 	return nil
 }
 
-// cmd shell command to be executed with args
-type cmd func(args ...string) error
-
 // wonderShaper uses wondershaper utility to apply bandwidth limit to the network interface
 type wonderShaper struct {
-	runCmd          cmd
+	path            string
 	targetInterface string
 	eventBus        eventbus.EventBus
 }
@@ -66,7 +63,7 @@ func newWonderShaper(eventBus eventbus.EventBus) (*wonderShaper, error) {
 		return nil, errors.Wrap(err, "wondershaper healthcheck failed")
 	}
 	return &wonderShaper{
-		runCmd:   sh.RunCmd(path),
+		path:     path,
 		eventBus: eventBus,
 	}, nil
 }
@@ -88,12 +85,12 @@ func healthcheck(cmd string) (path string, err error) {
 	}
 	testInterface := interfaces[0].Name
 
-	wondershaperOut, err := sh.Output(path, testInterface)
+	err = utils.SudoExec(path, testInterface)
 	if err != nil {
 		return path, errors.Wrapf(err, "failed to invoke wondershaper on %s", testInterface)
 	}
 
-	log.Debugf("Wondershaper healthcheck success. Status on %s: %s", testInterface, wondershaperOut)
+	log.Debugf("Wondershaper healthcheck success on %s", testInterface)
 	return path, nil
 }
 
@@ -122,11 +119,11 @@ func (s *wonderShaper) apply() error {
 }
 
 func (s *wonderShaper) limitBandwidth() error {
-	err := s.runCmd(s.targetInterface, strconv.Itoa(limitKbps), strconv.Itoa(limitKbps))
+	err := utils.SudoExec(s.path, s.targetInterface, strconv.Itoa(limitKbps), strconv.Itoa(limitKbps))
 	return errors.Wrap(err, "could not limit bandwidth on "+s.targetInterface)
 }
 
 func (s *wonderShaper) unlimitBandwidth() error {
-	err := s.runCmd("clear", s.targetInterface)
+	err := utils.SudoExec(s.path, "clear", s.targetInterface)
 	return errors.Wrap(err, "could not unlimit bandwidth on "+s.targetInterface)
 }
