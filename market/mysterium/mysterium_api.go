@@ -19,11 +19,12 @@ package mysterium
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	log "github.com/cihub/seelog"
 
