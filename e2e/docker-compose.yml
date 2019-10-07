@@ -27,6 +27,7 @@ services:
       --api.address=http://mysterium-api:8001/v1
       --ether.client.rpc=ws://ganache:8545
       --transactor.registry-address=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      --transactor.channel-implementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --transactor.address=http://transactor:8888/api/v1
       --ether.contract.payments=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
@@ -54,6 +55,7 @@ services:
       --transactor.registry-address=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
       --transactor.address=http://transactor:8888/api/v1
+      --transactor.channel-implementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --ether.contract.payments=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --ip-detector=http://ipify:3000/?format=json
       --experiment-identity-check

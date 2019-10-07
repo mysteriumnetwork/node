@@ -72,23 +72,26 @@ type ExchangeMessageTracker struct {
 	keystore                  *keystore.KeyStore
 	identity                  identity.Identity
 	peer                      identity.Identity
+	channelAddress            identity.Identity
 
-	consumerInvoiceStorage consumerInvoiceStorage
-	consumerTotalsStorage  consumerTotalsStorage
-	timeTracker            timeTracker
-	paymentInfo            dto.PaymentPerTime
+	registryAddress, channelImplementation string
+	consumerInvoiceStorage                 consumerInvoiceStorage
+	consumerTotalsStorage                  consumerTotalsStorage
+	timeTracker                            timeTracker
+	paymentInfo                            dto.PaymentPerTime
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker
 type ExchangeMessageTrackerDeps struct {
-	InvoiceChan               chan crypto.Invoice
-	PeerExchangeMessageSender PeerExchangeMessageSender
-	ConsumerInvoiceStorage    consumerInvoiceStorage
-	ConsumerTotalsStorage     consumerTotalsStorage
-	TimeTracker               timeTracker
-	Ks                        *keystore.KeyStore
-	Identity, Peer            identity.Identity
-	PaymentInfo               dto.PaymentPerTime
+	InvoiceChan                            chan crypto.Invoice
+	PeerExchangeMessageSender              PeerExchangeMessageSender
+	ConsumerInvoiceStorage                 consumerInvoiceStorage
+	ConsumerTotalsStorage                  consumerTotalsStorage
+	TimeTracker                            timeTracker
+	Ks                                     *keystore.KeyStore
+	Identity, Peer                         identity.Identity
+	PaymentInfo                            dto.PaymentPerTime
+	RegistryAddress, ChannelImplementation string
 }
 
 // NewExchangeMessageTracker returns a new instance of exchange message tracker
@@ -104,6 +107,8 @@ func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessage
 		timeTracker:               emtd.TimeTracker,
 		peer:                      emtd.Peer,
 		paymentInfo:               emtd.PaymentInfo,
+		registryAddress:           emtd.RegistryAddress,
+		channelImplementation:     emtd.ChannelImplementation,
 	}
 }
 
@@ -113,6 +118,11 @@ var ErrInvoiceMissmatch = errors.New("invoice mismatch")
 // Start starts the message exchange tracker. Blocks.
 func (emt *ExchangeMessageTracker) Start() error {
 	log.Debug().Msg("Starting...")
+	addr, err := crypto.GenerateChannelAddress(emt.identity.Address, emt.registryAddress, emt.channelImplementation)
+	if err != nil {
+		return errors.Wrap(err, "could not generate channel address")
+	}
+	emt.channelAddress = identity.FromAddress(addr)
 
 	emt.timeTracker.StartTracking()
 	for {
@@ -175,7 +185,7 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 		return ErrFeeChanged
 	}
 
-	// TODO: this should be calculated according to the passed in payment period
+	// TODO: this should be calculated according to the passed in payment period, not a hardcoded minute
 	shouldBe := uint64(math.Trunc(emt.timeTracker.Elapsed().Minutes() * float64(emt.paymentInfo.GetPrice().Amount)))
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
 	if invoice.AgreementTotal > upperBound {
@@ -220,7 +230,7 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 		return errors.Wrap(err, "could not calculate amount to promise")
 	}
 
-	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, "", emt.keystore, common.HexToAddress(emt.identity.Address))
+	msg, err := crypto.CreateExchangeMessage(invoice, amountToPromise, emt.channelAddress.Address, emt.keystore, common.HexToAddress(emt.identity.Address))
 	if err != nil {
 		return errors.Wrap(err, "could not create exchange message")
 	}

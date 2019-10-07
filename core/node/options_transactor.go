@@ -21,4 +21,5 @@ package node
 type OptionsTransactor struct {
 	TransactorEndpointAddress string
 	RegistryAddress           string
+	ChannelImplementation     string
 }
