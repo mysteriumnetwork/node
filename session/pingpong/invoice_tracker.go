@@ -19,7 +19,9 @@ package pingpong
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"math"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -91,6 +93,8 @@ type InvoiceTracker struct {
 	lastInvoice                     lastInvoice
 	lastExchangeMessage             crypto.ExchangeMessage
 	accountantCaller                accountantCaller
+	channelImplementation           string
+	registryAddress                 string
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker
@@ -107,6 +111,8 @@ type InvoiceTrackerDeps struct {
 	AccountantID               identity.Identity
 	AccountantCaller           accountantCaller
 	AccountantPromiseStorage   accountantPromiseStorage
+	ChannelImplementation      string
+	Registry                   string
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker
@@ -127,6 +133,8 @@ func NewInvoiceTracker(
 		accountantPromiseStorage:       itd.AccountantPromiseStorage,
 		accountantID:                   itd.AccountantID,
 		maxNotReceivedExchangeMessages: calculateMaxNotReceivedExchangeMessageCount(chargePeriodLeeway, itd.ChargePeriod),
+		channelImplementation:          itd.ChannelImplementation,
+		registryAddress:                itd.Registry,
 	}
 }
 
@@ -247,15 +255,43 @@ func (it *InvoiceTracker) getAccountantFailureCount() uint64 {
 	return atomic.LoadUint64(&it.accountantFailureCount)
 }
 
+func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
+	if res := em.ValidateExchangeMessage(common.HexToAddress(it.peer.Address)); !res {
+		return ErrExchangeValidationFailed
+	}
+
+	if em.Promise.Amount < it.lastExchangeMessage.Promise.Amount {
+		log.Warnf("consumer sent an invalid amount. Expected < %v, got %v", it.lastExchangeMessage.Promise.Amount, em.Promise.Amount)
+		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
+	}
+
+	if em.Promise.Hashlock != it.lastInvoice.invoice.Hashlock {
+		log.Warnf("consumer sent an invalid hashlock. Expected %q, got %q", it.lastInvoice.invoice.Hashlock, em.Promise.Hashlock)
+		return errors.Wrap(ErrConsumerPromiseValidationFailed, "missmatching hashlock")
+	}
+
+	addr, err := crypto.GenerateChannelAddress(it.peer.Address, it.registryAddress, it.channelImplementation)
+	if err != nil {
+		return errors.Wrap(err, "could not generate channel address")
+	}
+
+	if strings.ToLower(em.Promise.ChannelID) != strings.ToLower(addr) {
+		log.Warnf("consumer sent an invalid channel address. Expected %q, got %q", addr, em.Promise.ChannelID)
+		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid channel address")
+	}
+	return nil
+}
+
 func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 	select {
 	case pm := <-it.exchangeMessageChan:
-		if res := pm.ValidateExchangeMessage(common.HexToAddress(it.peer.Address)); !res {
-			return ErrExchangeValidationFailed
+		err := it.validateExchangeMessage(pm)
+		if err != nil {
+			return err
 		}
-		if pm.Promise.Amount < it.lastExchangeMessage.AgreementTotal {
-			return ErrConsumerPromiseValidationFailed
-		}
+
+		it.lastExchangeMessage = pm
+
 		promise, err := it.accountantCaller.RequestPromise(pm)
 		if err != nil {
 			it.incrementAccountantFailureCount()
@@ -270,6 +306,12 @@ func (it *InvoiceTracker) receiveExchangeMessageOrTimeout() error {
 			return errors.Wrap(err, "could not store accountant promise")
 		}
 		log.Debug("accountant promise stored")
+		hexR := hex.EncodeToString(it.lastInvoice.r)
+		err = it.accountantCaller.RevealR(hexR, it.providerID.Address, it.lastInvoice.invoice.AgreementID)
+		if err != nil {
+			// TODO: need to think about handling this a bit better
+			log.Error("could not reveal R", err)
+		}
 	case <-time.After(it.exchangeMessageWaitTimeout):
 		return ErrExchangeWaitTimeout
 	case <-it.stop:

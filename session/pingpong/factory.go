@@ -44,6 +44,8 @@ func InvoiceFactoryCreator(
 	accountantCaller accountantCaller,
 	accountantPromiseStorage accountantPromiseStorage,
 	accountantID identity.Identity,
+	registryAddress string,
+	channelImplementationAddress string,
 ) func(identity.Identity) (session.PaymentEngine, error) {
 	return func(providerID identity.Identity) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
@@ -67,6 +69,8 @@ func InvoiceFactoryCreator(
 			AccountantCaller:           accountantCaller,
 			AccountantPromiseStorage:   accountantPromiseStorage,
 			AccountantID:               accountantID,
+			ChannelImplementation:      channelImplementationAddress,
+			Registry:                   registryAddress,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
@@ -74,7 +78,14 @@ func InvoiceFactoryCreator(
 }
 
 // BackwardsCompatibleExchangeFactoryFunc returns a backwards compatible version of the exchange factory
-func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options node.Options, signer identity.SignerFactory, invoiceStorage consumerInvoiceStorage, totalStorage consumerTotalsStorage) func(paymentInfo *promise.PaymentInfo,
+func BackwardsCompatibleExchangeFactoryFunc(
+	keystore *keystore.KeyStore,
+	options node.Options,
+	signer identity.SignerFactory,
+	invoiceStorage consumerInvoiceStorage,
+	totalStorage consumerTotalsStorage,
+	channelImplementation string,
+	registryAddress string) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
 	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
 	return func(paymentInfo *promise.PaymentInfo,
@@ -121,6 +132,8 @@ func BackwardsCompatibleExchangeFactoryFunc(keystore *keystore.KeyStore, options
 					Price:    money.NewMoney(1, money.CurrencyMyst),
 					Duration: 1 * time.Minute,
 				},
+				RegistryAddress:       registryAddress,
+				ChannelImplementation: channelImplementation,
 			}
 			payments = NewExchangeMessageTracker(deps)
 		} else {

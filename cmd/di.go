@@ -456,7 +456,14 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
 		dialogFactory,
-		pingpong.BackwardsCompatibleExchangeFactoryFunc(di.Keystore, nodeOptions, di.SignerFactory, di.ConsumerInvoiceStorage, di.ConsumerTotalsStorage),
+		pingpong.BackwardsCompatibleExchangeFactoryFunc(
+			di.Keystore,
+			nodeOptions,
+			di.SignerFactory,
+			di.ConsumerInvoiceStorage,
+			di.ConsumerTotalsStorage,
+			nodeOptions.Transactor.ChannelImplementation,
+			nodeOptions.Transactor.RegistryAddress),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
 		connectivity.NewStatusSender(),
@@ -570,11 +577,11 @@ func newSessionManagerFactory(
 				},
 				Duration: time.Minute,
 			},
-			// TODO: code accountant address in here from node options
-
 			pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
 			identity.FromAddress(nodeOptions.Accountant.AccountantID),
+			nodeOptions.Transactor.ChannelImplementation,
+			nodeOptions.Transactor.RegistryAddress,
 		)
 		return session.NewManager(
 			proposal,

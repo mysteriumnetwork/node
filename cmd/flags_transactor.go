@@ -34,6 +34,11 @@ var (
 		Usage: "registry contract address used to register identity",
 		Value: metadata.DefaultNetwork.RegistryAddress,
 	}
+	channelImplementationFlag = cli.StringFlag{
+		Name:  "transactor.channel-implementation",
+		Usage: "channel implementation address",
+		Value: metadata.DefaultNetwork.ChannelImplAddress,
+	}
 )
 
 // RegisterFlagsTransactor function register network flags to flag list
@@ -42,6 +47,7 @@ func RegisterFlagsTransactor(flags *[]cli.Flag) {
 		*flags,
 		transactorAddressFlag,
 		registryAddressFlag,
+		channelImplementationFlag,
 	)
 }
 
@@ -50,5 +56,6 @@ func ParseFlagsTransactor(ctx *cli.Context) node.OptionsTransactor {
 	return node.OptionsTransactor{
 		TransactorEndpointAddress: ctx.GlobalString(transactorAddressFlag.Name),
 		RegistryAddress:           ctx.GlobalString(registryAddressFlag.Name),
+		ChannelImplementation:     ctx.GlobalString(channelImplementationFlag.Name),
 	}
 }
