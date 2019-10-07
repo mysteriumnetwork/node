@@ -19,8 +19,12 @@ package mysterium
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
+	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	log "github.com/cihub/seelog"
 
@@ -38,13 +42,19 @@ const (
 type MysteriumAPI struct {
 	http                requests.HTTPTransport
 	discoveryAPIAddress string
+
+	latestProposalsEtagMux sync.RWMutex
+	latestProposalsEtag    string
+	latestProposalsMux     sync.RWMutex
+	latestProposals        []market.ServiceProposal
 }
 
 // NewClient creates Mysterium centralized api instance with real communication
 func NewClient(srcIP, discoveryAPIAddress string) *MysteriumAPI {
 	return &MysteriumAPI{
-		requests.NewHTTPClient(srcIP, 20*time.Second),
-		discoveryAPIAddress,
+		http:                requests.NewHTTPClient(srcIP, 20*time.Second),
+		discoveryAPIAddress: discoveryAPIAddress,
+		latestProposals:     []market.ServiceProposal{},
 	}
 }
 
@@ -235,16 +245,58 @@ func (mApi *MysteriumAPI) QueryProposals(query ProposalsQuery) ([]market.Service
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Add("If-None-Match", mApi.getLatestProposalsEtag())
 
-	var proposalsResponse ProposalsResponse
-	err = mApi.http.DoRequestAndParseResponse(req, &proposalsResponse)
+	res, err := mApi.http.Do(req)
 	if err != nil {
+		return nil, errors.Wrap(err, "cannot fetch proposals")
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusNotModified {
+		return mApi.getLatestProposals(), nil
+	}
+
+	if err := requests.ParseResponseError(res); err != nil {
 		return nil, err
 	}
+
+	var proposalsResponse ProposalsResponse
+	if err := requests.ParseResponseJSON(res, &proposalsResponse); err != nil {
+		return nil, errors.Wrap(err, "cannot parse proposals response")
+	}
+
+	mApi.setLatestProposalsEtag(res.Header.Get("ETag"))
+
 	total := len(proposalsResponse.Proposals)
 	supported := supportedProposalsOnly(proposalsResponse.Proposals)
+	mApi.setLatestProposals(supported)
 	log.Trace(mysteriumAPILogPrefix, "Total proposals: ", total, " supported: ", len(supported))
 	return supported, nil
+}
+
+func (mApi *MysteriumAPI) getLatestProposalsEtag() string {
+	mApi.latestProposalsEtagMux.RLock()
+	defer mApi.latestProposalsEtagMux.RUnlock()
+	return mApi.latestProposalsEtag
+}
+
+func (mApi *MysteriumAPI) setLatestProposalsEtag(etag string) {
+	mApi.latestProposalsEtagMux.Lock()
+	defer mApi.latestProposalsEtagMux.Unlock()
+	mApi.latestProposalsEtag = etag
+}
+
+func (mApi *MysteriumAPI) getLatestProposals() []market.ServiceProposal {
+	mApi.latestProposalsMux.RLock()
+	defer mApi.latestProposalsMux.RUnlock()
+	return mApi.latestProposals
+}
+
+func (mApi *MysteriumAPI) setLatestProposals(proposals []market.ServiceProposal) {
+	mApi.latestProposalsMux.Lock()
+	defer mApi.latestProposalsMux.Unlock()
+	mApi.latestProposals = proposals
 }
 
 // SendSessionStats sends session statistics

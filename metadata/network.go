@@ -54,7 +54,7 @@ var TestnetDefinition = NetworkDefinition{
 // LocalnetDefinition defines parameters for local network
 // Expects discovery, broker and morqa services on localhost
 var LocalnetDefinition = NetworkDefinition{
-	MysteriumAPIAddress:       "http://localhost/v1",
+	MysteriumAPIAddress:       "http://localhost:8001/v1",
 	AccessPolicyOracleAddress: "https://localhost:8081/api/v1/access-policies/",
 	BrokerAddress:             "localhost",
 	EtherClientRPC:            "http://localhost:8545",

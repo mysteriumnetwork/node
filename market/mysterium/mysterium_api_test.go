@@ -20,9 +20,11 @@ package mysterium
 import (
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/requests"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,8 +55,49 @@ func TestHttpTransportDoesntBlockForeverIfServerFailsToSendAnyResponse(t *testin
 		assert.True(t, netError.Timeout())
 	case <-time.After(1000 * time.Millisecond):
 		assert.Fail(t, "failed request expected")
-
 	}
+}
+
+func TestProposalsReturnsPreviousProposalsWhenEtagMatches(t *testing.T) {
+	sentClientEtag := make(chan string, 1)
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sentClientEtag <- r.Header.Get("If-None-Match")
+		w.WriteHeader(http.StatusNotModified)
+	}))
+	defer s.Close()
+
+	client := NewClient("0.0.0.0", s.URL)
+	client.latestProposals = []market.ServiceProposal{
+		{ID: 1},
+		{ID: 2},
+	}
+	client.latestProposalsEtag = "etag1"
+
+	proposals, err := client.Proposals()
+
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 2)
+	assert.Equal(t, "etag1", <-sentClientEtag)
+}
+
+func TestProposalsOverrideLatestProposalsWhenEtagDoNotMatch(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		res := []byte(`{"proposals": []}`)
+		w.Header().Add("Etag", "etag1")
+		w.Write(res)
+	}))
+	defer s.Close()
+
+	client := NewClient("0.0.0.0", s.URL)
+	client.latestProposals = []market.ServiceProposal{
+		{ID: 1},
+		{ID: 2},
+	}
+	proposals, err := client.Proposals()
+
+	assert.NoError(t, err)
+	assert.Len(t, proposals, 0)
+	assert.Equal(t, "etag1", client.latestProposalsEtag)
 }
 
 func createHTTPServer(handlerFunc http.HandlerFunc) (address string, err error) {
