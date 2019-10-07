@@ -24,6 +24,17 @@ import (
 	"github.com/mysteriumnetwork/node/ci/storage"
 )
 
+const (
+	// ProxySonatypeUsername username for proxy used in publishing to sonatype
+	ProxySonatypeUsername = env.BuildVar("PROXY_SONATYPE_USERNAME")
+	// ProxySonatypePassword password for proxy used in publishing to sonatype
+	ProxySonatypePassword = env.BuildVar("PROXY_SONATYPE_PASSWORD")
+	// SonatypeUsername username for sonatype
+	SonatypeUsername = env.BuildVar("SONATYPE_USERNAME")
+	// SonatypePassword password for sonatype
+	SonatypePassword = env.BuildVar("SONATYPE_PASSWORD")
+)
+
 // ReleaseAndroidSDK releases Android SDK to sonatype/maven central
 func ReleaseAndroidSDK() error {
 	err := env.EnsureEnvVars(
@@ -37,9 +48,28 @@ func ReleaseAndroidSDK() error {
 		log.Info("not a tag build, skipping ReleaseAndroidSDK action...")
 		return nil
 	}
+	err = env.EnsureEnvVars(
+		ProxySonatypeUsername,
+		ProxySonatypePassword,
+		SonatypeUsername,
+		SonatypePassword,
+	)
+	if err != nil {
+		return err
+	}
 	err = storage.DownloadArtifacts()
 	if err != nil {
 		return err
 	}
-	return shell.NewCmdf("bash -ev bin/release_android %s", env.Str(env.BuildVersion)).Run()
+
+	envs := getEnvs(ProxySonatypeUsername, ProxySonatypePassword, SonatypeUsername, SonatypePassword)
+	return shell.NewCmdf("bash -ev bin/release_android %s", env.Str(env.BuildVersion)).RunWith(envs)
+}
+
+func getEnvs(vars ...env.BuildVar) map[string]string {
+	envs := map[string]string{}
+	for _, v := range vars {
+		envs[string(v)] = env.Str(v)
+	}
+	return envs
 }
