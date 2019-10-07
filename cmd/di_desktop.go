@@ -287,7 +287,7 @@ func (di *Dependencies) bootstrapMMN(options node.Options) {
 		return
 	}
 
-	client := mmn.NewClient(options.BindAddress, options.MMN.Address)
+	client := mmn.NewClient(options.BindAddress, options.MMN.Address, di.SignerFactory)
 
 	err := di.EventBus.SubscribeAsync(
 		identity.IdentityUnlockTopic,

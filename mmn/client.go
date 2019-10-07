@@ -20,24 +20,28 @@ package mmn
 import (
 	"time"
 
+	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
 // NewClient returns MMN API client
-func NewClient(srcIp string, mmnAddress string) *client {
+func NewClient(srcIp, mmnAddress string, signer identity.SignerFactory) *client {
 	return &client{
 		http:       requests.NewHTTPClient(srcIp, 20*time.Second),
 		mmnAddress: mmnAddress,
+		signer:     signer,
 	}
 }
 
 type client struct {
 	http       requests.HTTPTransport
 	mmnAddress string
+	signer     identity.SignerFactory
 }
 
 func (m *client) RegisterNode(information *NodeInformation) error {
-	req, err := requests.NewPostRequest(m.mmnAddress, "node", information)
+	id := identity.FromAddress(information.Identity)
+	req, err := requests.NewSignedPostRequest(m.mmnAddress, "node", information, m.signer(id))
 	if err != nil {
 		return err
 	}
