@@ -27,8 +27,8 @@ import (
 var fakeSignerFactory = func(id identity.Identity) identity.Signer {
 	return &fakeSigner{}
 }
-var existingIdentity = identity.Identity{"existing"}
-var newIdentity = identity.Identity{"new"}
+var existingIdentity = identity.Identity{Address: "existing"}
+var newIdentity = identity.Identity{Address: "new"}
 
 func TestUseOrCreateSucceeds(t *testing.T) {
 	identityManager := identity.NewIdentityManagerFake([]identity.Identity{existingIdentity}, newIdentity)

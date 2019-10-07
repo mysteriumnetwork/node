@@ -70,7 +70,7 @@ func NewCommand() (*cli.App, error) {
 	app := cli.NewApp()
 	app.Usage = "VPN server and client for Mysterium Network https://mysterium.network/"
 	app.Authors = []cli.Author{
-		{`The "MysteriumNetwork/node" Authors`, "mysterium-dev@mysterium.network"},
+		{Name: `The "MysteriumNetwork/node" Authors`, Email: "mysterium-dev@mysterium.network"},
 	}
 	app.Version = metadata.VersionAsString()
 	app.Copyright = licenseCopyright

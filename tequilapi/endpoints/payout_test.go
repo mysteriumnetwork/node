@@ -108,7 +108,7 @@ func TestUpdatePayoutInfo(t *testing.T) {
 	resp := httptest.NewRecorder()
 	mockPayoutInfoRegistry := &mockPayoutInfoRegistry{}
 	handlerFunc := NewPayoutEndpoint(mockIdm, mockSignerFactory, mockPayoutInfoRegistry).UpdatePayoutInfo
-	params := httprouter.Params{{"id", "1234abcd"}}
+	params := httprouter.Params{{Key: "id", Value: "1234abcd"}}
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, "1234abcd", mockPayoutInfoRegistry.recordedID.Address)
@@ -128,7 +128,7 @@ func TestUpdateReferralInfo(t *testing.T) {
 	resp := httptest.NewRecorder()
 	mockPayoutInfoRegistry := &mockPayoutInfoRegistry{}
 	handlerFunc := NewPayoutEndpoint(mockIdm, mockSignerFactory, mockPayoutInfoRegistry).UpdateReferralInfo
-	params := httprouter.Params{{"id", "1234abcd"}}
+	params := httprouter.Params{{Key: "id", Value: "1234abcd"}}
 	handlerFunc(resp, req, params)
 
 	assert.Equal(t, "1234referral", mockPayoutInfoRegistry.recordedReferralCode)
@@ -152,7 +152,7 @@ func TestGetPayoutInfo_ReturnsPayoutInfo(t *testing.T) {
 		nil,
 	)
 	assert.NoError(t, err)
-	params := httprouter.Params{{"id", existingIdentities[0].Address}}
+	params := httprouter.Params{{Key: "id", Value: existingIdentities[0].Address}}
 
 	handlerFunc(resp, req, params)
 
@@ -177,7 +177,7 @@ func TestGetPayoutInfo_ReturnsError_WhenPayoutInfoFindingFails(t *testing.T) {
 		nil,
 	)
 	assert.NoError(t, err)
-	params := httprouter.Params{{"id", "some other address"}}
+	params := httprouter.Params{{Key: "id", Value: "some other address"}}
 
 	handlerFunc(resp, req, params)
 

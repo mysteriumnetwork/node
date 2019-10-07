@@ -99,7 +99,7 @@ balanceLoop:
 		case <-time.After(processor.balanceInterval):
 			// TODO: replace static value with some real data
 			processor.balanceSend(
-				promise.BalanceMessage{1, true, processor.lastPromise.Amount},
+				promise.BalanceMessage{RequestID: 1, Accepted: true, Balance: processor.lastPromise.Amount},
 			)
 		}
 	}

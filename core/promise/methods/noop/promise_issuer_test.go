@@ -59,7 +59,7 @@ func TestPromiseIssuer_Start_SubscriptionFails(t *testing.T) {
 
 func TestPromiseIssuer_Start_SubscriptionOfBalances(t *testing.T) {
 	dialog := &fakeDialog{
-		returnReceiveMessage: promise.BalanceMessage{1, true, testToken(10)},
+		returnReceiveMessage: promise.BalanceMessage{RequestID: 1, Accepted: true, Balance: testToken(10)},
 	}
 
 	logs := make([]string, 0)
