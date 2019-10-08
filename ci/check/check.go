@@ -42,7 +42,7 @@ func CheckGoLint() error {
 	return commands.GoLint("./...", "docs")
 }
 
-// CheckGoVet Checks that the source is compliant with go vet.
+// CheckGoVet checks that the source is compliant with go vet.
 func CheckGoVet() error {
 	return commands.GoVet("./...")
 }
