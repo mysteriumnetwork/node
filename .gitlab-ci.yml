@@ -171,7 +171,6 @@ remove-bucket:
   stage: post-release
   tags: [go]
   script: go run mage.go -v RemoveBucket
-  when: always
 
 docker-prune:
   stage: post-release
