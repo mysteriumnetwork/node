@@ -106,6 +106,7 @@ func (api *configAPI) SetUserConfig(writer http.ResponseWriter, httpReq *http.Re
 	err = api.config.SaveUserConfig()
 	if err != nil {
 		utils.SendError(writer, err, http.StatusInternalServerError)
+		return
 	}
 	api.GetUserConfig(writer, nil, nil)
 }
