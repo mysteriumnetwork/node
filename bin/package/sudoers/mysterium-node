@@ -4,3 +4,4 @@ mysterium-node    ALL=NOPASSWD: /sbin/sysctl
 mysterium-node    ALL=NOPASSWD: /sbin/iptables
 mysterium-node    ALL=NOPASSWD: /sbin/ip
 mysterium-node    ALL=NOPASSWD: /etc/mysterium-node/prepare-env.sh
+mysterium-node    ALL=NOPASSWD: /sbin/wondershaper
