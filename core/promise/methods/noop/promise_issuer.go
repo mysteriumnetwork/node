@@ -72,7 +72,7 @@ func (issuer *PromiseIssuer) sendNewPromise() error {
 
 func (issuer *PromiseIssuer) subscribePromiseBalance() error {
 	return issuer.dialog.Receive(
-		&promise.BalanceMessageConsumer{issuer.processBalanceMessage},
+		&promise.BalanceMessageConsumer{Callback: issuer.processBalanceMessage},
 	)
 }
 

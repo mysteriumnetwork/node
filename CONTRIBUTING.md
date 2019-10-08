@@ -148,7 +148,7 @@ Before creating PR be sure to:
 * **Step 1.** Ensure that **your** code quality is passing
 
 ```bash
-bin/check
+go run mage.go -v Check
 ```
 
 * **Step 2.** Ensure that all unit tests pass

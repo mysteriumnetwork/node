@@ -32,17 +32,17 @@ func TestFirstIP(t *testing.T) {
 	}{
 		{
 			name: "Normal case",
-			args: net.IPNet{net.ParseIP("1.2.3.4").To4(), net.IPv4Mask(255, 255, 255, 0)},
+			args: net.IPNet{IP: net.ParseIP("1.2.3.4").To4(), Mask: net.IPv4Mask(255, 255, 255, 0)},
 			want: net.ParseIP("1.2.3.1").To4(),
 		},
 		{
 			name: "Normal case non /24",
-			args: net.IPNet{net.ParseIP("1.2.3.218").To4(), net.IPv4Mask(255, 255, 255, 128)},
+			args: net.IPNet{IP: net.ParseIP("1.2.3.218").To4(), Mask: net.IPv4Mask(255, 255, 255, 128)},
 			want: net.ParseIP("1.2.3.129").To4(),
 		},
 		{
 			name: "Normal case /32",
-			args: net.IPNet{net.ParseIP("1.2.3.218").To4(), net.IPv4Mask(255, 255, 255, 255)},
+			args: net.IPNet{IP: net.ParseIP("1.2.3.218").To4(), Mask: net.IPv4Mask(255, 255, 255, 255)},
 			want: net.ParseIP("1.2.3.218").To4(),
 		},
 		{

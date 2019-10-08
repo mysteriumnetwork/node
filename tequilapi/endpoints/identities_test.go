@@ -32,10 +32,10 @@ const identityUrl = "/irrelevant"
 
 var (
 	existingIdentities = []identity.Identity{
-		{"0x000000000000000000000000000000000000000a"},
-		{"0x000000000000000000000000000000000000beef"},
+		{Address: "0x000000000000000000000000000000000000000a"},
+		{Address: "0x000000000000000000000000000000000000beef"},
 	}
-	newIdentity = identity.Identity{"0x000000000000000000000000000000000000aaac"}
+	newIdentity = identity.Identity{Address: "0x000000000000000000000000000000000000aaac"}
 )
 
 type selectorFake struct {
@@ -61,7 +61,7 @@ func TestCurrentIdentitySuccess(t *testing.T) {
 		identityUrl,
 		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
 	)
-	params := httprouter.Params{{"id", "current"}}
+	params := httprouter.Params{{Key: "id", Value: "current"}}
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{
@@ -88,7 +88,7 @@ func TestUnlockIdentitySuccess(t *testing.T) {
 		identityUrl,
 		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
 	)
-	params := httprouter.Params{{"id", "1234abcd"}}
+	params := httprouter.Params{{Key: "id", Value: "1234abcd"}}
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
@@ -108,7 +108,7 @@ func TestUnlockIdentityWithInvalidJSON(t *testing.T) {
 		identityUrl,
 		bytes.NewBufferString(`{invalid json}`),
 	)
-	params := httprouter.Params{{"id", "1234abcd"}}
+	params := httprouter.Params{{Key: "id", Value: "1234abcd"}}
 	assert.Nil(t, err)
 
 	endpoint := &identitiesAPI{idm: mockIdm}
@@ -151,7 +151,7 @@ func TestUnlockFailure(t *testing.T) {
 		identityUrl,
 		bytes.NewBufferString(`{"passphrase": "mypassphrase"}`),
 	)
-	params := httprouter.Params{{"id", "1234abcd"}}
+	params := httprouter.Params{{Key: "id", Value: "1234abcd"}}
 	assert.Nil(t, err)
 
 	mockIdm.MarkUnlockToFail()

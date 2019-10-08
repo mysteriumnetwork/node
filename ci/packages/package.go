@@ -158,10 +158,8 @@ func PackageDockerSwaggerRedoc() error {
 	if err := env.EnsureEnvVars(env.BuildVersion); err != nil {
 		return err
 	}
-	if err := goGet("github.com/go-swagger/go-swagger/cmd/swagger"); err != nil {
-		return err
-	}
-	if err := sh.RunV("bin/swagger_generate"); err != nil {
+
+	if err := sh.RunV("swagger", "generate", "spec", "-o", "tequilapi.json", "--scan-models"); err != nil {
 		return err
 	}
 	if err := sh.RunV("bin/package_docker_docs"); err != nil {

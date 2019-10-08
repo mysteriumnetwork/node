@@ -43,16 +43,7 @@ checks:
   stage: test
   tags: [go]
   script:
-    - |
-      go get -u \
-        golang.org/x/lint/golint \
-        golang.org/x/tools/cmd/goimports \
-        github.com/go-swagger/go-swagger/cmd/swagger
-    - bin/check_golint
-    - bin/check_goimports
-    - bin/check_license
-    - bin/check_govet
-    - bin/check_swagger
+    - go run mage.go -v Check
 
 test:
   stage: test

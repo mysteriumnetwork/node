@@ -1,4 +1,0 @@
-#!/bin/bash
-set -e
-
-swagger generate spec -o tequilapi.json --scan-models
