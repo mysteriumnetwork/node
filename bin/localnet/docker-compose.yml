@@ -66,6 +66,26 @@ services:
     volumes:
       - "./deployer/keystore:/keystore"
 
+  accountant:
+    image: mysteriumnetwork/accountant:latest
+    environment:
+      PORT: 8889
+    expose:
+      - 8889
+    depends_on:
+      - ganache
+    command: >
+      -identityPassphrase ""
+      -myst 0x427C2BAD22335710Aec5e477f3E3AdCd313A9bcb
+      -rpcEndpoint ws://ganache:8545
+      -registry 0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
+      -operator 0x354bd098b4ef8c9e70b7f21be2d455df559705d7
+      -chImplementation 0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
+      -keystoreDir /keystore
+      -accountantAddress 0x599d43715DF3070f83355D9D90AE62c159E62A75
+    volumes:
+      - "./deployer/keystore:/keystore"
+
   #go runner to run go programs inside localnet (usefull for contract deployment or e2e test running)
   go-runner:
     image: golang:1.13
