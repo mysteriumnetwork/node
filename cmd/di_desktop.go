@@ -40,6 +40,7 @@ import (
 	wireguard_connection "github.com/mysteriumnetwork/node/services/wireguard/connection"
 	wireguard_service "github.com/mysteriumnetwork/node/services/wireguard/service"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/ui"
 	uinoop "github.com/mysteriumnetwork/node/ui/noop"
 
@@ -243,7 +244,14 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.NATTracker,
 			serviceID,
 			di.EventBus)
-		return session.NewDialogHandler(sessionManagerFactory, configProvider.ProvideConfig, di.PromiseStorage, identity.FromAddress(proposal.ProviderID)), nil
+
+		return session.NewDialogHandler(
+			sessionManagerFactory,
+			configProvider.ProvideConfig,
+			di.PromiseStorage,
+			identity.FromAddress(proposal.ProviderID),
+			connectivity.NewStatusSubscriber(di.SessionConnectivityStatusStorage),
+		), nil
 	}
 	di.ServicesManager = service.NewManager(
 		di.ServiceRegistry,

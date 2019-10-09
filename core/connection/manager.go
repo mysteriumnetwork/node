@@ -23,10 +23,12 @@ import (
 
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/consumer"
+	"github.com/mysteriumnetwork/node/core/ip"
 	"github.com/mysteriumnetwork/node/firewall"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/pkg/errors"
 )
@@ -72,13 +74,15 @@ type PaymentEngineFactory func(paymentInfo *promise.PaymentInfo,
 	consumer, provider identity.Identity) (PaymentIssuer, error)
 
 type connectionManager struct {
-	//these are passed on creation
-	newDialog            DialogCreator
-	paymentEngineFactory PaymentEngineFactory
-	newConnection        Creator
-	eventPublisher       Publisher
+	// These are passed on creation.
+	newDialog                DialogCreator
+	paymentEngineFactory     PaymentEngineFactory
+	newConnection            Creator
+	eventPublisher           Publisher
+	connectivityStatusSender connectivity.StatusSender
+	ipResolver               ip.Resolver
 
-	//these are populated by Connect at runtime
+	// These are populated by Connect at runtime.
 	ctx         context.Context
 	status      Status
 	statusLock  sync.RWMutex
@@ -95,14 +99,18 @@ func NewManager(
 	paymentEngineFactory PaymentEngineFactory,
 	connectionCreator Creator,
 	eventPublisher Publisher,
+	connectivityStatusSender connectivity.StatusSender,
+	ipResolver ip.Resolver,
 ) *connectionManager {
 	return &connectionManager{
-		newDialog:            dialogCreator,
-		newConnection:        connectionCreator,
-		status:               statusNotConnected(),
-		eventPublisher:       eventPublisher,
-		paymentEngineFactory: paymentEngineFactory,
-		cleanup:              make([]func() error, 0),
+		newDialog:                dialogCreator,
+		newConnection:            connectionCreator,
+		status:                   statusNotConnected(),
+		eventPublisher:           eventPublisher,
+		paymentEngineFactory:     paymentEngineFactory,
+		connectivityStatusSender: connectivityStatusSender,
+		cleanup:                  make([]func() error, 0),
+		ipResolver:               ipResolver,
 	}
 }
 
@@ -121,7 +129,6 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 	}()
 
 	providerID := identity.FromAddress(proposal.ProviderID)
-
 	dialog, err := manager.createDialog(consumerID, providerID, proposal.ProviderContacts[0])
 	if err != nil {
 		return err
@@ -137,19 +144,63 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 
 	sessionDTO, paymentInfo, err := manager.createSession(connection, dialog, consumerID, proposal)
 	if err != nil {
+		manager.sendSessionStatus(dialog, "", connectivity.StatusSessionEstablishmentFailed, err)
 		return err
 	}
 
 	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID)
 	if err != nil {
+		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
 		return err
 	}
 
+	currentPublicIP := manager.getPublicIP()
+	// Try to establish connection with peer.
 	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, stateChannel, statisticsChannel)
-	if err == context.Canceled {
-		return ErrConnectionCancelled
+	if err != nil {
+		if err == context.Canceled {
+			return ErrConnectionCancelled
+		}
+		// TODO: Here we need to extract mode detailed error if possible.
+		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
+		return err
 	}
-	return err
+
+	manager.checkSessionIP(dialog, sessionDTO.ID, currentPublicIP)
+	return nil
+}
+
+// checkSessionIP checks if ip was changed after connection is established and notify peer.
+func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, sessionID session.ID, currentPublicIP string) {
+	newPublicIP := manager.getPublicIP()
+	if currentPublicIP == newPublicIP {
+		manager.sendSessionStatus(dialog, sessionID, connectivity.StatusSessionIpNotChanged, nil)
+		return
+	}
+
+	manager.sendSessionStatus(dialog, sessionID, connectivity.StatusConnectionOk, nil)
+}
+
+// sendSessionStatus sends session connectivity status to other peer.
+func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog, sessionID session.ID, code connectivity.StatusCode, errDetails error) {
+	var errDetailsMsg string
+	if errDetails != nil {
+		errDetailsMsg = errDetails.Error()
+	}
+	manager.connectivityStatusSender.Send(dialog, &connectivity.StatusMessage{
+		SessionID:  string(sessionID),
+		StatusCode: code,
+		Message:    errDetailsMsg,
+	})
+}
+
+func (manager *connectionManager) getPublicIP() string {
+	currentPublicIP, err := manager.ipResolver.GetPublicIP()
+	if err != nil {
+		log.Errorf("could not get current public IP: %v", err)
+		return ""
+	}
+	return currentPublicIP
 }
 
 func (manager *connectionManager) launchPayments(paymentInfo *promise.PaymentInfo, dialog communication.Dialog, consumerID, providerID identity.Identity) error {
@@ -273,7 +324,7 @@ func (manager *connectionManager) startConnection(
 		return err
 	}
 
-	//consume statistics right after start - openvpn3 will publish them even before connected state
+	// Consume statistics right after start - openvpn3 will publish them even before connected state.
 	go manager.consumeStats(statisticsChannel)
 	err = manager.waitForConnectedState(stateChannel, sessionDTO.ID)
 	if err != nil {
