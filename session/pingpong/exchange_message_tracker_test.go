@@ -77,7 +77,7 @@ func Test_ExchangeMessageTracker_Start_Stop(t *testing.T) {
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
 		ChannelImplementation:     acc.Address.Hex(),
 		RegistryAddress:           acc.Address.Hex(),
-		Peer:                      identity.FromAddress("some peer"),
+		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		PaymentInfo:               dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
@@ -125,7 +125,7 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 		ChannelImplementation:     acc.Address.Hex(),
 		RegistryAddress:           acc.Address.Hex(),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
-		Peer:                      identity.FromAddress("some peer"),
+		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		PaymentInfo:               dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
@@ -133,8 +133,8 @@ func Test_ExchangeMessageTracker_SendsMessage(t *testing.T) {
 	mockInvoice := crypto.Invoice{
 		AgreementID:    1,
 		AgreementTotal: 0,
-		Fee:            0,
-		Hashlock:       "lock",
+		TransactorFee:  0,
+		Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 		Provider:       deps.Peer.Address,
 	}
 
@@ -190,7 +190,7 @@ func Test_ExchangeMessageTracker_BubblesErrors(t *testing.T) {
 		ChannelImplementation:     acc.Address.Hex(),
 		RegistryAddress:           acc.Address.Hex(),
 		Identity:                  identity.FromAddress(acc.Address.Hex()),
-		Peer:                      identity.FromAddress("some peer"),
+		Peer:                      identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 		PaymentInfo:               dto.PaymentPerTime{Price: money.NewMoney(10, money.CurrencyMyst), Duration: time.Minute},
 	}
 	exchangeMessageTracker := NewExchangeMessageTracker(deps)
@@ -230,7 +230,7 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 			name:   "errors on non zero fee",
 			fields: fields{},
 			invoice: crypto.Invoice{
-				Fee: 1,
+				TransactorFee: 1,
 			},
 			wantErr: true,
 		},
@@ -247,17 +247,17 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				},
 			},
 			invoice: crypto.Invoice{
-				Fee:            0,
+				TransactorFee:  0,
 				AgreementID:    1,
 				AgreementTotal: 105000001,
-				Provider:       "0x01",
+				Provider:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 			},
 			wantErr: true,
 		},
 		{
 			name: "accepts proper invoice",
 			fields: fields{
-				peer: identity.FromAddress("0x01"),
+				peer: identity.FromAddress("0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"),
 				timeTracker: &mockTimeTracker{
 					timeToReturn: time.Minute,
 				},
@@ -267,10 +267,10 @@ func TestExchangeMessageTracker_isInvoiceOK(t *testing.T) {
 				},
 			},
 			invoice: crypto.Invoice{
-				Fee:            0,
+				TransactorFee:  0,
 				AgreementID:    1,
 				AgreementTotal: 100000000,
-				Provider:       "0x01",
+				Provider:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 			},
 			wantErr: false,
 		},
@@ -604,7 +604,7 @@ func TestExchangeMessageTracker_issueExchangeMessage(t *testing.T) {
 			args: args{
 				invoice: crypto.Invoice{
 					AgreementTotal: 15,
-					Hashlock:       "mylock",
+					Hashlock:       "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C",
 				},
 			},
 			wantErr: false,

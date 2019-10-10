@@ -35,6 +35,7 @@ import (
 )
 
 const mockRegistryAddress = "0xE6b3a5c92e7c1f9543A0aEE9A93fE2F6B584c1f7"
+const mockAccountantAddress = "0xf28DB7aDf64A2811202B149aa4733A1FB9100e5c"
 const mockChannelImplementation = "0xa26b684d8dBa935DD34544FBd3Ab4d7FDe1C4D07"
 
 type MockPeerInvoiceSender struct {
@@ -223,7 +224,7 @@ func generateExchangeMessage(t *testing.T, amount uint64, invoice crypto.Invoice
 	assert.Nil(t, err)
 
 	if channel == "" {
-		addr, err := crypto.GenerateChannelAddress(acc.Address.Hex(), mockRegistryAddress, mockChannelImplementation)
+		addr, err := crypto.GenerateChannelAddress(acc.Address.Hex(), mockAccountantAddress, mockRegistryAddress, mockChannelImplementation)
 		assert.Nil(t, err)
 		channel = addr
 	}
@@ -237,9 +238,9 @@ func generateExchangeMessage(t *testing.T, amount uint64, invoice crypto.Invoice
 }
 
 func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
-	msg1, addr1 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10}, "some channel")
-	msg2, addr2 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "hashlock"}, "some channel")
-	msg3, addr3 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "hashlock"}, "")
+	msg1, addr1 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
+	msg2, addr2 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C")
+	msg3, addr3 := generateExchangeMessage(t, 10, crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"}, "")
 	type fields struct {
 		peer                       identity.Identity
 		exchangeMessageChan        chan crypto.ExchangeMessage
@@ -290,7 +291,7 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
 				lastInvoice: lastInvoice{
-					invoice: crypto.Invoice{AgreementTotal: 10, Hashlock: "hashlock"},
+					invoice: crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"},
 				},
 				peer: identity.FromAddress(addr2),
 			},
@@ -303,13 +304,14 @@ func TestInvoiceTracker_receiveExchangeMessageOrTimeout(t *testing.T) {
 				exchangeMessageWaitTimeout: time.Minute,
 				exchangeMessageChan:        make(chan crypto.ExchangeMessage),
 				lastInvoice: lastInvoice{
-					invoice: crypto.Invoice{AgreementTotal: 10, Hashlock: "hashlock"},
+					invoice: crypto.Invoice{AgreementTotal: 10, Hashlock: "0x441Da57A51e42DAB7Daf55909Af93A9b00eEF23C"},
 				},
 				accountantCaller:         &mockAccountantCaller{},
 				accountantPromiseStorage: &mockAccountantPromiseStorage{},
 				peer:                     identity.FromAddress(addr3),
 				registryAddress:          mockRegistryAddress,
 				channelImplementation:    mockChannelImplementation,
+				accountantID:             identity.FromAddress(mockAccountantAddress),
 			},
 			em: &msg3,
 		},

@@ -110,7 +110,7 @@ func (t *Transactor) FetchFees() (Fees, error) {
 
 // TopUp requests a myst topup for testing purposes.
 func (t *Transactor) TopUp(id string) error {
-	channelAddress, err := pc.GenerateChannelAddress(id, t.registryAddress, t.channelImplementation)
+	channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate channel address")
 	}
@@ -153,7 +153,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO Identi
 	regReq.Fee = regReqDTO.Fee
 
 	if regReqDTO.Beneficiary == "" {
-		channelAddress, err := pc.GenerateChannelAddress(id, t.registryAddress, t.channelImplementation)
+		channelAddress, err := pc.GenerateChannelAddress(id, t.accountantID, t.registryAddress, t.channelImplementation)
 		if err != nil {
 			return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to calculate channel address")
 		}

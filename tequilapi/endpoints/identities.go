@@ -28,6 +28,7 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
+	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -276,7 +277,8 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 		identityAddress = ""
 	}
 
-	channelAddress, err := pc.GenerateChannelAddress(identityAddress, endpoint.registryAddress, endpoint.channelImplementationAddress)
+	// TODO: pass in accountant id
+	channelAddress, err := pc.GenerateChannelAddress(identityAddress, metadata.TestnetDefinition.AccountantID, endpoint.registryAddress, endpoint.channelImplementationAddress)
 
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to calculate channel address"), http.StatusInternalServerError)

@@ -74,24 +74,24 @@ type ExchangeMessageTracker struct {
 	peer                      identity.Identity
 	channelAddress            identity.Identity
 
-	registryAddress, channelImplementation string
-	consumerInvoiceStorage                 consumerInvoiceStorage
-	consumerTotalsStorage                  consumerTotalsStorage
-	timeTracker                            timeTracker
-	paymentInfo                            dto.PaymentPerTime
+	registryAddress, channelImplementation, accountantAddress string
+	consumerInvoiceStorage                                    consumerInvoiceStorage
+	consumerTotalsStorage                                     consumerTotalsStorage
+	timeTracker                                               timeTracker
+	paymentInfo                                               dto.PaymentPerTime
 }
 
 // ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker
 type ExchangeMessageTrackerDeps struct {
-	InvoiceChan                            chan crypto.Invoice
-	PeerExchangeMessageSender              PeerExchangeMessageSender
-	ConsumerInvoiceStorage                 consumerInvoiceStorage
-	ConsumerTotalsStorage                  consumerTotalsStorage
-	TimeTracker                            timeTracker
-	Ks                                     *keystore.KeyStore
-	Identity, Peer                         identity.Identity
-	PaymentInfo                            dto.PaymentPerTime
-	RegistryAddress, ChannelImplementation string
+	InvoiceChan                                               chan crypto.Invoice
+	PeerExchangeMessageSender                                 PeerExchangeMessageSender
+	ConsumerInvoiceStorage                                    consumerInvoiceStorage
+	ConsumerTotalsStorage                                     consumerTotalsStorage
+	TimeTracker                                               timeTracker
+	Ks                                                        *keystore.KeyStore
+	Identity, Peer                                            identity.Identity
+	PaymentInfo                                               dto.PaymentPerTime
+	RegistryAddress, ChannelImplementation, AccountantAddress string
 }
 
 // NewExchangeMessageTracker returns a new instance of exchange message tracker
@@ -118,7 +118,7 @@ var ErrInvoiceMissmatch = errors.New("invoice mismatch")
 // Start starts the message exchange tracker. Blocks.
 func (emt *ExchangeMessageTracker) Start() error {
 	log.Debug().Msg("Starting...")
-	addr, err := crypto.GenerateChannelAddress(emt.identity.Address, emt.registryAddress, emt.channelImplementation)
+	addr, err := crypto.GenerateChannelAddress(emt.identity.Address, emt.accountantAddress, emt.registryAddress, emt.channelImplementation)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}
@@ -181,7 +181,7 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 	}
 
 	// TODO: this should be changed once we add in the fee support
-	if invoice.Fee != 0 {
+	if invoice.TransactorFee != 0 {
 		return ErrFeeChanged
 	}
 
