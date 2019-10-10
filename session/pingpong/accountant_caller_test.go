@@ -31,12 +31,12 @@ import (
 
 func TestAccountantCaller_RequestPromise_OK(t *testing.T) {
 	promise := crypto.Promise{
-		ChannelID: "ChannelID",
+		ChannelID: []byte("ChannelID"),
 		Amount:    1,
 		Fee:       1,
-		Hashlock:  "lock",
-		R:         "R",
-		Signature: "Signature",
+		Hashlock:  []byte("lock"),
+		R:         []byte("R"),
+		Signature: []byte("Signature"),
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

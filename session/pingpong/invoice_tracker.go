@@ -18,6 +18,7 @@
 package pingpong
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"math"
@@ -256,7 +257,7 @@ func (it *InvoiceTracker) getAccountantFailureCount() uint64 {
 }
 
 func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) error {
-	if res := em.ValidateExchangeMessage(common.HexToAddress(it.peer.Address)); !res {
+	if res := em.IsMessageValid(common.HexToAddress(it.peer.Address)); !res {
 		return ErrExchangeValidationFailed
 	}
 
@@ -265,18 +266,28 @@ func (it *InvoiceTracker) validateExchangeMessage(em crypto.ExchangeMessage) err
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid amount")
 	}
 
-	if em.Promise.Hashlock != it.lastInvoice.invoice.Hashlock {
-		log.Warnf("consumer sent an invalid hashlock. Expected %q, got %q", it.lastInvoice.invoice.Hashlock, em.Promise.Hashlock)
+	hashlock, err := hex.DecodeString(strings.TrimPrefix(it.lastInvoice.invoice.Hashlock, "0x"))
+	if err != nil {
+		return errors.Wrap(err, "could not decode hashlock")
+	}
+
+	if !bytes.Equal(hashlock, em.Promise.Hashlock) {
+		log.Warnf("consumer sent an invalid hashlock. Expected %q, got %q", it.lastInvoice.invoice.Hashlock, hex.EncodeToString(em.Promise.Hashlock))
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "missmatching hashlock")
 	}
 
-	addr, err := crypto.GenerateChannelAddress(it.peer.Address, it.registryAddress, it.channelImplementation)
+	addr, err := crypto.GenerateChannelAddress(it.peer.Address, it.accountantID.Address, it.registryAddress, it.channelImplementation)
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}
 
-	if strings.ToLower(em.Promise.ChannelID) != strings.ToLower(addr) {
-		log.Warnf("consumer sent an invalid channel address. Expected %q, got %q", addr, em.Promise.ChannelID)
+	expectedChannel, err := hex.DecodeString(strings.TrimPrefix(addr, "0x"))
+	if err != nil {
+		return errors.Wrap(err, "could not decode expected chanel")
+	}
+
+	if !bytes.Equal(expectedChannel, em.Promise.ChannelID) {
+		log.Warnf("consumer sent an invalid channel address. Expected %q, got %q", addr, hex.EncodeToString(em.Promise.ChannelID))
 		return errors.Wrap(ErrConsumerPromiseValidationFailed, "invalid channel address")
 	}
 	return nil

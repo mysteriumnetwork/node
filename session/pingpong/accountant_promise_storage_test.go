@@ -48,10 +48,10 @@ func TestAccountantPromiseStorage(t *testing.T) {
 	accountantStorage := NewAccountantPromiseStorage(bolt)
 
 	firstAccountant := identity.FromAddress(acc.Address.Hex())
-	firstPromise, err := crypto.CreatePromise("channelOne", 1, 1, "lockOne", ks, acc.Address)
+	firstPromise, err := crypto.CreatePromise("0x30960954558C5bFA0D4153B0002B1d1E3E3f5Ff5", 1, 1, "0xD87C7cF5FF5FDb85988c9AFEf52Ce00A7112eC2e", ks, acc.Address)
 	assert.NoError(t, err)
 
-	secondPromise, err := crypto.CreatePromise("channelTwo", 2, 2, "lockTwo", ks, acc.Address)
+	secondPromise, err := crypto.CreatePromise("0x60d99B9a5Dc8E35aD8f2B9199470008AEeA6db90", 2, 2, "0xbDA8709DA6F7B2B99B7729136dE2fD11aB1bB536", ks, acc.Address)
 	assert.NoError(t, err)
 
 	// check if errors are wrapped correctly

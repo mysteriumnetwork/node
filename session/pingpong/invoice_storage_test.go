@@ -34,7 +34,7 @@ var identityTwo = identity.FromAddress("0x3D32e7D08BE7E5c3870679b3A7Ef60e9422196
 var invoiceOne = crypto.Invoice{
 	AgreementID:    1,
 	AgreementTotal: 1,
-	Fee:            1,
+	TransactorFee:  1,
 	Hashlock:       "hashlock1",
 	Provider:       identityOne.Address,
 }
@@ -42,7 +42,7 @@ var invoiceOne = crypto.Invoice{
 var invoiceTwo = crypto.Invoice{
 	AgreementID:    2,
 	AgreementTotal: 2,
-	Fee:            2,
+	TransactorFee:  2,
 	Hashlock:       "hashlock2",
 	Provider:       identityTwo.Address,
 }
