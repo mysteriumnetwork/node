@@ -27,27 +27,27 @@ import (
 
 const accountantPromiseBucketName = "accountant_promises"
 
-// AccountantPromiseStorage allows for storing of accountant promises
+// AccountantPromiseStorage allows for storing of accountant promises.
 type AccountantPromiseStorage struct {
 	lock sync.Mutex
 	bolt persistentStorage
 }
 
-// NewAccountantPromiseStorage returns a new instance of the accountant promise storage
+// NewAccountantPromiseStorage returns a new instance of the accountant promise storage.
 func NewAccountantPromiseStorage(bolt persistentStorage) *AccountantPromiseStorage {
 	return &AccountantPromiseStorage{
 		bolt: bolt,
 	}
 }
 
-// Store stores the given promise for the given accountant
+// Store stores the given promise for the given accountant.
 func (aps *AccountantPromiseStorage) Store(accountantID identity.Identity, promise crypto.Promise) error {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()
 	return errors.Wrap(aps.bolt.SetValue(accountantPromiseBucketName, accountantID.Address, promise), "could not store accountant promise")
 }
 
-// Get fetches the promise for the given accountant
+// Get fetches the promise for the given accountant.
 func (aps *AccountantPromiseStorage) Get(accountantID identity.Identity) (crypto.Promise, error) {
 	aps.lock.Lock()
 	defer aps.lock.Unlock()

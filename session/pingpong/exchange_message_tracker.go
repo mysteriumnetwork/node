@@ -34,16 +34,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ErrWrongProvider represents an issue where the wrong provider is supplied
+// ErrWrongProvider represents an issue where the wrong provider is supplied.
 var ErrWrongProvider = errors.New("wrong provider supplied")
 
-// ErrFeeChanged represents an issue where the provider switches the fee mid session
+// ErrFeeChanged represents an issue where the provider switches the fee mid session.
 var ErrFeeChanged = errors.New("wrong fee provided")
 
-// ErrProviderOvercharge represents an issue where the provider is trying to overcharge us
+// ErrProviderOvercharge represents an issue where the provider is trying to overcharge us.
 var ErrProviderOvercharge = errors.New("provider is overcharging")
 
-// PeerExchangeMessageSender allows for sending of exchange messages
+// PeerExchangeMessageSender allows for sending of exchange messages.
 type PeerExchangeMessageSender interface {
 	Send(crypto.ExchangeMessage) error
 }
@@ -63,7 +63,7 @@ type timeTracker interface {
 	Elapsed() time.Duration
 }
 
-// ExchangeMessageTracker keeps track of exchange messages and sends them to the provider
+// ExchangeMessageTracker keeps track of exchange messages and sends them to the provider.
 type ExchangeMessageTracker struct {
 	stop                      chan struct{}
 	invoiceChan               chan crypto.Invoice
@@ -81,7 +81,7 @@ type ExchangeMessageTracker struct {
 	paymentInfo                                               dto.PaymentPerTime
 }
 
-// ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker
+// ExchangeMessageTrackerDeps contains all the dependencies for the exchange message tracker.
 type ExchangeMessageTrackerDeps struct {
 	InvoiceChan                                               chan crypto.Invoice
 	PeerExchangeMessageSender                                 PeerExchangeMessageSender
@@ -94,7 +94,7 @@ type ExchangeMessageTrackerDeps struct {
 	RegistryAddress, ChannelImplementation, AccountantAddress string
 }
 
-// NewExchangeMessageTracker returns a new instance of exchange message tracker
+// NewExchangeMessageTracker returns a new instance of exchange message tracker.
 func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessageTracker {
 	return &ExchangeMessageTracker{
 		stop:                      make(chan struct{}),
@@ -109,10 +109,11 @@ func NewExchangeMessageTracker(emtd ExchangeMessageTrackerDeps) *ExchangeMessage
 		paymentInfo:               emtd.PaymentInfo,
 		registryAddress:           emtd.RegistryAddress,
 		channelImplementation:     emtd.ChannelImplementation,
+		accountantAddress:         emtd.AccountantAddress,
 	}
 }
 
-// ErrInvoiceMissmatch represents an error that occurs when invoices do not match
+// ErrInvoiceMissmatch represents an error that occurs when invoices do not match.
 var ErrInvoiceMissmatch = errors.New("invoice mismatch")
 
 // Start starts the message exchange tracker. Blocks.
@@ -122,6 +123,7 @@ func (emt *ExchangeMessageTracker) Start() error {
 	if err != nil {
 		return errors.Wrap(err, "could not generate channel address")
 	}
+	log.Infof("addr %v", addr)
 	emt.channelAddress = identity.FromAddress(addr)
 
 	emt.timeTracker.StartTracking()
@@ -159,8 +161,9 @@ func (emt *ExchangeMessageTracker) getGrandTotalPromised() (uint64, error) {
 			log.Debug("no previous invoice grand total, assuming zero")
 			return 0, nil
 		}
+		return 0, errors.Wrap(err, "could not get previous grand total")
 	}
-	return res, errors.Wrap(err, "could not get previous grand total")
+	return res, nil
 }
 
 func (emt *ExchangeMessageTracker) incrementGrandTotalPromised(amount uint64) error {
@@ -188,8 +191,10 @@ func (emt *ExchangeMessageTracker) isInvoiceOK(invoice crypto.Invoice) error {
 	// TODO: this should be calculated according to the passed in payment period, not a hardcoded minute
 	shouldBe := uint64(math.Trunc(emt.timeTracker.Elapsed().Minutes() * float64(emt.paymentInfo.GetPrice().Amount)))
 	upperBound := uint64(math.Trunc(float64(shouldBe) * 1.05))
+	log.Trace("upper bound", upperBound)
+
 	if invoice.AgreementTotal > upperBound {
-		log.Debug("provider trying to overcharge")
+		log.Warn("provider trying to overcharge")
 		return ErrProviderOvercharge
 	}
 
@@ -249,7 +254,7 @@ func (emt *ExchangeMessageTracker) issueExchangeMessage(invoice crypto.Invoice) 
 	return emt.consumerTotalsStorage.Store(emt.peer.Address, invoice.AgreementTotal)
 }
 
-// Stop stops the message tracker
+// Stop stops the message tracker.
 func (emt *ExchangeMessageTracker) Stop() {
 	emt.once.Do(func() {
 		log.Debug().Msg("Stopping...")

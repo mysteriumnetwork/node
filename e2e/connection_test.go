@@ -32,6 +32,7 @@ var (
 	consumerPassphrase = "localconsumer"
 	providerID         = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 	providerPassphrase = "localprovider"
+	accountantID       = "0xd1a23227bd5ad77f36ba62badcb78a410a1db6c5"
 )
 
 func TestConsumerConnectsToProvider(t *testing.T) {
@@ -57,7 +58,7 @@ func TestConsumerConnectsToProvider(t *testing.T) {
 			if _, ok := serviceTypeAssertionMap[serviceType]; ok {
 				t.Run(serviceType, func(t *testing.T) {
 					proposal := consumerPicksProposal(t, tequilapiConsumer, serviceType)
-					consumerConnectFlow(t, tequilapiConsumer, consumerID, serviceType, proposal)
+					consumerConnectFlow(t, tequilapiConsumer, consumerID, accountantID, serviceType, proposal)
 				})
 			}
 
@@ -111,7 +112,7 @@ func consumerPicksProposal(t *testing.T, tequilapi *tequilapi_client.Client, ser
 	return proposals[0]
 }
 
-func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, serviceType string, proposal tequilapi_client.ProposalDTO) {
+func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consumerID, accountantID, serviceType string, proposal tequilapi_client.ProposalDTO) {
 	err := topUpAccount(consumerID)
 	assert.Nil(t, err)
 
@@ -129,7 +130,7 @@ func consumerConnectFlow(t *testing.T, tequilapi *tequilapi_client.Client, consu
 	})
 	assert.NoError(t, err)
 
-	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, serviceType, tequilapi_client.ConnectOptions{
+	connectionStatus, err = tequilapi.ConnectionCreate(consumerID, proposal.ProviderID, accountantID, serviceType, tequilapi_client.ConnectOptions{
 		DisableKillSwitch: false,
 	})
 

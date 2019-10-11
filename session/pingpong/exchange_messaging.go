@@ -22,7 +22,7 @@ import (
 	"github.com/mysteriumnetwork/payments/crypto"
 )
 
-// ExchangeRequest structure represents message from service consumer to send a an exchange message
+// ExchangeRequest structure represents message from service consumer to send a an exchange message.
 type ExchangeRequest struct {
 	Message crypto.ExchangeMessage `json:"exchangeMessage"`
 }
@@ -30,29 +30,29 @@ type ExchangeRequest struct {
 const endpointExchange = "session-exchange"
 const messageEndpointExchange = communication.MessageEndpoint(endpointExchange)
 
-// ExchangeSender is responsible for sending the exchange messages
+// ExchangeSender is responsible for sending the exchange messages.
 type ExchangeSender struct {
 	sender communication.Sender
 }
 
-// NewExchangeSender returns a new instance of exchange message sender
+// NewExchangeSender returns a new instance of exchange message sender.
 func NewExchangeSender(sender communication.Sender) *ExchangeSender {
 	return &ExchangeSender{
 		sender: sender,
 	}
 }
 
-// Send send the given exchange message
+// Send send the given exchange message.
 func (es *ExchangeSender) Send(em crypto.ExchangeMessage) error {
 	return es.sender.Send(&ExchangeMessageProducer{Message: em})
 }
 
-// ExchangeListener listens for exchange messages
+// ExchangeListener listens for exchange messages.
 type ExchangeListener struct {
 	MessageConsumer *ExchangeMessageConsumer
 }
 
-// NewExchangeListener returns a new instance of exchange message listener
+// NewExchangeListener returns a new instance of exchange message listener.
 func NewExchangeListener(exchangeChan chan crypto.ExchangeMessage) *ExchangeListener {
 	return &ExchangeListener{
 		MessageConsumer: &ExchangeMessageConsumer{
@@ -61,12 +61,12 @@ func NewExchangeListener(exchangeChan chan crypto.ExchangeMessage) *ExchangeList
 	}
 }
 
-// GetConsumer gets the underlying consumer from the listener
+// GetConsumer gets the underlying consumer from the listener.
 func (el *ExchangeListener) GetConsumer() *ExchangeMessageConsumer {
 	return el.MessageConsumer
 }
 
-// Consume handles requests from endpoint and replies with response
+// Consume handles requests from endpoint and replies with response.
 func (emc *ExchangeMessageConsumer) Consume(requestPtr interface{}) (err error) {
 	request := requestPtr.(*ExchangeRequest)
 	emc.queue <- request.Message
@@ -75,39 +75,39 @@ func (emc *ExchangeMessageConsumer) Consume(requestPtr interface{}) (err error) 
 
 // Dialog boilerplate below, please ignore
 
-// ExchangeMessageConsumer is responsible for consuming the exchange messages
+// ExchangeMessageConsumer is responsible for consuming the exchange messages.
 type ExchangeMessageConsumer struct {
 	queue chan crypto.ExchangeMessage
 }
 
-// GetMessageEndpoint returns endpoint where to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages.
 func (emc *ExchangeMessageConsumer) GetMessageEndpoint() communication.MessageEndpoint {
 	return messageEndpointExchange
 }
 
-// NewMessage creates struct where request from endpoint will be serialized
+// NewMessage creates struct where request from endpoint will be serialized.
 func (emc *ExchangeMessageConsumer) NewMessage() (requestPtr interface{}) {
 	return &ExchangeRequest{}
 }
 
-// ExchangeMessageProducer handles the production of messages from the consumer side
+// ExchangeMessageProducer handles the production of messages from the consumer side.
 type ExchangeMessageProducer struct {
 	Message crypto.ExchangeMessage
 }
 
-// GetMessageEndpoint returns endpoint where to receive messages
+// GetMessageEndpoint returns endpoint where to receive messages.
 func (emp *ExchangeMessageProducer) GetMessageEndpoint() communication.MessageEndpoint {
 	return messageEndpointExchange
 }
 
-// Produce creates the actual message
+// Produce creates the actual message.
 func (emp *ExchangeMessageProducer) Produce() (requestPtr interface{}) {
 	return &ExchangeRequest{
 		Message: emp.Message,
 	}
 }
 
-// NewResponse creates a new empty response
+// NewResponse creates a new empty response.
 func (emp *ExchangeMessageProducer) NewResponse() (responsePtr interface{}) {
 	return nil
 }

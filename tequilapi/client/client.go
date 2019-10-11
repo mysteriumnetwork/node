@@ -130,17 +130,19 @@ func (client *Client) IdentityRegistrationStatus(address string) (RegistrationDa
 }
 
 // ConnectionCreate initiates a new connection to a host identified by providerID
-func (client *Client) ConnectionCreate(consumerID, providerID, serviceType string, options ConnectOptions) (status StatusDTO, err error) {
+func (client *Client) ConnectionCreate(consumerID, providerID, accountantID, serviceType string, options ConnectOptions) (status StatusDTO, err error) {
 	payload := struct {
-		Identity    string         `json:"consumerId"`
-		ProviderID  string         `json:"providerId"`
-		ServiceType string         `json:"serviceType"`
-		Options     ConnectOptions `json:"connectOptions"`
+		Identity     string         `json:"consumerId"`
+		ProviderID   string         `json:"providerId"`
+		AccountantID string         `json:"accountantId"`
+		ServiceType  string         `json:"serviceType"`
+		Options      ConnectOptions `json:"connectOptions"`
 	}{
-		Identity:    consumerID,
-		ProviderID:  providerID,
-		ServiceType: serviceType,
-		Options:     options,
+		Identity:     consumerID,
+		ProviderID:   providerID,
+		AccountantID: accountantID,
+		ServiceType:  serviceType,
+		Options:      options,
 	}
 	response, err := client.http.Put("connection", payload)
 	if err != nil {

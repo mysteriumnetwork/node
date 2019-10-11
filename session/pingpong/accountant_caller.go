@@ -23,13 +23,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// AccountantCaller represents the http caller for accountant
+// AccountantCaller represents the http caller for accountant.
 type AccountantCaller struct {
 	transport         requests.HTTPTransport
 	accountantBaseURI string
 }
 
-// NewAccountantCaller returns a new instance of accountant caller
+// NewAccountantCaller returns a new instance of accountant caller.
 func NewAccountantCaller(transport requests.HTTPTransport, accountantBaseURI string) *AccountantCaller {
 	return &AccountantCaller{
 		transport:         transport,
@@ -37,7 +37,7 @@ func NewAccountantCaller(transport requests.HTTPTransport, accountantBaseURI str
 	}
 }
 
-// RequestPromise requests a promise from accountant
+// RequestPromise requests a promise from accountant.
 func (ac *AccountantCaller) RequestPromise(em crypto.ExchangeMessage) (crypto.Promise, error) {
 	req, err := requests.NewPostRequest(ac.accountantBaseURI, "/request_promise", em)
 	if err != nil {
@@ -48,15 +48,15 @@ func (ac *AccountantCaller) RequestPromise(em crypto.ExchangeMessage) (crypto.Pr
 	return resp, errors.Wrap(err, "could not request promise from accountant")
 }
 
-// RevealObject represents the reveal request object
+// RevealObject represents the reveal request object.
 type RevealObject struct {
 	R           string
 	Provider    string
 	AgreementID uint64
 }
 
-// RevealR reveals the R for the accountant
-func (ac *AccountantCaller) RevealR(r string, provider string, agreementID uint64) error {
+// RevealR reveals hashlock key 'r' from 'provider' to the accountant for the agreement identified by 'agreementID'.
+func (ac *AccountantCaller) RevealR(r, provider string, agreementID uint64) error {
 	req, err := requests.NewPostRequest(ac.accountantBaseURI, "/reveal_r", RevealObject{
 		R:           r,
 		Provider:    provider,
