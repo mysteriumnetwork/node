@@ -1,4 +1,6 @@
-#!/bin/bash -ev
+#!/bin/bash -v
+
+# -ev
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export DEBIAN_FRONTEND="noninteractive"
@@ -26,6 +28,8 @@ apt-get -y install \
   wireguard \
   openvpn \
   wondershaper
+
+cat /var/lib/dkms/wireguard/0.0.20190913/build/make.log
 
 # Setup unattended upgrades
 apt-get -y install \
