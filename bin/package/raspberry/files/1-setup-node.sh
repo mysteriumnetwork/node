@@ -27,6 +27,9 @@ apt-get update --allow-releaseinfo-change
 
 # Install myst dependencies
 apt-get -y install \
+  raspberrypi-kernel-headers=1.20190819-1
+
+apt-get -y install \
   wireguard \
   openvpn \
   wondershaper
