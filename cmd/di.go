@@ -88,41 +88,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Storage stores persistent objects for future usage
-type Storage interface {
-	GetValue(bucket string, key interface{}, to interface{}) error
-	SetValue(bucket string, key interface{}, to interface{}) error
-	Store(issuer string, data interface{}) error
-	Delete(issuer string, data interface{}) error
-	Update(bucket string, object interface{}) error
-	GetAllFrom(bucket string, data interface{}) error
-	GetOneByField(bucket string, fieldName string, key interface{}, to interface{}) error
-	GetLast(bucket string, to interface{}) error
-	GetBuckets() []string
-	Close() error
-}
-
-type serviceSessionStorage interface {
-	Add(sessionInstance session.Session)
-	GetAll() []session.Session
-	UpdateDataTransfer(id session.ID, up, down int64)
-	Find(id session.ID) (session.Session, bool)
-	Remove(id session.ID)
-	RemoveForService(serviceID string)
-}
-
-// JWTAuthenticator provides authentication for Tequilapi and UI
-type JWTAuthenticator interface {
-	CreateToken(username string) (token auth.JWT, err error)
-	ValidateToken(token string) (bool, error)
-}
-
-// Authenticator provides authentication for Tequilapi and UI
-type Authenticator interface {
-	CheckCredentials(username, password string) error
-	ChangePassword(username, oldPassword, newPassword string) error
-}
-
 // NatPinger is responsible for pinging nat holes
 type NatPinger interface {
 	PingProvider(ip string, port int, consumerPort int, stop <-chan struct{}) error
@@ -135,36 +100,10 @@ type NatPinger interface {
 	Valid() bool
 }
 
-// NatEventTracker is responsible for tracking NAT events
-type NatEventTracker interface {
-	ConsumeNATEvent(event event.Event)
-	LastEvent() *event.Event
-	WaitForEvent() event.Event
-}
-
-// NatEventSender is responsible for sending NAT events to metrics server
-type NatEventSender interface {
-	ConsumeNATEvent(event event.Event)
-}
-
-// CacheResolver caches the location resolution results
-type CacheResolver interface {
-	location.Resolver
-	location.OriginResolver
-	HandleNodeEvent(se nodevent.Payload)
-	HandleConnectionEvent(connection.StateEvent)
-}
-
 // UIServer represents our web server
 type UIServer interface {
 	Serve() error
 	Stop()
-}
-
-// Transactor represents interface to Transactor service
-type Transactor interface {
-	FetchFees() (transactor.Fees, error)
-	RegisterIdentity(identity string, regReqDTO *transactor.IdentityRegistrationRequestDTO) error
 }
 
 // Dependencies is DI container for top level components which is reused in several places
@@ -176,7 +115,7 @@ type Dependencies struct {
 	EtherClient       *ethclient.Client
 
 	NATService       nat.NATService
-	Storage          Storage
+	Storage          *boltdb.Bolt
 	Keystore         *keystore.KeyStore
 	PromiseStorage   *promise.Storage
 	IdentityManager  identity.Manager
@@ -192,7 +131,7 @@ type Dependencies struct {
 	QualityClient        *quality.MysteriumMORQA
 
 	IPResolver       ip.Resolver
-	LocationResolver CacheResolver
+	LocationResolver *location.Cache
 
 	StatisticsTracker  *statistics.SessionStatisticsTracker
 	StatisticsReporter *statistics.SessionStatisticsReporter
@@ -205,21 +144,21 @@ type Dependencies struct {
 
 	ServicesManager       *service.Manager
 	ServiceRegistry       *service.Registry
-	ServiceSessionStorage serviceSessionStorage
+	ServiceSessionStorage *session.EventBasedStorage
 
 	NATPinger      NatPinger
-	NATTracker     NatEventTracker
-	NATEventSender NatEventSender
+	NATTracker     *event.Tracker
+	NATEventSender *event.Sender
 
 	BandwidthTracker *bandwidth.Tracker
 
 	StateKeeper *state.Keeper
 
-	Authenticator    Authenticator
-	JWTAuthenticator JWTAuthenticator
+	Authenticator    *auth.Authenticator
+	JWTAuthenticator *auth.JWTAuthenticator
 	UIServer         UIServer
 	SSEHandler       *sse.Handler
-	Transactor       Transactor
+	Transactor       *transactor.Transactor
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
@@ -544,10 +483,10 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 
 func newSessionManagerFactory(
 	proposal market.ServiceProposal,
-	sessionStorage serviceSessionStorage,
+	sessionStorage *session.EventBasedStorage,
 	promiseStorage session_payment.PromiseStorage,
 	natPingerChan func(*traversal.Params),
-	natTracker NatEventTracker,
+	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
 ) session.ManagerFactory {
