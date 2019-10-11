@@ -21,19 +21,20 @@ import (
 	"github.com/mysteriumnetwork/node/core/node"
 	"github.com/mysteriumnetwork/node/metadata"
 	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var (
-	accountantAddressFlag = cli.StringFlag{
+	accountantAddressFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "accountant.address",
 		Usage: "accountant URL address",
 		Value: metadata.DefaultNetwork.AccountantAddress,
-	}
-	accountantIDFlag = cli.StringFlag{
+	})
+	accountantIDFlag = altsrc.NewStringFlag(cli.StringFlag{
 		Name:  "accountant.accountant-id",
 		Usage: "accountant contract address used to register identity",
 		Value: metadata.DefaultNetwork.AccountantID,
-	}
+	})
 )
 
 // RegisterFlagsAccountant function register network flags to flag list

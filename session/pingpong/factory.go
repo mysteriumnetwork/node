@@ -35,7 +35,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// InvoiceFactoryCreator returns a payment engine factory
+// DefaultAccountantFailureCount defines how many times we're allowed to fail to reach accountant in a row before announcing the failure.
+const DefaultAccountantFailureCount uint64 = 3
+
+// InvoiceFactoryCreator returns a payment engine factory.
 func InvoiceFactoryCreator(
 	dialog communication.Dialog,
 	balanceSendPeriod, promiseTimeout time.Duration,
@@ -43,11 +46,11 @@ func InvoiceFactoryCreator(
 	paymentInfo dto.PaymentPerTime,
 	accountantCaller accountantCaller,
 	accountantPromiseStorage accountantPromiseStorage,
-	accountantID identity.Identity,
 	registryAddress string,
 	channelImplementationAddress string,
-) func(identity.Identity) (session.PaymentEngine, error) {
-	return func(providerID identity.Identity) (session.PaymentEngine, error) {
+	maxAccountantFailureCount uint64,
+) func(identity.Identity, identity.Identity) (session.PaymentEngine, error) {
+	return func(providerID identity.Identity, accountantID identity.Identity) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
 		listener := NewExchangeListener(exchangeChan)
 		invoiceSender := NewInvoiceSender(dialog)
@@ -71,13 +74,14 @@ func InvoiceFactoryCreator(
 			AccountantID:               accountantID,
 			ChannelImplementation:      channelImplementationAddress,
 			Registry:                   registryAddress,
+			MaxAccountantFailureCount:  maxAccountantFailureCount,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil
 	}
 }
 
-// BackwardsCompatibleExchangeFactoryFunc returns a backwards compatible version of the exchange factory
+// BackwardsCompatibleExchangeFactoryFunc returns a backwards compatible version of the exchange factory.
 func BackwardsCompatibleExchangeFactoryFunc(
 	keystore *keystore.KeyStore,
 	options node.Options,
@@ -87,10 +91,10 @@ func BackwardsCompatibleExchangeFactoryFunc(
 	channelImplementation string,
 	registryAddress string) func(paymentInfo *promise.PaymentInfo,
 	dialog communication.Dialog,
-	consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
+	consumer, provider, accountant identity.Identity) (connection.PaymentIssuer, error) {
 	return func(paymentInfo *promise.PaymentInfo,
 		dialog communication.Dialog,
-		consumer, provider identity.Identity) (connection.PaymentIssuer, error) {
+		consumer, provider, accountant identity.Identity) (connection.PaymentIssuer, error) {
 		var promiseState promise.PaymentInfo
 		payment := dto.PaymentPerTime{
 			Price: money.Money{
@@ -134,6 +138,7 @@ func BackwardsCompatibleExchangeFactoryFunc(
 				},
 				RegistryAddress:       registryAddress,
 				ChannelImplementation: channelImplementation,
+				AccountantAddress:     accountant.Address,
 			}
 			payments = NewExchangeMessageTracker(deps)
 		} else {

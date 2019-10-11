@@ -305,18 +305,18 @@ func (c *cliApp) serviceGet(id string) {
 func (c *cliApp) connect(argsString string) {
 	args := strings.Fields(argsString)
 
-	helpMsg := "Please type in the provider identity. connect <consumer-identity> <provider-identity> <service-type> [disable-kill-switch] [enable-dns]"
-	if len(args) < 3 {
+	helpMsg := "Missing parameter. Usage: connect <consumer-identity> <provider-identity> <accountant-identity> <service-type> [disable-kill-switch] [enable-dns]"
+	if len(args) < 4 {
 		info(helpMsg)
 		return
 	}
 
-	consumerID, providerID, serviceType := args[0], args[1], args[2]
+	consumerID, providerID, accountantID, serviceType := args[0], args[1], args[2], args[3]
 
 	var disableKillSwitch bool
 	var enableDNS bool
 	var err error
-	for _, arg := range args[3:] {
+	for _, arg := range args[4:] {
 		switch arg {
 		case "enable-dns":
 			enableDNS = true
@@ -346,7 +346,7 @@ func (c *cliApp) connect(argsString string) {
 
 	status("CONNECTING", "from:", consumerID, "to:", providerID)
 
-	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, serviceType, connectOptions)
+	_, err = c.tequilapi.ConnectionCreate(consumerID, providerID, accountantID, serviceType, connectOptions)
 	if err != nil {
 		warn(err)
 		return

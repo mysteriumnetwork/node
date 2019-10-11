@@ -33,17 +33,19 @@ import (
 )
 
 type mockConnectionManager struct {
-	onConnectReturn      error
-	onDisconnectReturn   error
-	onStatusReturn       connection.Status
-	disconnectCount      int
-	requestedConsumerID  identity.Identity
-	requestedProvider    identity.Identity
-	requestedServiceType string
+	onConnectReturn       error
+	onDisconnectReturn    error
+	onStatusReturn        connection.Status
+	disconnectCount       int
+	requestedConsumerID   identity.Identity
+	requestedProvider     identity.Identity
+	requestedAccountantID identity.Identity
+	requestedServiceType  string
 }
 
-func (cm *mockConnectionManager) Connect(consumerID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
+func (cm *mockConnectionManager) Connect(consumerID, accountantID identity.Identity, proposal market.ServiceProposal, options connection.ConnectParams) error {
 	cm.requestedConsumerID = consumerID
+	cm.requestedAccountantID = accountantID
 	cm.requestedProvider = identity.FromAddress(proposal.ProviderID)
 	cm.requestedServiceType = proposal.ServiceType
 	return cm.onConnectReturn
@@ -111,7 +113,7 @@ func TestAddRoutesForConnectionAddsRoutes(t *testing.T) {
 			http.StatusOK, `{"status": ""}`,
 		},
 		{
-			http.MethodPut, "/connection", `{"consumerId": "me", "providerId": "node1", "serviceType": "noop"}`,
+			http.MethodPut, "/connection", `{"consumerId": "me", "providerId": "node1", "accountantId":"accountant", "serviceType": "noop"}`,
 			http.StatusCreated, `{"status": ""}`,
 		},
 		{
@@ -267,6 +269,7 @@ func TestPutReturns422ErrorIfRequestBodyIsMissingFieldValues(t *testing.T) {
 		`{
 			"message" : "validation_error",
 			"errors" : {
+				"accountantId" : [ {"code" : "required" , "message" : "Field is required" } ],
 				"consumerId" : [ { "code" : "required" , "message" : "Field is required" } ],
 				"providerId" : [ {"code" : "required" , "message" : "Field is required" } ]
 			}
@@ -284,7 +287,8 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 		strings.NewReader(
 			`{
 				"consumerId" : "my-identity",
-				"providerId" : "required-node"
+				"providerId" : "required-node",
+				"accountantId" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -293,6 +297,7 @@ func TestPutWithValidBodyCreatesConnection(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
 	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumerID)
+	assert.Equal(t, identity.FromAddress("accountant"), fakeManager.requestedAccountantID)
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
 	assert.Equal(t, "openvpn", fakeManager.requestedServiceType)
 }
@@ -309,6 +314,7 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 			`{
 				"consumerId" : "my-identity",
 				"providerId" : "required-node",
+				"accountantId": "accountant",
 				"serviceType": "noop"
 			}`))
 	resp := httptest.NewRecorder()
@@ -317,7 +323,8 @@ func TestPutWithServiceTypeOverridesDefault(t *testing.T) {
 
 	assert.Equal(t, http.StatusCreated, resp.Code)
 
-	assert.Equal(t, identity.FromAddress("my-identity"), fakeManager.requestedConsumerID)
+	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
+	assert.Equal(t, identity.FromAddress("accountant"), fakeManager.requestedAccountantID)
 	assert.Equal(t, identity.FromAddress("required-node"), fakeManager.requestedProvider)
 	assert.Equal(t, "noop", fakeManager.requestedServiceType)
 }
@@ -392,7 +399,8 @@ func TestEndpointReturnsConflictStatusIfConnectionAlreadyExists(t *testing.T) {
 		strings.NewReader(
 			`{
 				"consumerId" : "my-identity",
-				"providerId" : "required-node"
+				"providerId" : "required-node",
+				"accountantId" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -445,7 +453,8 @@ func TestConnectReturnsConnectCancelledStatusWhenErrConnectionCancelledIsEncount
 		strings.NewReader(
 			`{
 				"consumerId" : "my-identity",
-				"providerId" : "required-node"
+				"providerId" : "required-node",
+				"accountantId" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 
@@ -472,7 +481,8 @@ func TestConnectReturnsErrorIfNoProposals(t *testing.T) {
 		strings.NewReader(
 			`{
 				"consumerId" : "my-identity",
-				"providerId" : "required-node"
+				"providerId" : "required-node",
+				"accountantId" : "accountant"
 			}`))
 	resp := httptest.NewRecorder()
 

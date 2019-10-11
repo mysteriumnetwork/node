@@ -59,6 +59,11 @@ type connectionRequest struct {
 	// example: 0x0000000000000000000000000000000000000002
 	ProviderID string `json:"providerId"`
 
+	// accountant identity
+	// required: true
+	// example: 0x0000000000000000000000000000000000000003
+	AccountantID string `json:"accountantId"`
+
 	// service type. Possible values are "openvpn", "wireguard" and "noop"
 	// required: false
 	// default: openvpn
@@ -213,7 +218,7 @@ func (ce *ConnectionEndpoint) Create(resp http.ResponseWriter, req *http.Request
 	}
 
 	connectOptions := getConnectOptions(cr)
-	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), *proposal, connectOptions)
+	err = ce.manager.Connect(identity.FromAddress(cr.ConsumerID), identity.FromAddress(cr.AccountantID), *proposal, connectOptions)
 
 	if err != nil {
 		switch err {
@@ -326,6 +331,9 @@ func validateConnectionRequest(cr *connectionRequest) *validation.FieldErrorMap 
 	}
 	if len(cr.ProviderID) == 0 {
 		errs.ForField("providerId").AddError("required", "Field is required")
+	}
+	if len(cr.AccountantID) == 0 {
+		errs.ForField("accountantId").AddError("required", "Field is required")
 	}
 	return errs
 }

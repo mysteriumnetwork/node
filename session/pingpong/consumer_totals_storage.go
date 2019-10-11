@@ -25,27 +25,27 @@ import (
 
 const consumerTotalStorageBucketName = "consumer_promised_totals"
 
-// ConsumerTotalsStorage allows to store total promised amounts for each channel
+// ConsumerTotalsStorage allows to store total promised amounts for each channel.
 type ConsumerTotalsStorage struct {
 	bolt persistentStorage
 	lock sync.Mutex
 }
 
-// NewConsumerTotalsStorage creates a new instance of consumer totals storage
+// NewConsumerTotalsStorage creates a new instance of consumer totals storage.
 func NewConsumerTotalsStorage(bolt persistentStorage) *ConsumerTotalsStorage {
 	return &ConsumerTotalsStorage{
 		bolt: bolt,
 	}
 }
 
-// Store stores the given amount as promised for the given channel
+// Store stores the given amount as promised for the given channel.
 func (cts *ConsumerTotalsStorage) Store(providerAddress string, amount uint64) error {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()
 	return cts.bolt.SetValue(consumerTotalStorageBucketName, providerAddress, amount)
 }
 
-// Get fetches the amount as promised for the given channel
+// Get fetches the amount as promised for the given channel.
 func (cts *ConsumerTotalsStorage) Get(providerAddress string) (uint64, error) {
 	cts.lock.Lock()
 	defer cts.lock.Unlock()

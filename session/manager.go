@@ -84,7 +84,7 @@ type Storage interface {
 type BalanceTrackerFactory func(consumer, provider, issuer identity.Identity) (PaymentEngine, error)
 
 // PaymentEngineFactory creates a new instance of payment engine
-type PaymentEngineFactory func(providerID identity.Identity) (PaymentEngine, error)
+type PaymentEngineFactory func(providerID, accountantID identity.Identity) (PaymentEngine, error)
 
 // NATEventGetter lets us access the last known traversal event
 type NATEventGetter interface {
@@ -156,13 +156,8 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 	// TODO: this whole block needs to go when we deprecate the old payment pingpong
 	var paymentEngine PaymentEngine
 	if consumerInfo.PaymentVersion == PaymentVersionV2 {
-<<<<<<< HEAD
 		log.Info().Msg("Using new payments")
-		engine, err := manager.paymentEngineFactory()
-=======
-		log.Info("using new payments")
-		engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID))
->>>>>>> Implemented off chain payment message dialog between consumer and provider
+		engine, err := manager.paymentEngineFactory(identity.FromAddress(manager.currentProposal.ProviderID), consumerInfo.AccountantID)
 		if err != nil {
 			return sessionInstance, err
 		}

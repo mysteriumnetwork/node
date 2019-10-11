@@ -63,5 +63,6 @@ const PaymentVersionV2 PaymentVersion = "v2"
 // ConsumerInfo represents the consumer related information
 type ConsumerInfo struct {
 	IssuerID       identity.Identity `json:"issuerID"`
+	AccountantID   identity.Identity `json:"accountantID"`
 	PaymentVersion PaymentVersion    `json:"paymentVersion"`
 }

@@ -30,7 +30,7 @@ services:
       --transactor.registry-address=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --transactor.channel-implementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      --accountant.address=http://accountant:8889/api/v1"
+      --accountant.address=http://accountant:8889/api/v1
       --transactor.address=http://transactor:8888/api/v1
       --ether.contract.payments=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --keystore.lightweight
@@ -57,7 +57,7 @@ services:
     command: >
       --transactor.registry-address=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c
       --accountant.accountant-id=0x676b9a084aC11CEeF680AF6FFbE99b24106F47e7
-      --accountant.address=http://accountant:8889/api/v1"
+      --accountant.address=http://accountant:8889/api/v1
       --transactor.address=http://transactor:8888/api/v1
       --transactor.channel-implementation=0xAA9C4E723609Cb913430143fbc86D3CBe7ADCa21
       --ether.contract.payments=0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c

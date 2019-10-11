@@ -579,9 +579,9 @@ func newSessionManagerFactory(
 			},
 			pingpong.NewAccountantCaller(requests.NewHTTPClient(nodeOptions.BindAddress, time.Second*5), nodeOptions.Accountant.AccountantEndpointAddress),
 			accountantPromiseStorage,
-			identity.FromAddress(nodeOptions.Accountant.AccountantID),
 			nodeOptions.Transactor.RegistryAddress,
 			nodeOptions.Transactor.ChannelImplementation,
+			pingpong.DefaultAccountantFailureCount,
 		)
 		return session.NewManager(
 			proposal,
