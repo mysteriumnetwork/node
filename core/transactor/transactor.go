@@ -33,7 +33,8 @@ import (
 	"github.com/mysteriumnetwork/node/requests"
 )
 
-type transactor struct {
+// Transactor allows for convenient calls to the transactor service
+type Transactor struct {
 	http            requests.HTTPTransport
 	endpointAddress string
 	signerFactory   identity.SignerFactory
@@ -42,8 +43,8 @@ type transactor struct {
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID string, signerFactory identity.SignerFactory) *transactor {
-	return &transactor{
+func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID string, signerFactory identity.SignerFactory) *Transactor {
+	return &Transactor{
 		http:            requests.NewHTTPClient(bindAddress, 20*time.Second),
 		endpointAddress: endpointAddress,
 		signerFactory:   signerFactory,
@@ -87,8 +88,8 @@ type IdentityRegistrationRequest struct {
 	Identity  string `json:"identity"`
 }
 
-//  FetchFees fetches current transactor fees
-func (t *transactor) FetchFees() (Fees, error) {
+// FetchFees fetches current transactor fees
+func (t *Transactor) FetchFees() (Fees, error) {
 	f := Fees{}
 
 	req, err := requests.NewGetRequest(t.endpointAddress, "fee/register", nil)
@@ -101,7 +102,7 @@ func (t *transactor) FetchFees() (Fees, error) {
 }
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
-func (t *transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistrationRequestDTO) error {
+func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistrationRequestDTO) error {
 	regReq, err := t.fillIdentityRegistrationRequest(id, *regReqDTO)
 	if err != nil {
 		return errors.Wrap(err, "failed to fill in identity request")
@@ -120,7 +121,7 @@ func (t *transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 	return t.http.DoRequest(req)
 }
 
-func (t *transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {
+func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO IdentityRegistrationRequestDTO) (IdentityRegistrationRequest, error) {
 	regReq := IdentityRegistrationRequest{RegistryAddress: t.registryAddress, AccountantID: t.accountantID}
 
 	regReq.Stake = regReqDTO.Stake
@@ -153,7 +154,7 @@ func (t *transactor) fillIdentityRegistrationRequest(id string, regReqDTO Identi
 	return regReq, nil
 }
 
-func (t *transactor) validateRegisterIdentityRequest(regReq IdentityRegistrationRequest) error {
+func (t *Transactor) validateRegisterIdentityRequest(regReq IdentityRegistrationRequest) error {
 	if regReq.AccountantID == "" {
 		return errors.New("AccountantID is required")
 	}
@@ -163,7 +164,7 @@ func (t *transactor) validateRegisterIdentityRequest(regReq IdentityRegistration
 	return nil
 }
 
-func (t *transactor) signRegistrationRequest(signer identity.Signer, regReq IdentityRegistrationRequest) ([]byte, error) {
+func (t *Transactor) signRegistrationRequest(signer identity.Signer, regReq IdentityRegistrationRequest) ([]byte, error) {
 	req := registration.Request{
 		RegistryAddress: strings.ToLower(regReq.RegistryAddress),
 		AccountantID:    strings.ToLower(regReq.AccountantID),
