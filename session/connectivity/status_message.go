@@ -40,7 +40,6 @@ const (
 	StatusSessionIpNotChanged StatusCode = 2002
 
 	// StatusConnectionFailed indicates unknown session connection error.
-	// TODO: Split this error to more detailed.
 	StatusConnectionFailed StatusCode = 2003
 )
 

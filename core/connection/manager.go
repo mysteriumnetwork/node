@@ -161,7 +161,6 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 		if err == context.Canceled {
 			return ErrConnectionCancelled
 		}
-		// TODO: Here we need to extract mode detailed error if possible.
 		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
 		return err
 	}
