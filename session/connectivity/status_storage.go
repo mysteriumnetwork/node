@@ -18,11 +18,16 @@
 package connectivity
 
 import (
+	"sort"
 	"sync"
 	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
 )
+
+// maxEntriesKeepPeriod describes how long entries are kept in memory storage.
+// Older than this duration entries are removed on insert.
+const maxEntriesKeepDuration = time.Hour * 24 * 30
 
 // StatusStorage is responsible for status storage operations.
 type StatusStorage interface {
@@ -57,6 +62,11 @@ func (s *statusStorage) GetAllStatusEntries() []StatusEntry {
 	for _, entry := range s.entries {
 		res = append(res, entry)
 	}
+
+	// Sort by CreatedAtUTC descending to show newest entries first.
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].CreatedAtUTC.After(res[j].CreatedAtUTC)
+	})
 	return res
 }
 
@@ -64,5 +74,16 @@ func (s *statusStorage) AddStatusEntry(msg StatusEntry) {
 	s.entriesMux.Lock()
 	defer s.entriesMux.Unlock()
 
+	// Remove old entries which are older that maxEntriesKeepDuration.
+	var res []StatusEntry
+	minValidEntryTime := time.Now().UTC().Add(-maxEntriesKeepDuration)
+	for _, entry := range s.entries {
+		if entry.CreatedAtUTC.After(minValidEntryTime) {
+			res = append(res, entry)
+		}
+	}
+	s.entries = res
+
+	// Add new entry.
 	s.entries = append(s.entries, msg)
 }

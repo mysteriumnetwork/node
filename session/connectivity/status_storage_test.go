@@ -32,14 +32,14 @@ func TestStatusStorage_AddStatusEntry(t *testing.T) {
 		SessionID:    "1",
 		StatusCode:   StatusConnectionOk,
 		Message:      "Ok",
-		CreatedAtUTC: time.Time{},
+		CreatedAtUTC: time.Now().UTC(),
 	}
 	e2 := StatusEntry{
 		PeerID:       identity.Identity{},
 		SessionID:    "",
 		StatusCode:   StatusConnectionFailed,
 		Message:      "Failed",
-		CreatedAtUTC: time.Time{},
+		CreatedAtUTC: time.Now().UTC().Add(-1 * time.Second),
 	}
 
 	storage.AddStatusEntry(e1)
@@ -49,6 +49,25 @@ func TestStatusStorage_AddStatusEntry(t *testing.T) {
 	assert.Len(t, entries, 2)
 	assert.Equal(t, e1, entries[0])
 	assert.Equal(t, e2, entries[1])
+}
+
+func TestStatusStorage_AddStatusEntry_RemovesOldEntries(t *testing.T) {
+	storage := NewStatusStorage()
+	e1 := StatusEntry{
+		SessionID:    "s1",
+		CreatedAtUTC: time.Now().UTC().Add(-maxEntriesKeepDuration * 2),
+	}
+	storage.AddStatusEntry(e1)
+
+	e2 := StatusEntry{
+		SessionID:    "s2",
+		CreatedAtUTC: time.Now().UTC(),
+	}
+	storage.AddStatusEntry(e2)
+
+	entries := storage.GetAllStatusEntries()
+	assert.Len(t, entries, 1)
+	assert.Equal(t, e2, entries[0])
 }
 
 func TestStatusStorage_GetAllStatusEntries_Returns_Immutable_Data(t *testing.T) {
@@ -66,4 +85,29 @@ func TestStatusStorage_GetAllStatusEntries_Returns_Immutable_Data(t *testing.T) 
 
 	entries[0].SessionID = "2"
 	assert.NotEqual(t, entries[0].SessionID, storage.(*statusStorage).entries[0].SessionID)
+}
+
+func TestStatusStorage_GetAllStatusEntries_Returns_Sorted_Data(t *testing.T) {
+	storage := NewStatusStorage()
+	e1 := StatusEntry{
+		SessionID:    "1",
+		CreatedAtUTC: time.Now(),
+	}
+	e2 := StatusEntry{
+		SessionID:    "2",
+		CreatedAtUTC: time.Now().Add(-10 * time.Minute),
+	}
+	e3 := StatusEntry{
+		SessionID:    "3",
+		CreatedAtUTC: time.Now().Add(15 * time.Minute),
+	}
+	storage.AddStatusEntry(e1)
+	storage.AddStatusEntry(e2)
+	storage.AddStatusEntry(e3)
+
+	entries := storage.GetAllStatusEntries()
+
+	assert.Equal(t, e3, entries[0])
+	assert.Equal(t, e1, entries[1])
+	assert.Equal(t, e2, entries[2])
 }
