@@ -228,7 +228,7 @@ services:
       - 1194
       - 4050
     volumes:
-      - ../../e2e/myst-provider:/var/lib/mysterium-node
+      - ../../e2e/myst-provider/keystore:/var/lib/mysterium-node/keystore
     command: >
       --ip-detector=http://ipify:3000/?format=json
       --location.type=manual
