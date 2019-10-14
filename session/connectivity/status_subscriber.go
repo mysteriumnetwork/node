@@ -18,6 +18,8 @@
 package connectivity
 
 import (
+	"time"
+
 	"github.com/mysteriumnetwork/node/communication"
 )
 
@@ -40,13 +42,12 @@ type statusSubscriber struct {
 func (s *statusSubscriber) Subscribe(dialog communication.Dialog) {
 	consumer := &statusConsumer{
 		callback: func(msg *StatusMessage) {
-			log.Infof("session status dialog identity peerID: %s", dialog.PeerID())
-			log.Infof("session connectivity status: %v", msg)
 			entry := &StatusEntry{
-				PeerID:     dialog.PeerID(),
-				SessionID:  msg.SessionID,
-				StatusCode: msg.StatusCode,
-				Message:    msg.Message,
+				PeerID:       dialog.PeerID(),
+				SessionID:    msg.SessionID,
+				StatusCode:   msg.StatusCode,
+				Message:      msg.Message,
+				CreatedAtUTC: time.Now().UTC(),
 			}
 			s.statusStorage.AddStatusEntry(entry)
 		},

@@ -19,11 +19,12 @@ package connectivity
 
 import (
 	"sync"
+	"time"
 
 	"github.com/mysteriumnetwork/node/identity"
 )
 
-//StatusStorage is status storage interface.
+// StatusStorage is responsible for status storage operations.
 type StatusStorage interface {
 	GetAllStatusEntries() []*StatusEntry
 	AddStatusEntry(msg *StatusEntry)
@@ -31,10 +32,11 @@ type StatusStorage interface {
 
 // StatusEntry describes status entry.
 type StatusEntry struct {
-	PeerID     identity.Identity
-	SessionID  string
-	StatusCode StatusCode
-	Message    string
+	PeerID       identity.Identity
+	SessionID    string
+	StatusCode   StatusCode
+	Message      string
+	CreatedAtUTC time.Time
 }
 
 // NewStatusStorage returns new StatusStorage instance.
@@ -50,6 +52,7 @@ type statusStorage struct {
 func (s *statusStorage) GetAllStatusEntries() []*StatusEntry {
 	s.entriesMux.RLock()
 	defer s.entriesMux.RUnlock()
+
 	return s.entries
 }
 
@@ -57,6 +60,5 @@ func (s *statusStorage) AddStatusEntry(msg *StatusEntry) {
 	s.entriesMux.Lock()
 	defer s.entriesMux.Unlock()
 
-	// TODO: Maintain only last x entries to possibly to big memory usage.
 	s.entries = append(s.entries, msg)
 }

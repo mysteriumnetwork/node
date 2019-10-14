@@ -33,10 +33,11 @@ type sessionConnectivityStatusCollection struct {
 }
 
 type sessionConnectivityStatus struct {
-	PeerAddress string `json:"peer_address"`
-	SessionID   string `json:"session_id"`
-	Code        uint32 `json:"code"`
-	Message     string `json:"message"`
+	PeerAddress  string    `json:"peer_address"`
+	SessionID    string    `json:"session_id"`
+	Code         uint32    `json:"code"`
+	Message      string    `json:"message"`
+	CreatedAtUTC time.Time `json:"created_at_utc"`
 }
 
 type sessionConnectivityEndpoint struct {
@@ -64,10 +65,11 @@ func (e *sessionConnectivityEndpoint) List(resp http.ResponseWriter, req *http.R
 
 	for _, entry := range e.statusStorage.GetAllStatusEntries() {
 		r.Entries = append(r.Entries, &sessionConnectivityStatus{
-			PeerAddress: entry.PeerID.Address,
-			Code:        uint32(entry.StatusCode),
-			Message:     entry.Message,
-			SessionID:   entry.SessionID,
+			PeerAddress:  entry.PeerID.Address,
+			SessionID:    entry.SessionID,
+			Code:         uint32(entry.StatusCode),
+			Message:      entry.Message,
+			CreatedAtUTC: entry.CreatedAtUTC,
 		})
 	}
 
