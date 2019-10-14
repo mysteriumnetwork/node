@@ -476,7 +476,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
-	tequilapi_endpoints.AddRoutesForDialogsStatus(nodeOptions.BindAddress, router, di.SessionConnectivityStatusStorage)
+	tequilapi_endpoints.AddRoutesForConnectivityStatus(nodeOptions.BindAddress, router, di.SessionConnectivityStatusStorage)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 

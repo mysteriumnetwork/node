@@ -72,8 +72,8 @@ func (e *sessionConnectivityEndpoint) List(resp http.ResponseWriter, req *http.R
 	utils.WriteAsJSON(r, resp)
 }
 
-// AddRoutesForDialogsStatus attaches dialogs statuses to router.
-func AddRoutesForDialogsStatus(bindAddress string, router *httprouter.Router, statusStorage connectivity.StatusStorage) {
+// AddRoutesForConnectivityStatus attaches connectivity statuses endpoints to router.
+func AddRoutesForConnectivityStatus(bindAddress string, router *httprouter.Router, statusStorage connectivity.StatusStorage) {
 	e := &sessionConnectivityEndpoint{
 		http:          requests.NewHTTPClient(bindAddress, 20*time.Second),
 		statusStorage: statusStorage,

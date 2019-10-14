@@ -439,6 +439,6 @@ type mockStatusSender struct {
 	sentMsg *connectivity.StatusMessage
 }
 
-func (s mockStatusSender) Send(dialog communication.Dialog, msg *connectivity.StatusMessage) {
+func (s mockStatusSender) Send(dialog communication.Sender, msg *connectivity.StatusMessage) {
 	s.sentMsg = msg
 }

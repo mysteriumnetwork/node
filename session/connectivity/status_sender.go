@@ -23,7 +23,7 @@ import (
 
 // StatusSender is responsible for sending session connectivity status to other peer.
 type StatusSender interface {
-	Send(dialog communication.Dialog, msg *StatusMessage)
+	Send(dialog communication.Sender, msg *StatusMessage)
 }
 
 // NewStatusSender creates StatusSender instance.
@@ -34,7 +34,7 @@ func NewStatusSender() StatusSender {
 type statusSender struct{}
 
 // Send sends status message to other peer via broker.
-func (s *statusSender) Send(dialog communication.Dialog, msg *StatusMessage) {
+func (s *statusSender) Send(dialog communication.Sender, msg *StatusMessage) {
 	producer := &statusProducer{
 		message: msg,
 	}
