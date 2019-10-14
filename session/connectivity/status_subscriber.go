@@ -42,7 +42,7 @@ type statusSubscriber struct {
 func (s *statusSubscriber) Subscribe(dialog communication.Dialog) {
 	consumer := &statusConsumer{
 		callback: func(msg *StatusMessage) {
-			entry := &StatusEntry{
+			entry := StatusEntry{
 				PeerID:       dialog.PeerID(),
 				SessionID:    msg.SessionID,
 				StatusCode:   msg.StatusCode,

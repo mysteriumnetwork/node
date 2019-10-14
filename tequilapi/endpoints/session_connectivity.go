@@ -54,10 +54,6 @@ type sessionConnectivityEndpoint struct {
 //     description: List of connectivity statuses
 //     schema:
 //       "$ref": "#/definitions/ConnectivityStatus"
-//   500:
-//     description: Internal server error
-//     schema:
-//       "$ref": "#/definitions/ErrorMessageDTO"
 func (e *sessionConnectivityEndpoint) List(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	r := sessionConnectivityStatusCollection{
 		Entries: []*sessionConnectivityStatus{},

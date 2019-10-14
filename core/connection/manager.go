@@ -154,7 +154,7 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 		return err
 	}
 
-	currentPublicIP := manager.getPublicIP()
+	originalPublicIP := manager.getPublicIP()
 	// Try to establish connection with peer.
 	err = manager.startConnection(connection, consumerID, proposal, params, sessionDTO, stateChannel, statisticsChannel)
 	if err != nil {
@@ -165,15 +165,15 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 		return err
 	}
 
-	manager.checkSessionIP(dialog, sessionDTO.ID, currentPublicIP)
+	manager.checkSessionIP(dialog, sessionDTO.ID, originalPublicIP)
 	return nil
 }
 
 // checkSessionIP checks if ip was changed after connection is established and notify peer.
-func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, sessionID session.ID, currentPublicIP string) {
+func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, sessionID session.ID, originalPublicIP string) {
 	newPublicIP := manager.getPublicIP()
-	if currentPublicIP == newPublicIP {
-		manager.sendSessionStatus(dialog, sessionID, connectivity.StatusSessionIpNotChanged, nil)
+	if originalPublicIP == newPublicIP {
+		manager.sendSessionStatus(dialog, sessionID, connectivity.StatusSessionIPNotChanged, nil)
 		return
 	}
 

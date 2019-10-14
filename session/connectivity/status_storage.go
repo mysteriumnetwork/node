@@ -26,8 +26,8 @@ import (
 
 // StatusStorage is responsible for status storage operations.
 type StatusStorage interface {
-	GetAllStatusEntries() []*StatusEntry
-	AddStatusEntry(msg *StatusEntry)
+	GetAllStatusEntries() []StatusEntry
+	AddStatusEntry(msg StatusEntry)
 }
 
 // StatusEntry describes status entry.
@@ -45,18 +45,22 @@ func NewStatusStorage() StatusStorage {
 }
 
 type statusStorage struct {
-	entries    []*StatusEntry
+	entries    []StatusEntry
 	entriesMux sync.RWMutex
 }
 
-func (s *statusStorage) GetAllStatusEntries() []*StatusEntry {
+func (s *statusStorage) GetAllStatusEntries() []StatusEntry {
 	s.entriesMux.RLock()
 	defer s.entriesMux.RUnlock()
 
-	return s.entries
+	var res []StatusEntry
+	for _, entry := range s.entries {
+		res = append(res, entry)
+	}
+	return res
 }
 
-func (s *statusStorage) AddStatusEntry(msg *StatusEntry) {
+func (s *statusStorage) AddStatusEntry(msg StatusEntry) {
 	s.entriesMux.Lock()
 	defer s.entriesMux.Unlock()
 

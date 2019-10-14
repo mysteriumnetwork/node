@@ -36,8 +36,8 @@ const (
 	// StatusSessionPaymentsFailed indicates that session payments failed.
 	StatusSessionPaymentsFailed StatusCode = 2001
 
-	// StatusSessionIpNotChanged indicates that session is established but ip is not changed.
-	StatusSessionIpNotChanged StatusCode = 2002
+	// StatusSessionIPNotChanged indicates that session is established but ip is not changed.
+	StatusSessionIPNotChanged StatusCode = 2002
 
 	// StatusConnectionFailed indicates unknown session connection error.
 	StatusConnectionFailed StatusCode = 2003
