@@ -169,7 +169,7 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 	return nil
 }
 
-// checkSessionIP checks if ip was changed after connection is established and notify peer.
+// checkSessionIP checks if IP has changed after connection was established and notify peer.
 func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, sessionID session.ID, originalPublicIP string) {
 	newPublicIP := manager.getPublicIP()
 	if originalPublicIP == newPublicIP {
