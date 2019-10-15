@@ -449,6 +449,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		nodeOptions.Transactor.TransactorEndpointAddress,
 		nodeOptions.Transactor.RegistryAddress,
 		nodeOptions.Transactor.AccountantID,
+		// TODO: switch this to channel implementation after #1325 is merged
+		nodeOptions.Transactor.RegistryAddress,
 		di.SignerFactory,
 	)
 

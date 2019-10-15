@@ -46,7 +46,7 @@ func Test_RegisterIdentity(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -69,7 +69,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "registryAddress", "accountantID", fakeSignerFactory)
+	tr := transactor.NewTransactor(server.URL, server.URL, "registryAddress", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "accountantID", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(
@@ -92,7 +92,7 @@ func Test_TopUp(t *testing.T) {
 
 	router := httprouter.New()
 
-	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
 	req, err := http.NewRequest(

@@ -68,7 +68,7 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 	utils.WriteAsJSON(fees, resp)
 }
 
-// swagger:operation POST /transactor/topup Fees
+// swagger:operation POST /transactor/topup ErrorMessageDTO
 // ---
 // summary: tops up myst to the given identity
 // description: tops up myst to the given identity

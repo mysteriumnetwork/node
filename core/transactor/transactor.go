@@ -29,27 +29,28 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
-	http            requests.HTTPTransport
-	endpointAddress string
-	signerFactory   identity.SignerFactory
-	registryAddress string
-	accountantID    string
+	http                  requests.HTTPTransport
+	endpointAddress       string
+	signerFactory         identity.SignerFactory
+	registryAddress       string
+	accountantID          string
+	channelImplementation string
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID string, signerFactory identity.SignerFactory) *Transactor {
+func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory) *Transactor {
 	return &Transactor{
-		http:            requests.NewHTTPClient(bindAddress, 20*time.Second),
-		endpointAddress: endpointAddress,
-		signerFactory:   signerFactory,
-		registryAddress: registryAddress,
-		accountantID:    accountantID,
+		http:                  requests.NewHTTPClient(bindAddress, 20*time.Second),
+		endpointAddress:       endpointAddress,
+		signerFactory:         signerFactory,
+		registryAddress:       registryAddress,
+		accountantID:          accountantID,
+		channelImplementation: channelImplementation,
 	}
 }
 
@@ -110,9 +111,15 @@ func (t *Transactor) FetchFees() (Fees, error) {
 
 // TopUp requests a myst topup for testing purposes.
 func (t *Transactor) TopUp(id string) error {
-	payload := TopUpRequest{
-		Identity: id,
+	channelAddress, err := pc.GenerateChannelAddress(id, t.registryAddress, t.channelImplementation)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate channel address")
 	}
+
+	payload := TopUpRequest{
+		Identity: channelAddress,
+	}
+
 	req, err := requests.NewPostRequest(t.endpointAddress, "fee/topup", payload)
 	if err != nil {
 		return errors.Wrap(err, "identity request to Transactor failed")
@@ -147,8 +154,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO Identi
 	regReq.Fee = regReqDTO.Fee
 
 	if regReqDTO.Beneficiary == "" {
-		// TODO: inject ChannelImplAddress through constructor
-		channelAddress, err := pc.GenerateChannelAddress(id, regReq.RegistryAddress, metadata.TestnetDefinition.ChannelImplAddress)
+		channelAddress, err := pc.GenerateChannelAddress(id, t.registryAddress, t.channelImplementation)
 		if err != nil {
 			return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to calculate channel address")
 		}
