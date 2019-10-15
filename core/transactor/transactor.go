@@ -71,6 +71,13 @@ type IdentityRegistrationRequestDTO struct {
 	Fee uint64 `json:"fee,omitempty"`
 }
 
+// TopUpRequest represents the myst top up request
+// swagger:model TopUpRequestDTO
+type TopUpRequest struct {
+	// Identity to top up with myst
+	Identity string `json:"identity"`
+}
+
 // IdentityRegistrationRequest represents the identity registration request body
 type IdentityRegistrationRequest struct {
 	RegistryAddress string `json:"registryAddress"`
@@ -99,6 +106,18 @@ func (t *Transactor) FetchFees() (Fees, error) {
 
 	err = t.http.DoRequestAndParseResponse(req, &f)
 	return f, err
+}
+
+// TopUp requests a myst topup for testing purposes.
+func (t *Transactor) TopUp(id string) error {
+	payload := TopUpRequest{
+		Identity: id,
+	}
+	req, err := requests.NewPostRequest(t.endpointAddress, "fee/topup", payload)
+	if err != nil {
+		return errors.Wrap(err, "identity request to Transactor failed")
+	}
+	return t.http.DoRequest(req)
 }
 
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
