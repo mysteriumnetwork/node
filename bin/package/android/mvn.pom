@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>network.mysterium</groupId>
   <artifactId>mobile-node</artifactId>
-  <version>${VERSION}</version>
+  <version>{{.BuildVersion}}</version>
   <packaging>aar</packaging>
 
   <name>Mysterium Network Android SDK</name>
@@ -14,8 +16,8 @@
 
   <licenses>
     <license>
-      <name>GNU Lesser General Public License, Version 3.0</name>
-      <url>https://www.gnu.org/licenses/lgpl-3.0.en.html</url>
+      <name>GNU General Public License v3.0</name>
+      <url>https://github.com/mysteriumnetwork/node/blob/master/LICENSE</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
@@ -45,9 +47,33 @@
     <url>https://github.com/mysteriumnetwork/node/issues</url>
   </issueManagement>
 
+  <distributionManagement>
+    <repository>
+      <id>bintray</id>
+      <url>https://api.bintray.com/maven/mysteriumnetwork/maven/network.mysterium:mobile-node/;publish=1</url>
+    </repository>
+  </distributionManagement>
+
   <scm>
     <connection>https://github.com/mysteriumnetwork/node.git</connection>
     <developerConnection>https://github.com/mysteriumnetwork/node.git</developerConnection>
     <url>https://github.com/mysteriumnetwork/node</url>
   </scm>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.simpligility.maven.plugins</groupId>
+        <artifactId>android-maven-plugin</artifactId>
+        <version>4.1.0</version>
+
+        <extensions>true</extensions>
+        <configuration>
+          <sign>
+            <debug>false</debug>
+          </sign>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

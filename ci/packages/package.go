@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"text/template"
 
 	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
@@ -117,6 +118,28 @@ func PackageAndroid() error {
 	logconfig.Bootstrap()
 	defer log.Flush()
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
+		return err
+	}
+	err := env.EnsureEnvVars(env.BuildVersion)
+	if err != nil {
+		return err
+	}
+	pomTemplate, err := template.ParseFiles("bin/package/android/mvn.pom")
+	if err != nil {
+		return err
+	}
+	pomFileOut, err := os.Create("build/package/mvn.pom")
+	if err != nil {
+		return err
+	}
+	defer pomFileOut.Close()
+
+	err = pomTemplate.Execute(pomFileOut, struct {
+		BuildVersion string
+	}{
+		BuildVersion: env.Str(env.BuildVersion),
+	})
+	if err != nil {
 		return err
 	}
 	return env.IfRelease(storage.UploadArtifacts)

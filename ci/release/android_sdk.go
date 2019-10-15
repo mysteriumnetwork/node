@@ -18,25 +18,33 @@
 package release
 
 import (
+	"io"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"path"
+	"strings"
+	"time"
+
 	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/go-ci/env"
-	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/node/ci/storage"
+	"github.com/mysteriumnetwork/node/logconfig"
 )
 
 const (
-	// ProxySonatypeUsername username for proxy used in publishing to sonatype
-	ProxySonatypeUsername = env.BuildVar("PROXY_SONATYPE_USERNAME")
-	// ProxySonatypePassword password for proxy used in publishing to sonatype
-	ProxySonatypePassword = env.BuildVar("PROXY_SONATYPE_PASSWORD")
-	// SonatypeUsername username for sonatype
-	SonatypeUsername = env.BuildVar("SONATYPE_USERNAME")
-	// SonatypePassword password for sonatype
-	SonatypePassword = env.BuildVar("SONATYPE_PASSWORD")
+	// BintrayUsername user from https://bintray.com/mysteriumnetwork
+	BintrayUsername = env.BuildVar("BINTRAY_USERNAME")
+	// BintrayToken access token of the BintrayUsername
+	BintrayToken = env.BuildVar("BINTRAY_TOKEN")
 )
 
-// ReleaseAndroidSDK releases Android SDK to sonatype/maven central
+// ReleaseAndroidSDK releases Android SDK to Bintray
 func ReleaseAndroidSDK() error {
+	logconfig.Bootstrap()
+	defer log.Flush()
+
 	err := env.EnsureEnvVars(
 		env.TagBuild,
 		env.BuildVersion,
@@ -48,28 +56,128 @@ func ReleaseAndroidSDK() error {
 		log.Info("not a tag build, skipping ReleaseAndroidSDK action...")
 		return nil
 	}
-	err = env.EnsureEnvVars(
-		ProxySonatypeUsername,
-		ProxySonatypePassword,
-		SonatypeUsername,
-		SonatypePassword,
-	)
-	if err != nil {
-		return err
-	}
+
 	err = storage.DownloadArtifacts()
 	if err != nil {
 		return err
 	}
 
-	envs := getEnvs(ProxySonatypeUsername, ProxySonatypePassword, SonatypeUsername, SonatypePassword)
-	return shell.NewCmdf("bash -ev bin/release_android %s", env.Str(env.BuildVersion)).RunWith(envs)
+	err = env.EnsureEnvVars(BintrayUsername, BintrayToken)
+	if err != nil {
+		return err
+	}
+	repositoryURL, err := url.Parse("https://api.bintray.com/content/mysteriumnetwork/maven")
+	if err != nil {
+		return err
+	}
+	uploader := newBintrayReleaser(
+		&releaseOpts{
+			groupId:    "network.mysterium",
+			artifactId: "mobile-node",
+			version:    env.Str(env.BuildVersion),
+		},
+		&bintrayOpts{
+			repositoryURL: repositoryURL,
+			username:      env.Str(BintrayUsername),
+			password:      env.Str(BintrayToken),
+		},
+	)
+	if err := uploader.upload("build/package/Mysterium.aar"); err != nil {
+		return err
+	}
+	if err := uploader.upload("build/package/mvn.pom"); err != nil {
+		return err
+	}
+	return uploader.publish()
 }
 
-func getEnvs(vars ...env.BuildVar) map[string]string {
-	envs := map[string]string{}
-	for _, v := range vars {
-		envs[string(v)] = env.Str(v)
+type releaseOpts struct {
+	groupId, artifactId, version string
+}
+
+type bintrayOpts struct {
+	repositoryURL      *url.URL
+	username, password string
+}
+
+// bintrayReleaser uploads and publishes new versions in Bintray via its REST API: https://bintray.com/docs/api/
+type bintrayReleaser struct {
+	client      *http.Client
+	releaseOpts *releaseOpts
+	bintrayOpts *bintrayOpts
+}
+
+func newBintrayReleaser(releaseOpts *releaseOpts, bintrayOpts *bintrayOpts) *bintrayReleaser {
+	return &bintrayReleaser{
+		client:      &http.Client{Timeout: 30 * time.Second},
+		releaseOpts: releaseOpts,
+		bintrayOpts: bintrayOpts,
 	}
-	return envs
+}
+
+func (up *bintrayReleaser) upload(filename string) error {
+	log.Info("Uploading: ", filename)
+
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	requestURL := uploadURL(*up.releaseOpts, *up.bintrayOpts, filename)
+	return up.bintrayAPIRequest(http.MethodPut, *requestURL, file)
+}
+
+func (up *bintrayReleaser) publish() error {
+	log.Info("Publishing version: ", up.releaseOpts.version)
+	requestURL := publishURL(*up.releaseOpts, *up.bintrayOpts)
+	return up.bintrayAPIRequest(http.MethodPost, *requestURL, nil)
+}
+
+func (up *bintrayReleaser) bintrayAPIRequest(method string, url url.URL, body io.Reader) error {
+	log.Infof("Bintray request [%s] %s", method, url)
+	req, err := http.NewRequest(method, url.String(), body)
+	if err != nil {
+		return err
+	}
+	req.SetBasicAuth(up.bintrayOpts.username, up.bintrayOpts.password)
+	req.Header.Set("X-Bintray-Package", up.releaseOpts.groupId+":"+up.releaseOpts.artifactId)
+	req.Header.Set("X-Bintray-Version", env.Str(env.BuildVersion))
+	res, err := up.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	resBytes, err := httputil.DumpResponse(res, true)
+	if err != nil {
+		return err
+	}
+
+	log.Info("Bintray response: ", string(resBytes))
+	return nil
+}
+
+// uploadURL constructs bintray URL for artifact upload
+func uploadURL(r releaseOpts, b bintrayOpts, filename string) *url.URL {
+	segments := []string{b.repositoryURL.Path}
+	segments = append(segments, strings.Split(r.groupId, ".")...)
+
+	remoteFilename := r.artifactId + "-" + r.version + path.Ext(filename)
+	segments = append(segments, r.artifactId, r.version, remoteFilename)
+
+	resultURL, _ := url.Parse(b.repositoryURL.String())
+	resultURL.Path = path.Join(segments...)
+	return resultURL
+}
+
+// publishURL constructs bintray URL for publishing a version with uploaded artifacts.
+// It is different from uploadURL in a way that it uses artifactId (e.g. network.mysterium:mobile-node) instead of a
+// usual maven layout (e.g. network/mysterium/mobile-node).
+func publishURL(r releaseOpts, b bintrayOpts) *url.URL {
+	packageId := r.groupId + ":" + r.artifactId
+	resultPath := path.Join(b.repositoryURL.Path, packageId, r.version, "publish")
+
+	resultURL, _ := url.Parse(b.repositoryURL.String())
+	resultURL.Path = resultPath
+	return resultURL
 }
