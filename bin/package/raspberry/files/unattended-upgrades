@@ -1,6 +1,6 @@
 Unattended-Upgrade::Origins-Pattern {
-        "origin=Debian,codename=${distro_codename},label=Debian";
-        "origin=Debian,codename=${distro_codename},label=Debian-Security";
+        "origin=Raspbian,codename=${distro_codename},label=Raspbian";
+        "origin=Raspbian,codename=${distro_codename},label=Raspbian-Security";
         "o=LP-PPA-mysteriumnetwork-node,a=bionic";
 };
 
