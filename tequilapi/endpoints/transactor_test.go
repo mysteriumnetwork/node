@@ -36,10 +36,6 @@ var identityRegData = `{
   "stake": 0
 }`
 
-var topUpData = `{
-	"identity": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"
-}`
-
 func Test_RegisterIdentity(t *testing.T) {
 	mockResponse := ""
 	server := newTestTransactorServer(http.StatusAccepted, mockResponse)
@@ -95,6 +91,7 @@ func Test_TopUp(t *testing.T) {
 	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
 	AddRoutesForTransactor(router, tr)
 
+	topUpData := `{"identity": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"}`
 	req, err := http.NewRequest(
 		http.MethodPost,
 		"/transactor/topup",

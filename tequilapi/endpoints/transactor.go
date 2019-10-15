@@ -92,15 +92,13 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 func (te *transactorEndpoint) TopUp(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
 	topUpDTO := &transactor.TopUpRequest{}
 
-	if request.ContentLength > 0 {
-		err := json.NewDecoder(request.Body).Decode(&topUpDTO)
-		if err != nil {
-			utils.SendError(resp, errors.Wrap(err, "failed to parse top up request"), http.StatusBadRequest)
-			return
-		}
+	err := json.NewDecoder(request.Body).Decode(&topUpDTO)
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed to parse top up request"), http.StatusBadRequest)
+		return
 	}
 
-	err := te.transactor.TopUp(topUpDTO.Identity)
+	err = te.transactor.TopUp(topUpDTO.Identity)
 	if err != nil {
 		utils.SendError(resp, err, http.StatusInternalServerError)
 		return
@@ -140,15 +138,13 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 
 	regReqDTO := &transactor.IdentityRegistrationRequestDTO{}
 
-	if request.ContentLength > 0 {
-		err := json.NewDecoder(request.Body).Decode(&regReqDTO)
-		if err != nil {
-			utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
-			return
-		}
+	err := json.NewDecoder(request.Body).Decode(&regReqDTO)
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
+		return
 	}
 
-	err := te.transactor.RegisterIdentity(identity, regReqDTO)
+	err = te.transactor.RegisterIdentity(identity, regReqDTO)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
 		return

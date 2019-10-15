@@ -122,7 +122,7 @@ func (t *Transactor) TopUp(id string) error {
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "fee/topup", payload)
 	if err != nil {
-		return errors.Wrap(err, "identity request to Transactor failed")
+		return errors.Wrap(err, "failed to create TopUp request")
 	}
 	return t.http.DoRequest(req)
 }
@@ -141,7 +141,7 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/register", regReq)
 	if err != nil {
-		return errors.Wrap(err, "identity request to Transactor failed")
+		return errors.Wrap(err, "failed to create RegisterIdentity request")
 	}
 
 	return t.http.DoRequest(req)

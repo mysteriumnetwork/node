@@ -28,7 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/identity/registry"
 	identity_selector "github.com/mysteriumnetwork/node/identity/selector"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/tequilapi/utils"
 	"github.com/mysteriumnetwork/node/tequilapi/validation"
 )
@@ -68,9 +67,10 @@ type statusDTO struct {
 }
 
 type identitiesAPI struct {
-	idm      identity.Manager
-	selector identity_selector.Handler
-	registry registry.IdentityRegistry
+	idm                                           identity.Manager
+	selector                                      identity_selector.Handler
+	registry                                      registry.IdentityRegistry
+	registryAddress, channelImplementationAddress string
 }
 
 func idToDto(id identity.Identity) identityDto {
@@ -86,8 +86,8 @@ func mapIdentities(idArry []identity.Identity, f func(identity.Identity) identit
 }
 
 //NewIdentitiesEndpoint creates identities api controller used by tequilapi service
-func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler, registry registry.IdentityRegistry) *identitiesAPI {
-	return &identitiesAPI{idm, selector, registry}
+func NewIdentitiesEndpoint(idm identity.Manager, selector identity_selector.Handler, registry registry.IdentityRegistry, registryAddress, channelImplementationAddress string) *identitiesAPI {
+	return &identitiesAPI{idm, selector, registry, registryAddress, channelImplementationAddress}
 }
 
 // swagger:operation GET /identities Identity listIdentities
@@ -276,8 +276,7 @@ func (endpoint *identitiesAPI) Status(resp http.ResponseWriter, request *http.Re
 		identityAddress = ""
 	}
 
-	// TODO: pass channel impl through cli flags
-	channelAddress, err := pc.GenerateChannelAddress(identityAddress, metadata.TestnetDefinition.RegistryAddress, metadata.TestnetDefinition.ChannelImplAddress)
+	channelAddress, err := pc.GenerateChannelAddress(identityAddress, endpoint.registryAddress, endpoint.channelImplementationAddress)
 
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed to calculate channel address"), http.StatusInternalServerError)
@@ -348,8 +347,9 @@ func AddRoutesForIdentities(
 	idm identity.Manager,
 	selector identity_selector.Handler,
 	identityRegistry registry.IdentityRegistry,
+	registryAddress, channelImplementationAddress string,
 ) {
-	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry)
+	idmEnd := NewIdentitiesEndpoint(idm, selector, identityRegistry, registryAddress, channelImplementationAddress)
 	router.GET("/identities", idmEnd.List)
 	router.POST("/identities", idmEnd.Create)
 	router.PUT("/identities/:id", idmEnd.Current)
