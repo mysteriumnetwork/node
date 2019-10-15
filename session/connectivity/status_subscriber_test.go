@@ -55,11 +55,11 @@ func (m *mockDialog) PeerID() identity.Identity {
 }
 
 func (m *mockDialog) Send(producer communication.MessageProducer) error {
-	panic("implement me")
+	return nil
 }
 
 func (m *mockDialog) Request(producer communication.RequestProducer) (responsePtr interface{}, err error) {
-	panic("implement me")
+	return nil, nil
 }
 
 func (m *mockDialog) Receive(consumer communication.MessageConsumer) error {
@@ -67,15 +67,14 @@ func (m *mockDialog) Receive(consumer communication.MessageConsumer) error {
 }
 
 func (m *mockDialog) Respond(consumer communication.RequestConsumer) error {
-	panic("implement me")
+	return nil
 }
 
 func (m *mockDialog) Unsubscribe() {
-	panic("implement me")
 }
 
 func (m *mockDialog) Close() error {
-	panic("implement me")
+	return nil
 }
 
 type mockStatusStorage struct {
@@ -83,7 +82,7 @@ type mockStatusStorage struct {
 }
 
 func (m *mockStatusStorage) GetAllStatusEntries() []StatusEntry {
-	panic("implement me")
+	return []StatusEntry{}
 }
 
 func (m *mockStatusStorage) AddStatusEntry(msg StatusEntry) {
