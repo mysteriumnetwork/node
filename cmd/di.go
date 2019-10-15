@@ -75,6 +75,7 @@ import (
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
 	"github.com/mysteriumnetwork/node/session/balance"
+	"github.com/mysteriumnetwork/node/session/connectivity"
 	sessionevent "github.com/mysteriumnetwork/node/session/event"
 	session_payment "github.com/mysteriumnetwork/node/session/payment"
 	payment_factory "github.com/mysteriumnetwork/node/session/payment/factory"
@@ -133,9 +134,10 @@ type Dependencies struct {
 	IPResolver       ip.Resolver
 	LocationResolver *location.Cache
 
-	StatisticsTracker  *statistics.SessionStatisticsTracker
-	StatisticsReporter *statistics.SessionStatisticsReporter
-	SessionStorage     *consumer_session.Storage
+	StatisticsTracker                *statistics.SessionStatisticsTracker
+	StatisticsReporter               *statistics.SessionStatisticsReporter
+	SessionStorage                   *consumer_session.Storage
+	SessionConnectivityStatusStorage connectivity.StatusStorage
 
 	EventBus eventbus.EventBus
 
@@ -430,6 +432,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	)
 	di.SessionStorage = consumer_session.NewSessionStorage(di.Storage, di.StatisticsTracker)
 	di.PromiseStorage = promise.NewStorage(di.Storage)
+	di.SessionConnectivityStatusStorage = connectivity.NewStatusStorage()
 
 	di.ConnectionRegistry = connection.NewRegistry()
 	di.ConnectionManager = connection.NewManager(
@@ -437,6 +440,8 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		pingpong.BackwardsCompatibleExchangeFactoryFunc(di.Keystore, nodeOptions, di.SignerFactory),
 		di.ConnectionRegistry.CreateConnection,
 		di.EventBus,
+		connectivity.NewStatusSender(),
+		di.IPResolver,
 	)
 
 	di.Transactor = transactor.NewTransactor(
@@ -471,6 +476,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 	tequilapi_endpoints.AddRoutesForTransactor(router, di.Transactor)
 	tequilapi_endpoints.AddRoutesForConfig(router)
 	tequilapi_endpoints.AddRoutesForFeedback(router, di.Reporter)
+	tequilapi_endpoints.AddRoutesForConnectivityStatus(nodeOptions.BindAddress, router, di.SessionConnectivityStatusStorage)
 
 	identity_registry.AddIdentityRegistrationEndpoint(router, di.IdentityRegistry)
 

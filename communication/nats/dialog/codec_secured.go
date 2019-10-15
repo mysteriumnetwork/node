@@ -50,12 +50,12 @@ type codecSecured struct {
 func (codec *codecSecured) Pack(payloadPtr interface{}) ([]byte, error) {
 	payloadData, err := codec.codecPacker.Pack(payloadPtr)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, errors.Wrap(err, "could not pack payload data")
 	}
 
 	signature, err := codec.signer.Sign(payloadData)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, errors.Wrap(err, "could not sign payload data")
 	}
 
 	return codec.codecPacker.Pack(&messageEnvelope{

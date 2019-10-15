@@ -88,7 +88,7 @@ func TestCodecSigner_PackError(t *testing.T) {
 	)
 
 	data, err := codec.Pack("data")
-	assert.EqualError(t, err, "Signing failed")
+	assert.EqualError(t, err, "could not sign payload data: Signing failed")
 	assert.Equal(t, []byte{}, data)
 }
 

@@ -119,8 +119,7 @@ func (waiter *dialogWaiter) ServeDialogs(dialogHandler communication.DialogHandl
 	}
 	codec := NewCodecSecured(communication.NewCodecJSON(), waiter.signer, identity.NewVerifierSigned())
 	receiver := nats.NewReceiver(waiter.address.GetConnection(), codec, waiter.address.GetTopic())
-
-	return receiver.Respond(&dialogCreateConsumer{createDialog})
+	return receiver.Respond(&dialogCreateConsumer{Callback: createDialog})
 }
 
 func (waiter *dialogWaiter) newCodecForPeer(peerID identity.Identity) *codecSecured {

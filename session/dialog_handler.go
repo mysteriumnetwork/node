@@ -20,18 +20,20 @@ package session
 import (
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/session/connectivity"
 )
 
 // ManagerFactory initiates session Manager instance during runtime
 type ManagerFactory func(dialog communication.Dialog) *Manager
 
 // NewDialogHandler constructs handler which gets all incoming dialogs and starts handling them
-func NewDialogHandler(sessionManagerFactory ManagerFactory, configProvider ConfigProvider, promiseLoader PromiseLoader, receiverID identity.Identity) *handler {
+func NewDialogHandler(sessionManagerFactory ManagerFactory, configProvider ConfigProvider, promiseLoader PromiseLoader, receiverID identity.Identity, statusReceiver connectivity.StatusSubscriber) *handler {
 	return &handler{
 		sessionManagerFactory: sessionManagerFactory,
 		configProvider:        configProvider,
 		promiseLoader:         promiseLoader,
 		receiverID:            receiverID,
+		statusReceiver:        statusReceiver,
 	}
 }
 
@@ -41,10 +43,12 @@ type handler struct {
 	promiseLoader         PromiseLoader
 	receiverID            identity.Identity
 	publisher             publisher
+	statusReceiver        connectivity.StatusSubscriber
 }
 
 // Handle starts serving services in given Dialog instance
 func (handler *handler) Handle(dialog communication.Dialog) error {
+	handler.statusReceiver.Subscribe(dialog)
 	return handler.subscribeSessionRequests(dialog)
 }
 

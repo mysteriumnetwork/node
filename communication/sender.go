@@ -17,4 +17,10 @@
 
 package communication
 
-// TODO: remove this file when done.
+// Sender represents interface for:
+//   - sending asynchronous messages
+//   - sending and HTTP-like request and waiting for response
+type Sender interface {
+	Send(producer MessageProducer) error
+	Request(producer RequestProducer) (responsePtr interface{}, err error)
+}

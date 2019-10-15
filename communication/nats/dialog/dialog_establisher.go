@@ -53,36 +53,36 @@ type dialogEstablisher struct {
 	peerAddressFactory func(contact market.Contact) (*discovery.AddressNATS, error)
 }
 
-func (establisher *dialogEstablisher) EstablishDialog(
+func (e *dialogEstablisher) EstablishDialog(
 	peerID identity.Identity,
 	peerContact market.Contact,
 ) (communication.Dialog, error) {
 
 	log.Info(establisherLogPrefix, fmt.Sprintf("Connecting to: %#v", peerContact))
-	peerAddress, err := establisher.peerAddressFactory(peerContact)
+	peerAddress, err := e.peerAddressFactory(peerContact)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to connect to: %#v", peerContact)
 	}
 
-	peerCodec := establisher.newCodecForPeer(peerID)
+	peerCodec := e.newCodecForPeer(peerID)
 
-	peerSender := establisher.newSenderToPeer(peerAddress, peerCodec)
-	topic, err := establisher.negotiateTopic(peerSender)
+	peerSender := e.newSenderToPeer(peerAddress, peerCodec)
+	topic, err := e.negotiateTopic(peerSender)
 	if err != nil {
 		peerAddress.Disconnect()
 		return nil, err
 	}
 
-	dialog := establisher.newDialogToPeer(peerID, peerAddress, peerCodec, topic)
+	dialog := e.newDialogToPeer(peerID, peerAddress, peerCodec, topic)
 	log.Info(establisherLogPrefix, fmt.Sprintf("Dialog established with: %#v", peerContact))
 
 	return dialog, nil
 }
 
-func (establisher *dialogEstablisher) negotiateTopic(sender communication.Sender) (string, error) {
+func (e *dialogEstablisher) negotiateTopic(sender communication.Sender) (string, error) {
 	response, err := sender.Request(&dialogCreateProducer{
 		&dialogCreateRequest{
-			PeerID:  establisher.ID.Address,
+			PeerID:  e.ID.Address,
 			Version: "v1",
 		},
 	})
@@ -96,16 +96,16 @@ func (establisher *dialogEstablisher) negotiateTopic(sender communication.Sender
 	return response.(*dialogCreateResponse).Topic, nil
 }
 
-func (establisher *dialogEstablisher) newCodecForPeer(peerID identity.Identity) *codecSecured {
+func (e *dialogEstablisher) newCodecForPeer(peerID identity.Identity) *codecSecured {
 
 	return NewCodecSecured(
 		communication.NewCodecJSON(),
-		establisher.Signer,
+		e.Signer,
 		identity.NewVerifierIdentity(peerID),
 	)
 }
 
-func (establisher *dialogEstablisher) newSenderToPeer(
+func (e *dialogEstablisher) newSenderToPeer(
 	peerAddress *discovery.AddressNATS,
 	peerCodec *codecSecured,
 ) communication.Sender {
@@ -117,7 +117,7 @@ func (establisher *dialogEstablisher) newSenderToPeer(
 	)
 }
 
-func (establisher *dialogEstablisher) newDialogToPeer(
+func (e *dialogEstablisher) newDialogToPeer(
 	peerID identity.Identity,
 	peerAddress *discovery.AddressNATS,
 	peerCodec *codecSecured,
@@ -125,7 +125,7 @@ func (establisher *dialogEstablisher) newDialogToPeer(
 ) *dialog {
 	if len(topic) == 0 {
 		// TODO this is a compatibility check. It should be removed once all consumers will migrate to the newer version.
-		topic = peerAddress.GetTopic() + "." + establisher.ID.Address
+		topic = peerAddress.GetTopic() + "." + e.ID.Address
 	}
 
 	return &dialog{

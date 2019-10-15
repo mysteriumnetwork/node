@@ -388,7 +388,7 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 	return errors
 }
 
-// ServiceManager represents service manager that will be used for manipulation node services.
+// ServiceManager represents service manager that is used for services management.
 type ServiceManager interface {
 	Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error)
 	Stop(id service.ID) error

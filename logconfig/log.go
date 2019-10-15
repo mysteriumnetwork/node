@@ -64,18 +64,18 @@ func (l Logger) Infof(format string, params ...interface{}) {
 }
 
 // Warnf warn log fmt
-func (l Logger) Warnf(format string, params ...interface{}) error {
-	return seelog.Warnf(l.prefix+format, params...)
+func (l Logger) Warnf(format string, params ...interface{}) {
+	_ = seelog.Warnf(l.prefix+format, params...)
 }
 
 // Errorf error log fmt
-func (l Logger) Errorf(format string, params ...interface{}) error {
-	return seelog.Errorf(l.prefix+format, params...)
+func (l Logger) Errorf(format string, params ...interface{}) {
+	_ = seelog.Errorf(l.prefix+format, params...)
 }
 
 // Criticalf critical log fmt
-func (l Logger) Criticalf(format string, params ...interface{}) error {
-	return seelog.Criticalf(l.prefix+format, params...)
+func (l Logger) Criticalf(format string, params ...interface{}) {
+	_ = seelog.Criticalf(l.prefix+format, params...)
 }
 
 // Trace trace log

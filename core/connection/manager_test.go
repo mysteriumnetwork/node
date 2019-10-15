@@ -30,6 +30,7 @@ import (
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/services/openvpn/discovery/dto"
 	"github.com/mysteriumnetwork/node/session"
+	"github.com/mysteriumnetwork/node/session/connectivity"
 	"github.com/mysteriumnetwork/node/session/promise"
 	"github.com/mysteriumnetwork/payments/crypto"
 	"github.com/stretchr/testify/assert"
@@ -130,6 +131,8 @@ func (tc *testContext) SetupTest() {
 		},
 		tc.fakeConnectionFactory.CreateConnection,
 		tc.stubPublisher,
+		newMockStatusSender(),
+		ip.NewResolverMock("ip"),
 	)
 }
 
@@ -426,4 +429,16 @@ func (mpm *MockPaymentIssuer) Stop() {
 	defer mpm.Unlock()
 	mpm.stopCalled = true
 	close(mpm.stopChan)
+}
+
+func newMockStatusSender() *mockStatusSender {
+	return &mockStatusSender{}
+}
+
+type mockStatusSender struct {
+	sentMsg *connectivity.StatusMessage
+}
+
+func (s mockStatusSender) Send(dialog communication.Sender, msg *connectivity.StatusMessage) {
+	s.sentMsg = msg
 }

@@ -17,4 +17,11 @@
 
 package communication
 
-// TODO: remove this file when done.
+// Receiver represents interface for:
+//   - listening for asynchronous messages
+//   - listening and serving HTTP-like requests
+type Receiver interface {
+	Receive(consumer MessageConsumer) error
+	Respond(consumer RequestConsumer) error
+	Unsubscribe()
+}

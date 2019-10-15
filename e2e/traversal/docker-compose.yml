@@ -108,7 +108,7 @@ services:
         ipv4_address: 172.31.0.203
 
   mysterium-api:
-    image: mysteriumnetwork/mysterium-api:0.5.9
+    image: mysteriumnetwork/mysterium-api:0.5.22
     expose:
       - 80
     cap_add:
