@@ -104,6 +104,7 @@ install_if_not_exists() {
 
 install_script_dependencies() {
     install_if_not_exists curl
+    install_if_not_exists libcap2-bin
     install_if_not_exists jq
 }
 
@@ -111,7 +112,7 @@ install_dependencies() {
     # Wireguard
     echo "deb http://deb.debian.org/debian/ unstable main" > /etc/apt/sources.list.d/unstable.list
     printf 'Package: *\nPin: release a=unstable\nPin-Priority: 90\n' > /etc/apt/preferences.d/limit-unstable
-    apt-get install dirmngr
+    apt-get install -y dirmngr
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 04EE7237B7D453EC
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ECCB6A56B22C536D
     apt-get update
