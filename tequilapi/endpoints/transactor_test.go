@@ -19,6 +19,7 @@ package endpoints
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -82,7 +83,7 @@ func Test_Get_TransactorFees(t *testing.T) {
 	assert.JSONEq(t, mockResponse, resp.Body.String())
 }
 
-func Test_TopUp(t *testing.T) {
+func Test_TopUp_OK(t *testing.T) {
 	mockResponse := ""
 	server := newTestTransactorServer(http.StatusAccepted, mockResponse)
 
@@ -104,6 +105,35 @@ func Test_TopUp(t *testing.T) {
 
 	assert.Equal(t, http.StatusAccepted, resp.Code)
 	assert.Equal(t, "", resp.Body.String())
+}
+
+func Test_TopUp_BubblesErrors(t *testing.T) {
+	mockResponse := ""
+	mockStatus := http.StatusBadGateway
+	server := newTestTransactorServer(mockStatus, mockResponse)
+
+	router := httprouter.New()
+
+	tr := transactor.NewTransactor(server.URL, server.URL, "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c", fakeSignerFactory)
+	AddRoutesForTransactor(router, tr)
+
+	topUpData := `{"identity": "0x241F6e1d0bB17f45767DC60A6Bd3D21Cdb543a0c"}`
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"/transactor/topup",
+		bytes.NewBufferString(topUpData),
+	)
+	assert.Nil(t, err)
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	assert.JSONEq(
+		t,
+		fmt.Sprintf(`{"message":"server response invalid: %v %v (%v/fee/topup)"}`, mockStatus, http.StatusText(mockStatus), server.URL),
+		resp.Body.String(),
+	)
 }
 
 func newTestTransactorServer(mockStatus int, mockResponse string) *httptest.Server {
