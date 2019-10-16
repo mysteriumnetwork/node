@@ -85,7 +85,7 @@ download_latest_package() {
     package_url=$(echo "$latest_release_json" | jq --raw-output --arg package "$package_file" '.assets[] | select(.name==$package) | .browser_download_url')
     echo "Package URL: $package_url"
 
-    curl --write-out '%{http_code}\n' --location "$package_url" --output "$package_file"
+    curl --write-out '%{http_code}\n' --location "$package_url" --output "/tmp/$package_file"
 
     result="$package_file"
     echo $result
@@ -121,7 +121,7 @@ install_dependencies() {
 
 install_myst() {
     readonly local package_file=$1
-    apt install -y --allow-downgrades "./$package_file"
+    apt install -y --allow-downgrades "/tmp/$package_file"
     service mysterium-node restart
 }
 
