@@ -471,8 +471,7 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		connection.DefaultIPCheckParams(),
 	)
 
-	// TODO: switch this to channel implementation from params after #1325 is merged
-	channelImplementation := metadata.TestnetDefinition.ChannelImplAddress
+	channelImplementation := nodeOptions.Transactor.ChannelImplementation
 
 	di.Transactor = transactor.NewTransactor(
 		nodeOptions.BindAddress,
