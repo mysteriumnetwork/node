@@ -29,27 +29,28 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/metadata"
 	"github.com/mysteriumnetwork/node/requests"
 )
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
-	http            requests.HTTPTransport
-	endpointAddress string
-	signerFactory   identity.SignerFactory
-	registryAddress string
-	accountantID    string
+	http                  requests.HTTPTransport
+	endpointAddress       string
+	signerFactory         identity.SignerFactory
+	registryAddress       string
+	accountantID          string
+	channelImplementation string
 }
 
 // NewTransactor creates and returns new Transactor instance
-func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID string, signerFactory identity.SignerFactory) *Transactor {
+func NewTransactor(bindAddress, endpointAddress, registryAddress, accountantID, channelImplementation string, signerFactory identity.SignerFactory) *Transactor {
 	return &Transactor{
-		http:            requests.NewHTTPClient(bindAddress, 20*time.Second),
-		endpointAddress: endpointAddress,
-		signerFactory:   signerFactory,
-		registryAddress: registryAddress,
-		accountantID:    accountantID,
+		http:                  requests.NewHTTPClient(bindAddress, 20*time.Second),
+		endpointAddress:       endpointAddress,
+		signerFactory:         signerFactory,
+		registryAddress:       registryAddress,
+		accountantID:          accountantID,
+		channelImplementation: channelImplementation,
 	}
 }
 
@@ -69,6 +70,13 @@ type IdentityRegistrationRequestDTO struct {
 	Beneficiary string `json:"beneficiary,omitempty"`
 	// Fee: negotiated fee with transactor
 	Fee uint64 `json:"fee,omitempty"`
+}
+
+// TopUpRequest represents the myst top up request
+// swagger:model TopUpRequestDTO
+type TopUpRequest struct {
+	// Identity to top up with myst
+	Identity string `json:"identity"`
 }
 
 // IdentityRegistrationRequest represents the identity registration request body
@@ -101,6 +109,24 @@ func (t *Transactor) FetchFees() (Fees, error) {
 	return f, err
 }
 
+// TopUp requests a myst topup for testing purposes.
+func (t *Transactor) TopUp(id string) error {
+	channelAddress, err := pc.GenerateChannelAddress(id, t.registryAddress, t.channelImplementation)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate channel address")
+	}
+
+	payload := TopUpRequest{
+		Identity: channelAddress,
+	}
+
+	req, err := requests.NewPostRequest(t.endpointAddress, "fee/topup", payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to create TopUp request")
+	}
+	return t.http.DoRequest(req)
+}
+
 // RegisterIdentity instructs Transactor to register identity on behalf of a client identified by 'id'
 func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistrationRequestDTO) error {
 	regReq, err := t.fillIdentityRegistrationRequest(id, *regReqDTO)
@@ -115,7 +141,7 @@ func (t *Transactor) RegisterIdentity(id string, regReqDTO *IdentityRegistration
 
 	req, err := requests.NewPostRequest(t.endpointAddress, "identity/register", regReq)
 	if err != nil {
-		return errors.Wrap(err, "identity request to Transactor failed")
+		return errors.Wrap(err, "failed to create RegisterIdentity request")
 	}
 
 	return t.http.DoRequest(req)
@@ -128,8 +154,7 @@ func (t *Transactor) fillIdentityRegistrationRequest(id string, regReqDTO Identi
 	regReq.Fee = regReqDTO.Fee
 
 	if regReqDTO.Beneficiary == "" {
-		// TODO: inject ChannelImplAddress through constructor
-		channelAddress, err := pc.GenerateChannelAddress(id, regReq.RegistryAddress, metadata.TestnetDefinition.ChannelImplAddress)
+		channelAddress, err := pc.GenerateChannelAddress(id, t.registryAddress, t.channelImplementation)
 		if err != nil {
 			return IdentityRegistrationRequest{}, errors.Wrap(err, "failed to calculate channel address")
 		}

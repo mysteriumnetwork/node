@@ -31,6 +31,7 @@ import (
 // Transactor represents interface to Transactor service
 type Transactor interface {
 	FetchFees() (transactor.Fees, error)
+	TopUp(identity string) error
 	RegisterIdentity(identity string, regReqDTO *transactor.IdentityRegistrationRequestDTO) error
 }
 
@@ -67,6 +68,45 @@ func (te *transactorEndpoint) TransactorFees(resp http.ResponseWriter, _ *http.R
 	utils.WriteAsJSON(fees, resp)
 }
 
+// swagger:operation POST /transactor/topup ErrorMessageDTO
+// ---
+// summary: tops up myst to the given identity
+// description: tops up myst to the given identity
+// parameters:
+// - in: body
+//   name: body
+//   description: top up request body
+//   schema:
+//     $ref: "#/definitions/TopUpRequestDTO"
+// responses:
+//   202:
+//     description: top up request accepted
+//   500:
+//     description: Internal server error
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+//   400:
+//     description: Bad request
+//     schema:
+//       "$ref": "#/definitions/ErrorMessageDTO"
+func (te *transactorEndpoint) TopUp(resp http.ResponseWriter, request *http.Request, _ httprouter.Params) {
+	topUpDTO := &transactor.TopUpRequest{}
+
+	err := json.NewDecoder(request.Body).Decode(&topUpDTO)
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed to parse top up request"), http.StatusBadRequest)
+		return
+	}
+
+	err = te.transactor.TopUp(topUpDTO.Identity)
+	if err != nil {
+		utils.SendError(resp, err, http.StatusInternalServerError)
+		return
+	}
+
+	resp.WriteHeader(http.StatusAccepted)
+}
+
 // swagger:operation POST /identities/{id}/register Identity RegisterIdentity
 // ---
 // summary: Registers identity
@@ -98,15 +138,13 @@ func (te *transactorEndpoint) RegisterIdentity(resp http.ResponseWriter, request
 
 	regReqDTO := &transactor.IdentityRegistrationRequestDTO{}
 
-	if request.ContentLength > 0 {
-		err := json.NewDecoder(request.Body).Decode(&regReqDTO)
-		if err != nil {
-			utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
-			return
-		}
+	err := json.NewDecoder(request.Body).Decode(&regReqDTO)
+	if err != nil {
+		utils.SendError(resp, errors.Wrap(err, "failed to parse identity registration request"), http.StatusBadRequest)
+		return
 	}
 
-	err := te.transactor.RegisterIdentity(identity, regReqDTO)
+	err = te.transactor.RegisterIdentity(identity, regReqDTO)
 	if err != nil {
 		utils.SendError(resp, errors.Wrap(err, "failed identity registration request"), http.StatusInternalServerError)
 		return
@@ -120,4 +158,5 @@ func AddRoutesForTransactor(router *httprouter.Router, transactor Transactor) {
 	te := NewTransactorEndpoint(transactor)
 	router.POST("/identities/:id/register", te.RegisterIdentity)
 	router.GET("/transactor/fees", te.TransactorFees)
+	router.POST("/transactor/topup", te.TopUp)
 }
