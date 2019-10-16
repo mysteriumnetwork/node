@@ -58,7 +58,7 @@ var LocalnetDefinition = NetworkDefinition{
 	AccessPolicyOracleAddress: "https://localhost:8081/api/v1/access-policies/",
 	BrokerAddress:             "localhost",
 	EtherClientRPC:            "http://localhost:8545",
-	QualityOracle:             "http://localhost:8080",
+	QualityOracle:             "http://localhost:8085",
 	PaymentsContractAddress:   common.HexToAddress("0x1955141ba8e77a5B56efBa8522034352c94f77Ea"),
 	MMNAddress:                "http://localhost/api/v1",
 }
