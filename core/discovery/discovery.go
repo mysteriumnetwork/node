@@ -45,6 +45,8 @@ const (
 const (
 	// ProposalEventTopic represent proposal events topic.
 	ProposalEventTopic = "proposalEvent"
+	// IdentityRegistrationTopic represent topics for identity registration events.
+	IdentityRegistrationTopic = "identityRegistrationOccurred"
 )
 
 // Publisher is responsible for publishing given events.
@@ -180,6 +182,7 @@ func (d *Discovery) registerIdentity() {
 		switch registerEvent {
 		case identity_registry.Registered:
 			log.Info("identity registered, proceeding with proposal registration")
+			go d.eventPublisher.Publish(IdentityRegistrationTopic, d.ownIdentity)
 			d.changeStatus(RegisterProposal)
 		case identity_registry.Cancelled:
 			log.Info("cancelled identity registration")

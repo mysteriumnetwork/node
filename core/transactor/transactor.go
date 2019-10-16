@@ -22,15 +22,16 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/mysteriumnetwork/node/identity"
+	"github.com/mysteriumnetwork/node/logconfig"
+	"github.com/mysteriumnetwork/node/requests"
 	pc "github.com/mysteriumnetwork/payments/crypto"
 	"github.com/mysteriumnetwork/payments/registration"
 	"github.com/pkg/errors"
-
-	"github.com/mysteriumnetwork/node/identity"
-	"github.com/mysteriumnetwork/node/requests"
 )
+
+var log = logconfig.NewLogger()
 
 // Transactor allows for convenient calls to the transactor service
 type Transactor struct {
