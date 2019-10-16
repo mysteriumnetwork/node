@@ -32,7 +32,7 @@ import (
 )
 
 var mockSessionEvent = connection.SessionEvent{
-	Status: connection.SessionCreatedStatus,
+	Status: connection.SessionStatusCreated,
 	SessionInfo: connection.SessionInfo{
 		ConsumerID: identity.FromAddress("0x000"),
 		SessionID:  session.ID("test"),
@@ -89,7 +89,7 @@ func TestStatisticsReporterConsumeSessionEvent(t *testing.T) {
 	<-mockSender.called
 	assert.True(t, reporter.started)
 	copy := mockSessionEvent
-	copy.Status = connection.SessionEndedStatus
+	copy.Status = connection.SessionStatusEnded
 	reporter.ConsumeSessionEvent(copy)
 	assert.False(t, reporter.started)
 }

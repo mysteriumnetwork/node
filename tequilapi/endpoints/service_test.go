@@ -70,7 +70,7 @@ var (
 		ServiceType:       serviceTypeWithAccessPolicy,
 		ServiceDefinition: TestServiceDefinition{},
 		ProviderID:        "0xProviderId",
-		AccessPolicies:    &ap,
+		AccessPolicies:    ap,
 	}
 	mockServiceRunning                 = service.NewInstance(mockServiceOptions, service.Running, nil, mockProposal, nil, nil)
 	mockServiceStopped                 = service.NewInstance(mockServiceOptions, service.NotRunning, nil, mockProposal, nil, nil)
@@ -83,7 +83,7 @@ type fancyServiceOptions struct {
 
 type mockServiceManager struct{}
 
-func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error) {
+func (sm *mockServiceManager) Start(providerID identity.Identity, serviceType string, accessPolicies []market.AccessPolicy, options service.Options) (service.ID, error) {
 	if serviceType == serviceTypeWithAccessPolicy {
 		return mockAccessPolicyServiceID, nil
 	}

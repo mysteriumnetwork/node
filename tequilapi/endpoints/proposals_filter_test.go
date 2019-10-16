@@ -45,7 +45,7 @@ var (
 		ProviderID:        provider1,
 		ServiceType:       serviceTypeStreaming,
 		ServiceDefinition: mockService{Location: locationDatacenter},
-		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist},
+		AccessPolicies:    []market.AccessPolicy{accessRuleWhitelist},
 	}
 	proposalProvider1Noop = market.ServiceProposal{
 		ProviderID:        provider1,
@@ -56,7 +56,7 @@ var (
 		ProviderID:        provider2,
 		ServiceType:       serviceTypeStreaming,
 		ServiceDefinition: mockService{Location: locationResidential},
-		AccessPolicies:    &[]market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
+		AccessPolicies:    []market.AccessPolicy{accessRuleWhitelist, accessRuleBlacklist},
 	}
 )
 

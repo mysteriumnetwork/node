@@ -56,7 +56,7 @@ type ServiceProposal struct {
 	ProviderContacts ContactList `json:"provider_contacts"`
 
 	// AccessPolicies represents the access controls for proposal
-	AccessPolicies *[]AccessPolicy `json:"access_policies,omitempty"`
+	AccessPolicies []AccessPolicy `json:"access_policies,omitempty"`
 }
 
 // UniqueID returns unique proposal composite ID
@@ -98,7 +98,7 @@ func (proposal *ServiceProposal) UnmarshalJSON(data []byte) error {
 		ServiceDefinition *json.RawMessage `json:"service_definition"`
 		PaymentMethod     *json.RawMessage `json:"payment_method"`
 		ProviderContacts  *json.RawMessage `json:"provider_contacts"`
-		AccessPolicies    *[]AccessPolicy  `json:"access_policies,omitempty"`
+		AccessPolicies    []AccessPolicy   `json:"access_policies,omitempty"`
 	}
 	if err := json.Unmarshal(data, &jsonData); err != nil {
 		return err
@@ -139,7 +139,7 @@ func (proposal *ServiceProposal) SetProviderContact(providerID identity.Identity
 }
 
 // SetAccessPolicies updates service proposal with the given AccessPolicy
-func (proposal *ServiceProposal) SetAccessPolicies(ap *[]AccessPolicy) {
+func (proposal *ServiceProposal) SetAccessPolicies(ap []AccessPolicy) {
 	proposal.AccessPolicies = ap
 }
 

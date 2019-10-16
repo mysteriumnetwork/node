@@ -19,10 +19,8 @@ package quality
 
 import (
 	"runtime"
-	"sync"
 	"time"
 
-	"github.com/mysteriumnetwork/node/consumer"
 	"github.com/mysteriumnetwork/node/core/connection"
 	"github.com/mysteriumnetwork/node/core/location"
 	"github.com/mysteriumnetwork/node/core/node/event"
@@ -30,12 +28,13 @@ import (
 )
 
 const (
-	appName             = "myst"
-	sessionDataName     = "session_data"
-	sessionEventName    = "session_event"
-	startupEventName    = "startup"
-	proposalEventName   = "proposal_event"
-	natMappingEventName = "nat_mapping"
+	appName = "myst"
+
+	eventNameSessionData = "session_data"
+	eventNameSession     = "session_event"
+	eventNameStartup     = "startup"
+	eventNameProposal    = "proposal_event"
+	eventNameNATMapping  = "nat_mapping"
 )
 
 // Transport allows sending events
@@ -55,12 +54,10 @@ func NewSender(transport Transport, appVersion string, manager connection.Manage
 
 // Sender builds events and sends them using given transport
 type Sender struct {
-	Transport      Transport
-	AppVersion     string
-	connection     connection.Manager
-	location       location.OriginResolver
-	currentSession *connection.SessionInfo
-	mu             sync.RWMutex
+	Transport  Transport
+	AppVersion string
+	connection connection.Manager
+	location   location.OriginResolver
 }
 
 // Event contains data about event, which is sent using transport
@@ -95,6 +92,11 @@ type sessionDataContext struct {
 	sessionContext
 }
 
+type sessionConnStatusContext struct {
+	Status string
+	sessionContext
+}
+
 type sessionContext struct {
 	ID              string
 	Consumer        string
@@ -105,63 +107,47 @@ type sessionContext struct {
 }
 
 // SendSessionData sends transferred information about session.
-func (sender *Sender) SendSessionData(data consumer.SessionStatistics) {
-	currentSession := sender.session()
-	if len(currentSession.SessionID) == 0 {
-		return
-	}
-
-	sender.sendEvent(sessionDataName, sessionDataContext{
-		Rx: data.BytesReceived,
-		Tx: data.BytesSent,
+func (sender *Sender) SendSessionData(data connection.SessionStatsEvent) {
+	session := data.SessionInfo
+	sender.sendEvent(eventNameSessionData, sessionDataContext{
+		Rx: data.Stats.BytesReceived,
+		Tx: data.Stats.BytesSent,
 		sessionContext: sessionContext{
-			ID:              string(currentSession.SessionID),
-			Consumer:        currentSession.ConsumerID.Address,
-			Provider:        currentSession.Proposal.ProviderID,
-			ServiceType:     currentSession.Proposal.ServiceType,
-			ProviderCountry: currentSession.Proposal.ServiceDefinition.GetLocation().Country,
+			ID:              string(session.SessionID),
+			Consumer:        session.ConsumerID.Address,
+			Provider:        session.Proposal.ProviderID,
+			ServiceType:     session.Proposal.ServiceType,
+			ProviderCountry: session.Proposal.ServiceDefinition.GetLocation().Country,
+			ConsumerCountry: sender.originCountry(),
+		},
+	})
+}
+
+// SendConnStateEvent sends connection state events.
+func (sender *Sender) SendConnStateEvent(e connection.StateEvent) {
+	sender.sendEvent(eventNameSession, sessionEventContext{
+		Event: string(e.State),
+		sessionContext: sessionContext{
+			ID:              string(e.SessionInfo.SessionID),
+			Consumer:        e.SessionInfo.ConsumerID.Address,
+			Provider:        e.SessionInfo.Proposal.ProviderID,
+			ServiceType:     e.SessionInfo.Proposal.ServiceType,
+			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
 			ConsumerCountry: sender.originCountry(),
 		},
 	})
 }
 
 // SendSessionEvent sends session update events.
-func (sender *Sender) SendSessionEvent(e interface{}) {
-	var id, eventName, provider, consumer, serviceType, providerCountry string
-	switch state := e.(type) {
-	case connection.StateEvent:
-		id = string(state.SessionInfo.SessionID)
-		eventName = string(state.State)
-		consumer = state.SessionInfo.ConsumerID.Address
-		provider = state.SessionInfo.Proposal.ProviderID
-		serviceType = state.SessionInfo.Proposal.ServiceType
-		providerCountry = state.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country
-	case connection.SessionEvent:
-		if state.Status == connection.SessionCreatedStatus {
-			sender.setCurrentSession(&state.SessionInfo)
-		} else if state.Status == connection.SessionEndedStatus {
-			sender.setCurrentSession(nil)
-		}
-
-		id = string(state.SessionInfo.SessionID)
-		eventName = state.Status
-		consumer = state.SessionInfo.ConsumerID.Address
-		provider = state.SessionInfo.Proposal.ProviderID
-		serviceType = state.SessionInfo.Proposal.ServiceType
-		providerCountry = state.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country
-	default:
-		log.Warn("unknown session event type", e)
-		return
-	}
-
-	sender.sendEvent(sessionEventName, sessionEventContext{
-		Event: eventName,
+func (sender *Sender) SendSessionEvent(e connection.SessionEvent) {
+	sender.sendEvent(eventNameSession, sessionEventContext{
+		Event: string(e.Status),
 		sessionContext: sessionContext{
-			ID:              id,
-			Consumer:        consumer,
-			Provider:        provider,
-			ServiceType:     serviceType,
-			ProviderCountry: providerCountry,
+			ID:              string(e.SessionInfo.SessionID),
+			Consumer:        e.SessionInfo.ConsumerID.Address,
+			Provider:        e.SessionInfo.Proposal.ProviderID,
+			ServiceType:     e.SessionInfo.Proposal.ServiceType,
+			ProviderCountry: e.SessionInfo.Proposal.ServiceDefinition.GetLocation().Country,
 			ConsumerCountry: sender.originCountry(),
 		},
 	})
@@ -169,17 +155,17 @@ func (sender *Sender) SendSessionEvent(e interface{}) {
 
 // SendStartupEvent sends startup event
 func (sender *Sender) SendStartupEvent(e event.Payload) {
-	sender.sendEvent(startupEventName, e.Status)
+	sender.sendEvent(eventNameStartup, e.Status)
 }
 
 // SendProposalEvent sends provider proposal event.
 func (sender *Sender) SendProposalEvent(p market.ServiceProposal) {
-	sender.sendEvent(proposalEventName, p)
+	sender.sendEvent(eventNameProposal, p)
 }
 
 // SendNATMappingSuccessEvent sends event about successful NAT mapping
 func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[string]string) {
-	sender.sendEvent(natMappingEventName, natMappingContext{
+	sender.sendEvent(eventNameNATMapping, natMappingContext{
 		Stage:      stage,
 		Successful: true,
 		Gateways:   gateways,
@@ -189,7 +175,7 @@ func (sender *Sender) SendNATMappingSuccessEvent(stage string, gateways []map[st
 // SendNATMappingFailEvent sends event about failed NAT mapping
 func (sender *Sender) SendNATMappingFailEvent(stage string, gateways []map[string]string, err error) {
 	errorMessage := err.Error()
-	sender.sendEvent(natMappingEventName, natMappingContext{
+	sender.sendEvent(eventNameNATMapping, natMappingContext{
 		Stage:        stage,
 		Successful:   false,
 		ErrorMessage: &errorMessage,
@@ -214,27 +200,11 @@ func (sender *Sender) sendEvent(eventName string, context interface{}) {
 	}
 }
 
-func (sender *Sender) session() connection.SessionInfo {
-	sender.mu.RLock()
-	defer sender.mu.RUnlock()
-
-	if sender.currentSession == nil {
-		return connection.SessionInfo{}
-	}
-	return *sender.currentSession
-}
-
-func (sender *Sender) setCurrentSession(s *connection.SessionInfo) {
-	sender.mu.Lock()
-	defer sender.mu.Unlock()
-
-	sender.currentSession = s
-}
-
 func (sender *Sender) originCountry() string {
-	location, err := sender.location.GetOrigin()
+	originLocation, err := sender.location.GetOrigin()
 	if err != nil {
 		log.Warn("failed to get consumer origin country")
+		return ""
 	}
-	return location.Country
+	return originLocation.Country
 }

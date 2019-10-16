@@ -40,18 +40,18 @@ func (transport *morqaTransport) SendEvent(event Event) error {
 		return transport.morqaClient.SendMetric(metric)
 	}
 
-	return fmt.Errorf("event not implemented")
+	return fmt.Errorf("event '%s' not implemented", event.EventName)
 }
 
 func mapEventToMetric(event Event) *metrics.Event {
 	switch event.EventName {
-	case startupEventName:
+	case eventNameStartup:
 		return nodeVersionToMetricsEvent(event.Application)
-	case sessionEventName:
+	case eventNameSession:
 		return sessionEventToMetricsEvent(event.Context.(sessionEventContext))
-	case sessionDataName:
+	case eventNameSessionData:
 		return sessionDataToMetricsEvent(event.Context.(sessionDataContext))
-	case proposalEventName:
+	case eventNameProposal:
 		return proposalEventToMetricsEvent(event.Context.(market.ServiceProposal), event.Application)
 	}
 	return nil

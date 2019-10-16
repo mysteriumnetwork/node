@@ -144,13 +144,13 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 
 	sessionDTO, paymentInfo, err := manager.createSession(connection, dialog, consumerID, proposal)
 	if err != nil {
-		manager.sendSessionStatus(dialog, "", connectivity.StatusSessionEstablishmentFailed, err)
+		manager.sendSessionStatusToPeer(dialog, "", connectivity.StatusCodeSessionEstablishmentFailed, err)
 		return err
 	}
 
 	err = manager.launchPayments(paymentInfo, dialog, consumerID, providerID)
 	if err != nil {
-		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusSessionPaymentsFailed, err)
+		manager.sendSessionStatusToPeer(dialog, sessionDTO.ID, connectivity.StatusCodeSessionPaymentsFailed, err)
 		return err
 	}
 
@@ -161,27 +161,26 @@ func (manager *connectionManager) Connect(consumerID identity.Identity, proposal
 		if err == context.Canceled {
 			return ErrConnectionCancelled
 		}
-		manager.sendSessionStatus(dialog, sessionDTO.ID, connectivity.StatusConnectionFailed, err)
+		manager.sendSessionStatusToPeer(dialog, sessionDTO.ID, connectivity.StatusCodeConnectionFailed, err)
+		manager.publishConnState(StateConnectionFailed)
 		return err
 	}
 
-	manager.checkSessionIP(dialog, sessionDTO.ID, originalPublicIP)
-	return nil
-}
-
-// checkSessionIP checks if IP has changed after connection was established and notify peer.
-func (manager *connectionManager) checkSessionIP(dialog communication.Dialog, sessionID session.ID, originalPublicIP string) {
+	// Checks if IP has changed after connection was established and notify peer.
 	newPublicIP := manager.getPublicIP()
 	if originalPublicIP == newPublicIP {
-		manager.sendSessionStatus(dialog, sessionID, connectivity.StatusSessionIPNotChanged, nil)
+		manager.sendSessionStatusToPeer(dialog, sessionDTO.ID, connectivity.StatusCodeSessionIPNotChanged, nil)
+		manager.publishConnState(StateIPNotChanged)
 		return
 	}
 
-	manager.sendSessionStatus(dialog, sessionID, connectivity.StatusConnectionOk, nil)
+	// Notify peer that connection is successful.
+	manager.sendSessionStatusToPeer(dialog, sessionDTO.ID, connectivity.StatusCodeConnectionOk, nil)
+	return nil
 }
 
-// sendSessionStatus sends session connectivity status to other peer.
-func (manager *connectionManager) sendSessionStatus(dialog communication.Dialog, sessionID session.ID, code connectivity.StatusCode, errDetails error) {
+// sendSessionStatusToPeer sends session connectivity status to other peer via dialog.
+func (manager *connectionManager) sendSessionStatusToPeer(dialog communication.Dialog, sessionID session.ID, code connectivity.StatusCode, errDetails error) {
 	var errDetailsMsg string
 	if errDetails != nil {
 		errDetailsMsg = errDetails.Error()
@@ -269,16 +268,10 @@ func (manager *connectionManager) createSession(c Connection, dialog communicati
 		},
 	}
 
-	manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
-		Status:      SessionCreatedStatus,
-		SessionInfo: manager.sessionInfo,
-	})
+	manager.publishSessionStatus(SessionStatusCreated)
 
 	manager.cleanup = append(manager.cleanup, func() error {
-		manager.eventPublisher.Publish(SessionEventTopic, SessionEvent{
-			Status:      SessionEndedStatus,
-			SessionInfo: manager.sessionInfo,
-		})
+		manager.publishSessionStatus(SessionStatusEnded)
 		return nil
 	})
 
@@ -324,7 +317,7 @@ func (manager *connectionManager) startConnection(
 	}
 
 	// Consume statistics right after start - openvpn3 will publish them even before connected state.
-	go manager.consumeStats(statisticsChannel)
+	go manager.consumeStats(statisticsChannel, manager.sessionInfo)
 	err = manager.waitForConnectedState(stateChannel, sessionDTO.ID)
 	if err != nil {
 		return err
@@ -366,11 +359,7 @@ func (manager *connectionManager) Disconnect() error {
 	manager.setStatus(statusDisconnecting())
 	manager.cleanConnection()
 	manager.setStatus(statusNotConnected())
-
-	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
-		State:       NotConnected,
-		SessionInfo: manager.sessionInfo,
-	})
+	manager.publishConnState(NotConnected)
 	return nil
 }
 
@@ -429,18 +418,18 @@ func (manager *connectionManager) consumeConnectionStates(stateChannel <-chan St
 	logDisconnectError(manager.Disconnect())
 }
 
-func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics) {
+func (manager *connectionManager) consumeStats(statisticsChannel <-chan consumer.SessionStatistics, sessionInfo SessionInfo) {
 	for stats := range statisticsChannel {
-		manager.eventPublisher.Publish(StatisticsEventTopic, stats)
+		manager.eventPublisher.Publish(EventTopicStatistics, SessionStatsEvent{
+			Stats:       stats,
+			SessionInfo: sessionInfo,
+		})
 	}
 }
 
 func (manager *connectionManager) onStateChanged(state State) {
 	log.Trace("onStateChanged called")
-	manager.eventPublisher.Publish(StateEventTopic, StateEvent{
-		State:       state,
-		SessionInfo: manager.sessionInfo,
-	})
+	manager.publishConnState(state)
 
 	switch state {
 	case Connected:
@@ -465,6 +454,20 @@ func (manager *connectionManager) setupTrafficBlock(disableKillSwitch bool) erro
 		return nil
 	})
 	return nil
+}
+
+func (manager *connectionManager) publishSessionStatus(status SessionStatus) {
+	manager.eventPublisher.Publish(EventTopicSession, SessionEvent{
+		Status:      status,
+		SessionInfo: manager.sessionInfo,
+	})
+}
+
+func (manager *connectionManager) publishConnState(state State) {
+	manager.eventPublisher.Publish(EventTopicState, StateEvent{
+		State:       state,
+		SessionInfo: manager.sessionInfo,
+	})
 }
 
 func logDisconnectError(err error) {

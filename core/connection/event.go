@@ -17,31 +17,42 @@
 
 package connection
 
-// Topic represents the different topics a consumer can subscribe to
+import "github.com/mysteriumnetwork/node/consumer"
+
+// Topic represents the different topics a consumer can subscribe to.
 const (
-	// StateEventTopic represents the connection state change topic
-	StateEventTopic = "State"
-	// StatisticsEventTopic represents the connection stats topic
-	StatisticsEventTopic = "Statistics"
-	// SessionEventTopic represents the session event
-	SessionEventTopic = "Session"
+	// EventTopicState represents the connection state change topic.
+	EventTopicState = "State"
+	// EventTopicStatistics represents the connection stats topic.
+	EventTopicStatistics = "Statistics"
+	// EventTopicSession represents the session event.
+	EventTopicSession = "Session"
 )
 
-// StateEvent is the struct we'll emit on a StateEvent topic event
+// StateEvent is the struct we'll emit on a StateEvent topic event.
 type StateEvent struct {
 	State       State
 	SessionInfo SessionInfo
 }
 
+// SessionStatus represents session status types.
+type SessionStatus string
+
 const (
-	// SessionCreatedStatus represents a session creation event
-	SessionCreatedStatus = "Created"
-	// SessionEndedStatus represents a session end
-	SessionEndedStatus = "Ended"
+	// SessionStatusCreated represents a session creation event.
+	SessionStatusCreated = SessionStatus("Created")
+	// SessionStatusEnded represents a session end.
+	SessionStatusEnded = SessionStatus("Ended")
 )
 
-// SessionEvent represents a session related event
+// SessionEvent represents a session related event.
 type SessionEvent struct {
-	Status      string
+	Status      SessionStatus
+	SessionInfo SessionInfo
+}
+
+// SessionStatsEvent represents a session stats event.
+type SessionStatsEvent struct {
+	Stats       consumer.SessionStatistics
 	SessionInfo SessionInfo
 }

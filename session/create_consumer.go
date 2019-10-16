@@ -26,8 +26,6 @@ import (
 	"github.com/mysteriumnetwork/node/session/promise"
 )
 
-const consumerLogPrefix = "[session-create-consumer] "
-
 // PromiseLoader loads the last known promise info for the given consumer
 type PromiseLoader interface {
 	LoadPaymentInfo(consumerID, receiverID, issuerID identity.Identity) *promise.PaymentInfo

@@ -241,7 +241,7 @@ func Test_ServiceProposal_UnserializeAccessPolicy(t *testing.T) {
 				Definition: mockContact{},
 			},
 		},
-		AccessPolicies: &accessPolicies,
+		AccessPolicies: accessPolicies,
 	}
 	assert.Equal(t, expected, actual)
 	assert.True(t, actual.IsSupported())

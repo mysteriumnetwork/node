@@ -32,7 +32,7 @@ func TestStatusSubscriber_AddsNewEntry(t *testing.T) {
 		peerAddress: "p1",
 		msg: &StatusMessage{
 			SessionID:  "s1",
-			StatusCode: StatusConnectionOk,
+			StatusCode: StatusCodeConnectionOk,
 			Message:    "OK",
 		},
 	}

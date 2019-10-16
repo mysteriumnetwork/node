@@ -77,7 +77,7 @@ type proposalRes struct {
 	Metrics json.RawMessage `json:"metrics,omitempty"`
 
 	// AccessPolicies
-	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
+	AccessPolicies []market.AccessPolicy `json:"accessPolicies,omitempty"`
 }
 
 func proposalToRes(p market.ServiceProposal) proposalRes {

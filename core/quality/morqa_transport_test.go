@@ -32,7 +32,7 @@ import (
 
 var (
 	eventStartup = Event{
-		EventName:   startupEventName,
+		EventName:   eventNameStartup,
 		Application: appInfo{Version: "test version"},
 	}
 )

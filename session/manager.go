@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/identity"
 	"github.com/mysteriumnetwork/node/market"
 	"github.com/mysteriumnetwork/node/nat/event"
@@ -39,8 +38,6 @@ var (
 	// ErrorWrongSessionOwner returned when consumer tries to destroy session that does not belongs to him
 	ErrorWrongSessionOwner = errors.New("wrong session owner")
 )
-
-const managerLogPrefix = "[session-manager] "
 
 // IDGenerator defines method for session id generation
 type IDGenerator func() (ID, error)
@@ -145,15 +142,19 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 		return
 	}
 
-	sessionInstance.ID, err = manager.generateID()
+	sessionID, err := manager.generateID()
 	if err != nil {
+		err = errors.Wrap(err, "could not generate sessionID")
 		return
 	}
-	sessionInstance.ServiceID = manager.serviceId
-	sessionInstance.ConsumerID = consumerID
-	sessionInstance.done = make(chan struct{})
-	sessionInstance.Config = config
-	sessionInstance.CreatedAt = time.Now().UTC()
+	sessionInstance = Session{
+		ID:         sessionID,
+		ConsumerID: consumerID,
+		Config:     config,
+		ServiceID:  manager.serviceId,
+		CreatedAt:  time.Now().UTC(),
+		done:       make(chan struct{}),
+	}
 
 	// TODO: this whole block needs to go when we deprecate the old payment pingpong
 	var paymentEngine PaymentEngine
@@ -183,10 +184,10 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 	go func() {
 		err := paymentEngine.Start()
 		if err != nil {
-			log.Error(managerLogPrefix, "payment engine error: ", err)
+			log.Errorf("payment engine error: %v", err)
 			destroyErr := manager.Destroy(consumerID, string(sessionInstance.ID))
 			if destroyErr != nil {
-				log.Error(managerLogPrefix, "session cleanup failed: ", err)
+				log.Errorf("session cleanup failed: %v", err)
 			}
 		}
 	}()
@@ -196,7 +197,7 @@ func (manager *Manager) Create(consumerID identity.Identity, consumerInfo Consum
 	return sessionInstance, nil
 }
 
-// Acknowledge marks the session as successfuly established as far as the consumer is concerned.
+// Acknowledge marks the session as successfully established as far as the consumer is concerned.
 func (manager *Manager) Acknowledge(consumerID identity.Identity, sessionID string) error {
 	manager.creationLock.Lock()
 	defer manager.creationLock.Unlock()

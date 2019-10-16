@@ -71,17 +71,17 @@ func (sst *SessionStatisticsTracker) markSessionEnd() {
 }
 
 // ConsumeStatisticsEvent handles the connection statistics changes
-func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(stats consumer.SessionStatistics) {
-	sst.sessionStats = consumer.AddUpStatistics(sst.sessionStats, sst.lastStats.DiffWithNew(stats))
-	sst.lastStats = stats
+func (sst *SessionStatisticsTracker) ConsumeStatisticsEvent(event connection.SessionStatsEvent) {
+	sst.sessionStats = consumer.AddUpStatistics(sst.sessionStats, sst.lastStats.DiffWithNew(event.Stats))
+	sst.lastStats = event.Stats
 }
 
 // ConsumeSessionEvent handles the session state changes
 func (sst *SessionStatisticsTracker) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
 	switch sessionEvent.Status {
-	case connection.SessionEndedStatus:
+	case connection.SessionStatusEnded:
 		sst.markSessionEnd()
-	case connection.SessionCreatedStatus:
+	case connection.SessionStatusCreated:
 		sst.markSessionStart()
 	}
 }

@@ -18,14 +18,9 @@
 package session
 
 import (
-	"fmt"
-
-	log "github.com/cihub/seelog"
 	"github.com/mysteriumnetwork/node/communication"
 	"github.com/pkg/errors"
 )
-
-const sessionDestroyPrefix = "[session.DestroyProducer] "
 
 type destroyProducer struct {
 	SessionID string
@@ -51,13 +46,13 @@ func RequestSessionDestroy(sender communication.Sender, sessionID ID) error {
 		SessionID: string(sessionID),
 	})
 	if err != nil {
-		log.Info(sessionDestroyPrefix, fmt.Sprintf("Session destroy request failed: %#v", err.Error()))
+		log.Infof("Session destroy request failed: %v", err)
 		return err
 	}
 
 	response := responsePtr.(*DestroyResponse)
 	if !response.Success {
-		log.Info(sessionDestroyPrefix, fmt.Sprintf("Session destroy response failed: %#v", response.Message))
+		log.Infof("Session destroy response failed: %v", response.Message)
 
 		return errors.New("Session destroy failed: " + response.Message)
 	}

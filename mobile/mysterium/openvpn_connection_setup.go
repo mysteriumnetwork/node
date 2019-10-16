@@ -273,7 +273,7 @@ func (mobNode *MobileNode) OverrideOpenvpnConnection(tunnelSetup Openvpn3TunnelS
 		natPinger:      mobNode.di.NATPinger,
 		ipResolver:     mobNode.di.IPResolver,
 	}
-	mobNode.di.EventBus.Subscribe(connection.StateEventTopic, st.handleState)
+	mobNode.di.EventBus.Subscribe(connection.EventTopicState, st.handleState)
 	mobNode.di.ConnectionRegistry.Register("openvpn", factory)
 	return st
 }

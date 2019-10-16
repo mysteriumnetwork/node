@@ -307,12 +307,12 @@ func (tc *testContext) Test_SessionEndPublished_OnConnectError() {
 	found := false
 
 	for _, v := range history {
-		if v.calledWithTopic == SessionEventTopic {
+		if v.calledWithTopic == EventTopicSession {
 			event := v.calledWithData.(SessionEvent)
-			if event.Status == SessionEndedStatus {
+			if event.Status == SessionStatusEnded {
 				found = true
 
-				assert.Equal(tc.T(), SessionEndedStatus, event.Status)
+				assert.Equal(tc.T(), SessionStatusEnded, event.Status)
 				assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 				assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 				assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
@@ -353,25 +353,24 @@ func (tc *testContext) Test_ManagerPublishesEvents() {
 	waitABit()
 
 	history := tc.stubPublisher.GetEventHistory()
-	assert.Len(tc.T(), history, 3)
+	assert.Len(tc.T(), history, 4)
 
 	for _, v := range history {
-		if v.calledWithTopic == StatisticsEventTopic {
-			event := v.calledWithData.(consumer.SessionStatistics)
-			assert.True(tc.T(), event.BytesReceived == tc.mockStatistics.BytesReceived)
-			assert.True(tc.T(), event.BytesSent == tc.mockStatistics.BytesSent)
+		if v.calledWithTopic == EventTopicStatistics {
+			event := v.calledWithData.(SessionStatsEvent)
+			assert.True(tc.T(), event.Stats.BytesReceived == tc.mockStatistics.BytesReceived)
+			assert.True(tc.T(), event.Stats.BytesSent == tc.mockStatistics.BytesSent)
 		}
-		if v.calledWithTopic == StateEventTopic {
+		if v.calledWithTopic == EventTopicState {
 			event := v.calledWithData.(StateEvent)
-			assert.Equal(tc.T(), Connected, event.State)
+			assert.True(tc.T(), event.State == Connected || event.State == StateIPNotChanged)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
 			assert.Equal(tc.T(), activeProposal.ServiceType, event.SessionInfo.Proposal.ServiceType)
 		}
-		if v.calledWithTopic == SessionEventTopic {
+		if v.calledWithTopic == EventTopicSession {
 			event := v.calledWithData.(SessionEvent)
-			assert.Equal(tc.T(), SessionCreatedStatus, event.Status)
 			assert.Equal(tc.T(), consumerID, event.SessionInfo.ConsumerID)
 			assert.Equal(tc.T(), establishedSessionID, event.SessionInfo.SessionID)
 			assert.Equal(tc.T(), activeProposal.ProviderID, event.SessionInfo.Proposal.ProviderID)
@@ -439,6 +438,6 @@ type mockStatusSender struct {
 	sentMsg *connectivity.StatusMessage
 }
 
-func (s mockStatusSender) Send(dialog communication.Sender, msg *connectivity.StatusMessage) {
+func (s *mockStatusSender) Send(dialog communication.Sender, msg *connectivity.StatusMessage) {
 	s.sentMsg = msg
 }

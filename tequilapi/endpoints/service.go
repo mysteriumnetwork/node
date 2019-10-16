@@ -87,7 +87,7 @@ type serviceInfo struct {
 
 	Proposal proposalRes `json:"proposal"`
 
-	AccessPolicies *[]market.AccessPolicy `json:"accessPolicies,omitempty"`
+	AccessPolicies []market.AccessPolicy `json:"accessPolicies,omitempty"`
 }
 
 // ServiceEndpoint struct represents management of service resource and it's sub-resources
@@ -229,7 +229,7 @@ func (se *ServiceEndpoint) ServiceStart(resp http.ResponseWriter, req *http.Requ
 	utils.WriteAsJSON(statusResponse, resp)
 }
 
-func getAccessPolicyData(sr serviceRequest, href string) *[]market.AccessPolicy {
+func getAccessPolicyData(sr serviceRequest, href string) []market.AccessPolicy {
 	if len(sr.AccessPolicies.Ids) == 0 {
 		return nil
 	}
@@ -242,7 +242,7 @@ func getAccessPolicyData(sr serviceRequest, href string) *[]market.AccessPolicy 
 		}
 	}
 
-	return &result
+	return result
 }
 
 // ServiceStop stops service on the node.
@@ -390,7 +390,7 @@ func validateServiceRequest(sr serviceRequest) *validation.FieldErrorMap {
 
 // ServiceManager represents service manager that is used for services management.
 type ServiceManager interface {
-	Start(providerID identity.Identity, serviceType string, accessPolicies *[]market.AccessPolicy, options service.Options) (service.ID, error)
+	Start(providerID identity.Identity, serviceType string, accessPolicies []market.AccessPolicy, options service.Options) (service.ID, error)
 	Stop(id service.ID) error
 	Service(id service.ID) *service.Instance
 	Kill() error

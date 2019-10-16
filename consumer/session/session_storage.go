@@ -69,9 +69,9 @@ func (repo *Storage) GetAll() ([]History, error) {
 // ConsumeSessionEvent consumes the session state change events
 func (repo *Storage) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
 	switch sessionEvent.Status {
-	case connection.SessionEndedStatus:
+	case connection.SessionStatusEnded:
 		repo.handleEndedEvent(sessionEvent.SessionInfo.SessionID)
-	case connection.SessionCreatedStatus:
+	case connection.SessionStatusCreated:
 		repo.handleCreatedEvent(sessionEvent.SessionInfo)
 	}
 }

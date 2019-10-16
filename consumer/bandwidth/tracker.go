@@ -61,10 +61,10 @@ func (t *Tracker) Get() CurrentSpeed {
 }
 
 // ConsumeStatisticsEvent handles the connection statistics changes
-func (t *Tracker) ConsumeStatisticsEvent(stats consumer.SessionStatistics) {
+func (t *Tracker) ConsumeStatisticsEvent(event connection.SessionStatsEvent) {
 	t.lock.Lock()
 	defer func() {
-		t.previous = stats
+		t.previous = event.Stats
 		t.lock.Unlock()
 	}()
 
@@ -77,8 +77,8 @@ func (t *Tracker) ConsumeStatisticsEvent(stats consumer.SessionStatistics) {
 	secondsSince := currentTime.Sub(t.previousTime).Seconds()
 	t.previousTime = currentTime
 
-	byteDownDiff := stats.BytesReceived - t.previous.BytesReceived
-	byteUpDiff := stats.BytesSent - t.previous.BytesSent
+	byteDownDiff := event.Stats.BytesReceived - t.previous.BytesReceived
+	byteUpDiff := event.Stats.BytesSent - t.previous.BytesSent
 
 	t.currentSpeed = CurrentSpeed{
 		Up:   Throughput{BitsPerSecond: float64(byteUpDiff) / secondsSince * bitsInByte},
@@ -94,7 +94,7 @@ func (t *Tracker) ConsumeSessionEvent(sessionEvent connection.SessionEvent) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	switch sessionEvent.Status {
-	case connection.SessionEndedStatus, connection.SessionCreatedStatus:
+	case connection.SessionStatusEnded, connection.SessionStatusCreated:
 		t.previous = consumer.SessionStatistics{}
 		t.previousTime = time.Time{}
 		t.currentSpeed = CurrentSpeed{}

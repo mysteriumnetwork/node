@@ -30,14 +30,14 @@ func TestStatusStorage_AddStatusEntry(t *testing.T) {
 	e1 := StatusEntry{
 		PeerID:       identity.Identity{},
 		SessionID:    "1",
-		StatusCode:   StatusConnectionOk,
+		StatusCode:   StatusCodeConnectionOk,
 		Message:      "Ok",
 		CreatedAtUTC: time.Now().UTC(),
 	}
 	e2 := StatusEntry{
 		PeerID:       identity.Identity{},
 		SessionID:    "",
-		StatusCode:   StatusConnectionFailed,
+		StatusCode:   StatusCodeConnectionFailed,
 		Message:      "Failed",
 		CreatedAtUTC: time.Now().UTC().Add(-1 * time.Second),
 	}
@@ -75,7 +75,7 @@ func TestStatusStorage_GetAllStatusEntries_Returns_Immutable_Data(t *testing.T) 
 	e1 := StatusEntry{
 		PeerID:       identity.Identity{},
 		SessionID:    "1",
-		StatusCode:   StatusConnectionOk,
+		StatusCode:   StatusCodeConnectionOk,
 		Message:      "Ok",
 		CreatedAtUTC: time.Time{},
 	}

@@ -28,10 +28,6 @@ import (
 	"github.com/mysteriumnetwork/node/core/connection"
 )
 
-func Test_ThroughputStringOutput(t *testing.T) {
-
-}
-
 func Test_bitCountDecimal(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -82,7 +78,7 @@ func Test_ConsumeSessionEvent_ResetsOnConnect(t *testing.T) {
 		},
 	}
 	tracker.ConsumeSessionEvent(connection.SessionEvent{
-		Status: connection.SessionCreatedStatus,
+		Status: connection.SessionStatusCreated,
 	})
 
 	assert.True(t, tracker.previousTime.IsZero())
@@ -99,7 +95,7 @@ func Test_ConsumeSessionEvent_ResetsOnDisconnect(t *testing.T) {
 		},
 	}
 	tracker.ConsumeSessionEvent(connection.SessionEvent{
-		Status: connection.SessionEndedStatus,
+		Status: connection.SessionStatusEnded,
 	})
 
 	assert.True(t, tracker.previousTime.IsZero())
@@ -114,10 +110,13 @@ func Test_ConsumeStatisticsEvent_CalculatesCorrectly(t *testing.T) {
 		previousTime: startTime,
 	}
 
-	tracker.ConsumeStatisticsEvent(consumer.SessionStatistics{
-		BytesReceived: bytesTransfered,
-		BytesSent:     bytesTransfered,
-	})
+	input := connection.SessionStatsEvent{
+		Stats: consumer.SessionStatistics{
+			BytesReceived: bytesTransfered,
+			BytesSent:     bytesTransfered,
+		},
+	}
+	tracker.ConsumeStatisticsEvent(input)
 
 	assert.NotEqual(t, tracker.previousTime, startTime)
 	speed := tracker.Get()
@@ -128,13 +127,15 @@ func Test_ConsumeStatisticsEvent_CalculatesCorrectly(t *testing.T) {
 
 func Test_ConsumeStatisticsEvent_SkipsOnZero(t *testing.T) {
 	tracker := Tracker{}
-	input := consumer.SessionStatistics{
-		BytesReceived: 1,
-		BytesSent:     2,
+	input := connection.SessionStatsEvent{
+		Stats: consumer.SessionStatistics{
+			BytesReceived: 1,
+			BytesSent:     2,
+		},
 	}
 	tracker.ConsumeStatisticsEvent(input)
 	assert.False(t, tracker.previousTime.IsZero())
-	assert.Equal(t, input.BytesReceived, tracker.previous.BytesReceived)
-	assert.Equal(t, input.BytesSent, tracker.previous.BytesSent)
+	assert.Equal(t, input.Stats.BytesReceived, tracker.previous.BytesReceived)
+	assert.Equal(t, input.Stats.BytesSent, tracker.previous.BytesSent)
 	assert.Zero(t, tracker.Get().Down.BitsPerSecond)
 }

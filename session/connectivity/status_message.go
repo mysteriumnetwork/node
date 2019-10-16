@@ -27,20 +27,20 @@ const endpointConnectivityStatus = communication.MessageEndpoint("session-connec
 type StatusCode uint32
 
 const (
-	// StatusConnectionOk indicates that session, payments, ip change are all working.
-	StatusConnectionOk StatusCode = 1000
+	// StatusCodeConnectionOk indicates that session, payments, ip change are all working.
+	StatusCodeConnectionOk StatusCode = 1000
 
-	// StatusSessionEstablishmentFailed indicates that session is failed to establish.
-	StatusSessionEstablishmentFailed StatusCode = 2000
+	// StatusCodeSessionEstablishmentFailed indicates that session is failed to establish.
+	StatusCodeSessionEstablishmentFailed StatusCode = 2000
 
-	// StatusSessionPaymentsFailed indicates that session payments failed.
-	StatusSessionPaymentsFailed StatusCode = 2001
+	// StatusCodeSessionPaymentsFailed indicates that session payments failed.
+	StatusCodeSessionPaymentsFailed StatusCode = 2001
 
-	// StatusSessionIPNotChanged indicates that session is established but ip is not changed.
-	StatusSessionIPNotChanged StatusCode = 2002
+	// StatusCodeSessionIPNotChanged indicates that session is established but ip is not changed.
+	StatusCodeSessionIPNotChanged StatusCode = 2002
 
-	// StatusConnectionFailed indicates unknown session connection error.
-	StatusConnectionFailed StatusCode = 2003
+	// StatusCodeConnectionFailed indicates unknown session connection error.
+	StatusCodeConnectionFailed StatusCode = 2003
 )
 
 // StatusMessage is a contract for message broker.
