@@ -25,8 +25,8 @@ import (
 
 	log "github.com/cihub/seelog"
 	"github.com/magefile/mage/sh"
-
 	"github.com/mysteriumnetwork/go-ci/env"
+	"github.com/mysteriumnetwork/go-ci/shell"
 	"github.com/mysteriumnetwork/node/ci/storage"
 	"github.com/mysteriumnetwork/node/logconfig"
 )
@@ -120,6 +120,16 @@ func PackageAndroid() error {
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
 		return err
 	}
+
+	// Artifacts created by xgo (docker) on CI environment are owned by root.
+	// Chown package folder so we can create a POM (see below) in it.
+	if _, isCI := os.LookupEnv("CI"); isCI {
+		err := shell.NewCmd("sudo chown -R gitlab-runner:gitlab-runner build/package").Run()
+		if err != nil {
+			return err
+		}
+	}
+
 	err := env.EnsureEnvVars(env.BuildVersion)
 	if err != nil {
 		return err
