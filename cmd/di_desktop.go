@@ -248,7 +248,8 @@ func (di *Dependencies) bootstrapServiceComponents(nodeOptions node.Options) err
 			di.NATPinger.PingTarget,
 			di.NATTracker,
 			serviceID,
-			di.EventBus)
+			di.EventBus,
+			di.BCHelper)
 
 		return session.NewDialogHandler(
 			sessionManagerFactory,

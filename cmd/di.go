@@ -165,7 +165,11 @@ type Dependencies struct {
 	UIServer         UIServer
 	SSEHandler       *sse.Handler
 	Transactor       *transactor.Transactor
+<<<<<<< HEAD
 	TopUpper         *transactor.TopUpper
+=======
+	BCHelper         *pingpong.Blockchain
+>>>>>>> Make provider validate consumers sent accountant
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
@@ -540,6 +544,7 @@ func newSessionManagerFactory(
 	natTracker *event.Tracker,
 	serviceID string,
 	eventbus eventbus.EventBus,
+	bcHelper *pingpong.Blockchain,
 ) session.ManagerFactory {
 	return func(dialog communication.Dialog) *session.Manager {
 		providerBalanceTrackerFactory := func(consumerID, receiverID, issuerID identity.Identity) (session.PaymentEngine, error) {
@@ -582,6 +587,8 @@ func newSessionManagerFactory(
 			nodeOptions.Transactor.RegistryAddress,
 			nodeOptions.Transactor.ChannelImplementation,
 			pingpong.DefaultAccountantFailureCount,
+			pingpong.DefaultMaxAllowedAccountantFee,
+			bcHelper,
 		)
 		return session.NewManager(
 			proposal,
@@ -651,6 +658,9 @@ func (di *Dependencies) bootstrapNetworkComponents(options node.Options) (err er
 
 	log.Info().Msg("Using Eth contract at address: " + network.PaymentsContractAddress.String())
 	log.Info().Msg("options.ExperimentIdentityCheck: " + strconv.FormatBool(optionsNetwork.ExperimentIdentityCheck))
+	
+	di.BCHelper = pingpong.NewBlockchain(di.EtherClient, pingpong.DefaultBCTimeout)
+
 	if optionsNetwork.ExperimentIdentityCheck {
 		if di.IdentityRegistry, err = identity_registry.NewIdentityRegistryContract(di.EtherClient, network.PaymentsContractAddress, common.HexToAddress(options.Accountant.AccountantID)); err != nil {
 			return err

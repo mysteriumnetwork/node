@@ -49,6 +49,8 @@ func InvoiceFactoryCreator(
 	registryAddress string,
 	channelImplementationAddress string,
 	maxAccountantFailureCount uint64,
+	maxAllowedAccountantFee uint16,
+	blockchainHelper bcHelper,
 ) func(identity.Identity, identity.Identity) (session.PaymentEngine, error) {
 	return func(providerID identity.Identity, accountantID identity.Identity) (session.PaymentEngine, error) {
 		exchangeChan := make(chan crypto.ExchangeMessage, 1)
@@ -75,6 +77,8 @@ func InvoiceFactoryCreator(
 			ChannelImplementation:      channelImplementationAddress,
 			Registry:                   registryAddress,
 			MaxAccountantFailureCount:  maxAccountantFailureCount,
+			MaxAllowedAccountantFee:    maxAllowedAccountantFee,
+			BlockchainHelper:           blockchainHelper,
 		}
 		paymentEngine := NewInvoiceTracker(deps)
 		return paymentEngine, nil

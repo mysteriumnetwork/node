@@ -38,9 +38,19 @@ import (
 // ErrConsumerPromiseValidationFailed represents an error where consumer tries to cheat us with incorrect promises.
 var ErrConsumerPromiseValidationFailed = errors.New("consumer failed to issue promise for the correct amount")
 
+// ErrAccountantFeeTooLarge indicates that we do not allow accountants with such high fees
+var ErrAccountantFeeTooLarge = errors.New("accountants fee exceeds")
+
+// DefaultMaxAllowedAccountantFee the default fee we allow the accountant to take from us
+const DefaultMaxAllowedAccountantFee uint16 = 1500
+
 // PeerInvoiceSender allows to send invoices.
 type PeerInvoiceSender interface {
 	Send(crypto.Invoice) error
+}
+
+type bcHelper interface {
+	GetAccountantFee(accountantAddress common.Address) (uint16, error)
 }
 
 type providerInvoiceStorage interface {
@@ -97,6 +107,8 @@ type InvoiceTracker struct {
 	channelImplementation           string
 	registryAddress                 string
 	maxAccountantFailureCount       uint64
+	maxAllowedAccountantFee         uint16
+	bcHelper                        bcHelper
 }
 
 // InvoiceTrackerDeps contains all the deps needed for invoice tracker.
@@ -116,6 +128,8 @@ type InvoiceTrackerDeps struct {
 	ChannelImplementation      string
 	Registry                   string
 	MaxAccountantFailureCount  uint64
+	MaxAllowedAccountantFee    uint16
+	BlockchainHelper           bcHelper
 }
 
 // NewInvoiceTracker creates a new instance of invoice tracker.
@@ -139,6 +153,8 @@ func NewInvoiceTracker(
 		channelImplementation:          itd.ChannelImplementation,
 		registryAddress:                itd.Registry,
 		maxAccountantFailureCount:      itd.MaxAccountantFailureCount,
+		maxAllowedAccountantFee:        itd.MaxAllowedAccountantFee,
+		bcHelper:                       itd.BlockchainHelper,
 	}
 }
 
@@ -168,7 +184,17 @@ func (it *InvoiceTracker) Start() error {
 	log.Debug().Msg("Starting...")
 	it.timeTracker.StartTracking()
 
-	err := it.generateInitialInvoice()
+	fee, err := it.bcHelper.GetAccountantFee(common.HexToAddress(it.accountantID.Address))
+	if err != nil {
+		return err
+	}
+
+	if fee > it.maxAllowedAccountantFee {
+		log.Errorf("accountant fee too large, asking for %v where %v is the limit", fee, it.maxAllowedAccountantFee)
+		return ErrAccountantFeeTooLarge
+	}
+
+	err = it.generateInitialInvoice()
 	if err != nil {
 		return err
 	}
