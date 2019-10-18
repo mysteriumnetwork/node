@@ -102,7 +102,7 @@ func PackageWindowsAmd64() error {
 
 // PackageIOS builds and stores iOS package
 func PackageIOS() error {
-	mg.Deps(checkVend, vendordModules)
+	mg.Deps(vendordModules)
 
 	logconfig.Bootstrap()
 	if err := sh.RunV("bin/package_ios", "amd64"); err != nil {
@@ -113,7 +113,7 @@ func PackageIOS() error {
 
 // PackageAndroid builds and stores Android package
 func PackageAndroid() error {
-	mg.Deps(checkVend, vendordModules)
+	mg.Deps(vendordModules)
 
 	logconfig.Bootstrap()
 	if err := sh.RunV("bin/package_android", "amd64"); err != nil {
@@ -212,6 +212,7 @@ func PackageDockerSwaggerRedoc() error {
 // This is a temporary solution needed for ios and android builds since gomobile
 // does not support go modules yet and go mod vendor does not include c dependencies.
 func vendordModules() error {
+	mg.Deps(checkVend)
 	return sh.RunV("vend")
 }
 
@@ -221,7 +222,7 @@ func checkVend() error {
 		fmt.Println("Tool 'vend' already installed")
 		return nil
 	}
-	err := goGet("go get github.com/nomad-software/vend")
+	err := goGet("github.com/nomad-software/vend")
 	if err != nil {
 		fmt.Println("could not go get vend")
 		return err
@@ -230,7 +231,7 @@ func checkVend() error {
 }
 
 func goGet(pkg string) error {
-	return sh.RunV("go", "get", "-u", pkg)
+	return sh.RunWith(map[string]string{"GO111MODULE": "off"}, "go", "get", "-u", pkg)
 }
 
 func packageStandalone(binaryPath, os, arch string) error {
