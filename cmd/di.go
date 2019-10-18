@@ -161,6 +161,7 @@ type Dependencies struct {
 	UIServer         UIServer
 	SSEHandler       *sse.Handler
 	Transactor       *transactor.Transactor
+	TopUpper         *transactor.TopUpper
 
 	LogCollector *logconfig.Collector
 	Reporter     *feedback.Reporter
@@ -344,6 +345,11 @@ func (di *Dependencies) Shutdown() (err error) {
 			errs = append(errs, err)
 		}
 	}
+
+	if di.TopUpper != nil {
+		di.TopUpper.Stop()
+	}
+
 	firewall.Reset()
 	log.Flush()
 	return nil
@@ -455,6 +461,17 @@ func (di *Dependencies) bootstrapNodeComponents(nodeOptions node.Options, listen
 		channelImplementation,
 		di.SignerFactory,
 	)
+
+	di.TopUpper = transactor.NewTopUpper(
+		di.Transactor,
+		transactor.DefaultRetryCount,
+		transactor.DefaultDelayBetweenRetries,
+	)
+
+	err := di.TopUpper.Subscribe(di.EventBus)
+	if err != nil {
+		return errors.Wrap(err, "could not subscribe topper upper")
+	}
 
 	di.LogCollector = logconfig.NewCollector(&logconfig.CurrentLogOptions)
 	reporter, err := feedback.NewReporter(di.LogCollector, di.IdentityManager, nodeOptions.FeedbackURL)
